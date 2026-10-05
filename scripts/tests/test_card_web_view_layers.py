@@ -307,8 +307,6 @@ def script_switch_problems(root):
     sources = sorted((root / "ios").rglob("*.swift")) if (root / "ios").is_dir() else []
     for path in sources:
         relative = path.relative_to(root).as_posix()
-        if ".build" in path.parts:
-            continue
         judged["swift files"].append(relative)
         code = code_of(path.read_bytes().decode("utf-8", errors="replace"))
         for _ in SWITCH_DEFINITION.finditer(code):
