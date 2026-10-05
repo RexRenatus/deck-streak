@@ -1,0 +1,53 @@
+{
+  "population": "the card view's gate, rule list and fail-closed factory (SPEC-349 R3 and R4, ADR-360 D3 and D4); proved by the card-isolation job, joined to no shared population (#650)",
+  "mutants": [
+    {
+      "id": "SW34900",
+      "file": "Sources/CardIsolation/NavigationGate.swift",
+      "find": "state = .sealed",
+      "replace": "",
+      "killer": "CardIsolationTests.NavigationGateTests/test_only_the_first_main_frame_load_is_allowed",
+      "why": "the first main-frame load seals the gate, and nothing returns it to awaiting its first load"
+    },
+    {
+      "id": "SW34901",
+      "file": "Sources/CardIsolation/NavigationGate.swift",
+      "find": "request.isMainFrame",
+      "replace": "true",
+      "killer": "CardIsolationTests.NavigationGateTests/test_only_the_first_main_frame_load_is_allowed",
+      "why": "a subframe action before the first main-frame load is cancelled, not taken for the first load"
+    },
+    {
+      "id": "SW34902",
+      "file": "Sources/CardIsolation/NavigationGate.swift",
+      "find": "let first = state == .awaitingFirstLoad",
+      "replace": "let first = true",
+      "killer": "CardIsolationTests.NavigationGateTests/test_only_the_first_main_frame_load_is_allowed",
+      "why": "only the first main-frame load is allowed; every later one is cancelled"
+    },
+    {
+      "id": "SW34903",
+      "file": "Sources/CardIsolation/RuleList.swift",
+      "find": "{\"url-filter\":\".*\"}",
+      "replace": "{\"url-filter\":\"^https\"}",
+      "killer": "CardIsolationTests.RuleListTests/test_the_rule_list_blocks_every_load_of_every_type",
+      "why": "the one rule matches every URL, not only those of one scheme"
+    },
+    {
+      "id": "SW34904",
+      "file": "Sources/CardIsolation/RuleList.swift",
+      "find": "{\"type\":\"block\"}",
+      "replace": "{\"type\":\"ignore-previous-rules\"}",
+      "killer": "CardIsolationTests.RuleListTests/test_the_rule_list_blocks_every_load_of_every_type",
+      "why": "the one rule blocks what it matches"
+    },
+    {
+      "id": "SW34905",
+      "file": "Sources/CardIsolation/CardWebViewFactory.swift",
+      "find": "throw CardViewRefusal.ruleListDidNotCompile",
+      "replace": "return make(layers: Set(CardLayer.allCases), ruleList: nil)",
+      "killer": "CardIsolationTests.RuleListTests/test_a_rule_list_that_did_not_compile_builds_no_view",
+      "why": "a rule list that did not compile builds no view: the factory fails closed"
+    }
+  ]
+}

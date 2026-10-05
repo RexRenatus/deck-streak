@@ -42,6 +42,8 @@ ProtectProc=invisible
 ProcSubset=pid
 # It reaches the bucket over the network and its own files over a socket.
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+# It reaches its bucket with the host's identity, so it is on the closed list of the units the
+# kernel does not deny the host's identity endpoint (SPEC-354 R2; ADR-365 D3).
 RestrictNamespaces=yes
 RestrictRealtime=yes
 RestrictSUIDSGID=yes
