@@ -1,0 +1,70 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S35401-THE-API-IS-DENIED-THE-IDENTITY-ENDPOINT",
+        "deploy/systemd/deck-streak-api.service",
+        "IPAddressDeny=link-local",
+        "IPAddressDeny=",
+        "the API is denied the host's identity endpoint (SPEC-354 R1)",
+        "test_deploy_templates.TheServicesRunTheirRoles.test_no_unit_but_the_exempt_reaches_the_host_identity_endpoint"
+      ],
+      [
+        "S35402-THE-BOT-IS-DENIED-THE-IDENTITY-ENDPOINT",
+        "deploy/systemd/deck-streak-bot.service",
+        "IPAddressDeny=link-local",
+        "IPAddressDeny=",
+        "the bot is denied the host's identity endpoint (SPEC-354 R1)",
+        "test_deploy_templates.TheServicesRunTheirRoles.test_no_unit_but_the_exempt_reaches_the_host_identity_endpoint"
+      ],
+      [
+        "S35403-THE-MCP-SERVER-IS-DENIED-THE-IDENTITY-ENDPOINT",
+        "deploy/systemd/deck-streak-mcp.service",
+        "IPAddressDeny=link-local",
+        "IPAddressDeny=",
+        "the MCP server is denied the host's identity endpoint (SPEC-354 R1)",
+        "test_deploy_templates.TheServicesRunTheirRoles.test_no_unit_but_the_exempt_reaches_the_host_identity_endpoint"
+      ],
+      [
+        "S35404-EVERY-JOB-IS-DENIED-THE-IDENTITY-ENDPOINT",
+        "deploy/systemd/deck-streak-job@.service",
+        "IPAddressDeny=link-local",
+        "IPAddressDeny=",
+        "every job is denied the host's identity endpoint (SPEC-354 R1)",
+        "test_deploy_templates.TheServicesRunTheirRoles.test_no_unit_but_the_exempt_reaches_the_host_identity_endpoint"
+      ],
+      [
+        "S35405-EVERY-ALERT-IS-DENIED-THE-IDENTITY-ENDPOINT",
+        "deploy/systemd/deck-streak-alert@.service",
+        "IPAddressDeny=link-local",
+        "IPAddressDeny=",
+        "every alert is denied the host's identity endpoint (SPEC-354 R1)",
+        "test_deploy_templates.TheServicesRunTheirRoles.test_no_unit_but_the_exempt_reaches_the_host_identity_endpoint"
+      ],
+      [
+        "S35406-THE-DENY-HOLDS-THE-ENDPOINTS-RANGE",
+        "deploy/systemd/deck-streak-bot.service",
+        "IPAddressDeny=link-local",
+        "IPAddressDeny=multicast",
+        "a deny list covers the host's identity endpoint only when it names its range (SPEC-354 R1)",
+        "test_deploy_templates.TheServicesRunTheirRoles.test_no_unit_but_the_exempt_reaches_the_host_identity_endpoint"
+      ],
+      [
+        "S35407-A-NO-IP-UNIT-OPENS-NO-IP-SOCKET",
+        "deploy/systemd/deck-streak-slo.service",
+        "RestrictAddressFamilies=AF_UNIX",
+        "RestrictAddressFamilies=AF_UNIX AF_INET",
+        "a service with no deny list opens no IP socket (SPEC-354 R1)",
+        "test_deploy_templates.TheServicesRunTheirRoles.test_no_unit_but_the_exempt_reaches_the_host_identity_endpoint"
+      ],
+      [
+        "S35408-AN-ALLOW-NEVER-ADMITS-THE-ENDPOINT",
+        "deploy/systemd/deck-streak-sync-server.service",
+        "IPAddressAllow=localhost",
+        "IPAddressAllow=link-local",
+        "no allow list admits the host's identity endpoint, since an allow wins over a deny (SPEC-354 R1)",
+        "test_deploy_templates.TheServicesRunTheirRoles.test_no_unit_but_the_exempt_reaches_the_host_identity_endpoint"
+      ]
+    ]
+  }
+}

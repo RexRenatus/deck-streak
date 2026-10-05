@@ -132,6 +132,8 @@ ALERT_KEYS = {
         "CapabilityBoundingSet",
         "ExecStart",
         "Group",
+        # The host's identity endpoint denied (SPEC-354 R1); A1's census table pins its value.
+        "IPAddressDeny",
         "LoadCredential",
         "LockPersonality",
         "MemoryDenyWriteExecute",
@@ -188,7 +190,8 @@ PAGING_KEYS = {
         "ExecStart",
         "Group",
         "IOSchedulingClass",
-        # The sync server's peers (SPEC-340 R8), each bounded to one value below.
+        # The sync server's peers (SPEC-340 R8), and the host's identity endpoint denied to every
+        # other unit that loads a credential (SPEC-354 R1), each bounded below.
         "IPAddressAllow",
         "IPAddressDeny",
         "KillSignal",
@@ -248,9 +251,10 @@ PAGING_VALUES = {
     ("Service", "ReadWritePaths"): ("/run/deck-streak-sync",),
     # The sync server drains on an interrupt alone (SPEC-337 R2), so its stop signal is that one.
     ("Service", "KillSignal"): ("SIGINT",),
-    # The sync server reaches loopback peers alone (SPEC-340 R8; ADR-351 D6).
+    # The sync server reaches loopback peers alone (SPEC-340 R8; ADR-351 D6), and every other
+    # unit that loads a credential is denied the host's identity endpoint (SPEC-354 R1).
     ("Service", "IPAddressAllow"): ("localhost",),
-    ("Service", "IPAddressDeny"): ("any",),
+    ("Service", "IPAddressDeny"): ("any", "link-local"),
     # Enabling the sync server enables its snapshot window, its archive and its sync drill, and
     # disabling it removes all three (SPEC-340 R3, R4).
     ("Install", "Also"): (
