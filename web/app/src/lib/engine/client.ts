@@ -1,6 +1,6 @@
 // The page's side of the web engine: EngineClient, which numbers each request and settles it by
 // the reply that carries its id (SPEC-338 R3, ADR-348).
-import type { Body, ErrorCode, Opened, Rating, Reply, Snapshot } from './protocol';
+import type { Body, Deck, ErrorCode, Head, Opened, Rating, Reply, Snapshot } from './protocol';
 import { admitsOrigin } from './protocol';
 
 /** The Worker as the client sees it: a port to post to and hear from. */
@@ -55,8 +55,10 @@ export class EngineClient {
     });
   }
 
-  open(): Promise<Opened> {
-    return this.#send({ op: 'open' }) as Promise<Opened>;
+  /** Opens the collection; the engine speaks `languages`, in order, or English without them. */
+  open(languages?: string[]): Promise<Opened> {
+    const body: Body = languages === undefined ? { op: 'open' } : { op: 'open', languages };
+    return this.#send(body) as Promise<Opened>;
   }
 
   seed(count: number): Promise<number> {
@@ -86,5 +88,35 @@ export class EngineClient {
 
   close(): Promise<null> {
     return this.#send({ op: 'close' }) as Promise<null>;
+  }
+
+  /** The engine's deck tree, with today's counts (SPEC-350 R6). */
+  decks(): Promise<Deck[]> {
+    return this.#send({ op: 'decks' }) as Promise<Deck[]>;
+  }
+
+  /** Makes `deck` the deck the review studies. */
+  study(deck: bigint): Promise<null> {
+    return this.#send({ op: 'study', deck }) as Promise<null>;
+  }
+
+  /** The queue's head as the review shows it, which the engine keeps as the shown card (R2, R3). */
+  card(): Promise<Head> {
+    return this.#send({ op: 'card' }) as Promise<Head>;
+  }
+
+  /** Rates the shown card; another card is refused as `not-shown`. */
+  rate(card: bigint, rating: Rating, ms: number): Promise<null> {
+    return this.#send({ op: 'rate', card, rating, ms }) as Promise<null>;
+  }
+
+  /** Buries the shown card, the user's bury; another card is refused as `not-shown`. */
+  bury(card: bigint): Promise<null> {
+    return this.#send({ op: 'bury', card }) as Promise<null>;
+  }
+
+  /** Toggles red on the shown card and resolves to its flag; another card is refused. */
+  flag(card: bigint): Promise<number> {
+    return this.#send({ op: 'flag', card }) as Promise<number>;
   }
 }
