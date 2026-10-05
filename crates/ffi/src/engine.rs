@@ -1,7 +1,7 @@
 //! The engine handle, its typed refusal and the one entry point (SPEC-336 R1, R3).
 
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use deck_streak_engine_core::dispatch::{Dispatcher, Refusal};
@@ -136,6 +136,9 @@ fn refusal(refusal: Refusal) -> EngineRefusal {
     }
 }
 
+/// The launch argument a UI test names its seeded collection's directory with (ADR-359 D6).
+const COLLECTION_DIRECTORY: &str = "-DSCollectionDirectory";
+
 /// Why a launch's collection directory argument was refused, by name.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Error)]
 pub enum CollectionDirectoryRefusal {
@@ -162,21 +165,42 @@ impl fmt::Display for CollectionDirectoryRefusal {
 
 impl std::error::Error for CollectionDirectoryRefusal {}
 
-/// The directory the app opens its collection in (stubbed: the default for every argument).
+/// The directory the app opens its collection in: `default` when the launch `arguments` name no
+/// `-DSCollectionDirectory`, and the value after it when that is an absolute path to an existing
+/// directory (SPEC-348 R7). The app shell passes its own arguments and decides nothing.
 ///
 /// # Errors
 ///
-/// None while stubbed.
+/// Every other value, by name: [`CollectionDirectoryRefusal::NoValue`],
+/// [`CollectionDirectoryRefusal::NotAbsolute`], [`CollectionDirectoryRefusal::Missing`] or
+/// [`CollectionDirectoryRefusal::NotADirectory`].
 #[uniffi::export]
-#[allow(
-    unused_variables,
+#[expect(
     clippy::needless_pass_by_value,
-    clippy::unnecessary_wraps,
-    reason = "the stub returns the default for every argument"
+    reason = "a foreign caller's values cross the boundary owned, as the bindings pass them"
 )]
 pub fn collection_directory(
     default: String,
     arguments: Vec<String>,
 ) -> Result<String, CollectionDirectoryRefusal> {
-    Ok(default)
+    let Some(position) = arguments
+        .iter()
+        .position(|argument| argument == COLLECTION_DIRECTORY)
+    else {
+        return Ok(default);
+    };
+    let value = arguments
+        .get(position + 1)
+        .ok_or(CollectionDirectoryRefusal::NoValue)?;
+    let path = Path::new(value);
+    if !path.is_absolute() {
+        return Err(CollectionDirectoryRefusal::NotAbsolute);
+    }
+    if !path.exists() {
+        return Err(CollectionDirectoryRefusal::Missing);
+    }
+    if !path.is_dir() {
+        return Err(CollectionDirectoryRefusal::NotADirectory);
+    }
+    Ok(value.clone())
 }
