@@ -344,16 +344,22 @@ private func scriptedCards() -> [Scripted] {
             + " document.head.appendChild(early); const sheet = document.createElement('link');"
             + " sheet.rel = 'stylesheet'; sheet.href = '\(a.under("script-link"))/1'; document.head.appendChild(sheet);"
     })
-    cards.append(scripted("script-nav", held: [.L5, .L9], alone: nil, .connection) { a in
+    // L3 holds the two navigations as well as L5 and L9, measured on both simulators: their
+    // reference without L5 and L9 allowed every navigation and no load arrived, as SPEC-349's
+    // `nav-self` reads without L5 (the rule list refuses the document load).
+    cards.append(scripted("script-nav", held: [.L3, .L5, .L9], alone: nil, .connection) { a in
         "let tries = 0; const go = () => { tries += 1; location.assign('\(a.under("script-nav"))/1');"
             + " if (tries < 5) { setTimeout(go, 200); } }; setTimeout(go, 0);"
     })
-    cards.append(scripted("script-form", held: [.L5, .L9], alone: nil, .path) { a in
+    cards.append(scripted("script-form", held: [.L3, .L5, .L9], alone: nil, .path) { a in
         "const form = document.createElement('form'); form.method = 'post';"
             + " form.action = '\(a.under("script-form"))/1'; document.body.appendChild(form);"
             + " setTimeout(() => form.submit(), 0);"
     })
-    cards.append(scripted("script-open", held: [.L6], alone: .L6, .window) { a in
+    // L5 holds the window as well as L6, measured on both simulators: its reference without L6
+    // created no window, removing L6 alone opened nothing, and SPEC-349's `nav-blank` creates one
+    // only with both removed.
+    cards.append(scripted("script-open", held: [.L5, .L6], alone: nil, .window) { a in
         "setTimeout(() => window.open('\(a.under("script-open"))/1'), 0);"
     })
     cards.append(scripted("webrtc-stun", held: [.L8], alone: .L8, .datagram) { a in
@@ -366,7 +372,10 @@ private func scriptedCards() -> [Scripted] {
         "const frame = document.createElement('iframe'); frame.title = 'blank'; document.body.appendChild(frame);"
             + " const inner = frame.contentWindow; \(peer("inner", stun(a)))"
     })
-    cards.append(scripted("webrtc-srcdoc-frame", held: [.L8], alone: .L8, .datagram) { a in
+    // L5 holds the `srcdoc` frame as well as L8, measured on both simulators: its reference
+    // without L8 sent nothing with its marker set, and removing L5 alone, with no L8 built, sent a
+    // datagram. The gate cancels the frame's own navigation, so its script never runs.
+    cards.append(scripted("webrtc-srcdoc-frame", held: [.L5, .L8], alone: nil, .datagram) { a in
         "const frame = document.createElement('iframe'); frame.title = 'srcdoc';"
             + " frame.srcdoc = \"<script>\(peer("window", stun(a)))<\\/script>\"; document.body.appendChild(frame);"
     })
@@ -390,7 +399,8 @@ private func scriptedCards() -> [Scripted] {
             + " try { answers.prompt = String(prompt('card', '')); } catch (error) { answers.prompt = error.name; }"
             + " document.documentElement.dataset.record = JSON.stringify(answers);"
     })
-    // Depth, as `dialog` is.
+    // Depth, as `dialog` is. Its reference is blind, measured on both simulators: the card's
+    // document has no `navigator.mediaDevices`, so no capture request is made (BLIND_SCRIPTED).
     cards.append(scripted("capture", held: [.L6], alone: nil, .granted) { _ in
         "const note = (value) => { document.documentElement.dataset.record = JSON.stringify({ capture: value }); };"
             + " note('pending'); if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {"
@@ -404,10 +414,18 @@ private func scriptedCards() -> [Scripted] {
 /// UNOBSERVABLE there, and the run prints it.
 let ABSENT_ALLOWED: Set<String> = ["webtransport"]
 
+/// The scripted cards whose reference is blind, counted and pinned from the measurement on both
+/// simulators: the reference reached nothing, and no held set can open it. A7 asserts its blind
+/// set equals this one and prints the count, so a new blind reference, or this one opening, reads
+/// red. `capture`: the card's document has no `navigator.mediaDevices`, so L6's capture arm is
+/// never asked in the probe.
+let BLIND_SCRIPTED: Set<String> = ["capture"]
+
 /// The declared set of controls with no scripted channel of their own: removing one alone, every
-/// other control on, opens nothing (predicted; A10 measures it). L6 opens `script-open` and L8
-/// every peer connection; L3 and L9 share every load, L5 and L9 every navigation.
-let DEPTH_SCRIPTED: Set<CardLayer> = [.L1, .L3, .L4, .L5, .L7, .L9]
+/// other control on, opens nothing (A10 measures it). L8 opens every peer connection but the
+/// `srcdoc` frame's, which L5 also holds; L3 and L9 share every load, L3, L5 and L9 every
+/// navigation, and L5 and L6 the window, as measured on both simulators.
+let DEPTH_SCRIPTED: Set<CardLayer> = [.L1, .L3, .L4, .L5, .L6, .L7, .L9]
 
 /// SPEC-355 R10: the lookup card. A static and a script-added `dns-prefetch`, and a script's
 /// fetch, each of a `.local` name whose first label is the card's id and whose second only this

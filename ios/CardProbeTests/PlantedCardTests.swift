@@ -681,7 +681,9 @@ final class PlantedCardTests: XCTestCase {
         XCTAssertEqual(reached, [], "scripted cards that reached their probe from the scripted view")
         XCTAssertEqual(opened, [:], "scripted cards whose scripted view reached a listener")
         XCTAssertEqual(notRun, [], "scripted cards whose script did not run in the scripted view, so their absence proves nothing")
-        XCTAssertEqual(blind, [], "scripted cards whose reference reached nothing: a blind reference")
+        // No reference is blind but the pinned residual, counted and printed.
+        print("blind scripted references: \(blind.count) \(blind.sorted()), pinned \(BLIND_SCRIPTED.count) \(BLIND_SCRIPTED.sorted())")
+        XCTAssertEqual(Set(blind), BLIND_SCRIPTED, "scripted cards whose reference reached nothing, against the pinned BLIND_SCRIPTED")
         XCTAssertTrue(absentCards.isSubset(of: ABSENT_ALLOWED), "cards whose reference reads the interface absent: \(absentCards.sorted())")
     }
 
@@ -717,6 +719,7 @@ final class PlantedCardTests: XCTestCase {
         // main frame or any frame a card makes.
         XCTAssertEqual(left, [:], "peer-connection cards whose scripted view sent a datagram or opened a connection")
         XCTAssertEqual(notRun, [], "peer-connection cards whose script did not run in the scripted view, so their zero proves nothing")
+        print("blind peer-connection references: \(blind.count) \(blind.sorted())")
         XCTAssertEqual(blind, [], "peer-connection cards whose reference sent nothing, so the scripted view's zero proves nothing")
         XCTAssertTrue(absentCards.isSubset(of: ABSENT_ALLOWED), "cards whose reference reads the interface absent: \(absentCards.sorted())")
     }
