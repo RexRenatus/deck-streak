@@ -27,7 +27,11 @@ const ENGINE: &str = "crates/ingest/src/engine.rs";
 /// CLOSED and holds files, never a crate: admitting a whole crate would let any file in it name the
 /// engine's crate, and narrowing the census to the server crates would let a new one fall out
 /// silently. Every listed path is asserted present in the census's sources.
-const ENGINE_PORTS: [(&str, &str); 1] = [("crates/engine-core/src/dispatch.rs", "SPEC-345")];
+const ENGINE_PORTS: [(&str, &str); 3] = [
+    ("crates/engine-core/src/dispatch.rs", "SPEC-345"),
+    ("crates/engine-core/src/face.rs", "SPEC-348"),
+    ("crates/engine-core/src/media.rs", "SPEC-348"),
+];
 /// The skip's write module: beside the port, the one file that may name the write port.
 const SKIP_WRITE: &str = "crates/ingest/src/skip_write.rs";
 /// The engine's crate, as code names a path into it.
@@ -317,6 +321,16 @@ fn only_the_skip_write_reaches_an_engine_write_or_a_push() {
         planted.path(),
         "crates/engine-core/src/dispatch.rs",
         "use anki::backend::Backend;\nfn sneak(col: &mut Collection) {\n    col.update_card(&mut card);\n}\n",
+    );
+    plant(
+        planted.path(),
+        "crates/engine-core/src/face.rs",
+        "use anki::collection::Collection;\n",
+    );
+    plant(
+        planted.path(),
+        "crates/engine-core/src/media.rs",
+        "use anki::collection::Collection;\n",
     );
     let refused = census(planted.path());
     examined("planted source file(s)", refused.sources.clone());
