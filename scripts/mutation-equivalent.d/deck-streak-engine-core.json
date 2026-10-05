@@ -1,0 +1,13 @@
+{
+  "records": [
+    {
+      "file": "crates/engine-core/src/login_guard.rs",
+      "mutant": "delete field kind from struct BackendError expression in check",
+      "anchor": "kind: Kind::InvalidInput.into(),",
+      "reason": "INVALID_INPUT is 0 in backend.proto, the proto3 default, so deleting the field leaves the same value.",
+      "evidence": "check builds BackendError with ..BackendError::default(), and the default kind is the enum's zero, INVALID_INPUT. A proto3 scalar at its default is not encoded, so the bytes with the field and without it are equal, and no test can tell the two apart.",
+      "reached_by": "login_guard::a3_the_guard_admits_https_and_loopback_http_alone",
+      "issue": "#625"
+    }
+  ]
+}

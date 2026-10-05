@@ -1,0 +1,240 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S34300-A-410-IS-GONE",
+        "push",
+        "src/apns.rs",
+        "        410 => Sent::Gone {\n            since: timestamp(answer),\n        },",
+        "        410 => Sent::RetryLater {\n            after: answer.retry_after,\n        },",
+        "apns::a5_a_410_reports_the_device_gone_with_its_timestamp",
+        "APNs's 410 reports the device gone; read as try later, the device would be sent to again and never dropped (SPEC-343 A5)"
+      ],
+      [
+        "S34301-GONE-CARRIES-APPLES-TIMESTAMP",
+        "push",
+        "src/apns.rs",
+        "            since: timestamp(answer),",
+        "            since: None,",
+        "apns::a5_a_410_reports_the_device_gone_with_its_timestamp",
+        "a gone device carries the timestamp APNs gave; dropped, the caller could not tell a token re-registered since from one still gone (SPEC-343 A5)"
+      ],
+      [
+        "S34302-A-REFUSED-DEVICE-TOKEN-IS-NOT-RETRIED",
+        "push",
+        "src/apns.rs",
+        "        400 if refuses_the_device(answer) => Sent::Rejected(Refusal::Token),",
+        "        400 if refuses_the_device(answer) => Sent::RetryLater { after: None },",
+        "apns::a6_a_refused_device_token_is_never_retried",
+        "a 400 naming the device token is a refusal of the token; read as try later, the same refused request would be sent again (SPEC-343 A6)"
+      ],
+      [
+        "S34303-AN-EXPIRED-PROVIDER-TOKEN-IS-RESENT",
+        "push",
+        "src/apns.rs",
+        "            if !expired(&answer) {",
+        "            if !expired(&answer) || answer.status.is_client_error() {",
+        "apns::a4_an_expired_provider_token_is_reminted_once_and_resent",
+        "an answer refusing the provider token as expired earns one resend with a fresh token; without it the call fails on a token the sender could renew (SPEC-343 A4)"
+      ],
+      [
+        "S34304-ONE-RESEND-AT-MOST",
+        "push",
+        "src/apns.rs",
+        "const RESENDS: u32 = 1;",
+        "const RESENDS: u32 = 2;",
+        "apns::a4_an_expired_provider_token_is_reminted_once_and_resent",
+        "one call resends at most once after an expired-token answer; a second resend would repeat a request APNs keeps refusing (SPEC-343 A4)"
+      ],
+      [
+        "S34305-NO-TOKEN-INSIDE-THE-REMINT-FLOOR",
+        "push",
+        "src/apns.rs",
+        "const REMINT_FLOOR: Duration = Duration::from_mins(20);",
+        "const REMINT_FLOOR: Duration = Duration::from_mins(0);",
+        "apns::a_young_token_is_not_reminted_on_an_expired_answer",
+        "a refused token younger than twenty minutes is not reminted, since APNs refuses tokens asked for more often; with no floor a young refusal would mint again (SPEC-343 R3)"
+      ],
+      [
+        "S34306-THE-TOKEN-IS-RENEWED-BEFORE-THE-HOUR",
+        "push",
+        "src/apns.rs",
+        "const REFRESH_AGE: Duration = Duration::from_mins(45);",
+        "const REFRESH_AGE: Duration = Duration::from_mins(60);",
+        "apns::a3_the_provider_token_is_reused_inside_its_window_and_reminted_after",
+        "the provider token is renewed at 45 minutes; at 60 it would reach the age APNs refuses (SPEC-343 A3)"
+      ],
+      [
+        "S34307-IAT-IS-THE-CLOCKS-SECOND",
+        "push",
+        "src/apns.rs",
+        "\"iat\": now.epoch_millis().div_euclid(1000)",
+        "\"iat\": 0",
+        "apns::a2_the_provider_token_is_an_es256_jwt_the_fake_verifies",
+        "the provider token's iat is the clock's epoch second; a fixed zero would read as a token minted long ago (SPEC-343 A2)"
+      ],
+      [
+        "S34308-THE-HEADER-NAMES-THE-KEY",
+        "push",
+        "src/apns.rs",
+        "json!({\"alg\": \"ES256\", \"kid\": self.key_id})",
+        "json!({\"alg\": \"ES256\"})",
+        "apns::a2_the_provider_token_is_an_es256_jwt_the_fake_verifies",
+        "the provider token's header carries kid, the signing key's id; without it APNs cannot pick the key to verify with (SPEC-343 A2)"
+      ],
+      [
+        "S34309-THE-EXPIRY-ADDS-THE-TIME-TO-LIVE",
+        "push",
+        "src/apns.rs",
+        "    let seconds = i64::try_from(time_to_live.as_secs()).unwrap_or(i64::MAX);",
+        "    let seconds = 0_i64;",
+        "apns::a1_an_alert_reaches_the_fake_with_its_path_headers_and_body",
+        "apns-expiration is the clock's second plus the time to live; without the time to live APNs would drop an undelivered alert at once (SPEC-343 A1)"
+      ],
+      [
+        "S34310-A-4096-BYTE-PAYLOAD-IS-SENT",
+        "push",
+        "src/apns.rs",
+        "        if body.len() > PAYLOAD_MAX {",
+        "        if body.len() >= PAYLOAD_MAX {",
+        "apns::a8_an_oversize_payload_is_refused_before_any_request",
+        "a payload of exactly 4096 bytes is APNs's limit and is sent; at or above it refused would drop an alert APNs accepts (SPEC-343 A8)"
+      ],
+      [
+        "S34311-EACH-DEVICE-REACHES-ITS-OWN-ENVIRONMENT",
+        "push",
+        "src/apns.rs",
+        "            Environment::Development => &self.development,",
+        "            Environment::Development => &self.production,",
+        "apns::a9_each_device_reaches_its_own_environment_only",
+        "a development build's device is sent to the development service; sent to production, its token would be refused there (SPEC-343 A9)"
+      ],
+      [
+        "S34312-A-404-IS-GONE-TOO",
+        "push",
+        "src/web_push.rs",
+        "        404 | 410 => Sent::Gone { since: None },",
+        "        410 => Sent::Gone { since: None },",
+        "web_push::a14_a_404_or_410_reports_the_subscription_gone",
+        "a push service's 404 reports the subscription gone as a 410 does; read as a refused request, a dead subscription would be kept (SPEC-343 A14)"
+      ],
+      [
+        "S34313-A-3993-BYTE-PLAINTEXT-IS-SENT",
+        "push",
+        "src/web_push.rs",
+        "        if plaintext.len() > PLAINTEXT_MAX {",
+        "        if plaintext.len() >= PLAINTEXT_MAX {",
+        "web_push::a17_an_oversize_plaintext_is_refused_before_any_request",
+        "a plaintext of exactly 3993 bytes fills one 4096-byte record and is sent; at or above it refused would drop a message that fits (SPEC-343 A17)"
+      ],
+      [
+        "S34314-THE-VAPID-TOKEN-LIVES-UNDER-A-DAY",
+        "push",
+        "src/web_push.rs",
+        "const VAPID_LIFETIME: Duration = Duration::from_hours(12);",
+        "const VAPID_LIFETIME: Duration = Duration::from_hours(25);",
+        "web_push::a12_the_vapid_header_carries_a_jwt_the_fake_verifies_with_k",
+        "the VAPID token's exp is twelve hours ahead; past a day a push service may refuse it (SPEC-343 A12)"
+      ],
+      [
+        "S34315-AUD-IS-THE-ENDPOINTS-ORIGIN",
+        "push",
+        "src/web_push.rs",
+        "let token = self.vapid_token(subscription.origin.as_str(), self.clock.now())?;",
+        "let token = self.vapid_token(subscription.endpoint.as_str(), self.clock.now())?;",
+        "web_push::a12_the_vapid_header_carries_a_jwt_the_fake_verifies_with_k",
+        "the VAPID token's aud is the endpoint's origin; the whole endpoint would carry the path and fail the push service's check (SPEC-343 A12)"
+      ],
+      [
+        "S34316-TTL-IS-SENT-WHEN-ZERO",
+        "push",
+        "src/web_push.rs",
+        "        request = request.header(\"ttl\", notification.time_to_live().as_secs());",
+        "        if !notification.time_to_live().is_zero() {\n            request = request.header(\"ttl\", notification.time_to_live().as_secs());\n        }",
+        "web_push::a13_ttl_urgency_and_topic_carry_the_expiry_and_the_collapse_key",
+        "TTL is required, so a message that lives no time is sent with TTL 0; left out, the push service would refuse the request (SPEC-343 A13)"
+      ],
+      [
+        "S34317-THE-COLLAPSE-KEY-REACHES-TOPIC",
+        "push",
+        "src/web_push.rs",
+        "            request = request.header(\"topic\", key.as_str());",
+        "            let _ = key;",
+        "web_push::a13_ttl_urgency_and_topic_carry_the_expiry_and_the_collapse_key",
+        "a collapse key is sent as Topic, so a newer message replaces an undelivered older one; left out, both would be delivered (SPEC-343 A13)"
+      ],
+      [
+        "S34318-RETRY-AFTER-IS-CARRIED",
+        "push",
+        "src/web_push.rs",
+        "            after: answer.retry_after,",
+        "            after: None,",
+        "web_push::a15_try_later_answers_carry_retry_after_and_are_not_retried",
+        "a try-later answer carries the push service's Retry-After to the caller; dropped, the caller could retry sooner than asked (SPEC-343 A15)"
+      ],
+      [
+        "S34319-AN-ENDPOINT-OFF-THE-LIST-IS-REFUSED",
+        "push",
+        "src/origin.rs",
+        "        self.0.contains(origin)",
+        "        !origin.as_str().is_empty()",
+        "web_push::a16_an_endpoint_off_the_list_is_refused_before_any_request",
+        "a subscription whose endpoint is off the list of push services is refused before any request; admitting every origin would post to any host (SPEC-343 A16)"
+      ],
+      [
+        "S34320-PLAIN-HTTP-REACHES-LOOPBACK-ONLY",
+        "push",
+        "src/origin.rs",
+        "    host.eq_ignore_ascii_case(\"localhost\")",
+        "    !host.is_empty()",
+        "origin::a10_an_origin_is_https_or_loopback_http_and_nothing_more",
+        "an http origin is admitted only to a loopback host; admitting every host would let a request leave in clear text (SPEC-343 A10)"
+      ],
+      [
+        "S34321-AN-ERROR-BODY-IS-READ-TO-ITS-BOUND",
+        "push",
+        "src/client.rs",
+        "pub(crate) const ERROR_BODY_LIMIT: usize = 4096;",
+        "pub(crate) const ERROR_BODY_LIMIT: usize = usize::MAX;",
+        "apns::an_oversize_error_body_is_not_read_past_its_bound",
+        "an error body is read to its bound and no further; with no bound a push service could make the sender read without end (SPEC-343 R9)"
+      ],
+      [
+        "S34322-THE-LOG-LINE-HOLDS-NO-DEVICE-TOKEN",
+        "push",
+        "src/apns.rs",
+        "        tracing::info!(sender = \"apns\", outcome = sent.name(), \"push answered\");",
+        "        tracing::info!(sender = \"apns\", outcome = sent.name(), token = device.token.as_str(), \"push answered\");",
+        "logging::a18_no_log_line_carries_a_token_an_endpoint_or_a_path",
+        "the call's log line is built from the outcome alone; with the device token in it, a log reader could address the device (SPEC-343 A18)"
+      ],
+      [
+        "S34323-DEBUG-HOLDS-NO-SIGNING-KEY",
+        "push",
+        "src/jwt.rs",
+        "        formatter.debug_struct(\"Signer\").finish_non_exhaustive()",
+        "        formatter.debug_struct(\"Signer\").field(\"key\", &self.key.to_bytes()).finish_non_exhaustive()",
+        "debug::a19_debug_holds_no_key_token_or_endpoint",
+        "the signer's Debug names its type and holds no key; printing the scalar would put the signing key in any log of a sender (SPEC-343 A19)"
+      ],
+      [
+        "S34324-A-COLLAPSE-KEY-IS-32-CHARACTERS-AT-MOST",
+        "push",
+        "src/lib.rs",
+        "            && text.len() <= COLLAPSE_KEY_MAX",
+        "            && text.len() <= COLLAPSE_KEY_MAX + 1",
+        "web_push::a_collapse_key_past_32_characters_is_refused",
+        "a collapse key is at most 32 characters, which both APNs and Topic accept; a 33rd would be refused by a push service (SPEC-343 R6)"
+      ],
+      [
+        "S34325-CALLS-REFUSED-TOGETHER-MINT-ONE-TOKEN",
+        "push",
+        "src/apns.rs",
+        "        if let Some(current) = held.as_ref().filter(|held| held.text != refused.text) {",
+        "        if let Some(current) = held.as_ref().filter(|_| false) {",
+        "apns::two_calls_refused_together_mint_one_token",
+        "a call whose refused token was already replaced by a call refused alongside reuses that token; minting again would renew more often than APNs allows (SPEC-343 R3)"
+      ]
+    ]
+  }
+}

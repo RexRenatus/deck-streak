@@ -207,3 +207,17 @@ ADR pinned, on rusqlite 0.39's SQLite line (ADR-348).
 | `getrandom-wasm-js` | `a75d4c146d724e5e9fcd18aefae0e9bb77f016d0` | getrandom draws randomness from `crypto.getRandomValues` on wasm32 | getrandom picks a browser backend by default |
 | `native-only-log-file` | `42539da45e22fdf9c764740e020c3db621989038` | `tracing-appender` does not build for wasm32, and a browser has no log file | `tracing-appender` builds for wasm32 again |
 | `browser-tls` | `c538de55a23e695234e794029fce0dafff2d36a9` | the rustls custom-certificate path uses reqwest calls wasm32 lacks | upstream gates that path per target |
+
+## Amendment: the FSRS-7 crate's source (SPEC-342)
+
+`allow-git` names three sources, no longer exactly two. Beside the fork and `rust-url`, it admits
+the upstream scheduler's repository, `open-spaced-repetition/fsrs-rs`: its development line is the
+only source of FSRS-7, by ADR-338 and ADR-353 D1. `unknown-git = "deny"` still refuses any other
+source. The engine's own scheduler stays the released crate from the registry, as this ADR left
+it: only the isolated scheduler crate, `crates/fsrs7`, takes the git package, at the one full
+revision ADR-353 records.
+
+This amends the list in "The sources" above and nothing else: the fork, its patch and the pin rule
+stand. Vendoring the scheduler's source into the tree, which would have kept `allow-git` at two
+sources, was rejected in ADR-353 D1, because the copy is re-synced by hand and the lockfile records
+no provenance for it. SPEC-055's R3 and A1 point here.

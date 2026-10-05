@@ -20,9 +20,10 @@ pub struct Call {
     pub name: &'static str,
 }
 
-/// The allow-list: open a collection, list its decks, get the next card, answer it, undo, and
-/// render a card (SPEC-339 R10), a call that reads the card and writes nothing.
-pub const ALLOW_LIST: [Call; 6] = [
+/// The allow-list: open a collection, list its decks, get the next card, answer it, undo,
+/// render a card (SPEC-339 R10), a call that reads the card and writes nothing, and log in to a
+/// sync server (SPEC-347 R1), whose endpoint the core guards before the engine sees it.
+pub const ALLOW_LIST: [Call; 7] = [
     Call {
         service: 3,
         method: 0,
@@ -52,6 +53,11 @@ pub const ALLOW_LIST: [Call; 6] = [
         service: 27,
         method: 6,
         name: "CardRenderingService.RenderExistingCard",
+    },
+    Call {
+        service: 1,
+        method: 3,
+        name: "BackendSyncService.SyncLogin",
     },
 ];
 
