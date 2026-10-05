@@ -1,0 +1,82 @@
+# The harness's Xcode project, generated in CI by a pinned, digest-checked XcodeGen and never
+# committed (SPEC-339 R1, ADR-350). Build settings live in Config/Harness.xcconfig; the Info.plist
+# and the privacy manifest are committed files this spec points at, never generated.
+name: Harness
+options:
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+configs:
+  Debug: debug
+  Release: release
+configFiles:
+  Debug: Config/Harness.xcconfig
+  Release: Config/Harness.xcconfig
+packages:
+  EnginePackage:
+    path: EnginePackage
+  HarnessWire:
+    path: HarnessWire
+targets:
+  Harness:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Harness/Sources
+      - path: Harness/PrivacyInfo.xcprivacy
+        buildPhase: resources
+      # The synthetic collection CI writes with this commit's engine; git ignores it.
+      - path: Harness/Resources
+        buildPhase: resources
+        optional: true
+    dependencies:
+      - package: EnginePackage
+        product: DeckStreakFFI
+      - package: HarnessWire
+    settings:
+      base:
+        INFOPLIST_FILE: Harness/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_STRICT_CONCURRENCY: complete
+  HarnessTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: HarnessTests
+    dependencies:
+      - target: Harness
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: $(DS_APP_ID).tests
+        TARGETED_DEVICE_FAMILY: "1,2"
+  HarnessUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: HarnessUITests
+    dependencies:
+      - target: Harness
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: $(DS_APP_ID).uitests
+        TARGETED_DEVICE_FAMILY: "1,2"
+schemes:
+  Harness:
+    build:
+      targets:
+        Harness: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - HarnessTests
+        - HarnessUITests
+    archive:
+      config: Release

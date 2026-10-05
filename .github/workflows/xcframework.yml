@@ -10,6 +10,11 @@ name: xcframework
 # a pull request into dev that changes the adapter, the lockfile or this workflow, and on a
 # dispatch. No secret is used, the token is read-only, and every action is pinned by its full
 # commit SHA.
+#
+# The Swift harness (SPEC-339 R11, R12, ADR-350): the `xcframework` job also writes the synthetic
+# collection with this commit's engine; `harness-wire` runs the codec's tests on the host; and
+# `harness` links the framework, the bindings and the collection of THIS run into the app, runs its
+# tests on one iPhone and one iPad simulator, measures, and uploads its report and result bundles.
 on:
   pull_request:
     branches: [dev]
@@ -18,6 +23,7 @@ on:
       - "crates/ffi/**"
       - "Cargo.lock"
       - ".github/workflows/xcframework.yml"
+      - "ios/**"
   workflow_dispatch:
 
 permissions:
@@ -103,6 +109,13 @@ jobs:
             echo "$dir typechecks"
           done
           echo pass > "$REPORT/consumer"
+      - name: the harness's synthetic collection, written by this commit's engine
+        run: |
+          export PROTOC="$RUNNER_TEMP/protoc/bin/protoc"
+          started=$(date +%s)
+          cargo run --locked -p deck-streak-ffi --example harness-fixture -- harness-fixture
+          echo "$(( $(date +%s) - started ))" > "$REPORT/fixture-seconds"
+          ls -l harness-fixture
       - name: the report
         if: ${{ always() }}
         run: |
@@ -120,6 +133,7 @@ jobs:
               ("Swift bindings, library mode", minutes("bindgen-seconds")),
               ("modulemap names no builtin clang module", read("modulemap") or "not measured"),
               ("generated Swift typechecks against each slice", read("consumer") or "not measured"),
+              ("the harness's synthetic collection, host build", minutes("fixture-seconds")),
           ]
           for line in read("slices").splitlines():
               path, size = line.rsplit(" ", 1)
@@ -145,4 +159,333 @@ jobs:
             DeckStreakFFI.xcframework/
             bindings/
             xcframework-report/
+            harness-fixture/
+          if-no-files-found: warn
+
+  harness-wire:
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      REPORT: ${{ github.workspace }}/harness-wire-report
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: the codec's tests, on the host
+        run: |
+          set -o pipefail
+          mkdir -p "$REPORT"
+          swift test --package-path ios/HarnessWire 2>&1 | tee "$REPORT/swift-test.log"
+      - name: the codec's mutants, each against its one killer
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, re, subprocess, sys
+
+          package = pathlib.Path("ios/HarnessWire")
+          rows = json.loads((package / "swift-mutants.json").read_text())["mutants"]
+          report = pathlib.Path(os.environ["REPORT"])
+          print(f"examined {len(rows)} mutant row(s)")
+          if not rows:
+              sys.exit("examined 0 mutant rows: nothing was judged")
+
+          def run(killer):
+              """The killer alone: cases started, cases failed, the outermost count, the exit."""
+              selector = "^" + re.escape(killer) + "$"
+              done = subprocess.run(
+                  ["swift", "test", "--package-path", str(package), "--filter", selector],
+                  capture_output=True, text=True)
+              out = done.stdout + done.stderr
+              started = len(re.findall(r"^Test Case '.*' started\.$", out, re.M))
+              failed = len(re.findall(r"^Test Case '.*' failed \(", out, re.M))
+              executed = re.findall(r"Executed (\d+) tests?, with", out)
+              return started, failed, (executed[-1] if executed else "none"), done.returncode
+
+          lines = ["| id | verdict | why |", "|---|---|---|"]
+          bad = 0
+          baseline = {}
+          for killer in sorted({row["killer"] for row in rows}):
+              started, failed, executed, code = run(killer)
+              baseline[killer] = started == 1 and failed == 0 and executed == "1" and code == 0
+              print(f"unmutated {killer}: {started} started, {failed} failed, "
+                    f"Executed {executed}, exit {code}")
+          for row in rows:
+              path = package / row["file"]
+              original = path.read_bytes()
+              digest = hashlib.sha256(original).hexdigest()
+              text = original.decode()
+              if not baseline[row["killer"]]:
+                  verdict = "VOID: its killer is not green on one test unmutated"
+              elif text.count(row["find"]) != 1:
+                  verdict = f"VOID: its find occurs {text.count(row['find'])} times"
+              else:
+                  try:
+                      path.write_text(text.replace(row["find"], row["replace"], 1))
+                      started, failed, executed, code = run(row["killer"])
+                  finally:
+                      path.write_bytes(original)
+                  if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+                      verdict = "VOID: the file was not restored byte for byte"
+                  elif started == 1 and failed == 1 and code != 0:
+                      verdict = "KILLED"
+                  elif started == 1 and failed == 0 and code == 0:
+                      verdict = "SURVIVED"
+                  else:
+                      verdict = (f"VOID: {started} started, {failed} failed, "
+                                 f"exit {code}, so the killer did not judge it")
+              bad += verdict != "KILLED"
+              print(f"{row['id']}: {verdict}")
+              lines.append(f"| {row['id']} | {verdict} | {row['why']} |")
+          lines.append("")
+          lines.append(f"{len(rows) - bad} of {len(rows)} killed; {bad} survived or void")
+          (report / "sweep.md").write_text("\n".join(lines) + "\n")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write("\n".join(lines) + "\n")
+          sys.exit(1 if bad else 0)
+          PY
+      - name: upload the codec's report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: harness-wire
+          path: harness-wire-report/
+          if-no-files-found: warn
+
+  harness:
+    needs: xcframework
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      REPORT: ${{ github.workspace }}/harness-report
+      RESULTS: ${{ github.workspace }}/harness-results
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      # One iPhone and one iPad the runner image holds, on the default Xcode's simulator runtime.
+      IPHONE_SIM: "iPhone 17"
+      IPAD_SIM: "iPad (A16)"
+      SIM_OS: "26.5"
+      # The project generator, pinned by its release and the digest of its archive.
+      XCODEGEN_VERSION: "2.46.0"
+      XCODEGEN_DIGEST: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: this run's XCFramework, bindings and synthetic collection
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: xcframework
+          path: engine-artifact
+      - name: place the framework, the bindings and the collection
+        run: |
+          mkdir -p "$REPORT" "$RESULTS" ios/EnginePackage/Sources/DeckStreakFFI ios/Harness/Resources
+          cp -R engine-artifact/DeckStreakFFI.xcframework ios/EnginePackage/
+          cp engine-artifact/bindings/deck_streak_ffi.swift ios/EnginePackage/Sources/DeckStreakFFI/
+          cp engine-artifact/harness-fixture/collection.anki2 ios/Harness/Resources/
+      - name: XcodeGen, checksum-verified
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/xcodegen.zip" "https://github.com/yonaskolb/XcodeGen/releases/download/${XCODEGEN_VERSION}/xcodegen.zip"
+          echo "$XCODEGEN_DIGEST  $RUNNER_TEMP/xcodegen.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP"
+      - name: the project, generated
+        run: |
+          "$RUNNER_TEMP/xcodegen/bin/xcodegen" generate --spec ios/project.yml
+      - name: the tests, Debug, on the iPhone and then the iPad
+        run: |
+          started=$(date +%s)
+          # The measurement class runs in the Release step alone, where its figures are read.
+          xcodebuild test -project ios/Harness.xcodeproj -scheme Harness -configuration Debug \
+            -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
+            -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" \
+            -disable-concurrent-destination-testing \
+            -skip-testing:HarnessUITests/HarnessMeasureTests \
+            -derivedDataPath "$RUNNER_TEMP/debug" \
+            -resultBundlePath "$RESULTS/debug.xcresult" \
+            CODE_SIGNING_ALLOWED=NO
+          echo "$(( $(date +%s) - started ))" > "$REPORT/debug-seconds"
+      - name: the measurements, Release, on the iPhone and then the iPad
+        run: |
+          started=$(date +%s)
+          xcodebuild test -project ios/Harness.xcodeproj -scheme Harness -configuration Release \
+            -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
+            -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" \
+            -disable-concurrent-destination-testing \
+            -only-testing:HarnessUITests/HarnessMeasureTests \
+            -derivedDataPath "$RUNNER_TEMP/release" \
+            -resultBundlePath "$RESULTS/release.xcresult" \
+            ONLY_ACTIVE_ARCH=YES \
+            CODE_SIGNING_ALLOWED=NO
+          echo "$(( $(date +%s) - started ))" > "$REPORT/release-seconds"
+      - name: the Release app, built alone
+        run: |
+          # A test build copies the unit test bundle and XCTest's frameworks into the app it hosts,
+          # so the size and the imports are read from an app built with no test action.
+          xcodebuild build -project ios/Harness.xcodeproj -scheme Harness -configuration Release \
+            -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
+            -derivedDataPath "$RUNNER_TEMP/release-app" \
+            ONLY_ACTIVE_ARCH=YES \
+            CODE_SIGNING_ALLOWED=NO
+      - name: the Release app's size
+        run: |
+          app="$RUNNER_TEMP/release-app/Build/Products/Release-iphonesimulator/Harness.app"
+          find "$app" -type f -exec stat -f %z {} + | awk '{ total += $1 } END { print total }' > "$REPORT/app-bytes"
+          stat -f %z "$app/Harness" > "$REPORT/executable-bytes"
+          cat "$REPORT/app-bytes" "$REPORT/executable-bytes"
+      - name: the required-reason symbols the Release executable imports, against the manifest
+        run: |
+          nm -u "$RUNNER_TEMP/release-app/Build/Products/Release-iphonesimulator/Harness.app/Harness" > "$REPORT/imports"
+          python3 - <<'PY'
+          import os, pathlib, plistlib
+          report = pathlib.Path(os.environ["REPORT"])
+          # Apple's required-reason APIs a C import names, by category.
+          categories = {
+              "NSPrivacyAccessedAPICategoryFileTimestamp": {
+                  "_stat", "_fstat", "_fstatat", "_lstat", "_getattrlist", "_getattrlistbulk",
+                  "_fgetattrlist", "_getattrlistat",
+              },
+              "NSPrivacyAccessedAPICategorySystemBootTime": {"_mach_absolute_time"},
+              "NSPrivacyAccessedAPICategoryDiskSpace": {"_statfs", "_statvfs", "_fstatfs", "_fstatvfs"},
+              "NSPrivacyAccessedAPICategoryUserDefaults": {"_OBJC_CLASS_$_NSUserDefaults"},
+          }
+          imported = {line.strip() for line in (report / "imports").read_text().splitlines()}
+          used = {name: sorted(symbols & imported) for name, symbols in categories.items()}
+          used = {name: symbols for name, symbols in used.items() if symbols}
+          manifest = plistlib.loads(pathlib.Path("ios/Harness/PrivacyInfo.xcprivacy").read_bytes())
+          declared = {entry["NSPrivacyAccessedAPIType"] for entry in manifest["NSPrivacyAccessedAPITypes"]}
+          lines = [f"used {name}: {', '.join(symbols)}" for name, symbols in sorted(used.items())]
+          lines += [f"declared {name}" for name in sorted(declared)]
+          undeclared = sorted(set(used) - declared)
+          lines += [f"UNDECLARED {name}" for name in undeclared]
+          lines += [f"declared and not imported {name}" for name in sorted(declared - set(used))]
+          (report / "symbols").write_text("\n".join(lines) + "\n")
+          print("\n".join(lines))
+          raise SystemExit(1 if undeclared else 0)
+          PY
+      - name: the report
+        if: ${{ always() }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, statistics, subprocess
+          report = pathlib.Path(os.environ["REPORT"])
+          results = pathlib.Path(os.environ["RESULTS"])
+          report.mkdir(parents=True, exist_ok=True)
+          simulators = [os.environ["IPHONE_SIM"], os.environ["IPAD_SIM"]]
+          def read(name):
+              path = report / name
+              return path.read_text().strip() if path.is_file() else ""
+          def minutes(name):
+              seconds = read(name)
+              return f"{int(seconds) / 60:.1f} minutes" if seconds else "not measured"
+          def tool(*arguments):
+              done = subprocess.run(["xcrun", "xcresulttool", "get", "test-results", *arguments],
+                                    capture_output=True, text=True)
+              return json.loads(done.stdout) if done.returncode == 0 and done.stdout.strip() else None
+          def cases_in(label):
+              """Every test case one bundle holds, each case's details written beside the report."""
+              bundle = results / f"{label}.xcresult"
+              tests = tool("tests", "--path", str(bundle)) if bundle.exists() else None
+              if tests is None:
+                  return []
+              (report / f"{label}-tests.json").write_text(json.dumps(tests, indent=1))
+              cases = []
+              def walk(node):
+                  if node.get("nodeType") == "Test Case":
+                      cases.append(node)
+                  for child in node.get("children", []):
+                      walk(child)
+              for node in tests.get("testNodes", []):
+                  walk(node)
+              for case in cases:
+                  details = tool("test-details", "--test-id", case.get("nodeIdentifier", ""),
+                                 "--path", str(bundle))
+                  if details is not None:
+                      name = case.get("nodeIdentifier", "").replace("/", "-")
+                      (report / f"details-{label}-{name}.json").write_text(json.dumps(details, indent=1))
+              return cases
+          def per_simulator(case):
+              """A case's result on each simulator it ran on, or its one result."""
+              devices = [child for child in case.get("children", []) if child.get("nodeType") == "Device"]
+              if not devices:
+                  return str(case.get("result"))
+              return "; ".join(f"{device.get('name')}: {device.get('result')}" for device in devices)
+          def measured(node, device=None):
+              """(simulator, metric, unit, values) for every metric a bundle holds, read without
+              trusting one schema: a `device` names the simulator its subtree ran on."""
+              if isinstance(node, list):
+                  for item in node:
+                      yield from measured(item, device)
+              elif isinstance(node, dict):
+                  if isinstance(node.get("device"), dict):
+                      device = node["device"].get("deviceName", device)
+                  values = node.get("measurements")
+                  if isinstance(values, list) and values and all(
+                          isinstance(value, (int, float)) for value in values):
+                      name = " ".join(str(node.get(key, "")) for key in ("displayName", "identifier"))
+                      yield device, name.strip(), node.get("unitOfMeasurement", ""), values
+                  for key, value in node.items():
+                      if key != "measurements":
+                          yield from measured(value, device)
+          debug_cases = cases_in("debug")
+          release_cases = cases_in("release")
+          release = results / "release.xcresult"
+          metrics = tool("metrics", "--path", str(release)) if release.exists() else None
+          found = []
+          if metrics is not None:
+              (report / "release-metrics.json").write_text(json.dumps(metrics, indent=1))
+              found = list(measured(metrics))
+          # Section 7's figures: a launch takes the median of its passes, memory the largest.
+          figures = [
+              ("M1 launch to first responsive frame, median", statistics.median,
+               lambda name: "applaunch" in name.lower() or "applicationlaunch" in name.lower()),
+              ("M1 open to deck list (signpost), median", statistics.median,
+               lambda name: "open-to-deck-list" in name),
+              ("M2 peak physical memory, largest", max,
+               lambda name: "memory" in name.lower() and "peak" in name.lower()),
+          ]
+          rows = [
+              ("tests, Debug, both simulators", minutes("debug-seconds")),
+              ("measurements, Release, both simulators", minutes("release-seconds")),
+              ("Release app bytes", read("app-bytes") or "not measured"),
+              ("Release executable bytes", read("executable-bytes") or "not measured"),
+          ]
+          for simulator in simulators:
+              for label, pick, wanted in figures:
+                  hits = [(unit, values) for device, name, unit, values in found
+                          if device and (simulator in device or device in simulator) and wanted(name)]
+                  value = "not measured"
+                  if hits:
+                      unit, values = hits[0]
+                      value = f"{pick(values):g} {unit} (of {len(values)} passes)"
+                  rows.append((f"{label}, {simulator}", value))
+          lines = [
+              "`xcframework.yml`'s `harness` job:",
+              "",
+              "| measure | measured |",
+              "|---|---|",
+          ] + [f"| {name} | {value} |" for name, value in rows]
+          lines += ["", "| test | result |", "|---|---|"]
+          for label, cases in (("Debug", debug_cases), ("Release", release_cases)):
+              lines += [f"| {label} `{c.get('nodeIdentifier')}` | {per_simulator(c)} |" for c in cases]
+              if not cases:
+                  lines.append(f"| {label}: no test result was read | not measured |")
+          if found:
+              lines += ["", "| simulator | metric | unit | passes |", "|---|---|---|---|"]
+              lines += [f"| {device} | {name} | {unit} | {', '.join(f'{value:g}' for value in values)} |"
+                        for device, name, unit, values in found]
+          symbols = read("symbols")
+          if symbols:
+              lines += ["", "Required-reason imports against the privacy manifest:", "", "```", symbols, "```"]
+          text = "\n".join(lines) + "\n"
+          (report / "report.md").write_text(text)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("## Swift harness (SPEC-339)\n\n" + text)
+          print(text)
+          PY
+      - name: upload the report and the result bundles
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: harness
+          path: |
+            harness-report/
+            harness-results/
           if-no-files-found: warn
