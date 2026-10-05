@@ -1023,6 +1023,21 @@ fn a_push_that_cannot_start_answers_push_failed_and_moves_nothing() {
     });
     let before = scene.bytes();
     let (skip, answer) = scene.take(digest, unopenable);
+    assert!(
+        matches!(
+            answer,
+            TakeAnswer::Failed {
+                reason: FailReason::PushFailed,
+                ..
+            }
+        ),
+        "a push that cannot start answers push_failed: {answer:?}"
+    );
+    assert_eq!(
+        scene.state(skip),
+        SkipState::Failed(FailReason::PushFailed),
+        "the take is recorded as failed at the push"
+    );
     scene.wrote_nothing(skip, &answer, FailReason::PushFailed, &before);
     assert_eq!(scene.pushed(), Vec::new(), "no request carried a card");
 }
