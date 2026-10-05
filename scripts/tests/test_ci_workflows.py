@@ -42,6 +42,13 @@ THIS_REPOSITORY = "RexRenatus/deck-streak"
 # runner holds. The admission is by the workflow's file name, so the same runner under any other
 # name is refused, and this workflow on any other runner is refused.
 ADMITTED_RUNNERS = {"xcframework.yml": "macos-26"}
+# The jobs admitted to that runner by file and job (SPEC-352 R15, ADR-363): each TestFlight lane's
+# `app` job archives, signs and uploads the app, which only a macOS runner can. The lane's plan
+# job, a job of the same name in any other file, and the job on any other runner are refused.
+ADMITTED_JOB_RUNNERS = {
+    ("testflight-internal.yml", "app"): "macos-26",
+    ("testflight-release.yml", "app"): "macos-26",
+}
 # A pull request into main, as the github context presents it; each test changes what it needs.
 INTO_MAIN = {
     "github.event_name": "pull_request",
@@ -87,11 +94,16 @@ CACHE_BY_THEMSELVES = (
 )
 
 
-def admitted_runner(name):
+def admitted_runner(name, job=None):
     """The pattern every runner of the workflow `name` must match: a pinned Ubuntu image (SPEC-002
-    A9), or, for the one workflow ADMITTED_RUNNERS names, its one runner exactly (SPEC-336 R9)."""
+    A9), or, for the one workflow ADMITTED_RUNNERS names, its one runner exactly (SPEC-336 R9), or,
+    for a job ADMITTED_JOB_RUNNERS names by file and job, its one runner exactly (SPEC-352 R15).
+    `job` is the job whose own `runs-on` the runner is, or None for a value placed anywhere else,
+    which only the file's own admission or the Ubuntu pattern can admit."""
     if name in ADMITTED_RUNNERS:
         return f"^{re.escape(ADMITTED_RUNNERS[name])}$"
+    if (name, job) in ADMITTED_JOB_RUNNERS:
+        return f"^{re.escape(ADMITTED_JOB_RUNNERS[name, job])}$"
     return r"^ubuntu-\d\d\.\d\d$"
 
 
@@ -142,10 +154,12 @@ class WorkflowsAreHardened(unittest.TestCase):
             workflow = read_hardened(path)
             code = re.sub(r"(?m)#.*$", "", workflow_file_text(path))
             self.assertNotIn("pull_request_target", code, path.name)
-            runners += [(path.name, runner) for runner in entries(workflow, "runs-on")]
-        for name, runner in examined("runs-on values", runners):
+            # Every `runs-on` the workflow holds, each beside the job it is the own runner of, or
+            # None when it sits anywhere else, so a nested one is judged as no job's (SPEC-352 R15).
+            runners += [(path.name, job, runner) for runner, job in placed_runners(workflow)]
+        for name, job, runner in examined("runs-on values", runners):
             # A list or a mapping of labels is read as its text, so the pattern refuses it by name.
-            self.assertRegex(str(runner), admitted_runner(name), f"{name} runs on {runner}")
+            self.assertRegex(str(runner), admitted_runner(name, job), f"{name} runs on {runner}")
 
     def test_the_admitted_runner_is_admitted_to_its_one_workflow_only(self):
         # SPEC-336 R9: the admitted workflow passes on its runner and is refused on any other, and
@@ -157,6 +171,58 @@ class WorkflowsAreHardened(unittest.TestCase):
             for other in ("planted.yml", "ci.yml", name.replace(".yml", ".yaml"), f"x{name}"):
                 self.assertNotRegex(admitted, admitted_runner(other))
         self.assertRegex("ubuntu-24.04", admitted_runner("ci.yml"))
+
+    def test_the_macos_runner_is_admitted_to_the_lane_app_jobs_only(self):
+        # SPEC-352 A22 (R15; ADR-363): the macOS image is admitted by file and job to the two
+        # lanes' `app` jobs, and refused on a lane's `plan` job, on a job named `app` in another
+        # file, and to a lane's `app` job on any other image. Every `runs-on` sits in a job, so the
+        # runner test, judging each by its job, judges every one.
+        lanes = ("testflight-internal.yml", "testflight-release.yml")
+        runner = ADMITTED_RUNNERS["xcframework.yml"]
+        for path in examined("workflow files", self.files):
+            workflow = read_hardened(path)
+            jobs = workflow.get("jobs")
+            placed = [
+                job["runs-on"]
+                for job in (jobs if isinstance(jobs, dict) else {}).values()
+                if isinstance(job, dict) and "runs-on" in job
+            ]
+            self.assertEqual(placed, entries(workflow, "runs-on"), path.name)
+        for lane in examined("lane files", lanes):
+            jobs = load(lane)["jobs"]
+            self.assertEqual((jobs.get("app") or {}).get("runs-on"), runner, lane)
+            self.assertNotEqual(jobs["plan"].get("runs-on"), runner, lane)
+        texts = {lane: workflow_file_text(WORKFLOWS / lane) for lane in lanes}
+        app, plan = f"    runs-on: {runner}\n", "    runs-on: ubuntu-24.04\n"
+        internal = texts[lanes[0]]
+        self.assertEqual((internal.count(app), internal.count(plan)), (1, 1))
+        plants = {
+            "the two lanes": (texts, None),
+            "a plan job on the macOS image": (
+                {lanes[0]: internal.replace(plan, app)},
+                f"{lanes[0]} runs on {runner}",
+            ),
+            "an app job in another file": (
+                {"planted.yml": internal},
+                f"planted.yml runs on {runner}",
+            ),
+            "an app job on another image": (
+                {lanes[0]: internal.replace(app, "    runs-on: macos-15\n")},
+                f"{lanes[0]} runs on macos-15",
+            ),
+        }
+        test = "test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger"
+        for label, (files, refusal) in examined("planted runners", list(plants.items())):
+            with self.subTest(label), tempfile.TemporaryDirectory() as scratch:
+                for name, text in files.items():
+                    (Path(scratch) / name).write_text(text, encoding="utf-8")
+                case = WorkflowsAreHardened(test)
+                case.files = workflow_files(Path(scratch))
+                if refusal is None:
+                    case.test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger()
+                    continue
+                with self.assertRaisesRegex(AssertionError, re.escape(refusal) + "$"):
+                    case.test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger()
 
     def test_ci_runs_every_stage_of_the_local_gate(self):
         stages = STAGES.search((REPO / "scripts" / "check.sh").read_text()).group(1).split()
@@ -457,6 +523,122 @@ class WorkflowsAreHardened(unittest.TestCase):
             with self.subTest(form), self.assertRaisesRegex(AssertionError, why):
                 planted_problems(text)
 
+    def test_the_lanes_credential_reads_are_admitted_and_no_other(self):
+        # SPEC-352 A21 (R14; ADR-363): the lanes' reads are admitted by file, job and step, each
+        # part in the steps that use it, and every other shape, planted at run time from the live
+        # lane text, is refused by name. Each secret's name is read from the live preflight step
+        # and every problem is compared with each name replaced by its role word, so no message
+        # here carries one.
+        lanes = ("testflight-internal.yml", "testflight-release.yml")
+        parts = ("KEY", "KEYID", "ISSUER", "CERTIFICATE", "PASSWORD", "PROFILE")
+        reads = {
+            "preflight": set(parts),
+            "sign": {"CERTIFICATE", "PASSWORD", "PROFILE"},
+            "upload": {"KEY", "KEYID", "ISSUER"},
+        }
+        problems, judged = secret_and_checkout_problems(WORKFLOWS)
+        self.assertEqual(len(problems), 0, "a live workflow reads a secret the admission refuses")
+        roles = {}
+        for lane in examined("lane files", lanes):
+            steps = (load(lane)["jobs"].get("app") or {}).get("steps") or []
+            ids = {f"{lane}:jobs.app.steps[{n}]": step.get("id") for n, step in enumerate(steps)}
+            found = {}
+            for where, expression in judged["expressions"]:
+                variable = re.fullmatch(r"(.*\])\.env\.(\w+)", where)
+                for each in secret_reads(expression) if where.startswith(f"{lane}:") else []:
+                    step = ids.get(variable.group(1)) if variable else where
+                    found.setdefault(step, set()).add(variable.group(2) if variable else where)
+                    if step == "preflight":
+                        roles[each.removeprefix("reads the secret ")] = variable.group(2)
+            self.assertEqual(found, reads, lane)
+        self.assertEqual(sorted(roles.values()), sorted(parts))
+        secret = {role: name for name, role in roles.items()}
+
+        def masked(found):
+            return sorted(
+                re.sub(
+                    r"reads the secret (\S+)",
+                    lambda match: f"reads the {roles.get(match.group(1), 'unadmitted')} part",
+                    each,
+                )
+                for each in found
+            )
+
+        def value(part):
+            return f"${{{{ secrets.{secret[part]} }}}}"
+
+        lane = lanes[0]
+        text = workflow_file_text(WORKFLOWS / lane)
+        jobs = load(lane)["jobs"]
+        at = {step.get("id"): n for n, step in enumerate(jobs["app"]["steps"])}
+        planned = len(jobs["plan"]["steps"]) - 1
+        every = [
+            f"jobs.app.steps[{at[step]}].env.{part}: reads the {part} part"
+            for step, found in reads.items()
+            for part in found
+        ]
+        plan_run = "        run: python3 scripts/ios_lane.py plan --lane internal\n"
+        call = "    uses: $/.github/workflows/xcframework.yml\n"
+        upload_key = f"          KEY: {value('KEY')}\n"
+        job_variable = "      LANE: ${{ needs.plan.outputs.lane }}\n"
+        sign_run = "        run: python3 scripts/ios_lane.py sign\n"
+        plants = {
+            "the lane as it is": (lane, "", "", []),
+            "a read in the plan job": (
+                lane,
+                plan_run,
+                f"        env:\n          KEY: {value('KEY')}\n{plan_run}",
+                [f"jobs.plan.steps[{planned}].env.KEY: reads the KEY part"],
+            ),
+            "the lane's reads in a third file": ("planted.yml", "", "", every),
+            "a lane a pull request starts": (
+                lane,
+                "on:\n  workflow_dispatch:\n",
+                "on:\n  workflow_dispatch:\n  pull_request:\n",
+                every,
+            ),
+            "the upload step reading the certificate": (
+                lane,
+                upload_key,
+                f"{upload_key}          CERTIFICATE: {value('CERTIFICATE')}\n",
+                [f"jobs.app.steps[{at['upload']}].env.CERTIFICATE: reads the CERTIFICATE part"],
+            ),
+            # The base checker already refuses these two shapes: MUTATION COVERAGE.
+            "every secret passed to the call": (
+                lane,
+                call,
+                f"{call}    secrets: inherit\n",
+                ["jobs.framework.secrets: passes every secret to the workflow it calls"],
+            ),
+            "a secret passed to the call": (
+                lane,
+                call,
+                f"{call}    secrets:\n      KEY: {value('KEY')}\n",
+                ["jobs.framework.secrets.KEY: reads the KEY part"],
+            ),
+            "a read in the app job's own variables": (
+                lane,
+                job_variable,
+                f"      KEY: {value('KEY')}\n{job_variable}",
+                ["jobs.app.env.KEY: reads the KEY part"],
+            ),
+            "a read in a script": (
+                lane,
+                sign_run,
+                f'        run: python3 scripts/ios_lane.py sign "{value("PASSWORD")}"\n',
+                [f"jobs.app.steps[{at['sign']}].run: reads the PASSWORD part"],
+            ),
+        }
+        for label, (name, old, new, refused) in examined("planted reads", list(plants.items())):
+            with self.subTest(label), tempfile.TemporaryDirectory() as scratch:
+                if old:
+                    self.assertEqual(text.count(old), 1)
+                (Path(scratch) / name).write_text(
+                    text.replace(old, new) if old else text, encoding="utf-8"
+                )
+                found, _judged = secret_and_checkout_problems(Path(scratch))
+                self.assertEqual(masked(found), sorted(f"{name}:{each}" for each in refused))
+
     def test_this_repositorys_token_and_checkout_are_admitted(self):
         problems, judged = secret_and_checkout_problems(PLANTED / "admitted")
         self.assertEqual(problems, [])
@@ -555,9 +737,15 @@ class WorkflowsAreHardened(unittest.TestCase):
                 if isinstance(job, dict) and "uses" in job:
                     found.append((path.name, job_id, job["uses"]))
         body = "$/.github/workflows/xcframework.yml"
+        # The two TestFlight lanes call the same body as their framework job (SPEC-352 R2).
         self.assertEqual(
             sorted(found),
-            [("apple-on-change.yml", "apple", body), ("apple-on-tag.yml", "apple", body)],
+            [
+                ("apple-on-change.yml", "apple", body),
+                ("apple-on-tag.yml", "apple", body),
+                ("testflight-internal.yml", "framework", body),
+                ("testflight-release.yml", "framework", body),
+            ],
         )
         # The pin test, run by name over planted directories as the test above runs it.
         control = workflow_file_text(PLANTED_HARDENING / "hardened.yml")
@@ -1806,6 +1994,27 @@ def marked_uses(workflow, path=()):
         ]
     if isinstance(workflow, list):
         return [found for item in workflow for found in marked_uses(item, path + (None,))]
+    return []
+
+
+def placed_runners(workflow, path=()):
+    """Every value a read workflow holds under `runs-on`, in exactly `entries`' order, each beside
+    the id of the job it is the own runner of (the value at `jobs.<id>.runs-on`, nothing deeper),
+    or None for a value anywhere else (SPEC-352 R15). The place decides, never the text, so a
+    runner nested inside a job is admitted only as no job's."""
+    if isinstance(workflow, dict):
+        return [
+            found
+            for name, item in workflow.items()
+            for found in (
+                [(item, path[1] if len(path) == 2 and path[0] == "jobs" else None)]
+                if name == "runs-on"
+                else []
+            )
+            + placed_runners(item, path + (name,))
+        ]
+    if isinstance(workflow, list):
+        return [found for item in workflow for found in placed_runners(item, path + (None,))]
     return []
 
 
@@ -3262,6 +3471,46 @@ PLANTED_BLOCK_LINES = {
 # (group 2), or the context whole, which names no secret: `toJSON(secrets)`, `secrets.*`, or an
 # index computed at run time.
 SECRET = re.compile(r"(?<![\w.-])secrets(?![\w-])(?:\.([A-Za-z_][\w-]*)|\['([^']*)'\])?", re.I)
+# The one table of admitted secret reads (owner ruling #668; SPEC-352 R14; ADR-363): each
+# TestFlight lane's `app` job reads each part of the credential only in the step that uses it, by
+# the step's id, in that step's own variable: the preflight as a presence test, the signing and
+# upload steps as the value. Every other read stays a problem, and so does every read of a lane
+# that a pull request or another workflow's run starts (UNADMITTED_TRIGGERS).
+ADMITTED_SECRETS = {
+    (lane, "app", step): frozenset(reads)
+    for lane in ("testflight-internal.yml", "testflight-release.yml")
+    for step, reads in (
+        (
+            "preflight",
+            (
+                "secrets.TESTFLIGHT_UPLOAD_KEY",
+                "secrets.TESTFLIGHT_UPLOAD_KEY_ID",
+                "secrets.TESTFLIGHT_UPLOAD_ISSUER_ID",
+                "secrets.IOS_DIST_CERTIFICATE",
+                "secrets.IOS_DIST_CERTIFICATE_PASSWORD",
+                "secrets.IOS_PROVISIONING_PROFILE",
+            ),
+        ),
+        (
+            "sign",
+            (
+                "secrets.IOS_DIST_CERTIFICATE",
+                "secrets.IOS_DIST_CERTIFICATE_PASSWORD",
+                "secrets.IOS_PROVISIONING_PROFILE",
+            ),
+        ),
+        (
+            "upload",
+            (
+                "secrets.TESTFLIGHT_UPLOAD_KEY",
+                "secrets.TESTFLIGHT_UPLOAD_KEY_ID",
+                "secrets.TESTFLIGHT_UPLOAD_ISSUER_ID",
+            ),
+        ),
+    )
+}
+# The triggers under which no read is admitted: a pull request's code, or another run's.
+UNADMITTED_TRIGGERS = ("pull_request", "pull_request_target", "workflow_run")
 # A command that clones a repository, and a git command given a URL: one with a scheme, or git's
 # scp-like form, `user@host:path`, or `host:path` whose host is a dotted name. A refspec, such as
 # `main:refs/heads/main` or `v1.0:refs/tags/v1.0`, names no host.
@@ -3391,6 +3640,39 @@ def secret_reads(expression):
     return found
 
 
+def admitted_secret_places(name, workflow):
+    """{place: the secrets admitted there} for the workflow file `name`, each place a variable of
+    a step's own `env` that ADMITTED_SECRETS names by file, job and step id, spelt as `strings`
+    places it. A workflow whose `on`, read as a mapping, a list or one name, holds any of
+    UNADMITTED_TRIGGERS has no admitted place."""
+    on = workflow.get("on")
+    triggers = on if isinstance(on, (dict, list)) else [on]
+    if any(str(trigger) in UNADMITTED_TRIGGERS for trigger in triggers):
+        return {}
+    places = {}
+    jobs = workflow.get("jobs")
+    for job_id, job in (jobs if isinstance(jobs, dict) else {}).items():
+        if not isinstance(job, dict):
+            continue
+        for where, step in steps_in(job.get("steps"), f"jobs.{job_id}.steps"):
+            step_id = step.get("id") if isinstance(step, dict) else None
+            admitted = (
+                ADMITTED_SECRETS.get((name, job_id, step_id)) if isinstance(step_id, str) else None
+            )
+            if admitted is not None and isinstance(step.get("env"), dict):
+                places.update({f"{where}.env.{key}": admitted for key in step["env"]})
+    return places
+
+
+def admitted_read(admitted, text, expression):
+    """Whether the read in `expression`, the value `text` holds, is admitted: at an admitted
+    place, the value exactly that one expression, and the expression `secrets.<NAME>` or
+    `secrets.<NAME> != ''` for a secret admitted there. Any other form is not admitted."""
+    if admitted is None or text != f"${{{{ {expression} }}}}":
+        return False
+    return expression.removesuffix(" != ''") in admitted
+
+
 def commands(script):
     """A run script's commands, one per line: a line continued with a backslash is joined to the
     next, and each command's whitespace is collapsed."""
@@ -3469,10 +3751,12 @@ def git_variables(text):
 
 
 def secret_and_checkout_problems(directory):
-    """Every read of a secret other than GITHUB_TOKEN, every `secrets: inherit`, and every checkout,
-    clone or fetch of another repository in the workflows of `directory`, each named by its file
-    and its place, with what was judged: (problems, {population: [...]}). Every step of a job is
-    judged, a step inside a `parallel` block at any depth included, and a checkout whose inputs are
+    """Every read of a secret other than GITHUB_TOKEN and other than a read ADMITTED_SECRETS admits
+    (one whole `${{ secrets.<NAME> }}` or `${{ secrets.<NAME> != '' }}` value in a step's own env),
+    every `secrets: inherit`, and every checkout, clone or fetch of another repository in the
+    workflows of `directory`, each named by its file and its place, with what was judged:
+    (problems, {population: [...]}). Every step of a job is judged, a step inside a `parallel`
+    block at any depth included, and a checkout whose inputs are
     not a mapping is a problem, as `step_inputs` says. A clone or a fetch is read in every string
     the workflow holds, not only a run step's script. A shell that is not a built-in keyword, git
     configured from the environment, and an environment the checker cannot read are problems too,
@@ -3489,9 +3773,12 @@ def secret_and_checkout_problems(directory):
         except Unread as unread:
             workflow, refused = unread.workflow, unread.refused
         problems += [f"{path.name}:{why}" for why in refused]
+        admitted = admitted_secret_places(path.name, workflow)
         for where, text in strings(workflow):
             for expression in expressions_in(text):
                 judged["expressions"].append((f"{path.name}:{where}", expression))
+                if admitted_read(admitted.get(where), text, expression):
+                    continue
                 problems += [f"{path.name}:{where}: {read}" for read in secret_reads(expression)]
         problems += defaults_problems(workflow.get("defaults"), f"{path.name}:defaults")
         problems += environment_problems(workflow.get("env"), f"{path.name}:env")
@@ -6338,6 +6625,15 @@ DYNAMIC_IMPORTS = {
             "test_sync_ban",
             "failregexes",
             "configparser.ConfigParser(interpolation=configparser.BasicInterpolation(), inline_comment_prefixes=';')",
+            1,
+        ),
+    ),
+    **allowed(
+        "decompresses the image data of the icon a production script writes, to compare its pixels (SPEC-352 A24); bytes in and bytes out, and it imports, runs and reads nothing",
+        (
+            "test_ios_icon",
+            "WhatAnUploadNeeds.test_the_generated_icon_is_an_opaque_square_with_no_text",
+            "zlib.decompress(idat)",
             1,
         ),
     ),
