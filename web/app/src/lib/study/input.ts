@@ -108,7 +108,7 @@ export class StudyInput {
   }
 
   #intent(intent: Intent | null): void {
-    const action = intent === null ? null : resolve(intent, this.#target.side());
+    const action = intent && resolve(intent, this.#target.side());
     if (action === null) return;
     this.#target.act(action);
     this.#target.focus();
