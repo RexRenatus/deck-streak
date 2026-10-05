@@ -1,7 +1,7 @@
 // The Worker's session (SPEC-338 R3 to R6, ADR-348): the protocol's operations only, the tab lock
 // first, then the storage, then the engine.
 import { parseRequest } from './protocol';
-import type { ErrorCode, Opened, Reply, Request, Snapshot } from './protocol';
+import type { CardView, Deck, ErrorCode, Head, Opened, Reply, Request, Snapshot } from './protocol';
 
 /** The Web Lock that holds one collection per origin. */
 export const LOCK = 'deck-streak-collection';
@@ -12,7 +12,8 @@ export type LockAnswer = 'held' | 'busy' | 'unsupported';
 /** The module's exports, as `wasm-bindgen` writes them for `crates/web-engine/src/wasm.rs`. */
 export interface EngineModule {
   install_storage(): Promise<number>;
-  init(): void;
+  /** The engine's languages, in order; with none, the engine speaks English. */
+  init(languages: string[]): void;
   open(): string;
   close(): void;
   seed(count: number): number;
@@ -22,6 +23,13 @@ export interface EngineModule {
   snapshot(card: bigint): string;
   last_panic(): string | undefined;
   memory_pages(): number;
+  /** The review's exports (SPEC-350 R2, R3): JSON, with each id as a decimal string. */
+  deck_tree(): string;
+  set_current_deck(deck: bigint): void;
+  current_card(): string;
+  rate(card: bigint, rating: number, ms: number): void;
+  bury(card: bigint): void;
+  flag(card: bigint): number;
 }
 
 /** The bytes in one page of a module's linear memory. */
@@ -51,6 +59,26 @@ function toSnapshot(row: string): Snapshot | null {
   return { id: BigInt(id), queue, type, due, interval, reps, lapses };
 }
 
+/** A deck as the engine writes it: its id as a decimal string, so no id loses a digit. */
+interface DeckJson extends Omit<Deck, 'id' | 'children'> {
+  id: string;
+  children: DeckJson[];
+}
+
+/** The deck tree with each id as a bigint. */
+function toDeck(deck: DeckJson): Deck {
+  return { ...deck, id: BigInt(deck.id), children: deck.children.map(toDeck) };
+}
+
+/** The card view with its id as a bigint. */
+function toHead(text: string): Head {
+  const head = JSON.parse(text) as { counts: Head['counts']; card: (Omit<CardView, 'id'> & { id: string }) | null };
+  return { counts: head.counts, card: head.card === null ? null : { ...head.card, id: BigInt(head.card.id) } };
+}
+
+/** The prefix of the module's refusal of a card other than the one it showed. */
+const NOT_SHOWN = 'not-shown:';
+
 /** One Worker's session over one collection. It answers one request at a time, in order; it
  * takes the Web Lock before the storage and the storage before the engine, so a second tab and
  * a refused storage each answer by name with no engine loaded. */
@@ -77,15 +105,15 @@ export class Session {
     if (!('request' in parsed)) return refuse(parsed.id, 'bad-request', parsed.message);
     const request = parsed.request;
     if (this.#ended !== null) return refuse(request.id, this.#ended.code, this.#ended.why);
-    if (request.op === 'open') return this.#open(request.id);
+    if (request.op === 'open') return this.#open(request.id, request.languages ?? []);
     if (!this.#opened) return refuse(request.id, 'not-open', `${request.op} before open`);
     return this.#run(request.id, (engine) => this.#call(engine, request));
   }
 
-  async #open(id: number): Promise<Reply> {
+  async #open(id: number, languages: string[]): Promise<Reply> {
     if (this.#opened) return refuse(id, 'bad-request', 'the collection is already open');
     if (this.#engine === null) {
-      const ended = await this.#start(id);
+      const ended = await this.#start(id, languages);
       if (ended !== null) return ended;
     }
     return this.#run(id, (engine) => {
@@ -95,8 +123,8 @@ export class Session {
     });
   }
 
-  /** The lock, then the storage, then the module, its pool and its engine. */
-  async #start(id: number): Promise<Reply | null> {
+  /** The lock, then the storage, then the module, its pool and its engine, in `languages`. */
+  async #start(id: number, languages: string[]): Promise<Reply | null> {
     const lock = await this.#deps.lock(LOCK);
     if (lock === 'busy') return this.#end(id, 'collection-busy', 'another tab holds the collection');
     if (lock === 'unsupported') {
@@ -116,7 +144,7 @@ export class Session {
       return this.#end(id, 'storage-refused', describe(error));
     }
     try {
-      engine.init();
+      engine.init(languages);
     } catch (error) {
       return this.#end(id, 'engine-failed', this.#explain(engine, error));
     }
@@ -136,7 +164,8 @@ export class Session {
   }
 
   /** Runs an engine call. An error the engine returns leaves the session as it was; a trap spends
-   * the module, so the session ends. */
+   * the module, so the session ends. The module's refusal of a card it did not show answers
+   * `not-shown` (SPEC-350 R2). */
   #run(id: number, call: (engine: EngineModule) => unknown): Reply {
     const engine = this.#engine as EngineModule;
     try {
@@ -144,7 +173,7 @@ export class Session {
     } catch (error) {
       const why = this.#explain(engine, error);
       if (error instanceof WebAssembly.RuntimeError) return this.#end(id, 'engine-failed', why);
-      return refuse(id, 'engine-failed', why);
+      return refuse(id, why.startsWith(NOT_SHOWN) ? 'not-shown' : 'engine-failed', why);
     }
   }
 
@@ -163,6 +192,21 @@ export class Session {
         return null;
       case 'memory':
         return engine.memory_pages() * PAGE_BYTES;
+      case 'decks':
+        return (JSON.parse(engine.deck_tree()) as DeckJson[]).map(toDeck);
+      case 'study':
+        engine.set_current_deck(request.deck);
+        return null;
+      case 'card':
+        return toHead(engine.current_card());
+      case 'rate':
+        engine.rate(request.card, request.rating, request.ms);
+        return null;
+      case 'bury':
+        engine.bury(request.card);
+        return null;
+      case 'flag':
+        return engine.flag(request.card);
       default:
         engine.close();
         this.#opened = false;

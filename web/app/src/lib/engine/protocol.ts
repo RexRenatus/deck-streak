@@ -2,8 +2,24 @@
 // a request with an id and an operation; the Worker answers each with that id and a value, or with
 // an error code and a message. Nothing else crosses: no SQL, no service index, no engine handle.
 
-/** The operations the Worker serves, and nothing else. */
-export const OPS = ['open', 'seed', 'next', 'answer', 'undo', 'snapshot', 'memory', 'close'] as const;
+/** The operations the Worker serves, and nothing else. The last six are the review's (SPEC-350 R4):
+ * the deck list, the current deck, the card view, and a rating, bury or flag of the shown card. */
+export const OPS = [
+  'open',
+  'seed',
+  'next',
+  'answer',
+  'undo',
+  'snapshot',
+  'memory',
+  'close',
+  'decks',
+  'study',
+  'card',
+  'rate',
+  'bury',
+  'flag'
+] as const;
 export type Op = (typeof OPS)[number];
 
 /** Why the Worker refused a request. */
@@ -12,16 +28,20 @@ export type ErrorCode =
   | 'collection-busy'
   | 'storage-refused'
   | 'engine-failed'
-  | 'not-open';
+  | 'not-open'
+  | 'not-shown';
 
 /** A wire rating, as Anki's buttons number the answers: again, hard, good, easy. */
 export type Rating = 1 | 2 | 3 | 4;
 
 export type Request =
-  | { id: number; op: 'open' | 'next' | 'undo' | 'memory' | 'close' }
+  | { id: number; op: 'open'; languages?: string[] }
+  | { id: number; op: 'next' | 'undo' | 'memory' | 'close' | 'decks' | 'card' }
   | { id: number; op: 'seed'; count: number }
   | { id: number; op: 'answer'; rating: Rating; ms: number }
-  | { id: number; op: 'snapshot'; card: bigint };
+  | { id: number; op: 'snapshot' | 'bury' | 'flag'; card: bigint }
+  | { id: number; op: 'study'; deck: bigint }
+  | { id: number; op: 'rate'; card: bigint; rating: Rating; ms: number };
 
 /** A request as the page writes it; the client numbers it. */
 export type Body = Request extends infer R ? (R extends Request ? Omit<R, 'id'> : never) : never;
@@ -43,6 +63,43 @@ export interface Snapshot {
   lapses: number;
 }
 
+/** One deck of the engine's deck tree, with today's counts. */
+export interface Deck {
+  id: bigint;
+  name: string;
+  level: number;
+  new: number;
+  learning: number;
+  review: number;
+  children: Deck[];
+}
+
+/** The queue's new, learning and review counts. */
+export interface Counts {
+  new: number;
+  learning: number;
+  review: number;
+}
+
+/** The card the review shows: both sides rendered by the engine with sound and speech tags
+ * stripped, the note type's CSS, the four interval labels and the engine's undo label. */
+export interface CardView {
+  id: bigint;
+  ordinal: number;
+  flag: number;
+  question: string;
+  answer: string;
+  css: string;
+  labels: string[];
+  undo: string;
+}
+
+/** What `card` answers: the queue's counts, and the card it shows, or `null` when the deck is done. */
+export interface Head {
+  counts: Counts;
+  card: CardView | null;
+}
+
 export type Reply =
   | { id: number; ok: true; value: unknown }
   | { id: number | null; ok: false; code: ErrorCode; message: string };
@@ -54,17 +111,35 @@ const U32 = 2 ** 32 - 1;
 const I64 = 2n ** 63n - 1n;
 const whole = (value: unknown, least: number, most: number) =>
   Number.isSafeInteger(value) && (value as number) >= least && (value as number) <= most;
+/** An engine id: a positive i64, carried as a bigint. */
+const engineId = (value: unknown) => typeof value === 'bigint' && value >= 1n && value <= I64;
+/** A language tag as the engine names its languages: `ja`, `zh-CN`. */
+const TAG = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/;
+/** At most this many languages, in the order the engine prefers them. */
+const LANGUAGES = 8;
+const languages = (value: unknown) =>
+  value === undefined ||
+  (Array.isArray(value) &&
+    value.length >= 1 &&
+    value.length <= LANGUAGES &&
+    value.every((tag) => typeof tag === 'string' && TAG.test(tag)));
 
 /** Each operation's arguments, and the test each must pass: the engine's own types bound them. */
 const ARGS: Record<Op, Record<string, (value: unknown) => boolean>> = {
-  open: {},
+  open: { languages },
   next: {},
   undo: {},
   memory: {},
   close: {},
+  decks: {},
+  card: {},
   seed: { count: (value) => whole(value, 1, U32) },
   answer: { rating: (value) => whole(value, 1, 4), ms: (value) => whole(value, 0, U32) },
-  snapshot: { card: (value) => typeof value === 'bigint' && value >= 1n && value <= I64 }
+  snapshot: { card: engineId },
+  study: { deck: engineId },
+  rate: { card: engineId, rating: (value) => whole(value, 1, 4), ms: (value) => whole(value, 0, U32) },
+  bury: { card: engineId },
+  flag: { card: engineId }
 };
 
 /** Reads a request off the wire. Anything but an operation of `OPS` with exactly its arguments,
