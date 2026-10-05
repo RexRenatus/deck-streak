@@ -587,6 +587,7 @@ class LaneCredential(unittest.TestCase):
                 "the profile was not issued for the imported certificate",
             ),
         ]
+        self.step("clean")
         for case, changes, message in examined("refused profiles", refused):
             with self.subTest(case=case):
                 self.values["PROFILE"] = self.profile(**changes)

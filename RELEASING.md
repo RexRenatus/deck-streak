@@ -128,7 +128,8 @@ the workspace version, and its build number is `main`'s first-parent count at th
 `app` job waits for the owner's review in the release environment before it reads any credential.
 
 Each lane reads the upload credential only from its own GitHub environment, and only in the steps
-that use it (ADR-363). "Stopped before the upload" means the credential is not placed: with none of
+that use it (ADR-363). The certificate and the profile are each placed as the base64 text of the
+file's bytes. "Stopped before the upload" means the credential is not placed: with none of
 its six parts in the lane's environment, a run builds the app unsigned, writes "stopped before the
 upload: the credential is not placed" to its summary, and succeeds, having signed and uploaded
 nothing. A run with some parts placed fails and names each missing part by its role.
