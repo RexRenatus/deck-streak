@@ -2,6 +2,7 @@
 
 use anki::backend::{Backend, init_backend};
 
+use crate::login_guard;
 use crate::table::{Decision, Transport, decide};
 
 /// The one read of a card the page may make: its scheduling fields, by id (moved from the web
@@ -9,6 +10,9 @@ use crate::table::{Decision, Transport, decide};
 const SNAPSHOT_SQL: &str = "select id, queue, type, due, ivl, reps, lapses from cards where id = ?";
 /// The note count the web engine's `open` reports.
 const NOTE_COUNT_SQL: &str = "select count() from notes";
+/// The engine's sync login, `BackendSyncService.SyncLogin`: the one admitted call whose request
+/// the core reads, to guard its endpoint (SPEC-347 R2).
+const SYNC_LOGIN: (u32, u32) = (1, 3);
 
 /// One running engine on one transport. An adapter starts one and reaches the engine only through
 /// it; the backend is never handed out.
@@ -70,13 +74,18 @@ impl Dispatcher {
     ///
     /// [`Refusal::NeedsGesture`] for an exempt write, [`Refusal::NotAllowed`] for every other pair
     /// this transport may not make, and [`Refusal::Engine`] when the engine answers an admitted
-    /// call with an error.
+    /// call with an error, or when the login guard refuses a sync login's endpoint in the
+    /// engine's own error shape before the engine sees it (SPEC-347 R2).
     pub fn run(&self, service: u32, method: u32, input: &[u8]) -> Result<Vec<u8>, Refusal> {
         match decide(self.transport, service, method) {
-            Decision::Admit => self
-                .backend
-                .run_service_method(service, method, input)
-                .map_err(|error| Refusal::Engine { error }),
+            Decision::Admit => {
+                if (service, method) == SYNC_LOGIN {
+                    login_guard::check(input).map_err(|error| Refusal::Engine { error })?;
+                }
+                self.backend
+                    .run_service_method(service, method, input)
+                    .map_err(|error| Refusal::Engine { error })
+            }
             Decision::NeedsGesture => Err(Refusal::NeedsGesture { service, method }),
             Decision::NotAllowed => Err(Refusal::NotAllowed { service, method }),
         }
