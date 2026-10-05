@@ -270,7 +270,8 @@ the cards the search selects, killed when `prop:due=0` is dropped), A48 at line 
 This fix round adds two killers, both MUTATION COVERAGE (green at the unplanted head, red under a plant), recorded
 here in prose so the fence stays as it was. `a_push_that_cannot_start_answers_push_failed_and_moves_nothing`
 (`skip_write.rs:1011`): plant `WriteSync::NotStarted(_) => {}` at the push arm of `skip_write.rs`, red at
-`skip_write.rs:725` (`the take answers push_failed`), green in a5e7d7e8 on the unplanted source. The count assertion
+`skip_write.rs:1026` (`a push that cannot start answers push_failed`), green in 0a94ee63 on the unplanted
+source (a5e7d7e8 added the test, and 0a94ee63 gave it its own positive assertions). The count assertion
 added to A5 (`a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows`, through the helper
 `two_single_syncs` at `skip_write.rs:800`, exactly two `meta` and two `finish` requests a take): plant an extra
 `write_sync` before the push, red at `skip_write.rs:807` (`left: 3, right: 2`, `meta`), green in 4fe657af
