@@ -1928,8 +1928,10 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
             ("the install", DEPLOY, ("caddy-install", "v1.0.0")),
             ("the removal", ROLLBACK, ("caddy-remove",)),
         )
-        shapes = ("relative", "a space", "a placeholder", "a wildcard")
+        shapes = ("relative", "a space", "a placeholder", "a wildcard", "a letter outside ASCII")
         members = [(shape, step) for shape in shapes for step in steps]
+        installed = subprocess.run(["locale", "-a"], capture_output=True, text=True, check=True).stdout.split()
+        self.assertIn("en_US.utf8", installed, "a locale whose collation widens a bracket range is installed")
         for shape, (label, script, args) in examined("Caddy directory member(s)", members):
             with self.subTest(shape=shape, step=label):
                 w = self.fresh_world()
@@ -1941,9 +1943,10 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
                     "a space": f"{w.caddy_dir} two",
                     "a placeholder": f"{w.caddy_dir}/{{$HOME}}",
                     "a wildcard": f"{w.caddy_dir}*",
+                    "a letter outside ASCII": f"{w.caddy_dir}Ａ",
                 }[shape]
                 (w.tmp / directory).mkdir(parents=True, exist_ok=True)
-                env = {**self.config(), "DECKSTREAK_DEPLOY_CADDY_DIR": directory}
+                env = {**self.config(), "DECKSTREAK_DEPLOY_CADDY_DIR": directory, "LC_ALL": "en_US.UTF-8"}
                 before = self.tree(w.tmp)
                 done = w.run(script, *args, **env)
                 self.assertIn(said, done.stderr, f"{label} names the setting")
