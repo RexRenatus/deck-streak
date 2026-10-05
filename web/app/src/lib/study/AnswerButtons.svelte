@@ -21,7 +21,7 @@
   {#each GRADES as { grade, name }, index (grade)}
     <button
       type="button"
-      class="flex min-h-11 min-w-11 flex-col items-center justify-center rounded-md border px-2 py-1 transition-colors duration-150 hover:bg-muted"
+      class="flex min-h-11 min-w-11 flex-col items-center justify-center rounded-md border px-2 py-1 transition-colors duration-150 hover:bg-card"
       onclick={() => onanswer(grade)}
     >
       <span class="font-medium">{name()}</span>

@@ -158,7 +158,7 @@
       <div class="flex flex-wrap gap-2">
         <button
           type="button"
-          class="min-h-11 min-w-11 rounded-md border px-3 transition-colors duration-150 disabled:opacity-50"
+          class="min-h-11 min-w-11 rounded-md border px-3 transition-colors duration-150 disabled:opacity-60"
           disabled={!shown.controls.includes('undo')}
           onclick={() => input.click('undo')}
         >
@@ -173,7 +173,7 @@
         </button>
         <button
           type="button"
-          class="min-h-11 min-w-11 rounded-md border px-3 transition-colors duration-150 aria-pressed:bg-muted"
+          class="min-h-11 min-w-11 rounded-md border px-3 transition-colors duration-150 aria-pressed:border-foreground aria-pressed:bg-card aria-pressed:font-semibold"
           aria-pressed={face.view.flag === 1}
           onclick={() => input.click('flag')}
         >

@@ -54,7 +54,7 @@
       <li class="flex flex-col gap-2 [&>ul]:pl-4">
         <button
           type="button"
-          class="flex min-h-11 flex-wrap items-baseline gap-x-2 rounded-md border px-4 py-2 text-left transition-colors duration-150 hover:bg-muted"
+          class="flex min-h-11 flex-wrap items-baseline gap-x-2 rounded-md border px-4 py-2 text-left transition-colors duration-150 hover:bg-card"
           onclick={() => void choose(deck.id)}
         >
           <span class="font-medium">{deck.name}</span>
