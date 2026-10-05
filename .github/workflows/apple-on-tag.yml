@@ -1,0 +1,24 @@
+name: apple-on-tag
+
+# The Apple build on every release tag (SPEC-344 R3, ADR-355 D1, D4 and D5): the tags release.yml
+# publishes, and no other, run the one Apple job body, xcframework.yml. A path filter is never
+# evaluated for a tag push, so this workflow carries none. It builds and publishes nothing, passes
+# no secret, and its token is read-only.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: read
+
+# Every run of one tag takes one group and waits its turn, never cancelled and never replaced, as
+# release.yml's runs do (SPEC-190 R10 to R12).
+concurrency:
+  group: apple-on-tag-${{ github.ref }}
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  apple:
+    uses: $/.github/workflows/xcframework.yml

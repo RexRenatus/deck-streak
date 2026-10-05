@@ -6,34 +6,21 @@ name: xcframework
 # adapter itself builds, a check that the generated modulemap names no builtin clang module, one
 # XCFramework holding both slices, and a consumer check that typechecks the generated Swift against
 # each slice's own headers. It publishes the build time, each slice's size and both checks as the
-# run's summary and as the `xcframework` artifact, beside the framework and the bindings. It runs on
-# a pull request into dev that changes the adapter, the lockfile or this workflow, and on a
-# dispatch. No secret is used, the token is read-only, and every action is pinned by its full
-# commit SHA.
+# run's summary and as the `xcframework` artifact, beside the framework and the bindings.
+# apple-on-change.yml calls it on a pull request into dev that changes an Apple or FFI path,
+# apple-on-tag.yml calls it on every release tag, and a dispatch runs it directly (SPEC-344). No
+# secret is used, the token is read-only, and every action is pinned by its full commit SHA.
 #
 # The Swift harness (SPEC-339 R11, R12, ADR-350): the `xcframework` job also writes the synthetic
 # collection with this commit's engine; `harness-wire` runs the codec's tests on the host; and
 # `harness` links the framework, the bindings and the collection of THIS run into the app, runs its
 # tests on one iPhone and one iPad simulator, measures, and uploads its report and result bundles.
 on:
-  pull_request:
-    branches: [dev]
-    types: [opened, synchronize, reopened]
-    paths:
-      - "crates/ffi/**"
-      - "Cargo.lock"
-      - ".github/workflows/xcframework.yml"
-      - "ios/**"
+  workflow_call:
   workflow_dispatch:
 
 permissions:
   contents: read
-
-# A pull request's runs share its ref's group, and a newer push to it cancels the run it supersedes
-# (SPEC-190). Any other event has a group of its own, its run id, so it is never cancelled.
-concurrency:
-  group: xcframework-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   xcframework:
