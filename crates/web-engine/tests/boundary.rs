@@ -1,0 +1,192 @@
+//! SPEC-345 R5 (ADR-356 D1): the web engine's boundary, `src/wasm.rs`, reaches the engine only
+//! through the core's dispatcher, which it starts on the web transport. That module compiles only
+//! for `wasm32`, so no native test can run it: this census reads its source instead, one boundary
+//! function at a time, and names each statement a function owes and does not hold.
+
+// The examined helper prints its count on purpose; clippy.toml's in-test allowances cover only
+// `#[test]` bodies.
+#![allow(clippy::print_stdout)]
+
+use std::fs;
+use std::path::Path;
+
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    assert!(
+        !items.is_empty(),
+        "examined 0 {what}: the population is empty, so nothing was judged"
+    );
+    items
+}
+
+/// Each boundary function the census reads: its name, why it owes what it owes, and the
+/// statements its body holds for it. A statement is compared with every blank removed, so a
+/// reflow by rustfmt changes nothing.
+const OWED: [(&str, &str, &[&str]); 7] = [
+    (
+        "create_backend",
+        "starts the core's dispatcher on the web transport and keeps it",
+        &[
+            "Dispatcher::start(Transport::Web, &msg.encode_to_vec())",
+            "DISPATCHER.with(|d| *d.borrow_mut() = Some(dispatcher))",
+        ],
+    ),
+    (
+        "dispatcher",
+        "answers the dispatcher it keeps, and refuses before one is started",
+        &[
+            "DISPATCHER.with(|d| d.borrow().clone())",
+            ".ok_or_else(|| refuse(\"the engine is not initialised\"))",
+        ],
+    ),
+    (
+        "call",
+        "runs each service and method through the dispatcher",
+        &["dispatcher()?.run(service, method, input)"],
+    ),
+    (
+        "query",
+        "reads each fixed read through the dispatcher and answers its JSON",
+        &["dispatcher()?.read(read)", "serde_json::from_slice(&reply)"],
+    ),
+    (
+        "open",
+        "opens the collection through the dispatcher and says whether it existed and its notes",
+        &[
+            "file == COLLECTION_PATH",
+            "call(service::COLLECTION, 0, &request.encode_to_vec())?",
+            "query(Read::NoteCount)?",
+            "serde_json::json!({ \"existed\": existed, \"notes\": notes })",
+        ],
+    ),
+    (
+        "seed",
+        "refuses a collection that holds notes, then adds Basic notes through the dispatcher",
+        &[
+            "query(Read::NoteCount)?",
+            ".and_then(serde_json::Value::as_i64) != Some(0)",
+            "return Err(refuse(\"seed refuses a collection that holds notes\"));",
+            "entry.name == \"Basic\"",
+            "call(service::NOTES, 2,",
+            "u32::try_from(reply.nids.len())",
+        ],
+    ),
+    (
+        "snapshot",
+        "answers one card's row from the core's fixed read",
+        &["query(Read::CardSnapshot(card_id))?", ".pointer(\"/0\")"],
+    ),
+];
+
+/// `text` with every blank removed.
+fn squeezed(text: &str) -> String {
+    text.chars().filter(|c| !c.is_whitespace()).collect()
+}
+
+/// The body of `fn <name>(` in `source`, from the first brace after the name to the brace that
+/// closes it. A string literal is skipped whole, so a brace inside one counts for nothing. A name
+/// defined other than once, or a body that never closes, is refused.
+fn body<'a>(source: &'a str, name: &str) -> Result<&'a str, String> {
+    let head = format!("fn {name}(");
+    let starts: Vec<usize> = source.match_indices(&head).map(|(at, _)| at).collect();
+    let [start] = starts.as_slice() else {
+        return Err(format!("`{head}` occurs {} times, not once", starts.len()));
+    };
+    let Some(open) = source[*start..].find('{').map(|at| start + at) else {
+        return Err(format!("`{head}` has no body"));
+    };
+    let mut depth = 0_usize;
+    let mut chars = source[open..].char_indices();
+    while let Some((at, c)) = chars.next() {
+        match c {
+            '"' => {
+                while let Some((_, c)) = chars.next() {
+                    match c {
+                        '\\' => {
+                            chars.next();
+                        }
+                        '"' => break,
+                        _ => {}
+                    }
+                }
+            }
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Ok(&source[open..=open + at]);
+                }
+            }
+            _ => {}
+        }
+    }
+    Err(format!("`{head}`'s body never closes"))
+}
+
+/// Each statement of [`OWED`] that `source` does not hold, named with its function and why the
+/// function owes it.
+fn problems(source: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    for (name, why, statements) in OWED {
+        match body(source, name) {
+            Err(problem) => found.push(format!("{name}: {problem}")),
+            Ok(text) => {
+                let text = squeezed(text);
+                for statement in statements {
+                    if !text.contains(&squeezed(statement)) {
+                        found.push(format!("{name} {why}, and its body lacks `{statement}`"));
+                    }
+                }
+            }
+        }
+    }
+    found
+}
+
+fn boundary() -> String {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/wasm.rs");
+    fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()))
+}
+
+#[test]
+fn each_boundary_function_reaches_the_engine_through_the_dispatcher() {
+    let source = boundary();
+    let functions = examined("boundary function(s) of src/wasm.rs", OWED.to_vec());
+    let statements: usize = functions.iter().map(|(_, _, owed)| owed.len()).sum();
+    println!("examined {statements} owed statement(s)");
+    assert_eq!(problems(&source), Vec::<String>::new());
+}
+
+#[test]
+fn a_boundary_function_that_answers_a_constant_is_refused_by_name() {
+    let source = boundary();
+    for (name, _, _) in examined("planted constant bodies", OWED.to_vec()) {
+        let held = body(&source, name).expect("each boundary function has one body");
+        let planted = source.replacen(held, "{\n    Ok(Default::default())\n}", 1);
+        let refused = problems(&planted);
+        assert!(
+            refused
+                .iter()
+                .any(|line| line.starts_with(&format!("{name} "))),
+            "a constant body planted in {name} is not refused by name: {refused:?}"
+        );
+    }
+}
+
+#[test]
+fn the_body_reader_skips_a_brace_inside_a_string_and_refuses_a_name_defined_twice() {
+    let source = "fn f() -> String { let s = \"}{\"; format!(\"{s}\\\"}\") }\nfn g() {}\n";
+    assert_eq!(
+        body(source, "f"),
+        Ok("{ let s = \"}{\"; format!(\"{s}\\\"}\") }")
+    );
+    assert_eq!(body(source, "g"), Ok("{}"));
+    assert_eq!(
+        body("fn f() {}\nfn f() {}\n", "f"),
+        Err("`fn f(` occurs 2 times, not once".to_owned())
+    );
+    assert_eq!(
+        body("fn h() {", "h"),
+        Err("`fn h(`'s body never closes".to_owned())
+    );
+}

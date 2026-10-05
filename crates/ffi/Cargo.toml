@@ -12,11 +12,17 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-# ADR-022 and ADR-058: Anki's engine, whose protobuf backend this adapter puts behind its allow-list
-# (SPEC-336 R1). It depends on nothing else of DeckStreak's (ADR-345 D1).
-anki.workspace = true
+# ADR-356 D1 (SPEC-345 R5): the engine core, which holds Anki's engine behind its native column. This
+# adapter keeps its own allow-list, checked first (ADR-356 D3), and beside the core depends on no
+# crate of DeckStreak's (ADR-345 D1).
+deck-streak-engine-core.workspace = true
 # ADR-345 D2: the bindings generator's runtime and macros, pinned exactly.
 uniffi.workspace = true
+
+[dev-dependencies]
+# ADR-022 and ADR-058: Anki's engine, for the round-trip tests' synthetic collections only
+# (SPEC-345 R6).
+anki.workspace = true
 
 [features]
 # ADR-345 D3: the Swift bindings generator, turned on only by the XCFramework workflow; a workspace

@@ -3,7 +3,8 @@
 use std::fmt;
 use std::sync::Arc;
 
-use anki::backend::{Backend, init_backend};
+use deck_streak_engine_core::dispatch::{Dispatcher, Refusal};
+use deck_streak_engine_core::table::Transport;
 
 use crate::allow_list::allowed;
 
@@ -50,10 +51,12 @@ impl fmt::Display for EngineRefusal {
 
 impl std::error::Error for EngineRefusal {}
 
-/// One running engine: a native client holds one, opens a collection through it and calls it.
+/// One running engine: a native client holds one, opens a collection through it and calls it. It
+/// reaches the engine only through the core's dispatcher, started on the native transport
+/// (SPEC-345 R5).
 #[derive(uniffi::Object)]
 pub struct Engine {
-    backend: Backend,
+    dispatcher: Dispatcher,
 }
 
 #[uniffi::export]
@@ -69,8 +72,8 @@ impl Engine {
         reason = "a foreign caller's bytes cross the boundary owned, as the bindings pass them"
     )]
     pub fn new(message: Vec<u8>) -> Result<Arc<Self>, EngineRefusal> {
-        init_backend(&message)
-            .map(|backend| Arc::new(Self { backend }))
+        Dispatcher::start(Transport::Native, &message)
+            .map(|dispatcher| Arc::new(Self { dispatcher }))
             .map_err(|reason| EngineRefusal::Start { reason })
     }
 
@@ -90,8 +93,14 @@ impl Engine {
         if allowed(service, method).is_none() {
             return Err(EngineRefusal::NotAllowed { service, method });
         }
-        self.backend
-            .run_service_method(service, method, &input)
-            .map_err(|error| EngineRefusal::Engine { error })
+        self.dispatcher
+            .run(service, method, &input)
+            .map_err(|refusal| match refusal {
+                Refusal::Engine { error } => EngineRefusal::Engine { error },
+                Refusal::NotAllowed { service, method }
+                | Refusal::NeedsGesture { service, method } => {
+                    EngineRefusal::NotAllowed { service, method }
+                }
+            })
     }
 }
