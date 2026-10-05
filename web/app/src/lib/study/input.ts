@@ -29,6 +29,11 @@ export function deviceStorage(): SwitchStorage | undefined {
   return undefined;
 }
 
+/** The switch's store on a device with none: it keeps nothing, and the switch lives for the page. */
+class Unstored implements Pick<SwitchStorage, 'setItem'> {
+  setItem(): void {}
+}
+
 /** What the input moves: the review's one handler, the side it shows, and its focus. */
 export interface InputTarget {
   act(action: Action): void;
@@ -51,7 +56,7 @@ export class StudyInput {
 
   constructor(target: InputTarget, storage: SwitchStorage | undefined) {
     this.#target = target;
-    this.#store = storage ?? { setItem: () => {} };
+    this.#store = storage ?? new Unstored();
     this.#characterKeys = storage?.getItem(KEY_SWITCH) !== OFF;
   }
 
