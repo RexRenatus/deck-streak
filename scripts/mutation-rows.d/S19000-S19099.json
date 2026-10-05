@@ -189,7 +189,7 @@
         "S19024-A-RELEASE-WORKFLOW-CALLS-ONLY-A-CALLABLE-WORKFLOW",
         ".github/workflows/release.yml",
         "jobs:\n  release:\n",
-        "jobs:\n  cache:\n    uses: ./.github/workflows/rust-cache.yml\n  release:\n",
+        "jobs:\n  cache:\n    uses: $/.github/workflows/rust-cache.yml\n  release:\n",
         "release.yml calls only a workflow file here that takes workflow_call (SPEC-190 R12)",
         "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
       ],
