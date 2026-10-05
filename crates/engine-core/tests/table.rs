@@ -22,7 +22,7 @@ use deck_streak_engine_core::table::{
 const NATIVE: [(u32, u32); 6] = [(3, 0), (3, 8), (7, 13), (13, 3), (13, 4), (27, 6)];
 
 /// The web engine's study calls (SPEC-345 M4).
-const WEB: [(u32, u32); 8] = [
+const WEB: [(u32, u32); 16] = [
     (3, 0),
     (3, 1),
     (3, 8),
@@ -31,6 +31,15 @@ const WEB: [(u32, u32); 8] = [
     (23, 8),
     (25, 0),
     (25, 2),
+    // The review's eight (SPEC-350 R1, M10).
+    (7, 4),
+    (7, 22),
+    (27, 6),
+    (27, 9),
+    (13, 24),
+    (3, 7),
+    (13, 14),
+    (5, 4),
 ];
 
 /// The six exempt writes, the never-list's entries 2, 3, 6, 7 and 8 (SPEC-345 M8).

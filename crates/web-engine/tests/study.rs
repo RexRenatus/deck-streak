@@ -66,6 +66,16 @@ fn run_method_admits_only_the_study_calls() {
         (23, 8, "get_notetype_names"),
         (25, 0, "new_note"),
         (25, 2, "add_notes"),
+        // The review's eight: the deck list, the card view, its labels and undo label, bury and
+        // flag (SPEC-350 R1, M10).
+        (7, 4, "deck_tree"),
+        (7, 22, "set_current_deck"),
+        (27, 6, "render_existing_card"),
+        (27, 9, "strip_av_tags"),
+        (13, 24, "describe_next_states"),
+        (3, 7, "get_undo_status"),
+        (13, 14, "bury_or_suspend_cards"),
+        (5, 4, "set_flag"),
     ];
     for (svc, method, name) in examined("study call(s)", study.to_vec()) {
         assert_eq!(

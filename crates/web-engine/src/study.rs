@@ -61,17 +61,24 @@ impl Answer {
 pub mod service {
     /// The collection service.
     pub const COLLECTION: u32 = 3;
+    /// The cards service.
+    pub const CARDS: u32 = 5;
+    /// The decks service.
+    pub const DECKS: u32 = 7;
     /// The scheduler service.
     pub const SCHEDULER: u32 = 13;
     /// The notetypes service.
     pub const NOTETYPES: u32 = 23;
     /// The notes service.
     pub const NOTES: u32 = 25;
+    /// The card rendering service.
+    pub const CARD_RENDERING: u32 = 27;
 }
 
 /// The study calls `run_method` admits: service, method, and the method's name. Every pair
-/// outside it is refused, the exempt writes of ADR-337 included (#623).
-pub const STUDY_CALLS: [(u32, u32, &str); 8] = [
+/// outside it is refused, the exempt writes of ADR-337 included (#623). The last eight are the
+/// review's: the deck list, the card view, its labels and undo label, bury and flag (SPEC-350 R1).
+pub const STUDY_CALLS: [(u32, u32, &str); 16] = [
     (service::COLLECTION, 0, "open_collection"),
     (service::COLLECTION, 1, "close_collection"),
     (service::COLLECTION, 8, "undo"),
@@ -80,6 +87,14 @@ pub const STUDY_CALLS: [(u32, u32, &str); 8] = [
     (service::NOTETYPES, 8, "get_notetype_names"),
     (service::NOTES, 0, "new_note"),
     (service::NOTES, 2, "add_notes"),
+    (service::DECKS, 4, "deck_tree"),
+    (service::DECKS, 22, "set_current_deck"),
+    (service::CARD_RENDERING, 6, "render_existing_card"),
+    (service::CARD_RENDERING, 9, "strip_av_tags"),
+    (service::SCHEDULER, 24, "describe_next_states"),
+    (service::COLLECTION, 7, "get_undo_status"),
+    (service::SCHEDULER, 14, "bury_or_suspend_cards"),
+    (service::CARDS, 4, "set_flag"),
 ];
 
 /// The name of the study call at `service` and `method`.
