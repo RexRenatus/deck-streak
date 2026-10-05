@@ -1,5 +1,6 @@
 //! Only the skip's write module reaches the engine's card writes or pushes a local change
-//! (SPEC-083 A24, guardrail i): the engine's crate is named in code by `engine.rs` alone (ADR-022),
+//! (SPEC-083 A24, guardrail i): the engine's crate is named in code by `engine.rs` and the closed list of engine ports
+//! alone (ADR-022),
 //! inside it the calls that change a card or replace the server's collection sit only in the write
 //! port's impl, a normal sync only in the two impls of `RslibEngine` (the syncer's pull and the
 //! take's push), and the write port is named by `engine.rs` and the skip's write module alone, with
@@ -21,6 +22,12 @@ use std::path::{Path, PathBuf};
 
 /// The one file whose code may name the engine's crate: the port (ADR-022).
 const ENGINE: &str = "crates/ingest/src/engine.rs";
+/// The client engine boundaries admitted by name, as `(path, owning SPEC)`: each is a port of its
+/// own SPEC, so it may name the engine's crate, and it may not write a card or push. The list is
+/// CLOSED and holds files, never a crate: admitting a whole crate would let any file in it name the
+/// engine's crate, and narrowing the census to the server crates would let a new one fall out
+/// silently. Every listed path is asserted present in the census's sources.
+const ENGINE_PORTS: [(&str, &str); 1] = [("crates/engine-core/src/dispatch.rs", "SPEC-345")];
 /// The skip's write module: beside the port, the one file that may name the write port.
 const SKIP_WRITE: &str = "crates/ingest/src/skip_write.rs";
 /// The engine's crate, as code names a path into it.
@@ -166,6 +173,7 @@ fn census(root: &Path) -> Census {
 fn judge(census: &mut Census, name: &str, text: &str) {
     let lines: Vec<&str> = text.lines().collect();
     let is_engine = name == ENGINE;
+    let listed = ENGINE_PORTS.iter().find(|(path, _)| *path == name);
     let write_impl = is_engine.then(|| impl_block(&lines, WRITE_IMPL)).flatten();
     let read_impl = is_engine.then(|| impl_block(&lines, READ_IMPL)).flatten();
     for (index, line) in lines.iter().enumerate() {
@@ -173,7 +181,7 @@ fn judge(census: &mut Census, name: &str, text: &str) {
         let at = format!("{name}:{}", index + 1);
         if code.contains(ENGINE_CRATE) {
             census.naming_engine.insert(name.to_owned());
-            if !is_engine {
+            if !is_engine && listed.is_none() {
                 census
                     .refused
                     .push(format!("{at} names {ENGINE_CRATE}, and only {ENGINE} may"));
@@ -201,6 +209,16 @@ fn judge(census: &mut Census, name: &str, text: &str) {
                 ));
             }
         }
+        if let Some((_, spec)) = listed {
+            for call in WRITE_CALLS.iter().copied().chain([PUSH_CALL]) {
+                if code.contains(call) {
+                    census.refused.push(format!(
+                        "{at} calls {call}, and the engine port of {spec} may not write a card \
+                         or push"
+                    ));
+                }
+            }
+        }
         if code.contains(PORT) {
             census.naming_port.insert(name.to_owned());
             if name != ENGINE && name != SKIP_WRITE {
@@ -222,6 +240,16 @@ fn plant(root: &Path, path: &str, text: &str) {
     let file = root.join(path);
     fs::create_dir_all(file.parent().expect("a planted file's folder")).expect("its folder");
     fs::write(file, text).expect("the planted file");
+}
+
+/// Asserts that every listed engine port is among the census's `sources`, naming the path and SPEC.
+fn assert_ports_present(sources: &[String]) {
+    for (path, spec) in ENGINE_PORTS {
+        assert!(
+            sources.iter().any(|source| source == path),
+            "the listed engine port {path} ({spec}) is absent from the census's sources"
+        );
+    }
 }
 
 /// A planted engine port: the write port's impl calls the engine's Set Due Date and pushes, the
@@ -280,13 +308,27 @@ fn only_the_skip_write_reaches_an_engine_write_or_a_push() {
         "crates/ingest/src/window.rs",
         "// anki::collection stays behind the port\nconst DAYS: i64 = 7; // not anki::\n",
     );
+    plant(
+        planted.path(),
+        "crates/ffi/src/lib.rs",
+        "use anki::collection::Collection;\n",
+    );
+    plant(
+        planted.path(),
+        "crates/engine-core/src/dispatch.rs",
+        "use anki::backend::Backend;\nfn sneak(col: &mut Collection) {\n    col.update_card(&mut card);\n}\n",
+    );
     let refused = census(planted.path());
     examined("planted source file(s)", refused.sources.clone());
+    assert_ports_present(&refused.sources);
     assert_eq!(
         refused.refused,
         [
             "crates/coordination/src/skip/mod.rs:1 names CollectionWrite, and only \
              crates/ingest/src/engine.rs and crates/ingest/src/skip_write.rs may",
+            "crates/engine-core/src/dispatch.rs:3 calls .update_card, and the engine port of \
+             SPEC-345 may not write a card or push",
+            "crates/ffi/src/lib.rs:1 names anki::, and only crates/ingest/src/engine.rs may",
             "crates/ingest/src/engine.rs:18 calls .update_card outside impl CollectionWrite for \
              RslibEngine",
             "crates/ingest/src/engine.rs:21 calls .normal_sync( outside impl CollectionWrite for \
@@ -306,15 +348,21 @@ fn only_the_skip_write_reaches_an_engine_write_or_a_push() {
     // impl, and zero refused.
     let found = census(&root());
     examined("crate source file(s)", found.sources.clone());
+    assert_ports_present(&found.sources);
     examined(
         "engine card write call(s) inside impl CollectionWrite for RslibEngine",
         found.writes_inside.clone(),
     );
     assert_eq!(found.refused, Vec::<String>::new());
-    // The positive artifacts: the port alone names the engine's crate, and the write port is named
+    // The positive artifacts: the port and the listed engine ports alone name the engine's crate,
+    // and the write port is named
     // by exactly the port and the skip's write module.
     let naming: BTreeSet<&str> = found.naming_engine.iter().map(String::as_str).collect();
-    assert_eq!(naming, BTreeSet::from([ENGINE]));
+    let expected: BTreeSet<&str> = [ENGINE]
+        .into_iter()
+        .chain(ENGINE_PORTS.iter().map(|(path, _)| *path))
+        .collect();
+    assert_eq!(naming, expected);
     let naming: BTreeSet<&str> = found.naming_port.iter().map(String::as_str).collect();
     assert_eq!(
         naming,
