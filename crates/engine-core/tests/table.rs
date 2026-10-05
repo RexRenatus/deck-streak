@@ -18,8 +18,20 @@ use deck_streak_engine_core::table::{
     Decision, EXEMPT, ExemptWrite, TargetKind, Transport, decide,
 };
 
-/// The pairs the native adapter's allow-list holds (SPEC-345 M1).
-const NATIVE: [(u32, u32); 7] = [(1, 3), (3, 0), (3, 8), (7, 13), (13, 3), (13, 4), (27, 6)];
+/// The pairs the native adapter's allow-list holds (SPEC-345 M1), with the review screen's three
+/// (SPEC-348 R1).
+const NATIVE: [(u32, u32); 10] = [
+    (1, 3),
+    (3, 0),
+    (3, 8),
+    (7, 4),
+    (7, 13),
+    (7, 22),
+    (13, 3),
+    (13, 4),
+    (13, 24),
+    (27, 6),
+];
 
 /// The web engine's study calls (SPEC-345 M4).
 const WEB: [(u32, u32); 8] = [

@@ -110,7 +110,7 @@ impl Exempt {
 /// study calls (SPEC-345 M1, M4); a parity test holds each adapter's own table equal to its column.
 /// A pair one transport may make is not thereby admitted on the other: the native client neither
 /// closes the collection nor adds notes through this table (ADR-356 D2).
-pub const ORDINARY: [Ordinary; 11] = [
+pub const ORDINARY: [Ordinary; 14] = [
     Ordinary {
         service: 1,
         method: 3,
@@ -141,8 +141,22 @@ pub const ORDINARY: [Ordinary; 11] = [
     },
     Ordinary {
         service: 7,
+        method: 4,
+        name: "DecksService.DeckTree",
+        native: true,
+        web: false,
+    },
+    Ordinary {
+        service: 7,
         method: 13,
         name: "DecksService.GetDeckNames",
+        native: true,
+        web: false,
+    },
+    Ordinary {
+        service: 7,
+        method: 22,
+        name: "DecksService.SetCurrentDeck",
         native: true,
         web: false,
     },
@@ -159,6 +173,13 @@ pub const ORDINARY: [Ordinary; 11] = [
         name: "SchedulerService.AnswerCard",
         native: true,
         web: true,
+    },
+    Ordinary {
+        service: 13,
+        method: 24,
+        name: "SchedulerService.DescribeNextStates",
+        native: true,
+        web: false,
     },
     Ordinary {
         service: 23,
