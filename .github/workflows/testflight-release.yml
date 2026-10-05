@@ -23,6 +23,10 @@ jobs:
   plan:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    outputs:
+      lane: ${{ steps.plan.outputs.lane }}
+      number: ${{ steps.plan.outputs.number }}
+      version: ${{ steps.plan.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -45,3 +49,88 @@ jobs:
             echo "the commit of $tag is not on main" >&2
             exit 1
           fi
+      - name: the plan
+        id: plan
+        run: python3 scripts/ios_lane.py plan --lane release
+
+  framework:
+    needs: plan
+    uses: $/.github/workflows/xcframework.yml
+
+  app:
+    needs: [plan, framework]
+    runs-on: macos-26
+    timeout-minutes: 60
+    environment: testflight-release
+    permissions:
+      contents: read
+    env:
+      LANE: ${{ needs.plan.outputs.lane }}
+      NUMBER: ${{ needs.plan.outputs.number }}
+      VERSION: ${{ needs.plan.outputs.version }}
+      REPORT: ${{ github.workspace }}/harness-report
+      RESULTS: ${{ github.workspace }}/harness-results
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      XCODEGEN_VERSION: "2.46.0"
+      XCODEGEN_DIGEST: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: this run's XCFramework, bindings and synthetic collection
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: xcframework
+          path: engine-artifact
+      - name: place the framework, the bindings and the collection
+        run: |
+          mkdir -p "$REPORT" "$RESULTS" ios/EnginePackage/Sources/DeckStreakFFI ios/Harness/Resources
+          cp -R engine-artifact/DeckStreakFFI.xcframework ios/EnginePackage/
+          cp engine-artifact/bindings/deck_streak_ffi.swift ios/EnginePackage/Sources/DeckStreakFFI/
+          cp engine-artifact/harness-fixture/collection.anki2 ios/Harness/Resources/
+      - name: XcodeGen, checksum-verified
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/xcodegen.zip" "https://github.com/yonaskolb/XcodeGen/releases/download/${XCODEGEN_VERSION}/xcodegen.zip"
+          echo "$XCODEGEN_DIGEST  $RUNNER_TEMP/xcodegen.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP"
+      - name: the project, generated
+        run: |
+          "$RUNNER_TEMP/xcodegen/bin/xcodegen" generate --spec ios/project.yml
+      - name: the credential, by presence
+        id: preflight
+        env:
+          KEY: ${{ secrets.TESTFLIGHT_UPLOAD_KEY != '' }}
+          KEYID: ${{ secrets.TESTFLIGHT_UPLOAD_KEY_ID != '' }}
+          ISSUER: ${{ secrets.TESTFLIGHT_UPLOAD_ISSUER_ID != '' }}
+          CERTIFICATE: ${{ secrets.IOS_DIST_CERTIFICATE != '' }}
+          PASSWORD: ${{ secrets.IOS_DIST_CERTIFICATE_PASSWORD != '' }}
+          PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE != '' }}
+        run: python3 scripts/ios_lane.py preflight
+      - name: the app, unsigned
+        if: ${{ steps.preflight.outputs.placed == 'none' }}
+        run: python3 scripts/ios_lane.py build-unsigned
+      - name: the archive, signed
+        id: sign
+        if: ${{ steps.preflight.outputs.placed == 'all' }}
+        env:
+          CERTIFICATE: ${{ secrets.IOS_DIST_CERTIFICATE }}
+          PASSWORD: ${{ secrets.IOS_DIST_CERTIFICATE_PASSWORD }}
+          PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+        run: python3 scripts/ios_lane.py sign
+      - name: the upload
+        id: upload
+        if: ${{ steps.preflight.outputs.placed == 'all' }}
+        env:
+          KEY: ${{ secrets.TESTFLIGHT_UPLOAD_KEY }}
+          KEYID: ${{ secrets.TESTFLIGHT_UPLOAD_KEY_ID }}
+          ISSUER: ${{ secrets.TESTFLIGHT_UPLOAD_ISSUER_ID }}
+        run: python3 scripts/ios_lane.py upload-to-testflight
+      - name: clean
+        if: ${{ always() }}
+        run: python3 scripts/ios_lane.py clean
+      - name: the summary
+        if: ${{ always() }}
+        env:
+          PLACED: ${{ steps.preflight.outputs.placed }}
+          OUTCOME: ${{ steps.upload.outcome }}
+        run: python3 scripts/ios_lane.py summary
