@@ -40,3 +40,9 @@ committed the module or type their test names with a stub body: the native face'
 file, the voice choice holds nothing, and the collection directory is the default for every
 argument. `no_argument_gives_the_default` was green at A10's red commit, because the stub returns
 the default; the other five of A10's six tests were red there.
+
+Two green commits also touched files their red commit wrote, and neither changes an assertion. 68d81d2e,
+A3 to A7's green, adds a lint allow for `print_stdout` to `crates/engine-core/tests/face.rs`, two
+semicolons there, and renames one binding in `crates/engine-core/tests/review_pairs.rs`. 6aa81b35,
+A11's green, removes from the builder under `crates/ffi/tests/support/review.rs` the lint
+expectation that the stub body needed, since the real body returns each step's error.
