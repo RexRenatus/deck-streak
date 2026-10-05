@@ -221,3 +221,44 @@ sequenceDiagram
 A pair whose reference cannot reach its listener in an engine is in the suite's declared
 UNOBSERVABLE table for that engine, with a reason; the table must equal the measured set exactly,
 so a probe that went blind fails rather than passing.
+
+## 6. iPhone and iPad channels, as measured
+
+This section amends section 4 with what the iPhone and iPad delivery's planted suite measured
+(SPEC-349 A5 to A7). It is appended, not edited in, so section 4 keeps the prediction each
+reading confirmed or corrected; where the two differ, this section is the record. The readings
+are the `harness` job's `CardProbe` step at 92877de4 (run 37270629304), and they were identical on
+the iPhone and the iPad simulator: 27 planted cards and 189 single-layer variants on each. The
+card view reached no card's probe on either; for each followed link (`nav-self`, `nav-blank`) it
+opened one connection to the listener with no request read, which no layer of this delivery holds
+(#677).
+
+| channel | section 4 (blocked by / layer alone) | measured (blocked by / layer alone) | the reading that decided it |
+|---|---|---|---|
+| `object` | L3 / L3 | L3, L5 / - | the reference view's navigation delegate was asked about two navigations (`allowed=2`): an `<object>` and an `<embed>` of type `text/html` each load as a subframe, which L5 cancels as it does `nested-frame`'s, and no single-layer variant opened the card |
+| `nav-data` | L5 / L5 | UNOBSERVABLE | the reference view allowed the click (`allowed=1`) and its text did not change: WebKit refuses a page's own main-frame navigation to a `data:` URL |
+| `nav-blank` | L6 / L6 | L5, L6 / - | the reference view's navigation delegate was asked about the new-window action (`allowed=1`) before its UI delegate made the window (`windows=1`); the card view's gate cancels that action, so removing L6 alone opens nothing |
+| `preconnect` | measured / measured | L3 / L3 | the reference view opened 1 connection and the card view 0, and removing L3 alone opened it: the rule list covers a preconnect, so there is no residual and the iOS ADR owes no amendment |
+| `shadow-link` | measured / measured | L3 / L3 | as `preconnect`: 1 connection from the reference view, 0 from the card view, opened by L3 alone |
+| `file` | L7, L3 / - | L7, L3 / - | the reference view's image had a natural width (`fileWidth=1`), and no single-layer variant loaded it |
+
+**UNOBSERVABLE, measured:** `prefetch`, `dns-prefetch` and `nav-data`, where the reference view
+reached nothing a probe can see. Section 4 gives `prefetch` L3; on iOS, as on the web, WebKit sent
+no prefetch request, so it is declared unobservable with that reason.
+
+**Every card's layer alone, measured.** Removing L3 alone opened `img`, `css-url`, `css-import`,
+`font`, `media`, `stylesheet`, `preload`, `preconnect`, `shadow-link` and `base`. Removing L2
+alone opened `script-inline`, `event-handler`, `javascript-url` and `webrtc`. Removing L5 alone
+opened `external-scheme`. No layer alone opened `meta-refresh`, `nav-self`, `nav-blank`, `form`,
+`nested-frame`, `object`, `script-src`, `bridge` or `file`. Every row of section 4 that neither
+the table above nor the UNOBSERVABLE set names measured as section 4 declares it.
+
+**Layers with no channel of their own, measured:** L1, L4, L6 and L7. Section 4 declares L1 and
+L4. L6 joins them because L5 also holds `nav-blank`, and L7 because L3 also blocks the `file`
+card's load; removing any one of the four alone opened nothing. Each stays in the card view as
+depth.
+
+**The JS-on measurement, measured.** With page JavaScript on and every other layer on, the
+`webrtc` card sent 1 datagram to the UDP listener (`datagrams=1`), and `typeof window.webkit`
+read `undefined`: with no message handler, L4 leaves card script no `webkit` object at all. The
+reference view, which registers a handler for the `bridge` card, read `object`.

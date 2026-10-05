@@ -7467,5 +7467,174 @@ class TheHarnessLinksItsOwnRunsFramework(unittest.TestCase):
                 self.assertEqual(harness_link_problems({"jobs": {"harness": job}}), wanted, name)
 
 
+# The two simulators the card probe runs on, one after the other, as the harness job names them.
+CARD_PROBE_NEEDS = (
+    "xcodebuild test",
+    '-destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS"',
+    '-destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS"',
+    "-disable-concurrent-destination-testing",
+    '-resultBundlePath "$RESULTS/card-probe.xcresult"',
+)
+# The actions a planted card-view job uses; their refs are placeholders the checker never reads.
+PLANTED_CHECKOUT = "actions/checkout@" + "0" * 40
+PLANTED_UPLOAD = "actions/upload-artifact@" + "0" * 40
+
+
+def card_probe_problems(jobs):
+    """Each way the Apple job body could fail to run the card view's proof, named (SPEC-349 R10,
+    A9): the `harness` job runs the `CardProbe` scheme's tests on the iPhone and then the iPad and
+    uploads its result bundles whatever the outcome; a `card-isolation` job on the admitted runner,
+    waiting on nothing, checks out without persisted credentials, runs the package's tests and its
+    Swift mutant sweep on the host, and uploads its report whatever the outcome."""
+    problems = []
+    steps = (jobs.get("harness") or {}).get("steps") or []
+    probes = [s for s in steps if "-scheme CardProbe" in str(s.get("run", ""))]
+    if len(probes) != 1:
+        problems.append(f"harness: {len(probes)} CardProbe test steps, not one")
+    for step in probes:
+        run = re.sub(r"\\\n\s*", " ", str(step.get("run", "")))
+        problems += [
+            f"harness: the CardProbe step lacks {n}" for n in CARD_PROBE_NEEDS if n not in run
+        ]
+    if not any(
+        action(s) == "actions/upload-artifact"
+        and s.get("if") == "${{ always() }}"
+        and "harness-results/" in str((s.get("with") or {}).get("path", ""))
+        for s in steps
+    ):
+        problems.append("harness: no upload of its result bundles runs whatever the outcome")
+    job = jobs.get("card-isolation")
+    if job is None:
+        return problems + ["card-isolation: no such job"]
+    if job.get("runs-on") != ADMITTED_RUNNERS["xcframework.yml"]:
+        problems.append(
+            f"card-isolation: it runs on {job.get('runs-on')!r}, not the admitted runner"
+        )
+    if job.get("needs"):
+        problems.append("card-isolation: it waits on another job")
+    steps = job.get("steps") or []
+    runs = [str(s.get("run", "")) for s in steps]
+    checkouts = [s for s in steps if action(s) == "actions/checkout"]
+    if not checkouts or any(
+        str((s.get("with") or {}).get("persist-credentials")).lower() != "false" for s in checkouts
+    ):
+        problems.append("card-isolation: its checkout persists credentials")
+    if not any("swift test --package-path ios/CardIsolation" in r for r in runs):
+        problems.append("card-isolation: it runs no swift test of ios/CardIsolation")
+    if not any(
+        'pathlib.Path("ios/CardIsolation")' in r and "swift-mutants.json" in r for r in runs
+    ):
+        problems.append("card-isolation: it sweeps no mutant of ios/CardIsolation")
+    if not any(
+        action(s) == "actions/upload-artifact" and s.get("if") == "${{ always() }}" for s in steps
+    ):
+        problems.append("card-isolation: its report is not uploaded whatever the outcome")
+    return problems
+
+
+class TheCardViewIsProvedOnBothSimulators(unittest.TestCase):
+    def test_the_card_probe_suite_runs_on_both_simulators(self):
+        """SPEC-349 A9: the card view's planted suite runs on both simulators, and its package's
+        tests and Swift mutant sweep run on the host, in the one Apple job body."""
+        jobs = load("xcframework.yml")["jobs"]
+        self.assertEqual(card_probe_problems(jobs), [])
+        examined("harness steps", jobs["harness"].get("steps") or [])
+        examined("card-isolation steps", jobs["card-isolation"].get("steps") or [])
+
+        # The controls: the good jobs are accepted, and each plant is refused by its rule's name.
+        probe = {
+            "run": "xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe \\\n  "
+            + " \\\n  ".join(CARD_PROBE_NEEDS[1:])
+        }
+        upload = {
+            "uses": PLANTED_UPLOAD,
+            "if": "${{ always() }}",
+            "with": {"path": "harness-report/\nharness-results/"},
+        }
+        sweep = {
+            "run": 'package = pathlib.Path("ios/CardIsolation")\n(package / "swift-mutants.json")'
+        }
+        host = {
+            "runs-on": ADMITTED_RUNNERS["xcframework.yml"],
+            "steps": [
+                {"uses": PLANTED_CHECKOUT, "with": {"persist-credentials": "false"}},
+                {"run": "swift test --package-path ios/CardIsolation"},
+                sweep,
+                {"uses": PLANTED_UPLOAD, "if": "${{ always() }}", "with": {"path": "r/"}},
+            ],
+        }
+        good = {"harness": {"steps": [probe, upload]}, "card-isolation": host}
+
+        def harness(*steps):
+            return {**good, "harness": {"steps": list(steps)}}
+
+        def isolation(**changed):
+            return {**good, "card-isolation": {**host, **changed}}
+
+        plants = {
+            "the good jobs": (good, []),
+            "no probe step": (harness(upload), ["harness: 0 CardProbe test steps, not one"]),
+            "two probe steps": (
+                harness(probe, probe, upload),
+                ["harness: 2 CardProbe test steps, not one"],
+            ),
+            "the iPad left out": (
+                harness({"run": probe["run"].replace(CARD_PROBE_NEEDS[2], "")}, upload),
+                [f"harness: the CardProbe step lacks {CARD_PROBE_NEEDS[2]}"],
+            ),
+            "the simulators at once": (
+                harness({"run": probe["run"].replace(CARD_PROBE_NEEDS[3], "")}, upload),
+                [f"harness: the CardProbe step lacks {CARD_PROBE_NEEDS[3]}"],
+            ),
+            "no result bundle": (
+                harness({"run": probe["run"].replace(CARD_PROBE_NEEDS[4], "")}, upload),
+                [f"harness: the CardProbe step lacks {CARD_PROBE_NEEDS[4]}"],
+            ),
+            "a build in place of the tests": (
+                harness(
+                    {"run": probe["run"].replace("xcodebuild test", "xcodebuild build")}, upload
+                ),
+                ["harness: the CardProbe step lacks xcodebuild test"],
+            ),
+            "the bundles uploaded on success only": (
+                harness(probe, {k: v for k, v in upload.items() if k != "if"}),
+                ["harness: no upload of its result bundles runs whatever the outcome"],
+            ),
+            "no host job": (
+                {"harness": good["harness"]},
+                ["card-isolation: no such job"],
+            ),
+            "another runner": (
+                isolation(**{"runs-on": "macos-latest"}),
+                ["card-isolation: it runs on 'macos-latest', not the admitted runner"],
+            ),
+            "a host job that waits on the build": (
+                isolation(needs="xcframework"),
+                ["card-isolation: it waits on another job"],
+            ),
+            "a persisted checkout": (
+                isolation(steps=[{"uses": PLANTED_CHECKOUT}, *host["steps"][1:]]),
+                ["card-isolation: its checkout persists credentials"],
+            ),
+            "no package tests": (
+                isolation(steps=[host["steps"][0], sweep, host["steps"][3]]),
+                ["card-isolation: it runs no swift test of ios/CardIsolation"],
+            ),
+            "no sweep": (
+                isolation(steps=[*host["steps"][:2], host["steps"][3]]),
+                ["card-isolation: it sweeps no mutant of ios/CardIsolation"],
+            ),
+            "a report uploaded on success only": (
+                isolation(
+                    steps=[*host["steps"][:3], {"uses": PLANTED_UPLOAD, "with": {"path": "r/"}}]
+                ),
+                ["card-isolation: its report is not uploaded whatever the outcome"],
+            ),
+        }
+        for name, (jobs, wanted) in examined("planted card-view jobs", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(card_probe_problems(jobs), wanted, name)
+
+
 if __name__ == "__main__":
     unittest.main()
