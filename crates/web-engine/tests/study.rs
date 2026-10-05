@@ -4,7 +4,10 @@
 // `#[test]` bodies.
 #![allow(clippy::print_stdout)]
 
-use deck_streak_web_engine::study::{Answer, STUDY_CALLS, StudyError, admit, service};
+use deck_streak_web_engine::study::{
+    Answer, BuryOf, STUDY_CALLS, Shown, StudyError, admit, bury_of, engine_languages, service,
+    shown_for, toggled_red,
+};
 
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
     println!("examined {} {what}", items.len());
@@ -172,4 +175,60 @@ fn the_study_calls_are_the_reviews_pairs() {
             "service {svc} method {method}"
         );
     }
+}
+
+#[test]
+fn only_the_shown_card_is_rated_buried_or_flagged() {
+    // SPEC-350 R2: the kept card is card 42; a gesture for card 41 reaches nothing.
+    let kept = Shown {
+        card: 42,
+        states: "the states shown with card 42",
+        flag: 0,
+    };
+    assert_eq!(shown_for(Some(&kept), 41), Err(StudyError::NotShown));
+    assert_eq!(shown_for::<&str>(None, 42), Err(StudyError::NotShown));
+    assert_eq!(
+        shown_for(Some(&kept), 42),
+        Ok(&Shown {
+            card: 42,
+            states: "the states shown with card 42",
+            flag: 0,
+        })
+    );
+    assert_eq!(
+        StudyError::NotShown.to_string(),
+        "not-shown: the card is not the one on screen"
+    );
+}
+
+#[test]
+fn the_flag_toggles_red() {
+    // SPEC-350 R7: no flag turns red, red turns to none, and any other flag turns red.
+    assert_eq!(toggled_red(0), 1);
+    assert_eq!(toggled_red(1), 0);
+    assert_eq!(toggled_red(2), 1);
+    assert_eq!(toggled_red(7), 1);
+}
+
+#[test]
+fn bury_is_the_users_bury_of_the_shown_card() {
+    // SPEC-350 R2: one card, no note, and the user's bury, the engine's mode 2.
+    assert_eq!(
+        bury_of(42),
+        BuryOf {
+            card_ids: vec![42],
+            note_ids: vec![],
+            mode: 2,
+        }
+    );
+}
+
+#[test]
+fn the_engine_speaks_english_when_no_language_is_given() {
+    // SPEC-350 R4: the page's list reaches the engine as sent, and an empty one is English.
+    assert_eq!(engine_languages(Vec::new()), vec!["en".to_owned()]);
+    assert_eq!(
+        engine_languages(vec!["ja".to_owned(), "en".to_owned()]),
+        vec!["ja".to_owned(), "en".to_owned()]
+    );
 }
