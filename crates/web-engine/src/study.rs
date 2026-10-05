@@ -126,8 +126,9 @@ pub struct Shown<S> {
 /// # Errors
 /// [`StudyError::NotShown`] when no card is kept or `card` is another card's id.
 pub fn shown_for<S>(shown: Option<&Shown<S>>, card: i64) -> Result<&Shown<S>, StudyError> {
-    let _ = card;
-    shown.ok_or(StudyError::NotShown)
+    shown
+        .filter(|kept| kept.card == card)
+        .ok_or(StudyError::NotShown)
 }
 
 /// The engine's number for the red flag.
@@ -137,7 +138,7 @@ pub const RED: u32 = 1;
 /// desktop's red flag key does.
 #[must_use]
 pub fn toggled_red(flag: u32) -> u32 {
-    flag
+    if flag == RED { 0 } else { RED }
 }
 
 /// The engine's bury mode for the user's own bury, which the next day does not undo alone.
@@ -160,7 +161,7 @@ pub fn bury_of(card: i64) -> BuryOf {
     BuryOf {
         card_ids: vec![card],
         note_ids: Vec::new(),
-        mode: 1,
+        mode: BURY_USER,
     }
 }
 
@@ -168,7 +169,11 @@ pub fn bury_of(card: i64) -> BuryOf {
 /// (SPEC-350 R4).
 #[must_use]
 pub fn engine_languages(languages: Vec<String>) -> Vec<String> {
-    languages
+    if languages.is_empty() {
+        vec!["en".to_owned()]
+    } else {
+        languages
+    }
 }
 
 /// Why the study rule refused a request.
