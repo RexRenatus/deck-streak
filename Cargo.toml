@@ -122,6 +122,22 @@ trybuild = "1.0.121"
 # Default features off: the adapter's `bindgen` feature turns the generator on for the XCFramework
 # workflow alone.
 uniffi = { version = "=0.29.1", default-features = false }
+# ADR-354 D1, D2 and D5 (SPEC-343): the push senders' client and tokens. hyper's pooled client,
+# HTTP/2 for APNs, over hyper-rustls on the rustls the workspace already locks, with the platform
+# verifier and the aws-lc-rs provider the bot's client resolves; a bounded body read; P-256 ECDSA
+# for the provider and VAPID tokens; RFC 8291's encryption from web-push-native, its own `vapid`
+# feature off; base64url for the tokens. In tests only: hkdf and aes-gcm for the push service
+# fake's own RFC 8291 decryption, beside sha2 above.
+hyper = { version = "1.11.1", default-features = false }
+hyper-util = { version = "0.1.21", default-features = false }
+hyper-rustls = { version = "0.27.10", default-features = false }
+rustls = { version = "0.23.45", default-features = false }
+http-body-util = "0.1.5"
+p256 = "0.13.2"
+web-push-native = { version = "0.5.0", default-features = false }
+base64ct = { version = "1.8.3", default-features = false, features = ["alloc"] }
+hkdf = "0.13.0"
+aes-gcm = "0.10.3"
 
 # ADR-058 (#233): the engine's upstream tag above, replaced by a commit of the maintainer's fork that
 # is that tag plus one fix, so the engine's protobuf build script stops rerunning on every cargo
