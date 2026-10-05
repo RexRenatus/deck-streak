@@ -135,3 +135,48 @@ fn refusal(refusal: Refusal) -> EngineRefusal {
         }
     }
 }
+
+/// Why a launch's collection directory argument was refused, by name.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Error)]
+pub enum CollectionDirectoryRefusal {
+    /// The argument is the last one, with no value after it.
+    NoValue,
+    /// The value is not an absolute path.
+    NotAbsolute,
+    /// The value names nothing that exists.
+    Missing,
+    /// The value names something that is not a directory.
+    NotADirectory,
+}
+
+impl fmt::Display for CollectionDirectoryRefusal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::NoValue => "the collection directory argument has no value",
+            Self::NotAbsolute => "the collection directory is not an absolute path",
+            Self::Missing => "the collection directory does not exist",
+            Self::NotADirectory => "the collection directory is not a directory",
+        })
+    }
+}
+
+impl std::error::Error for CollectionDirectoryRefusal {}
+
+/// The directory the app opens its collection in (stubbed: the default for every argument).
+///
+/// # Errors
+///
+/// None while stubbed.
+#[uniffi::export]
+#[allow(
+    unused_variables,
+    clippy::needless_pass_by_value,
+    clippy::unnecessary_wraps,
+    reason = "the stub returns the default for every argument"
+)]
+pub fn collection_directory(
+    default: String,
+    arguments: Vec<String>,
+) -> Result<String, CollectionDirectoryRefusal> {
+    Ok(default)
+}
