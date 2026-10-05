@@ -130,3 +130,36 @@ fn run_method_admits_only_the_study_calls() {
         [3, 13, 23, 25]
     );
 }
+
+#[test]
+fn the_study_calls_are_the_reviews_pairs() {
+    // The oracle, written apart from the table (SPEC-350 R1, M10): DEV's eight calls, then the
+    // review's eight, each named as the engine names its method.
+    let review = vec![
+        (3, 0, "open_collection"),
+        (3, 1, "close_collection"),
+        (3, 8, "undo"),
+        (13, 3, "get_queued_cards"),
+        (13, 4, "answer_card"),
+        (23, 8, "get_notetype_names"),
+        (25, 0, "new_note"),
+        (25, 2, "add_notes"),
+        (7, 4, "deck_tree"),
+        (7, 22, "set_current_deck"),
+        (27, 6, "render_existing_card"),
+        (27, 9, "strip_av_tags"),
+        (13, 24, "describe_next_states"),
+        (3, 7, "get_undo_status"),
+        (13, 14, "bury_or_suspend_cards"),
+        (5, 4, "set_flag"),
+    ];
+    let review = examined("review study call(s)", review);
+    assert_eq!(STUDY_CALLS.to_vec(), review);
+    for &(svc, method, name) in &review {
+        assert_eq!(
+            admit(svc, method),
+            Ok(name),
+            "service {svc} method {method}"
+        );
+    }
+}
