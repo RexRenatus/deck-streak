@@ -14,6 +14,7 @@ import unittest
 
 from _support import examined
 from test_ci_workflows import (
+    LOCAL_CALL,
     WORKFLOWS,
     concurrency_problems,
     condition,
@@ -964,8 +965,6 @@ def schema_problems(content):
     return found + [p for p in unclosed(content) if p not in found]
 
 
-# A reusable workflow in this repository, called as GitHub reads it from the caller's own commit.
-LOCAL_CALL = re.compile(r"\./\.github/workflows/([^/@\s]+)")
 REF_READS = ("github.ref", "github['ref']")
 WORKFLOW_READS = ("github.workflow", "github['workflow']")
 
@@ -1037,7 +1036,7 @@ def release_class_problems(files):
     never by a sample (SPEC-190 R12):
     - a release workflow is read as GitHub's parser reads it: typed, tab-free, and every value it
       holds down to a job's keys is one the parser defines there;
-    - every call, in any workflow, is `./.github/workflows/<file>` with the file here and taking
+    - every call, in any workflow, is `$/.github/workflows/<file>` with the file here and taking
       `workflow_call`, walked to its end with no cycle, so no block is unread;
     - every block a release run holds, its own or a callee's, renders in the runner's context with
       text of its own, then github.ref and nothing else; never cancels (cancel-in-progress absent
@@ -1349,7 +1348,7 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
         tag = "on:\n  push:\n    tags: [v1]\n"
         plain = "jobs:\n  publish:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 5\n"
         plain += "    steps:\n      - run: echo publish\n"
-        caller = "jobs:\n  build:\n    uses: ./.github/workflows/called.yml\n"
+        caller = "jobs:\n  build:\n    uses: $/.github/workflows/called.yml\n"
         planted_files = {
             "release.yml": second_workflow(tag, name="release").replace(plain, caller),
             "second.yml": second_workflow(tag, name="second"),
@@ -1708,16 +1707,16 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
                 ("missing", True),
                 ("cycle", True),
             ):
-                files = {"release.yml": calling(f"./.github/workflows/{chain[0]}")}
+                files = {"release.yml": calling(f"$/.github/workflows/{chain[0]}")}
                 for n, name in enumerate(chain):
                     if n + 1 < depth:
-                        jobs = call(f"./.github/workflows/{chain[n + 1]}")
+                        jobs = call(f"$/.github/workflows/{chain[n + 1]}")
                     else:
                         jobs = {
                             "steps": steps,
                             "remote": call(remote),
-                            "missing": call("./.github/workflows/gone.yml"),
-                            "cycle": call(f"./.github/workflows/{chain[0]}"),
+                            "missing": call("$/.github/workflows/gone.yml"),
+                            "cycle": call(f"$/.github/workflows/{chain[0]}"),
                         }[end]
                     group = f"{name[:-4]}-${{{{ github.ref }}}}"
                     files[name] = callee(name[:-4], jobs, group, "  queue: max\n")
@@ -1738,7 +1737,7 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
             (
                 "a callee without workflow_call",
                 {
-                    "release.yml": calling("./.github/workflows/stage.yml"),
+                    "release.yml": calling("$/.github/workflows/stage.yml"),
                     "stage.yml": stage.replace("workflow_call", "workflow_dispatch"),
                 },
                 True,
@@ -1746,9 +1745,9 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
             (
                 "a callee called three times with the default queue",
                 {
-                    "release.yml": calling("./.github/workflows/stage.yml").replace(
+                    "release.yml": calling("$/.github/workflows/stage.yml").replace(
                         "  call:\n",
-                        "  one:\n    uses: ./.github/workflows/stage.yml\n  two:\n    uses: ./.github/workflows/stage.yml\n  call:\n",
+                        "  one:\n    uses: $/.github/workflows/stage.yml\n  two:\n    uses: $/.github/workflows/stage.yml\n  call:\n",
                     ),
                     "stage.yml": stage,
                 },
@@ -1757,19 +1756,19 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
             (
                 "a callee a reacher calls too, with the default queue",
                 {
-                    "release.yml": calling("./.github/workflows/stage.yml"),
+                    "release.yml": calling("$/.github/workflows/stage.yml"),
                     "stage.yml": stage,
                     "publish.yml": second_workflow(
                         "on:\n  workflow_dispatch:\n", "publish-${{ github.ref }}"
-                    ).replace("\njobs:\n", "\njobs:\n" + call("./.github/workflows/stage.yml")),
+                    ).replace("\njobs:\n", "\njobs:\n" + call("$/.github/workflows/stage.yml")),
                 },
                 True,
             ),
             (
                 "a callee called twice with the default queue",
                 {
-                    "release.yml": calling("./.github/workflows/stage.yml").replace(
-                        "  call:\n", "  again:\n    uses: ./.github/workflows/stage.yml\n  call:\n"
+                    "release.yml": calling("$/.github/workflows/stage.yml").replace(
+                        "  call:\n", "  again:\n    uses: $/.github/workflows/stage.yml\n  call:\n"
                     ),
                     "stage.yml": stage,
                 },
@@ -1778,8 +1777,8 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
             (
                 "a callee called twice that queues",
                 {
-                    "release.yml": calling("./.github/workflows/stage.yml").replace(
-                        "  call:\n", "  again:\n    uses: ./.github/workflows/stage.yml\n  call:\n"
+                    "release.yml": calling("$/.github/workflows/stage.yml").replace(
+                        "  call:\n", "  again:\n    uses: $/.github/workflows/stage.yml\n  call:\n"
                     ),
                     "stage.yml": callee(
                         "stage", steps, "stage-${{ github.ref }}", "  queue: max\n"
@@ -1791,7 +1790,7 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
                 "a callee under a matrix with the default queue",
                 {
                     "release.yml": calling(
-                        "./.github/workflows/stage.yml",
+                        "$/.github/workflows/stage.yml",
                         "    strategy:\n      matrix:\n        a: [1, 2, 3]\n",
                     ),
                     "stage.yml": stage,
@@ -1801,7 +1800,7 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
             (
                 "a callee whose group renders as its caller's",
                 {
-                    "release.yml": calling("./.github/workflows/stage.yml"),
+                    "release.yml": calling("$/.github/workflows/stage.yml"),
                     "stage.yml": callee("stage", steps, "${{ github.workflow }}-${{ github.ref }}"),
                 },
                 True,
@@ -1809,7 +1808,7 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
             (
                 "a callee that cancels",
                 {
-                    "release.yml": calling("./.github/workflows/stage.yml"),
+                    "release.yml": calling("$/.github/workflows/stage.yml"),
                     "stage.yml": stage.replace(
                         "cancel-in-progress: false", "cancel-in-progress: true"
                     ),
@@ -1818,13 +1817,13 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
             ),
             (
                 "a callee called once with the default queue",
-                {"release.yml": calling("./.github/workflows/stage.yml"), "stage.yml": stage},
+                {"release.yml": calling("$/.github/workflows/stage.yml"), "stage.yml": stage},
                 True,
             ),
             (
                 "a callee with no block",
                 {
-                    "release.yml": calling("./.github/workflows/stage.yml"),
+                    "release.yml": calling("$/.github/workflows/stage.yml"),
                     "stage.yml": callee("stage", steps),
                 },
                 False,
@@ -1842,7 +1841,7 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
             (
                 "a callee holding a key GitHub's parser does not define",
                 {
-                    "release.yml": calling("./.github/workflows/stage.yml"),
+                    "release.yml": calling("$/.github/workflows/stage.yml"),
                     "stage.yml": callee(
                         "stage",
                         steps.replace("timeout-minutes", "Timeout-minutes"),
@@ -1855,8 +1854,8 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
             (
                 "a callee two calls deep holding a key GitHub's parser does not define",
                 {
-                    "release.yml": calling("./.github/workflows/stage.yml"),
-                    "stage.yml": callee("stage", call("./.github/workflows/deep.yml")),
+                    "release.yml": calling("$/.github/workflows/stage.yml"),
+                    "stage.yml": callee("stage", call("$/.github/workflows/deep.yml")),
                     "deep.yml": callee("deep", steps.replace("runs-on", "Runs-on")),
                 },
                 True,
@@ -1939,7 +1938,7 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
                 second_workflow(tag, "publish-${{ github.ref }}", "publish", "  queue: max\n"),
             ),
             "stage.yml": (
-                {"release.yml": calling("./.github/workflows/stage.yml")},
+                {"release.yml": calling("$/.github/workflows/stage.yml")},
                 callee("stage", steps, "stage-${{ github.ref }}", "  queue: max\n"),
             ),
         }
@@ -2061,6 +2060,18 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
             if not harmful and problems:
                 wrong.append(f"{axis}: {label} is refused: {problems[:2]}")
         self.assertEqual(wrong, [])
+
+
+class TheAppleCallersAreClassedByTheirTriggers(unittest.TestCase):
+    def test_the_tag_caller_and_its_callee_are_release_workflows(self):
+        """SPEC-344 A5: a tag caller is a release workflow and so is the job body it calls, while
+        the change caller, which no tag can start, is a reacher."""
+        files = workflow_texts()
+        classes = membership(files)
+        self.assertEqual(classes.get("xcframework.yml"), "release")
+        self.assertEqual(classes.get("apple-on-tag.yml"), "release")
+        self.assertEqual(classes.get("apple-on-change.yml"), "reacher")
+        self.assertEqual(release_class_problems(files), [])
 
 
 if __name__ == "__main__":

@@ -1,14 +1,14 @@
 name: release
 
 # Builds a tagged release once and publishes it (SPEC-062 R1, R2; ADR-062, ADR-017, ADR-034). It runs
-# on a push of a SemVer tag and nothing else, and refuses a tag whose commit is not on main. The one
-# job builds the release binary and the sync server from the engine's pin (SPEC-337, ADR-347) and the
-# Mini App, assembles one tarball with the deploy files, the
-# agent files and a manifest of digests, writes SHA256SUMS, attests the tarball's build provenance,
-# and attaches both files to a draft release. The release is published by the last step, after every
-# upload succeeded, so a half-built release is never visible. The token is read-only except in that
-# one job, no secret is used, every action is pinned by its full commit SHA, and no step saves a
-# cache.
+# on a push of a SemVer tag and nothing else, and refuses a tag whose commit is not on main. A
+# first job audits the sync server's dependency graph (SPEC-340 R7, ADR-351 D5), and the release
+# job, which needs it, builds the release binary and the sync server from the engine's pin
+# (SPEC-337, ADR-347) and the Mini App, assembles one tarball with the deploy files, the agent files
+# and a manifest of digests, writes SHA256SUMS, attests the tarball's build provenance, and attaches
+# both files to a draft release. The release is published by the last step, after every upload
+# succeeded, so a half-built release is never visible. The token is read-only except in the release
+# job, no secret is used, every action is pinned by its full commit SHA, and no step saves a cache.
 on:
   push:
     tags:
@@ -27,6 +27,7 @@ concurrency:
 
 jobs:
   release:
+    needs: [audit-sync-server]
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     permissions:
@@ -126,3 +127,24 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release edit "$GITHUB_REF_NAME" --draft=false
+
+  # The sync server's dependency audit (SPEC-340 R7; ADR-351 D5): the RustSec advisory check over
+  # the graph the release builds the sync server from, at the fork and the commit the engine's patch
+  # entry pins, under the fork's own lockfile. It reads the repository and writes nothing, and the
+  # release job needs it, so an advisory refuses the release before anything is built.
+  audit-sync-server:
+    runs-on: "ubuntu-24.04"
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: the audit job reads the pinned Rust toolchain too
+        run: rustup show active-toolchain
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        with:
+          tool: cargo-deny
+      - name: the sync server's advisories, at the commit the engine's patch entry pins
+        run: bash scripts/audit-sync-server.sh --work "$RUNNER_TEMP/sync-server-audit"

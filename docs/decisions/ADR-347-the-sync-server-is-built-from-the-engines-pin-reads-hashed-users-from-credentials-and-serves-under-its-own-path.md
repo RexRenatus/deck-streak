@@ -301,3 +301,53 @@ What would make D12 wrong: the fork stops holding `media.db` for the server's li
 backup while it runs is then D5's again); the engine stops applying a sync in one transaction (the
 refusal is then no longer whole, and the model's switch for it reads the change); or the copy
 outgrows its bound, which the window's failure pages as it pages a failed copy.
+
+## Amendment: the sync key and its hash (SPEC-340)
+
+D2 chose to hand the server a hash and never a password. Read since at the fork's pinned commit
+(`rslib/src/sync/http_server/mod.rs`, the host-key derivation at lines 101 and 150-152): the server
+derives each client's key from the user name and the stored value, and with `PASSWORDS_HASHED` set
+the stored value is the hash. So the hash is what a client's key is made from, and the key has no
+lifetime of its own. This amendment replaces D2's chosen bullet's clause "a hash and never a
+password is what the server receives" with D13 below, and adds a consequence. The rest of D2
+stands.
+
+D13, the sync key and its hash (SEC01-F01, the sync key's lifetime and the hash's class):
+
+- The hash is a secret of the password's class. It lives only in the credential store, and is never
+  printed, logged or copied out of it. Any new hash, with a new salt, retires every key the old
+  one made. A lost synced device needs a new hash. A suspected exposure of the credential store
+  needs a new password as well, because the hash is made from the password. The cutover runbook's
+  `rekeyed` step names both triggers — chosen, because it costs no fork change and the owner's two
+  triggers are the events that put a key in another hand.
+- Treating the hash as public, as D2's earlier clause let a reader do: rejected because a client's
+  key is derived from it.
+- A key with a lifetime, or one made per login, by a fork patch: rejected for this delivery because
+  ADR-336 keeps the fork's patches minimal and the patch changes the engine's protocol state. It is
+  held as a named exception (SPEC-340 section 5, #649).
+
+### Consequences of D13
+
+- Bad, because a client's key never expires on its own: only a new hash retires it.
+- The Good consequence "no user, password or hash appears in the tree or a unit" stands, and is
+  now the reason the hash is safe at rest.
+
+### Sentences of this record that ADR-351 replaces
+
+- D12's "The integrity check, the archive, its digests and the offsite copy run on the copies in
+  the backup's own run, after the restart": they run in `deck-streak-sync-archive.service`, after
+  the window and before the backup (ADR-351 D1).
+- D12's "What else moves with it", first bullet (the backup's `AF_INET`, `AF_INET6` and
+  `EnvironmentFile=`): the archive's unit takes them, and the backup returns to `AF_UNIX` with no
+  settings file (ADR-351 D1).
+- D12's "`PAGING_VALUES` bounds it to the one value, the window's name": three values, the window,
+  the archive and the sync drill (ADR-351 D1).
+- D5's offsite copy: the copy is sealed first (ADR-351 D2), and the bucket deletes each archive a
+  stated period after it is written (ADR-351 D9).
+- D5's "the weekly drill (`restore-drill.sh`) restores the newest archive": its sync part runs in
+  `deck-streak-sync-restore-drill.service`, as the sync user, after the database drill (ADR-351
+  D1).
+- SPEC-337 R2's "runs the server as DeckStreak's user": the sync family runs as
+  `deck-streak-sync` (ADR-351 D1).
+- D4's route gains the edge's log of it, with no header and no key (ADR-351 D4), and no web cookie
+  crosses it (ADR-351 D7).

@@ -1,0 +1,86 @@
+// The codec's response decoders against bytes spelled by hand (SPEC-339 A3). Every input byte below
+// is written from the wire format and the engine's messages at the pinned rev, never produced by
+// the codec under test. Each response also carries fields the harness never reads, of each wire
+// type the engine's messages use (a varint, a length-delimited field, a 32-bit float and a 64-bit
+// value), so the decoders must skip what they do not know.
+import HarnessWire
+import XCTest
+
+final class ResponseDecodingTests: XCTestCase {
+    func test_a3_each_response_decodes_from_its_literal_bytes() throws {
+        // DeckNames { entries (1): DeckNameId { id (1), name (2) } }, two entries in the engine's
+        // order: `Default` (id 1), then `Synthetic` (id 300, `ac 02`).
+        let deckNames = bytes(
+            [0x0a, 0x0b], [0x08, 0x01], [0x12, 0x07, 0x44, 0x65, 0x66, 0x61, 0x75, 0x6c, 0x74],
+            [0x0a, 0x0e], [0x08, 0xac, 0x02],
+            [0x12, 0x09, 0x53, 0x79, 0x6e, 0x74, 0x68, 0x65, 0x74, 0x69, 0x63])
+        XCTAssertEqual(
+            try Responses.deckNames(deckNames),
+            [DeckName(id: 1, name: "Default"), DeckName(id: 300, name: "Synthetic")],
+            "DeckNames")
+
+        // QueuedCards { cards (1), new_count (2), learning_count (3), review_count (4) }, with one
+        // head card in the new queue: QueuedCard { card (1), queue (2) NEW = 0 and so omitted,
+        // states (3), context (4) }. The card is Card { id (1) 300, note_id (2) 200 `c8 01`,
+        // deck_id (3) 1, mtime_secs (5) 5, desired_retention (21) the float 0.9 `66 66 66 3f`
+        // under key (21 << 3) | 5 = 173 `ad 01` }. The states are SchedulingStates { current (1),
+        // again (2), hard (3), good (4), easy (5) }, each an opaque state the answer sends back;
+        // the context is SchedulingContext { deck_name (1) `Default`, seed (2) 7 }. The response
+        // ends with a 64-bit field 9 (key (9 << 3) | 1 = `49`) no engine message the harness
+        // reads holds. Counts: new 1, learning and review 0 and so omitted.
+        let newQueue = bytes(
+            [0x0a, 0x30],
+            [0x0a, 0x10], [0x08, 0xac, 0x02], [0x10, 0xc8, 0x01], [0x18, 0x01], [0x28, 0x05],
+            [0xad, 0x01, 0x66, 0x66, 0x66, 0x3f],
+            [0x1a, 0x0f], [0x0a, 0x01, 0x01], [0x12, 0x01, 0x02], [0x1a, 0x01, 0x03],
+            [0x22, 0x01, 0x04], [0x2a, 0x01, 0x05],
+            [0x22, 0x0b], [0x0a, 0x07, 0x44, 0x65, 0x66, 0x61, 0x75, 0x6c, 0x74], [0x10, 0x07],
+            [0x10, 0x01],
+            [0x49, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08])
+        XCTAssertEqual(
+            try Responses.queue(newQueue),
+            Queue(
+                cards: [
+                    QueuedCard(
+                        cardID: 300, noteID: 200, queue: 0, currentState: [0x01], goodState: [0x04])
+                ],
+                newCount: 1, learningCount: 0, reviewCount: 0),
+            "QueuedCards, a new card")
+
+        // The same message with every count and the queue set: a learning card (queue 1) whose
+        // card is { id 301 `ad 02`, note_id 201 `c9 01` }, its states only current and good, and
+        // counts new 0 (omitted), learning 2, review 3.
+        let learningQueue = bytes(
+            [0x0a, 0x12],
+            [0x0a, 0x06], [0x08, 0xad, 0x02], [0x10, 0xc9, 0x01],
+            [0x10, 0x01],
+            [0x1a, 0x06], [0x0a, 0x01, 0x11], [0x22, 0x01, 0x14],
+            [0x18, 0x02], [0x20, 0x03])
+        XCTAssertEqual(
+            try Responses.queue(learningQueue),
+            Queue(
+                cards: [
+                    QueuedCard(
+                        cardID: 301, noteID: 201, queue: 1, currentState: [0x11], goodState: [0x14])
+                ],
+                newCount: 0, learningCount: 2, reviewCount: 3),
+            "QueuedCards, a learning card")
+
+        // RenderCardResponse { question_nodes (1), answer_nodes (2), css (3) }, each node a
+        // RenderedTemplateNode with one of text (1) or replacement (2). The question holds a text
+        // node, `synthetic front`, then a replacement, RenderedTemplateReplacement { field_name
+        // (1) `Front`, current_text (2) `x`, filters (3) [`text`] }, which must decode as a
+        // replacement and never as text. The answer's node and the css are not the question's.
+        let rendered = bytes(
+            [0x0a, 0x11], [0x0a, 0x0f],
+            [0x73, 0x79, 0x6e, 0x74, 0x68, 0x65, 0x74, 0x69, 0x63, 0x20, 0x66, 0x72, 0x6f, 0x6e, 0x74],
+            [0x0a, 0x12], [0x12, 0x10], [0x0a, 0x05, 0x46, 0x72, 0x6f, 0x6e, 0x74], [0x12, 0x01, 0x78],
+            [0x1a, 0x04, 0x74, 0x65, 0x78, 0x74],
+            [0x12, 0x06], [0x0a, 0x04, 0x62, 0x61, 0x63, 0x6b],
+            [0x1a, 0x03, 0x78, 0x7b, 0x7d])
+        XCTAssertEqual(
+            try Responses.questionNodes(rendered),
+            [.text("synthetic front"), .replacement(fieldName: "Front")],
+            "RenderCardResponse's question")
+    }
+}

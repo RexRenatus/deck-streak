@@ -60,8 +60,8 @@
       [
         "S33708-A-HASH-CARRIES-ITS-SALT",
         "deploy/scripts/sync-server.sh",
-        "\\$[A-Za-z0-9+/]+\\$[A-Za-z0-9+/]+$'",
-        "(\\$[A-Za-z0-9+/]+)?\\$[A-Za-z0-9+/]+$'",
+        "\\$[A-Za-z0-9+/]{21}[AQgw]\\$",
+        "(\\$[A-Za-z0-9+/]{21}[AQgw])?\\$",
         "a hash with no salt is refused at start rather than at the first login (SPEC-337 R2, A5)",
         "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_refuses_a_bad_entry_and_execs_the_server_with_hashed_users"
       ],
@@ -311,7 +311,7 @@
         "            if is_database and not integrity_ok(scratch):",
         "            if False:",
         "the daily run checks each database of a generation before it archives it, so a broken collection is kept and fails the run (SPEC-337 R5, A7)",
-        "test_backup_units.SyncWindow.test_the_daily_run_checks_archives_copies_offsite_and_keeps_three"
+        "test_backup_units.SyncWindow.test_the_sync_archive_checks_archives_copies_offsite_and_keeps_three"
       ],
       [
         "S33740-THE-MANIFEST-DIGESTS-THE-MEMBERS-BYTES",
@@ -319,15 +319,15 @@
         "                    digest.update(chunk)",
         "                    pass",
         "each manifest line is the sha256 of its member's bytes, which the drill checks the restore against (SPEC-337 R5, A7)",
-        "test_backup_units.SyncWindow.test_the_daily_run_checks_archives_copies_offsite_and_keeps_three"
+        "test_backup_units.SyncWindow.test_the_sync_archive_checks_archives_copies_offsite_and_keeps_three"
       ],
       [
         "S33741-THE-OFFSITE-COPY-CARRIES-THE-MANIFEST",
         "deploy/scripts/backup.py",
-        "[*command, str(tar), str(manifest), bucket]",
-        "[*command, str(tar), bucket]",
+        "sealed_copy(seal, plain) for plain in (tar, manifest)]",
+        "sealed_copy(seal, plain) for plain in (tar,)]",
         "the offsite copy carries the archive and its manifest of digests to the bucket, with arguments and no shell (SPEC-337 R5, A7; ADR-347 D5)",
-        "test_backup_units.SyncWindow.test_the_daily_run_checks_archives_copies_offsite_and_keeps_three"
+        "test_backup_units.SyncWindow.test_the_sync_archive_checks_archives_copies_offsite_and_keeps_three"
       ],
       [
         "S33742-THE-OFFSITE-COPY-NEEDS-ITS-BUCKET",
@@ -335,7 +335,7 @@
         "    if not command or not bucket:",
         "    if not command:",
         "a copy command with no bucket is refused, so the generation is kept and the run fails (SPEC-337 R5, A7)",
-        "test_backup_units.SyncWindow.test_the_daily_run_checks_archives_copies_offsite_and_keeps_three"
+        "test_backup_units.SyncWindow.test_the_sync_archive_checks_archives_copies_offsite_and_keeps_three"
       ],
       [
         "S33743-THREE-ARCHIVES-STAY-ON-THE-HOST",
@@ -343,7 +343,7 @@
         "prune(snapshots, KEEP, pattern)",
         "prune(snapshots, KEEP + 1, pattern)",
         "the daily run keeps the newest three archives and manifests on the host and prunes the rest (SPEC-337 R5, A7)",
-        "test_backup_units.SyncWindow.test_the_daily_run_checks_archives_copies_offsite_and_keeps_three"
+        "test_backup_units.SyncWindow.test_the_sync_archive_checks_archives_copies_offsite_and_keeps_three"
       ],
       [
         "S33744-THE-DRILL-RESTORES-THE-NEWEST-ARCHIVE",

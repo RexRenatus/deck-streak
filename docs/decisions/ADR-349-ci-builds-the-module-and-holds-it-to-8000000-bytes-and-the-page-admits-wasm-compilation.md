@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
 

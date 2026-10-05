@@ -11,6 +11,7 @@ import re
 import unittest
 
 from _support import REPO, examined
+from test_sync_server_runbook import OFFSITE_PERIOD
 
 POLICY = REPO / "PRIVACY.md"
 INVENTORY = REPO / "privacy.json"
@@ -92,11 +93,16 @@ def copies(data):
     }
 
 
-def undisclosed_copies(policy, data):
-    """Every copy no bullet of the policy's unreached section discloses with its words."""
+def unreached_bullets(policy):
+    """Each bullet of the policy's unreached section, flattened."""
     _, found, rest = policy.partition(UNREACHED)
     section = rest.split("\n## ", 1)[0] if found else ""
-    bullets = [flat(bullet) for bullet in re.split(r"\n(?=- )", section) if bullet.startswith("- ")]
+    return [flat(bullet) for bullet in re.split(r"\n(?=- )", section) if bullet.startswith("- ")]
+
+
+def undisclosed_copies(policy, data):
+    """Every copy no bullet of the policy's unreached section discloses with its words."""
+    bullets = unreached_bullets(policy)
     return [
         copy
         for copy, words in copies(data).items()
@@ -125,6 +131,28 @@ class ThePolicyDisclosesWhatAnEraseLeaves(unittest.TestCase):
         self.assertEqual(
             [entry.split(" ")[0] for entry in undisclosed_categories(without_first, categories)],
             [first["id"]],
+        )
+
+    def test_the_offsite_snapshot_has_a_stated_period(self):
+        """SPEC-340 A14 (R11; ADR-351 D9): the snapshots' bullet states the offsite archives'
+        period, the one the runbook's bucket rule checks, and the policy discloses the edge log of
+        the sync route, with the journal's window, and the ban list, with the ban's."""
+        data = inventory()
+        bullets = examined("unreached bullet(s)", unreached_bullets(POLICY.read_text("utf-8")))
+        snapshots = [b for b in bullets if "snapshot" in b and "sync server" in b]
+        self.assertEqual(len(snapshots), 1, "one bullet discloses the sync server's snapshots")
+        self.assertIn(f"`{OFFSITE_PERIOD}`".casefold(), snapshots[0])
+        self.assertIn(in_words(OFFSITE_PERIOD), snapshots[0])
+        self.assertNotIn("as long as the bucket's own retention", snapshots[0])
+        logged = ("edge", "sync route", "address", "method", "path", "status")
+        window = in_words(data["logs"]["retention"])
+        edge = [b for b in bullets if all(word in b for word in logged)]
+        self.assertEqual(len(edge), 1, "one bullet discloses the edge log of the sync route")
+        self.assertIn(window, edge[0])
+        self.assertIn(f"`{data['logs']['retention']}`".casefold(), edge[0])
+        self.assertTrue(
+            any("ban list" in b and "address" in b and "up to one day" in b for b in bullets),
+            "no bullet discloses the ban list with the ban's period",
         )
 
     def test_the_readme_and_the_about_page_link_the_policy(self):

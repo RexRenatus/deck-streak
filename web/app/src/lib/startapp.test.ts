@@ -73,8 +73,9 @@ describe('the startapp token map', () => {
 
   // SPEC-077 R16, R17, T35. The progress screen and the law tab are opened by their paths alone:
   // the progress command's button names the path, and no startapp token opens either screen. The
-  // list is exact, so any other new screen still needs a token or a place here.
-  const BY_PATH = ['/progress', '/law'];
+  // list is exact, so any other new screen still needs a token or a place here. SPEC-343 R16: the
+  // remote harness is opened by its path in a browser tab, and no token opens it.
+  const BY_PATH = ['/progress', '/law', '/remote'];
 
   it('every destination is a screen of the route table', () => {
     const tokens = ['today', 'about', 'insights', 'score', 'level', 'streak', 'wallet', 'badges', 'records', 'capture'];

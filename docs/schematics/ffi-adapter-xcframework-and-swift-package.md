@@ -143,3 +143,16 @@ flowchart TD
 A member whose feature another package turns on is refused rather than compiled, because that
 feature is on in every workspace build, so code under its absence would be compiled in no pass,
 though a build of the member alone compiles it. The census admits no member by name.
+
+## Amendment: where the build is triggered (SPEC-344, ADR-355)
+
+The pull-request trigger described under "One build of the XCFramework" now lives in
+`apple-on-change.yml`, which calls `xcframework.yml` and also watches `ios/**`, `Cargo.toml` and
+`rust-toolchain.toml`. A run on every release tag is added by `apple-on-tag.yml`, which calls the
+same job body. `xcframework.yml` itself takes `workflow_call` and `workflow_dispatch`. See
+`apple-build-on-change-and-on-tag.md`.
+
+## Amendment: the call's spelling (SPEC-344, ADR-355)
+
+The CCALL and TCALL labels and the edge label above read `uses $/.github/workflows/xcframework.yml`
+and `"$/.github/workflows/FILE"`, the self-repository form; their endpoints are unchanged.

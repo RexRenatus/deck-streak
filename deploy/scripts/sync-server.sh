@@ -23,9 +23,11 @@ readonly SYNC_SERVER_OWNER=sync-server-owner
 readonly SYNC_SERVER_STAGING=sync-server-staging
 
 # A user name, which the server makes a directory of under its data directory, so it cannot start
-# with a dot or hold a slash; then the PHC form of a pbkdf2-sha256 hash: the rounds, an optional
-# length, a salt and a digest, each in unpadded standard base64.
-readonly ENTRY='^[A-Za-z0-9_-][A-Za-z0-9._-]*:\$pbkdf2-sha256\$i=[1-9][0-9]*(,l=[1-9][0-9]*)?\$[A-Za-z0-9+/]+\$[A-Za-z0-9+/]+$'
+# with a dot or hold a slash; then the PHC form of a pbkdf2-sha256 hash in the house's shape
+# (SPEC-340 R10; ADR-351 D8): 600000 to 999999 rounds, which bounds the time one check takes from
+# both sides, an optional length of 32, a 16-byte salt and a 32-byte digest, each in canonical
+# unpadded standard base64, whose last character carries no spare bit.
+readonly ENTRY='^[A-Za-z0-9_-][A-Za-z0-9._-]*:\$pbkdf2-sha256\$i=[6-9][0-9]{5}(,l=32)?\$[A-Za-z0-9+/]{21}[AQgw]\$[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]$'
 # A loopback IPv4 address and a port.
 readonly LOOPBACK='^127\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3}):([0-9]{1,5})$'
 
@@ -40,7 +42,8 @@ entry() {
   [ -f "$path" ] || refuse "the credential $1 is missing"
   value="$(cat -- "$path")"
   [ -n "$value" ] || refuse "the credential $1 is empty"
-  [[ "$value" =~ $ENTRY ]] || refuse "the credential $1 is not a user name and a pbkdf2-sha256 hash"
+  [[ "$value" =~ $ENTRY ]] ||
+    refuse "the credential $1 is not a user name and a pbkdf2-sha256 hash of the house's shape"
   printf '%s' "$value"
 }
 

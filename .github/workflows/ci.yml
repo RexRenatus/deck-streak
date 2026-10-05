@@ -265,6 +265,34 @@ jobs:
           path: ${{ runner.temp }}/check-logs/
           if-no-files-found: warn
 
+  card-sandbox:
+    # SPEC-341 R12: the planted card suite in Chromium and WebKit. Each planted card reaches its
+    # listener from the reference frame and nothing from the shipped card frame, and each layer
+    # removed alone opens exactly the channels the schematic gives it.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: the Mini App's dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Chromium's headless shell and WebKit, with their system libraries
+        run: pnpm --dir web/app exec playwright install --with-deps --only-shell chromium webkit
+      - name: the planted cards, in Chromium and WebKit
+        run: pnpm --dir web/app test:card
+      - name: upload the planted suite's results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: card-sandbox-results
+          path: web/app/test-results/
+          if-no-files-found: warn
   hygiene:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -837,7 +865,7 @@ jobs:
   ci:
     name: ${{ github.event_name == 'pull_request' && 'ci' || 'ci (push)' }}
     if: ${{ always() }}
-    needs: [rust, engine, release, web, hygiene, mutation-plan, mutation-rust, mutation-python, mutation-rows, mutation-verdict, mutation-web, web-engine, workflow-lint, base-is-dev]
+    needs: [rust, engine, release, web, card-sandbox, hygiene, mutation-plan, mutation-rust, mutation-python, mutation-rows, mutation-verdict, mutation-web, web-engine, workflow-lint, base-is-dev]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
