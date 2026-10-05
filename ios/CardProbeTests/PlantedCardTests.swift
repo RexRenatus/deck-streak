@@ -86,6 +86,37 @@ struct Reading: Sendable {
     }
 }
 
+/// A snapshot's decoded pixels: drawn into an RGBA8 bitmap of its own pixel size in one colour
+/// space, so two snapshots compare by what they show and never by how a PNG encoder wrote them.
+struct Pixels: Equatable, Sendable {
+    let width: Int
+    let height: Int
+    let bytes: Data
+
+    /// The pixel dimensions, as one value an assertion can print.
+    var size: String { "\(width)x\(height)" }
+
+    init?(_ image: CGImage) {
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(
+                data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
+                bytesPerRow: image.width * 4, space: space,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return nil }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        guard let drawn = context.makeImage(), let data = drawn.dataProvider?.data else { return nil }
+        width = image.width
+        height = image.height
+        bytes = data as Data
+    }
+}
+
+/// One snapshot of a view: the PNG it encodes to, kept to attach and to print, and its pixels.
+struct ViewSnapshot: Sendable {
+    var png = Data()
+    var pixels: Pixels?
+}
+
 /// The page state the suite reads with the app's own script, which runs whatever L2 says.
 private struct PageState: Decodable {
     let loaded: Bool
@@ -180,6 +211,34 @@ final class Probe {
                 "String(document.readyState === 'complete' && !!document.querySelector('meta[name=\"planted-card\"]'))"
             ) == "true"
         } != nil
+    }
+
+    /// Takes one snapshot of `view` and decodes its pixels.
+    static func snapshot(_ view: WKWebView) async -> ViewSnapshot {
+        await withCheckedContinuation { (continuation: CheckedContinuation<ViewSnapshot, Never>) in
+            view.takeSnapshot(with: nil) { image, _ in
+                continuation.resume(
+                    returning: ViewSnapshot(
+                        png: image?.pngData() ?? Data(), pixels: image?.cgImage.flatMap { Pixels($0) }))
+            }
+        }
+    }
+
+    /// Snapshots `view` until two snapshots in a row decode to the same pixels, or `seconds` pass.
+    /// Returns the last snapshot, how many were taken, and whether two in a row matched.
+    static func settle(
+        _ view: WKWebView, _ seconds: TimeInterval
+    ) async -> (snapshot: ViewSnapshot, polls: Int, settled: Bool) {
+        var last = ViewSnapshot()
+        var polls = 0
+        let took = await Probe.poll(seconds) {
+            let next = await Probe.snapshot(view)
+            polls += 1
+            let same = polls > 1 && next.pixels != nil && next.pixels == last.pixels
+            last = next
+            return same
+        }
+        return (last, polls, took != nil)
     }
 
     private static let stateScript = """
@@ -375,6 +434,9 @@ final class PlantedCardTests: XCTestCase {
         XCTAssertNil(UNOBSERVABLE["webrtc"], "webrtc is declared UNOBSERVABLE")
     }
 
+    /// How long each render view's snapshots are polled for two in a row that match.
+    private static let settleDeadline: TimeInterval = 10
+
     @MainActor
     func test_the_card_renders_in_the_card_view_as_in_the_reference_view() async throws {
         let reference = CardWebViewFactory.make(layers: [], ruleList: nil)
@@ -383,31 +445,47 @@ final class PlantedCardTests: XCTestCase {
         let blank = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
         blank.loadHTMLString(
             Planted.document(id: "blank", head: "", body: ""), baseURL: nil)
-        var shown: [String: (text: String, width: String, png: Data)] = [:]
+        var shown: [String: (text: String, width: String, snapshot: ViewSnapshot)] = [:]
         for (name, view) in examined("render views", [("reference", reference), ("shipped", shipped), ("blank", blank)]) {
             Probe.mount(view)
             let loaded = await Probe.loaded(view)
-            try? await Task.sleep(nanoseconds: 500_000_000)
+            // A bounded stability poll, never a fixed wait: the snapshot judged is the first that
+            // decodes to the same pixels as the one before it, and a view that never settles fails.
+            let (snapshot, polls, settled) = await Probe.settle(view, Self.settleDeadline)
+            let line = "settle \(name): polls=\(polls) settled=\(settled) deadline=\(Self.settleDeadline)s"
+            print(line)
+            XCTAssertTrue(settled, line)
             let text = await Probe.evaluate(view, "document.body ? document.body.innerText : ''") ?? ""
             let width = await Probe.evaluate(
                 view,
                 "String((document.getElementById('render-image') || { naturalWidth: 0 }).naturalWidth)") ?? ""
-            let png = await withCheckedContinuation { (continuation: CheckedContinuation<Data, Never>) in
-                view.takeSnapshot(with: nil) { image, _ in
-                    continuation.resume(returning: image?.pngData() ?? Data())
-                }
-            }
             view.removeFromSuperview()
-            print("render \(name): loaded=\(loaded) text=\(text.debugDescription) width=\(width) png=\(png.count) bytes")
-            shown[name] = (text, width, png)
+            print(
+                "render \(name): loaded=\(loaded) text=\(text.debugDescription) width=\(width)"
+                    + " png=\(snapshot.png.count) bytes pixels=\(snapshot.pixels?.size ?? "none")")
+            shown[name] = (text, width, snapshot)
         }
         let card = try XCTUnwrap(shown["shipped"])
         let base = try XCTUnwrap(shown["reference"])
         let empty = try XCTUnwrap(shown["blank"])
         XCTAssertEqual(card.text, base.text, "the card view's text against the reference view's")
         XCTAssertGreaterThan(Int(card.width) ?? 0, 0, "the card view's data: image has no natural width")
-        XCTAssertFalse(card.png.isEmpty, "the card view gave no snapshot")
-        XCTAssertEqual(card.png, base.png, "the card view's snapshot against the reference view's")
-        XCTAssertNotEqual(card.png, empty.png, "the card view's snapshot equals a blank view's")
+        let cardPixels = try XCTUnwrap(card.snapshot.pixels, "the card view gave no snapshot")
+        let basePixels = try XCTUnwrap(base.snapshot.pixels, "the reference view gave no snapshot")
+        let emptyPixels = try XCTUnwrap(empty.snapshot.pixels, "the blank view gave no snapshot")
+        // R8's "equals", with no tolerance: the same dimensions and the same decoded bytes.
+        XCTAssertEqual(
+            cardPixels.size, basePixels.size, "the card view's snapshot dimensions against the reference view's")
+        XCTAssertEqual(
+            cardPixels.bytes, basePixels.bytes, "the card view's decoded pixels against the reference view's")
+        if cardPixels != basePixels {
+            for (view, snapshot) in [("shipped", card.snapshot), ("reference", base.snapshot)] {
+                let attachment = XCTAttachment(data: snapshot.png, uniformTypeIdentifier: "public.png")
+                attachment.name = "A8 \(view) snapshot"
+                attachment.lifetime = .keepAlways
+                add(attachment)
+            }
+        }
+        XCTAssertNotEqual(cardPixels, emptyPixels, "the card view's snapshot equals a blank view's")
     }
 }
