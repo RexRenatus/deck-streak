@@ -14,7 +14,6 @@ tree; on the maintainer's machine only the host command and the repository are s
 import hashlib
 import io
 import json
-import locale
 import os
 import re
 import shlex
@@ -27,7 +26,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _support import REPO, examined
+from _support import REPO, collation_locale_available, examined
 
 DEPLOY = REPO / "deploy" / "deploy.sh"
 ROLLBACK = REPO / "deploy" / "rollback.sh"
@@ -1931,13 +1930,8 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
         )
         shapes = ("relative", "a space", "a placeholder", "a wildcard", "a letter outside ASCII")
         members = [(shape, step) for shape in shapes for step in steps]
-        collation = locale.setlocale(locale.LC_COLLATE)
-        try:
-            locale.setlocale(locale.LC_COLLATE, "en_US.UTF-8")
-        except locale.Error:
+        if not collation_locale_available("en_US.UTF-8"):
             self.fail("a locale whose collation widens a bracket range is installed")
-        finally:
-            locale.setlocale(locale.LC_COLLATE, collation)
         for shape, (label, script, args) in examined("Caddy directory member(s)", members):
             with self.subTest(shape=shape, step=label):
                 w = self.fresh_world()
