@@ -52,17 +52,7 @@ const TABLE: Record<Phase, Partial<Record<ReviewEvent, Cell>>> = {
   },
   question: { 'show-answer': { phase: 'answer', effect: 'none' }, undo: UNDO, bury: BURY, flag: FLAG },
   answer: { again: RATE, hard: RATE, good: RATE, easy: RATE, undo: UNDO, bury: BURY, flag: FLAG },
-  // stub: a grade in flight is rated again
-  busy: {
-    settled: NEXT,
-    'not-shown': NEXT,
-    flagged: { phase: 'side', effect: 'none' },
-    refusal: REFUSED,
-    again: RATE,
-    hard: RATE,
-    good: RATE,
-    easy: RATE
-  },
+  busy: { settled: NEXT, 'not-shown': NEXT, flagged: { phase: 'side', effect: 'none' }, refusal: REFUSED },
   refused: { retry: NEXT },
   done: {}
 };
@@ -150,8 +140,7 @@ export class Review {
   /** The controls the side shows: a card the frame refused keeps them (A12); undo only while the
    * engine names an undoable action (R7). They stay shown while a request is in flight. */
   get controls(): Action[] {
-    // stub: a card the frame refused hides its controls
-    if (!SHOWN.has(this.#state.phase) || this.escaped) return [];
+    if (!SHOWN.has(this.#state.phase)) return [];
     const side: Action[] =
       this.#state.side === 'question' ? ['show-answer'] : ['again', 'hard', 'good', 'easy'];
     const undo: Action[] = this.#view?.undo ? ['undo'] : [];

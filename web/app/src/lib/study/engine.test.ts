@@ -1,8 +1,10 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
-import { StudyEngine, type WorkerLike } from './engine';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { EngineError } from '$lib/engine/client';
+import { getLocale, overwriteGetLocale } from '$lib/paraglide/runtime.js';
+import { StudyEngine, studyEngine, type WorkerLike } from './engine';
 
 // SPEC-350 R5, A10; ADR-361. The app starts the engine's Worker in one place, `engine.ts`: on the
 // first study screen's first call, never at import, opening the collection in the app's languages,
@@ -10,6 +12,7 @@ import { StudyEngine, type WorkerLike } from './engine';
 const APP = fileURLToPath(new URL('../../..', import.meta.url));
 const SRC = join(APP, 'src');
 const ORIGIN = 'https://app.example';
+const ORIGINAL_LOCALE = getLocale;
 
 /** A Worker's construction: a dedicated or a shared one. */
 const WORKER = /\bnew\s+(?:Shared)?Worker\b/g;
@@ -41,15 +44,18 @@ function sources(dir: string): string[] {
 class FakeWorker implements WorkerLike {
   sent: unknown[] = [];
   terminated = false;
+  /** The operations this Worker refuses, each with its code. */
+  refuses: Record<string, string> = {};
   #listeners: ((event: MessageEvent) => void)[] = [];
 
   postMessage(message: unknown) {
     this.sent.push(message);
-    const { id } = message as { id: number };
+    const { id, op } = message as { id: number; op: string };
+    const code = this.refuses[op];
+    const data =
+      code === undefined ? { id, ok: true, value: null } : { id, ok: false, code, message: `${op} refused` };
     queueMicrotask(() => {
-      for (const listener of this.#listeners) {
-        listener(new MessageEvent('message', { data: { id, ok: true, value: null } }));
-      }
+      for (const listener of this.#listeners) listener(new MessageEvent('message', { data }));
     });
   }
 
@@ -111,5 +117,64 @@ describe("the app's engine", () => {
     await engine.client();
     expect(made).toHaveLength(2);
     expect(made[1].sent).toEqual([{ id: 1, op: 'open', languages: ['ja'] }]);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    overwriteGetLocale(ORIGINAL_LOCALE);
+  });
+
+  it("a refused open starts again, and the app's engine is the engine's module Worker", async () => {
+    // a refused open ends its Worker; the next call starts a new one and opens again
+    const made: FakeWorker[] = [];
+    const page = new EventTarget();
+    const engine = new StudyEngine(
+      () => {
+        const worker = new FakeWorker();
+        if (made.length === 0) worker.refuses.open = 'collection-busy';
+        made.push(worker);
+        return worker;
+      },
+      page,
+      ORIGIN,
+      () => ['fr']
+    );
+    const refused = engine.client();
+    await expect(refused).rejects.toBeInstanceOf(EngineError);
+    await expect(refused).rejects.toMatchObject({ code: 'collection-busy', message: 'open refused' });
+    expect(made[0].terminated).toBe(true);
+    await engine.client();
+    expect([made.length, made[1].terminated, made[1].sent]).toEqual([2, false, [{ id: 1, op: 'open', languages: ['fr'] }]]);
+    // a page hidden before any call closes nothing
+    const idle = new FakeWorker();
+    const quiet = new EventTarget();
+    new StudyEngine(() => idle, quiet, ORIGIN, () => ['fr']);
+    quiet.dispatchEvent(new Event('pagehide'));
+    expect(idle.sent).toEqual([]);
+
+    // the app's one engine: a module Worker from the engine's worker module, on the page's origin,
+    // opened in the app's locale, and the same engine on every call
+    const built: { url: string; options: unknown }[] = [];
+    vi.stubGlobal('window', new EventTarget());
+    vi.stubGlobal('location', { origin: ORIGIN });
+    vi.stubGlobal(
+      'Worker',
+      class extends FakeWorker {
+        constructor(url: URL | string, options: unknown) {
+          super();
+          built.push({ url: String(url), options });
+          made.push(this);
+        }
+      }
+    );
+    overwriteGetLocale(() => 'zh-Hant');
+    const app = studyEngine();
+    expect(studyEngine()).toBe(app);
+    expect(built).toEqual([]);
+    await app.client();
+    expect(built).toHaveLength(1);
+    expect(built[0].url.endsWith('/src/lib/engine/worker.ts')).toBe(true);
+    expect(built[0].options).toEqual({ type: 'module' });
+    expect(made[2].sent).toEqual([{ id: 1, op: 'open', languages: ['zh-TW'] }]);
   });
 });

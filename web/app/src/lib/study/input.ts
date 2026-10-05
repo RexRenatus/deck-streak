@@ -27,7 +27,7 @@ export interface InputTarget {
 }
 
 /** A key the switch silences: one character, with no Control or Command (WCAG 2.1.4). */
-export function silenced(event: KeyInput): boolean {
+function silenced(event: KeyInput): boolean {
   return event.key.length === 1 && !event.ctrlKey && !event.metaKey;
 }
 
@@ -62,7 +62,7 @@ export class StudyInput {
   /** A `keydown` on the page. */
   key(event: KeyInput): void {
     this.#tabbed = event.key === 'Tab';
-    // stub: the switch is not read
+    if (!this.#characterKeys && silenced(event)) return;
     this.#intent(readKey(event));
   }
 
@@ -81,6 +81,7 @@ export class StudyInput {
   /** A click on one of the review's controls, which names its action on either side. */
   click(action: Action): void {
     this.#target.act(action);
+    this.#target.focus();
   }
 
   /** A pointer went down on the page: the focus it moves is not a keyboard's. */
@@ -91,14 +92,13 @@ export class StudyInput {
   /** The window lost focus. When the card frame holds it and no Tab moved it, the review takes it
    * back, so the next key still reaches the review (P1). */
   blur(active: unknown, frame: unknown): void {
-    // stub: focus stays where it went
-    void active;
-    void frame;
+    if (frame !== null && active === frame && !this.#tabbed) this.#target.focus();
   }
 
   #intent(intent: Intent | null): void {
     const action = intent === null ? null : resolve(intent, this.#target.side());
     if (action === null) return;
     this.#target.act(action);
+    this.#target.focus();
   }
 }
