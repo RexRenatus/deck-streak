@@ -61,6 +61,12 @@
 		# The server's own routes begin /sync/ and /msync/. uri runs before respond and
 		# reverse_proxy in Caddy's directive order, so both see the server's own path.
 		uri strip_prefix /anki-sync
+		# The route answers under its one spelling alone (SPEC-351 R1, R2; ADR-362 D1). The
+		# request-target as the edge received it, which the strip above does not change and which
+		# the access log records, must be the prefix as written, then segments of letters and
+		# digits, then any query; every other spelling is answered 404 here and never proxied.
+		@sync_respelled expression !{http.request.orig_uri}.matches('^(?:https?://[A-Za-z0-9.:-]+)?/anki-sync(?:/[A-Za-z0-9]+)+(?:[?].*)?$')
+		respond @sync_respelled 404
 		# The server's health route answers on loopback only, as the API's do (ADR-025).
 		@sync_health path /health
 		respond @sync_health 404
