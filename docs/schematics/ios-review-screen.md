@@ -30,7 +30,7 @@ flowchart TB
     FAC["CardWebViewFactory.makeCardWebView(html:)<br/>L1 store, L2 JS off, L3 rule list,<br/>L4 no handler, L5 gate, L6 no windows,<br/>L7 string with no base URL"]
   end
   subgraph FFI["deck-streak-ffi (one static library)"]
-    ENG["Engine<br/>run(service, method, bytes)<br/>face(card, answer, night, autoplay)<br/>collection_directory(default, arguments)"]
+    ENG["Engine<br/>run(service, method, bytes)<br/>face(card, answer, night, autoplay)<br/>collection_directory(fallback, arguments)"]
     VC["VoiceChoices(path)<br/>chosen / options / choose"]
     AL["allow_list.rs<br/>+ (7,4) (7,22) (13,24)"]
   end

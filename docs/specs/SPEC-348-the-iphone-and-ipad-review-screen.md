@@ -130,8 +130,8 @@ R6. **The voice choice.** The native adapter exports `VoiceChoices`, opened on o
     clears the choice. The file holds one `language<TAB>identifier` line per language, is written
     whole to a temporary file and renamed, and a line that does not parse is skipped. The file is
     never inside the collection or its media folder, and nothing of it is synced.
-R7. **The test seam.** The native adapter exports `collection_directory(default, arguments)`: it
-    returns `default` when no `-DSCollectionDirectory` argument is given, and the value after that
+R7. **The test seam.** The native adapter exports `collection_directory(fallback, arguments)`: it
+    returns `fallback` when no `-DSCollectionDirectory` argument is given, and the value after that
     argument when it is an absolute path to an existing directory. Every other value is refused by
     name, as a `CollectionDirectoryRefusal`: no value after the argument (`NoValue`), a path that is
     not absolute (`NotAbsolute`), a path that does not exist (`Missing`), or a path that is not a

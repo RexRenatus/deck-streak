@@ -106,12 +106,16 @@ on the buttons come from the same states (13,24).
 
 ### D6. UI tests reach a seeded collection through one launch argument the engine adapter reads
 
-`collection_directory(default, arguments)` returns the default when no `-DSCollectionDirectory`
+`collection_directory(fallback, arguments)` returns the default when no `-DSCollectionDirectory`
 argument is given, and the value after it when that is an absolute path to an existing directory;
 every other value is refused by name (`CollectionDirectoryRefusal`: no value, not absolute,
 missing, not a directory). The UI tests copy the review fixture to
 a fresh directory and launch the app with the argument; a launch without it is the app shell's
 fresh install.
+
+The parameter is named `fallback` because `default` is a keyword in the generated C header, which the Swift
+module cannot import; chosen against are a header post-processing step in the workflow (it edits generated code,
+behind the workflow wall) and a binding-generator upgrade (a dependency change outside this delivery).
 
 | alternative | why it lost |
 |---|---|

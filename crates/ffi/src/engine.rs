@@ -165,7 +165,7 @@ impl fmt::Display for CollectionDirectoryRefusal {
 
 impl std::error::Error for CollectionDirectoryRefusal {}
 
-/// The directory the app opens its collection in: `default` when the launch `arguments` name no
+/// The directory the app opens its collection in: `fallback` when the launch `arguments` name no
 /// `-DSCollectionDirectory`, and the value after it when that is an absolute path to an existing
 /// directory (SPEC-348 R7). The app shell passes its own arguments and decides nothing.
 ///
@@ -180,14 +180,14 @@ impl std::error::Error for CollectionDirectoryRefusal {}
     reason = "a foreign caller's values cross the boundary owned, as the bindings pass them"
 )]
 pub fn collection_directory(
-    default: String,
+    fallback: String,
     arguments: Vec<String>,
 ) -> Result<String, CollectionDirectoryRefusal> {
     let Some(position) = arguments
         .iter()
         .position(|argument| argument == COLLECTION_DIRECTORY)
     else {
-        return Ok(default);
+        return Ok(fallback);
     };
     let value = arguments
         .get(position + 1)
