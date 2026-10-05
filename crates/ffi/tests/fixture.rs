@@ -6,7 +6,11 @@
 //! opens what was written with the engine and reads each file's own header, so a builder that
 //! wrote nothing, or wrote something else, fails here.
 
-#![allow(clippy::expect_used, reason = "a failed fixture should fail its test")]
+#![allow(
+    clippy::expect_used,
+    clippy::print_stdout,
+    reason = "a failed fixture should fail its test, and an enumerating test prints what it examined"
+)]
 
 #[path = "support/review.rs"]
 mod review;
@@ -15,6 +19,17 @@ use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anki::collection::CollectionBuilder;
+
+/// Prints how many `what` the test examined and refuses none: a population that came back empty
+/// judged nothing, and every assertion over it would pass.
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    assert!(
+        !items.is_empty(),
+        "examined 0 {what}: the population is empty, so nothing was judged"
+    );
+    items
+}
 
 #[test]
 fn the_review_fixture_holds_four_cards_and_two_files() {
@@ -33,16 +48,19 @@ fn the_review_fixture_holds_four_cards_and_two_files() {
     );
 
     let media = fixture.dir.join("collection.media");
-    let mut names: Vec<String> = std::fs::read_dir(&media)
-        .expect("the media folder is read")
-        .map(|entry| {
-            entry
-                .expect("a media entry is read")
-                .file_name()
-                .into_string()
-                .expect("a media name is UTF-8")
-        })
-        .collect();
+    let mut names: Vec<String> = examined(
+        "media file(s)",
+        std::fs::read_dir(&media)
+            .expect("the media folder is read")
+            .map(|entry| {
+                entry
+                    .expect("a media entry is read")
+                    .file_name()
+                    .into_string()
+                    .expect("a media name is UTF-8")
+            })
+            .collect(),
+    );
     names.sort();
     assert_eq!(
         names,

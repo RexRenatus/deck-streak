@@ -5,7 +5,11 @@
 //! choice against an installed set, asks for a picker's options, records and clears a choice, and
 //! opens the file again to read what survived.
 
-#![allow(clippy::expect_used, reason = "a failed fixture should fail its test")]
+#![allow(
+    clippy::expect_used,
+    clippy::print_stdout,
+    reason = "a failed fixture should fail its test, and an enumerating test prints what it examined"
+)]
 
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -49,6 +53,17 @@ fn scratch() -> PathBuf {
         .join(format!("{}-{stamp}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("a scratch directory");
     dir
+}
+
+/// Prints how many `what` the test examined and refuses none: a population that came back empty
+/// judged nothing, and every assertion over it would pass.
+fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
+    println!("examined {} {what}", items.len());
+    assert!(
+        !items.is_empty(),
+        "examined 0 {what}: the population is empty, so nothing was judged"
+    );
+    items
 }
 
 #[test]
@@ -130,16 +145,19 @@ fn a_voice_choice_survives_and_follows_the_installed_set() {
         "de-DE\tvoice.anna\nfr-FR\tvoice.thomas\n",
         "the file is written whole, the damaged line gone"
     );
-    let mut entries: Vec<String> = std::fs::read_dir(&dir)
-        .expect("the scratch directory is read")
-        .map(|entry| {
-            entry
-                .expect("an entry is read")
-                .file_name()
-                .to_string_lossy()
-                .into_owned()
-        })
-        .collect();
+    let mut entries: Vec<String> = examined(
+        "scratch entr(ies)",
+        std::fs::read_dir(&dir)
+            .expect("the scratch directory is read")
+            .map(|entry| {
+                entry
+                    .expect("an entry is read")
+                    .file_name()
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .collect(),
+    );
     entries.sort();
     assert_eq!(entries, ["voices.tsv"], "no temporary file is left behind");
 }
