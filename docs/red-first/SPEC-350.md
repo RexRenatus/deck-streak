@@ -168,6 +168,11 @@ times, not once) and green at d1afa325.
   storage name, a device with no storage and a forgotten gamepad; `deck-list.test.ts` the link
   back to Today; and `review-screen.test.ts` the screen's heading, the one gamepad the page
   already had leaving, a gamepad read afresh after it left, and a pointer after a Tab.
+- **The web engine's boundary census grows, mutation coverage.** After dev's table joined the
+  branch, the diff's own mutation pass found six survivors in `src/wasm.rs`, a module no native
+  test runs. `tests/boundary.rs` reads that module's source, so its owed list gains three rows
+  and a statement, each an added line: `deck_json`, `joined` and `undo` as functions, and the
+  deck tree's seconds conversion. No assertion is rewritten and none removed.
 - **Three rewrites with no change of behaviour.** The card request takes no event, a device with
   no storage is checked outside the try, and no intent resolves to no action; each removed a mutant
   no test could tell from the original.

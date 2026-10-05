@@ -22,7 +22,7 @@ fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
 /// Each boundary function the census reads: its name, why it owes what it owes, and the
 /// statements its body holds for it. A statement is compared with every blank removed, so a
 /// reflow by rustfmt changes nothing.
-const OWED: [(&str, &str, &[&str]); 13] = [
+const OWED: [(&str, &str, &[&str]); 16] = [
     (
         "create_backend",
         "starts the core's dispatcher on the web transport and keeps it",
@@ -82,8 +82,35 @@ const OWED: [(&str, &str, &[&str]); 13] = [
         "deck_tree",
         "reads the deck tree with today's counts through the dispatcher and answers its decks",
         &[
+            "now: now_millis() / 1000",
             "call(service::DECKS, 4, &request.encode_to_vec())?",
             "root.children.iter().map(deck_json)",
+        ],
+    ),
+    (
+        "deck_json",
+        "answers a deck's id, name, counts and children as the deck list reads them",
+        &[
+            "\"id\": node.deck_id.to_string()",
+            "\"review\": node.review_count",
+            "\"children\": node.children.iter().map(deck_json).collect::<Vec<_>>()",
+        ],
+    ),
+    (
+        "joined",
+        "joins a rendered side's text nodes and each replacement's current text",
+        &[
+            "Some(Value::Text(text)) => Some(text.as_str())",
+            "Some(Value::Replacement(replacement)) => Some(replacement.current_text.as_str())",
+            ".collect()",
+        ],
+    ),
+    (
+        "undo",
+        "undoes through the collection service and forgets the kept card",
+        &[
+            "call(service::COLLECTION, 8, &[])?",
+            "*kept.borrow_mut() = None",
         ],
     ),
     (
