@@ -1,12 +1,15 @@
 //! The engine handle, its typed refusal and the one entry point (SPEC-336 R1, R3).
 
 use std::fmt;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use deck_streak_engine_core::dispatch::{Dispatcher, Refusal};
+use deck_streak_engine_core::face::Side;
 use deck_streak_engine_core::table::Transport;
 
 use crate::allow_list::allowed;
+use crate::face::{CardFace, MediaFolder};
 
 /// Why a call was not answered with the response's bytes. A native client reads it as a thrown
 /// error; nothing on this path panics.
@@ -95,12 +98,109 @@ impl Engine {
         }
         self.dispatcher
             .run(service, method, &input)
-            .map_err(|refusal| match refusal {
-                Refusal::Engine { error } => EngineRefusal::Engine { error },
-                Refusal::NotAllowed { service, method }
-                | Refusal::NeedsGesture { service, method } => {
-                    EngineRefusal::NotAllowed { service, method }
-                }
-            })
+            .map_err(refusal)
     }
+
+    /// Completes the face of the card `card_id`: its question, or its answer when `answer` is
+    /// set, in one closed page lit for `night`, with the clips to autoplay when the client wishes
+    /// it and the card's preset allows it (SPEC-348 R5). Its media are read from the media folder
+    /// of the collection this engine opened.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the engine cannot read or render the card.
+    pub fn face(
+        &self,
+        card_id: i64,
+        answer: bool,
+        night: bool,
+        autoplay: bool,
+    ) -> Result<CardFace, EngineRefusal> {
+        let side = if answer { Side::Answer } else { Side::Question };
+        let folder = MediaFolder(self.dispatcher.media_folder().map(PathBuf::from));
+        self.dispatcher
+            .face(card_id, side, autoplay, &folder)
+            .map(|face| CardFace::new(face, night))
+            .map_err(refusal)
+    }
+}
+
+/// The adapter's refusal for the core's: a pair the native column does not admit reads as one the
+/// allow-list does not carry, since the two are equal.
+fn refusal(refusal: Refusal) -> EngineRefusal {
+    match refusal {
+        Refusal::Engine { error } => EngineRefusal::Engine { error },
+        Refusal::NotAllowed { service, method } | Refusal::NeedsGesture { service, method } => {
+            EngineRefusal::NotAllowed { service, method }
+        }
+    }
+}
+
+/// The launch argument a UI test names its seeded collection's directory with (ADR-359 D6).
+const COLLECTION_DIRECTORY: &str = "-DSCollectionDirectory";
+
+/// Why a launch's collection directory argument was refused, by name.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Error)]
+pub enum CollectionDirectoryRefusal {
+    /// The argument is the last one, with no value after it.
+    NoValue,
+    /// The value is not an absolute path.
+    NotAbsolute,
+    /// The value names nothing that exists.
+    Missing,
+    /// The value names something that is not a directory.
+    NotADirectory,
+}
+
+impl fmt::Display for CollectionDirectoryRefusal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::NoValue => "the collection directory argument has no value",
+            Self::NotAbsolute => "the collection directory is not an absolute path",
+            Self::Missing => "the collection directory does not exist",
+            Self::NotADirectory => "the collection directory is not a directory",
+        })
+    }
+}
+
+impl std::error::Error for CollectionDirectoryRefusal {}
+
+/// The directory the app opens its collection in: `fallback` when the launch `arguments` name no
+/// `-DSCollectionDirectory`, and the value after it when that is an absolute path to an existing
+/// directory (SPEC-348 R7). The app shell passes its own arguments and decides nothing.
+///
+/// # Errors
+///
+/// Every other value, by name: [`CollectionDirectoryRefusal::NoValue`],
+/// [`CollectionDirectoryRefusal::NotAbsolute`], [`CollectionDirectoryRefusal::Missing`] or
+/// [`CollectionDirectoryRefusal::NotADirectory`].
+#[uniffi::export]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "a foreign caller's values cross the boundary owned, as the bindings pass them"
+)]
+pub fn collection_directory(
+    fallback: String,
+    arguments: Vec<String>,
+) -> Result<String, CollectionDirectoryRefusal> {
+    let Some(position) = arguments
+        .iter()
+        .position(|argument| argument == COLLECTION_DIRECTORY)
+    else {
+        return Ok(fallback);
+    };
+    let value = arguments
+        .get(position + 1)
+        .ok_or(CollectionDirectoryRefusal::NoValue)?;
+    let path = Path::new(value);
+    if !path.is_absolute() {
+        return Err(CollectionDirectoryRefusal::NotAbsolute);
+    }
+    if !path.exists() {
+        return Err(CollectionDirectoryRefusal::Missing);
+    }
+    if !path.is_dir() {
+        return Err(CollectionDirectoryRefusal::NotADirectory);
+    }
+    Ok(value.clone())
 }

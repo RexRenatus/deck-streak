@@ -8,6 +8,11 @@
       "id": "S06226-TWO-INSTANCES-OF-ONE-TEMPLATE-ARE-REFUSED",
       "reason": "The rule it pinned, that a shipped template carries at most one instance drop-in directory (SPEC-062 R14, A21), is replaced: the held flush needs its own drop-in beside the sync's, so an instance is now admitted by name on one allowlist. Its two true successors are S06229 (an unnamed instance is refused) and S06230 (an unshipped template's instance is refused).",
       "approval": "orchestrator, under the owner's 2026-09-27 delegation of all DeckStreak gates; ruling PR #512 2026-10-01"
+    },
+    {
+      "id": "S35022-DECK-TREE-IS-NOT-NATIVE",
+      "reason": "SPEC-348 R1 makes the deck tree a native pair as well as a web one, so the row's claim that it is not native is reversed. S34803 holds the same line the other way: marked web-only, the native dispatcher refuses the deck tree.",
+      "approval": "orchestrator, under the owner's delegation of all DeckStreak gates; the DeckStreak seat's ruling on the review screen's merge with the web review"
     }
   ]
 }

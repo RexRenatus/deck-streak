@@ -8,8 +8,10 @@ name: xcframework
 # each slice's own headers. It publishes the build time, each slice's size and both checks as the
 # run's summary and as the `xcframework` artifact, beside the framework and the bindings.
 # apple-on-change.yml calls it on a pull request into dev that changes an Apple or FFI path,
-# apple-on-tag.yml calls it on every release tag, and a dispatch runs it directly (SPEC-344). No
-# secret is used, the token is read-only, and every action is pinned by its full commit SHA.
+# apple-on-tag.yml calls it on every release tag, and a dispatch runs it directly (SPEC-344). The
+# two TestFlight lanes, testflight-internal.yml and testflight-release.yml, call it before their app
+# job builds and uploads the app (SPEC-352). No secret is passed to it or used by it, the token is
+# read-only, and every action is pinned by its full commit SHA.
 #
 # The Swift harness (SPEC-339 R11, R12, ADR-350): the `xcframework` job also writes the synthetic
 # collection with this commit's engine; `harness-wire` runs the codec's tests on the host; and
@@ -120,6 +122,8 @@ jobs:
           cargo run --locked -p deck-streak-ffi --example harness-fixture -- harness-fixture
           echo "$(( $(date +%s) - started ))" > "$REPORT/fixture-seconds"
           ls -l harness-fixture
+          cargo run --locked -p deck-streak-ffi --example review-fixture -- review-fixture
+          ls -l review-fixture
       - name: the report
         if: ${{ always() }}
         run: |
@@ -166,6 +170,7 @@ jobs:
             bindings/
             xcframework-report/
             harness-fixture/
+            review-fixture/
           if-no-files-found: warn
 
   harness-wire:
@@ -287,6 +292,9 @@ jobs:
           cp -R engine-artifact/DeckStreakFFI.xcframework ios/EnginePackage/
           cp engine-artifact/bindings/deck_streak_ffi.swift ios/EnginePackage/Sources/DeckStreakFFI/
           cp engine-artifact/harness-fixture/collection.anki2 ios/Harness/Resources/
+      - name: the app icon, written
+        run: |
+          python3 scripts/ios_icon.py write ios/Harness/Assets.xcassets/AppIcon.appiconset/AppIcon.png
       - name: XcodeGen, checksum-verified
         run: |
           curl -fsSL -o "$RUNNER_TEMP/xcodegen.zip" "https://github.com/yonaskolb/XcodeGen/releases/download/${XCODEGEN_VERSION}/xcodegen.zip"

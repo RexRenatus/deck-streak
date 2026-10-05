@@ -157,7 +157,7 @@ pub const ORDINARY: [Ordinary; 18] = [
         service: 7,
         method: 4,
         name: "DecksService.DeckTree",
-        native: false,
+        native: true,
         web: true,
     },
     Ordinary {
@@ -171,7 +171,7 @@ pub const ORDINARY: [Ordinary; 18] = [
         service: 7,
         method: 22,
         name: "DecksService.SetCurrentDeck",
-        native: false,
+        native: true,
         web: true,
     },
     Ordinary {
@@ -199,7 +199,7 @@ pub const ORDINARY: [Ordinary; 18] = [
         service: 13,
         method: 24,
         name: "SchedulerService.DescribeNextStates",
-        native: false,
+        native: true,
         web: true,
     },
     Ordinary {

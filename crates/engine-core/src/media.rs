@@ -1,0 +1,168 @@
+//! The media rules a face's references pass (SPEC-348 R3; ADR-359 D1).
+//!
+//! A card's frame blocks every load and has no base URL, so a media file reaches it only inside the
+//! document, as a `data:` URL the core writes. A reference is admitted only as a plain file name
+//! with a type in one closed table, read through the caller's [`Reader`] under two caps. The caps
+//! and the table are public constants: one copy both clients read.
+
+use anki::text::replace_media_refs;
+use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD;
+
+/// The largest media file a face inlines or plays: 4 MiB (ADR-359 D1).
+pub const FILE_CAP: u64 = 4 * 1024 * 1024;
+/// The most media bytes one face carries: 16 MiB (ADR-359 D1).
+pub const FACE_CAP: u64 = 16 * 1024 * 1024;
+
+/// The closed type table: a file name's extension, compared ASCII-case-insensitively, and the
+/// media type its `data:` URL names. Images and audio only; an mp4 is read as audio.
+pub const TYPES: [(&str, &str); 16] = [
+    ("png", "image/png"),
+    ("jpg", "image/jpeg"),
+    ("jpeg", "image/jpeg"),
+    ("gif", "image/gif"),
+    ("webp", "image/webp"),
+    ("svg", "image/svg+xml"),
+    ("avif", "image/avif"),
+    ("mp3", "audio/mpeg"),
+    ("m4a", "audio/mp4"),
+    ("aac", "audio/aac"),
+    ("ogg", "audio/ogg"),
+    ("oga", "audio/ogg"),
+    ("opus", "audio/ogg"),
+    ("wav", "audio/wav"),
+    ("webm", "audio/webm"),
+    ("mp4", "audio/mp4"),
+];
+
+/// Where a face's media files are read from. The caller owns the store: the native adapter reads
+/// the opened collection's media folder, a test reads memory.
+pub trait Reader {
+    /// The first `limit` bytes of the media file `name` at most, or `None` when there is no such
+    /// file. The core asks for one byte past its cap and decides by the length it gets back.
+    fn read(&self, name: &str, limit: u64) -> Option<Vec<u8>>;
+}
+
+/// Whether `name` is a plain file name: not empty, no separator or NUL, and not `.` or `..`.
+#[must_use]
+pub fn plain_name(name: &str) -> bool {
+    let separator = name.contains(['/', '\\', '\0']);
+    let dots = name == "." || name == "..";
+    let empty = name.is_empty();
+    !(separator || dots || empty)
+}
+
+/// `name` with its `%XX` escapes decoded, as a card writes a media file's name in an attribute. A
+/// `%` not followed by two hex digits stands for itself. `None` when the decoded bytes are not
+/// UTF-8, which refuses the reference: no file name the engine stores can spell them.
+#[must_use]
+pub fn decoded_name(name: &str) -> Option<String> {
+    let mut decoded = Vec::with_capacity(name.len());
+    let mut rest = name.as_bytes();
+    while let Some((&byte, tail)) = rest.split_first() {
+        if byte == b'%'
+            && let [high, low, after @ ..] = tail
+            && let (Some(high), Some(low)) = (hex(*high), hex(*low))
+        {
+            decoded.push(high * 16 + low);
+            rest = after;
+        } else {
+            decoded.push(byte);
+            rest = tail;
+        }
+    }
+    String::from_utf8(decoded).ok()
+}
+
+/// One hex digit's value.
+fn hex(digit: u8) -> Option<u8> {
+    char::from(digit)
+        .to_digit(16)
+        .and_then(|value| u8::try_from(value).ok())
+}
+
+/// The media type the closed table gives `name`'s extension, compared ASCII-case-insensitively.
+fn media_type(name: &str) -> Option<&'static str> {
+    let (_, extension) = name.rsplit_once('.')?;
+    TYPES
+        .iter()
+        .find(|(known, _)| known.eq_ignore_ascii_case(extension))
+        .map(|&(_, media_type)| media_type)
+}
+
+/// One face's media: the caller's reader, the bytes the face has taken so far against
+/// [`FACE_CAP`], and the names it left out. Every use of a file counts toward the total, and a file
+/// is read again at each use, so the bytes held while a face is completed stay within its cap.
+pub(crate) struct Budget<'a> {
+    reader: &'a dyn Reader,
+    total: u64,
+    omitted: Vec<String>,
+}
+
+impl<'a> Budget<'a> {
+    /// A budget with nothing taken, reading through `reader`.
+    pub(crate) fn new(reader: &'a dyn Reader) -> Self {
+        Self {
+            reader,
+            total: 0,
+            omitted: Vec::new(),
+        }
+    }
+
+    /// `text` with every media reference the engine finds in it rewritten: to the `data:` URL of
+    /// the file's bytes when the rules admit it, else to nothing.
+    pub(crate) fn rewrite(&mut self, text: &str) -> String {
+        replace_media_refs(text, |name| Some(self.attribute(name)))
+            .unwrap_or_else(|| text.to_owned())
+    }
+
+    /// The value a media attribute that wrote `written` takes.
+    fn attribute(&mut self, written: &str) -> String {
+        match self.take(written, "") {
+            Some((media_type, bytes)) => {
+                format!("data:{media_type};base64,{}", STANDARD.encode(bytes))
+            }
+            None => String::new(),
+        }
+    }
+
+    /// The bytes of the sound file `written` names, when the rules admit it and its type is audio.
+    pub(crate) fn sound(&mut self, written: &str) -> Option<Vec<u8>> {
+        self.take(written, "audio/").map(|(_, bytes)| bytes)
+    }
+
+    /// The names left out, each once, in the order the face first met them.
+    pub(crate) fn into_omitted(self) -> Vec<String> {
+        self.omitted
+    }
+
+    /// The type and bytes of the file `written` names when the rules admit it and its type starts
+    /// with `kind`; else `None`, with `written` joining the omitted names once.
+    fn take(&mut self, written: &str, kind: &str) -> Option<(&'static str, Vec<u8>)> {
+        let admitted = self.admit(written, kind);
+        if admitted.is_none() && !self.omitted.iter().any(|name| name == written) {
+            self.omitted.push(written.to_owned());
+        }
+        admitted
+    }
+
+    /// The rules of SPEC-348 R3, in order: the decoded name is plain, its type is in the table,
+    /// the reader has it, it is within the file cap, and the face stays within its own.
+    fn admit(&mut self, written: &str, kind: &str) -> Option<(&'static str, Vec<u8>)> {
+        let name = decoded_name(written)?;
+        if !plain_name(&name) {
+            return None;
+        }
+        let media_type = media_type(&name).filter(|found| found.starts_with(kind))?;
+        let bytes = self.reader.read(&name, FILE_CAP + 1)?;
+        let len = u64::try_from(bytes.len()).ok()?;
+        if len > FILE_CAP {
+            return None;
+        }
+        if self.total + len > FACE_CAP {
+            return None;
+        }
+        self.total += len;
+        Some((media_type, bytes))
+    }
+}
