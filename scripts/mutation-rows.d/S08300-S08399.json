@@ -236,6 +236,42 @@
         "{ let _ = ports.writer.write_sync(&working, &login).await; } match ports.writer.write_sync(&working, &login).await {",
         "skip_write::a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows",
         "a take makes one converge sync and one push sync, two single normal syncs with no retry, so a repeated push sync is refused (SPEC-083 R24)"
+      ],
+      [
+        "S08331-A-CONVERGE-THAT-CANNOT-START-FAILS-THE-TAKE",
+        "ingest",
+        "src/skip_write.rs",
+        "        WriteSync::NotStarted(_) | WriteSync::Unknown(_) => Err(FailReason::ConvergeFailed),",
+        "        WriteSync::NotStarted(_) | WriteSync::Unknown(_) => Ok(()),",
+        "skip_write::a_converge_that_cannot_start_answers_converge_failed_and_moves_nothing",
+        "a converge sync the engine refuses to start fails the take with converge_failed and moves nothing, never going on to the snapshot, the backup or the push (SPEC-083 R21, A25)"
+      ],
+      [
+        "S08332-A-A-ONE-CARD-TAKE-IS-NOT-AN-EMPTY-ONE",
+        "ingest",
+        "src/skip_write.rs",
+        "    if moved.is_empty() {\n        return Ok(TakeAnswer::Accepted {",
+        "    if moved.len() < 2 {\n        return Ok(TakeAnswer::Accepted {",
+        "skip_write::a_take_that_moves_exactly_one_card_writes_and_pushes_it",
+        "a take with exactly one card to move writes and pushes it and records its prior state, and only a take with no card returns early (SPEC-083 R21)"
+      ],
+      [
+        "S08333-A-THE-BACKUP-PARTIAL-IS-SET-TO-OWNER-ONLY",
+        "ingest",
+        "src/skip_write.rs",
+        "    std::fs::set_permissions(&partial, std::fs::Permissions::from_mode(BACKUP_MODE))\n        .map_err(|_| FailReason::BackupFailed)?;",
+        "    let _ = BACKUP_MODE;",
+        "skip_write::the_backup_sits_beside_the_copy_owner_only_and_one_is_kept",
+        "the take sets the backup's mode itself, so a private copy wider than 0600 still yields an owner-only backup, not one that merely inherits its source's mode (SPEC-083 R34, A53)"
+      ],
+      [
+        "S08334-A-THE-SNAPSHOT-RECORDS-THE-PRIOR-EASE-FACTOR",
+        "ingest",
+        "src/skip.rs",
+        "            .bind(card.ease_factor)\n            .bind(card.original_deck)",
+        "            .bind(card.ease_factor + 1)\n            .bind(card.original_deck)",
+        "skip_write::the_snapshot_holds_every_prior_and_left_column_of_each_moved_card",
+        "each moved card's snapshot row holds its prior ease factor as the card stood before the take, with every other prior and left column, the undo's source (SPEC-083 R22, R26, A29)"
       ]
     ]
   }
