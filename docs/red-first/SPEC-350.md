@@ -153,3 +153,22 @@ times, not once) and green at d1afa325.
   grows from eight pairs to sixteen, and the study calls in the second gain the same eight rows, each
   an added line and no assertion rewritten. Both oracles pinned the eight pairs the review's pairs now
   join, so they had to grow with the table the commit changes (SPEC-350 R1, M10).
+
+## What the mutation pass added
+
+- **Mutation coverage, green when written.** The tests below were each written after the web
+  stage's mutation pass found a survivor in the code they hold, and each passed at the commit that
+  added it. `review.test.ts` pins every cell of the review's table, a fresh review's phase and
+  side, the one change `start` announces, an undo before any card, a client that fails with no
+  code, and a card whose answer alone escapes the frame. `frame-document.test.ts` pins a card's
+  frame document with no classes and a body the frame would give attributes. `client.test.ts`
+  pins an open that names no languages, `protocol.test.ts` the eighth language and a language
+  list nested in a list, and `engine.test.ts` an open refused after the page was hidden and
+  after a newer start. `input.test.ts` pins the focus a fresh input takes back, the switch's own
+  storage name, a device with no storage and a forgotten gamepad; `deck-list.test.ts` the link
+  back to Today; and `review-screen.test.ts` the screen's heading, the one gamepad the page
+  already had leaving, a gamepad read afresh after it left, and a pointer after a Tab.
+- **Three rewrites with no change of behaviour.** The card request takes no event, a device with
+  no storage is checked outside the try, and no intent resolves to no action; each removed a mutant
+  no test could tell from the original.
+
