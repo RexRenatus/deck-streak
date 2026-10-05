@@ -36,6 +36,7 @@ deck-streak-bot           (Telegram Bot API adapter)  depends on: kernel, identi
 deck-streak-mcp           (MCP adapter: the bearer guard, the server and its tools)  depends on: kernel, coordination
 deck-streak-engine-core   (the engine core: Anki's engine for both clients behind one per-transport table; ADR-356)  depends on: nothing
 deck-streak-ffi           (the umbrella FFI crate, the app's one Rust static library: the engine's backend behind an allow-list; ADR-345, ADR-357)  depends on: engine-core
+deck-streak-fsrs7         (the isolated FSRS-7 scheduler: review history replayed into memory state; ADR-338)  depends on: nothing
 deck-streak-daemon        (composition root: the deckstreakd binary)  depends on: kernel, ingest, identity, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault, agent, insights, publishing, privacy, coordination, api, bot, mcp
 deck-streak-migration     (one-off import of v9's schema 24, planned)  depends on: kernel, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault
 deck-streak-web-engine    (Anki's engine on wasm32 in the web client's Worker: the study calls over OPFS)  depends on: engine-core
@@ -52,6 +53,12 @@ allow-list for a native client, checked first, and reaches the engine only throu
 dispatcher on the native transport (SPEC-336, ADR-345 D1; ADR-356 D3). `deck-streak-web-engine`
 reaches it the same way on the web transport, from its `wasm32` table only. The daemon composes
 none of the three: a native client links the adapter into its own binary.
+
+`deck-streak-fsrs7` is the isolated FSRS-7 scheduler (ADR-338): it replays a card's review history
+into FSRS-7 memory state, and it depends on no context and never on the engine. Its one external
+dependency is the upstream scheduler crate at a pinned git revision; the engine keeps the released
+crate, and the lockfile tells the two apart by source (SPEC-342, ADR-353 D1 and D5). Its `measure`
+module is the replay-time harness, which the crate's two examples only call (ADR-353 D6).
 
 `deck-streak-push` is an outbound adapter: it builds APNs and web push requests and reports what
 each platform answered, and it depends on the kernel's clock alone (SPEC-343, ADR-354 D3). The

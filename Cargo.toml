@@ -123,6 +123,15 @@ trybuild = "1.0.121"
 # Default features off: the adapter's `bindgen` feature turns the generator on for the XCFramework
 # workflow alone.
 uniffi = { version = "=0.29.1", default-features = false }
+# ADR-338 and ADR-353 D1: the upstream scheduler's FSRS-7, for the isolated scheduler crate alone,
+# taken from fsrs-rs at one full commit of its main branch, never a branch name or a short id. The
+# released crate carries no FSRS-7, and this package shares its name, so cargo tells the two apart
+# by source. A re-pin is a deliberate delivery.
+fsrs7 = { package = "fsrs", git = "https://github.com/open-spaced-repetition/fsrs-rs.git", rev = "4bc0a0979f95dd01cc653031b6f2a01429e4c32b" }
+# ADR-338 and ADR-353 D5: the released scheduler the engine already locks, pinned exactly to the
+# engine's own, so the scheduler crate's coexistence test links both packages into one binary. A
+# dev-dependency only; nothing in production names it.
+fsrs6 = { package = "fsrs", version = "=6.6.2" }
 # ADR-354 D1, D2 and D5 (SPEC-343): the push senders' client and tokens. hyper's pooled client,
 # HTTP/2 for APNs, over hyper-rustls on the rustls the workspace already locks, with the platform
 # verifier and the aws-lc-rs provider the bot's client resolves; a bounded body read; P-256 ECDSA
