@@ -5,7 +5,7 @@
 //! carries its fields as data for a client that branches on them, and its text for a person who
 //! reads the error a client shows; each variant's text names what refused the call and why.
 
-use deck_streak_ffi::engine::{Engine, EngineRefusal};
+use deck_streak_ffi::engine::{CollectionDirectoryRefusal, Engine, EngineRefusal};
 
 /// `BackendCollectionService.CloseCollection`: a real engine call the allow-list leaves out.
 const CLOSE_COLLECTION: (u32, u32) = (3, 1);
@@ -35,5 +35,25 @@ fn each_refusal_reads_as_its_own_sentence() {
             String::from("the engine refused the call (4 bytes)"),
             String::from("the engine could not start: a synthetic reason"),
         )
+    );
+}
+
+/// MUTATION COVERAGE (SPEC-348 R7): each collection directory refusal reads as its own sentence
+/// and none is empty.
+#[test]
+fn each_collection_directory_refusal_reads_as_its_own_sentence() {
+    assert_eq!(
+        [
+            CollectionDirectoryRefusal::NoValue.to_string(),
+            CollectionDirectoryRefusal::NotAbsolute.to_string(),
+            CollectionDirectoryRefusal::Missing.to_string(),
+            CollectionDirectoryRefusal::NotADirectory.to_string(),
+        ],
+        [
+            "the collection directory argument has no value",
+            "the collection directory is not an absolute path",
+            "the collection directory does not exist",
+            "the collection directory is not a directory",
+        ]
     );
 }
