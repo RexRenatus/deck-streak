@@ -90,11 +90,13 @@ FORBIDDEN = {
 NETWORK_NAMES = frozenset({"NWConnection", "import Network"})
 ADMITTED_TESTS = ("ios/CardIsolation/Tests/", "ios/CardProbeTests/")
 # R11's decision tokens: the branching keywords, the short-circuit and nil-coalescing operators, a
-# ternary, and the calls that decide over a collection.
+# ternary, and the calls that decide over a collection, each call in both of its spellings: the
+# call form (`.filter(`) and the trailing closure (`.filter {` or `.filter{`).
 DECISIONS = re.compile(
     r"\b(?:if|guard|case|while|for|repeat|catch)\b"
     r"|&&|\|\||\?\?| \? "
-    r"|\.(?:filter|sorted|sort|reduce|min|max|contains|allSatisfy)\(|\.first\(where:"
+    r"|\.(?:filter|sorted|sort|reduce|min|max|contains|allSatisfy)(?:\(|\s*\{)"
+    r"|\.first(?:\(where:|\s*\{)"
 )
 # A raw string's delimiter, which the stripper does not read: a counted file may not hold one.
 RAW_STRING = '#"'
@@ -430,6 +432,10 @@ EVERY_TOKEN = (
     "xs.filter(f)\nxs.sorted(by: f)\nxs.sort(by: f)\nxs.reduce(0, f)\nxs.min()\nxs.max()\n"
     "xs.contains(1)\nxs.first(where: f)\nxs.allSatisfy(f)\n"
 )
+# Each decision call again, written with a trailing closure in both of its spellings, a space
+# before the brace and none: the same call, so each counts once as its call form does.
+CALLS = ("filter", "sorted", "sort", "reduce", "min", "max", "contains", "first", "allSatisfy")
+EVERY_TRAILING_CLOSURE = "".join(f"xs.{call} {{ f }}\nxs.{call}{{ f }}\n" for call in CALLS)
 
 
 def register_text(pairs):
@@ -477,6 +483,13 @@ PLANTS = {
     "the good tree": ({}, []),
     "every decision token, each counted once": (
         {"sources": {WIRE: EVERY_TOKEN}, "entries": {WIRE: {"role": "wire", "decisions": 20}}},
+        [],
+    ),
+    "every decision call as a trailing closure, in both spellings, each counted once": (
+        {
+            "sources": {WIRE: EVERY_TRAILING_CLOSURE},
+            "entries": {WIRE: {"role": "wire", "decisions": 18}},
+        },
         [],
     ),
     "no register": ({"missing": True}, unlisted(f"{REGISTER}: the register: missing")),
@@ -703,6 +716,26 @@ PLANTS = {
     "a register that records more than the file holds": (
         {"entries": {LIST: {"role": "view", "decisions": 2}}},
         [f"{LIST}: the budgets: 1 counted, the register records 2"],
+    ),
+    "a trailing closure with a space the register does not record": (
+        {
+            "sources": edit(
+                LIST,
+                "    let names: [String]\n",
+                "    let names: [String]\n    var kept: [String] { names.filter { !$0.isEmpty } }\n",
+            )
+        },
+        [f"{LIST}: the budgets: 2 counted, the register records 1"],
+    ),
+    "a trailing closure with no space the register does not record": (
+        {
+            "sources": edit(
+                LIST,
+                "    let names: [String]\n",
+                "    let names: [String]\n    var kept: [String] { names.filter{ !$0.isEmpty } }\n",
+            )
+        },
+        [f"{LIST}: the budgets: 2 counted, the register records 1"],
     ),
     "a codec count that drifts": (
         {"entries": {WIRE: {"role": "wire", "decisions": 2}}},

@@ -449,6 +449,7 @@ Files this part changes that section 4 does not name:
 
 `scripts/tests/test_ci_workflows.py`'s new class reads the workflow through `load`, as its
 neighbours do, so it lists nothing in `NOT_WORKFLOW_READS`.
+`scripts/tests/test_ios_thin_swift.py` counts each call R11 lists in both of its spellings, the call form (`.filter(`, `.first(where:`) and the trailing closure (`.filter {` or `.filter{`, `.first {` or `.first{`), so a call counts once however it is written; a planted tree for each trailing spelling is refused by the budgets' name.
 
 Part 1's rows, which this part leaves as they are:
 
