@@ -21,6 +21,11 @@ export interface SwitchStorage {
 
 /** This device's storage, or none where the browser refuses to give it. */
 export function deviceStorage(): SwitchStorage | undefined {
+  try {
+    return localStorage;
+  } catch {
+    // a frame refused its storage reads as a device with none: the switch is the page's alone
+  }
   return undefined;
 }
 

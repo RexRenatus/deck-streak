@@ -81,9 +81,6 @@ export interface StudyClient {
 /** What the status region announces: a refusal's code, a card the frame refused, a done deck. */
 export type Status = ErrorCode | 'escaped' | 'done';
 
-/** The phases that show a side: its card, and its controls. */
-const SHOWN: ReadonlySet<Phase> = new Set<Phase>(['question', 'answer', 'busy']);
-
 /** What the frame shows: the card last shown, and its side. */
 export interface Face {
   view: CardView;
@@ -96,6 +93,7 @@ export class Review {
   readonly #onChange: () => void;
   #state: ReviewState = { phase: 'loading', side: 'question' };
   #view: CardView | null = null;
+  #face: Face | null = null;
   #counts: Counts | null = null;
   #refusal: ErrorCode | null = null;
   /** A refusal the review recovered from, announced until the next gesture. */
@@ -125,7 +123,7 @@ export class Review {
 
   /** The card and side the frame shows, or `null` when it shows none. */
   get face(): Face | null {
-    return null;
+    return this.#face;
   }
 
   /** The queue's counts, as the last `card` read them. */
@@ -133,12 +131,12 @@ export class Review {
     return this.#counts;
   }
 
-  /** Whether the frame refuses the side shown, which then shows a message in its place. */
+  /** Whether the frame refuses the face it shows, which then shows a message in its place. */
   get escaped(): boolean {
-    const view = this.#view;
-    if (view === null || !SHOWN.has(this.#state.phase)) return false;
-    const html = this.#state.side === 'answer' ? view.answer : view.question;
-    return frameDocument(html, view.css).refused === 'escaped';
+    const face = this.#face;
+    if (face === null) return false;
+    const html = face.side === 'answer' ? face.view.answer : face.view.question;
+    return frameDocument(html, face.view.css).refused === 'escaped';
   }
 
   /** What the status region announces now, or `null` when it is quiet. */
@@ -148,13 +146,13 @@ export class Review {
     return this.#notice ?? (this.escaped ? 'escaped' : null);
   }
 
-  /** The controls the side shows: a card the frame refused keeps them (A12); undo only while the
+  /** The controls the face shows: a card the frame refused keeps them (A12); undo only while the
    * engine names an undoable action (R7). They stay shown while a request is in flight. */
   get controls(): Action[] {
-    if (!SHOWN.has(this.#state.phase)) return [];
-    const side: Action[] =
-      this.#state.side === 'question' ? ['show-answer'] : ['again', 'hard', 'good', 'easy'];
-    const undo: Action[] = this.#view?.undo ? ['undo'] : [];
+    const face = this.#face;
+    if (face === null) return [];
+    const side: Action[] = face.side === 'question' ? ['show-answer'] : ['again', 'hard', 'good', 'easy'];
+    const undo: Action[] = face.view.undo ? ['undo'] : [];
     return [...side, ...undo, 'bury', 'flag'];
   }
 
@@ -190,8 +188,20 @@ export class Review {
   #fire(event: ReviewEvent): void {
     const next = step(this.#state, event);
     this.#state = next.state;
+    this.#show(next.state.phase);
     this.#run(next.effect, event);
     this.#onChange();
+  }
+
+  /** Entering a side shows its card on that side; a request in flight and the next card's load
+   * keep the face, so a grade leaves the rated card's answer on screen until the next card shows;
+   * a refusal and a done deck show none. */
+  #show(phase: Phase): void {
+    if (phase === 'question' || phase === 'answer') {
+      this.#face = { view: this.#view as CardView, side: phase };
+    } else if (phase === 'refused' || phase === 'done') {
+      this.#face = null;
+    }
   }
 
   #run(effect: Effect, event: ReviewEvent): void {
