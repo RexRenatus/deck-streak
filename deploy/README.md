@@ -207,7 +207,7 @@ previous block and Caddyfile back, reloads them and exits non-zero (SPEC-127).
 The `import` line names the block by its absolute path in the Caddy directory, and each step
 writes and checks its candidate in the live Caddyfile's own directory, so the site is served
 whether the Caddyfile is in the Caddy directory or set apart by `DECKSTREAK_DEPLOY_CADDYFILE`;
-either step refuses a Caddy directory that is not an absolute path of letters, digits and
+either step refuses a Caddy directory that is not an absolute path of ASCII letters, digits and
 `._@+/-` before it reads or writes anything (SPEC-353).
 `rollback.sh caddy-remove` reverses it under the same rule. Either Caddy step refuses, before it
 reads or writes anything, any entry of its environment whose name starts with `DECKSTREAK_DEPLOY_` and

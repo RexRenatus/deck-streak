@@ -9,7 +9,7 @@ undo. Only the paths that flow carries change. Every host step is the owner's go
 
 ```mermaid
 flowchart LR
-  cdir["DECKSTREAK_DEPLOY_CADDY_DIR<br/>the Caddy directory"] --> plain{"an absolute path<br/>of letters, digits and ._@+/-"}
+  cdir["DECKSTREAK_DEPLOY_CADDY_DIR<br/>the Caddy directory"] --> plain{"an absolute path<br/>of ASCII letters, digits and ._@+/-"}
   plain -- "no" --> refused["exit 1, naming the setting<br/>before the tag is read<br/>and before the host"]
   plain -- "yes" --> line["the import line<br/>import CADDY_DIR/deck-streak.caddy"]
   plain -- "yes" --> block["the site block<br/>CADDY_DIR/deck-streak.caddy"]

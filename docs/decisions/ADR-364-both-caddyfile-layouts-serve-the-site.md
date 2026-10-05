@@ -85,11 +85,12 @@ D2, where each step's candidate is written and checked:
 
 D3, what the Caddy directory may hold:
 
-- An absolute path of letters, digits and `._@+/-`: chosen, because D1 carries the directory into
+- An absolute path of ASCII letters, digits and `._@+/-`: chosen, because D1 carries the directory into
   one Caddyfile token. Whitespace splits tokens, and `{$…}` is substituted before the Caddyfile is
   parsed. `#` opens a comment at the start of a line, and quotes, backticks and `<<` delimit
   tokens. The import's glob reads `*`, `?`, `[` and `\`. Each Caddy step checks the setting first,
-  `case $CADDY_DIR in [!/]* | /*[!A-Za-z0-9._@+/-]*) die ...`, before the tag is read or the host
+  `case $CADDY_DIR in [!/]* | /*[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._@+/-]*) die ...`,
+  before the tag is read or the host
   is reached. A plain absolute path means one file to the step's shell and to Caddy. A relative directory would
   name one place to the host script and another to Caddy, which joins a relative pattern to the
   Caddyfile's directory. The set is the vocabulary `render-caddy.py` already admits for a web root,
@@ -100,6 +101,9 @@ D3, what the Caddy directory may hold:
 - No check, leaving it to `caddy validate`: rejected, because the validation refuses only some of
   these directories. A placeholder or a wildcard can resolve to another existing file with no
   error, and the import would then name something other than the block.
+- The ranges `A-Za-z0-9` in the bracket: rejected, because bash matches a range against a character
+  above U+00FF by the locale's collation, so under `en_US.UTF-8` the step admitted a fullwidth letter
+  (U+FF21) and a roman numeral (U+2170). Listing the characters matches one set in every locale.
 
 ## Decision Outcome
 

@@ -42,10 +42,10 @@ R2. Each Caddy step writes the candidate it validates and adapts in the live Cad
     directory, the directory the reload reads the Caddyfile from. Every relative import the
     Caddyfile holds, the operator's own included, then resolves at the check to the file it
     resolves to at the reload, in both layouts.
-R3. Each Caddy step refuses a Caddy directory that is not an absolute path of letters, digits and
-    the characters `.`, `_`, `@`, `+`, `/` and `-`. It names the setting and exits 1 before it
-    reads the tag or reaches the host, with the tree unchanged. A Caddy directory of those
-    characters is admitted.
+R3. Each Caddy step refuses a Caddy directory that is not an absolute path of ASCII letters,
+    ASCII digits and the characters `.`, `_`, `@`, `+`, `/` and `-`, whatever the locale it runs
+    under. It names the setting and exits 1 before it reads the tag or reaches the host, with the
+    tree unchanged. A Caddy directory of those characters is admitted.
 R4. SPEC-127, ADR-198 and `deploy/README.md` say that both layouts serve the site.
 R5. Every criterion of SPEC-127 holds on the cured scripts and is judged as before. The helper of
     its A7 to A9 resolves each import as Caddy resolves it, and A38's stale copies are the names
@@ -57,7 +57,7 @@ R5. Every criterion of SPEC-127 holds on the cured scripts and is judged as befo
 |---|---|---|
 | A1 | R1: in both layouts, the import the install adds resolves to the site block in the Caddy directory, which holds the site; the removal leaves the Caddyfile byte for byte as it was and the block gone | `test_deploy_scripts.py` TheCaddyInstall |
 | A2 | R2: in both layouts, every candidate the install and the removal validate and adapt resolves the operator's own relative import to the file the reload resolves it to; the steps check four times and reload the live Caddyfile twice | `test_deploy_scripts.py` TheCaddyInstall |
-| A3 | R3: a relative Caddy directory, and absolute ones holding a space, a placeholder or a wildcard, are each refused by both steps by name, with exit 1, the tree unchanged and the host never reached; a Caddy directory holding each admitted punctuation installs, and its import names its block | `test_deploy_scripts.py` TheCaddyInstall |
+| A3 | R3: a relative Caddy directory, and absolute ones holding a space, a placeholder, a wildcard or a letter outside ASCII (run under a locale whose collation widens a range), are each refused by both steps by name, with exit 1, the tree unchanged and the host never reached; a Caddy directory holding each admitted punctuation installs, and its import names its block | `test_deploy_scripts.py` TheCaddyInstall |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_the_site_import_resolves_to_the_site_block_in_both_layouts
@@ -94,7 +94,8 @@ three documents. R5 is decided by SPEC-127's own acceptance lines, which run in 
 - It leaves the candidate's name, the block's name, the four-name guard and the directory checks as
   ADR-198 decided them; only the candidate's directory moves (#424).
 - It does not name a failed temporary directory of the operator's own (#451).
-- It does not add `--adapter` to the reload, which reads a Caddyfile not named `Caddyfile*` as JSON;
+- It does not add `--adapter` to the reload, which reads a Caddyfile whose name neither starts with
+  `Caddyfile` nor ends with `.caddyfile` as JSON;
   that is filed as its own requirement (#674).
 
 ## 6. Risks
@@ -123,7 +124,7 @@ S35300-S35399, in `scripts/mutation-rows.d/S35300-S35399.json`, table
   (S35302); the removal's (S35303).
 - The Caddy directory's check (A3): the relative arm dropped (S35304); the plain-character arm
   dropped (S35305); the install's call dropped (S35306); the removal's call dropped
-  (S35307).
+  (S35307); the plain-character arm spelt with ranges again, which a locale's collation widens (S35308).
 
 ## 8. References
 

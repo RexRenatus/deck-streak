@@ -101,5 +101,5 @@ ADR-364 decides how the set-apart layout serves the site:
 - the Caddy directory is an absolute path of plain characters (D3).
 
 This record's decisions are unchanged. The candidate keeps its fixed name, and the four-name guard
-and the directory checks read its new place through the same variables. #452 is closed by
-SPEC-353, and #451 stays out of scope. The rest of this record stands.
+and the directory checks read its new place through the same variables. SPEC-353 delivers
+#452, and #451 stays out of scope. The rest of this record stands.
