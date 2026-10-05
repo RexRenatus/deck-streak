@@ -43,7 +43,7 @@ function silenced(event: KeyInput): boolean {
 
 export class StudyInput {
   readonly #target: InputTarget;
-  readonly #storage: SwitchStorage | undefined;
+  readonly #store: Pick<SwitchStorage, 'setItem'>;
   readonly #reader = new GamepadReader();
   #characterKeys: boolean;
   /** Whether the page's last key was Tab, which moves focus on purpose. */
@@ -51,7 +51,7 @@ export class StudyInput {
 
   constructor(target: InputTarget, storage: SwitchStorage | undefined) {
     this.#target = target;
-    this.#storage = storage;
+    this.#store = storage ?? { setItem: () => {} };
     this.#characterKeys = storage?.getItem(KEY_SWITCH) !== OFF;
   }
 
@@ -62,10 +62,8 @@ export class StudyInput {
 
   set characterKeys(on: boolean) {
     this.#characterKeys = on;
-    const storage = this.#storage;
-    if (storage === undefined) return;
     try {
-      storage.setItem(KEY_SWITCH, on ? 'on' : OFF);
+      this.#store.setItem(KEY_SWITCH, on ? 'on' : OFF);
     } catch {
       // storage the browser refuses keeps the switch for this page only
     }

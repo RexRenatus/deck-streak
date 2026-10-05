@@ -220,4 +220,15 @@ describe("the app's engine", () => {
     expect(made).toHaveLength(2);
     expect(made[1].terminated).toBe(false);
   });
+
+  it('an open refused after the page was hidden still rejects with the engine\'s error', async () => {
+    const worker = new FakeWorker();
+    worker.refuses.open = 'collection-busy';
+    const page = new EventTarget();
+    const engine = new StudyEngine(() => worker, page, ORIGIN, () => ['en']);
+    const refused = engine.client();
+    page.dispatchEvent(new Event('pagehide'));
+    await expect(refused).rejects.toMatchObject({ code: 'collection-busy' });
+    expect(worker.terminated).toBe(true);
+  });
 });
