@@ -56,3 +56,12 @@ A11: not red: it pins the web engine's study-call table, which the base already 
 - **The commit between them (228d303c) changed no assertion.** It holds the core's test targets to
   clippy: an allowance for `expect` and the examined counts' printing in each target, as the
   workspace's census tests carry, and clippy's idioms in the graph census's header reader.
+
+Correction (merge round): the reds this round measured are its own. At the merge of dev (export of
+6936640d) `deck-streak-engine-core::parity each_adapter_table_equals_its_transport_column` and
+`deck-streak-ffi::render a1_renders_the_queued_cards_question` failed, and nothing else in the
+two packages did, because the swift harness added the pair (27, 6) to the native allow-list after
+this pull request's CI ran; both are green at the cure. The red lines above are an earlier
+round's: A1 to A8 are the build round's own measurements at 24e5ed54 and beae6cdf, as the record's
+opening says, and A9 to A11 were never red. The later build and fix rounds added no line to this
+record, and the mutation rows' proofs and the wasm boundary census they added are theirs.

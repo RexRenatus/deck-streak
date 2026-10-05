@@ -259,3 +259,13 @@ The red each shows first, recorded in `docs/red-first/SPEC-345.md`:
 A12 to A17 are red at their own tests commit over a `run_exempt` that refuses every gesture and a
 census whose callers are not yet written: A15 fails on its positive artifact, the two adapter
 entries it must find. A18 is mutation coverage, as A9 is for the refusals it mirrors.
+
+## Amendment
+
+The merge round that carried this pull request over the swift harness's landing adds the pair
+(27, 6), `CardRenderingService.RenderExistingCard`, as one `Ordinary` row (native, not web), as
+section 5 says the pull request that lands second must. The native column then holds 6 pairs, up
+from 5, and `ORDINARY` holds 10 rows, up from 9. Section 4's manifest also omits two files this
+delivery adds: `crates/web-engine/tests/boundary.rs`, the source census that kills the wasm
+boundary's mutants, and `scripts/mutation-equivalent.d/deck-streak-web-engine.json`, the
+equivalence file from which 15 stale records were removed and none added.
