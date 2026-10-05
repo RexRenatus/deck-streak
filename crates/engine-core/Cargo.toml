@@ -1,0 +1,24 @@
+[package]
+name = "deck-streak-engine-core"
+description = "DeckStreak's engine core: Anki's engine behind one allow-listed dispatcher both clients share. See docs/CONTEXT-MAP.md."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# ADR-356 D1 and D4: the one client-side holder of the engine. It declares no feature, no
+# `crate-type` and no build script, so nothing a member turns on can widen what it admits.
+[dependencies]
+# ADR-022 and ADR-058: Anki's engine, whose backend this crate holds privately (SPEC-345 R1).
+anki.workspace = true
+# ADR-348: the engine's protobuf messages and their codec, from the same fork commit.
+anki_proto.workspace = true
+prost.workspace = true
+# ADR-029: the engine's database command is JSON; the core builds it from its own fixed reads
+# (ADR-356 D7).
+serde_json.workspace = true

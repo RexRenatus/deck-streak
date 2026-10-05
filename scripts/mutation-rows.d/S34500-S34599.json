@@ -1,0 +1,150 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S34500-DECK-NAMES-IS-METHOD-THIRTEEN",
+        "engine-core",
+        "src/table.rs",
+        "        method: 13,\n        name: \"DecksService.GetDeckNames\",",
+        "        method: 14,\n        name: \"DecksService.GetDeckNames\",",
+        "table::every_pair_is_admitted_held_or_refused_by_its_transport",
+        "GetDeckNames is the pair (7,13); renumbered to (7,14), the native column would admit a method the allow-list never named and refuse a native client's deck list (SPEC-345 A1)"
+      ],
+      [
+        "S34501-CLOSE-COLLECTION-IS-THE-WEBS-ALONE",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"BackendCollectionService.CloseCollection\",\n        native: false,",
+        "        name: \"BackendCollectionService.CloseCollection\",\n        native: true,",
+        "table::every_pair_is_admitted_held_or_refused_by_its_transport",
+        "CloseCollection is on the web column only; marked native, the core would admit a pair the native allow-list does not hold (SPEC-345 A1)"
+      ],
+      [
+        "S34502-FORGET-IS-METHOD-SEVENTEEN",
+        "engine-core",
+        "src/table.rs",
+        "        method: 17,\n        name: \"SchedulerService.ScheduleCardsAsNew\",",
+        "        method: 18,\n        name: \"SchedulerService.ScheduleCardsAsNew\",",
+        "table::each_exempt_write_names_its_engine_call_and_its_target_kind",
+        "forgetting a card is the pair (13,17); renumbered, the gesture would be held on another engine call and Forget would reach none (SPEC-345 A2)"
+      ],
+      [
+        "S34503-SET-DUE-DATE-IS-METHOD-NINETEEN",
+        "engine-core",
+        "src/table.rs",
+        "        method: 19,\n        name: \"SchedulerService.SetDueDate\",",
+        "        method: 20,\n        name: \"SchedulerService.SetDueDate\",",
+        "table::each_exempt_write_names_its_engine_call_and_its_target_kind",
+        "setting a due date is the pair (13,19); renumbered, the gesture would be held on another engine call (SPEC-345 A2)"
+      ],
+      [
+        "S34504-DELETE-PRESET-IS-METHOD-FIVE",
+        "engine-core",
+        "src/table.rs",
+        "        method: 5,\n        name: \"DeckConfigService.RemoveDeckConfig\",",
+        "        method: 6,\n        name: \"DeckConfigService.RemoveDeckConfig\",",
+        "table::each_exempt_write_names_its_engine_call_and_its_target_kind",
+        "deleting a preset is the pair (11,5), RemoveDeckConfig; renumbered, the gesture would be held on another engine call (SPEC-345 A2)"
+      ],
+      [
+        "S34505-CHANGE-NOTE-TYPE-IS-METHOD-FIFTEEN",
+        "engine-core",
+        "src/table.rs",
+        "        method: 15,\n        name: \"NotetypesService.ChangeNotetype\",",
+        "        method: 16,\n        name: \"NotetypesService.ChangeNotetype\",",
+        "table::each_exempt_write_names_its_engine_call_and_its_target_kind",
+        "changing a note type is the pair (23,15); renumbered, the gesture would be held on another engine call (SPEC-345 A2)"
+      ],
+      [
+        "S34506-DELETE-CARD-IS-METHOD-TWO",
+        "engine-core",
+        "src/table.rs",
+        "        method: 2,\n        name: \"CardsService.RemoveCards\",",
+        "        method: 3,\n        name: \"CardsService.RemoveCards\",",
+        "table::each_exempt_write_names_its_engine_call_and_its_target_kind",
+        "deleting a card is the pair (5,2); renumbered, the gesture would be held on another engine call (SPEC-345 A2)"
+      ],
+      [
+        "S34507-DELETE-NOTE-IS-METHOD-SEVEN",
+        "engine-core",
+        "src/table.rs",
+        "        method: 7,\n        name: \"NotesService.RemoveNotes\",",
+        "        method: 8,\n        name: \"NotesService.RemoveNotes\",",
+        "table::each_exempt_write_names_its_engine_call_and_its_target_kind",
+        "deleting a note is the pair (25,7); renumbered, the gesture would be held on another engine call (SPEC-345 A2)"
+      ],
+      [
+        "S34508-A-ROW-MATCHES-ITS-SERVICE-AND-ITS-METHOD",
+        "engine-core",
+        "src/table.rs",
+        "(row.service, row.method) == (service, method)",
+        "row.service == service",
+        "table::every_pair_is_admitted_held_or_refused_by_its_transport",
+        "a row admits its own pair; matched on the service alone, every method of an admitted service would reach the engine (SPEC-345 A1)"
+      ],
+      [
+        "S34509-A-ROW-ADMITS-ONLY-ON-ITS-TRANSPORTS",
+        "engine-core",
+        "src/table.rs",
+        "row.admits(transport)",
+        "(row.admits(transport) || true)",
+        "table::every_pair_is_admitted_held_or_refused_by_its_transport",
+        "a row admits a pair only on the transports it marks; with the mark ignored, each client would reach the other's calls (SPEC-345 A1)"
+      ],
+      [
+        "S34510-AN-EXEMPT-PAIR-NEEDS-A-GESTURE",
+        "engine-core",
+        "src/table.rs",
+        "        Decision::NeedsGesture\n    } else {",
+        "        Decision::NotAllowed\n    } else {",
+        "table::every_pair_is_admitted_held_or_refused_by_its_transport",
+        "an exempt write is held for an owner's gesture; decided NotAllowed, it reads as an unknown call and no gesture could ever reach it (SPEC-345 A1)"
+      ],
+      [
+        "S34511-RUN-HOLDS-AN-EXEMPT-WRITE-FOR-A-GESTURE",
+        "engine-core",
+        "src/dispatch.rs",
+        "            Decision::NeedsGesture => Err(Refusal::NeedsGesture { service, method }),",
+        "            Decision::NeedsGesture => Err(Refusal::NotAllowed { service, method }),",
+        "dispatch::an_ordinary_call_reaches_the_engine_and_an_exempt_one_does_not",
+        "the dispatcher refuses an exempt write as needing a gesture; refused as not allowed, an adapter could not tell an owner's write from a forbidden call (SPEC-345 A3)"
+      ],
+      [
+        "S34512-THE-SNAPSHOT-READS-ONE-CARD-BY-ID",
+        "engine-core",
+        "src/dispatch.rs",
+        "lapses from cards where id = ?\";",
+        "lapses from cards\";",
+        "dispatch::a_fixed_read_returns_its_one_card",
+        "a card's snapshot reads that card by id; without the condition it reads another card or fails, and the page would show the wrong card's schedule (SPEC-345 A4)"
+      ],
+      [
+        "S34513-ONLY-THE-ADAPTERS-MAY-NAME-THE-CORE",
+        "engine-core",
+        "tests/graph.rs",
+        "    (\"web-engine\", Kind::Normal, Some(WASM32)),",
+        "    (\"daemon\", Kind::Normal, Some(WASM32)),",
+        "graph::only_the_client_adapters_reach_the_engine_core",
+        "the census lets the web engine name the core from its wasm32 table; letting another member in its place, the real web engine reads as a violation and the census admits a crate that may not reach the engine (SPEC-345 A7)"
+      ],
+      [
+        "S34514-A-TARGET-TABLE-IS-READ-AS-ITS-OWN-TABLE",
+        "engine-core",
+        "tests/graph.rs",
+        "if let Some(after) = inner.strip_prefix(\"target.\") {",
+        "if let Some(after) = None::<&str> {",
+        "graph::only_the_client_adapters_reach_the_engine_core",
+        "the census reads a target table's dependencies under its cfg; with that arm gone, a target table reads as unreadable and the web engine's wasm32 edge is never judged (SPEC-345 A7)"
+      ],
+      [
+        "S34515-THE-FFI-STARTS-THE-CORE-ON-THE-NATIVE-TRANSPORT",
+        "ffi",
+        "src/engine.rs",
+        "        Dispatcher::start(Transport::Native, &message)",
+        "        Dispatcher::start(Transport::Web, &message)",
+        "round_trip::a2_lists_the_collections_decks",
+        "a native client's engine starts on the native transport; started on the web one, its deck list is refused, since the web column never admits GetDeckNames (SPEC-345 A6; SPEC-336 A2)"
+      ]
+    ]
+  }
+}

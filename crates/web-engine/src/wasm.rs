@@ -3,12 +3,12 @@
 //!
 //! The collection lives in the origin private file system through the `SyncAccessHandle` pool VFS,
 //! which only a dedicated Worker can install. The page never reaches SQL: a card's snapshot is one
-//! fixed read-only query, and `run_method` refuses every call outside [`crate::study::STUDY_CALLS`].
+//! fixed read the engine core holds, and `run_method` refuses every call outside
+//! [`crate::study::STUDY_CALLS`]. Every call reaches the engine through the core's dispatcher,
+//! started on the web transport, whose web column equals the study calls (SPEC-345 R5; ADR-356 D1).
 
 use std::cell::RefCell;
 
-use anki::backend::Backend;
-use anki::backend::init_backend;
 use anki_proto::backend::BackendError;
 use anki_proto::backend::BackendInit;
 use anki_proto::collection::CloseCollectionRequest;
@@ -28,7 +28,10 @@ use sqlite_wasm_vfs::sahpool::OpfsSAHPoolUtil;
 use sqlite_wasm_vfs::sahpool::install;
 use wasm_bindgen::prelude::*;
 
-use crate::study::{Answer, admit, service};
+use deck_streak_engine_core::dispatch::{Dispatcher, Read, Refusal};
+use deck_streak_engine_core::table::Transport;
+
+use crate::study::{Answer, StudyError, admit, service};
 use crate::synthetic::fields;
 
 /// The pool's directory in OPFS, one per origin (SPEC-338 R4).
@@ -37,13 +40,9 @@ const DIRECTORY: &str = "deck-streak";
 const COLLECTION_PATH: &str = "/deck-streak/collection.anki2";
 /// The default deck of a new collection, where the synthetic notes go.
 const DEFAULT_DECK: i64 = 1;
-/// The one read the page may make of a card: its scheduling fields, by id.
-const SNAPSHOT_SQL: &str = "select id, queue, type, due, ivl, reps, lapses from cards where id = ?";
-/// The note count `open` reports.
-const NOTE_COUNT_SQL: &str = "select count() from notes";
 
 thread_local! {
-    static BACKEND: RefCell<Option<Backend>> = const { RefCell::new(None) };
+    static DISPATCHER: RefCell<Option<Dispatcher>> = const { RefCell::new(None) };
     static POOL: RefCell<Option<OpfsSAHPoolUtil>> = const { RefCell::new(None) };
     static LAST_PANIC: RefCell<Option<String>> = const { RefCell::new(None) };
 }
@@ -52,18 +51,23 @@ fn refuse(message: impl std::fmt::Display) -> JsValue {
     JsValue::from_str(&message.to_string())
 }
 
-fn backend() -> Result<Backend, JsValue> {
-    BACKEND
-        .with(|b| b.borrow().clone())
+fn dispatcher() -> Result<Dispatcher, JsValue> {
+    DISPATCHER
+        .with(|d| d.borrow().clone())
         .ok_or_else(|| refuse("the engine is not initialised"))
 }
 
 fn call(service: u32, method: u32, input: &[u8]) -> Result<Vec<u8>, JsValue> {
-    backend()?
-        .run_service_method(service, method, input)
-        .map_err(|bytes| match BackendError::decode(bytes.as_slice()) {
-            Ok(err) => refuse(format!("engine error {}: {}", err.kind, err.message)),
-            Err(_) => refuse("engine error (undecodable)"),
+    dispatcher()?
+        .run(service, method, input)
+        .map_err(|refusal| match refusal {
+            Refusal::Engine { error } => match BackendError::decode(error.as_slice()) {
+                Ok(err) => refuse(format!("engine error {}: {}", err.kind, err.message)),
+                Err(_) => refuse("engine error (undecodable)"),
+            },
+            Refusal::NotAllowed { service, method } | Refusal::NeedsGesture { service, method } => {
+                refuse(StudyError::CallRefused { service, method })
+            }
         })
 }
 
@@ -71,15 +75,9 @@ fn decode<M: Message + Default>(bytes: &[u8]) -> Result<M, JsValue> {
     M::decode(bytes).map_err(refuse)
 }
 
-fn query(sql: &str, args: &[serde_json::Value]) -> Result<serde_json::Value, JsValue> {
-    let request = serde_json::json!({
-        "kind": "query",
-        "sql": sql,
-        "args": args,
-        "first_row_only": true,
-    });
-    let reply = backend()?
-        .run_db_command_bytes(request.to_string().as_bytes())
+fn query(read: Read) -> Result<serde_json::Value, JsValue> {
+    let reply = dispatcher()?
+        .read(read)
         .map_err(|_| refuse("the read failed"))?;
     serde_json::from_slice(&reply).map_err(refuse)
 }
@@ -105,7 +103,8 @@ pub fn last_panic() -> Option<String> {
     LAST_PANIC.with(|p| p.borrow().clone())
 }
 
-/// Creates the engine's backend, as the desktop's bridge does.
+/// Creates the engine's backend, as the desktop's bridge does, behind the core's dispatcher on the
+/// web transport.
 #[wasm_bindgen(js_name = "init")]
 pub fn create_backend() -> Result<(), JsValue> {
     std::panic::set_hook(Box::new(|info| {
@@ -121,8 +120,8 @@ pub fn create_backend() -> Result<(), JsValue> {
         locale_folder_path: String::new(),
         server: false,
     };
-    let backend = init_backend(&msg.encode_to_vec()).map_err(refuse)?;
-    BACKEND.with(|b| *b.borrow_mut() = Some(backend));
+    let dispatcher = Dispatcher::start(Transport::Web, &msg.encode_to_vec()).map_err(refuse)?;
+    DISPATCHER.with(|d| *d.borrow_mut() = Some(dispatcher));
     Ok(())
 }
 
@@ -141,7 +140,7 @@ pub fn open() -> Result<String, JsValue> {
         media_db_path: String::new(),
     };
     call(service::COLLECTION, 0, &request.encode_to_vec())?;
-    let notes = query(NOTE_COUNT_SQL, &[])?;
+    let notes = query(Read::NoteCount)?;
     let notes = notes
         .pointer("/0/0")
         .cloned()
@@ -163,7 +162,7 @@ pub fn close() -> Result<(), JsValue> {
 /// the number of notes added.
 #[wasm_bindgen]
 pub fn seed(count: u32) -> Result<u32, JsValue> {
-    let held = query(NOTE_COUNT_SQL, &[])?;
+    let held = query(Read::NoteCount)?;
     if held.pointer("/0/0").and_then(serde_json::Value::as_i64) != Some(0) {
         return Err(refuse("seed refuses a collection that holds notes"));
     }
@@ -256,7 +255,7 @@ pub fn undo() -> Result<(), JsValue> {
 /// One card's scheduling fields as JSON (`[id, queue, type, due, ivl, reps, lapses]`), or `null`.
 #[wasm_bindgen]
 pub fn snapshot(card_id: i64) -> Result<String, JsValue> {
-    let row = query(SNAPSHOT_SQL, &[serde_json::json!(card_id)])?;
+    let row = query(Read::CardSnapshot(card_id))?;
     Ok(row
         .pointer("/0")
         .cloned()
