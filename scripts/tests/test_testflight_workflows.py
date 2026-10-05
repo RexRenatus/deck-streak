@@ -90,8 +90,8 @@ def verb(step):
 
 
 def credential_reads(workflow):
-    """Each secret a read workflow reads, other than the default token, in its order: (where,
-    name, expression, whole). `where` is (job, step id, variable) for a step's own variable and
+    """Each secret a read workflow reads, the default token included, in its order: (where, name,
+    expression, whole). `where` is (job, step id, variable) for a step's own variable and
     (place,) for any other place; `whole` is whether the value is that one expression."""
     jobs = workflow.get("jobs") if isinstance(workflow.get("jobs"), dict) else {}
     found = []
@@ -99,8 +99,6 @@ def credential_reads(workflow):
         for expression in expressions_in(text):
             for match in SECRET.finditer(expression):
                 name = match.group(1) if match.group(1) is not None else match.group(2)
-                if name is not None and name.upper() == "GITHUB_TOKEN":
-                    continue
                 at = STEP_VARIABLE.fullmatch(place)
                 if at:
                     step = steps_of(jobs.get(at.group(1)))[int(at.group(2))]

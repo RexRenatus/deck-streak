@@ -813,9 +813,10 @@ class LaneCredential(unittest.TestCase):
 
     def test_each_signing_tool_is_given_exactly_its_arguments(self):
         printed, records = self.sign()
-        keychain_password, passphrase = [
-            m for m in self.masks(printed) if m not in self.ids.values()
-        ]
+        masks = self.masks(printed)
+        known = ("team", "team name", "app id", "profile name", "profile uuid")
+        self.assertEqual(masks[:5], [self.ids[each] for each in known])
+        keychain_password, passphrase = masks[5:]
         keychain = str(self.lane / "lane.keychain-db")
         bundle = str(self.lane / "certificate.p12")
         expected = [
@@ -917,8 +918,11 @@ class LaneCredential(unittest.TestCase):
         self.sign()
         self.step("upload-to-testflight", ("KEY", "KEYID", "ISSUER"))
         for out, _, _ in examined("steps", self.runs):
-            shown = [line for line in out.splitlines() if not line.startswith("::add-mask::")]
-            self.assertEqual(shown, ["warning: <redacted>", "error: <redacted>"])
+            lines = out.splitlines()
+            self.assertEqual(lines[-2:], ["warning: <redacted>", "error: <redacted>"])
+            self.assertEqual(
+                [line[:12] for line in lines[:-2]], ["::add-mask::"] * (len(lines) - 2)
+            )
 
 
 if __name__ == "__main__":
