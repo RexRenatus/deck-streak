@@ -143,3 +143,47 @@ fn a_voice_choice_survives_and_follows_the_installed_set() {
     entries.sort();
     assert_eq!(entries, ["voices.tsv"], "no temporary file is left behind");
 }
+
+/// MUTATION COVERAGE (SPEC-348 R6): a line with an empty language, an empty identifier or a second
+/// tab is skipped, each by its own line, and the rewrite keeps only the lines that parse.
+#[test]
+fn a_line_with_an_empty_side_or_a_second_tab_is_skipped() {
+    let dir = scratch();
+    let file = dir.join("voices.tsv");
+    std::fs::write(
+        &file,
+        "\tvoice.anna\nde-DE\t\nfr-FR\tvoice.thomas\textra\nen-US\tvoice.zoe\n",
+    )
+    .expect("the choices file is planted");
+    let choices = VoiceChoices::open(file.to_str().expect("a scratch path is UTF-8").to_owned());
+    choices
+        .choose("ja-JP".to_owned(), Some("voice.kyoko".to_owned()))
+        .expect("a choice is recorded");
+    assert_eq!(
+        std::fs::read_to_string(&file).expect("the choices file is read"),
+        "en-US\tvoice.zoe\nja-JP\tvoice.kyoko\n",
+        "only the lines that parse survive the rewrite"
+    );
+}
+
+/// MUTATION COVERAGE (SPEC-348 R6): a choice that cannot be written is refused in a sentence that
+/// names the reason.
+#[test]
+fn a_choice_that_cannot_be_written_is_refused_in_words() {
+    let missing = scratch().join("no-such-directory").join("voices.tsv");
+    let choices = VoiceChoices::open(
+        missing
+            .to_str()
+            .expect("a scratch path is UTF-8")
+            .to_owned(),
+    );
+    let refusal = choices
+        .choose("en-US".to_owned(), Some("voice.zoe".to_owned()))
+        .expect_err("the directory does not exist");
+    assert!(
+        refusal
+            .to_string()
+            .starts_with("the voice choice was not written: "),
+        "the refusal reads as a sentence: {refusal}"
+    );
+}
