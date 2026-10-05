@@ -381,3 +381,16 @@ These are read by the owner, not by CI, so they sit outside section 3's table an
 | V1 | The 8BitDo remote, in its gamepad mode and its keyboard mode, shows the answer, grades, undoes, buries and flags on Safari on iPhone and iPad and on a desktop browser, and the gamepad still drives the review after a tap on the card | the owner, in the first device session, read from the screens' own behaviour beside the remote harness's log (#629) |
 | V2 | The screen stays lit while a gamepad is connected during a review, and the browser keeps no mapped key (Control-1, Command-1) for itself | the owner, in the first device session (#629) |
 | V3 | A review with a synced collection, read with VoiceOver, names every control and announces each refusal | the owner, in the acceptance session, after the web sync screens land (#637, #631) |
+
+## 10. Amendments
+
+- **R6: a collection with no deck shows a message only.** The deck list of a collection with no
+  deck says "There is no deck to study yet." and offers no action beside it. The entry to the web
+  sync screens, which R6 named as that state's one action, is not part of this screen. Held by
+  `web/app/src/lib/study/deck-list.test.ts` "a collection with no deck says so".
+- **R7: a done deck ends where it is.** A done deck shows a designed end: the status region's "This
+  deck is done for today." and a link back to the deck list, `/study`. The screen never navigates
+  away on its own, so the announcement R10 requires is heard; where R7 says a done deck returns to
+  the deck list, the user returns by that link. Held by
+  `web/app/src/lib/study/review-screen.test.ts` "a refusal, a card the frame refuses and a done deck
+  are announced".
