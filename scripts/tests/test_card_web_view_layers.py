@@ -281,5 +281,135 @@ class OneFactoryBuildsTheCardWebView(unittest.TestCase):
                 self.assertEqual(card_view_problems(Path(scratch))[0], wanted, name)
 
 
+# The one file that may define the card-script switch (SPEC-355 R1, ADR-366 D1).
+SWITCH_FILE = "ios/CardIsolation/Sources/CardIsolation/CardScripts.swift"
+SWITCH_DEFINITION = re.compile(r"\bstatic\s+(?:let|var)\s+switchedOn\b")
+# Each control the factory builds for scripted cards, with the tokens that show it set (SPEC-355
+# R3 and R4, the schematic's section 7): L8's user script runs at document start, in every frame,
+# in the page's own world; L9's proxy configuration is installed with failover off. The factory
+# builds both, so every token is read there.
+CONTROL_TOKENS = (
+    ("L8", "forMainFrameOnly: false"),
+    ("L8", ".atDocumentStart"),
+    ("L8", "in: .page"),
+    ("L9", "allowFailover = false"),
+    ("L9", "proxyConfigurations = ["),
+)
+
+
+def script_switch_problems(root):
+    """Every rule of the card-script switch the tree at `root` breaks, each named, and what was
+    judged: every Swift file under `ios/`, test targets included, and each file that defines the
+    switch, once per definition."""
+    root = Path(root)
+    problems = []
+    judged = {"swift files": [], "switch definitions": []}
+    sources = sorted((root / "ios").rglob("*.swift")) if (root / "ios").is_dir() else []
+    for path in sources:
+        relative = path.relative_to(root).as_posix()
+        if ".build" in path.parts:
+            continue
+        judged["swift files"].append(relative)
+        code = code_of(path.read_bytes().decode("utf-8", errors="replace"))
+        for _ in SWITCH_DEFINITION.finditer(code):
+            judged["switch definitions"].append(relative)
+            if relative != SWITCH_FILE:
+                problems.append(f"{relative}: defines switchedOn, which only {SWITCH_FILE} may")
+    count = judged["switch definitions"].count(SWITCH_FILE)
+    if count != 1:
+        problems.append(f"{SWITCH_FILE}: defines switchedOn {count} times, not once")
+    factory = root / FACTORY
+    if not factory.is_file():
+        problems.append(f"{FACTORY}: missing")
+    else:
+        code = code_of(factory.read_bytes().decode("utf-8", errors="replace"))
+        for layer, token in CONTROL_TOKENS:
+            if token not in code:
+                problems.append(f"{FACTORY}: lacks {layer} ({token})")
+    return problems, judged
+
+
+GOOD_SWITCH = """public enum CardScripts {
+    // The planted switch: defined once.
+    public static let switchedOn = false
+}
+"""
+SECOND_SWITCH = "extension CardScripts {\n    static var switchedOn: Bool { true }\n}\n"
+GOOD_SCRIPTED_FACTORY = (
+    GOOD_FACTORY
+    + "let removal = WKUserScript(source: s, injectionTime: .atDocumentStart,"
+    + " forMainFrameOnly: false, in: .page)\n"
+    + "var proxy = ProxyConfiguration(httpCONNECTProxy: hold)\n"
+    + "proxy.allowFailover = false\n"
+    + "store.proxyConfigurations = [proxy]\n"
+)
+
+
+class TheScriptSwitchLivesInOneFile(unittest.TestCase):
+    def test_the_script_switch_lives_in_one_file_and_every_control_is_set(self):
+        # The behaviour first: exactly one definition of the switch under ios/, in its own file,
+        # and the factory sets every control's token.
+        problems, judged = script_switch_problems(REPO)
+        self.assertEqual(judged["switch definitions"], [SWITCH_FILE])
+        self.assertEqual(problems, [])
+        examined("Swift files under ios/", judged["swift files"])
+
+        # The controls: the good tree is accepted, and each plant is refused by its rule's name.
+        switch = {SWITCH_FILE: GOOD_SWITCH}
+        only = f"which only {SWITCH_FILE} may"
+        plants = {
+            "the good tree": ({"factory": GOOD_SCRIPTED_FACTORY, "extra": switch}, []),
+            "no switch": (
+                {"factory": GOOD_SCRIPTED_FACTORY},
+                [f"{SWITCH_FILE}: defines switchedOn 0 times, not once"],
+            ),
+            "the switch defined twice in its file": (
+                {
+                    "factory": GOOD_SCRIPTED_FACTORY,
+                    "extra": {SWITCH_FILE: GOOD_SWITCH + SECOND_SWITCH},
+                },
+                [f"{SWITCH_FILE}: defines switchedOn 2 times, not once"],
+            ),
+            "a second switch in the harness": (
+                {
+                    "factory": GOOD_SCRIPTED_FACTORY,
+                    "extra": {**switch, "ios/Harness/Sources/Scripts.swift": SECOND_SWITCH},
+                },
+                [f"ios/Harness/Sources/Scripts.swift: defines switchedOn, {only}"],
+            ),
+            "a second switch in a test target": (
+                {
+                    "factory": GOOD_SCRIPTED_FACTORY,
+                    "extra": {**switch, "ios/CardProbeTests/Switch.swift": SECOND_SWITCH},
+                },
+                [f"ios/CardProbeTests/Switch.swift: defines switchedOn, {only}"],
+            ),
+            "the switch only in a comment": (
+                {
+                    "factory": GOOD_SCRIPTED_FACTORY,
+                    "extra": {SWITCH_FILE: "// public static let switchedOn = true\n"},
+                },
+                [f"{SWITCH_FILE}: defines switchedOn 0 times, not once"],
+            ),
+            "no factory": ({"factory": None, "extra": switch}, [f"{FACTORY}: missing"]),
+        }
+        for layer, token in CONTROL_TOKENS:
+            plants[f"the factory without {layer}'s {token}"] = (
+                {"factory": GOOD_SCRIPTED_FACTORY.replace(token, ""), "extra": switch},
+                [f"{FACTORY}: lacks {layer} ({token})"],
+            )
+            plants[f"the factory with {layer}'s {token} only in a comment"] = (
+                {
+                    "factory": GOOD_SCRIPTED_FACTORY.replace(token, "") + f"// {token}\n",
+                    "extra": switch,
+                },
+                [f"{FACTORY}: lacks {layer} ({token})"],
+            )
+        for name, (shape, wanted) in examined("planted trees", list(plants.items())):
+            with self.subTest(plant=name), tempfile.TemporaryDirectory() as scratch:
+                plant(Path(scratch), **shape)
+                self.assertEqual(script_switch_problems(Path(scratch))[0], wanted, name)
+
+
 if __name__ == "__main__":
     unittest.main()
