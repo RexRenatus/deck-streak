@@ -22,3 +22,8 @@ One commit sits between the red and the cure: 6bf75cc1 re-implements the test he
 994aee75 was not pushed alone, so CI never ran it; its `deploy/deploy.sh` and `scripts/tests/test_deploy_scripts.py` blobs (22379a2d, e5b22a25) are the head's, and CI's python job read the module green at 0b313178 (run 37307839879, job 111756115842).
 
 A3's criterion changed after the first fence above: it now also refuses a letter outside ASCII, run under `LC_ALL=en_US.UTF-8` after the test asserts that locale is installed. That member is committed alone before the cure that lists the guard's characters, and a changed criterion takes no second fence line. At the range spelling under `en_US.UTF-8` the guard admits a fullwidth letter, so the two new subtests (the install and the removal) fail by assertion: the refusal text is absent and the step goes on to need the host. Listing the characters refuses it in every locale (S35308 restores the range spelling and is killed by that member).
+
+Correction (verify round 2, ruling 399): the paragraph on 994aee75 above was true at 0b313178 and
+is stale at later heads. Its `deploy/deploy.sh` and `scripts/tests/test_deploy_scripts.py` blobs
+(22379a2d, e5b22a25) are 0b313178's, not the current head's, and the job that read the module green
+at 0b313178 is CI's `hygiene` job (run 37307839879, job 111756115842); no `python` check-run exists.
