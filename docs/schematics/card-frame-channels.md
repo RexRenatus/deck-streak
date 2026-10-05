@@ -262,3 +262,84 @@ depth.
 `webrtc` card sent 1 datagram to the UDP listener (`datagrams=1`), and `typeof window.webkit`
 read `undefined`: with no message handler, L4 leaves card script no `webkit` object at all. The
 reference view, which registers a handler for the `bridge` card, read `object`.
+
+## 7. iPhone and iPad with card scripts on (SPEC-355, ADR-366)
+
+Kind: state machine (the switch's decision), component (the two new layers), data flow (every
+script-driven channel and the control that holds it). Read at
+`ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift` lines 4-91 and
+`ios/CardProbeTests/Planted.swift` lines 224-236 at 05aef786.
+
+The layers L1 to L7 are section 4's. Two join them:
+
+| layer | what it is |
+|---|---|
+| L8 | a `WKUserScript` at document start, in every frame, in the page's content world, that deletes every global named `^(webkit)?RTC` and `WebTransport` |
+| L9 | the store's one proxy configuration: an HTTP CONNECT proxy at the app's loopback `ConnectionHold`, failover off, no excluded domain; the hold answers no byte and closes each connection |
+
+L2 is no longer fixed: it is the verdict of the one switch.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Built: the factory builds the view with every control it can
+    Built --> ReadBack: present is read from the configuration and the view
+    ReadBack --> Run: switch on and L1, L3 to L9 all present
+    ReadBack --> Off: switch off, or any of them missing
+    Run --> [*]: page JavaScript on, the card loaded as a string
+    Off --> [*]: page JavaScript off (today's view), the card loaded as a string
+```
+
+`Built` fails closed before either verdict when the rule list does not compile (SPEC-349 R4): no
+view at all. `Off` names the missing controls, which the probe reads.
+
+```mermaid
+flowchart LR
+    subgraph app[the app]
+      factory[CardWebViewFactory]
+      hold[ConnectionHold, loopback]
+    end
+    subgraph view[the card view]
+      card[card document, opaque origin]
+      l8[L8 user script, every frame]
+      store[L1 non-persistent store]
+    end
+    factory -->|builds, reads back| view
+    l8 -->|deletes peer-connection globals before card script| card
+    card -->|any connection| store
+    store -->|L9 CONNECT| hold
+    hold -->|no byte, closed| store
+    card -.->|peer connection: no constructor| l8
+```
+
+| channel | the planted card (scripts on) | observable | held in the scripted view by (predicted) | control alone (predicted) |
+|---|---|---|---|---|
+| `script-fetch` | `fetch` of the listener under its id | path | L3, L9 | none |
+| `script-xhr` | `XMLHttpRequest` to the listener | path | L3, L9 | none |
+| `script-websocket` | a `WebSocket` to the listener | connection | L3, L9 | none |
+| `script-eventsource` | an `EventSource` on the listener | path | L3, L9 | none |
+| `script-beacon` | `navigator.sendBeacon` to the listener | path | L3, L9 | none |
+| `script-image` | a script-made `Image` with the listener's URL | path | L3, L9 | none |
+| `script-worker` | a worker from a `blob:` URL that fetches the listener | path | L3, L9 | none |
+| `script-link` | a script-added `link rel=preconnect` and `rel=stylesheet` | connection | L3, L9 | none |
+| `script-nav` | `location.assign` to the listener, in a loop | connection | L5, L9 | none |
+| `script-form` | a script-submitted form to the listener | path | L5, L9 | none |
+| `script-open` | `window.open` of the listener | window | L6 | L6 |
+| `webrtc-stun` | a peer connection with a STUN server at the UDP listener | datagram | L8 | L8 |
+| `webrtc-turn-tcp` | a peer connection with a TURN-over-TCP server at the TCP listener | connection | L8 | L8 |
+| `webrtc-blank-frame` | the same, from an appended blank frame's globals | datagram | L8 | L8 |
+| `webrtc-srcdoc-frame` | the same, from a frame given `srcdoc` | datagram | L8 | L8 |
+| `webrtc-written-frame` | the same, from a frame written by `document.write` | datagram | L8 | L8 |
+| `webtransport` | a `WebTransport` to the UDP listener | datagram | L8 | L8, or UNOBSERVABLE when the engine has none (the marker reads `absent`) |
+| `lookup` | a static and a script-added `link rel=dns-prefetch` of `<id>.local` | query (the witness) | measured | measured |
+| `dialog` | `alert`, `confirm`, `prompt` | the refusal's recorded asks, and `confirm` reading false | L6 | depth |
+| `capture` | `getUserMedia` for camera and microphone | the refusal's recorded asks, and the rejection's name | L6 | depth |
+| `app-state` | reads the default store's cookie and storage at the planted origin, a file the app wrote, `window.webkit`, a stored credential | the values read, written into its own body | L1, L4, L7 | none |
+| `render-script` | a hint toggle that sets its marker | marker and body text | (opens by design) | - |
+
+The `#677` channel, on the scripts-off view: `nav-self` and `nav-blank` open no connection with
+L9 present; removed alone, L9 opens one each, and the hold's count reads each refused attempt.
+
+Every scripted card's reference is the scripted view with its own control off, and must reach on
+both simulators; `app-state`'s reference is a view on the default store at the planted origin,
+which must read every planted value but the credential (no reference can reach a stored
+credential; its card's marker proves the attempt ran).
