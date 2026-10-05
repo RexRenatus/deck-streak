@@ -51,6 +51,10 @@ describe('the study screens call only the study operations', () => {
     expect(census).toEqual({});
     examined('shipped source files under the study modules and routes', files);
     expect(files).toContain('src/lib/study/ReviewScreen.svelte');
+    // ruling 317 item 6: both study route pages are read too
+    expect(files).toEqual(
+      expect.arrayContaining(['src/routes/study/+page.svelte', 'src/routes/study/review/+page.svelte'])
+    );
 
     // and the matcher refuses each harness call by name, where reading a field is no call
     const planted: Record<string, string> = {
