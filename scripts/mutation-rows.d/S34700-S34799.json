@@ -1,0 +1,78 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S34700-THE-LOGIN-PAIR-IS-THE-ENGINES-LOGIN-CALL",
+        "ffi",
+        "src/allow_list.rs",
+        "        method: 3,\n        name: \"BackendSyncService.SyncLogin\",",
+        "        method: 4,\n        name: \"BackendSyncService.SyncLogin\",",
+        "login::a1_a_login_through_the_adapter_returns_the_servers_host_key",
+        "SyncLogin is the pair (1,3); renumbered to (1,4), the adapter would refuse a native client's login before the engine sees it (SPEC-347 R1, A1)"
+      ],
+      [
+        "S34701-THE-CORE-ADMITS-THE-LOGIN-PAIR",
+        "engine-core",
+        "src/table.rs",
+        "        method: 3,\n        name: \"BackendSyncService.SyncLogin\",",
+        "        method: 4,\n        name: \"BackendSyncService.SyncLogin\",",
+        "parity::each_adapter_table_equals_its_transport_column",
+        "the core's native column holds the login as (1,3); renumbered to (1,4), it would admit a pair the adapter's allow-list never named and refuse the login (SPEC-347 R1, A5)"
+      ],
+      [
+        "S34702-AN-ABSENT-ENDPOINT-IS-REFUSED",
+        "engine-core",
+        "src/login_guard.rs",
+        "        return Some(ABSENT);",
+        "        return Some(ABSENT).filter(|_| false);",
+        "login_guard::a3_the_guard_admits_https_and_loopback_http_alone",
+        "a login that names no endpoint is refused; admitted, the engine would send the password to its own built-in server (SPEC-347 R2, A3)"
+      ],
+      [
+        "S34703-ONLY-HTTPS-IS-ADMITTED",
+        "engine-core",
+        "src/login_guard.rs",
+        "url.scheme() == \"https\"",
+        "url.scheme() != \"https\"",
+        "login_guard::a3_the_guard_admits_https_and_loopback_http_alone",
+        "only an https endpoint, or plain http to a loopback address, is admitted; inverted, every https server is refused and every other scheme admitted (SPEC-347 R2, A3)"
+      ],
+      [
+        "S34704-PLAIN-HTTP-ONLY-TO-LOOPBACK",
+        "engine-core",
+        "src/login_guard.rs",
+        "is_loopback(&url)",
+        "(is_loopback(&url) || true)",
+        "login_guard::a3_the_guard_admits_https_and_loopback_http_alone",
+        "plain http is admitted only to a loopback IP literal; forced true, the password would cross the network in the clear to any http host (SPEC-347 R2, A3)"
+      ],
+      [
+        "S34705-NO-CREDENTIALS-IN-THE-URL",
+        "engine-core",
+        "src/login_guard.rs",
+        "!url.username().is_empty() || url.password().is_some()",
+        "false",
+        "login_guard::a3_the_guard_admits_https_and_loopback_http_alone",
+        "an endpoint carrying a username or a password is refused; with the check deleted, an https URL's userinfo would reach the engine beside the login (SPEC-347 R2, A3)"
+      ],
+      [
+        "S34706-THE-LOGIN-PASSES-THE-GUARD",
+        "engine-core",
+        "src/dispatch.rs",
+        "                    login_guard::check(input).map_err(|error| Refusal::Engine { error })?;",
+        "                    let _ = login_guard::check;",
+        "login_guard::a4_a_refused_login_never_reaches_the_engine_and_names_no_secret",
+        "the dispatcher runs the guard on the login before the engine sees it; with the call removed, a refused endpoint reaches the engine's own HTTP client (SPEC-347 R2, A4)"
+      ],
+      [
+        "S34707-THE-GUARD-REFUSES-AS-INVALID-INPUT",
+        "engine-core",
+        "src/login_guard.rs",
+        "            kind: Kind::InvalidInput.into(),",
+        "            kind: Kind::SyncOtherError.into(),",
+        "login_guard::a4_a_refused_login_never_reaches_the_engine_and_names_no_secret",
+        "the guard refuses in the engine's own shape, kind INVALID_INPUT; as SYNC_OTHER_ERROR, a client would read a refused endpoint as a failed sync (SPEC-347 R2, A4)"
+      ]
+    ]
+  }
+}

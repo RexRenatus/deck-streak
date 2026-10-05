@@ -23,6 +23,9 @@ uniffi.workspace = true
 # ADR-022 and ADR-058: Anki's engine, for the round-trip tests' synthetic collections only
 # (SPEC-345 R6).
 anki.workspace = true
+# ADR-358 (SPEC-347 R3): the runtime that runs the engine's own sync server as a child of the login
+# test, on a loopback port.
+tokio = { workspace = true, features = ["rt"] }
 
 [features]
 # ADR-345 D3: the Swift bindings generator, turned on only by the XCFramework workflow; a workspace
