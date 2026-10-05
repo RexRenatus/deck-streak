@@ -10,6 +10,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - "crates/ffi/**"
+      - "crates/engine-core/**"
       - "ios/**"
       - "Cargo.lock"
       - "Cargo.toml"
