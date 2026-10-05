@@ -1,0 +1,28 @@
+[package]
+name = "deck-streak-fsrs7"
+description = "DeckStreak's isolated FSRS-7 scheduler: review history replayed into memory state. See docs/CONTEXT-MAP.md."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# ADR-338 and ADR-353 D1: the upstream scheduler's FSRS-7, from fsrs-rs at the pinned revision. The
+# crate depends on nothing else, and never on the engine.
+fsrs7.workspace = true
+
+[dev-dependencies]
+# ADR-353 D5: the released scheduler the engine pins, so one test binary links both (SPEC-342 A4).
+fsrs6.workspace = true
+
+# ADR-353 D6: the harness's two entry points, which only call the `measure` module (SPEC-342 R7, R8).
+[[example]]
+name = "replay_timing"
+
+[[example]]
+name = "replay_report"
