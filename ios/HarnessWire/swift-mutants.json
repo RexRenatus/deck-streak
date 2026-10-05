@@ -1,0 +1,189 @@
+{
+  "population": "the HarnessWire codec's behaviours (SPEC-339 R9, ADR-350); proved by the harness-wire job, joined to no shared population (#650)",
+  "mutants": [
+    {
+      "id": "SW33900",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "writer.stringField(1, collectionPath)",
+      "replace": "writer.stringField(4, collectionPath)",
+      "killer": "HarnessWireTests.RequestBytesTests/test_a2_each_request_encodes_to_its_literal_bytes",
+      "why": "OpenCollectionRequest writes the collection path as field 1"
+    },
+    {
+      "id": "SW33901",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "writer.stringField(2, mediaFolderPath)",
+      "replace": "writer.stringField(3, mediaFolderPath)",
+      "killer": "HarnessWireTests.RequestBytesTests/test_a2_each_request_encodes_to_its_literal_bytes",
+      "why": "OpenCollectionRequest writes the media folder as field 2"
+    },
+    {
+      "id": "SW33902",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "writer.stringField(3, mediaDatabasePath)",
+      "replace": "writer.stringField(2, mediaDatabasePath)",
+      "killer": "HarnessWireTests.RequestBytesTests/test_a2_each_request_encodes_to_its_literal_bytes",
+      "why": "OpenCollectionRequest writes the media database as field 3"
+    },
+    {
+      "id": "SW33903",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "writer.varintField(2, includeFiltered ? 1 : 0)",
+      "replace": "writer.varintField(1, includeFiltered ? 1 : 0)",
+      "killer": "HarnessWireTests.RequestBytesTests/test_a2_each_request_encodes_to_its_literal_bytes",
+      "why": "GetDeckNamesRequest writes include_filtered as field 2, not skip_empty_default"
+    },
+    {
+      "id": "SW33904",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "writer.varintField(1, UInt64(fetchLimit))",
+      "replace": "writer.varintField(2, UInt64(fetchLimit))",
+      "killer": "HarnessWireTests.RequestBytesTests/test_a2_each_request_encodes_to_its_literal_bytes",
+      "why": "GetQueuedCardsRequest writes fetch_limit as field 1"
+    },
+    {
+      "id": "SW33905",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "writer.int64Field(1, cardID)",
+      "replace": "writer.int64Field(2, cardID)",
+      "killer": "HarnessWireTests.RequestBytesTests/test_a2_each_request_encodes_to_its_literal_bytes",
+      "why": "RenderExistingCardRequest writes card_id as field 1, not browser"
+    },
+    {
+      "id": "SW33906",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "writer.int64Field(1, answer.cardID)",
+      "replace": "writer.int64Field(2, answer.cardID)",
+      "killer": "HarnessWireTests.RequestBytesTests/test_a2_each_request_encodes_to_its_literal_bytes",
+      "why": "CardAnswer writes card_id as field 1"
+    },
+    {
+      "id": "SW33907",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "writer.bytesField(2, answer.currentState)",
+      "replace": "writer.bytesField(3, answer.currentState)",
+      "killer": "HarnessWireTests.RequestBytesTests/test_a2_each_request_encodes_to_its_literal_bytes",
+      "why": "CardAnswer writes the current state as field 2"
+    },
+    {
+      "id": "SW33908",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "writer.bytesField(3, answer.newState)",
+      "replace": "writer.bytesField(2, answer.newState)",
+      "killer": "HarnessWireTests.RequestBytesTests/test_a2_each_request_encodes_to_its_literal_bytes",
+      "why": "CardAnswer writes the new state as field 3"
+    },
+    {
+      "id": "SW33909",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "writer.varintField(4, UInt64(answer.rating.rawValue))",
+      "replace": "writer.varintField(5, UInt64(answer.rating.rawValue))",
+      "killer": "HarnessWireTests.RequestBytesTests/test_a2_each_request_encodes_to_its_literal_bytes",
+      "why": "CardAnswer writes the rating as field 4"
+    },
+    {
+      "id": "SW33910",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "writer.int64Field(5, answer.answeredAtMillis)",
+      "replace": "writer.int64Field(6, answer.answeredAtMillis)",
+      "killer": "HarnessWireTests.RequestBytesTests/test_a2_each_request_encodes_to_its_literal_bytes",
+      "why": "CardAnswer writes the answer time as field 5"
+    },
+    {
+      "id": "SW33911",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "writer.varintField(6, UInt64(answer.millisecondsTaken))",
+      "replace": "writer.varintField(5, UInt64(answer.millisecondsTaken))",
+      "killer": "HarnessWireTests.RequestBytesTests/test_a2_each_request_encodes_to_its_literal_bytes",
+      "why": "CardAnswer writes the time taken as field 6"
+    },
+    {
+      "id": "SW33912",
+      "file": "Sources/HarnessWire/Wire.swift",
+      "find": "rest & 0x7f) | 0x80)",
+      "replace": "rest & 0x7f) | 0x00)",
+      "killer": "HarnessWireTests.RequestBytesTests/test_a2_each_request_encodes_to_its_literal_bytes",
+      "why": "the writer sets the continuation bit on every varint byte but the last"
+    },
+    {
+      "id": "SW33913",
+      "file": "Sources/HarnessWire/Wire.swift",
+      "find": "varint(UInt64(value.count))",
+      "replace": "bytes.append(UInt8(truncatingIfNeeded: value.count))",
+      "killer": "HarnessWireTests.RequestBytesTests/test_a2_each_request_encodes_to_its_literal_bytes",
+      "why": "the writer spells a length as a varint, so a length past 127 takes two bytes"
+    },
+    {
+      "id": "SW33914",
+      "file": "Sources/HarnessWire/Wire.swift",
+      "find": "if byte & 0x80 == 0 {",
+      "replace": "if byte & 0x40 == 0 {",
+      "killer": "HarnessWireTests.ResponseDecodingTests/test_a3_each_response_decodes_from_its_literal_bytes",
+      "why": "the reader ends a varint on the byte whose continuation bit is clear"
+    },
+    {
+      "id": "SW33915",
+      "file": "Sources/HarnessWire/Wire.swift",
+      "find": "try Self.skip(4, of: bytes, from: &at)",
+      "replace": "try Self.skip(8, of: bytes, from: &at)",
+      "killer": "HarnessWireTests.ResponseDecodingTests/test_a3_each_response_decodes_from_its_literal_bytes",
+      "why": "the reader skips an unknown 32-bit field by four bytes"
+    },
+    {
+      "id": "SW33916",
+      "file": "Sources/HarnessWire/Wire.swift",
+      "find": "try Self.skip(8, of: bytes, from: &at)",
+      "replace": "try Self.skip(4, of: bytes, from: &at)",
+      "killer": "HarnessWireTests.ResponseDecodingTests/test_a3_each_response_decodes_from_its_literal_bytes",
+      "why": "the reader skips an unknown 64-bit field by eight bytes"
+    },
+    {
+      "id": "SW33917",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "if let replacement = node.lengthDelimited(2) {",
+      "replace": "if let replacement = node.lengthDelimited(1) {",
+      "killer": "HarnessWireTests.ResponseDecodingTests/test_a3_each_response_decodes_from_its_literal_bytes",
+      "why": "a replacement node decodes as a replacement, never as text"
+    },
+    {
+      "id": "SW33918",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "try WireMessage(bytes).repeated(1).compactMap(renderedNode)",
+      "replace": "try WireMessage(bytes).repeated(2).compactMap(renderedNode)",
+      "killer": "HarnessWireTests.ResponseDecodingTests/test_a3_each_response_decodes_from_its_literal_bytes",
+      "why": "the question's nodes are field 1, never the answer's field 2"
+    },
+    {
+      "id": "SW33919",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "name: try deck.string(2)",
+      "replace": "name: try deck.string(1)",
+      "killer": "HarnessWireTests.ResponseDecodingTests/test_a3_each_response_decodes_from_its_literal_bytes",
+      "why": "a deck's name is DeckNameId field 2"
+    },
+    {
+      "id": "SW33920",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "queue: Int32(truncatingIfNeeded: queued.varint(2))",
+      "replace": "queue: Int32(truncatingIfNeeded: queued.varint(3))",
+      "killer": "HarnessWireTests.ResponseDecodingTests/test_a3_each_response_decodes_from_its_literal_bytes",
+      "why": "a queued card's queue is QueuedCard field 2"
+    },
+    {
+      "id": "SW33921",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "goodState: states.lengthDelimited(4) ?? []",
+      "replace": "goodState: states.lengthDelimited(2) ?? []",
+      "killer": "HarnessWireTests.ResponseDecodingTests/test_a3_each_response_decodes_from_its_literal_bytes",
+      "why": "the Good state is SchedulingStates field 4, not Again"
+    },
+    {
+      "id": "SW33922",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "learningCount: UInt32(truncatingIfNeeded: queue.varint(3))",
+      "replace": "learningCount: UInt32(truncatingIfNeeded: queue.varint(4))",
+      "killer": "HarnessWireTests.ResponseDecodingTests/test_a3_each_response_decodes_from_its_literal_bytes",
+      "why": "the learning count is QueuedCards field 3"
+    }
+  ]
+}
