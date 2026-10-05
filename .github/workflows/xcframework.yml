@@ -68,6 +68,16 @@ jobs:
             --module-name deck_streak_ffiFFI --modulemap-filename module.modulemap
           echo "$(( $(date +%s) - started ))" > "$REPORT/bindgen-seconds"
           ls bindings
+      - name: the bindings hold one module
+        run: |
+          echo fail > "$REPORT/one-module"
+          files=$(cd bindings && find . -type f | sed 's|^\./||' | LC_ALL=C sort | tr '\n' ' ')
+          echo "bindings: $files"
+          test "$files" = "deck_streak_ffi.swift deck_streak_ffiFFI.h module.modulemap "
+          modules=$(grep -cE '^[[:space:]]*(explicit[[:space:]]+|framework[[:space:]]+)?module[[:space:]]' bindings/module.modulemap || true)
+          echo "modules declared: $modules"
+          test "$modules" -eq 1
+          echo pass > "$REPORT/one-module"
       - name: the modulemap check, which a builtin clang module refuses
         run: |
           cp bindings/module.modulemap "$REPORT/module.modulemap"
@@ -85,6 +95,13 @@ jobs:
             -library target/aarch64-apple-ios-sim/release/libdeck_streak_ffi.a -headers headers \
             -output DeckStreakFFI.xcframework
           find DeckStreakFFI.xcframework -name '*.a' -exec stat -f '%N %z' {} \; | tee "$REPORT/slices"
+      - name: the XCFramework holds one Rust library
+        run: |
+          echo fail > "$REPORT/one-library"
+          libraries=$(cd DeckStreakFFI.xcframework && find . -name '*.a' | sed 's|^\./||' | LC_ALL=C sort | tr '\n' ' ')
+          echo "libraries: $libraries"
+          test "$libraries" = "ios-arm64-simulator/libdeck_streak_ffi.a ios-arm64/libdeck_streak_ffi.a "
+          echo pass > "$REPORT/one-library"
       - name: the consumer check, the generated Swift typechecked against each slice's headers
         run: |
           echo fail > "$REPORT/consumer"
@@ -122,6 +139,8 @@ jobs:
               ("Swift bindings, library mode", minutes("bindgen-seconds")),
               ("modulemap names no builtin clang module", read("modulemap") or "not measured"),
               ("generated Swift typechecks against each slice", read("consumer") or "not measured"),
+              ("the bindings hold one module", read("one-module") or "not measured"),
+              ("the XCFramework holds one Rust library", read("one-library") or "not measured"),
               ("the harness's synthetic collection, host build", minutes("fixture-seconds")),
           ]
           for line in read("slices").splitlines():

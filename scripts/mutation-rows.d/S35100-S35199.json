@@ -1,0 +1,102 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S35101-THE-GUARD-READS-THE-TARGET-AS-RECEIVED",
+        "deploy/caddy/deck-streak.caddy",
+        "!{http.request.orig_uri}",
+        "!{http.request.uri}",
+        "the guard reads the request-target as the edge received it, never as a rewrite left it (SPEC-351 R3)",
+        "test_deploy_templates.TheCaddyBlock.test_the_sync_route_is_served_under_its_one_spelling"
+      ],
+      [
+        "S35102-THE-GUARD-REFUSES-WHAT-IT-DOES-NOT-ADMIT",
+        "deploy/caddy/deck-streak.caddy",
+        "expression !{",
+        "expression {",
+        "the guard refuses what its pattern does not admit (SPEC-351 R2)",
+        "test_deploy_templates.TheCaddyBlock.test_the_sync_route_is_served_under_its_one_spelling"
+      ],
+      [
+        "S35103-AN-ESCAPE-IS-REFUSED",
+        "deploy/caddy/deck-streak.caddy",
+        "[A-Za-z0-9]",
+        "[A-Za-z0-9%]",
+        "an escape in a segment of the route is refused (SPEC-351 R2)",
+        "test_deploy_templates.TheCaddyBlock.test_the_sync_route_is_served_under_its_one_spelling"
+      ],
+      [
+        "S35104-AN-EMPTY-SEGMENT-IS-REFUSED",
+        "deploy/caddy/deck-streak.caddy",
+        "]+)+",
+        "]*)+",
+        "an empty segment of the route is refused (SPEC-351 R2)",
+        "test_deploy_templates.TheCaddyBlock.test_the_sync_route_is_served_under_its_one_spelling"
+      ],
+      [
+        "S35105-THE-PREFIX-KEEPS-ITS-CASE",
+        "deploy/caddy/deck-streak.caddy",
+        "/anki-sync(?:",
+        "/[Aa]nki-sync(?:",
+        "the prefix is served only as written, in its own case (SPEC-351 R2)",
+        "test_deploy_templates.TheCaddyBlock.test_the_sync_route_is_served_under_its_one_spelling"
+      ],
+      [
+        "S35106-A-RESPELLING-IS-ANSWERED-404",
+        "deploy/caddy/deck-streak.caddy",
+        "\t\trespond @sync_respelled 404\n",
+        "",
+        "the edge answers every other spelling of the route 404 (SPEC-351 R2)",
+        "test_deploy_templates.TheCaddyBlock.test_the_sync_route_is_served_under_its_one_spelling"
+      ],
+      [
+        "S35107-THE-ABSOLUTE-FORM-IS-SERVED",
+        "deploy/caddy/deck-streak.caddy",
+        "(?:https?://[A-Za-z0-9.:-]+)?",
+        "",
+        "the route is served in the absolute form (SPEC-351 R1)",
+        "test_deploy_templates.TheCaddyBlock.test_the_sync_route_is_served_under_its_one_spelling"
+      ],
+      [
+        "S35108-A-QUERY-IS-SERVED",
+        "deploy/caddy/deck-streak.caddy",
+        "(?:[?].*)?",
+        "",
+        "the route is served with a query (SPEC-351 R1)",
+        "test_deploy_templates.TheCaddyBlock.test_the_sync_route_is_served_under_its_one_spelling"
+      ],
+      [
+        "S35109-A-DOT-SEGMENT-IS-REFUSED",
+        "deploy/caddy/deck-streak.caddy",
+        "A-Za-z0-9]+",
+        "A-Za-z0-9.]+",
+        "a dot segment of the route is refused (SPEC-351 R2)",
+        "test_deploy_templates.TheCaddyBlock.test_the_sync_route_is_served_under_its_one_spelling"
+      ],
+      [
+        "S35110-THE-SCHEME-KEEPS-ITS-CASE",
+        "deploy/caddy/deck-streak.caddy",
+        "(?:https?://",
+        "(?:[Hh][Tt][Tt][Pp][Ss]?://",
+        "the edge serves the absolute form under the scheme's lower case alone, the case the filter counts (SPEC-351 R4)",
+        "test_sync_ban.TheSyncBanJail.test_the_filter_counts_every_spelling_of_a_refused_login_the_edge_serves"
+      ],
+      [
+        "S35111-THE-BAN-COUNTS-A-LOGIN-WITH-A-QUERY",
+        "deploy/fail2ban/filter.d/deck-streak-sync.conf",
+        "(?:\\?[^\"]*)?",
+        "",
+        "the ban counts a refused login with a query (SPEC-351 R4)",
+        "test_sync_ban.TheSyncBanJail.test_the_filter_counts_every_spelling_of_a_refused_login_the_edge_serves"
+      ],
+      [
+        "S35112-THE-BAN-COUNTS-THE-ABSOLUTE-FORM",
+        "deploy/fail2ban/filter.d/deck-streak-sync.conf",
+        "(?:https?://[^/\"]+)?",
+        "",
+        "the ban counts a refused login in the absolute form (SPEC-351 R4)",
+        "test_sync_ban.TheSyncBanJail.test_the_filter_counts_every_spelling_of_a_refused_login_the_edge_serves"
+      ]
+    ]
+  }
+}
