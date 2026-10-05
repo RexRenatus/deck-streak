@@ -192,7 +192,10 @@ private func plantedCards() -> [Planted] {
         "<iframe title=\"nested\" src=\"\(h)/1\"></iframe>"
             + "<iframe title=\"nested document\" srcdoc=\"<img alt='' src='\(h)/2'>\"></iframe>"
     })
-    cards.append(loads("object", .L3) { h in
+    // The schematic gives L3 alone. Measured on both simulators: an `<object>` and an `<embed>` of
+    // type text/html each load as a subframe, which the gate cancels as it does `nested-frame`'s,
+    // so L3 and L5 both hold this card and no layer alone opens it.
+    cards.append(loads("object", nil) { h in
         "<object type=\"text/html\" data=\"\(h)/1\"></object><embed type=\"text/html\" src=\"\(h)/2\">"
     })
     cards.append(acts("script-inline", .L2, .marker) { _ in "<script>\(ranMarker)</script>" })
