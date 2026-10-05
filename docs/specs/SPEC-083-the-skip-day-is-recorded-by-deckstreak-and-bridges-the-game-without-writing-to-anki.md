@@ -1201,3 +1201,12 @@ a named port of its own SPEC:
 Chosen against: narrowing the population to the server crates, which would let a new server crate fall out of the census
 silently; admitting a whole crate, which would let any file in it name the engine's crate; and leaving the census red.
 The list is derived by search at the tree it is merged into, and a new entry is an amendment of its own.
+
+Amendment, 2026-10-05 (ruling 397): the list gains two ports, `crates/engine-core/src/face.rs`
+and `crates/engine-core/src/media.rs`, each owned by SPEC-348. Why: dev gained the client
+card-face and media rules, and each names the engine's crate, so the census refused both as
+files it had not been told about. Neither calls a card write or a push, so the same checks
+apply to them as to the first entry. The list stays CLOSED, now three files, each asserted
+present, and the positive artifact reads the engine's port plus the list. Chosen against the
+same three alternatives named above: narrowing the population to the server crates, admitting
+a whole crate, and leaving the census red. A24's criterion text is unchanged.
