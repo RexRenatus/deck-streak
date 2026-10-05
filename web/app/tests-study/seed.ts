@@ -42,6 +42,8 @@ export async function seed(page: Page, count: number): Promise<number> {
         new Promise<unknown>((resolve, reject) => {
           const id = (next += 1);
           const heard = (event: MessageEvent) => {
+            // a dedicated Worker's channel delivers an empty origin; any other than the page's own is not heard
+            if (event.origin !== '' && event.origin !== location.origin) return;
             const reply = event.data as { id: number; ok: boolean; value?: unknown; code?: string; message?: string };
             if (reply.id !== id) return;
             worker.removeEventListener('message', heard);
