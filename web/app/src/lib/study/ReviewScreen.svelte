@@ -110,6 +110,7 @@
   onMount(() => review.start());
 </script>
 
+<!-- a11y-exception: the pointer's down event activates nothing; it marks the focus move it starts as a pointer's, which the window's blur reads -->
 <svelte:window
   onkeydown={(event) => input.key(event)}
   onpointerdown={() => input.pointer()}
