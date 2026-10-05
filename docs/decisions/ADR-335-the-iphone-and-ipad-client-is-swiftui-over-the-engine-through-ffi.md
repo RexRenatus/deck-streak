@@ -44,6 +44,28 @@ size, cold start and memory. When both halves pass, the delivery that records th
 to `accepted` with the measurements; if either fails, this ADR is rejected and the owner chooses
 again among the options above.
 
+**The spike's outcome.** Both halves passed. The Rust half built the XCFramework in CI (SPEC-336,
+section 7). In `xcframework` run 37233368979, the Swift half opened the synthetic collection on the
+iPhone and iPad simulators, listed its decks, rendered the queued card in the isolated web view and
+answered it Good (SPEC-339, A4 to A8, on both simulators), and each of its codec's 23 mutants was
+killed. SPEC-339 section 7 holds that run's figures:
+
+- the Release simulator app is 35286275 bytes, of which 35145000 are the executable, with the
+  engine linked and dead-stripped;
+- the median cold start to the first responsive frame is 3.47 s on the iPhone simulator and
+  10.57 s on the iPad simulator;
+- the median from the harness's first line to the deck names shown is 1.96 s and 3.03 s;
+- the largest peak physical memory over open, list, render and answer is 58251.9 kB and
+  70244.9 kB.
+
+These are a simulator's figures, not a device's, and the iPad simulator's passes spread widely:
+the run before read 4.00 s to its first frame. None of them shows the engine too large, too slow
+to start or too heavy in memory for the spike to stop on.
+
+Proposal: accept this option. What could still make it wrong is a device's size, cold start and
+memory, which no simulator measures. This records the outcome only; the status is the
+decision-makers' to set.
+
 - **The engine through FFI.** One umbrella crate exposes an allow-listed `run(service, method,
   bytes)` over the engine's protobuf backend, through UniFFI at a pinned version. It is the app's
   one Rust static library, because two Rust static libraries in one app clash; the engine core,

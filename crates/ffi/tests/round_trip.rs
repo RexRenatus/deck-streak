@@ -5,19 +5,21 @@
 //! Basic note in the default deck, and a second, empty deck. It then drives the adapter the way a
 //! native client does, with each request encoded as protobuf bytes and each response decoded from
 //! them. The pairs below are read from the engine's generated dispatch, not from the adapter's
-//! table, so a wrong entry in the table fails here. The wire helpers encode and decode only what
-//! these six tests send and read.
+//! table, so a wrong entry in the table fails here. The builder and the wire helpers are the
+//! adapter's shared test support (`support/`), which encodes and decodes only what its tests send
+//! and read.
 
 // A failed setup step fails the test, as clippy.toml allows inside a test function.
 #![allow(clippy::expect_used)]
 
-use std::path::{Path, PathBuf};
+mod support;
+
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use anki::collection::CollectionBuilder;
-use anki::decks::DeckId;
 use deck_streak_ffi::engine::{Engine, EngineRefusal};
+use support::synthetic::SECOND_DECK;
+use support::{Synthetic, open_request, synthetic, wire};
 
 /// `BackendCollectionService.OpenCollection`, as the engine's generated dispatch numbers it.
 const OPEN_COLLECTION: (u32, u32) = (3, 0);
@@ -35,62 +37,8 @@ const ANSWER_CARD: (u32, u32) = (13, 4);
 const GOOD: u64 = 2;
 /// The engine's queue for a new card (`QueuedCards.Queue.NEW`).
 const NEW_QUEUE: u64 = 0;
-/// The second deck the synthetic collection holds, beside the engine's own default deck.
-const SECOND_DECK: &str = "Synthetic";
 /// The engine's name for the operation an answer records, which its undo reports.
 const ANSWER_OPERATION: &str = "Answer Card";
-
-/// A collection built for one test, closed, and ready for the adapter to open.
-struct Synthetic {
-    dir: PathBuf,
-    collection: PathBuf,
-    note_id: i64,
-    card_id: i64,
-}
-
-/// Builds the synthetic collection in a directory of its own under the target's scratch space.
-fn synthetic(test: &str) -> Synthetic {
-    let stamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_nanos();
-    let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
-        .join("ffi-round-trip")
-        .join(format!("{test}-{}-{stamp}", std::process::id()));
-    std::fs::create_dir_all(dir.join("collection.media")).expect("a scratch directory");
-    let collection = dir.join("collection.anki2");
-    let mut col = CollectionBuilder::new(&collection)
-        .build()
-        .expect("the engine creates the collection");
-    col.get_or_create_normal_deck(SECOND_DECK)
-        .expect("the engine creates the second deck");
-    let basic = col
-        .get_notetype_by_name("Basic")
-        .expect("the note types are read")
-        .expect("the engine creates its stock Basic note type");
-    let mut note = basic.new_note();
-    note.set_field(0, "synthetic front")
-        .expect("the front is set");
-    note.set_field(1, "synthetic back")
-        .expect("the back is set");
-    col.add_note(&mut note, DeckId(1))
-        .expect("the engine adds the note to the default deck");
-    let note_id = note.id.0;
-    let card_id: i64 = col
-        .storage
-        .db()
-        .query_row("select id from cards where nid = ?", [note_id], |row| {
-            row.get(0)
-        })
-        .expect("the note has one card");
-    col.close(None).expect("the engine closes the collection");
-    Synthetic {
-        dir,
-        collection,
-        note_id,
-        card_id,
-    }
-}
 
 fn engine() -> Arc<Engine> {
     Engine::new(Vec::new()).expect("the engine starts from the default init message")
@@ -102,26 +50,6 @@ fn call(
     input: Vec<u8>,
 ) -> Result<Vec<u8>, EngineRefusal> {
     engine.run(service, method, input)
-}
-
-fn text(path: &Path) -> &str {
-    path.to_str().expect("a scratch path is UTF-8")
-}
-
-fn open_request(synthetic: &Synthetic) -> Vec<u8> {
-    let mut out = Vec::new();
-    wire::put_bytes(&mut out, 1, text(&synthetic.collection).as_bytes());
-    wire::put_bytes(
-        &mut out,
-        2,
-        text(&synthetic.dir.join("collection.media")).as_bytes(),
-    );
-    wire::put_bytes(
-        &mut out,
-        3,
-        text(&synthetic.dir.join("collection.media.db")).as_bytes(),
-    );
-    out
 }
 
 /// `GetDeckNamesRequest { skip_empty_default: false, include_filtered: true }`.
@@ -348,116 +276,4 @@ fn a6_refuses_an_unlisted_call_and_keeps_serving() {
         ),
         "A6: each unlisted call is refused by the allow-list before the engine sees it, and the collection keeps serving the listed calls"
     );
-}
-
-/// The protobuf wire format, as far as these tests use it: varints and length-delimited fields
-/// out, and every wire type the engine's messages use in.
-mod wire {
-    /// Appends a base-128 varint.
-    pub fn put_varint(out: &mut Vec<u8>, mut value: u64) {
-        while value >= 0x80 {
-            out.push(u8::try_from(value & 0x7f).expect("seven bits") | 0x80);
-            value >>= 7;
-        }
-        out.push(u8::try_from(value).expect("seven bits"));
-    }
-
-    /// Appends a varint field.
-    pub fn put_varint_field(out: &mut Vec<u8>, field: u64, value: u64) {
-        put_varint(out, field << 3);
-        put_varint(out, value);
-    }
-
-    /// Appends a length-delimited field: a string, bytes or an embedded message.
-    pub fn put_bytes(out: &mut Vec<u8>, field: u64, bytes: &[u8]) {
-        put_varint(out, (field << 3) | 2);
-        put_varint(
-            out,
-            u64::try_from(bytes.len()).expect("a length fits 64 bits"),
-        );
-        out.extend_from_slice(bytes);
-    }
-
-    #[derive(Debug, Clone)]
-    enum Value {
-        Varint(u64),
-        Bytes(Vec<u8>),
-        Fixed,
-    }
-
-    fn read_varint(bytes: &[u8], at: &mut usize) -> u64 {
-        let mut value = 0_u64;
-        let mut shift = 0;
-        loop {
-            let byte = bytes[*at];
-            *at += 1;
-            value |= u64::from(byte & 0x7f) << shift;
-            if byte & 0x80 == 0 {
-                return value;
-            }
-            shift += 7;
-        }
-    }
-
-    fn fields(bytes: &[u8]) -> Vec<(u64, Value)> {
-        let mut at = 0;
-        let mut out = Vec::new();
-        while at < bytes.len() {
-            let key = read_varint(bytes, &mut at);
-            let value = match key & 7 {
-                0 => Value::Varint(read_varint(bytes, &mut at)),
-                1 => {
-                    at += 8;
-                    Value::Fixed
-                }
-                2 => {
-                    let length = usize::try_from(read_varint(bytes, &mut at))
-                        .expect("a length fits the address space");
-                    let value = bytes[at..at + length].to_vec();
-                    at += length;
-                    Value::Bytes(value)
-                }
-                5 => {
-                    at += 4;
-                    Value::Fixed
-                }
-                wire => panic!("wire type {wire} is not one the engine's messages use"),
-            };
-            out.push((key >> 3, value));
-        }
-        out
-    }
-
-    /// A varint field's value, or zero when the message omits it (proto3's default).
-    pub fn varint(bytes: &[u8], field: u64) -> u64 {
-        fields(bytes)
-            .into_iter()
-            .filter_map(|(number, value)| match value {
-                Value::Varint(value) if number == field => Some(value),
-                _ => None,
-            })
-            .next_back()
-            .unwrap_or_default()
-    }
-
-    /// An `int64` field's value: the varint read as two's complement.
-    pub fn signed(bytes: &[u8], field: u64) -> i64 {
-        i64::from_ne_bytes(varint(bytes, field).to_ne_bytes())
-    }
-
-    /// A length-delimited field's bytes, or none when the message omits it.
-    pub fn bytes(bytes: &[u8], field: u64) -> Vec<u8> {
-        repeated(bytes, field).pop().unwrap_or_default()
-    }
-
-    /// Every occurrence of a length-delimited field, in order.
-    pub fn repeated(bytes: &[u8], field: u64) -> Vec<Vec<u8>> {
-        fields(bytes)
-            .into_iter()
-            .filter_map(|(number, value)| match value {
-                Value::Bytes(value) if number == field => Some(value),
-                _ => None,
-            })
-            .collect()
-    }
 }

@@ -2005,7 +2005,7 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
             self.assertIsNone(workflow["jobs"][job].get("needs"), f"{job} waits on another job")
         needs = workflow["jobs"]["ci"]["needs"]
         # SPEC-039 adds the five mutation jobs beside the gate's five, each a need of ci; SPEC-087
-        # adds the sixth, the Python runner's shards.
+        # adds the sixth, the Python runner's shards. SPEC-341 adds the planted card suite.
         mutation = [
             "mutation-plan",
             "mutation-python",
@@ -2017,7 +2017,16 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
         # SPEC-338 adds the web engine's job, which builds the module and holds it to its budget.
         self.assertEqual(
             sorted(needs),
-            sorted([*OWNER_LAYOUT, *mutation, "web-engine", "workflow-lint", "base-is-dev"]),
+            sorted(
+                [
+                    *OWNER_LAYOUT,
+                    *mutation,
+                    "web-engine",
+                    "workflow-lint",
+                    "base-is-dev",
+                    "card-sandbox",
+                ]
+            ),
         )
 
     def test_every_stage_runs_in_exactly_one_ci_job(self):
@@ -2060,6 +2069,37 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
                 gate = next(s for s in job["steps"] if GATE_CALL.search(str(s.get("run", ""))))
                 env = dict(job.get("env") or {}, **(gate.get("env") or {}))
                 self.assertEqual(env.get("CHECK_HISTORY"), "1", f"{job_id} scans no history")
+
+
+# --- the card sandbox job (SPEC-341 A13, R12)
+# The planted card suite runs on every pull request in Chromium and in WebKit, so the job installs
+# both with their system libraries, keeps the suite's results whatever its verdict, and the
+# aggregate check waits on it.
+CARD_JOB = "card-sandbox"
+CARD_INSTALL = "pnpm --dir web/app exec playwright install --with-deps --only-shell chromium webkit"
+CARD_SUITE = "pnpm --dir web/app test:card"
+
+
+class TheCardSandboxRunsInBothEngines(unittest.TestCase):
+    def test_the_card_sandbox_job_runs_the_planted_suite_in_both_engines(self):
+        jobs = load("ci.yml")["jobs"]
+        self.assertIn(CARD_JOB, jobs, "ci.yml has no card-sandbox job")
+        steps = jobs[CARD_JOB]["steps"]
+        runs = [str(step.get("run", "")).strip() for step in steps]
+        # both engines installed once, then the suite once, after them
+        self.assertEqual(runs.count(CARD_INSTALL), 1, "the job does not install both engines once")
+        self.assertEqual(runs.count(CARD_SUITE), 1, "the job does not run the planted suite once")
+        self.assertLess(runs.index(CARD_INSTALL), runs.index(CARD_SUITE))
+        # one upload of the suite's results after it, whatever its verdict
+        uploads = [at for at, step in enumerate(steps) if action(step) == "actions/upload-artifact"]
+        self.assertEqual(len(uploads), 1, "the job does not upload the suite's results once")
+        upload = steps[uploads[0]]
+        self.assertGreater(uploads[0], runs.index(CARD_SUITE))
+        self.assertEqual(upload.get("if"), "${{ always() }}")
+        self.assertEqual(paths(upload), ["web/app/test-results/"])
+        # and the aggregate check waits on it
+        self.assertIn(CARD_JOB, jobs["ci"]["needs"])
+        examined("card-sandbox steps", steps)
 
 
 def cache_scan(directory):
@@ -3481,6 +3521,7 @@ VETTED_MODULES = {
     "math": "numbers",
     "os": "the system's calls; each that reads or starts a process is named",
     "pathlib": "paths; each member that reads is named",
+    "plistlib": "parses property-list bytes it is given, or a file object only an `open` can make",
     "posixpath": "path strings",
     "re": "patterns over text it is given",
     "shlex": "splits and quotes text it is given; the `shlex` lexer, which can open a file it names, is named",
@@ -6684,6 +6725,92 @@ class WorkflowFilesAreReadAsBytes(unittest.TestCase):
                 self.assertIn(
                     f"test_zz_plant: plant_{name}: {name}: 1 {kind} site(s), 0 listed", said
                 )
+
+
+# The download step a planted harness job uses; its ref is a placeholder the checker never reads.
+PLANTED_DOWNLOAD = "actions/download-artifact@" + "0" * 40
+
+
+def harness_link_problems(workflow):
+    """Each way the `harness` job of a read workflow could link a framework its own run did not
+    build, named (SPEC-339 R12, A9): it waits on the `xcframework` job, downloads exactly one
+    artifact, that job's `xcframework`, and names no run, token or repository by which its download
+    could reach another run's artifact."""
+    job = (workflow.get("jobs") or {}).get("harness") or {}
+    needs = job.get("needs")
+    needs = [needs] if isinstance(needs, str) else list(needs or [])
+    problems = []
+    if "xcframework" not in needs:
+        problems.append("harness: it does not wait on the xcframework job")
+    downloads = [s for s in job.get("steps") or [] if action(s) == "actions/download-artifact"]
+    if len(downloads) != 1:
+        problems.append(f"harness: {len(downloads)} artifact downloads, not one")
+    for step in downloads:
+        given = step.get("with") or {}
+        if given.get("name") != "xcframework":
+            problems.append(f"harness: it downloads {given.get('name')!r}, not 'xcframework'")
+        for key in ("run-id", "github-token", "repository"):
+            if key in given:
+                problems.append(f"harness: its download names a {key}, so it can reach another run")
+    return problems
+
+
+class TheHarnessLinksItsOwnRunsFramework(unittest.TestCase):
+    def test_the_harness_links_the_framework_its_own_run_built(self):
+        """SPEC-339 A9: the harness job links the XCFramework this run's `xcframework` job built,
+        never one another run left behind."""
+        jobs = load("xcframework.yml")["jobs"]
+        self.assertIn("harness", list(jobs))
+        examined("harness steps", jobs["harness"].get("steps") or [])
+        self.assertEqual(harness_link_problems({"jobs": jobs}), [])
+
+        # The controls: the good job is accepted, and each plant is refused by its rule's name.
+        good = {
+            "needs": ["xcframework"],
+            "steps": [{"uses": PLANTED_DOWNLOAD, "with": {"name": "xcframework"}}],
+        }
+
+        def download(**given):
+            return {**good, "steps": [{"uses": PLANTED_DOWNLOAD, "with": given}]}
+
+        plants = {
+            "the good job": (good, []),
+            "a job that waits on nothing": (
+                {**good, "needs": []},
+                ["harness: it does not wait on the xcframework job"],
+            ),
+            "a job that waits on another job": (
+                {**good, "needs": "harness-wire"},
+                ["harness: it does not wait on the xcframework job"],
+            ),
+            "no download": (
+                {**good, "steps": [{"run": "true"}]},
+                ["harness: 0 artifact downloads, not one"],
+            ),
+            "a second download": (
+                {**good, "steps": good["steps"] * 2},
+                ["harness: 2 artifact downloads, not one"],
+            ),
+            "another artifact": (
+                download(name="harness-fixture"),
+                ["harness: it downloads 'harness-fixture', not 'xcframework'"],
+            ),
+            "another run": (
+                download(name="xcframework", **{"run-id": "1"}),
+                ["harness: its download names a run-id, so it can reach another run"],
+            ),
+            "a token": (
+                download(name="xcframework", **{"github-token": "planted"}),
+                ["harness: its download names a github-token, so it can reach another run"],
+            ),
+            "another repository": (
+                download(name="xcframework", repository="planted/planted"),
+                ["harness: its download names a repository, so it can reach another run"],
+            ),
+        }
+        for name, (job, wanted) in examined("planted harness jobs", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(harness_link_problems({"jobs": {"harness": job}}), wanted, name)
 
 
 if __name__ == "__main__":

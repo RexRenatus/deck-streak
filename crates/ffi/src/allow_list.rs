@@ -3,10 +3,11 @@
 //! The engine numbers its backend services and their methods when it is built, and its own
 //! clients address a call by that pair. A backend service answers its own methods and, after them,
 //! the methods of the collection service it fronts, so `Undo` is reached through the backend
-//! collection service. The table below holds the pairs this adapter lets through, each with the
-//! engine's name for it, so a reader can check a number against the engine's generated dispatch.
-//! A pair the engine renumbers fails the round-trip tests, which call each entry and decode its
-//! answer.
+//! collection service and `RenderExistingCard` through the backend card rendering service. The
+//! table below holds the pairs this adapter lets through, each with the engine's name for it, so a
+//! reader can check a number against the engine's generated dispatch.
+//! A pair the engine renumbers fails the round-trip and render tests, which call each entry and
+//! decode its answer.
 
 /// One engine call a native client may make.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -19,8 +20,9 @@ pub struct Call {
     pub name: &'static str,
 }
 
-/// The allow-list: open a collection, list its decks, get the next card, answer it, undo.
-pub const ALLOW_LIST: [Call; 5] = [
+/// The allow-list: open a collection, list its decks, get the next card, answer it, undo, and
+/// render a card (SPEC-339 R10), a call that reads the card and writes nothing.
+pub const ALLOW_LIST: [Call; 6] = [
     Call {
         service: 3,
         method: 0,
@@ -45,6 +47,11 @@ pub const ALLOW_LIST: [Call; 5] = [
         service: 3,
         method: 8,
         name: "CollectionService.Undo",
+    },
+    Call {
+        service: 27,
+        method: 6,
+        name: "CardRenderingService.RenderExistingCard",
     },
 ];
 
