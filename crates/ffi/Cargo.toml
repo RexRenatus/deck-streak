@@ -1,6 +1,6 @@
 [package]
 name = "deck-streak-ffi"
-description = "DeckStreak's FFI adapter: the engine's allow-listed backend for a native client. See docs/CONTEXT-MAP.md."
+description = "DeckStreak's umbrella FFI crate: the app's one Rust static library and its one UniFFI component, the engine's allow-listed backend for a native client. See docs/CONTEXT-MAP.md."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
