@@ -6,7 +6,7 @@
         ".github/workflows/testflight-internal.yml",
         "    environment: testflight-internal\n",
         "",
-        "the internal lane's app job names its environment, whose rules hold the credential (SPEC-352 R7, A16)",
+        "the internal lane's app job names its environment, whose rules hold the credential (SPEC-352 R2, A16)",
         "test_testflight_workflows.TheTestflightLanes.test_only_the_app_job_names_an_environment_and_reads_a_credential"
       ],
       [
@@ -46,7 +46,7 @@
         ".github/workflows/testflight-internal.yml",
         "        with:\n          persist-credentials: false\n",
         "        with:\n          persist-credentials: true\n",
-        "the app job's checkout keeps no token on disk (SPEC-352 R13, A17)",
+        "the app job's checkout keeps no token on disk (SPEC-352 R16, A17)",
         "test_testflight_workflows.TheTestflightLanes.test_the_lanes_are_hardened_pinned_uncached_and_queued"
       ],
       [

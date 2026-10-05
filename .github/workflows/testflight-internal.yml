@@ -9,8 +9,8 @@ on:
 permissions:
   contents: read
 
-# The lane's runs on one ref take one group and wait their turn, never cancelled and never replaced
-# (ADR-292).
+# The lane's runs on one ref take one group and wait their turn: a run in progress is never
+# cancelled and a waiting one is not replaced, up to queue: max's hundred waiting runs (ADR-292).
 concurrency:
   group: testflight-internal-${{ github.ref }}
   cancel-in-progress: false

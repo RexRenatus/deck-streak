@@ -31,7 +31,7 @@ team and the app id are read from the profile.
  |            checkout, full history, no persisted token                             |
  |            [release only] tag is SemVer, annotated, its commit on main             |
  |            ios_lane.py plan --lane L: refuse event, ref, shallow, version          |
- |            outputs: sha, marketing version, build number (first-parent count)      |
+ |            outputs: lane, marketing version, build number (first-parent count)     |
  +----------------------------------------------------------------------------------+
                      | needs (a refusal here starts no macOS job)
                      v
@@ -57,8 +57,9 @@ team and the app id are read from the profile.
 ```
 
 Each lane file queues its runs in one group per lane and ref (`testflight-internal-` or
-`testflight-release-` followed by `github.ref`) that never cancels a run and never replaces a
-waiting one. No job restores or saves a cache, and no job uploads an artifact of its own.
+`testflight-release-` followed by `github.ref`) that never cancels a run in progress and never
+replaces a waiting one, up to `queue: max`'s hundred waiting runs (ADR-292). No job restores or
+saves a cache, and no job uploads an artifact of its own.
 
 ## The credential's path, and nowhere else
 
@@ -76,22 +77,22 @@ waiting one. No job restores or saves a cache, and no job uploads an artifact of
         |    ::add-mask:: each identifier, the keychain password and the re-wrap passphrase
         |    check: App Store profile, unexpired, for this certificate, app id's first
         |           label not `invalid` (the placeholder's)
-        |    write certificate -> TMP/lane/cert (0600); password -> openssl pkcs12 on stdin,
+        |    write certificate -> TMP/lane/original.p12 (0600); password -> openssl pkcs12 on stdin,
         |    re-wrapped under a run-time passphrase -> security import -x -T codesign
         |    -> every certificate file REMOVED
-        |    keychain TMP/lane/lane.keychain (generated password, search list set)
+        |    keychain TMP/lane/lane.keychain-db (generated password, search list set)
         |    profile -> the user's profiles directory (removed by step 7)
         |    include file ios/Config/<ignored include> (project-level: every native
         |    target, never a package target; removed by step 7)
         |    drop every secret variable from the environment handed to any child
-        |    xcodebuild archive  -> TMP/lane/app.xcarchive   (output -> TMP/lane/archive.log)
+        |    xcodebuild archive  -> TMP/lane/app.xcarchive   (output -> TMP/lane/xcodebuild-archive.log)
         v
    step 6 upload-to-testflight   env: key, key id, issuer
         |  ios_lane.py upload-to-testflight:
         |    mkdir TMP/lane/key-XXXX (0700); write AuthKey file (0600)
-        |    write TMP/lane/export.plist (app-store-connect, manual, upload, internal only)
+        |    write TMP/lane/export-options.plist (app-store-connect, manual, upload, internal only)
         |    xcodebuild -exportArchive ... -authenticationKeyPath <that file>
-        |                (output -> TMP/lane/export.log; only error lines printed, redacted)
+        |                (output -> TMP/lane/xcodebuild-exportArchive.log; only error lines printed, redacted)
         |    on ANY exit: remove TMP/lane/key-XXXX
         v
    step 7 clean (always)  remove key dir, profile, include file, keychain; restore search list
@@ -114,10 +115,10 @@ discarded when the job ends.
 
 | state | when | `app` result | summary says |
 |---|---|---|---|
-| refused | wrong event or ref, shallow, a bad tag, a version mismatch | `plan` fails; no macOS job runs | the refusal's reason |
+| refused | wrong event or ref, shallow, a bad tag, a version mismatch | `plan` fails; no macOS job runs | no summary: the app job never runs; the plan step's error line names the reason |
 | stopped | no part placed | success | "stopped before the upload: the credential is not placed" |
-| half-placed | some parts placed | failure at step 3 | the absent parts by role |
-| profile refused | a development, expired or foreign profile, or one whose app id's first label is `invalid` | failure at step 5, before the archive | the check that failed |
+| half-placed | some parts placed | failure at step 3 | credential: half placed; outcome: stopped at the preflight (its error line names the absent parts by role) |
+| profile refused | a development, expired or foreign profile, or one whose app id's first label is `invalid` | failure at step 5, before the archive | outcome: not uploaded: the signing or the upload failed (the step's error lines name the cause, redacted) |
 | awaiting the owner | release lane, parts placed | waits at the environment's review | (nothing until approved) |
 | uploaded | all placed, signing and upload succeed | success | "uploaded", with the number |
-| upload refused | App Store Connect refuses | failure at step 6 | its error lines, redacted |
+| upload refused | App Store Connect refuses | failure at step 6 | outcome: not uploaded: the signing or the upload failed (the step's error lines name the cause, redacted) |

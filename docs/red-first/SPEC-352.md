@@ -24,7 +24,7 @@ A6: red at 12092762: AssertionError: None != '2'
 A6: green at 9b8f8d31
 A7: red at 84fd5d05: AssertionError: "the credential is half placed; absent: the key id, the issuer id, the certificate, the certificate's password, the profile" not found in []
 A7: green at 192c1b65
-A8: red at 84fd5d05: AssertionError: Items in the first set but not the second: (the fixture profile's four identifiers, none masked)
+A8: red at 84fd5d05: AssertionError: Items in the first set but not the second: (the fixture profile's five identifiers, none masked)
 A8: green at 192c1b65
 A9: red at 84fd5d05: AssertionError: 0 != 1 : security create-keychain ran 0 times
 A9: green at 192c1b65
@@ -60,7 +60,7 @@ A24: green at edf2fa57
 ```
 
 - Three red lines are shortened where the failure printed more than a criterion needs: A8's set
-  difference lists the fixture profile's four synthetic identifiers, A22's expected value is the
+  difference lists the fixture profile's five synthetic identifiers, A22's expected value is the
   admitted runner image's label, and A21's sets carry role words, never a secret's name.
 - A23 is red on the project's half (no app icon named); its property-list half, the launch screen
   and the four iPad orientations, is mutation coverage, held by row S35207.

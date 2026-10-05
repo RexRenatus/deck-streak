@@ -12,8 +12,9 @@ on:
 permissions:
   contents: read
 
-# One tag's runs take one group and wait their turn, never cancelled and never replaced, as
-# release.yml's runs do (ADR-292).
+# One tag's runs take one group and wait their turn, as release.yml's runs do: a run in progress
+# is never cancelled and a waiting one is not replaced, up to queue: max's hundred waiting runs
+# (ADR-292).
 concurrency:
   group: testflight-release-${{ github.ref }}
   cancel-in-progress: false

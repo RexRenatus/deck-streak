@@ -36,8 +36,8 @@ ls-tree`, `git show DEV:<path>` and `grep -n`.
   repository.
 - `.github/workflows/release.yml` builds host releases from a SemVer tag with no secret, in two
   jobs, the sync server's audit and the release (`scripts/tests/test_release_workflow.py`,
-  `steps_of`), and its release job's first step refuses a tag that is not SemVer, a lightweight
-  tag and a commit that is not on `main` (lines 44 to 60).
+  `steps_of`), and its release job's step after the checkout refuses a tag that is not SemVer, a
+  lightweight tag and a commit that is not on `main` (lines 44 to 60).
 - `xcframework.yml`, the one Apple job body, already takes `workflow_call` (line 19) and
   `workflow_dispatch` (line 20); `apple-on-change.yml` calls it on a pull request that changes an
   Apple or FFI path, and `apple-on-tag.yml` on every release tag, which builds and publishes
@@ -140,7 +140,8 @@ R15. The macOS image is admitted, by file and job, to the two lane files' `app` 
 R16. Each lane file defaults its token to `contents: read`, checks out with
     `persist-credentials: false`, pins every action by its full commit SHA, restores and saves no
     cache, expands no `${{ }}` expression inside a `run` script, and queues its runs in one group
-    per lane and ref that never cancels a run and never replaces a waiting one (ADR-292):
+    per lane and ref that never cancels a run in progress and never replaces a waiting one, up to
+    `queue: max`'s hundred waiting runs (ADR-292):
     `testflight-internal-${{ github.ref }}` and `testflight-release-${{ github.ref }}`, with
     `cancel-in-progress: false` and `queue: max`, and no job-level block.
 R17. The two `app` jobs are identical except for the environment's name and the lane value, and the
