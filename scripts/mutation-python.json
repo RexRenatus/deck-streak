@@ -11,7 +11,9 @@
   },
   "scripts/ios_lane.py": {
     "dir": "scripts/tests",
-    "modules": []
+    "modules": [
+      "test_ios_lane"
+    ]
   },
   "scripts/memory_scope.py": {
     "dir": "scripts/tests",
