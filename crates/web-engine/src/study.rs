@@ -61,17 +61,24 @@ impl Answer {
 pub mod service {
     /// The collection service.
     pub const COLLECTION: u32 = 3;
+    /// The cards service.
+    pub const CARDS: u32 = 5;
+    /// The decks service.
+    pub const DECKS: u32 = 7;
     /// The scheduler service.
     pub const SCHEDULER: u32 = 13;
     /// The notetypes service.
     pub const NOTETYPES: u32 = 23;
     /// The notes service.
     pub const NOTES: u32 = 25;
+    /// The card rendering service.
+    pub const CARD_RENDERING: u32 = 27;
 }
 
 /// The study calls `run_method` admits: service, method, and the method's name. Every pair
-/// outside it is refused, the exempt writes of ADR-337 included (#623).
-pub const STUDY_CALLS: [(u32, u32, &str); 8] = [
+/// outside it is refused, the exempt writes of ADR-337 included (#623). The last eight are the
+/// review's: the deck list, the card view, its labels and undo label, bury and flag (SPEC-350 R1).
+pub const STUDY_CALLS: [(u32, u32, &str); 16] = [
     (service::COLLECTION, 0, "open_collection"),
     (service::COLLECTION, 1, "close_collection"),
     (service::COLLECTION, 8, "undo"),
@@ -80,6 +87,14 @@ pub const STUDY_CALLS: [(u32, u32, &str); 8] = [
     (service::NOTETYPES, 8, "get_notetype_names"),
     (service::NOTES, 0, "new_note"),
     (service::NOTES, 2, "add_notes"),
+    (service::DECKS, 4, "deck_tree"),
+    (service::DECKS, 22, "set_current_deck"),
+    (service::CARD_RENDERING, 6, "render_existing_card"),
+    (service::CARD_RENDERING, 9, "strip_av_tags"),
+    (service::SCHEDULER, 24, "describe_next_states"),
+    (service::COLLECTION, 7, "get_undo_status"),
+    (service::SCHEDULER, 14, "bury_or_suspend_cards"),
+    (service::CARDS, 4, "set_flag"),
 ];
 
 /// The name of the study call at `service` and `method`.
@@ -94,6 +109,73 @@ pub fn admit(service: u32, method: u32) -> Result<&'static str, StudyError> {
         .ok_or(StudyError::CallRefused { service, method })
 }
 
+/// The card the review last showed: its id, the scheduling states read to show it, and its flag
+/// (SPEC-350 R2, ADR-361 D2). A rating, a bury or a flag reaches this card and no other.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Shown<S> {
+    /// The card's id.
+    pub card: i64,
+    /// The scheduling states the engine gave when it showed the card.
+    pub states: S,
+    /// The card's flag when it was shown, as the engine numbers flags.
+    pub flag: u32,
+}
+
+/// The kept card, when `card` is its id.
+///
+/// # Errors
+/// [`StudyError::NotShown`] when no card is kept or `card` is another card's id.
+pub fn shown_for<S>(shown: Option<&Shown<S>>, card: i64) -> Result<&Shown<S>, StudyError> {
+    shown
+        .filter(|kept| kept.card == card)
+        .ok_or(StudyError::NotShown)
+}
+
+/// The engine's number for the red flag.
+pub const RED: u32 = 1;
+
+/// The flag the flag action sets: red to none, and any other flag, none included, to red, as the
+/// desktop's red flag key does.
+#[must_use]
+pub fn toggled_red(flag: u32) -> u32 {
+    if flag == RED { 0 } else { RED }
+}
+
+/// The engine's bury mode for the user's own bury, which the next day does not undo alone.
+pub const BURY_USER: i32 = 2;
+
+/// A bury request's fields, in the engine's order: the cards, the notes and the mode.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BuryOf {
+    /// The card ids to bury.
+    pub card_ids: Vec<i64>,
+    /// The note ids whose cards to bury.
+    pub note_ids: Vec<i64>,
+    /// The bury mode.
+    pub mode: i32,
+}
+
+/// The user's bury of one card: that card's id, no note, the user's mode.
+#[must_use]
+pub fn bury_of(card: i64) -> BuryOf {
+    BuryOf {
+        card_ids: vec![card],
+        note_ids: Vec::new(),
+        mode: BURY_USER,
+    }
+}
+
+/// The languages the engine's `init` receives: the page's list, or English when it sends none
+/// (SPEC-350 R4).
+#[must_use]
+pub fn engine_languages(languages: Vec<String>) -> Vec<String> {
+    if languages.is_empty() {
+        vec!["en".to_owned()]
+    } else {
+        languages
+    }
+}
+
 /// Why the study rule refused a request.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StudyError {
@@ -106,6 +188,8 @@ pub enum StudyError {
         /// The method index asked for.
         method: u32,
     },
+    /// A rating, bury or flag for a card other than the one shown, or with none shown.
+    NotShown,
 }
 
 impl fmt::Display for StudyError {
@@ -120,6 +204,7 @@ impl fmt::Display for StudyError {
                     "run_method refuses service {service} method {method}: not a study call"
                 )
             }
+            Self::NotShown => write!(f, "not-shown: the card is not the one on screen"),
         }
     }
 }

@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:card": "playwright test --config playwright.card.config.ts",
-    "test:engine": "playwright test --config playwright.engine.config.ts"
+    "test:engine": "playwright test --config playwright.engine.config.ts",
+    "test:study": "playwright test --config playwright.study.config.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

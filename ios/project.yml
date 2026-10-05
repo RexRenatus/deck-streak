@@ -29,6 +29,9 @@ targets:
       - path: Harness/Sources
       - path: Harness/PrivacyInfo.xcprivacy
         buildPhase: resources
+      # The asset catalog: its icon set lists the icon CI writes at build time, which git
+      # ignores (SPEC-352 R19).
+      - path: Harness/Assets.xcassets
       # The synthetic collection CI writes with this commit's engine; git ignores it.
       - path: Harness/Resources
         buildPhase: resources
@@ -42,6 +45,7 @@ targets:
       base:
         INFOPLIST_FILE: Harness/Info.plist
         GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_STRICT_CONCURRENCY: complete
   HarnessTests:

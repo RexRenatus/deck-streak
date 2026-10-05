@@ -4,7 +4,10 @@
 // `#[test]` bodies.
 #![allow(clippy::print_stdout)]
 
-use deck_streak_web_engine::study::{Answer, STUDY_CALLS, StudyError, admit, service};
+use deck_streak_web_engine::study::{
+    Answer, BuryOf, STUDY_CALLS, Shown, StudyError, admit, bury_of, engine_languages, service,
+    shown_for, toggled_red,
+};
 
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
     println!("examined {} {what}", items.len());
@@ -66,6 +69,16 @@ fn run_method_admits_only_the_study_calls() {
         (23, 8, "get_notetype_names"),
         (25, 0, "new_note"),
         (25, 2, "add_notes"),
+        // The review's eight: the deck list, the card view, its labels and undo label, bury and
+        // flag (SPEC-350 R1, M10).
+        (7, 4, "deck_tree"),
+        (7, 22, "set_current_deck"),
+        (27, 6, "render_existing_card"),
+        (27, 9, "strip_av_tags"),
+        (13, 24, "describe_next_states"),
+        (3, 7, "get_undo_status"),
+        (13, 14, "bury_or_suspend_cards"),
+        (5, 4, "set_flag"),
     ];
     for (svc, method, name) in examined("study call(s)", study.to_vec()) {
         assert_eq!(
@@ -128,5 +141,94 @@ fn run_method_admits_only_the_study_calls() {
             service::NOTES
         ],
         [3, 13, 23, 25]
+    );
+}
+
+#[test]
+fn the_study_calls_are_the_reviews_pairs() {
+    // The oracle, written apart from the table (SPEC-350 R1, M10): DEV's eight calls, then the
+    // review's eight, each named as the engine names its method.
+    let review = vec![
+        (3, 0, "open_collection"),
+        (3, 1, "close_collection"),
+        (3, 8, "undo"),
+        (13, 3, "get_queued_cards"),
+        (13, 4, "answer_card"),
+        (23, 8, "get_notetype_names"),
+        (25, 0, "new_note"),
+        (25, 2, "add_notes"),
+        (7, 4, "deck_tree"),
+        (7, 22, "set_current_deck"),
+        (27, 6, "render_existing_card"),
+        (27, 9, "strip_av_tags"),
+        (13, 24, "describe_next_states"),
+        (3, 7, "get_undo_status"),
+        (13, 14, "bury_or_suspend_cards"),
+        (5, 4, "set_flag"),
+    ];
+    let review = examined("review study call(s)", review);
+    assert_eq!(STUDY_CALLS.to_vec(), review);
+    for &(svc, method, name) in &review {
+        assert_eq!(
+            admit(svc, method),
+            Ok(name),
+            "service {svc} method {method}"
+        );
+    }
+}
+
+#[test]
+fn only_the_shown_card_is_rated_buried_or_flagged() {
+    // SPEC-350 R2: the kept card is card 42; a gesture for card 41 reaches nothing.
+    let kept = Shown {
+        card: 42,
+        states: "the states shown with card 42",
+        flag: 0,
+    };
+    assert_eq!(shown_for(Some(&kept), 41), Err(StudyError::NotShown));
+    assert_eq!(shown_for::<&str>(None, 42), Err(StudyError::NotShown));
+    assert_eq!(
+        shown_for(Some(&kept), 42),
+        Ok(&Shown {
+            card: 42,
+            states: "the states shown with card 42",
+            flag: 0,
+        })
+    );
+    assert_eq!(
+        StudyError::NotShown.to_string(),
+        "not-shown: the card is not the one on screen"
+    );
+}
+
+#[test]
+fn the_flag_toggles_red() {
+    // SPEC-350 R7: no flag turns red, red turns to none, and any other flag turns red.
+    assert_eq!(toggled_red(0), 1);
+    assert_eq!(toggled_red(1), 0);
+    assert_eq!(toggled_red(2), 1);
+    assert_eq!(toggled_red(7), 1);
+}
+
+#[test]
+fn bury_is_the_users_bury_of_the_shown_card() {
+    // SPEC-350 R2: one card, no note, and the user's bury, the engine's mode 2.
+    assert_eq!(
+        bury_of(42),
+        BuryOf {
+            card_ids: vec![42],
+            note_ids: vec![],
+            mode: 2,
+        }
+    );
+}
+
+#[test]
+fn the_engine_speaks_english_when_no_language_is_given() {
+    // SPEC-350 R4: the page's list reaches the engine as sent, and an empty one is English.
+    assert_eq!(engine_languages(Vec::new()), vec!["en".to_owned()]);
+    assert_eq!(
+        engine_languages(vec!["ja".to_owned(), "en".to_owned()]),
+        vec!["ja".to_owned(), "en".to_owned()]
     );
 }

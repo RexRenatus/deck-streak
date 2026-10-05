@@ -110,7 +110,7 @@ impl Exempt {
 /// study calls (SPEC-345 M1, M4); a parity test holds each adapter's own table equal to its column.
 /// A pair one transport may make is not thereby admitted on the other: the native client neither
 /// closes the collection nor adds notes through this table (ADR-356 D2).
-pub const ORDINARY: [Ordinary; 11] = [
+pub const ORDINARY: [Ordinary; 18] = [
     Ordinary {
         service: 1,
         method: 3,
@@ -134,9 +134,30 @@ pub const ORDINARY: [Ordinary; 11] = [
     },
     Ordinary {
         service: 3,
+        method: 7,
+        name: "CollectionService.GetUndoStatus",
+        native: false,
+        web: true,
+    },
+    Ordinary {
+        service: 3,
         method: 8,
         name: "CollectionService.Undo",
         native: true,
+        web: true,
+    },
+    Ordinary {
+        service: 5,
+        method: 4,
+        name: "CardsService.SetFlag",
+        native: false,
+        web: true,
+    },
+    Ordinary {
+        service: 7,
+        method: 4,
+        name: "DecksService.DeckTree",
+        native: false,
         web: true,
     },
     Ordinary {
@@ -145,6 +166,13 @@ pub const ORDINARY: [Ordinary; 11] = [
         name: "DecksService.GetDeckNames",
         native: true,
         web: false,
+    },
+    Ordinary {
+        service: 7,
+        method: 22,
+        name: "DecksService.SetCurrentDeck",
+        native: false,
+        web: true,
     },
     Ordinary {
         service: 13,
@@ -158,6 +186,20 @@ pub const ORDINARY: [Ordinary; 11] = [
         method: 4,
         name: "SchedulerService.AnswerCard",
         native: true,
+        web: true,
+    },
+    Ordinary {
+        service: 13,
+        method: 14,
+        name: "SchedulerService.BuryOrSuspendCards",
+        native: false,
+        web: true,
+    },
+    Ordinary {
+        service: 13,
+        method: 24,
+        name: "SchedulerService.DescribeNextStates",
+        native: false,
         web: true,
     },
     Ordinary {
@@ -186,7 +228,14 @@ pub const ORDINARY: [Ordinary; 11] = [
         method: 6,
         name: "CardRenderingService.RenderExistingCard",
         native: true,
-        web: false,
+        web: true,
+    },
+    Ordinary {
+        service: 27,
+        method: 9,
+        name: "CardRenderingService.StripAvTags",
+        native: false,
+        web: true,
     },
 ];
 
