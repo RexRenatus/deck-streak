@@ -379,3 +379,28 @@ and `changelog.d/fix-caddy-undo-423.md`.
   does not measure a write on a branch that none of its eight exits reaches (ADR-198; #423).
 - It does not name a failed temporary directory of the operator's own (#451), nor check the site
   import when the Caddyfile is set apart (#452).
+
+## Amendment (SPEC-353): both layouts serve the site
+
+This amendment lifts the second half of this file's last exclusion, which left the site import
+unchecked when the Caddyfile is set apart (#452). SPEC-353 decides it, under ADR-364.
+
+Both layouts serve the site: the Caddyfile in the Caddy directory, which is the default, and a
+Caddyfile that `DECKSTREAK_DEPLOY_CADDYFILE` names elsewhere. In either, the import line the install
+adds names the site block by its absolute path in the Caddy directory, and the candidate each step
+validates and adapts is written in the live Caddyfile's own directory, the directory the reload
+reads it from (SPEC-353 R1, R2). That directory therefore holds the candidate as well as the
+rename target and the Caddyfile's previous copy. The Caddy directory is an absolute path of plain
+characters (SPEC-353 R3).
+
+Two of this file's tests change with it, and no criterion changes. The helper of A7 to A9 resolves
+each `import` line of the live Caddyfile as Caddy resolves it, instead of matching the line's text.
+A38's stale copies are the names each step writes in each directory: the block's previous copy in
+the Caddy directory, and the candidate and the Caddyfile's previous copy in the Caddyfile's
+directory.
+
+The other half of that exclusion, a failed temporary directory of the operator's own, stays open
+(#451).
+
+The insertion this amendment makes is this section, appended after the file's last line, and
+nothing above it is edited (SPEC-038 section 8, ruling (i)).
