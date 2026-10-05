@@ -828,6 +828,12 @@ jobs:
         run: pnpm --dir web/app exec playwright install --with-deps --only-shell chromium webkit
       - name: the browser tests over the module (Chromium and WebKit, persistent profiles)
         run: pnpm --dir web/app test:engine
+      - name: the Mini App's build, which the study suite serves
+        run: pnpm --dir web/app build
+      - name: the module and its bindings staged beside the build, under /engine/
+        run: bash scripts/web-engine-stage.sh
+      - name: the study suite over the staged build (Chromium and WebKit, persistent profiles)
+        run: pnpm --dir web/app test:study
 
   workflow-lint:
     runs-on: ubuntu-24.04
