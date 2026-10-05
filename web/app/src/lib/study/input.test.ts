@@ -176,4 +176,52 @@ describe('the review input', () => {
       vi.unstubAllGlobals();
     }
   });
+
+  // Mutation coverage: each case holds behaviour the criteria's tests do not reach.
+  it('a fresh input takes focus back from the frame, and a Tab only holds it until the next gesture', () => {
+    const frame = { tagName: 'IFRAME' };
+    const fresh = target('answer');
+    new StudyInput(fresh.target, new MemoryStorage()).blur(frame, frame);
+    expect(fresh.record.focused).toBe(1);
+
+    // Tab, then a key that fires nothing, then blur: the Tab no longer holds the focus
+    const keyed = target('answer');
+    const afterKey = new StudyInput(keyed.target, new MemoryStorage());
+    afterKey.key(key('Tab'));
+    afterKey.key(key('x'));
+    afterKey.blur(frame, frame);
+    expect(keyed.record.focused).toBe(1);
+
+    // Tab, then a pointer, then blur
+    const pointed = target('answer');
+    const afterPointer = new StudyInput(pointed.target, new MemoryStorage());
+    afterPointer.key(key('Tab'));
+    afterPointer.pointer();
+    afterPointer.blur(frame, frame);
+    expect(pointed.record.focused).toBe(1);
+  });
+
+  it('the switch is kept under its own name, and a device with none keeps no switch and throws nothing', () => {
+    const storage = new MemoryStorage();
+    storage.setItem('deck-streak.study.character-keys', 'off');
+    expect(new StudyInput(target().target, storage).characterKeys).toBe(false);
+
+    const input = new StudyInput(target().target, undefined);
+    expect(() => {
+      input.characterKeys = false;
+    }).not.toThrow();
+    expect(input.characterKeys).toBe(false);
+  });
+
+  it('a forgotten gamepad is read afresh: its next frame is a baseline', () => {
+    const { record, target: review } = target('answer');
+    const input = new StudyInput(review, new MemoryStorage());
+    input.pads([pad()]);
+    input.forget(0);
+    input.pads([pad([15])]);
+    expect(record.acted).toEqual([]);
+    input.pads([pad()]);
+    input.pads([pad([15])]);
+    expect(record.acted).toEqual(['good']);
+  });
 });

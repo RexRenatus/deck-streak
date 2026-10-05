@@ -62,8 +62,10 @@ export class StudyInput {
 
   set characterKeys(on: boolean) {
     this.#characterKeys = on;
+    const storage = this.#storage;
+    if (storage === undefined) return;
     try {
-      this.#storage?.setItem(KEY_SWITCH, on ? 'on' : OFF);
+      storage.setItem(KEY_SWITCH, on ? 'on' : OFF);
     } catch {
       // storage the browser refuses keeps the switch for this page only
     }
