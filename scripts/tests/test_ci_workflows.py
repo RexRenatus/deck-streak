@@ -2642,6 +2642,49 @@ def planted_job(text, job_id, *changes):
     return read_workflow(text[: block.start()] + planted + text[block.end() :])
 
 
+# The steps the web-engine job runs after its browser tests, each found by the command it runs, in
+# the order the job must run them: the app's build, the stage that puts the module and its bindings
+# beside it, then the study suite over both (SPEC-350 R13, A21).
+WEB_ENGINE_STUDY_ORDER = (
+    ("the app build", "pnpm --dir web/app build"),
+    ("the stage", "bash scripts/web-engine-stage.sh"),
+    ("the study suite", "pnpm --dir web/app test:study"),
+)
+
+
+def web_engine_study_problems(workflow):
+    """What a workflow gets wrong about the web-engine job's study suite (SPEC-350 R13, A21): the
+    app's build, the stage or the study suite missing or out of order, any of them before the
+    browser tests over the module, or an expression inside one of their commands."""
+    job = (workflow.get("jobs") or {}).get(WEB_ENGINE_JOB)
+    if job is None:
+        return ["there is no web-engine job"]
+    runs = [str(step.get("run", "")) for step in job.get("steps") or []]
+    found = sorted(
+        (at, name)
+        for name, command in WEB_ENGINE_STUDY_ORDER
+        for at, run in enumerate(runs)
+        if command in run
+    )
+    ran = [name for _, name in found]
+    wanted = [name for name, _ in WEB_ENGINE_STUDY_ORDER]
+    missing = [name for name in wanted if name not in ran]
+    problems = [f"the web-engine job runs no {name.removeprefix('the ')}" for name in missing]
+    if not missing and ran != wanted:
+        problems.append(
+            f"the web-engine job runs {', '.join(ran)}, in that order, not {', '.join(wanted)}"
+        )
+    browsers = next((at for at, run in enumerate(runs) if "test:engine" in run), None)
+    if browsers is not None and any(at < browsers for at, _ in found):
+        problems.append(
+            "the web-engine job builds the app, stages the module or runs the study suite before "
+            "its browser tests"
+        )
+    if any("${{" in runs[at] for at, _ in found):
+        problems.append("a study step of the web-engine job holds an expression in its command")
+    return problems
+
+
 class TheWebEngineIsHeldToItsBudget(unittest.TestCase):
     def test_the_web_engine_job_builds_the_module_and_holds_it_to_its_budget(self):
         text = workflow_file_text(WORKFLOWS / "ci.yml")
@@ -2749,6 +2792,47 @@ class TheWebEngineIsHeldToItsBudget(unittest.TestCase):
             with self.subTest(name):
                 planted = planted_job(text, job_id, *changes)
                 self.assertEqual(web_engine_job_problems(planted), refusal)
+
+    def test_the_web_engine_job_runs_the_study_suite(self):
+        text = workflow_file_text(WORKFLOWS / "ci.yml")
+        workflow = read_workflow(text)
+        self.assertEqual(web_engine_study_problems(workflow), [])
+        job = workflow["jobs"].get(WEB_ENGINE_JOB) or {}
+        examined("web-engine job steps", job.get("steps") or [])
+        # Each planted copy of the real job breaks one rule, and the judge refuses it by name.
+        build, stage, study = (command for _, command in WEB_ENGINE_STUDY_ORDER)
+        browsers = "pnpm --dir web/app test:engine"
+        order = (
+            "the web-engine job runs {}, in that order, not the app build, the stage, the study "
+            "suite"
+        )
+        early = (
+            "the web-engine job builds the app, stages the module or runs the study suite before "
+            "its browser tests"
+        )
+        plants = {
+            "no app build": ([(build, "true")], ["the web-engine job runs no app build"]),
+            "no stage": ([(stage, "true")], ["the web-engine job runs no stage"]),
+            "no study suite": ([(study, "true")], ["the web-engine job runs no study suite"]),
+            "the stage before the app build": (
+                [(stage, "SWAPPED"), (build, stage), ("SWAPPED", build)],
+                [order.format("the stage, the app build, the study suite")],
+            ),
+            "the study suite before the browser tests": (
+                [(study, "SWAPPED"), (browsers, study), ("SWAPPED", browsers)],
+                [order.format("the study suite, the app build, the stage"), early],
+            ),
+            "an expression in a study step": (
+                [(study, study + ' -- --project "${{ github.event_name }}"')],
+                ["a study step of the web-engine job holds an expression in its command"],
+            ),
+        }
+        for name, (changes, refusal) in examined(
+            "planted web-engine study defect(s)", plants.items()
+        ):
+            with self.subTest(name):
+                planted = planted_job(text, WEB_ENGINE_JOB, *changes)
+                self.assertEqual(web_engine_study_problems(planted), refusal)
 
 
 # ------------------------------------------ no secret, no other repository (SPEC-034 A9 to A12)
