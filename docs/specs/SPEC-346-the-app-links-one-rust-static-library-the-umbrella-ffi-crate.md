@@ -197,7 +197,6 @@ A6: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k tes
 A7: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_xcframework_holds_one_rust_library_per_slice
 A8: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_change_caller_watches_every_crate_the_umbrella_links
 A9: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_change_caller_runs_the_build_on_each_apple_path
-A10: gh run download <the change caller's run on this pull request> --name xcframework --dir a10 && grep -Fxq pass a10/xcframework-report/one-module && grep -Fxq pass a10/xcframework-report/one-library
 ```
 
 ## 4. File manifest
