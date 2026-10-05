@@ -39,3 +39,33 @@ test that stands on `dev` and is named as it is.
 | 25 | A22 | `scripts/tests/test_web_engine_stage.py` `test_the_stage_refuses_a_missing_module` | added (step 10) |
 | 26 | A23 | `web/app/src/lib/card/card-sinks.test.ts` "card HTML reaches the page only through the card frame" | named: SPEC-341's, unchanged |
 | 27 | A23 | `web/app/src/lib/csp.test.ts` "the page policy admits WebAssembly compilation and nothing else new" | named: unchanged |
+
+## The reds and greens
+
+Each line's command is the criterion's line in SPEC-350 section 3's fence, run at the commit named.
+
+```red-first
+A1: red at 686e0132: assertion `left == right` failed: left holds the eight study calls, right the review's sixteen
+A1: green at 56f905c0
+A2: red at 2131fda2: assertion `left == right` failed: DecksService.DeckTree (7, 4) on the web, left: NotAllowed, right: Admit
+A2: green at 56f905c0
+A3: red at 108a6e53: assertion `left == right` failed: left: Ok(Shown { card: 42, states: "the states shown with card 42", flag: 0 }), right: Err(NotShown)
+A3: green at 4ffc0357
+A4: red at 108a6e53: assertion `left == right` failed: left: 0, right: 1
+A4: green at 4ffc0357
+A5: red at 108a6e53: assertion `left == right` failed: left: BuryOf { card_ids: [42], note_ids: [], mode: 1 }, right: BuryOf { card_ids: [42], note_ids: [], mode: 2 }
+A5: green at 4ffc0357
+A6: red at cb6f38a3: AssertionError: expected { id: 1, …(1) } to deeply equal { request: { id: 1, op: 'decks' } }
+A6: green at ab7d5aea
+A7: red at cb6f38a3: AssertionError: expected { id: 1, ok: false, …(2) } to deeply equal { id: 1, ok: true, value: { …(2) } }
+A7: green at ab7d5aea
+A8: red at cb6f38a3: TypeError: client.decks is not a function
+A8: green at ab7d5aea
+```
+
+Two tests decide no criterion and were still seen red first. The engine's English default (R4's
+`["en"]` when empty), `crates/web-engine/tests/study.rs`
+`the_engine_speaks_english_when_no_language_is_given`, was red at 108a6e53 (`left: [], right:
+["en"]`) and green at 4ffc0357. The boundary census of the six new exports (its `OWED` list, grown
+insert-only), `crates/web-engine/tests/boundary.rs`, was red at f6784c3f (`fn deck_tree(` occurs 0
+times, not once) and green at d1afa325.
