@@ -37,12 +37,13 @@ mutants.out.old/
 web/app/reports/
 
 # The Swift harness (SPEC-339): the generated project, what CI places from the run's own artifact,
-# test results, and a person's own signing settings.
+# the app icon CI writes (SPEC-352 R19), test results, and a person's own signing settings.
 ios/*.xcodeproj/
 ios/EnginePackage/DeckStreakFFI.xcframework/
 ios/EnginePackage/Sources/DeckStreakFFI/
 ios/Harness/Resources/collection.anki2
 ios/Harness/Resources/collection.media/
+ios/Harness/Assets.xcassets/AppIcon.appiconset/AppIcon.png
 *.xcresult
 DerivedData/
 .build/
