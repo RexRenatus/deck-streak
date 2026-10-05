@@ -64,5 +64,13 @@
   "law_tiers_cards": "Cartes",
   "law_tiers_xp": "XP du jour",
   "law_tiers_none": "Sans palier",
-  "law_tiers_unavailable": "Les cartes de droit par palier ne peuvent pas être affichées pour le moment."
+  "law_tiers_unavailable": "Les cartes de droit par palier ne peuvent pas être affichées pour le moment.",
+  "study_refused_bad_request": "L’écran d’étude a demandé au moteur quelque chose qu’il n’a pas pu lire. Réessayez.",
+  "study_refused_collection_busy": "Votre collection est ouverte dans un autre onglet. Fermez-la là-bas, puis réessayez.",
+  "study_refused_storage": "Ce navigateur a refusé de conserver votre collection. Autorisez ce site à stocker des données, puis réessayez.",
+  "study_refused_engine": "Le moteur d’étude s’est arrêté. Réessayez.",
+  "study_refused_not_open": "Votre collection n’est pas encore ouverte. Réessayez.",
+  "study_refused_not_shown": "Cette carte n’était plus à l’écran ; la révision affiche maintenant celle qui l’est.",
+  "study_card_escaped": "Cette carte ne peut pas être affichée ici en toute sécurité. Vous pouvez quand même y répondre, l’enfouir ou la marquer.",
+  "study_done": "Ce paquet est terminé pour aujourd’hui."
 }

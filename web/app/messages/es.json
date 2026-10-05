@@ -64,5 +64,13 @@
   "law_tiers_cards": "Tarjetas",
   "law_tiers_xp": "XP de hoy",
   "law_tiers_none": "Sin grado",
-  "law_tiers_unavailable": "Las tarjetas de derecho por grado no se pueden mostrar ahora."
+  "law_tiers_unavailable": "Las tarjetas de derecho por grado no se pueden mostrar ahora.",
+  "study_refused_bad_request": "La pantalla de estudio pidió al motor algo que no pudo leer. Inténtalo de nuevo.",
+  "study_refused_collection_busy": "Tu colección está abierta en otra pestaña. Ciérrala allí y vuelve a intentarlo.",
+  "study_refused_storage": "Este navegador no quiso guardar tu colección. Permite que este sitio guarde datos y vuelve a intentarlo.",
+  "study_refused_engine": "El motor de estudio se detuvo. Inténtalo de nuevo.",
+  "study_refused_not_open": "Tu colección aún no está abierta. Inténtalo de nuevo.",
+  "study_refused_not_shown": "Esa tarjeta ya no estaba en pantalla, así que el repaso mostró la que sí lo está.",
+  "study_card_escaped": "Esta tarjeta no se puede mostrar aquí de forma segura. Aún puedes responderla, enterrarla o marcarla.",
+  "study_done": "Has terminado este mazo por hoy."
 }

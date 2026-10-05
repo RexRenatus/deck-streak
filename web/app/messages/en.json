@@ -164,5 +164,13 @@
   "remote_log_raw": "Input",
   "remote_log_action": "Action",
   "remote_log_visibility": "Visibility",
-  "remote_log_lock": "Wake lock"
+  "remote_log_lock": "Wake lock",
+  "study_refused_bad_request": "The study screen asked the engine for something it could not read. Try again.",
+  "study_refused_collection_busy": "Your collection is open in another tab. Close it there, then try again.",
+  "study_refused_storage": "This browser would not keep your collection. Allow this site to store data, then try again.",
+  "study_refused_engine": "The study engine stopped. Try again.",
+  "study_refused_not_open": "Your collection is not open yet. Try again.",
+  "study_refused_not_shown": "That card was no longer on screen, so the review showed the card that is.",
+  "study_card_escaped": "This card cannot be shown safely here. You can still answer, bury or flag it.",
+  "study_done": "This deck is done for today."
 }

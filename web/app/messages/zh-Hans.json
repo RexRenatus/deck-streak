@@ -64,5 +64,13 @@
   "law_tiers_cards": "卡片",
   "law_tiers_xp": "今日 XP",
   "law_tiers_none": "无层级",
-  "law_tiers_unavailable": "暂时无法显示按层级划分的法律卡片。"
+  "law_tiers_unavailable": "暂时无法显示按层级划分的法律卡片。",
+  "study_refused_bad_request": "学习界面向引擎发送了无法读取的请求。请重试。",
+  "study_refused_collection_busy": "你的收藏已在另一个标签页中打开。请在那里关闭后重试。",
+  "study_refused_storage": "此浏览器未保存你的收藏。请允许本网站存储数据后重试。",
+  "study_refused_engine": "学习引擎已停止。请重试。",
+  "study_refused_not_open": "你的收藏尚未打开。请重试。",
+  "study_refused_not_shown": "那张卡片已不在屏幕上，复习现在显示的是当前的卡片。",
+  "study_card_escaped": "这张卡片无法在这里安全显示。你仍然可以作答、暂时搁置或标记它。",
+  "study_done": "这个牌组今天已经学完了。"
 }

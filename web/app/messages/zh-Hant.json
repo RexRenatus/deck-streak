@@ -64,5 +64,13 @@
   "law_tiers_cards": "卡片",
   "law_tiers_xp": "今日 XP",
   "law_tiers_none": "無層級",
-  "law_tiers_unavailable": "暫時無法顯示依層級區分的法律卡片。"
+  "law_tiers_unavailable": "暫時無法顯示依層級區分的法律卡片。",
+  "study_refused_bad_request": "學習畫面向引擎送出了無法讀取的請求。請再試一次。",
+  "study_refused_collection_busy": "你的收藏已在另一個分頁中開啟。請在那裡關閉後再試一次。",
+  "study_refused_storage": "此瀏覽器未保存你的收藏。請允許本網站儲存資料後再試一次。",
+  "study_refused_engine": "學習引擎已停止。請再試一次。",
+  "study_refused_not_open": "你的收藏尚未開啟。請再試一次。",
+  "study_refused_not_shown": "那張卡片已不在畫面上，複習現在顯示的是目前的卡片。",
+  "study_card_escaped": "這張卡片無法在這裡安全顯示。你仍然可以作答、暫時擱置或標記它。",
+  "study_done": "這個牌組今天已經學完了。"
 }
