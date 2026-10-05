@@ -151,6 +151,74 @@ final class Listeners: @unchecked Sendable {
     }
 }
 
+/// SPEC-355 R10: the multicast DNS witness. It joins the multicast DNS group and keeps every
+/// datagram it receives, so a lookup a card asks for is counted by a label only that card's view
+/// names. A lookup reaches no listener a test owns otherwise: the name is resolved before any
+/// connection, and an address literal is not looked up at all.
+final class Witness: @unchecked Sendable {
+    // @unchecked: every mutable field below is read and written only on `queue`, the queue the
+    // group's handlers run on.
+    private let queue = DispatchQueue(label: "card-probe.witness")
+    private let group: NWConnectionGroup
+    private var datagrams: [Data] = []
+
+    /// The multicast DNS group's address and port.
+    static let address = "224.0.0.251"
+    static let port: NWEndpoint.Port = 5353
+
+    init() throws {
+        let multicast = try NWMulticastGroup(
+            for: [.hostPort(host: NWEndpoint.Host(Self.address), port: Self.port)])
+        let parameters = NWParameters.udp
+        parameters.allowLocalEndpointReuse = true
+        group = NWConnectionGroup(with: multicast, using: parameters)
+    }
+
+    /// Joins the group and waits until it is ready.
+    func start() async throws {
+        group.setReceiveHandler(maximumMessageSize: 65_535, rejectOversizedMessages: false) {
+            [weak self] _, content, _ in
+            guard let self, let content else { return }
+            self.datagrams.append(content)
+        }
+        let once = Once()
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            group.stateUpdateHandler = { state in
+                switch state {
+                case .ready:
+                    if once.claim() { continuation.resume() }
+                case .failed(let error):
+                    if once.claim() { continuation.resume(throwing: error) }
+                case .cancelled:
+                    if once.claim() { continuation.resume(throwing: CancellationError()) }
+                default:
+                    break
+                }
+            }
+            group.start(queue: queue)
+        }
+    }
+
+    /// How many datagrams so far carry `label`, as a DNS name carries it: its length, then its
+    /// bytes.
+    func count(_ label: String) -> Int {
+        let bytes = Data(label.utf8)
+        guard !bytes.isEmpty, bytes.count < 64 else { return 0 }
+        let wire = Data([UInt8(bytes.count)]) + bytes
+        return queue.sync { datagrams.filter { $0.range(of: wire) != nil }.count }
+    }
+
+    /// Every datagram so far, for the run's log.
+    var total: Int {
+        queue.sync { datagrams.count }
+    }
+
+    /// Leaves the group.
+    func cancel() {
+        queue.sync { group.cancel() }
+    }
+}
+
 /// A flag that is claimed once, so a continuation resumes exactly once.
 private final class Once: @unchecked Sendable {
     // @unchecked: `claim()` is called only from the listener's state handler, on one queue.

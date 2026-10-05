@@ -28,6 +28,11 @@ enum Observable: Equatable, Sendable {
     case allowed
     /// The file image's natural width above zero.
     case fileImage
+    /// A multicast DNS query for the card's own `.local` name reached the witness (SPEC-355 R10).
+    case query
+    /// A request a learner would be asked about (a script dialog, a media capture) was answered
+    /// yes: by the recorder, or as the card's own record reads it (SPEC-355 R5).
+    case granted
 }
 
 /// Where a card's markup points: the listeners' addresses and the fixture file, from the test.
@@ -36,12 +41,17 @@ struct Address: Sendable {
     let udpPort: UInt16
     /// The fixture image the suite wrote, as a file URL.
     let fixture: URL
+    /// A label only this view's card names, for the multicast DNS witness (SPEC-355 R10).
+    var label = "unlabelled"
 
     /// The TCP listener's origin.
     var origin: String { "http://\(Listeners.host):\(tcpPort)" }
 
     /// The origin under a card's own path, so each of its requests names it.
     func under(_ id: String) -> String { "\(origin)/\(id)" }
+
+    /// The `.local` name a lookup card asks for: the card's id, then this view's label.
+    func local(_ id: String) -> String { "\(id).\(label).local" }
 }
 
 /// One channel's planted card.
@@ -220,8 +230,13 @@ private func plantedCards() -> [Planted] {
     return cards
 }
 
-/// The layers the single-layer variants remove, one at a time.
-let LAYERS: [CardLayer] = CardLayer.allCases
+/// SPEC-349's seven layers, named one by one: the scripts-off view as SPEC-349 measured it, with
+/// L8 and L9 off. SPEC-355 R12 keeps SPEC-349's single-layer variants on this base, so their
+/// declarations stand as measured.
+let BASE: [CardLayer] = [.L1, .L2, .L3, .L4, .L5, .L6, .L7]
+
+/// The layers the single-layer variants remove, one at a time: SPEC-349's base, by name.
+let LAYERS: [CardLayer] = BASE
 
 /// The declared set of layers with no channel of their own: removing one alone opens nothing.
 /// The schematic declares L1 and L4. L6 and L7 are added as predicted by the table's own
@@ -246,3 +261,196 @@ let RENDER = Planted.document(
         + "<img id=\"render-image\" alt=\"a red square\" width=\"40\" height=\"40\" "
         + "src=\"data:image/gif;base64,R0lGODlhAQABAIABAP8AAP///ywAAAAAAQABAAACAkQBADs=\">"
         + "<table><tbody><tr><td>der</td><td>Hund</td></tr><tr><td>die</td><td>Katze</td></tr></tbody></table>")
+
+// SPEC-355 R7 to R11: the scripted cards of the schematic's section 7, the controls a scripted
+// view must carry, and the declared sets the scripted variants measure against.
+
+/// The controls a scripted card view must carry (SPEC-355 R1), named one by one: every layer but
+/// L2, which is the verdict itself.
+let CONTROLS: [CardLayer] = [.L1, .L3, .L4, .L5, .L6, .L7, .L8, .L9]
+
+/// One scripted card: the planted card, and the controls that hold its channel in the scripted
+/// view, which its reference removes. Its card's `alone` is the control whose removal alone, every
+/// other control on, opens the channel (the section's "control alone" column, predicted).
+struct Scripted: Sendable {
+    let card: Planted
+    let held: Set<CardLayer>
+
+    var id: String { card.id }
+}
+
+/// A card whose own script acts with no click. The script sets the `ran` marker first, so an
+/// absence in the scripted view is never read off a script that did not run.
+func scripted(
+    _ id: String, held: Set<CardLayer>, alone: CardLayer?, _ observable: Observable,
+    _ script: @escaping @Sendable (Address) -> String
+) -> Scripted {
+    Scripted(
+        card: Planted(
+            id: id, alone: alone, click: false, observable: observable, head: { _ in "" },
+            body: { a in "<p>\(id)</p><script>\(ranMarker) \(script(a))</script>" }),
+        held: held)
+}
+
+/// A peer connection opened from `scope`'s globals with `server` as its one ICE server. Every
+/// quote in it is a single quote, so a frame's `srcdoc` can carry it in double quotes.
+func peer(_ scope: String, _ server: String) -> String {
+    "const Peer = \(scope).RTCPeerConnection; const peer = new Peer({ iceServers: [\(server)] });"
+        + " peer.createDataChannel('card'); peer.createOffer().then((offer) => peer.setLocalDescription(offer));"
+}
+
+/// A STUN server at the UDP listener.
+func stun(_ a: Address) -> String {
+    "{ urls: 'stun:\(Listeners.host):\(a.udpPort)' }"
+}
+
+/// A TURN server over TCP at the TCP listener: the peer connection's twin reading, so the ICE
+/// agent skipping the loopback interface for UDP reads red, never green (SPEC-355 R9).
+func turnOverTCP(_ a: Address) -> String {
+    "{ urls: 'turn:\(Listeners.host):\(a.tcpPort)?transport=tcp', username: 'card', credential: 'card' }"
+}
+
+/// One card per script-driven channel of the section's table, but `lookup`, `app-state` and
+/// `render-script`, which have their own criteria (A11, A9, A12).
+let SCRIPTED: [Scripted] = scriptedCards()
+
+// One statement per card, so the compiler type-checks each card's markup on its own.
+private func scriptedCards() -> [Scripted] {
+    var cards: [Scripted] = []
+    cards.append(scripted("script-fetch", held: [.L3, .L9], alone: nil, .path) { a in
+        "fetch('\(a.under("script-fetch"))/1').catch(() => {});"
+    })
+    cards.append(scripted("script-xhr", held: [.L3, .L9], alone: nil, .path) { a in
+        "const request = new XMLHttpRequest(); request.open('GET', '\(a.under("script-xhr"))/1'); request.send();"
+    })
+    cards.append(scripted("script-websocket", held: [.L3, .L9], alone: nil, .connection) { a in
+        "try { new WebSocket('ws://\(Listeners.host):\(a.tcpPort)/script-websocket/1'); } catch (error) {}"
+    })
+    cards.append(scripted("script-eventsource", held: [.L3, .L9], alone: nil, .path) { a in
+        "new EventSource('\(a.under("script-eventsource"))/1');"
+    })
+    cards.append(scripted("script-beacon", held: [.L3, .L9], alone: nil, .path) { a in
+        "navigator.sendBeacon('\(a.under("script-beacon"))/1', 'card');"
+    })
+    cards.append(scripted("script-image", held: [.L3, .L9], alone: nil, .path) { a in
+        "const image = new Image(); image.src = '\(a.under("script-image"))/1';"
+    })
+    cards.append(scripted("script-worker", held: [.L3, .L9], alone: nil, .path) { a in
+        "const source = \"fetch('\(a.under("script-worker"))/1').catch(() => {});\";"
+            + " new Worker(URL.createObjectURL(new Blob([source], { type: 'text/javascript' })));"
+    })
+    cards.append(scripted("script-link", held: [.L3, .L9], alone: nil, .connection) { a in
+        "const early = document.createElement('link'); early.rel = 'preconnect'; early.href = '\(a.origin)';"
+            + " document.head.appendChild(early); const sheet = document.createElement('link');"
+            + " sheet.rel = 'stylesheet'; sheet.href = '\(a.under("script-link"))/1'; document.head.appendChild(sheet);"
+    })
+    cards.append(scripted("script-nav", held: [.L5, .L9], alone: nil, .connection) { a in
+        "let tries = 0; const go = () => { tries += 1; location.assign('\(a.under("script-nav"))/1');"
+            + " if (tries < 5) { setTimeout(go, 200); } }; setTimeout(go, 0);"
+    })
+    cards.append(scripted("script-form", held: [.L5, .L9], alone: nil, .path) { a in
+        "const form = document.createElement('form'); form.method = 'post';"
+            + " form.action = '\(a.under("script-form"))/1'; document.body.appendChild(form);"
+            + " setTimeout(() => form.submit(), 0);"
+    })
+    cards.append(scripted("script-open", held: [.L6], alone: .L6, .window) { a in
+        "setTimeout(() => window.open('\(a.under("script-open"))/1'), 0);"
+    })
+    cards.append(scripted("webrtc-stun", held: [.L8], alone: .L8, .datagram) { a in
+        peer("window", stun(a))
+    })
+    cards.append(scripted("webrtc-turn-tcp", held: [.L8], alone: .L8, .connection) { a in
+        peer("window", turnOverTCP(a))
+    })
+    cards.append(scripted("webrtc-blank-frame", held: [.L8], alone: .L8, .datagram) { a in
+        "const frame = document.createElement('iframe'); frame.title = 'blank'; document.body.appendChild(frame);"
+            + " const inner = frame.contentWindow; \(peer("inner", stun(a)))"
+    })
+    cards.append(scripted("webrtc-srcdoc-frame", held: [.L8], alone: .L8, .datagram) { a in
+        "const frame = document.createElement('iframe'); frame.title = 'srcdoc';"
+            + " frame.srcdoc = \"<script>\(peer("window", stun(a)))<\\/script>\"; document.body.appendChild(frame);"
+    })
+    cards.append(scripted("webrtc-written-frame", held: [.L8], alone: .L8, .datagram) { a in
+        "const frame = document.createElement('iframe'); frame.title = 'written'; document.body.appendChild(frame);"
+            + " frame.contentDocument.open(); frame.contentDocument.write(\"<script>\(peer("window", stun(a)))<\\/script>\");"
+            + " frame.contentDocument.close();"
+    })
+    // UNOBSERVABLE when the engine has no WebTransport: the reference's record then reads
+    // `absent` (ABSENT_ALLOWED).
+    cards.append(scripted("webtransport", held: [.L8], alone: .L8, .datagram) { a in
+        "const present = typeof WebTransport !== 'undefined';"
+            + " document.documentElement.dataset.record = present ? 'present' : 'absent';"
+            + " if (present) { try { new WebTransport('https://\(Listeners.host):\(a.udpPort)/webtransport'); }"
+            + " catch (error) {} }"
+    })
+    // Depth: the engine's own answer with no delegate is already a refusal.
+    cards.append(scripted("dialog", held: [.L6], alone: nil, .granted) { _ in
+        "const answers = {}; try { alert('card'); answers.alert = 'returned'; } catch (error) { answers.alert = error.name; }"
+            + " try { answers.confirm = String(confirm('card')); } catch (error) { answers.confirm = error.name; }"
+            + " try { answers.prompt = String(prompt('card', '')); } catch (error) { answers.prompt = error.name; }"
+            + " document.documentElement.dataset.record = JSON.stringify(answers);"
+    })
+    // Depth, as `dialog` is.
+    cards.append(scripted("capture", held: [.L6], alone: nil, .granted) { _ in
+        "const note = (value) => { document.documentElement.dataset.record = JSON.stringify({ capture: value }); };"
+            + " note('pending'); if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {"
+            + " navigator.mediaDevices.getUserMedia({ video: true, audio: true })"
+            + ".then(() => note('granted'), (error) => note(error.name)); } else { note('absent'); }"
+    })
+    return cards
+}
+
+/// The cards whose reference may read `absent`: the engine has no such interface, so the card is
+/// UNOBSERVABLE there, and the run prints it.
+let ABSENT_ALLOWED: Set<String> = ["webtransport"]
+
+/// The declared set of controls with no scripted channel of their own: removing one alone, every
+/// other control on, opens nothing (predicted; A10 measures it). L6 opens `script-open` and L8
+/// every peer connection; L3 and L9 share every load, L5 and L9 every navigation.
+let DEPTH_SCRIPTED: Set<CardLayer> = [.L1, .L3, .L4, .L5, .L7, .L9]
+
+/// SPEC-355 R10: the lookup card. A static and a script-added `dns-prefetch`, and a script's
+/// fetch, each of a `.local` name whose first label is the card's id and whose second only this
+/// view names.
+let LOOKUP = Planted(
+    id: "lookup", alone: nil, click: false, observable: .query,
+    head: { a in "<link rel=\"dns-prefetch\" href=\"http://\(a.local("lookup"))/\">" },
+    body: { a in
+        "<p>lookup</p><script>\(ranMarker) const hint = document.createElement('link'); hint.rel = 'dns-prefetch';"
+            + " hint.href = 'http://\(a.local("lookup"))/'; document.head.appendChild(hint);"
+            + " fetch('http://\(a.local("lookup"))/1').catch(() => {});</script>"
+    })
+
+/// SPEC-355 R6: the card that tries to read the app's state: the default store's cookie and
+/// storage, a file the app wrote, `window.webkit`, and a stored credential. It writes what it read
+/// into its own record after each step.
+func appState(file: URL) -> String {
+    let script: [String] = [
+        ranMarker,
+        "const read = {};",
+        "const done = () => { document.documentElement.dataset.record = JSON.stringify(read); };",
+        "try { read.cookie = document.cookie; } catch (error) { read.cookie = error.name; }",
+        "try { read.storage = String(localStorage.getItem('planted')); } catch (error) { read.storage = error.name; }",
+        "read.webkit = typeof window.webkit; done();",
+        "fetch('\(file.absoluteString)').then((response) => response.text())",
+        ".then((text) => { read.file = text; }, (error) => { read.file = error.name; })",
+        ".then(() => (navigator.credentials && navigator.credentials.get)",
+        "? navigator.credentials.get({ password: true, mediation: 'silent' }) : null)",
+        ".then((credential) => { read.credential = credential ? JSON.stringify(credential) : 'none'; },",
+        "(error) => { read.credential = error.name; })",
+        ".then(done, done);",
+    ]
+    return Planted.document(
+        id: "app-state", head: "",
+        body: "<p>app state</p><script>\(script.joined(separator: " "))</script>")
+}
+
+/// SPEC-355 R11: a benign scripted card, a hint toggle. Its script shows the hint and sets the
+/// marker, so its body text matches the reference's only when the script ran.
+let RENDER_SCRIPT = Planted.document(
+    id: "render-script",
+    head: "<style>body { font: 16px sans-serif; color: #123; background: #fefae0; }</style>",
+    body: "<p>Der Hund</p><p id=\"hint\" hidden>the dog</p><button id=\"toggle\" type=\"button\">hint</button>"
+        + "<script>\(ranMarker) const hint = document.getElementById('hint');"
+        + " document.getElementById('toggle').addEventListener('click', () => { hint.hidden = !hint.hidden; });"
+        + " hint.hidden = false;</script>")

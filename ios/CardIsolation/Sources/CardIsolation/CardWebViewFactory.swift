@@ -31,8 +31,13 @@ public enum CardWebViewFactory {
         configuration(layers: [.L1, .L2], ruleList: nil)
     }
 
-    /// The card view around a compiled list, or a refusal when there is none.
-    static func build(html: String, ruleList: WKContentRuleList?) throws -> WKWebView {
+    /// The card view around a compiled list, or a refusal when there is none. `hold` is the
+    /// listener L9 sends every connection to, and `switchedOn` the switch the verdict reads
+    /// (SPEC-355 R1, R2).
+    static func build(
+        html: String, ruleList: WKContentRuleList?, hold: ConnectionHold? = nil,
+        switchedOn: Bool = CardScripts.switchedOn
+    ) throws -> WKWebView {
         guard let ruleList else {
             throw CardViewRefusal.ruleListDidNotCompile
         }
@@ -46,7 +51,10 @@ public enum CardWebViewFactory {
 
     /// The probe's door: a view with only `layers` on, for the planted suite's reference and
     /// single-layer-off views. Internal, so only a test target reaches it.
-    static func make(layers: Set<CardLayer>, ruleList: WKContentRuleList?) -> WKWebView {
+    static func make(
+        layers: Set<CardLayer>, ruleList: WKContentRuleList?, hold: ConnectionHold? = nil,
+        switchedOn: Bool = false
+    ) -> WKWebView {
         let view = WKWebView(
             frame: .zero, configuration: configuration(layers: layers, ruleList: ruleList))
         if layers.contains(.L5) {
@@ -67,6 +75,12 @@ public enum CardWebViewFactory {
         // controller, so no script in the frame has a bridge into Swift.
         // It does NOT stop the page running script inside its own frame, were JavaScript on.
         return view
+    }
+
+    /// The switch's verdict for a view this factory built, or nil for a view it did not build
+    /// (SPEC-355 R2). The stub the red-first tests run against: no verdict is kept.
+    static func verdict(of view: WKWebView) -> CardScripts.Verdict? {
+        nil
     }
 
     private static func configuration(
