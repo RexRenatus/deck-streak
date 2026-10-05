@@ -266,6 +266,7 @@ What only a device or a person proves, who proves it and when, is section 9.
 | `.github/workflows/ci.yml` | CI | changed: the `web-engine` job builds the app, stages the module and runs `test:study` |
 | `scripts/tests/test_ci_workflows.py` | CI | changed (A21) |
 | `scripts/mutation-rows.d/S35000-S35099.json` | mutation | added |
+| `scripts/mutation-equivalent.d/deck-streak-web-engine.json` | CI | changed (record 21 removed: its undo mutant is now caught, rulings 344 and 357) |
 | `docs/schematics/web-study-screens.md` | docs | added |
 | `docs/decisions/ADR-361-the-web-review-answers-only-the-card-it-showed-and-the-frame-stays-sealed.md` | docs | added |
 | `docs/red-first/SPEC-350.md` | docs | added |
