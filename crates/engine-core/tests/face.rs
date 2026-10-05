@@ -26,7 +26,7 @@ use std::path::{Path, PathBuf};
 use anki::collection::{Collection, CollectionBuilder};
 use anki::deckconfig::{DeckConfig, DeckConfigInner, UpdateDeckConfigsRequest};
 use anki::decks::DeckId;
-use anki::notetype::Notetype;
+use anki::notetype::{Notetype, NotetypeId};
 use anki_proto::collection::OpenCollectionRequest;
 use anki_proto::deck_config::UpdateDeckConfigsMode;
 use anki_proto::deck_config::deck_configs_for_update::current_deck::Limits;
@@ -214,12 +214,17 @@ fn text(path: &Path) -> String {
 
 /// A native dispatcher with the fixture's collection open.
 fn open(fixture: &Fixture) -> Dispatcher {
+    open_at(&fixture.dir, &fixture.collection)
+}
+
+/// A native dispatcher with the collection at `collection`, in `dir`, open.
+fn open_at(dir: &Path, collection: &Path) -> Dispatcher {
     let dispatcher =
         Dispatcher::start(Transport::Native, &[]).expect("the engine starts from the default init");
     let request = OpenCollectionRequest {
-        collection_path: text(&fixture.collection),
-        media_folder_path: text(&fixture.dir.join("collection.media")),
-        media_db_path: text(&fixture.dir.join("collection.media.db")),
+        collection_path: text(collection),
+        media_folder_path: text(&dir.join("collection.media")),
+        media_db_path: text(&dir.join("collection.media.db")),
     };
     let (service, method) = OPEN_COLLECTION;
     dispatcher
@@ -506,4 +511,54 @@ fn autoplay_follows_the_preset_and_the_client() {
         };
         assert_eq!(face.autoplay, expected, "{case}: the autoplay");
     }
+}
+
+#[test]
+fn a_field_the_frontend_completes_keeps_its_own_text_beside_the_front_side() {
+    let dir = support::scratch("engine-core-face", "typed-answer");
+    std::fs::create_dir_all(dir.join("collection.media")).expect("a media directory");
+    let collection = dir.join("collection.anki2");
+    let mut col = CollectionBuilder::new(&collection)
+        .build()
+        .expect("the engine creates the collection");
+    let plain = deck(&mut col, "Plain");
+    let basic = col
+        .get_notetype_by_name("Basic")
+        .expect("the note types are read")
+        .expect("the engine creates its stock Basic note type");
+    let mut typed = Notetype::clone(&basic);
+    typed.id = NotetypeId(0);
+    "Basic typed".clone_into(&mut typed.name);
+    "{{FrontSide}}<hr id=answer>{{custom:Back}}"
+        .clone_into(&mut typed.templates[0].config.a_format);
+    col.add_notetype(&mut typed, false)
+        .expect("the engine adds the note type");
+    let card = note(&mut col, &typed, plain, "front words", "back words");
+    col.close(None).expect("the engine closes the collection");
+
+    let dispatcher = open_at(&dir, &collection);
+    let answer = face(&dispatcher, card, Side::Answer, true);
+    assert_eq!(
+        answer.text.matches("front words").count(),
+        1,
+        "the front side stands once: {}",
+        answer.text
+    );
+    assert!(
+        answer.text.contains("back words"),
+        "a field other than the front side keeps its own text: {}",
+        answer.text
+    );
+}
+
+#[test]
+fn a_percent_escape_decodes_to_its_byte() {
+    assert_eq!(media::decoded_name("a%41b").as_deref(), Some("aAb"));
+    assert_eq!(
+        media::decoded_name("%e2%9C%93.png").as_deref(),
+        Some("\u{2713}.png")
+    );
+    assert_eq!(media::decoded_name("100%.png").as_deref(), Some("100%.png"));
+    assert_eq!(media::decoded_name("%4").as_deref(), Some("%4"));
+    assert_eq!(media::decoded_name("%ff"), None);
 }
