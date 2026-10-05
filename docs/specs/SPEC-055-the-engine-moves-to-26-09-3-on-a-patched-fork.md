@@ -77,6 +77,7 @@ R2. The pinned commit carries the fix: with nothing changed, a second
     cargo's own `Finished` time for it is at most 10 seconds.
 R3. `deny.toml`'s `allow-git` names exactly `https://github.com/RexRenatus/anki.git` and
     `https://github.com/ankitects/rust-url.git`, and `unknown-git` still refuses any other source.
+    (amended by ADR-058's amendment, SPEC-342)
     The `paste` (RUSTSEC-2024-0436) and `bincode` (RUSTSEC-2025-0141) exceptions and the `Unlicense`
     allowance are removed with their comments, because nothing in the graph needs them at 26.09.3.
     `CC0-1.0` stays: it predates the engine. Every advisory exception that remains is one
@@ -118,7 +119,7 @@ R11. The engine's record follows the pin. SPEC-022's A1 check (`test_engine_spik
 
 | id | criterion | decided by |
 |---|---|---|
-| A1 | the engine's dependency names upstream tag 26.09.3, the root manifest patches it by `rev` to a commit of the fork, every engine package in the lockfile comes from that commit, and `allow-git` names exactly the fork and `rust-url` | `test_engine_pin.py` `the_engine_is_patched_by_rev_to_a_commit_of_the_fork` |
+| A1 | the engine's dependency names upstream tag 26.09.3, the root manifest patches it by `rev` to a commit of the fork, every engine package in the lockfile comes from that commit, and `allow-git` names exactly the fork and `rust-url` (amended by ADR-058's amendment, SPEC-342) | `test_engine_pin.py` `the_engine_is_patched_by_rev_to_a_commit_of_the_fork` |
 | A2 | a second build of `deck-streak-ingest` with nothing changed compiles no unit, within cargo's own time bound | `test_engine_pin.py` `a_second_build_of_ingest_recompiles_nothing` |
 | A3 | every advisory exception in `deny.toml` is one `cargo deny` still encounters, and every allowed git source is in the graph | `test_engine_pin.py` `every_advisory_exception_and_git_source_in_deny_toml_is_live` |
 | A4 | every job that compiles Rust still installs protoc 31.1 at ADR-022's digest | `test_ci_workflows.py` `every_job_that_compiles_rust_installs_the_pinned_protoc_first` (SPEC-038) |

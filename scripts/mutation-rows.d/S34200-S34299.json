@@ -1,0 +1,69 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S34200-THE-GRID-HOLDS-A-MILLION-REVIEW-ROWS",
+        "fsrs7",
+        "src/measure/mod.rs",
+        "pub const REVIEWS: [usize; 3] = [10_000, 100_000, 1_000_000];",
+        "pub const REVIEWS: [usize; 3] = [10_000, 100_000, 100_000];",
+        "report::the_grid_is_three_sizes_by_two_lengths_by_two_methods_five_runs_each",
+        "the grid's largest cell is a million review rows; a grid that stops short of it would never time the size the decision rests on (SPEC-342 R7, A11)"
+      ],
+      [
+        "S34201-THE-GRID-HOLDS-TWO-MEAN-LENGTHS",
+        "fsrs7",
+        "src/measure/mod.rs",
+        "pub const MEANS: [usize; 2] = [8, 32];",
+        "pub const MEANS: [usize; 2] = [8, 16];",
+        "report::the_grid_is_three_sizes_by_two_lengths_by_two_methods_five_runs_each",
+        "the grid's mean card lengths are 8 and 32; another long mean would time a different history shape than the report names (SPEC-342 R7, A11)"
+      ],
+      [
+        "S34202-EACH-CELL-IS-TIMED-FIVE-TIMES",
+        "fsrs7",
+        "src/measure/mod.rs",
+        "pub const RUNS: usize = 5;",
+        "pub const RUNS: usize = 4;",
+        "report::the_grid_is_three_sizes_by_two_lengths_by_two_methods_five_runs_each",
+        "each cell is timed five times and the report reads their median; four runs would move the median the report records (SPEC-342 R7, A11)"
+      ],
+      [
+        "S34203-ONE-UNTIMED-WARM-UP-PER-CELL",
+        "fsrs7",
+        "src/measure/mod.rs",
+        "pub const WARMUPS: usize = 1;",
+        "pub const WARMUPS: usize = 0;",
+        "report::the_grid_is_three_sizes_by_two_lengths_by_two_methods_five_runs_each",
+        "each cell takes one untimed warm-up before its timed runs; without it the first timed run would carry the cold start (SPEC-342 R7, A11)"
+      ],
+      [
+        "S34204-A-DAY-IS-86400000-MILLISECONDS",
+        "fsrs7",
+        "src/convert.rs",
+        "pub const MS_PER_DAY: f64 = 86_400_000.0;",
+        "pub const MS_PER_DAY: f64 = 8_640_000.0;",
+        "convert::a_cards_reviews_become_fractional_day_intervals_from_zero",
+        "a review-log gap becomes days by dividing by a day's milliseconds; a far other divisor scales every interval the scheduler reads (SPEC-342 R5, A5)"
+      ],
+      [
+        "S34205-CHECKSUMS-AGREE-TO-ONE-PART-IN-10000",
+        "fsrs7",
+        "src/measure/report.rs",
+        "pub const TOLERANCE: f64 = 1e-4;",
+        "pub const TOLERANCE: f64 = 1e-3;",
+        "report::disagreeing_checksums_and_a_missing_web_check_are_refused",
+        "two targets' checksums of one cell may differ by one part in 10,000; a looser bound would accept a wasm replay that computed other states (SPEC-342 R8, A13)"
+      ],
+      [
+        "S34206-RESCHEDULED-ENTRIES-ARE-DROPPED",
+        "fsrs7",
+        "src/convert.rs",
+        "pub const DROPPED_KINDS: [u8; 2] = [4, 5];",
+        "pub const DROPPED_KINDS: [u8; 2] = [4, 4];",
+        "convert::manual_rescheduled_and_unrated_entries_are_dropped",
+        "manual and rescheduled review-log entries are not reviews and are dropped; keeping a rescheduled one would replay it as an answer (SPEC-342 R5, A6)"
+      ]
+    ]
+  }
+}
