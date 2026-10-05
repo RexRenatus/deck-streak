@@ -8,6 +8,9 @@
 //!
 //! - [`allow_list`]: the calls a native client may make, and the lookup that decides one (R2).
 //! - [`engine`]: the engine handle, its typed refusal and the entry point (R1, R3).
+//! - [`face`]: a card's face as a native client shows and plays it: one closed page whose media
+//!   are `data:` URLs read from the opened collection's media folder, its clips and the names it
+//!   left out (SPEC-348 R5). [`engine::Engine::face`] completes it through the core, beside `run`.
 //!
 //! Of this workspace's crates the adapter depends on the engine core (`deck-streak-engine-core`)
 //! alone (ADR-345 D1), and reaches the engine only through the core's dispatcher started on the

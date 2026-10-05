@@ -6,6 +6,8 @@
 //! URL the core wrote or emptied. The shell names no script, no `base` element and no URL of any
 //! other scheme; a card author's own markup stays the frame's to block.
 
+use std::fs::File;
+use std::io::Read as _;
 use std::path::PathBuf;
 
 use deck_streak_engine_core::face::{self, Face};
@@ -50,14 +52,16 @@ pub struct CardFace {
     pub omitted: Vec<String>,
 }
 
-/// The media folder of the collection the engine opened (stubbed: it finds no file).
-pub(crate) struct MediaFolder(
-    #[expect(dead_code, reason = "the stub reads no folder")] pub(crate) Option<PathBuf>,
-);
+/// The media folder of the collection the engine opened, read at most a cap and a byte at a time;
+/// the core's comparison decides what that length admits.
+pub(crate) struct MediaFolder(pub(crate) Option<PathBuf>);
 
 impl Reader for MediaFolder {
-    fn read(&self, _name: &str, _limit: u64) -> Option<Vec<u8>> {
-        None
+    fn read(&self, name: &str, limit: u64) -> Option<Vec<u8>> {
+        let file = File::open(self.0.as_ref()?.join(name)).ok()?;
+        let mut bytes = Vec::new();
+        file.take(limit).read_to_end(&mut bytes).ok()?;
+        Some(bytes)
     }
 }
 
