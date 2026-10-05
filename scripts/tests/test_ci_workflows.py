@@ -6257,6 +6257,39 @@ DYNAMIC_IMPORTS = {
             1,
         ),
     ),
+    **allowed(
+        "probes, then restores, the collation locale the refusal is measured under; reads no file, never a workflow",
+        (
+            "test_deploy_scripts",
+            "TheCaddyInstall.test_a_caddy_directory_the_import_line_cannot_carry_is_refused_before_the_host",
+            "locale.Error",
+            1,
+        ),
+        (
+            "test_deploy_scripts",
+            "TheCaddyInstall.test_a_caddy_directory_the_import_line_cannot_carry_is_refused_before_the_host",
+            "locale.LC_COLLATE",
+            3,
+        ),
+        (
+            "test_deploy_scripts",
+            "TheCaddyInstall.test_a_caddy_directory_the_import_line_cannot_carry_is_refused_before_the_host",
+            "locale.setlocale(locale.LC_COLLATE)",
+            1,
+        ),
+        (
+            "test_deploy_scripts",
+            "TheCaddyInstall.test_a_caddy_directory_the_import_line_cannot_carry_is_refused_before_the_host",
+            "locale.setlocale(locale.LC_COLLATE, 'en_US.UTF-8')",
+            1,
+        ),
+        (
+            "test_deploy_scripts",
+            "TheCaddyInstall.test_a_caddy_directory_the_import_line_cannot_carry_is_refused_before_the_host",
+            "locale.setlocale(locale.LC_COLLATE, collation)",
+            1,
+        ),
+    ),
 }
 
 
