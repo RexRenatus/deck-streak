@@ -71,7 +71,7 @@ D1, where the one spelling is stated and what reads it:
 
 D2, how the filter's test takes its population:
 
-- The test reads the guard from the Caddy block with the existing Caddyfile reader. It forms each
+- The test reads the guard from the Caddy block with the existing Caddyfile reader, chosen: it forms each
   spelling of the login: the login itself and each of its respellings, crossed with three queries
   and five forms of the target. It keeps those the edge serves, which means those the handle's
   matcher places in the route and the guard admits; with no guard, it keeps every one the matcher
@@ -87,7 +87,7 @@ D2, how the filter's test takes its population:
 
 D3, how the guard is judged without running the edge:
 
-- The test reads the pattern from the block and judges it with Python's `re`. It refuses any
+- The test reads the pattern from the block and judges it with Python's `re`, chosen: it refuses any
   pattern outside the part of RE2 that both engines read alike (literals, `^`, `$`, `.`, classes,
   `(?:` groups, single `?`, `+` and `*`), and planted patterns prove the check refuses each
   construct by name. It also asserts that no spelling it feeds holds a newline, the one input on
