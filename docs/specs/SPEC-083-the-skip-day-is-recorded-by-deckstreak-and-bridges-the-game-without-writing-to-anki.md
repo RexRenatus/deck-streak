@@ -1179,6 +1179,10 @@ carry the pin instead. A6, A40 and A44 are unchanged in their words, and their t
 fence until E4c lands the undo arms. After the merge of dev into this branch, U15's `SEEDS` holds 42 statements, one
 more than dev's own: both sides added one.
 
+Correction, 2026-10-05 (ruling 415): U15's `SEEDS` holds 43 statements at the head after the merge
+of dev, and the earlier sentence's 42 was a miscount. Dev's own `SEEDS` holds 42. Nothing else
+changes.
+
 ## 16. Amendments, 2026-10-05: the census names the engine core's dispatcher as a port (E4b)
 
 A24's criterion text is unchanged. What changed is the tree it walks: the client crates now run on the engine core, a
