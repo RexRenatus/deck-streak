@@ -260,3 +260,19 @@ those lines read `.block_on(` and `}`; measured at 0fa34058, the A5 assertion is
 (`TakeAnswer::Accepted { .. }`, whose `Failed(engine_failed) != Accepted` is the red) and the A25, A36, A47 and A49
 assertion is the `assert!` at `:712` in `wrote_nothing`, whose message is `the take answers {reason}: {answer:?}`
 (`:714`). The fence lines are not edited.
+
+Correction (ruling 147 (a), ruling 262): A38, A48 and A53 read red first by a PRECONDITION, not by their own
+violation: at 0fa34058 the reds are lines 1137, 1256 and 1324 of `crates/ingest/tests/skip_write.rs` (at 2f009307
+lines 1211, 1330 and 1486), the first take or the first listing that the stub could not answer. Each criterion's own
+red is the verifier's plant measurement at 2f009307, cited by sha and line: A38 at line 1205 (the preview lists only
+the cards the search selects, killed when `prop:due=0` is dropped), A48 at line 725 (`counts_moved`, killed when
+`moved_counts` is bypassed) and A53 at line 1506 (one backup kept, killed when `remove_older_backups` is bypassed).
+This fix round adds two killers, both MUTATION COVERAGE (green at the unplanted head, red under a plant), recorded
+here in prose so the fence stays as it was. `a_push_that_cannot_start_answers_push_failed_and_moves_nothing`
+(`skip_write.rs:1007`): plant `WriteSync::NotStarted(_) => {}` at the push arm of `skip_write.rs`, red at
+`skip_write.rs:725` (`the take answers push_failed`), green in a5e7d7e8 on the unplanted source. The count assertion
+added to A5 (`a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows`, `skip_write.rs:902`, exactly two
+`meta` and two `finish` requests a take): plant an extra `write_sync` before the push, red at `skip_write.rs:900`
+(`left: 3, right: 2`, `meta`), green in c3176173 on the unplanted source; A26 and A6 still pass under that plant,
+which is why the count belongs in A5. Mutation rows S08329 and S08330 prove each plant killed. The fence lines are
+not edited.
