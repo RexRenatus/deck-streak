@@ -10,7 +10,12 @@
 //! out here, the `data:` URLs' base64 included, so no expectation is computed by the code under
 //! test.
 
-#![allow(clippy::expect_used, reason = "a failed fixture should fail its test")]
+#![allow(
+    clippy::expect_used,
+    clippy::print_stdout,
+    reason = "a failed fixture should fail its test, and the shared support module prints what an \
+              enumerating test examined"
+)]
 
 mod support;
 
@@ -157,10 +162,10 @@ fn fixture(test: &str) -> Fixture {
         config.skip_question_when_replaying_answer = true;
     });
     preset(&mut col, quiet, "Quiet", |config| {
-        config.disable_autoplay = true
+        config.disable_autoplay = true;
     });
     preset(&mut col, moved, "Moved", |config| {
-        config.disable_autoplay = true
+        config.disable_autoplay = true;
     });
     let basic = col
         .get_notetype_by_name("Basic")

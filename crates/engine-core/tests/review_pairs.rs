@@ -200,16 +200,16 @@ fn the_review_pairs_run_natively_and_no_other_pair_joins() {
         .filter(|pair| !NATIVE.contains(pair))
         .collect();
     let others = support::examined("pair(s) outside the native column", others);
-    let (mut held, mut refused, mut answered) = (Vec::new(), 0_usize, Vec::new());
+    let (mut for_gesture, mut refused, mut answered) = (Vec::new(), 0_usize, Vec::new());
     for &(service, method) in &others {
         match dispatcher.run(service, method, &[]) {
-            Err(Refusal::NeedsGesture { .. }) => held.push((service, method)),
+            Err(Refusal::NeedsGesture { .. }) => for_gesture.push((service, method)),
             Err(Refusal::NotAllowed { .. }) => refused += 1,
             Ok(_) | Err(Refusal::Engine { .. }) => answered.push((service, method)),
         }
     }
     assert_eq!(
-        (held, refused, answered),
+        (for_gesture, refused, answered),
         (HELD.to_vec(), 4225 - NATIVE.len() - HELD.len(), Vec::new()),
         "the pairs outside the native column: held, refused, and reaching the engine"
     );

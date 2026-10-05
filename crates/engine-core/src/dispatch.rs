@@ -1,6 +1,10 @@
 //! The dispatcher: the engine's backend, held privately, behind the table (SPEC-345 R1, R2, R4).
 
+use std::sync::{Arc, Mutex, PoisonError};
+
 use anki::backend::{Backend, init_backend};
+use anki_proto::collection::OpenCollectionRequest;
+use prost::Message;
 
 use crate::face::{self, Face, Side};
 use crate::login_guard;
@@ -15,6 +19,9 @@ const NOTE_COUNT_SQL: &str = "select count() from notes";
 /// The engine's sync login, `BackendSyncService.SyncLogin`: the one admitted call whose request
 /// the core reads, to guard its endpoint (SPEC-347 R2).
 const SYNC_LOGIN: (u32, u32) = (1, 3);
+/// The engine's collection open, `BackendCollectionService.OpenCollection`: the one admitted call
+/// whose request the core keeps a field of, the media folder a face reads (SPEC-348 R5).
+const OPEN_COLLECTION: (u32, u32) = (3, 0);
 
 /// One running engine on one transport. An adapter starts one and reaches the engine only through
 /// it; the backend is never handed out.
@@ -22,6 +29,8 @@ const SYNC_LOGIN: (u32, u32) = (1, 3);
 pub struct Dispatcher {
     backend: Backend,
     transport: Transport,
+    /// The media folder the last successful open named, shared by every clone of this dispatcher.
+    media_folder: Arc<Mutex<Option<String>>>,
 }
 
 /// Why the dispatcher did not answer a call with the engine's reply.
@@ -65,7 +74,11 @@ impl Dispatcher {
     ///
     /// The engine's reason when it cannot decode the message.
     pub fn start(transport: Transport, message: &[u8]) -> Result<Self, String> {
-        init_backend(message).map(|backend| Self { backend, transport })
+        init_backend(message).map(|backend| Self {
+            backend,
+            transport,
+            media_folder: Arc::default(),
+        })
     }
 
     /// Runs one ordinary call: the request's protobuf bytes in, the response's out. The table
@@ -77,16 +90,22 @@ impl Dispatcher {
     /// [`Refusal::NeedsGesture`] for an exempt write, [`Refusal::NotAllowed`] for every other pair
     /// this transport may not make, and [`Refusal::Engine`] when the engine answers an admitted
     /// call with an error, or when the login guard refuses a sync login's endpoint in the
-    /// engine's own error shape before the engine sees it (SPEC-347 R2).
+    /// engine's own error shape before the engine sees it (SPEC-347 R2). When the engine opens a
+    /// collection, the core keeps the media folder its request named (SPEC-348 R5).
     pub fn run(&self, service: u32, method: u32, input: &[u8]) -> Result<Vec<u8>, Refusal> {
         match decide(self.transport, service, method) {
             Decision::Admit => {
                 if (service, method) == SYNC_LOGIN {
                     login_guard::check(input).map_err(|error| Refusal::Engine { error })?;
                 }
-                self.backend
+                let reply = self
+                    .backend
                     .run_service_method(service, method, input)
-                    .map_err(|error| Refusal::Engine { error })
+                    .map_err(|error| Refusal::Engine { error })?;
+                if (service, method) == OPEN_COLLECTION {
+                    self.keep_media_folder(input);
+                }
+                Ok(reply)
             }
             Decision::NeedsGesture => Err(Refusal::NeedsGesture { service, method }),
             Decision::NotAllowed => Err(Refusal::NotAllowed { service, method }),
@@ -115,11 +134,27 @@ impl Dispatcher {
             .map_err(|error| Refusal::Engine { error })
     }
 
-    /// The media folder of the collection this engine last opened, as its open request named it
-    /// (stubbed: none).
+    /// The media folder of the collection this engine last opened, as its open request named it;
+    /// `None` before an open succeeds, or when the request named none. The native adapter reads a
+    /// face's media from it (SPEC-348 R5).
     #[must_use]
     pub fn media_folder(&self) -> Option<String> {
-        None
+        self.media_folder
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
+    /// Keeps the media folder a successful open's request named, replacing the last one.
+    fn keep_media_folder(&self, input: &[u8]) {
+        let folder = OpenCollectionRequest::decode(input)
+            .ok()
+            .map(|request| request.media_folder_path)
+            .filter(|path| !path.is_empty());
+        *self
+            .media_folder
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner) = folder;
     }
 
     /// Completes `card`'s face for `side`, as the engine's own reviewer completes it, reading its
