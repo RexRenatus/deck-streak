@@ -21,6 +21,12 @@ class FakeEngine implements EngineModule {
   installRefusal: string | null = null;
   failures: Partial<Record<keyof EngineModule, unknown>> = {};
   panic: string | undefined = undefined;
+  /** SPEC-350: each language list `init` received, the decks `deck_tree` answers, and the card the
+   * last card view showed, which alone a rating, bury or flag reaches, as the module keeps it. */
+  languages: string[][] = [];
+  decks: unknown[] = [];
+  kept: bigint | null = null;
+  flags = new Map<bigint, number>();
 
   #call(name: keyof EngineModule, ...args: unknown[]) {
     this.calls.push([name, ...args]);
@@ -32,8 +38,9 @@ class FakeEngine implements EngineModule {
     if (this.installRefusal !== null) throw this.installRefusal;
     return 0;
   }
-  init() {
+  init(languages: string[]) {
     this.#call('init');
+    this.languages.push(languages);
   }
   open() {
     this.#call('open');
@@ -74,6 +81,57 @@ class FakeEngine implements EngineModule {
   last_panic() {
     this.calls.push(['last_panic']);
     return this.panic;
+  }
+  deck_tree() {
+    this.#call('deck_tree');
+    return JSON.stringify(this.decks);
+  }
+  set_current_deck(deck: bigint) {
+    this.#call('set_current_deck', deck);
+  }
+  current_card() {
+    this.#call('current_card');
+    const due = [...this.cards].filter(([, card]) => card.reps === 0 && card.queue >= 0);
+    const counts = { new: due.length, learning: 0, review: 0 };
+    this.kept = due[0]?.[0] ?? null;
+    if (this.kept === null) return JSON.stringify({ counts, card: null });
+    const id = this.kept;
+    const card = {
+      id: String(id),
+      ordinal: 1,
+      flag: this.flags.get(id) ?? 0,
+      question: `front ${id}`,
+      answer: `back ${id}`,
+      css: '.card { color: black; }',
+      labels: ['<1m', '<6m', '<10m', '4d'],
+      undo: this.journal.length > 0 ? 'Answer Card' : ''
+    };
+    return JSON.stringify({ counts, card });
+  }
+  /** The module's refusal of a card other than the kept one, thrown as its string. */
+  #shown(card: bigint) {
+    if (card !== this.kept) throw 'not-shown: the card is not the one on screen';
+  }
+  rate(card: bigint, rating: number, ms: number) {
+    this.#call('rate', card, rating, ms);
+    this.#shown(card);
+    const held = this.cards.get(card)!;
+    this.journal.push([card, { ...held }]);
+    this.cards.set(card, { ...held, queue: 2, type: 2, ivl: rating, reps: 1 });
+    this.kept = null;
+  }
+  bury(card: bigint) {
+    this.#call('bury', card);
+    this.#shown(card);
+    this.cards.set(card, { ...this.cards.get(card)!, queue: -3 });
+    this.kept = null;
+  }
+  flag(card: bigint) {
+    this.#call('flag', card);
+    this.#shown(card);
+    const flag = this.flags.get(card) === 1 ? 0 : 1;
+    this.flags.set(card, flag);
+    return flag;
   }
   /** The module's linear memory in 64 KiB pages: it grows with the collection, as a real one does. */
   memory_pages() {
@@ -417,5 +475,105 @@ describe('the Worker session', () => {
       refusal(1, 'not-open', 'memory before open')
     );
     expect([before.log, fresh.calls]).toEqual([[], []]);
+  });
+
+  it('each study operation reaches its engine call', async () => {
+    // SPEC-350 A7: open passes the app's languages to the engine's init, each study operation
+    // reaches its export with its ids as bigint, and the module's refusal of a card other than the
+    // one it showed answers not-shown and leaves the session open.
+    const engine = new FakeEngine();
+    engine.decks = [
+      {
+        id: '1',
+        name: 'Default',
+        level: 1,
+        new: 2,
+        learning: 0,
+        review: 0,
+        children: [{ id: '9007199254740993', name: 'Verbs', level: 2, new: 1, learning: 3, review: 4, children: [] }]
+      }
+    ];
+    const { session } = browser(engine);
+    expect(await session.handle({ id: 1, op: 'open', languages: ['ja', 'en'] })).toEqual({
+      id: 1,
+      ok: true,
+      value: { existed: false, notes: 0 }
+    });
+    expect(engine.languages).toEqual([['ja', 'en']]);
+    await session.handle({ id: 2, op: 'seed', count: 2 });
+    expect(await session.handle({ id: 3, op: 'decks' })).toEqual({
+      id: 3,
+      ok: true,
+      value: [
+        {
+          id: 1n,
+          name: 'Default',
+          level: 1,
+          new: 2,
+          learning: 0,
+          review: 0,
+          children: [{ id: 9007199254740993n, name: 'Verbs', level: 2, new: 1, learning: 3, review: 4, children: [] }]
+        }
+      ]
+    });
+    expect(await session.handle({ id: 4, op: 'study', deck: 9007199254740993n })).toEqual({ id: 4, ok: true, value: null });
+    const view = (id: bigint, flag: number, undo: string) => ({
+      id,
+      ordinal: 1,
+      flag,
+      question: `front ${id}`,
+      answer: `back ${id}`,
+      css: '.card { color: black; }',
+      labels: ['<1m', '<6m', '<10m', '4d'],
+      undo
+    });
+    expect(await session.handle({ id: 5, op: 'card' })).toEqual({
+      id: 5,
+      ok: true,
+      value: { counts: { new: 2, learning: 0, review: 0 }, card: view(1001n, 0, '') }
+    });
+    expect(await session.handle({ id: 6, op: 'flag', card: 1001n })).toEqual({ id: 6, ok: true, value: 1 });
+    expect(await session.handle({ id: 7, op: 'rate', card: 1002n, rating: 3, ms: 1500 })).toEqual(
+      refusal(7, 'not-shown', 'not-shown: the card is not the one on screen')
+    );
+    expect(await session.handle({ id: 8, op: 'rate', card: 1001n, rating: 3, ms: 1500 })).toEqual({
+      id: 8,
+      ok: true,
+      value: null
+    });
+    expect(await session.handle({ id: 9, op: 'card' })).toEqual({
+      id: 9,
+      ok: true,
+      value: { counts: { new: 1, learning: 0, review: 0 }, card: view(1002n, 0, 'Answer Card') }
+    });
+    expect(await session.handle({ id: 10, op: 'bury', card: 1001n })).toEqual(
+      refusal(10, 'not-shown', 'not-shown: the card is not the one on screen')
+    );
+    expect(await session.handle({ id: 11, op: 'bury', card: 1002n })).toEqual({ id: 11, ok: true, value: null });
+    expect(await session.handle({ id: 12, op: 'card' })).toEqual({
+      id: 12,
+      ok: true,
+      value: { counts: { new: 0, learning: 0, review: 0 }, card: null }
+    });
+    expect(engine.calls).toEqual([
+      ['install_storage'],
+      ['init'],
+      ['open'],
+      ['seed', 2],
+      ['deck_tree'],
+      ['set_current_deck', 9007199254740993n],
+      ['current_card'],
+      ['flag', 1001n],
+      ['rate', 1002n, 3, 1500],
+      ['rate', 1001n, 3, 1500],
+      ['current_card'],
+      ['bury', 1001n],
+      ['bury', 1002n],
+      ['current_card']
+    ]);
+    // with no languages, init receives none, and the engine's own rule speaks English
+    const plain = new FakeEngine();
+    await browser(plain).session.handle({ id: 1, op: 'open' });
+    expect(plain.languages).toEqual([[]]);
   });
 });

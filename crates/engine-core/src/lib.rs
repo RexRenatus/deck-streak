@@ -10,7 +10,11 @@
 //! - [`table`]: the transports, the ordinary table with its transport columns, the exempt table
 //!   and the decision for a pair (R2, R3).
 //! - [`dispatch`]: the dispatcher, its refusal and its fixed reads (R1, R4).
+//! - [`face`]: a card's face, completed as the engine's own reviewer completes it: its text, its
+//!   sound and speech clips, and what autoplay and replay play (SPEC-348 R2, R4).
 //! - [`login_guard`]: the endpoint guard on the engine's sync login (SPEC-347 R2).
+//! - [`media`]: the rules a face's media references pass: the name rule, the closed type table,
+//!   the two caps and the `data:` rewrite (SPEC-348 R3).
 //!
 //! The core depends on the engine and on no crate of this workspace; only the two client
 //! adapters depend on it (ADR-356 D4, held by the graph census).
@@ -18,5 +22,7 @@
 #![forbid(unsafe_code)]
 
 pub mod dispatch;
+pub mod face;
 pub mod login_guard;
+pub mod media;
 pub mod table;

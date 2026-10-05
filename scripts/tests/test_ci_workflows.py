@@ -27,6 +27,7 @@ from pathlib import Path
 from unittest import mock
 
 from _support import REPO, examined
+from test_one_static_library import umbrella_closure
 
 WORKFLOWS = REPO / ".github" / "workflows"
 PINNED = re.compile(r"^[\w.-]+/[\w.-]+(?:/[\w.-]+)*@[0-9a-f]{40}$")
@@ -41,6 +42,13 @@ THIS_REPOSITORY = "RexRenatus/deck-streak"
 # runner holds. The admission is by the workflow's file name, so the same runner under any other
 # name is refused, and this workflow on any other runner is refused.
 ADMITTED_RUNNERS = {"xcframework.yml": "macos-26"}
+# The jobs admitted to that runner by file and job (SPEC-352 R15, ADR-363): each TestFlight lane's
+# `app` job archives, signs and uploads the app, which only a macOS runner can. The lane's plan
+# job, a job of the same name in any other file, and the job on any other runner are refused.
+ADMITTED_JOB_RUNNERS = {
+    ("testflight-internal.yml", "app"): "macos-26",
+    ("testflight-release.yml", "app"): "macos-26",
+}
 # A pull request into main, as the github context presents it; each test changes what it needs.
 INTO_MAIN = {
     "github.event_name": "pull_request",
@@ -86,11 +94,16 @@ CACHE_BY_THEMSELVES = (
 )
 
 
-def admitted_runner(name):
+def admitted_runner(name, job=None):
     """The pattern every runner of the workflow `name` must match: a pinned Ubuntu image (SPEC-002
-    A9), or, for the one workflow ADMITTED_RUNNERS names, its one runner exactly (SPEC-336 R9)."""
+    A9), or, for the one workflow ADMITTED_RUNNERS names, its one runner exactly (SPEC-336 R9), or,
+    for a job ADMITTED_JOB_RUNNERS names by file and job, its one runner exactly (SPEC-352 R15).
+    `job` is the job whose own `runs-on` the runner is, or None for a value placed anywhere else,
+    which only the file's own admission or the Ubuntu pattern can admit."""
     if name in ADMITTED_RUNNERS:
         return f"^{re.escape(ADMITTED_RUNNERS[name])}$"
+    if (name, job) in ADMITTED_JOB_RUNNERS:
+        return f"^{re.escape(ADMITTED_JOB_RUNNERS[name, job])}$"
     return r"^ubuntu-\d\d\.\d\d$"
 
 
@@ -141,10 +154,12 @@ class WorkflowsAreHardened(unittest.TestCase):
             workflow = read_hardened(path)
             code = re.sub(r"(?m)#.*$", "", workflow_file_text(path))
             self.assertNotIn("pull_request_target", code, path.name)
-            runners += [(path.name, runner) for runner in entries(workflow, "runs-on")]
-        for name, runner in examined("runs-on values", runners):
+            # Every `runs-on` the workflow holds, each beside the job it is the own runner of, or
+            # None when it sits anywhere else, so a nested one is judged as no job's (SPEC-352 R15).
+            runners += [(path.name, job, runner) for runner, job in placed_runners(workflow)]
+        for name, job, runner in examined("runs-on values", runners):
             # A list or a mapping of labels is read as its text, so the pattern refuses it by name.
-            self.assertRegex(str(runner), admitted_runner(name), f"{name} runs on {runner}")
+            self.assertRegex(str(runner), admitted_runner(name, job), f"{name} runs on {runner}")
 
     def test_the_admitted_runner_is_admitted_to_its_one_workflow_only(self):
         # SPEC-336 R9: the admitted workflow passes on its runner and is refused on any other, and
@@ -156,6 +171,58 @@ class WorkflowsAreHardened(unittest.TestCase):
             for other in ("planted.yml", "ci.yml", name.replace(".yml", ".yaml"), f"x{name}"):
                 self.assertNotRegex(admitted, admitted_runner(other))
         self.assertRegex("ubuntu-24.04", admitted_runner("ci.yml"))
+
+    def test_the_macos_runner_is_admitted_to_the_lane_app_jobs_only(self):
+        # SPEC-352 A22 (R15; ADR-363): the macOS image is admitted by file and job to the two
+        # lanes' `app` jobs, and refused on a lane's `plan` job, on a job named `app` in another
+        # file, and to a lane's `app` job on any other image. Every `runs-on` sits in a job, so the
+        # runner test, judging each by its job, judges every one.
+        lanes = ("testflight-internal.yml", "testflight-release.yml")
+        runner = ADMITTED_RUNNERS["xcframework.yml"]
+        for path in examined("workflow files", self.files):
+            workflow = read_hardened(path)
+            jobs = workflow.get("jobs")
+            placed = [
+                job["runs-on"]
+                for job in (jobs if isinstance(jobs, dict) else {}).values()
+                if isinstance(job, dict) and "runs-on" in job
+            ]
+            self.assertEqual(placed, entries(workflow, "runs-on"), path.name)
+        for lane in examined("lane files", lanes):
+            jobs = load(lane)["jobs"]
+            self.assertEqual((jobs.get("app") or {}).get("runs-on"), runner, lane)
+            self.assertNotEqual(jobs["plan"].get("runs-on"), runner, lane)
+        texts = {lane: workflow_file_text(WORKFLOWS / lane) for lane in lanes}
+        app, plan = f"    runs-on: {runner}\n", "    runs-on: ubuntu-24.04\n"
+        internal = texts[lanes[0]]
+        self.assertEqual((internal.count(app), internal.count(plan)), (1, 1))
+        plants = {
+            "the two lanes": (texts, None),
+            "a plan job on the macOS image": (
+                {lanes[0]: internal.replace(plan, app)},
+                f"{lanes[0]} runs on {runner}",
+            ),
+            "an app job in another file": (
+                {"planted.yml": internal},
+                f"planted.yml runs on {runner}",
+            ),
+            "an app job on another image": (
+                {lanes[0]: internal.replace(app, "    runs-on: macos-15\n")},
+                f"{lanes[0]} runs on macos-15",
+            ),
+        }
+        test = "test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger"
+        for label, (files, refusal) in examined("planted runners", list(plants.items())):
+            with self.subTest(label), tempfile.TemporaryDirectory() as scratch:
+                for name, text in files.items():
+                    (Path(scratch) / name).write_text(text, encoding="utf-8")
+                case = WorkflowsAreHardened(test)
+                case.files = workflow_files(Path(scratch))
+                if refusal is None:
+                    case.test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger()
+                    continue
+                with self.assertRaisesRegex(AssertionError, re.escape(refusal) + "$"):
+                    case.test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger()
 
     def test_ci_runs_every_stage_of_the_local_gate(self):
         stages = STAGES.search((REPO / "scripts" / "check.sh").read_text()).group(1).split()
@@ -456,6 +523,122 @@ class WorkflowsAreHardened(unittest.TestCase):
             with self.subTest(form), self.assertRaisesRegex(AssertionError, why):
                 planted_problems(text)
 
+    def test_the_lanes_credential_reads_are_admitted_and_no_other(self):
+        # SPEC-352 A21 (R14; ADR-363): the lanes' reads are admitted by file, job and step, each
+        # part in the steps that use it, and every other shape, planted at run time from the live
+        # lane text, is refused by name. Each secret's name is read from the live preflight step
+        # and every problem is compared with each name replaced by its role word, so no message
+        # here carries one.
+        lanes = ("testflight-internal.yml", "testflight-release.yml")
+        parts = ("KEY", "KEYID", "ISSUER", "CERTIFICATE", "PASSWORD", "PROFILE")
+        reads = {
+            "preflight": set(parts),
+            "sign": {"CERTIFICATE", "PASSWORD", "PROFILE"},
+            "upload": {"KEY", "KEYID", "ISSUER"},
+        }
+        problems, judged = secret_and_checkout_problems(WORKFLOWS)
+        self.assertEqual(len(problems), 0, "a live workflow reads a secret the admission refuses")
+        roles = {}
+        for lane in examined("lane files", lanes):
+            steps = (load(lane)["jobs"].get("app") or {}).get("steps") or []
+            ids = {f"{lane}:jobs.app.steps[{n}]": step.get("id") for n, step in enumerate(steps)}
+            found = {}
+            for where, expression in judged["expressions"]:
+                variable = re.fullmatch(r"(.*\])\.env\.(\w+)", where)
+                for each in secret_reads(expression) if where.startswith(f"{lane}:") else []:
+                    step = ids.get(variable.group(1)) if variable else where
+                    found.setdefault(step, set()).add(variable.group(2) if variable else where)
+                    if step == "preflight":
+                        roles[each.removeprefix("reads the secret ")] = variable.group(2)
+            self.assertEqual(found, reads, lane)
+        self.assertEqual(sorted(roles.values()), sorted(parts))
+        secret = {role: name for name, role in roles.items()}
+
+        def masked(found):
+            return sorted(
+                re.sub(
+                    r"reads the secret (\S+)",
+                    lambda match: f"reads the {roles.get(match.group(1), 'unadmitted')} part",
+                    each,
+                )
+                for each in found
+            )
+
+        def value(part):
+            return f"${{{{ secrets.{secret[part]} }}}}"
+
+        lane = lanes[0]
+        text = workflow_file_text(WORKFLOWS / lane)
+        jobs = load(lane)["jobs"]
+        at = {step.get("id"): n for n, step in enumerate(jobs["app"]["steps"])}
+        planned = len(jobs["plan"]["steps"]) - 1
+        every = [
+            f"jobs.app.steps[{at[step]}].env.{part}: reads the {part} part"
+            for step, found in reads.items()
+            for part in found
+        ]
+        plan_run = "        run: python3 scripts/ios_lane.py plan --lane internal\n"
+        call = "    uses: $/.github/workflows/xcframework.yml\n"
+        upload_key = f"          KEY: {value('KEY')}\n"
+        job_variable = "      LANE: ${{ needs.plan.outputs.lane }}\n"
+        sign_run = "        run: python3 scripts/ios_lane.py sign\n"
+        plants = {
+            "the lane as it is": (lane, "", "", []),
+            "a read in the plan job": (
+                lane,
+                plan_run,
+                f"        env:\n          KEY: {value('KEY')}\n{plan_run}",
+                [f"jobs.plan.steps[{planned}].env.KEY: reads the KEY part"],
+            ),
+            "the lane's reads in a third file": ("planted.yml", "", "", every),
+            "a lane a pull request starts": (
+                lane,
+                "on:\n  workflow_dispatch:\n",
+                "on:\n  workflow_dispatch:\n  pull_request:\n",
+                every,
+            ),
+            "the upload step reading the certificate": (
+                lane,
+                upload_key,
+                f"{upload_key}          CERTIFICATE: {value('CERTIFICATE')}\n",
+                [f"jobs.app.steps[{at['upload']}].env.CERTIFICATE: reads the CERTIFICATE part"],
+            ),
+            # The base checker already refuses these two shapes: MUTATION COVERAGE.
+            "every secret passed to the call": (
+                lane,
+                call,
+                f"{call}    secrets: inherit\n",
+                ["jobs.framework.secrets: passes every secret to the workflow it calls"],
+            ),
+            "a secret passed to the call": (
+                lane,
+                call,
+                f"{call}    secrets:\n      KEY: {value('KEY')}\n",
+                ["jobs.framework.secrets.KEY: reads the KEY part"],
+            ),
+            "a read in the app job's own variables": (
+                lane,
+                job_variable,
+                f"      KEY: {value('KEY')}\n{job_variable}",
+                ["jobs.app.env.KEY: reads the KEY part"],
+            ),
+            "a read in a script": (
+                lane,
+                sign_run,
+                f'        run: python3 scripts/ios_lane.py sign "{value("PASSWORD")}"\n',
+                [f"jobs.app.steps[{at['sign']}].run: reads the PASSWORD part"],
+            ),
+        }
+        for label, (name, old, new, refused) in examined("planted reads", list(plants.items())):
+            with self.subTest(label), tempfile.TemporaryDirectory() as scratch:
+                if old:
+                    self.assertEqual(text.count(old), 1)
+                (Path(scratch) / name).write_text(
+                    text.replace(old, new) if old else text, encoding="utf-8"
+                )
+                found, _judged = secret_and_checkout_problems(Path(scratch))
+                self.assertEqual(masked(found), sorted(f"{name}:{each}" for each in refused))
+
     def test_this_repositorys_token_and_checkout_are_admitted(self):
         problems, judged = secret_and_checkout_problems(PLANTED / "admitted")
         self.assertEqual(problems, [])
@@ -554,9 +737,15 @@ class WorkflowsAreHardened(unittest.TestCase):
                 if isinstance(job, dict) and "uses" in job:
                     found.append((path.name, job_id, job["uses"]))
         body = "$/.github/workflows/xcframework.yml"
+        # The two TestFlight lanes call the same body as their framework job (SPEC-352 R2).
         self.assertEqual(
             sorted(found),
-            [("apple-on-change.yml", "apple", body), ("apple-on-tag.yml", "apple", body)],
+            [
+                ("apple-on-change.yml", "apple", body),
+                ("apple-on-tag.yml", "apple", body),
+                ("testflight-internal.yml", "framework", body),
+                ("testflight-release.yml", "framework", body),
+            ],
         )
         # The pin test, run by name over planted directories as the test above runs it.
         control = workflow_file_text(PLANTED_HARDENING / "hardened.yml")
@@ -588,6 +777,7 @@ class WorkflowsAreHardened(unittest.TestCase):
 
 APPLE_PATHS = [
     "crates/ffi/**",
+    "crates/engine-core/**",
     "ios/**",
     "Cargo.lock",
     "Cargo.toml",
@@ -625,6 +815,59 @@ def cargo_commands(text):
     ]
 
 
+# The one cargo command that may name a crate type: the umbrella's static library (SPEC-346 R3).
+UMBRELLA_STATICLIB = "-p deck-streak-ffi --lib --crate-type staticlib"
+
+
+def static_library_problems(texts):
+    """What the workflows get wrong about the app's one Rust static library (SPEC-346 R3), for
+    {workflow file name: its text}: a cargo command naming `--crate-type` that is not a `cargo
+    rustc` of the umbrella's static library, one outside xcframework.yml, and a `--crate-type` in a
+    file's non-comment lines that `cargo_commands` did not read. Returns the problems and the
+    commands judged."""
+    problems, judged = [], []
+    for name, text in sorted(texts.items()):
+        commands = [command for command in cargo_commands(text) if "--crate-type" in command]
+        spelled = sum(
+            line.count("--crate-type")
+            for line in text.splitlines()
+            if not line.lstrip().startswith("#")
+        )
+        seen = sum(command.count("--crate-type") for command in commands)
+        if spelled != seen:
+            problems.append(
+                f"{name}: {spelled} `--crate-type` in its text, {seen} in the cargo commands read"
+            )
+        for command in commands:
+            judged.append(command)
+            package = re.search(r"(?:-p|--package)\s+(\S+)", command)
+            built = package.group(1) if package else "no package"
+            if not command.startswith("cargo rustc ") or UMBRELLA_STATICLIB not in command:
+                problems.append(
+                    f"{name}: `{command}` builds {built}, not the umbrella's static library"
+                )
+            elif name != "xcframework.yml":
+                problems.append(f"{name}: `{command}` builds it outside xcframework.yml")
+    return problems, judged
+
+
+def watch_problems(paths, closure):
+    """Where the change caller's `crates/` globs and the umbrella's build closure differ (SPEC-346
+    R6): a crate the umbrella links that no glob watches, and a glob for a crate it does not link.
+    `closure` is `umbrella_closure`'s directories."""
+    globs = {path for path in paths if path.startswith("crates/")}
+    wanted = {f"{directory}/**" for directory in closure}
+    unwatched = [
+        f"{pattern}: the umbrella links it, and the change caller does not watch it"
+        for pattern in sorted(wanted - globs)
+    ]
+    unlinked = [
+        f"{pattern}: the change caller watches it, and the umbrella does not link it"
+        for pattern in sorted(globs - wanted)
+    ]
+    return unwatched + unlinked
+
+
 class TheAppleBuildRunsFromOneBody(unittest.TestCase):
     """SPEC-344: one job body, xcframework.yml, called by a change caller and a tag caller."""
 
@@ -645,6 +888,7 @@ class TheAppleBuildRunsFromOneBody(unittest.TestCase):
         paths = caller["on"]["pull_request"]["paths"]
         runs = (
             "crates/ffi/src/lib.rs",
+            "crates/engine-core/src/lib.rs",
             "ios/Harness/Info.plist",
             "Cargo.lock",
             "Cargo.toml",
@@ -688,6 +932,124 @@ class TheAppleBuildRunsFromOneBody(unittest.TestCase):
         plant = text + "      - run: cargo build -p deck-streak-ffi\n"
         unlocked = [c for c in cargo_commands(plant) if "--locked" not in c.split(" -- ")[0]]
         self.assertEqual(unlocked, ["cargo build -p deck-streak-ffi"])
+
+
+class TheAppHasOneRustStaticLibrary(unittest.TestCase):
+    """SPEC-346: the app links one Rust static library, the umbrella FFI crate. The workflows build
+    the umbrella alone as one, the Apple job proves its bindings hold one module and each slice of
+    its XCFramework one library, and the change caller watches every crate the umbrella links."""
+
+    def test_only_the_umbrella_is_built_as_a_static_library(self):
+        texts = {path.name: workflow_file_text(path) for path in workflow_files(WORKFLOWS)}
+        problems, judged = static_library_problems(texts)
+        self.assertEqual(problems, [])
+        for command in examined("cargo commands naming a crate type", judged):
+            self.assertIn(UMBRELLA_STATICLIB, command)
+        engine = "cargo rustc --locked -p deck-streak-engine-core --lib --crate-type staticlib"
+        plant = texts["xcframework.yml"] + f"      - run: {engine}\n"
+        planted, _judged = static_library_problems({**texts, "xcframework.yml": plant})
+        self.assertEqual(len(planted), 1, planted)
+        self.assertIn("builds deck-streak-engine-core,", planted[0])
+        unread = "      - run: echo --crate-type staticlib\n"
+        planted, _judged = static_library_problems({**texts, "release.yml": unread})
+        self.assertEqual(
+            planted, ["release.yml: 1 `--crate-type` in its text, 0 in the cargo commands read"]
+        )
+
+    def test_the_bindings_hold_one_module(self):
+        steps = load("xcframework.yml")["jobs"]["xcframework"]["steps"]
+        names = [step.get("name") for step in steps]
+        self.assertIn("the bindings hold one module", names)
+        after = names.index("the Swift bindings, in library mode over the device library")
+        self.assertEqual(names.index("the bindings hold one module"), after + 1)
+        modulemap = (
+            'module deck_streak_ffiFFI {\n    header "deck_streak_ffiFFI.h"\n    export *\n}\n'
+        )
+        umbrella = {
+            "bindings/deck_streak_ffi.swift": "",
+            "bindings/deck_streak_ffiFFI.h": "",
+            "bindings/module.modulemap": modulemap,
+        }
+        second_crate = {
+            **umbrella,
+            "bindings/deck_streak_xp.swift": "",
+            "bindings/deck_streak_xpFFI.h": "",
+        }
+        second_module = {
+            **umbrella,
+            "bindings/module.modulemap": modulemap + modulemap.replace("ffiFFI", "xpFFI"),
+        }
+        cases = [
+            ("the umbrella's three files", umbrella, (0, {"one-module": "pass"})),
+            ("a second crate's bindings", second_crate, (1, {"one-module": "fail"})),
+            ("a modulemap declaring two modules", second_module, (1, {"one-module": "fail"})),
+        ]
+        for case, plant, verdict in examined("planted bindings", cases):
+            self.assertEqual(run_output_check(steps[after + 1], plant), verdict, case)
+
+    def test_the_xcframework_holds_one_rust_library_per_slice(self):
+        steps = load("xcframework.yml")["jobs"]["xcframework"]["steps"]
+        names = [step.get("name") for step in steps]
+        self.assertIn("the XCFramework holds one Rust library", names)
+        after = names.index("the XCFramework, device and simulator slices")
+        self.assertEqual(names.index("the XCFramework holds one Rust library"), after + 1)
+        device = "DeckStreakFFI.xcframework/ios-arm64/libdeck_streak_ffi.a"
+        simulator = "DeckStreakFFI.xcframework/ios-arm64-simulator/libdeck_streak_ffi.a"
+        third = "DeckStreakFFI.xcframework/ios-arm64/libxp.a"
+        other = "DeckStreakFFI.xcframework/ios-arm64-simulator/libother.a"
+        failed = (1, {"one-library": "fail"})
+        cases = [
+            (
+                "the umbrella in each slice",
+                {device: "", simulator: ""},
+                (0, {"one-library": "pass"}),
+            ),
+            ("a third library", {device: "", simulator: "", third: ""}, failed),
+            ("another library in the simulator slice", {device: "", other: ""}, failed),
+            ("a single slice", {device: ""}, failed),
+        ]
+        for case, plant, verdict in examined("planted XCFrameworks", cases):
+            self.assertEqual(run_output_check(steps[after + 1], plant), verdict, case)
+
+    def test_the_change_caller_watches_every_crate_the_umbrella_links(self):
+        paths = load("apple-on-change.yml")["on"]["pull_request"]["paths"]
+        closure = umbrella_closure(REPO)
+        watched = sorted(path for path in paths if path.startswith("crates/"))
+        self.assertEqual(
+            watched,
+            [f"{directory}/**" for directory in closure],
+            f"the change caller watches {watched}, the closure is {closure}",
+        )
+        self.assertEqual(watch_problems(paths, examined("crates the umbrella links", closure)), [])
+        with tempfile.TemporaryDirectory() as scratch:
+            where = Path(scratch)
+            graph = {
+                "Cargo.toml": '[workspace]\nmembers = ["crates/*"]\n\n'
+                '[workspace.dependencies]\nb = { path = "crates/b" }\n',
+                "crates/ffi/Cargo.toml": '[package]\nname = "deck-streak-ffi"\n\n'
+                '[dependencies]\na = { path = "../a" }\n',
+                "crates/a/Cargo.toml": '[package]\nname = "a"\n\n'
+                "[dependencies]\nb.workspace = true\n",
+                "crates/b/Cargo.toml": '[package]\nname = "b"\n\n'
+                '[dev-dependencies]\nc = { path = "../c" }\n',
+                "crates/c/Cargo.toml": '[package]\nname = "c"\n',
+            }
+            for relative, text in graph.items():
+                (where / relative).parent.mkdir(parents=True, exist_ok=True)
+                (where / relative).write_text(text, encoding="utf-8")
+            planted = umbrella_closure(where)
+        self.assertEqual(planted, ["crates/a", "crates/b", "crates/ffi"])
+        self.assertEqual(
+            watch_problems(["crates/ffi/**"], planted),
+            [
+                "crates/a/**: the umbrella links it, and the change caller does not watch it",
+                "crates/b/**: the umbrella links it, and the change caller does not watch it",
+            ],
+        )
+        self.assertEqual(
+            watch_problems(["crates/a/**", "crates/b/**", "crates/c/**", "crates/ffi/**"], planted),
+            ["crates/c/**: the change caller watches it, and the umbrella does not link it"],
+        )
 
 
 def triggers(workflow):
@@ -1635,6 +1997,27 @@ def marked_uses(workflow, path=()):
     return []
 
 
+def placed_runners(workflow, path=()):
+    """Every value a read workflow holds under `runs-on`, in exactly `entries`' order, each beside
+    the id of the job it is the own runner of (the value at `jobs.<id>.runs-on`, nothing deeper),
+    or None for a value anywhere else (SPEC-352 R15). The place decides, never the text, so a
+    runner nested inside a job is admitted only as no job's."""
+    if isinstance(workflow, dict):
+        return [
+            found
+            for name, item in workflow.items()
+            for found in (
+                [(item, path[1] if len(path) == 2 and path[0] == "jobs" else None)]
+                if name == "runs-on"
+                else []
+            )
+            + placed_runners(item, path + (name,))
+        ]
+    if isinstance(workflow, list):
+        return [found for item in workflow for found in placed_runners(item, path + (None,))]
+    return []
+
+
 def path_glob(pattern):
     """A path filter as GitHub matches it: `**` is any run including a slash, `*` any run but a
     slash, `?` one character but a slash, `[..]` a class, and every other character itself."""
@@ -2354,6 +2737,32 @@ def run_step(step, lockfile):
     return done.returncode, dict(pairs)
 
 
+def run_output_check(step, plant):
+    """Run an output check's own script under GitHub's default bash, in a directory holding
+    `plant`, {relative path: text}, with REPORT naming an empty report directory (SPEC-346 R5).
+    Returns its exit code and {report file: its text, stripped}."""
+    with tempfile.TemporaryDirectory() as scratch:
+        where = Path(scratch)
+        for relative, text in plant.items():
+            (where / relative).parent.mkdir(parents=True, exist_ok=True)
+            (where / relative).write_text(text, encoding="utf-8")
+        report = where / "report"
+        report.mkdir()
+        env = {"PATH": os.environ["PATH"], "REPORT": str(report)}
+        done = subprocess.run(
+            ["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", step["run"]],
+            cwd=where,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        written = {}
+        for each in sorted(report.iterdir()):
+            written[each.name] = each.read_text().strip()
+    return done.returncode, written
+
+
 # ------------------------------------------------------- the engine job (SPEC-038 A18, R14)
 
 # The job that runs the engine set, SPEC-022's slow sync and budget tests, beside rust.
@@ -2642,6 +3051,49 @@ def planted_job(text, job_id, *changes):
     return read_workflow(text[: block.start()] + planted + text[block.end() :])
 
 
+# The steps the web-engine job runs after its browser tests, each found by the command it runs, in
+# the order the job must run them: the app's build, the stage that puts the module and its bindings
+# beside it, then the study suite over both (SPEC-350 R13, A21).
+WEB_ENGINE_STUDY_ORDER = (
+    ("the app build", "pnpm --dir web/app build"),
+    ("the stage", "bash scripts/web-engine-stage.sh"),
+    ("the study suite", "pnpm --dir web/app test:study"),
+)
+
+
+def web_engine_study_problems(workflow):
+    """What a workflow gets wrong about the web-engine job's study suite (SPEC-350 R13, A21): the
+    app's build, the stage or the study suite missing or out of order, any of them before the
+    browser tests over the module, or an expression inside one of their commands."""
+    job = (workflow.get("jobs") or {}).get(WEB_ENGINE_JOB)
+    if job is None:
+        return ["there is no web-engine job"]
+    runs = [str(step.get("run", "")) for step in job.get("steps") or []]
+    found = sorted(
+        (at, name)
+        for name, command in WEB_ENGINE_STUDY_ORDER
+        for at, run in enumerate(runs)
+        if command in run
+    )
+    ran = [name for _, name in found]
+    wanted = [name for name, _ in WEB_ENGINE_STUDY_ORDER]
+    missing = [name for name in wanted if name not in ran]
+    problems = [f"the web-engine job runs no {name.removeprefix('the ')}" for name in missing]
+    if not missing and ran != wanted:
+        problems.append(
+            f"the web-engine job runs {', '.join(ran)}, in that order, not {', '.join(wanted)}"
+        )
+    browsers = next((at for at, run in enumerate(runs) if "test:engine" in run), None)
+    if browsers is not None and any(at < browsers for at, _ in found):
+        problems.append(
+            "the web-engine job builds the app, stages the module or runs the study suite before "
+            "its browser tests"
+        )
+    if any("${{" in runs[at] for at, _ in found):
+        problems.append("a study step of the web-engine job holds an expression in its command")
+    return problems
+
+
 class TheWebEngineIsHeldToItsBudget(unittest.TestCase):
     def test_the_web_engine_job_builds_the_module_and_holds_it_to_its_budget(self):
         text = workflow_file_text(WORKFLOWS / "ci.yml")
@@ -2749,6 +3201,47 @@ class TheWebEngineIsHeldToItsBudget(unittest.TestCase):
             with self.subTest(name):
                 planted = planted_job(text, job_id, *changes)
                 self.assertEqual(web_engine_job_problems(planted), refusal)
+
+    def test_the_web_engine_job_runs_the_study_suite(self):
+        text = workflow_file_text(WORKFLOWS / "ci.yml")
+        workflow = read_workflow(text)
+        self.assertEqual(web_engine_study_problems(workflow), [])
+        job = workflow["jobs"].get(WEB_ENGINE_JOB) or {}
+        examined("web-engine job steps", job.get("steps") or [])
+        # Each planted copy of the real job breaks one rule, and the judge refuses it by name.
+        build, stage, study = (command for _, command in WEB_ENGINE_STUDY_ORDER)
+        browsers = "pnpm --dir web/app test:engine"
+        order = (
+            "the web-engine job runs {}, in that order, not the app build, the stage, the study "
+            "suite"
+        )
+        early = (
+            "the web-engine job builds the app, stages the module or runs the study suite before "
+            "its browser tests"
+        )
+        plants = {
+            "no app build": ([(build, "true")], ["the web-engine job runs no app build"]),
+            "no stage": ([(stage, "true")], ["the web-engine job runs no stage"]),
+            "no study suite": ([(study, "true")], ["the web-engine job runs no study suite"]),
+            "the stage before the app build": (
+                [(stage, "SWAPPED"), (build, stage), ("SWAPPED", build)],
+                [order.format("the stage, the app build, the study suite")],
+            ),
+            "the study suite before the browser tests": (
+                [(study, "SWAPPED"), (browsers, study), ("SWAPPED", browsers)],
+                [order.format("the study suite, the app build, the stage"), early],
+            ),
+            "an expression in a study step": (
+                [(study, study + ' -- --project "${{ github.event_name }}"')],
+                ["a study step of the web-engine job holds an expression in its command"],
+            ),
+        }
+        for name, (changes, refusal) in examined(
+            "planted web-engine study defect(s)", plants.items()
+        ):
+            with self.subTest(name):
+                planted = planted_job(text, WEB_ENGINE_JOB, *changes)
+                self.assertEqual(web_engine_study_problems(planted), refusal)
 
 
 # ------------------------------------------ no secret, no other repository (SPEC-034 A9 to A12)
@@ -2978,6 +3471,46 @@ PLANTED_BLOCK_LINES = {
 # (group 2), or the context whole, which names no secret: `toJSON(secrets)`, `secrets.*`, or an
 # index computed at run time.
 SECRET = re.compile(r"(?<![\w.-])secrets(?![\w-])(?:\.([A-Za-z_][\w-]*)|\['([^']*)'\])?", re.I)
+# The one table of admitted secret reads (owner ruling #668; SPEC-352 R14; ADR-363): each
+# TestFlight lane's `app` job reads each part of the credential only in the step that uses it, by
+# the step's id, in that step's own variable: the preflight as a presence test, the signing and
+# upload steps as the value. Every other read stays a problem, and so does every read of a lane
+# that a pull request or another workflow's run starts (UNADMITTED_TRIGGERS).
+ADMITTED_SECRETS = {
+    (lane, "app", step): frozenset(reads)
+    for lane in ("testflight-internal.yml", "testflight-release.yml")
+    for step, reads in (
+        (
+            "preflight",
+            (
+                "secrets.TESTFLIGHT_UPLOAD_KEY",
+                "secrets.TESTFLIGHT_UPLOAD_KEY_ID",
+                "secrets.TESTFLIGHT_UPLOAD_ISSUER_ID",
+                "secrets.IOS_DIST_CERTIFICATE",
+                "secrets.IOS_DIST_CERTIFICATE_PASSWORD",
+                "secrets.IOS_PROVISIONING_PROFILE",
+            ),
+        ),
+        (
+            "sign",
+            (
+                "secrets.IOS_DIST_CERTIFICATE",
+                "secrets.IOS_DIST_CERTIFICATE_PASSWORD",
+                "secrets.IOS_PROVISIONING_PROFILE",
+            ),
+        ),
+        (
+            "upload",
+            (
+                "secrets.TESTFLIGHT_UPLOAD_KEY",
+                "secrets.TESTFLIGHT_UPLOAD_KEY_ID",
+                "secrets.TESTFLIGHT_UPLOAD_ISSUER_ID",
+            ),
+        ),
+    )
+}
+# The triggers under which no read is admitted: a pull request's code, or another run's.
+UNADMITTED_TRIGGERS = ("pull_request", "pull_request_target", "workflow_run")
 # A command that clones a repository, and a git command given a URL: one with a scheme, or git's
 # scp-like form, `user@host:path`, or `host:path` whose host is a dotted name. A refspec, such as
 # `main:refs/heads/main` or `v1.0:refs/tags/v1.0`, names no host.
@@ -3107,6 +3640,39 @@ def secret_reads(expression):
     return found
 
 
+def admitted_secret_places(name, workflow):
+    """{place: the secrets admitted there} for the workflow file `name`, each place a variable of
+    a step's own `env` that ADMITTED_SECRETS names by file, job and step id, spelt as `strings`
+    places it. A workflow whose `on`, read as a mapping, a list or one name, holds any of
+    UNADMITTED_TRIGGERS has no admitted place."""
+    on = workflow.get("on")
+    triggers = on if isinstance(on, (dict, list)) else [on]
+    if any(str(trigger) in UNADMITTED_TRIGGERS for trigger in triggers):
+        return {}
+    places = {}
+    jobs = workflow.get("jobs")
+    for job_id, job in (jobs if isinstance(jobs, dict) else {}).items():
+        if not isinstance(job, dict):
+            continue
+        for where, step in steps_in(job.get("steps"), f"jobs.{job_id}.steps"):
+            step_id = step.get("id") if isinstance(step, dict) else None
+            admitted = (
+                ADMITTED_SECRETS.get((name, job_id, step_id)) if isinstance(step_id, str) else None
+            )
+            if admitted is not None and isinstance(step.get("env"), dict):
+                places.update({f"{where}.env.{key}": admitted for key in step["env"]})
+    return places
+
+
+def admitted_read(admitted, text, expression):
+    """Whether the read in `expression`, the value `text` holds, is admitted: at an admitted
+    place, the value exactly that one expression, and the expression `secrets.<NAME>` or
+    `secrets.<NAME> != ''` for a secret admitted there. Any other form is not admitted."""
+    if admitted is None or text != f"${{{{ {expression} }}}}":
+        return False
+    return expression.removesuffix(" != ''") in admitted
+
+
 def commands(script):
     """A run script's commands, one per line: a line continued with a backslash is joined to the
     next, and each command's whitespace is collapsed."""
@@ -3185,10 +3751,12 @@ def git_variables(text):
 
 
 def secret_and_checkout_problems(directory):
-    """Every read of a secret other than GITHUB_TOKEN, every `secrets: inherit`, and every checkout,
-    clone or fetch of another repository in the workflows of `directory`, each named by its file
-    and its place, with what was judged: (problems, {population: [...]}). Every step of a job is
-    judged, a step inside a `parallel` block at any depth included, and a checkout whose inputs are
+    """Every read of a secret other than GITHUB_TOKEN and other than a read ADMITTED_SECRETS admits
+    (one whole `${{ secrets.<NAME> }}` or `${{ secrets.<NAME> != '' }}` value in a step's own env),
+    every `secrets: inherit`, and every checkout, clone or fetch of another repository in the
+    workflows of `directory`, each named by its file and its place, with what was judged:
+    (problems, {population: [...]}). Every step of a job is judged, a step inside a `parallel`
+    block at any depth included, and a checkout whose inputs are
     not a mapping is a problem, as `step_inputs` says. A clone or a fetch is read in every string
     the workflow holds, not only a run step's script. A shell that is not a built-in keyword, git
     configured from the environment, and an environment the checker cannot read are problems too,
@@ -3205,9 +3773,12 @@ def secret_and_checkout_problems(directory):
         except Unread as unread:
             workflow, refused = unread.workflow, unread.refused
         problems += [f"{path.name}:{why}" for why in refused]
+        admitted = admitted_secret_places(path.name, workflow)
         for where, text in strings(workflow):
             for expression in expressions_in(text):
                 judged["expressions"].append((f"{path.name}:{where}", expression))
+                if admitted_read(admitted.get(where), text, expression):
+                    continue
                 problems += [f"{path.name}:{where}: {read}" for read in secret_reads(expression)]
         problems += defaults_problems(workflow.get("defaults"), f"{path.name}:defaults")
         problems += environment_problems(workflow.get("env"), f"{path.name}:env")
@@ -4359,6 +4930,46 @@ NOT_WORKFLOW_READS = {
             "test_ci_workflows",
             "run_step",
             "subprocess.run(['bash', '--noprofile', '--norc', '-e', '-o', 'pipefail', '-c', step['run']], cwd=where, env=env, capture_output=True, text=True, check=False)",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs an output check's own shell under bash in a scratch directory holding planted bindings or a planted XCFramework, and reads the report files it writes; verdicts, never a workflow",
+        ("test_ci_workflows", "run_output_check", "each.read_text()", 1),
+        (
+            "test_ci_workflows",
+            "run_output_check",
+            "subprocess.run(['bash', '--noprofile', '--norc', '-e', '-o', 'pipefail', '-c', step['run']], cwd=where, env=env, capture_output=True, text=True, check=False)",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls run_output_check, which runs an output check's shell over planted files and reads its report",
+        (
+            "test_ci_workflows",
+            "TheAppHasOneRustStaticLibrary.test_the_bindings_hold_one_module",
+            "run_output_check(steps[after + 1], plant)",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "TheAppHasOneRustStaticLibrary.test_the_xcframework_holds_one_rust_library_per_slice",
+            "run_output_check(steps[after + 1], plant)",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls umbrella_closure, which reads a workspace's Cargo manifests for the umbrella's build closure; manifests, never a workflow",
+        (
+            "test_ci_workflows",
+            "TheAppHasOneRustStaticLibrary.test_the_change_caller_watches_every_crate_the_umbrella_links",
+            "umbrella_closure(REPO)",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "TheAppHasOneRustStaticLibrary.test_the_change_caller_watches_every_crate_the_umbrella_links",
+            "umbrella_closure(where)",
             1,
         ),
     ),
@@ -6014,6 +6625,15 @@ DYNAMIC_IMPORTS = {
             "test_sync_ban",
             "failregexes",
             "configparser.ConfigParser(interpolation=configparser.BasicInterpolation(), inline_comment_prefixes=';')",
+            1,
+        ),
+    ),
+    **allowed(
+        "decompresses the image data of the icon a production script writes, to compare its pixels (SPEC-352 A24); bytes in and bytes out, and it imports, runs and reads nothing",
+        (
+            "test_ios_icon",
+            "WhatAnUploadNeeds.test_the_generated_icon_is_an_opaque_square_with_no_text",
+            "zlib.decompress(idat)",
             1,
         ),
     ),

@@ -1,0 +1,285 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S34800-THE-DECK-TREE-PAIR-IS-ON-THE-ALLOW-LIST",
+        "ffi",
+        "src/allow_list.rs",
+        "        method: 4,\n        name: \"DecksService.DeckTree\",",
+        "        method: 5,\n        name: \"DecksService.DeckTree\",",
+        "review_pairs::the_allow_list_carries_the_review_pairs",
+        "DeckTree is the pair (7,4); renumbered to (7,5), the allow-list no longer carries the deck tree a native client draws its sidebar from (SPEC-348 R1, A2)"
+      ],
+      [
+        "S34801-THE-CURRENT-DECK-PAIR-IS-ON-THE-ALLOW-LIST",
+        "ffi",
+        "src/allow_list.rs",
+        "        method: 22,\n        name: \"DecksService.SetCurrentDeck\",",
+        "        method: 23,\n        name: \"DecksService.SetCurrentDeck\",",
+        "review_pairs::the_allow_list_carries_the_review_pairs",
+        "SetCurrentDeck is the pair (7,22); renumbered to (7,23), the allow-list no longer carries the call that chooses the deck to review (SPEC-348 R1, A2)"
+      ],
+      [
+        "S34802-THE-NEXT-STATES-PAIR-IS-ON-THE-ALLOW-LIST",
+        "ffi",
+        "src/allow_list.rs",
+        "        method: 24,\n        name: \"SchedulerService.DescribeNextStates\",",
+        "        method: 23,\n        name: \"SchedulerService.DescribeNextStates\",",
+        "review_pairs::the_allow_list_carries_the_review_pairs",
+        "DescribeNextStates is the pair (13,24); renumbered to (13,23), the allow-list no longer carries the call that labels the rating buttons (SPEC-348 R1, A2)"
+      ],
+      [
+        "S34803-THE-CORE-ADMITS-THE-DECK-TREE",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"DecksService.DeckTree\",\n        native: true,",
+        "        name: \"DecksService.DeckTree\",\n        native: false,",
+        "review_pairs::the_review_pairs_run_natively_and_no_other_pair_joins",
+        "DeckTree is on the native column; marked web-only, a native dispatcher refuses the deck tree (SPEC-348 R1, A1)"
+      ],
+      [
+        "S34804-THE-CORE-ADMITS-THE-CURRENT-DECK",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"DecksService.SetCurrentDeck\",\n        native: true,",
+        "        name: \"DecksService.SetCurrentDeck\",\n        native: false,",
+        "review_pairs::the_review_pairs_run_natively_and_no_other_pair_joins",
+        "SetCurrentDeck is on the native column; marked web-only, a native dispatcher refuses the choice of deck (SPEC-348 R1, A1)"
+      ],
+      [
+        "S34805-THE-CORE-ADMITS-THE-NEXT-STATES",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"SchedulerService.DescribeNextStates\",\n        native: true,",
+        "        name: \"SchedulerService.DescribeNextStates\",\n        native: false,",
+        "review_pairs::the_review_pairs_run_natively_and_no_other_pair_joins",
+        "DescribeNextStates is on the native column; marked web-only, a native dispatcher refuses the rating buttons' labels (SPEC-348 R1, A1)"
+      ],
+      [
+        "S34806-A-SEPARATOR-EMPTIES-THE-REFERENCE",
+        "engine-core",
+        "src/media.rs",
+        "    let separator = name.contains(['/', '\\\\', '\\0']);",
+        "    let separator = false;",
+        "face::a_reference_the_rules_refuse_is_omitted_and_emptied",
+        "A name holding a path separator is refused; with the separator arm gone, a reference into a subfolder reaches the reader (SPEC-348 R3, A5)"
+      ],
+      [
+        "S34807-A-DOUBLE-DOT-EMPTIES-THE-REFERENCE",
+        "engine-core",
+        "src/media.rs",
+        "    let dots = name == \".\" || name == \"..\";",
+        "    let dots = name == \".\";",
+        "face::a_reference_the_rules_refuse_is_omitted_and_emptied",
+        "A name that is .. is refused; with that arm gone, the parent directory's name reaches the reader (SPEC-348 R3, A5)"
+      ],
+      [
+        "S34808-AN-EMPTY-NAME-EMPTIES-THE-REFERENCE",
+        "engine-core",
+        "src/media.rs",
+        "    let empty = name.is_empty();",
+        "    let empty = false;",
+        "face::a_reference_the_rules_refuse_is_omitted_and_emptied",
+        "An empty name is refused; with that arm gone, the media folder itself reaches the reader (SPEC-348 R3, A5)"
+      ],
+      [
+        "S34809-A-FILE-AT-THE-CAP-IS-REFUSED",
+        "engine-core",
+        "src/media.rs",
+        "        if len > FILE_CAP {",
+        "        if len >= FILE_CAP {",
+        "face::a_reference_the_rules_refuse_is_omitted_and_emptied",
+        "A file of exactly the per-file cap is admitted; with >= in place of >, it is refused (SPEC-348 R3, A5)"
+      ],
+      [
+        "S34810-A-FACE-AT-THE-CAP-IS-REFUSED",
+        "engine-core",
+        "src/media.rs",
+        "        if self.total + len > FACE_CAP {",
+        "        if self.total + len >= FACE_CAP {",
+        "face::a_reference_the_rules_refuse_is_omitted_and_emptied",
+        "A face whose files total exactly the face cap is admitted whole; with >= in place of >, its last file is refused (SPEC-348 R3, A5)"
+      ],
+      [
+        "S34811-THE-FILE-CAP-VALUE",
+        "engine-core",
+        "src/media.rs",
+        "pub const FILE_CAP: u64 = 4 * 1024 * 1024;",
+        "pub const FILE_CAP: u64 = 4 * 1024 * 1024 + 1;",
+        "face::a_reference_the_rules_refuse_is_omitted_and_emptied",
+        "The per-file cap is 4 MiB; one byte more admits a file the rule refuses (SPEC-348 R3, A5)"
+      ],
+      [
+        "S34812-THE-FACE-CAP-VALUE",
+        "engine-core",
+        "src/media.rs",
+        "pub const FACE_CAP: u64 = 16 * 1024 * 1024;",
+        "pub const FACE_CAP: u64 = 16 * 1024 * 1024 + 1;",
+        "face::a_reference_the_rules_refuse_is_omitted_and_emptied",
+        "The face cap is 16 MiB; one byte more admits a file past it (SPEC-348 R3, A5)"
+      ],
+      [
+        "S34813-THE-FACE-TOTAL-ACCUMULATES",
+        "engine-core",
+        "src/media.rs",
+        "        self.total += len;",
+        "        self.total += 0;",
+        "face::a_reference_the_rules_refuse_is_omitted_and_emptied",
+        "Each admitted file counts toward the face's total; uncounted, no face ever reaches its cap (SPEC-348 R3, A5)"
+      ],
+      [
+        "S34814-THE-OMITTED-ATTRIBUTE-IS-EMPTY",
+        "engine-core",
+        "src/media.rs",
+        "            None => String::new(),",
+        "            None => written.to_owned(),",
+        "face::a_reference_the_rules_refuse_is_omitted_and_emptied",
+        "A refused reference's attribute is emptied; kept as written, the frame would try to load the name the rules refused (SPEC-348 R3, A5)"
+      ],
+      [
+        "S34815-THE-PNG-TYPE",
+        "engine-core",
+        "src/media.rs",
+        "    (\"png\", \"image/png\"),",
+        "    (\"png\", \"image/jpeg\"),",
+        "face::a_face_inlines_its_image_and_strips_its_av_tags",
+        "A png file is inlined as image/png; typed as JPEG, its data: URL names the wrong type (SPEC-348 R3, A4)"
+      ],
+      [
+        "S34816-FRONTSIDE-IS-THE-EXTRACTED-TEXT",
+        "engine-core",
+        "src/face.rs",
+        "    let answer_raw = join(&rendered.answer_nodes, Some(&question_extracted));",
+        "    let answer_raw = join(&rendered.answer_nodes, Some(&question_raw));",
+        "face::the_answer_replays_the_question_unless_the_preset_skips_it",
+        "The answer's {{FrontSide}} holds the question's extracted text, as the engine's reviewer fills it; filled from the raw text, the question's tags are extracted again on the answer (SPEC-348 R2, A3)"
+      ],
+      [
+        "S34817-THE-SKIP-FLAG-IS-READ",
+        "engine-core",
+        "src/face.rs",
+        "            if !preset.skip_question_when_replaying_answer {",
+        "            if preset.skip_question_when_replaying_answer {",
+        "face::the_answer_replays_the_question_unless_the_preset_skips_it",
+        "The answer's replay holds the question's clips unless the preset skips them; with the negation dropped, the default preset loses them (SPEC-348 R4, A3)"
+      ],
+      [
+        "S34818-THE-PRESET-DISABLES-AUTOPLAY",
+        "engine-core",
+        "src/face.rs",
+        "    let allowed = !preset.disable_autoplay;",
+        "    let allowed = true;",
+        "face::autoplay_follows_the_preset_and_the_client",
+        "A preset that disables autoplay gets an empty autoplay; ignored, its clips play anyway (SPEC-348 R4, A7)"
+      ],
+      [
+        "S34819-THE-CLIENT-WISH-IS-HEARD",
+        "engine-core",
+        "src/face.rs",
+        "    let wished = autoplay;",
+        "    let wished = autoplay || true;",
+        "face::autoplay_follows_the_preset_and_the_client",
+        "A client that does not wish autoplay gets an empty autoplay; ignored, its clips play anyway (SPEC-348 R4, A7)"
+      ],
+      [
+        "S34820-THE-RATE-IS-CLAMPED",
+        "engine-core",
+        "src/face.rs",
+        "    let rate = (tag.speed * DEFAULT_RATE).clamp(MINIMUM_RATE, MAXIMUM_RATE);",
+        "    let rate = tag.speed * DEFAULT_RATE;",
+        "face::a_tts_tag_becomes_speech_in_the_platforms_terms",
+        "A speech rate is held to the platform's range; unclamped, a fast tag asks for a rate the platform does not have (SPEC-348 R4, A6)"
+      ],
+      [
+        "S34821-THE-LANGUAGE-USES-THE-PLATFORMS-SPELLING",
+        "engine-core",
+        "src/face.rs",
+        "    let language = tag.lang.replace('_', \"-\");",
+        "    let language = tag.lang.clone();",
+        "face::a_tts_tag_becomes_speech_in_the_platforms_terms",
+        "A tag's en_US becomes the platform's en-US; left as written, the platform finds no voice for it (SPEC-348 R4, A6)"
+      ],
+      [
+        "S34822-THE-AV-TAGS-ARE-STRIPPED",
+        "engine-core",
+        "src/face.rs",
+        "    let shown_question = strip_av_tags(question_raw.as_str());",
+        "    let shown_question = question_raw.clone();",
+        "face::a_face_inlines_its_image_and_strips_its_av_tags",
+        "The shown text holds no AV tag; unstripped, the card shows the engine's play markup (SPEC-348 R2, A4)"
+      ],
+      [
+        "S34823-THE-MEDIA-FOLDER-IS-KEPT-AT-THE-OPEN",
+        "engine-core",
+        "src/dispatch.rs",
+        "                    self.keep_media_folder(input);",
+        "                    self.keep_media_folder(&[]);",
+        "face::a_face_inlines_its_image_and_strips_its_av_tags",
+        "A successful open keeps the media folder its request named; with an empty request kept instead, the native face finds no media (SPEC-348 R5, A4)"
+      ],
+      [
+        "S34824-THE-NIGHT-CLASSES-FOLLOW-THE-ASKING",
+        "ffi",
+        "src/face.rs",
+        "    let classes = if night { NIGHT } else { DAY };",
+        "    let classes = if night || true { NIGHT } else { DAY };",
+        "face::the_native_document_is_one_closed_page",
+        "The night classes are written only when the client asks; always written, a day face renders in night mode (SPEC-348 R5, A8)"
+      ],
+      [
+        "S34825-AN-UNINSTALLED-VOICE-IS-NOT-CHOSEN",
+        "ffi",
+        "src/voices.rs",
+        "        let present = installed.iter().any(|voice| voice.identifier == identifier);",
+        "        let present = true;",
+        "voices::a_voice_choice_survives_and_follows_the_installed_set",
+        "A chosen voice counts only while it is installed; unchecked, a removed voice is still chosen (SPEC-348 R6, A9)"
+      ],
+      [
+        "S34826-THE-PRIMARY-SUBTAG-IS-THE-FALLBACK",
+        "ffi",
+        "src/voices.rs",
+        "        if options.is_empty() {",
+        "        if false {",
+        "voices::a_voice_choice_survives_and_follows_the_installed_set",
+        "With no voice of the language itself, the picker offers its primary subtag's voices; without the fallback it offers none (SPEC-348 R6, A9)"
+      ],
+      [
+        "S34827-THE-VOICE-QUALITY-ORDER",
+        "ffi",
+        "src/voices.rs",
+        "        options.sort_by(|a, b| b.quality.cmp(&a.quality).then_with(|| a.name.cmp(&b.name)));",
+        "        options.sort_by(|a, b| a.quality.cmp(&b.quality).then_with(|| a.name.cmp(&b.name)));",
+        "voices::a_voice_choice_survives_and_follows_the_installed_set",
+        "The picker offers the better quality first; reversed, the system's default voice leads (SPEC-348 R6, A9)"
+      ],
+      [
+        "S34828-A-DAMAGED-LINE-IS-SKIPPED",
+        "ffi",
+        "src/voices.rs",
+        "            continue;",
+        "            return BTreeMap::new();",
+        "voices::a_voice_choice_survives_and_follows_the_installed_set",
+        "A line that does not parse is skipped; refusing the file instead loses every language's choice (SPEC-348 R6, A9)"
+      ],
+      [
+        "S34829-A-RELATIVE-DIRECTORY-IS-REFUSED",
+        "ffi",
+        "src/engine.rs",
+        "    if !path.is_absolute() {",
+        "    if false {",
+        "seam::a_relative_directory_is_refused",
+        "A relative collection directory is refused by name; unchecked, it resolves against wherever the app was launched (SPEC-348 R7, A10)"
+      ],
+      [
+        "S34830-A-MISSING-DIRECTORY-IS-REFUSED",
+        "ffi",
+        "src/engine.rs",
+        "    if !path.exists() {",
+        "    if false {",
+        "seam::a_missing_directory_is_refused",
+        "A missing collection directory is refused by name as missing; unchecked, it is refused as not a directory (SPEC-348 R7, A10)"
+      ]
+    ]
+  }
+}

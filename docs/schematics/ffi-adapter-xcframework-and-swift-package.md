@@ -156,3 +156,9 @@ same job body. `xcframework.yml` itself takes `workflow_call` and `workflow_disp
 
 The CCALL and TCALL labels and the edge label above read `uses $/.github/workflows/xcframework.yml`
 and `"$/.github/workflows/FILE"`, the self-repository form; their endpoints are unchanged.
+
+## Amendment: the Swift package exists, and the adapter is the umbrella (SPEC-346, ADR-357)
+
+The Swift package drawn dashed above now exists, as `ios/EnginePackage/` (SPEC-339, ADR-350), and
+`deck-streak-ffi` is the umbrella FFI crate, the app's one Rust static library. The census and the
+two output checks that hold one library are drawn in `umbrella-ffi-crate-and-one-static-library.md`.

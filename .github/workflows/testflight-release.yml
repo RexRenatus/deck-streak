@@ -1,0 +1,140 @@
+name: testflight-release
+
+# The release TestFlight lane (SPEC-352 R1, R4 and R16; ADR-363 D2 and D7): a push of a SemVer tag,
+# and nothing else, starts it, and its plan job first runs release.yml's own tag guard on the full
+# history, refusing a tag that is not SemVer, a lightweight tag and a commit that is not on main. No
+# pull request starts it, its token is read-only, and every action is pinned by its full commit SHA.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: read
+
+# One tag's runs take one group and wait their turn, as release.yml's runs do: a run in progress
+# is never cancelled and a waiting one is not replaced, up to queue: max's hundred waiting runs
+# (ADR-292).
+concurrency:
+  group: testflight-release-${{ github.ref }}
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      lane: ${{ steps.plan.outputs.lane }}
+      number: ${{ steps.plan.outputs.number }}
+      version: ${{ steps.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: '0'
+          persist-credentials: false
+      - name: the tag is SemVer, annotated, and its commit is on main
+        run: |
+          set -euo pipefail
+          tag="$GITHUB_REF_NAME"
+          if ! [[ "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "the tag $tag is not a SemVer release tag" >&2
+            exit 1
+          fi
+          if [ "$(git cat-file -t "refs/tags/$tag")" != tag ]; then
+            echo "the tag $tag is a lightweight tag; a release is an annotated tag" >&2
+            exit 1
+          fi
+          git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "the commit of $tag is not on main" >&2
+            exit 1
+          fi
+      - name: the plan
+        id: plan
+        run: python3 scripts/ios_lane.py plan --lane release
+
+  framework:
+    needs: plan
+    uses: $/.github/workflows/xcframework.yml
+
+  app:
+    needs: [plan, framework]
+    runs-on: macos-26
+    timeout-minutes: 60
+    environment: testflight-release
+    permissions:
+      contents: read
+    env:
+      LANE: ${{ needs.plan.outputs.lane }}
+      NUMBER: ${{ needs.plan.outputs.number }}
+      VERSION: ${{ needs.plan.outputs.version }}
+      REPORT: ${{ github.workspace }}/harness-report
+      RESULTS: ${{ github.workspace }}/harness-results
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      XCODEGEN_VERSION: "2.46.0"
+      XCODEGEN_DIGEST: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: this run's XCFramework, bindings and synthetic collection
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: xcframework
+          path: engine-artifact
+      - name: place the framework, the bindings and the collection
+        run: |
+          mkdir -p "$REPORT" "$RESULTS" ios/EnginePackage/Sources/DeckStreakFFI ios/Harness/Resources
+          cp -R engine-artifact/DeckStreakFFI.xcframework ios/EnginePackage/
+          cp engine-artifact/bindings/deck_streak_ffi.swift ios/EnginePackage/Sources/DeckStreakFFI/
+          cp engine-artifact/harness-fixture/collection.anki2 ios/Harness/Resources/
+      - name: the app icon, written
+        run: |
+          python3 scripts/ios_icon.py write ios/Harness/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+      - name: XcodeGen, checksum-verified
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/xcodegen.zip" "https://github.com/yonaskolb/XcodeGen/releases/download/${XCODEGEN_VERSION}/xcodegen.zip"
+          echo "$XCODEGEN_DIGEST  $RUNNER_TEMP/xcodegen.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP"
+      - name: the project, generated
+        run: |
+          "$RUNNER_TEMP/xcodegen/bin/xcodegen" generate --spec ios/project.yml
+      - name: the credential, by presence
+        id: preflight
+        env:
+          KEY: ${{ secrets.TESTFLIGHT_UPLOAD_KEY != '' }}
+          KEYID: ${{ secrets.TESTFLIGHT_UPLOAD_KEY_ID != '' }}
+          ISSUER: ${{ secrets.TESTFLIGHT_UPLOAD_ISSUER_ID != '' }}
+          CERTIFICATE: ${{ secrets.IOS_DIST_CERTIFICATE != '' }}
+          PASSWORD: ${{ secrets.IOS_DIST_CERTIFICATE_PASSWORD != '' }}
+          PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE != '' }}
+        run: python3 scripts/ios_lane.py preflight
+      - name: the app, unsigned
+        if: ${{ steps.preflight.outputs.placed == 'none' }}
+        run: python3 scripts/ios_lane.py build-unsigned
+      - name: the archive, signed
+        id: sign
+        if: ${{ steps.preflight.outputs.placed == 'all' }}
+        env:
+          CERTIFICATE: ${{ secrets.IOS_DIST_CERTIFICATE }}
+          PASSWORD: ${{ secrets.IOS_DIST_CERTIFICATE_PASSWORD }}
+          PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+        run: python3 scripts/ios_lane.py sign
+      - name: the upload
+        id: upload
+        if: ${{ steps.preflight.outputs.placed == 'all' }}
+        env:
+          KEY: ${{ secrets.TESTFLIGHT_UPLOAD_KEY }}
+          KEYID: ${{ secrets.TESTFLIGHT_UPLOAD_KEY_ID }}
+          ISSUER: ${{ secrets.TESTFLIGHT_UPLOAD_ISSUER_ID }}
+        run: python3 scripts/ios_lane.py upload-to-testflight
+      - name: clean
+        if: ${{ always() }}
+        run: python3 scripts/ios_lane.py clean
+      - name: the summary
+        if: ${{ always() }}
+        env:
+          PLACED: ${{ steps.preflight.outputs.placed }}
+          OUTCOME: ${{ steps.upload.outcome }}
+        run: python3 scripts/ios_lane.py summary
