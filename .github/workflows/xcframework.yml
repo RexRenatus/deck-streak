@@ -124,6 +124,8 @@ jobs:
           cargo run --locked -p deck-streak-ffi --example harness-fixture -- harness-fixture
           echo "$(( $(date +%s) - started ))" > "$REPORT/fixture-seconds"
           ls -l harness-fixture
+          cargo run --locked -p deck-streak-ffi --example review-fixture -- review-fixture
+          ls -l review-fixture
       - name: the report
         if: ${{ always() }}
         run: |
@@ -170,6 +172,7 @@ jobs:
             bindings/
             xcframework-report/
             harness-fixture/
+            review-fixture/
           if-no-files-found: warn
 
   harness-wire:

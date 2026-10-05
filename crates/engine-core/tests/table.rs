@@ -18,8 +18,20 @@ use deck_streak_engine_core::table::{
     Decision, EXEMPT, ExemptWrite, ORDINARY, TargetKind, Transport, decide,
 };
 
-/// The pairs the native adapter's allow-list holds (SPEC-345 M1).
-const NATIVE: [(u32, u32); 7] = [(1, 3), (3, 0), (3, 8), (7, 13), (13, 3), (13, 4), (27, 6)];
+/// The pairs the native adapter's allow-list holds (SPEC-345 M1), with the review screen's three
+/// (SPEC-348 R1).
+const NATIVE: [(u32, u32); 10] = [
+    (1, 3),
+    (3, 0),
+    (3, 8),
+    (7, 4),
+    (7, 13),
+    (7, 22),
+    (13, 3),
+    (13, 4),
+    (13, 24),
+    (27, 6),
+];
 
 /// The web engine's study calls (SPEC-345 M4).
 const WEB: [(u32, u32); 16] = [
@@ -144,10 +156,11 @@ fn each_exempt_write_names_its_engine_call_and_its_target_kind() {
 
 /// The review's eight pairs (SPEC-350 R1, M10), each with the engine's name for it and what the
 /// native transport decides for it, written from the engine's protos at the pin, never read from
-/// the core: seven new rows the web alone may call, and the card render both may.
+/// the core: four new rows the web alone may call, and four both may (the card render, and the
+/// three the native review screen also calls, SPEC-348 R1).
 const REVIEW: [(u32, u32, &str, Decision); 8] = [
-    (7, 4, "DecksService.DeckTree", Decision::NotAllowed),
-    (7, 22, "DecksService.SetCurrentDeck", Decision::NotAllowed),
+    (7, 4, "DecksService.DeckTree", Decision::Admit),
+    (7, 22, "DecksService.SetCurrentDeck", Decision::Admit),
     (
         27,
         6,
@@ -164,7 +177,7 @@ const REVIEW: [(u32, u32, &str, Decision); 8] = [
         13,
         24,
         "SchedulerService.DescribeNextStates",
-        Decision::NotAllowed,
+        Decision::Admit,
     ),
     (
         3,

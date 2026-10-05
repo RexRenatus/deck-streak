@@ -95,6 +95,9 @@ prost = "0.13.5"
 # ADR-358 D4: the URL parser the engine's own dependencies already bring, for the engine core's
 # endpoint guard on the sync login (SPEC-347 R2).
 url = "2.5.8"
+# ADR-359 D1: the encoder for the `data:` URLs the engine core writes a face's media into
+# (SPEC-348 R3), at the version the engine's own HTTP client already resolves, so it adds no package.
+base64 = "0.22.1"
 # SPEC-022 section 7: the zstd the engine already brings, for the census's tests to read the
 # engine's compressed request bodies.
 zstd = "0.13.3"
