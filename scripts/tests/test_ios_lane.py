@@ -811,6 +811,115 @@ class LaneCredential(unittest.TestCase):
                 )
                 self.assertEqual((code, errors, records), (0, "", []))
 
+    def test_each_signing_tool_is_given_exactly_its_arguments(self):
+        printed, records = self.sign()
+        keychain_password, passphrase = [
+            m for m in self.masks(printed) if m not in self.ids.values()
+        ]
+        keychain = str(self.lane / "lane.keychain-db")
+        bundle = str(self.lane / "certificate.p12")
+        expected = [
+            [
+                "openssl",
+                "pkcs12",
+                "-in",
+                str(self.lane / "original.p12"),
+                "-passin",
+                "stdin",
+                "-passout",
+                f"pass:{passphrase}",
+            ],
+            [
+                "openssl",
+                "pkcs12",
+                "-export",
+                "-out",
+                bundle,
+                "-passin",
+                f"pass:{passphrase}",
+                "-passout",
+                f"pass:{passphrase}",
+                "-certpbe",
+                "PBE-SHA1-3DES",
+                "-keypbe",
+                "PBE-SHA1-3DES",
+                "-macalg",
+                "sha1",
+            ],
+            ["security", "create-keychain", "-p", keychain_password, keychain],
+            ["security", "set-keychain-settings", "-lut", "21600", keychain],
+            ["security", "unlock-keychain", "-p", keychain_password, keychain],
+            [
+                "security",
+                "import",
+                bundle,
+                "-k",
+                keychain,
+                "-P",
+                passphrase,
+                "-f",
+                "pkcs12",
+                "-x",
+                "-T",
+                "/usr/bin/codesign",
+            ],
+            [
+                "security",
+                "set-key-partition-list",
+                "-S",
+                "apple-tool:,apple:,codesign:",
+                "-s",
+                "-k",
+                keychain_password,
+                keychain,
+            ],
+            ["security", "list-keychains", "-d", "user"],
+            ["security", "list-keychains", "-d", "user", "-s", keychain, LOGIN_KEYCHAIN],
+            ["security", "find-identity", "-v", "-p", "codesigning", keychain],
+            ["xcodebuild", "archive"],
+        ]
+        called = [[r["tool"], *r["args"]] for r in examined("signing calls", records)]
+        self.assertEqual(called[:-1], expected[:-1])
+        self.assertEqual(called[-1][:2], expected[-1])
+        code, _, errors, records, _ = self.step("upload-to-testflight", ("KEY", "KEYID", "ISSUER"))
+        self.assertEqual(code, 0, errors)
+        key = Path(self.one(records, "xcodebuild", "-exportArchive")["key"]["path"])
+        self.assertEqual((key.parent.parent, key.parent.name[:4]), (self.lane, "key-"))
+
+    def test_the_profile_is_installed_where_xcode_reads_it_and_cleaned_up_alone(self):
+        profiles = self.home / "Library/Developer/Xcode/UserData/Provisioning Profiles"
+        profiles.mkdir(parents=True)
+        another = profiles / "another.mobileprovision"
+        another.write_bytes(b"another profile")
+        self.sign()
+        self.assertEqual(self.lane.stat().st_mode & 0o777, 0o700)
+        installed = profiles / f"{self.ids['profile uuid']}.mobileprovision"
+        self.assertEqual(sorted(profiles.iterdir()), sorted([another, installed]))
+        code, _, errors, _, _ = self.step("clean")
+        self.assertEqual((code, errors), (0, ""))
+        self.assertEqual(list(profiles.iterdir()), [another])
+        # A sign whose profile is already gone still cleans up everything else.
+        self.sign()
+        installed.unlink()
+        code, _, errors, _, _ = self.step("clean")
+        self.assertEqual((code, errors), (0, ""))
+        self.assertEqual(list(self.temp.iterdir()), [])
+
+    def test_a_build_tool_prints_only_its_error_and_warning_lines_each_value_redacted(self):
+        # A profile's name often holds its app id, so a value can sit inside another.
+        self.ids["profile name"] = f"Store Profile: {self.ids['app id']}"
+        self.values["PROFILE"] = self.profile()
+        fixture = json.loads((self.shims / "fixture.json").read_text(encoding="utf-8"))
+        fixture["printed"] = (
+            f"{self.ids['profile name']}\n{self.ids['team']} is built\nerror: {self.ids['app id']}"
+        )
+        (self.shims / "fixture.json").write_text(json.dumps(fixture), encoding="utf-8")
+        self.sign()
+        self.step("upload-to-testflight", ("KEY", "KEYID", "ISSUER"))
+        for out, _, _ in examined("steps", self.runs):
+            shown = [line for line in out.splitlines() if not line.startswith("::add-mask::")]
+            self.assertEqual(shown, ["warning: <redacted>", "error: <redacted>"])
+
 
 if __name__ == "__main__":
     unittest.main()
