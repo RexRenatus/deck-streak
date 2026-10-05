@@ -145,3 +145,11 @@ times, not once) and green at d1afa325.
   message only, held by `deck-list.test.ts` "a collection with no deck says so", and a done deck
   shows its designed end with a link back to the deck list and never navigates on its own, held by
   `review-screen.test.ts` "a refusal, a card the frame refuses and a done deck are announced".
+
+## What A1 disclosed
+
+- **A1's green commit grows two oracles, insert-only.** Commit 56f905c, the green of A1 and A2, edits
+  `crates/engine-core/tests/table.rs` and `crates/web-engine/tests/study.rs`: the web list in the first
+  grows from eight pairs to sixteen, and the study calls in the second gain the same eight rows, each
+  an added line and no assertion rewritten. Both oracles pinned the eight pairs the review's pairs now
+  join, so they had to grow with the table the commit changes (SPEC-350 R1, M10).
