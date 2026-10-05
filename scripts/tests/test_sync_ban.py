@@ -12,6 +12,16 @@ import re
 import unittest
 
 from _support import REPO, examined
+from test_deploy_templates import (
+    SYNC_PATH,
+    cleaned_segments,
+    handle,
+    request_path,
+    respellings,
+    serves,
+    site,
+    sync_guard,
+)
 
 FAIL2BAN = REPO / "deploy" / "fail2ban"
 FILTER = FAIL2BAN / "filter.d" / "deck-streak-sync.conf"
@@ -25,6 +35,25 @@ CLIENT = "192.0.2.7"
 CLIENT_V6 = "2001:db8::7"
 # The sync server's login route as the edge logs it, before its prefix is stripped.
 LOGIN = "/anki-sync/sync/hostKey"
+
+# The forms of a request-target that names the login: the origin form, and the absolute form
+# under each scheme in either case and the host in either case.
+FORMS = (
+    "",
+    "https://app.example.org",
+    "http://app.example.org",
+    "https://APP.EXAMPLE.ORG",
+    "HTTPS://app.example.org",
+)
+QUERIES = ("", "?a=1", "?")
+
+
+def reaches_the_login(spelling):
+    """Whether a request the edge serves reaches the server's login route: its path, decoded and
+    cleaned, is the prefix in any case, then the login route as the server names it. Every
+    segment is decoded, so this counts at least every spelling the server answers as its login."""
+    head, *rest = cleaned_segments(spelling) or [""]
+    return [head.lower(), *rest] == [SYNC_PATH[1:], "sync", "hostKey"]
 
 
 def edge_line(uri, status, client=CLIENT):
@@ -142,6 +171,32 @@ class TheSyncBanJail(unittest.TestCase):
         patterns = failregexes()
         self.assertEqual(len(patterns), 1, patterns)
         self.assertEqual(patterns[0].count(ADDR), 1, patterns[0])
+
+    def test_the_filter_counts_every_spelling_of_a_refused_login_the_edge_serves(self):
+        """SPEC-351 A2; ADR-362 D2: each spelling of a refused sync login that the edge would
+        serve, derived from the edge's own guard, is counted by the filter against its address."""
+        route = handle(site(), f"{SYNC_PATH}/*")
+        self.assertIsNotNone(route, f"no handle for {SYNC_PATH}/*")
+        pattern = sync_guard(route)
+        spellings = examined(
+            "spelling(s) of a sync login",
+            [
+                form + path + query
+                for path in (LOGIN, *respellings(LOGIN))
+                for query in QUERIES
+                for form in FORMS
+            ],
+        )
+        served = [s for s in spellings if serves(pattern, s) and reaches_the_login(s)]
+        missed = [s for s in served if captured(edge_line(s, 403)) != CLIENT]
+        self.assertEqual(
+            len(missed), 0, f"{len(missed)} served spelling(s) of a refused login not counted"
+        )
+        # The login itself is among them, under every form and query the edge serves, and is the
+        # one path the edge serves for it.
+        examined("served spelling(s) of a refused login", served)
+        self.assertIn(LOGIN, served)
+        self.assertEqual({request_path(s) for s in served}, {LOGIN})
 
     def test_the_jail_bans_five_refused_logins_in_ten_minutes_for_an_hour(self):
         """A6: the jail reads the edge's journal through the filter above, and holds its numbers."""
