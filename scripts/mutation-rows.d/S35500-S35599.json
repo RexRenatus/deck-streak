@@ -1,0 +1,54 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S35500-THE-REMOVAL-RUNS-IN-EVERY-FRAME",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        "forMainFrameOnly: false",
+        "forMainFrameOnly: true",
+        "the peer-connection removal runs only in the main frame, so a nested frame keeps the names (SPEC-355 R3, L8)",
+        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
+      ],
+      [
+        "S35501-THE-REMOVAL-RUNS-AT-DOCUMENT-START",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        ".atDocumentStart",
+        ".atDocumentEnd",
+        "the peer-connection removal runs after the card's own script (SPEC-355 R3, L8)",
+        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
+      ],
+      [
+        "S35502-THE-REMOVAL-RUNS-IN-THE-PAGE-WORLD",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        "in: .page",
+        "in: .defaultClient",
+        "the peer-connection removal deletes names in a world the card's script does not see (SPEC-355 R3, L8)",
+        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
+      ],
+      [
+        "S35503-THE-HOLD-ALLOWS-NO-FAILOVER",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        "allowFailover = false",
+        "allowFailover = true",
+        "a connection the hold refuses fails over to a direct one (SPEC-355 R4, L9)",
+        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
+      ],
+      [
+        "S35504-THE-STORE-NAMES-THE-HOLD",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        "            store.proxyConfigurations = [proxy]\n",
+        "",
+        "the card view's store names no proxy, so a connection reaches its host directly (SPEC-355 R4, L9)",
+        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
+      ],
+      [
+        "S35505-PAGE-SCRIPT-FOLLOWS-THE-VERDICT",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        "allowsContentJavaScript = verdict == .run",
+        "allowsContentJavaScript = true",
+        "page JavaScript runs whatever the switch decided (SPEC-355 R2, L2)",
+        "test_card_web_view_layers.OneFactoryBuildsTheCardWebView.test_one_file_builds_the_card_web_view_and_it_carries_every_layer"
+      ]
+    ]
+  }
+}
