@@ -1,3 +1,4 @@
+import Network
 import ObjectiveC
 import WebKit
 
@@ -19,16 +20,21 @@ public enum CardViewRefusal: Error, Equatable, Sendable {
 public enum CardWebViewFactory {
     /// A web view showing `html`, a card face the app did not write. The rule list is compiled
     /// first; when it does not compile, this throws `CardViewRefusal.ruleListDidNotCompile` and
-    /// builds no view.
+    /// builds no view. L9's hold is started here; a hold that does not start leaves L9 absent,
+    /// so the card's scripts stay off (SPEC-355 R4).
     public static func makeCardWebView(html: String) async throws -> WKWebView {
         let compiled = await RuleList.compile()
-        return try build(html: html, ruleList: compiled)
+        let hold = try? ConnectionHold()
+        try? await hold?.start()
+        return try build(html: html, ruleList: compiled, hold: hold)
     }
 
     /// The configuration L1 and L2 set, for a reader of the layers (SPEC-339's A8). It is not a
     /// card view: the rule list and the delegates come only with `makeCardWebView(html:)`.
     public static func configuration() -> WKWebViewConfiguration {
-        configuration(layers: [.L1, .L2], ruleList: nil)
+        configuration(
+            layers: [.L1, .L2], ruleList: nil,
+            built: Built(switchedOn: false, scriptsFollowVerdict: true, hold: nil))
     }
 
     /// The card view around a compiled list, or a refusal when there is none. `hold` is the
@@ -41,7 +47,8 @@ public enum CardWebViewFactory {
         guard let ruleList else {
             throw CardViewRefusal.ruleListDidNotCompile
         }
-        let view = make(layers: Set(CardLayer.allCases), ruleList: ruleList)
+        let view = make(
+            layers: Set(CardLayer.allCases), ruleList: ruleList, hold: hold, switchedOn: switchedOn)
         // L7, no file access: the card is handed over as a string with no base URL, never as a
         // file, so its document has no origin that can read one.
         // It does NOT stop a load the card's markup names; the rule list (L3) does.
@@ -55,8 +62,14 @@ public enum CardWebViewFactory {
         layers: Set<CardLayer>, ruleList: WKContentRuleList?, hold: ConnectionHold? = nil,
         switchedOn: Bool = false
     ) -> WKWebView {
+        let built = Built(
+            switchedOn: switchedOn, scriptsFollowVerdict: layers.contains(.L2), hold: hold)
         let view = WKWebView(
-            frame: .zero, configuration: configuration(layers: layers, ruleList: ruleList))
+            frame: .zero,
+            configuration: configuration(layers: layers, ruleList: ruleList, built: built))
+        // What was built stays with the view, so its verdict reads the view (SPEC-355 R2), and
+        // the hold lives as long as the view.
+        Retained.keep(built, by: view, under: Retained.built)
         if layers.contains(.L5) {
             // L5, the navigation gate: only the first main-frame load is allowed.
             // It does NOT stop a subresource load.
@@ -65,7 +78,8 @@ public enum CardWebViewFactory {
             Retained.keep(gate, by: view, under: Retained.gate)
         }
         if layers.contains(.L6) {
-            // L6, the window refusal: no request for a new window gets one.
+            // L6, the window refusal: no request for a new window gets one, and no dialog,
+            // capture or motion request is granted (SPEC-355 R5).
             // It does NOT stop a navigation in the same view.
             let refusal = WindowRefusal()
             view.uiDelegate = refusal
@@ -78,22 +92,95 @@ public enum CardWebViewFactory {
     }
 
     /// The switch's verdict for a view this factory built, or nil for a view it did not build
-    /// (SPEC-355 R2). The stub the red-first tests run against: no verdict is kept.
+    /// (SPEC-355 R2): read from the view as it is now, never from what the factory meant to do.
     static func verdict(of view: WKWebView) -> CardScripts.Verdict? {
-        nil
+        verdict(of: view, requestURL: nil)
+    }
+
+    /// The verdict, with the URL of a main-frame navigation the view is about to make, which L7
+    /// reads beside the view's own.
+    static func verdict(of view: WKWebView, requestURL: URL?) -> CardScripts.Verdict? {
+        guard let built = Retained.kept(Built.self, by: view, under: Retained.built) else {
+            return nil
+        }
+        return CardScripts.decide(
+            switchedOn: built.switchedOn,
+            present: present(in: view, built: built, requestURL: requestURL))
+    }
+
+    /// What `view` was built with, or nil for a view this factory did not build.
+    static func built(of view: WKWebView) -> Built? {
+        Retained.kept(Built.self, by: view, under: Retained.built)
+    }
+
+    /// Every required control `view` carries now, each read back from its configuration, its
+    /// delegates and its URL (SPEC-355 R2).
+    private static func present(
+        in view: WKWebView, built: Built, requestURL: URL?
+    ) -> Set<CardLayer> {
+        let configuration = view.configuration
+        let store = configuration.websiteDataStore
+        let controller = configuration.userContentController as? CardContentController
+        var present: Set<CardLayer> = []
+        if !store.isPersistent {
+            present.insert(.L1)
+        }
+        if let controller, controller.ruleLists.contains(RuleList.identifier) {
+            present.insert(.L3)
+        }
+        if let controller, controller.named == 0 {
+            present.insert(.L4)
+        }
+        if view.navigationDelegate is GateAdapter {
+            present.insert(.L5)
+        }
+        if view.uiDelegate is WindowRefusal {
+            present.insert(.L6)
+        }
+        if isBlank(view.url) && isBlank(requestURL) {
+            present.insert(.L7)
+        }
+        let removal = configuration.userContentController.userScripts.contains { script in
+            script.source == PeerConnectionRemoval.source && !script.isForMainFrameOnly
+                && script.injectionTime != .atDocumentEnd
+        }
+        if removal {
+            present.insert(.L8)
+        }
+        let proxies = store.proxyConfigurations
+        if let hold = built.hold, let endpoint = built.endpoint, hold.isReady,
+           hold.endpoint == endpoint, proxies.count == 1, let proxy = proxies.first,
+           !proxy.allowFailover, proxy.excludedDomains.isEmpty, proxy.matchDomains.isEmpty
+        {
+            present.insert(.L9)
+        }
+        return present
+    }
+
+    /// Whether `url` names no document of its own: none, or the blank page a string with no base
+    /// URL is shown at.
+    private static func isBlank(_ url: URL?) -> Bool {
+        guard let url else {
+            return true
+        }
+        return url.absoluteString == "about:blank"
     }
 
     private static func configuration(
-        layers: Set<CardLayer>, ruleList: WKContentRuleList?
+        layers: Set<CardLayer>, ruleList: WKContentRuleList?, built: Built
     ) -> WKWebViewConfiguration {
         let configuration = WKWebViewConfiguration()
+        // The controller records the rule lists and named handlers added to it, which WebKit
+        // does not list, so the verdict can read L3 and L4 back.
+        configuration.userContentController = CardContentController()
         if layers.contains(.L1) {
             // L1, a non-persistent data store: no cookie, cache or storage outlives the view.
             // It does NOT stop a script from reading what the page itself holds.
             configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
         }
         if layers.contains(.L2) {
-            // L2, page JavaScript off: the card's own scripts never run.
+            // L2, page JavaScript off: the card's own scripts never run, unless the switch's
+            // verdict for this view is to run them (the gate sets it per navigation).
             // It does NOT stop the app's own evaluated script, or markup's own loads.
             configuration.defaultWebpagePreferences.allowsContentJavaScript = false
         }
@@ -102,11 +189,94 @@ public enum CardWebViewFactory {
             // It does NOT stop script running, a peer connection, or a navigation the app starts.
             configuration.userContentController.add(ruleList)
         }
+        if layers.contains(.L8) {
+            // L8, the peer-connection removal: one user script, at document start, in every
+            // frame, in the page's own world, deletes every peer-connection global first.
+            // It does NOT stop a load, a navigation or a lookup; L3, L5 and L9 hold those.
+            configuration.userContentController.addUserScript(
+                WKUserScript(
+                    source: PeerConnectionRemoval.source, injectionTime: .atDocumentStart,
+                    forMainFrameOnly: false, in: .page))
+        }
+        // L9, the connection hold (#677): the store's one proxy is the app's loopback hold, with
+        // failover off and no domain excluded, so every connection the view starts reaches only
+        // the hold. A hold that is not ready leaves L9 absent. The list is assigned either way:
+        // a view without L1 shares the default store, whose list outlives any one view.
+        // It does NOT stop a peer connection, whose UDP passes no HTTP proxy; L8 does.
+        let store = configuration.websiteDataStore
+        if layers.contains(.L9), let endpoint = built.hold?.endpoint {
+            var proxy = ProxyConfiguration(httpCONNECTProxy: endpoint)
+            proxy.allowFailover = false
+            store.proxyConfigurations = [proxy]
+            built.endpoint = endpoint
+        } else {
+            store.proxyConfigurations.removeAll()
+        }
         return configuration
     }
 }
 
+/// What the factory built into one view, kept with the view (SPEC-355 R2): the switch the view
+/// was built under, whether page JavaScript follows the verdict (L2 was built), and L9's hold
+/// with the endpoint the store was given.
+@MainActor
+final class Built: NSObject {
+    let switchedOn: Bool
+    let scriptsFollowVerdict: Bool
+    let hold: ConnectionHold?
+    var endpoint: NWEndpoint?
+
+    init(switchedOn: Bool, scriptsFollowVerdict: Bool, hold: ConnectionHold?) {
+        self.switchedOn = switchedOn
+        self.scriptsFollowVerdict = scriptsFollowVerdict
+        self.hold = hold
+        super.init()
+    }
+}
+
+/// The card view's user content controller. WebKit lists neither the rule lists nor the named
+/// handlers a controller holds, so this one records both as they are added and removed, and the
+/// verdict reads L3 and L4 from it.
+/// It does NOT see a handler added with a reply; the tree guard refuses that call outside test
+/// targets (SPEC-349 A4).
+final class CardContentController: WKUserContentController {
+    /// The identifiers of the rule lists installed now.
+    private(set) var ruleLists: Set<String> = []
+    /// How many handlers were ever added under a name. It never falls: a bridge once opened is
+    /// read as open, so the verdict fails closed.
+    private(set) var named = 0
+
+    override func add(_ contentRuleList: WKContentRuleList) {
+        ruleLists.insert(contentRuleList.identifier)
+        super.add(contentRuleList)
+    }
+
+    override func remove(_ contentRuleList: WKContentRuleList) {
+        ruleLists.remove(contentRuleList.identifier)
+        super.remove(contentRuleList)
+    }
+
+    override func removeAllContentRuleLists() {
+        ruleLists.removeAll()
+        super.removeAllContentRuleLists()
+    }
+
+    override func add(_ scriptMessageHandler: WKScriptMessageHandler, name: String) {
+        named += 1
+        super.add(scriptMessageHandler, name: name)
+    }
+
+    override func add(
+        _ scriptMessageHandler: WKScriptMessageHandler, contentWorld world: WKContentWorld,
+        name: String
+    ) {
+        named += 1
+        super.add(scriptMessageHandler, contentWorld: world, name: name)
+    }
+}
+
 /// The navigation gate as the view's navigation delegate, layer L5 (SPEC-349 R3, ADR-360 D1).
+/// It also sets L2 per navigation from the switch's verdict (SPEC-355 R2).
 @MainActor
 final class GateAdapter: NSObject, WKNavigationDelegate {
     /// The gate this adapter asks.
@@ -116,15 +286,23 @@ final class GateAdapter: NSObject, WKNavigationDelegate {
 
     func webView(
         _ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
-        decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
+        preferences: WKWebpagePreferences,
+        decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy, WKWebpagePreferences) -> Void
     ) {
         // A new-window action has no target frame, so it is judged as a subframe's: cancelled.
+        let isMainFrame = navigationAction.targetFrame?.isMainFrame ?? false
         let request = NavigationRequest(
-            isMainFrame: navigationAction.targetFrame?.isMainFrame ?? false,
-            kind: NavigationKind(navigationAction.navigationType))
+            isMainFrame: isMainFrame, kind: NavigationKind(navigationAction.navigationType))
         let decision = gate.decide(request)
         decisions.append(decision)
-        decisionHandler(decision == .allow ? .allow : .cancel)
+        if let built = CardWebViewFactory.built(of: webView), built.scriptsFollowVerdict {
+            // L2 follows the verdict, read back from the view now: page JavaScript is on only
+            // when the switch is on and every required control is present.
+            let verdict = CardWebViewFactory.verdict(
+                of: webView, requestURL: isMainFrame ? navigationAction.request.url : nil)
+            preferences.allowsContentJavaScript = verdict == .run
+        }
+        decisionHandler(decision == .allow ? .allow : .cancel, preferences)
     }
 }
 
@@ -149,11 +327,18 @@ extension NavigationKind {
 private final class Retained: Sendable {
     static let gate = Retained()
     static let refusal = Retained()
+    static let built = Retained()
 
     @MainActor
     static func keep(_ delegate: NSObject, by view: WKWebView, under key: Retained) {
         objc_setAssociatedObject(
             view, UnsafeRawPointer(Unmanaged.passUnretained(key).toOpaque()), delegate,
             .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    }
+
+    @MainActor
+    static func kept<T>(_ type: T.Type, by view: WKWebView, under key: Retained) -> T? {
+        objc_getAssociatedObject(view, UnsafeRawPointer(Unmanaged.passUnretained(key).toOpaque()))
+            as? T
     }
 }

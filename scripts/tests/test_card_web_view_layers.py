@@ -24,10 +24,13 @@ PROBE_PLIST = "ios/CardProbeHost/Info.plist"
 # The one transport answer the probe host may give: local networking, and nothing else.
 PROBE_TRANSPORT = {"NSAllowsLocalNetworking": True}
 # Each layer the factory's source can show, with the token that shows it (the schematic's
-# section 4). L4 is an absence the handler rule below holds for the whole tree.
+# section 4). L4 is an absence the handler rule below holds for the whole tree. L2 shows twice:
+# the configuration's default is off, and each navigation's preference follows the switch's
+# verdict (SPEC-355 R2, ADR-366 D1).
 LAYER_TOKENS = (
     ("L1", "WKWebsiteDataStore.nonPersistent()"),
     ("L2", "allowsContentJavaScript = false"),
+    ("L2", "allowsContentJavaScript = verdict == .run"),
     ("L3", "userContentController.add(ruleList)"),
     ("L5", "navigationDelegate = gate"),
     ("L6", "uiDelegate = refusal"),
@@ -131,6 +134,7 @@ GOOD_FACTORY = """import WebKit
 let configuration = WKWebViewConfiguration()
 configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
 configuration.defaultWebpagePreferences.allowsContentJavaScript = false
+preferences.allowsContentJavaScript = verdict == .run
 configuration.userContentController.add(ruleList)
 let view = WKWebView(frame: .zero, configuration: configuration)
 view.navigationDelegate = gate
@@ -267,11 +271,11 @@ class OneFactoryBuildsTheCardWebView(unittest.TestCase):
             ),
         }
         for layer, token in LAYER_TOKENS:
-            plants[f"the factory without {layer}"] = (
+            plants[f"the factory without {layer} ({token})"] = (
                 {"factory": GOOD_FACTORY.replace(token, "")},
                 [f"{FACTORY}: lacks {layer} ({token})"],
             )
-            plants[f"the factory with {layer} only in a comment"] = (
+            plants[f"the factory with {layer} ({token}) only in a comment"] = (
                 {"factory": GOOD_FACTORY.replace(token, "") + f"// {token}\n"},
                 [f"{FACTORY}: lacks {layer} ({token})"],
             )

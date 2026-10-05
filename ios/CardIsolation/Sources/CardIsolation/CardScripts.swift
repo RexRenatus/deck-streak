@@ -31,7 +31,7 @@ public enum CardScripts {
     /// The decision, pure: `.run` exactly when `switchedOn` and `present` holds every control in
     /// `required`; otherwise `.off`, naming the controls `present` lacks.
     public static func decide(switchedOn: Bool, present: Set<CardLayer>) -> Verdict {
-        // The stub the red-first tests run against: never `.run`.
-        .off(missing: required.subtracting(present))
+        let missing = required.subtracting(present)
+        return switchedOn && missing.isEmpty ? .run : .off(missing: missing)
     }
 }

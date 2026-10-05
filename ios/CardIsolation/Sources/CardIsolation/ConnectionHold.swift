@@ -13,7 +13,6 @@ public final class ConnectionHold: @unchecked Sendable {
     private let listener: NWListener
     private var held = 0
     private var ready = false
-    private var open: [NWConnection] = []
     private var boundPort: UInt16 = 0
 
     /// The loopback address the hold listens on.
@@ -76,26 +75,23 @@ public final class ConnectionHold: @unchecked Sendable {
         queue.sync { held }
     }
 
-    /// Stops the listener and every connection it kept.
+    /// Stops the listener. No connection outlives its arrival, so none is left to stop.
     public func cancel() {
         queue.sync {
             listener.cancel()
-            for connection in open {
-                connection.cancel()
-            }
-            open = []
             ready = false
         }
     }
 
-    // Called on `queue`. The stub the red-first tests run against: it answers one byte and
-    // counts nothing.
+    deinit {
+        listener.cancel()
+    }
+
+    // Called on `queue`: count the connection, send it nothing, and close it.
     private func receive(_ connection: NWConnection) {
-        open.append(connection)
+        held += 1
         connection.start(queue: queue)
-        connection.send(content: Data([0x48]), completion: .contentProcessed { _ in
-            connection.cancel()
-        })
+        connection.cancel()
     }
 }
 
