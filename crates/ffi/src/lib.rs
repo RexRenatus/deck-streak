@@ -19,3 +19,4 @@ uniffi::setup_scaffolding!();
 
 pub mod allow_list;
 pub mod engine;
+pub mod face;
