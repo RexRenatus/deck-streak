@@ -9,7 +9,7 @@
   first-parent build number), ADR-335 (the client, and an upload as artifact publication), ADR-350
   (the Swift harness's seam this lane inherits), ADR-355 (one Apple job body and its callers) and
   ADR-292 (queued runs), under the owner ruling on the lane's secrets (#668).
-- **Status:** planned, built by the draft pull request that adds this file with its tests and
+- **Status:** delivered by the pull request that adds this file, with its tests and
   `docs/red-first/SPEC-352.md`. **Mutation band:** `S35200-S35299`.
 - **Base:** cut from `dev` at `4da5cfcadcfd407df49c1fb2967664e2f48e87dd`, which holds the Swift
   harness (#656) and the owner ruling on the lane's secrets (#668).
