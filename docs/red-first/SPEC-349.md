@@ -1,7 +1,7 @@
 # Red-first record: SPEC-349
 
 Every criterion's test was committed before the code it judges, against stubs that compile. A4
-and A9 run on the box and in CI's `hygiene` job; A1 and A2 run on the macOS host, in the
+and A9 run locally and in CI's `hygiene` job; A1 and A2 run on the macOS host, in the
 `card-isolation` job's `swift test`; A3 and A5 to A8 run only on the simulators, so each of their
 reds and greens is read from the pull request's own `apple-on-change` run, from the `harness` job's
 `CardProbe` step, which tests `iPhone 17` and then `iPad (A16)` in one invocation. A simulator

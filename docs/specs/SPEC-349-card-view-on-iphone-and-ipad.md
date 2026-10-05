@@ -7,7 +7,7 @@
   carries; ADR-335 (card faces in an isolated web view). It closes SEC01-F14 (peer connections from
   card script) and SEC01-F15 (the card frame's other channels) for iPhone and iPad.
 - **Schematic:** `docs/schematics/card-frame-channels.md` section 4, which this delivery amends with what its
-  suite measured.
+  suite measured, in an appended section 6.
 - **Status:** this pull request delivers R1 to R10, with its tests and
   `docs/red-first/SPEC-349.md`.
 
@@ -125,7 +125,7 @@ A9: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k tes
 | `.github/workflows/xcframework.yml` | CI | changed: the harness job runs `CardProbe`; the host job runs the package's tests and sweep |
 | `scripts/tests/test_ci_workflows.py` | CI | changed: A9 |
 | `scripts/mutation-rows.d/S34900-S34999.json` | mutation | added: rows on `CardWebViewFactory.swift` killed by A4 |
-| `docs/schematics/card-frame-channels.md` | docs | changed: section 4's measured values |
+| `docs/schematics/card-frame-channels.md` | docs | changed: section 6 appended, section 4's measured values |
 | `docs/decisions/ADR-360-card-view-on-iphone-and-ipad.md` | docs | added |
 | `docs/specs/SPEC-349-card-view-on-iphone-and-ipad.md` | docs | added: this SPEC |
 | `docs/red-first/SPEC-349.md` | docs | added |

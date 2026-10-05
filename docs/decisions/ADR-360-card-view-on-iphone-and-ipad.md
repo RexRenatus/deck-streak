@@ -101,6 +101,7 @@ A single-layer-off variant per layer shows the channels that layer alone holds. 
 channel of their own under the shipped configuration are declared (expected: L1 and L4, both made
 unreachable by L2) and must equal the measured set, so a layer that silently stopped mattering, or
 started mattering, is a red.
+Measured: the depth is L1, L4, L6 and L7 (the schematic's section 6).
 
 Chosen against:
 
