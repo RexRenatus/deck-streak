@@ -1182,6 +1182,7 @@ dependencies = [
  "anki_proto",
  "prost",
  "serde_json",
+ "url",
 ]
 
 [[package]]
