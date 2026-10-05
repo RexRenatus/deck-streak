@@ -1,9 +1,10 @@
 import ObjectiveC
 import WebKit
 
-/// The card view's seven layers (SPEC-349 R2, the schematic's section 4).
+/// The card view's layers: the seven of SPEC-349 R2 (the schematic's section 4), then L8, the
+/// peer-connection removal, and L9, the connection hold (SPEC-355 R3 and R4, section 7).
 public enum CardLayer: String, CaseIterable, Sendable {
-    case L1, L2, L3, L4, L5, L6, L7
+    case L1, L2, L3, L4, L5, L6, L7, L8, L9
 }
 
 /// Why the factory built no view.
