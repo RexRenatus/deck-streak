@@ -859,8 +859,15 @@ class TheCaddyInstall(Case):
         SPEC-353 R1)."""
         path = Path(pattern)
         if not path.is_absolute():
-            path = Path(os.path.abspath(importing)).parent / path
-        return Path(os.path.normpath(path))
+            path = Path(importing).absolute().parent / path
+        parts = []
+        for part in path.parts[1:]:
+            if part == "..":
+                if parts:
+                    parts.pop()
+            elif part != ".":
+                parts.append(part)
+        return Path(path.anchor, *parts)
 
     def site_imports(self, caddyfile):
         """The file each `import` line of a Caddyfile names, resolved as Caddy resolves it."""
