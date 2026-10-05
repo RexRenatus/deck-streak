@@ -27,6 +27,7 @@ from pathlib import Path
 from unittest import mock
 
 from _support import REPO, examined
+from test_one_static_library import umbrella_closure
 
 WORKFLOWS = REPO / ".github" / "workflows"
 PINNED = re.compile(r"^[\w.-]+/[\w.-]+(?:/[\w.-]+)*@[0-9a-f]{40}$")
@@ -588,6 +589,7 @@ class WorkflowsAreHardened(unittest.TestCase):
 
 APPLE_PATHS = [
     "crates/ffi/**",
+    "crates/engine-core/**",
     "ios/**",
     "Cargo.lock",
     "Cargo.toml",
@@ -625,6 +627,59 @@ def cargo_commands(text):
     ]
 
 
+# The one cargo command that may name a crate type: the umbrella's static library (SPEC-346 R3).
+UMBRELLA_STATICLIB = "-p deck-streak-ffi --lib --crate-type staticlib"
+
+
+def static_library_problems(texts):
+    """What the workflows get wrong about the app's one Rust static library (SPEC-346 R3), for
+    {workflow file name: its text}: a cargo command naming `--crate-type` that is not a `cargo
+    rustc` of the umbrella's static library, one outside xcframework.yml, and a `--crate-type` in a
+    file's non-comment lines that `cargo_commands` did not read. Returns the problems and the
+    commands judged."""
+    problems, judged = [], []
+    for name, text in sorted(texts.items()):
+        commands = [command for command in cargo_commands(text) if "--crate-type" in command]
+        spelled = sum(
+            line.count("--crate-type")
+            for line in text.splitlines()
+            if not line.lstrip().startswith("#")
+        )
+        seen = sum(command.count("--crate-type") for command in commands)
+        if spelled != seen:
+            problems.append(
+                f"{name}: {spelled} `--crate-type` in its text, {seen} in the cargo commands read"
+            )
+        for command in commands:
+            judged.append(command)
+            package = re.search(r"(?:-p|--package)\s+(\S+)", command)
+            built = package.group(1) if package else "no package"
+            if not command.startswith("cargo rustc ") or UMBRELLA_STATICLIB not in command:
+                problems.append(
+                    f"{name}: `{command}` builds {built}, not the umbrella's static library"
+                )
+            elif name != "xcframework.yml":
+                problems.append(f"{name}: `{command}` builds it outside xcframework.yml")
+    return problems, judged
+
+
+def watch_problems(paths, closure):
+    """Where the change caller's `crates/` globs and the umbrella's build closure differ (SPEC-346
+    R6): a crate the umbrella links that no glob watches, and a glob for a crate it does not link.
+    `closure` is `umbrella_closure`'s directories."""
+    globs = {path for path in paths if path.startswith("crates/")}
+    wanted = {f"{directory}/**" for directory in closure}
+    unwatched = [
+        f"{pattern}: the umbrella links it, and the change caller does not watch it"
+        for pattern in sorted(wanted - globs)
+    ]
+    unlinked = [
+        f"{pattern}: the change caller watches it, and the umbrella does not link it"
+        for pattern in sorted(globs - wanted)
+    ]
+    return unwatched + unlinked
+
+
 class TheAppleBuildRunsFromOneBody(unittest.TestCase):
     """SPEC-344: one job body, xcframework.yml, called by a change caller and a tag caller."""
 
@@ -645,6 +700,7 @@ class TheAppleBuildRunsFromOneBody(unittest.TestCase):
         paths = caller["on"]["pull_request"]["paths"]
         runs = (
             "crates/ffi/src/lib.rs",
+            "crates/engine-core/src/lib.rs",
             "ios/Harness/Info.plist",
             "Cargo.lock",
             "Cargo.toml",
@@ -688,6 +744,124 @@ class TheAppleBuildRunsFromOneBody(unittest.TestCase):
         plant = text + "      - run: cargo build -p deck-streak-ffi\n"
         unlocked = [c for c in cargo_commands(plant) if "--locked" not in c.split(" -- ")[0]]
         self.assertEqual(unlocked, ["cargo build -p deck-streak-ffi"])
+
+
+class TheAppHasOneRustStaticLibrary(unittest.TestCase):
+    """SPEC-346: the app links one Rust static library, the umbrella FFI crate. The workflows build
+    the umbrella alone as one, the Apple job proves its bindings hold one module and each slice of
+    its XCFramework one library, and the change caller watches every crate the umbrella links."""
+
+    def test_only_the_umbrella_is_built_as_a_static_library(self):
+        texts = {path.name: workflow_file_text(path) for path in workflow_files(WORKFLOWS)}
+        problems, judged = static_library_problems(texts)
+        self.assertEqual(problems, [])
+        for command in examined("cargo commands naming a crate type", judged):
+            self.assertIn(UMBRELLA_STATICLIB, command)
+        engine = "cargo rustc --locked -p deck-streak-engine-core --lib --crate-type staticlib"
+        plant = texts["xcframework.yml"] + f"      - run: {engine}\n"
+        planted, _judged = static_library_problems({**texts, "xcframework.yml": plant})
+        self.assertEqual(len(planted), 1, planted)
+        self.assertIn("builds deck-streak-engine-core,", planted[0])
+        unread = "      - run: echo --crate-type staticlib\n"
+        planted, _judged = static_library_problems({**texts, "release.yml": unread})
+        self.assertEqual(
+            planted, ["release.yml: 1 `--crate-type` in its text, 0 in the cargo commands read"]
+        )
+
+    def test_the_bindings_hold_one_module(self):
+        steps = load("xcframework.yml")["jobs"]["xcframework"]["steps"]
+        names = [step.get("name") for step in steps]
+        self.assertIn("the bindings hold one module", names)
+        after = names.index("the Swift bindings, in library mode over the device library")
+        self.assertEqual(names.index("the bindings hold one module"), after + 1)
+        modulemap = (
+            'module deck_streak_ffiFFI {\n    header "deck_streak_ffiFFI.h"\n    export *\n}\n'
+        )
+        umbrella = {
+            "bindings/deck_streak_ffi.swift": "",
+            "bindings/deck_streak_ffiFFI.h": "",
+            "bindings/module.modulemap": modulemap,
+        }
+        second_crate = {
+            **umbrella,
+            "bindings/deck_streak_xp.swift": "",
+            "bindings/deck_streak_xpFFI.h": "",
+        }
+        second_module = {
+            **umbrella,
+            "bindings/module.modulemap": modulemap + modulemap.replace("ffiFFI", "xpFFI"),
+        }
+        cases = [
+            ("the umbrella's three files", umbrella, (0, {"one-module": "pass"})),
+            ("a second crate's bindings", second_crate, (1, {"one-module": "fail"})),
+            ("a modulemap declaring two modules", second_module, (1, {"one-module": "fail"})),
+        ]
+        for case, plant, verdict in examined("planted bindings", cases):
+            self.assertEqual(run_output_check(steps[after + 1], plant), verdict, case)
+
+    def test_the_xcframework_holds_one_rust_library_per_slice(self):
+        steps = load("xcframework.yml")["jobs"]["xcframework"]["steps"]
+        names = [step.get("name") for step in steps]
+        self.assertIn("the XCFramework holds one Rust library", names)
+        after = names.index("the XCFramework, device and simulator slices")
+        self.assertEqual(names.index("the XCFramework holds one Rust library"), after + 1)
+        device = "DeckStreakFFI.xcframework/ios-arm64/libdeck_streak_ffi.a"
+        simulator = "DeckStreakFFI.xcframework/ios-arm64-simulator/libdeck_streak_ffi.a"
+        third = "DeckStreakFFI.xcframework/ios-arm64/libxp.a"
+        other = "DeckStreakFFI.xcframework/ios-arm64-simulator/libother.a"
+        failed = (1, {"one-library": "fail"})
+        cases = [
+            (
+                "the umbrella in each slice",
+                {device: "", simulator: ""},
+                (0, {"one-library": "pass"}),
+            ),
+            ("a third library", {device: "", simulator: "", third: ""}, failed),
+            ("another library in the simulator slice", {device: "", other: ""}, failed),
+            ("a single slice", {device: ""}, failed),
+        ]
+        for case, plant, verdict in examined("planted XCFrameworks", cases):
+            self.assertEqual(run_output_check(steps[after + 1], plant), verdict, case)
+
+    def test_the_change_caller_watches_every_crate_the_umbrella_links(self):
+        paths = load("apple-on-change.yml")["on"]["pull_request"]["paths"]
+        closure = umbrella_closure(REPO)
+        watched = sorted(path for path in paths if path.startswith("crates/"))
+        self.assertEqual(
+            watched,
+            [f"{directory}/**" for directory in closure],
+            f"the change caller watches {watched}, the closure is {closure}",
+        )
+        self.assertEqual(watch_problems(paths, examined("crates the umbrella links", closure)), [])
+        with tempfile.TemporaryDirectory() as scratch:
+            where = Path(scratch)
+            graph = {
+                "Cargo.toml": '[workspace]\nmembers = ["crates/*"]\n\n'
+                '[workspace.dependencies]\nb = { path = "crates/b" }\n',
+                "crates/ffi/Cargo.toml": '[package]\nname = "deck-streak-ffi"\n\n'
+                '[dependencies]\na = { path = "../a" }\n',
+                "crates/a/Cargo.toml": '[package]\nname = "a"\n\n'
+                "[dependencies]\nb.workspace = true\n",
+                "crates/b/Cargo.toml": '[package]\nname = "b"\n\n'
+                '[dev-dependencies]\nc = { path = "../c" }\n',
+                "crates/c/Cargo.toml": '[package]\nname = "c"\n',
+            }
+            for relative, text in graph.items():
+                (where / relative).parent.mkdir(parents=True, exist_ok=True)
+                (where / relative).write_text(text, encoding="utf-8")
+            planted = umbrella_closure(where)
+        self.assertEqual(planted, ["crates/a", "crates/b", "crates/ffi"])
+        self.assertEqual(
+            watch_problems(["crates/ffi/**"], planted),
+            [
+                "crates/a/**: the umbrella links it, and the change caller does not watch it",
+                "crates/b/**: the umbrella links it, and the change caller does not watch it",
+            ],
+        )
+        self.assertEqual(
+            watch_problems(["crates/a/**", "crates/b/**", "crates/c/**", "crates/ffi/**"], planted),
+            ["crates/c/**: the change caller watches it, and the umbrella does not link it"],
+        )
 
 
 def triggers(workflow):
@@ -2352,6 +2526,32 @@ def run_step(step, lockfile):
         )
         pairs = [line.split("=", 1) for line in output.read_text().splitlines() if "=" in line]
     return done.returncode, dict(pairs)
+
+
+def run_output_check(step, plant):
+    """Run an output check's own script under GitHub's default bash, in a directory holding
+    `plant`, {relative path: text}, with REPORT naming an empty report directory (SPEC-346 R5).
+    Returns its exit code and {report file: its text, stripped}."""
+    with tempfile.TemporaryDirectory() as scratch:
+        where = Path(scratch)
+        for relative, text in plant.items():
+            (where / relative).parent.mkdir(parents=True, exist_ok=True)
+            (where / relative).write_text(text, encoding="utf-8")
+        report = where / "report"
+        report.mkdir()
+        env = {"PATH": os.environ["PATH"], "REPORT": str(report)}
+        done = subprocess.run(
+            ["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", step["run"]],
+            cwd=where,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        written = {}
+        for each in sorted(report.iterdir()):
+            written[each.name] = each.read_text().strip()
+    return done.returncode, written
 
 
 # ------------------------------------------------------- the engine job (SPEC-038 A18, R14)
@@ -4359,6 +4559,46 @@ NOT_WORKFLOW_READS = {
             "test_ci_workflows",
             "run_step",
             "subprocess.run(['bash', '--noprofile', '--norc', '-e', '-o', 'pipefail', '-c', step['run']], cwd=where, env=env, capture_output=True, text=True, check=False)",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs an output check's own shell under bash in a scratch directory holding planted bindings or a planted XCFramework, and reads the report files it writes; verdicts, never a workflow",
+        ("test_ci_workflows", "run_output_check", "each.read_text()", 1),
+        (
+            "test_ci_workflows",
+            "run_output_check",
+            "subprocess.run(['bash', '--noprofile', '--norc', '-e', '-o', 'pipefail', '-c', step['run']], cwd=where, env=env, capture_output=True, text=True, check=False)",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls run_output_check, which runs an output check's shell over planted files and reads its report",
+        (
+            "test_ci_workflows",
+            "TheAppHasOneRustStaticLibrary.test_the_bindings_hold_one_module",
+            "run_output_check(steps[after + 1], plant)",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "TheAppHasOneRustStaticLibrary.test_the_xcframework_holds_one_rust_library_per_slice",
+            "run_output_check(steps[after + 1], plant)",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls umbrella_closure, which reads a workspace's Cargo manifests for the umbrella's build closure; manifests, never a workflow",
+        (
+            "test_ci_workflows",
+            "TheAppHasOneRustStaticLibrary.test_the_change_caller_watches_every_crate_the_umbrella_links",
+            "umbrella_closure(REPO)",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "TheAppHasOneRustStaticLibrary.test_the_change_caller_watches_every_crate_the_umbrella_links",
+            "umbrella_closure(where)",
             1,
         ),
     ),
