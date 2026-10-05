@@ -17,7 +17,6 @@ import subprocess
 import sys
 import tempfile
 import unittest
-import urllib.parse
 from pathlib import Path
 
 import _units
@@ -1047,7 +1046,10 @@ def cleaned_segments(spelling):
     """The path's segments as a decoding matcher reads them: every escape decoded, empty and `.`
     segments dropped, and each `..` removing the segment before it."""
     kept = []
-    for segment in urllib.parse.unquote(request_path(spelling)).split("/"):
+    decoded = re.sub(
+        r"%([0-9A-Fa-f]{2})", lambda match: chr(int(match.group(1), 16)), request_path(spelling)
+    )
+    for segment in decoded.split("/"):
         if segment in ("", "."):
             continue
         if segment == "..":
