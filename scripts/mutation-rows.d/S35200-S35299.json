@@ -1,0 +1,70 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S35200-THE-INTERNAL-APP-JOB-NAMES-ITS-ENVIRONMENT",
+        ".github/workflows/testflight-internal.yml",
+        "    environment: testflight-internal\n",
+        "",
+        "the internal lane's app job names its environment, whose rules hold the credential (SPEC-352 R7, A16)",
+        "test_testflight_workflows.TheTestflightLanes.test_only_the_app_job_names_an_environment_and_reads_a_credential"
+      ],
+      [
+        "S35201-NO-PULL-REQUEST-STARTS-THE-INTERNAL-LANE",
+        ".github/workflows/testflight-internal.yml",
+        "on:\n  workflow_dispatch:\n",
+        "on:\n  workflow_dispatch:\n  pull_request:\n",
+        "a dispatch alone starts the internal lane, never a pull request (SPEC-352 R1, A14)",
+        "test_testflight_workflows.TheTestflightLanes.test_each_lane_runs_on_its_one_trigger_and_nothing_a_pull_request_starts"
+      ],
+      [
+        "S35202-THE-PLAN-READS-THE-FULL-HISTORY",
+        ".github/workflows/testflight-internal.yml",
+        "          fetch-depth: '0'\n",
+        "          fetch-depth: '1'\n",
+        "the plan job checks out the full history it numbers the build from (SPEC-352 R3, A17)",
+        "test_testflight_workflows.TheTestflightLanes.test_the_lanes_are_hardened_pinned_uncached_and_queued"
+      ],
+      [
+        "S35203-CLEAN-ALWAYS-RUNS",
+        ".github/workflows/testflight-internal.yml",
+        "      - name: clean\n        if: ${{ always() }}\n",
+        "      - name: clean\n",
+        "the clean step runs whatever came before it (SPEC-352 R11, A17)",
+        "test_testflight_workflows.TheTestflightLanes.test_the_lanes_are_hardened_pinned_uncached_and_queued"
+      ],
+      [
+        "S35204-THE-TAGS-COMMIT-IS-ON-MAIN",
+        ".github/workflows/testflight-release.yml",
+        "git merge-base --is-ancestor \"$GITHUB_SHA\" origin/main; then",
+        "git merge-base --is-ancestor \"$GITHUB_SHA\" origin/dev; then",
+        "the release lane builds only a tag whose commit is on main, as the release workflow's guard says (SPEC-352 R4, A18)",
+        "test_testflight_workflows.TheTestflightLanes.test_the_two_app_jobs_differ_only_in_environment_and_lane"
+      ],
+      [
+        "S35205-NO-PERSISTED-CREDENTIALS",
+        ".github/workflows/testflight-internal.yml",
+        "        with:\n          persist-credentials: false\n",
+        "        with:\n          persist-credentials: true\n",
+        "the app job's checkout keeps no token on disk (SPEC-352 R13, A17)",
+        "test_testflight_workflows.TheTestflightLanes.test_the_lanes_are_hardened_pinned_uncached_and_queued"
+      ],
+      [
+        "S35206-NO-INHERITED-SECRETS",
+        ".github/workflows/testflight-internal.yml",
+        "    needs: plan\n    uses: $/.github/workflows/xcframework.yml\n",
+        "    needs: plan\n    uses: $/.github/workflows/xcframework.yml\n    secrets: inherit\n",
+        "the framework call passes no secret to the body it calls (SPEC-352 R6, R14, A21)",
+        "test_ci_workflows.WorkflowsAreHardened.test_the_lanes_credential_reads_are_admitted_and_no_other"
+      ],
+      [
+        "S35207-THE-LAUNCH-SCREEN",
+        "ios/Harness/Info.plist",
+        "\t<key>UILaunchScreen</key>\n\t<dict/>\n",
+        "",
+        "the app's property list keeps the launch screen an upload requires (SPEC-352 R19, A23)",
+        "test_ios_icon.WhatAnUploadNeeds.test_the_app_declares_what_an_upload_requires"
+      ]
+    ]
+  }
+}
