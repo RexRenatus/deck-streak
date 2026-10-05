@@ -5,7 +5,7 @@ that carries the rebuild fix (SPEC-055 A1, A2, A3 and A5; ADR-058).
   tag, the root manifest's `[patch]` entry on the upstream URL takes `anki` from the fork by a full
   commit id, and `anki_proto` from the same commit when it is patched too (SPEC-338 A14, ADR-348),
   every engine package in the lockfile comes from that commit, and `allow-git` names exactly the
-  fork and `ankitects/rust-url`.
+  fork, `ankitects/rust-url` and fsrs-rs (ADR-338; SPEC-342 A2).
 - A2 builds `deck-streak-ingest` twice in the workspace's own target directory and reads the second
   build's `Compiling`, `Dirty`, `Fresh` and `Finished` lines. With the fix, nothing is compiled or
   judged dirty, and cargo's own time stays inside R2's bound. Unpatched, the second build recompiles
@@ -48,6 +48,9 @@ ADR_058 = (
 UPSTREAM = "https://github.com/ankitects/anki.git"
 FORK = "https://github.com/RexRenatus/anki.git"
 RUST_URL = "https://github.com/ankitects/rust-url.git"
+#: The upstream scheduler's repository, whose development line is the only source of FSRS-7; only
+#: `deck-streak-fsrs7` takes a crate from it (ADR-338, ADR-353 D1).
+FSRS_RS = "https://github.com/open-spaced-repetition/fsrs-rs.git"
 #: The upstream release the engine runs (SPEC-055 R1).
 TAG = "26.09.3"
 #: The dependency line, in the one form its two readers parse: SPEC-022's A1 check and the report
@@ -90,7 +93,7 @@ def patched_rev(manifest):
 
 def pin_findings(manifest, lock, deny):
     """Why the engine is not the upstream tag patched by rev to a commit of the fork, with exactly
-    the fork and rust-url allowed; empty when it is."""
+    the fork, rust-url and fsrs-rs allowed; empty when it is."""
     found = []
     dependency = tomllib.loads(manifest).get("workspace", {}).get("dependencies", {}).get("anki")
     if DEPENDENCY not in manifest.splitlines():
@@ -144,8 +147,8 @@ def pin_findings(manifest, lock, deny):
         found.append(f"the lockfile records the patch as unused: {[p['name'] for p in unused]}")
     sources = tomllib.loads(deny).get("sources", {})
     allowed = sources.get("allow-git", [])
-    if sorted(allowed) != sorted([FORK, RUST_URL]):
-        found.append(f"allow-git is {allowed}, not exactly the fork and rust-url")
+    if sorted(allowed) != sorted([FORK, RUST_URL, FSRS_RS]):
+        found.append(f"allow-git is {allowed}, not exactly the fork, rust-url and fsrs-rs")
     if sources.get("unknown-git") != "deny":
         found.append(f"unknown-git is {sources.get('unknown-git')!r}, not 'deny'")
     return found
@@ -185,7 +188,7 @@ def planted_lock(sources=None, unused=""):
     return body + unused
 
 
-def planted_deny(allowed=(FORK, RUST_URL)):
+def planted_deny(allowed=(FORK, RUST_URL, FSRS_RS)):
     listed = ", ".join(f'"{url}"' for url in allowed)
     return f'[sources]\nunknown-git = "deny"\nallow-git = [{listed}]\n'
 
@@ -623,8 +626,17 @@ class TheEngineIsPatchedByRev(unittest.TestCase):
             "upstream still allowed": (
                 planted_manifest(),
                 planted_lock(),
-                planted_deny((UPSTREAM, FORK, RUST_URL)),
-                [f"allow-git is {[UPSTREAM, FORK, RUST_URL]}, not exactly the fork and rust-url"],
+                planted_deny((UPSTREAM, FORK, RUST_URL, FSRS_RS)),
+                [
+                    f"allow-git is {[UPSTREAM, FORK, RUST_URL, FSRS_RS]}, "
+                    "not exactly the fork, rust-url and fsrs-rs"
+                ],
+            ),
+            "fsrs-rs not allowed": (
+                planted_manifest(),
+                planted_lock(),
+                planted_deny((FORK, RUST_URL)),
+                [f"allow-git is {[FORK, RUST_URL]}, not exactly the fork, rust-url and fsrs-rs"],
             ),
             "a comment that names neither": (
                 planted_manifest(comment="# the fix"),

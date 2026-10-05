@@ -22,3 +22,6 @@ prost.workspace = true
 # ADR-029: the engine's database command is JSON; the core builds it from its own fixed reads
 # (ADR-356 D7).
 serde_json.workspace = true
+# ADR-358 D4: the URL parser for the sync login's endpoint guard (SPEC-347 R2); the engine's own
+# dependencies already bring it, so it adds no package.
+url.workspace = true

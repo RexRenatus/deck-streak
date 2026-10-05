@@ -62,10 +62,14 @@ unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 # ADR-022 and ADR-058: the maintainer's fork of Anki, whose commit the root manifest's `[patch]`
 # entry puts in place of the upstream tag the engine names, and the one fork the engine's own
-# manifest pins by revision (ankitects/rust-url, for percent-encoding-iri). Nothing else. While the
-# patch holds no crate comes from Anki's own repository, so it is not allowed: an unpatched engine
-# is refused by name.
+# manifest pins by revision (ankitects/rust-url, for percent-encoding-iri). ADR-338 and ADR-353 add
+# a third, fsrs-rs, below; nothing else. While the patch holds no crate comes from Anki's own
+# repository, so it is not allowed: an unpatched engine is refused by name.
 allow-git = [
     "https://github.com/RexRenatus/anki.git",
     "https://github.com/ankitects/rust-url.git",
+    # ADR-338, ADR-353 D1: the upstream scheduler's development line, the only source of FSRS-7,
+    # pinned by a full revision in [workspace.dependencies] and used by deck-streak-fsrs7 alone. The
+    # engine keeps the released crate from the registry.
+    "https://github.com/open-spaced-repetition/fsrs-rs.git",
 ]

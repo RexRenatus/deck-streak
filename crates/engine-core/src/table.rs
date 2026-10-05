@@ -110,7 +110,14 @@ impl Exempt {
 /// study calls (SPEC-345 M1, M4); a parity test holds each adapter's own table equal to its column.
 /// A pair one transport may make is not thereby admitted on the other: the native client neither
 /// closes the collection nor adds notes through this table (ADR-356 D2).
-pub const ORDINARY: [Ordinary; 17] = [
+pub const ORDINARY: [Ordinary; 18] = [
+    Ordinary {
+        service: 1,
+        method: 3,
+        name: "BackendSyncService.SyncLogin",
+        native: true,
+        web: false,
+    },
     Ordinary {
         service: 3,
         method: 0,
