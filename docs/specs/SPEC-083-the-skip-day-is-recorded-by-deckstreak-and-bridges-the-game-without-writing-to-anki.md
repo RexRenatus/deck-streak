@@ -1178,3 +1178,26 @@ manifest row are met by the file's absence; `crates/ingest/Cargo.toml` and `crat
 carry the pin instead. A6, A40 and A44 are unchanged in their words, and their take arms stay outside the red-first
 fence until E4c lands the undo arms. After the merge of dev into this branch, U15's `SEEDS` holds 42 statements, one
 more than dev's own: both sides added one.
+
+## 16. Amendments, 2026-10-05: the census names the engine core's dispatcher as a port (E4b)
+
+A24's criterion text is unchanged. What changed is the tree it walks: the client crates now run on the engine core, a
+client engine boundary that names the engine's crate, so the census's population gained a file that the engine's own port
+does not own. The census now carries a CLOSED list of `(path, owning SPEC)` pairs, each a client engine boundary that is
+a named port of its own SPEC:
+
+| path | owning SPEC |
+|---|---|
+| `crates/engine-core/src/dispatch.rs` | SPEC-345 |
+
+- Each listed path is asserted present in the census's sources; a failure names the path and its SPEC.
+- A file naming the engine's crate is refused unless it is the engine's own port (`crates/ingest/src/engine.rs`) or on the
+  list. Every other file naming it stays refused, a server crate's included.
+- The card-write and push checks apply to each listed file: any engine card write or push there is refused, with a message
+  naming the port and its SPEC.
+- The planted tree gains a client-crate file that is not on the list and names the engine's crate (refused), and a listed
+  port that calls `.update_card` (refused); the positive artifact is the engine's port plus the list.
+
+Chosen against: narrowing the population to the server crates, which would let a new server crate fall out of the census
+silently; admitting a whole crate, which would let any file in it name the engine's crate; and leaving the census red.
+The list is derived by search at the tree it is merged into, and a new entry is an amendment of its own.
