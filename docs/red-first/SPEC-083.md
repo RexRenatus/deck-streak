@@ -269,10 +269,12 @@ the cards the search selects, killed when `prop:due=0` is dropped), A48 at line 
 `moved_counts` is bypassed) and A53 at line 1506 (one backup kept, killed when `remove_older_backups` is bypassed).
 This fix round adds two killers, both MUTATION COVERAGE (green at the unplanted head, red under a plant), recorded
 here in prose so the fence stays as it was. `a_push_that_cannot_start_answers_push_failed_and_moves_nothing`
-(`skip_write.rs:1007`): plant `WriteSync::NotStarted(_) => {}` at the push arm of `skip_write.rs`, red at
+(`skip_write.rs:1011`): plant `WriteSync::NotStarted(_) => {}` at the push arm of `skip_write.rs`, red at
 `skip_write.rs:725` (`the take answers push_failed`), green in a5e7d7e8 on the unplanted source. The count assertion
-added to A5 (`a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows`, `skip_write.rs:902`, exactly two
-`meta` and two `finish` requests a take): plant an extra `write_sync` before the push, red at `skip_write.rs:900`
-(`left: 3, right: 2`, `meta`), green in c3176173 on the unplanted source; A26 and A6 still pass under that plant,
+added to A5 (`a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows`, through the helper
+`two_single_syncs` at `skip_write.rs:800`, exactly two `meta` and two `finish` requests a take): plant an extra
+`write_sync` before the push, red at `skip_write.rs:807` (`left: 3, right: 2`, `meta`), green in 4fe657af
+(c3176173 added the count in the test body, and the helper is the same assertion under clippy's line cap) on the
+unplanted source; A26 and A6 still pass under that plant,
 which is why the count belongs in A5. Mutation rows S08329 and S08330 prove each plant killed. The fence lines are
 not edited.
