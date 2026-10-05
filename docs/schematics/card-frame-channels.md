@@ -228,8 +228,10 @@ This section amends section 4 with what the iPhone and iPad delivery's planted s
 (SPEC-349 A5 to A7). It is appended, not edited in, so section 4 keeps the prediction each
 reading confirmed or corrected; where the two differ, this section is the record. The readings
 are the `harness` job's `CardProbe` step at 92877de4 (run 37270629304), and they were identical on
-the iPhone and the iPad simulator: 27 planted cards and 189 single-layer variants on each, and
-the card view reached nothing from any card on either.
+the iPhone and the iPad simulator: 27 planted cards and 189 single-layer variants on each. The
+card view reached no card's probe on either; for each followed link (`nav-self`, `nav-blank`) it
+opened one connection to the listener with no request read, which no layer of this delivery holds
+(#677).
 
 | channel | section 4 (blocked by / layer alone) | measured (blocked by / layer alone) | the reading that decided it |
 |---|---|---|---|

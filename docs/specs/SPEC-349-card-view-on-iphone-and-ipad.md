@@ -149,6 +149,11 @@ A9: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k tes
   connection. The `preconnect` pair measures it; if the card view connects, the iOS ADR records the
   residual, and a follow-up strips `link` elements from the card before it reaches the view
   (#664).
+- **A followed link opens one connection that no layer holds.** When the card follows a link
+  (`nav-self`, `nav-blank`), the card view opens one connection to the link's host with no request
+  read, and no layer of this delivery holds it. A5 counts the connections from the card view for
+  every planted card: those two may read at most one each, and every other card none. #677 tracks
+  the cure.
 - **`WKWebView` in a unit-test bundle loads nothing until its host app's run loop turns.** The probe
   tests run hosted by `CardProbeHost` and await each load's navigation delegate callback with a
   bounded expectation, never a sleep.

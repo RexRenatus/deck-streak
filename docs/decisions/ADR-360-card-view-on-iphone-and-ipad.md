@@ -121,6 +121,21 @@ Chosen against:
 - `loadFileURL` with read access to the media directory: rejected because it gives the card file
   reads of everything below that directory and a base URL for relative paths.
 
+### D8. A followed link's one connection is counted for every card and recorded as a residual
+
+A followed link (`nav-self`, `nav-blank`) opens one connection to the link's host with no request
+read, and no layer of this delivery holds it. A5 counts the connections from the card view for
+every planted card and prints each count: every card must read none except those two, which may
+read at most one each, asserted by name with the reading printed. #677 tracks the cure.
+Confirmation: A5's count, on the iPhone and the iPad simulator.
+
+Chosen against:
+
+- A5 asserting zero connections for every card now: rejected because it reads red, and no layer
+  of this delivery holds the connection, so a new layer is design work outside SPEC-349's
+  manifest (#677).
+- Leaving A5 blind to connections, as it was: rejected because it hides a measured channel.
+
 ## Decision Outcome
 
 The card view is built by one constructor with L1 to L7, its pure parts are tested and swept on the

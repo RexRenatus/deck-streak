@@ -372,6 +372,7 @@ final class PlantedCardTests: XCTestCase {
         var shippedReached: [String] = []
         var notLoaded: [String] = []
         var silent: Set<String> = []
+        var connections: [String: Int] = [:]
         for card in examined("planted cards", PLANTED) {
             let (reference, took) = try await reference(card, probe)
             if !reference.reached(card) {
@@ -379,6 +380,8 @@ final class PlantedCardTests: XCTestCase {
             }
             let (shipped, _) = try await probe.show(card, in: .shipped, window: window(took))
             print("shipped \(card.id): reached=\(shipped.reached(card)) \(shipped.summary)")
+            connections[card.id] = shipped.arrivals.connections
+            print("connections \(card.id): \(shipped.arrivals.connections)")
             if shipped.reached(card) {
                 shippedReached.append(card.id)
             }
@@ -388,6 +391,20 @@ final class PlantedCardTests: XCTestCase {
         }
         // The behaviour first: nothing reaches from the card view.
         XCTAssertEqual(shippedReached, [], "cards that reached their probe from the card view")
+        // Every card's connections from the card view are counted. A followed link opens one
+        // connection to its host with no request read, and no layer of this delivery holds it
+        // (ADR-360 D8, #677): `nav-self` and `nav-blank` may each read one, every other card none.
+        let residual = ["nav-self", "nav-blank"]
+        for name in residual {
+            let count = connections[name]
+            let reading = count.map { String($0) } ?? "none"
+            print("residual \(name): connections=\(reading)")
+            XCTAssertNotNil(count, "\(name) is not planted, so its connections were not counted")
+            XCTAssertLessThanOrEqual(count ?? 0, 1, "the connections the card view opened for \(name)")
+        }
+        XCTAssertEqual(
+            connections.filter { !residual.contains($0.key) && $0.value != 0 }, [:],
+            "the cards whose card view opened a connection, the residual aside")
         XCTAssertEqual(notLoaded, [], "cards the card view never finished loading, so nothing was judged")
         XCTAssertEqual(
             silent, Set(UNOBSERVABLE.keys),
