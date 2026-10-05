@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { EngineError } from '$lib/engine/client';
 import type { CardView, Head } from '$lib/engine/protocol';
-import { Review, step, type StudyClient } from './review';
+import { Review, step, type Effect, type Phase, type ReviewEvent, type StudyClient } from './review';
 
 // SPEC-350 R2, R7, R10, A11, A12; ADR-361. The review's machine shows a card's question, reveals
 // its answer, rates the shown card with the time since its question showed, and moves on; while a
@@ -24,6 +24,12 @@ function view(id: number, extra: Partial<CardView> = {}): CardView {
     undo: '',
     ...extra
   };
+}
+
+function examined<T>(what: string, items: T[]): T[] {
+  console.log(`examined ${items.length} ${what}`);
+  expect(items.length, `examined 0 ${what}: the population is empty`).toBeGreaterThan(0);
+  return items;
 }
 
 /** Lets every answer that is not held arrive. */
@@ -318,5 +324,96 @@ describe('the review', () => {
     review.act('easy');
     await review.settled();
     expect([review.phase, review.face, review.escaped, review.controls]).toEqual(['done', null, false, []]);
+  });
+
+  // Mutation coverage: each case holds behaviour the criteria's tests do not reach.
+  it('the table has these cells and no others', () => {
+    const cells: [phase: Phase, event: ReviewEvent, to: Phase, effect: Effect][] = [
+      ['loading', 'view', 'question', 'none'],
+      ['loading', 'empty', 'done', 'none'],
+      ['loading', 'refusal', 'refused', 'none'],
+      ['question', 'show-answer', 'answer', 'none'],
+      ['question', 'undo', 'busy', 'undo'],
+      ['question', 'bury', 'busy', 'bury'],
+      ['question', 'flag', 'busy', 'flag'],
+      ['answer', 'again', 'busy', 'rate'],
+      ['answer', 'hard', 'busy', 'rate'],
+      ['answer', 'good', 'busy', 'rate'],
+      ['answer', 'easy', 'busy', 'rate'],
+      ['answer', 'undo', 'busy', 'undo'],
+      ['answer', 'bury', 'busy', 'bury'],
+      ['answer', 'flag', 'busy', 'flag'],
+      ['busy', 'settled', 'loading', 'card'],
+      ['busy', 'not-shown', 'loading', 'card'],
+      ['busy', 'refusal', 'refused', 'none'],
+      ['refused', 'retry', 'loading', 'card']
+    ];
+    for (const [phase, event, to, effect] of cells) {
+      expect(step({ phase, side: 'question' }, event), `${phase} ${event}`).toMatchObject({
+        state: { phase: to },
+        effect
+      });
+    }
+    examined('cells', cells);
+    // a new card shows its question, whatever side the last one ended on
+    expect(step({ phase: 'loading', side: 'answer' }, 'view').state).toStrictEqual({ phase: 'question', side: 'question' });
+    // a flag's reply returns to the side the review was on
+    expect(step({ phase: 'busy', side: 'answer' }, 'flagged')).toStrictEqual({
+      state: { phase: 'answer', side: 'answer' },
+      effect: 'none'
+    });
+  });
+
+  it('a fresh review is loading its first card, and starting it says so once', async () => {
+    const client = new FakeClient([head(view(1))]);
+    let changes = 0;
+    const review = new Review(
+      async () => client,
+      () => 0,
+      () => changes++
+    );
+    expect([review.phase, review.side]).toEqual(['loading', 'question']);
+    review.start();
+    expect(changes).toBe(1);
+    await review.settled();
+  });
+
+  it('an undo before any card fires nothing', async () => {
+    const client = new FakeClient([head(view(1))]);
+    let changes = 0;
+    const review = new Review(
+      async () => client,
+      () => 0,
+      () => changes++
+    );
+    expect(() => review.act('undo')).not.toThrow();
+    expect([client.calls, changes]).toEqual([[], 0]);
+  });
+
+  it('a client that fails with no code is announced as an engine failure', async () => {
+    const review = new Review(
+      () => Promise.reject(new Error('the worker would not start')),
+      () => 0,
+      () => undefined
+    );
+    review.start();
+    await review.settled();
+    expect([review.phase, review.status]).toEqual(['refused', 'engine-failed']);
+  });
+
+  it('a card whose answer alone escapes the frame is refused only on its answer', async () => {
+    const escaping = view(1, {
+      answer: '<form><math><mtext></form><form><mglyph><style></math><link rel="preconnect" href="https://cards.example/">'
+    });
+    const review = new Review(
+      async () => new FakeClient([head(escaping)]),
+      () => 0,
+      () => undefined
+    );
+    review.start();
+    await review.settled();
+    expect([review.side, review.escaped, review.status]).toEqual(['question', false, null]);
+    review.act('show-answer');
+    expect([review.side, review.escaped, review.status]).toEqual(['answer', true, 'escaped']);
   });
 });

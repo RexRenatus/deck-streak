@@ -177,4 +177,47 @@ describe("the app's engine", () => {
     expect(built[0].options).toEqual({ type: 'module' });
     expect(made[2].sent).toEqual([{ id: 1, op: 'open', languages: ['zh-TW'] }]);
   });
+
+  // Mutation coverage: an open that is refused after the page was hidden, and after a newer start.
+  it('a refused open after the page was hidden rejects with the engine\'s error and spares a newer start', async () => {
+    class HeldWorker extends FakeWorker {
+      #answer: ((event: MessageEvent) => void)[] = [];
+      override postMessage(message: unknown) {
+        this.sent.push(message);
+      }
+      override addEventListener(_type: 'message', listener: (event: MessageEvent) => void) {
+        this.#answer.push(listener);
+      }
+      reply(data: unknown) {
+        for (const listener of this.#answer) listener(new MessageEvent('message', { data }));
+      }
+    }
+    const made: HeldWorker[] = [];
+    const page = new EventTarget();
+    const engine = new StudyEngine(
+      () => {
+        const worker = new HeldWorker();
+        made.push(worker);
+        return worker;
+      },
+      page,
+      ORIGIN,
+      () => ['en']
+    );
+    const first = engine.client();
+    const firstRefusal = expect(first).rejects.toMatchObject({ code: 'collection-busy' });
+    page.dispatchEvent(new Event('pagehide'));
+    // a newer start, while the first open is still unanswered
+    const second = engine.client();
+    expect(made).toHaveLength(2);
+    made[0].reply({ id: 1, ok: false, code: 'collection-busy', message: 'open refused' });
+    await firstRefusal;
+    await expect(first).rejects.toBeInstanceOf(EngineError);
+    // the refusal of the older start leaves the newer one standing
+    made[1].reply({ id: 1, ok: true, value: null });
+    const client = await second;
+    expect(await engine.client()).toBe(client);
+    expect(made).toHaveLength(2);
+    expect(made[1].terminated).toBe(false);
+  });
 });

@@ -19,7 +19,8 @@ describe('the study operations on the wire', () => {
       { id: 9, op: 'open' },
       { id: 10, op: 'open', languages: ['en'] },
       { id: 11, op: 'open', languages: ['zh-CN', 'en'] },
-      { id: 12, op: 'open', languages: undefined }
+      { id: 12, op: 'open', languages: undefined },
+      { id: 13, op: 'open', languages: Array(8).fill('en') }
     ];
     for (const request of admitted) {
       expect(parseRequest(request), JSON.stringify(request, (_, v) => String(v))).toEqual({ request });
@@ -58,6 +59,7 @@ describe('the study operations on the wire', () => {
       [{ id: 1, op: 'open', languages: ['english'] }, "open's languages is malformed"],
       [{ id: 1, op: 'open', languages: ['zh-CN-x'] }, "open's languages is malformed"],
       [{ id: 1, op: 'open', languages: Array(9).fill('en') }, "open's languages is malformed"],
+      [{ id: 1, op: 'open', languages: [['en']] }, "open's languages is malformed"],
       [{ id: 1, op: 'open', languages: ['en'], sql: 'x' }, 'open takes no sql']
     ];
     for (const [request, message] of refused) {

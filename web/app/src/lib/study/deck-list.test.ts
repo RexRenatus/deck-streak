@@ -147,4 +147,11 @@ describe('the deck list', () => {
       ''
     ]);
   });
+
+  // Mutation coverage: the way back to Today is a link of that name.
+  it('the deck list links back to Today', async () => {
+    render(DeckList, { client: async () => new FakeDecks([[]]), onopen: () => undefined });
+    await settle();
+    expect(screen.getByRole('link', { name: 'Back to Today' }).getAttribute('href')).toBe('/');
+  });
 });

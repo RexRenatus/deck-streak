@@ -151,4 +151,11 @@ describe('EngineClient', () => {
     await expect(stale).rejects.toMatchObject({ code: 'not-shown' });
     expect(client.waiting).toBe(0);
   });
+
+  // Mutation coverage: an open with no languages names none, as a key of its own or an undefined one.
+  it('an open with no languages sends none', () => {
+    const port = new FakePort();
+    new EngineClient(port, ORIGIN).open();
+    expect(port.sent).toStrictEqual([{ id: 1, op: 'open' }]);
+  });
 });

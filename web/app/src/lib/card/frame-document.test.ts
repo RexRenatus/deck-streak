@@ -126,4 +126,14 @@ describe('the frame document', () => {
     examined('admitted class lists', admitted);
     examined('refused class lists', outside);
   });
+
+  // Mutation coverage: a card with no classes opens a bare body, and a body tag the second parse
+  // reads, which the first read as a style's text, is refused on its attribute alone.
+  it('a card with no classes has a bare body, and a body the frame would give attributes is refused', () => {
+    expect(frameDocument('<p>x</p>', '.a{}')).toStrictEqual({
+      srcdoc: `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${POLICY}"><meta http-equiv="x-dns-prefetch-control" content="off"><style>.a{}</style></head><body><p>x</p></body></html>`
+    });
+    const html = '<form><math><mtext></form><form><mglyph><style></math><body class="x">';
+    expect(frameDocument(html, '.a{}')).toStrictEqual({ refused: 'escaped' });
+  });
 });

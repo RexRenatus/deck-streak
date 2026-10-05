@@ -441,4 +441,57 @@ describe('the review screen', () => {
     shown.unmount();
     expect([held.released, cancelled]).toEqual([1, [1]]);
   });
+
+  // Mutation coverage: each case holds behaviour the criteria's tests do not reach.
+  it('the screen is headed Review', async () => {
+    render(ReviewScreen, { client: async () => new FakeClient([head(view(1))]) });
+    await settle();
+    expect(screen.getByRole('heading', { level: 1, name: 'Review' })).not.toBeNull();
+  });
+
+  it('the one gamepad the page already had leaves, and the lock goes with it', async () => {
+    withGamepads();
+    const only = pad(2);
+    gamepads = [null, only];
+    render(ReviewScreen, { client: async () => new FakeClient([head(view(1))]) });
+    await settle();
+    expect([lock.requests, frames.size]).toEqual([1, 1]);
+    const held = lock.grant();
+    await settle();
+
+    connectPad(only, 'gamepaddisconnected');
+    expect([held.released, cancelled]).toEqual([1, [1]]);
+  });
+
+  it('a gamepad that left is read afresh: a button it holds fires nothing on its next frame', async () => {
+    withGamepads();
+    const left = pad(0);
+    const stays = pad(1);
+    gamepads = [left, stays];
+    render(ReviewScreen, { client: async () => new FakeClient([head(view(1))]) });
+    await settle();
+    runFrame();
+
+    left.buttons[0].pressed = true;
+    connectPad(left, 'gamepaddisconnected');
+    runFrame();
+    expect(body().title).toBe("The card's question");
+    // and the next press is read as one
+    left.buttons[0].pressed = false;
+    runFrame();
+    left.buttons[0].pressed = true;
+    runFrame();
+    expect(body().title).toBe("The card's answer");
+  });
+
+  it('a pointer after a Tab gives the focus the frame takes back', async () => {
+    render(ReviewScreen, { client: async () => new FakeClient([head(view(1))]) });
+    await settle();
+    await fireEvent.keyDown(window, { key: 'Tab' });
+    await fireEvent.pointerDown(window);
+    frame().focus();
+    window.dispatchEvent(new FocusEvent('blur'));
+    await settle();
+    expect(document.activeElement).toBe(review());
+  });
 });
