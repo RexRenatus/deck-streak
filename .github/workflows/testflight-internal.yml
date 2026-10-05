@@ -1,0 +1,27 @@
+name: testflight-internal
+
+# The internal TestFlight lane (SPEC-352 R1, R3 and R16; ADR-363 D2, under ADR-344): a dispatch on
+# dev, and nothing else, starts it, and its plan job reads the full history on Linux. No pull
+# request starts it, its token is read-only, and every action is pinned by its full commit SHA.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# The lane's runs on one ref take one group and wait their turn, never cancelled and never replaced
+# (ADR-292).
+concurrency:
+  group: testflight-internal-${{ github.ref }}
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: '0'
+          persist-credentials: false

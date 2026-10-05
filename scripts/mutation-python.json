@@ -9,6 +9,10 @@
     "dir": "scripts/tests",
     "modules": []
   },
+  "scripts/ios_lane.py": {
+    "dir": "scripts/tests",
+    "modules": []
+  },
   "scripts/memory_scope.py": {
     "dir": "scripts/tests",
     "modules": [

@@ -1,0 +1,47 @@
+name: testflight-release
+
+# The release TestFlight lane (SPEC-352 R1, R4 and R16; ADR-363 D2 and D7): a push of a SemVer tag,
+# and nothing else, starts it, and its plan job first runs release.yml's own tag guard on the full
+# history, refusing a tag that is not SemVer, a lightweight tag and a commit that is not on main. No
+# pull request starts it, its token is read-only, and every action is pinned by its full commit SHA.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: read
+
+# One tag's runs take one group and wait their turn, never cancelled and never replaced, as
+# release.yml's runs do (ADR-292).
+concurrency:
+  group: testflight-release-${{ github.ref }}
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: '0'
+          persist-credentials: false
+      - name: the tag is SemVer, annotated, and its commit is on main
+        run: |
+          set -euo pipefail
+          tag="$GITHUB_REF_NAME"
+          if ! [[ "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "the tag $tag is not a SemVer release tag" >&2
+            exit 1
+          fi
+          if [ "$(git cat-file -t "refs/tags/$tag")" != tag ]; then
+            echo "the tag $tag is a lightweight tag; a release is an annotated tag" >&2
+            exit 1
+          fi
+          git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "the commit of $tag is not on main" >&2
+            exit 1
+          fi
