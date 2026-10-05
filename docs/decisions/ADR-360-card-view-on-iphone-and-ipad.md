@@ -24,7 +24,7 @@ it is proved.
 - The pure parts are testable on the macOS host with `swift test` and swept by Swift mutants; the
   web-view parts are proved on one iPhone and one iPad simulator.
 
-## Decisions
+## Decisions, and the alternatives each was chosen against
 
 ### D1. Seven layers
 

@@ -127,6 +127,7 @@ A9: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k tes
 | `scripts/mutation-rows.d/S34900-S34999.json` | mutation | added: rows on `CardWebViewFactory.swift` killed by A4 |
 | `docs/schematics/card-frame-channels.md` | docs | changed: section 4's measured values |
 | `docs/decisions/ADR-360-card-view-on-iphone-and-ipad.md` | docs | added |
+| `docs/specs/SPEC-349-card-view-on-iphone-and-ipad.md` | docs | added: this SPEC |
 | `docs/red-first/SPEC-349.md` | docs | added |
 | `changelog.d/card-view-ios-349.md` | docs | added |
 
