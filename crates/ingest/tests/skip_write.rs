@@ -13,15 +13,18 @@
 mod support;
 
 use std::fmt::Write as _;
+use std::io::{self, ErrorKind};
+use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
-use std::thread;
+use std::thread::{self, JoinHandle};
 use std::time::{Duration, SystemTime};
 
 use deck_streak_ingest::engine::{CollectionWrite, RslibEngine};
 use deck_streak_ingest::reader::is_study_event;
-use deck_streak_ingest::settings::SkipSearch;
+use deck_streak_ingest::settings::{SkipSearch, SYNC_PASSWORD};
 use deck_streak_ingest::skip::{
     skip_spec, FailReason, SkipId, SkipState, SkipStore, SKIP_MAX_CARDS, SKIP_SPREAD_MAX_DAYS,
     SKIP_SPREAD_MIN_DAYS,
@@ -34,6 +37,7 @@ use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
 use deck_streak_ingest::write_class_stop::{ClassStop, StopSetter, WriteClassStop};
 use deck_streak_kernel::{Db, Environment, Hour, StudyDay, StudyDayRule, UtcMillis, UtcOffset};
 use sha2::{Digest, Sha256};
+use sqlx::Row as _;
 use support::recording::{local_change, CardRow, Recording};
 use support::synthetic::{self, SkipCard, SkipSetup, SKIP_CARDS, SKIP_FLOOR};
 use support::{Fixture, SyncServer};
@@ -478,6 +482,93 @@ struct Scene {
     store: SkipStore,
     stop: WriteClassStop,
     rule: StudyDayRule,
+    /// The relay between the recording layer and the server, when the scene was built flaky.
+    flaky: Option<Flaky>,
+}
+
+/// A relay between the recording layer and the engine's sync server. Once armed it carries the
+/// first connection that follows (a take's login) and drops every later one before the server sees
+/// it, so an exchange that started then fails: the converge's `Unknown` outcome (SPEC-083 R21).
+struct Flaky {
+    endpoint: String,
+    armed: Arc<AtomicBool>,
+    stop: Arc<AtomicBool>,
+    thread: Option<JoinHandle<()>>,
+}
+
+impl Flaky {
+    fn start(upstream: &str) -> Self {
+        let upstream: SocketAddr = upstream
+            .strip_prefix("http://")
+            .and_then(|rest| rest.strip_suffix('/'))
+            .and_then(|address| address.parse().ok())
+            .unwrap_or_else(|| panic!("{upstream} is not http://<loopback address>/"));
+        let listener = TcpListener::bind("127.0.0.1:0").expect("a loopback port");
+        listener
+            .set_nonblocking(true)
+            .expect("a non-blocking listener");
+        let endpoint = format!("http://{}/", listener.local_addr().expect("its address"));
+        let armed = Arc::new(AtomicBool::new(false));
+        let stop = Arc::new(AtomicBool::new(false));
+        let (is_armed, is_stopped) = (Arc::clone(&armed), Arc::clone(&stop));
+        let thread = thread::spawn(move || {
+            let later = AtomicUsize::new(0);
+            while !is_stopped.load(Ordering::SeqCst) {
+                match listener.accept() {
+                    Ok((client, _)) => {
+                        if is_armed.load(Ordering::SeqCst)
+                            && later.fetch_add(1, Ordering::SeqCst) >= 1
+                        {
+                            drop(client);
+                        } else {
+                            thread::spawn(move || relay_connection(client, upstream));
+                        }
+                    }
+                    Err(error) if error.kind() == ErrorKind::WouldBlock => {
+                        thread::sleep(Duration::from_millis(5));
+                    }
+                    Err(_) => return,
+                }
+            }
+        });
+        Self {
+            endpoint,
+            armed,
+            stop,
+            thread: Some(thread),
+        }
+    }
+
+    fn arm(&self) {
+        self.armed.store(true, Ordering::SeqCst);
+    }
+}
+
+impl Drop for Flaky {
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::SeqCst);
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
+    }
+}
+
+/// Carries one connection to `upstream` and back until the server closes it.
+fn relay_connection(client: TcpStream, upstream: SocketAddr) {
+    let Ok(server) = TcpStream::connect(upstream) else {
+        return;
+    };
+    let (Ok(mut from_client), Ok(mut to_server)) = (client.try_clone(), server.try_clone()) else {
+        return;
+    };
+    let sending = thread::spawn(move || {
+        let _ = io::copy(&mut from_client, &mut to_server);
+        let _ = to_server.shutdown(Shutdown::Write);
+    });
+    let (mut from_server, mut to_client) = (server, client);
+    let _ = io::copy(&mut from_server, &mut to_client);
+    let _ = to_client.shutdown(Shutdown::Both);
+    let _ = sending.join();
 }
 
 impl Scene {
@@ -485,6 +576,15 @@ impl Scene {
         test: Option<&str>,
         seeded: Option<(&[(i64, SkipCard)], SkipSetup)>,
         rule: StudyDayRule,
+    ) -> Self {
+        Self::build_in(test, seeded, rule, false)
+    }
+
+    fn build_in(
+        test: Option<&str>,
+        seeded: Option<(&[(i64, SkipCard)], SkipSetup)>,
+        rule: StudyDayRule,
+        flaky: bool,
     ) -> Self {
         let runtime = support::runtime();
         let scratch = tempfile::tempdir().expect("a scratch directory");
@@ -498,9 +598,17 @@ impl Scene {
             let _ = support::server_collection(&base);
             SyncServer::start(test, &base)
         });
-        let recording = server
+        let flaky = server
             .as_ref()
-            .map(|server| Recording::start(server.endpoint()));
+            .filter(|_| flaky)
+            .map(|server| Flaky::start(server.endpoint()));
+        let recording = server.as_ref().map(|server| {
+            Recording::start(
+                flaky
+                    .as_ref()
+                    .map_or(server.endpoint(), |flaky| &flaky.endpoint),
+            )
+        });
         let fixture = Fixture::new(recording.as_ref().map_or(ENDPOINT, Recording::endpoint));
         let db = runtime.block_on(fixture.db());
         Self {
@@ -513,12 +621,26 @@ impl Scene {
             fixture,
             db,
             rule,
+            flaky,
         }
     }
 
     /// The server holds `cards` built with `setup`, and the owner's sync pulls them.
     fn served(test: &str, cards: &[(i64, SkipCard)], setup: SkipSetup, rule: StudyDayRule) -> Self {
         let scene = Self::build(Some(test), Some((cards, setup)), rule);
+        scene.owner_sync();
+        scene.clear();
+        scene
+    }
+
+    /// As [`Scene::served`], with the relay in front of the server that [`Flaky::arm`] turns on.
+    fn served_flaky(
+        test: &str,
+        cards: &[(i64, SkipCard)],
+        setup: SkipSetup,
+        rule: StudyDayRule,
+    ) -> Self {
+        let scene = Self::build_in(Some(test), Some((cards, setup)), rule, true);
         scene.owner_sync();
         scene.clear();
         scene
@@ -1042,6 +1164,116 @@ fn a_push_that_cannot_start_answers_push_failed_and_moves_nothing() {
     assert_eq!(scene.pushed(), Vec::new(), "no request carried a card");
 }
 
+/// A25's converge arm (SPEC-083 R21): a converge sync that cannot start fails the take with
+/// `converge_failed` and nothing moves. The sync password is replaced after the preview, so the
+/// converge's login is refused by the server before any exchange.
+#[test]
+fn a_converge_that_cannot_start_answers_converge_failed_and_moves_nothing() {
+    const TEST: &str = "a_converge_that_cannot_start_answers_converge_failed_and_moves_nothing";
+    if support::role().as_deref() == Some(support::SERVER) {
+        return support::serve();
+    }
+    let _zone = zone(UTC);
+    let scene = Scene::served(TEST, &SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
+    let digest = Some(scene.digest());
+    std::fs::write(
+        scene
+            .fixture
+            .scratch()
+            .join("credentials")
+            .join(SYNC_PASSWORD),
+        "a password the server refuses\n",
+    )
+    .expect("the sync password is replaced");
+    let before = scene.bytes();
+    let (skip, answer) = scene.take(digest, no_hooks());
+    assert!(
+        matches!(
+            answer,
+            TakeAnswer::Failed {
+                reason: FailReason::ConvergeFailed,
+                ..
+            }
+        ),
+        "a converge that cannot start answers converge_failed: {answer:?}"
+    );
+    assert_eq!(
+        scene.state(skip),
+        SkipState::Failed(FailReason::ConvergeFailed),
+        "the take is recorded as failed at the converge"
+    );
+    scene.wrote_nothing(skip, &answer, FailReason::ConvergeFailed, &before);
+    assert_eq!(scene.pushed(), Vec::new(), "no request carried a card");
+    no_snapshot_and_no_backup(&scene, skip);
+}
+
+/// A25's converge arm, the other outcome (SPEC-083 R21): a converge whose exchange starts and then
+/// fails is as fatal as one that never started. The relay lets the login through and drops the
+/// sync's own connections.
+#[test]
+fn a_converge_whose_exchange_fails_answers_converge_failed_and_moves_nothing() {
+    const TEST: &str = "a_converge_whose_exchange_fails_answers_converge_failed_and_moves_nothing";
+    if support::role().as_deref() == Some(support::SERVER) {
+        return support::serve();
+    }
+    let _zone = zone(UTC);
+    let scene = Scene::served_flaky(TEST, &SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
+    let digest = Some(scene.digest());
+    scene.flaky.as_ref().expect("the relay").arm();
+    let before = scene.bytes();
+    let (skip, answer) = scene.take(digest, no_hooks());
+    assert!(
+        matches!(
+            answer,
+            TakeAnswer::Failed {
+                reason: FailReason::ConvergeFailed,
+                ..
+            }
+        ),
+        "a converge whose exchange fails answers converge_failed: {answer:?}"
+    );
+    assert_eq!(
+        scene.state(skip),
+        SkipState::Failed(FailReason::ConvergeFailed),
+        "the take is recorded as failed at the converge"
+    );
+    scene.wrote_nothing(skip, &answer, FailReason::ConvergeFailed, &before);
+    assert_eq!(scene.pushed(), Vec::new(), "no request carried a card");
+    no_snapshot_and_no_backup(&scene, skip);
+}
+
+/// A5's smallest take (SPEC-083 R21): one card to move is a take, not an empty one. It is
+/// accepted with that card, the push carries it, and its prior state is recorded.
+#[test]
+fn a_take_that_moves_exactly_one_card_writes_and_pushes_it() {
+    const TEST: &str = "a_take_that_moves_exactly_one_card_writes_and_pushes_it";
+    if support::role().as_deref() == Some(support::SERVER) {
+        return support::serve();
+    }
+    let _zone = zone(UTC);
+    let one = synthetic::skip_due_reviews(1);
+    let moved = synthetic::skip_moved(&one);
+    assert_eq!(moved.len(), 1, "the fixture moves exactly one card");
+    let scene = Scene::served(TEST, &one, SkipSetup::UTC, StudyDayRule::default());
+    let digest = Some(scene.digest());
+    let (skip, answer) = scene.take(digest, no_hooks());
+    assert_eq!(
+        answer,
+        TakeAnswer::Accepted {
+            moved: moved.clone(),
+            left_alone: Vec::new(),
+            read_back: Vec::new()
+        },
+        "the one card moved"
+    );
+    let pushed = examined("pushed card(s)", scene.pushed());
+    let ids: Vec<i64> = pushed.iter().map(|card| card.id).collect();
+    assert_eq!(ids, moved, "the push carries the one card");
+    let snapshot = scene.snapshot(skip);
+    assert_eq!(snapshot.len(), 1, "one snapshot row");
+    assert_eq!(snapshot[0].0, moved[0], "the row is the moved card's");
+}
+
 #[test]
 fn the_prior_state_is_recorded_before_any_card_changes() {
     const TEST: &str = "the_prior_state_is_recorded_before_any_card_changes";
@@ -1094,6 +1326,84 @@ fn the_prior_state_is_recorded_before_any_card_changes() {
     );
     assert_eq!(scene.snapshot(skip), rows, "the rows stay after the stop");
     assert_eq!(scene.pushed(), Vec::new(), "no request carried a card");
+}
+
+/// A29's whole record (SPEC-083 R22, R26): every `prior_*` column of a moved card's snapshot row is
+/// the card as the engine held it before the take (read from the private copy), and every `left_*`
+/// column is the card as the take left it (the card the push carried).
+#[test]
+fn the_snapshot_holds_every_prior_and_left_column_of_each_moved_card() {
+    const TEST: &str = "the_snapshot_holds_every_prior_and_left_column_of_each_moved_card";
+    if support::role().as_deref() == Some(support::SERVER) {
+        return support::serve();
+    }
+    let _zone = zone(UTC);
+    let scene = Scene::served(TEST, &SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
+    let moved = synthetic::skip_moved(&SKIP_CARDS);
+    let search = format!(
+        "cid:{}",
+        moved
+            .iter()
+            .map(i64::to_string)
+            .collect::<Vec<_>>()
+            .join(",")
+    );
+    let prior = examined(
+        "card(s) read before the take",
+        RslibEngine
+            .due_cards(&scene.copy(), &search)
+            .expect("the private copy's cards are read"),
+    );
+    let digest = Some(scene.digest());
+    let (skip, answer) = scene.take(digest, no_hooks());
+    assert!(matches!(answer, TakeAnswer::Accepted { .. }), "{answer:?}");
+    let left = examined("card(s) the push carried", scene.pushed());
+    let rows = scene
+        .runtime
+        .block_on(
+            sqlx::query("SELECT * FROM skip_card_snapshot WHERE skip_id = ?1 ORDER BY card_id")
+                .bind(skip.get())
+                .fetch_all(scene.db.reader()),
+        )
+        .expect("the snapshot is read");
+    assert_eq!(rows.len(), moved.len(), "one snapshot row a moved card");
+    assert_eq!(prior.len(), moved.len(), "every moved card was read");
+    assert_eq!(left.len(), moved.len(), "every moved card was pushed");
+    for ((row, before), after) in rows.iter().zip(&prior).zip(&left) {
+        assert_eq!(row.get::<i64, _>("card_id"), before.id);
+        assert_eq!(before.id, after.id);
+        for (column, expected) in [
+            ("prior_due", before.due),
+            ("prior_queue", before.queue),
+            ("prior_type", before.kind),
+            ("prior_interval", before.interval),
+            ("prior_ease_factor", before.factor),
+            ("prior_original_deck_id", before.original_deck),
+            ("prior_original_due", before.original_due),
+        ] {
+            assert_eq!(
+                row.get::<i64, _>(column),
+                expected,
+                "card {}: {column} is the card before the take",
+                before.id
+            );
+        }
+        for (column, expected) in [
+            ("left_due", after.due),
+            ("left_queue", after.queue),
+            ("left_type", after.ctype),
+            ("left_interval", after.ivl),
+            ("left_ease_factor", after.factor),
+            ("left_mtime", after.mtime),
+        ] {
+            assert_eq!(
+                row.get::<Option<i64>, _>(column),
+                Some(expected),
+                "card {}: {column} is the card as the take left it",
+                before.id
+            );
+        }
+    }
 }
 
 #[test]
@@ -1550,7 +1860,11 @@ fn the_backup_sits_beside_the_copy_owner_only_and_one_is_kept() {
         vec!["skip-backup-999.anki2".to_owned()]
     );
 
-    // A take whose check passes replaces it: one backup, owner-only, named for its skip.
+    // A take whose check passes replaces it: one backup, owner-only, named for its skip. The
+    // private copy is widened first, because a copy carries its source's mode, so the backup's
+    // 0600 holds only where the take itself sets it.
+    std::fs::set_permissions(scene.copy(), std::fs::Permissions::from_mode(0o644))
+        .expect("the private copy is widened");
     let digest = Some(scene.digest());
     let (skip, answer) = scene.take(digest, no_hooks());
     assert!(matches!(answer, TakeAnswer::Accepted { .. }), "{answer:?}");
@@ -1763,8 +2077,8 @@ fn the_skip_refuses_a_zone_the_service_does_not_pin() {
     // Only the pin reads TZ or opens a zone directory, and nothing names the host's zone file.
     let mut in_pin = false;
     let mut reads = Vec::new();
-    // The module's own tests come last (clippy's items_after_test_module refuses code after
-    // them) and one of them hands a child process its zone, so the scan ends where they begin.
+    // The module's tests sit in `src/skip_write/tests.rs` behind its one `#[cfg(test)]`, and one
+    // of them hands a child process its zone, so the scan ends at that attribute.
     for (number, line) in SKIP_WRITE_SOURCE
         .lines()
         .enumerate()
