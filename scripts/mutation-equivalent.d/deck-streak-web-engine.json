@@ -183,7 +183,7 @@
     {
       "file": "crates/web-engine/src/wasm.rs",
       "mutant": "replace undo -> Result<(), JsValue> with Ok(())",
-      "anchor": "pub fn undo() -> Result<(), JsValue> {\n    call(service::COLLECTION, 8, &[]).map(|_| ())\n}",
+      "anchor": "pub fn undo() -> Result<(), JsValue> {\n    call(service::COLLECTION, 8, &[])?;\n    SHOWN.with(|kept| *kept.borrow_mut() = None);\n    Ok(())\n}",
       "reason": "The mutated function `undo` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
       "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
