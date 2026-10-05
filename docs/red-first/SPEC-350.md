@@ -61,6 +61,34 @@ A7: red at cb6f38a3: AssertionError: expected { id: 1, ok: false, …(2) } to de
 A7: green at ab7d5aea
 A8: red at cb6f38a3: TypeError: client.decks is not a function
 A8: green at ab7d5aea
+A9: red at 7bf7e931: AssertionError: expected [ [ 'en', [ 'en' ] ], …(6) ] to deeply equal [ [ 'en', [ 'en' ] ], …(6) ]
+A9: green at 8456c54d
+A10: red at 7bf7e931: AssertionError: expected {} to deeply equal { 'src/lib/study/engine.ts': 1 }
+A10: green at 8456c54d
+A11: red at 7bf7e931: AssertionError: expected [ 'busy', …(1) ] to deeply equal [ 'busy', [ 'card', 'rate 1 3 0' ] ]
+A11: green at 8456c54d
+A12: red at 7bf7e931: AssertionError: expected [] to deeply equal [ 'show-answer', 'bury', 'flag' ]
+A12: green at 8456c54d
+A13: red at a5575873: AssertionError: expected [ 'Again', 'Hard', 'Good', 'Easy' ] to deeply equal [ 'Again <1m', 'Hard <6m', …(2) ]
+A13: green at 6861ca7f
+A14: red at 7bf7e931: AssertionError: expected [ 'again', 'hard', 'good', …(5) ] to deeply equal []
+A14: green at 8456c54d
+A15: red at 7bf7e931: AssertionError: expected +0 to be 1
+A15: green at 8456c54d
+A16: red at a5575873: AssertionError: expected [ 1, +0 ] to deeply equal [ +0, +0 ]
+A16: green at 6861ca7f
+A17: red at a5575873: AssertionError: expected { …(1) } to deeply equal {}
+A17: green at 6861ca7f
+A18: red at 4485f65a: AssertionError: card card1: expected [] to deeply equal [ 'class' ]
+A18: green at f223b824
+A19: red at 3528ac25: AssertionError: expected [ '/', '/about', '/badges', …(10) ] to deeply equal [ '/', '/about', '/badges', …(12) ]
+A19: green at 965ef25f
+A20: red at 2b3bda11: AssertionError: tests-study/study.spec.ts does not exist: expected false to be true
+A20: green at a511f110
+A21: not red: test_ci_workflows.py runs in CI only, so CI's hygiene job decides the test by name, and the mutation-rows job's kills of S35030 and S35031, each the job without one of its new steps, are its red evidence
+A22: red at 2b3bda11: AssertionError: Tuples differ: (0, {'deck_streak_web_engine_bg.wasm': b'\x00asm\x01\x00\x00\x00'}) != (1, {})
+A22: green at a511f110
+A23: not red: its two tests stand on dev, named as they are and unchanged by this delivery, which must keep them green; both pass at a511f110
 ```
 
 Two tests decide no criterion and were still seen red first. The engine's English default (R4's
@@ -69,3 +97,51 @@ Two tests decide no criterion and were still seen red first. The engine's Englis
 ["en"]`) and green at 4ffc0357. The boundary census of the six new exports (its `OWED` list, grown
 insert-only), `crates/web-engine/tests/boundary.rs`, was red at f6784c3f (`fn deck_tree(` occurs 0
 times, not once) and green at d1afa325.
+
+## What A9 to A23 disclosed
+
+- **A11 and A14 were each red by their second test.** Each has two lines in the fence. A11's first
+  test, `review.test.ts` "the review shows, reveals, rates and moves on", and A14's first,
+  `input.test.ts` "every source reaches one action", passed at their stubs at 7bf7e931. They are
+  recorded here as passed at the stub, and were not re-shaped to read red. Each criterion's red is
+  its second test's: "a gesture during a request fires nothing" (the stub rated again on each
+  press) and "the key switch silences single-character keys" (the stub silenced nothing).
+- **A13, A16 and A17 were red over the screens' stubs at a5575873.** A13's buttons were named by
+  their grade alone; A16's screen held the lock's condition without the gamepad; A17's screen held
+  one planted `answer(` call, which the census found and the green removed. At the same red, the
+  three `deck-list.test.ts` tests (`Unable to find an accessible element with the role "status"`,
+  the stub showing its loading text only) and three `review-screen.test.ts` tests ("the review
+  screen shows the card, reveals it and rates it", "keys, the gamepad and a tap on the card reach
+  the review", and "a refusal, a card the frame refuses and a done deck are announced", each failing
+  for the stub's buttons or its adapter) were red too; they decide no criterion. At the green
+  6861ca7f, `deck-list.test.ts`'s retry click changed from an awaited `fireEvent.click` to
+  `.click()` and then `flushSync()`, because the awaited click passed through the list's transient
+  loading state; no assertion changed.
+- **A19 is named, unchanged.** The two study routes joined the route table at 965ef25f, and the
+  audit's coverage test, which holds the table equal to the screens on disk, read red at 3528ac25
+  with the two route pages on disk and the table not yet grown.
+- **A20 holds the study suite's shape; the suite itself runs in CI.** The Playwright suite
+  `web/app/tests-study/study.spec.ts` serves the app's build with the module staged beside it, so
+  it runs in CI's `web-engine` job, after that job builds the module, and is read there by name.
+  A20's test, which runs everywhere, holds the suite to the review loop's seven steps, both
+  engines, the persistent profiles, the seed through the build's own Worker, and the audit of both
+  screens.
+- **A21 is decided in CI.** Its test module runs in CI only. Its red evidence is the
+  mutation-rows job's two kills: S35030 and S35031 each remove one of the web-engine job's new
+  steps, and the test refuses each.
+- **Tests that decide no criterion.** `refusal.test.ts` "each refusal names its own message in
+  every locale" was red at 7bf7e931 (`expected { …(8) } to deeply equal { …(8) }`, every status
+  mapped to one message) and green at 8456c54d. `review.test.ts` "the frame keeps its card while a
+  request is in flight" (`expected null to deeply equal { view: { id: 1n, …(7) }, …(1) }`) and
+  `input.test.ts` "the device's storage is the browser's, or none where reading it throws"
+  (`expected undefined to be MemoryStorage{ items: Map{} }`) were each red at 72edab88 and green at
+  d8806e1d.
+- **Mutation coverage, green when written.** `engine.test.ts` "a refused open starts again, and
+  the app's engine is the engine's module Worker" was added at the green 8456c54d;
+  `review-screen.test.ts` "a gamepad the page already had holds the lock once the page is visible,
+  and closing releases it" was green at a5575873; and `src/routes/study.test.ts` was green at
+  3528ac25. Each holds behaviour its criterion's test does not reach, so a mutant there dies.
+- **R6 and R7 as amended.** SPEC-350 section 10 records them: a collection with no deck shows a
+  message only, held by `deck-list.test.ts` "a collection with no deck says so", and a done deck
+  shows its designed end with a link back to the deck list and never navigates on its own, held by
+  `review-screen.test.ts` "a refusal, a card the frame refuses and a done deck are announced".
