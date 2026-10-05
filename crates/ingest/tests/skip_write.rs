@@ -795,6 +795,22 @@ fn pushed_no_other_change(recording: &Recording) {
     }
 }
 
+/// Two single normal syncs with no retry (A5): each normal sync opens with one `meta` request and
+/// closes with one `finish`, so a take is exactly two of each, the converge and the push.
+fn two_single_syncs(recording: &Recording, fsrs: bool) {
+    for method in ["meta", "finish"] {
+        let sent = recording
+            .requests()
+            .iter()
+            .filter(|request| request.method == method)
+            .count();
+        assert_eq!(
+            sent, 2,
+            "fsrs {fsrs}: one converge sync and one push sync, never a retry: {method}"
+        );
+    }
+}
+
 #[test]
 fn a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows() {
     const TEST: &str = "a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows";
@@ -889,19 +905,7 @@ fn a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows() {
             "fsrs {fsrs}: one review-log row of type 4 with ease 0 a card"
         );
         pushed_no_other_change(recording);
-        // Two single normal syncs with no retry: each normal sync opens with one `meta` request
-        // and closes with one `finish`, so a take is exactly two of each, the converge and the push.
-        for method in ["meta", "finish"] {
-            let sent = recording
-                .requests()
-                .iter()
-                .filter(|request| request.method == method)
-                .count();
-            assert_eq!(
-                sent, 2,
-                "fsrs {fsrs}: one converge sync and one push sync, never a retry: {method}"
-            );
-        }
+        two_single_syncs(recording, fsrs);
         assert!(
             scene.bytes() == before,
             "fsrs {fsrs}: the private copy's bytes are unchanged"
