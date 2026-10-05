@@ -35,4 +35,18 @@ describe('the card frame', () => {
     expect(marked[0].getAttribute('data-card-refused')).toBe('escaped');
     expect(marked[0].getAttribute('sandbox')).toBe('');
   });
+
+  // SPEC-350 R7, A18; ADR-361. The card's classes reach the frame's body through its document, and
+  // the frame itself gains nothing: the same three attributes, the same empty sandbox.
+  it("the card's classes reach the frame body and the frame gains no attribute", () => {
+    const shown = render(CardFrame, { html: CARD, css: CSS, title: 'The card', classes: 'card card2 nightMode night_mode' });
+    const frames = [...shown.container.querySelectorAll('iframe')];
+
+    expect(frames).toHaveLength(1);
+    const [frame] = frames;
+    const body = new DOMParser().parseFromString(frame.getAttribute('srcdoc') ?? '', 'text/html').body;
+    expect(body.getAttribute('class')).toBe('card card2 nightMode night_mode');
+    expect(frame.getAttributeNames().sort()).toEqual(['sandbox', 'srcdoc', 'title']);
+    expect(frame.getAttribute('sandbox')).toBe('');
+  });
 });
