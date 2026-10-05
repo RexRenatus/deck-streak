@@ -2,7 +2,9 @@
 
 use anki::backend::{Backend, init_backend};
 
+use crate::face::{self, Face, Side};
 use crate::login_guard;
+use crate::media::Reader;
 use crate::table::{Decision, Transport, decide};
 
 /// The one read of a card the page may make: its scheduling fields, by id (moved from the web
@@ -111,5 +113,28 @@ impl Dispatcher {
         self.backend
             .run_db_command_bytes(request.to_string().as_bytes())
             .map_err(|error| Refusal::Engine { error })
+    }
+
+    /// The media folder of the collection this engine last opened, as its open request named it
+    /// (stubbed: none).
+    #[must_use]
+    pub fn media_folder(&self) -> Option<String> {
+        None
+    }
+
+    /// Completes `card`'s face for `side`, as the engine's own reviewer completes it, reading its
+    /// media through `media` (SPEC-348 R2). `autoplay` is the client's wish.
+    ///
+    /// # Errors
+    ///
+    /// [`Refusal::Engine`] when the engine cannot read or render the card.
+    pub fn face(
+        &self,
+        card: i64,
+        side: Side,
+        autoplay: bool,
+        media: &dyn Reader,
+    ) -> Result<Face, Refusal> {
+        face::complete(&self.backend, card, side, autoplay, media)
     }
 }
