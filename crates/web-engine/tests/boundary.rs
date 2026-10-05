@@ -22,7 +22,7 @@ fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
 /// Each boundary function the census reads: its name, why it owes what it owes, and the
 /// statements its body holds for it. A statement is compared with every blank removed, so a
 /// reflow by rustfmt changes nothing.
-const OWED: [(&str, &str, &[&str]); 7] = [
+const OWED: [(&str, &str, &[&str]); 13] = [
     (
         "create_backend",
         "starts the core's dispatcher on the web transport and keeps it",
@@ -75,6 +75,62 @@ const OWED: [(&str, &str, &[&str]); 7] = [
         "snapshot",
         "answers one card's row from the core's fixed read",
         &["query(Read::CardSnapshot(card_id))?", ".pointer(\"/0\")"],
+    ),
+    // The review's exports (SPEC-350 R1 to R3): each reaches the engine through the dispatcher,
+    // and a rating, bury or flag reaches only the card the review showed.
+    (
+        "deck_tree",
+        "reads the deck tree with today's counts through the dispatcher and answers its decks",
+        &[
+            "call(service::DECKS, 4, &request.encode_to_vec())?",
+            "root.children.iter().map(deck_json)",
+        ],
+    ),
+    (
+        "set_current_deck",
+        "makes the chosen deck current through the dispatcher",
+        &["call(service::DECKS, 22, &DeckId { did: deck }.encode_to_vec())"],
+    ),
+    (
+        "current_card",
+        "reads the queue's head, renders it, strips it, labels it and keeps it",
+        &[
+            "call(service::SCHEDULER, 3, &request.encode_to_vec())?",
+            "call(service::CARD_RENDERING, 6,",
+            "partial_render: false",
+            "call(service::CARD_RENDERING, 9,",
+            "call(service::SCHEDULER, 24, &states.encode_to_vec())?",
+            "call(service::COLLECTION, 7, &[])?",
+            "*kept.borrow_mut() = Some(Shown {",
+        ],
+    ),
+    (
+        "rate",
+        "answers only the kept card, with the states kept when it was shown",
+        &[
+            "Answer::from_wire(rating)",
+            "shown_for(kept.borrow().as_ref(), card)",
+            "answer.pick(states.again, states.hard, states.good, states.easy)",
+            "call(service::SCHEDULER, 4, &request.encode_to_vec())?",
+        ],
+    ),
+    (
+        "bury",
+        "buries only the kept card, the user's bury of that card alone",
+        &[
+            "shown_for(kept.borrow().as_ref(), card)",
+            "bury_of(card)",
+            "call(service::SCHEDULER, 14, &request.encode_to_vec())?",
+        ],
+    ),
+    (
+        "flag",
+        "toggles red on only the kept card",
+        &[
+            "shown_for(kept.borrow().as_ref(), card)",
+            "toggled_red(kept.flag)",
+            "call(service::CARDS, 4,",
+        ],
     ),
 ];
 
