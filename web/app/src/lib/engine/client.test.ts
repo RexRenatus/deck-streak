@@ -110,4 +110,45 @@ describe('EngineClient', () => {
     await expect(second).resolves.toBe(1002n);
     expect(client.waiting).toBe(0);
   });
+
+  it('the client posts each study operation and settles its answer', async () => {
+    // SPEC-350 A8: the review's operations, each with its own request, each settled by its reply
+    const port = new FakePort();
+    const client = new EngineClient(port, ORIGIN);
+    const calls = [
+      client.open(['ja', 'en']),
+      client.decks(),
+      client.study(9007199254740993n),
+      client.card(),
+      client.rate(1001n, 3, 1500),
+      client.bury(1001n),
+      client.flag(1001n)
+    ];
+
+    expect(port.sent).toEqual([
+      { id: 1, op: 'open', languages: ['ja', 'en'] },
+      { id: 2, op: 'decks' },
+      { id: 3, op: 'study', deck: 9007199254740993n },
+      { id: 4, op: 'card' },
+      { id: 5, op: 'rate', card: 1001n, rating: 3, ms: 1500 },
+      { id: 6, op: 'bury', card: 1001n },
+      { id: 7, op: 'flag', card: 1001n }
+    ]);
+    const values = [
+      { existed: true, notes: 2 },
+      [{ id: 1n, name: 'Default', level: 1, new: 2, learning: 0, review: 0, children: [] }],
+      null,
+      { counts: { new: 0, learning: 0, review: 0 }, card: null },
+      null,
+      null,
+      1
+    ];
+    values.forEach((value, at) => port.reply({ id: at + 1, ok: true, value }));
+    await expect(Promise.all(calls)).resolves.toEqual(values);
+    // a stale card's refusal settles as an EngineError with its code
+    const stale = client.rate(1002n, 3, 0);
+    port.reply({ id: 8, ok: false, code: 'not-shown', message: 'not-shown: the card is not the one on screen' });
+    await expect(stale).rejects.toMatchObject({ code: 'not-shown' });
+    expect(client.waiting).toBe(0);
+  });
 });
