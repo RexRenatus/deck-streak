@@ -132,7 +132,7 @@ ALERT_KEYS = {
         "CapabilityBoundingSet",
         "ExecStart",
         "Group",
-        # The host's identity endpoint denied (SPEC-354 R1), bounded by PAGING_VALUES' rule.
+        # The host's identity endpoint denied (SPEC-354 R1); A1's census table pins its value.
         "IPAddressDeny",
         "LoadCredential",
         "LockPersonality",
