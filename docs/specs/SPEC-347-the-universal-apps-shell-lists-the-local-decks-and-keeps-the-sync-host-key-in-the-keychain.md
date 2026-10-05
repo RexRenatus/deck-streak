@@ -197,11 +197,28 @@ R14. **What the lane receives (#634).** The scheme `DeckStreak`, its Release arc
 | A3 | The guard admits `https` endpoints and `http` to `127.0.0.1` and `[::1]`, and refuses, each by its rule: an absent and an empty endpoint, an unparseable one, `http` to a named host, `http` to a non-loopback IP literal, `http://127.0.0.1@example.invalid/`, a URL carrying a username or a password, and a non-HTTP scheme; it prints the endpoints examined. Red first: over a guard that admits everything, the absent endpoint is admitted | `cargo test -p deck-streak-engine-core --test login_guard -- --exact a3_the_guard_admits_https_and_loopback_http_alone` |
 | A4 | Through the dispatcher, (1,3) with the endpoint `ftp://127.0.0.1:1/` returns a `BackendError` of kind `INVALID_INPUT` carrying the guard's sentence, and the sentence names neither the endpoint, the user nor the password. Red first: over the stub guard that admits every endpoint, the engine's own client refuses the scheme with another kind, and no request leaves the process | `cargo test -p deck-streak-engine-core --test login_guard -- --exact a4_a_refused_login_never_reaches_the_engine_and_names_no_secret` |
 | A5 | The (1,3) pair is in both the adapter's list and the core's native column, and #623's parity test still holds | `cargo test -p deck-streak-engine-core --test parity` |
+| A6 | `Requests.syncLogin` writes the user, the password and the endpoint as fields 1, 2 and 3, byte for byte, an empty endpoint included | `swift test --package-path ios/HarnessWire --filter HarnessWireTests.RequestBytesTests/test_a6_the_login_request_writes_user_password_and_endpoint` (`harness-wire`, step "the codec's tests, on the host") |
+| A7 | `Responses.syncAuth` reads the host key past unknown fields, and `Responses.engineMessage` reads a `BackendError`'s message and kind | `swift test --package-path ios/HarnessWire --filter HarnessWireTests.ResponseDecodingTests/test_a7_the_host_key_and_the_engines_message_decode` (same step) |
+| A8 | On a fresh install the deck list shows exactly one row, the engine's default deck, on the iPhone and on the iPad | `xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakUITests/ShellFlowTests/test_a8_a_fresh_install_lists_the_engines_default_deck` (`harness`, step "the app's tests, Debug, on the iPhone and then the iPad") |
+| A9 | A login to the placeholder endpoint shows the engine's message on the sheet and stays signed out, with no stored item | the same shape, `-only-testing:DeckStreakUITests/ShellFlowTests/test_a9_a_refused_login_shows_the_engines_message_and_stays_signed_out` |
+| A10 | The host key round-trips through the store under the configured endpoint and user, reads as absent under another endpoint, carries the accessibility and synchronizable attributes of R9, and sign-out deletes it | the same shape, `-only-testing:DeckStreakTests/CredentialStoreTests/test_a10_the_host_key_round_trips_and_sign_out_deletes_it` |
+| A11 | On the iPad the deck list and the detail show side by side; on the iPhone the deck list shows first and choosing a deck shows the detail | the same shape, `-only-testing:DeckStreakUITests/ShellFlowTests/test_a11_the_split_view_follows_the_size_class` |
+| A12 | R11 over the tree, and planted trees breaking each reading refused by its rule's name | `python3 -m unittest discover -s scripts/tests -p test_ios_thin_swift.py -k test_every_swift_file_keeps_its_role_its_doors_and_its_budget` |
+| A13 | R12 over the tree, and planted trees breaking each rule refused by name | `python3 -m unittest discover -s scripts/tests -p test_ios_app_tree.py -k test_the_app_tree_carries_the_seam_and_keeps_the_credential_in_the_keychain` |
+| A14 | The `harness` job generates both specs, runs the app's tests on both simulators and archives the app for a generic iOS device with code signing off, all after the harness's steps and before the report; no other job, workflow or runner changes | `python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_app_is_generated_tested_and_archived_in_the_harness_job` |
+| A15 | The Release archive builds, and its executable's required-reason imports are all declared | `xcodebuild archive -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Release -destination generic/platform=iOS -archivePath "$RUNNER_TEMP/DeckStreak.xcarchive" CODE_SIGNING_ALLOWED=NO` (`harness`, step "the app, archived unsigned for a device") |
 
 A1 and A2 are red over the lists without (1,3). A3 and A4 are red over a stub guard that admits
 every endpoint, wired where the guard will sit and committed alone before the guard. A5 is #623's
 parity test, run unchanged: it adds no test, so it has no red of its own, and rows 00 and 01 each
 break it.
+
+A6 and A7 are red over stubs that write and read nothing; A8 to A11 over an app whose first
+commit opens no collection and stores nothing; A12 and A13 over a census whose positive artifact
+(the register's files, the app's plist) is not yet written. The macOS reds are read from the pull
+request's own run (ADR-350). A14's red comes from CI with its red commit pushed alone first. A15
+is a build, not a test: if the test-selection probe flags it, it leaves the fence and its run's
+lines are quoted in the pull request's body, in the same commit, disclosed.
 
 ```acceptance
 A1: cargo test -p deck-streak-ffi --test login -- --exact a1_a_login_through_the_adapter_returns_the_servers_host_key
@@ -209,6 +226,16 @@ A2: cargo test -p deck-streak-ffi --test login -- --exact a2_a_wrong_password_is
 A3: cargo test -p deck-streak-engine-core --test login_guard -- --exact a3_the_guard_admits_https_and_loopback_http_alone
 A4: cargo test -p deck-streak-engine-core --test login_guard -- --exact a4_a_refused_login_never_reaches_the_engine_and_names_no_secret
 A5: cargo test -p deck-streak-engine-core --test parity
+A6: swift test --package-path ios/HarnessWire --filter HarnessWireTests.RequestBytesTests/test_a6_the_login_request_writes_user_password_and_endpoint
+A7: swift test --package-path ios/HarnessWire --filter HarnessWireTests.ResponseDecodingTests/test_a7_the_host_key_and_the_engines_message_decode
+A8: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakUITests/ShellFlowTests/test_a8_a_fresh_install_lists_the_engines_default_deck
+A9: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakUITests/ShellFlowTests/test_a9_a_refused_login_shows_the_engines_message_and_stays_signed_out
+A10: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakTests/CredentialStoreTests/test_a10_the_host_key_round_trips_and_sign_out_deletes_it
+A11: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakUITests/ShellFlowTests/test_a11_the_split_view_follows_the_size_class
+A12: python3 -m unittest discover -s scripts/tests -p test_ios_thin_swift.py -k test_every_swift_file_keeps_its_role_its_doors_and_its_budget
+A13: python3 -m unittest discover -s scripts/tests -p test_ios_app_tree.py -k test_the_app_tree_carries_the_seam_and_keeps_the_credential_in_the_keychain
+A14: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_app_is_generated_tested_and_archived_in_the_harness_job
+A15: xcodebuild archive -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Release -destination generic/platform=iOS -archivePath "$RUNNER_TEMP/DeckStreak.xcarchive" CODE_SIGNING_ALLOWED=NO
 ```
 
 ## 4. File manifest
@@ -315,25 +342,7 @@ Part 2:
 
 ## 7. Delivered by the next pull request
 
-| id | criterion | delivered by |
-|---|---|---|
-| A6 | `Requests.syncLogin` writes the user, the password and the endpoint as fields 1, 2 and 3, byte for byte, an empty endpoint included | `swift test --package-path ios/HarnessWire --filter HarnessWireTests.RequestBytesTests/test_a6_the_login_request_writes_user_password_and_endpoint` (`harness-wire`, step "the codec's tests, on the host") |
-| A7 | `Responses.syncAuth` reads the host key past unknown fields, and `Responses.engineMessage` reads a `BackendError`'s message and kind | `swift test --package-path ios/HarnessWire --filter HarnessWireTests.ResponseDecodingTests/test_a7_the_host_key_and_the_engines_message_decode` (same step) |
-| A8 | On a fresh install the deck list shows exactly one row, the engine's default deck, on the iPhone and on the iPad | `xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM" -destination "platform=iOS Simulator,name=$IPAD_SIM" -disable-concurrent-destination-testing -only-testing:DeckStreakUITests/ShellFlowTests/test_a8_a_fresh_install_lists_the_engines_default_deck` (`harness`, step "the app's tests, Debug, on the iPhone and then the iPad") |
-| A9 | A login to the placeholder endpoint shows the engine's message on the sheet and stays signed out, with no stored item | the same shape, `-only-testing:DeckStreakUITests/ShellFlowTests/test_a9_a_refused_login_shows_the_engines_message_and_stays_signed_out` |
-| A10 | The host key round-trips through the store under the configured endpoint and user, reads as absent under another endpoint, carries the accessibility and synchronizable attributes of R9, and sign-out deletes it | the same shape, `-only-testing:DeckStreakTests/CredentialStoreTests/test_a10_the_host_key_round_trips_and_sign_out_deletes_it` |
-| A11 | On the iPad the deck list and the detail show side by side; on the iPhone the deck list shows first and choosing a deck shows the detail | the same shape, `-only-testing:DeckStreakUITests/ShellFlowTests/test_a11_the_split_view_follows_the_size_class` |
-| A12 | R11 over the tree, and planted trees breaking each reading refused by its rule's name | `python3 -m unittest discover -s scripts/tests -p test_ios_thin_swift.py -k test_every_swift_file_keeps_its_role_its_doors_and_its_budget` |
-| A13 | R12 over the tree, and planted trees breaking each rule refused by name | `python3 -m unittest discover -s scripts/tests -p test_ios_app_tree.py -k test_the_app_tree_carries_the_seam_and_keeps_the_credential_in_the_keychain` |
-| A14 | The `harness` job generates both specs, runs the app's tests on both simulators and archives the app for a generic iOS device with code signing off, all after the harness's steps and before the report; no other job, workflow or runner changes | `python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_app_is_generated_tested_and_archived_in_the_harness_job` |
-| A15 | The Release archive builds, and its executable's required-reason imports are all declared | `xcodebuild archive -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Release -destination generic/platform=iOS -archivePath "$RUNNER_TEMP/DeckStreak.xcarchive" CODE_SIGNING_ALLOWED=NO` (`harness`, step "the app, archived unsigned for a device") |
-
-A6 and A7 are red over stubs that write and read nothing; A8 to A11 over an app whose first
-commit opens no collection and stores nothing; A12 and A13 over a census whose positive artifact
-(the register's files, the app's plist) is not yet written. The macOS reds are read from the pull
-request's own run (ADR-350). A14's red comes from CI with its red commit pushed alone first. A15
-is a build, not a test: if the test-selection probe flags it, it leaves the fence and its run's
-lines are quoted in the pull request's body, in the same commit, disclosed.
+Part 2's criteria, A6 to A15, now sit in section 3 with their lines in its fence (section 10).
 
 ## 8. Mutation rows (band `S34700-S34799`)
 
@@ -394,3 +403,66 @@ once is VOID, so the build fixes each find after the code is written.
 - `scripts/tests/test_ios_app_tree.py`: unchanged in this part; delivered by part 2
 - `scripts/tests/test_ci_workflows.py`: unchanged in this part; delivered by part 2
 - `.github/workflows/xcframework.yml`: unchanged in this part; delivered by part 2
+
+## 10. Amendments: what part 2 delivers
+
+Part 2 delivers R4 to R14, and section 7's rows A6 to A15 now sit in section 3, with their lines
+in its fence. It was cut at `dev` `1a3bdcf3`. Seven points move from the text above; ADR-358 D9 and
+D10 decide the two that change a requirement, and the rest are named here.
+
+- **R11's isolation role.** The register gains the role `isolation`, for the card view's sources
+  under `ios/CardIsolation/Sources/` (SPEC-348 R17). Like the harness's files, they are bound by
+  the closed register and the forbidden names alone, with no door and no budget. Each package
+  manifest is `manifest`; every file of a test target (`ios/*/Tests/`, `ios/HarnessTests/`,
+  `ios/HarnessUITests/`, `ios/CardProbeTests/`, `ios/AppTests/`, `ios/AppUITests/`) is `test`; the
+  harness's sources and the card probe's host are `harness`; the codec's two sources are `wire`.
+  The register is read over the files git tracks, so a file on disk that git does not track is
+  never judged.
+- **R11's network names (ADR-358 D9).** `import Network`, `NWConnection` and `NWConnectionGroup`
+  are admitted only in `isolation` files and in `test` files under `ios/CardIsolation/Tests/` and
+  `ios/CardProbeTests/`, where the card probe's listeners hold them, and the census prints each
+  admission by its file and its name. Those names stay refused in every other file, and every other
+  name R11 forbids (`URLSession`, `URLRequest`, `SQLite3`, `sqlite3_`, `UserDefaults`,
+  `@AppStorage`, `NSUbiquitousKeyValueStore`) stays refused in every file, admitted ones included.
+- **R13's generate line (ADR-358 D10).** `xcodegen generate --spec ios/app.yml` is the first line
+  of the new step "the app's tests, Debug, on the iPhone and then the iPad", which runs after the
+  harness's steps. The step "the project, generated" keeps its one line, so the TestFlight lanes'
+  copy of the harness's steps (SPEC-352 A20) stays equal and no lane file changes. A14 holds the
+  step and its one line.
+- **The destinations.** A8 to A11's `-destination` strings carry `,OS=$SIM_OS`, as every
+  destination in the `harness` job does.
+- **The fragment.** This part's entry is `changelog.d/ios-app-shell-347.md`, a new file, because
+  `changelog.d/ios-app-347.md` is part 1's.
+- **The seam's values and the app's property list.** `DS_SYNC_USER`'s placeholder is
+  `invalid-sync-user`. Besides R5's seven keys, `ios/App/Info.plist` carries the harness's launch
+  screen, scene manifest and both orientation keys, so the app fills the screen on the iPhone and
+  the iPad. The app has no asset catalog.
+- **The lane.** Section 5 leaves the scheme move and the product icon to #634; SPEC-352's section 5
+  names them #625's. This part does neither, and leaves both texts as they are.
+
+Files this part changes that section 4 does not name:
+
+- `docs/decisions/ADR-358-the-app-shell-its-own-project-one-keychain-item-and-the-endpoint-guard-in-the-core.md`: D9 and D10
+- `docs/schematics/app-shell-login-and-deck-list.md`: section 8, the app's two steps
+- `docs/red-first/SPEC-347.md`: part 2's lines
+- `changelog.d/ios-app-shell-347.md`: part 2's entry
+
+`scripts/tests/test_ci_workflows.py`'s new class reads the workflow through `load`, as its
+neighbours do, so it lists nothing in `NOT_WORKFLOW_READS`.
+
+Part 1's rows, which this part leaves as they are:
+
+- `crates/ffi/src/allow_list.rs`: unchanged in this part; delivered by part 1
+- `crates/ffi/Cargo.toml`: unchanged in this part; delivered by part 1
+- `crates/ffi/tests/login.rs`: unchanged in this part; delivered by part 1
+- `crates/ffi/tests/support/sync_server.rs`: unchanged in this part; delivered by part 1
+- `crates/engine-core/src/table.rs`: unchanged in this part; delivered by part 1
+- `crates/engine-core/src/login_guard.rs`: unchanged in this part; delivered by part 1
+- `crates/engine-core/src/dispatch.rs`: unchanged in this part; delivered by part 1
+- `crates/engine-core/src/lib.rs`: unchanged in this part; delivered by part 1
+- `crates/engine-core/Cargo.toml`: unchanged in this part; delivered by part 1
+- `crates/engine-core/tests/login_guard.rs`: unchanged in this part; delivered by part 1
+- `crates/engine-core/tests/table.rs`: unchanged in this part; delivered by part 1
+- `Cargo.toml`: unchanged in this part; delivered by part 1
+- `Cargo.lock`: unchanged in this part; delivered by part 1
+- `changelog.d/ios-app-347.md`: unchanged in this part; delivered by part 1
