@@ -108,3 +108,27 @@ bash deploy/rollback.sh vX.Y.W
 A release whose database migration removed or rewrote data cannot be rolled back by the binary
 alone: ship a schema change as expand, then contract, and follow the data-migration runbook's
 rollback for the database.
+
+## 8. TestFlight builds of the iPhone and iPad app
+
+An internal build is started by hand on `dev`, after a delivery lands there:
+
+```sh
+gh workflow run testflight-internal.yml --ref dev
+```
+
+The workflow refuses any other event or ref, a shallow checkout, and a workspace version that is
+not three dot-separated integers. Its build number is the first-parent count of the commit it
+builds, `git rev-list --count --first-parent HEAD` on full history, and its marketing version is
+the workspace version in the root `Cargo.toml` (ADR-344, SPEC-352).
+
+A release tag (step 3) also starts `testflight-release.yml`, beside the release workflow and the
+Apple build. It refuses the tags the release workflow refuses and a tag whose version differs from
+the workspace version, and its build number is `main`'s first-parent count at the tag's commit. Its
+`app` job waits for the owner's review in the release environment before it reads any credential.
+
+Each lane reads the upload credential only from its own GitHub environment, and only in the steps
+that use it (ADR-363). "Stopped before the upload" means the credential is not placed: with none of
+its six parts in the lane's environment, a run builds the app unsigned, writes "stopped before the
+upload: the credential is not placed" to its summary, and succeeds, having signed and uploaded
+nothing. A run with some parts placed fails and names each missing part by its role.
