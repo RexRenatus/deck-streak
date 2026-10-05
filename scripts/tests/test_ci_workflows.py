@@ -30,6 +30,10 @@ from _support import REPO, examined
 
 WORKFLOWS = REPO / ".github" / "workflows"
 PINNED = re.compile(r"^[\w.-]+/[\w.-]+(?:/[\w.-]+)*@[0-9a-f]{40}$")
+# A reusable workflow in this repository, called as GitHub reads it from the caller's own commit: the
+# release class's call shape (SPEC-190 R12) and the pin census's one admitted local call, a call
+# job's own `uses` (SPEC-344 R5).
+LOCAL_CALL = re.compile(r"\$/\.github/workflows/([^/@\s]+)")
 STAGES = re.compile(r"^STAGES_ALL=\(([^)]*)\)", re.M)
 THIS_REPOSITORY = "RexRenatus/deck-streak"
 # The one workflow admitted to a runner that is not a pinned Ubuntu image, and the one runner it is
@@ -122,9 +126,13 @@ class WorkflowsAreHardened(unittest.TestCase):
 
     def test_every_action_is_pinned_by_a_full_commit_sha(self):
         uses = [
-            (path.name, ref) for path in self.files for ref in entries(read_hardened(path), "uses")
+            (path.name, ref, is_call)
+            for path in self.files
+            for ref, is_call in marked_uses(read_hardened(path))
         ]
-        for name, ref in examined("action references", uses):
+        for name, ref, is_call in examined("action references", uses):
+            if is_call and isinstance(ref, str) and LOCAL_CALL.fullmatch(ref):
+                continue
             self.assertRegex(ref, PINNED, f"{name} uses {ref}")
 
     def test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger(self):
@@ -530,6 +538,156 @@ class WorkflowsAreHardened(unittest.TestCase):
         self.assertEqual(
             entries(nested, "uses"), [{"uses": "actions/checkout@v4"}, "actions/checkout@v4"]
         )
+
+    def test_a_call_job_is_a_local_call_or_pinned(self):
+        # SPEC-344 A4: the live call jobs are exactly the two callers' calls of the one job body.
+        found = []
+        for path in workflow_files(WORKFLOWS):
+            workflow = read_hardened(path)
+            self.assertEqual(
+                [ref for ref, _call in marked_uses(workflow)],
+                entries(workflow, "uses"),
+                f"{path.name}: the marking walk and the census walk disagree",
+            )
+            jobs = workflow.get("jobs")
+            for job_id, job in (jobs if isinstance(jobs, dict) else {}).items():
+                if isinstance(job, dict) and "uses" in job:
+                    found.append((path.name, job_id, job["uses"]))
+        body = "$/.github/workflows/xcframework.yml"
+        self.assertEqual(
+            sorted(found),
+            [("apple-on-change.yml", "apple", body), ("apple-on-tag.yml", "apple", body)],
+        )
+        # The pin test, run by name over planted directories as the test above runs it.
+        control = workflow_file_text(PLANTED_HARDENING / "hardened.yml")
+        step = CONTROL_STEP.split("uses: ", 1)[1]
+        call = "  call:\n    uses: "
+        plants = (
+            (f"{control}{call}{body}\n", None),
+            (f"{control}{call}{body}@dev\n", f"{body}@dev"),
+            (
+                f"{control}{call}octo-org/other/.github/workflows/x.yml@main\n",
+                "octo-org/other/.github/workflows/x.yml@main",
+            ),
+            (control.replace(step, "./.github/actions/x"), "./.github/actions/x"),
+            (control.replace(step, body), body),
+        )
+        for planted, ref in plants:
+            with self.subTest(ref), tempfile.TemporaryDirectory() as scratch:
+                (Path(scratch) / "planted.yml").write_text(planted, encoding="utf-8")
+                case = WorkflowsAreHardened("test_every_action_is_pinned_by_a_full_commit_sha")
+                case.files = workflow_files(Path(scratch))
+                if ref is None:
+                    case.test_every_action_is_pinned_by_a_full_commit_sha()
+                    continue
+                with self.assertRaisesRegex(
+                    AssertionError, re.escape(f"planted.yml uses {ref}") + "$"
+                ):
+                    case.test_every_action_is_pinned_by_a_full_commit_sha()
+
+
+APPLE_PATHS = [
+    "crates/ffi/**",
+    "ios/**",
+    "Cargo.lock",
+    "Cargo.toml",
+    "rust-toolchain.toml",
+    ".github/workflows/xcframework.yml",
+    ".github/workflows/apple-on-change.yml",
+]
+PULL_REQUEST_ONLY = (
+    "github.event.pull_request",
+    "github.head_ref",
+    "github.base_ref",
+    "github.event.number",
+    "GITHUB_HEAD_REF",
+    "GITHUB_BASE_REF",
+)
+
+
+def pull_request_reads(text):
+    """Every line of a workflow that reads a context only a pull request has."""
+    return [
+        line.strip()
+        for line in text.splitlines()
+        if not line.lstrip().startswith("#") and any(read in line for read in PULL_REQUEST_ONLY)
+    ]
+
+
+def cargo_commands(text):
+    """Every `cargo` command of a workflow's run scripts, backslash continuations joined."""
+    joined = re.sub(r"\\\n\s*", " ", text)
+    return [
+        match.group(1).strip()
+        for match in re.finditer(
+            r"(?m)^[^#\n]*?\b(cargo (?:rustc|run|build|test|check)\b[^\n]*)", joined
+        )
+    ]
+
+
+class TheAppleBuildRunsFromOneBody(unittest.TestCase):
+    """SPEC-344: one job body, xcframework.yml, called by a change caller and a tag caller."""
+
+    def test_the_change_caller_runs_the_build_on_each_apple_path(self):
+        self.assertIn("apple-on-change.yml", [p.name for p in workflow_files(WORKFLOWS)])
+        caller = load("apple-on-change.yml")
+        self.assertEqual(
+            caller["on"],
+            {
+                "pull_request": {
+                    "branches": ["dev"],
+                    "types": ["opened", "synchronize", "reopened"],
+                    "paths": APPLE_PATHS,
+                }
+            },
+        )
+        self.assertEqual(caller["jobs"], {"apple": {"uses": "$/.github/workflows/xcframework.yml"}})
+        paths = caller["on"]["pull_request"]["paths"]
+        runs = (
+            "crates/ffi/src/lib.rs",
+            "ios/Harness/Info.plist",
+            "Cargo.lock",
+            "Cargo.toml",
+            "rust-toolchain.toml",
+            ".github/workflows/xcframework.yml",
+        )
+        idle = (
+            "crates/api/src/main.rs",
+            "docs/specs/x.md",
+            "web/app/package.json",
+            "Cargo.toml.orig",
+            "deploy/host-budget.json",
+        )
+        for changed in examined("changed paths", runs + idle):
+            self.assertEqual(
+                any(path_glob(glob).fullmatch(changed) for glob in paths),
+                changed in runs,
+                changed,
+            )
+
+    def test_one_job_body_serves_the_change_and_the_tag(self):
+        callee = load("xcframework.yml")
+        self.assertEqual(sorted(callee["on"]), ["workflow_call", "workflow_dispatch"])
+        self.assertNotIn("concurrency", callee)
+        for job_id, job in examined("callee jobs", callee["jobs"].items()):
+            self.assertEqual(job["runs-on"], ADMITTED_RUNNERS["xcframework.yml"], job_id)
+        text = workflow_file_text(WORKFLOWS / "xcframework.yml")
+        self.assertEqual(pull_request_reads(text), [])
+        plant = text.replace(
+            "    steps:\n", '    steps:\n      - run: echo "${{ github.head_ref }}"\n', 1
+        )
+        self.assertNotEqual(plant, text)
+        self.assertEqual(pull_request_reads(plant), ['- run: echo "${{ github.head_ref }}"'])
+
+    def test_the_apple_build_resolves_only_the_locked_graph(self):
+        text = workflow_file_text(WORKFLOWS / "xcframework.yml")
+        commands = examined("cargo commands", cargo_commands(text))
+        self.assertGreaterEqual(len(commands), 2)
+        for command in commands:
+            self.assertIn("--locked", command.split(" -- ")[0], command)
+        plant = text + "      - run: cargo build -p deck-streak-ffi\n"
+        unlocked = [c for c in cargo_commands(plant) if "--locked" not in c.split(" -- ")[0]]
+        self.assertEqual(unlocked, ["cargo build -p deck-streak-ffi"])
 
 
 def triggers(workflow):
@@ -1455,6 +1613,45 @@ def entries(value, key):
     if isinstance(value, list):
         return [found for item in value for found in entries(item, key)]
     return []
+
+
+def marked_uses(workflow, path=()):
+    """Every value a read workflow holds under `uses`, in exactly `entries`' order, each beside
+    whether it is a call job's own `uses` (the value at `jobs.<id>.uses`, nothing deeper). A step's
+    `uses` can spell the same text, so the mark is the value's place, never its text."""
+    if isinstance(workflow, dict):
+        return [
+            found
+            for name, item in workflow.items()
+            for found in (
+                [(item, name == "uses" and len(path) == 2 and path[0] == "jobs")]
+                if name == "uses"
+                else []
+            )
+            + marked_uses(item, path + (name,))
+        ]
+    if isinstance(workflow, list):
+        return [found for item in workflow for found in marked_uses(item, path + (None,))]
+    return []
+
+
+def path_glob(pattern):
+    """A path filter as GitHub matches it: `**` is any run including a slash, `*` any run but a
+    slash, `?` one character but a slash, `[..]` a class, and every other character itself."""
+    out, at = "", 0
+    while at < len(pattern):
+        if pattern.startswith("**", at):
+            out, at = out + ".*", at + 2
+        elif pattern[at] == "*":
+            out, at = out + "[^/]*", at + 1
+        elif pattern[at] == "?":
+            out, at = out + "[^/]", at + 1
+        elif pattern[at] == "[" and "]" in pattern[at:]:
+            close = pattern.index("]", at)
+            out, at = out + pattern[at : close + 1], close + 1
+        else:
+            out, at = out + re.escape(pattern[at]), at + 1
+    return re.compile(out)
 
 
 def action(step):

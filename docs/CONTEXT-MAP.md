@@ -39,6 +39,7 @@ deck-streak-ffi           (FFI adapter for a native client: the engine's backend
 deck-streak-daemon        (composition root: the deckstreakd binary)  depends on: kernel, ingest, identity, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault, agent, insights, publishing, privacy, coordination, api, bot, mcp
 deck-streak-migration     (one-off import of v9's schema 24, planned)  depends on: kernel, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault
 deck-streak-web-engine    (Anki's engine on wasm32 in the web client's Worker: the study calls over OPFS)  depends on: engine-core
+deck-streak-push          (APNs and web push senders for a native or web client: provider and VAPID tokens, RFC 8291; ADR-354)  depends on: kernel
 miniapp   web/app/src     (the SvelteKit Mini App)  depends on: nothing internal
 ios-harness  ios/  (the SwiftUI harness over deck-streak-ffi's XCFramework; ADR-335)  depends on: nothing internal
 landing   web/site/src    (the Astro landing page, planned)  depends on: nothing internal
@@ -51,6 +52,11 @@ allow-list for a native client, checked first, and reaches the engine only throu
 dispatcher on the native transport (SPEC-336, ADR-345 D1; ADR-356 D3). `deck-streak-web-engine`
 reaches it the same way on the web transport, from its `wasm32` table only. The daemon composes
 none of the three: a native client links the adapter into its own binary.
+
+`deck-streak-push` is an outbound adapter: it builds APNs and web push requests and reports what
+each platform answered, and it depends on the kernel's clock alone (SPEC-343, ADR-354 D3). The
+daemon does not compose it until native push carries the one router (#640), which adds its
+notifications edge and the join in `crates/daemon/src/wiring.rs`.
 
 `deck-streak-migration` and `landing` are PLANNED: they have no code yet, so the probe counts
 them and judges none of their edges until the wave that builds them (W8 and W7).
