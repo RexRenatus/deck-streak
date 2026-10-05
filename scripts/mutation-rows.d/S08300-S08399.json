@@ -227,6 +227,15 @@
         "WriteSync::NotStarted(_) => {}",
         "skip_write::a_push_that_cannot_start_answers_push_failed_and_moves_nothing",
         "a push the engine refuses to start fails the take with push_failed and moves nothing, never falling through to the read-back as accepted (SPEC-083 R24)"
+      ],
+      [
+        "S08330-A-TAKE-MAKES-EXACTLY-TWO-SYNCS",
+        "ingest",
+        "src/skip_write.rs",
+        "match ports.writer.write_sync(&working, &login).await {",
+        "{ let _ = ports.writer.write_sync(&working, &login).await; } match ports.writer.write_sync(&working, &login).await {",
+        "skip_write::a_take_pushes_exactly_the_previewed_cards_and_their_review_log_rows",
+        "a take makes one converge sync and one push sync, two single normal syncs with no retry, so a repeated push sync is refused (SPEC-083 R24)"
       ]
     ]
   }
