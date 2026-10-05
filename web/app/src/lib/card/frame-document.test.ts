@@ -89,4 +89,51 @@ describe('the frame document', () => {
     expect(frameDocument(CARD, CSS).refused).toBeUndefined();
     expect(frameDocument(CARD, 'p::after { content: "</p>"; }').refused).toBeUndefined();
   });
+
+  // SPEC-350 R7, A18; ADR-361. The frame's body carries the card's classes, `card card<ordinal + 1>`,
+  // and the night-mode pair in a dark palette, and nothing else: no other attribute, and no class
+  // outside that set, so a class can neither open an attribute nor name a style the card did not.
+  it("the frame body carries the card's classes and nothing else", () => {
+    const admitted = ['card card1', 'card card3 nightMode night_mode', 'card card12'];
+    for (const classes of admitted) {
+      const body = read(frameDocument(CARD, CSS, classes).srcdoc).body;
+      expect(body.getAttributeNames(), classes).toEqual(['class']);
+      expect(body.getAttribute('class'), classes).toBe(classes);
+      expect(body.innerHTML, classes).toBe(CARD);
+    }
+
+    // with no classes the body carries no attribute at all
+    expect(read(frameDocument(CARD, CSS).srcdoc).body.getAttributeNames()).toEqual([]);
+
+    const outside = [
+      '',
+      'card',
+      'card card0',
+      'card card01',
+      'card1',
+      'card card1 nightMode',
+      'card card1 night_mode nightMode',
+      'card card1 x',
+      'card card1" onload="x',
+      'card  card1',
+      ' card card1',
+      'card card1 ',
+      'CARD card1'
+    ];
+    for (const classes of outside) {
+      expect(frameDocument(CARD, CSS, classes), `"${classes}"`).toStrictEqual({ refused: 'escaped' });
+    }
+    examined('admitted class lists', admitted);
+    examined('refused class lists', outside);
+  });
+
+  // Mutation coverage: a card with no classes opens a bare body, and a body tag the second parse
+  // reads, which the first read as a style's text, is refused on its attribute alone.
+  it('a card with no classes has a bare body, and a body the frame would give attributes is refused', () => {
+    expect(frameDocument('<p>x</p>', '.a{}')).toStrictEqual({
+      srcdoc: `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${POLICY}"><meta http-equiv="x-dns-prefetch-control" content="off"><style>.a{}</style></head><body><p>x</p></body></html>`
+    });
+    const html = '<form><math><mtext></form><form><mglyph><style></math><body class="x">';
+    expect(frameDocument(html, '.a{}')).toStrictEqual({ refused: 'escaped' });
+  });
 });

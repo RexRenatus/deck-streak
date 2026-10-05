@@ -32,15 +32,19 @@ const config = {
       }
     },
     // svelte-check reads the TypeScript project SvelteKit generates, which covers src and tests;
-    // the card harness and its two configurations are type-checked too (SPEC-341). Paths are
-    // relative to the generated .svelte-kit/tsconfig.json.
+    // the card harness and its two configurations are type-checked too (SPEC-341), and so are the
+    // study suite and its two (SPEC-350). Paths are relative to the generated
+    // .svelte-kit/tsconfig.json.
     typescript: {
       config: (tsconfig) => {
         tsconfig.include.push(
           '../tests-card/**/*.ts',
           '../vite.card.config.ts',
           '../playwright.card.config.ts',
-          '../policy-header.ts'
+          '../policy-header.ts',
+          '../tests-study/**/*.ts',
+          '../vite.study.config.ts',
+          '../playwright.study.config.ts'
         );
       }
     }
