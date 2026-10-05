@@ -158,7 +158,7 @@ export class Review {
 
   /** Loads the first card. */
   start(): void {
-    this.#run('card', 'retry');
+    this.#run('card');
     this.#onChange();
   }
 
@@ -204,7 +204,7 @@ export class Review {
     }
   }
 
-  #run(effect: Effect, event: ReviewEvent): void {
+  #run(effect: Effect, event?: ReviewEvent): void {
     if (effect === 'none') return;
     this.#inFlight = this.#request(effect, event).then(
       (outcome) => this.#fire(outcome),
@@ -213,7 +213,7 @@ export class Review {
   }
 
   /** Sends the request `effect` names, and answers the event its reply moves the machine by. */
-  async #request(effect: Effect, event: ReviewEvent): Promise<ReviewEvent> {
+  async #request(effect: Effect, event?: ReviewEvent): Promise<ReviewEvent> {
     const client = await this.#client();
     if (effect === 'card') {
       const head = await client.card();
