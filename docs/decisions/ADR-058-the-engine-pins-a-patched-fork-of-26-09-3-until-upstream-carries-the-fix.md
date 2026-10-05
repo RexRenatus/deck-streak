@@ -177,3 +177,33 @@ section 8's metric (the slowest gate job plus `ci`, excluding the wait for a run
   149 s.
 - **The engine's recompile on every cargo command is gone.** The `rust` job now takes 93 to 139 s
   warm, against 147 s before the fork (run 36382447015), with its three forced recompiles.
+
+## Note, appended by SPEC-338: the pin moves to the fork's wasm32 patches
+
+This note leaves the body above as it was decided. ADR-336 accepted Anki's engine in the browser on
+`wasm32-unknown-unknown`, and ADR-348 decided how the fork carries the patches that build it: one
+commit per patch over this ADR's fix commit `57382da085e6752738dc4bb617789be836a23300`, on branch
+`wasm32-26.09.3` of `RexRenatus/anki`, tagged `deckstreak-pin-26.09.3-wasm32`. The root manifest's
+`[patch]` entry takes `anki` and `anki_proto` by `rev` from the tag's commit, the dependency line
+keeps the upstream tag `26.09.3`, and the fix above stays the range's first commit. Every patch is a
+`cfg` on the target or a dependency line both targets share, so the native engine is the one this
+ADR pinned, on rusqlite 0.39's SQLite line (ADR-348).
+
+| record | measured |
+|---|---|
+| the pinned commit | `c538de55a23e695234e794029fce0dafff2d36a9`, the head of branch `wasm32-26.09.3`, tagged `deckstreak-pin-26.09.3-wasm32` (`git ls-remote`) |
+| its range | ten commits over `57382da`, one per patch; none adds a workflow file (`git diff --stat 57382da c538de5 -- .github` is empty) |
+| `git diff --stat 26.09.3 c538de5` on the fork | 22 files changed, 338 insertions(+), 69 deletions(-) |
+
+| patch | commit | reason | removal condition |
+|---|---|---|---|
+| `sqlite-route` | `15732ac4825cbe3f45fe0f30d276957badd0a0ca` | rusqlite 0.39 routes wasm32 to `sqlite-wasm-rs` and keeps `libsqlite3-sys` inside the range `sqlx` accepts | the upstream tag's rusqlite routes wasm32 and resolves beside `sqlx` |
+| `native-only-sync-server` | `e777006206e1cf8a612c5523b42ea6d1e721f14b` | the in-crate sync server needs a socket runtime wasm32 lacks | upstream gates its server by feature or target |
+| `current-thread-runtime` | `e24fe01727006c12e534e336de8dc41a932f838d` | tokio on wasm32 has no multi-thread runtime, fs, net or signal | upstream builds its runtime per target |
+| `single-thread-zstd` | `25189dc8e4e2d7c3af3c755db269fb2bb1992e86` | zstd's `zstdmt` needs threads wasm32 lacks | upstream gates `zstdmt` per target |
+| `sequential-rayon` | `bf7b4a732f4e43543b26d9b7fc40517151566bd1` | rayon has no thread pool on wasm32 | upstream gates rayon per target |
+| `js-date-clock` | `d123ca755da9c90a8a75b3222d0d94f6488d096e` | the standard clock panics on wasm32 | the standard clock works on wasm32 |
+| `browser-fetch` | `cebf678517c65530baca83f63f4838771073f9b2` | the browser's fetch has no `http1_only`, client timeout or streamed body | a browser sync transport replaces the refusal (#631) |
+| `getrandom-wasm-js` | `a75d4c146d724e5e9fcd18aefae0e9bb77f016d0` | getrandom draws randomness from `crypto.getRandomValues` on wasm32 | getrandom picks a browser backend by default |
+| `native-only-log-file` | `42539da45e22fdf9c764740e020c3db621989038` | `tracing-appender` does not build for wasm32, and a browser has no log file | `tracing-appender` builds for wasm32 again |
+| `browser-tls` | `c538de55a23e695234e794029fce0dafff2d36a9` | the rustls custom-certificate path uses reqwest calls wasm32 lacks | upstream gates that path per target |

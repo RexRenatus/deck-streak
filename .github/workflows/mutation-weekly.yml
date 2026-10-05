@@ -281,6 +281,8 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - name: fetch the locked dependency graph, so the offline census finds every package
+        run: cargo fetch --locked
       - name: every hand-proved row
         run: |
           mkdir -p "$RUNNER_TEMP/mutation"
@@ -438,6 +440,8 @@ jobs:
           python3 scripts/memory_scope.py --report "$shard" -- cargo mutants --no-shuffle -vV --in-place -f crates/kernel/src/clock.rs --timeout 1200 --build-timeout 600 --output "$shard" || rc=$?
           echo "$rc" > "$shard/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
+      - name: fetch the locked dependency graph, so the offline census finds every package
+        run: cargo fetch --locked
       - name: one row, as the rows job proves it
         run: |
           mkdir -p "$RUNNER_TEMP/reports/rows"

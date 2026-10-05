@@ -67,6 +67,7 @@ flowchart LR
   (SPEC-334 R3). If the browser engine spike says NO-GO, the Worker is replaced by ADR-336's
   fallback: the server-side study collection behind the daemon's study API, and the web client
   calls it over HTTPS instead.
+  The WASM transport is drawn in `web-engine-worker-and-opfs.md` (SPEC-338, ADR-348).
 - The FSRS-7 crate and the XP crate join the same umbrella static library on iPhone and iPad and
   the same WASM build in the browser. FSRS-7 never links into the engine, and it writes only the
   stock fields through it (ADR-338).

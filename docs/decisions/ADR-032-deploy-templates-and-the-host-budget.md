@@ -169,3 +169,17 @@ MCP server's, and the API keeps its cap, since it serves the clients' path.
 | `deck-streak-mcp.service` | 15% | 32 |
 
 The rest of this record stands.
+
+## Amendment (SPEC-340): the sync family's archive and drill
+
+ADR-351 D1 moves the archive of the sync server's snapshot out of the daily backup and the
+snapshot's restore out of the drill, each into a oneshot of the sync family's own user. Each takes
+the ceilings of the unit it was split from, in this record's form:
+
+| unit | memory_high | memory_max | why |
+|---|---|---|---|
+| `deck-streak-sync-archive.service` (SPEC-340) | 48M | 64M | the daily backup's work it was, which reads each member of a generation in chunks through its digest, and each database through its check |
+| `deck-streak-sync-restore-drill.service` (SPEC-340) | 96M | 128M | the drill's work it was, which opens each restored collection to count its cards |
+
+Both are jobs, so the share is unchanged: the largest job's ceiling is still the job template's, and
+the daemons' caps do not move. The rest of this record stands.

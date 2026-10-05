@@ -5,7 +5,8 @@ engine's slow tests in a job of their own, a cache is saved only by a push to de
 job that compiles Rust installs the protoc Anki's engine needs (SPEC-038). No workflow reads a
 secret but the default token, or checks out or fetches another repository (SPEC-034 A9 to A12), and
 a `.yaml` workflow is held to the hardening rules as a `.yml` one is, the hardening tests reading
-keys the way the checker does (A13)."""
+keys the way the checker does (A13). The web engine's job builds the module, holds it to its budget
+and runs the browser tests over it, and the aggregate needs it (SPEC-338 A16)."""
 
 import ast
 import builtins
@@ -20,6 +21,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import tomllib
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -28,8 +30,17 @@ from _support import REPO, examined
 
 WORKFLOWS = REPO / ".github" / "workflows"
 PINNED = re.compile(r"^[\w.-]+/[\w.-]+(?:/[\w.-]+)*@[0-9a-f]{40}$")
+# A reusable workflow in this repository, called as GitHub reads it from the caller's own commit: the
+# release class's call shape (SPEC-190 R12) and the pin census's one admitted local call, a call
+# job's own `uses` (SPEC-344 R5).
+LOCAL_CALL = re.compile(r"\$/\.github/workflows/([^/@\s]+)")
 STAGES = re.compile(r"^STAGES_ALL=\(([^)]*)\)", re.M)
 THIS_REPOSITORY = "RexRenatus/deck-streak"
+# The one workflow admitted to a runner that is not a pinned Ubuntu image, and the one runner it is
+# admitted to (SPEC-336, ADR-345 D4): the XCFramework job needs Apple's SDKs, which only a macOS
+# runner holds. The admission is by the workflow's file name, so the same runner under any other
+# name is refused, and this workflow on any other runner is refused.
+ADMITTED_RUNNERS = {"xcframework.yml": "macos-26"}
 # A pull request into main, as the github context presents it; each test changes what it needs.
 INTO_MAIN = {
     "github.event_name": "pull_request",
@@ -75,6 +86,14 @@ CACHE_BY_THEMSELVES = (
 )
 
 
+def admitted_runner(name):
+    """The pattern every runner of the workflow `name` must match: a pinned Ubuntu image (SPEC-002
+    A9), or, for the one workflow ADMITTED_RUNNERS names, its one runner exactly (SPEC-336 R9)."""
+    if name in ADMITTED_RUNNERS:
+        return f"^{re.escape(ADMITTED_RUNNERS[name])}$"
+    return r"^ubuntu-\d\d\.\d\d$"
+
+
 def workflow_file_text(path):
     """A workflow file's text as GitHub's parser is given it: the file's bytes, decoded as UTF-8
     strictly and not translated. `Path.read_text` turns a lone carriage return into a line feed
@@ -107,9 +126,13 @@ class WorkflowsAreHardened(unittest.TestCase):
 
     def test_every_action_is_pinned_by_a_full_commit_sha(self):
         uses = [
-            (path.name, ref) for path in self.files for ref in entries(read_hardened(path), "uses")
+            (path.name, ref, is_call)
+            for path in self.files
+            for ref, is_call in marked_uses(read_hardened(path))
         ]
-        for name, ref in examined("action references", uses):
+        for name, ref, is_call in examined("action references", uses):
+            if is_call and isinstance(ref, str) and LOCAL_CALL.fullmatch(ref):
+                continue
             self.assertRegex(ref, PINNED, f"{name} uses {ref}")
 
     def test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger(self):
@@ -121,7 +144,18 @@ class WorkflowsAreHardened(unittest.TestCase):
             runners += [(path.name, runner) for runner in entries(workflow, "runs-on")]
         for name, runner in examined("runs-on values", runners):
             # A list or a mapping of labels is read as its text, so the pattern refuses it by name.
-            self.assertRegex(str(runner), r"^ubuntu-\d\d\.\d\d$", f"{name} runs on {runner}")
+            self.assertRegex(str(runner), admitted_runner(name), f"{name} runs on {runner}")
+
+    def test_the_admitted_runner_is_admitted_to_its_one_workflow_only(self):
+        # SPEC-336 R9: the admitted workflow passes on its runner and is refused on any other, and
+        # its runner is refused under any other name (PLANTED_KEYS plants it in the control too).
+        for name, admitted in examined("admitted runners", list(ADMITTED_RUNNERS.items())):
+            self.assertRegex(admitted, admitted_runner(name))
+            for runner in ("macos-15", "ubuntu-24.04", [admitted], "self-hosted"):
+                self.assertNotRegex(str(runner), admitted_runner(name))
+            for other in ("planted.yml", "ci.yml", name.replace(".yml", ".yaml"), f"x{name}"):
+                self.assertNotRegex(admitted, admitted_runner(other))
+        self.assertRegex("ubuntu-24.04", admitted_runner("ci.yml"))
 
     def test_ci_runs_every_stage_of_the_local_gate(self):
         stages = STAGES.search((REPO / "scripts" / "check.sh").read_text()).group(1).split()
@@ -504,6 +538,156 @@ class WorkflowsAreHardened(unittest.TestCase):
         self.assertEqual(
             entries(nested, "uses"), [{"uses": "actions/checkout@v4"}, "actions/checkout@v4"]
         )
+
+    def test_a_call_job_is_a_local_call_or_pinned(self):
+        # SPEC-344 A4: the live call jobs are exactly the two callers' calls of the one job body.
+        found = []
+        for path in workflow_files(WORKFLOWS):
+            workflow = read_hardened(path)
+            self.assertEqual(
+                [ref for ref, _call in marked_uses(workflow)],
+                entries(workflow, "uses"),
+                f"{path.name}: the marking walk and the census walk disagree",
+            )
+            jobs = workflow.get("jobs")
+            for job_id, job in (jobs if isinstance(jobs, dict) else {}).items():
+                if isinstance(job, dict) and "uses" in job:
+                    found.append((path.name, job_id, job["uses"]))
+        body = "$/.github/workflows/xcframework.yml"
+        self.assertEqual(
+            sorted(found),
+            [("apple-on-change.yml", "apple", body), ("apple-on-tag.yml", "apple", body)],
+        )
+        # The pin test, run by name over planted directories as the test above runs it.
+        control = workflow_file_text(PLANTED_HARDENING / "hardened.yml")
+        step = CONTROL_STEP.split("uses: ", 1)[1]
+        call = "  call:\n    uses: "
+        plants = (
+            (f"{control}{call}{body}\n", None),
+            (f"{control}{call}{body}@dev\n", f"{body}@dev"),
+            (
+                f"{control}{call}octo-org/other/.github/workflows/x.yml@main\n",
+                "octo-org/other/.github/workflows/x.yml@main",
+            ),
+            (control.replace(step, "./.github/actions/x"), "./.github/actions/x"),
+            (control.replace(step, body), body),
+        )
+        for planted, ref in plants:
+            with self.subTest(ref), tempfile.TemporaryDirectory() as scratch:
+                (Path(scratch) / "planted.yml").write_text(planted, encoding="utf-8")
+                case = WorkflowsAreHardened("test_every_action_is_pinned_by_a_full_commit_sha")
+                case.files = workflow_files(Path(scratch))
+                if ref is None:
+                    case.test_every_action_is_pinned_by_a_full_commit_sha()
+                    continue
+                with self.assertRaisesRegex(
+                    AssertionError, re.escape(f"planted.yml uses {ref}") + "$"
+                ):
+                    case.test_every_action_is_pinned_by_a_full_commit_sha()
+
+
+APPLE_PATHS = [
+    "crates/ffi/**",
+    "ios/**",
+    "Cargo.lock",
+    "Cargo.toml",
+    "rust-toolchain.toml",
+    ".github/workflows/xcframework.yml",
+    ".github/workflows/apple-on-change.yml",
+]
+PULL_REQUEST_ONLY = (
+    "github.event.pull_request",
+    "github.head_ref",
+    "github.base_ref",
+    "github.event.number",
+    "GITHUB_HEAD_REF",
+    "GITHUB_BASE_REF",
+)
+
+
+def pull_request_reads(text):
+    """Every line of a workflow that reads a context only a pull request has."""
+    return [
+        line.strip()
+        for line in text.splitlines()
+        if not line.lstrip().startswith("#") and any(read in line for read in PULL_REQUEST_ONLY)
+    ]
+
+
+def cargo_commands(text):
+    """Every `cargo` command of a workflow's run scripts, backslash continuations joined."""
+    joined = re.sub(r"\\\n\s*", " ", text)
+    return [
+        match.group(1).strip()
+        for match in re.finditer(
+            r"(?m)^[^#\n]*?\b(cargo (?:rustc|run|build|test|check)\b[^\n]*)", joined
+        )
+    ]
+
+
+class TheAppleBuildRunsFromOneBody(unittest.TestCase):
+    """SPEC-344: one job body, xcframework.yml, called by a change caller and a tag caller."""
+
+    def test_the_change_caller_runs_the_build_on_each_apple_path(self):
+        self.assertIn("apple-on-change.yml", [p.name for p in workflow_files(WORKFLOWS)])
+        caller = load("apple-on-change.yml")
+        self.assertEqual(
+            caller["on"],
+            {
+                "pull_request": {
+                    "branches": ["dev"],
+                    "types": ["opened", "synchronize", "reopened"],
+                    "paths": APPLE_PATHS,
+                }
+            },
+        )
+        self.assertEqual(caller["jobs"], {"apple": {"uses": "$/.github/workflows/xcframework.yml"}})
+        paths = caller["on"]["pull_request"]["paths"]
+        runs = (
+            "crates/ffi/src/lib.rs",
+            "ios/Harness/Info.plist",
+            "Cargo.lock",
+            "Cargo.toml",
+            "rust-toolchain.toml",
+            ".github/workflows/xcframework.yml",
+        )
+        idle = (
+            "crates/api/src/main.rs",
+            "docs/specs/x.md",
+            "web/app/package.json",
+            "Cargo.toml.orig",
+            "deploy/host-budget.json",
+        )
+        for changed in examined("changed paths", runs + idle):
+            self.assertEqual(
+                any(path_glob(glob).fullmatch(changed) for glob in paths),
+                changed in runs,
+                changed,
+            )
+
+    def test_one_job_body_serves_the_change_and_the_tag(self):
+        callee = load("xcframework.yml")
+        self.assertEqual(sorted(callee["on"]), ["workflow_call", "workflow_dispatch"])
+        self.assertNotIn("concurrency", callee)
+        for job_id, job in examined("callee jobs", callee["jobs"].items()):
+            self.assertEqual(job["runs-on"], ADMITTED_RUNNERS["xcframework.yml"], job_id)
+        text = workflow_file_text(WORKFLOWS / "xcframework.yml")
+        self.assertEqual(pull_request_reads(text), [])
+        plant = text.replace(
+            "    steps:\n", '    steps:\n      - run: echo "${{ github.head_ref }}"\n', 1
+        )
+        self.assertNotEqual(plant, text)
+        self.assertEqual(pull_request_reads(plant), ['- run: echo "${{ github.head_ref }}"'])
+
+    def test_the_apple_build_resolves_only_the_locked_graph(self):
+        text = workflow_file_text(WORKFLOWS / "xcframework.yml")
+        commands = examined("cargo commands", cargo_commands(text))
+        self.assertGreaterEqual(len(commands), 2)
+        for command in commands:
+            self.assertIn("--locked", command.split(" -- ")[0], command)
+        plant = text + "      - run: cargo build -p deck-streak-ffi\n"
+        unlocked = [c for c in cargo_commands(plant) if "--locked" not in c.split(" -- ")[0]]
+        self.assertEqual(unlocked, ["cargo build -p deck-streak-ffi"])
 
 
 def triggers(workflow):
@@ -1431,6 +1615,45 @@ def entries(value, key):
     return []
 
 
+def marked_uses(workflow, path=()):
+    """Every value a read workflow holds under `uses`, in exactly `entries`' order, each beside
+    whether it is a call job's own `uses` (the value at `jobs.<id>.uses`, nothing deeper). A step's
+    `uses` can spell the same text, so the mark is the value's place, never its text."""
+    if isinstance(workflow, dict):
+        return [
+            found
+            for name, item in workflow.items()
+            for found in (
+                [(item, name == "uses" and len(path) == 2 and path[0] == "jobs")]
+                if name == "uses"
+                else []
+            )
+            + marked_uses(item, path + (name,))
+        ]
+    if isinstance(workflow, list):
+        return [found for item in workflow for found in marked_uses(item, path + (None,))]
+    return []
+
+
+def path_glob(pattern):
+    """A path filter as GitHub matches it: `**` is any run including a slash, `*` any run but a
+    slash, `?` one character but a slash, `[..]` a class, and every other character itself."""
+    out, at = "", 0
+    while at < len(pattern):
+        if pattern.startswith("**", at):
+            out, at = out + ".*", at + 2
+        elif pattern[at] == "*":
+            out, at = out + "[^/]*", at + 1
+        elif pattern[at] == "?":
+            out, at = out + "[^/]", at + 1
+        elif pattern[at] == "[" and "]" in pattern[at:]:
+            close = pattern.index("]", at)
+            out, at = out + pattern[at : close + 1], close + 1
+        else:
+            out, at = out + re.escape(pattern[at]), at + 1
+    return re.compile(out)
+
+
 def action(step):
     """The action a step uses, without its ref: `actions/cache/restore`, or '' for a run step."""
     return str(step.get("uses", "")).split("@", 1)[0]
@@ -1782,7 +2005,7 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
             self.assertIsNone(workflow["jobs"][job].get("needs"), f"{job} waits on another job")
         needs = workflow["jobs"]["ci"]["needs"]
         # SPEC-039 adds the five mutation jobs beside the gate's five, each a need of ci; SPEC-087
-        # adds the sixth, the Python runner's shards.
+        # adds the sixth, the Python runner's shards. SPEC-341 adds the planted card suite.
         mutation = [
             "mutation-plan",
             "mutation-python",
@@ -1791,8 +2014,19 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
             "mutation-verdict",
             "mutation-web",
         ]
+        # SPEC-338 adds the web engine's job, which builds the module and holds it to its budget.
         self.assertEqual(
-            sorted(needs), sorted([*OWNER_LAYOUT, *mutation, "workflow-lint", "base-is-dev"])
+            sorted(needs),
+            sorted(
+                [
+                    *OWNER_LAYOUT,
+                    *mutation,
+                    "web-engine",
+                    "workflow-lint",
+                    "base-is-dev",
+                    "card-sandbox",
+                ]
+            ),
         )
 
     def test_every_stage_runs_in_exactly_one_ci_job(self):
@@ -1835,6 +2069,37 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
                 gate = next(s for s in job["steps"] if GATE_CALL.search(str(s.get("run", ""))))
                 env = dict(job.get("env") or {}, **(gate.get("env") or {}))
                 self.assertEqual(env.get("CHECK_HISTORY"), "1", f"{job_id} scans no history")
+
+
+# --- the card sandbox job (SPEC-341 A13, R12)
+# The planted card suite runs on every pull request in Chromium and in WebKit, so the job installs
+# both with their system libraries, keeps the suite's results whatever its verdict, and the
+# aggregate check waits on it.
+CARD_JOB = "card-sandbox"
+CARD_INSTALL = "pnpm --dir web/app exec playwright install --with-deps --only-shell chromium webkit"
+CARD_SUITE = "pnpm --dir web/app test:card"
+
+
+class TheCardSandboxRunsInBothEngines(unittest.TestCase):
+    def test_the_card_sandbox_job_runs_the_planted_suite_in_both_engines(self):
+        jobs = load("ci.yml")["jobs"]
+        self.assertIn(CARD_JOB, jobs, "ci.yml has no card-sandbox job")
+        steps = jobs[CARD_JOB]["steps"]
+        runs = [str(step.get("run", "")).strip() for step in steps]
+        # both engines installed once, then the suite once, after them
+        self.assertEqual(runs.count(CARD_INSTALL), 1, "the job does not install both engines once")
+        self.assertEqual(runs.count(CARD_SUITE), 1, "the job does not run the planted suite once")
+        self.assertLess(runs.index(CARD_INSTALL), runs.index(CARD_SUITE))
+        # one upload of the suite's results after it, whatever its verdict
+        uploads = [at for at, step in enumerate(steps) if action(step) == "actions/upload-artifact"]
+        self.assertEqual(len(uploads), 1, "the job does not upload the suite's results once")
+        upload = steps[uploads[0]]
+        self.assertGreater(uploads[0], runs.index(CARD_SUITE))
+        self.assertEqual(upload.get("if"), "${{ always() }}")
+        self.assertEqual(paths(upload), ["web/app/test-results/"])
+        # and the aggregate check waits on it
+        self.assertIn(CARD_JOB, jobs["ci"]["needs"])
+        examined("card-sandbox steps", steps)
 
 
 def cache_scan(directory):
@@ -2244,6 +2509,248 @@ class TheEngineSetRunsInSlices(unittest.TestCase):
         )
 
 
+# ------------------------------------------------- the web engine job (SPEC-338 A16, R8, R9)
+
+# The job that builds the web engine's module, holds it to ADR-336's budget and runs the browser
+# tests over it (ADR-349).
+WEB_ENGINE_JOB = "web-engine"
+# Its three steps, each found by the command its script runs, in the order the job must run them:
+# the build, the size gate over the two files the build wrote, then the browser tests over the
+# module the gate measured.
+WEB_ENGINE_ORDER = (
+    ("the build", "bash scripts/web-engine-build.sh"),
+    ("the size gate", "python3 scripts/web-engine-size.py"),
+    ("the browser tests", "test:engine"),
+)
+# The job's timeout: a cold wasm32 release build of the engine, the browsers' install and the
+# browser tests, with room for a slow run, and a hung browser ended within the hour.
+WEB_ENGINE_TIMEOUT_MINUTES = range(20, 61)
+# The release archives the job downloads: wasm-bindgen's CLI, whose version is in its URL twice,
+# and binaryen's, which carries wasm-opt.
+BINDGEN_RELEASE = re.compile(
+    r"/wasm-bindgen/releases/download/([^/\s]+)/wasm-bindgen-\1-x86_64-unknown-linux-musl\.tar\.gz"
+)
+BINARYEN_RELEASE = re.compile(r"/binaryen/releases/download/[^/\s]+/binaryen-[^/\s]+\.tar\.gz")
+
+
+def bindgen_version():
+    """The wasm-bindgen version the root manifest pins exactly (`=X.Y.Z`). The CLI that writes the
+    bindings must be that version, or its bindings do not match the module (ADR-349), so the
+    manifest is the oracle, not the workflow."""
+    manifest = tomllib.loads((REPO / "Cargo.toml").read_text(encoding="utf-8"))
+    pin = manifest["workspace"]["dependencies"]["wasm-bindgen"]
+    pin = pin if isinstance(pin, str) else str(pin.get("version", ""))
+    if not re.fullmatch(r"=\d+\.\d+\.\d+", pin):
+        raise AssertionError(f"the root manifest pins wasm-bindgen as {pin!r}, not exactly")
+    return pin[1:]
+
+
+def sha256_checked(step, variable):
+    """Whether a step checks a download against the full digest in its own `variable`: the digest
+    is 64 hex characters, and a line of its script hands it to `sha256sum -c -`."""
+    digest = str((step.get("env") or {}).get(variable, ""))
+    check = rf'echo "\${variable}  \S+" \| sha256sum -c -'
+    return bool(re.fullmatch(r"[0-9a-f]{64}", digest)) and any(
+        re.fullmatch(check, line) for line in lines_of(step.get("run"))
+    )
+
+
+def web_engine_job_problems(workflow):
+    """What a workflow gets wrong about the web engine's job (SPEC-338 R8, ADR-349): no such job,
+    one that waits on another or can be skipped, a ci that does not need it, the build, the size
+    gate and the browser tests missing or out of order, no wasm32 target added before the build, a
+    wasm-bindgen that is not the crate's exact version or a download whose digest is not checked, a
+    `RUSTFLAGS` or a `.cargo/config` anywhere in it (the build's settings are on its script's
+    command line only, ADR-348), incremental builds, or a timeout outside its band."""
+    jobs = workflow.get("jobs") or {}
+    job = jobs.get(WEB_ENGINE_JOB)
+    if job is None:
+        return ["there is no web-engine job"]
+    problems = []
+    if job.get("needs") is not None:
+        problems.append("the web-engine job waits on another job")
+    if "if" in job:
+        problems.append("the web-engine job can be skipped, and a skipped need fails ci")
+    if WEB_ENGINE_JOB not in ((jobs.get("ci") or {}).get("needs") or []):
+        problems.append(
+            "ci does not need the web-engine job, so the module's budget is not required"
+        )
+    steps = job.get("steps") or []
+    runs = [str(step.get("run", "")) for step in steps]
+    found = sorted(
+        (at, name)
+        for name, command in WEB_ENGINE_ORDER
+        for at, run in enumerate(runs)
+        if command in run
+    )
+    ran = [name for _, name in found]
+    wanted = [name for name, _ in WEB_ENGINE_ORDER]
+    missing = [name for name in wanted if name not in ran]
+    problems += [f"the web-engine job runs no {name.removeprefix('the ')}" for name in missing]
+    if not missing and ran != wanted:
+        problems.append(
+            f"the web-engine job runs {', '.join(ran)}, in that order, not {', '.join(wanted)}"
+        )
+    build = next((at for at, name in found if name == "the build"), len(steps))
+    if not any("rustup target add wasm32-unknown-unknown" in lines_of(run) for run in runs[:build]):
+        problems.append("the web-engine job adds no wasm32-unknown-unknown target before its build")
+    version = bindgen_version()
+    bindgen = [
+        (s, m.group(1)) for s in steps for m in BINDGEN_RELEASE.finditer(str(s.get("run", "")))
+    ]
+    if not bindgen:
+        problems.append("the web-engine job installs no wasm-bindgen release")
+    for step, installed in bindgen:
+        if installed != version:
+            problems.append(
+                f"the web-engine job installs wasm-bindgen {installed}, not the crate's {version}"
+            )
+        if not sha256_checked(step, "WASM_BINDGEN_SHA256"):
+            problems.append("the web-engine job does not check wasm-bindgen's sha256")
+    binaryen = [s for s in steps if BINARYEN_RELEASE.search(str(s.get("run", "")))]
+    if not binaryen:
+        problems.append("the web-engine job installs no binaryen release")
+    if not all(sha256_checked(step, "BINARYEN_SHA256") for step in binaryen):
+        problems.append("the web-engine job does not check binaryen's sha256")
+    held = json.dumps([workflow.get("env"), job])
+    if "RUSTFLAGS" in held or ".cargo/config" in held:
+        problems.append(
+            "the web-engine job sets RUSTFLAGS or writes a .cargo/config, where the build takes "
+            "its settings on its script's command line only"
+        )
+    if str((job.get("env") or {}).get("CARGO_INCREMENTAL")) != "0":
+        problems.append("the web-engine job builds incrementally")
+    minutes = str(job.get("timeout-minutes") or "")
+    if not minutes.isdigit() or int(minutes) not in WEB_ENGINE_TIMEOUT_MINUTES:
+        band = f"{WEB_ENGINE_TIMEOUT_MINUTES.start} to {WEB_ENGINE_TIMEOUT_MINUTES.stop - 1}"
+        problems.append(f"the web-engine job's timeout is {minutes or 'unset'}, not {band} minutes")
+    return problems
+
+
+def planted_job(text, job_id, *changes):
+    """A workflow read from `text` with each (old, new) applied in turn inside one job's block. Each
+    `old` must occur exactly once in the block when its turn comes, so a plant that changes nothing,
+    or changes a line of another job, fails by name instead of passing."""
+    block = re.search(rf"(?ms)^  {re.escape(job_id)}:\n.*?(?=^  [a-z-]+:\n|\Z)", text)
+    if block is None:
+        raise AssertionError(f"the workflow has no {job_id} job to plant in")
+    planted = block.group(0)
+    for old, new in changes:
+        if planted.count(old) != 1:
+            raise AssertionError(f"the {job_id} job holds {old!r} {planted.count(old)} times")
+        planted = planted.replace(old, new)
+    return read_workflow(text[: block.start()] + planted + text[block.end() :])
+
+
+class TheWebEngineIsHeldToItsBudget(unittest.TestCase):
+    def test_the_web_engine_job_builds_the_module_and_holds_it_to_its_budget(self):
+        text = workflow_file_text(WORKFLOWS / "ci.yml")
+        workflow = read_workflow(text)
+        job = workflow["jobs"].get(WEB_ENGINE_JOB) or {}
+        examined("web-engine job steps", job.get("steps") or [])
+        self.assertEqual(web_engine_job_problems(workflow), [])
+        # Each planted copy of the real job breaks one rule, and the judge refuses it by name.
+        version = bindgen_version()
+        size, browsers = "python3 scripts/web-engine-size.py", "pnpm --dir web/app test:engine"
+        target = "rustup target add wasm32-unknown-unknown\n"
+        incremental = 'CARGO_INCREMENTAL: "0"\n'
+        flags = (
+            "the web-engine job sets RUSTFLAGS or writes a .cargo/config, where the build takes "
+            "its settings on its script's command line only"
+        )
+        plants = {
+            "no web-engine job": (
+                "web-engine",
+                [("  web-engine:\n", "  web-engine-gone:\n")],
+                ["there is no web-engine job"],
+            ),
+            "a job that waits on another": (
+                "web-engine",
+                [("  web-engine:\n", "  web-engine:\n    needs: [rust]\n")],
+                ["the web-engine job waits on another job"],
+            ),
+            "a job that can be skipped": (
+                "web-engine",
+                [
+                    (
+                        "  web-engine:\n",
+                        "  web-engine:\n    if: ${{ github.event_name == 'push' }}\n",
+                    )
+                ],
+                ["the web-engine job can be skipped, and a skipped need fails ci"],
+            ),
+            "a ci that does not need it": (
+                "ci",
+                [(", web-engine,", ",")],
+                ["ci does not need the web-engine job, so the module's budget is not required"],
+            ),
+            "the size gate after the browser tests": (
+                "web-engine",
+                [(size, "SWAPPED"), (browsers, size), ("SWAPPED", browsers)],
+                [
+                    "the web-engine job runs the build, the browser tests, the size gate, in that "
+                    "order, not the build, the size gate, the browser tests"
+                ],
+            ),
+            "no size gate": (
+                "web-engine",
+                [(size, "python3 -c pass")],
+                ["the web-engine job runs no size gate"],
+            ),
+            "no wasm32 target": (
+                "web-engine",
+                [(target, "rustup target list --installed\n")],
+                ["the web-engine job adds no wasm32-unknown-unknown target before its build"],
+            ),
+            "another wasm-bindgen": (
+                "web-engine",
+                [
+                    (
+                        f"download/{version}/wasm-bindgen-{version}-",
+                        "download/0.0.1/wasm-bindgen-0.0.1-",
+                    )
+                ],
+                [f"the web-engine job installs wasm-bindgen 0.0.1, not the crate's {version}"],
+            ),
+            "an unchecked wasm-bindgen": (
+                "web-engine",
+                [('echo "$WASM_BINDGEN_SHA256  /tmp/wasm-bindgen.tgz" | sha256sum -c -', "true")],
+                ["the web-engine job does not check wasm-bindgen's sha256"],
+            ),
+            "an unchecked binaryen": (
+                "web-engine",
+                [('echo "$BINARYEN_SHA256  /tmp/binaryen.tgz" | sha256sum -c -', "true")],
+                ["the web-engine job does not check binaryen's sha256"],
+            ),
+            "RUSTFLAGS in the job's env": (
+                "web-engine",
+                [(incremental, incremental + "      RUSTFLAGS: -Ctarget-feature=+simd128\n")],
+                [flags],
+            ),
+            "a .cargo/config written": (
+                "web-engine",
+                [(target, target + "          mkdir -p .cargo && touch .cargo/config.toml\n")],
+                [flags],
+            ),
+            "an incremental build": (
+                "web-engine",
+                [(incremental, 'CARGO_INCREMENTAL: "1"\n')],
+                ["the web-engine job builds incrementally"],
+            ),
+            "a timeout outside the band": (
+                "web-engine",
+                [(f"timeout-minutes: {job.get('timeout-minutes')}\n", "timeout-minutes: 360\n")],
+                ["the web-engine job's timeout is 360, not 20 to 60 minutes"],
+            ),
+        }
+        for name, (job_id, changes, refusal) in examined(
+            "planted web-engine defect(s)", plants.items()
+        ):
+            with self.subTest(name):
+                planted = planted_job(text, job_id, *changes)
+                self.assertEqual(web_engine_job_problems(planted), refusal)
+
+
 # ------------------------------------------ no secret, no other repository (SPEC-034 A9 to A12)
 
 # The planted workflows: those the checker refuses (A10) and those it admits (A11).
@@ -2295,6 +2802,12 @@ PLANTED_KEYS = (
         "    runs-on: ubuntu-24.04",
         '    "runs-on": [self-hosted, linux]',
         r"planted\.yml runs on \['self-hosted', 'linux'\]$",
+    ),
+    (
+        HARDENING_RUNNER,
+        "    runs-on: ubuntu-24.04",
+        "    runs-on: macos-26",
+        r"planted\.yml runs on macos-26$",
     ),
     (
         HARDENING_RUNNER,
@@ -3008,6 +3521,7 @@ VETTED_MODULES = {
     "math": "numbers",
     "os": "the system's calls; each that reads or starts a process is named",
     "pathlib": "paths; each member that reads is named",
+    "plistlib": "parses property-list bytes it is given, or a file object only an `open` can make",
     "posixpath": "path strings",
     "re": "patterns over text it is given",
     "shlex": "splits and quotes text it is given; the `shlex` lexer, which can open a file it names, is named",
@@ -3633,6 +4147,15 @@ NOT_WORKFLOW_READS = {
             "test_ci_workflows",
             "OnlyAPushSavesACache.test_the_browser_cache_is_keyed_on_the_locked_playwright_version",
             "(REPO / 'pnpm-lock.yaml').read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "the root manifest, which bindgen_version reads for the wasm-bindgen pin; never handed to the reader",
+        (
+            "test_ci_workflows",
+            "bindgen_version",
+            "(REPO / 'Cargo.toml').read_text(encoding='utf-8')",
             1,
         ),
     ),
@@ -5026,6 +5549,14 @@ DYNAMIC_IMPORTS = {
             1,
         ),
         ("test_backup_units", "load_backup", "spec.loader.exec_module(module)", 1),
+        ("test_web_engine_size", "load_gate", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_web_engine_size",
+            "load_gate",
+            "importlib.util.spec_from_file_location('web_engine_size', GATE)",
+            1,
+        ),
+        ("test_web_engine_size", "load_gate", "spec.loader.exec_module(module)", 1),
         ("test_dispatch_shards", "wrapper_module", "importlib.util.module_from_spec(spec)", 1),
         (
             "test_dispatch_shards",
@@ -5475,6 +6006,16 @@ DYNAMIC_IMPORTS = {
             1,
         ),
         ("test_mutation_rows_refusal", "outcome", "error.__cause__", 2),
+    ),
+    **allowed(
+        "reads the ban filter through configparser, the way the ban service reads it; never a workflow",
+        ("test_sync_ban", "failregexes", "configparser.BasicInterpolation()", 1),
+        (
+            "test_sync_ban",
+            "failregexes",
+            "configparser.ConfigParser(interpolation=configparser.BasicInterpolation(), inline_comment_prefixes=';')",
+            1,
+        ),
     ),
 }
 
@@ -6184,6 +6725,92 @@ class WorkflowFilesAreReadAsBytes(unittest.TestCase):
                 self.assertIn(
                     f"test_zz_plant: plant_{name}: {name}: 1 {kind} site(s), 0 listed", said
                 )
+
+
+# The download step a planted harness job uses; its ref is a placeholder the checker never reads.
+PLANTED_DOWNLOAD = "actions/download-artifact@" + "0" * 40
+
+
+def harness_link_problems(workflow):
+    """Each way the `harness` job of a read workflow could link a framework its own run did not
+    build, named (SPEC-339 R12, A9): it waits on the `xcframework` job, downloads exactly one
+    artifact, that job's `xcframework`, and names no run, token or repository by which its download
+    could reach another run's artifact."""
+    job = (workflow.get("jobs") or {}).get("harness") or {}
+    needs = job.get("needs")
+    needs = [needs] if isinstance(needs, str) else list(needs or [])
+    problems = []
+    if "xcframework" not in needs:
+        problems.append("harness: it does not wait on the xcframework job")
+    downloads = [s for s in job.get("steps") or [] if action(s) == "actions/download-artifact"]
+    if len(downloads) != 1:
+        problems.append(f"harness: {len(downloads)} artifact downloads, not one")
+    for step in downloads:
+        given = step.get("with") or {}
+        if given.get("name") != "xcframework":
+            problems.append(f"harness: it downloads {given.get('name')!r}, not 'xcframework'")
+        for key in ("run-id", "github-token", "repository"):
+            if key in given:
+                problems.append(f"harness: its download names a {key}, so it can reach another run")
+    return problems
+
+
+class TheHarnessLinksItsOwnRunsFramework(unittest.TestCase):
+    def test_the_harness_links_the_framework_its_own_run_built(self):
+        """SPEC-339 A9: the harness job links the XCFramework this run's `xcframework` job built,
+        never one another run left behind."""
+        jobs = load("xcframework.yml")["jobs"]
+        self.assertIn("harness", list(jobs))
+        examined("harness steps", jobs["harness"].get("steps") or [])
+        self.assertEqual(harness_link_problems({"jobs": jobs}), [])
+
+        # The controls: the good job is accepted, and each plant is refused by its rule's name.
+        good = {
+            "needs": ["xcframework"],
+            "steps": [{"uses": PLANTED_DOWNLOAD, "with": {"name": "xcframework"}}],
+        }
+
+        def download(**given):
+            return {**good, "steps": [{"uses": PLANTED_DOWNLOAD, "with": given}]}
+
+        plants = {
+            "the good job": (good, []),
+            "a job that waits on nothing": (
+                {**good, "needs": []},
+                ["harness: it does not wait on the xcframework job"],
+            ),
+            "a job that waits on another job": (
+                {**good, "needs": "harness-wire"},
+                ["harness: it does not wait on the xcframework job"],
+            ),
+            "no download": (
+                {**good, "steps": [{"run": "true"}]},
+                ["harness: 0 artifact downloads, not one"],
+            ),
+            "a second download": (
+                {**good, "steps": good["steps"] * 2},
+                ["harness: 2 artifact downloads, not one"],
+            ),
+            "another artifact": (
+                download(name="harness-fixture"),
+                ["harness: it downloads 'harness-fixture', not 'xcframework'"],
+            ),
+            "another run": (
+                download(name="xcframework", **{"run-id": "1"}),
+                ["harness: its download names a run-id, so it can reach another run"],
+            ),
+            "a token": (
+                download(name="xcframework", **{"github-token": "planted"}),
+                ["harness: its download names a github-token, so it can reach another run"],
+            ),
+            "another repository": (
+                download(name="xcframework", repository="planted/planted"),
+                ["harness: its download names a repository, so it can reach another run"],
+            ),
+        }
+        for name, (job, wanted) in examined("planted harness jobs", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(harness_link_problems({"jobs": {"harness": job}}), wanted, name)
 
 
 if __name__ == "__main__":

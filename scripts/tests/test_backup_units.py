@@ -25,7 +25,7 @@ from pathlib import Path
 
 from _support import REPO, examined
 from _units import STOPS_A_START, env_assignments, load_subject, service_type, size_bytes
-from test_deploy_templates import HARDENING
+from test_deploy_templates import hardening
 
 DEPLOY = REPO / "deploy"
 BACKUP_SCRIPT = DEPLOY / "scripts" / "backup.py"
@@ -46,7 +46,12 @@ DRILL_TIMER = "deck-streak-restore-drill.timer"
 # The sync server and the window that stops it for the snapshot's copy (SPEC-337 R5; ADR-347 D12).
 SYNC_SERVER = "deck-streak-sync-server.service"
 WINDOW = "deck-streak-sync-snapshot.service"
+# The snapshot's archive and its drill, each a unit of the sync family's own (SPEC-340 R3, R4).
+ARCHIVE = "deck-streak-sync-archive.service"
+SYNC_DRILL = "deck-streak-sync-restore-drill.service"
 SNAPSHOT_FILES = ("collection.anki2", "media.db")
+# The first line of every sealed file (SPEC-340 R12; ADR-351 D2): the age format's version line.
+SEAL_HEADER = b"age-encryption.org/v1\n"
 NEW_SERVICES = (LITESTREAM, BACKUP, DRILL)
 # R6: the two slots, exactly, in UTC as the neutral templates are written (SPEC-032 R4).
 BACKUP_CALENDAR = "*-*-* 03:24:00 UTC"
@@ -315,7 +320,7 @@ class BackupUnits(unittest.TestCase):
         # R7: every new unit's OnFailure, UMask, private temporary directory and budget entry.
         for unit in services:
             self.assertEqual(unit.values("Unit", "OnFailure"), [ALERT], unit.name)
-            for key, want in HARDENING.items():
+            for key, want in hardening(unit.name).items():
                 self.assertEqual(unit.last("Service", key), want, f"{unit.name} {key}")
             self.assertEqual(unit.last("Service", "StateDirectory"), "deck-streak")
             self.assertEqual(unit.last("Service", "MemoryHigh"), budget[unit.name]["memory_high"])
@@ -324,11 +329,11 @@ class BackupUnits(unittest.TestCase):
                 size_bytes(unit.last("Service", "MemoryHigh")),
                 size_bytes(unit.last("Service", "MemoryMax")),
             )
-            # All three reach a bucket, the backup for the sync server's snapshot (SPEC-337 R5),
-            # and each expands it from the required settings file.
+            # The replicator and the drill reach a bucket and expand it from the required
+            # settings file; the backup copies the database alone and reads none (SPEC-340 R3).
             self.assertEqual(
                 unit.values("Service", "EnvironmentFile"),
-                ["/etc/deck-streak/deck-streak.env"],
+                [] if unit.name == BACKUP else ["/etc/deck-streak/deck-streak.env"],
                 unit.name,
             )
         # The three backup copies: the script keeps three, once a day.
@@ -344,9 +349,12 @@ class BackupUnits(unittest.TestCase):
         self.assertEqual(facts["replicas_lists"], 0, "0.5 takes `replica:`, not a `replicas:` list")
         for url in facts["urls"]:
             self.assertIn(url_scheme(url), OFF_HOST_SCHEMES, url)
-        # Exactly one drill and one Litestream unit among every unit the census reads.
+        # Exactly two drills, the database's and the sync family's (SPEC-340 R4), and one
+        # Litestream unit among every unit the census reads.
         names = examined("units", subject.units)
-        self.assertEqual([n for n in names if "restore" in n and n.endswith(".service")], [DRILL])
+        self.assertEqual(
+            [n for n in names if "restore" in n and n.endswith(".service")], [DRILL, SYNC_DRILL]
+        )
         self.assertEqual(
             [
                 n
@@ -754,8 +762,15 @@ class SyncWindow(unittest.TestCase):
         with unittest.mock.patch.dict(os.environ, environ, clear=False):
             return backup.main(argv, now=backup.parse_stamp(stamp))
 
+    def archive(self, backup, snapshots, environ):
+        """The archive unit's run, `--sync-archive`, over `snapshots` (SPEC-340 R3)."""
+        argv = ["--sync-archive", "--snapshots", str(snapshots)]
+        with unittest.mock.patch.dict(os.environ, environ, clear=False):
+            return backup.main(argv)
+
     def offsite(self, root):
-        """A stand-in for the rail's object-store command: it records its arguments."""
+        """A stand-in for the rail's object-store command: it records its arguments. The settings
+        name the seal's stand-in too, since the archive copies only sealed files (SPEC-340 R12)."""
         log = root / "offsite.jsonl"
         stub = root / "object-store-copy"
         stub.write_text(
@@ -767,6 +782,7 @@ class SyncWindow(unittest.TestCase):
         environ = {
             "DECKSTREAK_SNAPSHOT_COPY": f"{sys.executable} {stub} --no-clobber",
             "DECKSTREAK_SNAPSHOT_BUCKET": "example://deck-streak-example-snapshot/",
+            "DECKSTREAK_SNAPSHOT_SEAL": self.sealer(root, "seal-offsite")[0],
         }
         return environ, log
 
@@ -802,9 +818,9 @@ class SyncWindow(unittest.TestCase):
         # No second schedule: the daily backup pulls it in, and enabling the server enables it.
         self.assertIsNone(subject.units.get(WINDOW.replace(".service", ".timer")))
         self.assertEqual(window.values("Install", "WantedBy"), [BACKUP])
-        self.assertEqual(server.values("Install", "Also"), [WINDOW])
-        # No new privilege: the service user, no capability, no privileged command prefix.
-        for key, want in HARDENING.items():
+        self.assertEqual(server.values("Install", "Also"), [WINDOW, ARCHIVE, SYNC_DRILL])
+        # No new privilege: the sync family's user, no capability, no privileged command prefix.
+        for key, want in hardening(WINDOW).items():
             self.assertEqual(window.last("Service", key), want, f"{WINDOW} {key}")
         self.assertEqual(window.last("Service", "CapabilityBoundingSet"), "")
         self.assertEqual(window.values("Service", "AmbientCapabilities"), [])
@@ -820,12 +836,53 @@ class SyncWindow(unittest.TestCase):
             [],
             "no grant file ships",
         )
-        # It reads the server's store and writes beside the backups.
+        # It writes its generation into the sync family's snapshots directory, first, so it is
+        # the script's state root, and reads the server's store, second (SPEC-340 R2).
         self.assertEqual(
-            window.values("Service", "StateDirectory"), ["deck-streak deck-streak-sync-server"]
+            window.values("Service", "StateDirectory"),
+            ["deck-streak-sync-snapshots deck-streak-sync-server"],
         )
         self.assertEqual(window.last("Service", "MemoryHigh"), budget[WINDOW]["memory_high"])
         self.assertEqual(window.last("Service", "MemoryMax"), budget[WINDOW]["memory_max"])
+
+    def test_the_archive_runs_as_its_own_unit_after_the_window(self):
+        """SPEC-340 A3 (R3; ADR-351 D1): the snapshot's archive is a oneshot of the sync family's
+        own, pulled in by the backup's run after the window and before the database's copy; the
+        database's copy reaches no network and reads no settings file."""
+        subject = load_subject(REPO)
+        archive = subject.units.get(ARCHIVE)
+        self.assertIsNotNone(archive, "the archive is a unit of its own (SPEC-340 R3)")
+        server, backup_unit = subject.units[SYNC_SERVER], subject.units[BACKUP]
+        budget = json.loads(BUDGET.read_text(encoding="utf-8"))["units"]
+        self.assertEqual(service_type(archive), "oneshot")
+        self.assertEqual(
+            archive.values("Service", "ExecStart"),
+            [f"/usr/bin/python3 {RELEASE_ROOT}/deploy/scripts/backup.py --sync-archive"],
+        )
+        self.assertEqual(archive.values("Unit", "After"), [WINDOW])
+        self.assertEqual(archive.values("Unit", "Before"), [BACKUP])
+        self.assertEqual(archive.values("Unit", "OnFailure"), [ALERT])
+        self.assertEqual(archive.values("Install", "WantedBy"), [BACKUP])
+        for key, want in hardening(ARCHIVE).items():
+            self.assertEqual(archive.last("Service", key), want, f"{ARCHIVE} {key}")
+        self.assertEqual(
+            archive.values("Service", "StateDirectory"), ["deck-streak-sync-snapshots"]
+        )
+        self.assertEqual(
+            archive.values("Service", "EnvironmentFile"), ["/etc/deck-streak/deck-streak.env"]
+        )
+        self.assertEqual(
+            archive.values("Service", "RestrictAddressFamilies"), ["AF_UNIX AF_INET AF_INET6"]
+        )
+        self.assertEqual(archive.last("Service", "Nice"), "10")
+        self.assertEqual(archive.last("Service", "IOSchedulingClass"), "idle")
+        self.assertEqual(archive.last("Service", "MemoryHigh"), budget[ARCHIVE]["memory_high"])
+        self.assertEqual(archive.last("Service", "MemoryMax"), budget[ARCHIVE]["memory_max"])
+        # Enabling the server enables its window, its archive and its sync drill.
+        self.assertEqual(server.values("Install", "Also"), [WINDOW, ARCHIVE, SYNC_DRILL])
+        # The database's copy no longer archives: no network, no settings file.
+        self.assertEqual(backup_unit.values("Service", "RestrictAddressFamilies"), ["AF_UNIX"])
+        self.assertEqual(backup_unit.values("Service", "EnvironmentFile"), [])
 
     def test_a_planted_copy_failure_fails_the_unit_and_publishes_nothing(self):
         backup = load_backup()
@@ -882,7 +939,10 @@ class SyncWindow(unittest.TestCase):
                 self.assertEqual(copy.execute("SELECT count(*) FROM cards").fetchone(), (3,))
                 copy.close()
 
-    def test_the_daily_run_checks_archives_copies_offsite_and_keeps_three(self):
+    def test_the_sync_archive_checks_archives_copies_offsite_and_keeps_three(self):
+        """SPEC-340 A4 (R3; ADR-351 D1): the archive is `--sync-archive`, the archive unit's run;
+        the database's run, with the copy's settings in its environment, leaves a generation
+        untouched."""
         backup = load_backup()
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -895,7 +955,14 @@ class SyncWindow(unittest.TestCase):
             self.assertFalse(snapshots.exists())
             for stamp in self.STAMPS:
                 self.assertEqual(self.window(backup, base, snapshots, stamp), 0)
+                generation = f"gen-{stamp.replace('-', '').replace(':', '')}.tar"
                 self.assertEqual(self.daily(backup, root, snapshots, stamp, environ), 0)
+                self.assertEqual(
+                    names_in(snapshots, "gen-"), [generation], "the database's run archives nothing"
+                )
+                self.assertEqual(self.archive(backup, snapshots, environ), 0)
+            # With no snapshot directory, the archive's run has nothing to do.
+            self.assertEqual(self.archive(backup, root / "absent", environ), 0)
             tars = names_in(snapshots, "sync-")
             self.assertEqual(
                 tars,
@@ -911,8 +978,8 @@ class SyncWindow(unittest.TestCase):
                 calls[-1],
                 [
                     "--no-clobber",
-                    f"{newest}.tar",
-                    f"{newest}.sha256",
+                    f"{newest}.tar.age",
+                    f"{newest}.sha256.age",
                     environ["DECKSTREAK_SNAPSHOT_BUCKET"],
                 ],
             )
@@ -925,15 +992,21 @@ class SyncWindow(unittest.TestCase):
                     data = archive.extractfile(member).read()
                     self.assertEqual(manifest.pop(member.name), hashlib.sha256(data).hexdigest())
             self.assertEqual(manifest, {})
-            # A generation with no copy command or no bucket configured is kept for the next run,
-            # and the run fails: the copy needs both settings, and neither alone reaches it.
+            # A generation with no copy command, no bucket or no seal configured is kept for the
+            # next run, and the run fails: the copy needs all three settings, and none alone
+            # reaches it.
             self.assertEqual(self.window(backup, base, snapshots, "2030-01-05T03:00:00Z"), 0)
             for key in ("", *sorted(environ)):
                 alone = {key: environ[key]} if key else {}
-                self.assertEqual(
-                    self.daily(backup, root, snapshots, "2030-01-05T03:00:00Z", alone), 1, key
-                )
+                self.assertEqual(self.archive(backup, snapshots, alone), 1, key)
                 self.assertEqual(names_in(snapshots, "gen-"), ["gen-20300105T030000Z.tar"], key)
+            # Nor does any two of the three: each missing setting alone refuses the copy.
+            for key in sorted(environ):
+                without = {name: value for name, value in environ.items() if name != key}
+                self.assertEqual(self.archive(backup, snapshots, without), 1, f"without {key}")
+                self.assertEqual(
+                    names_in(snapshots, "gen-"), ["gen-20300105T030000Z.tar"], f"without {key}"
+                )
             self.assertEqual(len(log.read_text(encoding="utf-8").splitlines()), 4)
             # A generation whose collection fails its check is not archived, and the run fails.
             broken = root / "broken"
@@ -943,14 +1016,151 @@ class SyncWindow(unittest.TestCase):
                 for path in sorted((broken / "sync-base").rglob("*")):
                     if path.is_file():
                         archive.add(path, arcname=str(path.relative_to(broken / "sync-base")))
-            self.assertEqual(
-                self.daily(backup, root, snapshots, "2030-01-06T03:00:00Z", environ), 1
-            )
+            self.assertEqual(self.archive(backup, snapshots, environ), 1)
             self.assertNotIn("sync-20300106T030000Z.tar", names_in(snapshots, "sync-"))
             self.assertEqual(len(log.read_text(encoding="utf-8").splitlines()), 4)
 
-    def drill(self, root, snapshots):
-        """The weekly drill over a sound replica and daily copy, with the snapshot directory given."""
+    def sealer(self, root, name, header=SEAL_HEADER, status=0):
+        """A stand-in for the rail's seal command (SPEC-340 R12): it records its arguments, writes
+        the file `--output` names as `header`, a marker and the plain file's bytes, and exits
+        `status`. Returned as the setting's value, with a recipients file as its leading
+        arguments, and the log of its calls."""
+        log = root / f"{name}.jsonl"
+        stub = root / name
+        stub.write_text(
+            "#!/usr/bin/env python3\nimport json, sys\nargs = sys.argv[1:]\n"
+            f"open({str(log)!r}, 'a').write(json.dumps(args) + '\\n')\n"
+            "at = args.index('--output')\n"
+            "plain = open(args[at + 2], 'rb').read()\n"
+            f"open(args[at + 1], 'wb').write({header!r} + b'sealed:' + plain)\n"
+            f"sys.exit({status})\n",
+            encoding="utf-8",
+        )
+        stub.chmod(0o755)
+        return f"{sys.executable} {stub} --recipients-file {root / 'recipients.txt'}", log
+
+    def test_the_offsite_copy_is_sealed_and_never_plain(self):
+        """SPEC-340 A15 (R12; ADR-351 D2): the archive and its manifest are sealed before any copy,
+        only the sealed files are copied, and they are removed after it; an unset seal, one that
+        fails and one that leaves no header copy nothing and fail the run."""
+        backup = load_backup()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            base = make_sync_base(root)
+            snapshots = root / "sync-snapshots"
+            bucket = "example://deck-streak-example-snapshot/"
+            # The copy stand-in records its arguments and the bytes of each file it is given.
+            copied = root / "copied.jsonl"
+            copy = root / "object-store-read"
+            copy.write_text(
+                "#!/usr/bin/env python3\nimport json, os, sys\nfiles = {\n"
+                "    a: open(a, 'rb').read().hex() for a in sys.argv[1:] if os.path.isfile(a)\n}\n"
+                f"open({str(copied)!r}, 'a').write(json.dumps([sys.argv[1:], files]) + '\\n')\n",
+                encoding="utf-8",
+            )
+            copy.chmod(0o755)
+            seal, seals = self.sealer(root, "seal")
+            environ = {
+                "DECKSTREAK_SNAPSHOT_COPY": f"{sys.executable} {copy} --no-clobber",
+                "DECKSTREAK_SNAPSHOT_BUCKET": bucket,
+                "DECKSTREAK_SNAPSHOT_SEAL": seal,
+            }
+
+            def copies():
+                if not copied.exists():
+                    return []
+                return [
+                    json.loads(line) for line in copied.read_text(encoding="utf-8").splitlines()
+                ]
+
+            self.assertEqual(self.window(backup, base, snapshots, self.STAMPS[0]), 0)
+            status = self.archive(backup, snapshots, environ)
+            newest = snapshots / "sync-20300101T030000Z"
+            self.assertEqual(
+                [argv for argv, _files in copies()],
+                [["--no-clobber", f"{newest}.tar.age", f"{newest}.sha256.age", bucket]],
+                "only the sealed files are copied",
+            )
+            self.assertEqual(status, 0)
+            # Each copied file is its plain file's seal, the format's header first.
+            files = copies()[0][1]
+            for plain in (f"{newest}.tar", f"{newest}.sha256"):
+                self.assertEqual(
+                    bytes.fromhex(files[f"{plain}.age"]),
+                    SEAL_HEADER + b"sealed:" + Path(plain).read_bytes(),
+                    plain,
+                )
+            recipients = ["--recipients-file", str(root / "recipients.txt")]
+            self.assertEqual(
+                [json.loads(line) for line in seals.read_text(encoding="utf-8").splitlines()],
+                [
+                    [*recipients, "--output", f"{newest}.tar.age", f"{newest}.tar"],
+                    [*recipients, "--output", f"{newest}.sha256.age", f"{newest}.sha256"],
+                ],
+            )
+            # The sealed files are removed, and the host keeps its plain archive for the drill.
+            self.assertEqual(sorted(p.name for p in snapshots.glob("*.age")), [])
+            self.assertEqual(
+                names_in(snapshots, "sync-"), [f"{newest.name}.sha256", f"{newest.name}.tar"]
+            )
+            # An unset seal is refused before the generation is touched; a seal that fails, or one
+            # that leaves no header, fails the run. None copies anything or leaves a sealed file.
+            refused = {
+                "unset": "",
+                "failing": self.sealer(root, "seal-failing", status=1)[0],
+                "headerless": self.sealer(root, "seal-headerless", header=b"")[0],
+            }
+            cases = examined("refused seal(s)", zip(refused.items(), self.STAMPS[1:]))
+            for (label, command), stamp in cases:
+                with self.subTest(seal=label):
+                    self.assertEqual(self.window(backup, base, snapshots, stamp), 0)
+                    generation = f"gen-{stamp.replace('-', '').replace(':', '')}.tar"
+                    settings = dict(environ, DECKSTREAK_SNAPSHOT_SEAL=command)
+                    self.assertEqual(self.archive(backup, snapshots, settings), 1)
+                    self.assertEqual(len(copies()), 1, "a refused seal copies nothing")
+                    self.assertEqual(sorted(p.name for p in snapshots.glob("*.age")), [])
+                    if not command:
+                        self.assertIn(generation, names_in(snapshots, "gen-"))
+
+    def test_the_sync_drill_runs_as_its_own_unit(self):
+        """SPEC-340 A5 (R4; ADR-351 D1): the snapshot's drill is a oneshot of the sync family's own,
+        pulled in by the restore drill and ordered after it; `--part sync` fails with no snapshot
+        directory, `--part database` never reads it, and any other part is refused."""
+        subject = load_subject(REPO)
+        drill = subject.units.get(SYNC_DRILL)
+        self.assertIsNotNone(drill, "the sync drill is a unit of its own (SPEC-340 R4)")
+        budget = json.loads(BUDGET.read_text(encoding="utf-8"))["units"]
+        self.assertEqual(service_type(drill), "oneshot")
+        self.assertEqual(
+            drill.values("Service", "ExecStart"),
+            [f"{RELEASE_ROOT}/deploy/scripts/restore-drill.sh --part sync"],
+        )
+        self.assertEqual(drill.values("Unit", "After"), [DRILL])
+        self.assertEqual(drill.values("Unit", "OnFailure"), [ALERT])
+        self.assertEqual(drill.values("Install", "WantedBy"), [DRILL])
+        for key, want in hardening(SYNC_DRILL).items():
+            self.assertEqual(drill.last("Service", key), want, f"{SYNC_DRILL} {key}")
+        self.assertEqual(drill.values("Service", "StateDirectory"), ["deck-streak-sync-snapshots"])
+        self.assertEqual(drill.values("Service", "EnvironmentFile"), [])
+        self.assertEqual(drill.values("Service", "RestrictAddressFamilies"), ["AF_UNIX"])
+        self.assertEqual(drill.last("Service", "MemoryHigh"), budget[SYNC_DRILL]["memory_high"])
+        self.assertEqual(drill.last("Service", "MemoryMax"), budget[SYNC_DRILL]["memory_max"])
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            missing = root / "sync-snapshots"
+            done = self.drill(root, missing, part="sync")
+            self.assertEqual(done.returncode, 1, done.stderr)
+            self.assertIn("restore-drill: no snapshot directory", done.stderr)
+            # The database's part never reads the snapshot directory: a file in its place passes.
+            missing.write_text("not a directory", encoding="utf-8")
+            done = self.drill(root, missing, part="database")
+            self.assertEqual(done.returncode, 0, done.stderr)
+            done = self.drill(root, missing, part="other")
+            self.assertEqual(done.returncode, 2, done.stderr)
+
+    def drill(self, root, snapshots, part=None):
+        """The restore drill over a sound replica and daily copy, with the snapshot directory given,
+        and its part when one is named (SPEC-340 R4)."""
         state = root / "drill-state"
         state.mkdir(exist_ok=True)
         live = state / "deck_streak.db"
@@ -984,6 +1194,7 @@ class SyncWindow(unittest.TestCase):
                 str(state / "backups"),
                 "--snapshots",
                 str(snapshots),
+                *(["--part", part] if part else []),
             ],
             capture_output=True,
             text=True,
@@ -997,12 +1208,14 @@ class SyncWindow(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             snapshots = root / "sync-snapshots"
-            # No snapshot directory: the server is not installed, and the drill is the old one.
+            # No snapshot directory: the database's part runs alone, and the sync part fails.
             done = self.drill(root, snapshots)
             self.assertEqual(done.returncode, 0, done.stderr)
-            # A snapshot directory with no archive in it fails the drill.
+            self.assertEqual(self.drill(root, snapshots, part="sync").returncode, 1)
+            # A snapshot directory with no archive in it fails the sync part, and not the other.
             snapshots.mkdir()
-            done = self.drill(root, snapshots)
+            self.assertEqual(self.drill(root, snapshots).returncode, 0)
+            done = self.drill(root, snapshots, part="sync")
             self.assertEqual(done.returncode, 1, done.stderr)
             self.assertIn("no snapshot archive", done.stderr)
             # Two generations, the later with four cards: the drill restores the newest archive, by
@@ -1011,8 +1224,8 @@ class SyncWindow(unittest.TestCase):
             for cards, stamp in ((3, self.STAMPS[0]), (4, self.STAMPS[1])):
                 store = make_sync_base(root / f"store-{cards}", cards=cards)
                 self.assertEqual(self.window(backup, store, snapshots, stamp), 0)
-                self.assertEqual(self.daily(backup, root, snapshots, stamp, environ), 0)
-            done = self.drill(root, snapshots)
+                self.assertEqual(self.archive(backup, snapshots, environ), 0)
+            done = self.drill(root, snapshots, part="sync")
             self.assertEqual(done.returncode, 0, done.stderr)
             lines = done.stdout.splitlines()
             for user in ("owner", "staging"):
@@ -1029,7 +1242,7 @@ class SyncWindow(unittest.TestCase):
             at = raw.index(b"image bytes of owner")
             raw[at] ^= 0x01
             archive.write_bytes(bytes(raw))
-            done = self.drill(root, snapshots)
+            done = self.drill(root, snapshots, part="sync")
             self.assertEqual(done.returncode, 1, done.stderr)
             self.assertIn("owner/media/a.jpg", done.stderr)
             # A media index that fails its integrity check fails the drill, though every digest in
@@ -1044,7 +1257,7 @@ class SyncWindow(unittest.TestCase):
             Path(f"{newest}.sha256").write_text(
                 "".join(f"{digest(p)}  {p.relative_to(planted)}\n" for p in files), encoding="utf-8"
             )
-            done = self.drill(root, snapshots)
+            done = self.drill(root, snapshots, part="sync")
             self.assertEqual(done.returncode, 1, done.stderr)
             self.assertIn(
                 "restore-drill: owner/media.db failed PRAGMA integrity_check",
