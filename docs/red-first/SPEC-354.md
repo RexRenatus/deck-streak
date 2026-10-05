@@ -12,3 +12,10 @@ A2: not red: the refusal is the census's own helper, committed with its test; it
 A1: green at 06b23e75
 A3: green at 06b23e75
 ```
+
+Correction (verify round 1, ruling 395): A1's quote on line 9 joins two lines of the replay output
+with ` | `. The red line itself is `AssertionError: Lists differ:
+["deploy/systemd/deck-streak-alert@.servic[637 chars]sed"] != []`, and `First list contains 5
+additional elements.` is the output's next line. Line 6 overstates one clause: the paging units'
+admitted key list already held `IPAddressDeny`, and 06b23e7 only rewords its comment there; the fix
+commit adds `IPAddressDeny` to the alert unit's admitted key list.
