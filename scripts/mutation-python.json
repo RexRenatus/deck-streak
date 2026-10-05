@@ -9,6 +9,12 @@
     "dir": "scripts/tests",
     "modules": []
   },
+  "scripts/ios_icon.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_ios_icon"
+    ]
+  },
   "scripts/ios_lane.py": {
     "dir": "scripts/tests",
     "modules": [

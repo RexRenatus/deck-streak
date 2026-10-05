@@ -6304,6 +6304,15 @@ DYNAMIC_IMPORTS = {
             1,
         ),
     ),
+    **allowed(
+        "decompresses the image data of the icon a production script writes, to compare its pixels (SPEC-352 A24); bytes in and bytes out, and it imports, runs and reads nothing",
+        (
+            "test_ios_icon",
+            "WhatAnUploadNeeds.test_the_generated_icon_is_an_opaque_square_with_no_text",
+            "zlib.decompress(idat)",
+            1,
+        ),
+    ),
 }
 
 
