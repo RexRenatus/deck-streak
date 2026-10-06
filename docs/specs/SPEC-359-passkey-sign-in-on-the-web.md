@@ -60,6 +60,7 @@ R1. `DECKSTREAK_PUBLIC_ORIGIN`, the web client's `https` origin, is configuratio
     `https` origin (a scheme, a host, an optional port, nothing else) refuses start by name. The
     relying party id is its host and the expected origin is that origin exactly: one entry, never
     the request's `Origin` header.
+R16. At deploy, confirm every shared library of the server binary resolves on the target (`ldd` shows no `not found`), and fail the deploy if one does not.
 
 Sessions
 
@@ -340,6 +341,7 @@ Part b is §7's manifest.
 | A42 | ceremony options and responses round-trip through base64url | `pnpm exec vitest run web/app/src/lib/passkeys.test.ts -t "ceremony options and responses round-trip through base64url"`; red: the stub returns its input unconverted |
 | A43 | after a passkey sign-in the page signals the accepted credentials where the browser offers it, and calls nothing where it does not | `pnpm exec vitest run web/app/src/lib/passkeys.test.ts -t "a sign-in signals the accepted credentials only where the browser offers it"`; red: the stub never signals |
 | A44 | where the browser offers no WebAuthn, the link page redeems nothing and asks the owner to open it in the browser, keeping the code unspent | `pnpm exec vitest run web/app/src/routes/link.test.ts -t "without webauthn the link page keeps the code unspent"`; red: the stub redeems on load |
+| A45 | At deploy, confirm every shared library of the server binary resolves on the target (`ldd` shows no `not found`), and fail the deploy if one does not. | the private deploy rail |
 
 Part b's manifest: `web/app/src/routes/link/+page.svelte`, `web/app/src/routes/link.test.ts`,
 `web/app/src/routes/signin/+page.svelte`, `web/app/src/routes/signin.test.ts`,
