@@ -8,7 +8,7 @@
 - **Status:** delivered by the pull request that adds this file, with its tests and
   `docs/red-first/SPEC-362.md`. **Mutation band:** S36200-S36299. **Model:**
   `formal/tla/EveryLegCounted`. Amends SPEC-039 R18, SPEC-129 R4 and SPEC-327 R2, R7 and R8, each by
-  an amendment line in its own file; it retires SPEC-129 A2 in SPEC-056 R14's shape. The per-mutant budget and the leg's 360 minutes are the
+  an amendment line in its own file; it retires SPEC-129 A2 and SPEC-087 A14, each in SPEC-056 R14's shape. The per-mutant budget and the leg's 360 minutes are the
   owner's signed ruling, `docs/rulings/OWNER-RULING-2026-10-06-mutation-timeout-2200.md`.
 
 ## 1. The problem, measured
@@ -107,6 +107,12 @@ R13. **The counting surface is modelled.** A TLA+ entry, `formal/tla/EveryLegCou
     that finish whole, partial or not at all, re-runs of failed legs, and the verdict. Its
     properties `PassMeansEveryLegCounted` and `PassMeansThePartition` hold at its model config, and
     each of its two witnesses is caught.
+R14. **The Python matrix is sized to the hosted job.** `PYTHON_SHARD_MUTANTS` is 20, so
+    `python_shards` sizes the diff's Python matrix at the ceiling of listed over 20, clamped to 1 to
+    32 shards (`PYTHON_MAX_SHARDS` stays 32). Measured: one leg of 34 mutants took 54 minutes 42
+    seconds and its sibling was cancelled at the 60-minute job cap, so a full shard of 40 needs about
+    64 minutes against the 60-minute job. Every listed mutant is still examined and every shard still
+    counted; the same population only spreads over more legs. It retires SPEC-087 A14.
 
 ## 3. Acceptance criteria
 
@@ -123,6 +129,7 @@ R13. **The counting surface is modelled.** A TLA+ entry, `formal/tla/EveryLegCou
 | A9 | every cargo-mutants command runs nextest's `mutants` profile, which stops at the first failure | `python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_every_mutation_command_runs_the_mutants_profile` |
 | A10 | the battery is sized from its listing, at its ceiling, and no longer fixed | `python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_whole_tree_is_sized_from_its_listing` |
 | A11 | the plan prints its headroom on every sizing | `python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_every_sizing_prints_its_headroom` |
+| A12 | the Python matrix is at most 20 listed mutants a shard, clamped to 1 to 32: 20 listed read 1 shard, 21 read 2, 68 read 4, and 32 x 20 + 1 read 32 | `python3 -m unittest discover -s scripts/tests -p test_mutation_python_shard_binding.py -k test_the_matrix_takes_twenty_listed_mutants_a_shard_clamped_to_thirty_two` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_release_listing_fits_one_run
@@ -136,6 +143,7 @@ A8: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k
 A9: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_every_mutation_command_runs_the_mutants_profile
 A10: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_whole_tree_is_sized_from_its_listing
 A11: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_every_sizing_prints_its_headroom
+A12: python3 -m unittest discover -s scripts/tests -p test_mutation_python_shard_binding.py -k test_the_matrix_takes_twenty_listed_mutants_a_shard_clamped_to_thirty_two
 ```
 
 R13 is decided by the formal check of `formal/tla/EveryLegCounted` in `dev`'s formal CI job, not
@@ -145,7 +153,7 @@ by a unittest, so it has no line in the fence.
 
 | file | context | change |
 |---|---|---|
-| `scripts/mutation-verdict.py` | CI scripts | changed: bound, ceiling, baseline, census, prices, headroom line, R7 and R8 checks, `size` through `shards`' sizing |
+| `scripts/mutation-verdict.py` | CI scripts | changed: Python shard size 20, bound, ceiling, baseline, census, prices, headroom line, R7 and R8 checks, `size` through `shards`' sizing |
 | `.github/workflows/ci.yml` | CI | changed: `mutation-rust` timeout, `--timeout`, nextest profile |
 | `.github/workflows/mutation-weekly.yml` | CI | changed: legs sized by the plan, timeout, `--timeout`, nextest profile |
 | `.config/nextest.toml` | CI | added: the `mutants` profile |
@@ -153,6 +161,9 @@ by a unittest, so it has no line in the fence.
 | `scripts/tests/test_dispatch_shards.py` | CI scripts | changed: A1 to A5, A10, A11; `TheWholeTreeKeepsThirtyTwo` retired |
 | `scripts/tests/test_mutation_verdict.py` | CI scripts | changed: A6 to A8; `cargo_report`'s Baseline names its log, which R7 reads |
 | `scripts/tests/test_mutation_workflows.py` | CI scripts | changed: A9 |
+| `scripts/tests/test_mutation_python_shard_binding.py` | CI scripts | changed: R14's fixture sizes by a literal 20; the pin test A12 |
+| `docs/specs/SPEC-087-the-guard-scripts-and-the-parity-oracle-prove-their-tests-kill-generated-mutants.md` | docs | amended: A14 retired (section 12) |
+| `docs/red-first/SPEC-087.md` | docs | changed: A14's lines in a retired fence |
 | `scripts/tests/_mutants_finder.py` | CI scripts | changed: the bounds it reads |
 | `scripts/tests/test_ci_workflows.py` | CI scripts | changed: the census entries for the new tests' reads |
 | `scripts/tests/test_memory_scope.py` | CI scripts | changed: its byte pins read `--timeout 2200` |
@@ -173,7 +184,7 @@ by a unittest, so it has no line in the fence.
 | `RELEASING.md` | release | changed: R12 |
 | `docs/schematics/mutation-testing.md` | docs | changed: the plan, legs, verdict and `ci` as drawn in this SPEC's schematic |
 | `docs/specs/SPEC-039-every-change-proves-its-tests-kill-its-mutants.md` | docs | amended: R18's bound and ceiling |
-| `docs/specs/SPEC-056-every-pack-is-judged-on-the-box-and-nothing-of-the-hub-is-published.md` | docs | amended: section 7's row of A2, section 10 |
+| `docs/specs/SPEC-056-every-pack-is-judged-on-the-box-and-nothing-of-the-hub-is-published.md` | docs | amended: section 7's rows of A2 and of SPEC-087's A14, section 10 |
 | `docs/red-first/SPEC-129.md` | docs | changed: A2's lines in a retired fence |
 | `docs/specs/SPEC-129-a-package-dispatch-is-sharded-by-its-projected-weight.md` | docs | amended: R4; A2 retired (section 14) |
 | `docs/specs/SPEC-327-the-mutation-budget-covers-the-settle-census.md` | docs | amended: R2's need, R7, R8 |

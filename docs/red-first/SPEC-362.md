@@ -29,6 +29,8 @@ A6: green at 039b003c
 A7: green at 039b003c
 A10: green at 039b003c
 A11: green at 039b003c
+A12: red at 86618b25: AssertionError: 1 != 2 : 21 listed
+A12: green at debf6c01
 ```
 
 **A8, by its planted mutant.** A8 is mutation coverage, not red-first. Row S36209's mutant, which
@@ -56,3 +58,6 @@ moved 11 derived counts in `test_memory_cap_verdict.py` from 51 and 50 to 143 an
 `sharded()` fixture being `2 * ((SHARD_BOUND_SECONDS - BASELINE_SECONDS) // 126) + 1`, with its
 assertions unchanged; and it gave `test_mutation_verdict.py`'s `cargo_report` Baseline a
 `log_path`, which R7 reads.
+
+A12 plants, by hand on `PYTHON_SHARD_MUTANTS`: 19 reads `2 != 1 : 20 listed`, 21 reads `1 != 2 : 21 listed`
+and 0 reads `ZeroDivisionError`; each fails the pin, and the file is restored byte-equal.

@@ -12,3 +12,6 @@
   kills still runs every test.
 - The scheduled battery sizes the whole tree from its listing at its own ceiling, no longer at a
   fixed 32 legs. No mutant, leg or row is skipped, capped or deferred.
+- The Python mutation matrix is sized to the hosted job: at most 20 listed mutants a shard, clamped
+  to 1 to 32 shards, so a full shard fits its 60-minute job; no mutant is dropped (SPEC-362 R14,
+  ADR-373).

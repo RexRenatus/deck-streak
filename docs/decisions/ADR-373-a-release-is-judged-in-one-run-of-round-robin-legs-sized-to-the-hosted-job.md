@@ -130,3 +130,19 @@ its legs and ceiling and `mutation-verdict` counts every leg.
   price after R9 (then the bound can be re-measured downwards); or a tree that grows past the
   ceiling faster than re-pricing recovers headroom (then the per-package fallback, or a faster
   census, is owed).
+
+## Amendment: D1, the Python matrix is sized to the hosted job
+
+Insert-only; every earlier byte is kept. SPEC-362 R14 lowers `PYTHON_SHARD_MUTANTS` from 40 to 20
+(`PYTHON_MAX_SHARDS` stays 32), under this decision's own principle that legs are sized to the
+hosted job. Measured: a leg of 34 Python mutants took 54 minutes 42 seconds, and its sibling of 34
+was cancelled at the 60-minute job cap, so a full shard of 40 needs about 64 minutes. Every listed
+mutant is still examined and every shard still counted, so this is not a weakening: the same
+population spreads over more legs (68 listed reads 4 shards of 17).
+
+Chosen against:
+
+- Raising the Python job's `timeout-minutes`: rejected, because it lengthens the leg instead of
+  sizing it, and the next growth in per-mutant cost eats the margin again.
+- Sizing the Python legs by measured per-mutant cost, as `fewest_shards` does for Rust: rejected for
+  this delivery, because the Python listing carries no per-mutant cost; it is a follow-up idea.
