@@ -460,6 +460,7 @@ These are read by the owner, not by CI, so they sit outside section 3's table an
   `web/app/messages/ko.json`, `web/app/messages/zh-Hans.json` and `web/app/messages/zh-Hant.json`.
 - **R15's citation, corrected:** A26 holds R15 under ADR-361 D7 and D12 (sound), not D13 (voice).
 - **Part 2 also touches** `web/app/src/lib/study/review-screen.test.ts`, which the bullet above omits.
+- **Part 2's icons, corrected:** part 2 touches `web/app/src/lib/icon.ts`, `web/app/src/routes/icon-192.png/+server.ts`, `web/app/src/routes/icon-512.png/+server.ts` and `web/app/src/routes/apple-touch-icon.png/+server.ts` in place of `web/app/static/icon-192.png`, `web/app/static/icon-512.png` and `web/app/static/apple-touch-icon.png`, which no commit touches; the build prerenders each icon at its path (ADR-361 D16).
 
 ## 11. Acceptance criteria of part 2
 
