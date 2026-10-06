@@ -184,3 +184,26 @@ A36: green at e2d01121
   are disclosed above. So the pushed head is not byte-identical to the green commits. The builder's
   runs before the push measure every criterion green on the pushed head's code and tests, and CI's
   run at the pushed head is the verdict.
+- DISCLOSE: 74bbc20 and 4339d5e add eleven tests, each MUTATION COVERAGE and none red-first: each
+  was written after the code it covers and is green at its own commit. Together they kill 24 of
+  the 26 mutants the diff's own mutation run left missed. They add new test names, two helpers
+  (`probe` in `crates/identity/tests/linking.rs`, `app_on` in `crates/api/tests/linking_routes.rs`)
+  and `use` lines, and change no existing test, value or assertion. In
+  `crates/identity/tests/linking.rs`, `a_link_code_and_its_store_debug_without_the_code` pins
+  `LinkCode` and `LinkCodes`'s `Debug`, and `ending_a_rows_sessions_answers_how_many_ended` pins
+  `end_opened_by`'s count. `a_link_session_hands_its_route_its_id_and_debugs_without_it` and
+  `a_fresh_telegram_session_hands_its_route_its_id_and_debugs_without_it` pin each extractor's
+  `token()` and `Debug`. In `crates/identity/tests/passkeys.rs`,
+  `a_ceremony_and_its_stores_debug_without_the_flow_id` pins `FlowId`, `Ceremonies` and
+  `Passkeys`'s `Debug`. `an_assertion_over_another_ceremonys_challenge_is_refused` pins the
+  library's challenge mismatch as `challenge_invalid`.
+  `a_registration_the_store_refuses_is_not_already_linked` pins a store failure that is not a
+  duplicate. In `crates/identity/tests/linking_config.rs`,
+  `an_https_public_origin_in_the_environment_turns_linking_on` pins the setting's parse and
+  `RelyingParty`'s `Debug`. In `crates/api/tests/linking_routes.rs`,
+  `the_ceremony_bound_serves_again_when_the_minute_turns` pins the bound's minute reset, and
+  `a_sign_in_answers_its_refusals_over_the_routes` pins the two sign-in routes' refusals.
+  `a_registration_finish_takes_its_flow_from_the_ceremony_cookie` pins the ceremony cookie's
+  reading. The other two missed mutants are argued equivalent to the reviewer and recorded nowhere:
+  `LinkingConfig::off` already returns the derived default, and `id_bytes` ORs a high nibble with a
+  low one, so `|` and `^` agree on every input.
