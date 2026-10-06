@@ -24,7 +24,7 @@ use anki_proto::sync::SyncCollectionResponse;
 use anki_proto::sync::sync_collection_response::ChangesRequired;
 use deck_streak_engine_core::dispatch::Dispatcher;
 use deck_streak_engine_core::full_sync::{
-    Confirmed, Counted, Counts, Direction, IdSets, Losses, Offer, SnapshotAnswer, Unsynced,
+    Confirmed, Counted, Counts, Direction, IdSets, Losses, Offer, Ready, SnapshotAnswer, Unsynced,
 };
 use deck_streak_engine_core::table::Transport;
 
@@ -423,6 +423,63 @@ fn a_download_needs_no_snapshot_and_refuses_one() {
         backed.clone().snapshot_found(&FOUND).err(),
         Some(backed),
         "a download refuses the snapshot step, even on a found snapshot"
+    );
+}
+
+#[test]
+fn a_write_refuses_a_device_row_its_backup_lacks() {
+    let device = sets(&[1, 2], &[10, 11], &[20, 21], 7);
+    let server = sets(&[1, 3], &[10], &[20], 9);
+    let download = || {
+        confirmed(&device, &server, Direction::Download)
+            .backed_up(&device)
+            .expect("the device's collection backs up the download")
+            .download_ready()
+            .expect("a download is ready from its backup")
+    };
+    let written = |ready: Ready, now: &IdSets| {
+        ready
+            .at_write(now)
+            .map(|write| write.direction())
+            .map_err(|counted| counted.counts())
+    };
+    // The device read at the write gained one row since its backup: a review, a card or a note.
+    let gained = [
+        sets(&[1, 2, 4], &[10, 11], &[20, 21], 8),
+        sets(&[1, 2], &[10, 11, 12], &[20, 21], 8),
+        sets(&[1, 2], &[10, 11], &[20, 21, 22], 8),
+    ];
+    assert_eq!(
+        gained.each_ref().map(|now| written(download(), now)),
+        [
+            Err(Counts {
+                upload: Some(losses(1, 0, 0)),
+                download: Some(losses(2, 1, 1)),
+            }),
+            Err(Counts {
+                upload: Some(losses(1, 0, 0)),
+                download: Some(losses(1, 2, 1)),
+            }),
+            Err(Counts {
+                upload: Some(losses(1, 0, 0)),
+                download: Some(losses(1, 1, 2)),
+            }),
+        ],
+        "a download whose device gained a row its backup lacks is refused, with new counts over \
+         the device read now"
+    );
+    let upload = confirmed(&device, &server, Direction::Upload)
+        .backed_up(&server)
+        .expect("the server copy backs up the upload")
+        .snapshot_found(&FOUND)
+        .expect("a found snapshot checks the upload")
+        .rechecked(server.clone())
+        .expect("an unchanged server copy is ready");
+    assert_eq!(
+        [written(download(), &device), written(upload, &gained[0])],
+        [Ok(Direction::Download), Ok(Direction::Upload)],
+        "a download whose device is unchanged is written, and an upload admits a device gain, \
+         which it sends"
     );
 }
 
