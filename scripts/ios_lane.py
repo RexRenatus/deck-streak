@@ -103,8 +103,10 @@ def plan(lane):
     event = os.environ["GITHUB_EVENT_NAME"]
     ref = os.environ["GITHUB_REF"]
     if lane == "internal":
-        if event != "workflow_dispatch":
-            raise Refused(f"the internal lane runs on workflow_dispatch only, not on {event}")
+        if event not in ("workflow_dispatch", "push"):
+            raise Refused(
+                f"the internal lane runs on workflow_dispatch or push only, not on {event}"
+            )
         if ref != "refs/heads/dev":
             raise Refused(f"the internal lane builds refs/heads/dev only, not {ref}")
     elif event != "push" or os.environ.get("GITHUB_REF_TYPE") != "tag":
