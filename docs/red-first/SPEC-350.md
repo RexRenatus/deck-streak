@@ -218,5 +218,84 @@ lines of section 11's fence resolves to a test this delivery adds, or to a test 
 Each line's command is the criterion's line in SPEC-350 section 11's fence, run at the commit named.
 
 ```red-first
+A24: red at 803693bb: assertion `left == right` failed: left: [("cat.mp3", 9), ("cat.mp3", 9), ("dog.ogg", 7)] right: [("cat.mp3", 9), ("dog.ogg", 7)]
+A24: green at f8ae12cd
 A25: not red: its three tests stand on dev, named as they are and unchanged by this delivery, which must keep them green
+A26: red at e4935e82: AssertionError: expected [] to deeply equal [ true ]
+A26: green at f8ae12cd
+A27: red at 45de2676: AssertionError: expected null to be { voiceURI: 'markus', …(2) } // Object.is equality
+A27: green at f10a2333
+A28: red at d97ce3ce: AssertionError: expected null to deeply equal { name: 'DeckStreak', …(4) }
+A28: green at e8723819
+A30: red at 876861a9: AssertionError: expected [ 'good', 'good', 'again' ] to deeply equal [ 'good', 'undo', 'good', 'again' ]
+A30: green at aef11216
 ```
+
+## Part 2: what the reds and greens disclosed
+
+- **A24 is red by its first test, and green where its last turned green.** The native tests were
+  red at 803693bb. Its TypeScript lines were each committed before the code they hold:
+  `session.test.ts` and `media.test.ts` at ac6a31d0, and `review.test.ts` "the frame shows the
+  faces the engine completed" at e4935e82, the last to turn green, at f8ae12cd. Its eighth line,
+  `frame-document.test.ts` "a data: media source reaches the frame unchanged", passed when it was
+  written at 003f7d76: the frame already passed a `data:` source through, so the test pins that
+  and proves no new behaviour.
+- **A26's other two lines were red at e4935e82 too**, re-measured in a checkout of that commit:
+  "a blocked play leaves the replay control" (`expected [] to deeply equal [ false ]`) and
+  `input.test.ts` "the remote's replay fires on either side" (`expected [ 'replay', 'replay' ] to
+  deeply equal [ 'replay', 'replay', 'replay', …(1) ]`).
+- **A27's other two titles were red at 45de2676 by assertion**: `expected [] to deeply equal [
+  …(2) ]` and `expected [] to deeply equal [ 'de-DE', 'ja-JP' ]`.
+- **A30's other tests were red at 876861a9.** The route's red is `a11y-coverage.test.ts`
+  (`expected [ '/', '/about', '/badges', …(12) ] to deeply equal [ '/', '/about', '/badges',
+  …(13) ]`), with the route page on disk and the route table not yet grown. The store's other
+  tests were red by assertion, and the screen's three by `TestingLibraryElementError` over the
+  stub screen, which held no heading, button or checkbox. All are green at aef11216.
+- **Commits between a red and its green that touch a test file:**
+  - f9269f2d added a third native test, `a_sound_takes_the_type_the_table_gives_its_name`, beyond
+    the two the plan named; it decides no criterion, and it is S35043's killer.
+  - 7167420c, step 2's green, changed one `OWED` statement in `boundary.rs` that f9269f2d added,
+    because rustfmt put a trailing comma after the `Files::new(` argument; no assertion changed.
+  - ac6a31d0 grew part 1's `OPS` list in `protocol.test.ts` by `'faces'` (GROWN), and inserted a
+    `wants` field and a `faces` method into `session.test.ts`'s `FakeEngine`.
+  - 20b1b3c8 edited the `OWED` statement in `boundary.rs` in the same commit that made `wasm.rs`
+    consume the media contents by value.
+  - ced6a00d, step 3's green, made one type-only edit to `media.test.ts`'s helper: `FakeFolder`'s
+    map became `Map<string, Uint8Array<ArrayBuffer>>`, for svelte-check. No case was edited.
+  - 003f7d76 is step 4's new test, above; e4935e82 is step 5's tests.
+  - 45de2676 added a test outside the fence to `review-screen.test.ts`, "the review screen plays
+    the face, and offers its replay and its voices", and an insert-only second import line,
+    `import type { Clip, Faces }`.
+  - 876861a9, step 8's red, gave `StudyInput` a stub third constructor parameter, the mapping,
+    which it ignored, so the red test reads red by assertion rather than by a type error.
+  - aef11216, step 8's green, grew `startapp.test.ts`'s `BY_PATH` by `/study/mapping` (GROWN, with
+    a SPEC-350 R18 comment), and typed the two expected-pair lists in `mapping-store.test.ts` as
+    `[string, string][]` and `[number, string][]` for svelte-check; no assertion changed. It also
+    added `review-screen.test.ts` "the review reads the mapping this device stores, and links to
+    its screen", outside the fence, which read red on the uncommitted tree before the review
+    screen passed the mapping on (`expected [ 'card', 'rate 1 3 0', 'card' ] to deeply equal [
+    'card' ]`).
+- **A27's fence title is quoted so a static reader resolves it.** The tdd probe's
+  `acceptance-has-a-test` found that `voice.test.ts` wrote the title "a speech clip is spoken in
+  its language at the web's rate" with an escaped quote, which it reads as no match. The title is
+  now in double quotes; the string vitest matches is unchanged.
+- **The study suite gains no test.** A replay control needs a card with a sound, which the suite's
+  synthetic notes do not hold and no seeding route may add; the mapping screen holds no deck, and
+  its behaviour is held by the render tests above. `tests/a11y.spec.ts` audits every path of the
+  route table, so `/study/mapping` is audited in both colour schemes once it joins the table.
+- **The icons were made by this standard-library script**, run from the repository root:
+
+  ```python
+  import struct, zlib
+  def chunk(kind, data):
+      return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+  for n, name in ((192, 'icon-192.png'), (512, 'icon-512.png'), (180, 'apple-touch-icon.png')):
+      rows = (b'\x00' + bytes((15, 23, 42)) * n) * n
+      header = struct.pack('>IIBBBBB', n, n, 8, 2, 0, 0, 0)
+      with open('web/app/static/' + name, 'wb') as out:
+          out.write(b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', header) + chunk(b'IDAT', zlib.compress(rows, 9)) + chunk(b'IEND', b''))
+  ```
+
+- **Rows S35040 to S35043** hold the media reader: a name asked twice is wanted once, a file is
+  read no further than its limit, a file not read is absent, and an extension is read without
+  case. Each was proved KILLED by its killer.

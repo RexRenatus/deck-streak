@@ -458,6 +458,8 @@ These are read by the owner, not by CI, so they sit outside section 3's table an
   `web/app/static/icon-512.png`, `web/app/static/apple-touch-icon.png`, `web/app/messages/en.json`,
   `web/app/messages/es.json`, `web/app/messages/fr.json`, `web/app/messages/ja.json`,
   `web/app/messages/ko.json`, `web/app/messages/zh-Hans.json` and `web/app/messages/zh-Hant.json`.
+- **R15's citation, corrected:** A26 holds R15 under ADR-361 D7 and D12 (sound), not D13 (voice).
+- **Part 2 also touches** `web/app/src/lib/study/review-screen.test.ts`, which the bullet above omits.
 
 ## 11. Acceptance criteria of part 2
 

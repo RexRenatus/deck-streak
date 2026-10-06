@@ -188,7 +188,7 @@ describe('the voice', () => {
     }
   });
 
-  it('a speech clip is spoken in its language at the web\'s rate', async () => {
+  it("a speech clip is spoken in its language at the web's rate", async () => {
     const synthesis = new FakeSynthesis(VOICES);
     const choices = new VoiceChoices(stored(JSON.stringify({ 'de-DE': 'anna' })));
     const speaker = new WebSpeaker(synthesis, choices, (text) => new FakeUtterance(text));
