@@ -8,7 +8,14 @@
 
 use std::fmt;
 
-use crate::table::{ExemptWrite, TargetKind};
+use anki_proto::cards::RemoveCardsRequest;
+use anki_proto::deck_config::DeckConfigId;
+use anki_proto::notes::RemoveNotesRequest;
+use anki_proto::notetypes::ChangeNotetypeRequest;
+use anki_proto::scheduler::{ScheduleCardsAsNewRequest, SetDueDateRequest};
+use prost::Message;
+
+use crate::table::{EXEMPT, ExemptWrite, TargetKind};
 
 /// The one thing an exempt write acts on, by the engine's id.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -96,15 +103,65 @@ impl OwnerGesture {
     ///
     /// [`GestureRefusal::WrongKind`] when `target` is not of the kind `write` takes.
     pub fn from_tap(write: ExemptWrite, target: Target) -> Result<Self, GestureRefusal> {
-        Err(GestureRefusal::WrongKind { write, target })
+        if EXEMPT
+            .iter()
+            .any(|row| row.write == write && row.kind == target.kind())
+        {
+            Ok(Self { write, target })
+        } else {
+            Err(GestureRefusal::WrongKind { write, target })
+        }
     }
 
     /// The service, the method and the request the engine runs for this gesture: `input` decoded
     /// as the write's own message, checked against the one target, and encoded again.
-    pub(crate) fn checked(self, _input: &[u8]) -> Result<(u32, u32, Vec<u8>), GestureRefusal> {
-        Err(GestureRefusal::NotTheTarget {
-            write: self.write,
-            target: self.target,
-        })
+    pub(crate) fn checked(self, input: &[u8]) -> Result<(u32, u32, Vec<u8>), GestureRefusal> {
+        let Self { write, target } = self;
+        let (Target::Card(id) | Target::Note(id) | Target::Preset(id)) = target;
+        let Some(row) = EXEMPT.iter().find(|row| row.write == write) else {
+            return Err(GestureRefusal::WrongKind { write, target });
+        };
+        let undecodable = |_| GestureRefusal::Undecodable { write };
+        // Each write's request is decoded as its own message and judged on the ids it names: the
+        // one target, alone. The engine then runs the checked message, encoded again.
+        let (names_only_the_target, request) = match write {
+            ExemptWrite::Forget => {
+                let request = ScheduleCardsAsNewRequest::decode(input).map_err(undecodable)?;
+                (only(&request.card_ids, id), request.encode_to_vec())
+            }
+            ExemptWrite::SetDueDate => {
+                let request = SetDueDateRequest::decode(input).map_err(undecodable)?;
+                (only(&request.card_ids, id), request.encode_to_vec())
+            }
+            ExemptWrite::DeletePreset => {
+                let request = DeckConfigId::decode(input).map_err(undecodable)?;
+                (request.dcid == id, request.encode_to_vec())
+            }
+            ExemptWrite::ChangeNoteType => {
+                let request = ChangeNotetypeRequest::decode(input).map_err(undecodable)?;
+                (only(&request.note_ids, id), request.encode_to_vec())
+            }
+            ExemptWrite::DeleteCard => {
+                let request = RemoveCardsRequest::decode(input).map_err(undecodable)?;
+                (only(&request.card_ids, id), request.encode_to_vec())
+            }
+            ExemptWrite::DeleteNote => {
+                let request = RemoveNotesRequest::decode(input).map_err(undecodable)?;
+                (
+                    only(&request.note_ids, id) && request.card_ids.is_empty(),
+                    request.encode_to_vec(),
+                )
+            }
+        };
+        if names_only_the_target {
+            Ok((row.service, row.method, request))
+        } else {
+            Err(GestureRefusal::NotTheTarget { write, target })
+        }
     }
+}
+
+/// Whether a request's ids name the one target and nothing else.
+fn only(ids: &[i64], id: i64) -> bool {
+    ids == [id]
 }
