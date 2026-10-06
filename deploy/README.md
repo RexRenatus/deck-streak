@@ -204,6 +204,11 @@ a JSON object with `host`, `web_root`, `api_upstream` and `sync_upstream`), adds
 of the Caddyfile, runs `caddy validate` and `caddy adapt --validate` on the copy, moves it into
 place and reloads; a refusal leaves the live file as it was, and a reload that fails puts the
 previous block and Caddyfile back, reloads them and exits non-zero (SPEC-127).
+The `import` line names the block by its absolute path in the Caddy directory, and each step
+writes and checks its candidate in the live Caddyfile's own directory, so the site is served
+whether the Caddyfile is in the Caddy directory or set apart by `DECKSTREAK_DEPLOY_CADDYFILE`;
+either step refuses a Caddy directory that is not an absolute path of ASCII letters, digits and
+`._@+/-` before it reads or writes anything (SPEC-353).
 `rollback.sh caddy-remove` reverses it under the same rule. Either Caddy step refuses, before it
 reads or writes anything, any entry of its environment whose name starts with `DECKSTREAK_DEPLOY_` and
 is not one of the settings above, whatever follows the prefix, and a setting it receives twice or

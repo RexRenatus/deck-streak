@@ -66,11 +66,24 @@ CADDYFILE=${DECKSTREAK_DEPLOY_CADDYFILE:-/etc/caddy/Caddyfile}
 READY_SECONDS=${DECKSTREAK_DEPLOY_READY_SECONDS:-180}
 READY_POLL=${DECKSTREAK_DEPLOY_READY_POLL:-2}
 KEEP=${DECKSTREAK_DEPLOY_KEEP:-3}
-IMPORT_LINE='import deck-streak.caddy'
+# The site block is imported by its absolute path, and each Caddy step writes and checks its candidate in the
+# Caddyfile's own directory: Caddy resolves a relative import against the directory of the file that holds
+# it, so the check and the reload then read one configuration, wherever the Caddyfile is (SPEC-353 R1, R2;
+# ADR-364 D1, D2).
+IMPORT_LINE="import $CADDY_DIR/deck-streak.caddy"
 
 die() {
     echo "deploy: $*" >&2
     exit 1
+}
+
+# The import line carries the Caddy directory as one Caddyfile token, so it is an absolute path of
+# the characters a Caddyfile token and an import pattern read literally (SPEC-353 R3; ADR-364 D3).
+plain_caddy_dir() {
+    case $CADDY_DIR in
+    [!/]* | /*[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._@+/-]*)
+        die "DECKSTREAK_DEPLOY_CADDY_DIR is not an absolute path of plain characters" ;;
+    esac
 }
 
 need_host() {
@@ -270,6 +283,7 @@ rollback_tag() {
 
 caddy_install() {
     local tag=$1 config=${DECKSTREAK_DEPLOY_CADDY_CONFIG:-} block template
+    plain_caddy_dir
     verify_tag "$tag"
     [ -n "$config" ] && [ -f "$config" ] || die "the private Caddy configuration is missing"
     need_host
@@ -284,7 +298,7 @@ caddy_install() {
 set -eu
 dir=$1 file=$2 line=$3
 block=$dir/deck-streak.caddy
-copy=$dir/deck-streak.candidate
+copy=$(dirname -- "$file")/deck-streak.candidate
 kept=$file.previous
 had=
 put_back_block() {
@@ -325,13 +339,14 @@ exit 0
 }
 
 caddy_remove() {
+    plain_caddy_dir
     need_host
     # shellcheck disable=SC2016  # a literal script for the host
     on_host '
 set -eu
 dir=$1 file=$2 line=$3
 block=$dir/deck-streak.caddy
-copy=$dir/deck-streak.candidate
+copy=$(dirname -- "$file")/deck-streak.candidate
 kept=$file.previous
 had=
 unwritten() {

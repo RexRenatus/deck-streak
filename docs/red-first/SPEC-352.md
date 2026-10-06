@@ -57,6 +57,8 @@ A23: red at 83b2734a: AssertionError: None != 'AppIcon'
 A23: green at edf2fa57
 A24: red at 83b2734a: AssertionError: False is not true : the script wrote no icon
 A24: green at edf2fa57
+A25: red at 7124d3ce: AssertionError: Lists differ: ["crates/engine-core/**: the XCFramework l[157 chars] it"] != []
+A25: green at 85c644d7
 ```
 
 - Three red lines are shortened where the failure printed more than a criterion needs: A8's set
@@ -79,3 +81,15 @@ A24: green at edf2fa57
   cured in ebb03f0a, where the SPEC's status reads delivered.
 - A14 to A22 are never run on the box. Their greens are the CI reading by name at the completing
   push's head; the green lines name 54954977, the commit that wrote the lanes in full.
+- Ruling 461's amendment (SPEC-352 R22). Its tests were committed alone at 7124d3ce, before the
+  workflow and the plan changed at 85c644d7. Each red and green was read locally by running the two
+  workflow modules, `test_testflight_workflows.py` and `test_ci_workflows.py`, at each commit
+  (`Ran 62 tests`: three failures at 7124d3ce, `OK` at 85c644d7), and A1's one test at each. A1,
+  A14 and A17 are amended criteria, so their new reds are recorded here and not in the fence. A1
+  was red at 7124d3ce on a push to `dev`, `AssertionError: None != 'internal'`, and green at
+  85c644d7. A14 was red at 7124d3ce, the internal `on` reading `{'workflow_dispatch': None}`
+  against the dispatch and the filtered push, and green at 85c644d7. A17 was red at 7124d3ce, the
+  internal queue reading `testflight-internal-${{ github.ref }}` with `queue: max` against R16's
+  amended block, and green at 85c644d7. A25's planted control, the live workflow with
+  `crates/engine-core/**` dropped, was red by name: `crates/engine-core/**: the XCFramework links
+  it, and the internal lane's push filter does not watch it`.

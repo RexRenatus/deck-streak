@@ -213,6 +213,7 @@ context each migration names equal to the owner this register gives each table i
 | `ingest_state` | `ingest` | `migrations/002301_ingest_state.sql` (SPEC-023) | reset in place: the anchor, the rescore flag, the refused request (SPEC-128) and the window's base cleared |
 | `skip_days` | `ingest` | `migrations/008301_ingest_skip_days.sql` (SPEC-083) | exported and erased |
 | `skip_card_snapshot` | `ingest` | `migrations/008302_ingest_skip_card_snapshot.sql` (SPEC-083) | exported and erased |
+| `write_class_stop` | `ingest` | `migrations/008303_ingest_write_class_stop.sql` (SPEC-083) | exempt: only the owner's command clears the class's stop, and an erase that cleared it would be a second path |
 | `cron_fires` | `coordination` | `migrations/002701_coordination_cron_fires.sql` (SPEC-027) | exempt: an erase must never re-arm the catch-up double-send guard |
 | `instrument_reports` | `coordination` | `migrations/009401_coordination_instrument_reports.sql` (SPEC-094) | exported and erased |
 | `xp_ledger` | `progression` | `migrations/004001_progression_xp_ledger.sql` (SPEC-040) | exported and erased |

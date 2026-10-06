@@ -260,12 +260,23 @@ class LanePlan(unittest.TestCase):
         self.assertEqual(outputs, {})
 
     def test_the_internal_plan_refuses_any_event_or_ref_but_a_dispatch_on_dev(self):
+        # SPEC-352 A1 (R3, as R22 amends it): a dispatch on dev and a push to dev are admitted;
+        # any other event, and either admitted event on any ref but dev, is refused by name.
         checkout = self.clone()
-        dispatch_only = "the internal lane runs on workflow_dispatch only, not on {}"
+        for event in examined("admitted internal starts", ["workflow_dispatch", "push"]):
+            with self.subTest(event=event):
+                run, outputs = self.plan(
+                    checkout, "internal", event, "refs/heads/dev", self.sha["D"]
+                )
+                self.assertEqual(outputs.get("lane"), "internal")
+                self.assertEqual(run.returncode, 0)
+        events_only = "the internal lane runs on workflow_dispatch or push only, not on {}"
         dev_only = "the internal lane builds refs/heads/dev only, not {}"
         refused = [
-            ("push", "refs/heads/dev", dispatch_only.format("push")),
-            ("pull_request", "refs/pull/1/merge", dispatch_only.format("pull_request")),
+            ("pull_request", "refs/pull/1/merge", events_only.format("pull_request")),
+            ("schedule", "refs/heads/dev", events_only.format("schedule")),
+            ("push", "refs/heads/main", dev_only.format("refs/heads/main")),
+            ("push", "refs/tags/v0.2.0", dev_only.format("refs/tags/v0.2.0")),
             ("workflow_dispatch", "refs/heads/main", dev_only.format("refs/heads/main")),
             ("workflow_dispatch", "refs/tags/v0.2.0", dev_only.format("refs/tags/v0.2.0")),
         ]
@@ -273,11 +284,6 @@ class LanePlan(unittest.TestCase):
             with self.subTest(event=event, ref=ref):
                 run, outputs = self.plan(checkout, "internal", event, ref, self.sha["D"])
                 self.assertRefused(run, outputs, message)
-        run, outputs = self.plan(
-            checkout, "internal", "workflow_dispatch", "refs/heads/dev", self.sha["D"]
-        )
-        self.assertEqual(outputs.get("lane"), "internal")
-        self.assertEqual(run.returncode, 0)
 
     def test_the_plan_refuses_a_shallow_checkout(self):
         starts = [

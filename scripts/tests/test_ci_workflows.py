@@ -4972,6 +4972,12 @@ NOT_WORKFLOW_READS = {
             "umbrella_closure(where)",
             1,
         ),
+        (
+            "test_testflight_workflows",
+            "TheTestflightLanes.test_the_internal_push_filter_watches_every_crate_the_xcframework_links",
+            "umbrella_closure(REPO, package)",
+            1,
+        ),
     ),
     **allowed(
         "the loader's one read: a workflow file's bytes, decoded as strict utf-8 with no byte order mark",
@@ -6627,6 +6633,40 @@ DYNAMIC_IMPORTS = {
             "configparser.ConfigParser(interpolation=configparser.BasicInterpolation(), inline_comment_prefixes=';')",
             1,
         ),
+    ),
+    **allowed(
+        "probes, then restores, the collation locale the refusal is measured under; reads no file, never a workflow",
+        (
+            "_support",
+            "collation_locale_available",
+            "locale.Error",
+            1,
+        ),
+        (
+            "_support",
+            "collation_locale_available",
+            "locale.LC_COLLATE",
+            3,
+        ),
+        (
+            "_support",
+            "collation_locale_available",
+            "locale.setlocale(locale.LC_COLLATE)",
+            1,
+        ),
+        (
+            "_support",
+            "collation_locale_available",
+            "locale.setlocale(locale.LC_COLLATE, name)",
+            1,
+        ),
+        (
+            "_support",
+            "collation_locale_available",
+            "locale.setlocale(locale.LC_COLLATE, collation)",
+            1,
+        ),
+        ("_support", "collation_locale_available", "collation", 1),
     ),
     **allowed(
         "decompresses the image data of the icon a production script writes, to compare its pixels (SPEC-352 A24); bytes in and bytes out, and it imports, runs and reads nothing",
