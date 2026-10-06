@@ -273,3 +273,11 @@ impl<'a> Wanted<'a> {
         self.asked.into_inner()
     }
 }
+
+/// The media type `types` gives `name`'s extension, compared without case. `types` is the core's
+/// one table, passed in, so no copy of it lives here (SPEC-350 R15, ADR-361 D12).
+#[must_use]
+pub fn media_type<'a>(name: &str, types: &[(&str, &'a str)]) -> Option<&'a str> {
+    let _ = (name, types);
+    None
+}

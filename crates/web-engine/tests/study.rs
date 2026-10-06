@@ -6,7 +6,7 @@
 
 use deck_streak_web_engine::study::{
     Answer, BuryOf, Files, STUDY_CALLS, Shown, StudyError, Wanted, admit, bury_of,
-    engine_languages, service, shown_for, toggled_red,
+    engine_languages, media_type, service, shown_for, toggled_red,
 };
 
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
@@ -261,4 +261,15 @@ fn a_file_is_read_no_further_than_its_limit() {
     assert_eq!(files.read("short.wav", 3), Some(vec![6]));
     assert_eq!(files.read("long.wav", u64::MAX), Some(vec![1, 2, 3, 4, 5]));
     assert_eq!(files.read("absent.wav", 3), None);
+}
+
+#[test]
+fn a_sound_takes_the_type_the_table_gives_its_name() {
+    // SPEC-350 R15: the table is the caller's, its extension read without case; a name with no
+    // extension, or one the table lacks, has no type.
+    let types = [("mp3", "audio/mpeg"), ("ogg", "audio/ogg")];
+    assert_eq!(media_type("cat.MP3", &types), Some("audio/mpeg"));
+    assert_eq!(media_type("dog.wav.ogg", &types), Some("audio/ogg"));
+    assert_eq!(media_type("bird.wav", &types), None);
+    assert_eq!(media_type("ogg", &types), None);
 }
