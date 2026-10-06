@@ -35,7 +35,7 @@ changed no identity, api or web-client path.
 | screens the web client routes | 15 | `git show $D:web/app/src/lib/routes.ts \| grep -c -E "^\s+'/"` |
 | Permissions-Policy declared by the edge or the page | 0, so WebAuthn's default allowlist (`self`) holds at top level | `git grep -i -c permissions-policy $D -- deploy/caddy web/app/svelte.config.js \| wc -l` |
 | the page's `connect-src` | `'self'` only | `git grep -n connect-src $D -- web/app/svelte.config.js` (line 30) |
-| migrations | 30, none creating a passkey table | `git ls-tree --name-only $D migrations/ \| wc -l` |
+| migrations | 31, none creating a passkey table | `git ls-tree --name-only $D migrations/ \| wc -l` |
 | SPEC-131's scope | 20 requirements and 58 criteria, of which this SPEC takes 26 (23 in §3, 3 in §7; A40 and A42 for `passkeys` only), by the map in each row | `git grep -c -E '^R[0-9]+\. ' $D -- 'docs/specs/planned/SPEC-131-*'` and `git grep -c -E '^\| A[0-9]+ \|' $D -- 'docs/specs/planned/SPEC-131-*'` |
 
 - **A browser outside Telegram cannot sign in.** The web client and the Mini App are one
