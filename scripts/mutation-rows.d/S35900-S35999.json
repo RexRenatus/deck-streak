@@ -1,0 +1,296 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S35900-LINK-CODE-LIFE",
+        "identity",
+        "src/linking.rs",
+        "pub const LINK_CODE_LIFETIME: Duration = Duration::from_mins(10);",
+        "pub const LINK_CODE_LIFETIME: Duration = Duration::from_secs(601);",
+        "linking::a_link_code_expires_at_six_hundred_seconds",
+        "a link code lives 600 seconds, so a code of 600 seconds is refused link_code_expired; 601 accepts it (SPEC-359 R3, A2)"
+      ],
+      [
+        "S35901-LINK-CODE-BYTES",
+        "identity",
+        "src/linking.rs",
+        "pub const LINK_CODE_BYTES: usize = 16;",
+        "pub const LINK_CODE_BYTES: usize = 12;",
+        "linking::a_link_code_is_random_and_kept_hashed",
+        "a link code is 16 random bytes; 12 shortens every code (SPEC-359 R3, A1)"
+      ],
+      [
+        "S35902-LINK-CODE-HASHED",
+        "identity",
+        "src/linking.rs",
+        "            digest: digest(&code),",
+        "            digest: code.to_vec(),",
+        "linking::a_link_code_is_random_and_kept_hashed",
+        "the store keeps a link code only as its SHA-256; keeping the code's bytes keeps the secret itself (SPEC-359 R3, A1)"
+      ],
+      [
+        "S35903-LINK-CODE-ONCE",
+        "identity",
+        "src/linking.rs",
+        "        let kept = live.remove(at);",
+        "        let kept = Live { digest: live[at].digest.clone(), owner: live[at].owner, minted: live[at].minted };",
+        "linking::a_link_code_redeems_once",
+        "a redeem removes the code in the critical section that finds it, so a second redeem is refused link_code_invalid; a lookup that keeps the code redeems it twice (SPEC-359 R3, A3)"
+      ],
+      [
+        "S35904-LINK-CODE-CAP",
+        "identity",
+        "src/linking.rs",
+        "pub const MAX_LIVE_LINK_CODES: usize = 8;",
+        "pub const MAX_LIVE_LINK_CODES: usize = 9;",
+        "linking::a_ninth_link_code_evicts_the_oldest",
+        "at most eight link codes are live, so a ninth evicts the oldest; nine keeps it (SPEC-359 R3, A5)"
+      ],
+      [
+        "S35905-REAUTH-AGE",
+        "identity",
+        "src/linking.rs",
+        "pub const REAUTH_AGE: Duration = Duration::from_mins(5);",
+        "pub const REAUTH_AGE: Duration = Duration::from_secs(301);",
+        "linking::a_link_code_needs_a_fresh_telegram_session",
+        "a link code needs a Telegram handshake at most 300 seconds old, so one of 301 seconds is refused reauth_required (SPEC-359 R3, A4)"
+      ],
+      [
+        "S35906-LINK-SESSION-LIFE",
+        "identity",
+        "src/session.rs",
+        "pub const LINK_SESSION_LIFETIME: Duration = Duration::from_mins(10);",
+        "pub const LINK_SESSION_LIFETIME: Duration = Duration::from_secs(601);",
+        "linking::a_link_session_is_not_an_owner_session",
+        "a link session lives 600 seconds after its redeem, so the linking use cases refuse it at 600 (SPEC-359 R2, R4, A6)"
+      ],
+      [
+        "S35907-OWNER-REFUSES-LINK",
+        "identity",
+        "src/session.rs",
+        "        if session.proof == Proof::Link {",
+        "        if session.proof == Proof::Linked(i64::MIN) {",
+        "linking::a_link_session_is_not_an_owner_session",
+        "an owner session never admits a link session; skipping admit's refusal of the link proof admits it (SPEC-359 R2, A6)"
+      ],
+      [
+        "S35908-OWNER-ADMITS-LINKED",
+        "identity",
+        "src/session.rs",
+        "        if session.proof == Proof::Link {",
+        "        if session.proof != Proof::Telegram {",
+        "linking::a_linked_session_is_an_owner_session_that_mints_nothing",
+        "an owner session admits a linked session; refusing every proof but telegram refuses it (SPEC-359 R2, A7)"
+      ],
+      [
+        "S35909-REMOVAL-ENDS-SESSIONS",
+        "identity",
+        "src/linking.rs",
+        "        self.sessions.end_opened_by(id);",
+        "        let _ = id;",
+        "linking::removing_a_passkey_ends_its_sessions",
+        "removing a passkey ends the linked sessions it opened; without the call they stay live (SPEC-359 R9, A25)"
+      ],
+      [
+        "S35910-LAST-METHOD",
+        "identity",
+        "src/linking.rs",
+        "        if id == TELEGRAM_METHOD {",
+        "        if id < TELEGRAM_METHOD {",
+        "linking::unlinking_telegram_is_refused",
+        "the Telegram method is never removed and is refused last_method; skipping the refusal answers identity_unknown instead (SPEC-359 R9, A23)"
+      ],
+      [
+        "S35911-OWNER-CHECK",
+        "identity",
+        "src/linking.rs",
+        "        if user != self.owner.user().get() {",
+        "        if user == self.owner.user().get() {",
+        "linking::a_linked_identity_of_another_user_is_refused",
+        "a credential whose row belongs to another Telegram user is refused not_owner before the library verifies (SPEC-359 R6, A21)"
+      ],
+      [
+        "S35912-ROTATE",
+        "identity",
+        "src/linking.rs",
+        "            .await?;\n        if let Some(arriving) = arriving {\n            self.sessions.end_session(arriving);\n        }",
+        "            .await?;\n        let _ = arriving;",
+        "linking::a_sign_in_rotates_the_session",
+        "a passkey sign-in ends the session it arrived with and opens a new linked one; without the end the arriving session stays live (SPEC-359 R6, A22)"
+      ],
+      [
+        "S35913-CEREMONY-LIFE",
+        "identity",
+        "src/passkeys.rs",
+        "pub const CEREMONY_LIFETIME: Duration = Duration::from_mins(5);",
+        "pub const CEREMONY_LIFETIME: Duration = Duration::from_secs(301);",
+        "passkeys::a_passkey_challenge_expires_at_three_hundred_seconds",
+        "a ceremony lives 300 seconds, so one finished at 300 is refused challenge_expired (SPEC-359 R7, A11)"
+      ],
+      [
+        "S35914-CEREMONY-CAP",
+        "identity",
+        "src/passkeys.rs",
+        "pub const MAX_LIVE_CEREMONIES: usize = 8;",
+        "pub const MAX_LIVE_CEREMONIES: usize = 9;",
+        "passkeys::a_ninth_ceremony_evicts_the_oldest",
+        "at most eight ceremonies are live, so a ninth evicts the oldest; nine keeps it (SPEC-359 R7, A16)"
+      ],
+      [
+        "S35915-CEREMONY-TAKEN",
+        "identity",
+        "src/passkeys.rs",
+        "        let ceremony = live.remove(at);",
+        "        let ceremony = live[at].clone();",
+        "passkeys::a_reused_passkey_challenge_is_refused",
+        "a ceremony is taken out of the store in the critical section that finds it, so its second finish is refused challenge_invalid (SPEC-359 R7, A10)"
+      ],
+      [
+        "S35916-CEREMONY-SESSION",
+        "identity",
+        "src/passkeys.rs",
+        "        if !bool::from(digest(session.as_bytes()).ct_eq(&started_in)) {",
+        "        if started_in.is_empty() {",
+        "passkeys::a_ceremony_finishes_only_in_its_own_session",
+        "a registration finishes only in the link session that started it; skipping the comparison finishes it in another (SPEC-359 R7, A17)"
+      ],
+      [
+        "S35917-COUNTER-ADVANCE",
+        "identity",
+        "src/passkeys.rs",
+        "    (stored == 0 && presented == 0) || presented > stored",
+        "    (stored == 0 && presented == 0) || presented >= stored",
+        "passkeys::the_counter_rule_accepts_only_an_advance_or_two_zeros",
+        "the counter rule accepts an advance and refuses an equal counter (SPEC-359 R8, A15)"
+      ],
+      [
+        "S35918-COUNTER-ZEROS",
+        "identity",
+        "src/passkeys.rs",
+        "    (stored == 0 && presented == 0) || presented > stored",
+        "    (presented == 0) || presented > stored",
+        "passkeys::the_counter_rule_accepts_only_an_advance_or_two_zeros",
+        "the counter rule accepts zero only over a stored zero; dropping the stored side accepts a zero after a non-zero counter (SPEC-359 R8, A15)"
+      ],
+      [
+        "S35919-COUNTER-CAS",
+        "identity",
+        "src/passkeys.rs",
+        "        if advanced.rows_affected() != 1 {",
+        "        if advanced.rows_affected() > 1 {",
+        "passkeys::a_counter_moved_since_its_read_is_refused",
+        "the counter advances by one compare-and-swap on the value the rule read, so a counter moved since is refused counter_regressed (SPEC-359 R8, A35)"
+      ],
+      [
+        "S35920-COUNTER-STORED",
+        "identity",
+        "src/passkeys.rs",
+        "        let counter = i64::from(presented);",
+        "        let counter = i64::from(read);",
+        "passkeys::a_passkey_sign_in_stores_its_counter",
+        "a sign-in stores the presented counter; binding the stored one keeps the old value (SPEC-359 R8, A13)"
+      ],
+      [
+        "S35921-HANDLE-REUSED",
+        "identity",
+        "src/passkeys.rs",
+        "        let handle = held_handle.unwrap_or_else(Uuid::new_v4);",
+        "        let handle = held_handle.map_or_else(Uuid::new_v4, |_| Uuid::new_v4());",
+        "passkeys::the_user_handle_carries_no_personal_data",
+        "every passkey of the owner shares one user handle, so a second registration reuses the held one (SPEC-359 R5, A14)"
+      ],
+      [
+        "S35922-UV-MAPPED",
+        "identity",
+        "src/passkeys.rs",
+        "        WebauthnError::UserNotVerified => Refusal::UvRequired,",
+        "        WebauthnError::UserNotVerified => Refusal::PasskeyInvalid,",
+        "passkeys::a_passkey_without_user_verification_is_refused",
+        "a response without user verification is refused uv_required, by the library's UserNotVerified (SPEC-359 R8, A9)"
+      ],
+      [
+        "S35923-ORIGIN-MAPPED",
+        "identity",
+        "src/passkeys.rs",
+        "        | WebauthnError::InvalidRPIDHash => Refusal::OriginMismatch,",
+        "        | WebauthnError::InvalidRPIDHash => Refusal::PasskeyInvalid,",
+        "passkeys::a_passkey_from_another_origin_is_refused",
+        "a response naming another origin or relying party is refused origin_mismatch (SPEC-359 R8, A8)"
+      ],
+      [
+        "S35924-DEBUG-REDACTED",
+        "identity",
+        "src/passkeys.rs",
+        "        f.write_str(\"Ceremony { .. }\")",
+        "        let kind = if matches!(self.state, State::Registration { .. }) { \"registration\" } else { \"sign_in\" };\n        write!(f, \"Ceremony {{ kind: {kind}, began: {:?}, .. }}\", self.began)",
+        "linking::no_linking_secret_reaches_a_log",
+        "a ceremony's Debug is exactly its redacted form; printing its kind and instant shows more of it (SPEC-359 R13, A29)"
+      ],
+      [
+        "S35925-ORIGIN-OFF",
+        "identity",
+        "src/linking_config.rs",
+        "        let Some(text) = value.map(str::trim).filter(|text| !text.is_empty()) else {",
+        "        let Some(text) = value.map(str::trim) else {",
+        "linking_config::linking_is_off_without_the_public_origin",
+        "a blank public origin is linking off; reading it as configured refuses start (SPEC-359 R1, A26)"
+      ],
+      [
+        "S35926-HTTPS-ONLY",
+        "identity",
+        "src/linking_config.rs",
+        "        if origin.scheme() != \"https\" {",
+        "        if origin.scheme().is_empty() {",
+        "linking_config::a_public_origin_that_is_not_https_refuses_start",
+        "a public origin that is not https refuses start; skipping the scheme check accepts an http origin (SPEC-359 R1, A27)"
+      ],
+      [
+        "S35927-STATUS-TABLE",
+        "identity",
+        "src/lib.rs",
+        "            Self::CounterRegressed => StatusCode::UNAUTHORIZED,",
+        "            Self::CounterRegressed => StatusCode::BAD_REQUEST,",
+        "linking::each_refusal_answers_its_status",
+        "counter_regressed answers 401, by the literal table of every refusal's status (SPEC-359 R8, A36)"
+      ],
+      [
+        "S35928-COOKIE-STRICT",
+        "api",
+        "src/linking_routes.rs",
+        "const COOKIE_ATTRIBUTES: &str = \"Path=/; Secure; HttpOnly; SameSite=Strict\";",
+        "const COOKIE_ATTRIBUTES: &str = \"Path=/; Secure; HttpOnly; SameSite=Lax\";",
+        "linking_routes::the_ceremony_cookie_is_host_prefixed_strict_and_short_lived",
+        "the ceremony cookie is SameSite=Strict; Lax sends it on a cross-site navigation (SPEC-359 R7, A31)"
+      ],
+      [
+        "S35929-CEREMONY-BOUND",
+        "api",
+        "src/linking_routes.rs",
+        "pub const CEREMONIES_PER_MINUTE: u32 = 30;",
+        "pub const CEREMONIES_PER_MINUTE: u32 = 31;",
+        "linking_routes::a_ceremony_flood_is_bounded_and_spares_the_handshake",
+        "thirty ceremony starts and redeems are admitted a minute, so the thirty-first is refused 429 (SPEC-359 R10, A32)"
+      ],
+      [
+        "S35930-LINK-ONLY-ROUTES",
+        "api",
+        "src/linking_routes.rs",
+        "async fn identities(ready: Ready, _owner: OwnerSession) -> Response {",
+        "async fn identities(ready: Ready, _owner: Result<OwnerSession, Refusal>) -> Response {",
+        "linking_routes::a_link_session_reaches_only_the_linking_routes",
+        "the methods list takes an owner session, so no session and a link session are refused 401; an extractor that admits any session serves them (SPEC-359 R2, A30)"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S35931-CREDENTIAL-UNIQUE",
+        "migrations/035901_identity_passkeys.sql",
+        "    credential_id BLOB NOT NULL UNIQUE CHECK (length(credential_id) > 0),",
+        "    credential_id BLOB NOT NULL CHECK (length(credential_id) > 0),",
+        "identity",
+        "linking::linking_twice_is_refused",
+        "the credential id is unique, and that key is the refusal of a credential registered twice, already_linked (SPEC-359 R5, A19)"
+      ]
+    ]
+  }
+}
