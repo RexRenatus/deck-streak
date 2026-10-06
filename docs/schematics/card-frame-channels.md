@@ -448,7 +448,7 @@ that contradicts one is a STOP for the seat.
 | `script-frame-link` | a `_blank` link in an appended blank frame, clicked | connection | L10 | L10 |
 | `script-click-detached` | a detached `_blank` link's `click()` | connection | L11 | L11 |
 | `script-dispatch-detached` | a detached link sent a `MouseEvent` click | connection | L11 | L11 |
-| `script-written-link` | a frame's document opened, a `_blank` link written and clicked | connection | L11 | L11 |
+| `script-written-link` | a frame's document opened, a `_blank` link written and clicked | connection | L10, L11 | none |
 | `lookup` | a static and a script-added `dns-prefetch`, and a fetch, of a `.local` name | query (the witness) | L3 | measured |
 | `dialog`, `capture` | script dialogs, media capture | the refusal's recorded asks | L6 | depth |
 | `app-state` | the app's stores, a file, the bridge, a credential | the values read | L1, L4, L7 | none |
