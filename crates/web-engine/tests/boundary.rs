@@ -22,7 +22,7 @@ fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
 /// Each boundary function the census reads: its name, why it owes what it owes, and the
 /// statements its body holds for it. A statement is compared with every blank removed, so a
 /// reflow by rustfmt changes nothing.
-const OWED: [(&str, &str, &[&str]); 16] = [
+const OWED: [(&str, &str, &[&str]); 23] = [
     (
         "create_backend",
         "starts the core's dispatcher on the web transport and keeps it",
@@ -157,6 +157,71 @@ const OWED: [(&str, &str, &[&str]); 16] = [
             "shown_for(kept.borrow().as_ref(), card)",
             "toggled_red(kept.flag)",
             "call(service::CARDS, 4,",
+        ],
+    ),
+    (
+        "faces",
+        "completes both faces of only the kept card through the core, reading media it was given",
+        &[
+            "shown_for(kept.borrow().as_ref(), card)",
+            "Files::new(names.into_iter().zip(contents.into_iter().map(|bytes| bytes.to_vec()))",
+            "let wanted = Wanted::new(&files);",
+            ".face(card, Side::Question, true, &wanted)",
+            ".face(card, Side::Answer, true, &wanted)",
+            "set(&reply, \"question\", &face_value(question)?)?;",
+            "set(&reply, \"answer\", &face_value(answer)?)?;",
+            "set(&reply, \"wanted\", &wanted_value(wanted.into_names())?)?;",
+        ],
+    ),
+    (
+        "read",
+        "answers the core's read from the files given, recording what they lack",
+        &["self.ask(name, limit)"],
+    ),
+    (
+        "set",
+        "writes one field of a reply",
+        &["Reflect::set(target, &JsValue::from_str(key), value).map(|_| ())"],
+    ),
+    (
+        "face_value",
+        "carries a face's text, CSS, clips and omitted names as the core completed them",
+        &[
+            "set(&value, \"text\", &face.text.into())?;",
+            "set(&value, \"css\", &face.css.into())?;",
+            "set(&value, \"autoplay\", &clips_value(face.autoplay)?)?;",
+            "set(&value, \"replay\", &clips_value(face.replay)?)?;",
+            "face.omitted.into_iter().map(JsValue::from).collect()",
+            "set(&value, \"omitted\", &omitted)?;",
+        ],
+    ),
+    (
+        "clips_value",
+        "carries every clip, in the core's order",
+        &["for clip in clips {", "array.push(&clip_value(clip)?);"],
+    ),
+    (
+        "clip_value",
+        "carries a sound's bytes with the type the core's table gives its name, and speech as text",
+        &[
+            "set(&value, \"kind\", &\"sound\".into())?;",
+            "media_type(&name, &TYPES).map_or(JsValue::NULL, JsValue::from_str)",
+            "set(&value, \"name\", &name.into())?;",
+            "set(&value, \"bytes\", &Uint8Array::from(bytes.as_slice()).into())?;",
+            "set(&value, \"kind\", &\"speech\".into())?;",
+            "set(&value, \"text\", &text.into())?;",
+            "set(&value, \"language\", &language.into())?;",
+            "set(&value, \"rate\", &rate.into())?;",
+        ],
+    ),
+    (
+        "wanted_value",
+        "names each file the core asked for and lacked, with its limit",
+        &[
+            "for (name, limit) in names {",
+            "set(&ask, \"name\", &name.into())?;",
+            "set(&ask, \"limit\", &limit.into())?;",
+            "array.push(&ask);",
         ],
     ),
 ];

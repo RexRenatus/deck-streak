@@ -1,5 +1,6 @@
 // The web engine's Worker entry (SPEC-338 R3, ADR-348): the session served on the Worker's own
 // scope, over the browser's Web Locks, origin private file system and the module the build ships.
+import { readMedia } from './media';
 import { admitsOrigin } from './protocol';
 import type { EngineModule, LockAnswer, SessionDeps } from './session';
 import { Session } from './session';
@@ -9,6 +10,9 @@ export const ENGINE_BINDINGS = 'deck_streak_web_engine.js';
 export const ENGINE_MODULE = 'deck_streak_web_engine_bg.wasm';
 /** Where the page's server serves them, from the origin's root. */
 export const ENGINE_BASE = '/engine/';
+/** The origin private file system's directory of the collection's media: flat, at the root, each
+ * file under the name the engine stores (SPEC-350 R14, ADR-361 D12). */
+export const MEDIA_DIRECTORY = 'deck-streak-media';
 
 /** The Worker's scope as the session needs it. */
 export interface WorkerScope {
@@ -88,7 +92,8 @@ export function browserDeps(
       };
       await bindings.default({ module_or_path: new URL(ENGINE_MODULE, base) });
       return bindings;
-    }
+    },
+    media: (wanted) => readMedia(globals.navigator?.storage, MEDIA_DIRECTORY, wanted)
   };
 }
 
