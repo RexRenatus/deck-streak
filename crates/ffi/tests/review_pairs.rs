@@ -16,9 +16,11 @@
 mod support;
 
 use std::collections::BTreeSet;
+use std::path::Path;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use anki::collection::CollectionBuilder;
 use deck_streak_ffi::allow_list::ALLOW_LIST;
 use deck_streak_ffi::engine::{Engine, EngineRefusal};
 use support::synthetic::SECOND_DECK;
@@ -68,6 +70,59 @@ fn call(
     engine.run(service, method, input)
 }
 
+/// The seconds the pinned rollover must stay ahead of the test's reads. The longest learning step is
+/// ten minutes, so any lead above it keeps the engine from turning the interval into days; six
+/// hours leaves the whole of a slow run's margin.
+const MIN_LEAD_SECS: i64 = 6 * 3600;
+
+/// Opens the synthetic collection, optionally sets its rollover hour, and returns the seconds from
+/// the engine's own reading of now to its next day rollover. The engine caches that reading per
+/// open collection, so each reading opens afresh and closes before the next.
+fn lead_with_rollover(collection: &Path, hour: Option<u32>) -> i64 {
+    let mut col = CollectionBuilder::new(collection)
+        .build()
+        .expect("the engine opens the synthetic collection");
+    if let Some(hour) = hour {
+        col.set_config_json("rollover", &hour, false)
+            .expect("the engine accepts a rollover hour");
+    }
+    let timing = col.timing_today().expect("the engine reads its day timing");
+    col.close(None).expect("the engine closes the collection");
+    timing.next_day_at.0 - timing.now.0
+}
+
+/// Pins the synthetic collection's day rollover to the hour furthest from now, so the engine never
+/// turns a learning interval that would cross the rollover into days.
+///
+/// The engine reads the wall clock itself, and a learning interval that reaches the next rollover
+/// reads in days (`IntervalKind::maybe_as_days`, which `describe_next_states` applies to each of
+/// the four choices). On the engine's own rollover that made the 10-minute interval read `1d` in
+/// the ten minutes before it, so the exact assertion below failed for ten minutes a day. A
+/// collection that sets no scheduler version runs the engine's version-1 timing, which has no
+/// rollover hour to set, so the pin first selects version 2, whose timing reads the hour. Each of
+/// the day's 24 hours is a rollover the engine accepts, so one of them is at least 23 hours away.
+/// The pin uses the engine's own API, as the builder of the synthetic collection does, and leaves
+/// the collection closed before the adapter opens it.
+fn pin_rollover_far_from_now(collection: &Path) {
+    {
+        let mut col = CollectionBuilder::new(collection)
+            .build()
+            .expect("the engine opens the synthetic collection");
+        col.set_config_json("schedVer", &2_u8, false)
+            .expect("the engine accepts the version-2 scheduler");
+        col.close(None).expect("the engine closes the collection");
+    }
+    let (hour, _) = (0_u32..24)
+        .map(|hour| (hour, lead_with_rollover(collection, Some(hour))))
+        .max_by_key(|&(_, lead)| lead)
+        .expect("the day has 24 hours");
+    let pinned = lead_with_rollover(collection, Some(hour));
+    assert!(
+        pinned >= MIN_LEAD_SECS,
+        "the pinned rollover lies at least six hours ahead (measured lead {pinned}s)"
+    );
+}
+
 fn now_secs() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -97,6 +152,7 @@ fn text(bytes: Vec<u8>) -> String {
 #[test]
 fn the_allow_list_carries_the_review_pairs() {
     let synthetic = synthetic("review-pairs");
+    pin_rollover_far_from_now(&synthetic.collection);
     let engine = engine();
     call(&engine, OPEN_COLLECTION, open_request(&synthetic))
         .expect("the adapter opens the synthetic collection");
