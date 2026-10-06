@@ -1430,11 +1430,11 @@ class EveryMutationCommandKeepsTheGatesBounds(unittest.TestCase):
 HEAD_COMMANDS = {
     "size": (
         'cargo mutants --no-shuffle --list --json --in-place ${PACKAGE:+--package "$PACKAGE"} '
-        '--timeout 1200 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"'
+        '--timeout 2200 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"'
     ),
     "rust": (
         'cargo mutants --no-shuffle -vV --in-place ${PACKAGE:+--package "$PACKAGE"} '
-        '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 1200 --build-timeout 600 '
+        '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2200 --build-timeout 600 '
         '--output "$RUNNER_TEMP/mutation" || rc=$?'
     ),
 }

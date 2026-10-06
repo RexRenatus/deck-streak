@@ -259,7 +259,8 @@ class TheWeeklyBattery(unittest.TestCase):
         found = jobs(text)
         rust = found.get("rust", "")
         # The legs are the sized matrix and the denominator is the size step's own count
-        # (SPEC-129 R4); a scheduled run and a dispatch with no package size to 32.
+        # (SPEC-129 R4); a scheduled run and a dispatch with no package are sized from the whole
+        # workspace's listing at the battery run's ceiling (SPEC-362 R11).
         self.assertRegex(rust, r"(?m)^\s+SHARDS: \$\{\{ needs\.size\.outputs\.shards \}\}$")
         self.assertIn('--shard "$SHARD/$SHARDS"', rust)
         self.assertIn("shard: ${{ fromJSON(needs.size.outputs.matrix) }}", rust)
