@@ -19,7 +19,6 @@ use deck_streak_kernel::{Clock, Db, KernelError, UtcMillis};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use subtle::ConstantTimeEq;
-use tracing::subscriber::NoSubscriber;
 use webauthn_rs::prelude::{
     CredentialID, Passkey, PasskeyAuthentication, PasskeyRegistration, RegisterPublicKeyCredential,
     Uuid, WebauthnError,
@@ -264,13 +263,6 @@ const fn refusal_of(error: &WebauthnError) -> Refusal {
     }
 }
 
-/// Runs `call` into the library with no subscriber. The library's own debug and trace events carry
-/// a ceremony's state, the credential id and the public key, which never reach a log at any level
-/// (SPEC-359 R13), so they are dropped here rather than left to the log filter.
-fn quietly<T>(call: impl FnOnce() -> T) -> T {
-    tracing::subscriber::with_default(NoSubscriber::default(), call)
-}
-
 /// A lifetime in whole milliseconds; every lifetime here is far below `i64::MAX`.
 pub(crate) fn millis(lifetime: Duration) -> i64 {
     i64::try_from(lifetime.as_millis()).unwrap_or(i64::MAX)
@@ -419,15 +411,10 @@ impl Passkeys {
             .transpose()
             .map_err(|_| Refusal::PasskeyInvalid)?;
         let user_handle = held_handle.unwrap_or_else(Uuid::new_v4);
-        let (options, state) = quietly(|| {
-            relying_party.webauthn().start_passkey_registration(
-                user_handle,
-                USER_NAME,
-                USER_NAME,
-                Some(excluded),
-            )
-        })
-        .map_err(|error| refusal_of(&error))?;
+        let (options, state) = relying_party
+            .webauthn()
+            .start_passkey_registration(user_handle, USER_NAME, USER_NAME, Some(excluded))
+            .map_err(|error| refusal_of(&error))?;
         let flow = self.ceremonies.insert(State::Registration {
             state,
             session: digest(session.as_bytes()),
@@ -466,12 +453,10 @@ impl Passkeys {
         }
         let credential = serde_json::from_value::<RegisterPublicKeyCredential>(response.clone())
             .map_err(|_| Refusal::PasskeyInvalid)?;
-        let passkey = quietly(|| {
-            relying_party
-                .webauthn()
-                .finish_passkey_registration(&credential, &state)
-        })
-        .map_err(|error| refusal_of(&error))?;
+        let passkey = relying_party
+            .webauthn()
+            .finish_passkey_registration(&credential, &state)
+            .map_err(|error| refusal_of(&error))?;
         let stored = serde_json::to_value(&passkey).map_err(|_| Refusal::PasskeyInvalid)?;
         let counter = stored["cred"]["counter"].as_i64().unwrap_or(0);
         let backup_state = i64::from(stored["cred"]["backup_state"].as_bool().unwrap_or(false));
@@ -527,12 +512,10 @@ impl Passkeys {
             .iter()
             .map(|passkey| passkey.passkey.clone())
             .collect::<Vec<_>>();
-        let (options, state) = quietly(|| {
-            relying_party
-                .webauthn()
-                .start_passkey_authentication(&passkeys)
-        })
-        .map_err(|error| refusal_of(&error))?;
+        let (options, state) = relying_party
+            .webauthn()
+            .start_passkey_authentication(&passkeys)
+            .map_err(|error| refusal_of(&error))?;
         let flow = self.ceremonies.insert(State::SignIn { state, held })?;
         let options = serde_json::to_value(&options).map_err(|_| Refusal::PasskeyInvalid)?;
         Ok(Started { flow, options })
@@ -548,12 +531,10 @@ impl Passkeys {
         credential: &webauthn_rs::prelude::PublicKeyCredential,
     ) -> Result<i64, PasskeyError> {
         let relying_party = self.relying_party()?;
-        let result = quietly(|| {
-            relying_party
-                .webauthn()
-                .finish_passkey_authentication(credential, state)
-        })
-        .map_err(|error| refusal_of(&error))?;
+        let result = relying_party
+            .webauthn()
+            .finish_passkey_authentication(credential, state)
+            .map_err(|error| refusal_of(&error))?;
         let passkey = held
             .iter()
             .find(|passkey| passkey.credential_id.as_slice() == result.cred_id().as_ref())

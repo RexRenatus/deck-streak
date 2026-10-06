@@ -10,6 +10,9 @@
 
 mod support;
 
+#[path = "../../../tools/log-capture/capture.rs"]
+mod log_capture;
+
 use std::time::Duration;
 
 use axum::Router;
@@ -24,6 +27,7 @@ use deck_streak_identity::session::Proof;
 use deck_streak_identity::session::SESSION_COOKIE;
 use deck_streak_identity::{FreshTelegramSession, LinkSession};
 use deck_streak_identity::{Refusal, SignedIn};
+use deck_streak_kernel::logging;
 use sha2::{Digest as _, Sha256};
 use tower::ServiceExt as _;
 
@@ -552,7 +556,8 @@ async fn removing_a_passkey_ends_its_sessions() {
 #[tokio::test]
 async fn no_linking_secret_reaches_a_log() {
     let captured = Captured::default();
-    let _subscriber = tracing::subscriber::set_default(captured.clone());
+    // The library's events reach the capture as they reach a log: through the kernel's silence.
+    let _logging = log_capture::hold_capture(logging::silence(captured.clone()));
     let world = fixture().await;
     let authenticator = Authenticator::new(7);
     let telegram = open_telegram(&world);

@@ -11,22 +11,29 @@
 //! Rust's default panic hook writes a panic's message to stderr as plain text, past the redacting
 //! writer, so a credential the message carried would reach the journal whole. The setup replaces it,
 //! never chains to it: a panic, on whatever thread, is one ERROR event through the same writer.
+//!
+//! The passkey library's events never leave the process at any level (SPEC-359 R13): the setup
+//! drops every event under [`SILENCED_TARGETS`] in a filter of its own, which `RUST_LOG` never
+//! reaches.
 
 use std::fmt;
 use std::panic::{self, PanicHookInfo};
 
-use tracing::{Event, Level, Subscriber};
+use tracing::{Event, Level, Metadata, Subscriber};
 use tracing_subscriber::EnvFilter;
+use tracing_subscriber::filter::filter_fn;
 use tracing_subscriber::fmt::format::{FormatEvent, FormatFields, Writer};
 use tracing_subscriber::fmt::{FmtContext, MakeWriter};
+use tracing_subscriber::layer::SubscriberExt as _;
 use tracing_subscriber::registry::LookupSpan;
 
 use crate::error::KernelError;
 use crate::redact::{RedactingMakeWriter, Redactor};
 
 /// Installs the process's one subscriber: JSON on stdout at `RUST_LOG`'s level (info when unset),
-/// every line redacted through `redactor`, whose registrations it reads live; then replaces the
-/// panic hook, so a panic is logged through that subscriber and never printed around it.
+/// every line redacted through `redactor`, whose registrations it reads live, and nothing under
+/// [`SILENCED_TARGETS`] at any level; then replaces the panic hook, so a panic is logged through
+/// that subscriber and never printed around it.
 ///
 /// # Errors
 ///
@@ -61,7 +68,8 @@ fn log_panic(info: &PanicHookInfo<'_>) {
 }
 
 /// The subscriber [`install`] installs, writing to the writers `make_writer` makes, so a test can
-/// read exactly what a process would print.
+/// read exactly what a process would print. Nothing under [`SILENCED_TARGETS`] reaches it, whatever
+/// `filter` enables ([`silence`]).
 pub fn subscriber<M>(
     redactor: Redactor,
     make_writer: M,
@@ -74,12 +82,44 @@ where
         .json()
         .flatten_event(true)
         .without_time();
-    tracing_subscriber::fmt()
-        .json()
-        .event_format(JournalPriority(format))
-        .with_writer(RedactingMakeWriter::new(redactor, make_writer))
-        .with_env_filter(filter)
-        .finish()
+    silence(
+        tracing_subscriber::fmt()
+            .json()
+            .event_format(JournalPriority(format))
+            .with_writer(RedactingMakeWriter::new(redactor, make_writer))
+            .with_env_filter(filter)
+            .finish(),
+    )
+}
+
+/// The crates whose events and spans never leave the process, whatever `RUST_LOG` says: the passkey
+/// library's two (SPEC-359 R13). Their debug and trace events carry a ceremony's state, the
+/// credential id and the public key, and their error and warn events would pass the default
+/// filter. A target is silenced when it is one of these crates or a module under one.
+pub const SILENCED_TARGETS: [&str; 2] = ["webauthn_rs", "webauthn_rs_core"];
+
+/// `subscriber` behind a filter of its own, which drops every event and span under
+/// [`SILENCED_TARGETS`] before `subscriber` sees it. The silence is no directive of the
+/// `EnvFilter`: that filter ranks a longer target above a shorter one, and enables an event inside a
+/// span a span directive names before it reads any target, so a `RUST_LOG` naming a module of the
+/// library, or a span its calls run in, would outrank a fixed `off` there. A test that captures
+/// the library's events wraps its capture in this, so it reads them as a log would.
+pub fn silence<S>(subscriber: S) -> impl Subscriber + Send + Sync + 'static
+where
+    S: Subscriber + Send + Sync + 'static,
+{
+    subscriber.with(filter_fn(admitted))
+}
+
+/// Whether an event or span may leave the process: its target is no crate of
+/// [`SILENCED_TARGETS`] and no module under one.
+fn admitted(metadata: &Metadata<'_>) -> bool {
+    let target = metadata.target();
+    !SILENCED_TARGETS.iter().any(|silenced| {
+        target
+            .strip_prefix(silenced)
+            .is_some_and(|rest| rest.is_empty() || rest.starts_with("::"))
+    })
 }
 
 /// Opens each line with its event's sd-daemon(3) priority, so journald files it at that level.
