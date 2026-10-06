@@ -25,10 +25,19 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+# ADR-370 (SPEC-359): the passkey ceremonies, the passkeys' random user handles, and the
+# `passkeys` table identity owns.
+sqlx.workspace = true
+uuid.workspace = true
+webauthn-rs.workspace = true
 
 [dev-dependencies]
 # ADR-020's temporary directory holds A16's credentials; tower's oneshot and tokio drive the
 # extractor through a router.
 tempfile.workspace = true
+# ADR-370: the tests' software authenticator signs its responses with P-256 and encodes them as
+# base64url (SPEC-359's test support).
+p256.workspace = true
+base64.workspace = true
 tokio = { workspace = true, features = ["macros", "rt"] }
 tower = { workspace = true, features = ["util"] }

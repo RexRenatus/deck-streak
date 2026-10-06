@@ -269,3 +269,143 @@ from 5, and `ORDINARY` holds 10 rows, up from 9. Section 4's manifest also omits
 delivery adds: `crates/web-engine/tests/boundary.rs`, the source census that kills the wasm
 boundary's mutants, and `scripts/mutation-equivalent.d/deck-streak-web-engine.json`, the
 equivalence file from which 15 stale records were removed and none added.
+
+## 8. Amendments: what part 2 measured and adds
+
+Part 2 is cut at `dev` `79f321902f729a6d703660bc9d3810d3d7728a4e`, and it re-measured the
+containment census's population there. Wherever R10, section 6 and A15 say "seven" held lines, read
+the held lines this section names; those sentences stay as they are.
+
+**The engine's names outside the core.** M11's command, run outside the core at the cut,
+`git grep -n -E '(\.[[:space:]]*(NAMES)[[:space:]]*\(|::[[:space:]]*(NAMES)\b)' HEAD -- crates ':!*drill*' ':!*readings_tree*' ':!crates/engine-core/'`,
+printed 21 lines in 10 files, all under `crates/ingest`: 16 distinct pairs of a file and an exact
+trimmed line. The census holds each pair by its file, its exact trimmed text, its count and its
+reason, never by a line number or a pattern:
+
+- `crates/ingest/src/engine.rs`: `col.full_download(auth, engine_client())`, 1: the mirror's full
+  download, which writes only DeckStreak's read copy of the collection (SPEC-022 R6).
+- `crates/ingest/src/engine.rs`: `.set_due_date(&ids, spec, None)`, 1: the mirror's skip-take
+  write (#600), the adapter reaching the engine's own write as its full download does.
+- `crates/ingest/src/skip_write.rs`: `writer.set_due_date(path, &moved, &spec)`, 1: the mirror's
+  own port method, reached as `sync.rs` reaches its full download.
+- `crates/ingest/src/sync.rs`: `self.reopening(|| self.engine.full_download(&copy, login))`, 1:
+  the mirror's own port method.
+- `crates/ingest/examples/engine_probe.rs`: `.block_on(RslibEngine.full_download(collection, &login()?))`,
+  1: the mirror's own port method.
+- `crates/ingest/tests/engine_budget.rs`: `.block_on(RslibEngine.full_download(&copy, &login))`, 2:
+  the mirror's own port method.
+- `crates/ingest/tests/sync.rs`: `.block_on(RslibEngine.full_download(&copy, &login))`, 1: the
+  mirror's own port method.
+- `crates/ingest/tests/support/mod.rs`: `.block_on(col.full_upload(auth, engine_client()))`, 1: an
+  upload to the scratch test server.
+- `crates/ingest/tests/undo_and_full_sync.rs`: `.block_on(col.full_download(auth, engine_client()))`,
+  4; `.block_on(col.full_upload(auth, engine_client()))`, 2; and
+  `.block_on(a.full_upload(auth, engine_client()))`, 1: SPEC-342 R10 and R11's probes of the engine
+  against the engine's own sync server, a child of the test.
+- `crates/ingest/tests/skip_write.rs`: `.set_due_date(`, 1: #600's test reaching the mirror's port.
+- `crates/ingest/tests/skip_census.rs`: `".set_due_date(",`, `".full_upload(",`,
+  `col.set_due_date(&ids, &spec, None);\n\` and `["crates/ingest/src/engine.rs:11 .set_due_date("],`,
+  1 each: string literals of #600's own census test, data and not calls. The census strips
+  comments and never string literals, so a literal is read as the line it is.
+
+**The gesture's names outside the two entry files.** Two test files name `run_exempt` or the
+gesture's constructor, and the census holds their lines by the same four fields:
+
+- `crates/ffi/tests/exempt.rs`: `engine.run_exempt(write, target, input)`, 1: the native adapter's
+  own test of its exempt entry (A17, A18). Every tap in that file goes through the one helper that
+  holds this line.
+- `crates/web-engine/tests/boundary.rs`: `"run_exempt",`,
+  `"let gesture = OwnerGesture::from_tap(write, target).map_err(refuse)?;",` and
+  `"dispatcher()?.run_exempt(gesture, input).map_err(refuse)",`, 1 each: string literals of the web
+  boundary census's own `OWED` entry for the export, data and not calls.
+
+So the census holds 25 lines, 20 pairs in 12 files. A held line that gains more text on its line,
+or a second copy in its file, is refused by name (rows S34524 and S34525), and a held line the tree
+no longer holds is refused as stale. The census reads every member's `src`, `tests`, `examples` and
+`benches` and its `build.rs`, reads a name in a `use` tree whether on one line or braced over
+several, and refuses a `#[path]` or `include!` that names a core file.
+
+**The census's scope.** R10 says "outside the core", and the census holds nothing inside it. At the
+cut the core names the engine at seven lines: `crates/engine-core/src/dispatch.rs:6`
+(`use anki::backend::{Backend, init_backend};`), `:93` (the bare `init_backend(message)`), `:119`
+(`.run_service_method(`), `:149` and `:223` (`.run_db_command_bytes(`),
+`crates/engine-core/src/face.rs:120` (`.run_service_method(`) and
+`crates/engine-core/tests/face.rs:116` (`col.update_deck_configs(`). Part 2 adds `run_exempt`'s one
+`.run_service_method(` in `crates/engine-core/src/dispatch.rs`. None is held: the graph census (A7)
+bounds who reaches the core, and a core line costs no census edit.
+
+**The refusal.** `Refusal` keeps its three variants, and no existing match on it changes.
+`OwnerGesture::from_tap` and `Dispatcher::run_exempt` refuse with one core type, `GestureRefusal`:
+`WrongKind` (a target of another kind than the write takes), `NotTheTarget` (a request that names
+other than the gesture's one target), `Undecodable` (a request that is not the write's own message)
+and `Engine` (the engine's own error bytes). The native adapter maps it to its own `ExemptRefusal`,
+as it maps `Refusal` to `EngineRefusal`, and the web export maps it to a refusal string (ADR-356's
+amendment).
+
+**The entries.** The native `Engine::run_exempt(write, target, input)` takes an `ExemptTap` and an
+`ExemptTarget` (a card, a note or a preset, by id). The web export `run_exempt(write, target, input)`
+takes the tap as the exempt table's index, 0 to 5, and the target's id, and gives the target the
+kind its write takes. Neither has a caller in this delivery.
+
+**The mutation rows** (band `S34500-S34599`): S34520-A-GESTURE-TAKES-ONLY-ITS-WRITES-KIND (the kind
+check admits any kind; A12), S34521-A-CARD-WRITE-NAMES-ONLY-ITS-CARD (a card write's one-id check
+admits any list holding the card; A14), S34522-REMOVE-NOTES-CARRIES-NO-CARD-IDS (`RemoveNotes`
+admitted with `card_ids`; A14), S34523-ONLY-THE-TWO-ENTRY-FILES-MAY-CALL (the entry files widened to
+their crates; A15), S34524-A-HELD-LINE-MATCHES-BY-ITS-EXACT-TEXT (a held line matched by
+containment; A15), S34525-A-HELD-LINE-HOLDS-ITS-COUNT (a held count admits more copies; A15),
+S34526-A-NATIVE-FORGET-TAP-IS-A-FORGET (the native tap's Forget and set due date swapped; A17) and
+S34527-EACH-EXEMPT-REFUSAL-READS-AS-ITS-OWN-SENTENCE (the native refusal's text; A18). The checked
+message's re-encoding has no row: on a well-formed request it equals forwarding the caller's bytes,
+so no test can tell the two apart.
+
+**Files part 2 touches beyond section 4's part 2 rows:**
+
+- `crates/engine-core/src/lib.rs`: the `gesture` module and its doc bullet.
+- `crates/web-engine/tests/boundary.rs`: one `OWED` entry, for the `run_exempt` export.
+- `docs/specs/SPEC-345-the-engine-core-one-allow-listed-dispatcher-and-an-owner-gesture-token.md`:
+  this section and section 9.
+- `docs/decisions/ADR-356-the-engine-core-holds-the-engine-for-both-clients-behind-a-per-transport-table.md`:
+  its amendment.
+- `docs/schematics/engine-core-dispatcher-and-owner-gesture.md`: the two held-line counts.
+- `changelog.d/owner-gesture-345.md`: part 2's fragment, the second fragment section 4's last row
+  names.
+
+**Section 4's rows part 2 leaves as they are:**
+
+- `crates/engine-core/Cargo.toml`: unchanged in this part; no new dependency.
+- `crates/engine-core/src/table.rs`: unchanged in this part.
+- `crates/engine-core/tests/table.rs`: unchanged in this part.
+- `crates/engine-core/tests/dispatch.rs`: unchanged in this part.
+- `crates/engine-core/tests/parity.rs`: unchanged in this part.
+- `crates/engine-core/tests/graph.rs`: unchanged in this part.
+- `crates/engine-core/tests/support/mod.rs`: unchanged in this part.
+- `crates/ffi/Cargo.toml`: unchanged in this part.
+- `crates/ffi/src/lib.rs`: unchanged in this part.
+- `crates/web-engine/Cargo.toml`: unchanged in this part.
+- `Cargo.toml`: unchanged in this part.
+- `Cargo.lock`: unchanged in this part.
+- `docs/CONTEXT-MAP.md`: unchanged in this part.
+- `changelog.d/engine-core-345.md`: unchanged in this part; part 1's fragment, which the release
+  already folded into the changelog.
+
+## 9. Acceptance criteria of part 2
+
+| id | criterion | decided by |
+|---|---|---|
+| A12 | `OwnerGesture::from_tap` takes one target of its write's kind and refuses another kind | `cargo test -p deck-streak-engine-core --test gesture -- --exact a_gesture_takes_one_target_of_its_writes_kind` |
+| A13 | On a synthetic collection of two cards, a Forget gesture on one card resets that card and leaves the other unchanged | `cargo test -p deck-streak-engine-core --test exempt -- --exact a_forget_gesture_resets_its_one_card_and_no_other` |
+| A14 | For each of the six writes, a request naming no target, another target, or the target and another (and `RemoveNotes` with any `card_ids`) is refused before the engine sees it, every card's row unchanged | `cargo test -p deck-streak-engine-core --test exempt -- --exact a_request_naming_more_than_its_gestures_target_is_refused` |
+| A15 | Outside the core, the gesture's constructor and `run_exempt` are named only in the two adapters' entry files, and the engine's write and door names only at the held lines of section 8; no `#[path]` or `include!` of a core file; planted callers in the daemon, the bot, coordination and ingest are refused by name; it prints the callers and files examined | `cargo test -p deck-streak-engine-core --test containment -- --exact no_non_ui_caller_reaches_an_exempt_function` |
+| A16 | `OwnerGesture` derives and implements neither `Clone` nor `Copy` | `cargo test -p deck-streak-engine-core --test containment -- --exact the_gesture_is_neither_clone_nor_copy` |
+| A17 | The native adapter's exempt entry runs a Forget tap on its one card | `cargo test -p deck-streak-ffi --test exempt -- --exact a_native_forget_tap_resets_its_one_card` |
+| A18 | Each exempt refusal of the native adapter reads as its own sentence | `cargo test -p deck-streak-ffi --test exempt -- --exact each_exempt_refusal_reads_as_its_own_sentence` |
+
+```acceptance
+A12: cargo test -p deck-streak-engine-core --test gesture -- --exact a_gesture_takes_one_target_of_its_writes_kind
+A13: cargo test -p deck-streak-engine-core --test exempt -- --exact a_forget_gesture_resets_its_one_card_and_no_other
+A14: cargo test -p deck-streak-engine-core --test exempt -- --exact a_request_naming_more_than_its_gestures_target_is_refused
+A15: cargo test -p deck-streak-engine-core --test containment -- --exact no_non_ui_caller_reaches_an_exempt_function
+A16: cargo test -p deck-streak-engine-core --test containment -- --exact the_gesture_is_neither_clone_nor_copy
+A17: cargo test -p deck-streak-ffi --test exempt -- --exact a_native_forget_tap_resets_its_one_card
+A18: cargo test -p deck-streak-ffi --test exempt -- --exact each_exempt_refusal_reads_as_its_own_sentence
+```

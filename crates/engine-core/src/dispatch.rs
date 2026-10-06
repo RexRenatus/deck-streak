@@ -1,12 +1,17 @@
 //! The dispatcher: the engine's backend, held privately, behind the table (SPEC-345 R1, R2, R4).
 
+use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex, PoisonError};
 
 use anki::backend::{Backend, init_backend};
+use anki_proto::backend::BackendError;
+use anki_proto::backend::backend_error::Kind;
 use anki_proto::collection::OpenCollectionRequest;
 use prost::Message;
 
 use crate::face::{self, Face, Side};
+use crate::full_sync::{IdSets, Unsynced};
+use crate::gesture::{GestureRefusal, OwnerGesture};
 use crate::login_guard;
 use crate::media::Reader;
 use crate::table::{Decision, Transport, decide};
@@ -22,6 +27,18 @@ const SYNC_LOGIN: (u32, u32) = (1, 3);
 /// The engine's collection open, `BackendCollectionService.OpenCollection`: the one admitted call
 /// whose request the core keeps a field of, the media folder a face reads (SPEC-348 R5).
 const OPEN_COLLECTION: (u32, u32) = (3, 0);
+/// Every review-log id: the reviews a full sync can lose (SPEC-357 R5, R9).
+const REVIEW_IDS_SQL: &str = "select id from revlog";
+/// Every card id.
+const CARD_IDS_SQL: &str = "select id from cards";
+/// Every note id.
+const NOTE_IDS_SQL: &str = "select id from notes";
+/// The collection's modified stamp, which an upload's re-check compares (SPEC-357 R7).
+const MODIFIED_SQL: &str = "select mod from col";
+/// What a sync has not sent, in one statement: the reviews whose sequence number marks them
+/// unsynced, and whether the collection or its schema changed since its last sync (SPEC-357 R9).
+const UNSYNCED_SQL: &str = "select (select count() from revlog where usn = -1), \
+                            (select mod > ls from col), (select scm > ls from col)";
 
 /// One running engine on one transport. An adapter starts one and reaches the engine only through
 /// it; the backend is never handed out.
@@ -112,6 +129,27 @@ impl Dispatcher {
         }
     }
 
+    /// Runs the one exempt write an owner's gesture names, consuming the gesture (SPEC-345 R8).
+    /// The request is decoded as the write's own message and checked against the gesture's one
+    /// target, and the engine runs the message the check passed, encoded again, never the
+    /// caller's bytes.
+    ///
+    /// # Errors
+    ///
+    /// [`GestureRefusal::NotTheTarget`] when the request names other than the gesture's target,
+    /// [`GestureRefusal::Undecodable`] when it is not the write's message, and
+    /// [`GestureRefusal::Engine`] when the engine refuses the checked write.
+    pub fn run_exempt(
+        &self,
+        gesture: OwnerGesture,
+        input: &[u8],
+    ) -> Result<Vec<u8>, GestureRefusal> {
+        let (service, method, request) = gesture.checked(input)?;
+        self.backend
+            .run_service_method(service, method, &request)
+            .map_err(|error| GestureRefusal::Engine { error })
+    }
+
     /// Runs one fixed read of the open collection and returns the engine's JSON reply: its first
     /// row only, as `[[column, ...]]`, or `[]` when no row matches.
     ///
@@ -132,6 +170,81 @@ impl Dispatcher {
         self.backend
             .run_db_command_bytes(request.to_string().as_bytes())
             .map_err(|error| Refusal::Engine { error })
+    }
+
+    /// Every review-log, card and note id of the open collection, and its modified stamp: what a
+    /// full sync's counts, its backup check and its re-check compare (SPEC-357 R5, R9). Every row,
+    /// by the core's fixed statements; no adapter passes SQL.
+    ///
+    /// # Errors
+    ///
+    /// [`Refusal::Engine`] when the engine cannot run a read, a closed collection among them, or
+    /// answers one with a row that is not the integers its statement selects.
+    pub fn id_sets(&self) -> Result<IdSets, Refusal> {
+        let [modified] = self.one_row(MODIFIED_SQL)?[..] else {
+            return Err(unreadable(MODIFIED_SQL));
+        };
+        Ok(IdSets {
+            reviews: self.ids(REVIEW_IDS_SQL)?,
+            cards: self.ids(CARD_IDS_SQL)?,
+            notes: self.ids(NOTE_IDS_SQL)?,
+            modified,
+        })
+    }
+
+    /// What this device has not synced, by one fixed statement and with no network, so a client
+    /// can warn offline (SPEC-357 R9): the reviews not yet synced, and whether the collection or
+    /// its schema changed since its last sync.
+    ///
+    /// # Errors
+    ///
+    /// [`Refusal::Engine`] when the engine cannot run the read, a closed collection among them, or
+    /// answers it with a row that is not the three integers it selects.
+    pub fn unsynced(&self) -> Result<Unsynced, Refusal> {
+        let [reviews, changed, schema] = self.one_row(UNSYNCED_SQL)?[..] else {
+            return Err(unreadable(UNSYNCED_SQL));
+        };
+        Ok(Unsynced {
+            reviews: u32::try_from(reviews).map_err(|_| unreadable(UNSYNCED_SQL))?,
+            changed: changed != 0,
+            schema: schema != 0,
+        })
+    }
+
+    /// The ids one fixed statement selects, one per row.
+    fn ids(&self, sql: &str) -> Result<BTreeSet<i64>, Refusal> {
+        self.rows(sql)?
+            .into_iter()
+            .map(|row| match row[..] {
+                [id] => Ok(id),
+                _ => Err(unreadable(sql)),
+            })
+            .collect()
+    }
+
+    /// The one row a fixed statement over the collection's single row selects.
+    fn one_row(&self, sql: &str) -> Result<Vec<i64>, Refusal> {
+        let mut rows = self.rows(sql)?;
+        match (rows.pop(), rows.is_empty()) {
+            (Some(row), true) => Ok(row),
+            _ => Err(unreadable(sql)),
+        }
+    }
+
+    /// Runs one of the core's fixed statements and returns its rows, each cell an integer. The id
+    /// reads and the unsynced read all come here, so every one of them reads every row.
+    fn rows(&self, sql: &str) -> Result<Vec<Vec<i64>>, Refusal> {
+        let request = serde_json::json!({
+            "kind": "query",
+            "sql": sql,
+            "args": [],
+            "first_row_only": false,
+        });
+        let reply = self
+            .backend
+            .run_db_command_bytes(request.to_string().as_bytes())
+            .map_err(|error| Refusal::Engine { error })?;
+        serde_json::from_slice(&reply).map_err(|_| unreadable(sql))
     }
 
     /// The media folder of the collection this engine last opened, as its open request named it;
@@ -171,5 +284,19 @@ impl Dispatcher {
         media: &dyn Reader,
     ) -> Result<Face, Refusal> {
         face::complete(&self.backend, card, side, autoplay, media)
+    }
+}
+
+/// The refusal for a fixed read whose reply is not the integers its statement selects, in the
+/// engine's own error shape: an encoded `BackendError` of kind `DB_ERROR` naming the statement, so
+/// an adapter reads it as it reads any engine error and never a guessed value.
+fn unreadable(sql: &str) -> Refusal {
+    Refusal::Engine {
+        error: BackendError {
+            message: format!("the engine's reply to `{sql}` is not the integers it selects"),
+            kind: Kind::DbError.into(),
+            ..BackendError::default()
+        }
+        .encode_to_vec(),
     }
 }

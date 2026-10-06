@@ -26,6 +26,24 @@
       "evidence": "The local closure value returns digit - b'0' for b'0'..=b'9' and digit - b'a' + 10 for b'a'..=b'f', so at most 15 as a u8 (git grep -n 'id_bytes(' finds callers only in admit and end_session, none sets an operand): the left operand has only its high four bits and the right only its low four, so a | b == a ^ b.",
       "reached_by": "session::each_handshake_issues_a_new_session_id",
       "issue": "#302"
+    },
+    {
+      "file": "crates/identity/src/linking_config.rs",
+      "mutant": "replace LinkingConfig::off -> Self with Default::default()",
+      "anchor": "Self::default()",
+      "reason": "The body already is Self::default() over the derived Default, and Default::default() at the return type Self is that same call, so the mutant is the original program.",
+      "evidence": "LinkingConfig derives Default (git grep -n 'derive(Clone, Debug, Default)' in this file shows the line above the struct) and off() holds the single expression Self::default(); both spell Default::default() at type LinkingConfig, so every call returns the same value.",
+      "reached_by": "linking_config::linking_is_off_without_the_public_origin",
+      "issue": "#627"
+    },
+    {
+      "file": "crates/identity/src/passkeys.rs",
+      "mutant": "replace | with ^ in id_bytes",
+      "anchor": "(value(pair[0])? << 4) | value(pair[1])?",
+      "reason": "The two operands of the byte's | share no set bit, so | and ^ produce the same byte for every flow id.",
+      "evidence": "The local closure value returns digit - b'0' for b'0'..=b'9' and digit - b'a' + 10 for b'a'..=b'f', so at most 15 as a u8, and its only caller is Ceremonies::take: the left operand has only its high four bits and the right only its low four, so a | b == a ^ b.",
+      "reached_by": "passkeys::a_passkey_sign_in_stores_its_counter",
+      "issue": "#627"
     }
   ]
 }

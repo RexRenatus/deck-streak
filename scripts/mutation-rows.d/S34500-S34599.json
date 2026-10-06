@@ -144,6 +144,78 @@
         "        Dispatcher::start(Transport::Web, &message)",
         "round_trip::a2_lists_the_collections_decks",
         "a native client's engine starts on the native transport; started on the web one, its deck list is refused, since the web column never admits GetDeckNames (SPEC-345 A6; SPEC-336 A2)"
+      ],
+      [
+        "S34520-A-GESTURE-TAKES-ONLY-ITS-WRITES-KIND",
+        "engine-core",
+        "src/gesture.rs",
+        "            .any(|row| row.write == write && row.kind == target.kind())",
+        "            .any(|row| row.write == write && true)",
+        "gesture::a_gesture_takes_one_target_of_its_writes_kind",
+        "a tap's gesture takes only a target of the kind its write takes; with the kind check gone, a card's id would make a preset's delete gesture (SPEC-345 A12)"
+      ],
+      [
+        "S34521-A-CARD-WRITE-NAMES-ONLY-ITS-CARD",
+        "engine-core",
+        "src/gesture.rs",
+        "    ids == [id]",
+        "    ids.contains(&id)",
+        "exempt::a_request_naming_more_than_its_gestures_target_is_refused",
+        "an exempt write's request names its one target and nothing else; read as containment, a request naming the target and another card would reach the engine (SPEC-345 A14)"
+      ],
+      [
+        "S34522-REMOVE-NOTES-CARRIES-NO-CARD-IDS",
+        "engine-core",
+        "src/gesture.rs",
+        "                    only(&request.note_ids, id) && request.card_ids.is_empty(),",
+        "                    only(&request.note_ids, id) && true,",
+        "exempt::a_request_naming_more_than_its_gestures_target_is_refused",
+        "a delete-note request carries no card ids; admitted with card ids, one note's gesture would also delete cards it never named (SPEC-345 A14)"
+      ],
+      [
+        "S34523-ONLY-THE-TWO-ENTRY-FILES-MAY-CALL",
+        "engine-core",
+        "tests/containment.rs",
+        "    ENTRY_FILES.contains(&file)",
+        "    ENTRY_FILES.contains(&file) || file.starts_with(\"crates/ffi/\")",
+        "containment::no_non_ui_caller_reaches_an_exempt_function",
+        "only the two adapters' entry files may name the gesture or its exempt entry; widened to the native crate, a caller planted in another of its files would pass the census (SPEC-345 A15)"
+      ],
+      [
+        "S34524-A-HELD-LINE-MATCHES-BY-ITS-EXACT-TEXT",
+        "engine-core",
+        "tests/containment.rs",
+        "    line == held",
+        "    line.contains(held)",
+        "containment::no_non_ui_caller_reaches_an_exempt_function",
+        "a held line is matched by its exact trimmed text; matched by containment, a held line extended with a new engine call would pass the census (SPEC-345 A15)"
+      ],
+      [
+        "S34525-A-HELD-LINE-HOLDS-ITS-COUNT",
+        "engine-core",
+        "tests/containment.rs",
+        "    count == found",
+        "    count <= found",
+        "containment::no_non_ui_caller_reaches_an_exempt_function",
+        "a held line holds its measured count; relaxed to at most, a second copy of a held line in its file would pass the census as no new caller (SPEC-345 A15)"
+      ],
+      [
+        "S34526-A-NATIVE-FORGET-TAP-IS-A-FORGET",
+        "ffi",
+        "src/engine.rs",
+        "        ExemptTap::Forget => ExemptWrite::Forget,\n        ExemptTap::SetDueDate => ExemptWrite::SetDueDate,",
+        "        ExemptTap::Forget => ExemptWrite::SetDueDate,\n        ExemptTap::SetDueDate => ExemptWrite::Forget,",
+        "exempt::a_native_forget_tap_resets_its_one_card",
+        "a native Forget tap reaches the engine's Forget and no other write; swapped with set due date, the owner's tap would run a write it never chose (SPEC-345 A17)"
+      ],
+      [
+        "S34527-EACH-EXEMPT-REFUSAL-READS-AS-ITS-OWN-SENTENCE",
+        "ffi",
+        "src/engine.rs",
+        "        match self {\n            Self::WrongKind => f.write_str(\"the tap's target is not of the kind its write takes\"),\n            Self::NotTheTarget => f.write_str(\"the request names other than the tap's one target\"),\n            Self::Undecodable => f.write_str(\"the request is not the tap's own write\"),\n            Self::Engine { error } => {\n                write!(f, \"the engine refused the write ({} bytes)\", error.len())\n            }\n        }\n",
+        "        let _ = (self, f);\n        Ok(Default::default())\n",
+        "exempt::each_exempt_refusal_reads_as_its_own_sentence",
+        "each exempt refusal reads as its own sentence for the person a native client shows it to, never as empty text: ExemptRefusal's Display body replaced with Ok(Default::default()), S33600's form (SPEC-345 A18)"
       ]
     ]
   }
