@@ -14,7 +14,7 @@ deck-streak-kernel        (shared kernel: ids, study day, track, verdict, errors
 deck-streak-ingest        (anti-corruption layer for Anki: sync, read, change gate, new-card queue, skip day)  depends on: kernel
 deck-streak-identity      (Telegram initData, the owner allow-list, sessions, linked sign-in)  depends on: kernel
 deck-streak-analytics     (daily rollup, per-language stats, five-pillar score, today snapshot)  depends on: kernel, ingest
-deck-streak-progression   (XP ledger and grant port, levels, tiers, badges, records, seasons)  depends on: kernel, ingest
+deck-streak-progression   (XP ledger and grant port, levels, tiers, badges, records, seasons)  depends on: kernel, ingest, xp
 deck-streak-streaks       (language and law streaks, freezes, governor, relight)  depends on: kernel
 deck-streak-curriculum    (Road to C2, CEFR, strands, goal, memory, Can-Do, law track, leeches)  depends on: kernel, ingest
 deck-streak-economy       (coin wallet, the only confiscable stake, loss cap, shop)  depends on: kernel
@@ -41,6 +41,7 @@ deck-streak-daemon        (composition root: the deckstreakd binary)  depends on
 deck-streak-migration     (one-off import of v9's schema 24, planned)  depends on: kernel, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault
 deck-streak-web-engine    (Anki's engine on wasm32 in the web client's Worker: the study calls over OPFS)  depends on: engine-core
 deck-streak-push          (APNs and web push senders for a native or web client: provider and VAPID tokens, RFC 8291; ADR-354)  depends on: kernel
+deck-streak-xp            (the per-review XP rule, with no I/O, for the server and both clients; ADR-371)  depends on: nothing
 miniapp   web/app/src     (the SvelteKit Mini App)  depends on: nothing internal
 ios-harness  ios/  (the SwiftUI harness over deck-streak-ffi's XCFramework; ADR-335)  depends on: nothing internal
 landing   web/site/src    (the Astro landing page, planned)  depends on: nothing internal
@@ -60,6 +61,11 @@ dependency is the upstream scheduler crate at a pinned git revision; the engine 
 crate, and the lockfile tells the two apart by source (SPEC-342, ADR-353 D1 and D5). Its `measure`
 module is the replay-time harness, which the crate's two examples only call (ADR-353 D6).
 
+`deck-streak-xp` holds progression's per-review XP rule and its table, read from `economy.json`
+(SPEC-360, ADR-371 D1 and D4). It depends on no context and does no I/O, and progression
+translates an ingest review into it at its edge (ADR-371 D2 and D3). The umbrella FFI crate and
+the web engine depend on it when #639 links it (ADR-357 D1).
+
 `deck-streak-push` is an outbound adapter: it builds APNs and web push requests and reports what
 each platform answered, and it depends on the kernel's clock alone (SPEC-343, ADR-354 D3). The
 daemon does not compose it until native push carries the one router (#640), which adds its
@@ -76,7 +82,9 @@ The graph has three layers, and an edge only ever points down.
    both need: identifiers, the study day and its 04:00 rollover calendar, the track (language or
    law), the `Verdict` type, the error type, typed configuration and credentials, the clock, the
    SQLite repository base, and the data-rights port every stateful context implements. Domain
-   logic placed in the kernel for convenience is a context hiding in shared code.
+   logic placed in the kernel for convenience is a context hiding in shared code. Beside the
+   kernel sits `xp`, one context's rule published for the clients, which every layer above may
+   depend on and which depends on nothing.
 2. **The domain contexts** depend on the kernel, and on `ingest` where they compute from Anki
    reviews, cards or queues. No domain context depends on another domain context. What crosses
    between them (an XP grant after a reading is marked read, a coin fine after a broken

@@ -10,6 +10,7 @@ mod golden;
 use deck_streak_progression::economy_config::xp;
 use deck_streak_progression::level::LEVEL_TITLES;
 use deck_streak_progression::xp::{LEVEL_CURVE_LINEAR, LEVEL_CURVE_QUADRATIC};
+use deck_streak_xp::table::table;
 use serde_json::{Value, json};
 
 /// Whether two values are the same constant: numbers by value, whichever way JSON writes them.
@@ -31,6 +32,8 @@ fn same(left: &Value, right: &Value) -> bool {
 #[test]
 fn the_progression_constants_equal_the_predecessors_and_economy_json() {
     let economy = xp();
+    // The eight per-review constants are the XP crate's own (SPEC-360 R4).
+    let per_review = table();
     let keyed = |values: &[f64], keys: &[&str]| -> Value {
         keys.iter()
             .zip(values)
@@ -41,14 +44,14 @@ fn the_progression_constants_equal_the_predecessors_and_economy_json() {
     golden::each_case("progression.constants", |case| {
         let name = case.input["name"].as_str().expect("a constant's name");
         let ours: Value = match name {
-            "constants.XP_BASE" => json!(economy.base),
-            "constants.EASE_XP_MULT" => keyed(&economy.ease, &["1", "2", "3", "4"]),
-            "constants.TYPE_XP_MULT" => keyed(&economy.types, &["0", "1", "2", "3"]),
-            "constants.XP_MATURE_MULT" => json!(economy.mature),
-            "constants.XP_YOUNG_MULT" => json!(economy.young),
-            "constants.XP_NEUTRAL_MULT" => json!(economy.fresh),
-            "constants.MATURE_IVL_DAYS" => json!(economy.mature_interval_days),
-            "constants.TIER_XP_MULT" => keyed(&economy.tier, &["T1", "T2", "T3", "T4"]),
+            "constants.XP_BASE" => json!(per_review.base),
+            "constants.EASE_XP_MULT" => keyed(&per_review.ease, &["1", "2", "3", "4"]),
+            "constants.TYPE_XP_MULT" => keyed(&per_review.types, &["0", "1", "2", "3"]),
+            "constants.XP_MATURE_MULT" => json!(per_review.mature),
+            "constants.XP_YOUNG_MULT" => json!(per_review.young),
+            "constants.XP_NEUTRAL_MULT" => json!(per_review.fresh),
+            "constants.MATURE_IVL_DAYS" => json!(per_review.mature_interval_days),
+            "constants.TIER_XP_MULT" => keyed(&per_review.tier, &["T1", "T2", "T3", "T4"]),
             "constants.XP_BONUS_STUDIED" => json!(economy.studied),
             "constants.XP_BONUS_BACKLOG_ZERO" => json!(economy.backlog_zero),
             "constants.XP_BONUS_STREAK_PER_DAY" => json!(economy.streak_per_day),

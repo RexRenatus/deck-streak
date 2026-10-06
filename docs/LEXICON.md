@@ -11,7 +11,7 @@ SPEC that introduces the concept.
 reading in deck-streak-readings: preread, prereading, prestudy
 topic in deck-streak-readings: lane
 comeback in deck-streak-readings, deck-streak-notifications: ticket
-xp in deck-streak-progression, deck-streak-readings: points, exp
+xp in deck-streak-progression, deck-streak-readings, deck-streak-xp: points, exp
 coin in deck-streak-economy, deck-streak-discipline, deck-streak-markets, deck-streak-quests: gold, gem, credit
 chest in deck-streak-quests: lootbox, crate
 streak in deck-streak-streaks: combo, chain
@@ -42,6 +42,7 @@ leech in deck-streak-curriculum: hardcard
 | comeback reading | readings | the one reading offered once per lapse, inside the comeback cap |
 | lapse | streaks | the governor's episode of three or more zero-review study days, identified by a lapse id |
 | XP | progression | experience points, granted once per (day, source, track) through the grant port; never confiscable |
+| review facts | xp | the three facts of one answer the XP rule reads: its ease, its new interval and its review type; progression builds them from an ingest review |
 | coin | economy | the only confiscable stake, under the daily loss cap and the zero floor |
 | chest | quests | a session reward whose rarity is rolled once on the server and stored; never sold |
 | celebration | notifications | an event the router may render at a tier T0 to T5, once ever per event key |
