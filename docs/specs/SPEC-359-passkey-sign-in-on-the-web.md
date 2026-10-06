@@ -171,7 +171,7 @@ never-expire, keep-all), so the test compiles at that commit and fails on its as
 | A15 | the counter rule accepts both-zero and an advance, and refuses equal, lower and zero-after-non-zero, over its table | `the_counter_rule_accepts_only_an_advance_or_two_zeros` | the stub's rule answers true |
 | A16 | a ninth live ceremony evicts the oldest, which is refused `challenge_invalid` | `a_ninth_ceremony_evicts_the_oldest` | the stub keeps nine |
 | A17 | a registration ceremony finished in another session is refused `challenge_invalid` | `a_ceremony_finishes_only_in_its_own_session` | the stub ignores the session |
-| A18 | a response whose signature does not verify is refused `passkey_invalid` | `a_passkey_with_a_foreign_signature_is_refused` | the stub answers `challenge_invalid` for it |
+| A18 | a response whose signature does not verify is refused `passkey_invalid` | `a_passkey_with_a_foreign_signature_is_refused` | the stub refuses it as an invalid challenge |
 | A19 | registering a credential already present is refused `already_linked` and writes nothing (A24) | `linking_twice_is_refused` | the stub inserts a second row |
 | A20 | a sign-in with no passkey held, or an unknown credential, is refused `not_linked` and writes nothing (A21) | `a_sign_in_with_an_unlinked_identity_creates_nothing` | the stub opens a session |
 | A21 | a passkey row of another Telegram user is refused `not_owner` (A22) | `a_linked_identity_of_another_user_is_refused` | the stub skips the owner check |
