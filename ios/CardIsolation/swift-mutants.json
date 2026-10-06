@@ -122,14 +122,6 @@
       "why": "L8 is a required control: a view without it keeps its scripts off"
     },
     {
-      "id": "SW35509",
-      "file": "Sources/CardIsolation/CardScripts.swift",
-      "find": ".L9,",
-      "replace": "",
-      "killer": "CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present",
-      "why": "L9 is a required control: a view without it keeps its scripts off"
-    },
-    {
       "id": "SW35510",
       "file": "Sources/CardIsolation/PeerConnectionRemoval.swift",
       "find": "\"^(webkit)?RTC\"",
@@ -144,30 +136,6 @@
       "replace": "[]",
       "killer": "CardIsolationTests.PeerConnectionRemovalTests/test_the_removal_deletes_every_peer_connection_name_and_nothing_else",
       "why": "the removal deletes WebTransport, a datagram transport outside the load path"
-    },
-    {
-      "id": "SW35512",
-      "file": "Sources/CardIsolation/ConnectionHold.swift",
-      "find": "held += 1",
-      "replace": "",
-      "killer": "CardIsolationTests.ConnectionHoldTests/test_the_hold_answers_no_byte_and_counts_every_connection",
-      "why": "the hold counts every connection it receives"
-    },
-    {
-      "id": "SW35513",
-      "file": "Sources/CardIsolation/ConnectionHold.swift",
-      "find": "connection.cancel()",
-      "replace": "_ = Unmanaged.passRetained(connection)",
-      "killer": "CardIsolationTests.ConnectionHoldTests/test_the_hold_answers_no_byte_and_counts_every_connection",
-      "why": "the hold closes every connection it receives and keeps none open"
-    },
-    {
-      "id": "SW35514",
-      "file": "Sources/CardIsolation/ConnectionHold.swift",
-      "find": "connection.cancel()",
-      "replace": "connection.send(content: Data([0x48]), completion: .contentProcessed { _ in connection.cancel() })",
-      "killer": "CardIsolationTests.ConnectionHoldTests/test_the_hold_answers_no_byte_and_counts_every_connection",
-      "why": "the hold answers no byte before it closes a connection"
     }
   ]
 }

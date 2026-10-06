@@ -289,15 +289,12 @@ class OneFactoryBuildsTheCardWebView(unittest.TestCase):
 SWITCH_FILE = "ios/CardIsolation/Sources/CardIsolation/CardScripts.swift"
 SWITCH_DEFINITION = re.compile(r"\bstatic\s+(?:let|var)\s+switchedOn\b")
 # Each control the factory builds for scripted cards, with the tokens that show it set (SPEC-355
-# R3 and R4, the schematic's section 7): L8's user script runs at document start, in every frame,
-# in the page's own world; L9's proxy configuration is installed with failover off. The factory
-# builds both, so every token is read there.
+# R3, the schematic's section 7): L8's user script runs at document start, in every frame, in the
+# page's own world. The factory builds it, so every token is read there.
 CONTROL_TOKENS = (
     ("L8", "forMainFrameOnly: false"),
     ("L8", ".atDocumentStart"),
     ("L8", "in: .page"),
-    ("L9", "allowFailover = false"),
-    ("L9", "proxyConfigurations = ["),
 )
 
 
@@ -341,9 +338,6 @@ GOOD_SCRIPTED_FACTORY = (
     GOOD_FACTORY
     + "let removal = WKUserScript(source: s, injectionTime: .atDocumentStart,"
     + " forMainFrameOnly: false, in: .page)\n"
-    + "var proxy = ProxyConfiguration(httpCONNECTProxy: hold)\n"
-    + "proxy.allowFailover = false\n"
-    + "store.proxyConfigurations = [proxy]\n"
 )
 
 

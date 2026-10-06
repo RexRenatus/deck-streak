@@ -1,11 +1,11 @@
-import Network
 import ObjectiveC
 import WebKit
 
 /// The card view's layers: the seven of SPEC-349 R2 (the schematic's section 4), then L8, the
-/// peer-connection removal, and L9, the connection hold (SPEC-355 R3 and R4, section 7).
+/// peer-connection removal (SPEC-355 R3, section 7). L9 is retired (SPEC-361 R2), and its number
+/// is not reused.
 public enum CardLayer: String, CaseIterable, Sendable {
-    case L1, L2, L3, L4, L5, L6, L7, L8, L9
+    case L1, L2, L3, L4, L5, L6, L7, L8
 }
 
 /// Why the factory built no view.
@@ -20,13 +20,10 @@ public enum CardViewRefusal: Error, Equatable, Sendable {
 public enum CardWebViewFactory {
     /// A web view showing `html`, a card face the app did not write. The rule list is compiled
     /// first; when it does not compile, this throws `CardViewRefusal.ruleListDidNotCompile` and
-    /// builds no view. L9's hold is started here; a hold that does not start leaves L9 absent,
-    /// so the card's scripts stay off (SPEC-355 R4).
+    /// builds no view.
     public static func makeCardWebView(html: String) async throws -> WKWebView {
         let compiled = await RuleList.compile()
-        let hold = try? ConnectionHold()
-        try? await hold?.start()
-        return try build(html: html, ruleList: compiled, hold: hold)
+        return try build(html: html, ruleList: compiled)
     }
 
     /// The configuration L1 and L2 set, for a reader of the layers (SPEC-339's A8). It is not a
@@ -34,21 +31,18 @@ public enum CardWebViewFactory {
     public static func configuration() -> WKWebViewConfiguration {
         configuration(
             layers: [.L1, .L2], ruleList: nil,
-            built: Built(switchedOn: false, scriptsFollowVerdict: true, hold: nil))
+            built: Built(switchedOn: false, scriptsFollowVerdict: true))
     }
 
-    /// The card view around a compiled list, or a refusal when there is none. `hold` is the
-    /// listener L9 sends every connection to, and `switchedOn` the switch the verdict reads
-    /// (SPEC-355 R1, R2).
+    /// The card view around a compiled list, or a refusal when there is none. `switchedOn` is the
+    /// switch the verdict reads (SPEC-355 R1, R2).
     static func build(
-        html: String, ruleList: WKContentRuleList?, hold: ConnectionHold? = nil,
-        switchedOn: Bool = CardScripts.switchedOn
+        html: String, ruleList: WKContentRuleList?, switchedOn: Bool = CardScripts.switchedOn
     ) throws -> WKWebView {
         guard let ruleList else {
             throw CardViewRefusal.ruleListDidNotCompile
         }
-        let view = make(
-            layers: Set(CardLayer.allCases), ruleList: ruleList, hold: hold, switchedOn: switchedOn)
+        let view = make(layers: Set(CardLayer.allCases), ruleList: ruleList, switchedOn: switchedOn)
         // L7, no file access: the card is handed over as a string with no base URL, never as a
         // file, so its document has no origin that can read one.
         // It does NOT stop a load the card's markup names; the rule list (L3) does.
@@ -59,16 +53,13 @@ public enum CardWebViewFactory {
     /// The probe's door: a view with only `layers` on, for the planted suite's reference and
     /// single-layer-off views. Internal, so only a test target reaches it.
     static func make(
-        layers: Set<CardLayer>, ruleList: WKContentRuleList?, hold: ConnectionHold? = nil,
-        switchedOn: Bool = false
+        layers: Set<CardLayer>, ruleList: WKContentRuleList?, switchedOn: Bool = false
     ) -> WKWebView {
-        let built = Built(
-            switchedOn: switchedOn, scriptsFollowVerdict: layers.contains(.L2), hold: hold)
+        let built = Built(switchedOn: switchedOn, scriptsFollowVerdict: layers.contains(.L2))
         let view = WKWebView(
             frame: .zero,
             configuration: configuration(layers: layers, ruleList: ruleList, built: built))
-        // What was built stays with the view, so its verdict reads the view (SPEC-355 R2), and
-        // the hold lives as long as the view.
+        // What was built stays with the view, so its verdict reads the view (SPEC-355 R2).
         Retained.keep(built, by: view, under: Retained.built)
         if layers.contains(.L5) {
             // L5, the navigation gate: only the first main-frame load is allowed.
@@ -147,13 +138,6 @@ public enum CardWebViewFactory {
         if removal {
             present.insert(.L8)
         }
-        let proxies = store.proxyConfigurations
-        if let hold = built.hold, let endpoint = built.endpoint, hold.isReady,
-           hold.endpoint == endpoint, proxies.count == 1, let proxy = proxies.first,
-           !proxy.allowFailover, proxy.excludedDomains.isEmpty, proxy.matchDomains.isEmpty
-        {
-            present.insert(.L9)
-        }
         return present
     }
 
@@ -192,44 +176,26 @@ public enum CardWebViewFactory {
         if layers.contains(.L8) {
             // L8, the peer-connection removal: one user script, at document start, in every
             // frame, in the page's own world, deletes every peer-connection global first.
-            // It does NOT stop a load, a navigation or a lookup; L3, L5 and L9 hold those.
+            // It does NOT stop a load, a navigation or a lookup; L3 and L5 hold those.
             configuration.userContentController.addUserScript(
                 WKUserScript(
                     source: PeerConnectionRemoval.source, injectionTime: .atDocumentStart,
                     forMainFrameOnly: false, in: .page))
-        }
-        // L9, the connection hold (#677): the store's one proxy is the app's loopback hold, with
-        // failover off and no domain excluded, so every connection the view starts reaches only
-        // the hold. A hold that is not ready leaves L9 absent. The list is assigned either way:
-        // a view without L1 shares the default store, whose list outlives any one view.
-        // It does NOT stop a peer connection, whose UDP passes no HTTP proxy; L8 does.
-        let store = configuration.websiteDataStore
-        if layers.contains(.L9), let endpoint = built.hold?.endpoint {
-            var proxy = ProxyConfiguration(httpCONNECTProxy: endpoint)
-            proxy.allowFailover = false
-            store.proxyConfigurations = [proxy]
-            built.endpoint = endpoint
-        } else {
-            store.proxyConfigurations.removeAll()
         }
         return configuration
     }
 }
 
 /// What the factory built into one view, kept with the view (SPEC-355 R2): the switch the view
-/// was built under, whether page JavaScript follows the verdict (L2 was built), and L9's hold
-/// with the endpoint the store was given.
+/// was built under, and whether page JavaScript follows the verdict (L2 was built).
 @MainActor
 final class Built: NSObject {
     let switchedOn: Bool
     let scriptsFollowVerdict: Bool
-    let hold: ConnectionHold?
-    var endpoint: NWEndpoint?
 
-    init(switchedOn: Bool, scriptsFollowVerdict: Bool, hold: ConnectionHold?) {
+    init(switchedOn: Bool, scriptsFollowVerdict: Bool) {
         self.switchedOn = switchedOn
         self.scriptsFollowVerdict = scriptsFollowVerdict
-        self.hold = hold
         super.init()
     }
 }

@@ -53,13 +53,10 @@ final class FactoryTests: XCTestCase {
     @MainActor
     func test_the_card_view_runs_scripts_only_with_every_control() async throws {
         let probe = try await Probe.make()
-        let hold = try ConnectionHold()
-        try await hold.start()
-        defer { hold.cancel() }
         let html = Planted.document(id: "factory", head: "", body: "<script>\(ranMarker)</script><p>a card</p>")
         let bridge = Recorder()
-        let on = try CardWebViewFactory.build(html: html, ruleList: probe.ruleList, hold: hold, switchedOn: true)
-        let off = try CardWebViewFactory.build(html: html, ruleList: probe.ruleList, hold: hold, switchedOn: false)
+        let on = try CardWebViewFactory.build(html: html, ruleList: probe.ruleList, switchedOn: true)
+        let off = try CardWebViewFactory.build(html: html, ruleList: probe.ruleList, switchedOn: false)
         var rows: [(name: String, view: WKWebView, verdict: CardScripts.Verdict, runs: Bool)] = [
             (name: "every control, the switch on", view: on, verdict: .run, runs: true),
             (name: "every control, the switch off", view: off, verdict: .off(missing: []), runs: false),
@@ -70,8 +67,7 @@ final class FactoryTests: XCTestCase {
             let leftOut: Set<CardLayer> = control == .L4 || control == .L7 ? [] : [control]
             let layers = Set(CardLayer.allCases).subtracting(leftOut)
             let view = CardWebViewFactory.make(
-                layers: layers, ruleList: layers.contains(.L3) ? probe.ruleList : nil,
-                hold: layers.contains(.L9) ? hold : nil, switchedOn: true)
+                layers: layers, ruleList: layers.contains(.L3) ? probe.ruleList : nil, switchedOn: true)
             if control == .L4 {
                 view.configuration.userContentController.add(bridge, name: "bridge")
             }

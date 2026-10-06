@@ -26,22 +26,6 @@
         "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
       ],
       [
-        "S35503-THE-HOLD-ALLOWS-NO-FAILOVER",
-        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
-        "allowFailover = false",
-        "allowFailover = true",
-        "a connection the hold refuses fails over to a direct one (SPEC-355 R4, L9)",
-        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
-      ],
-      [
-        "S35504-THE-STORE-NAMES-THE-HOLD",
-        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
-        "            store.proxyConfigurations = [proxy]\n",
-        "",
-        "the card view's store names no proxy, so a connection reaches its host directly (SPEC-355 R4, L9)",
-        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
-      ],
-      [
         "S35505-PAGE-SCRIPT-FOLLOWS-THE-VERDICT",
         "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
         "allowsContentJavaScript = verdict == .run",

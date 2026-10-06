@@ -1,5 +1,5 @@
 // SPEC-355 A1: the card-script switch's decision, which is pure, over every case: the switch on or
-// off, times every subset of the eight controls a scripted card view must carry. It runs on the
+// off, times every subset of the seven controls a scripted card view must carry. It runs on the
 // macOS host with no WebKit.
 import XCTest
 
@@ -15,7 +15,7 @@ final class CardScriptsTests: XCTestCase {
 
     /// The controls a scripted card view must carry (SPEC-355 R1), named here rather than read
     /// from the code under test: every layer but L2, which is the verdict itself.
-    static let controls: [CardLayer] = [.L1, .L3, .L4, .L5, .L6, .L7, .L8, .L9]
+    static let controls: [CardLayer] = [.L1, .L3, .L4, .L5, .L6, .L7, .L8]
 
     func test_scripts_run_only_when_switched_on_with_every_control_present() {
         let controls = Self.controls
@@ -36,7 +36,7 @@ final class CardScriptsTests: XCTestCase {
                 CardScripts.decide(switchedOn: row.switchedOn, present: row.present), wanted,
                 "switch \(row.switchedOn ? "on" : "off"), present \(row.present.map(\.rawValue).sorted())")
         }
-        XCTAssertEqual(cases.count, 512, "the cases are not the switch times every subset of eight")
-        XCTAssertEqual(CardScripts.required, Set(controls), "the required controls are not L1 and L3 to L9")
+        XCTAssertEqual(cases.count, 256, "the cases are not the switch times every subset of seven")
+        XCTAssertEqual(CardScripts.required, Set(controls), "the required controls are not L1 and L3 to L8")
     }
 }

@@ -232,7 +232,7 @@ private func plantedCards() -> [Planted] {
 }
 
 /// SPEC-349's seven layers, named one by one: the scripts-off view as SPEC-349 measured it, with
-/// L8 and L9 off. SPEC-355 R12 keeps SPEC-349's single-layer variants on this base, so their
+/// L8 off. SPEC-355 R12 keeps SPEC-349's single-layer variants on this base, so their
 /// declarations stand as measured.
 let BASE: [CardLayer] = [.L1, .L2, .L3, .L4, .L5, .L6, .L7]
 
@@ -268,7 +268,7 @@ let RENDER = Planted.document(
 
 /// The controls a scripted card view must carry (SPEC-355 R1), named one by one: every layer but
 /// L2, which is the verdict itself.
-let CONTROLS: [CardLayer] = [.L1, .L3, .L4, .L5, .L6, .L7, .L8, .L9]
+let CONTROLS: [CardLayer] = [.L1, .L3, .L4, .L5, .L6, .L7, .L8]
 
 /// One scripted card: the planted card, and the controls that hold its channel in the scripted
 /// view, which its reference removes. Its card's `alone` is the control whose removal alone, every
@@ -318,41 +318,41 @@ let SCRIPTED: [Scripted] = scriptedCards()
 // One statement per card, so the compiler type-checks each card's markup on its own.
 private func scriptedCards() -> [Scripted] {
     var cards: [Scripted] = []
-    cards.append(scripted("script-fetch", held: [.L3, .L9], alone: nil, .path) { a in
+    cards.append(scripted("script-fetch", held: [.L3], alone: nil, .path) { a in
         "fetch('\(a.under("script-fetch"))/1').catch(() => {});"
     })
-    cards.append(scripted("script-xhr", held: [.L3, .L9], alone: nil, .path) { a in
+    cards.append(scripted("script-xhr", held: [.L3], alone: nil, .path) { a in
         "const request = new XMLHttpRequest(); request.open('GET', '\(a.under("script-xhr"))/1'); request.send();"
     })
-    cards.append(scripted("script-websocket", held: [.L3, .L9], alone: nil, .connection) { a in
+    cards.append(scripted("script-websocket", held: [.L3], alone: nil, .connection) { a in
         "try { new WebSocket('ws://\(Listeners.host):\(a.tcpPort)/script-websocket/1'); } catch (error) {}"
     })
-    cards.append(scripted("script-eventsource", held: [.L3, .L9], alone: nil, .path) { a in
+    cards.append(scripted("script-eventsource", held: [.L3], alone: nil, .path) { a in
         "new EventSource('\(a.under("script-eventsource"))/1');"
     })
-    cards.append(scripted("script-beacon", held: [.L3, .L9], alone: nil, .path) { a in
+    cards.append(scripted("script-beacon", held: [.L3], alone: nil, .path) { a in
         "navigator.sendBeacon('\(a.under("script-beacon"))/1', 'card');"
     })
-    cards.append(scripted("script-image", held: [.L3, .L9], alone: nil, .path) { a in
+    cards.append(scripted("script-image", held: [.L3], alone: nil, .path) { a in
         "const image = new Image(); image.src = '\(a.under("script-image"))/1';"
     })
-    cards.append(scripted("script-worker", held: [.L3, .L9], alone: nil, .path) { a in
+    cards.append(scripted("script-worker", held: [.L3], alone: nil, .path) { a in
         "const source = \"fetch('\(a.under("script-worker"))/1').catch(() => {});\";"
             + " new Worker(URL.createObjectURL(new Blob([source], { type: 'text/javascript' })));"
     })
-    cards.append(scripted("script-link", held: [.L3, .L9], alone: nil, .connection) { a in
+    cards.append(scripted("script-link", held: [.L3], alone: nil, .connection) { a in
         "const early = document.createElement('link'); early.rel = 'preconnect'; early.href = '\(a.origin)';"
             + " document.head.appendChild(early); const sheet = document.createElement('link');"
             + " sheet.rel = 'stylesheet'; sheet.href = '\(a.under("script-link"))/1'; document.head.appendChild(sheet);"
     })
-    // L3 holds the two navigations as well as L5 and L9, measured on both simulators: their
-    // reference without L5 and L9 allowed every navigation and no load arrived, as SPEC-349's
+    // L3 holds the two navigations as well as L5, measured on both simulators: their reference
+    // without L5 allowed every navigation and no load arrived, as SPEC-349's
     // `nav-self` reads without L5 (the rule list refuses the document load).
-    cards.append(scripted("script-nav", held: [.L3, .L5, .L9], alone: nil, .connection) { a in
+    cards.append(scripted("script-nav", held: [.L3, .L5], alone: nil, .connection) { a in
         "let tries = 0; const go = () => { tries += 1; location.assign('\(a.under("script-nav"))/1');"
             + " if (tries < 5) { setTimeout(go, 200); } }; setTimeout(go, 0);"
     })
-    cards.append(scripted("script-form", held: [.L3, .L5, .L9], alone: nil, .path) { a in
+    cards.append(scripted("script-form", held: [.L3, .L5], alone: nil, .path) { a in
         "const form = document.createElement('form'); form.method = 'post';"
             + " form.action = '\(a.under("script-form"))/1'; document.body.appendChild(form);"
             + " setTimeout(() => form.submit(), 0);"
@@ -428,9 +428,9 @@ let BLIND_SCRIPTED: Set<String> = ["capture", "script-open"]
 
 /// The declared set of controls with no scripted channel of their own: removing one alone, every
 /// other control on, opens nothing (A10 measures it). L8 opens every peer connection but the
-/// `srcdoc` frame's, which L5 also holds; L3 and L9 share every load, L3, L5 and L9 every
-/// navigation, and L5 and L6 the window, as measured on both simulators.
-let DEPTH_SCRIPTED: Set<CardLayer> = [.L1, .L3, .L4, .L5, .L6, .L7, .L9]
+/// `srcdoc` frame's, which L5 also holds; L3 and L9, which SPEC-361 retires, shared every load,
+/// L3, L5 and L9 every navigation, and L5 and L6 the window, as measured on both simulators.
+let DEPTH_SCRIPTED: Set<CardLayer> = [.L1, .L3, .L4, .L5, .L6, .L7]
 
 /// SPEC-355 R10: the lookup card. A static and a script-added `dns-prefetch`, and a script's
 /// fetch, each of a `.local` name whose first label is the card's id and whose second only this

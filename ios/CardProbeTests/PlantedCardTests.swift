@@ -109,8 +109,6 @@ struct Reading: Sendable {
     var body = ""
     var fileWidth = 0
     var webkit = ""
-    /// Connections the view's hold (L9) received and refused.
-    var held = 0
     /// Multicast DNS queries the witness counted for this view's label.
     var queries = 0
     /// Dialogs and capture requests the recorder answered yes.
@@ -142,7 +140,7 @@ struct Reading: Sendable {
         "loaded=\(loaded) paths=\(arrivals.paths) connections=\(arrivals.connections)"
             + " datagrams=\(arrivals.datagrams) allowed=\(allowedAfterFirst) windows=\(windows)"
             + " messages=\(messages) marker=\(marker) fileWidth=\(fileWidth) webkit=\(webkit)"
-            + " held=\(held) queries=\(queries) granted=\(granted) record=\(record)"
+            + " queries=\(queries) granted=\(granted) record=\(record)"
     }
 }
 
@@ -191,11 +189,11 @@ private struct PageState: Decodable {
 enum Variant: Hashable, Sendable {
     /// `make(layers: [])`: every layer off, page JavaScript on.
     case reference
-    /// `build(html:ruleList:hold:switchedOn: false)`: the scripts-off card view, every layer on.
+    /// `build(html:ruleList:switchedOn: false)`: the scripts-off card view, every layer on.
     case shipped
     /// `make(layers:)` with every layer of SPEC-349's base but one (SPEC-355 R12).
     case without(CardLayer)
-    /// `build(html:ruleList:hold:switchedOn: true)`: the scripted card view (SPEC-355 R2).
+    /// `build(html:ruleList:switchedOn: true)`: the scripted card view (SPEC-355 R2).
     case scripted
     /// A scripted card's reference: scripts on, every control on but the ones that hold its
     /// channel.
@@ -345,10 +343,6 @@ final class Probe {
         let listeners = try Listeners()
         try await listeners.start()
         defer { listeners.cancel() }
-        // Every view gets its own hold, so a refused connection names the view that opened it.
-        let hold = try ConnectionHold()
-        try await hold.start()
-        defer { hold.cancel() }
         let label = "v" + UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
         let address = Address(
             tcpPort: listeners.tcpPort, udpPort: listeners.udpPort, fixture: fixture, label: label)
@@ -359,13 +353,11 @@ final class Probe {
         let view: WKWebView
         switch variant {
         case .shipped:
-            view = try CardWebViewFactory.build(html: html, ruleList: ruleList, hold: hold, switchedOn: false)
+            view = try CardWebViewFactory.build(html: html, ruleList: ruleList, switchedOn: false)
         case .scripted:
-            view = try CardWebViewFactory.build(html: html, ruleList: ruleList, hold: hold, switchedOn: true)
+            view = try CardWebViewFactory.build(html: html, ruleList: ruleList, switchedOn: true)
         default:
-            view = CardWebViewFactory.make(
-                layers: layers, ruleList: layers.contains(.L3) ? ruleList : nil,
-                hold: layers.contains(.L9) ? hold : nil)
+            view = CardWebViewFactory.make(layers: layers, ruleList: layers.contains(.L3) ? ruleList : nil)
         }
         // The probe setting every view gets, the shipped one too: a planted click is the app's own
         // script activating the element, the stand-in for a tap (ADR-360 D5).
@@ -402,10 +394,10 @@ final class Probe {
         var took: TimeInterval?
         if let window {
             try? await Task.sleep(nanoseconds: UInt64(window * 1_000_000_000))
-            reading = await read(view, listeners, recorder, reading.loaded, hold, witness, label)
+            reading = await read(view, listeners, recorder, reading.loaded, witness, label)
         } else {
             took = await Probe.poll(deadline) {
-                reading = await self.read(view, listeners, recorder, reading.loaded, hold, witness, label)
+                reading = await self.read(view, listeners, recorder, reading.loaded, witness, label)
                 return reading.reached(card)
             }
         }
@@ -414,12 +406,11 @@ final class Probe {
 
     private func read(
         _ view: WKWebView, _ listeners: Listeners, _ recorder: Recorder, _ loaded: Bool,
-        _ hold: ConnectionHold, _ witness: Witness?, _ label: String
+        _ witness: Witness?, _ label: String
     ) async -> Reading {
         var reading = Reading()
         reading.loaded = loaded
         reading.arrivals = listeners.arrivals()
-        reading.held = hold.count
         reading.queries = witness?.count(label) ?? 0
         reading.granted = recorder.granted
         if let gate = view.navigationDelegate as? GateAdapter {
@@ -475,7 +466,6 @@ final class PlantedCardTests: XCTestCase {
         var notLoaded: [String] = []
         var silent: Set<String> = []
         var connections: [String: Int] = [:]
-        var held: [String: Int] = [:]
         for card in examined("planted cards", PLANTED) {
             let (reference, took) = try await reference(card, probe)
             if !reference.reached(card) {
@@ -484,8 +474,7 @@ final class PlantedCardTests: XCTestCase {
             let (shipped, _) = try await probe.show(card, in: .shipped, window: window(took))
             print("shipped \(card.id): reached=\(shipped.reached(card)) \(shipped.summary)")
             connections[card.id] = shipped.arrivals.connections
-            held[card.id] = shipped.held
-            print("connections \(card.id): \(shipped.arrivals.connections) held=\(shipped.held)")
+            print("connections \(card.id): \(shipped.arrivals.connections)")
             if shipped.reached(card) {
                 shippedReached.append(card.id)
             }
@@ -494,21 +483,10 @@ final class PlantedCardTests: XCTestCase {
             }
         }
         // The behaviour first: nothing reaches from the card view, and no card opens a connection
-        // from it. A followed link's connection reaches only the hold (L9, SPEC-355 R12, #677).
+        // from it.
         XCTAssertEqual(shippedReached, [], "cards that reached their probe from the card view")
         XCTAssertEqual(
             connections.filter { $0.value != 0 }, [:], "the cards whose card view opened a connection")
-        // The #677 reference is not blind: with L9 off each followed link opens a connection, and
-        // with it on the hold counts the refused attempt.
-        for name in examined("followed links", ["nav-self", "nav-blank"]) {
-            let card = try XCTUnwrap(PLANTED.first { $0.id == name }, "\(name) is not planted")
-            let (_, took) = try await reference(card, probe)
-            let (open, _) = try await probe.show(card, in: .without(.L9), window: window(took))
-            print("followed \(name): without L9 connections=\(open.arrivals.connections) card view held=\(held[name] ?? 0)")
-            XCTAssertGreaterThanOrEqual(
-                open.arrivals.connections, 1, "\(name) opened no connection with L9 off, so its zero proves nothing")
-            XCTAssertGreaterThanOrEqual(held[name] ?? 0, 1, "the hold counted no refused attempt for \(name)")
-        }
         XCTAssertEqual(notLoaded, [], "cards the card view never finished loading, so nothing was judged")
         XCTAssertEqual(
             silent, Set(UNOBSERVABLE.keys),
@@ -727,9 +705,6 @@ final class PlantedCardTests: XCTestCase {
     @MainActor
     func test_a_scripted_card_reads_no_state_the_app_holds() async throws {
         let probe = try await Probe.make()
-        let hold = try ConnectionHold()
-        try await hold.start()
-        defer { hold.cancel() }
         let planted = "planted" + UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
         let origin = try XCTUnwrap(URL(string: "https://app-state.invalid/"), "the planted origin is not a URL")
         // The app's state, none of it the card's: a cookie and storage in the default store at
@@ -763,7 +738,7 @@ final class PlantedCardTests: XCTestCase {
                 return view
             }),
             ("scripted", {
-                try CardWebViewFactory.build(html: html, ruleList: probe.ruleList, hold: hold, switchedOn: true)
+                try CardWebViewFactory.build(html: html, ruleList: probe.ruleList, switchedOn: true)
             }),
         ]
         var records: [String: String] = [:]
@@ -858,9 +833,6 @@ final class PlantedCardTests: XCTestCase {
     @MainActor
     func test_a_scripted_card_renders_and_its_script_runs() async throws {
         let probe = try await Probe.make()
-        let hold = try ConnectionHold()
-        try await hold.start()
-        defer { hold.cancel() }
         let builds: [(name: String, build: @MainActor () throws -> WKWebView)] = [
             ("reference", {
                 let view = CardWebViewFactory.make(layers: [], ruleList: nil)
@@ -868,7 +840,7 @@ final class PlantedCardTests: XCTestCase {
                 return view
             }),
             ("scripted", {
-                try CardWebViewFactory.build(html: RENDER_SCRIPT, ruleList: probe.ruleList, hold: hold, switchedOn: true)
+                try CardWebViewFactory.build(html: RENDER_SCRIPT, ruleList: probe.ruleList, switchedOn: true)
             }),
         ]
         var shown: [String: (text: String, ran: Bool)] = [:]
