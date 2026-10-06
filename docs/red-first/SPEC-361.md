@@ -23,3 +23,15 @@ A13: not red: SPEC-355's criterion, kept; with L9 gone it is L3's proof
 A14: not red: SPEC-355's criterion, kept
 A15: not red: over the factory's stubs (fc0a34dd) no L12 is built until the layer's commit (a550da38), so nothing blocks the `permitted` card's data: image, font and audio, and the criterion, which reads those loads accepted in both card views, holds over the stub
 ```
+
+A9 and A12 at 8e4a808b read one probe-validity red, the same on both simulators of one `harness`
+job (112308297225), with nothing reached from the scripted view: `script-written-link`'s reference
+without L11 opened no connection with its marker set, so A9's blind set held it beside the pinned
+`BLIND_SCRIPTED` (`PlantedCardTests.swift:715`) and L11's single-control map lost it
+(`PlantedCardTests.swift:854`). WebKit's parser names a second control. With L11 removed the
+frame's document is opened and written, and the rewrite erases L10's listener, but WebKit runs
+every document-start user script again when `write` parses the opened document's new root element,
+so L10's refusal (`LinkActivationRefusal.swift`) holds the written link's click. Two controls, L10
+and L11, hold `script-written-link`: its held set is L10 and L11, its reference removes both, and
+no control alone opens it (`Planted.swift`). `BLIND_SCRIPTED`, the other cards' held sets and the
+other channels of each control's map are unchanged.

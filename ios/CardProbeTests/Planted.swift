@@ -455,7 +455,13 @@ private func scriptedCards() -> [Scripted] {
             + " link.target = '_blank'; link.href = '\(a.under("script-closed-shadow"))/1'; link.textContent = 'open';"
             + " root.appendChild(link); setTimeout(() => link.click(), 0);"
     })
-    cards.append(scripted("script-written-link", held: [.L11], alone: .L11, .connection) { a in
+    // L10 holds the written link as well as L11, measured on both simulators: its reference
+    // without L11 opened no connection with its marker set. With L11 removed the frame's document
+    // is opened and written, and the rewrite erases L10's listener, but WebKit runs every
+    // document-start user script again when `write` parses the opened document's new root
+    // element, so L10's refusal is back on the written link before its click. Its reference
+    // removes both, and no control alone opens it.
+    cards.append(scripted("script-written-link", held: [.L10, .L11], alone: nil, .connection) { a in
         "const frame = document.createElement('iframe'); frame.title = 'written'; document.body.appendChild(frame);"
             + " const inner = frame.contentDocument; inner.open();"
             + " inner.write(\"<a id='written' target='_blank' href='\(a.under("script-written-link"))/1'>open</a>\");"
