@@ -165,3 +165,8 @@ touches `ios/`.
 
 - ADR-352 (D1 amended for iPhone and iPad), ADR-360 (L1 to L7), SPEC-349, #651, #677, #664.
 - SEC-01 findings by id: SEC01-F14, SEC01-F15.
+
+## Amendment (SPEC-355 section 7): the switch defaults off on iOS
+
+The switch defaults off on iOS pending a measured containment layer. Every line above in which card
+scripts go on, run or work on iPhone and iPad reads with this default.
