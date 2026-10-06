@@ -320,3 +320,11 @@ A30: green at aef11216
   compared only for equality, so counting down in place of up was a mutant no test could tell
   from the original. The turn is now a token compared by identity; `audio.test.ts`, which holds a
   later sequence stopping the last, is unchanged and green.
+
+## Part 2: the census reports what it examined
+
+- **The media census reports its count through the examined contract.** "the media rules have one
+  copy" in `media.test.ts` printed how many source files it read but asserted nothing on the count,
+  so an empty walk would have passed it. It now reports through a local `examined` helper that
+  prints the same line and fails when the count is zero; no assertion was removed or loosened, and
+  the test is green.

@@ -43,6 +43,12 @@ function sources(directory: string): string[] {
     .filter((path) => !/\.(test|spec)\./.test(path) && !path.includes('paraglide'));
 }
 
+function examined<T>(what: string, items: T[]): T[] {
+  console.log(`examined ${items.length} ${what}`);
+  expect(items.length, `examined 0 ${what}: the population is empty, so nothing was judged`).toBeGreaterThan(0);
+  return items;
+}
+
 describe('the media directory', () => {
   it('the worker reads each name the engine asks for, no further than its limit', async () => {
     const media = new FakeFolder(
@@ -90,7 +96,7 @@ describe('the media directory', () => {
     for (const [path, text] of planted) expect(copies(text), path).not.toEqual([]);
 
     const files = [...sources('web/app/src'), ...sources('crates/web-engine/src')];
-    console.log(`examined ${files.length} source file(s) against ${rules.length} rule(s)`);
+    examined(`source file(s) against ${rules.length} rule(s)`, files);
     expect(files).toContain(join('web/app/src/lib/engine', 'media.ts'));
     expect(files).toContain(join('crates/web-engine/src', 'wasm.rs'));
     expect(caps).toHaveLength(2);
