@@ -162,6 +162,7 @@ by a unittest, so it has no line in the fence.
 | `scripts/tests/test_mutation_verdict.py` | CI scripts | changed: A6 to A8; `cargo_report`'s Baseline names its log, which R7 reads |
 | `scripts/tests/test_mutation_workflows.py` | CI scripts | changed: A9 |
 | `scripts/tests/test_mutation_python_shard_binding.py` | CI scripts | changed: R14's fixture sizes by a literal 20; the pin test A12 |
+| `scripts/tests/test_mutation_python_verdict.py` | CI scripts | changed: its sizing cases and a three-shard fixture follow the 20-mutant rule (the retired A14's test; the cases scale by the same factor) |
 | `docs/specs/SPEC-087-the-guard-scripts-and-the-parity-oracle-prove-their-tests-kill-generated-mutants.md` | docs | amended: A14 retired (section 12) |
 | `docs/red-first/SPEC-087.md` | docs | changed: A14's lines in a retired fence |
 | `scripts/tests/_mutants_finder.py` | CI scripts | changed: the bounds it reads |
