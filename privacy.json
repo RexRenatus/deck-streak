@@ -14,7 +14,7 @@
     },
     {
       "id": "skip-days",
-      "data": "the record of each skip day: the study day, how many reviews were due, whether the skip was applied, failed or undone, and how many cards it moved; and, for each moved card, its id and its scheduling before the skip and as the skip left it",
+      "data": "the record of each skip day: the study day, how many reviews were due, whether the skip was applied, failed or undone, and how many cards it moved; and, for each moved card, its id and its scheduling before the skip and as the skip left it; and, beside the private copy of the collection, the one backup of that copy a skip day's write makes before it changes a card, which an erase removes and an export leaves out",
       "source": "derived",
       "stores": ["skip_days.*", "skip_card_snapshot.*"],
       "purpose": "showing the skip day and its cost, bridging the streak over it, and undoing it exactly",

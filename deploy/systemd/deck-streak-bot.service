@@ -59,6 +59,9 @@ ProtectProc=invisible
 ProcSubset=pid
 # AF_UNIX carries the sd_notify datagram, and AF_INET and AF_INET6 the outbound requests.
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+# It never uses the host's identity, so the kernel refuses it every route to the host's identity
+# endpoint (SPEC-354 R1; ADR-365 D1).
+IPAddressDeny=link-local
 RestrictNamespaces=yes
 RestrictRealtime=yes
 RestrictSUIDSGID=yes

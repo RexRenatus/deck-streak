@@ -6629,6 +6629,40 @@ DYNAMIC_IMPORTS = {
         ),
     ),
     **allowed(
+        "probes, then restores, the collation locale the refusal is measured under; reads no file, never a workflow",
+        (
+            "_support",
+            "collation_locale_available",
+            "locale.Error",
+            1,
+        ),
+        (
+            "_support",
+            "collation_locale_available",
+            "locale.LC_COLLATE",
+            3,
+        ),
+        (
+            "_support",
+            "collation_locale_available",
+            "locale.setlocale(locale.LC_COLLATE)",
+            1,
+        ),
+        (
+            "_support",
+            "collation_locale_available",
+            "locale.setlocale(locale.LC_COLLATE, name)",
+            1,
+        ),
+        (
+            "_support",
+            "collation_locale_available",
+            "locale.setlocale(locale.LC_COLLATE, collation)",
+            1,
+        ),
+        ("_support", "collation_locale_available", "collation", 1),
+    ),
+    **allowed(
         "decompresses the image data of the icon a production script writes, to compare its pixels (SPEC-352 A24); bytes in and bytes out, and it imports, runs and reads nothing",
         (
             "test_ios_icon",

@@ -1,5 +1,6 @@
 """Shared helpers for the repository's own guard tests."""
 
+import locale
 import os
 from pathlib import Path
 
@@ -34,3 +35,16 @@ def refuse_link_components(path, root):
                 f"{walked.relative_to(root).as_posix()} is a link: the tree stores the name it "
                 "points at and no file, and a link is never followed"
             )
+
+
+def collation_locale_available(name):
+    """Whether the C library can collate under `name`: it sets that collation locale, then restores the
+    one set before, so no test inherits it. It reads no file and starts no program."""
+    collation = locale.setlocale(locale.LC_COLLATE)
+    try:
+        locale.setlocale(locale.LC_COLLATE, name)
+    except locale.Error:
+        return False
+    finally:
+        locale.setlocale(locale.LC_COLLATE, collation)
+    return True

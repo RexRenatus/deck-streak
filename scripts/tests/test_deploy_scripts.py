@@ -26,7 +26,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _support import REPO, examined
+from _support import REPO, collation_locale_available, examined
 
 DEPLOY = REPO / "deploy" / "deploy.sh"
 ROLLBACK = REPO / "deploy" / "rollback.sh"
@@ -851,12 +851,34 @@ class TheCaddyInstall(Case):
         body = MOVE_FAILS.replace("@SUFFIX@", source_suffix)
         self.world.script("mv", body)
 
+    @staticmethod
+    def caddy_import(importing, pattern):
+        """The file Caddy imports for `import <pattern>` written in the file `importing`: an
+        absolute pattern names itself, and a relative one is joined to the directory of the
+        importing file's absolute path, never to a working directory (Caddy's `import` directive;
+        SPEC-353 R1)."""
+        path = Path(pattern)
+        if not path.is_absolute():
+            path = Path(importing).absolute().parent / path
+        parts = []
+        for part in path.parts[1:]:
+            if part == "..":
+                if parts:
+                    parts.pop()
+            elif part != ".":
+                parts.append(part)
+        return Path(path.anchor, *parts)
+
+    def site_imports(self, caddyfile):
+        """The file each `import` line of a Caddyfile names, resolved as Caddy resolves it."""
+        lines = Path(caddyfile).read_text(encoding="utf-8").splitlines()
+        found = (re.fullmatch(r"\s*import\s+(\S+)\s*", line) for line in lines)
+        return [self.caddy_import(caddyfile, m.group(1)) for m in found if m]
+
     def imports_a_missing_block(self):
-        w = self.world
-        live = (w.caddy_dir / "Caddyfile").read_text()
-        return (
-            "import deck-streak.caddy" in live and not (w.caddy_dir / "deck-streak.caddy").exists()
-        )
+        """The live Caddyfile imports a file that is not there, resolved as Caddy resolves it."""
+        live = self.world.caddy_dir / "Caddyfile"
+        return any(not target.exists() for target in self.site_imports(live))
 
     def test_a_removal_whose_caddyfile_rename_fails_leaves_the_block_in_place(self):
         w = self.world
@@ -1746,7 +1768,10 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
     def test_every_directory_a_caddy_script_writes_or_undoes_is_checked_before_the_first_write(
         self,
     ):
-        stales = {"caddy-dir": ("deck-streak.candidate",), "caddyfile-dir": ("Caddyfile.previous",)}
+        stales = {
+            "caddy-dir": ("deck-streak.caddy.previous",),
+            "caddyfile-dir": ("deck-streak.candidate", "Caddyfile.previous"),
+        }
         stales["shared"] = stales["caddy-dir"] + stales["caddyfile-dir"]
         places = []
         for layout in ("beside", "apart"):
@@ -1846,6 +1871,105 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
         self.ok(w.run(DEPLOY, "caddy-install", "v1.0.1", **self.config()))
         rendered = (w.caddy_dir / "deck-streak.caddy").read_text(encoding="utf-8")
         self.assertIn(mark, rendered, "the block is the tag's, not the working tree's")
+
+    def laid_out(self, layout, operator=""):
+        """A new world with v1.0.0 shipped and its Caddyfile beside the block in the Caddy
+        directory or set apart from it; returns the world, the Caddyfile and the setting naming
+        it. `operator` is text of the operator's own, appended to the Caddyfile."""
+        w = self.fresh_world()
+        cfdir = w.tmp / "host" / "etc" / "cfdir" if layout == "apart" else w.caddy_dir
+        cfdir.mkdir(exist_ok=True)
+        caddyfile = cfdir / "Caddyfile"
+        caddyfile.write_text("example.org {\n\trespond 200\n}\n" + operator, encoding="utf-8")
+        w.ship("v1.0.0")
+        return w, caddyfile, {"DECKSTREAK_DEPLOY_CADDYFILE": str(caddyfile)}
+
+    def test_the_site_import_resolves_to_the_site_block_in_both_layouts(self):
+        for layout in examined("Caddyfile layout(s)", ("beside", "apart")):
+            with self.subTest(layout=layout):
+                w, caddyfile, setting = self.laid_out(layout)
+                original = caddyfile.read_bytes()
+                block = w.caddy_dir / "deck-streak.caddy"
+                self.ok(w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config(), **setting))
+                self.assertEqual(
+                    self.site_imports(caddyfile), [block], "the import names the site block"
+                )
+                self.assertIn("app.example.org {", block.read_text(encoding="utf-8"))
+                self.ok(w.run(ROLLBACK, "caddy-remove", **self.config(), **setting))
+                self.assertEqual(caddyfile.read_bytes(), original, "the Caddyfile is as it was")
+                self.assertFalse(block.exists(), "the removal takes the block out")
+
+    def test_the_candidate_is_validated_where_the_reload_reads_the_caddyfile(self):
+        for layout in examined("Caddyfile layout(s)", ("beside", "apart")):
+            with self.subTest(layout=layout):
+                w, caddyfile, setting = self.laid_out(layout, operator="import extra.caddy\n")
+                extra = caddyfile.parent / "extra.caddy"
+                extra.write_text("# the operator's own file\n", encoding="utf-8")
+                self.ok(w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config(), **setting))
+                self.ok(w.run(ROLLBACK, "caddy-remove", **self.config(), **setting))
+                calls = [
+                    (line.split()[1], Path(re.search(r" --config (\S+)", line).group(1)))
+                    for line in w.text("caddy.log").splitlines()
+                ]
+                checked = [path for verb, path in calls if verb in ("validate", "adapt")]
+                for path in checked:
+                    self.assertEqual(
+                        self.caddy_import(path, "extra.caddy"),
+                        extra,
+                        f"{path}: the check resolves the operator's import elsewhere",
+                    )
+                self.assertEqual(len(checked), 4, "each step validates and adapts a candidate")
+                reloads = [path for verb, path in calls if verb == "reload"]
+                self.assertEqual(reloads, [caddyfile, caddyfile], "each step reloads the Caddyfile")
+
+    def test_a_caddy_directory_the_import_line_cannot_carry_is_refused_before_the_host(self):
+        said = "DECKSTREAK_DEPLOY_CADDY_DIR is not an absolute path of plain characters"
+        steps = (
+            ("the install", DEPLOY, ("caddy-install", "v1.0.0")),
+            ("the removal", ROLLBACK, ("caddy-remove",)),
+        )
+        shapes = ("relative", "a space", "a placeholder", "a wildcard", "a letter outside ASCII")
+        members = [(shape, step) for shape in shapes for step in steps]
+        if not collation_locale_available("en_US.UTF-8"):
+            self.fail("a locale whose collation widens a bracket range is installed")
+        for shape, (label, script, args) in examined("Caddy directory member(s)", members):
+            with self.subTest(shape=shape, step=label):
+                w = self.fresh_world()
+                site = "example.org {\n\trespond 200\n}\n"
+                (w.caddy_dir / "Caddyfile").write_text(site, encoding="utf-8")
+                w.ship("v1.0.0")
+                directory = {
+                    "relative": "host/etc/caddy",
+                    "a space": f"{w.caddy_dir} two",
+                    "a placeholder": f"{w.caddy_dir}/{{$HOME}}",
+                    "a wildcard": f"{w.caddy_dir}*",
+                    "a letter outside ASCII": f"{w.caddy_dir}Ａ",
+                }[shape]
+                (w.tmp / directory).mkdir(parents=True, exist_ok=True)
+                env = {
+                    **self.config(),
+                    "DECKSTREAK_DEPLOY_CADDY_DIR": directory,
+                    "LC_ALL": "en_US.UTF-8",
+                }
+                before = self.tree(w.tmp)
+                done = w.run(script, *args, **env)
+                self.assertIn(said, done.stderr, f"{label} names the setting")
+                self.assertEqual(done.returncode, 1, done.stderr)
+                self.assertEqual(self.tree(w.tmp), before, "nothing was written")
+                self.assertEqual(w.text("host.log"), "", "the host was never reached")
+        w = self.fresh_world()
+        plain = w.tmp / "host" / "etc" / "caddy.d_@+-"
+        plain.mkdir()
+        caddyfile = plain / "Caddyfile"
+        caddyfile.write_text("example.org {\n\trespond 200\n}\n", encoding="utf-8")
+        w.ship("v1.0.0")
+        env = {
+            "DECKSTREAK_DEPLOY_CADDY_DIR": str(plain),
+            "DECKSTREAK_DEPLOY_CADDYFILE": str(caddyfile),
+        }
+        self.ok(w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config(), **env))
+        self.assertNotEqual(w.text("host.log"), "", "a plain Caddy directory reaches the host")
+        self.assertEqual(self.site_imports(caddyfile), [plain / "deck-streak.caddy"])
 
 
 class NoDeployScriptNamesAPrivateValue(unittest.TestCase):

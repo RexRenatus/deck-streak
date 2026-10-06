@@ -10,14 +10,16 @@ absence it asserts is paired with a planted template it must refuse. No test wri
 instance name literally (SPEC-032 R10): each is built at run time from its template and its id.
 """
 
+import fnmatch
 import ipaddress
 import json
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import _units
 from _support import REPO, examined
@@ -29,6 +31,20 @@ BUDGET = DEPLOY / "host-budget.json"
 ENV_EXAMPLE = DEPLOY / "deck-streak.env.example"
 SCRUB = REPO / "scripts" / "public-scrub.py"
 ADR = REPO / "docs" / "decisions" / "ADR-032-deploy-templates-and-the-host-budget.md"
+LITESTREAM_CONFIG = DEPLOY / "litestream.yml"
+DAILY_COPY = DEPLOY / "scripts" / "backup.py"
+# SPEC-083 R34 (ADR-321 D4, D17): the take's backup of the owner's collection, and its partial while
+# the restore check runs, sit beside the private copy in the directory systemd gives the units
+# (StateDirectory=deck-streak), named for the skip. They never leave the host and are no standing
+# copy, so no Litestream database or directory and no daily copy's name may reach them.
+STATE_DIRECTORY = "/var/lib/deck-streak"
+SKIP_BACKUP_NAMES = ("skip-backup-1.anki2", "skip-backup-1.anki2.partial")
+# The daily copy's two names: the one file it copies, and the pattern of the copies it keeps and
+# prunes (SPEC-064 R9).
+DAILY_COPY_NAMES = (
+    ("DATABASE_NAME", re.compile(r'^DATABASE_NAME = "([^"]+)"$', re.M)),
+    ("COPY_NAME", re.compile(r'^COPY_NAME = re\.compile\(r"([^"]+)"\)$', re.M)),
+)
 # SPEC-064's units: the replicator's, the daily backup's and the drill's ceilings are decided here,
 # and the share it raised (ADR-032 keeps a dated note).
 ADR_BACKUPS = (
@@ -417,6 +433,107 @@ def subject(root=REPO):
 
 def services(root=REPO):
     return examined("service unit(s) under deploy/", sorted(subject(root).services, key=name))
+
+
+# SPEC-354 R1 to R3 (ADR-365 D1 to D4): the host's identity endpoint. systemd names the range it
+# lies in `link-local`, and `any` holds that range too (systemd.resource-control(5), "Special
+# address/network names"), so a deny list holding either word covers it.
+IDENTITY_DENY = ("any", "link-local")
+# systemd grants a packet that matches an allow entry before it reads the deny list
+# (systemd.resource-control(5)), so a denied unit holds no allow entry but loopback's.
+IDENTITY_ALLOW = ("localhost",)
+# The closed list of the services that use the host's identity (R2): the replicator, the sync
+# archive's upload and the restore drill reach their bucket with it. An entry whose unit the tree
+# does not ship is refused.
+IDENTITY_EXEMPT = (LITESTREAM_SERVICE_NAME, SYNC_ARCHIVE_SERVICE_NAME, DRILL_SERVICE_NAME)
+# The address families that open an IP socket (systemd.exec(5), RestrictAddressFamilies=).
+IP_FAMILIES = {"AF_INET", "AF_INET6"}
+# How each shipped service is kept from the endpoint, written by hand: the word of its deny list
+# that covers it, NO_IP_SOCKET when its families open no IP socket, or EXEMPT.
+NO_IP_SOCKET = "opens no IP socket"
+EXEMPT = "exempt"
+IDENTITY_ARMS = {
+    "deck-streak-api.service": "link-local",
+    "deck-streak-bot.service": "link-local",
+    "deck-streak-mcp.service": "link-local",
+    f"{JOB_TEMPLATE}@.service": "link-local",
+    f"{ALERT_TEMPLATE}@.service": "link-local",
+    SYNC_SERVER_SERVICE_NAME: "any",
+    BACKUP_SERVICE_NAME: NO_IP_SOCKET,
+    SYNC_SNAPSHOT_SERVICE_NAME: NO_IP_SOCKET,
+    SYNC_DRILL_SERVICE_NAME: NO_IP_SOCKET,
+    SLO_SERVICE: NO_IP_SOCKET,
+    WATCH_SERVICE: NO_IP_SOCKET,
+    LITESTREAM_SERVICE_NAME: EXEMPT,
+    SYNC_ARCHIVE_SERVICE_NAME: EXEMPT,
+    DRILL_SERVICE_NAME: EXEMPT,
+}
+
+
+def ip_list(unit, key):
+    """Every word of `unit`'s `[Service]` list `key`, its drop-ins included, after systemd's reset
+    rule: an empty assignment clears what came before it."""
+    return " ".join(unit.values("Service", key)).split()
+
+
+def opens_no_ip_socket(unit):
+    """Whether the kernel refuses `unit` every IP socket: an allow list of families, in every
+    assignment, that names neither IP family, on the native ABI alone (systemd.exec(5) asks for
+    SystemCallArchitectures=native beside it). A `~` deny list is read as one that may open an IP
+    socket, never guessed."""
+    families = unit.values("Service", "RestrictAddressFamilies")
+    return (
+        bool(families)
+        and not any(value.startswith("~") for value in families)
+        and not set(" ".join(families).split()) & IP_FAMILIES
+        and unit.values("Service", "SystemCallArchitectures") == ["native"]
+    )
+
+
+def identity_arm(unit):
+    """How `unit` is kept from the host's identity endpoint (R1): EXEMPT, NO_IP_SOCKET, the word of
+    its deny list that covers the endpoint, or None when nothing does."""
+    if unit.name in IDENTITY_EXEMPT:
+        return EXEMPT
+    if opens_no_ip_socket(unit):
+        return NO_IP_SOCKET
+    if any(word not in IDENTITY_ALLOW for word in ip_list(unit, "IPAddressAllow")):
+        return None
+    covering = [word for word in ip_list(unit, "IPAddressDeny") if word in IDENTITY_DENY]
+    return covering[0] if covering else None
+
+
+def identity_refusals(root=REPO):
+    """Every service under `root`'s deploy/ that could reach the host's identity endpoint, each
+    refusal naming the unit and why (R1, R3); the census prints its examined count and refuses
+    zero."""
+    refused = []
+    for unit in services(root):
+        if identity_arm(unit) is not None:
+            continue
+        wider = [word for word in ip_list(unit, "IPAddressAllow") if word not in IDENTITY_ALLOW]
+        refused.extend(
+            f"{unit.rel}: IPAddressAllow={word} can admit the host's identity endpoint, and is "
+            "refused"
+            for word in wider
+        )
+        if not wider:
+            refused.append(
+                f"{unit.rel}: opens an IP socket and no IPAddressDeny= covers the host's identity "
+                "endpoint, and is refused"
+            )
+    return refused
+
+
+def exempt_refusals(root=REPO):
+    """Every exempt-list entry whose unit `root`'s deploy/ does not ship (R2), so the list can hold
+    no stale name."""
+    shipped = {unit.name for unit in subject(root).services}
+    return [
+        f"the exempt list names {name}, which deploy/ does not ship, and is refused"
+        for name in IDENTITY_EXEMPT
+        if name not in shipped
+    ]
 
 
 def reader_refusal(files):
@@ -1469,8 +1586,9 @@ class NoSecretInTheEnvironment(unittest.TestCase):
             self.assertNotIn(key, SYSTEMD_SETS, f"{where}: systemd sets {key}")
             self.assertIn(
                 key,
-                # The replica's bucket is read by Litestream's configuration, not by a role.
-                declared | {"RUST_LOG", "DECKSTREAK_REPLICA_BUCKET"},
+                # The replica's bucket is read by Litestream's configuration, not by a role; the
+                # zone is read by chrono's `Local`, as the engine reads it (SPEC-083 R3).
+                declared | {"RUST_LOG", "TZ", "DECKSTREAK_REPLICA_BUCKET"},
                 f"{where}: no role reads {key}",
             )
         self.assertLessEqual(set(REQUIRED_SETTINGS), {key for _, key, _ in settings})
@@ -1499,6 +1617,130 @@ class NoSecretInTheEnvironment(unittest.TestCase):
                     "environment"
                 ]
             ],
+        )
+
+
+def litestream_items(text):
+    """Each `dbs:` item of a Litestream configuration, as a dict of the item's own keys (`path`, or
+    `dir` with `pattern` and `recursive`) to (line, value). A nested block's keys, such as a
+    replica's own `path`, are not the item's."""
+    items = []
+    top = None
+    dash = None
+    for number, raw in enumerate(text.splitlines(), start=1):
+        body = raw.strip()
+        if not body or body.startswith("#"):
+            continue
+        indent = len(raw) - len(raw.lstrip())
+        if indent == 0:
+            top = body.partition(":")[0]
+            dash = None
+            continue
+        if top != "dbs":
+            continue
+        if body.startswith("- ") and dash in (None, indent):
+            dash = indent
+            items.append({})
+            body = body[2:]
+            indent += 2
+        if not items or indent != dash + 2:
+            continue
+        key, colon, value = body.partition(":")
+        if colon:
+            items[-1][key.strip()] = (number, value.strip().strip("\"'"))
+    return items
+
+
+def skip_backup_reachers(litestream_where, litestream_text, daily_where, daily_text):
+    """Each line of a Litestream configuration or of the daily copy's script that would carry the
+    skip's backup off the host or into a standing copy, as `<file>:<line>: <reason>`; empty when
+    none does (SPEC-083 A55). A database's `path` reaches a backup it matches as a pattern; a
+    directory reaches one inside it, or below it when recursive, whose name its `pattern` matches,
+    and a directory with no pattern is read as matching every name. The daily copy reaches a
+    backup when the one file it copies or the copies it keeps and prunes match its name; a script
+    whose names the census cannot read is refused, never passed."""
+    found = []
+    backups = [PurePosixPath(STATE_DIRECTORY) / name for name in SKIP_BACKUP_NAMES]
+    for item in litestream_items(litestream_text):
+        if "path" in item:
+            number, path = item["path"]
+            for backup in backups:
+                if fnmatch.fnmatchcase(str(backup), path):
+                    found.append(f"{litestream_where}:{number}: replicates {backup}")
+        if "dir" in item:
+            number, directory = item["dir"]
+            pattern = item.get("pattern", (number, "*"))[1]
+            recursive = item.get("recursive", (number, "false"))[1] == "true"
+            root = PurePosixPath(directory)
+            for backup in backups:
+                inside = backup.parent == root or (recursive and root in backup.parents)
+                if inside and fnmatch.fnmatchcase(backup.name, pattern):
+                    found.append(f"{litestream_where}:{number}: replicates {backup}")
+    for key, expression in DAILY_COPY_NAMES:
+        match = expression.search(daily_text)
+        if match is None:
+            found.append(f"{daily_where}: names no {key}")
+            continue
+        number = daily_text.count("\n", 0, match.start()) + 1
+        for name in SKIP_BACKUP_NAMES:
+            if key == "DATABASE_NAME" and fnmatch.fnmatchcase(name, match.group(1)):
+                found.append(f"{daily_where}:{number}: {key} copies {name}")
+            if key == "COPY_NAME" and re.search(match.group(1), name):
+                found.append(f"{daily_where}:{number}: {key} keeps {name}")
+    return found
+
+
+class TheSkipBackupStaysOnTheHost(unittest.TestCase):
+    def test_no_replica_or_daily_copy_reaches_the_skip_backup(self):
+        litestream = LITESTREAM_CONFIG.read_text(encoding="utf-8")
+        daily = DAILY_COPY.read_text(encoding="utf-8")
+        examined("Litestream database item(s)", litestream_items(litestream))
+        examined("skip backup name(s)", SKIP_BACKUP_NAMES)
+        self.assertEqual(
+            skip_backup_reachers(
+                "deploy/litestream.yml", litestream, "deploy/scripts/backup.py", daily
+            ),
+            [],
+        )
+        # The census judges. A database path whose pattern names the backup, a directory over the
+        # state directory, and a daily copy that copies or keeps the backup's name are each refused
+        # by file and line; a replica's own `path` is not a database's.
+        replica = (
+            f"    replica:\n      type: gcs\n      path: {STATE_DIRECTORY}/skip-backup-1.anki2\n"
+        )
+        planted = (
+            "dbs:\n"
+            f"  - path: {STATE_DIRECTORY}/deck_streak.db\n{replica}"
+            f"  - path: {STATE_DIRECTORY}/skip-backup-*.anki2*\n{replica}"
+            f'  - dir: {STATE_DIRECTORY}\n    pattern: "*.anki2"\n{replica}'
+            "  - dir: /var/lib\n    recursive: true\n"
+        )
+        planted_daily = daily.replace(
+            'DATABASE_NAME = "deck_streak.db"', 'DATABASE_NAME = "skip-backup-1.anki2"'
+        ).replace('COPY_NAME = re.compile(r"', 'COPY_NAME = re.compile(r".*|')
+        self.assertNotEqual(planted_daily, daily)
+        database = daily.splitlines().index('DATABASE_NAME = "deck_streak.db"') + 1
+        copies = next(
+            n for n, line in enumerate(daily.splitlines(), 1) if line.startswith("COPY_NAME = ")
+        )
+        backup, partial = (f"{STATE_DIRECTORY}/{name}" for name in SKIP_BACKUP_NAMES)
+        self.assertEqual(
+            skip_backup_reachers("planted.yml", planted, "planted.py", planted_daily),
+            [
+                f"planted.yml:6: replicates {backup}",
+                f"planted.yml:6: replicates {partial}",
+                f"planted.yml:10: replicates {backup}",
+                f"planted.yml:15: replicates {backup}",
+                f"planted.yml:15: replicates {partial}",
+                f"planted.py:{database}: DATABASE_NAME copies skip-backup-1.anki2",
+                f"planted.py:{copies}: COPY_NAME keeps skip-backup-1.anki2",
+                f"planted.py:{copies}: COPY_NAME keeps skip-backup-1.anki2.partial",
+            ],
+        )
+        # A daily copy whose names the census cannot read is refused, never passed.
+        self.assertEqual(
+            skip_backup_reachers("planted.yml", "dbs:\n", "planted.py", ""),
+            ["planted.py: names no DATABASE_NAME", "planted.py: names no COPY_NAME"],
         )
 
 
@@ -1822,6 +2064,118 @@ class TheServicesRunTheirRoles(unittest.TestCase):
             self.assertTrue(unit.assigned("Service", "CapabilityBoundingSet"), unit.rel)
             self.assertEqual(unit.values("Service", "AmbientCapabilities"), [], unit.rel)
 
+    def test_no_unit_but_the_exempt_reaches_the_host_identity_endpoint(self):
+        """SPEC-354 A1 (R1, R3; ADR-365 D1, D2, D4): every shipped service is kept from the host's
+        identity endpoint by a deny list that covers it or by opening no IP socket, or is on the
+        closed exempt list, and each takes the way the table names."""
+        self.assertEqual(identity_refusals(), [])
+        self.assertEqual({unit.name: identity_arm(unit) for unit in services()}, IDENTITY_ARMS)
+        # Planted, each on a scratch copy of deploy/systemd: one way to the endpoint opened in one
+        # unit's file or drop-in, and the refusal that names it.
+        sync_job = f"{JOB_TEMPLATE}@{INSTANCE_DROPIN_ALLOWLIST[f'{JOB_TEMPLATE}@.service'][0]}"
+        plants = {
+            "the bot's deny removed": (
+                "deck-streak-bot.service",
+                "IPAddressDeny=link-local\n",
+                "",
+                [
+                    "deploy/systemd/deck-streak-bot.service: opens an IP socket and no "
+                    "IPAddressDeny= covers the host's identity endpoint, and is refused"
+                ],
+            ),
+            "the bot's deny of a range that misses the endpoint": (
+                "deck-streak-bot.service",
+                "IPAddressDeny=link-local\n",
+                "IPAddressDeny=multicast\n",
+                [
+                    "deploy/systemd/deck-streak-bot.service: opens an IP socket and no "
+                    "IPAddressDeny= covers the host's identity endpoint, and is refused"
+                ],
+            ),
+            "the API admits the link-local range": (
+                "deck-streak-api.service",
+                "IPAddressDeny=link-local\n",
+                "IPAddressDeny=link-local\nIPAddressAllow=link-local\n",
+                [
+                    "deploy/systemd/deck-streak-api.service: IPAddressAllow=link-local can admit "
+                    "the host's identity endpoint, and is refused"
+                ],
+            ),
+            "the sync server admits every peer": (
+                SYNC_SERVER_SERVICE_NAME,
+                "IPAddressAllow=localhost\n",
+                "IPAddressAllow=any\n",
+                [
+                    f"deploy/systemd/{SYNC_SERVER_SERVICE_NAME}: IPAddressAllow=any can admit the "
+                    "host's identity endpoint, and is refused"
+                ],
+            ),
+            "the SLO evaluator opens an IP socket": (
+                SLO_SERVICE,
+                "RestrictAddressFamilies=AF_UNIX\n",
+                "RestrictAddressFamilies=AF_UNIX AF_INET\n",
+                [
+                    f"deploy/systemd/{SLO_SERVICE}: opens an IP socket and no IPAddressDeny= covers "
+                    "the host's identity endpoint, and is refused"
+                ],
+            ),
+            "the backup's families as a deny list": (
+                BACKUP_SERVICE_NAME,
+                "RestrictAddressFamilies=AF_UNIX\n",
+                "RestrictAddressFamilies=~AF_PACKET\n",
+                [
+                    f"deploy/systemd/{BACKUP_SERVICE_NAME}: opens an IP socket and no IPAddressDeny= "
+                    "covers the host's identity endpoint, and is refused"
+                ],
+            ),
+            "the sync job's drop-in resets the deny": (
+                f"{sync_job}.service.d/30-planted.conf",
+                None,
+                "[Service]\nIPAddressDeny=\n",
+                [
+                    f"deploy/systemd/{JOB_TEMPLATE}@.service: opens an IP socket and no "
+                    "IPAddressDeny= covers the host's identity endpoint, and is refused"
+                ],
+            ),
+        }
+        got = {}
+        for label in examined("planted way(s) to the host's identity endpoint", sorted(plants)):
+            file, find, replace, _ = plants[label]
+            with tempfile.TemporaryDirectory() as scratch:
+                systemd = Path(scratch) / "deploy" / "systemd"
+                shutil.copytree(SYSTEMD, systemd)
+                path = systemd / file
+                if find is None:
+                    path.write_text(replace, encoding="utf-8")
+                else:
+                    text = path.read_text(encoding="utf-8")
+                    self.assertEqual(text.count(find), 1, label)
+                    path.write_text(text.replace(find, replace), encoding="utf-8")
+                got[label] = identity_refusals(scratch)
+        self.assertEqual(got, {label: plants[label][3] for label in plants})
+
+    def test_an_exempt_entry_whose_unit_is_absent_is_refused(self):
+        """SPEC-354 A2 (R2; ADR-365 D3): every name on the closed exempt list is a unit the tree
+        ships, and a scratch copy of deploy/systemd that lacks one is refused by the entry's
+        name."""
+        self.assertEqual(exempt_refusals(), [])
+        got = {}
+        for name in examined("exempt-list entr(ies)", IDENTITY_EXEMPT):
+            with tempfile.TemporaryDirectory() as scratch:
+                shutil.copytree(
+                    SYSTEMD,
+                    Path(scratch) / "deploy" / "systemd",
+                    ignore=shutil.ignore_patterns(name),
+                )
+                got[name] = exempt_refusals(scratch)
+        self.assertEqual(
+            got,
+            {
+                name: [f"the exempt list names {name}, which deploy/ does not ship, and is refused"]
+                for name in IDENTITY_EXEMPT
+            },
+        )
+
 
 class TheSyncServerRunsAsItsOwnUnit(unittest.TestCase):
     """SPEC-337 A3 and A4 (R2, R3; ADR-347 D2, D3): the sync server's own unit, its entry in the
@@ -1908,7 +2262,7 @@ class TheSyncServerRunsAsItsOwnUnit(unittest.TestCase):
             self.assertIn(key, _units.PAGING_KEYS["Service"], key)
         table = _units.PAGING_VALUES
         self.assertEqual(table.get(("Service", "IPAddressAllow")), ("localhost",))
-        self.assertEqual(table.get(("Service", "IPAddressDeny")), ("any",))
+        self.assertEqual(table.get(("Service", "IPAddressDeny")), ("any", "link-local"))
         # A planted unit that admits every peer and clears the deny list is refused at both lines.
         with tempfile.TemporaryDirectory() as scratch:
             planted = Path(scratch) / "deploy" / "systemd" / "planted.service"
@@ -2662,6 +3016,58 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 "is not a value this unit admits for the key, and is refused"
             ],
         )
+
+    def test_the_credential_census_admits_the_identity_deny_and_no_wider_peer_list(self):
+        """SPEC-354 A3 (R4; ADR-365 D5): a unit that loads a credential may deny the link-local
+        range, the alert template included, while the census still refuses a deny of another
+        range on a paging unit and any allow list on the alert template."""
+        head = "[Unit]\nDescription=planted\n"
+        page = f"OnFailure={ON_FAILURE}\n"
+        run = "[Service]\nExecStart=/bin/true\n"
+        loads = f"LoadCredential=telegram-bot-token:{SOCKET}\n"
+        where = "deploy/systemd/planted.service"
+
+        def paging(unit):
+            return off_list_refusals(unit, _units.PAGING_KEYS) + value_refusals(
+                unit, _units.PAGING_VALUES
+            )
+
+        def alert(unit):
+            return off_list_refusals(unit, _units.ALERT_KEYS)
+
+        plants = {
+            "a paging unit denies the link-local range": (
+                paging,
+                f"{head}{page}{run}{loads}IPAddressDeny=link-local\n",
+                [],
+            ),
+            "the alert template denies the link-local range": (
+                alert,
+                f"{head}{run}{loads}IPAddressDeny=link-local\n",
+                [],
+            ),
+            "a paging unit denies a range that misses the endpoint": (
+                paging,
+                f"{head}{page}{run}{loads}IPAddressDeny=multicast\n",
+                [
+                    f"{where}:7: [Service] IPAddressDeny=multicast is not a value this unit admits "
+                    "for the key, and is refused"
+                ],
+            ),
+            "the alert template holds an allow list": (
+                alert,
+                f"{head}{run}{loads}IPAddressAllow=localhost\n",
+                [
+                    f"{where}:6: [Service] IPAddressAllow=localhost is not on this unit's list of "
+                    "keys, and is refused"
+                ],
+            ),
+        }
+        got = {}
+        for label in examined("planted unit(s) held to the credential census", sorted(plants)):
+            check, text, _ = plants[label]
+            got[label] = planted_refusals(text, check)
+        self.assertEqual(got, {label: plants[label][2] for label in plants})
 
     def test_a_restarting_paging_unit_holds_the_whole_restart_budget(self):
         # A unit that loads a credential and pages, and assigns `Restart=` to anything but `no`,

@@ -22,6 +22,7 @@ use deck_streak_coordination::data_rights::CRON_FIRES_TABLE;
 use deck_streak_coordination::data_rights_registry::{erase_all, export_all, ports};
 use deck_streak_coordination::jobs::FireDate;
 use deck_streak_coordination::ledger::{CronLedger, SqliteCronLedger};
+use deck_streak_ingest::data_rights::WRITE_CLASS_STOP_TABLE;
 use deck_streak_kernel::data_rights::SCHEMA_VERSION_TABLE;
 use deck_streak_kernel::{Db, Declaration, Disposition, UtcMillis};
 use deck_streak_privacy::{Erasure, SCHEMA_KEY};
@@ -32,7 +33,7 @@ use tempfile::TempDir;
 /// Statements that leave every table of the schema holding rows no erase leaves: 101 rows in each
 /// table that takes rows, so an export that pages or limits its read comes up short (the
 /// predecessor's lesson), and every column a reset writes moved off its reset value.
-const SEEDS: [&str; 42] = [
+const SEEDS: [&str; 43] = [
     "UPDATE settings_generation SET generation = 7, courses_digest = '0123456789abcdef' \
      WHERE id = 1",
     "UPDATE ingest_state SET anchor_newest_review_id = 1700000000123, anchor_card_count = 57, \
@@ -41,6 +42,8 @@ const SEEDS: [&str; 42] = [
      refused_at = 1700000000789, refused_reason = 'recompute_failed', \
      window_floor = 1690000000000, window_count = 12 WHERE id = 1",
     "UPDATE owner_last_message SET message_id = 4242, arrived_at = 1700000000789 WHERE id = 1",
+    "UPDATE write_class_stop SET stopped = 1, set_by = 'counts', reason = 'review_log_rows', \
+     set_at = 1700000000999 WHERE id = 1",
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO sync_runs (trigger, study_day, started_at, finished_at, status, reason, \
      attempts, full_download, created_at) \
@@ -565,7 +568,11 @@ async fn erase_leaves_the_cron_fire_ledger_and_the_schema_table_untouched() {
     let probe = Probe::run().await;
     for table in examined(
         "exempt table(s)",
-        vec![CRON_FIRES_TABLE, SCHEMA_VERSION_TABLE],
+        vec![
+            CRON_FIRES_TABLE,
+            SCHEMA_VERSION_TABLE,
+            WRITE_CLASS_STOP_TABLE,
+        ],
     ) {
         let before = &probe.before[table];
         assert!(!before.is_empty(), "{table} held rows before the erase");
@@ -581,7 +588,11 @@ async fn erase_leaves_the_cron_fire_ledger_and_the_schema_table_untouched() {
     assert_eq!(probe.before[CRON_FIRES_TABLE].len(), 101);
     assert_eq!(
         probe.erasure.kept,
-        [SCHEMA_VERSION_TABLE, CRON_FIRES_TABLE],
+        [
+            SCHEMA_VERSION_TABLE,
+            WRITE_CLASS_STOP_TABLE,
+            CRON_FIRES_TABLE
+        ],
         "the erase reports the exempt tables it kept"
     );
     // The guard still holds: a fire claimed before the erase cannot be claimed again after it.

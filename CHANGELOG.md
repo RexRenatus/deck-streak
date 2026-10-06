@@ -10,6 +10,1168 @@ process compiles the fragments into a new version section here.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-05
+
+### Added
+
+- The TestFlight lane for the iPhone and iPad app (SPEC-352, #634): `testflight-internal.yml`, a
+  dispatch on `dev`, and `testflight-release.yml`, a SemVer tag on `main`, each plan the build
+  number and version on Linux, call the one Apple job body, and sign and upload the harness to
+  internal TestFlight from a GitHub environment that only that lane's `app` job names. Until the
+  owner places the credential, a run builds unsigned and says it stopped before the upload. The
+  hardening test admits the lanes' secret reads by file, job and step and nothing else, and the
+  app icon is generated at build time, never committed. ADR-363 records the choices and what each
+  was chosen against.
+- The engine side of the iPhone and iPad review screen (SPEC-348, part 1 of 2, #632): three
+  ordinary pairs, the deck tree (7,4), the current deck (7,22) and the next states' intervals
+  (13,24), join the native adapter's allow-list and the engine core's native column. The core
+  completes a card's face as the engine's own reviewer does: the question's extracted text fills
+  `{{FrontSide}}`, the AV tags are stripped from the shown text and become sound and speech clips,
+  autoplay and replay follow the card's preset and the client's wish, and every media reference is
+  inlined as a `data:` URL under a name rule, a closed type table and two size caps, or emptied and
+  named as omitted. The native adapter returns the face as one closed HTML document, keeps a
+  per-language voice choice in a small file of its own, resolves a UI test's collection directory
+  from one checked launch argument, and writes a review fixture the Apple job uploads. ADR-359
+  records the choices and what each was chosen against.
+- The web study screens, part 1 (SPEC-350): `/study` lists the engine's decks with their new,
+  learning and review counts, and `/study/review` shows the deck's next card from the engine in
+  the sealed card frame, reveals its answer, and rates it with four buttons that carry the engine's
+  own interval labels. Undo, bury and the red flag act on the card on screen and on no other: the
+  web engine keeps the card it showed and refuses a rating, bury or flag for any other id. Anki's
+  keys and the remote's gamepad reach one handler through the remote's modules, a switch stored on
+  the device turns the single-character keys off, and focus comes back to the review after a tap on
+  the card. The engine core's web column and the web engine's study calls grow to the review's
+  sixteen pairs, and CI's web-engine job runs the review end to end in Chromium and WebKit over the
+  real module. ADR-361 records the choices and what each was chosen against; media, sound, speech,
+  the Home Screen and the mapping screen are the next part (#630).
+- The app links one Rust static library, the umbrella FFI crate (SPEC-346): `deck-streak-ffi` grows
+  in place, UniFFI is named by it alone, and a census in the required CI refuses a second static
+  library, a second UniFFI component, a remote or second binary target and a committed built
+  library. The Apple job checks that its bindings hold one module and that each XCFramework slice
+  holds one library, and the change caller now watches every crate the umbrella links. ADR-357
+  records the choices and what each was chosen against.
+- The native sync login (SPEC-347, part 1 of 2, #625): the engine's login call (1,3) joins the
+  native adapter's allow-list and the engine core's native column, and the core guards it before
+  the engine sees it. A login whose endpoint is absent, empty, unparseable, carries a user or a
+  password, or is not `https` (plain `http` only to a loopback IP literal, the engine's own test
+  server) is refused in the engine's own error shape, a `BackendError` of kind `INVALID_INPUT`
+  whose text names neither the endpoint nor the credential. A login through the adapter round-trips
+  against the engine's own sync server on loopback. ADR-358 records the choices and what each was
+  chosen against.
+- The card view on iPhone and iPad (SPEC-349, ADR-360): one factory in the `CardIsolation` package
+  builds every card web view with seven named layers (a non-persistent store, page JavaScript off,
+  a compiled rule list that blocks every load, no message handler, a navigation gate that allows
+  only the first load, a window refusal, and no file access). A tree guard holds it to one
+  constructor; a test-only probe host on one iPhone and one iPad simulator plants a card for every
+  channel and proves each reaches its listener from a reference view and nothing from the card
+  view. It closes SEC01-F14 and SEC01-F15 for iPhone and iPad.
+- An engine core that holds Anki's engine for both clients behind one table, with a column per
+  transport and the owner's exempt writes held apart. The native adapter and the web engine now
+  reach the engine only through it, each keeping its own table checked first, and a census keeps
+  every other member from naming the core.
+- A SwiftUI harness for the iPhone and the iPad over the engine, through the FFI (SPEC-339, #616):
+  it opens a collection, lists its decks, renders the next card in an isolated web view and
+  answers it, through six engine calls and no others. It is a spike, not the app (ADR-335).
+- The harness's own wire codec, a small Swift package with its request and response tests, so the
+  bytes the harness sends and reads are judged without a simulator.
+- The `harness-wire` and `harness` jobs in the `xcframework` workflow: the codec's tests and its
+  mutants on the macOS runner, then the harness's tests on two simulators and section 7's
+  measurements, in Release.
+- FSRS-7's replay time, undo's review-log row and the full-sync choice path are measured
+  (SPEC-342). A new context, `deck-streak-fsrs7`, takes the upstream scheduler crate's FSRS-7 from
+  fsrs-rs at one pinned revision beside the engine's released crate, turns review-log rows into
+  FSRS-7 items, and replays them card by card and in one batch. The `fsrs7-measure` workflow times
+  the replay natively on one thread and as `wasm32-wasip1` under Node's V8, and reports both with
+  their checksums and the web target's check. ADR-353 records where the crate sits and how each
+  figure is taken.
+- `crates/ingest/tests/undo_and_full_sync.rs` measures the engine's undo of an answer, before and
+  after a normal sync, and the full-sync choice: what each side is offered, the requests each
+  choice sends, and the review-log rows each choice loses, against the engine's own sync server.
+- The push spike's senders (SPEC-343): a new adapter crate, `deck-streak-push`, builds an APNs
+  notification over HTTP/2 with its ES256 provider token, and a web push message encrypted as RFC
+  8291 says with its VAPID token, and reports each platform's answer as one typed outcome. CI holds
+  every request against recording fakes on loopback ports that verify each token and decrypt each
+  body with their own decryption. Keys are generated in memory by the tests; nothing composes the
+  crate yet (#640). ADR-354 records the choices and what each was chosen against.
+- The remote harness (SPEC-343): `/remote` reads the 8BitDo remote as a standard gamepad and as
+  Anki's desktop keys, drives a simulated review, holds a screen wake lock while a review is open,
+  a gamepad is connected and the page is visible, and logs the last 200 events for the owner's
+  first device session (#629).
+- The sync server is hardened before its first deploy (SPEC-340, ADR-351, #628): the sync family
+  runs as its own user with its own archive and drill units, the server reaches loopback peers only,
+  the edge logs the sync route alone with no key, the route drops the web cookie both ways, and a
+  ban filter and jail count a refused sync login.
+- The launcher admits only the house's hash shape: a floor and a ceiling on the rounds, a 16-byte
+  salt and a 32-byte digest, each in canonical form.
+- The release audits the sync server's dependencies before it builds anything: the audit job reads
+  the pin in the engine's patch entry and the fork's own lockfile, and the release job needs it.
+- The offsite copy is sealed before it leaves and only the sealed files are copied; they are removed
+  afterwards, and an unset seal copies nothing and fails the run.
+- The privacy policy states the offsite period and discloses the edge log and the ban list, and the
+  runbook names the rekey triggers, the hash command and the bucket rule.
+- Tests for each, a red-first record, and mutation rows S34001 to S34021 for the new checks; rows
+  S33708 and S33739 to S33743 are re-anchored under their ids.
+- The web engine (SPEC-338): Anki's engine, built for WebAssembly from the pinned fork's tag, runs
+  in a dedicated Worker over the browser's private file system. The page's client opens a
+  collection, takes the study queue, answers a card and undoes it; one tab at a time holds a
+  collection, and a second tab is refused by name. Persistent storage is requested and its answer
+  surfaced, and a context that refuses the private file system is refused by name. ADR-348 records
+  the fork's patches and the Worker boundary.
+- CI's `web-engine` job builds the module with its bindings, holds them to 8000000 bytes gzip -9
+  with brotli printed beside it, and runs the browser tests over the module in Chromium and WebKit
+  (ADR-349). The page's policy admits WebAssembly compilation (`'wasm-unsafe-eval'`) and nothing
+  else new.
+- The release builds the sync server (SPEC-337, ADR-347, #617): a step after the tag guard and the
+  protobuf compiler reads the fork and the commit from the engine's patch entry, refuses anything
+  but a full commit before cargo runs, builds the server with the fork's own lockfile, and the
+  tarball carries it as `bin/anki-sync-server`, so the manifest, the digests and the attestation
+  cover it.
+- Tests that hold the step's order and run its text under bash with cargo stubbed, over a pinned
+  manifest, three it must refuse and the tree's own, with mutation rows for the guard, the lockfile,
+  the second copy of the commit, the fork and the tarball line.
+- The sync server runs as its own unit (SPEC-337, ADR-347, #617): `deck-streak-sync-server.service`
+  runs a launcher that reads the owner's and the staging user from the credential socket, refuses
+  an entry that is not a user name and a pbkdf2-sha256 hash, clears what the server would read, and
+  execs the server on a loopback address with its data in the unit's own state directory.
+- DeckStreak's share is 1152M, recorded by amendments of ADR-064 and ADR-032, and its two
+  processors are split among the five daemons: the API and the sync server 75% each, the bot 20%,
+  and the replicator and the MCP server 15% each.
+- Tests that hold the unit's hardening, its budget entry, the share, its two credentials and the
+  absence of any password hash in the tree, and that run the launcher over its starts and its
+  refusals with the server stubbed, with mutation rows for each of its checks.
+- The sync server is served on the web app's origin under `/anki-sync/` (SPEC-337, ADR-347, #617):
+  the bare path redirects to the slash form, the prefix is stripped, the server's health route
+  answers 404 at the edge, the request body is bounded at the server's own payload limit and the
+  proxy reads with a larger buffer; render-caddy fills a fourth key, the sync server's loopback
+  upstream, checked as the API's is and refused under its own name.
+- Tests that render the block with the route and run render-caddy over the fourth key, with mutation
+  rows for the key, its check, the refusal's name and each line of the route.
+- The sync server's cutover runbook, `docs/runbooks/sync-server-cutover.md` (SPEC-337, ADR-347,
+  #617): one step per state of the schematic's sequence, the data moved by a final sync and
+  desktop's full upload into an empty store, the server's collection read back before any retry,
+  each host step on the owner's go (#161), the old server untouched as the rollback, and the
+  cutover's full upload held to a first reading under the sync server's real quota, which stops
+  the cutover on a client failure or a long stall.
+- A test that reads the runbook against the schematic's states, their order and each step's go.
+- The sync server's store has a daily offsite snapshot (SPEC-337, ADR-347 D12, #617): the daily
+  backup's run pulls in a stopped-server window, `deck-streak-sync-snapshot.service`, which stops
+  the server, copies each user's two databases and media files from that one stopped generation,
+  refusing at once a database a process still holds, publishes the copy only when whole, and has
+  the server started again whether the copy succeeds or fails; the backup then checks each
+  database, archives the copy with its sha256 digests, copies the archive to an offsite bucket
+  named by configuration and keeps three, and the weekly drill restores the newest archive,
+  checks it and opens each collection. Enabling the server enables the window, and disabling it
+  removes the window.
+- Tests that hold the window's ordering, its restart on success and failure, its bound and its lack
+  of any condition or new privilege, run the copy against a held database and a planted failure,
+  and run the daily archive and the drill over scratch stores, with mutation rows for the window's
+  refusal and its lack of a busy wait, the copy published only when whole, each check, the
+  manifest's digests, the offsite copy's arguments and its two settings, the three archives kept,
+  and the drill's newest archive, digests, database checks and refusal; a TLA+ model of the window,
+  `formal/tla/SyncSnapshotWindow`, with a witness for each of its four properties; and the privacy
+  policy's disclosure of the snapshots among the copies an erase cannot reach.
+- The browser engine spike's record: SPEC-335 measures Anki's engine built for WebAssembly, opening,
+  answering and undoing a card in a Worker over the browser's private file system in Chromium and
+  WebKit, at 7529787 bytes gzip -9 shipped. ADR-346 records the fork's gates and the measuring
+  harness, and ADR-336 takes GO as its decision outcome with a size budget of 8000000 bytes gzip -9.
+- An FFI adapter puts the engine behind a five-call allow-list for a native client, and a workflow
+  builds it as an arm64 XCFramework with a device slice and a simulator slice.
+- The app campaign's PRD (SPEC-334): a web study client and a universal iPhone and iPad client
+  over Anki's engine, with the owner's own sync server behind HTTPS, and the order its deliveries
+  keep.
+- Ten decisions for the campaign (ADR-335 to ADR-344): the SwiftUI client over FFI, the engine on
+  WASM in the browser, the owner's own taps and the never-list, FSRS-7 on one preset, the
+  reorder-only rule for every other model, the sync server's move, native push through the one
+  router, one universal app driven by touch, keys or an 8BitDo remote, in-app personas behind the
+  persona-core gates, and the internal TestFlight lane.
+- A schematic of the clients, the engine, the sync server and the one router
+  (`docs/schematics/app-clients-engine-and-sync.md`).
+- The MCP server's unit has an SLO of its own, `mcp-availability` (0.95 over 28 days, the API's
+  response-event indicator and alert windows), so the observability probe's `obs.slo-declared`
+  finds it covered; `deploy/README.md`'s host budget names all four daemons whose `CPUQuota=` the
+  share test sums (SPEC-333, issue #157).
+- The owner confirms a day's writing with `/write` in the bot: by naming each writing course by its code or alias, or by tapping a writing course's chip on today's checklist, and `/unwrite` or a second tap clears it. Each confirmed writing course earns 75 XP on its study day, and a day with every writing course confirmed earns a further 100 XP. The XP is settled from the writing log, once per course and day, so a recompute and a confirmation agree, and a chip drawn for a day that has closed changes nothing. The checklist shows each writing course's streak and the all-courses streak. The habit badges (first page, the quill and ink streak badges, bookworm week, polyglot reader and marathon reader) are awarded once each by the recompute. The writing log is exported and erased with the owner's data.
+- The MCP server's systemd unit (SPEC-119, part of #157): `deck-streak-mcp.service` runs the `mcp`
+  role with the watchdog, the hardening every service carries and its two tokens loaded as
+  credentials from the private rail, inside DeckStreak's existing share of the host (ADR-332). A
+  deploy installs it and never starts it; its first start is the owner's, once the core token is
+  stored, as `deploy/README.md` describes.
+- `DECKSTREAK_MCP_LISTEN` in the committed settings example: the MCP server's loopback address.
+- The MCP server's first slice, part a of SPEC-119 (#157, ADR-329): `deckstreakd mcp` serves the
+  streamable HTTP transport at `/mcp` alone, keeping no session and answering JSON, on the loopback
+  address `DECKSTREAK_MCP_LISTEN` names. Any other address refuses start by the setting's name, and
+  a request whose `Host` is not a loopback name is refused. Every request passes the house layers
+  and then the bearer guard, ahead of a bound on the requests in flight, so a refused request never
+  takes a slot and a request past the bound is shed at once with 503; the body is capped.
+- One tool, `get_law_track`, matching its entry of the predecessor's roster golden less the `token`
+  parameter. It asks the guard for the `law_track` scope before it reads the law track through
+  `coordination`'s use case, and answers the law streak, the XP and the level with the dues, the
+  active leeches and the mastery. A pending number answers null, never 0, and the output schema
+  declares each pending number nullable and required.
+- The role reads its tokens once, through the credential loader, and drains on SIGTERM. Mutation
+  rows pin the loopback rule, the scope check, the body cap, the shed, the hosts, the stateless JSON
+  transport, the pending numbers, the mastery's rounding, the guard's place in the stack and the
+  role's name.
+- The gate runs the workspace's tests in the release profile the daemon ships from (stage
+  `test-release`, CI job `release`), and clippy refuses `cfg!` and `option_env!` in workspace code
+  unless a site allows one by name with its reason (SPEC-330, issue #473).
+- The three table censuses read a reserved table name however its literals spell it (SPEC-324,
+  #460): one shared reader decodes every crate's literals as the compiler does, follows includes
+  and `#[path]` modules, pools the pieces across the workspace, and refuses each file holding a
+  piece of a join that assembles `xp_ledger`, `xp_settlement` or `coin_ledger` in any case outside
+  its owner. A join it cannot read beside part of the name, and an include it cannot name or read,
+  are refused by name; an include joined onto the build-script output folder is counted and
+  disclosed.
+- A generated population plants every split of each name in nine forms, a fourteen-member family of
+  literal spellings evaluated by the compiler, near misses one character short, and the real tree's
+  own joins as controls; every census prints what it examined.
+- The owner logs minutes of book reading with `/read` in the bot: by a course's code or alias and the minutes, by the minutes alone for the most-read course, or through a course picker and a row of presets, each entry with an optional short note. Each minute earns 2 XP, up to 240 XP a course on a study day, and 210 minutes of one course in a study week earn a weekly bonus of 150 XP. The XP is settled from the log, once per course and day, so a recompute and an entry agree; `/undo` and each logged reply's Undo button remove the newest entry and settle its day and its own week again. The log is exported and erased with the owner's data.
+- The personal board, in the progression and coordination crates (SPEC-075, #79): the best day
+  among the 365 most recent stored rollups, on a tie the most recent; today's score; the language
+  streak; and the level both XP tables' total reaches, equal to the predecessor's
+  `ReadApiLayer.leaderboard`. `GET /api/board` answers it to the owner alone.
+- The XP exchange readout (SPEC-075, #80): each source bucket's XP over the graduations of the
+  distinct days it paid on, read from `xp_ledger`, `xp_settlement` and the rollups in one read
+  transaction, with no rate where no card graduated; and its window, the last N study days capped
+  at 3650 or every day. `GET /api/xp/exchange?days=N` answers it to the owner alone, an undefined
+  rate as `null`, and refuses a `days` that is not an integer.
+- A Lean proof of the bucket rule, the readout's fold (every row kept, a day counted once per
+  bucket, a rate defined exactly when a card graduated), the best day and the window, checked
+  against `exchange_rates` over 777 recorded vectors.
+- The historical landmarks, each 25th earned study day and each anniversary of the first study
+  day, are now celebrated through the notification router (SPEC-102 part b, #127; ADR-322). The
+  sync cycle offers them between the recompute's writes, after the badges, records and band-ups,
+  from a cursor that only the router's answers move: a landmark the router did not answer stays
+  owed, and the next recompute offers it again.
+- The first run stores the predecessor's high-water mark in its exact bytes, raises at most the
+  first landmark due that day, and keeps the cursor; a mark imported from the predecessor raises the
+  day's landmarks and none of its history. An anniversary on a day without language study reads the
+  honest variant.
+- The model LandmarkOnce now covers the offers' code, and mutation rows S10205 to S10207 and
+  S10223 to S10228 hold the offers, the cursor, the seed and the mark.
+- The Road to C2 in the Mini App and the bot (SPEC-077, part two of two): `GET /api/progress`
+  answers each configured course's mastery, band, current unit and six band cells, and
+  `GET /api/law` answers the law block with each pending count as pending; both serve the owner
+  only.
+- The bot's `/progress` states each course's band, mastery and current unit.
+- The Mini App's progress screen draws each course's ladder as six band cells, each with its
+  mastery and its mature cards, and marks the current band and unit; the law tab shows the law
+  block's lines in the server's order, lists a count not yet counted as pending rather than as
+  zero, and shows the law cards and today's law XP by tier. Both screens are audited for
+  accessibility in both of Telegram's colour schemes and carry their strings in all seven
+  locales.
+- The skip day, part one of three (SPEC-083, #108): DeckStreak records a skip once per study day and
+  can undo the most recent one; a standing skip bridges both streaks without spending a freeze,
+  leaves the consistency run as it was, and neither counts nor ends the governor's silent run.
+- The skip tariff, read from the ladder in `economy.json`: it is taken on the skip's day by a
+  debit the wallet clips to what it holds, outside the daily loss limit; an unfunded skip still
+  applies and records its shortfall; an undo refunds what the skip paid, on the undo's day; and a
+  retry moves no coin twice.
+- The preview's fields, with no card list, and the skip tables in the owner's export and erase.
+- A model of one skip per day and one charge and refund per skip, a proof of the tariff with the
+  Rust test that answers its vectors, and mutation rows for the ladder, the settlement's keys and
+  days, and the skip constants. The take that writes to the collection lands in a later part.
+- The MCP server's bearer guard, part one of SPEC-119 (#158), as a library of the new adapter
+  crate `deck-streak-mcp`, whose only dependency edge is the kernel (ADR-320): the core and
+  law-track credentials read only through the credential loader, each at least 32 characters, no
+  two sharing a value, and one holding a character no request can present refused at start by its
+  id; the bearer parsed from one `Authorization` header and matched by comparing SHA-256 digests in
+  constant time over every grant; one `401 unauthorized` with `WWW-Authenticate: Bearer` for every
+  refusal; and the predecessor's limiter of five fresh failures a minute over at most 512 buckets,
+  proved against its goldens.
+- A model of the guard's shared limiter, checked with a witness for each way a granted token could
+  be refused, a bucket could pass its count, the buckets could pass their cap, or a refusal could
+  say why, and mutation rows for the credentials, the bearer, the match, the refusal and the
+  limiter.
+- Historical landmarks, part one of two (SPEC-102, #127): the rule that finds each anniversary of the
+  first study day and every 25th study day, which landmarks fall due on a day, and their texts, equal
+  to the predecessor's own results on three goldens; and a read of the study days of the whole scoped
+  log, one value per day. Nothing raises a landmark yet: the step and the first run are the second
+  part (ADR-318).
+- The obligation horizon (SPEC-091, #91): a fixed 365-day forward histogram of the reviews every
+  card owes, with the owed-now, beyond-horizon, new and excluded counts, and a readout that names
+  the true 30-day obligation and the two levers that create more. Each number is proved against the
+  predecessor's own function, and the horizon's constants against a golden of their own (ADR-317).
+- The Road to C2, in the curriculum crate (SPEC-077, part one of two): each card's memory state,
+  parsed from its data in the ingest crate, and its mastery; each course's progress across its unit
+  bands from A1 to C2, with its current band and current unit; the law mastery pillar; and the
+  curriculum constants, each equal to the predecessor's.
+- The band-up, in the recompute's progress step: it stores each course's progress on the current
+  study day, records a course seen for the first time as a silent baseline, and pays a band later
+  than the stored one its XP, its badge and its celebration once, through the one router.
+- The law block's view: its fields equal to the predecessor's, the law dues pending before the
+  first recompute, the leeches and the law mastery pillar pending until their port is wired, and
+  the block omitted when there is no law activity.
+- The next milestone reads the courses' stored mature cards.
+- The `language_progress`, `band_milestones` and `law_dues` tables, exported and erased with the
+  learner's data.
+- A TLA+ model that a band-up is paid and celebrated once across recomputes that interleave or
+  crash, and a Lean proof of the band rules and the law pillar's range, checked against recorded
+  vectors.
+- Session chests with their pity counters and double-XP tokens, the first deliverable of SPEC-081
+  (#102, #103): each chest is rolled once, from the operating system's generator, and stored with
+  its rarity and payout, so a second recompute never rolls a session again and a failed draw writes
+  no chest and moves no pity counter (ADR-081).
+- Opening a chest pays once and reveals the stored rarity; an Epic's choice settles once, and a
+  freeze a cap refuses becomes a token. The sweep resolves the stale chests of earlier study days.
+- A double-XP token activates for a two-hour window, one at a time, and its bonus is settled by
+  study day and capped per token.
+- The chest, pity, token and chest-settings tables join the data rights: the chests and tokens are
+  exported and erased, and the pity counters and the settings are reset in place.
+- Models of a chest opened once and of the token window, proofs of the token bonus, and mutation
+  rows for the roll, the grant, the sweep, the token window and the bonus.
+- A photo, voice note or document the owner sends the bot lands in the vault inbox once, as the
+  predecessor saved it: the last photo size Telegram lists, a document's plain extension of 1 to
+  10 characters or `.bin`, nothing declared over 20 MB fetched, and a download that streams past
+  the cap discarded. The bot answers with what became of the capture. Only the owner's media is admitted,
+  and the file's URL never reaches a log line.
+- `/badges` lists the 20 badges you earned most recently, newest first, and `/records` lists your
+  personal records with the one closest to being beaten today. The Mini App gains a badge gallery,
+  where a locked badge shows its criteria and, where its input is stored, its progress, and a
+  records screen showing each record's distance from today. The next milestone answers pending
+  until Road to C2 supplies the mature cards it is computed from.
+- The coin wallet, part two of three (SPEC-082, #106): the recompute fold mints each day's coins in
+  its own write, after the day's base XP is final, so a backfilled, a settled or a current day
+  holds the mint of its final base, and a fold that fails leaves no mint behind (ADR-315).
+- `GET /api/wallet`, for the owner only: the balance, today's loss limit and what is left of it,
+  and the coin movements newest first, twenty to a page with a cursor to the next.
+- The balance in the Mini App's header on every screen, linking to a new `/wallet` screen that
+  lists the movements and loads older pages, in all seven locales.
+- A model of the mint reading each day's final base, checked with a witness for each way it could
+  read too early, and mutation rows for the mint's phase, a backfilled day's mint, the owner-only
+  route, the movements' order and the page's size and boundary.
+- The scheduled sync's spread test counts what it judged: its judges record each member they are
+  handed, and the spread is refused unless it hands 3,600 distinct members, so a generator that
+  repeats an offset, an hour or a day reads red (SPEC-027, issue #462).
+- A capture lands in the vault's inbox once. The vault writes a capture's attachment and its
+  same-stem `.md` stub as `<UTC date>-<kind>-<unique>`, never creates a missing inbox, never
+  overwrites an earlier capture and never writes into a journal folder; a capture sent again under
+  the same key is written once.
+- The Mini App gains a quick capture: a text or a journal line, sent with its own retry key, is
+  written by `POST /api/inbox/captures` as an inbox stub marked `source: miniapp`, and a capture id
+  or a kind that is not its own form is answered 422 with its reason named. A journal line lands
+  in the inbox, never in a journal section.
+- The owner's layout file, named by `DECKSTREAK_VAULT_LAYOUT`, names the inbox and the journal
+  folders. Unset, the vendored layout is in force; a file that cannot be read or is not a layout
+  serves no capture and never refuses the start.
+- The kernel now holds CPython's numbers once (SPEC-302, issue #540): the mean, median, sum,
+  round, the nearest-rank percentile, `lgamma` and the Mersenne Twister generator with its
+  `choices`, each equal to CPython's result to the last bit on the parity goldens and on an
+  edge-value fixture. The analytics crate calls the kernel's sum instead of keeping its own.
+- The coin wallet, in the economy crate (SPEC-082, part one of three): the coin constants and the
+  pure rules, each equal to the predecessor's, for the day's mint, the daily loss cap, the scaled
+  fine and the debit clip; and the wallet's seven ports over one coin ledger, a credit, a
+  once-ever credit, the day's mint settle, a purchase, a floor-clipped debit, a refund and a capped
+  debit. Each port reads the balance and writes its movement in one immediate transaction, so the
+  balance never falls below zero, and a key holds at most one movement (ADR-308).
+- Migration 008201, which creates the `coin_ledger` and `economy_state` tables, and the economy
+  data-rights port, which exports and erases both with the learner's data.
+- A model of concurrent callers over the coin ledger, checked for the zero floor, one movement per
+  key, a once-ever credit and a settled mint that never falls, with a witness for each; and a Lean
+  proof of the debit clip's bounds and of the mint's range and order, checked against
+  `clip_debit` and `mint_for_base_xp` over 747 recorded vectors.
+- A badge you earn and a personal record you set are now offered to the notification router after
+  the day's write, and marked as sent only once the router has answered. A day that stopped between
+  the write and the offer is offered at the next evaluation, and a record replaced before it was
+  offered is named in the log. The first evaluation with no stored records seeds them silently. A
+  record beaten on the seed's own study day is offered once, under its day's key; the seed stays
+  marked and silent.
+- The open lapse walk is proved in Lean over the day type it walks (#472). The entry
+  `lean/OpenLapse` proves that `open_lapse` takes at most one step per day from the window's first
+  day to today, never overflows at the smallest day, and answers as the rule does, with the one
+  exception at the smallest day; each theorem has a witness that the formal check catches. Vectors
+  the port writes hold it to the Rust function, and SPEC-076 records the proof and section 24's
+  count of its amendment's insertions (#513).
+- Badges, records and the next milestone, in the progression crate (SPEC-073, part one of three): the
+  40-badge catalog with its course-named descriptions; the study conditions and thresholds,
+  equal to the predecessor's; a badge tier awarded at most once, a band key accepted only for a
+  configured course and a band from A1 to C2, and an unknown key refused before any write; record
+  detection, which counts only a value above the stored best and whole minutes; the record to
+  chase; and the next milestone across the reviews, streak and mature-card ladders, with a tie
+  kept by the earlier ladder.
+- The `badges_earned` and `records` tables, exported and erased with the learner's data.
+- A Lean proof that the next milestone is the least remaining fraction with its tie order, checked
+  against `next_milestone` over 1,287 recorded vectors.
+- The streak screen draws a calendar of the last 26 weeks for each track, as whole weeks from Monday, the window the predecessor serves, with a freeze, skip or break marker on the day it belongs to. `GET /api/streak` serves the days: each carries its date, whether it was a study day and its markers. A freeze sits on the missed day it covered, never on the day it was spent; a break sits on the day the run's own replay records it broken; a skip sits on a declared skip day. The law track serves skip and break markers.
+- The repository declares its formal-check settings in `config/formal.json`, holding only the fields the formal checker reads; ADR-295 decides that formal checks are judged against the development branch; three tests pin the file and the reader that refuses a planted fault (#468).
+- The two generated lapse populations (the walk's window cases and the study-day boundary cases)
+  now pin how many different members they hold as well as how many they generate, and how many of
+  their members each line of the judges' rules decides, so a fold of a generator that would let a
+  mutant of one of those lines pass fails a count.
+- The open lapse's walk over its window, and the study day a review counts on, are now pinned by
+  tests that generate their cases: every position a silent run can start at (the window's first
+  day included) and every day boundary of a spread of offsets and rollover hours.
+- A mutants run now happens inside a memory scope (SPEC-196, issue #439). Each `mutation-rust`
+  leg, each weekly rust leg and the `rehearsal` run `cargo mutants` through
+  `scripts/memory_scope.py`, which holds the run in a transient scope at fifteen sixteenths of the
+  machine with swap forbidden, so a mutant that allocates without end is stopped by the kernel
+  and the rest of the leg goes on. The scope writes `memory-scope.json` beside the report. The
+  verdict reads it: a leg with no record, or with a scope that was not in force, is VOID by name;
+  a mutant the cap stopped fails its leg as `MEMORY-CAP <mutant>`, is neither caught nor a
+  timeout, and is not examined; every other result in the leg stands. Thirty rows,
+  `S19600` to `S19629`, hold the arms. A scheduled weekly run between this merge and the release
+  that carries it reads its shards VOID, because the workflow comes from main and the scripts
+  from dev.
+- The language and law streaks, their freezes, the governor and the relight hold are specified
+  and accepted; the law streak is evaluated on every study day, so it decays when law study stops,
+  and an empty history is answered as the predecessor answers it.
+- The streak rules, views, routes and reply are pinned by generated populations, the silence
+  walk and the streak counters can no longer spin, and the streak screen, its readers and its page
+  carry generated-population tests, so the mutation checks of the streak files leave only recorded
+  equivalents standing.
+- The relight's celebration is due in the same write as its grant, so it is sent once for each
+  committed grant, also across a failed sync or a restart; nothing is at stake once the day has a
+  study review; and every value the streak and governor routes serve is read in its own place.
+- A celebration whose route fails stays due, so a later sync sends it once, and the streak
+  reply's heat is read in its own place on the language line; both are pinned by tests.
+- A lapse now opens after three silent study days: the streaks crate answers the open lapse, if any,
+  by the first silent day of the run, and a skip day neither counts nor ends a run. The count of
+  silent days is the economy file's value, and the answer matches the predecessor's on a golden of
+  synthetic study-day sets. Coordination reads the same answer from the reviews a caller has
+  already read. Nothing calls it yet.
+- The router can now send the owner a photo and prepare it as a message to share. Both are additive: a transport without the calls refuses them, and nothing is sent unless the router allows it (#125, #126).
+- A law drill is answered once through the vault contract, from the bot or the app: the answer is appended under its heading in the drill note, a second answer is refused, and a drill that already holds an answer stays answered.
+- A graded drill pays its post-back XP once, on the study day of the poll that finds it, and an interrupted poll is completed by the next one without a second pay.
+- `/drills` and `/drill` in the bot list, filter and answer drills, and the owner's drill routes in the api list, show and answer them.
+- The drill answer and grade records are exported and erased with the rest of a learner's data; an erase never deletes a note.
+- The instruments run through one frame: each weekly instrument runs one at a time after a sync's
+  recompute, when its stored report is absent or a week of study days old, and the owner can ask for a
+  run on demand; a run already in progress is answered, not queued.
+- Dark Fields, the first instrument, lists the note fields no card template shows that reviewed notes
+  still fill in, states zero as a checked result, and reports a failed read as a failure, never as an
+  all-clear. The owner's screen for it is the Insights screen of the Mini App.
+- The latest report of each instrument is exported and erased with the rest of the owner's data.
+- The data migration and the cutover (W8) are specified as seven planned SPECs, seven proposed
+  ADRs and three schematics, each SPEC naming its issues, its prerequisites and its mutation band.
+  Nothing in them stops the predecessor: every step after the owner's go names #164, and the
+  predecessor stays disabled, not removed, until the owner approves its removal.
+  - SPEC-140: each context imports its own v9 rows for the study record, and the recovered card
+    state keeps its origin in its own column (ADR-140, ADR-141).
+  - SPEC-141: the game, the economy, discipline and the messages import their own v9 rows, and the
+    runtime settings split by owner (ADR-140).
+  - SPEC-142: the import reads a verified copy, rehearses on a copy of DeckStreak's database, and
+    applies once over a restored backup, with a rollback by rename (ADR-142).
+  - SPEC-143: the cutover checklist moves each contract one at a time, and no contract has two
+    writers at any step (ADR-143).
+  - SPEC-144: the predecessor retires only after the owner's go, and a day of DeckStreak alone is
+    judged by every SLO (ADR-144).
+  - SPEC-145: v1.0.0 is released from main after the day alone, and a check that cannot write
+    reads the tag, CI and the security settings (ADR-145).
+  - SPEC-146: the nightly stats file keeps the predecessor's contract, and is written after the
+    day's one sync by one writer (ADR-146).
+- A mutation row's killer can now run a binary's own unit tests, as `bin::<test path>`
+  (SPEC-039 section 15, issue #352). The runner reads the binary's name from the crate's
+  manifest, resolves the test in the binary's own sources, and runs it by its exact name; a
+  killer that selects no test is VOID, as for every cargo killer. The kind follows the compiler's
+  module rule for a root file of any name, and a crate whose `tests/bin.rs` it would shadow is
+  refused by name. Row `S05754` is its first
+  user: the daemon's exit grace, one second to two.
+- The vault to Anki flashcard bridge (W9) is specified as three planned SPECs, three proposed ADRs
+  and two schematics, one SPEC per surface of the flow, each naming its issue, its prerequisites and
+  its mutation band. A card reaches Anki only as a package the owner imports, and only after the
+  owner's tap; DeckStreak reads the vault for it and writes nothing there.
+  - SPEC-150: the flashcards in a note the owner tagged become pending candidates on request, each
+    with a GUID from its note's identity and its block key, and only the owner's approve, edit or
+    reject moves one, from the bot or the Mini App through one use case (ADR-150, ADR-152).
+  - SPEC-151: `/vaultpack` builds a package of the approved cards alone with the engine's own
+    export, each note keeping its GUID and its decision's time, and sends it into the owner's chat
+    (ADR-151, ADR-152).
+  - SPEC-152: the Mini App's vault card screen lists the pending cards and lets the owner approve,
+    edit or reject each, and scan again.
+- A refused owner `/sync` is recorded with its reason and the time it was refused, beside the
+  pending flag, which the same write clears. The owner is told the reason code instead of "still
+  running", the notification router is not flushed, and the next job run does not serve the same
+  request again. A new request clears the record. An erase clears it, and an export carries it.
+- A refusal that comes after the owner's sync ran is answered beside the run: the sync's own line,
+  then "Your scores were not recomputed (code), so they stand." Every code the owner cycle
+  records is checked against the closed set, and the record's reason and instant are set together.
+- Celebrations render on the ladder's six tiers: a reaction to the owner's latest message, a line, a
+  reveal that edits its placeholder, a dice then the message, and a dice, the message and a pin. The
+  tier follows the event and its rarity, steps down past the week's budget for the owner's intensity
+  (an Epic or a Legendary keeps its floor), and is capped at a reaction on a day the streak broke.
+- A reaction is made only to an owner message at most 24 hours old, and a refused reaction holds the
+  next ones for the cooldown while every other tier still sends.
+- The flush after a sync renders the two held celebrations of highest tier in full and names the
+  rest in one line, each at most a line.
+- The Mini App animates each celebration at the tier it rendered at, and shows the same content
+  without motion when the device asks for reduced motion; a T5's card stays until it is dismissed.
+- The owner's latest message is in the owner's export, and an erase resets it.
+- Surfaces and polish (W7) are specified as nine planned SPECs, ten proposed ADRs and three
+  schematics, one SPEC per bounded context or tight group, each naming its issues, its
+  prerequisites and its mutation band. The domain and the image provider stay the owner's: the
+  origin is configuration with a neutral example, and the image port has no provider wired.
+  - SPEC-130: one settings screen shows and sets every stored runtime setting through its owning
+    context's setter, and names each value that stays configuration (ADR-130).
+  - SPEC-131: passkeys, Google and Apple link to the owner's Telegram account, every doubtful
+    assertion is refused by name, and Apple's grant is revoked on unlink and erase (ADR-131,
+    ADR-132, ADR-133).
+  - SPEC-132: the router sends a photo and prepares a share through two additive transport calls
+    that refuse by default (ADR-136).
+  - SPEC-134: every box-run pack is enforced, and each red that #60 owns turns green in the tree or
+    stays a named exception on its own issue (ADR-134).
+  - SPEC-135: keepsake art is drawn through an image port with none wired, capped, cached, gated and
+    sent by a job, and the text ceremony stands without it (ADR-135).
+  - SPEC-136: a streak milestone draws a share card once, the gallery shows every drawn image, and
+    the owner shares one from Telegram's own sheet (ADR-136).
+  - SPEC-137: the public achievement page is opt-in and allow-listed, served by DeckStreak, and
+    withdrawn by switching off or erasing (ADR-137).
+  - SPEC-138: future grants are re-priced per source from the next study day, inside the grant
+    port, so no closed day's XP moves (ADR-138).
+  - SPEC-139: the public landing page is a static Astro site that states only what DeckStreak does,
+    built by the box run from the commit it judges (ADR-139).
+- Tests and hand-proved rows that pin the constants of the daemon and api crates which the mutation
+  tool never reaches: the open lock's file name, the watchdog variables' names, the listen setting,
+  the feed route, the public version and the shapes of the settings that refuse a value
+  (SPEC-057 R20).
+- XP is earned per review and per day and settled once per source: a review's XP follows the card's maturity, type and, for a law card, its tier; each day's derived bonuses settle once per source and never fall once the day is closed; the level and its title are read from the ledger and the settlements. The owner sees the level, today's settling XP and the consistency run in `/level` on the bot, `GET /api/level` and a level screen, and a level crossed by a recompute raises one level-up line.
+- A tag on `main` now builds and publishes a release: `release.yml` attests the tarball's build
+  provenance and attaches it with its `SHA256SUMS`.
+- `deploy/deploy.sh` installs a verified tag on the host, switches `current` atomically and switches
+  back from a release that does not become ready; `deploy/rollback.sh` returns to a kept release in
+  one command. `deploy/scripts/render-caddy.py` renders the Caddy block for `deploy.sh
+  caddy-install`, which validates a copy before it reloads.
+- The Python mutation runner, `scripts/mutation_python.py`, and its population map
+  `scripts/mutation-python.json` (SPEC-087; #218, #219). It lists the mutants of the guard scripts
+  and the parity oracle's generator, runs each against its mapped test modules, restores every file
+  checked by sha256, and reads a hung mutant, a red control and a failed restore as VOID by name.
+- The repository's own Python is mutated (SPEC-087, ADR-073, accepted; #218, #219). A pull request
+  runs the new job `mutation-python` over the mutants on its changed lines in the guard scripts and
+  the parity oracle's Python, one job per shard, and the verdict judges the reports: a survivor
+  fails, a hung mutant, a missing or partial shard and a failed restore read VOID by name, and an
+  equivalent mutant is recorded, with its argument, in `scripts/mutation-equivalent.d/python.json`.
+  The weekly battery gains a `python` job of sixteen shards over the whole population, and its
+  `package` input accepts `python`.
+- Hand-proved rows `S08701-S08725` for the runner's and the verdict's own guards and the runner's
+  constants, each proved KILLED.
+- Engagement parity (W5) is specified as ten planned SPECs, eleven proposed ADRs and nine schematics,
+  one SPEC per bounded context or tight group, each naming its issues, its prerequisites and its
+  mutation band.
+  - SPEC-100: the morning brief, the evening nudges and the comeback speak once through the one
+    router, a holdout measures the nudges, and a job that sends runs under its own template (ADR-100, ADR-101, ADR-102, ADR-124).
+  - SPEC-101: the daily digest and the weekly report tell what closed, and the session debrief asks
+    how a session felt (ADR-108).
+  - SPEC-102: landmarks and milestones are celebrated once, and the widget is one silent pinned
+    message a study day, edited in place through the router (ADR-109).
+  - SPEC-103: a fine is recorded once beside its coins, and refunded once when it is reversed
+    (ADR-103).
+  - SPEC-104: the doomscroll rail judges each ping, and a verdict that fines stays revisable while
+    its evidence settles (ADR-104).
+  - SPEC-105: committed windows and hard mode pay on evidence, and a quarter-hourly tick reminds
+    (ADR-105).
+  - SPEC-106: wagers and contracts stake only coins and settle on evidence, a panic waits for the
+    rollover, and no rung moves real money (ADR-106).
+  - SPEC-107: the markets price the owner's next day, settle on evidence and rank the Oracle
+    ladder (ADR-107).
+  - SPEC-108: a smoke bomb cancels one day's pending coin fines, and a chest lock makes the day's
+    first chest Common.
+  - SPEC-109: the skip day has a switch, and only the first three skips of a month bridge the
+    streaks.
+- The agent core: a process runner with turn, budget and wall-clock caps, an output gate that runs the packs' probes and fails closed, a duty engine that checks the optional AI route first (an unset route records that coaching was unavailable and alerts nothing), fenced untrusted inputs, an `agent_runs` record kept 90 days, and its data-rights port.
+- The progression crate's mutation row: every one of its 57 mutants is killed or unviable, none
+  is left unexplained, and a test holds the SPEC-057 table's row to those counts (SPEC-057 A27).
+- The second brain and the AI duties (W6) are specified as twelve planned SPECs, twelve proposed
+  ADRs and five schematics, one SPEC per bounded context or tight group, each naming its issues,
+  its prerequisites and its mutation band. Every duty runs through SPEC-043's runner with the AI
+  route absent by default (ADR-054), and each SPEC tests what the product does without it.
+  - SPEC-110: a law drill is answered once through the vault contract, from the bot or the Mini
+    App, and its grade is recorded once and paid as a `once` grant keyed by its drill (ADR-110).
+  - SPEC-111: the drill coach mints law drills by the owner's cadence, archives the unanswered, and
+    grades an answer only when the law gate and an integer score range accept it (ADR-111).
+  - SPEC-112: the leech doctor prepares a remedy for a failing card after the sync, capped, against
+    a confusable card the engine chose (ADR-112).
+  - SPEC-113: the writing tutor corrects a sample and the conversation partner answers one turn,
+    each at the owner's level; a requested duty answers as its command's reply (ADR-113).
+  - SPEC-114: a practice set is generated on request, its keys stay on the server until it is
+    submitted, and its completion pays once, never its score (ADR-114).
+  - SPEC-115: the daily digest gains a coaching paragraph that quotes only its own numbers, and goes
+    out degraded when coaching cannot be had (ADR-115).
+  - SPEC-116: the inbox curator files captures byte for byte from a plan it returns, the daily note
+    links the day, and the weekly synthesis cites every claim (ADR-116).
+  - SPEC-117: the vault pass runs nightly and on `/vaultops`, one at a time, bounded (ADR-117).
+  - SPEC-118: a photo, voice note or document the owner sends lands in the vault inbox once, and a
+    quick capture from the Mini App writes the same stub (ADR-118).
+  - SPEC-119: the MCP server serves the predecessor's tools in Rust on loopback, and its guard
+    refuses every request without a granted bearer, comparing digests in constant time (ADR-119,
+    ADR-121).
+  - SPEC-120: the collection atlas is a series refreshed from the cards whose stamp changed after
+    each sync, and the agent reads it in pages (ADR-120).
+  - SPEC-121: the drill workspace answers a drill section by section, and the law progress screen
+    reads the ledger, never the vault's dashboards.
+- DeckStreak's database is replicated to an offsite bucket by its own Litestream unit, copied daily
+  with an integrity check that keeps three copies, and restored every week into a private temporary
+  path by a drill that checks both the replica and the newest daily copy. A failure pages through the
+  alert unit. The replica and daily copies keep an erased row for at most three days, the declared window.
+- A plan for generated mutants over the repository's own Python: the guard scripts under
+  `scripts/` and the parity oracle's generator (SPEC-087, planned; #218, #219). ADR-073, proposed,
+  chooses a runner of the repository's own, `scripts/mutation_python.py`, against mutmut 3.8.0 and
+  cosmic-ray 8.7.0, each measured on four targets: mutmut ran on none of them as the tree stands,
+  and cosmic-ray records a hung mutant as killed and reads a run that examined nothing as complete
+  with no survivor. The runner mutates in place and restores each file checked by sha256, reads a
+  hung mutant and an empty run as VOID by name, leaves out a test that fails on any change to the
+  file's bytes, and names every killer. A pull request judges the mutants on its changed lines,
+  and the weekly battery the whole population in sixteen shards; a survivor is killed by a test or
+  recorded equivalent with its argument.
+  - The schematic `docs/schematics/mutation-testing-python.md` adds the Python job to the mutation
+    jobs of `docs/schematics/mutation-testing.md`, and draws one file's run.
+- Tests hold the identity crate to SPEC-057: every cargo-mutants mutant of `deck-streak-identity`
+  is now killed or recorded equivalent. The session cookies, the presented id, the ending of a
+  session, the reading of an id, the `Debug` of the owner, the key, the token and the store, the
+  owner credential's sign and zero, and an `auth_date` with a sign each gained a test that fails
+  when the behaviour changes.
+- Three mutants that join a byte's two hex digits with `^` instead of `|` are recorded equivalent
+  in `scripts/mutation-equivalent.d/deck-streak-identity.json`, each with the argument that the two
+  halves share no bit (SPEC-057 R5).
+- A test holds every workflow to ADR-017's rule: none reads a secret other than `GITHUB_TOKEN`,
+  passes its secrets on with `secrets: inherit`, or checks out, clones or fetches another
+  repository. It judges any directory of workflows, names each refusal by its file and place,
+  refuses a directory with no workflow as VOID, and proves itself on planted workflows under
+  `scripts/tests/fixtures/secrets-and-checkouts/` (SPEC-034 R7).
+- The test's own workflow reader fails closed: a character outside printable ASCII, and a value or
+  key in a form it does not read as YAML does, a quoted escape, an anchor, alias or tag among them,
+  are refused by its line. A checkout of another repository named in any case, its action and its
+  inputs read as the runner reads them, a checkout from another server, and a fetch in git's
+  scp-like form are refused too. Every workflow test reads `.yml` and `.yaml` files, an action is
+  pinned only in its plain form, and the hardening tests read keys the way the checker does
+  (SPEC-034 A13).
+- The checker judges every step of a job, a step inside a `parallel` block at any depth included,
+  and refuses a checkout whose inputs are not a mapping, such as one `${{ }}` expression that
+  GitHub evaluates when the step runs; an omitted or empty `with` is no inputs (SPEC-034 R7).
+- The checker refuses a `shell` that is not one of GitHub's built-in keywords, at a step, a job's
+  `defaults.run` and the workflow's, reads every string of a workflow for a clone or a fetch, and
+  refuses git configured from the environment: a key or a string that names a variable beginning
+  with `GIT_`, in any case, and an `env` or a container it cannot read (SPEC-034 R7).
+- The checker refuses a job's container whose `options`, `image`, `ports` or `volumes` is or holds
+  a `${{ }}` expression, which GitHub evaluates when the job runs, as the runner creates the
+  container from each; a container's registry `credentials` are not read by its steps
+  (SPEC-034 R7).
+- Curriculum and insight parity (W4) is specified as ten planned SPECs, ten proposed ADRs and three
+  schematics, one SPEC per bounded context or tight group, each naming its issues, its
+  prerequisites and its mutation band.
+  - SPEC-090: each course is forecast to its next band, the daily goal adapts, and the balance names
+    a neglected course, with CPython's numeric semantics ported once into the kernel (ADR-090).
+  - SPEC-091: memory health is read against the collection's own target, and the horizon shows the
+    load ahead; curriculum's readouts are computed at the current study day and stored as the
+    latest (ADR-091).
+  - SPEC-092: each course is measured by its strands, and the test-prep board counts each section's
+    cards; the law taxonomy is private configuration (ADR-092).
+  - SPEC-093: a leech is snapshotted each sync, and its remediation pays once and can be undone as a
+    settlement corrected to zero (ADR-093).
+  - SPEC-094: the instruments run through one frame, weekly after the sync or on demand (ADR-094),
+    their reads keep the scope (ADR-095), the owner's note conventions are private configuration
+    (ADR-096), and Dark Fields finds content no template renders.
+  - SPEC-095: the Echo Test, the Price of a Day Off, Bench II and the Docket run weekly on the frame.
+  - SPEC-096: the Illusion Ledger and the Hanzi Dividend read the owner's note conventions.
+  - SPEC-097: Dead Air, the Fluency Trap, the Tilt Test and the Other Hand read how the owner
+    studies, and the Other Hand attributes a skip day's rows by its snapshot and window (ADR-097).
+  - SPEC-098: Divestment Day, the hand, the sabbatical clock and the runway price the owner's time;
+    the clock ports its two primitives into insights (ADR-098).
+  - SPEC-099: the Can-Do ladder unlocks a rung in the owner's own words after each sync, and records
+    each unlock once (ADR-099).
+- Every mutant of the Mini App is now killed by a Vitest test or recorded as one no test can observe: 1632 killed, 14 recorded and 1 unviable of 1647, none unexplained.
+- The owner's `/sync` is served by the sync job. The bot stores the request and touches a request
+  file, a path unit (`deck-streak-job@sync` (path unit)) starts the sync job on a change of that file, and
+  the job runs the owner's cycle, with the five-minute reuse window, before its scheduled run. The
+  owner is answered with the outcome, or told the sync is still running once the bounded wait ends.
+  A sync needs more memory than the bot's limit, so the bot no longer runs one.
+- A tmpfiles snippet creates the request directory, which only the service user owns and only the
+  bot unit may write.
+- Every study day is rolled up, scored and settled once, in order, after each sync: the day's
+  metrics, its per-course statistics, its card state and its five-pillar score and grade, with the
+  owner's courses kept as private configuration.
+- The bot's /score and the Mini App's score screen show the current study day's score, its grade
+  and its five pillars from one read, so the two never disagree; a retention the day does not have
+  is shown as absent, never as 0.
+- One notification router decides every celebration, nudge, digest and alert for the bot and the
+  Mini App. A kind the owner switched off, a key already delivered, a nudge during a lapse, quiet
+  hours (23:00 to 07:30 unless the owner sets others) and the comeback's cap each withhold with a
+  recorded reason, and one key is delivered at most once across both surfaces.
+- Celebrations raised in quiet hours, or held after a failed send, are delivered by the first flush
+  after a successful sync: two in full, and the rest named in one line. A celebration held past 720
+  minutes, or past its two retries, is named in that line and never sent.
+- The Mini App's in-app feed, served to the owner alone; and the router's decisions, deliveries,
+  held celebrations, feed and settings in the owner's export and erase.
+- The `reading_ready` notification kind, for the morning readings line.
+- The host scrub (SPEC-060, ADR-060). `deploy/host-scrub/inventory.py` reads a host with a read-only
+  allow list of commands, each under `nice` and `ionice -c3`, and counts a hard-linked file once;
+  `plan.py` lists each obsolete item with the rule and reason that selected it, the bytes it frees
+  and its digest; `apply.py` runs dry by default and deletes only what the owner approved, with every
+  check passing before the first deletion (and each deletion measuring its item again and stopping
+  the run there, earlier deletions kept), after checking the list's digest, the rules the inventory read, a boot-disk snapshot
+  taken after the inventory, a host clock that reads synchronised, an item that lies on another
+  device or is or holds a mount point or lies inside a bind mount or is inside or holds the directory one shows, the protected paths, links out of an item and every item's digest
+  again, and it stops the scrub when a health check turns red. It runs only read commands as health
+  checks, refuses a path it does not read canonically, and deletes nothing it did not check first: each
+  item is read again, through directories opened without following a link, just before it goes.
+  `docs/runbooks/host-scrub.md` is the order of work with its rollback, and
+  `deploy/host-scrub/rules.example.json` gives the rules' shape with neutral values.
+
+### Changed
+
+- The upload lane for iPhone and iPad builds keeps its credential as per-lane environment secrets,
+  by a ruling the owner signs (`docs/rulings/`). Six neutral role names may appear only in the
+  lane's two workflow files and the hardening test's admission table, never beside a value. No
+  workflow is built.
+- The Apple build (SPEC-344, ADR-355) now runs from one job body, `xcframework.yml`, on a pull
+  request into `dev` that changes an Apple or FFI path, the workspace manifest or the toolchain
+  pin, and on every release tag, through two small callers. It stays an advisory check, passes no
+  secret and holds a read-only token. The CI pin test admits a call job's own local call and
+  nothing else it refused before.
+- The settle census compiles the workspace under every combination of the features its members
+  declare, so a call to `settle` under a feature is refused for the call, and a member that declares
+  a feature is no longer refused for declaring it.
+- The charter's constraints 2, 4 and 14, the PRD's third non-goal and the design system's first two
+  principles each carry a note quoting the owner's app-surfaces ruling and naming the ADR that
+  carries it; their earlier text is kept.
+- The owner amends CHARTER items 2, 4 and 14, the PRD's third non-goal and DESIGN_SYSTEM's first
+  two principles for the web and iPhone and iPad clients, by a ruling the owner signs
+  (`docs/rulings/`). One router still carries every celebration and nudge, the private copy stays
+  read-only for the game, and the service still answers one owner. The amended files keep their
+  text until their own deliveries; no surface is built.
+- The owner's own taps in the study client are exempt from ADR-301's never-list (a), by a ruling
+  the owner signs (`docs/rulings/`). The exemption covers the owner's own gestures only; every
+  other write still goes through a declared write class. No write path is built.
+- The API's processor ceiling gives the MCP server its share; it stays a ceiling, not a
+  reservation (ADR-332).
+- The settle census refuses progression's own operation (#445, ADR-197 round 9): a wrapper, a
+  function pointer or a generic in progression's own code that calls `settle` is refused by name
+  unless progression admits its file, which it admits none; its imports and re-exports stay
+  accepted and are followed to their callers as before.
+- The recompute registers Road to C2's progress step and its band badge step, so a band-up is
+  stored, paid and celebrated in production, once ever, even after its milestone is erased.
+- The persona engine's band adapter reads a course's live band from its stored progress.
+- The box-pack runner now removes the temporary cards directory it created when it exits, whether
+  the verdict passed, failed or the run stopped on an error (#531). A `BOX_PACKS_OUT` directory is
+  never removed, and `BOX_PACKS_KEEP=1` keeps the runner's own directory and prints its path.
+- Both scans of the workflow tests that look for `cargo mutants` now read each workflow through the
+  one finder the dispatch-shard guard uses, so a command spelled with a toolchain selector, the
+  hyphenated binary, repeated blanks, an option before the subcommand or at the end of a line is
+  found by both. A planted workflow of each spelling must be found by each scan.
+- A test double that cannot plant its seam now exits non-zero and names the failure, and runs
+  nothing after it, where it used to run the real program. A text-only census lists each such
+  fallback it reaches in the top-level `*.py` files of `scripts/tests/`, within 12 lines of the
+  handler.
+- ADR-301 and ADR-089 gain dated notes that state the skip day's rung as a ceiling, say what is
+  decided and what is open for the skip day's change budget, dwell and band, and say how
+  ADR-301's backup reads beside ADR-064. Every note is an insertion; no earlier word changed.
+- `config/formal.json` sets `tlc_slot.capacity` to 4, equal to the formal checker's own setting, and keeps `wait_seconds` at 1800, because the checker's slot directory is shared and it refuses a settings file whose capacity differs from its own; SPEC-295 and ADR-295 are amended, the settings test pins the value and a mutation row holds it (#516).
+- DeckStreak writes to the collection only through declared write classes, each with its own ADR
+  in ADR-089's form (ADR-301, #514). CHARTER constraint 4, ADR-089's guardrails (i) to (iv) and
+  ADR-037's conditions (a) and (b) keep their text and each gains a dated note naming ADR-301. The
+  ADR states the never-list, the backup each batch takes first, the promotion ladder from advisory
+  to approval to autonomous, the single writer and the objective. The skip day is the first
+  declared class. No write path is built.
+- `config/formal.json` names the formal checker's toolchain by its identity, so a TLA+ or Lean check uses the checker's own tool pin, refuses a checker built with another pin as drift, and no pin file is committed; SPEC-295 and ADR-295 are amended and the settings test pins the field, refuses a malformed digest and a tree with two toolchain sources, every shape a tree can commit at the pin path, a link included, is read as the tree stores it, and every refusal of its reader, a link at any component of its path, an absent file and each way the parser refuses the bytes, fails by assertion (#504).
+- The deploy tests' host stand-in runs only the commands the tests use and refuses any other by name; every deploy-script call goes through one helper that refuses an environment that does not name the elevation setting (#502).
+- The mutation verdict step is now tested with each of its judges and its legs check failing
+  alone, under the shell the workflow resolves for the step, so removing any one fold of an exit
+  into the step's status, or piping a command so its exit is lost, turns a test red.
+- The harness that runs the verdict step refuses, by name, a `shell:` or `defaults:` it cannot read
+  and any command line it cannot drive, instead of treating them as absent or as safe.
+- A release tag's runs now queue in the tag's group, so a third run of one tag waits behind the
+  running one and no longer replaces the waiting second. A running release is still never cancelled
+  and two runs of one tag still never run at once; GitHub keeps up to a hundred waiting runs of one
+  tag and cancels any beyond them.
+- The check that holds a release workflow to its queue now reads every workflow as GitHub's parser
+  does: a quoted false is text and a tab in the indentation is refused. It reads only the YAML
+  forms it names and refuses every other form by its line, so a form YAML reads otherwise, or
+  refuses, never passes as text. Every value a release
+  workflow holds, down to a job's own keys, is one the parser defines there, and every workflow it
+  calls is one of this repository's, held to the same queue. Its group reads the tag's ref alone,
+  its cancellation is absent or the boolean false, and no other workflow's or job's block can render
+  as its group.
+- In every test module that imports the loader's module at any depth, and in `_support.py`, the
+  tests read each workflow file through one loader, as its bytes, and a census taken when the tests run
+  refuses any other read of a file or a process's output there, and any import by a computed name in any
+  test module, unless it is listed with its reason.
+- A mutation leg with nothing to examine is no longer started: `mutation-rust` runs only when the plan's listing holds a mutant, and `mutation-rows` only when the plan selects a row or its retirement check is due. The verdict judges each skipped leg against the listing and refuses, by name, a listed leg that is missing and any examined sum that differs from the listing; `ci` admits a skip from those two legs alone (#435).
+- Nine diagrams in the design documents that showed an error instead of a picture now render, with
+  every label unchanged. A check in the Mini App's test suite now parses every diagram under the
+  documents folder and names any block that does not parse.
+- The two engine legs of the gate now build only the two test targets they run, in place of every
+  test target of the workspace. They still build under the whole workspace's package scope, so no
+  dependency is rebuilt, and the tests each slice runs are the same as before. The target flags are
+  derived from the one definition of the engine set, so they cannot drift from it.
+- A refused owner sync names its reason by a closed set of variants at the point it is produced, so a
+  reason outside the set fails to compile; the stored codes are unchanged and a test over the
+  variants replaces the source scan.
+- Each refusal site of the owner's sync is pinned by a test of its own, so a site that stops
+  refusing fails a test.
+- Every step whose failure refuses the owner's sync is driven through the sync by its own fault, and
+  its refusal is logged under the step's name, so a step whose failure is refused by another code,
+  answered, or logged as another step's fails a test.
+- The workflow guards now read every suffix, spelling and word: each scan of the workflows reads
+  both `.yml` and `.yaml` files (#393), the verdict test's judge-line reader stops at redirections
+  and substitutions, inside double quotes too (#394), and the dispatch-shard guard finds
+  `cargo +<toolchain> mutants`, the `cargo-mutants mutants` binary form, a cargo flag's separate
+  value and a second command on a line, because it reads each `run:` value as YAML and bash read
+  it, or refuses it (#395, #447). SPEC-038, SPEC-126 and SPEC-129 each take an insert-only
+  amendment against dev.
+- The same guard refuses a computed word before the cargo bounds that bash could expand to exactly
+  `--` (a word with an unquoted expansion, or an expansion and no literal besides `-`), and the
+  weekly mutation sweep names its package in literal words, pinned by a test to select what it
+  did before (#395, #447).
+- The same guard reads the memory scope's wrapper (`python3 scripts/memory_scope.py --report <dir>
+  -- ...`) through to the command after its `--`, a test pins that the wrapper runs exactly those
+  words, and the weekly sweep's mutation rows name each literal branch, so the census holds again
+  (#395, #447).
+- The verdict test now reads each `mutation-verdict.py judge` command as the shell splits it: quotes
+  removed, a `$` in single quotes or escaped kept apart from an expansion, continuations joined,
+  `--flag=value` split, and the command ended at a control operator or a comment. An equivalent spelling passes and every wrong path is still refused (#374).
+  SPEC-126 takes an insert-only amendment that adds two checks.
+- A scheduled job now saves the Rust build cache in the default branch's scope, so a run on any ref can restore it (#370).
+- A pull request's superseded run of the changelog and engine-measure workflows is now cancelled
+  when a newer push arrives, as the main gate's already was. No push, tag, schedule or dispatch run
+  is cancelled while it runs, and the newest run reports the same checks as before. The release
+  workflow's runs of one tag still queue under GitHub's one pending run per group, as before.
+- A mutation run for one package now sizes its number of parallel legs from that package's own
+  list of mutants, so a small package no longer fans out to thirty-two legs. The same mutants run
+  with the same limits, and the whole-tree and scheduled runs keep thirty-two legs.
+  A guard now pins the bounds of every mutation command line in the workflows, reading each bound as
+  a whole value and every spelling of the command.
+- The verdict test now reads each `mutation-verdict.py judge` command line by its `--class` and
+  asserts the flags and paths of the `rust` and `oracle` lines separately, so a flag moved between
+  the two lines or dropped from one no longer passes (#358). SPEC-126 takes an insert-only
+  amendment that restates A4 and corrects two of its statements.
+- The release runbook declares its release model, `Release model: no-back-merge (ADR-034)`, under its section on never merging back into `dev` (SPEC-034 R9).
+- Development and test builds keep line tables only in the workspace's crates and no debuginfo in
+  dependencies, which makes the build directory several times smaller with the same test results and
+  backtraces that still name each file and line.
+- The sync login is loaded by the sync job alone, through a drop-in for its instance; the liveness
+  and maintenance instances no longer request it.
+- The box-run driver's proxy scan now admits an expected red row that names an open issue, as a pack's entry does. The row is counted, not failed, and the expectation goes stale when its issue closes or its row stops reading red; any other red row still fails the run.
+- Every mutant of the privacy crate is now killed by a test: the words of an export mismatch
+  (`ExportProblem`'s display form), the only mutant the weekly battery left unexplained, are
+  pinned by a test.
+- The export's format name, `deckstreak.export.v1`, is pinned by a test in the privacy crate and by row S05780, since the weekly battery never mutates a constant.
+- The agent crate meets SPEC-057: a sweep of every cargo-mutants mutant of `deck-streak-agent`
+  finds each one killed by an existing test or unviable, so the crate needs no equivalence
+  record. Two hand-proved rows pin the roster setting's name and the shape it must have, since
+  cargo-mutants never mutates a constant, and a test now holds its row of the campaign table to
+  that reading.
+- Every mutant of the coordination crate is now killed by a test or recorded as equivalent with
+  the argument that no test could observe it: the text of a reason, the debug line of the
+  obligations registry and the half-day shift of the signed skew are pinned by tests, and two
+  mutants that leave the program unchanged are recorded.
+- Every mutant of the api crate is now killed by a test: the listen address's display form and the
+  owner access's debug form, the only two the weekly battery left unexplained, are pinned by tests.
+- The AI route will reach the proxy through the loopback forward the private rail provides
+  (ADR-068), and the repository ships no tunnel unit, no tunnel account's key line, no sshd
+  drop-in and no second forward. The planned SPEC-063 is amended to that shape, with one new
+  criterion (A7) that refuses a planted one of each, and it records its build order: after
+  SPEC-043 and SPEC-053.
+- DeckStreak's memory share is 704 MiB, to hold the replicator's ceiling.
+- Every mutant of the daemon crate is now killed by a test or recorded as equivalent with the
+  argument that no test could observe it: the notifier's enabled state and its once-per-episode
+  warning, the abstract-socket send, the watchdog warning's millisecond figures and the role
+  name that alone runs the `data` role are pinned by tests.
+- Every mutant of the ingest crate is now killed by a test or recorded as equivalent with the
+  argument that no test could observe it: the retry reopens and their waits, the jitter draws, the
+  engine's error mapping, the run record's reads, the settings' host check and cleartext warning,
+  the gate's reason names and the declared reset row are pinned by tests.
+- Every mutant of `deck-streak-kernel` is now killed by a test: seventeen the weekly mutation battery found surviving (the redactor's registry count, debug and flush, the study-day parser's signed years, the offset bounds, the credential loader's read errors, the verdict's accessors, and the pools' close) are each observed by a test that asserts the behaviour. No production code changed and no mutant is recorded equivalent.
+- The bot unit no longer loads the sync login. Requests during a running sync start at most one more
+  run, and the job table keeps its one scheduled sync per study day.
+- The bot flushes its notification router when it observes the owner's sync succeed, as it did when it
+  ran the sync itself.
+- A role refuses to start when a credential it loads is empty, naming the credential as it does for
+  a missing one, so the unit fails and its alert quotes the refusal. The sync job records a run
+  whose credential is empty as missing its credentials, as it does for a missing one. The alert
+  unit refuses to page with an empty credential, before any request, and stays failed.
+- The skip day will write its reschedule back to Anki once SPEC-083 is built, by the owner's
+  decision (ADR-089). ADR-037's no-upload condition is superseded for the skip-day path only, and
+  every other path keeps the proof that it records zero uploads. CHARTER constraint 4 stands as
+  written.
+  - SPEC-083's delivery will build the write and its exact undo, with an acceptance criterion for
+    each of the owner's guardrails: incremental syncs only, with any full-sync demand aborting; the
+    owner's confirm only; the cards previewed before the write; their prior state recorded first;
+    and an undo that never writes a card whose change reached the sync server before it starts, and lists a card reviewed on another client while it runs. Each will be proven against the recording fake sync server, once
+    a control has proven that the recorder sees a planted upload. A review or another change on a device that syncs only after a take or an undo can still be lost to it, unlisted. The service pins its zone as a fixed rule, a POSIX rule that names no zone file, in its environment, and refuses a skip whose engine day is not the study day, whose configured UTC offset is missing or differs from the process's zone, or whose process zone observes daylight saving or is not pinned.
+
+  - ADR-083 records the option the owner took and how the write will be made, on a working copy
+    discarded after each push. ADR-037, SPEC-001 and SPEC-022 gain insert-only amendments, and the
+    skip day's schematics show the write and the undo's compare.
+- Four features the predecessor left inert are revived as feature issues: the smoke-bomb spend
+  (#279) and the skip-day switch with its monthly bridge cap (#280) in W5, the collection atlas as a
+  data series the agent reads (#282) in W6, and the per-source XP re-pricing (#281) in W7.
+
+### Fixed
+
+- The Caddy install serves the site whether the Caddyfile is in the Caddy directory or set apart,
+  and checks its candidate where the reload reads the Caddyfile.
+- Every CI job that proves mutation rows now runs `cargo fetch --locked` after its cache restore and
+  before `prove` (#606): a cache restored by key prefix can lack a package the current `Cargo.lock`
+  adds, and the rows runner's offline census then read every row VOID. A test over the workflow
+  files fails when a proving job lacks the step, orders it outside that window or lets it swallow
+  its exit code (SPEC-332, ADR-333).
+- The three table censuses no longer refuse files that hold one unrelated character (SPEC-331,
+  #604). A literal piece of one character leaves the workspace-wide pool and is judged only in a
+  file's reach: the file's own pieces, the files it includes, and the `const` and `static` items
+  it or an included file names, as a word or as a format placeholder. Pieces of two or more
+  characters are pooled as before, so every spelling SPEC-324 refuses stays refused, and so does
+  a join of a one-character piece held in the joining file, a file it includes, or an item it names. A
+  character carried to its join only through a function's return value or argument is no longer
+  refused; that class is disclosed, pinned by a test, and tracked under #585. A character reached
+  only through a second step (a const naming another const, a renamed re-export, or an include
+  inside a named item's initialiser) is not refused either. Rows `S33100` to
+  `S33107` pin the reach, and a Lean entry proves that the new refusals are always within the old
+  ones and that a lone character is never refused.
+- A pull request that changes `deck-streak-progression` gets a mutation verdict again (SPEC-327,
+  ADR-328). Every `cargo mutants` command now runs under `--timeout 1200 --build-timeout 600`,
+  admitted by the owner's signed ruling: the settle census's two tests need about 788 s, and at
+  300 s every shard's unmutated baseline timed out and the verdict read VOID. The shard sizer
+  charges the census 788 s for each progression mutant and once in the baseline of a plan that
+  lists one, so each shard stays within its one-hour projection. The weekly battery keeps its 32
+  shards until a weekly run under the new budget re-sizes it (#597).
+- The streak-break cap now applies. Every celebration reads the language streak as stored before
+  it is routed: each award, band-up and landmark through the one `Celebrate` door, the level-up and
+  the relight. Every flush re-caps each held celebration with the stored streak at its own study
+  day: the scheduled held flush, the flush after a sync, and the bot's flush after the owner's
+  `/sync`. A celebration on the day the streak broke therefore renders at most at the policy's cap,
+  T1. A streak that cannot be read routes and flushes nothing: the award stays owed, the relight
+  stays due and the held queue keeps its holds (SPEC-326, ADR-327, #572).
+- The daemon library's `wiring::tests` no longer fail on default parallel threads with `the
+  database opens: Database(Io(Os { code: 11, kind: WouldBlock ... }))` (issue #577). The tests
+  never shared a database path or a lock file: each multi-thread test built a runtime of one worker
+  per core of the host, libtest ran them at once, and the SQLite driver's connection thread was
+  refused when the process's task budget ran out. Each multi-thread test in the module now runs on
+  two workers, a test reads that size back from the runtime, and a census refuses any multi-thread
+  attribute in the file that drops the bound (SPEC-325, ADR-326).
+- The one-router census now follows what the compiler pulls in (#297). A file brought in by
+  `include!`, `include_str!`, `include_bytes!` or `#[path]` is read under its own path with every
+  rule of that path, and one the census cannot follow is refused. The walker reads SQL, so only
+  the router's two migrations may name the feed and the held queue, and it refuses a symlink in a
+  place it walks. A systemd unit or drop-in that runs a test file is refused, and so is a command
+  reply visible outside the handler's module. Rows `S04182` to `S04194` pin each rule.
+- The notification-policy check no longer reads a command reply as a notification. The policy file
+  declares the replies' duty in a new top-level `replies` list, the router's loader types it and
+  refuses at start an entry that names a declared kind, and a test holds every committed golden
+  message to being a notification or a declared reply.
+- Every recompute cycle, the scheduled sync's and the owner's, now holds a notification router
+  (SPEC-319, #571; ADR-319). Before it, no production cycle held one, so no badge, record, level-up
+  or relight celebration was ever raised. The cycle's router has no bot transport and the sync job
+  still loads no bot credential: a celebration it routes outside the quiet window is held on the
+  queue, and the bot's flush after the owner's `/sync` is answered or the 07:36 held flush sends it.
+- The celebrations' switch is seeded off at the job's start where no value is stored (#402 items 8
+  and 11), so every celebration is withheld and marked answered until the cutover checklist turns
+  it on; a stored value is never overwritten.
+- A model of the held flush now covers a hold outside the quiet window, with a witness for a hold
+  no later flush reaches, and mutation rows S31900 to S31905 hold the holding arm, the router each
+  cycle attaches and the switch's seed.
+- SPEC-024's A18 row no longer states a routed-capture count that goes stale with every delivery
+  that routes a capture: the census test's own assertion holds it, a docs test refuses a count in
+  the row, and an insert-only amendment (section 13) records why.
+- SPEC-076 and SPEC-094 no longer read "planned" in their Status: each names the delivery that moved
+  it out of `docs/specs/planned/` (#446, #403), and SPEC-002 gains A11, which refuses a judged SPEC
+  that reads planned.
+- A staged duty run now guards each folder, move and note against the journal folders when it is
+  applied: an operation that would reach a journal folder through a link the vault gained after
+  the run was checked stops the run there, and the operations before it stay applied.
+- With no vault configured, the daemon's log says no capture is saved, which holds for the bot's
+  media as well as the Mini App's quick capture.
+- Two recomputes that overlap settle each closed study day once, in turn (SPEC-071, issue #311).
+  The scheduled cycle and the owner's recompute could both read the settle cursor before either
+  settled, and both settle the same closed day. Each owed day's write now reads the cursor again
+  inside its own transaction and settles only the day that cursor owes, the day after it or, with
+  none yet, the run's own day; a write for any other day commits nothing and the run goes on from
+  the owed day (ADR-313). SPEC-071 also states which days before the first settled day have a row:
+  a study day of the window or a recompute's current day, and no other.
+- The public scrub's owned email rule now passes a systemd instance unit's path (a unit type, then
+  `/`, `.d/`, `.wants/`, `.requires/` or `.upholds/`) and still finds a real address in every
+  context. The owned copy equals its source again over every field it keeps (SPEC-056 section 9).
+- The workflow scan of `test_mutation_workflows.py` follows a standalone `--` only after the
+  dispatch-shard guard's own wrapper form. It reads that form from the guard's text with `ast` and
+  never imports the guard, so `cargo mutants` after `echo`, `env`, `timeout`, `git` or another
+  script's `--` is refused, as the guard refuses it (#533). Two named limits stay, and each is
+  pinned by a test: an option the guard would refuse, which the scan over-finds, and a `--` given as
+  an option's value.
+- The census of stand-ins that fall back to a real program reads the syntax tree. It parses every
+  `*.py` file under `scripts/tests/` and each string constant one level deep, and resolves calls
+  through import aliases. It reaches the handler, the `finally` block and every later statement of
+  the enclosing blocks, with no line window and no `plant` word. The finder's copy check compares
+  normalised bodies beside the name match, and the tree reads exactly its one ruled floor (#532).
+  SPEC-129 takes an insert-only amendment against dev, decided by ADR-312, and mutation rows
+  S12913 to S12937 pin the new arms.
+- The setting-shape guard now reads an implementation from rustc's tokens: a raw identifier, a
+  `use ... as` alias (followed through a chain), an attribute or a second item on the line are read,
+  and an implementation a macro writes, one whose trait path is a repetition or whose `impl` keyword
+  is passed in among them, refuses its file (#436). A pin counts only in an item rustc compiles
+  under `--cfg test`, in the implementation's own test module, in a file under `tests/` that cargo
+  and rustc compile (a `tests/<name>.rs` or `tests/<dir>/main.rs` root, or a module a compiled file
+  declares under attributes the evaluator keeps) and in an out-of-line test module's file, judged
+  by one three-valued `cfg` evaluator (#449). A crate file that passes an attribute into a macro's
+  module, has a macro name a module's `path`, passes a `cfg(test)` module through an invocation,
+  declares an out-of-line module in a block, holds `include!`, imports `include` under any name or
+  takes a macro's name from a macro is refused by name (#535). A macro module the evaluator proves
+  is no test-only module is read, a module is read from the directory the walk from the crate roots
+  gives it, and a `cfg_attr` path below an inline module is read as its predicate chooses under test
+  (#536); a macro module under `cfg(any(test, feature = "..."))` stays refused. SPEC-192 section
+  16, ADR-310, rows S19315 to S19436.
+- The log-capture helper names a missing floor apart from a nested capture (SPEC-024, issue
+  #522). It counts the captures it holds on each thread: a capture made while that count is above
+  0 is refused as nested, with the same message as before, and a capture made while it is 0 where
+  the floor is not the thread's default is refused with a message naming the missing floor. The
+  refusal's doc now says its reading of the default holds outside a dispatcher's own call, and
+  states when the default reads as none inside one (issue #511, wording 3).
+- The open lapse's count of silent days is a named step, `next_silent_count`, that saturates at
+  `u32::MAX`, and a test pins its exact values at and below that bound, so replacing the step with a
+  wrapping add is now caught (#534).
+- A change to a guard script's docstrings alone now reads a named `docstring-only` case in the mutation plan and verdict, never VOID: the plan compares each changed script's syntax tree with its base's once docstrings are set aside, and any other difference, or a script added, deleted, not UTF-8 or that does not parse, keeps the `scripts` class applying (#485, ADR-307).
+- The mutation verdict script's description of its plan now names the two jobs whose skip the final check admits, and every step output the plan writes (#455).
+- The settings-shape guard now reads a `mod tests;` declared inside an inline module from the file
+  rustc reads, or from the `#[path]` it names, with the inner attributes that open that file as the
+  module's own (#433). It refuses a crate file whose `macro_rules!` body declares a `cfg(test)`
+  module, by an attribute before the `mod`, before a `$( ... )` repetition or inside its braces,
+  naming the file (#441). It refuses a module file that any visible declaration compiles without
+  `test`, reads a file that only test reaches through its own inner attributes or a
+  `cfg_attr(test, path = ...)`, and takes a declaration whose file it cannot name to name every
+  file (#458). SPEC-192 sections 12 to 15, ADR-304, rows S19305 to S19314.
+- The predecessor's table register in `docs/CONTEXT-MAP.md` no longer lists `xp_settlement`, a
+  DeckStreak-only table, or a second `buffs` row (issue #420): it holds 64 unique names, equal to
+  the number its prose states, and a docs test counts it. "DeckStreak's own tables" is unchanged.
+- SPEC-024 gains an insert-only amendment stating the log-capture killer's own exemption from its
+  census, and its red-first record names the nested-capture test and carries the unfiltered
+  passed-test count (issue #511).
+- Held notifications are now flushed by a scheduled step of their own after the quiet window ends,
+  not only after a sync (#291). A flush never sends one held item twice across two flushers.
+- The mutation runner's `bin` killer kind now reads a crate's source files, test targets and
+  binaries as the compiler and cargo define them: a `mod` with `#[path]` no longer contributes a
+  stray default file, a `[[test]]` target named `bin` is refused at any path, and the refusal's
+  binary count is cargo's own. Paths through `..` and absolute paths, entries whose names start
+  with a dot, and a manifest with no `edition` key are read as cargo reads them, and a `mod`
+  inside a macro invocation is refused by name. What the reader cannot decide is refused by name.
+  A generated population judged by `cargo metadata` and `rustc` holds the rule (#405). SPEC-039
+  takes an insert-only amendment (ADR-299).
+- The Python mutation verdict now counts a shard's work only from the report bound to that
+  shard: the report's own shard field must equal the slot it sits in, and the mutants it
+  examined must equal the plan's listing for that shard. A copied, swapped, trimmed or padded
+  report, or one with a missing or malformed shard field, is refused by name (#438).
+- The same verdict reads a shard's report through one reader that the binding and the judge
+  share: a container of another type, an outcome the runner does not produce, or a mutant filed
+  under a path the class does not read is refused by name rather than crashing or passing (#438).
+- The Python mutation lane runs the six test modules of the verdict script in a cheaper order, the
+  module that kills most mutants first; the same modules and the same mutants run, so a slow shard
+  stops costing about as long as the longest job (#438).
+- The shard-report tests plant a dropped, a constant and a swapped value in every interpolated field
+  of every asserted message, so a drift tail with its counts swapped or fixed is refused (#438).
+- The formal settings reader's tests plant every value type each kind refuses at every field of the kind, the object kind at every object level and each element of a map or a list included, an integral float such as `20.0` among them, and assert that each refusal names its field and its kind. A second test admits each document the kinds admit. Nine mutation rows pin the reader's integer and map arms (#488).
+- A test's log capture no longer loses a line that another thread reached first (SPEC-024,
+  issue #461). Every capturing test goes through one helper that first installs a floor as the
+  global default, so a thread holding no capture answers "sometimes" for a callsite it reaches after
+  that. A test reads every source file under the crates and tools, and those they bring in, and fails on any name from its fixed lists
+  that installs or registers outside the helper, and the helper refuses a capture nested inside
+  another on one thread.
+- The comment above the mutation plan in the CI workflow now says which two legs can be not
+  started and that `ci` fails on any other skipped need. SPEC-290 and ADR-290 carry an amendment
+  naming the pull requests, not the issues, that the two recorded runs belong to.
+- The one-router census now refuses, in the bot crate's transport and the bot's other sources, a
+  hand-built Bot API send URL that names the bot's base URL, and, by the mention of a name it holds, a
+  request whose Bot API method it cannot read (a generic request, the client's own HTTP client or the
+  HTTP crate) outside its named site (SPEC-041, issue #429).
+- A use of one of the four reqwest paths in `clippy.toml` is now named by the compiler's resolved
+  path: the workspace's clippy stage refuses a use of the client type or of `get`, `new` and
+  `builder` under any name a source binds it to, outside the bot transport's one annotated site, and
+  a test refuses any other suppression of the rule (SPEC-041 A18, issue #429). A request over a raw
+  socket or through another HTTP crate is not read.
+- A share caption over the Bot API limit of 1,024 UTF-16 units is now refused before any Bot API
+  call, by the same bound function the photo path uses (SPEC-132, issue #430).
+- The mutation runner no longer reports a missing tool as a surviving mutant (SPEC-039 section 30,
+  ADR-291, issue #431). When a process it must run (`git`, `cargo`, the interpreter, `bash` or
+  `sh`) is absent from `PATH`, not executable, or a directory, every verb now ends with one line
+  naming the tool and exit 2, never a traceback and never exit 1, and a mutant that was installed
+  is restored byte for byte. A shell parser that cannot be run now refuses the proof the same way,
+  where it used to leave the mutant VOID. The spawn executes the file the runner judged, so a file the kernel refuses is one refusal and
+  never a run of a later copy on `PATH`, and the row census refuses a name that reaches what it has
+  not read.
+- `deploy.sh caddy-install` now undoes every write it made and prints its refusal on every early exit; `caddy-remove` checks the same four paths as the install's guard, and both scripts check every directory they write or undo, the Caddy directory and the live Caddyfile's own, before they write; either Caddy step refuses any `DECKSTREAK_DEPLOY_` entry of its environment it does not list, whatever follows the prefix, and a setting it receives twice or without a value, before it reads or writes anything, unless a name outside the prefix stops it first, an entry that can already run any code in the step (#423, #424).
+- The settle census (SPEC-072 A12, issue 397) is now the compiler. Progression's `settle` carries a
+  deprecation under a cfg that progression's build script sets only for the census, and the census
+  has cargo check every target of every workspace package in four passes (debug assertions on and
+  off in every package, each with the unwind and the abort panic strategy), and again over libraries
+  and binaries alone when a member has a dev-dependency, with the deprecation forced to warn. So
+  rustc names every caller outside progression however it reaches `settle`: through a re-export, an
+  alias, a glob, a macro, an `include!`, a manifest's rename, a test, a bench, an example or a build
+  script. A caller outside coordination is refused by file, and coordination's callers keep the
+  owner's-correction rule. What the compiler is not asked to compile (a member's feature, a
+  proc-macro member, a package outside the workspace, a cargo configuration) is refused by name
+  (ADR-197).
+
+- The census now reads the resolve graph (`cargo metadata --locked --offline`) and refuses, by name,
+  every package that has a build script and can name `settle`: the package that defines it, or one
+  that depends on it by a normal, a build or a dev edge. Progression's own script is admitted at
+  one pinned SHA-256, and a graph cargo cannot give is a refusal. A build script's cfg in a package
+  that cannot name `settle`, read by a macro that package exports, and an `include!` of a
+  recompute file from outside the folder remain disclosed by kind (SPEC-072 section 12, ADR-197).
+
+- The census's verdict depends only on the tree it judges. It finds progression by the path of its
+  manifest, never by a package's name, and refuses by name a graph where that member is absent or
+  ambiguous, where its package is renamed, where another package carries its name, or where it has
+  no build script or more than one. Each census compiles in an empty target of its own, which no CI
+  cache serves, with an environment it names; a cargo configuration above the tree or in cargo's
+  home, and a member's code reading beyond the tree, are refused by name. Progression's own code
+  reading the census's cfg, which the pin does not cover, stays disclosed by kind (SPEC-072 section
+  14, ADR-197).
+- The mutation-row runner now ends a killer's process group when it receives SIGTERM, to its pid or
+  its whole group, as it already did on an interrupt (SPEC-025 sections 10 and 11, issue 409). A
+  timed-out killer returns at its bound even when a descendant outside the group holds its output
+  pipes, and every path closes both pipes. Rows `S02506` to `S02508` pin the three edges.
+- The setting-shape guard's own tests now fail when its source reader is rewritten (nested or
+  block comments, raw strings, character literals, escapes, the implementation's own constant, or other
+  source files read whole), and the guard reads an out-of-line `#[cfg(test)] mod` file and ignores an
+  implementation named inside a block comment.
+- The agent's tests that pin its run-record prune and its verdict's must-use attribute now read the
+  source as Rust's tokens, so a copy of what they look for inside a comment or any literal is not
+  code, a second delete statement a count reads is refused, and a source that does not lex is refused; each is
+  shown red before and green after.
+- `deploy.sh caddy-remove` now refuses in words of its own when its candidate Caddyfile cannot be
+  written, and both of its refusals print `deploy: refused` even when the candidate file is absent.
+- `mutation_rows.py retired` reads the retirement list through the same parser as the band files,
+  so a key repeated in `scripts/mutation-rows.retired.json`, at its top or inside one entry, is
+  refused by name with exit 2 instead of keeping the last value (SPEC-122, #385).
+- A lifecycle test that fails no longer leaves its daemon running, and a mutation row's killer that
+  outruns its bound is ended with everything it started (issue 366).
+- The agent's output gate now refuses, when it is built, an empty list of blocking classes or a missing input class for a duty that reads inputs, with a named error.
+- The daily prune of the agent's run record now reads an index on its date column, and a test pins that the verdict type stays must-use.
+- `deploy.sh caddy-remove` now prints `deploy: refused` when the adapted configuration is refused, as it
+  already did when the validation was refused, so the operator can tell which step stopped.
+- The mutation verdict's `plan` refuses a band file that repeats a key with the one-line refusal
+  and exit 1 instead of a traceback, and the equivalence records under
+  `scripts/mutation-equivalent.d/` are read by the same parser, so a key repeated at any depth is
+  refused by name instead of keeping the last value: the census reports it as a finding, and `judge`
+  and `table` as a failure, while `survivors` reads the records only to excuse a survivor and names
+  no record problem (SPEC-122, #345).
+- Every setting's stated shape (the words a refused value is answered with) is now pinned by a test
+  that spells it, so rewording one fails the build; a guard refuses a new setting (generic or macro-written
+  included; comments of both forms and code after a test module do not count as a spelling) whose shape no test of its crate and no row on its own file spells, and one whose
+  literal two settings of a crate share without a row on each file.
+- A Caddy reload that fails during `deploy.sh caddy-install` or `caddy-remove` now puts the previous site block and Caddyfile back, reloads them and exits non-zero naming the failed reload, so the files on the host match the configuration Caddy is running.
+- The mutation verdict no longer reads `VOID no plan` on a run where only the plan had uploaded:
+  it downloads each report by name, so its layout does not depend on how many jobs finished first.
+- A mutation-row band file that repeats a key in one object is refused at every read, in the
+  working tree and in a revision, naming the file and the key (SPEC-122, ADR-122). A clean git
+  merge of two added tables under one key no longer drops rows silently; `retired` exits 2 on a
+  refusal instead of a traceback.
+- The required `ci` check is always the pull request's own run: a push to `dev` or `main` reports the aggregate job as `ci (push)` (SPEC-034 R8).
+- A hand-proved mutation row whose mutant is a shell script that does not parse now reads VOID,
+  never KILLED: the runner parse-checks the mutant with `bash -n` for a bash script and `sh -n`
+  otherwise, before it runs the row's killer.
+
+### Security
+
+- Every service that does not use the host's identity is denied the host's identity endpoint, and
+  the services that use it are a closed list a test holds.
+- The edge serves the sync route under its one spelling and answers every other spelling of it
+  404 (SPEC-351, ADR-362). A test feeds the ban filter each spelling of a refused sync login
+  that the edge serves, taken from the edge's own rule, and the filter counts every one.
+- A card face renders on the web only in a sandboxed `srcdoc` frame that runs no script, carries
+  its own policy admitting `data:` images, media and fonts alone, and holds none of the card's
+  `link`, `meta`, `base` or `template` elements; a card whose markup would escape that document is
+  refused (SPEC-341, ADR-352). The page policy gains `frame-src 'none'`, so a card frame cannot
+  navigate itself (SEC01-F13).
+- A planted suite, the `card-sandbox` job, opens one planted card for every channel the
+  schematic names in Chromium and WebKit: each reaches a listener the test owns from a reference
+  frame with every layer off, and nothing from the shipped frame (SEC01-F14 and SEC01-F15, web).
+- The formal check's trust root holds the owner's signing key, so a change the ratchet refuses as a weakening can be admitted only by a ruling the owner signs; the owner's ruling names the key by its fingerprint.
+
 ## [0.2.0] - 2026-09-28
 
 ### Added
@@ -527,6 +1689,7 @@ process compiles the fragments into a new version section here.
 - The public scrub reads every blob of the history a change publishes. It refuses committed
   binaries and oversize files, and a shallow checkout reads VOID instead of green (SPEC-033).
 
-[Unreleased]: https://github.com/RexRenatus/deck-streak/compare/v0.2.0...dev
+[Unreleased]: https://github.com/RexRenatus/deck-streak/compare/v0.3.0...dev
+[0.3.0]: https://github.com/RexRenatus/deck-streak/releases/tag/v0.3.0
 [0.2.0]: https://github.com/RexRenatus/deck-streak/releases/tag/v0.2.0
 [0.1.0]: https://github.com/RexRenatus/deck-streak/releases/tag/v0.1.0
