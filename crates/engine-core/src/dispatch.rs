@@ -11,6 +11,7 @@ use prost::Message;
 
 use crate::face::{self, Face, Side};
 use crate::full_sync::{IdSets, Unsynced};
+use crate::gesture::{GestureRefusal, OwnerGesture};
 use crate::login_guard;
 use crate::media::Reader;
 use crate::table::{Decision, Transport, decide};
@@ -126,6 +127,27 @@ impl Dispatcher {
             Decision::NeedsGesture => Err(Refusal::NeedsGesture { service, method }),
             Decision::NotAllowed => Err(Refusal::NotAllowed { service, method }),
         }
+    }
+
+    /// Runs the one exempt write an owner's gesture names, consuming the gesture (SPEC-345 R8).
+    /// The request is decoded as the write's own message and checked against the gesture's one
+    /// target, and the engine runs the message the check passed, encoded again, never the
+    /// caller's bytes.
+    ///
+    /// # Errors
+    ///
+    /// [`GestureRefusal::NotTheTarget`] when the request names other than the gesture's target,
+    /// [`GestureRefusal::Undecodable`] when it is not the write's message, and
+    /// [`GestureRefusal::Engine`] when the engine refuses the checked write.
+    pub fn run_exempt(
+        &self,
+        gesture: OwnerGesture,
+        input: &[u8],
+    ) -> Result<Vec<u8>, GestureRefusal> {
+        let (service, method, request) = gesture.checked(input)?;
+        self.backend
+            .run_service_method(service, method, &request)
+            .map_err(|error| GestureRefusal::Engine { error })
     }
 
     /// Runs one fixed read of the open collection and returns the engine's JSON reply: its first
