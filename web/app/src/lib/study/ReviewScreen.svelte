@@ -6,7 +6,11 @@
   // its body carries the card's classes, and the night-mode classes in Telegram's dark palette. The
   // status region announces a refusal, a card the frame refused and a done deck, whose designed
   // end is that message and the way back to the deck list. The screen lock is #663's holder, held
-  // while a card is shown, a gamepad is connected and the page is visible.
+  // while a card is shown, a gamepad is connected and the page is visible. The face's clips play
+  // through the page's one audio element and its speaker (SPEC-350 R15, R16): the Replay control
+  // shows while the side has replay clips, and a voice picker for each language the card speaks.
+  // The input reads the remote's mapping this device stores, and the nav links to its screen
+  // (SPEC-350 R18, ADR-361 D15).
   import { onMount } from 'svelte';
   import CardFrame from '$lib/card/CardFrame.svelte';
   import { m } from '$lib/paraglide/messages.js';
@@ -14,18 +18,27 @@
   import { WakeLockHolder, type Conditions } from '$lib/remote/wake-lock';
   import { telegram } from '$lib/telegram.svelte';
   import AnswerButtons from './AnswerButtons.svelte';
+  import { Player } from './audio';
   import { deviceStorage, StudyInput } from './input';
+  import { MappingStore } from './mapping-store';
   import { statusText } from './refusal';
-  import { Review, type StudyClient } from './review';
+  import { Review, type ClipPlayer, type StudyClient } from './review';
+  import { deviceSpeaker } from './speech';
+  import { VoiceChoices } from './voice';
+  import VoicePicker from './VoicePicker.svelte';
 
-  let { client }: { client: () => Promise<StudyClient> } = $props();
+  let { client, player }: { client: () => Promise<StudyClient>; player?: ClipPlayer } = $props();
 
   let region: HTMLElement;
+
+  const choices = new VoiceChoices(deviceStorage());
+  const devicePlayer = new Player(new Audio(), URL, deviceSpeaker(choices));
 
   const review = new Review(
     () => client(),
     () => performance.now(),
-    () => (shown = read())
+    () => (shown = read()),
+    { play: (clips) => (player ?? devicePlayer).play(clips) }
   );
 
   /** What the screen draws, read from the machine after each of its steps. */
@@ -35,7 +48,8 @@
       face: review.face,
       counts: review.counts,
       status: review.status,
-      controls: review.controls
+      controls: review.controls,
+      languages: review.languages
     };
   }
 
@@ -48,7 +62,8 @@
       side: () => review.side,
       focus: () => region.focus()
     },
-    deviceStorage()
+    deviceStorage(),
+    new MappingStore(deviceStorage()).mapping
   );
 
   const holder = new WakeLockHolder(navigator.wakeLock);
@@ -164,6 +179,15 @@
         >
           {m.study_undo()}
         </button>
+        {#if shown.controls.includes('replay')}
+          <button
+            type="button"
+            class="min-h-11 min-w-11 rounded-md border px-3 transition-colors duration-150"
+            onclick={() => input.click('replay')}
+          >
+            {m.study_replay()}
+          </button>
+        {/if}
         <button
           type="button"
           class="min-h-11 min-w-11 rounded-md border px-3 transition-colors duration-150"
@@ -201,8 +225,12 @@
     />
     {m.study_character_keys()}
   </label>
+  <div class="flex flex-col">
+    <VoicePicker {choices} languages={shown.languages} synthesis={globalThis.speechSynthesis} />
+  </div>
 
   <nav class="mt-4">
     <a href="/study" class="inline-flex min-h-11 items-center rounded-md border px-4">{m.study_back_to_decks()}</a>
+    <a href="/study/mapping" class="inline-flex min-h-11 items-center rounded-md border px-4">{m.study_mapping_title()}</a>
   </nav>
 </main>

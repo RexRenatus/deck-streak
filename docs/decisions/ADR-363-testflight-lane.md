@@ -100,6 +100,37 @@ does; and how a build states which lane built it.
 - Downloading another run's framework — rejected, because its commit can differ from the one being
   signed.
 
+**Amendment (ruling 461): the internal lane's file carries both triggers.** The internal lane could
+not run: GitHub starts a `workflow_dispatch` workflow only from a file on the default branch, the
+default branch stays `main`, and `main` does not hold the lane's file. The reason the bullet above
+rejected one file with both triggers, ADR-344's "no push starts it", is reversed for the internal
+lane by ADR-344's own amendment line, and the release lane keeps its one trigger (SPEC-352 R22).
+
+- A push to `dev` filtered to the app's inputs, beside the dispatch, in the one internal file — chosen, because it runs while `dev` is the only branch that moves, needs nothing from `main`, builds only reviewed code that has reached `dev`, and starts only when a merge changes a path the app is built from: every crate the XCFramework links, `ios/**`, the workspace manifest, the lockfile, the toolchain pin, and the two workflow files and the two scripts the lane runs.
+- Flipping the default branch to `dev` — rejected, because `main` stays the protected, visible default branch.
+- A dispatch-only lane — rejected, because it cannot run while `main` lacks the file.
+- A `schedule` — rejected, because a scheduled workflow also runs only from the default branch.
+- Cancelling a push run in progress when a newer push arrives — rejected, because SPEC-190 R9 holds that no workflow cancels a push run in progress, and a cancelled run can stop inside the upload; instead each event waits in a group of its own, `testflight-internal-${{ github.event_name }}-${{ github.ref }}`, with `cancel-in-progress: false` and `queue: single`, so a newer push replaces the push run still waiting and never stops one that is running.
+- Keeping `queue: max` for the dispatch group alone — rejected, because GitHub's documentation gives `queue` no expression form, so one value covers both groups, and a push group that never replaced a waiting run would build every merge in turn rather than the newest; a newer dispatch now replaces a waiting dispatch too, which narrows ADR-292's "never replaces" for this lane's dispatches.
+
+**The mid-upload case.** No run in progress is cancelled by a newer one, so a push run that has
+begun its upload finishes it. A run cancelled by hand, or stopped by its job's timeout, while
+`xcodebuild` uploads still runs its `clean` and `summary` steps, which run under `always()`: the
+key and the job keychain are removed, and App Store Connect either holds the build, so a later run
+of the same commit is refused as already uploaded (ADR-344), or holds none, so the next push's run
+uploads a higher number. A waiting run that a newer one replaces never started, so it read no
+credential and uploaded nothing. This is acceptable because nothing a cancel leaves behind is
+unsafe, and nothing it loses cannot be rebuilt from `dev`. Cancelling push runs in progress would
+add a loss this shape avoids: merges in quick succession would each cancel the build in flight, so
+a steady run of merges could finish no build at all.
+
+**The environment.** The `testflight-internal` environment admits deployments from the branch `dev`
+only and names no required reviewer, so a push run on `dev` neither waits for a review nor is
+refused, and a dispatch on any other ref is refused at the `app` job as before. The release-ops
+pack's `ro.deploy-from-tags` row now reads the internal `app` job as a deploy started by a branch
+push, as its `ro.deploy-tag-on-main` row already did (Consequences, below); an upload is artifact
+publication, not a deploy (ADR-335).
+
 ### D3. How the app is signed
 
 - Manual signing with a non-extractable job keychain — chosen, because it needs no credential that

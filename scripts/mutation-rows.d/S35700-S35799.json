@@ -1,0 +1,132 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S35701-THE-COUNTS-ARE-WHAT-THE-REPLACED-SIDE-ALONE-HOLDS",
+        "engine-core",
+        "src/full_sync.rs",
+        "of.difference(against).count()",
+        "against.difference(of).count()",
+        "full_sync::each_direction_counts_the_ids_the_replaced_side_alone_holds",
+        "a direction's counts are the ids the replaced side alone holds; reversed, the choice screen would count what the write keeps and name the wrong losses (SPEC-357 A3)"
+      ],
+      [
+        "S35702-A-DIRECTION-NOT-OFFERED-IS-REFUSED",
+        "engine-core",
+        "src/full_sync.rs",
+        "if self.offer.admits(direction) {",
+        "if true {",
+        "full_sync::a_direction_not_offered_is_refused_and_the_choice_kept",
+        "confirm admits only an offered direction; admitting any, the owner could confirm a write the engine never offered (SPEC-357 A4)"
+      ],
+      [
+        "S35703-THE-BACKUP-HOLDS-EVERY-REVIEW",
+        "engine-core",
+        "src/full_sync.rs",
+        "let holds = backup.reviews.is_superset(&replaced.reviews)",
+        "let holds = true",
+        "full_sync::a_backup_missing_an_id_of_the_replaced_side_is_refused",
+        "a backup must hold every review id of the side the write replaces; unchecked, a backup missing a review would let the write lose it (SPEC-357 A5)"
+      ],
+      [
+        "S35704-THE-BACKUP-IS-OF-THE-REPLACED-SIDE",
+        "engine-core",
+        "src/full_sync.rs",
+        "Direction::Download => &sides.device,",
+        "Direction::Download => &sides.server,",
+        "full_sync::a_backup_missing_an_id_of_the_replaced_side_is_refused",
+        "a download replaces the device, so its backup is checked against the device; checked against the server, a backup missing a device row would pass (SPEC-357 A5)"
+      ],
+      [
+        "S35705-THE-SNAPSHOT-MUST-BE-FOUND",
+        "engine-core",
+        "src/full_sync.rs",
+        "if upload && answer.found {",
+        "if upload {",
+        "full_sync::an_upload_reaches_ready_only_after_the_snapshot_and_the_recheck",
+        "an upload goes on only when the server's snapshot was found; ignoring the answer, it would replace the server with no copy of it (SPEC-357 A6)"
+      ],
+      [
+        "S35706-A-CHANGED-SERVER-RETURNS-TO-THE-COUNTS",
+        "engine-core",
+        "src/full_sync.rs",
+        "fresh.reviews == copy.reviews && fresh.cards == copy.cards && fresh.notes == copy.notes;",
+        "true;",
+        "full_sync::an_upload_reaches_ready_only_after_the_snapshot_and_the_recheck",
+        "the recheck compares the fresh server ids with the backed-up copy; skipped, a review another client synced meanwhile would be overwritten uncounted (SPEC-357 A6)"
+      ],
+      [
+        "S35707-A-CHANGED-STAMP-RETURNS-TO-THE-COUNTS",
+        "engine-core",
+        "src/full_sync.rs",
+        "let same_stamp = fresh.modified == copy.modified;",
+        "let same_stamp = true;",
+        "full_sync::an_upload_reaches_ready_only_after_the_snapshot_and_the_recheck",
+        "the recheck compares the server's modified stamp; skipped, an edit that kept every id would be overwritten uncounted (SPEC-357 A6)"
+      ],
+      [
+        "S35708-AN-UPLOAD-IS-NOT-READY-FROM-ITS-BACKUP",
+        "engine-core",
+        "src/full_sync.rs",
+        "if self.confirmed.direction == Direction::Download {",
+        "if true {",
+        "full_sync::an_upload_reaches_ready_only_after_the_snapshot_and_the_recheck",
+        "only a download is ready from its backup; admitting an upload there, it would skip the snapshot and the recheck (SPEC-357 A6)"
+      ],
+      [
+        "S35709-A-DOWNLOAD-HAS-NO-SNAPSHOT-STEP",
+        "engine-core",
+        "src/full_sync.rs",
+        "let upload = self.confirmed.direction == Direction::Upload;",
+        "let upload = true;",
+        "full_sync::a_download_needs_no_snapshot_and_refuses_one",
+        "the snapshot step belongs to an upload alone; admitting a download there, a download would take the upload's path (SPEC-357 A7)"
+      ],
+      [
+        "S35710-THE-WRITE-RE-READS-THE-DEVICE",
+        "engine-core",
+        "src/full_sync.rs",
+        "let backed = device_now.reviews.is_subset(&self.backup.reviews)",
+        "let backed = true",
+        "full_sync::a_write_refuses_a_device_row_its_backup_lacks",
+        "a download's write re-reads the device and refuses a review its backup lacks; unchecked, a review made after the backup would be lost (SPEC-357 A8)"
+      ],
+      [
+        "S35711-A-FULL-UPLOAD-OFFERS-THE-UPLOAD-ONLY",
+        "engine-core",
+        "src/full_sync.rs",
+        "ChangesRequired::FullUpload => Self::of(true, false),",
+        "ChangesRequired::FullUpload => Self::of(true, true),",
+        "full_sync::the_offer_follows_the_engines_answer",
+        "an engine answer of a full upload offers the upload only; offering both, the screen would admit a download the engine did not ask for (SPEC-357 A2)"
+      ],
+      [
+        "S35712-THE-ID-READS-TAKE-EVERY-ROW",
+        "engine-core",
+        "src/dispatch.rs",
+        "\"first_row_only\": false,",
+        "\"first_row_only\": true,",
+        "full_sync::the_id_reads_take_every_row",
+        "the id reads take every row; reading the first row only, the counts and the backup check would see one id of each kind (SPEC-357 A10)"
+      ],
+      [
+        "S35713-ONLY-UNSYNCED-REVIEWS-ARE-COUNTED",
+        "engine-core",
+        "src/dispatch.rs",
+        "usn = -1",
+        "usn >= -1",
+        "full_sync::the_unsynced_read_counts_reviews_and_changes_since_the_last_sync",
+        "the unsynced read counts the reviews not yet synced; counting synced ones too, the warning would overstate what a full sync loses (SPEC-357 A9)"
+      ],
+      [
+        "S35714-ANY-UNSYNCED-CHANGE-WARNS",
+        "engine-core",
+        "src/full_sync.rs",
+        "self.reviews > 0 || self.changed || self.schema",
+        "self.reviews > 0 && self.changed && self.schema",
+        "full_sync::the_unsynced_read_counts_reviews_and_changes_since_the_last_sync",
+        "any unsynced review or change warns; needing all of them, an unsynced review alone would not warn (SPEC-357 A9)"
+      ]
+    ]
+  }
+}

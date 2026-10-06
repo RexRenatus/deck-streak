@@ -311,7 +311,9 @@ class TheSwiftSideLinksOneLibrary(unittest.TestCase):
         project = "ios/project.yml"
         dependency = "      - package: HarnessWire\n"
         self.assertEqual(files[project].count(dependency), 1)
-        app = "ios/app.yml"
+        # The planted second spec sits at a path no tree tracks: the app's own `ios/app.yml` is
+        # tracked (SPEC-347 R4), and a plant there would be listed twice.
+        app = "ios/planted.yml"
         clean = (
             "name: App\npackages:\n  EnginePackage:\n    path: EnginePackage\ntargets:\n"
             "  App:\n    type: application\n    dependencies:\n      - package: EnginePackage\n"

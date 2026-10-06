@@ -3,6 +3,8 @@
 //!
 //! It holds no engine type, so the native tests judge exactly the rule the `wasm32` module runs.
 
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt;
 
 /// Anki's four answers, in the order of its `Rating` enum.
@@ -210,3 +212,75 @@ impl fmt::Display for StudyError {
 }
 
 impl std::error::Error for StudyError {}
+
+/// The media files the Worker read for a face, each under the name the engine stores (SPEC-350
+/// R14). The core decides every cap and type; this only hands it the bytes it asked for.
+#[derive(Debug, Default)]
+pub struct Files {
+    by_name: HashMap<String, Vec<u8>>,
+}
+
+impl Files {
+    /// The files read, by name.
+    pub fn new(files: impl IntoIterator<Item = (String, Vec<u8>)>) -> Self {
+        Self {
+            by_name: files.into_iter().collect(),
+        }
+    }
+
+    /// The first `limit` bytes of `name` at most, or `None` when no file of that name was read.
+    #[must_use]
+    pub fn read(&self, name: &str, limit: u64) -> Option<Vec<u8>> {
+        let bytes = self.by_name.get(name)?;
+        let end = usize::try_from(limit).map_or(bytes.len(), |limit| limit.min(bytes.len()));
+        Some(bytes[..end].to_vec())
+    }
+}
+
+/// The core's reader over [`Files`] for one face call: it answers from the files, and records
+/// each name the core asked for that the files lack, with the limit asked, so the Worker can read
+/// those names and ask again (SPEC-350 R14, ADR-361 D12).
+#[derive(Debug)]
+pub struct Wanted<'a> {
+    files: &'a Files,
+    asked: RefCell<Vec<(String, u64)>>,
+}
+
+impl<'a> Wanted<'a> {
+    /// A reader over `files` that has recorded nothing yet.
+    #[must_use]
+    pub fn new(files: &'a Files) -> Self {
+        Self {
+            files,
+            asked: RefCell::new(Vec::new()),
+        }
+    }
+
+    /// The core's ask for `name`: the file's first `limit` bytes, or `None` and a record of it.
+    #[must_use]
+    pub fn ask(&self, name: &str, limit: u64) -> Option<Vec<u8>> {
+        let read = self.files.read(name, limit);
+        let mut asked = self.asked.borrow_mut();
+        if read.is_none() && !asked.iter().any(|(wanted, _)| wanted == name) {
+            asked.push((name.to_owned(), limit));
+        }
+        read
+    }
+
+    /// Each name the core asked for and the files lacked, with its limit, in the order asked.
+    #[must_use]
+    pub fn into_names(self) -> Vec<(String, u64)> {
+        self.asked.into_inner()
+    }
+}
+
+/// The media type `types` gives `name`'s extension, compared without case. `types` is the core's
+/// one table, passed in, so no copy of it lives here (SPEC-350 R15, ADR-361 D12).
+#[must_use]
+pub fn media_type<'a>(name: &str, types: &[(&str, &'a str)]) -> Option<&'a str> {
+    let (_, extension) = name.rsplit_once('.')?;
+    types
+        .iter()
+        .find(|(known, _)| known.eq_ignore_ascii_case(extension))
+        .map(|&(_, media_type)| media_type)
+}

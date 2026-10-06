@@ -136,4 +136,23 @@ describe('the frame document', () => {
     const html = '<form><math><mtext></form><form><mglyph><style></math><body class="x">';
     expect(frameDocument(html, '.a{}')).toStrictEqual({ refused: 'escaped' });
   });
+
+  it('a data: media source reaches the frame unchanged', () => {
+    // SPEC-350 A24, ADR-361 D12: the core writes each media file a face holds as a data: URL in
+    // its text, and the frame keeps every one as written, so the frame policy's data: sources are
+    // the only way media reaches the card, and nothing is rewritten on the page
+    const media = [
+      `<img alt="a cat" src="${IMAGE}">`,
+      '<audio controls="" src="data:audio/ogg;base64,T2dnUw=="></audio>',
+      '<video><source src="data:video/webm;base64,GkXfow==" type="video/webm"></video>'
+    ];
+    const card = `<p>die Katze</p>${media.join('')}`;
+    const frame = read(frameDocument(card, CSS, 'card card1').srcdoc);
+    expect(frame.body.innerHTML).toBe(card);
+    const sources = examined(
+      'media source(s)',
+      [...frame.body.querySelectorAll('[src]')].map((element) => element.getAttribute('src'))
+    );
+    expect(sources).toEqual([IMAGE, 'data:audio/ogg;base64,T2dnUw==', 'data:video/webm;base64,GkXfow==']);
+  });
 });

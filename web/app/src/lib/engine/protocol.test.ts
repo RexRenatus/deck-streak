@@ -81,7 +81,23 @@ describe('the study operations on the wire', () => {
       'card',
       'rate',
       'bury',
-      'flag'
+      'flag',
+      'faces'
     ]);
+  });
+
+  it('the faces operation names the card it asks for', () => {
+    // SPEC-350 A24, ADR-361 D12: faces carries the shown card's id, within the engine's type, and
+    // nothing else, so the page names no media file and no limit
+    expect(parseRequest({ id: 9, op: 'faces', card: 1001n })).toEqual({
+      request: { id: 9, op: 'faces', card: 1001n }
+    });
+    expect(parseRequest({ id: 9, op: 'faces', card: I64 })).toEqual({ request: { id: 9, op: 'faces', card: I64 } });
+    expect(parseRequest({ id: 9, op: 'faces' })).toEqual({ id: 9, message: "faces's card is malformed" });
+    expect(parseRequest({ id: 9, op: 'faces', card: 0n })).toEqual({ id: 9, message: "faces's card is malformed" });
+    expect(parseRequest({ id: 9, op: 'faces', card: 1001n, names: ['cat.mp3'] })).toEqual({
+      id: 9,
+      message: 'faces takes no names'
+    });
   });
 });

@@ -117,6 +117,7 @@ An internal build is started by hand on `dev`, after a delivery lands there:
 gh workflow run testflight-internal.yml --ref dev
 ```
 
+The internal lane also starts on a push to `dev` that changes one of the app's inputs (SPEC-352 R22).
 The workflow refuses any other event or ref, a shallow checkout, and a workspace version that is
 not three dot-separated integers. Its build number is the first-parent count of the commit it
 builds, `git rev-list --count --first-parent HEAD` on full history, and its marketing version is

@@ -29,24 +29,25 @@ function inControl(target: EventTarget | null): boolean {
   return CONTROLS.has(element.tagName) || element.isContentEditable === true;
 }
 
-/** The intent `event`'s key names, before the event's filters. */
-function mapped(event: KeyInput): Intent | null {
+/** The intent `event`'s key names in `keys`, before the event's filters. */
+function mapped(event: KeyInput, keys: ReadonlyMap<string, Intent>): Intent | null {
   if (event.ctrlKey || event.metaKey) {
     return event.key === FLAG_KEY ? 'flag' : null;
   }
-  return KEYS.get(event.key) ?? null;
+  return keys.get(event.key) ?? null;
 }
 
 /**
  * The intent `event` names, or `null` when it fires nothing: a repeat, a key typed while
  * composing, a key in a control, a key with Alt, and a key with Control or Command other than the
- * flag's. A mapped key's default action is prevented, so Space does not scroll the page.
+ * flag's. A mapped key's default action is prevented, so Space does not scroll the page. `keys` is
+ * today's map unless the study screens pass a device's own (SPEC-350 R18).
  */
-export function readKey(event: KeyInput): Intent | null {
+export function readKey(event: KeyInput, keys: ReadonlyMap<string, Intent> = KEYS): Intent | null {
   if (event.repeat || event.isComposing || event.altKey || inControl(event.target)) {
     return null;
   }
-  const intent = mapped(event);
+  const intent = mapped(event, keys);
   if (intent !== null) {
     event.preventDefault();
   }

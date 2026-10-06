@@ -1,16 +1,17 @@
-"""The TestFlight lanes (SPEC-352 A14 to A20; ADR-363): `testflight-internal.yml`, which a dispatch
-on dev starts, and `testflight-release.yml`, which a SemVer tag starts. Each runs a plan job on a
-versioned Ubuntu image, the one Apple job body as its framework job, and an app job on the admitted
-macOS image that names the lane's environment and alone reads the credential, in its preflight,
-signing and upload steps. These tests read both files through `test_ci_workflows.py`'s reader and
-compare them with each other, with `release.yml`'s tag guard and with the harness job of
+"""The TestFlight lanes (SPEC-352 A14 to A20 and A25; ADR-363): `testflight-internal.yml`, which
+a dispatch on dev or a push to dev that changes an app input starts, its filter held to the crates
+the XCFramework links, and `testflight-release.yml`, which a SemVer tag starts. Each runs a plan job
+on a versioned Ubuntu image, the one Apple job body as its framework job, and an app job on the
+admitted macOS image that names the lane's environment and alone reads the credential, in its
+preflight, signing and upload steps. These tests read both files through `test_ci_workflows.py`'s
+reader and compare them with each other, with `release.yml`'s tag guard and with the harness job of
 `xcframework.yml`. Nothing here runs a workflow. A secret's name is read from the live files and
 compared, never printed: each read is named by its job, its step's id and its role-word variable."""
 
 import re
 import unittest
 
-from _support import examined
+from _support import REPO, examined
 from test_ci_workflows import (
     ADMITTED_RUNNERS,
     CACHE_BY_THEMSELVES,
@@ -18,16 +19,42 @@ from test_ci_workflows import (
     SECRET,
     WORKFLOWS,
     action,
+    cargo_commands,
     expressions_in,
     load,
     marked_uses,
     read_hardened,
     strings,
+    workflow_file_text,
 )
+from test_one_static_library import umbrella_closure
 
 # Each lane file and the lane its plan names (SPEC-352 R1).
 LANES = {"testflight-internal.yml": "internal", "testflight-release.yml": "release"}
 INTERNAL, RELEASE = LANES
+# The internal lane's push on dev, filtered to the app's inputs (SPEC-352 R22): every crate the
+# XCFramework links, the iOS tree, the lockfile, the workspace manifest and the toolchain pin, the
+# two workflow files the lane runs, and the two scripts its steps call.
+INTERNAL_PATHS = [
+    "crates/ffi/**",
+    "crates/engine-core/**",
+    "ios/**",
+    "Cargo.lock",
+    "Cargo.toml",
+    "rust-toolchain.toml",
+    ".github/workflows/xcframework.yml",
+    ".github/workflows/testflight-internal.yml",
+    "scripts/ios_lane.py",
+    "scripts/ios_icon.py",
+]
+# The internal lane's queue (SPEC-352 R16 as R22 amends it): a dispatch and a push wait in groups of
+# their own, so neither replaces the other; no run in progress is ever cancelled (SPEC-190 R9); and
+# a newer push replaces the push run still waiting, so the next build is dev's newest.
+INTERNAL_QUEUE = {
+    "group": "testflight-internal-${{ github.event_name }}-${{ github.ref }}",
+    "cancel-in-progress": "false",
+    "queue": "single",
+}
 # The one Apple job body, called as GitHub reads it from the caller's own commit (SPEC-344 R5).
 BODY = "$/.github/workflows/xcframework.yml"
 # The release tag filter, the release workflow's own (SPEC-352 R1).
@@ -109,17 +136,94 @@ def credential_reads(workflow):
     return found
 
 
+def built_packages(text):
+    """The packages a workflow's cargo commands name with `-p` or `--package`, sorted, and every
+    cargo command that names none, whose build closure no manifest read can place."""
+    named, unnamed = set(), []
+    for command in cargo_commands(text):
+        found = re.findall(r"(?:^|\s)(?:-p|--package)(?:\s+|=)(\S+)", command.split(" -- ")[0])
+        if found:
+            named.update(found)
+        else:
+            unnamed.append(command)
+    return sorted(named), unnamed
+
+
+def filter_problems(paths, closure):
+    """Where the internal lane's push filter and the XCFramework's build closure differ (SPEC-352
+    R22): a crate the XCFramework links that no `crates/` glob watches, and a `crates/` glob for a
+    crate it does not link. `closure` is the `crates/<dir>` directories `umbrella_closure` reads."""
+    globs = {str(path) for path in paths if str(path).startswith("crates/")}
+    wanted = {f"{directory}/**" for directory in closure}
+    unwatched = [
+        f"{pattern}: the XCFramework links it, and the internal lane's push filter"
+        " does not watch it"
+        for pattern in sorted(wanted - globs)
+    ]
+    unlinked = [
+        f"{pattern}: the internal lane's push filter watches it, and the XCFramework"
+        " does not link it"
+        for pattern in sorted(globs - wanted)
+    ]
+    return unwatched + unlinked
+
+
+def push_paths(workflow):
+    """The `paths` filter of a read workflow's push trigger, or none when it has no such filter."""
+    on = workflow.get("on")
+    push = on.get("push") if isinstance(on, dict) else None
+    paths = push.get("paths") if isinstance(push, dict) else None
+    return list(paths) if isinstance(paths, list) else []
+
+
 class TheTestflightLanes(unittest.TestCase):
     def test_each_lane_runs_on_its_one_trigger_and_nothing_a_pull_request_starts(self):
-        # SPEC-352 A14 (R1): a dispatch starts the internal lane and a SemVer tag the release lane,
-        # each on nothing else, so no pull request, schedule or branch push starts either.
+        # SPEC-352 A14 (R1, as R22 amends it): a dispatch on dev and a push to dev that changes an
+        # app input start the internal lane, and a SemVer tag the release lane, each on nothing
+        # else, so no pull request, schedule, tag or other branch's push starts the internal lane.
         triggers = {
-            INTERNAL: {"workflow_dispatch": None},
+            INTERNAL: {
+                "workflow_dispatch": None,
+                "push": {"branches": ["dev"], "paths": INTERNAL_PATHS},
+            },
             RELEASE: {"push": {"tags": TAGS}},
         }
         for name, on in examined("lane triggers", list(triggers.items())):
             self.assertEqual(read_hardened(WORKFLOWS / name).get("on"), on, name)
         self.assertEqual(load("release.yml")["on"]["push"]["tags"], TAGS)
+
+    def test_the_internal_push_filter_watches_every_crate_the_xcframework_links(self):
+        # SPEC-352 A25 (R22): the internal lane's push filter watches exactly the crates the
+        # XCFramework links, read from the packages its cargo commands build and the workspace's
+        # manifests, so a crate added to that closure without the filter goes red here by name.
+        paths = push_paths(read_hardened(WORKFLOWS / INTERNAL))
+        packages, unnamed = built_packages(workflow_file_text(WORKFLOWS / "xcframework.yml"))
+        closure = set()
+        for package in packages:
+            closure |= set(umbrella_closure(REPO, package))
+        self.assertEqual(filter_problems(paths, sorted(closure)), [])
+        self.assertEqual(unnamed, [])
+        examined("packages the XCFramework builds", packages)
+        linked = examined("crates the XCFramework links", sorted(closure))
+        watched = [f"{directory}/**" for directory in linked]
+        self.assertEqual(
+            filter_problems(watched[:-1], linked),
+            [
+                f"{watched[-1]}: the XCFramework links it, and the internal lane's push filter"
+                " does not watch it"
+            ],
+        )
+        self.assertEqual(
+            filter_problems([*watched, "crates/not-linked/**"], linked),
+            [
+                "crates/not-linked/**: the internal lane's push filter watches it, and the"
+                " XCFramework does not link it"
+            ],
+        )
+        self.assertEqual(
+            built_packages("    cargo run -p a --bin b -- -p c\n    cargo build --release\n"),
+            (["a"], ["cargo build --release"]),
+        )
 
     def test_the_job_graph_is_plan_then_framework_then_app(self):
         # SPEC-352 A15 (R2): plan, then the framework call, then the app; a refusal in plan starts
@@ -172,24 +276,24 @@ class TheTestflightLanes(unittest.TestCase):
             self.assertEqual(conditions, CONDITIONS, name)
 
     def test_the_lanes_are_hardened_pinned_uncached_and_queued(self):
-        # SPEC-352 A17 (R13, R16): a read-only token, a full history in plan and no persisted token
-        # anywhere, every action pinned, no cache and no artifact of its own, no expression and no
-        # trace in a script, clean and summary always, and one queue per lane and ref that never
-        # cancels and never replaces.
+        # SPEC-352 A17 (R13, R16, as R22 amends R16): a read-only token, a full history in plan and
+        # no persisted token anywhere, every action pinned, no cache and no artifact of its own, no
+        # expression and no trace in a script, clean and summary always; the release lane keeps one
+        # queue per ref that never cancels and never replaces, and the internal lane one queue per
+        # event and ref that never cancels, where a newer waiting run replaces an older one.
         for name in examined("lane files", LANES):
             workflow = read_hardened(WORKFLOWS / name)
             jobs = lane_jobs(name)
             self.assertEqual(workflow.get("permissions"), {"contents": "read"}, name)
             stem = name.removesuffix(".yml")
-            self.assertEqual(
-                workflow.get("concurrency"),
-                {
-                    "group": f"{stem}-${{{{ github.ref }}}}",
-                    "cancel-in-progress": "false",
-                    "queue": "max",
-                },
-                name,
-            )
+            expected = {
+                "group": f"{stem}-${{{{ github.ref }}}}",
+                "cancel-in-progress": "false",
+                "queue": "max",
+            }
+            if name == INTERNAL:
+                expected = INTERNAL_QUEUE
+            self.assertEqual(workflow.get("concurrency"), expected, name)
             for job_id, job in jobs.items():
                 self.assertIn(job.get("permissions"), (None, {"contents": "read"}), job_id)
                 self.assertNotIn("concurrency", job, job_id)
