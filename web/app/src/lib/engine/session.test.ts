@@ -133,6 +133,15 @@ class FakeEngine implements EngineModule {
     this.flags.set(card, flag);
     return flag;
   }
+  /** SPEC-350 R14: the names the core wants on the next faces call, each with its limit. Each face's
+   * text names the files it was given, so what the session passed is judged by the reply. */
+  wants: { name: string; limit: bigint }[] = [];
+  faces(card: bigint, names: string[], contents: Uint8Array[]) {
+    this.#call('faces', card, names, contents);
+    this.#shown(card);
+    const face = (side: string) => ({ text: [side, ...names].join(' '), css: '', autoplay: [], replay: [], omitted: [] });
+    return { question: face('question'), answer: face('answer'), wanted: this.wants.filter((ask) => !names.includes(ask.name)) };
+  }
   /** The module's linear memory in 64 KiB pages: it grows with the collection, as a real one does. */
   memory_pages() {
     this.#call('memory_pages');
@@ -575,5 +584,84 @@ describe('the Worker session', () => {
     const plain = new FakeEngine();
     await browser(plain).session.handle({ id: 1, op: 'open' });
     expect(plain.languages).toEqual([[]]);
+  });
+
+  it('faces asks the engine twice, the second time with the files it named', async () => {
+    // SPEC-350 A24, ADR-361 D12: the first ask carries no file and names the files the core wants;
+    // the Worker reads them and asks again, and the second answer is the reply. A face that wants
+    // nothing is asked once, a card the engine did not show is refused before any read, and a
+    // Worker with no media directory asks again with none.
+    const engine = new FakeEngine();
+    const read: unknown[] = [];
+    const session = new Session({
+      lock: async () => 'held',
+      storage: async () => null,
+      load: async () => engine,
+      media: async (wanted) => {
+        read.push(wanted);
+        return [{ name: 'cat.mp3', bytes: new Uint8Array([1, 2]) }];
+      }
+    });
+    await session.handle({ id: 1, op: 'open' });
+    await session.handle({ id: 2, op: 'seed', count: 1 });
+    await session.handle({ id: 3, op: 'card' });
+    engine.wants = [
+      { name: 'cat.mp3', limit: 9n },
+      { name: 'gone.png', limit: 9n }
+    ];
+    const face = (text: string) => ({ text, css: '', autoplay: [], replay: [], omitted: [] });
+    expect(await session.handle({ id: 4, op: 'faces', card: 1001n })).toEqual({
+      id: 4,
+      ok: true,
+      value: {
+        question: face('question cat.mp3'),
+        answer: face('answer cat.mp3'),
+        wanted: [{ name: 'gone.png', limit: 9n }]
+      }
+    });
+    expect(read).toEqual([
+      [
+        { name: 'cat.mp3', limit: 9n },
+        { name: 'gone.png', limit: 9n }
+      ]
+    ]);
+    expect(engine.calls.filter(([name]) => name === 'faces')).toEqual([
+      ['faces', 1001n, [], []],
+      ['faces', 1001n, ['cat.mp3'], [new Uint8Array([1, 2])]]
+    ]);
+
+    // a face that wants nothing is asked once, and nothing is read
+    engine.wants = [];
+    engine.calls = [];
+    expect(await session.handle({ id: 5, op: 'faces', card: 1001n })).toEqual({
+      id: 5,
+      ok: true,
+      value: { question: face('question'), answer: face('answer'), wanted: [] }
+    });
+    expect(engine.calls).toEqual([['faces', 1001n, [], []]]);
+
+    // a card the engine did not show is refused, and nothing is read
+    engine.wants = [{ name: 'cat.mp3', limit: 9n }];
+    expect(await session.handle({ id: 6, op: 'faces', card: 1002n })).toEqual(
+      refusal(6, 'not-shown', 'not-shown: the card is not the one on screen')
+    );
+    expect(read).toHaveLength(1);
+
+    // a Worker with no media directory asks again with no file
+    const bare = new FakeEngine();
+    const { session: plain } = browser(bare);
+    await plain.handle({ id: 1, op: 'open' });
+    await plain.handle({ id: 2, op: 'seed', count: 1 });
+    await plain.handle({ id: 3, op: 'card' });
+    bare.wants = [{ name: 'cat.mp3', limit: 9n }];
+    expect(await plain.handle({ id: 4, op: 'faces', card: 1001n })).toEqual({
+      id: 4,
+      ok: true,
+      value: { question: face('question'), answer: face('answer'), wanted: [{ name: 'cat.mp3', limit: 9n }] }
+    });
+    expect(bare.calls.filter(([name]) => name === 'faces')).toEqual([
+      ['faces', 1001n, [], []],
+      ['faces', 1001n, [], []]
+    ]);
   });
 });

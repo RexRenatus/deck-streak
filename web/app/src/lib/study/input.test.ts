@@ -228,4 +228,27 @@ describe('the review input', () => {
     input.pads([pad([15])]);
     expect(record.acted).toEqual(['good']);
   });
+
+  it("the remote's replay fires on either side", () => {
+    // SPEC-350 R15, A26: #663's reviewer fires only show answer on the question side, so the input
+    // reads replay itself, on either side; a key and a gamepad button each reach it, and focus
+    // returns to the review after each
+    const { record, target: review } = target('question');
+    const input = new StudyInput(review, new MemoryStorage());
+    input.key(key('r'));
+    input.pads([pad()]);
+    input.pads([pad([2])]);
+    record.side = 'answer';
+    input.key(key('r'));
+    input.pads([pad()]);
+    input.pads([pad([2])]);
+    expect(record.acted).toEqual(['replay', 'replay', 'replay', 'replay']);
+    expect(record.focused).toBe(4);
+
+    // every other intent still reads against the side: a grade on the question side fires nothing
+    record.side = 'question';
+    input.key(key('4'));
+    input.key(key(' '));
+    expect(record.acted).toEqual(['replay', 'replay', 'replay', 'replay', 'show-answer']);
+  });
 });
