@@ -83,4 +83,32 @@ final class ResponseDecodingTests: XCTestCase {
             [.text("synthetic front"), .replacement(fieldName: "Front")],
             "RenderCardResponse's question")
     }
+
+    func test_a7_the_host_key_and_the_engines_message_decode() throws {
+        // SyncAuth { hkey (1), endpoint (2), io_timeout_secs (3) }, its host key last: the
+        // endpoint `e`, a timeout of 30 (`1e`), and a 64-bit field 9 no engine message the app
+        // reads holds (key (9 << 3) | 1 = `49`) come first, so the host key `k1` is read past all
+        // three.
+        let auth = bytes(
+            [0x12, 0x01, 0x65], [0x18, 0x1e],
+            [0x49, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08],
+            [0x0a, 0x02, 0x6b, 0x31])
+        XCTAssertEqual(try Responses.syncAuth(auth), "k1", "SyncAuth's host key")
+
+        // BackendError { message (1), kind (2), help_page (3), context (4) }: the message
+        // `denied`, the kind SYNC_AUTH_ERROR = 7, a help page 5 and the context `ctx`.
+        let refused = bytes(
+            [0x0a, 0x06, 0x64, 0x65, 0x6e, 0x69, 0x65, 0x64], [0x10, 0x07], [0x18, 0x05],
+            [0x22, 0x03, 0x63, 0x74, 0x78])
+        XCTAssertEqual(
+            try Responses.engineMessage(refused), EngineMessage(message: "denied", kind: 7),
+            "BackendError")
+
+        // The context first and the kind omitted: the message is still read past the context,
+        // and the kind is proto3's default, 0.
+        let unkinded = bytes([0x22, 0x03, 0x63, 0x74, 0x78], [0x0a, 0x02, 0x6e, 0x6f])
+        XCTAssertEqual(
+            try Responses.engineMessage(unkinded), EngineMessage(message: "no", kind: 0),
+            "BackendError, its kind omitted")
+    }
 }

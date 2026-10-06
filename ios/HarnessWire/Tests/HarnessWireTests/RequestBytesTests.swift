@@ -60,4 +60,25 @@ final class RequestBytesTests: XCTestCase {
         // Empty, the undo call's request: no fields, no bytes.
         XCTAssertEqual(Requests.undo(), [], "Empty")
     }
+
+    func test_a6_the_login_request_writes_user_password_and_endpoint() {
+        // SyncLoginRequest: username (1), password (2) and endpoint (3), each a length-delimited
+        // string, so their keys are `0a`, `12` and `1a`. `user` is 4 bytes, `pw` 2, and
+        // `https://s.invalid/` 18, `12`.
+        XCTAssertEqual(
+            Requests.syncLogin(username: "user", password: "pw", endpoint: "https://s.invalid/"),
+            bytes(
+                [0x0a, 0x04, 0x75, 0x73, 0x65, 0x72],
+                [0x12, 0x02, 0x70, 0x77],
+                [0x1a, 0x12, 0x68, 0x74, 0x74, 0x70, 0x73, 0x3a, 0x2f, 0x2f, 0x73, 0x2e, 0x69, 0x6e,
+                 0x76, 0x61, 0x6c, 0x69, 0x64, 0x2f]),
+            "SyncLoginRequest")
+
+        // An empty endpoint is still written, as its key and a zero length, so the engine reads
+        // the field the app sent rather than a default it chose.
+        XCTAssertEqual(
+            Requests.syncLogin(username: "user", password: "pw", endpoint: ""),
+            bytes([0x0a, 0x04, 0x75, 0x73, 0x65, 0x72], [0x12, 0x02, 0x70, 0x77], [0x1a, 0x00]),
+            "SyncLoginRequest, an empty endpoint")
+    }
 }
