@@ -177,6 +177,7 @@ client, and that client's next sync is forced to a full sync by the upload's sch
 | `pending` | the second client's reviews not yet synced |
 | `backup`, `copy`, `snap` | review ids in the backup, the scratch server copy and the newest sealed snapshot (or none) |
 | `pc`, `dir`, `counted` | the choice's state, its direction, and the ids the counts showed as lost |
+| `held` | the ids the write's last check reads: the counted device side, and the backup's ids once the backup is accepted |
 | `made`, `window`, `lostUncounted`, `lostUnbacked`, `needFull`, `snapFound`, `uploadedNoSnap` | history: every review made, rows the second client synced after the re-check, what a write removed uncounted or unbacked, whether the second client must make a full sync, whether this choice found a snapshot, whether an upload ran without one |
 
 | action | step |
@@ -184,7 +185,8 @@ client, and that client's next sync is forced to a full sync by the upload's sch
 | `AReview(r)`, `BReview(r)` | a review on the device, on the second client |
 | `BSync` | the second client's normal sync, atomic; disabled once it must make a full sync |
 | `Snapshot` | the daily window seals the server's rows |
-| `Count`, `Confirm(d)`, `Backup`, `SnapCheck`, `Recheck`, `DownloadReady`, `Write` | the choice, one step each, guarded by the switches below |
+| `Count`, `Confirm(d)`, `Backup`, `SnapCheck`, `Rechecked`, `DownloadReady`, `AtWriteRefused`, `Write` | the choice, one step each, guarded by the switches below; `Rechecked` and `AtWriteRefused` return to new counts |
+| `Cancel` | the owner's Cancel at any step before the write; nothing is written |
 | `Finished` | stutter once the choice is done or refused |
 
 | switch (TRUE in `MCFullSyncChoice.cfg`) | FALSE in witness | kills |
