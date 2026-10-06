@@ -281,6 +281,8 @@ Part a:
 | `docs/decisions/ADR-370-passkey-sign-in-on-the-web.md`, `docs/schematics/passkey-sign-in-on-the-web.md` | docs | added |
 | `docs/red-first/SPEC-359.md` | docs | added |
 | `scripts/mutation-rows.d/S35900-S35999.json` | repo | added: the band's rows |
+| `scripts/mutation-equivalent.d/deck-streak-identity.json` | repo | changed: two records of mutants that cannot differ from the original |
+| `docs/specs/planned/SPEC-057-every-surviving-mutant-is-killed-or-recorded-equivalent-before-the-first-mutation-gated-release.md` | docs | changed: section 7's identity row counts the two records (145 listed, 5 equivalent) |
 | `formal/tla/PasskeyOnce/PasskeyOnce.tla`, `formal/tla/PasskeyOnce/MCPasskeyOnce.cfg`, `formal/tla/PasskeyOnce/witness/a-take-that-keeps-its-entry.cfg`, `formal/tla/PasskeyOnce/witness/a-counter-read-then-written-in-two-steps.cfg` | formal | added: the model of a ceremony or link code taken once and the counter advanced by one compare-and-swap, with a witness per property |
 | `changelog.d/passkey-sign-in-359.md` | repo | added |
 
