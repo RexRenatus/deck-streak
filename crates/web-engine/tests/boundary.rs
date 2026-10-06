@@ -22,7 +22,7 @@ fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
 /// Each boundary function the census reads: its name, why it owes what it owes, and the
 /// statements its body holds for it. A statement is compared with every blank removed, so a
 /// reflow by rustfmt changes nothing.
-const OWED: [(&str, &str, &[&str]); 23] = [
+const OWED: [(&str, &str, &[&str]); 24] = [
     (
         "create_backend",
         "starts the core's dispatcher on the web transport and keeps it",
@@ -75,6 +75,22 @@ const OWED: [(&str, &str, &[&str]); 23] = [
         "snapshot",
         "answers one card's row from the core's fixed read",
         &["query(Read::CardSnapshot(card_id))?", ".pointer(\"/0\")"],
+    ),
+    // The owner's exempt tap (SPEC-345 R9): each tap names one write and a target of its kind,
+    // and the write reaches the engine only as the gesture the tap builds.
+    (
+        "run_exempt",
+        "maps each tap to its write and a target of the write's kind, and runs the owner's gesture through the dispatcher",
+        &[
+            "0 => (ExemptWrite::Forget, Target::Card(target)),",
+            "1 => (ExemptWrite::SetDueDate, Target::Card(target)),",
+            "2 => (ExemptWrite::DeletePreset, Target::Preset(target)),",
+            "3 => (ExemptWrite::ChangeNoteType, Target::Note(target)),",
+            "4 => (ExemptWrite::DeleteCard, Target::Card(target)),",
+            "5 => (ExemptWrite::DeleteNote, Target::Note(target)),",
+            "let gesture = OwnerGesture::from_tap(write, target).map_err(refuse)?;",
+            "dispatcher()?.run_exempt(gesture, input).map_err(refuse)",
+        ],
     ),
     // The review's exports (SPEC-350 R1 to R3): each reaches the engine through the dispatcher,
     // and a rating, bury or flag reaches only the card the review showed.

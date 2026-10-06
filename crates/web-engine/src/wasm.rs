@@ -43,8 +43,9 @@ use wasm_bindgen::prelude::*;
 
 use deck_streak_engine_core::dispatch::{Dispatcher, Read, Refusal};
 use deck_streak_engine_core::face::{Clip, Face, Side};
+use deck_streak_engine_core::gesture::{OwnerGesture, Target};
 use deck_streak_engine_core::media::{Reader, TYPES};
-use deck_streak_engine_core::table::Transport;
+use deck_streak_engine_core::table::{ExemptWrite, Transport};
 use js_sys::{Array, Object, Reflect, Uint8Array};
 
 use crate::study::{
@@ -285,6 +286,25 @@ pub fn snapshot(card_id: i64) -> Result<String, JsValue> {
         .cloned()
         .unwrap_or(serde_json::Value::Null)
         .to_string())
+}
+
+/// Runs one owner's tap on an exempt write (SPEC-345 R9): `write` names the write by its place in
+/// the core's exempt table (0 `Forget`, 1 `SetDueDate`, 2 `DeletePreset`, 3 `ChangeNoteType`,
+/// 4 `DeleteCard`, 5 `DeleteNote`), `target` its one target's id, and `input` the write's request,
+/// which runs only when it names exactly that target. A refusal reads as its own sentence.
+#[wasm_bindgen]
+pub fn run_exempt(write: u32, target: i64, input: &[u8]) -> Result<Vec<u8>, JsValue> {
+    let (write, target) = match write {
+        0 => (ExemptWrite::Forget, Target::Card(target)),
+        1 => (ExemptWrite::SetDueDate, Target::Card(target)),
+        2 => (ExemptWrite::DeletePreset, Target::Preset(target)),
+        3 => (ExemptWrite::ChangeNoteType, Target::Note(target)),
+        4 => (ExemptWrite::DeleteCard, Target::Card(target)),
+        5 => (ExemptWrite::DeleteNote, Target::Note(target)),
+        _ => return Err(refuse(format!("tap {write} names no exempt write"))),
+    };
+    let gesture = OwnerGesture::from_tap(write, target).map_err(refuse)?;
+    dispatcher()?.run_exempt(gesture, input).map_err(refuse)
 }
 
 /// One deck of the tree as JSON: its id as a decimal string, its name, level, new, learning and
