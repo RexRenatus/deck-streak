@@ -73,6 +73,72 @@
         "login_guard::a4_a_refused_login_never_reaches_the_engine_and_names_no_secret",
         "the guard refuses in the engine's own shape, kind INVALID_INPUT; as SYNC_OTHER_ERROR, a client would read a refused endpoint as a failed sync (SPEC-347 R2, A4)"
       ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S34710-THE-REGISTER-IS-CLOSED",
+        "scripts/tests/test_ios_thin_swift.py",
+        "            problems.append(f\"{path}: the register: not listed\")",
+        "            pass",
+        "a tracked Swift file the register does not list is refused by the register's name; with the refusal gone, an unlisted file is judged by no role at all (SPEC-347 R11, A12)",
+        "test_ios_thin_swift.EverySwiftFileKeepsItsRole.test_every_swift_file_keeps_its_role_its_doors_and_its_budget"
+      ],
+      [
+        "S34711-ONLY-THE-CREDENTIAL-FILE-NAMES-SECURITY",
+        "scripts/tests/test_ios_thin_swift.py",
+        "    \"imports Security\": (imports(\"Security\"), {\"credential\"}),",
+        "    \"imports Security\": (imports(\"Security\"), COUNTED),",
+        "only the credential file may import Security; opened to every counted role, the model could reach the Keychain itself (SPEC-347 R11, A12)",
+        "test_ios_thin_swift.EverySwiftFileKeepsItsRole.test_every_swift_file_keeps_its_role_its_doors_and_its_budget"
+      ],
+      [
+        "S34712-A-BUDGET-IS-EXACT",
+        "scripts/tests/test_ios_thin_swift.py",
+        "        exact = count == recorded",
+        "        exact = count <= recorded",
+        "a file's decision count equals the register's; as an upper bound, a register recording more decisions than the file holds would let logic grow unseen (SPEC-347 R11, A12)",
+        "test_ios_thin_swift.EverySwiftFileKeepsItsRole.test_every_swift_file_keeps_its_role_its_doors_and_its_budget"
+      ],
+      [
+        "S34713-NO-FILE-NAMES-USER-DEFAULTS",
+        "scripts/tests/test_ios_thin_swift.py",
+        "    \"UserDefaults\": re.compile(r\"UserDefaults\"),",
+        "",
+        "no Swift file names UserDefaults; dropped from the forbidden names, a setting could outlive the engine's collection in a second store (SPEC-347 R11, A12)",
+        "test_ios_thin_swift.EverySwiftFileKeepsItsRole.test_every_swift_file_keeps_its_role_its_doors_and_its_budget"
+      ],
+      [
+        "S34714-THE-ENDPOINT-PLACEHOLDER-IS-INVALID",
+        "scripts/tests/test_ios_app_tree.py",
+        "        if not host.endswith(\".invalid\"):",
+        "        if False:",
+        "the committed sync endpoint is on a host under .invalid; without the test, a real host could be committed as the placeholder (SPEC-347 R5, A13)",
+        "test_ios_app_tree.TheAppTreeCarriesTheSeam.test_the_app_tree_carries_the_seam_and_keeps_the_credential_in_the_keychain"
+      ],
+      [
+        "S34715-THE-ITEM-STAYS-ON-THIS-DEVICE",
+        "scripts/tests/test_ios_app_tree.py",
+        "        if token != ACCESSIBLE:",
+        "        if False:",
+        "the store names no accessibility but the device-only one; without the test, an accessibility that lets the item leave the device is admitted beside it (SPEC-347 R9, A13)",
+        "test_ios_app_tree.TheAppTreeCarriesTheSeam.test_the_app_tree_carries_the_seam_and_keeps_the_credential_in_the_keychain"
+      ],
+      [
+        "S34716-APP-TRANSPORT-SECURITY-IS-UNTOUCHED",
+        "scripts/tests/test_ios_app_tree.py",
+        "    if \"NSAppTransportSecurity\" in info:",
+        "    if False:",
+        "the property list holds no NSAppTransportSecurity key; without the test, the app could relax transport security unseen (SPEC-347 R5, A13)",
+        "test_ios_app_tree.TheAppTreeCarriesTheSeam.test_the_app_tree_carries_the_seam_and_keeps_the_credential_in_the_keychain"
+      ],
+      [
+        "S34717-THE-ARCHIVE-IS-UNSIGNED",
+        "scripts/tests/test_ci_workflows.py",
+        "        if \"CODE_SIGNING_ALLOWED=NO\" not in run:",
+        "        if False:",
+        "the device archive turns code signing off on its command line; without the test, an archive step that signs is admitted (SPEC-347 R13, A14)",
+        "test_ci_workflows.TheAppIsGeneratedTestedAndArchived.test_the_app_is_generated_tested_and_archived_in_the_harness_job"
+      ]
     ]
   }
 }

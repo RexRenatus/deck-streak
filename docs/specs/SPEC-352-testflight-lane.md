@@ -63,6 +63,9 @@ R1. Two workflows carry the lane. `testflight-internal.yml` runs on `workflow_di
     nothing else. `testflight-release.yml` runs on a push of a tag matching
     `v[0-9]+.[0-9]+.[0-9]+` and on nothing else. Neither declares `pull_request`,
     `pull_request_target`, `workflow_run`, `schedule`, or a push to a branch.
+    Amended by R22 (ruling 461: a push on `dev`, a path filter, and push runs that supersede one
+    another): `testflight-internal.yml` also runs on a push to `dev` that changes a path its filter
+    names, and on nothing else; the release lane's trigger is unchanged.
 R2. Each lane runs three jobs in order: `plan` on a versioned Ubuntu image, with no environment
     and no secret; `framework`, the reusable call of `xcframework.yml` at the same commit, passing
     no secret; and `app` on the macOS image the hardening test admits, naming the lane's
@@ -71,6 +74,8 @@ R3. The internal `plan` refuses, naming the reason: an event other than `workflo
     other than `refs/heads/dev`; a shallow checkout (`git rev-parse --is-shallow-repository`
     prints `true`). It outputs the build number, `git rev-list --count --first-parent HEAD`, and
     the marketing version.
+    Amended by R22 (ruling 461): the internal `plan` admits a push as well as a dispatch, each on
+    `refs/heads/dev` only, and refuses any other event by name.
 R4. The release `plan` refuses, naming the reason: an event other than a tag push; a tag that is
     not SemVer; a lightweight tag; a commit that is not on `main`'s first-parent chain; a tag
     whose version differs from the workspace version; a shallow checkout. It outputs the build
@@ -144,6 +149,12 @@ R16. Each lane file defaults its token to `contents: read`, checks out with
     `queue: max`'s hundred waiting runs (ADR-292):
     `testflight-internal-${{ github.ref }}` and `testflight-release-${{ github.ref }}`, with
     `cancel-in-progress: false` and `queue: max`, and no job-level block.
+    Amended by R22 (ruling 461): the internal lane's group is
+    `testflight-internal-${{ github.event_name }}-${{ github.ref }}`, with
+    `cancel-in-progress: false` and `queue: single`, so a dispatch and a push wait in groups of
+    their own, no run in progress is cancelled (SPEC-190 R9), and a newer run replaces the waiting
+    run of its own event: push runs supersede one another while they wait. The release lane's
+    block is unchanged.
 R17. The two `app` jobs are identical except for the environment's name and the lane value, and the
     two `plan` jobs differ only in the lane argument and the release lane's ancestry step.
 R18. The lane passes `DS_LANE`, `internal` or `release`, as a build setting on the `xcodebuild`
@@ -164,6 +175,19 @@ R20. Every lane run's summary names the lane, the commit, the marketing version,
     whether the credential was placed, and the upload's outcome, and no private value.
 R21. `RELEASING.md` says how to dispatch an internal build, what a release tag starts, where the
     build number comes from, and what "stopped before the upload" means.
+R22. Ruling 461: the internal lane also starts on a push to `dev`, filtered to the app's inputs,
+    and push runs supersede one another. `testflight-internal.yml` runs on `workflow_dispatch` and
+    on a `push` to `dev` whose `paths` filter names exactly: every crate the XCFramework links,
+    read from the packages `xcframework.yml`'s cargo commands build and the workspace manifests'
+    path dependencies (`crates/ffi/**` and `crates/engine-core/**`); `ios/**`; `Cargo.lock`,
+    `Cargo.toml` and `rust-toolchain.toml`; the two workflow files the lane runs,
+    `.github/workflows/xcframework.yml` and `.github/workflows/testflight-internal.yml`; and the two
+    scripts its steps call, `scripts/ios_lane.py` and `scripts/ios_icon.py`. It declares no other
+    trigger, so no pull request, schedule, tag or other branch starts it. Its `plan` admits that
+    push (R3 as amended), and its queue is R16's as amended. The token stays read-only, every
+    action stays pinned by its full commit SHA, the jobs stay on hosted runners, a run with no
+    credential placed builds and stops before the upload (ADR-363 D5), and ADR-363 D7's rule that
+    no real data reaches a device before the real-data gates clear is unchanged.
 
 ## 3. Acceptance criteria
 
@@ -193,6 +217,7 @@ R21. `RELEASING.md` says how to dispatch an internal build, what a release tag s
 | A22 | the macOS image is admitted by file and job to the two `app` jobs, and refused on a lane's `plan` job and on a job named `app` in another file; every `runs-on` is judged | `test_ci_workflows.py`, `test_the_macos_runner_is_admitted_to_the_lane_app_jobs_only` |
 | A23 | the app's property list declares `UILaunchScreen` and the four iPad orientations, and the project names the asset catalog among the target's sources and its app icon | `test_ios_icon.py`, `test_the_app_declares_what_an_upload_requires` |
 | A24 | the icon `scripts/ios_icon.py` writes decodes to a 1024 by 1024 RGB image with no alpha channel and no text chunk, every unfiltered pixel one opaque colour | `test_ios_icon.py`, `test_the_generated_icon_is_an_opaque_square_with_no_text` |
+| A25 | the internal lane's push filter watches exactly the crates the XCFramework links, read from the packages its cargo commands build and the workspace's manifests; a filter missing one linked crate, and a filter naming a crate the XCFramework does not link, are each refused by name | `test_testflight_workflows.py`, `test_the_internal_push_filter_watches_every_crate_the_xcframework_links` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_internal_plan_refuses_any_event_or_ref_but_a_dispatch_on_dev
@@ -219,6 +244,7 @@ A21: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k te
 A22: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_macos_runner_is_admitted_to_the_lane_app_jobs_only
 A23: python3 -m unittest discover -s scripts/tests -p test_ios_icon.py -k test_the_app_declares_what_an_upload_requires
 A24: python3 -m unittest discover -s scripts/tests -p test_ios_icon.py -k test_the_generated_icon_is_an_opaque_square_with_no_text
+A25: python3 -m unittest discover -s scripts/tests -p test_testflight_workflows.py -k test_the_internal_push_filter_watches_every_crate_the_xcframework_links
 ```
 
 Every criterion runs on Linux in the hygiene job's `python` stage, with no credential, no macOS
@@ -308,3 +334,36 @@ and on tags.
 - **The first upload, after it is placed.** The same dispatch: the summary reads "uploaded", and the
   build appears in internal TestFlight under the dev app id with that number (ADR-344,
   Confirmation).
+
+## 8. Amendments
+
+### Ruling 461: the internal lane also starts on a push to dev
+
+The internal lane could not run: GitHub starts a `workflow_dispatch` workflow only from a file on
+the default branch, the default branch stays `main`, and `main` does not hold the lane's file.
+Ruling 461 adds a push trigger on `dev`, filtered to the app's inputs, with push runs that
+supersede one another (R22). R1, R3 and R16 carry amendment lines, ADR-363 D2 records the reversal
+of its "one file with both triggers" rejection, and ADR-344 carries an amendment line on its "no
+push starts it" clause.
+
+- A1 (R3) now admits a push on `dev` beside a dispatch on `dev`, and refuses a pull request, a
+  schedule, and a push or a dispatch on any ref but `dev`, each by name.
+- A14 (R1) now holds the internal lane's `on` to exactly the dispatch and the filtered push; the
+  release lane's assertion is unchanged.
+- A17 (R16) now holds the internal lane's queue to exactly R16's amended block; the release lane's
+  is unchanged.
+- A25 (R22) is new.
+
+| file | context | change |
+|---|---|---|
+| `.github/workflows/testflight-internal.yml` | CI | changed: the push trigger, its filter and the queue (R22) |
+| `scripts/ios_lane.py` | scripts | changed: the internal plan admits a push on `dev` (R3 as amended) |
+| `scripts/tests/test_ios_lane.py` | tests | changed: A1 |
+| `scripts/tests/test_testflight_workflows.py` | tests | changed: A14 and A17, and A25 added |
+| `scripts/tests/test_ci_workflows.py` | tests | changed: the read census's entry for A25's manifest read |
+| `scripts/mutation-rows.d/S35200-S35299.json` | mutation | changed: rows for the new arms, appended |
+| `changelog.d/testflight-internal-push-352.md` | docs | added |
+| `docs/specs/SPEC-352-testflight-lane.md`, `docs/decisions/ADR-363-testflight-lane.md`, `docs/decisions/ADR-344-internal-testflight-builds-come-from-a-dispatch-on-dev-numbered-by-its-first-parent-count.md`, `docs/schematics/testflight-lane.md`, `docs/red-first/SPEC-352.md` | docs | changed: insert-only amendments |
+
+The amendment changes no trigger, filter or queue of the release lane or of `xcframework.yml`, and
+no repository or environment setting (#634).

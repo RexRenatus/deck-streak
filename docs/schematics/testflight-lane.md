@@ -8,6 +8,7 @@ by role, never by secret name, and no value, identifier or host appears.
 | component | where | holds |
 |---|---|---|
 | internal trigger | `.github/workflows/testflight-internal.yml` | `workflow_dispatch` only; jobs `plan`, `framework`, `app`; the internal environment on `app` |
+| internal trigger, amended (SPEC-352 R22) | `.github/workflows/testflight-internal.yml` | also a push to `dev` whose `paths` name every crate the XCFramework links, `ios/**`, `Cargo.lock`, `Cargo.toml`, `rust-toolchain.toml`, the two workflow files the lane runs and the two scripts its steps call; no other trigger |
 | release trigger | `.github/workflows/testflight-release.yml` | a push of a SemVer tag only; the same jobs; the release environment on `app` |
 | framework call | `.github/workflows/xcframework.yml` | already takes `workflow_call` (SPEC-344); its jobs (the XCFramework, the harness, the wire sweep) run inside the caller's run; its `harness` job gains the icon step |
 | lane script | `scripts/ios_lane.py` | `plan`, `preflight`, `build-unsigned`, `sign`, `upload-to-testflight`, `clean`, `summary`; standard library only |
@@ -24,6 +25,7 @@ team and the app id are read from the profile.
 
 ```
  internal: workflow_dispatch (refs/heads/dev)         release: push of tag vX.Y.Z
+ internal (R22): or a push to dev that changes a filtered path
                      |                                            |
                      v                                            v
  +----------------------------------------------------------------------------------+
@@ -60,6 +62,12 @@ Each lane file queues its runs in one group per lane and ref (`testflight-intern
 `testflight-release-` followed by `github.ref`) that never cancels a run in progress and never
 replaces a waiting one, up to `queue: max`'s hundred waiting runs (ADR-292). No job restores or
 saves a cache, and no job uploads an artifact of its own.
+
+The internal lane's queue is amended by SPEC-352 R22: its group is `testflight-internal-`, then
+`github.event_name`, then `-` and `github.ref`, with `cancel-in-progress: false` and
+`queue: single`, so a dispatch and a push never share a group, no run in progress is cancelled,
+and a newer run replaces the waiting run of its own event. SPEC-352 A25 holds the push filter's
+crates to the XCFramework's build closure, read from the workspace's manifests.
 
 ## The credential's path, and nowhere else
 
