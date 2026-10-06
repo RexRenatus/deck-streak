@@ -118,7 +118,7 @@ SCRIPTS = re.compile(r"scripts/[^/]+\.py")
 #: The Python mutation runner's report schema, and its listing's (`mutation_python.py`).
 PYTHON_SCHEMA = "deckstreak.mutation-python.v1"
 #: The mutants one Python shard holds, and the most shards a pull request's matrix runs (R9).
-PYTHON_SHARD_MUTANTS, PYTHON_MAX_SHARDS = 40, 32
+PYTHON_SHARD_MUTANTS, PYTHON_MAX_SHARDS = 20, 32
 #: The weekly battery's Python shards, each `run --all --shard k/16` (R14).
 PYTHON_WEEKLY_SHARDS = 16
 #: The weekly dispatch's `package` value that sweeps the Python population alone (R14).
@@ -985,7 +985,7 @@ def python_listing(path: str | None) -> list[dict] | None:
 
 
 def python_shards(listing: list[dict]) -> dict:
-    """The Python matrix, sized by the diff's listing (R9): the ceiling of listed over 40, clamped
+    """The Python matrix, sized by the diff's listing (R9): the ceiling of listed over 20, clamped
     to 1 to 32, each shard's mutants round-robin as the runner assigns them, `i mod count`."""
     count = min(PYTHON_MAX_SHARDS, max(1, -(-len(listing) // PYTHON_SHARD_MUTANTS)))
     names = [str(entry.get("name")) for entry in listing]
