@@ -14,6 +14,7 @@ use deck_streak_identity::{LinkingConfig, PasskeyError, Refusal};
 use deck_streak_kernel::Environment;
 use serde_json::Value;
 
+use support::ORIGIN;
 use support::fixture_with;
 
 /// A link code's text the store never minted: 16 zero bytes as base64url.
@@ -166,4 +167,23 @@ fn a_public_origin_that_is_not_https_refuses_start() {
             "the https origin {value:?} turned linking off"
         );
     }
+}
+
+/// An `https` origin set in the environment turns linking on: the setting's text is read whole and
+/// its relying party is built, which `Debug`s as `RelyingParty { .. }` (SPEC-359 R1).
+#[test]
+fn an_https_public_origin_in_the_environment_turns_linking_on() {
+    let env = Environment::from_vars([(PUBLIC_ORIGIN, ORIGIN)]);
+    let config = LinkingConfig::from_env(&env).expect("an https origin starts");
+    let relying_party = config
+        .relying_party()
+        .expect("an https origin turns linking on");
+    assert_eq!(
+        [format!("{relying_party:?}"), format!("{config:?}")],
+        [
+            "RelyingParty { .. }",
+            "LinkingConfig { relying_party: Some(RelyingParty { .. }) }",
+        ],
+        "the relying party does not debug as its redacted form"
+    );
 }

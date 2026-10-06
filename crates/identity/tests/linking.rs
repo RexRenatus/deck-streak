@@ -12,12 +12,20 @@ mod support;
 
 use std::time::Duration;
 
+use axum::Router;
+use axum::body::Body;
 use axum::body::to_bytes;
+use axum::http::header::COOKIE;
+use axum::http::{Request, StatusCode};
 use axum::response::IntoResponse as _;
+use axum::routing::get;
 use deck_streak_identity::linking::{LINK_CODE_BYTES, MAX_LIVE_LINK_CODES, TELEGRAM_METHOD};
 use deck_streak_identity::session::Proof;
+use deck_streak_identity::session::SESSION_COOKIE;
+use deck_streak_identity::{FreshTelegramSession, LinkSession};
 use deck_streak_identity::{Refusal, SignedIn};
 use sha2::{Digest as _, Sha256};
+use tower::ServiceExt as _;
 
 use support::{Authenticator, Captured, Fixture, Presented, STRANGER, b64, fixture, unb64};
 
@@ -688,4 +696,130 @@ async fn each_refusal_answers_its_status() {
             "a refusal's body is not its reason alone"
         );
     }
+}
+
+/// A minted link code `Debug`s as `LinkCode(..)`, and the store of live codes as its count, so
+/// neither a code nor its digest reaches a log (SPEC-359 R3, R13).
+#[tokio::test]
+async fn a_link_code_and_its_store_debug_without_the_code() {
+    let world = fixture().await;
+    let session = open_telegram(&world);
+    let code = world
+        .passkeys
+        .mint_link_code(&session)
+        .expect("a code is minted");
+    let rendered = [
+        format!("{code:?}"),
+        format!("{:?}", world.passkeys.link_codes()),
+    ];
+    assert_eq!(
+        rendered,
+        ["LinkCode(..)", "LinkCodes { live: 1, .. }"],
+        "a link code or its store does not debug as its redacted form"
+    );
+    let digest = world.passkeys.link_codes().digests();
+    let secrets = vec![
+        ("the link code", code.expose().to_owned()),
+        (
+            "the code's digest, as a derived Debug writes its bytes",
+            digest
+                .first()
+                .map(|bytes| format!("{bytes:?}"))
+                .unwrap_or_default(),
+        ),
+    ];
+    for (what, secret) in examined("link code secrets", secrets) {
+        assert!(!secret.is_empty(), "{what} is empty, so nothing was judged");
+        for text in &rendered {
+            assert!(!text.contains(&secret), "{what} reached a Debug rendering");
+        }
+    }
+}
+
+/// Ending the sessions a `passkeys` row opened ends exactly those and answers how many: two of
+/// the three live, the `telegram` one kept (SPEC-359 R9).
+#[tokio::test]
+async fn ending_a_rows_sessions_answers_how_many_ended() {
+    let world = fixture().await;
+    let first = open_linked(&world, 1);
+    let second = open_linked(&world, 1);
+    let telegram = open_telegram(&world);
+    assert_eq!(world.sessions.live(), 3, "three sessions are live");
+    assert_eq!(
+        world.sessions.end_opened_by(1),
+        2,
+        "the row's two sessions were not the count ended"
+    );
+    assert_eq!(
+        [
+            proof(&world, &first),
+            proof(&world, &second),
+            proof(&world, &telegram)
+        ],
+        [None, None, Some(Proof::Telegram)],
+        "the row's sessions live on, or the telegram session ended"
+    );
+}
+
+/// What a probe route answers to a request whose session cookie is `token`.
+async fn probe(app: Router, token: &str) -> (StatusCode, String) {
+    let request = Request::get("/probe")
+        .header(COOKIE, format!("{SESSION_COOKIE}={token}"))
+        .body(Body::empty())
+        .expect("a request");
+    let response = app
+        .oneshot(request)
+        .await
+        .expect("the router is infallible");
+    let status = response.status();
+    let body = to_bytes(response.into_body(), BODY_READ_LIMIT)
+        .await
+        .expect("a readable body");
+    (
+        status,
+        String::from_utf8(body.to_vec()).expect("a UTF-8 body"),
+    )
+}
+
+/// A `link` session's extractor hands its route the id it admitted, and `Debug`s as
+/// `LinkSession(..)`, never the id (SPEC-359 R2, R13).
+#[tokio::test]
+async fn a_link_session_hands_its_route_its_id_and_debugs_without_it() {
+    let world = fixture().await;
+    let link = world.link_session();
+    let app = Router::new()
+        .route(
+            "/probe",
+            get(|session: LinkSession| async move { format!("{session:?}|{}", session.token()) }),
+        )
+        .with_state(world.sessions.clone());
+    assert_eq!(
+        probe(app, &link).await,
+        (StatusCode::OK, format!("LinkSession(..)|{link}")),
+        "the link session's route saw another id, or its Debug is not the redacted form"
+    );
+}
+
+/// A fresh `telegram` session's extractor hands its route the id it admitted, and `Debug`s as
+/// `FreshTelegramSession(..)`, never the id (SPEC-359 R3, R13).
+#[tokio::test]
+async fn a_fresh_telegram_session_hands_its_route_its_id_and_debugs_without_it() {
+    let world = fixture().await;
+    let telegram = open_telegram(&world);
+    let app = Router::new()
+        .route(
+            "/probe",
+            get(|session: FreshTelegramSession| async move {
+                format!("{session:?}|{}", session.token())
+            }),
+        )
+        .with_state(world.sessions.clone());
+    assert_eq!(
+        probe(app, &telegram).await,
+        (
+            StatusCode::OK,
+            format!("FreshTelegramSession(..)|{telegram}")
+        ),
+        "the telegram session's route saw another id, or its Debug is not the redacted form"
+    );
 }

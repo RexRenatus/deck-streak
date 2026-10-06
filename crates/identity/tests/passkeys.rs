@@ -13,8 +13,11 @@ use std::time::Duration;
 
 use deck_streak_identity::Refusal;
 use deck_streak_identity::passkeys::{USER_NAME, counter_advances};
+use deck_streak_identity::{LinkingConfig, Owner, PasskeyError, Passkeys};
+use deck_streak_kernel::TelegramUserId;
 use serde_json::Value;
 
+use support::ORIGIN;
 use support::{Authenticator, ELSEWHERE, Fixture, OWNER, Presented, USER_PRESENT, fixture, unb64};
 
 /// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
@@ -504,4 +507,101 @@ async fn a_counter_moved_since_its_read_is_refused() {
         Some(9),
         "the row's counter after the refused sign-in"
     );
+}
+
+/// A started ceremony's flow id `Debug`s as `FlowId(..)`, and the ceremony store and the use cases
+/// as the live count, so no flow id reaches a log (SPEC-359 R13).
+#[tokio::test]
+async fn a_ceremony_and_its_stores_debug_without_the_flow_id() {
+    let world = fixture().await;
+    let session = world.link_session();
+    let started = world
+        .passkeys
+        .start_registration(&world.db, &session)
+        .await
+        .expect("a registration starts");
+    let rendered = [
+        format!("{:?}", started.flow),
+        format!("{:?}", world.passkeys.ceremonies()),
+        format!("{:?}", world.passkeys),
+    ];
+    assert_eq!(
+        rendered,
+        [
+            "FlowId(..)",
+            "Ceremonies { live: 1, .. }",
+            "Passkeys { ceremonies: Ceremonies { live: 1, .. }, .. }",
+        ],
+        "a flow id or a store does not debug as its redacted form"
+    );
+    let flow = started.flow.expose();
+    assert_eq!(flow.len(), 64, "the flow id is 32 bytes as hex");
+    for text in examined("Debug renderings", rendered.to_vec()) {
+        assert!(!text.contains(flow), "the flow id reached `{text}`");
+    }
+}
+
+/// An assertion signed over another ceremony's challenge is refused `challenge_invalid`, and the
+/// row is unchanged (SPEC-359 R8).
+#[tokio::test]
+async fn an_assertion_over_another_ceremonys_challenge_is_refused() {
+    let world = fixture().await;
+    let authenticator = Authenticator::new(2);
+    let row = world.seed(OWNER, &authenticator, 5).await;
+    let signed = world
+        .passkeys
+        .start_sign_in(&world.db)
+        .await
+        .expect("a start");
+    let presented = world
+        .passkeys
+        .start_sign_in(&world.db)
+        .await
+        .expect("a start");
+    assert_eq!(
+        finish(
+            &world,
+            presented.flow.expose(),
+            &signed.options,
+            &authenticator,
+            &Presented::counter(6)
+        )
+        .await,
+        Err(Some(Refusal::ChallengeInvalid)),
+        "an assertion over another ceremony's challenge"
+    );
+    assert_eq!(
+        world.row(row).await,
+        Some((5, 0, None)),
+        "the refused sign-in wrote"
+    );
+}
+
+/// A registration the store refuses for a reason other than a duplicate credential answers a store
+/// failure, never `already_linked`: owner id 0, which the table's check refuses (SPEC-359 R5).
+#[tokio::test]
+async fn a_registration_the_store_refuses_is_not_already_linked() {
+    let world = fixture().await;
+    let config = LinkingConfig::from_setting(Some(ORIGIN)).expect("the origin is an https origin");
+    let refused = Owner::new(TelegramUserId::new(0));
+    let passkeys = Passkeys::new(config, world.sessions.clone(), refused, world.clock.clone());
+    let session = world.link_session();
+    let started = passkeys
+        .start_registration(&world.db, &session)
+        .await
+        .expect("a registration starts");
+    let response = Authenticator::new(2).register(&started.options, &Presented::default());
+    let answered = passkeys
+        .finish_registration(&world.db, &session, started.flow.expose(), &response)
+        .await;
+    assert!(
+        matches!(answered, Err(PasskeyError::Store(_))),
+        "the store's refusal answered otherwise: {answered:?}"
+    );
+    assert_eq!(
+        answered.err().and_then(|error| error.refusal()),
+        None,
+        "a store failure answered a refusal"
+    );
+    assert_eq!(world.rows().await, 0, "a refused registration wrote a row");
 }
