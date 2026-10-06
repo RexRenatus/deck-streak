@@ -259,3 +259,114 @@ flowchart TD
 | `baseline_seconds` | the listing's packages, as a set | 371 plus each named package's term once; rows S32702 and S32703 |
 | `shards` and `size` | the computed baseline, into `fewest_shards` and `projected` | the pull request's plan and the package dispatch both pay it; row S32704 |
 | every `cargo mutants` command | `--timeout 1200 --build-timeout 600` | `BOUNDS` and the byte pins hold each command to it; rows S12904 to S12909 and S32705 |
+
+## 8. A release's mutants in one run of legs (SPEC-362, ADR-373)
+
+Schematic for SPEC-362 and ADR-373 (rows band S36200-S36299). It draws the data flow of a pull
+request's Rust mutants, the release pull request's included, and of the scheduled battery, as the
+build leaves them. Names are the jobs, artifacts and files the workflows write; section 8.4 cites
+each step by `path:line`. Where sections 1, 2, 4 and 7 name the bound of an hour, the 120-minute
+leg, the 32 whole-tree legs, `--timeout 1200` or a census of 788 s, this section supersedes them.
+
+### 8.1 A pull request's run, the release's included
+
+```mermaid
+flowchart TD
+    EV["pull_request into dev or main<br/>(the merge ref; a release's head is dev)"] --> PLAN
+
+    subgraph PLAN["job mutation-plan"]
+        D["git diff HEAD^1...HEAD<br/>-> git.diff"] --> L["cargo mutants --list --json --in-diff git.diff<br/>-> listed.json (the population)"]
+        L --> S["mutation-verdict.py shards<br/>fewest round-robin legs whose slowest is projected<br/>within SHARD_BOUND_SECONDS (half the leg's timeout)"]
+        S --> C{"legs N within<br/>LEG_CEILING for ci.yml?"}
+        C -- "no" --> R["REFUSED, whole: count, ceiling, projection<br/>(never capped)"]
+        C -- "yes" --> P["plan.json: legs 0..N-1, each its mutants<br/>prints: legs N of ceiling C"]
+    end
+
+    P --> ART1[("artifact mutation-plan<br/>git.diff, listed.json, plan.json")]
+    R --> ART1
+
+    ART1 --> M
+
+    subgraph M["job mutation-rust, matrix leg = 0..N-1 (one run)"]
+        LEG["leg k: cargo mutants --in-place --in-diff git.diff<br/>--sharding round-robin --shard k/N<br/>--timeout from the census; nextest profile mutants"]
+        LEG --> B["baseline: the leg's tests, unmutated<br/>(log: its slowest test)"]
+        B --> MU["each mutant: build, then tests until the first failure<br/>caught / missed / timeout / unviable"]
+        MU --> O["mutants.out: outcomes.json, logs"]
+    end
+
+    O --> ART2[("artifact mutation-rust-shard-k<br/>one per leg, latest attempt")]
+
+    ART1 --> V
+    ART2 --> V
+
+    subgraph V["job mutation-verdict (if: always())"]
+        V1["the population is listed.json:<br/>plan's legs hold each listed mutant once, else VOID"]
+        V2["every planned leg 0..N-1:<br/>no report or a partial one is VOID by name"]
+        V3["each leg: 1.5 x its slowest baseline test<br/>within the per-mutant timeout, else VOID"]
+        V4["reports hold each listed mutant once:<br/>in two legs FAIL, in none VOID"]
+        V5["judge: a missed mutant FAILS; caught, timeout<br/>and unviable are examined"]
+        V1 --> V2 --> V3 --> V4 --> V5
+    end
+
+    V5 --> CI{"job ci (if: always())<br/>needs every job, the verdict included"}
+    CI -- "every need success" --> OK["required check ci: success"]
+    CI -- "any other result" --> NO["required check ci: failure"]
+
+    NO -. "a leg VOID from a runner shutdown:<br/>Re-run failed jobs" .-> M
+```
+
+Reading it:
+
+- One run holds every leg. `LEG_CEILING` is 256 less the most jobs the run's other jobs can
+  generate, so the plan never asks for a matrix the run cannot start.
+- The plan's legs come from the tool's listing, and the verdict checks them against that listing,
+  so a sizing defect cannot shrink the population the verdict judges.
+- A leg that never reports is VOID because the verdict walks the plan's legs, never the artifacts
+  that arrived.
+- A push to `dev` while a release pull request's run is in flight starts a new run on the new head
+  and cancels this one (the workflow's concurrency group): the cancelled run decides nothing.
+
+### 8.2 The scheduled battery
+
+```mermaid
+flowchart TD
+    T["schedule (the default branch's workflow) or dispatch<br/>checks out dev"] --> SZ
+
+    subgraph SZ["job size"]
+        WL["cargo mutants --list --json (no diff)<br/>-> the whole tree's listing"] --> WS["the same sizing as shards,<br/>at mutation-weekly.yml's ceiling"]
+        WS --> WC{"legs within the battery's ceiling?"}
+        WC -- "no" --> WR["REFUSED, whole, by name"]
+        WC -- "yes" --> WP["plan: legs 0..N-1"]
+    end
+
+    WP --> WM["job rust legs 0..N-1<br/>the same leg command, no --in-diff"]
+    WM --> WA[("artifact per leg")]
+    WA --> BV["BATTERY: every planned leg counted;<br/>the listing is the population"]
+    BV --> SV["survivors: each surviving mutant filed once"]
+```
+
+The battery's legs were a fixed 32. They are sized from the listing like any diff's, so the
+battery judges the whole tree at the bound every leg can hold, and refuses by name when the tree
+outgrows the ceiling.
+
+### 8.3 A leg's report, as the verdict reads it
+
+```mermaid
+stateDiagram-v2
+    [*] --> Running: the matrix starts leg k
+    Running --> Whole: every dealt mutant has an outcome
+    Running --> Partial: timeout or shutdown after some outcomes
+    Running --> None: shutdown before any upload
+    Whole --> Counted: the verdict reads it
+    Partial --> Void: VOID by name
+    None --> Void: VOID by name
+    Void --> Running: Re-run failed jobs (a new attempt of leg k)
+    Counted --> [*]
+```
+
+An artifact's name is unique in its run, and the leg's upload sets no `overwrite`, whose default
+refuses a name the run already holds; the verdict downloads `mutation-rust-shard-*` with
+`merge-multiple: true`. So a re-run attempt's upload does not replace what an earlier attempt of
+leg k stored, and the verdict reads whichever report the store holds for each leg. The TLA+ entry
+`formal/tla/EveryLegCounted` lets the verdict read any stored attempt, so its two properties hold
+under either reading of a re-run's upload.
