@@ -1,0 +1,79 @@
+# The app's Xcode project, generated in CI by the same pinned, digest-checked XcodeGen as the
+# harness's and never committed (SPEC-347 R4, ADR-358). Build settings live in
+# Config/App.xcconfig; the Info.plist and the privacy manifest are committed files this spec points
+# at, never generated. Its packages are local paths alone, and the harness's spec is unchanged.
+name: DeckStreak
+options:
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+configs:
+  Debug: debug
+  Release: release
+configFiles:
+  Debug: Config/App.xcconfig
+  Release: Config/App.xcconfig
+packages:
+  EnginePackage:
+    path: EnginePackage
+  HarnessWire:
+    path: HarnessWire
+targets:
+  DeckStreak:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: App/Sources
+      - path: App/PrivacyInfo.xcprivacy
+        buildPhase: resources
+    dependencies:
+      - package: EnginePackage
+        product: DeckStreakFFI
+      - package: HarnessWire
+    settings:
+      base:
+        INFOPLIST_FILE: App/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_STRICT_CONCURRENCY: complete
+  DeckStreakTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: AppTests
+    dependencies:
+      - target: DeckStreak
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: $(DS_APP_ID).tests
+        TARGETED_DEVICE_FAMILY: "1,2"
+  DeckStreakUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: AppUITests
+    dependencies:
+      - target: DeckStreak
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: $(DS_APP_ID).uitests
+        TARGETED_DEVICE_FAMILY: "1,2"
+schemes:
+  DeckStreak:
+    build:
+      targets:
+        DeckStreak: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - DeckStreakTests
+        - DeckStreakUITests
+    archive:
+      config: Release

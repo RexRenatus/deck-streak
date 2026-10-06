@@ -85,6 +85,12 @@ public enum Requests {
     public static func undo() -> [UInt8] {
         []
     }
+
+    /// `SyncLoginRequest`: `username` (1), `password` (2) and `endpoint` (3), each written, an
+    /// empty endpoint included, because the endpoint is never optional here (SPEC-347 R10).
+    public static func syncLogin(username: String, password: String, endpoint: String) -> [UInt8] {
+        []
+    }
 }
 
 /// One entry of `DeckNames`.
@@ -136,6 +142,18 @@ public enum RenderedNode: Equatable, Sendable {
     case replacement(fieldName: String)
 }
 
+/// The engine's refusal, read from a `BackendError`: its message, the sentence the app shows, and
+/// its kind, as the engine numbers it.
+public struct EngineMessage: Equatable, Sendable {
+    public var message: String
+    public var kind: Int32
+
+    public init(message: String, kind: Int32) {
+        self.message = message
+        self.kind = kind
+    }
+}
+
 /// The response decoders.
 public enum Responses {
     /// `DeckNames`: `entries` (1), each a `DeckNameId` of `id` (1) and `name` (2), in the order
@@ -145,6 +163,18 @@ public enum Responses {
             let deck = try WireMessage(entry)
             return DeckName(id: Int64(bitPattern: deck.varint(1)), name: try deck.string(2))
         }
+    }
+
+    /// `SyncAuth`: the host key, `hkey` (1). Its `endpoint` (2) and `io_timeout_secs` (3), and any
+    /// field the app never reads, are skipped whole.
+    public static func syncAuth(_ bytes: [UInt8]) throws -> String {
+        ""
+    }
+
+    /// `BackendError`: its `message` (1) and `kind` (2). Its `help_page` (3), `context` (4) and any
+    /// other field are skipped whole.
+    public static func engineMessage(_ bytes: [UInt8]) throws -> EngineMessage {
+        EngineMessage(message: "", kind: 0)
     }
 
     /// `QueuedCards`: `cards` (1), `new_count` (2), `learning_count` (3), `review_count` (4).

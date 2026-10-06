@@ -1,0 +1,22 @@
+// The app's build settings (SPEC-347 R5, R14; ADR-358). The lane that ships the app renders its
+// own values into the ignored Signing.local.xcconfig, included last: the app id, the sync endpoint,
+// the sync user, and its signing. A person building locally puts their own in that same file.
+
+// The bundle id is read from one setting. Its committed value is a reserved name (RFC 2606's
+// `.invalid`, written reversed) that no account can register and no upload can carry.
+PRODUCT_BUNDLE_IDENTIFIER = $(DS_APP_ID)
+DS_APP_ID = invalid.deckstreak.app
+
+// The sync server the app signs in to, and the user it signs in as. Both committed values are
+// placeholders: the endpoint is on a reserved `.invalid` host no resolver answers (`$()` expands
+// to nothing, so the two slashes do not open a comment), and the user names no account.
+DS_SYNC_ENDPOINT = https:/$()/sync.deckstreak.invalid/
+DS_SYNC_USER = invalid-sync-user
+
+// The Info.plist reads both; the lane overrides them.
+CURRENT_PROJECT_VERSION = 1
+MARKETING_VERSION = 0.0.0
+
+DEAD_CODE_STRIPPING = YES
+
+#include? "Signing.local.xcconfig"

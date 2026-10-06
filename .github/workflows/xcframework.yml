@@ -476,6 +476,57 @@ jobs:
           print("\n".join(lines))
           raise SystemExit(1 if undeclared else 0)
           PY
+      - name: the app's tests, Debug, on the iPhone and then the iPad
+        id: app-tests
+        run: |
+          "$RUNNER_TEMP/xcodegen/bin/xcodegen" generate --spec ios/app.yml
+          started=$(date +%s)
+          xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug \
+            -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
+            -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" \
+            -disable-concurrent-destination-testing \
+            -derivedDataPath "$RUNNER_TEMP/app-debug" \
+            -resultBundlePath "$RESULTS/app.xcresult" \
+            CODE_SIGNING_ALLOWED=NO
+          echo "$(( $(date +%s) - started ))" > "$REPORT/app-seconds"
+      - name: the app, archived unsigned for a device
+        # Read after a red test step too, so the archive and its imports are measured at every
+        # run (SPEC-347 A15); a cancelled run, or a test step that never ran, skips it.
+        if: ${{ !cancelled() && steps.app-tests.outcome != 'skipped' }}
+        run: |
+          xcodebuild archive -project ios/DeckStreak.xcodeproj -scheme DeckStreak \
+            -configuration Release \
+            -destination generic/platform=iOS \
+            -archivePath "$RUNNER_TEMP/DeckStreak.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO
+          nm -u "$RUNNER_TEMP/DeckStreak.xcarchive/Products/Applications/DeckStreak.app/DeckStreak" > "$REPORT/app-imports"
+          python3 - <<'PY'
+          import os, pathlib, plistlib
+          report = pathlib.Path(os.environ["REPORT"])
+          # Apple's required-reason APIs a C import names, by category: the harness's table.
+          categories = {
+              "NSPrivacyAccessedAPICategoryFileTimestamp": {
+                  "_stat", "_fstat", "_fstatat", "_lstat", "_getattrlist", "_getattrlistbulk",
+                  "_fgetattrlist", "_getattrlistat",
+              },
+              "NSPrivacyAccessedAPICategorySystemBootTime": {"_mach_absolute_time"},
+              "NSPrivacyAccessedAPICategoryDiskSpace": {"_statfs", "_statvfs", "_fstatfs", "_fstatvfs"},
+              "NSPrivacyAccessedAPICategoryUserDefaults": {"_OBJC_CLASS_$_NSUserDefaults"},
+          }
+          imported = {line.strip() for line in (report / "app-imports").read_text().splitlines()}
+          used = {name: sorted(symbols & imported) for name, symbols in categories.items()}
+          used = {name: symbols for name, symbols in used.items() if symbols}
+          manifest = plistlib.loads(pathlib.Path("ios/App/PrivacyInfo.xcprivacy").read_bytes())
+          declared = {entry["NSPrivacyAccessedAPIType"] for entry in manifest["NSPrivacyAccessedAPITypes"]}
+          lines = [f"used {name}: {', '.join(symbols)}" for name, symbols in sorted(used.items())]
+          lines += [f"declared {name}" for name in sorted(declared)]
+          undeclared = sorted(set(used) - declared)
+          lines += [f"UNDECLARED {name}" for name in undeclared]
+          lines += [f"declared and not imported {name}" for name in sorted(declared - set(used))]
+          (report / "app-symbols").write_text("\n".join(lines) + "\n")
+          print("\n".join(lines))
+          raise SystemExit(1 if undeclared else 0)
+          PY
       - name: the report
         if: ${{ always() }}
         run: |
@@ -542,6 +593,7 @@ jobs:
                           yield from measured(value, device)
           debug_cases = cases_in("debug")
           release_cases = cases_in("release")
+          app_cases = cases_in("app")
           release = results / "release.xcresult"
           metrics = tool("metrics", "--path", str(release)) if release.exists() else None
           found = []
@@ -562,6 +614,7 @@ jobs:
               ("measurements, Release, both simulators", minutes("release-seconds")),
               ("Release app bytes", read("app-bytes") or "not measured"),
               ("Release executable bytes", read("executable-bytes") or "not measured"),
+              ("app's tests, Debug, both simulators", minutes("app-seconds")),
           ]
           for simulator in simulators:
               for label, pick, wanted in figures:
@@ -579,7 +632,7 @@ jobs:
               "|---|---|",
           ] + [f"| {name} | {value} |" for name, value in rows]
           lines += ["", "| test | result |", "|---|---|"]
-          for label, cases in (("Debug", debug_cases), ("Release", release_cases)):
+          for label, cases in (("Debug", debug_cases), ("Release", release_cases), ("App", app_cases)):
               lines += [f"| {label} `{c.get('nodeIdentifier')}` | {per_simulator(c)} |" for c in cases]
               if not cases:
                   lines.append(f"| {label}: no test result was read | not measured |")
@@ -590,6 +643,10 @@ jobs:
           symbols = read("symbols")
           if symbols:
               lines += ["", "Required-reason imports against the privacy manifest:", "", "```", symbols, "```"]
+          app_symbols = read("app-symbols")
+          if app_symbols:
+              lines += ["", "The app's required-reason imports against its privacy manifest:", "", "```",
+                        app_symbols, "```"]
           text = "\n".join(lines) + "\n"
           (report / "report.md").write_text(text)
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
