@@ -1532,6 +1532,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "deck-streak-xp"
+version = "0.3.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "delegate-display"
 version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
