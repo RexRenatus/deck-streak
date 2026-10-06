@@ -140,6 +140,9 @@ pub struct Admitted {
     pub proof: Proof,
     /// When the session began: for a `telegram` session, its handshake.
     pub began: UtcMillis,
+    /// When the store admitted it: the instant a freshness check measures the handshake's age
+    /// against (SPEC-359 R3, R9).
+    pub now: UtcMillis,
 }
 
 /// A live session, as the store keeps it: the SHA-256 of its id, never the id.
@@ -298,6 +301,7 @@ impl Sessions {
             owner: session.owner,
             proof: session.proof,
             began: session.began,
+            now,
         })
     }
 
