@@ -291,8 +291,9 @@ final class Probe {
     /// loaded. It is the wait the planted suite has always measured (SPEC-361 R16).
     static let loadSeconds: TimeInterval = 10
 
-    /// The bound of the warm-up's one load: it holds the host's first start of WebKit, which a
-    /// cold first test's measured wait would otherwise pay (SPEC-361 R16, ADR-372 D11).
+    /// The bound of each of the warm-up's two loads: they hold the host's first start of WebKit on
+    /// each path, which a cold first test's measured wait would otherwise pay (SPEC-361 R16,
+    /// ADR-372 D11).
     static let warmUpSeconds: TimeInterval = 60
 
     /// The warm-up's reading, once per process: nil until it has run.
@@ -319,16 +320,32 @@ final class Probe {
         await loadTime(view) != nil
     }
 
-    /// Starts WebKit once per test process, before any measured wait: one planted card in a view
-    /// the factory builds, mounted and waited for under `warmUpSeconds`. Returns whether it loaded;
-    /// every later call returns the first reading (SPEC-361 R16, ADR-372 D11).
+    /// Starts WebKit once per test process, before any measured wait, on both paths a measured
+    /// wait can take: one planted card in a scripts-off view the factory builds, then one card
+    /// whose script runs in a scripts-on view, each mounted and waited for under `warmUpSeconds`.
+    /// Returns whether both loaded; every later call returns the first reading (SPEC-361 R16,
+    /// ADR-372 D11).
     static func warmUp() async -> Bool {
         if let reading = warmedUp {
             return reading
         }
         let ruleList = await RuleList.compile()
-        let view = CardWebViewFactory.make(layers: Set(CardLayer.allCases), ruleList: ruleList)
-        CardWebViewFactory.load(Planted.document(id: "warm-up", head: "", body: "<p>a card</p>"), into: view)
+        let off = await warmUpLoad(switchedOn: false, body: "<p>a card</p>", ruleList: ruleList)
+        let on = await warmUpLoad(
+            switchedOn: true, body: "<script>\(ranMarker)</script><p>a card</p>", ruleList: ruleList)
+        let loaded = off && on
+        warmedUp = loaded
+        return loaded
+    }
+
+    /// One warm-up load: a planted card in a view the factory builds with `switchedOn`, mounted,
+    /// waited for under `warmUpSeconds` and taken down. Returns whether it loaded.
+    private static func warmUpLoad(
+        switchedOn: Bool, body: String, ruleList: WKContentRuleList?
+    ) async -> Bool {
+        let view = CardWebViewFactory.make(
+            layers: Set(CardLayer.allCases), ruleList: ruleList, switchedOn: switchedOn)
+        CardWebViewFactory.load(Planted.document(id: "warm-up", head: "", body: body), into: view)
         mount(view)
         let took = await poll(Probe.warmUpSeconds) {
             await reportsLoaded(view)
@@ -336,8 +353,8 @@ final class Probe {
         view.stopLoading()
         view.removeFromSuperview()
         let loaded = took != nil
-        print("card probe warm-up: loaded=\(loaded) took=\(took.map { String(format: "%.2f", $0) } ?? "none")")
-        warmedUp = loaded
+        let scripts = switchedOn ? "on" : "off"
+        print("card probe warm-up: scripts=\(scripts) loaded=\(loaded) took=\(took.map { String(format: "%.2f", $0) } ?? "none")")
         return loaded
     }
 
