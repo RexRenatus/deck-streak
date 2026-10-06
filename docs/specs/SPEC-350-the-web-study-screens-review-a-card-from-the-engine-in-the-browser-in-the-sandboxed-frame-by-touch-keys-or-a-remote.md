@@ -303,6 +303,10 @@ What only a device or a person proves, who proves it and when, is section 9.
 - It builds nothing for iPhone and iPad (#632, #633).
 - It does not test Firefox (#652), write the campaign's threat model (#653) or re-check the
   shipped headers (#638).
+- It does not stage the engine's module at `/engine/` in the release, or hold the release to the
+  module's size bound, and so has no A29 row; both are a release workflow change (#685).
+- It does not speak with the voice a speech tag names: the core's speech clip carries no tag voice
+  (#666).
 
 ## 6. Risks
 
@@ -395,3 +399,98 @@ These are read by the owner, not by CI, so they sit outside section 3's table an
   the deck list, the user returns by that link. Held by
   `web/app/src/lib/study/review-screen.test.ts` "a refusal, a card the frame refuses and a done deck
   are announced".
+- **R14, as part 2 amends it: media through the core's face.** The Worker answers a `faces`
+  operation for the card on screen only, through the check `rate` makes. The engine builds both
+  sides through the core's one face call, which holds the one cap pair and the one closed type
+  table both clients read (ADR-359 D1), and writes every `data:` URL itself. The core reads media
+  synchronously and the media directory answers asynchronously, so the Worker asks twice: first
+  with no files, which answers each name the core asked for with its limit, then with each named
+  file's first `limit` bytes. The media directory is `deck-streak-media` at the origin's root,
+  flat, each file under the name the engine stores; a file or a directory that is absent is
+  absent, never an error. The second answer is the reply. `frameDocument`, `FRAME_POLICY`,
+  `FRAME_SANDBOX` and the census do not change, and no pair joins a table. Held by A24 and A25 in
+  section 11 (ADR-361 D12).
+- **R15, as part 2 amends it: sound.** The face's clips play in one page-owned audio element, in
+  order: its `autoplay` clips on show and on reveal, and its `replay` clips on the Replay control
+  and on the remote's replay, on either side. A sound plays from a page URL made from its bytes and
+  the type the core gives it, revoked after use; nothing reaches the frame. A blocked play leaves
+  the Replay control. A speech clip in the sequence goes to R16's speaker. Held by A26 (ADR-361
+  D13).
+- **R16, as part 2 amends it: speech.** A speech clip is spoken with `speechSynthesis` in the
+  language the core gives it, at the core's rate divided by the native default of 0.5 (SPEC-348
+  P3). The voice is the device's stored choice for that language, else the language's default
+  voice; the voice a tag names is #666's. A voice picker lists the device's voices for the card's
+  languages and stores the choice per language under one local-storage key. Held by A27 (ADR-361
+  D13).
+- **R17, as part 2 amends it: the Home Screen.** A manifest (`name`, `short_name`, 192 and 512
+  pixel icons, `start_url` `/study`, `display` `standalone`) and a 180 pixel touch icon, linked
+  from `app.html`; no service worker; the page policy unchanged. The release's staging of the
+  module at `/engine/` and its size gate are #685's, with A29 (section 5). Held by A28 (ADR-361
+  D14, D16).
+- **R18, as part 2 amends it: the mapping screen.** The remote's mapping is stored per device
+  under one local-storage key and edited on `/study/mapping`, with a default per mode, gamepad and
+  keyboard. #663's `readKey` and `GamepadReader` each take it as one trailing parameter that
+  defaults to today's map. The mapping screen also binds the key switch, and the review keeps it.
+  Held by A30 (ADR-361 D15).
+- **Part 2 touches these paths:** `docs/specs/SPEC-350-the-web-study-screens-review-a-card-from-the-engine-in-the-browser-in-the-sandboxed-frame-by-touch-keys-or-a-remote.md`,
+  `docs/decisions/ADR-361-the-web-review-answers-only-the-card-it-showed-and-the-frame-stays-sealed.md`,
+  `docs/schematics/web-study-screens.md`, `docs/red-first/SPEC-350.md`,
+  `changelog.d/study-media-350.md`, `scripts/mutation-rows.d/S35000-S35099.json`,
+  `crates/web-engine/src/study.rs`, `crates/web-engine/src/wasm.rs`,
+  `crates/web-engine/tests/study.rs`, `crates/web-engine/tests/boundary.rs`,
+  `web/app/src/lib/engine/protocol.ts`, `web/app/src/lib/engine/protocol.test.ts`,
+  `web/app/src/lib/engine/session.ts`, `web/app/src/lib/engine/session.test.ts`,
+  `web/app/src/lib/engine/client.ts`, `web/app/src/lib/engine/client.test.ts`,
+  `web/app/src/lib/engine/worker.ts`, `web/app/src/lib/engine/worker.test.ts`,
+  `web/app/src/lib/engine/media.ts`, `web/app/src/lib/engine/media.test.ts`,
+  `web/app/src/lib/card/frame-document.test.ts`, `web/app/src/lib/study/review.ts`,
+  `web/app/src/lib/study/review.test.ts`, `web/app/src/lib/study/input.ts`,
+  `web/app/src/lib/study/input.test.ts`, `web/app/src/lib/study/audio.ts`,
+  `web/app/src/lib/study/audio.test.ts`, `web/app/src/lib/study/speech.ts`,
+  `web/app/src/lib/study/voice.ts`, `web/app/src/lib/study/voice.test.ts`,
+  `web/app/src/lib/study/VoicePicker.svelte`, `web/app/src/lib/study/ReviewScreen.svelte`,
+  `web/app/src/lib/study/mapping-store.ts`, `web/app/src/lib/study/mapping-store.test.ts`,
+  `web/app/src/lib/study/MappingScreen.svelte`, `web/app/src/routes/study/mapping/+page.svelte`,
+  `web/app/src/lib/remote/keys.ts`, `web/app/src/lib/remote/gamepad.ts`,
+  `web/app/src/lib/routes.ts`, `web/app/src/lib/startapp.test.ts`,
+  `web/app/src/lib/manifest.test.ts`, `web/app/src/app.html`,
+  `web/app/static/manifest.webmanifest`, `web/app/static/icon-192.png`,
+  `web/app/static/icon-512.png`, `web/app/static/apple-touch-icon.png`, `web/app/messages/en.json`,
+  `web/app/messages/es.json`, `web/app/messages/fr.json`, `web/app/messages/ja.json`,
+  `web/app/messages/ko.json`, `web/app/messages/zh-Hans.json` and `web/app/messages/zh-Hant.json`.
+
+## 11. Acceptance criteria of part 2
+
+Section 7's rows as the amendments above decide them. A29 has no row here: it is #685's.
+
+| id | criterion | red it must show first | decided by |
+|---|---|---|---|
+| A24 | The core names each media file a face needs once, with its limit; the Worker reads no file past that limit and reads an absent file as absent; the faces it answers are the core's, `data:` URLs included, and reach the frame unchanged; no cap or media type is copied outside the core | a reader that keeps every ask and returns a whole file; `OWED` naming a `faces` export that does not exist; a session with no `faces` operation; no reader of the media directory; no census | `crates/web-engine/tests/study.rs` `each_name_the_core_asks_for_is_wanted_once`, `a_file_is_read_no_further_than_its_limit`; `crates/web-engine/tests/boundary.rs`; `session.test.ts`, `media.test.ts`, `review.test.ts`; `frame-document.test.ts` |
+| A25 | The frame policy, the sandbox and the census are unchanged with media | none: they stand on dev, unchanged | the unchanged `policy.test.ts`, `card-sinks.test.ts`, `card-frame.test.ts` |
+| A26 | The face's clips play in order on show and on reveal, replay replays them on either side, and a blocked play leaves the Replay control | no player | `audio.test.ts`; `input.test.ts` |
+| A27 | A speech clip is spoken in its language at the web's rate, with the stored voice for that language, else the language's default; the picker stores the choice per language | no speaker, no voice choice, no picker | `voice.test.ts` |
+| A28 | The manifest meets the install criteria, and the page policy is unchanged | no manifest | `manifest.test.ts`; the unchanged `csp.test.ts` |
+| A30 | A stored mapping drives the review, and each mode keeps its default | no mapping store | `mapping-store.test.ts` |
+
+```acceptance
+A24: cargo test -p deck-streak-web-engine --test study -- --exact each_name_the_core_asks_for_is_wanted_once
+A24: cargo test -p deck-streak-web-engine --test study -- --exact a_file_is_read_no_further_than_its_limit
+A24: cargo test -p deck-streak-web-engine --test boundary -- --exact each_boundary_function_reaches_the_engine_through_the_dispatcher
+A24: pnpm exec vitest run web/app/src/lib/engine/session.test.ts -t "faces asks the engine twice, the second time with the files it named"
+A24: pnpm exec vitest run web/app/src/lib/engine/media.test.ts -t "the worker reads each name the engine asks for, no further than its limit"
+A24: pnpm exec vitest run web/app/src/lib/engine/media.test.ts -t "the media rules have one copy"
+A24: pnpm exec vitest run web/app/src/lib/study/review.test.ts -t "the frame shows the faces the engine completed"
+A24: pnpm exec vitest run web/app/src/lib/card/frame-document.test.ts -t "a data: media source reaches the frame unchanged"
+A25: pnpm exec vitest run web/app/src/lib/card/policy.test.ts -t "the card frame's policy fetches only data and runs no script"
+A25: pnpm exec vitest run web/app/src/lib/card/card-sinks.test.ts -t "card HTML reaches the page only through the card frame"
+A25: pnpm exec vitest run web/app/src/lib/card/card-frame.test.ts -t "the card frame is a sandboxed srcdoc frame with no token"
+A26: pnpm exec vitest run web/app/src/lib/study/audio.test.ts -t "the face's clips play in order on show and reveal, and replay replays them"
+A26: pnpm exec vitest run web/app/src/lib/study/audio.test.ts -t "a blocked play leaves the replay control"
+A26: pnpm exec vitest run web/app/src/lib/study/input.test.ts -t "the remote's replay fires on either side"
+A27: pnpm exec vitest run web/app/src/lib/study/voice.test.ts -t "a speech clip's voice is the stored choice, else the language's default"
+A27: pnpm exec vitest run web/app/src/lib/study/voice.test.ts -t "a speech clip is spoken in its language at the web's rate"
+A27: pnpm exec vitest run web/app/src/lib/study/voice.test.ts -t "the picker stores the choice per language"
+A28: pnpm exec vitest run web/app/src/lib/manifest.test.ts -t "the manifest meets the install criteria"
+A28: pnpm exec vitest run web/app/src/lib/csp.test.ts -t "the page policy admits WebAssembly compilation and nothing else new"
+A30: pnpm exec vitest run web/app/src/lib/study/mapping-store.test.ts -t "a stored mapping drives the review, and each mode keeps its default"
+```

@@ -183,3 +183,40 @@ times, not once) and green at d1afa325.
   no storage is checked outside the try, and no intent resolves to no action; each removed a mutant
   no test could tell from the original.
 
+
+## Part 2: the fence, line by line
+
+Part 2's criteria are A24 to A28 and A30, in SPEC-350 section 11; A29 is #685's. Each of the 20
+lines of section 11's fence resolves to a test this delivery adds, or to a test that stands on
+`dev` and is named as it is.
+
+| # | criterion | test | added or named |
+|---|---|---|---|
+| 1 | A24 | `crates/web-engine/tests/study.rs` `each_name_the_core_asks_for_is_wanted_once` | added (step 1) |
+| 2 | A24 | `crates/web-engine/tests/study.rs` `a_file_is_read_no_further_than_its_limit` | added (step 1) |
+| 3 | A24 | `crates/web-engine/tests/boundary.rs` `each_boundary_function_reaches_the_engine_through_the_dispatcher` | named: its `OWED` grows by `faces` (step 2) |
+| 4 | A24 | `web/app/src/lib/engine/session.test.ts` "faces asks the engine twice, the second time with the files it named" | added (step 3) |
+| 5 | A24 | `web/app/src/lib/engine/media.test.ts` "the worker reads each name the engine asks for, no further than its limit" | added (step 3) |
+| 6 | A24 | `web/app/src/lib/engine/media.test.ts` "the media rules have one copy" | added (step 3) |
+| 7 | A24 | `web/app/src/lib/study/review.test.ts` "the frame shows the faces the engine completed" | added (step 5) |
+| 8 | A24 | `web/app/src/lib/card/frame-document.test.ts` "a data: media source reaches the frame unchanged" | added (step 4) |
+| 9 | A25 | `web/app/src/lib/card/policy.test.ts` "the card frame's policy fetches only data and runs no script" | named: unchanged |
+| 10 | A25 | `web/app/src/lib/card/card-sinks.test.ts` "card HTML reaches the page only through the card frame" | named: SPEC-341's, unchanged |
+| 11 | A25 | `web/app/src/lib/card/card-frame.test.ts` "the card frame is a sandboxed srcdoc frame with no token" | named: unchanged |
+| 12 | A26 | `web/app/src/lib/study/audio.test.ts` "the face's clips play in order on show and reveal, and replay replays them" | added (step 5) |
+| 13 | A26 | `web/app/src/lib/study/audio.test.ts` "a blocked play leaves the replay control" | added (step 5) |
+| 14 | A26 | `web/app/src/lib/study/input.test.ts` "the remote's replay fires on either side" | added (step 5) |
+| 15 | A27 | `web/app/src/lib/study/voice.test.ts` "a speech clip's voice is the stored choice, else the language's default" | added (step 6) |
+| 16 | A27 | `web/app/src/lib/study/voice.test.ts` "a speech clip is spoken in its language at the web's rate" | added (step 6) |
+| 17 | A27 | `web/app/src/lib/study/voice.test.ts` "the picker stores the choice per language" | added (step 6) |
+| 18 | A28 | `web/app/src/lib/manifest.test.ts` "the manifest meets the install criteria" | added (step 7) |
+| 19 | A28 | `web/app/src/lib/csp.test.ts` "the page policy admits WebAssembly compilation and nothing else new" | named: unchanged |
+| 20 | A30 | `web/app/src/lib/study/mapping-store.test.ts` "a stored mapping drives the review, and each mode keeps its default" | added (step 8) |
+
+## Part 2: the reds and greens
+
+Each line's command is the criterion's line in SPEC-350 section 11's fence, run at the commit named.
+
+```red-first
+A25: not red: its three tests stand on dev, named as they are and unchanged by this delivery, which must keep them green
+```

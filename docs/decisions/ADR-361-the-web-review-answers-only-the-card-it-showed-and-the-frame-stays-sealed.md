@@ -218,6 +218,86 @@ Chosen against:
 - A pull request per surface: rejected because each later surface needs the review loop part 1
   builds, and a split smaller than two leaves a review that cannot be tested end to end.
 
+### D12. Media through the core's face, asked twice, from one flat directory (part 2; amends D6)
+
+D6's `data:` URL built by the Worker and its `src` replacement in `frameDocument` are superseded.
+The core holds one cap pair and one closed type table that both clients read, and builds each
+face's `data:` URLs itself (ADR-359 D1). One new export answers both faces of the card on screen
+only, through the check `rate` makes. It reads media through a reader over the files it is given,
+which also records each name the core asks for that the files lack, with the limit the core asked
+for, and it answers both faces and that list. The core reads synchronously and the browser's file
+reads do not, so the Worker asks twice: once with no files, then with each named file's first
+`limit` bytes; the second answer is the reply. The media directory is `deck-streak-media` at the
+origin's root, flat, each file under the name the engine stores, read through the Worker's
+injected storage; an absent file or directory is absent. `open()` keeps its empty media folder, so
+the engine never reads the directory itself. No pair joins a table, and the frame, its policy and
+the census are unchanged, since the policy already admits `data:` images and media.
+
+Chosen against:
+
+- Two copies of the media rules, one in the Worker: rejected because two clients would then
+  decide a cap or a type in two places, the shape ADR-359 D1 rejected as a cap pair and a type
+  table in each client.
+- A reader over the storage pool, so the engine reads the directory itself: rejected because the
+  pool's export reads a whole file into the module's memory before any cap applies, and a module's
+  memory never shrinks.
+- `blob:` URLs in the frame: rejected for D6's reason, since the frame policy would gain a source no
+  test holds.
+- The core's media and sound pairs, (41,8) and (27,3), called from the page: rejected because
+  ADR-359 D2 rejected (27,3) as an adapter pair, and the face call already answers both.
+
+### D13. The voice is the device's choice for the language, and the rate is the core's (part 2; amends D8)
+
+A speech clip carries its text, its language and the native platform's rate, the engine's speed
+times its default of 0.5 (SPEC-348 P3); it carries no voice the tag names. The page speaks it in
+that language with the device's stored voice for the language, else the language's default voice,
+at the clip's rate divided by 0.5, one named constant. The choice is stored per language under one
+local-storage key, and a storage the browser refuses keeps the choice for the page. A tag's named
+voice is #666's.
+
+Chosen against:
+
+- The voice the tag names, ahead of the default: rejected because the core's clip does not carry
+  it, and adding it is the parity work #666 holds.
+- The clip's rate passed to the browser unchanged: rejected because the browser's normal rate is 1
+  and the native platform's is 0.5, so every card would speak at half speed.
+
+### D14. The release's module staging is a follow-up (part 2; amends D9)
+
+D9's release step, which stages the module at `/engine/` and holds it to the size gate, and its
+criterion A29 move to #685. Part 2 edits no workflow file.
+
+Chosen against:
+
+- The release step in this pull request: rejected because a workflow change costs every open pull
+  request a merge round, and the release workflow carries rows of its own that the step would move.
+
+### D15. The mapping is a parameter of #663's readers, stored per device (part 2; amends D10)
+
+#663's key reader and gamepad reader each gain one trailing parameter that defaults to today's
+map, so #663's callers and tests are unchanged. The study input reads the stored mapping for each
+mode and passes it in. The mapping screen is the route `/study/mapping`, and it also binds the key
+switch, which the review keeps.
+
+Chosen against:
+
+- A second copy of the readers in the study screens: rejected because the remote's rules would
+  then live in two places.
+- Moving the key switch off the review: rejected because a learner who turned the keys off needs
+  the switch where the keys act.
+
+### D16. A plain generated icon (part 2)
+
+The 192 and 512 pixel icons and the 180 pixel touch icon are plain squares, made once by a short
+standard-library command quoted in the red-first record; no generator ships.
+
+Chosen against:
+
+- A generator in the build: rejected because it adds a step and a dependency for three files that
+  do not change.
+- Waiting for drawn art: rejected because none has been supplied, and the install criteria need an
+  icon now.
+
 ## Decision Outcome
 
 The web review crosses the core's dispatcher with ordinary pairs named in both tables, answers only
