@@ -861,15 +861,15 @@ SECONDS_PER_MUTANT = {
     "deck-streak-fsrs7": 2,
 }
 #: The unmutated baseline each leg builds and tests before its first mutant. A leg over a whole
-#: listing tests the workspace, whose nextest run in run 37410215011's `rust` job read
-#: `Summary [1717.322s]`, started up to 51 s into the job, so 1768 (SPEC-362 R5).
-BASELINE_SECONDS = 1768
+#: listing tests the workspace, whose nextest run in run 37438835490's `rust` job read 2089.093 s,
+#: started up to 51 s into the job, so 2141 (SPEC-362 R5, the signed 2300 s ruling).
+BASELINE_SECONDS = 2141
 #: Seconds the settle census adds to a run of its package's tests, by package (SPEC-327): its
-#: slowest test passed at 1378.452 s in push run 37392351782, started up to 51 s into the run, so
-#: 1430 (SPEC-362 R6). It is paid by each mutant of the package and once by the baseline of a plan
-#: that lists one; a table apart from `SECONDS_PER_MUTANT`, whose highest is the cost of every
-#: package that table does not name.
-CENSUS_SECONDS = {"deck-streak-progression": 1430}
+#: slowest test passed at 1469.349 s in push run 37438835490, started up to 51 s into the run, so
+#: 1521 (SPEC-362 R6, the signed 2300 s ruling). It is paid by each mutant of the package and
+#: once by the baseline of a plan that lists one; a table apart from `SECONDS_PER_MUTANT`, whose
+#: highest is the cost of every package that table does not name.
+CENSUS_SECONDS = {"deck-streak-progression": 1521}
 #: A leg's projected time may reach half its job's `timeout-minutes` of 360, the most a hosted job
 #: runs: the shards of runs 36373915578 and 36384080819 took from 0.66 to 1.33 times this table's
 #: projection (SPEC-039 R18, SPEC-362 R2).
@@ -879,7 +879,7 @@ SHARD_BOUND_SECONDS = 10800
 LEG_CEILING = {"ci": 209, "battery": 234}
 #: The per-mutant `--timeout` every cargo-mutants command carries (SPEC-327 R2), and the margin a
 #: leg's slowest baseline test must keep under it (SPEC-362 R7).
-MUTANT_TIMEOUT_SECONDS = 2200
+MUTANT_TIMEOUT_SECONDS = 2300
 TIMEOUT_MARGIN = 1.5
 
 

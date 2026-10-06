@@ -947,7 +947,7 @@ class ACensusPackagePaysTheCensus(unittest.TestCase):
         sharding = census_shards(self, packages)
         projected = [shard["projected_seconds"] for shard in sharding["shards"]]
         self.assertEqual(sharding["count"], 12)
-        self.assertEqual(max(projected), 9612)
+        self.assertEqual(max(projected), 10440)
         self.assertTrue(all(seconds <= 10800 for seconds in projected), projected)
         self.assertEqual(sharding["serial_seconds"], 4 * 126 + 8 * 54 + 10 * 64 + 45 * 1647)
         held = [name for shard in sharding["shards"] for name in shard["mutants"]]
@@ -970,11 +970,11 @@ class ACensusPackagePaysTheCensus(unittest.TestCase):
             )
             written = sink.read_text(encoding="utf-8")
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
-        # Five mutants at 1647 s on a 3662 s baseline: one leg projects 10978 s, past the bound,
+        # Five mutants at 1647 s on a 3662 s baseline: one leg projects 11897 s, past the bound,
         # so two, the slowest 3662 + 3 * 1647.
         self.assertIn(
-            "mutation: size: 2 shard(s) for 5 listed mutant(s), projected at 7780 s serially, "
-            "the slowest at 7866 s of its 10800 s bound",
+            "mutation: size: 2 shard(s) for 5 listed mutant(s), projected at 8235 s serially, "
+            "the slowest at 8603 s of its 10800 s bound",
             done.stdout,
         )
         self.assertEqual(written, "shards=2\nmatrix=[0, 1]\n")
