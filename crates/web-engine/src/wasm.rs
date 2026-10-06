@@ -42,10 +42,14 @@ use sqlite_wasm_vfs::sahpool::install;
 use wasm_bindgen::prelude::*;
 
 use deck_streak_engine_core::dispatch::{Dispatcher, Read, Refusal};
+use deck_streak_engine_core::face::{Clip, Face, Side};
+use deck_streak_engine_core::media::{Reader, TYPES};
 use deck_streak_engine_core::table::Transport;
+use js_sys::{Array, Object, Reflect, Uint8Array};
 
 use crate::study::{
-    Answer, Shown, StudyError, admit, bury_of, engine_languages, service, shown_for, toggled_red,
+    Answer, Files, Shown, StudyError, Wanted, admit, bury_of, engine_languages, media_type,
+    service, shown_for, toggled_red,
 };
 use crate::synthetic::fields;
 
@@ -457,6 +461,110 @@ pub fn flag(card: i64) -> Result<u32, JsValue> {
         }
     });
     Ok(flag)
+}
+
+/// The core reads a face's media through the files the Worker gave, and each name it asks for
+/// that they lack is recorded for the Worker to read (SPEC-350 R14, ADR-361 D12).
+impl Reader for Wanted<'_> {
+    fn read(&self, name: &str, limit: u64) -> Option<Vec<u8>> {
+        self.ask(name, limit)
+    }
+}
+
+/// Both faces of the kept card, and no other, as the core completes them with the media files
+/// `names` and `contents` carry: `{question, answer, wanted}`. Each face is `{text, css, autoplay,
+/// replay, omitted}`, its text holding the core's `data:` URLs; `wanted` names each file the core
+/// asked for that was not given, with the limit it asked for. The core reads synchronously and the
+/// media directory does not, so the Worker asks once with no files and again with the files the
+/// first answer wanted. The client always wishes autoplay; the card's preset decides (SPEC-350 R14,
+/// R15, ADR-361 D12).
+#[wasm_bindgen]
+pub fn faces(card: i64, names: Vec<String>, contents: Vec<Uint8Array>) -> Result<JsValue, JsValue> {
+    SHOWN
+        .with(|kept| shown_for(kept.borrow().as_ref(), card).map(|_| ()))
+        .map_err(refuse)?;
+    let files = Files::new(
+        names
+            .into_iter()
+            .zip(contents.iter().map(Uint8Array::to_vec)),
+    );
+    let wanted = Wanted::new(&files);
+    let engine = dispatcher()?;
+    let question = engine
+        .face(card, Side::Question, true, &wanted)
+        .map_err(|_| refuse("the engine could not complete the question"))?;
+    let answer = engine
+        .face(card, Side::Answer, true, &wanted)
+        .map_err(|_| refuse("the engine could not complete the answer"))?;
+    let reply = Object::new();
+    set(&reply, "question", &face_value(question)?)?;
+    set(&reply, "answer", &face_value(answer)?)?;
+    set(&reply, "wanted", &wanted_value(wanted.into_names())?)?;
+    Ok(reply.into())
+}
+
+/// Writes `value` to `target` under `key`.
+fn set(target: &Object, key: &str, value: &JsValue) -> Result<(), JsValue> {
+    Reflect::set(target, &JsValue::from_str(key), value).map(|_| ())
+}
+
+/// A face as the page reads it.
+fn face_value(face: Face) -> Result<JsValue, JsValue> {
+    let value = Object::new();
+    set(&value, "text", &face.text.into())?;
+    set(&value, "css", &face.css.into())?;
+    set(&value, "autoplay", &clips_value(face.autoplay)?)?;
+    set(&value, "replay", &clips_value(face.replay)?)?;
+    let omitted: Array = face.omitted.into_iter().map(JsValue::from).collect();
+    set(&value, "omitted", &omitted)?;
+    Ok(value.into())
+}
+
+/// The clips, in the core's order.
+fn clips_value(clips: Vec<Clip>) -> Result<JsValue, JsValue> {
+    let array = Array::new();
+    for clip in clips {
+        array.push(&clip_value(clip)?);
+    }
+    Ok(array.into())
+}
+
+/// A sound as its name, its bytes and the type the core's table gives its name; speech as its
+/// text, language and the native platform's rate.
+fn clip_value(clip: Clip) -> Result<JsValue, JsValue> {
+    let value = Object::new();
+    match clip {
+        Clip::Sound { name, bytes } => {
+            set(&value, "kind", &"sound".into())?;
+            let media = media_type(&name, &TYPES).map_or(JsValue::NULL, JsValue::from_str);
+            set(&value, "type", &media)?;
+            set(&value, "name", &name.into())?;
+            set(&value, "bytes", &Uint8Array::from(bytes.as_slice()).into())?;
+        }
+        Clip::Speech {
+            text,
+            language,
+            rate,
+        } => {
+            set(&value, "kind", &"speech".into())?;
+            set(&value, "text", &text.into())?;
+            set(&value, "language", &language.into())?;
+            set(&value, "rate", &rate.into())?;
+        }
+    }
+    Ok(value.into())
+}
+
+/// Each name the core asked for and was not given, with the limit it asked for.
+fn wanted_value(names: Vec<(String, u64)>) -> Result<JsValue, JsValue> {
+    let array = Array::new();
+    for (name, limit) in names {
+        let ask = Object::new();
+        set(&ask, "name", &name.into())?;
+        set(&ask, "limit", &limit.into())?;
+        array.push(&ask);
+    }
+    Ok(array.into())
 }
 
 /// The module's linear memory in pages of 65536 bytes. Linear memory never shrinks, so a reading

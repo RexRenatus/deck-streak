@@ -164,7 +164,7 @@ const OWED: [(&str, &str, &[&str]); 23] = [
         "completes both faces of only the kept card through the core, reading media it was given",
         &[
             "shown_for(kept.borrow().as_ref(), card)",
-            "Files::new(names.into_iter().zip(contents.iter().map(Uint8Array::to_vec)))",
+            "Files::new(names.into_iter().zip(contents.iter().map(Uint8Array::to_vec))",
             "let wanted = Wanted::new(&files);",
             ".face(card, Side::Question, true, &wanted)",
             ".face(card, Side::Answer, true, &wanted)",

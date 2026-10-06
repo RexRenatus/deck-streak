@@ -278,6 +278,9 @@ impl<'a> Wanted<'a> {
 /// one table, passed in, so no copy of it lives here (SPEC-350 R15, ADR-361 D12).
 #[must_use]
 pub fn media_type<'a>(name: &str, types: &[(&str, &'a str)]) -> Option<&'a str> {
-    let _ = (name, types);
-    None
+    let (_, extension) = name.rsplit_once('.')?;
+    types
+        .iter()
+        .find(|(known, _)| known.eq_ignore_ascii_case(extension))
+        .map(|&(_, media_type)| media_type)
 }
