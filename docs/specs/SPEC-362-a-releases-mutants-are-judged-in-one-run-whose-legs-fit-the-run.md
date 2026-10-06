@@ -146,8 +146,8 @@ A11: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k
 A12: python3 -m unittest discover -s scripts/tests -p test_mutation_python_shard_binding.py -k test_the_matrix_takes_twenty_listed_mutants_a_shard_clamped_to_thirty_two
 ```
 
-R13 is decided by the formal check of `formal/tla/EveryLegCounted` in `dev`'s formal CI job, not
-by a unittest, so it has no line in the fence.
+R13 is decided by the formal check of `formal/tla/EveryLegCounted` at review, not by a unittest,
+so it has no line in the fence.
 
 ## 4. File manifest
 

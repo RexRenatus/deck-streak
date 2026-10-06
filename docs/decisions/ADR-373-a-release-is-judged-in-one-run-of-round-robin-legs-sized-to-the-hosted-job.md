@@ -34,8 +34,8 @@ it deals the tree into 32 legs whose projections each exceed their job's timeout
 
 ## Considered Options (the alternatives it was chosen against)
 
-- **One run, one matrix of round-robin legs, bounded at half of the hosted job's limit, at most the
-  run's job budget (chosen).**
+- **Chosen: one run, one matrix of round-robin legs, bounded at half of the hosted job's limit, at
+  most the run's job budget.**
 - Several matrix jobs in one run, each of 256 legs or fewer: lost because the 256 jobs are per
   run, so a second matrix in the same run shares the first one's budget and adds no leg.
 - Several runs, each of 256 legs or fewer, with one verdict counting every leg: lost because a job
@@ -47,8 +47,8 @@ it deals the tree into 32 legs whose projections each exceed their job's timeout
 - Matrices nested through reusable workflows: lost because the per-run limit still binds the run
   that calls them, and reported uses of the pattern to exceed it have met the service's abuse
   protection.
-- Stepwise release merges along `dev`'s first-parent history, each step a release of its own:
-  lost because a step judges only its own merge diff, so a later step's change that deletes the
+- Stepwise release merges along `dev`'s first-parent history, each step a release of its own: lost
+  because a step judges only its own merge diff, so a later step's change that deletes the
   test killing an earlier step's mutant is never judged with that mutant (#220's class, at step
   size); a step's head is not `dev`'s tip, so `base-is-dev` and ADR-034's model would have to
   admit a second head into `main`, which the no-back-merge model does not survive; and the steps
