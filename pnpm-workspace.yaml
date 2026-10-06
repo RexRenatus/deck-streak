@@ -11,12 +11,13 @@ catalog:
 # Refuse to install on a Node that a package's `engines` rules out (the root pins Node 24).
 engineStrict: true
 
-# Three development-only transitive dependencies, moved to the versions that fix their advisories,
+# Two development-only transitive dependencies, moved to the versions that fix their advisories,
 # which no update inside a parent's major reaches (ADR-005's amendment). SvelteKit 2 declares
-# `cookie ^0.6.0` (fixed in 0.7.0), StrykerJS 10's `typed-rest-client` 2.3.1 pins `qs` 6.15.1
-# (fixed in 6.16.0), and Mermaid 11 declares `katex ^0.16.47` (fixed in 0.18.2). Each selector
-# names its parent's major, so an entry never touches a later major, which declares a fixed range
-# itself; an entry whose parent no longer matches is removed.
+# `cookie ^0.6.0` (fixed in 0.7.0), and StrykerJS 10's `typed-rest-client` 2.3.1 pins `qs` 6.15.1
+# (fixed in 6.16.0). Each selector names its parent's major, so an entry never touches a later
+# major, which declares a fixed range itself; an entry whose parent no longer matches is removed.
+# A third follows the same rule: Mermaid 11 declares a `katex` range that no update reaches past
+# (GHSA-238p-pmpm-9mq7); its selector holds the first fixed release.
 overrides:
   '@sveltejs/kit@2>cookie': '>=0.7.0 <0.8'
   'typed-rest-client@2>qs': '>=6.16.0 <7'

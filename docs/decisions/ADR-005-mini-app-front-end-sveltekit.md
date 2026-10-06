@@ -71,9 +71,9 @@ which the next resolution undoes with nothing recording why; and accepting the a
 build- and test-time only, while a fix exists that changes no byte of the built Mini App.
 
 Amendment: `pnpm-workspace.yaml` overrides a third development-only transitive dependency.
-Mermaid 11 declares `katex ^0.16.47`, so no update inside its range reaches a version that fixes
-GHSA-238p-pmpm-9mq7, and `mermaid@11>katex` takes `>=0.18.2 <0.19`, the first fixed line. The same
-audit also named `source-map-js` (GHSA-68fv-2mgg-jv7q); PostCSS, css-tree and Tailwind's node
+Mermaid 11 declares a `katex` range that no update reaches past, so none inside it gets a version
+that fixes GHSA-238p-pmpm-9mq7, and `mermaid@11>katex` takes `>=0.18.2 <0.19`, the first fixed
+line. The same audit also named `source-map-js` (GHSA-68fv-2mgg-jv7q); PostCSS, css-tree and Tailwind's node
 package each declare a range that admits the fixed release, so that one moved in the lockfile alone
 by an update and takes no override. The selector names Mermaid's major, so it applies to no later
 major, and it is removed when the parent no longer matches. Rejected: a global `katex` override,
