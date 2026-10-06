@@ -70,10 +70,14 @@ const MIRROR_PORT: &str = "the mirror's own port method";
 const SKIP_CENSUS_LITERAL: &str = "a string literal of #600's own census test: data, not a call";
 /// Why SPEC-342's probes may: they run the engine against the engine's own sync server.
 const SYNC_PROBE: &str = "SPEC-342 R10 and R11's probes against the engine's own sync server";
+/// Why the web boundary census may: its `OWED` entry for the export names the export's statements
+/// as string literals, data and not calls.
+const BOUNDARY_CENSUS_LITERAL: &str =
+    "a string literal of the web boundary census's own entry for the export: data, not a call";
 
 /// Each line outside the core that may name the engine or the gesture (SPEC-345 section 8): its
 /// file, its exact trimmed text, how many times the file holds it, and why.
-const HELD: [(&str, &str, usize, &str); 17] = [
+const HELD: [(&str, &str, usize, &str); 20] = [
     (
         "crates/ingest/src/engine.rs",
         "col.full_download(auth, engine_client())",
@@ -175,6 +179,24 @@ const HELD: [(&str, &str, usize, &str); 17] = [
         "engine.run_exempt(write, target, input)",
         1,
         "the native adapter's own test of its exempt entry (A17, A18)",
+    ),
+    (
+        "crates/web-engine/tests/boundary.rs",
+        "\"run_exempt\",",
+        1,
+        BOUNDARY_CENSUS_LITERAL,
+    ),
+    (
+        "crates/web-engine/tests/boundary.rs",
+        "\"let gesture = OwnerGesture::from_tap(write, target).map_err(refuse)?;\",",
+        1,
+        BOUNDARY_CENSUS_LITERAL,
+    ),
+    (
+        "crates/web-engine/tests/boundary.rs",
+        "\"dispatcher()?.run_exempt(gesture, input).map_err(refuse)\",",
+        1,
+        BOUNDARY_CENSUS_LITERAL,
     ),
 ];
 
