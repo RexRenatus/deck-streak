@@ -29,8 +29,9 @@ function served(name: string): Buffer | null {
 }
 
 /**
- * The PNG the built site holds at `/<name>`: the answer of the endpoint at that path, which the build
- * prerenders, or null where no prerendered endpoint answers a PNG there.
+ * The file the built site holds at `/<name>`: the answer of the endpoint at that path, which the build
+ * prerenders and writes to that file when it answers 200, or null where no prerendered endpoint
+ * answers there. The host types the file by its extension, so the answer names no content type.
  */
 async function built(name: string): Promise<Buffer | null> {
   const load = ENDPOINTS[`../routes/${name}/+server.ts`];
@@ -38,7 +39,7 @@ async function built(name: string): Promise<Buffer | null> {
   const endpoint = await load();
   if (endpoint.prerender !== true || endpoint.GET === undefined) return null;
   const answer = await endpoint.GET();
-  if (answer.headers.get('content-type') !== 'image/png') return null;
+  if (answer.status !== 200) return null;
   return Buffer.from(await answer.arrayBuffer());
 }
 

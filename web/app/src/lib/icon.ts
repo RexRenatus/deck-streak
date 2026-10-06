@@ -58,7 +58,9 @@ async function deflate(bytes: Uint8Array<ArrayBuffer>): Promise<Uint8Array> {
 
 /**
  * What an icon's endpoint answers: a plain square `side` pixels wide and high, as a PNG of 8-bit red,
- * green and blue pixels with no interlace.
+ * green and blue pixels with no interlace. It names no content type: the build writes the answer to
+ * the file at the icon's path, which the host types by its extension, and a media type's name in the
+ * app is a copy of the core's media rules, which the media census refuses (`media.test.ts`).
  */
 export async function icon(side: number): Promise<Response> {
   const header = join([uint32(side), uint32(side), Uint8Array.of(8, 2, 0, 0, 0)]);
@@ -68,5 +70,5 @@ export async function icon(side: number): Promise<Response> {
     chunk('IDAT', await deflate(rows(side))),
     chunk('IEND', new Uint8Array(0))
   ]);
-  return new Response(png, { headers: { 'content-type': 'image/png' } });
+  return new Response(png);
 }
