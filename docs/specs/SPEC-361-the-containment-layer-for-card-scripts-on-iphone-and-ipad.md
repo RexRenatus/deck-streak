@@ -9,8 +9,9 @@
   section that names every channel, the part of the layer that closes it, and the planted card
   that proves it.
 - **Status:** the card-scripts switch defaults OFF on iPhone and iPad, pending a containment layer
-  measured to hold. This SPEC is that layer. Its build turns the switch on in its last commit,
-  and only after every criterion below is green in CI by name on both simulators.
+  measured to hold. This SPEC is that layer. `CardScripts.switchedOn` reads `false` at every
+  commit of this delivery; the switch turns on only in a separate commit, ruled after a
+  verification by hand measures the layer, so it turns on only once that measurement holds.
 
 ## 1. The problem, measured
 
@@ -47,11 +48,11 @@ backend answers with no action and the policy admits only as `img-src`, `media-s
 
 ## 2. Requirements
 
-R1. **One switch, off until the last commit.** `CardScripts.switchedOn` stays the only switch and
-    stays defined in `ios/CardIsolation/Sources/CardIsolation/CardScripts.swift` alone (SPEC-355
-    A5's rule). It is `false` at every commit of the build but the last. The last commit changes
-    that one line to `true`, and is pushed only after a CI run at the head before it reads every
-    criterion of section 3 green by name on both simulators.
+R1. **One switch, off at every commit of this delivery.** `CardScripts.switchedOn` stays the only
+    switch and stays defined in `ios/CardIsolation/Sources/CardIsolation/CardScripts.swift` alone
+    (SPEC-355 A5's rule). It reads `false` at every commit of this delivery. It turns on only in a
+    separate commit that changes that one line to `true`, ruled after a verification by hand
+    measures the layer: the switch turns on only once that measurement holds.
 
 R2. **The required controls.** `CardScripts.required` is exactly L1, L3, L4, L5, L6, L7, L8, L10,
     L11, L12 and L13. L9 is retired: the app builds no proxy configuration, owns no loopback
@@ -211,7 +212,7 @@ section 3a names their proof on a device, held.
 
 | file | context | change |
 |---|---|---|
-| `ios/CardIsolation/Sources/CardIsolation/CardScripts.swift` | `ios-harness` | changed: `required` per R2; the switch per R1 (its last commit) |
+| `ios/CardIsolation/Sources/CardIsolation/CardScripts.swift` | `ios-harness` | changed: `required` per R2; the switch per R1 (`false` at every commit of this delivery, on only in a separate commit once that measurement holds) |
 | `ios/CardIsolation/Sources/CardIsolation/LinkActivationRefusal.swift` | `ios-harness` | added: L10's source, its content world and its user script |
 | `ios/CardIsolation/Sources/CardIsolation/PageGuard.swift` | `ios-harness` | added: L11's source and its user script |
 | `ios/CardIsolation/Sources/CardIsolation/DocumentPolicy.swift` | `ios-harness` | added: L12's prefix and `weaker(_:)` |
