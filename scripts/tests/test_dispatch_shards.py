@@ -28,7 +28,7 @@ from unittest import mock
 from _mutants_finder import BOUNDS, Refused, mutants_in, run_texts
 from _support import REPO, examined
 from test_mutation_verdict import verdict_module
-from test_mutation_workflows import VERDICT, WEEKLY, WORKFLOWS, jobs, listed, shard, workflow
+from test_mutation_workflows import CI, VERDICT, WEEKLY, WORKFLOWS, jobs, listed, shard, workflow
 
 WHOLE = 32
 COUNT = "${{ needs.size.outputs.shards }}"
@@ -110,13 +110,13 @@ class TheDispatchIsSizedFromItsListing(unittest.TestCase):
     function; a projection past the matrix's limit is refused with its projection."""
 
     def test_a_small_package_takes_one_shard_and_a_large_one_the_fewest_within_the_bound(self):
-        # Costs and bound are the plan's: the daemon costs 80 s a mutant on a 371 s baseline, and
-        # 40 mutants project to 3571 s of a 3600 s bound; the ingest costs 126 s.
+        # Costs and bound are the plan's: the daemon costs 80 s a mutant on a 1768 s baseline, and
+        # 112 mutants project to 10728 s of a 10800 s bound; the ingest costs 126 s, 71 to a leg.
         cases = [
             ("deck-streak-kernel", 5, 1),
-            ("deck-streak-daemon", 40, 1),
-            ("deck-streak-daemon", 41, 2),
-            ("deck-streak-ingest", 60, 3),
+            ("deck-streak-daemon", 112, 1),
+            ("deck-streak-daemon", 113, 2),
+            ("deck-streak-ingest", 150, 3),
         ]
         for package, count, expected in examined("listings sized", cases):
             code, out, written = size(entries(package, count), package)
@@ -158,10 +158,10 @@ class TheDispatchIsSizedFromItsListing(unittest.TestCase):
             self.assertEqual(written.get("shards"), str(planned), out)
 
     def test_a_projection_past_the_limit_is_refused_with_its_projection_never_capped(self):
-        code, out, written = size(entries("deck-streak-ingest", 7000), "deck-streak-ingest")
+        code, out, written = size(entries("deck-streak-ingest", 17000), "deck-streak-ingest")
         self.assertEqual(code, 1, out)
         self.assertIn("REFUSED", out)
-        self.assertIn("7000 mutant(s), projected at 882000 s serially", out)
+        self.assertIn("17000 mutant(s), projected at 2142000 s serially", out)
         self.assertEqual(written, {}, "a refused sizing wrote outputs")
 
     def test_a_package_that_lists_nothing_or_a_non_listing_is_not_sized(self):
@@ -173,15 +173,177 @@ class TheDispatchIsSizedFromItsListing(unittest.TestCase):
         self.assertEqual(written, {}, out)
 
 
-class TheWholeTreeKeepsThirtyTwo(unittest.TestCase):
-    """A2 (R3): a scheduled run and a dispatch with no package read no listing and keep 32."""
+#: #691's listing, the release range whose legs one run must hold (SPEC-362 A1): each package's
+#: mutant count in the listing's own package order, from the plan artifact of run 37410215011.
+RELEASE_691 = (
+    ("agent", 239),
+    ("analytics", 335),
+    ("api", 164),
+    ("bot", 437),
+    ("coordination", 977),
+    ("curriculum", 198),
+    ("daemon", 211),
+    ("economy", 137),
+    ("engine-core", 131),
+    ("ffi", 55),
+    ("fsrs7", 95),
+    ("habits", 129),
+    ("identity", 143),
+    ("ingest", 710),
+    ("insights", 93),
+    ("kernel", 781),
+    ("mcp", 122),
+    ("notifications", 599),
+    ("privacy", 29),
+    ("progression", 399),
+    ("push", 138),
+    ("quests", 250),
+    ("readings", 239),
+    ("streaks", 318),
+    ("vault", 1338),
+    ("web-engine", 100),
+)
+#: The most jobs one workflow run holds, GitHub's matrix limit: the legs and every other job of
+#: the workflow share it (SPEC-362 R3).
+RUN_JOBS = 256
+#: The axis the pull request's Python matrix reads: the plan writes at most `PYTHON_MAX_SHARDS`.
+PYTHON_AXIS = "${{ fromJSON(needs.mutation-plan.outputs.python_matrix) }}"
 
-    def test_no_package_is_thirty_two_shards_whatever_the_listing(self):
-        for raw in examined("listings", [None, "not json", json.dumps(entries("a", 3))]):
-            code, out, written = size(None, None, raw=raw or "")
+
+def plan_shards(listing):
+    """Run `shards` as the plan's job does, over a plan whose Rust class applies and `listing`:
+    (exit code, stdout and stderr, the plan as it was left)."""
+    with tempfile.TemporaryDirectory() as scratch:
+        plan = Path(scratch) / "plan.json"
+        plan.write_text(json.dumps({"classes": {"rust": {"applies": True}}}), "utf-8")
+        whole = Path(scratch) / "listed.json"
+        whole.write_text(json.dumps(listing), encoding="utf-8")
+        env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+        env.pop("GITHUB_OUTPUT", None)
+        done = subprocess.run(
+            [sys.executable, str(VERDICT), "shards", "--plan", str(plan), "--listed", str(whole)],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=120,
+            env=env,
+        )
+        return done.returncode, done.stdout + done.stderr, json.loads(plan.read_text("utf-8"))
+
+
+def generated(job, python_most):
+    """The most jobs one workflow job can generate: one, or the product of its matrix's axes, a
+    listed axis by its length and the Python plan's axis by the most shards the plan writes. An
+    axis this cannot count is refused, never counted as one."""
+    block = re.search(r"(?ms)^      matrix:\n(.*?)(?=^      \S|^    \S|\Z)", job)
+    if block is None:
+        return 1
+    most = 1
+    for line in block.group(1).splitlines():
+        if not line.strip() or line.strip().startswith("#"):
+            continue
+        axis = re.fullmatch(r"        ([\w-]+): (.+)", line)
+        if axis is None:
+            raise AssertionError(f"a matrix line this cannot count: {line!r}")
+        value = axis.group(2)
+        if value.startswith("[") and value.endswith("]"):
+            most *= len([each for each in value[1:-1].split(",") if each.strip()])
+        elif value == PYTHON_AXIS:
+            most *= python_most
+        else:
+            raise AssertionError(f"a matrix axis this cannot count: {line!r}")
+    return most
+
+
+class TheReleaseFitsOneRun(unittest.TestCase):
+    """SPEC-362 A1 to A4, A10 and A11 (R1 to R4, R11): a release's legs are sized within the run
+    that judges them, at half the hosted job's limit, and the battery is sized the same way."""
+
+    def test_the_release_listing_fits_one_run(self):
+        listing = [
+            entry for name, count in RELEASE_691 for entry in entries(f"deck-streak-{name}", count)
+        ]
+        self.assertEqual(len(examined("release mutants", listing)), 8367)
+        code, out, planned = plan_shards(listing)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(planned["shards"]["count"], 200, out)
+        self.assertLessEqual(planned["shards"]["count"], 209, out)
+        slowest = max(leg["projected_seconds"] for leg in planned["shards"]["shards"])
+        self.assertLessEqual(slowest, 10800, out)
+
+    def test_the_bound_is_half_of_every_legs_timeout(self):
+        minutes = {}
+        for path, leg in examined("leg jobs", [(CI, "mutation-rust"), (WEEKLY, "rust")]):
+            job = jobs(workflow(path)).get(leg, "")
+            found = re.findall(r"(?m)^    timeout-minutes: (\d+)$", job)
+            self.assertEqual(found, ["360"], leg)
+            minutes[leg] = int(found[0])
+        module = verdict_module()
+        for leg, value in minutes.items():
+            self.assertEqual(module.SHARD_BOUND_SECONDS, value * 60 // 2, leg)
+
+    def test_the_ceiling_is_the_runs_job_budget(self):
+        module = verdict_module()
+        derived = {}
+        for key, path, leg in examined(
+            "workflows that run legs", [("ci", CI, "mutation-rust"), ("battery", WEEKLY, "rust")]
+        ):
+            found = jobs(workflow(path))
+            self.assertIn(leg, found, key)
+            others = [
+                generated(job, module.PYTHON_MAX_SHARDS)
+                for name, job in found.items()
+                if name != leg
+            ]
+            derived[key] = RUN_JOBS - sum(others)
+        self.assertEqual(getattr(module, "LEG_CEILING", None), derived)
+        self.assertEqual(derived, {"ci": 209, "battery": 234})
+
+    def test_a_listing_beyond_the_ceiling_is_refused_whole(self):
+        # 71 ingest mutants of 126 s fit a leg's 10800 s after its 1768 s baseline, so the
+        # battery's 234 legs hold 16614 and the pull request's 209 legs hold 14839.
+        code, out, written = size(entries("deck-streak-ingest", 16615), "deck-streak-ingest")
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            "REFUSED: 16615 mutant(s), projected at 2093490 s serially, need more than 234 legs",
+            out,
+        )
+        self.assertEqual(written, {}, "a refused sizing wrote outputs")
+        code, out, written = size(entries("deck-streak-ingest", 16614), "deck-streak-ingest")
+        self.assertEqual((code, written.get("shards")), (0, "234"), out)
+        code, out, planned = plan_shards(entries("deck-streak-ingest", 14840))
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            "REFUSED: 14840 mutant(s), projected at 1869840 s serially, need more than 209 legs",
+            out,
+        )
+        self.assertNotIn("shards", planned)
+
+    def test_the_whole_tree_is_sized_from_its_listing(self):
+        # 14840 ingest mutants need 210 legs: one past the pull request's ceiling, within the
+        # battery's, which sizes the whole tree as it sizes a package.
+        cases = [(entries("deck-streak-kernel", 5), 1), (entries("deck-streak-ingest", 14840), 210)]
+        for listing, expected in examined("whole-tree listings", cases):
+            code, out, written = size(listing)
             self.assertEqual(code, 0, out)
-            self.assertEqual(written.get("shards"), str(WHOLE), out)
-            self.assertEqual(json.loads(written["matrix"]), list(range(WHOLE)), out)
+            self.assertEqual(written.get("shards"), str(expected), out)
+            self.assertEqual(json.loads(written.get("matrix", "null")), list(range(expected)), out)
+            self.assertIn(f"{expected} shard(s) for {len(listing)} listed mutant(s)", out)
+        code, out, written = size(None, None, raw="not json")
+        self.assertEqual((code, written), (3, {}), out)
+        code, out, written = size(entries("a", 3), "miniapp")
+        self.assertEqual((code, written.get("shards")), (0, "1"), out)
+
+    def test_every_sizing_prints_its_headroom(self):
+        code, out, _ = size(entries("deck-streak-daemon", 113), "deck-streak-daemon")
+        self.assertEqual(code, 0, out)
+        self.assertIn("legs 2 of ceiling 234", out)
+        code, out, _ = size(entries("deck-streak-kernel", 5))
+        self.assertEqual(code, 0, out)
+        self.assertIn("legs 1 of ceiling 234", out)
+        code, out, _ = plan_shards(entries("deck-streak-daemon", 113))
+        self.assertEqual(code, 0, out)
+        self.assertIn("legs 2 of ceiling 209", out)
 
 
 class TheWorkflowReadsTheOneCount(unittest.TestCase):
@@ -1037,11 +1199,10 @@ def bash_runs(scripts):
 
 
 #: The settle census's measured need in seconds, the one literal SPEC-327 A1 holds the gate's
-#: budget and the sizer's census term to: the slower census test passed at 736.931 s in run
-#: 37131363071's `rust` job (`check-stage-logs-rust` test.log:1373), and nextest started the census
-#: tests up to 51 s into a shard's baseline run (the three shard logs' Summary less SIGTERM), so a
-#: run that holds them needs 51 + 737 = 788 s.
-CENSUS_NEED_SECONDS = 788
+#: budget and the sizer's census term to, re-derived by SPEC-362 R6: the slowest census test passed
+#: at 1378.452 s in push run 37392351782's `rust` job, and nextest started the census tests up to
+#: 51 s into a leg's baseline run, so a run that holds them needs 51 + 1379 = 1430 s.
+CENSUS_NEED_SECONDS = 1430
 
 
 class TheGatesTimeoutCoversTheCensus(unittest.TestCase):

@@ -24,6 +24,7 @@ from collections import Counter
 from pathlib import Path
 from unittest import mock
 
+from _mutants_finder import BOUNDS
 from _support import REPO, examined
 
 VERDICT = REPO / "scripts" / "mutation-verdict.py"
@@ -819,13 +820,15 @@ class TheShardsFitTheirBound(unittest.TestCase):
             self.assertEqual(held[name], 1, name)
         self.assertEqual(outputs.get("shards"), str(count))
         self.assertEqual(json.loads(outputs.get("matrix", "null")), list(range(count)))
-        # A diff beyond the most shards a matrix holds is refused with its projection: never capped.
+        # A diff beyond the legs the pull request's run holds is refused with its projection:
+        # never capped.
         fixture.plan()
-        beyond = listing([costly] * (module.MAX_SHARDS * fits + 1))
+        ceiling = module.LEG_CEILING["ci"]
+        beyond = listing([costly] * (ceiling * fits + 1))
         refused, unsharded, none = run_shards(fixture, beyond)
         self.assertEqual(refused.returncode, 1, refused.stdout + refused.stderr)
         self.assertIn(f"REFUSED: {len(beyond)} mutant(s)", refused.stdout)
-        self.assertIn(f"more than {module.MAX_SHARDS} shards", refused.stdout)
+        self.assertIn(f"more than {ceiling} legs", refused.stdout)
         self.assertNotIn("shards", unsharded)
         self.assertNotIn("matrix", none)
         # The Rust class applies and no listing came: VOID, never one shard of nothing.
@@ -856,10 +859,18 @@ class TheShardsFitTheirBound(unittest.TestCase):
 
     def test_a_listing_that_needs_exactly_the_shard_cap_is_sized_at_the_cap(self):
         module = verdict_module()
-        # One mutant per shard fits (baseline + 3000 <= bound); two to a shard do not, so the
-        # fewest is the cap itself, and a search that stops short of it would refuse the listing.
-        costs = [3000] * module.MAX_SHARDS
-        self.assertEqual(module.fewest_shards(costs, module.BASELINE_SECONDS), module.MAX_SHARDS)
+        # One mutant per leg fits (1768 + 6000 <= 10800); two to a leg do not, so the fewest is the
+        # ceiling itself, and a search that stops short of it would refuse the listing.
+        for key, ceiling in examined("ceilings", [("ci", 209), ("battery", 234)]):
+            costs = [6000] * ceiling
+            sized = module.fewest_shards(costs, 1768, module.LEG_CEILING[key])
+            self.assertEqual(sized, ceiling, key)
+            # One mutant more needs a leg past the ceiling: no count, so the sizing refuses it.
+            beyond = module.fewest_shards([*costs, 6000], 1768, module.LEG_CEILING[key])
+            self.assertIsNone(beyond, key)
+        # With no ceiling named, the pull request's.
+        self.assertEqual(module.fewest_shards([6000] * 209, 1768), 209)
+        self.assertIsNone(module.fewest_shards([6000] * 210, 1768))
 
 
 def sharded(test):
@@ -879,9 +890,10 @@ def sharded(test):
 
 #: The package the settle census lives in (SPEC-327). Every value the class below expects is
 #: computed from literals, never from the sizer's own constants: progression's table cost is the
-#: table's highest, 126 s, coordination's 64 s and the api's 54 s, the baseline 371 s, and the
-#: census term 788 s, the slower census test's 736.931 s in run 37131363071's `rust` job
-#: (test.log:1373) after a start of up to 51 s.
+#: table's highest, 126 s, coordination's 64 s and the api's 54 s, the baseline 1768 s, the
+#: workspace's nextest run in run 37410215011 plus its start, and the census term 1430 s, the
+#: slowest census test's 1378.452 s in push run 37392351782 after a start of up to 51 s
+#: (SPEC-362 R5, R6).
 CENSUS_PACKAGE = "deck-streak-progression"
 
 
@@ -898,28 +910,30 @@ def census_shards(test, packages):
 
 class ACensusPackagePaysTheCensus(unittest.TestCase):
     """SPEC-327 A3 to A6 (R4 to R6): a mutant of progression is projected with the settle census's
-    788 s, and a plan or a dispatch that lists one pays the term once in its baseline."""
+    1430 s, and a plan or a dispatch that lists one pays the term once in its baseline."""
 
     def test_each_mutant_of_a_census_package_is_projected_with_the_census(self):
         sharding = census_shards(self, [CENSUS_PACKAGE, CENSUS_PACKAGE, "deck-streak-coordination"])
-        # Each progression mutant costs 126 + 788 = 914 s; the coordination mutant 64 s, as at the
-        # base.
-        self.assertEqual(sharding["serial_seconds"], 914 + 914 + 64)
+        # Each progression mutant costs 126 + 1430 = 1556 s; the coordination mutant 64 s, as at
+        # the base.
+        self.assertEqual(sharding["serial_seconds"], 1556 + 1556 + 64)
         self.assertEqual(sharding["count"], 1)
-        # One shard: the baseline, 371 + 788 = 1159 s, then the three mutants.
+        # One leg: the baseline, 1768 + 1430 = 3198 s, then the three mutants.
         projected = [shard["projected_seconds"] for shard in sharding["shards"]]
-        self.assertEqual(projected, [1159 + 914 + 914 + 64])
+        self.assertEqual(projected, [3198 + 1556 + 1556 + 64])
         other = census_shards(self, ["deck-streak-coordination"] * 3)
         self.assertEqual(other["serial_seconds"], 3 * 64)
-        self.assertEqual([shard["projected_seconds"] for shard in other["shards"]], [371 + 3 * 64])
+        self.assertEqual([shard["projected_seconds"] for shard in other["shards"]], [1768 + 3 * 64])
 
     def test_a_plan_naming_a_census_package_pays_the_census_once_in_its_baseline(self):
         sharding = census_shards(self, [CENSUS_PACKAGE, CENSUS_PACKAGE, "deck-streak-coordination"])
-        # Two progression mutants pay the term once: 371 + 788, never 371 + 2 * 788.
-        self.assertEqual(sharding["baseline_seconds"], 371 + 788)
+        # Two progression mutants pay the term once: 1768 + 1430, never 1768 + 2 * 1430.
+        self.assertEqual(sharding["baseline_seconds"], 1768 + 1430)
         other = census_shards(self, ["deck-streak-coordination", "deck-streak-api"])
-        self.assertEqual(other["baseline_seconds"], 371)
-        self.assertEqual([shard["projected_seconds"] for shard in other["shards"]], [371 + 64 + 54])
+        self.assertEqual(other["baseline_seconds"], 1768)
+        self.assertEqual(
+            [shard["projected_seconds"] for shard in other["shards"]], [1768 + 64 + 54]
+        )
 
     def test_the_592_listing_fits_its_bound(self):
         # #592's own listing (run 37131363071's plan): 67 mutants in listing order. The analytics
@@ -932,17 +946,17 @@ class ACensusPackagePaysTheCensus(unittest.TestCase):
         )
         sharding = census_shards(self, packages)
         projected = [shard["projected_seconds"] for shard in sharding["shards"]]
-        self.assertEqual(sharding["count"], 23)
-        self.assertEqual(max(projected), 3113)
-        self.assertTrue(all(seconds <= 3600 for seconds in projected), projected)
-        self.assertEqual(sharding["serial_seconds"], 4 * 126 + 8 * 54 + 10 * 64 + 45 * 914)
+        self.assertEqual(sharding["count"], 12)
+        self.assertEqual(max(projected), 9612)
+        self.assertTrue(all(seconds <= 10800 for seconds in projected), projected)
+        self.assertEqual(sharding["serial_seconds"], 4 * 126 + 8 * 54 + 10 * 64 + 45 * 1556)
         held = [name for shard in sharding["shards"] for name in shard["mutants"]]
         self.assertEqual(len(examined("listed mutants held by a shard", held)), 67)
 
     def test_a_dispatch_of_a_census_package_is_sized_with_the_census(self):
         with tempfile.TemporaryDirectory() as scratch:
             path = Path(scratch) / "package.json"
-            path.write_text(json.dumps(listing([CENSUS_PACKAGE] * 3)), encoding="utf-8")
+            path.write_text(json.dumps(listing([CENSUS_PACKAGE] * 5)), encoding="utf-8")
             sink = Path(scratch) / "output"
             sink.touch()
             done = subprocess.run(
@@ -956,11 +970,11 @@ class ACensusPackagePaysTheCensus(unittest.TestCase):
             )
             written = sink.read_text(encoding="utf-8")
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
-        # Three mutants at 914 s on a 1159 s baseline: one shard projects 3901 s, past the bound,
-        # so two, the slowest 1159 + 2 * 914.
+        # Five mutants at 1556 s on a 3198 s baseline: one leg projects 10978 s, past the bound,
+        # so two, the slowest 3198 + 3 * 1556.
         self.assertIn(
-            "mutation: size: 2 shard(s) for 3 listed mutant(s), projected at 2742 s serially, "
-            "the slowest at 2987 s of its 3600 s bound",
+            "mutation: size: 2 shard(s) for 5 listed mutant(s), projected at 7780 s serially, "
+            "the slowest at 7866 s of its 10800 s bound",
             done.stdout,
         )
         self.assertEqual(written, "shards=2\nmatrix=[0, 1]\n")
@@ -969,7 +983,7 @@ class ACensusPackagePaysTheCensus(unittest.TestCase):
 def shard_outcomes(names, missed=(), total=None):
     """A shard's outcomes.json, as cargo-mutants writes it: every one of `names` caught but the
     `missed` ones. `total` above the count is a report left partial."""
-    entries = [{"scenario": "Baseline", "summary": "Success"}]
+    entries = [{"scenario": "Baseline", "summary": "Success", "log_path": "log/baseline.log"}]
     for name in names:
         entries.append(
             {
@@ -989,19 +1003,221 @@ def shard_outcomes(names, missed=(), total=None):
     }
 
 
-def shard_reports(root, reports, scopes=None):
+def baseline_log(seconds):
+    """A leg's baseline log as cargo-mutants writes it, with nextest's status lines: its slowest
+    test passed in `seconds`, a string as nextest prints it, and another test's output holds a
+    byte that is no UTF-8."""
+    return (
+        "\n*** baseline\n\n        PASS [   0.004s] (1/3) fix tests::other\n"
+        f"        PASS [{seconds:>9}s] (2/3) fix tests::doubles\n"
+    ).encode("utf-8") + b"a stray \xff byte\n        PASS [   1.250s] (3/3) fix tests::triples\n"
+
+
+def shard_reports(root, reports, scopes=None, logs=None):
     """Each shard's artifact, as the verdict's job downloads it: {shard: (exit, outcomes or None)}.
     A shard left out uploaded nothing. `scopes` maps a shard to its memory-scope record; a shard
-    left out gets the zero record."""
+    left out gets the zero record. `logs` maps a shard to its baseline log's bytes, or None for no
+    log; a shard left out gets a baseline whose slowest test took 12.345 s."""
     for shard, (code, report) in reports.items():
         directory = root / f"mutation-rust-shard-{shard}"
         directory.mkdir(parents=True)
         write_scope(directory, (scopes or {}).get(shard))
         (directory / "cargo-mutants.exit").write_text(f"{code}\n", encoding="utf-8")
         if report is not None:
-            (directory / "mutants.out").mkdir()
+            (directory / "mutants.out" / "log").mkdir(parents=True)
             (directory / "mutants.out" / "outcomes.json").write_text(json.dumps(report), "utf-8")
+            log = (logs or {}).get(shard, baseline_log("12.345"))
+            if log is not None:
+                (directory / "mutants.out" / "log" / "baseline.log").write_bytes(log)
     return str(root)
+
+
+def dispatch_size(listed, package=None):
+    """`size` as the battery's size job runs it, over `listed` and `package`: (the run, the step
+    outputs it wrote)."""
+    with tempfile.TemporaryDirectory() as scratch:
+        path = Path(scratch) / "package.json"
+        path.write_text(json.dumps(listed), encoding="utf-8")
+        sink = Path(scratch) / "output"
+        sink.touch()
+        args = [sys.executable, str(VERDICT), "size", "--listed", str(path)]
+        if package is not None:
+            args += ["--package", package]
+        done = subprocess.run(
+            args,
+            capture_output=True,
+            text=True,
+            env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", GITHUB_OUTPUT=str(sink)),
+            timeout=300,
+            check=False,
+        )
+        written = sink.read_text(encoding="utf-8")
+    return done, dict(line.split("=", 1) for line in written.splitlines() if "=" in line)
+
+
+class TheLegsAreSizedToTheRun(unittest.TestCase):
+    """SPEC-362 R2 to R6, R10 and R11: the bound, the ceilings, the measured prices and terms,
+    and the battery sized from its listing like a diff, each at the value its record names."""
+
+    def test_the_sizing_constants_are_the_measured_ones(self):
+        module = verdict_module()
+        self.assertEqual(
+            module.SECONDS_PER_MUTANT,
+            {
+                "deck-streak-ingest": 126,
+                "deck-streak-daemon": 80,
+                "deck-streak-coordination": 64,
+                "deck-streak-api": 54,
+                "deck-streak-ffi": 18,
+                "deck-streak-kernel": 13,
+                "deck-streak-identity": 8,
+                "deck-streak-vault": 8,
+                "deck-streak-push": 6,
+                "deck-streak-engine-core": 4,
+                "deck-streak-web-engine": 3,
+                "deck-streak-fsrs7": 2,
+            },
+        )
+        self.assertEqual(module.BASELINE_SECONDS, 1768)
+        self.assertEqual(module.CENSUS_SECONDS, {"deck-streak-progression": 1430})
+        self.assertEqual(module.SHARD_BOUND_SECONDS, 10800)
+        self.assertEqual(module.LEG_CEILING, {"ci": 209, "battery": 234})
+        self.assertEqual((module.MUTANT_TIMEOUT_SECONDS, module.TIMEOUT_MARGIN), (2200, 1.5))
+
+    def test_the_whole_tree_is_sized_at_the_batterys_ceiling(self):
+        # 71 ingest mutants of 126 s fit a leg's 10800 s after its 1768 s baseline: 14840 need
+        # 210 legs, past the pull request's 209 and within the battery's 234.
+        many = listing(["deck-streak-ingest"] * 14840)
+        for package in examined("battery scopes", [None, "deck-streak-ingest"]):
+            done, written = dispatch_size(many, package)
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            self.assertEqual(written.get("shards"), "210", done.stdout)
+            self.assertIn("legs 210 of ceiling 234", done.stdout)
+        beyond = listing(["deck-streak-ingest"] * 16615)
+        refused, written = dispatch_size(beyond)
+        self.assertEqual(refused.returncode, 1, refused.stdout + refused.stderr)
+        self.assertIn("need more than 234 legs", refused.stdout)
+        self.assertEqual(written, {})
+        # The Mini App runs no Rust leg and reads no listing: one leg, whatever it is given.
+        mini, written = dispatch_size(None, "miniapp")
+        self.assertEqual(mini.returncode, 0, mini.stdout + mini.stderr)
+        self.assertEqual(written, {"shards": "1", "matrix": "[0]"})
+        self.assertIn("legs 1 of ceiling 234", mini.stdout)
+        # The pull request's plan prints its own ceiling.
+        fixture = Fixture(self)
+        fixture.head({LIB: LIB_TEXT.replace("x * 2", "x + x")})
+        fixture.plan()
+        planned, _, _ = run_shards(fixture, listing(["deck-streak-daemon"] * 113))
+        self.assertEqual(planned.returncode, 0, planned.stdout + planned.stderr)
+        self.assertIn("legs 2 of ceiling 209", planned.stdout)
+
+
+class ALegProvesItsTimeoutCoversItsTests(unittest.TestCase):
+    """SPEC-362 A6 (R7): a leg whose slowest baseline test, at 1.5 times its time, passes the
+    per-mutant timeout is VOID by name, since a mutant only that test kills could read as a
+    timeout; a leg whose baseline log shows no time proves nothing and is VOID too."""
+
+    def test_a_leg_whose_slowest_test_outgrows_the_timeout_is_void(self):
+        fixture, planned = sharded(self)
+        reports = {shard: ("0", shard_outcomes(names)) for shard, names in enumerate(planned)}
+        # 1.5 x 1467 s is 2200.5 s, past the 2200 s timeout.
+        slow = shard_reports(fixture.out / "slow", reports, logs={1: baseline_log("1467.000")})
+        done = fixture.judge("rust", "--shard-reports", slow)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertIn(
+            "VOID mutation-rust-shard-1: the baseline's slowest test ran 1467.0 s, and 1.5 times "
+            "it passes the 2200 s per-mutant timeout, so a mutant only that test kills could read "
+            "as a timeout",
+            done.stdout,
+        )
+        self.assertNotIn("VOID mutation-rust-shard-0", done.stdout)
+        # Exactly at the timeout, and within it: every leg counted, and the run whole.
+        for seconds in examined("baselines within the timeout", ["1466.6666666666667", "1466.000"]):
+            within = shard_reports(
+                fixture.out / f"within-{seconds}", reports, logs={1: baseline_log(seconds)}
+            )
+            control = fixture.judge("rust", "--shard-reports", within)
+            self.assertEqual(control.returncode, 0, control.stdout + control.stderr)
+        # A baseline that names no log, a named log that is gone, a log that times no test and a
+        # report with no baseline each prove nothing: VOID by name.
+        unnamed = shard_outcomes(planned[2])
+        del unnamed["outcomes"][0]["log_path"]
+        headless = shard_outcomes(planned[2])
+        del headless["outcomes"][0]
+        cases = [
+            ("unnamed", {2: ("0", unnamed)}, {}, "its baseline outcome names no log"),
+            ("gone", {}, {2: None}, "its baseline log log/baseline.log is unreadable"),
+            ("untimed", {}, {2: b"\n*** baseline\n\n   Compiling fix\n"}, "times no test"),
+            ("headless", {2: ("0", headless)}, {}, "its report holds no baseline outcome"),
+        ]
+        for name, bent, logs, finding in examined("baselines that prove nothing", cases):
+            root = shard_reports(fixture.out / name, {**reports, **bent}, logs=logs)
+            void = fixture.judge("rust", "--shard-reports", root)
+            self.assertEqual(void.returncode, 3, void.stdout + void.stderr)
+            self.assertIn(f"VOID mutation-rust-shard-2: {finding}", void.stdout)
+        self.assertIn(
+            "VOID mutation-rust-shard-2: its report holds no baseline outcome, so it cannot show "
+            "its timeout covers its tests",
+            void.stdout,
+        )
+        # The timeout R7 holds a leg to is the one every cargo-mutants command carries.
+        words = BOUNDS.split()
+        module = verdict_module()
+        self.assertEqual(module.MUTANT_TIMEOUT_SECONDS, int(words[words.index("--timeout") + 1]))
+
+
+class TheListingIsThePopulation(unittest.TestCase):
+    """SPEC-362 A7 and A8 (R8): the tool's own listing, uploaded beside the plan, is the
+    population the legs must partition, and every planned leg is counted."""
+
+    def test_a_plan_that_does_not_partition_the_listing_is_void(self):
+        fixture, planned = sharded(self)
+        reports = {shard: ("0", shard_outcomes(names)) for shard, names in enumerate(planned)}
+        whole = shard_reports(fixture.out / "whole", reports)
+        listed = json.loads((fixture.out / "listed.json").read_text(encoding="utf-8"))
+        # The tool listed one mutant the plan dealt to no leg.
+        dropped = dict(listed[0], name=f"{LIB}:3:5: replace double -> i64 with -7")
+        fixture.report("listed.json", [*listed, dropped])
+        done = fixture.judge("rust", "--shard-reports", whole)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertIn(
+            f"VOID the plan's legs hold {dropped['name']} 0 time(s), and the tool's listing 1",
+            done.stdout,
+        )
+        # The plan dealt a mutant the tool never listed.
+        fixture.report("listed.json", listed[1:])
+        extra = fixture.judge("rust", "--shard-reports", whole)
+        self.assertEqual(extra.returncode, 3, extra.stdout + extra.stderr)
+        self.assertIn(
+            f"VOID the plan's legs hold {listed[0]['name']} 1 time(s), and the tool's listing 0",
+            extra.stdout,
+        )
+        # No listing beside the plan: VOID, never the plan trusted as its own population.
+        fixture.report("listed.json", {"not": "a listing"})
+        unlisted = fixture.judge("rust", "--shard-reports", whole)
+        self.assertEqual(unlisted.returncode, 3, unlisted.stdout + unlisted.stderr)
+        self.assertIn("holds no cargo-mutants listing", unlisted.stdout)
+        # --listed names the listing, and wins over the plan's directory.
+        sized = fixture.report("sized.json", listed)
+        named = fixture.judge("rust", "--shard-reports", whole, "--listed", str(sized))
+        self.assertEqual(named.returncode, 0, named.stdout + named.stderr)
+        # The control: the listing the plan was sized from, beside the plan.
+        fixture.report("listed.json", listed)
+        control = fixture.judge("rust", "--shard-reports", whole)
+        self.assertEqual(control.returncode, 0, control.stdout + control.stderr)
+        self.assertNotIn("VOID", control.stdout)
+
+    def test_a_planned_leg_with_no_report_is_void(self):
+        fixture, planned = sharded(self)
+        # Every leg but the middle one reported whole, every mutant it was dealt caught.
+        arrived = {
+            shard: ("0", shard_outcomes(names)) for shard, names in enumerate(planned) if shard != 1
+        }
+        gap = shard_reports(fixture.out / "gap", arrived)
+        done = fixture.judge("rust", "--shard-reports", gap)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertIn("VOID mutation-rust-shard-1: no report", done.stdout)
+        self.assertNotIn("verdict: ok", done.stdout)
 
 
 class TheVerdictCountsEveryShard(unittest.TestCase):
