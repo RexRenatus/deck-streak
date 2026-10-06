@@ -6637,6 +6637,14 @@ DYNAMIC_IMPORTS = {
             1,
         ),
     ),
+    **allowed(
+        "names the exception class plistlib's XML parser raises on a malformed property list, to refuse it by name (SPEC-347 A13); a class caught, and it imports, runs and reads nothing",
+        ("test_ios_app_tree", "plist_of", "ExpatError", 1),
+    ),
+    **allowed(
+        "splits a settings value the test already holds as text into its scheme and host, to judge the sync endpoint (SPEC-347 A13); text in and parts out, and it imports, runs and reads nothing",
+        ("test_ios_app_tree", "settings_problems", "urlsplit(value.replace('$()', ''))", 1),
+    ),
 }
 
 
