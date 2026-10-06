@@ -225,6 +225,42 @@
         "    pub const CARD_RENDERING: u32 = 28;",
         "study::the_study_calls_are_the_reviews_pairs",
         "the engine numbers this backend service 27; as 28 every study call through it would name another service's method (SPEC-350 A1)"
+      ],
+      [
+        "S35040-A-NAME-ASKED-TWICE-IS-WANTED-ONCE",
+        "web-engine",
+        "src/study.rs",
+        "        if read.is_none() && !asked.iter().any(|(wanted, _)| wanted == name) {",
+        "        if read.is_none() {",
+        "study::each_name_the_core_asks_for_is_wanted_once",
+        "a name the core asks for twice is wanted once; recorded twice, the Worker would read one file twice and answer the core with the same name twice (SPEC-350 A24)"
+      ],
+      [
+        "S35041-A-FILE-IS-READ-NO-FURTHER-THAN-ITS-LIMIT",
+        "web-engine",
+        "src/study.rs",
+        "        let end = usize::try_from(limit).map_or(bytes.len(), |limit| limit.min(bytes.len()));",
+        "        let end = usize::try_from(limit).map_or(bytes.len(), |_| bytes.len());",
+        "study::a_file_is_read_no_further_than_its_limit",
+        "a file is read no further than the limit the core asked for; read whole, the core would take bytes past its cap (SPEC-350 A24)"
+      ],
+      [
+        "S35042-A-FILE-NOT-READ-IS-ABSENT",
+        "web-engine",
+        "src/study.rs",
+        "        let bytes = self.by_name.get(name)?;",
+        "        let bytes = self.by_name.get(name).map_or(&[][..], Vec::as_slice);",
+        "study::a_file_is_read_no_further_than_its_limit",
+        "a file the Worker did not read is absent, never empty; read as empty, the core would take a missing sound for a file of no bytes (SPEC-350 A24)"
+      ],
+      [
+        "S35043-AN-EXTENSION-IS-READ-WITHOUT-CASE",
+        "web-engine",
+        "src/study.rs",
+        "        .find(|(known, _)| known.eq_ignore_ascii_case(extension))",
+        "        .find(|(known, _)| *known == extension)",
+        "study::a_sound_takes_the_type_the_table_gives_its_name",
+        "an extension is read without case; compared exactly, a sound whose name is in capitals would have no type (SPEC-350 R15)"
       ]
     ],
     "SCRIPT_MUTATIONS": [
