@@ -319,10 +319,17 @@ impl Ready {
     /// # Errors
     ///
     /// New counts over the device read now, when a download's backup lacks one of its rows.
-    pub fn at_write(self, _device_now: &IdSets) -> Result<Write, Counted> {
-        Ok(Write {
-            direction: self.confirmed.direction,
-        })
+    pub fn at_write(self, device_now: &IdSets) -> Result<Write, Counted> {
+        let direction = self.confirmed.direction;
+        let backed = device_now.reviews.is_subset(&self.backup.reviews)
+            && device_now.cards.is_subset(&self.backup.cards)
+            && device_now.notes.is_subset(&self.backup.notes);
+        if direction == Direction::Upload || backed {
+            Ok(Write { direction })
+        } else {
+            let Counted { offer, sides } = self.confirmed.counted;
+            Err(Counted::show(offer, device_now.clone(), sides.server))
+        }
     }
 }
 
