@@ -1290,9 +1290,9 @@ const ROUTE_STATE: [(&str, &str); 15] = [
 ];
 
 /// Every `static` item and thread-local in the source of every crate coordination links, written
-/// out: two run sequences, the data-rights registry's entries, the migrator, the parsed XP economy
-/// and the parsed skip tariff ladder. None is a count per day.
-const STATICS: [(&str, &str); 20] = [
+/// out: two run sequences, the data-rights registry's entries, the migrator, the parsed XP economy,
+/// the parsed per-review XP table and the parsed skip tariff ladder. None is a count per day.
+const STATICS: [(&str, &str); 21] = [
     (
         "crates/agent/src/gate.rs",
         "static STAGE_SEQUENCE: AtomicU64 = AtomicU64::new(0);",
@@ -1372,6 +1372,10 @@ const STATICS: [(&str, &str); 20] = [
     (
         "crates/progression/src/economy_config.rs",
         "static XP: LazyLock<XpEconomy> = LazyLock::new(parse);",
+    ),
+    (
+        "crates/xp/src/table.rs",
+        "static TABLE: LazyLock<ReviewXpTable> = LazyLock::new(parse);",
     ),
 ];
 
