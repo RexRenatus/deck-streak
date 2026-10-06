@@ -10,6 +10,7 @@
 use std::collections::BTreeSet;
 
 use anki_proto::sync::SyncCollectionResponse;
+use anki_proto::sync::sync_collection_response::ChangesRequired;
 
 /// The ids one side's collection holds, read by the core's fixed reads
 /// ([`crate::dispatch::Dispatcher::id_sets`]): what the counts, the backup check, the re-check and
@@ -81,8 +82,13 @@ impl Offer {
     /// The offer the engine's answer makes. It is read from the answer, never from a screen, so
     /// both clients offer the same directions on the same answer.
     #[must_use]
-    pub fn from_answer(_answer: &SyncCollectionResponse) -> Self {
-        Self::of(true, true)
+    pub fn from_answer(answer: &SyncCollectionResponse) -> Self {
+        match answer.required() {
+            ChangesRequired::FullSync => Self::of(true, true),
+            ChangesRequired::FullUpload => Self::of(true, false),
+            ChangesRequired::FullDownload => Self::of(false, true),
+            ChangesRequired::NoChanges | ChangesRequired::NormalSync => Self::of(false, false),
+        }
     }
 
     /// An offer of the named directions.
@@ -118,8 +124,13 @@ impl Losses {
     /// What a write that replaces `replaced` with `kept` loses: each id `replaced` holds and
     /// `kept` lacks.
     #[must_use]
-    pub fn between(_replaced: &IdSets, _kept: &IdSets) -> Self {
-        Self::default()
+    pub fn between(replaced: &IdSets, kept: &IdSets) -> Self {
+        let lost = |of: &BTreeSet<i64>, against: &BTreeSet<i64>| of.difference(against).count();
+        Self {
+            reviews: lost(&replaced.reviews, &kept.reviews),
+            cards: lost(&replaced.cards, &kept.cards),
+            notes: lost(&replaced.notes, &kept.notes),
+        }
     }
 }
 
@@ -175,10 +186,14 @@ impl Counted {
     ///
     /// The unchanged state, when the offer does not admit `direction`: the choice is kept.
     pub fn confirm(self, direction: Direction) -> Result<Confirmed, Self> {
-        Ok(Confirmed {
-            counted: self,
-            direction,
-        })
+        if self.offer.admits(direction) {
+            Ok(Confirmed {
+                counted: self,
+                direction,
+            })
+        } else {
+            Err(self)
+        }
     }
 }
 
@@ -200,8 +215,8 @@ impl Confirmed {
     pub fn backed_up(self, backup: &IdSets) -> Result<BackedUp, Self> {
         let sides = &self.counted.sides;
         let replaced = match self.direction {
-            Direction::Upload => &sides.device,
-            Direction::Download => &sides.server,
+            Direction::Upload => &sides.server,
+            Direction::Download => &sides.device,
         };
         let holds = backup.reviews.is_superset(&replaced.reviews)
             && backup.cards.is_superset(&replaced.cards)
@@ -232,7 +247,7 @@ impl BackedUp {
     ///
     /// The unchanged state for an upload, which needs the snapshot and the re-check first.
     pub fn download_ready(self) -> Result<Ready, Self> {
-        if self.confirmed.direction == Direction::Upload {
+        if self.confirmed.direction == Direction::Download {
             Ok(Ready {
                 confirmed: self.confirmed,
                 backup: self.backup,
@@ -305,13 +320,10 @@ impl Ready {
     ///
     /// New counts over the device read now, when a download's backup lacks one of its rows.
     pub fn at_write(self, _device_now: &IdSets) -> Result<Write, Counted> {
-        Ok(made(self.confirmed.direction))
+        Ok(Write {
+            direction: self.confirmed.direction,
+        })
     }
-}
-
-/// A write of `direction`.
-fn made(direction: Direction) -> Write {
-    Write { direction }
 }
 
 /// The one write a confirmed and checked choice makes: the direction a client's one-way call runs.
