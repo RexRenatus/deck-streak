@@ -69,9 +69,9 @@ derived from the new baseline (`docs/rulings/OWNER-RULING-2026-10-06-mutation-ti
 Each read red at e0b635cc, the base's code, for the figure and for nothing else.
 
 ```red-first
-B1: red at e0b635cc: AssertionError: 1430 != 1521
-B2: red at e0b635cc: AssertionError: 1768 != 2141
-B3: red at e0b635cc: AssertionError: '--timeout 2300' not found in 'cargo mutants --no-shuffle --list --json --in-place --package="$PACKAGE" --timeout 2200 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"'
-B4: red at e0b635cc: AssertionError: 3198 != 3662 : the baseline a plan naming the census package pays
-B5: red at e0b635cc: AssertionError: "VOID mutation-rust-shard-1: the baseline's slowest test ran 1534.0 s, and 1.5 times it passes the 2300 s per-mutant timeout" not found
+A5: red at e0b635cc: AssertionError: 1430 != 1521
+A3: red at e0b635cc: AssertionError: 1768 != 2141
+A4: red at e0b635cc: AssertionError: '--timeout 2300' not found in 'cargo mutants --no-shuffle --list --json --in-place --package="$PACKAGE" --timeout 2200 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"'
+A5: red at e0b635cc: AssertionError: 3198 != 3662
+A6: red at e0b635cc: AssertionError: "VOID mutation-rust-shard-1: the baseline's slowest test" not found, the 2300 s per-mutant timeout being absent
 ```
