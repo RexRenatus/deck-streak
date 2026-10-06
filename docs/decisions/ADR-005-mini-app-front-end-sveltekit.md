@@ -70,5 +70,15 @@ which would also force a later SvelteKit major, or any other consumer, onto the 
 which the next resolution undoes with nothing recording why; and accepting the advisories as
 build- and test-time only, while a fix exists that changes no byte of the built Mini App.
 
+Amendment: `pnpm-workspace.yaml` overrides a third development-only transitive dependency.
+Mermaid 11 declares a `katex` range that no update reaches past, so none inside it gets a version
+that fixes GHSA-238p-pmpm-9mq7, and `mermaid@11>katex` takes `>=0.18.2 <0.19`, the first fixed
+line. The same audit also named `source-map-js` (GHSA-68fv-2mgg-jv7q); PostCSS, css-tree and Tailwind's node
+package each declare a range that admits the fixed release, so that one moved in the lockfile alone
+by an update and takes no override. The selector names Mermaid's major, so it applies to no later
+major, and it is removed when the parent no longer matches. Rejected: a global `katex` override,
+which would also force any other consumer onto the newer line, and an audit ignore, which would
+leave the advisory unfixed.
+
 Amendment (2026-09-28): passages describing another service's operations were replaced with the
 API's own memory budget under the public-text rule (ADR-059).

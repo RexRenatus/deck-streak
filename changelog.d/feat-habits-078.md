@@ -1,3 +1,0 @@
-### Added
-
-- The owner logs minutes of book reading with `/read` in the bot: by a course's code or alias and the minutes, by the minutes alone for the most-read course, or through a course picker and a row of presets, each entry with an optional short note. Each minute earns 2 XP, up to 240 XP a course on a study day, and 210 minutes of one course in a study week earn a weekly bonus of 150 XP. The XP is settled from the log, once per course and day, so a recompute and an entry agree; `/undo` and each logged reply's Undo button remove the newest entry and settle its day and its own week again. The log is exported and erased with the owner's data.
