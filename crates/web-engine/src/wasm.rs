@@ -486,7 +486,7 @@ pub fn faces(card: i64, names: Vec<String>, contents: Vec<Uint8Array>) -> Result
     let files = Files::new(
         names
             .into_iter()
-            .zip(contents.iter().map(Uint8Array::to_vec)),
+            .zip(contents.into_iter().map(|bytes| bytes.to_vec())),
     );
     let wanted = Wanted::new(&files);
     let engine = dispatcher()?;
