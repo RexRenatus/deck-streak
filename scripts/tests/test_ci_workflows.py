@@ -4972,6 +4972,12 @@ NOT_WORKFLOW_READS = {
             "umbrella_closure(where)",
             1,
         ),
+        (
+            "test_testflight_workflows",
+            "TheTestflightLanes.test_the_internal_push_filter_watches_every_crate_the_xcframework_links",
+            "umbrella_closure(REPO, package)",
+            1,
+        ),
     ),
     **allowed(
         "the loader's one read: a workflow file's bytes, decoded as strict utf-8 with no byte order mark",
