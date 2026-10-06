@@ -323,7 +323,7 @@ fn the_state_debug_line_says_which_ports_it_holds() {
     assert!(bare.starts_with("ApiState { readiness: "), "{bare}");
     assert!(
         bare.ends_with(
-            ", owner: None, instruments: false, law_tiers: false, drills: false, courses: false, inbox: false }"
+            ", owner: None, instruments: false, law_tiers: false, drills: false, courses: false, inbox: false, linking: false }"
         ),
         "{bare}"
     );
@@ -333,7 +333,7 @@ fn the_state_debug_line_says_which_ports_it_holds() {
     );
     assert!(
         served.ends_with(
-            ", owner: None, instruments: true, law_tiers: false, drills: false, courses: false, inbox: false }"
+            ", owner: None, instruments: true, law_tiers: false, drills: false, courses: false, inbox: false, linking: false }"
         ),
         "{served}"
     );

@@ -418,6 +418,17 @@
       "retention": {"until": "account-deletion"},
       "export": true,
       "erase": "delete"
+    },
+    {
+      "id": "passkeys",
+      "data": "each passkey the owner registered for signing in on the web: its credential id, the random user handle every passkey of the owner shares, the stored credential with its public key, the signature counter, the backup state, and when it was added and last used",
+      "source": "learner-input",
+      "stores": ["passkeys.*"],
+      "purpose": "signing the owner in on the web with a passkey",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
     }
   ],
   "sql": ["migrations/*.sql"],

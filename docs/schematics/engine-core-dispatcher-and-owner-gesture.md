@@ -45,7 +45,7 @@ flowchart LR
   end
   D -->|"run_service_method"| ENG["Anki engine: Backend"]
   D -->|"run_db_command_bytes, fixed statements"| ENG
-  ING["deck-streak-ingest<br/>the mirror's engine port"] -->|"Collection API, 7 lines held by text"| ENG
+  ING["deck-streak-ingest<br/>the mirror's engine port"] -->|"Collection API, 21 lines held by text"| ENG
   SERVER["daemon, api, bot, mcp, coordination"] -.->|"no edge: compile error"| CORE
 ```
 
@@ -161,7 +161,7 @@ core, so it cannot name `from_tap` at all; the containment census refuses an add
 ```mermaid
 flowchart TB
   M["every workspace member's Cargo.toml"] --> GR["graph census<br/>core named by ffi and web-engine only<br/>anki named outside dev-deps by core and ingest only<br/>no member names an adapter"]
-  SRC["every member's src, examples, tests, benches, build.rs"] --> CC["containment census<br/>from_tap and run_exempt only in the two entry files<br/>engine write names only at the 7 held ingest lines<br/>no path or include of a core file"]
+  SRC["every member's src, examples, tests, benches, build.rs"] --> CC["containment census<br/>from_tap and run_exempt only in the two entry files<br/>engine write names only at the 21 held ingest lines<br/>no path or include of a core file"]
   PL["planted callers in a scratch tree<br/>daemon, bot, coordination, ingest"] --> CC
   GR --> V["examined counts printed<br/>a planted caller refused by name"]
   CC --> V

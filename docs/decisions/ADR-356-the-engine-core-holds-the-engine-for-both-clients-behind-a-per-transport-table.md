@@ -201,3 +201,39 @@ SPEC-345's A1 to A11 (part 1) and section 7's A12 to A18 (part 2), and the mutat
 
 ADR-301 (a), ADR-335, ADR-336, ADR-337, ADR-345, ADR-348, ADR-022, the owner-taps ruling in
 `docs/rulings/`; SPEC-022, SPEC-334, SPEC-336, SPEC-338; #616, #620, #623, #624, #631, #633, #641.
+
+## Amendment: part 2's refusal and the census's measured population (SPEC-345)
+
+Part 2 builds D5 and D8 at `dev` `79f321902f729a6d703660bc9d3810d3d7728a4e`. D8 is read with
+SPEC-345 section 8's held lines: 25 lines, 20 pairs of a file and an exact trimmed line in 12
+files. 21 of them are `crates/ingest`'s lines that name the engine's write and door names (16
+pairs in 10 files, the mirror's skip-take write of #600 and its census's string literals
+included), where the design read seven. The other four are two test files' lines that name the
+gesture. The rest of the Decision Outcome stands. Part 2 decides five things it left open.
+
+The gesture's refusal:
+
+- One core refusal, `GestureRefusal` (`WrongKind`, `NotTheTarget`, `Undecodable`, `Engine`), returned by `from_tap` and `run_exempt`, with `Refusal` keeping its three variants: chosen because no existing match on `Refusal` changes, and each adapter maps the new type to its own refusal as D3 says.
+- Two new `Refusal` variants, `TargetMismatch` and `Malformed`, as the design draft had them: rejected because three exhaustive matches on `Refusal` would stop compiling (the native adapter's map into `EngineRefusal`, whose variants and text row S33600 holds; the web engine's `call`; SPEC-348's pair test), and a gesture's refusal is not the ordinary table's.
+
+How the census holds a line (D8):
+
+- Each held line by its file, its exact trimmed text, its count and its reason: chosen because a new line, a second copy of a held line, or more text on a held line fails by name, and an edit that moves lines moves no hold.
+- A held pattern per file (a name, or a whole file): rejected because a new call in a held file would then pass unread.
+- A held line number: rejected because any edit above a held line would move it, and the census would refuse a line it should hold.
+
+The census's scope:
+
+- Outside the core only, the core's own seven engine-name lines unheld: chosen because R10 says "outside the core", the graph census already bounds who reaches the core, and a sibling's new core line then costs no census edit.
+- The core's lines held by text too: rejected because every new core read or write path would edit the census, while the core is the engine's one holder by D1.
+
+The web export's killer:
+
+- The export's statements owed in one new `OWED` entry of `crates/web-engine/tests/boundary.rs`, insert-only, its tap-to-write arms included: chosen because the export compiles only for `wasm32`, so its mutants run natively and only that source census can read them, as it does for part 1's boundary.
+- A native build of the web boundary so that a test runs the export: rejected because it rewrites the whole boundary module, which this part does not touch beyond the export.
+
+The adapters' test lines that name the gesture:
+
+- chosen: hold the native adapter's test lines by text; rejected: rename R9's entry, which moves a requirement's name to satisfy a test.
+- The boundary census's `OWED` literals that name the export and the gesture's constructor, held by text as #600's census literals are: chosen because they are data a test compares, not calls, and a held literal copied or extended still fails by name.
+- String literals stripped before the gesture's names are read: rejected because the census reads the engine's names in literals too, and a literal can carry a call into a macro, so one stripping rule serves both.

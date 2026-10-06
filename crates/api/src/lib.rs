@@ -16,7 +16,9 @@
 //! coordination's score reads. SPEC-041 adds the in-app feed the notification router appends to
 //! ([`notifications_routes`]), served to the owner's session alone.
 //! SPEC-118 adds the quick capture ([`inbox_capture_route`]): one text into the vault inbox,
-//! through coordination's capture use case.
+//! through coordination's capture use case. SPEC-359 adds the linking routes ([`linking_routes`]):
+//! the link code, the passkey ceremonies and the owner's methods, over identity's linking use
+//! cases.
 //!
 //! The context map (docs/CONTEXT-MAP.md) is binding: this crate depends only on what its line
 //! there declares, and a new edge is an ADR, never a fix to make code compile.
@@ -31,6 +33,7 @@ pub mod health;
 pub mod inbox_capture_route;
 pub mod insights_routes;
 pub mod law_routes;
+pub mod linking_routes;
 pub mod notifications_routes;
 pub mod progress_routes;
 pub mod router;
