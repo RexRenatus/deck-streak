@@ -36,7 +36,7 @@ const NOTE_IDS_SQL: &str = "select id from notes";
 const MODIFIED_SQL: &str = "select mod from col";
 /// What a sync has not sent, in one statement: the reviews whose sequence number marks them
 /// unsynced, and whether the collection or its schema changed since its last sync (SPEC-357 R9).
-const UNSYNCED_SQL: &str = "select (select count() from revlog), \
+const UNSYNCED_SQL: &str = "select (select count() from revlog where usn = -1), \
                             (select mod > ls from col), (select scm > ls from col)";
 
 /// One running engine on one transport. An adapter starts one and reaches the engine only through
@@ -216,7 +216,7 @@ impl Dispatcher {
             "kind": "query",
             "sql": sql,
             "args": [],
-            "first_row_only": true,
+            "first_row_only": false,
         });
         let reply = self
             .backend
