@@ -359,7 +359,9 @@ private func scriptedCards() -> [Scripted] {
     })
     // L5 holds the window as well as L6, measured on both simulators: its reference without L6
     // created no window, removing L6 alone opened nothing, and SPEC-349's `nav-blank` creates one
-    // only with both removed.
+    // only with both removed. Its reference without L5 and L6 is blind, measured on both
+    // simulators (`allowed=0 windows=0`): the `window.open` never reached either delegate, so it is
+    // pinned in BLIND_SCRIPTED.
     cards.append(scripted("script-open", held: [.L5, .L6], alone: nil, .window) { a in
         "setTimeout(() => window.open('\(a.under("script-open"))/1'), 0);"
     })
@@ -416,11 +418,13 @@ private func scriptedCards() -> [Scripted] {
 let ABSENT_ALLOWED: Set<String> = ["webtransport"]
 
 /// The scripted cards whose reference is blind, counted and pinned from the measurement on both
-/// simulators: the reference reached nothing, and no held set can open it. A7 asserts its blind
-/// set equals this one and prints the count, so a new blind reference, or this one opening, reads
-/// red. `capture`: the card's document has no `navigator.mediaDevices`, so L6's capture arm is
-/// never asked in the probe.
-let BLIND_SCRIPTED: Set<String> = ["capture"]
+/// simulators: the reference reached nothing. A7 asserts its blind set equals this one and prints
+/// the count, so a new blind reference, or one of these opening, reads red. `capture`: the card's
+/// document has no `navigator.mediaDevices`, so no held set can open it and L6's capture arm is
+/// never asked in the probe. `script-open`: its reference without L5 and L6 neither allowed a
+/// navigation nor created a window (`allowed=0 windows=0`), so the window it asks for reached
+/// neither delegate.
+let BLIND_SCRIPTED: Set<String> = ["capture", "script-open"]
 
 /// The declared set of controls with no scripted channel of their own: removing one alone, every
 /// other control on, opens nothing (A10 measures it). L8 opens every peer connection but the

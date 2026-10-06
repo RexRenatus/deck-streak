@@ -52,6 +52,17 @@ gains L6. `webtransport` read `absent` on both simulators, the engine having no 
 its declaration allows. The `dns-prefetch` witness was not blind: the reference's lookup reached
 it once on both simulators.
 
+The pull request's second head (8ae87c02) measured one more blind scripted reference on both
+simulators, in the `apple-on-change` run 37386694535's `harness` job (attempt 1, job 112026390528):
+`script-open`, whose reference without L5 and L6 neither allowed a navigation nor created a window
+(`allowed=0 windows=0`), so the `window.open` its script asks for reached neither delegate. A7 read
+`blind scripted references: 2 ["capture", "script-open"], pinned 1 ["capture"]` on both. It is
+counted and pinned in the same form as `capture`: `BLIND_SCRIPTED` holds both, and A7 prints the
+count, 2, against the pin, so a third blind reference, or either of these opening, reads red. No
+criterion's words, assertion or tolerance changed. Why the window reached no delegate is not
+measured: the probe sets its window preference on the view's configuration after the factory built
+the view, and whether that setting reaches the built view is a hypothesis.
+
 ```red-first
 A1: red at 436d23f7: CardScriptsTests.swift:35: XCTAssertEqual failed: ("off(missing: Set([]))") is not equal to ("run") - switch on, present ["L1", "L3", "L4", "L5", "L6", "L7", "L8", "L9"] (run 37371807357 attempt 2, job card-isolation, host; Executed 1 test, with 1 failure; examined 512 cases)
 A2: red at 436d23f7: PeerConnectionRemovalTests.swift:55: XCTAssertEqual failed: (21 names, first "RTCPeerConnection", "webkitRTCPeerConnection") is not equal to ("[]") - a peer-connection name survived the removal (run 37371807357 attempt 2, job card-isolation, host; Executed 1 test, with 1 failure; examined 33 planted global names)
