@@ -283,6 +283,10 @@ Part a:
 | `formal/tla/PasskeyOnce/PasskeyOnce.tla`, `formal/tla/PasskeyOnce/MCPasskeyOnce.cfg`, `formal/tla/PasskeyOnce/witness/a-take-that-keeps-its-entry.cfg`, `formal/tla/PasskeyOnce/witness/a-counter-read-then-written-in-two-steps.cfg` | formal | added: the model of a ceremony or link code taken once and the counter advanced by one compare-and-swap, with a witness per property |
 | `changelog.d/passkey-sign-in-359.md` | repo | added |
 
+`ApiState::with_linking(config, owner)` in `crates/api/src/router.rs` takes the `Owner` beside the
+`LinkingConfig`: the owner's access exposes no owner, and `crates/api/src/session_routes.rs` is not
+in this manifest.
+
 Part b is §7's manifest.
 
 ## 5. What this does NOT do

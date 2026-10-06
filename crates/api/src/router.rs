@@ -36,6 +36,7 @@ use deck_streak_coordination::drills::{DrillNotes, RealFs};
 use deck_streak_coordination::inbox_capture::InboxCaptures;
 use deck_streak_coordination::instruments::InstrumentService;
 use deck_streak_coordination::progression::level_view::LawTierSource;
+use deck_streak_identity::{LinkingConfig, Owner};
 use deck_streak_kernel::Courses;
 use tower::ServiceBuilder;
 use tower::limit::GlobalConcurrencyLimitLayer;
@@ -57,6 +58,7 @@ use crate::health::{self, Readiness};
 use crate::inbox_capture_route;
 use crate::insights_routes;
 use crate::law_routes;
+use crate::linking_routes;
 use crate::notifications_routes;
 use crate::progress_routes;
 use crate::session_routes::{self, OwnerAccess};
@@ -86,6 +88,7 @@ pub struct ApiState {
     drills: Option<Arc<DrillNotes<RealFs>>>,
     courses: Option<Courses>,
     inbox: Option<Arc<InboxCaptures<RealFs>>>,
+    linking: Option<(LinkingConfig, Owner)>,
 }
 
 impl std::fmt::Debug for ApiState {
@@ -99,6 +102,7 @@ impl std::fmt::Debug for ApiState {
             .field("drills", &self.drills.is_some())
             .field("courses", &self.courses.is_some())
             .field("inbox", &self.inbox.is_some())
+            .field("linking", &self.linking.is_some())
             .finish()
     }
 }
@@ -115,6 +119,7 @@ impl ApiState {
             drills: None,
             courses: None,
             inbox: None,
+            linking: None,
         }
     }
 
@@ -129,6 +134,14 @@ impl ApiState {
     #[must_use]
     pub fn with_owner(mut self, access: OwnerAccess) -> Self {
         self.owner = Some(access);
+        self
+    }
+
+    /// This state, serving SPEC-359's linking routes for `owner` as `config` turns linking on or
+    /// off. The owner travels beside the configuration because the owner's access exposes none.
+    #[must_use]
+    pub fn with_linking(mut self, config: LinkingConfig, owner: Owner) -> Self {
+        self.linking = Some((config, owner));
         self
     }
 
@@ -183,6 +196,7 @@ pub fn router(state: ApiState) -> Router {
     let drills = state.drills.clone();
     let courses = state.courses.clone().unwrap_or_default();
     let inbox = state.inbox.clone();
+    let linking = state.linking.clone();
     let routes = health::routes().with_state(state);
     let routes = match owner {
         Some(access) => {
@@ -216,6 +230,11 @@ pub fn router(state: ApiState) -> Router {
                     access.clone(),
                     readiness.clone(),
                     inbox,
+                ))
+                .merge(linking_routes::routes(
+                    access.clone(),
+                    readiness.clone(),
+                    linking,
                 ))
                 .merge(notifications_routes::routes(access.clone(), readiness));
             match instruments {

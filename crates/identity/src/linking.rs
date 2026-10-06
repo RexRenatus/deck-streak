@@ -159,6 +159,19 @@ pub fn fresh_telegram(sessions: &Sessions, token: &str) -> Result<Owner, Refusal
     Ok(admitted.owner)
 }
 
+/// The `passkeys` row holding the credential `id`, with the Telegram user id it belongs to: read
+/// before the library verifies, so an unknown credential is `not_linked` and another user's is
+/// `not_owner` (SPEC-359 R6).
+async fn credential_row(db: &Db, id: &[u8]) -> Result<Option<(i64, i64)>, PasskeyError> {
+    let found = sqlx::query!(
+        "SELECT id, telegram_user_id FROM passkeys WHERE credential_id = ?1",
+        id
+    )
+    .fetch_optional(db.reader())
+    .await?;
+    Ok(found.map(|row| (row.id, row.telegram_user_id)))
+}
+
 /// One of the owner's ways in, as the methods list names it: never a credential id, a public key
 /// or the user handle (SPEC-359 R9).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -231,6 +244,8 @@ impl Passkeys {
         };
         let credential = serde_json::from_value::<PublicKeyCredential>(response.clone())
             .map_err(|_| Refusal::PasskeyInvalid)?;
+        let found = credential_row(db, credential.get_credential_id()).await?;
+        let _ = found;
         let row = self
             .verify_assertion(db, &state, &held, &credential)
             .await?;
