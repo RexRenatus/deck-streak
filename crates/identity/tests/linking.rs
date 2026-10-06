@@ -154,7 +154,7 @@ async fn a_link_code_is_random_and_kept_hashed() {
     );
     let codes = [unb64(&first), unb64(&second)];
     for code in &codes {
-        assert_eq!(code.len(), LINK_CODE_BYTES, "a code is not 16 bytes");
+        assert_eq!(code.len(), 16, "a code is not 16 bytes");
     }
     let digests: Vec<Vec<u8>> = codes
         .iter()
@@ -249,7 +249,7 @@ async fn a_link_code_needs_a_fresh_telegram_session() {
 async fn a_ninth_link_code_evicts_the_oldest() {
     let world = fixture().await;
     let session = open_telegram(&world);
-    let codes: Vec<String> = (0..=MAX_LIVE_LINK_CODES)
+    let codes: Vec<String> = (0..9)
         .map(|_| mint(&world, &session).expect("a code is minted"))
         .collect();
     assert_eq!(
@@ -259,7 +259,7 @@ async fn a_ninth_link_code_evicts_the_oldest() {
     );
     assert_eq!(
         world.passkeys.link_codes().live(),
-        MAX_LIVE_LINK_CODES,
+        8,
         "the store does not hold exactly eight codes"
     );
     assert!(
