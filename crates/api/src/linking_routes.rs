@@ -27,16 +27,18 @@ use axum::http::request::Parts;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{AppendHeaders, IntoResponse, Response};
 use axum::routing::{delete, get, post};
+use deck_streak_identity::passkeys::CEREMONY_LIFETIME;
 use deck_streak_identity::session::{opening_cookie, presented};
 use deck_streak_identity::{
-    LinkingConfig, Owner, OwnerSession, PasskeyError, Passkeys, Refusal, Sessions,
+    LinkSession, LinkingConfig, Owner, OwnerSession, PasskeyError, Passkeys, Refusal, Sessions,
+    Started,
 };
 use deck_streak_kernel::{Clock, Db, UtcMillis};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
 use crate::health::Readiness;
-use crate::session_routes::OwnerAccess;
+use crate::session_routes::{OwnerAccess, StateChange};
 
 /// Mints a link code.
 pub const LINK_CODE_PATH: &str = "/api/link/code";
@@ -119,7 +121,7 @@ struct Redeem {
 }
 
 /// `POST /api/link/code`.
-async fn mint_code(ready: Ready, headers: HeaderMap) -> Response {
+async fn mint_code(_state_change: StateChange, ready: Ready, headers: HeaderMap) -> Response {
     let token = presented(&headers).unwrap_or_default();
     match ready.passkeys.mint_link_code(token) {
         Ok(code) => answer(StatusCode::OK, &json!({ "code": code.expose() })),
@@ -128,7 +130,13 @@ async fn mint_code(ready: Ready, headers: HeaderMap) -> Response {
 }
 
 /// `POST /api/link/redeem`.
-async fn redeem(_slot: CeremonySlot, ready: Ready, headers: HeaderMap, body: Bytes) -> Response {
+async fn redeem(
+    _state_change: StateChange,
+    _slot: CeremonySlot,
+    ready: Ready,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
     let Ok(Redeem { code }) = serde_json::from_slice(&body) else {
         return failed(&Refusal::LinkCodeInvalid.into());
     };
@@ -140,26 +148,30 @@ async fn redeem(_slot: CeremonySlot, ready: Ready, headers: HeaderMap, body: Byt
 
 /// `POST /api/passkeys/register/start`.
 async fn register_start(
+    _state_change: StateChange,
     _slot: CeremonySlot,
     ready: Ready,
-    _owner: OwnerSession,
-    headers: HeaderMap,
+    session: LinkSession,
 ) -> Response {
-    let token = presented(&headers).unwrap_or_default();
-    match ready.passkeys.start_registration(&ready.db, token).await {
-        Ok(started) => answer(StatusCode::OK, &started.options),
+    match ready
+        .passkeys
+        .start_registration(&ready.db, session.token())
+        .await
+    {
+        Ok(started) => ceremony_started(&started),
         Err(error) => failed(&error),
     }
 }
 
 /// `POST /api/passkeys/register/finish`.
 async fn register_finish(
+    _state_change: StateChange,
     ready: Ready,
-    _owner: OwnerSession,
+    session: LinkSession,
     headers: HeaderMap,
     body: Bytes,
 ) -> Response {
-    let token = presented(&headers).unwrap_or_default();
+    let token = session.token();
     let flow = ceremony_presented(&headers).unwrap_or_default();
     let response = serde_json::from_slice::<Value>(&body).unwrap_or(Value::Null);
     let answered = match ready
@@ -174,15 +186,20 @@ async fn register_finish(
 }
 
 /// `POST /api/passkeys/sign-in/start`.
-async fn sign_in_start(_slot: CeremonySlot, ready: Ready) -> Response {
+async fn sign_in_start(_state_change: StateChange, _slot: CeremonySlot, ready: Ready) -> Response {
     match ready.passkeys.start_sign_in(&ready.db).await {
-        Ok(started) => answer(StatusCode::OK, &started.options),
+        Ok(started) => ceremony_started(&started),
         Err(error) => failed(&error),
     }
 }
 
 /// `POST /api/passkeys/sign-in/finish`.
-async fn sign_in_finish(ready: Ready, headers: HeaderMap, body: Bytes) -> Response {
+async fn sign_in_finish(
+    _state_change: StateChange,
+    ready: Ready,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
     let flow = ceremony_presented(&headers).unwrap_or_default();
     let response = serde_json::from_slice::<Value>(&body).unwrap_or(Value::Null);
     let answered = match ready
@@ -208,12 +225,19 @@ async fn sign_in_finish(ready: Ready, headers: HeaderMap, body: Bytes) -> Respon
 
 /// `GET /api/identities`.
 async fn identities(ready: Ready, _owner: OwnerSession) -> Response {
-    let _ = ready;
-    answer(StatusCode::OK, &json!([]))
+    match ready.passkeys.methods(&ready.db).await {
+        Ok(methods) => answer(StatusCode::OK, &json!(methods)),
+        Err(error) => failed(&error),
+    }
 }
 
 /// `DELETE /api/identities/{id}`.
-async fn remove(ready: Ready, Path(id): Path<String>, headers: HeaderMap) -> Response {
+async fn remove(
+    _state_change: StateChange,
+    ready: Ready,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+) -> Response {
     let Ok(id) = id.parse::<i64>() else {
         return failed(&Refusal::IdentityUnknown.into());
     };
@@ -292,6 +316,10 @@ impl CeremonyBound {
         if window.0 != minute {
             *window = (minute, 0);
         }
+        if window.1 >= CEREMONIES_PER_MINUTE {
+            let left = MINUTE_MS - millis.rem_euclid(MINUTE_MS);
+            return Err(u64::try_from(left).map_or(60, |left| left.div_ceil(1000)));
+        }
         window.1 = window.1.saturating_add(1);
         Ok(())
     }
@@ -318,6 +346,21 @@ fn ceremony_presented(headers: &HeaderMap) -> Option<&str> {
         }
     }
     found
+}
+
+/// A ceremony's start: its options, and its flow id in [`CEREMONY_COOKIE`], living as long as the
+/// ceremony.
+fn ceremony_started(started: &Started) -> Response {
+    let opened = format!(
+        "{CEREMONY_COOKIE}={}; Max-Age={}; {COOKIE_ATTRIBUTES}",
+        started.flow.expose(),
+        CEREMONY_LIFETIME.as_secs()
+    );
+    (
+        AppendHeaders([(SET_COOKIE, opened)]),
+        answer(StatusCode::OK, &started.options),
+    )
+        .into_response()
 }
 
 /// `response`, with the ceremony cookie cleared beside whatever cookie it already sets.
