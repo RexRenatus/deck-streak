@@ -843,31 +843,44 @@ def say_plan(plan: Plan) -> None:
 
 #: Seconds one mutant costs, its build and its tests, by package: the mean over the weekly
 #: battery's 31 reported shards of run 36384080819 on GitHub's ubuntu-24.04 runners, rounded up
-#: (R18). A package the table does not name costs the table's highest.
+#: (R18). `ffi`, `push`, `engine-core`, `web-engine` and `fsrs7` are the means over the 125 shard
+#: reports of 31 pull request runs, 37224975775 .. 37409647919, rounded up (SPEC-362 R10). A
+#: package the table does not name costs the table's highest.
 SECONDS_PER_MUTANT = {
     "deck-streak-ingest": 126,
     "deck-streak-daemon": 80,
     "deck-streak-coordination": 64,
     "deck-streak-api": 54,
+    "deck-streak-ffi": 18,
     "deck-streak-kernel": 13,
     "deck-streak-identity": 8,
     "deck-streak-vault": 8,
+    "deck-streak-push": 6,
+    "deck-streak-engine-core": 4,
+    "deck-streak-web-engine": 3,
+    "deck-streak-fsrs7": 2,
 }
-#: The unmutated baseline each shard builds and tests before its first mutant: the mean over the
-#: same 31 shards, rounded up.
-BASELINE_SECONDS = 371
+#: The unmutated baseline each leg builds and tests before its first mutant. A leg over a whole
+#: listing tests the workspace, whose nextest run in run 37410215011's `rust` job read
+#: `Summary [1717.322s]`, started up to 51 s into the job, so 1768 (SPEC-362 R5).
+BASELINE_SECONDS = 1768
 #: Seconds the settle census adds to a run of its package's tests, by package (SPEC-327): its
-#: slower test passed at 736.931 s in the `rust` job of run 37131363071 (test.log:1373), started up
-#: to 51 s into the run, so 788. It is paid by each mutant of the package and once by the baseline
-#: of a plan that lists one. It is read from that pull request's CI, not from the weekly battery,
-#: until a weekly run re-derives it; a table apart from `SECONDS_PER_MUTANT`, whose highest is the
-#: cost of every package that table does not name.
-CENSUS_SECONDS = {"deck-streak-progression": 788}
-#: A shard's projected time may reach an hour, half its job's timeout-minutes of 120: the shards of
-#: runs 36373915578 and 36384080819 took from 0.66 to 1.33 times this table's projection (R18).
-SHARD_BOUND_SECONDS = 3600
-#: The most jobs a matrix may generate in one workflow run (GitHub's workflow syntax).
-MAX_SHARDS = 256
+#: slowest test passed at 1378.452 s in push run 37392351782, started up to 51 s into the run, so
+#: 1430 (SPEC-362 R6). It is paid by each mutant of the package and once by the baseline of a plan
+#: that lists one; a table apart from `SECONDS_PER_MUTANT`, whose highest is the cost of every
+#: package that table does not name.
+CENSUS_SECONDS = {"deck-streak-progression": 1430}
+#: A leg's projected time may reach half its job's `timeout-minutes` of 360, the most a hosted job
+#: runs: the shards of runs 36373915578 and 36384080819 took from 0.66 to 1.33 times this table's
+#: projection (SPEC-039 R18, SPEC-362 R2).
+SHARD_BOUND_SECONDS = 10800
+#: The most legs each workflow's run holds: the 256 jobs of one run, less the most every other job
+#: of that workflow can generate, 47 in `ci.yml` and 22 in `mutation-weekly.yml` (SPEC-362 R3).
+LEG_CEILING = {"ci": 209, "battery": 234}
+#: The per-mutant `--timeout` every cargo-mutants command carries (SPEC-327 R2), and the margin a
+#: leg's slowest baseline test must keep under it (SPEC-362 R7).
+MUTANT_TIMEOUT_SECONDS = 2200
+TIMEOUT_MARGIN = 1.5
 
 
 def projected(costs: list[int], count: int, baseline: int) -> list[int]:
@@ -895,28 +908,28 @@ def baseline_seconds(packages: list[str]) -> int:
     return BASELINE_SECONDS + sum(CENSUS_SECONDS.get(package, 0) for package in set(packages))
 
 
-def fewest_shards(costs: list[int], baseline: int = BASELINE_SECONDS) -> int | None:
-    """The fewest round-robin shards whose slowest is projected within the bound, or None when
-    even `MAX_SHARDS` do not fit. The one function the per-pull-request plan and a package
-    dispatch's sizing share (SPEC-129 R2)."""
+def fewest_shards(
+    costs: list[int], baseline: int = BASELINE_SECONDS, ceiling: int = LEG_CEILING["ci"]
+) -> int | None:
+    """The fewest round-robin legs whose slowest is projected within the bound, or None when even
+    the run's `ceiling` of legs does not fit. The one function the per-pull-request plan and a
+    dispatch's sizing share (SPEC-129 R2, SPEC-362 R3)."""
     fitting = (
         n
-        for n in range(1, MAX_SHARDS + 1)
+        for n in range(1, ceiling + 1)
         if max(projected(costs, n, baseline)) <= SHARD_BOUND_SECONDS
     )
     return next(fitting, None)
 
 
-#: The shards a scheduled run and a dispatch with no package sweep (SPEC-129 R4).
-WHOLE_SHARDS = 32
-
-
 def size(listed_path: str | None, package: str | None) -> int:
-    """The shards a dispatch runs: `WHOLE_SHARDS` with no package or for the Mini App, which
-    reads no listing, else the fewest that fit the bound for the package's listing (SPEC-129
-    R2 to R4). A projection past the matrix's limit is refused and never capped."""
-    if package in (None, "", MINIAPP):
-        count, note = WHOLE_SHARDS, "the whole tree, which is never sized"
+    """The legs a dispatch runs: one for the Mini App, which runs no Rust leg and reads no
+    listing; else the fewest that fit the bound for the listing, the whole tree's with no package
+    and the package's with one, within the battery run's ceiling (SPEC-129 R2 to R4, SPEC-362
+    R11). A projection past the ceiling is refused and never capped."""
+    ceiling = LEG_CEILING["battery"]
+    if package == MINIAPP:
+        count, note = 1, f"the Mini App ({MINIAPP}), which runs no Rust leg and reads no listing"
     else:
         listed = read_listing(listed_path)
         if not isinstance(listed, list):
@@ -926,12 +939,12 @@ def size(listed_path: str | None, package: str | None) -> int:
             return EXIT_VOID
         costs = mutant_costs([str(entry.get("package")) for entry in listed])
         baseline = baseline_seconds([str(entry.get("package")) for entry in listed])
-        fewest = fewest_shards(costs, baseline)
+        fewest = fewest_shards(costs, baseline, ceiling)
         if fewest is None:
             print(
                 f"mutation: size: REFUSED: {len(listed)} mutant(s), projected at {sum(costs)} s "
-                f"serially, need more than {MAX_SHARDS} shards within {SHARD_BOUND_SECONDS} s each, "
-                "the most a job matrix holds: never capped"
+                f"serially, need more than {ceiling} legs within {SHARD_BOUND_SECONDS} s each, "
+                f"the battery run's ceiling: never capped"
             )
             return EXIT_FAIL
         count = fewest
@@ -940,7 +953,7 @@ def size(listed_path: str | None, package: str | None) -> int:
             f"{len(listed)} listed mutant(s), projected at {sum(costs)} s serially, the slowest "
             f"at {max(times)} s of its {SHARD_BOUND_SECONDS} s bound"
         )
-    print(f"mutation: size: {count} shard(s) for {note}")
+    print(f"mutation: size: {count} shard(s) for {note}; legs {count} of ceiling {ceiling}")
     announce(count)
     return EXIT_OK
 
@@ -1028,12 +1041,12 @@ def shards(
         mutants = [(str(entry.get("name")), str(entry.get("package"))) for entry in listed]
     costs = mutant_costs([package for _, package in mutants])
     baseline = baseline_seconds([package for _, package in mutants])
-    count = fewest_shards(costs, baseline)
+    count = fewest_shards(costs, baseline, LEG_CEILING["ci"])
     if count is None:
         print(
             f"mutation: shards: REFUSED: {len(mutants)} mutant(s), projected at {sum(costs)} s "
-            f"serially, need more than {MAX_SHARDS} shards within {SHARD_BOUND_SECONDS} s each, the "
-            "most a job matrix holds: split the change, since a run is never capped"
+            f"serially, need more than {LEG_CEILING['ci']} legs within {SHARD_BOUND_SECONDS} s "
+            f"each, the pull request run's ceiling: split the change, since a run is never capped"
         )
         return EXIT_FAIL
     times = projected(costs, count, baseline)
@@ -1063,7 +1076,8 @@ def shards(
         )
     print(
         f"mutation: shards: {count} shard(s) for {len(mutants)} listed mutant(s), projected at "
-        f"{sum(costs)} s serially; the slowest at {max(times)} s of its {SHARD_BOUND_SECONDS} s bound"
+        f"{sum(costs)} s serially; the slowest at {max(times)} s of its {SHARD_BOUND_SECONDS} s "
+        f"bound; legs {count} of ceiling {LEG_CEILING['ci']}"
     )
     announce(count)
     output = os.environ.get("GITHUB_OUTPUT")
@@ -1294,6 +1308,84 @@ def examined_sum(verdict: Verdict, plan: dict, whole: list[tuple[str, dict]]) ->
         )
 
 
+#: A nextest status line, as a leg's baseline log holds one for each test: the seconds it ran.
+NEXTEST_STATUS = re.compile(r"^\s*[A-Z]+\s+\[\s*([\d.]+)s\]")
+
+
+def baseline_void(where: str, directory: pathlib.Path, report: dict) -> str | None:
+    """Why a leg cannot show that the per-mutant timeout covers its own tests, or None when it can
+    (SPEC-362 R7): its slowest baseline test, times the margin, must stay within the timeout, or a
+    mutant only that test kills could read as a timeout. A report with no baseline, a baseline
+    that names no log or an unreadable one, and a log that times no test prove nothing."""
+    baseline = next(
+        (
+            o
+            for o in report.get("outcomes", [])
+            if isinstance(o, dict)
+            if o.get("scenario") == "Baseline"
+        ),
+        None,
+    )
+    if baseline is None:
+        return (
+            f"{where}its report holds no baseline outcome, so it cannot show its timeout covers "
+            f"its tests"
+        )
+    log_path = baseline.get("log_path")
+    if not isinstance(log_path, str):
+        return (
+            f"{where}its baseline outcome names no log, so it cannot show its timeout covers its "
+            f"tests"
+        )
+    log = directory / "mutants.out" / "log" / pathlib.PurePosixPath(log_path).name
+    try:
+        text = log.read_bytes().decode("utf-8", "replace")
+    except OSError:
+        return (
+            f"{where}its baseline log {log_path} is unreadable, so it cannot show its timeout "
+            f"covers its tests"
+        )
+    times = [
+        float(found.group(1))
+        for found in (NEXTEST_STATUS.match(line) for line in text.splitlines())
+        if found is not None
+    ]
+    if not times:
+        return (
+            f"{where}times no test in its baseline log {log_path}, so it cannot show its timeout "
+            f"covers its tests"
+        )
+    slowest = max(times)
+    if TIMEOUT_MARGIN * slowest > MUTANT_TIMEOUT_SECONDS:
+        return (
+            f"{where}the baseline's slowest test ran {slowest} s, and {TIMEOUT_MARGIN} times it "
+            f"passes the {MUTANT_TIMEOUT_SECONDS} s per-mutant timeout, so a mutant only that "
+            f"test kills could read as a timeout"
+        )
+    return None
+
+
+def population_gaps(plan: dict, args: argparse.Namespace) -> list[str]:
+    """Each mutant the plan's legs hold a different number of times than the tool's own listing
+    does (SPEC-362 R8). The listing, uploaded beside the plan or named by --listed, is the
+    population, so a sizing defect that drops or doubles a mutant cannot shrink what is judged."""
+    path = args.listed or str(pathlib.Path(args.plan).parent / "listed.json")
+    listed = read_listing(path)
+    if not isinstance(listed, list):
+        return [
+            f"no listing: {path} holds no cargo-mutants listing, so the plan's legs cannot be "
+            f"held to the tool's population"
+        ]
+    planned = (plan.get("shards") or {}).get("shards") or []
+    dealt = Counter(name for leg in planned for name in leg["mutants"])
+    wanted = Counter(str(entry.get("name")) for entry in listed)
+    return [
+        f"the plan's legs hold {name} {dealt[name]} time(s), and the tool's listing {wanted[name]}"
+        for name in sorted(set(dealt) | set(wanted))
+        if dealt[name] != wanted[name]
+    ]
+
+
 def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
     rows = read_json(args.rows)
     applies = plan["classes"]["rust"]["applies"]
@@ -1324,6 +1416,11 @@ def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
                     verdict.fail, deferred.append, verdict.say, where, directory, held.get(where)
                 )
             }
+            if where in held:
+                gap = baseline_void(where, directory, held[where])
+                if gap is not None:
+                    deferred.append(gap)
+        deferred.extend(population_gaps(plan, args))
     caught, missed, timeout, unviable, total = (
         sum(int(report.get(key, 0)) for _, report in whole)
         for key in ("caught", "missed", "timeout", "unviable", "total_mutants")

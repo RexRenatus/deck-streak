@@ -1726,7 +1726,9 @@ def cargo_report(entries):
         "Unviable": "unviable",
     }
     report = {
-        "outcomes": [{"scenario": "Baseline", "summary": "Success"}],
+        "outcomes": [
+            {"scenario": "Baseline", "summary": "Success", "log_path": "log/baseline.log"}
+        ],
         "total_mutants": len(entries),
         "caught": 0,
         "missed": 0,
