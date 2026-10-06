@@ -276,6 +276,7 @@ Part a:
 | `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: the api role reads the public origin and builds the relying party |
 | `crates/kernel/src/logging.rs` | `deck-streak-kernel` | changed: the passkey library's targets silenced at any level, in a filter `RUST_LOG` never reaches (R13) |
 | `crates/kernel/tests/logging.rs` | `deck-streak-kernel` | changed: R13's silence measured under five `RUST_LOG` values beside a positive control |
+| `crates/kernel/tests/log_capture_class.rs` | `deck-streak-kernel` | changed: the guard's routed capture count follows the routed passkey capture (one literal) |
 | `.env.example`, `deploy/deck-streak.env.example` | repo, deploy | changed: the public origin's line, unset, with no example and named by its role |
 | `privacy.json`, `PRIVACY.md` | repo, docs | changed: the `passkeys` category and its line |
 | `docs/CONTEXT-MAP.md` | docs | changed: identity's own-tables row |
