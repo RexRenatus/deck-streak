@@ -135,7 +135,7 @@ R10. **Nothing else moves.** The core's tables, its dispatcher's `run`, its grap
 |---|---|---|---|
 | A1 | The formal budget file holds the new entry, and the test pins it | `EXPECTED` gains the entry before the file does: the committed text differs | `scripts/tests/test_formal_config.py` `the_committed_file_holds_exactly_the_declared_fields` |
 | A2 | The offer follows the engine's answer in each of its five cases | an offer that admits both directions on every answer | `crates/engine-core/tests/full_sync.rs` `the_offer_follows_the_engines_answer` |
-| A3 | Each direction counts the ids the replaced side alone holds, for reviews, cards and notes, and a review synced before the server was replaced is counted | counts taken from the unsynced rows | `full_sync.rs` `each_direction_counts_the_ids_the_replaced_side_alone_holds` |
+| A3 | Each direction counts the ids the replaced side alone holds, for reviews, cards and notes, and a review synced before the server was replaced is counted | counts of zero | `full_sync.rs` `each_direction_counts_the_ids_the_replaced_side_alone_holds` |
 | A4 | A direction not offered is refused and the choice kept | a confirm that accepts any direction | `full_sync.rs` `a_direction_not_offered_is_refused_and_the_choice_kept` |
 | A5 | A backup missing one id of the replaced side is refused, for each direction | a backup check that reads the kept side | `full_sync.rs` `a_backup_missing_an_id_of_the_replaced_side_is_refused` |
 | A6 | An upload reaches `Ready` only after a found snapshot and an unchanged re-check; a changed copy returns new counts | an upload's backup that answers `Ready` | `full_sync.rs` `an_upload_reaches_ready_only_after_the_snapshot_and_the_recheck` |
