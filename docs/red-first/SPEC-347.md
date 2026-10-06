@@ -23,6 +23,15 @@ A9: red at 73a6bda1: run 37395776689, job `harness`, on the iPhone and on the iP
 A10: red at 73a6bda1: run 37395776689, job `harness`, on the iPhone and on the iPad: CredentialStoreTests.swift:24: XCTAssertEqual failed: ("nil") is not equal to ("Optional("k1")") - A10: the host key round-trips through the store; CredentialStoreTests.swift:58: failed - A10: the stored item's attributes were not read: status -34018; CredentialStoreTests.swift:32: XCTAssertEqual failed: ("nil") is not equal to the stored item's attributes - A10: the stored item carries R9's accessibility and is not synchronizable
 A11: red at 73a6bda1: run 37395776689, job `harness`: on the iPhone, ShellFlowTests.swift:97: XCTAssertEqual failed: ("[[false, false], [false, false]]") is not equal to ("[[true, false], [false, true]]") - A11: on the iPhone the deck list shows first, and choosing a deck shows the detail; on the iPad, ShellFlowTests.swift:89: XCTAssertEqual failed: ("[false, true]") is not equal to ("[true, true]") - A11: on the iPad the deck list and the detail show side by side
 A14: red at 0199b22a: run 37390492155, job `hygiene`: AssertionError: Lists differ: ['harness: 0 steps named "the app\'s tests[270 chars]s")'] != []; first extra element 'harness: 0 steps named "the app\'s tests, Debug, on the iPhone and then the iPad", not one'
+A6: green at ba3b30b0
+A7: green at ba3b30b0
+A8: green at ba3b30b0
+A9: green at ba3b30b0
+A10: green at ba3b30b0
+A11: green at ba3b30b0
+A12: green at 0668e8ac
+A13: green at 0668e8ac
+A14: green at 73a6bda1
 ```
 
 - A1 and A2 were read on R1's tree before rustfmt rewrapped two statements of `login.rs` below
@@ -89,3 +98,30 @@ of run 37390492155 at 0199b22a, which pushed A14's test (ccdf350f) before the st
 - The test-selection probe read A15's fence line as a command it cannot resolve to a test, so the
   commit that adds this line takes A15 out of SPEC-347 section 3's fence, as that section provides;
   its row stays, and its run's lines, quoted above, are quoted in the pull request's body.
+
+Part 2's greens are quoted from the pull request's own run 37410222691 at ba3b30b0 for A6 to A11
+(ADR-350), and from the `hygiene` job of run 37395775906 at 73a6bda1 for A14. A12's and A13's
+greens are read from a pass of each whole module from `scripts/tests` at 0668e8ac, the commit that
+opens the collection and keeps the host key, as their reds were read at 3cea6a34.
+
+- The push to ba3b30b0 carries the codec (486a8e3e), the app's collection and store (0668e8ac)
+  and the test step's ad-hoc signing (137e6a69). No Swift test file changed between the red of A6
+  to A11 at 73a6bda1 and their green: 137e6a69 edits A14's test alone, as disclosed above, and
+  e8634173 adds mutation rows.
+- In the `harness-wire` job, A6 and A7 passed in the step "the codec's tests, on the host", and
+  the job's sweep killed each of the 26 rows of `ios/HarnessWire/swift-mutants.json`, SW34700 to
+  SW34702 among them.
+- In the `harness` job's step "the app's tests, Debug, on the iPhone and then the iPad", A8, A9,
+  A10 and A11 each passed on the iPhone and then on the iPad. A10 no longer read `status -34018`:
+  signed ad hoc, the test host reaches the Keychain.
+- A12 examined 37 Swift files, 81 doors and 9 decision counts at 0668e8ac, and its 46 planted
+  trees held. A13 examined 7 plist keys, 2 settings, 2 privacy keys, 4 credential names and 2
+  generator specs, and its 34 planted trees held. The `hygiene` job of run 37410222457 at ba3b30b0
+  read both green with the same counts.
+- At 73a6bda1 the `hygiene` job's Python stage failed on A12 and A13 alone, so A14 read green
+  there. After 137e6a69 changed its assertion, the `hygiene` job of run 37410222457 at ba3b30b0
+  read A14 green again: each of its 20 planted harness jobs read as its class expects, and the
+  planted test step that turns code signing off was refused for lacking the ad-hoc identity.
+- At ba3b30b0 the step "the app, archived unsigned for a device" built again
+  (`** ARCHIVE SUCCEEDED **`), and the executable imports the same required-reason categories,
+  DiskSpace and FileTimestamp, both declared and none undeclared.
