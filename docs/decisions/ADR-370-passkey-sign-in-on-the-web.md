@@ -163,6 +163,7 @@ redirect.
   signature then reads as what it is.
 - Folding it into `challenge_invalid`: rejected because a forged signature would read as a stale
   ceremony, which hides the attack class from the audit events.
+- Chosen: every ceremony call into the library runs under a subscriber that records nothing (`quietly` in `passkeys.rs`), because the library's core traces ceremony state and credential ids (R13), chosen against a per-target filter in the daemon's subscriber, which an operator's log filter could re-open.
 
 ## Consequences
 
