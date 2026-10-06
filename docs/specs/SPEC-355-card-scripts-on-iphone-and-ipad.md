@@ -102,7 +102,7 @@ R13. CI needs no new job: the `harness` job's planted step already runs the `Car
 |---|---|---|
 | A1 | scripts run only when the switch is on and every control is present, over all 512 cases | `swift test` `CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present` |
 | A2 | the removal deletes every peer-connection name and nothing else | `swift test` `PeerConnectionRemovalTests/test_the_removal_deletes_every_peer_connection_name_and_nothing_else` |
-| A3 | the hold answers no byte, closes and counts every connection | `swift test` `ConnectionHoldTests/test_the_hold_answers_no_byte_and_counts_every_connection` |
+| ~~A3~~ | the hold answers no byte, closes and counts every connection | `swift test` `ConnectionHoldTests/test_the_hold_answers_no_byte_and_counts_every_connection` |
 | A4 | the card view carries every control, and scripts run only with all of them | `xcodebuild test` `CardProbeTests/FactoryTests/test_the_card_view_runs_scripts_only_with_every_control` |
 | A5 | one file holds the switch, and every control's token is set in the factory | `scripts/tests/test_card_web_view_layers.py` `test_the_script_switch_lives_in_one_file_and_every_control_is_set` |
 | A6 | every card opens zero connections from the scripts-off view; the hold counts the refused link (#677) | `xcodebuild test` `.../PlantedCardTests/test_a_planted_card_reaches_from_the_reference_view_and_nothing_from_the_card_view` |
@@ -116,7 +116,11 @@ R13. CI needs no new job: the `harness` job's planted step already runs the `Car
 ```acceptance
 A1: swift test --package-path ios/CardIsolation --filter CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present
 A2: swift test --package-path ios/CardIsolation --filter CardIsolationTests.PeerConnectionRemovalTests/test_the_removal_deletes_every_peer_connection_name_and_nothing_else
+```
+```retired
 A3: swift test --package-path ios/CardIsolation --filter CardIsolationTests.ConnectionHoldTests/test_the_hold_answers_no_byte_and_counts_every_connection
+```
+```acceptance
 A4: xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:CardProbeTests/FactoryTests/test_the_card_view_runs_scripts_only_with_every_control
 A5: python3 -m unittest discover -s scripts/tests -p test_card_web_view_layers.py -k test_the_script_switch_lives_in_one_file_and_every_control_is_set
 A6: xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:CardProbeTests/PlantedCardTests/test_a_planted_card_reaches_from_the_reference_view_and_nothing_from_the_card_view
@@ -206,3 +210,29 @@ needed after all, it is a STOP for the seat, never a silent addition (it raises 
 
 The switch defaults off on iOS pending a measured containment layer. Every line above in which the
 switch turns on, or card scripts run, on iPhone and iPad reads with this default.
+
+## 8. Amendment: L9 and its criterion A3 are retired
+
+Made by SPEC-361's delivery, insert-only: every earlier byte is kept in order. It inserts:
+
+- section 3: `~~` around A3 in the criteria table, so the table no longer states it;
+- section 3: the fence lines that set A3 apart in a `` ```retired `` fence between A2 and A4,
+  splitting the acceptance fence where its line stood;
+- this section.
+
+The retired criterion, why its subject is gone, and what judges it now:
+
+- A3 (the hold answers no byte, closes and counts every connection): SPEC-361 removes L9, the
+  connection hold of R4, with `ConnectionHold.swift` and its test, so A3's subject is gone.
+  SPEC-361's A7 and A8 judge the channel it held: every planted card opens zero connections from
+  the scripts-off view and from the scripted view, and `nav-self` and `nav-blank` each open one
+  from the same view without L10, so neither zero is blind.
+
+What left with L9 in the same delivery:
+
+- A6's followed-link block, which read the hold's count for `nav-self` and `nav-blank` against a
+  view without L9. A6 keeps its other assertions; SPEC-361's A7 restores the followed-link control
+  on L10.
+- A10's L9 variant: `CONTROLS` no longer names L9, so A10 removes each remaining control in turn.
+  A4's L9 row leaves for the same reason, and A1's cases follow `CardScripts.required`, which
+  SPEC-361 R2 sets (SPEC-361's A1).

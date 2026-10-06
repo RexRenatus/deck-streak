@@ -115,8 +115,12 @@ A1: red at 436d23f7: CardScriptsTests.swift:35: XCTAssertEqual failed: ("off(mis
 A1: green at 8ae87c02
 A2: red at 436d23f7: PeerConnectionRemovalTests.swift:55: XCTAssertEqual failed: (21 names, first "RTCPeerConnection", "webkitRTCPeerConnection") is not equal to ("[]") - a peer-connection name survived the removal (run 37371807357 attempt 2, job card-isolation, host; Executed 1 test, with 1 failure; examined 33 planted global names)
 A2: green at 8ae87c02
+```
+```retired
 A3: red at 436d23f7: ConnectionHoldTests.swift:43: XCTAssertEqual failed: ("1") is not equal to ("0") - attempt 1: the hold answered 1 byte(s), and so for attempts 2 and 3; ConnectionHoldTests.swift:50: ("0") is not equal to ("3") - the hold counted 0 of 3 connections (run 37371807357 attempt 2, job card-isolation, host; Executed 1 test, with 4 failures; examined 3 connection attempts)
 A3: green at 8ae87c02
+```
+```red-first
 A4: red at 748c31cf: FactoryTests.swift:90: XCTAssertEqual failed: ("nil") is not equal to ("Optional(CardIsolation.CardScripts.Verdict.run)") - every control, the switch on: the switch's verdict, and nil for each of the other nine rows; FactoryTests.swift:89: ("false") is not equal to ("true") - every control, the switch on: whether the card's script ran (run 37371807357 attempt 2, job harness, iPhone 17 and iPad (A16); on iPhone 17 also FactoryTests.swift:91: every control, the switch on: the view never finished loading the card)
 A5: red at 7fa48227: AssertionError: Lists differ: [] != ['ios/CardIsolation/Sources/CardIsolation/CardScripts.swift'] (local, scripts/tests); still red at a16e84d6: Lists differ, CardWebViewFactory.swift lacks L8 (forMainFrameOnly: false), (.atDocumentStart), (in: .page) and L9 (allowFailover = false), (proxyConfigurations = [) (run 37371806959 attempt 2, job hygiene)
 A5: green at 8ae87c02

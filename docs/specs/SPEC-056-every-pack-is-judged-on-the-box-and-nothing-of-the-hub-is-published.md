@@ -301,6 +301,7 @@ and its SPEC's dated amendment section says why its subject is gone and what jud
 | SPEC-054 | A6 | the vendoring scans with the scrub's own rules | the scrub's own rules (A9, A10); the vendoring is removed (A1) |
 | SPEC-054 | A10 | a bounded command fails by name | the box run's vault-duties pack, which runs the rows it bounded |
 | SPEC-054 | A11 | the adapter's cargo run is bounded | the box run's vault-duties pack, which runs the rows it bounded |
+| SPEC-355 | A3 | the hold answers no byte, closes and counts every connection | nothing: the hold is removed (SPEC-361 R2); SPEC-361 A7 and A8 judge the channel it held |
 
 ## 8. Amendment, 2026-09-28: a retirement SPEC-057 made
 
@@ -386,3 +387,13 @@ A23: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k te
   that differs, so it fails by name and the copy is refreshed in its own delivery (R17).
 - **The new regex lets a real address through.** A22 pins every context the rule must still catch,
   and A23 the reserved domains.
+
+## 10. Amendment: a retirement SPEC-361 made
+
+Made by SPEC-361's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. That delivery retired SPEC-355's A3 in R14's form, when SPEC-361 removed
+L9, the connection hold, and the test A3 ran, and A18's test holds section 7 equal to every
+retirement the delivered SPECs hold. It inserts:
+
+- section 7: the row of SPEC-355's A3, in the table's order;
+- this section.
