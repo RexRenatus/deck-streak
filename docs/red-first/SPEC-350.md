@@ -363,3 +363,16 @@ A30: green at aef11216
   branch touches. In their place the branch touches `web/app/src/lib/icon.ts`,
   `web/app/src/routes/icon-192.png/+server.ts`, `web/app/src/routes/icon-512.png/+server.ts` and
   `web/app/src/routes/apple-touch-icon.png/+server.ts`.
+- **The icons name no content type.** At 7290f87b the web stage's whole vitest run was red on A24's
+  census, "the media rules have one copy": `AssertionError: expected [ Array(1) ] to deeply equal
+  []`, with `+ "web/app/src/lib/icon.ts: image/png"`. The endpoint named the PNG media type, a type
+  of the core's closed table, so the app held a copy of a media rule. The name entered at e8723819,
+  so the census was red from there to 7290f87b; the first cut's icons were files under `static/`,
+  outside the census's population, and named no type. At 9ef7bc7e the answer names no content type:
+  the build writes an answer of 200 to the file at its path whatever its type, and the host types
+  the file by its extension. A28's test changed with it, disclosed here: its endpoint reader checked
+  the answer's `image/png` content type, and now checks the answer's 200, the status the build
+  writes a file for. No other line of the test changed, and its red at d97ce3ce is still the
+  manifest's assertion, which runs first. At 9ef7bc7e the census and A28 are green, the build writes
+  the three files at 192, 512 and 180 pixels as before, and StrykerJS killed all 39 mutants of
+  `web/app/src/lib/icon.ts` and the three endpoints (33, 2, 2 and 2), with none surviving.

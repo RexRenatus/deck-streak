@@ -308,6 +308,12 @@ icon is made once or committed, and the tree and its history hold no binary file
   `vite build` already runs SvelteKit's prerender pass, so the endpoints add neither a build step
   nor a dependency, the two reasons a generator in the build lost above.
 
+The endpoint's answer names no content type: the build writes it to the file at the icon's path
+whatever its type, and the host types the file by its extension.
+
+- Naming the PNG media type in the answer: rejected because a media type named in the app is a copy
+  of the core's one closed type table (D12), which SPEC-350 A24's census refuses.
+
 ## Decision Outcome
 
 The web review crosses the core's dispatcher with ordinary pairs named in both tables, answers only
