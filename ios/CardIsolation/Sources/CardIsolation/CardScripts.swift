@@ -16,6 +16,10 @@ public enum CardScripts {
         .L6,
         .L7,
         .L8,
+        .L10,
+        .L11,
+        .L12,
+        .L13,
     ]
 
     /// What the switch decided for one built view.

@@ -1,4 +1,7 @@
 import WebKit
+#if os(iOS)
+import UIKit
+#endif
 
 /// The card view's UI delegate, layer L6 (SPEC-349 R2, ADR-360 D1), with the refusal arms a
 /// scripted card meets (SPEC-355 R5): no window, no dialog shown, no capture and no motion.
@@ -66,6 +69,16 @@ public final class WindowRefusal: NSObject, WKUIDelegate {
         decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void
     ) {
         decisionHandler(.deny)
+    }
+
+    /// A long press on a link offers no menu, so no menu item opens the link (SPEC-361 R6, L13).
+    /// iOS only: macOS asks no such question of the delegate.
+    /// It does NOT stop a tap on the link; the link-activation refusal (L10) does.
+    public func webView(
+        _ webView: WKWebView, contextMenuConfigurationForElement elementInfo: WKContextMenuElementInfo,
+        completionHandler: @escaping @MainActor @Sendable (UIContextMenuConfiguration?) -> Void
+    ) {
+        completionHandler(nil)
     }
     #endif
 }

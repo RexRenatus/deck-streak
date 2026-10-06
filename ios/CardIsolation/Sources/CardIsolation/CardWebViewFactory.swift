@@ -48,11 +48,16 @@ public enum CardWebViewFactory {
         return view
     }
 
-    /// Hands `html` to `view` the one way a card is loaded (SPEC-361 R5, R8): as a string with no
-    /// base URL. Internal, so only a test target reaches it beside the factory.
-    /// This is the stub L12's criteria are red against: it hands the card over with no policy and
-    /// keeps no record of what it handed.
+    /// Hands `html` to `view` the one way a card is loaded (SPEC-361 R5, R8): the document policy
+    /// first, then the card, as a string with no base URL. What it handed is kept with the view,
+    /// and is the one record L12 is read back from. Internal, so only a test target reaches it
+    /// beside the factory.
     static func load(_ html: String, into view: WKWebView) {
+        // L12, the document policy: its element goes ahead of the card's markup, so the parser
+        // places it first in the card's `head`.
+        // It does NOT stop a resource hint's early connection or a navigation; L3 and L5 do.
+        let html = DocumentPolicy.prefixed(html)
+        Retained.keep(Handed(html: html), by: view, under: Retained.handed)
         // L7, no file access: the card is handed over as a string with no base URL, never as a
         // file, so its document has no origin that can read one.
         // It does NOT stop a load the card's markup names; the rule list (L3) does.
@@ -84,6 +89,12 @@ public enum CardWebViewFactory {
             let refusal = WindowRefusal()
             view.uiDelegate = refusal
             Retained.keep(refusal, by: view, under: Retained.refusal)
+        }
+        if layers.contains(.L13) {
+            // L13, no link preview: a long press on a link shows no preview of it, and L6's
+            // context-menu arm offers no menu item that opens it (SPEC-361 R6).
+            // It does NOT stop a tap on the link; L10 refuses its activation.
+            view.allowsLinkPreview = false
         }
         // L4, no script message handler: nothing is added under a name to the user content
         // controller, so no script in the frame has a bridge into Swift.
@@ -147,7 +158,28 @@ public enum CardWebViewFactory {
         if removal {
             present.insert(.L8)
         }
+        if installed(LinkActivationRefusal.source, in: configuration) {
+            present.insert(.L10)
+        }
+        if installed(PageGuard.source, in: configuration) {
+            present.insert(.L11)
+        }
+        let handed = Retained.kept(Handed.self, by: view, under: Retained.handed)
+        if let handed, handed.html.hasPrefix(DocumentPolicy.prefix) {
+            present.insert(.L12)
+        }
+        if !view.allowsLinkPreview && view.uiDelegate is WindowRefusal {
+            present.insert(.L13)
+        }
         return present
+    }
+
+    /// Whether a user script with `source` is installed to run in every frame before the card's
+    /// own script (SPEC-361 R8).
+    private static func installed(_ source: String, in configuration: WKWebViewConfiguration) -> Bool {
+        configuration.userContentController.userScripts.contains { script in
+            script.source == source && !script.isForMainFrameOnly && script.injectionTime != .atDocumentEnd
+        }
     }
 
     /// Whether `url` names no document of its own: none, or the blank page a string with no base
@@ -191,7 +223,32 @@ public enum CardWebViewFactory {
                     source: PeerConnectionRemoval.source, injectionTime: .atDocumentStart,
                     forMainFrameOnly: false, in: .page))
         }
+        if layers.contains(.L10) {
+            // L10, the link-activation refusal: one user script, in every frame, before the card's
+            // own script, in a world the app owns, cancels every link's activation (SPEC-361 R3).
+            // It does NOT see a detached link's activation; L11 refuses that.
+            configuration.userContentController.addUserScript(LinkActivationRefusal.userScript)
+        }
+        if layers.contains(.L11) {
+            // L11, the page guard: one user script, in every frame, before the card's own script,
+            // in the page's world, refuses a detached node's activation and every rewrite of the
+            // card's document (SPEC-361 R4).
+            // It does NOT stop a connected link's activation; L10 refuses that.
+            configuration.userContentController.addUserScript(PageGuard.userScript)
+        }
         return configuration
+    }
+}
+
+/// What the factory's load handed one view, kept with the view (SPEC-361 R8): the policy and the
+/// card as one string, which L12 is read back from.
+@MainActor
+final class Handed: NSObject {
+    let html: String
+
+    init(html: String) {
+        self.html = html
+        super.init()
     }
 }
 
@@ -303,6 +360,7 @@ private final class Retained: Sendable {
     static let gate = Retained()
     static let refusal = Retained()
     static let built = Retained()
+    static let handed = Retained()
 
     @MainActor
     static func keep(_ delegate: NSObject, by view: WKWebView, under key: Retained) {
