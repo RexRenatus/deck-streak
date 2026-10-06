@@ -172,3 +172,15 @@ A36: green at e2d01121
   the data-rights registry's `IDENTITY` static that 73d9104 adds, which moves the array's length
   from 19 to 20. The census reads every static in the source of every crate coordination links,
   and the new static is a registry entry like the others, not a count per day. No entry is removed.
+- DISCLOSE: f13e5e0 pins A1's code length and A5's mint and live counts by literal (`16`, `0..9`,
+  `8`) in `crates/identity/tests/linking.rs`, where the tests read `LINK_CODE_BYTES` and
+  `MAX_LIVE_LINK_CODES`, the two constants rows S35901 and S35904 mutate: a test whose expected
+  value moves with its mutant cannot fail, and both rows survived before it. Every value is
+  unchanged, no assertion is removed or loosened, and no line a red above quotes changes.
+- DISCLOSE: each green above names the commit where its criterion first went green, and later
+  commits change code and tests those commits ran: faf2aef respells source (durations in minutes,
+  routes that borrow their access, an `if let` where a `match` stood) with no behaviour changed,
+  c93f9ba and f13e5e0 respell tests with every value unchanged, and 73d9104, 4165549 and a212650
+  are disclosed above. So the pushed head is not byte-identical to the green commits. The builder's
+  runs before the push measure every criterion green on the pushed head's code and tests, and CI's
+  run at the pushed head is the verdict.
