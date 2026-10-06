@@ -1,11 +1,11 @@
 ---------------------------- MODULE FullSyncChoice ----------------------------
-\* @phx covers crates/engine-core/src/full_sync.rs anchor=between digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/full_sync.rs anchor=confirm digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/full_sync.rs anchor=backed_up digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/full_sync.rs anchor=download_ready digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/full_sync.rs anchor=snapshot_found digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/full_sync.rs anchor=rechecked digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/full_sync.rs anchor=at_write digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/engine-core/src/full_sync.rs anchor=between digest=sha256:db55966be96ceef9bb1fd8394410e6a784b2332af0a4beeb0b2676829e524667
+\* @phx covers crates/engine-core/src/full_sync.rs anchor=confirm digest=sha256:6362036ba9d7b4df5ceb70233a22a8035144bbaeabd8ba8d66b1754c4f46bcee
+\* @phx covers crates/engine-core/src/full_sync.rs anchor=backed_up digest=sha256:2c38d51f7c21abe805af22a7a99b85a579f6c067ee77e52d6e490a180ca23b3d
+\* @phx covers crates/engine-core/src/full_sync.rs anchor=download_ready digest=sha256:f1d1e8486daa6a66a84f4a87749e61651962be417682733c89f8a6cdd1ad0d2f
+\* @phx covers crates/engine-core/src/full_sync.rs anchor=snapshot_found digest=sha256:f025e37a54e3752c70b60dd71db37364d5f806a1431afe8a1d23444ed947c2a1
+\* @phx covers crates/engine-core/src/full_sync.rs anchor=rechecked digest=sha256:02e784b8937cb78f7419bc2335ab231a924d94e108aa0925ee48185f2cf38754
+\* @phx covers crates/engine-core/src/full_sync.rs anchor=at_write digest=sha256:83da3f27c7ad7b2749e6279bfdb695bb1ee8abfc3105bfff678e3c45006fd778
 \* @phx cites #631, #620, #660
 \* @phx property BackupBeforeReplace ramp=report
 \* @phx property SnapshotBeforeUpload ramp=report
