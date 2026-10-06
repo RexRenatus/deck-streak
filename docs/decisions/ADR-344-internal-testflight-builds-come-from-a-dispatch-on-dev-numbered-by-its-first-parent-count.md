@@ -52,6 +52,7 @@ Proposed option: a manual dispatch on `dev`, numbered by `dev`'s first-parent co
 - **The trigger.** The iPhone and iPad build workflow runs on `workflow_dispatch` only, and refuses
   any ref other than `dev`. Each iPhone and iPad delivery's hand-off asks for one dispatch after it
   lands; the owner or the orchestrator runs it. No push, pull request or schedule starts it.
+  Amended by ADR-363 D2's amendment (ruling 461): a push to `dev` that changes one of the app's inputs also starts it; no pull request or schedule does.
 - **The app id.** Builds from `dev` use a dev app id, distinct from the release app id, so a dev
   build never replaces a release build on a device.
 - **The tester.** The build goes to internal TestFlight only, with the owner as the only tester.
