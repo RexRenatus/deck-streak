@@ -33,7 +33,7 @@ use tempfile::TempDir;
 /// Statements that leave every table of the schema holding rows no erase leaves: 101 rows in each
 /// table that takes rows, so an export that pages or limits its read comes up short (the
 /// predecessor's lesson), and every column a reset writes moved off its reset value.
-const SEEDS: [&str; 43] = [
+const SEEDS: [&str; 44] = [
     "UPDATE settings_generation SET generation = 7, courses_digest = '0123456789abcdef' \
      WHERE id = 1",
     "UPDATE ingest_state SET anchor_newest_review_id = 1700000000123, anchor_card_count = 57, \
@@ -233,6 +233,12 @@ const SEEDS: [&str; 43] = [
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO writing_log (code, study_day, created_at) \
      SELECT CASE i % 2 WHEN 0 THEN 'qaa' ELSE 'qab' END, 20000 + i, 1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO passkeys (telegram_user_id, credential_id, user_handle, credential, counter, \
+     backup_state, created_at, last_used_at) \
+     SELECT 4242, CAST('synthetic-credential-' || i AS BLOB), zeroblob(16), \
+     'synthetic credential ' || i, i, i % 2, 1000 * i, \
+     CASE WHEN i % 2 = 0 THEN 1000 * i + 500 END FROM n",
 ];
 
 /// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).

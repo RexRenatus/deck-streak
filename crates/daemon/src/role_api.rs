@@ -18,7 +18,7 @@ use deck_streak_api::settings::LISTEN;
 use deck_streak_api::{ApiError, ApiState, ListenAddress, OwnerAccess, Readiness};
 use deck_streak_coordination::progression::law_tiers::CollectionLawTiers;
 use deck_streak_coordination::progression::level_view::LawTierSource;
-use deck_streak_identity::{Freshness, IdentityError, OwnerGate};
+use deck_streak_identity::{Freshness, IdentityError, LinkingConfig, OwnerGate};
 use deck_streak_ingest::reader::CollectionReader;
 use deck_streak_ingest::settings::{ScopeSettings, SyncSettings};
 use deck_streak_kernel::{
@@ -152,6 +152,8 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     )?;
     // The conventions refuse start here, before anything is bound (SPEC-094 R2).
     let _conventions = Conventions::load(env)?;
+    // So does a public origin that is set and is not an https origin (SPEC-359 R1).
+    let linking = LinkingConfig::from_env(env)?;
     let notifier = Notifier::from_env(env);
     let shutdown = ShutdownSignal::install().map_err(ApiRoleError::Signals)?;
 
@@ -162,11 +164,13 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     })?;
     let clock: Arc<dyn Clock> = Arc::new(SystemClock);
     let readiness = Readiness::new();
+    let owner = gate.owner();
     let access = OwnerAccess::new(gate, Arc::clone(&clock), kernel.study_day_rule);
     let late = wiring::LateInstruments::new();
     let offload = Offload::new(kernel.offload_workers, clock);
     let router = deck_streak_api::router(
         api_state(env, &offload, readiness.clone(), access)
+            .with_linking(linking, owner)
             .with_instruments(Arc::new(late.clone())),
     );
     tracing::info!(listen = %bound, "the api role serves");

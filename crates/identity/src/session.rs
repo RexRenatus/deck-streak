@@ -10,6 +10,11 @@
 //!
 //! A presented id is hashed and compared with each live session's digest in constant time
 //! (`subtle`), so no timing reveals how much of a stored digest a guess matched.
+//!
+//! SPEC-359 R2 gives each session its proof ([`Proof`]): `telegram` for a handshake, `link` for a
+//! redeemed link code, and `linked` for a passkey sign-in, with the `passkeys` row that opened it.
+//! [`OwnerSession`] admits `telegram` and `linked`; a `link` session lives
+//! [`LINK_SESSION_LIFETIME`] and reaches the linking routes alone, through [`LinkSession`].
 
 use std::fmt;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -35,6 +40,8 @@ pub const IDLE_TIMEOUT: Duration = Duration::from_mins(30);
 pub const ABSOLUTE_LIFETIME: Duration = Duration::from_hours(8);
 /// The most sessions kept at once: one owner, a few devices.
 pub const MAX_LIVE_SESSIONS: usize = 8;
+/// A `link` session ends this long after the redeem that opened it (SPEC-359 R2).
+pub const LINK_SESSION_LIFETIME: Duration = Duration::from_mins(10);
 /// A session id's length: 32 bytes from the operating system's generator.
 const ID_BYTES: usize = 32;
 
@@ -113,9 +120,35 @@ pub fn presented(headers: &HeaderMap) -> Option<&str> {
     found
 }
 
+/// What a session proves (SPEC-359 R2).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Proof {
+    /// A Telegram handshake, at the session's beginning.
+    Telegram,
+    /// A redeemed link code: the linking routes alone, for [`LINK_SESSION_LIFETIME`].
+    Link,
+    /// A passkey sign-in, with the `passkeys` row that opened it.
+    Linked(i64),
+}
+
+/// A session the store admitted, with its proof and the instant it began.
+#[derive(Clone, Copy, Debug)]
+pub struct Admitted {
+    /// The owner the session belongs to.
+    pub owner: Owner,
+    /// What the session proves.
+    pub proof: Proof,
+    /// When the session began: for a `telegram` session, its handshake.
+    pub began: UtcMillis,
+    /// When the store admitted it: the instant a freshness check measures the handshake's age
+    /// against (SPEC-359 R3, R9).
+    pub now: UtcMillis,
+}
+
 /// A live session, as the store keeps it: the SHA-256 of its id, never the id.
 struct Live {
     digest: [u8; 32],
+    proof: Proof,
     owner: Owner,
     began: UtcMillis,
     seen: UtcMillis,
@@ -123,10 +156,15 @@ struct Live {
 
 impl Live {
     /// Whether the session is still live at `now`: less than the idle timeout since its last
-    /// request, and less than the absolute lifetime since it began.
+    /// request, and less than its lifetime since it began: the absolute lifetime, or for a `link`
+    /// session [`LINK_SESSION_LIFETIME`] (SPEC-359 R4).
     fn is_live(&self, now: UtcMillis) -> bool {
         let since = |then: UtcMillis| now.epoch_millis().saturating_sub(then.epoch_millis());
-        since(self.seen) < millis(IDLE_TIMEOUT) && since(self.began) < millis(ABSOLUTE_LIFETIME)
+        let lifetime = match self.proof {
+            Proof::Link => LINK_SESSION_LIFETIME,
+            Proof::Telegram | Proof::Linked(_) => ABSOLUTE_LIFETIME,
+        };
+        since(self.seen) < millis(IDLE_TIMEOUT) && since(self.began) < millis(lifetime)
     }
 }
 
@@ -197,6 +235,29 @@ impl Sessions {
     ///
     /// [`SessionError::Random`] when the operating system's generator fails.
     pub fn open(&self, owner: Owner) -> Result<SessionToken, SessionError> {
+        self.open_with(owner, Proof::Telegram)
+    }
+
+    /// Opens a NEW `link` session for `owner`, as [`Sessions::open`] does (SPEC-359 R4).
+    ///
+    /// # Errors
+    ///
+    /// [`SessionError::Random`] when the operating system's generator fails.
+    pub fn open_link(&self, owner: Owner) -> Result<SessionToken, SessionError> {
+        self.open_with(owner, Proof::Link)
+    }
+
+    /// Opens a NEW `linked` session for `owner`, opened by the `passkeys` row `row` (SPEC-359 R6).
+    ///
+    /// # Errors
+    ///
+    /// [`SessionError::Random`] when the operating system's generator fails.
+    pub fn open_linked(&self, owner: Owner, row: i64) -> Result<SessionToken, SessionError> {
+        self.open_with(owner, Proof::Linked(row))
+    }
+
+    /// Opens a NEW session with `proof`, evicting the oldest when [`MAX_LIVE_SESSIONS`] are live.
+    fn open_with(&self, owner: Owner, proof: Proof) -> Result<SessionToken, SessionError> {
         let mut id = [0_u8; ID_BYTES];
         getrandom::fill(&mut id).map_err(SessionError::Random)?;
         let now = self.clock.now();
@@ -208,6 +269,7 @@ impl Sessions {
         }
         live.push(Live {
             digest: digest(&id),
+            proof,
             owner,
             began: now,
             seen: now,
@@ -215,8 +277,9 @@ impl Sessions {
         Ok(SessionToken(hex(&id)))
     }
 
-    /// The owner of the live session `token` names, refreshing its idle timer; `None` when it
-    /// names none, or its session has ended.
+    /// The owner of the live `telegram` or `linked` session `token` names, refreshing its idle
+    /// timer; `None` when it names none, its session has ended, or it is a `link` session, which
+    /// reaches the linking routes alone (SPEC-359 R2, R4).
     #[must_use]
     pub fn admit(&self, token: &str) -> Option<Owner> {
         let presented = digest(&id_bytes(token)?);
@@ -225,8 +288,43 @@ impl Sessions {
         let session = live
             .iter_mut()
             .find(|session| bool::from(session.digest.ct_eq(&presented)))?;
+        if session.proof == Proof::Link {
+            return None;
+        }
         session.seen = now;
         Some(session.owner)
+    }
+
+    /// The live session `token` names, with its proof, refreshing its idle timer; `None` when it
+    /// names none, or its session has ended (SPEC-359 R2).
+    #[must_use]
+    pub fn admit_proof(&self, token: &str) -> Option<Admitted> {
+        let presented = digest(&id_bytes(token)?);
+        let now = self.clock.now();
+        let mut live = self.live_at(now);
+        let session = live
+            .iter_mut()
+            .find(|session| bool::from(session.digest.ct_eq(&presented)))?;
+        session.seen = now;
+        Some(Admitted {
+            owner: session.owner,
+            proof: session.proof,
+            began: session.began,
+            now,
+        })
+    }
+
+    /// Ends every `linked` session the `passkeys` row `row` opened, and no other; how many ended
+    /// (SPEC-359 R9).
+    #[allow(
+        clippy::must_use_candidate,
+        reason = "ending the sessions is the effect; how many ended is only a report"
+    )]
+    pub fn end_opened_by(&self, row: i64) -> usize {
+        let mut live = self.live_at(self.clock.now());
+        let before = live.len();
+        live.retain(|session| session.proof != Proof::Linked(row));
+        before - live.len()
     }
 
     /// Ends the session `token` names, on the server; whether a live one was ended.
@@ -294,5 +392,102 @@ where
             .and_then(|token| Sessions::from_ref(state).admit(token))
             .map(|owner| Self { owner })
             .ok_or(Refusal::NoSession)
+    }
+}
+
+/// A request inside a `link` session: the linking routes' session (SPEC-359 R2, R5). A route that
+/// takes it answers 401 `no_session` to any other request. Its `Debug` never shows the id.
+#[derive(Clone)]
+pub struct LinkSession {
+    owner: Owner,
+    token: String,
+}
+
+impl LinkSession {
+    /// The owner the session belongs to.
+    #[must_use]
+    pub const fn owner(&self) -> Owner {
+        self.owner
+    }
+
+    /// The session's id, for the identity call the route makes with it.
+    #[must_use]
+    pub fn token(&self) -> &str {
+        &self.token
+    }
+}
+
+impl fmt::Debug for LinkSession {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("LinkSession(..)")
+    }
+}
+
+impl<S> FromRequestParts<S> for LinkSession
+where
+    Sessions: FromRef<S>,
+    S: Send + Sync,
+{
+    type Rejection = Refusal;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let token = presented(&parts.headers).ok_or(Refusal::NoSession)?;
+        let admitted = Sessions::from_ref(state)
+            .admit_proof(token)
+            .ok_or(Refusal::NoSession)?;
+        match admitted.proof {
+            Proof::Link => Ok(Self {
+                owner: admitted.owner,
+                token: token.to_owned(),
+            }),
+            Proof::Telegram | Proof::Linked(_) => Err(Refusal::NoSession),
+        }
+    }
+}
+
+/// A request inside a `telegram` session whose handshake is at most
+/// [`crate::linking::REAUTH_AGE`] old: what minting a link code and removing a method need
+/// (SPEC-359 R3, R9). Any other session is refused 401 `reauth_required`, and no session
+/// `no_session`. Its `Debug` never shows the id.
+#[derive(Clone)]
+pub struct FreshTelegramSession {
+    owner: Owner,
+    token: String,
+}
+
+impl FreshTelegramSession {
+    /// The owner the session belongs to.
+    #[must_use]
+    pub const fn owner(&self) -> Owner {
+        self.owner
+    }
+
+    /// The session's id, for the identity call the route makes with it.
+    #[must_use]
+    pub fn token(&self) -> &str {
+        &self.token
+    }
+}
+
+impl fmt::Debug for FreshTelegramSession {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("FreshTelegramSession(..)")
+    }
+}
+
+impl<S> FromRequestParts<S> for FreshTelegramSession
+where
+    Sessions: FromRef<S>,
+    S: Send + Sync,
+{
+    type Rejection = Refusal;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let token = presented(&parts.headers).ok_or(Refusal::NoSession)?;
+        let owner = crate::linking::fresh_telegram(&Sessions::from_ref(state), token)?;
+        Ok(Self {
+            owner,
+            token: token.to_owned(),
+        })
     }
 }

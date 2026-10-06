@@ -10,6 +10,7 @@ use deck_streak_analytics::data_rights::AnalyticsDataRights;
 use deck_streak_curriculum::data_rights::CurriculumDataRights;
 use deck_streak_economy::data_rights::EconomyDataRights;
 use deck_streak_habits::data_rights::HabitsDataRights;
+use deck_streak_identity::data_rights::IdentityDataRights;
 use deck_streak_ingest::data_rights::IngestDataRights;
 use deck_streak_kernel::{DataRights, Db, KernelDataRights};
 use deck_streak_notifications::data_rights::NotificationsDataRights;
@@ -51,6 +52,9 @@ static HABITS: HabitsDataRights = HabitsDataRights;
 /// The vault's port: the law drill answers and grades, and the inbox captures' rows, exported and
 /// erased, and never a note or a captured file (SPEC-110, SPEC-118, ADR-118).
 static VAULT: VaultDataRights = VaultDataRights;
+/// Identity's port: the owner's passkeys exported and erased (SPEC-359); its sessions, link codes
+/// and ceremonies live in memory and are never stored.
+static IDENTITY: IdentityDataRights = IdentityDataRights;
 /// Coordination's own port: the cron-fire ledger exempt.
 static STREAKS: StreaksDataRights = StreaksDataRights;
 /// Coordination's own port: the cron-fire ledger exempt, the instrument reports exported and
@@ -60,8 +64,8 @@ static COORDINATION: CoordinationDataRights = CoordinationDataRights;
 /// Every stateful context's port, in the order an erase runs them: the kernel, ingest, analytics
 /// (SPEC-071), curriculum (SPEC-077), progression (SPEC-040), notifications (SPEC-041), readings
 /// (SPEC-045), the agent (SPEC-043), streaks (SPEC-076), the economy (SPEC-082), the quests
-/// (SPEC-081), the habits (SPEC-078), the vault (SPEC-110) and coordination.
-/// Identity keeps its sessions in memory (ADR-024), so it has no table and no port.
+/// (SPEC-081), the habits (SPEC-078), the vault (SPEC-110), identity (SPEC-359) and coordination.
+/// Identity keeps its sessions in memory (ADR-024); its one table is the owner's passkeys.
 #[must_use]
 pub fn ports() -> Vec<&'static dyn DataRights> {
     vec![
@@ -78,6 +82,7 @@ pub fn ports() -> Vec<&'static dyn DataRights> {
         &QUESTS,
         &HABITS,
         &VAULT,
+        &IDENTITY,
         &COORDINATION,
     ]
 }

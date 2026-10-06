@@ -21,6 +21,10 @@
   through SPEC-130. **Mutation band:** `S13100-S13199`.
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-131.md` (ADR-016).
+- SPEC-359 delivers the passkey slice: R1's origin for the passkey routes, R3-R5, R10, R11,
+  R15-R16 for passkeys, R17's sign-in page, R18-R19 for `passkeys`, R20; its migration creates
+  `passkeys`, so this SPEC's later delivery creates only `linked_identities` and
+  `identity_revocations`.
 
 ## 1. The problem, measured
 
