@@ -194,8 +194,8 @@
         "S35921-HANDLE-REUSED",
         "identity",
         "src/passkeys.rs",
-        "        let handle = held_handle.unwrap_or_else(Uuid::new_v4);",
-        "        let handle = held_handle.map_or_else(Uuid::new_v4, |_| Uuid::new_v4());",
+        "        let user_handle = held_handle.unwrap_or_else(Uuid::new_v4);",
+        "        let user_handle = held_handle.map_or_else(Uuid::new_v4, |_| Uuid::new_v4());",
         "passkeys::the_user_handle_carries_no_personal_data",
         "every passkey of the owner shares one user handle, so a second registration reuses the held one (SPEC-359 R5, A14)"
       ],
