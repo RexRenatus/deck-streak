@@ -187,14 +187,18 @@ simulator, read its first row not loaded at the 10-second wait (#681). The test 
 row's view and starts every load before it mounts the first, in a host process that has not yet
 started WebKit's GPU and networking processes. Those two took 6.3 and 3.7 seconds in the first
 run and 7.3 and 12.7 seconds in the second, against 1.4 to 4.3 seconds on the second simulator,
-where the same test passed both times. The cost is the host's first start of WebKit, paid once
-per process, and whichever wait runs first pays it.
+where the same test passed both times. A warm-up of the scripts-off path alone did not absorb
+that cost for the scripts-on path: after it loaded in 3.78 seconds on the iPhone simulator and
+4.54 seconds on the iPad simulator, the first scripts-on load still took 9.37 and 7.14 seconds
+against the 10-second wait, while every other load took 0.17 seconds or less. The first load on
+each path pays a start of its own.
 
-- Chosen, because the cost is paid once per process, so one load that absorbs it under its own
-  bound leaves every measured wait as it was: `Probe.warmUp()` loads one planted card in a view
-  the factory builds, under `Probe.warmUpSeconds` (60 seconds), once per process, and every test
-  class that loads a card asserts it from `setUp`. A host where WebKit never starts fails every
-  test with the warm-up's message, so the warm-up hides nothing.
+- Chosen, because a load on each path that absorbs its start under its own bound leaves every
+  measured wait as it was: `Probe.warmUp()` loads one planted card in a scripts-off view the
+  factory builds, then one card whose script runs in a scripts-on view, each under
+  `Probe.warmUpSeconds` (60 seconds), once per process, and every test class that loads a card
+  asserts it from `setUp`. A host where WebKit never starts on either path fails every test with
+  the warm-up's message, so the warm-up hides nothing.
 - Rejected, because it is a bound edit (ruling 530) and lengthens every wait that runs to its
   bound, a card that never loads included: raising the 10-second wait.
 - Rejected, because it changes what the factory test measures, every row live at once: starting

@@ -152,15 +152,19 @@ R15. **The `harness` job's bound holds the planted suite.** The card view's plan
 
 R16. **The load wait holds for a cold first test (#681).** The planted suite's measured load wait,
     `Probe.loadSeconds`, stays 10 seconds, and its assertion stays `loaded` true, with no
-    tolerance, skip or retry. `Probe.warmUp()` starts WebKit once per test process, before any
-    measured wait: it loads one planted card in a view the factory builds, mounted, under its own
-    bound, `Probe.warmUpSeconds`, 60 seconds. Every test class in `ios/CardProbeTests` that loads
-    a card asserts it from `setUp`, so a fresh simulator's first test is measured after the host
-    has started WebKit, never while it starts. A card that never loads still reads red within the
-    wait: `loaded` reads false, and only after the whole bound. Each load's time is recorded:
+    tolerance, skip or retry. A warm-up of the scripts-off path alone did not cover the
+    scripts-on path: after it loaded in 3.78 seconds on the iPhone simulator and 4.54 seconds on
+    the iPad simulator, the first scripts-on load still took 9.37 and 7.14 seconds against the
+    10-second wait, while every other load took 0.17 seconds or less. So `Probe.warmUp()` loads
+    both paths once per test process, before any measured wait: one planted card in a scripts-off
+    view the factory builds, then one card whose script runs in a scripts-on view, each mounted,
+    under its own bound, `Probe.warmUpSeconds`, 60 seconds. Every test class in
+    `ios/CardProbeTests` that loads a card asserts it from `setUp`, so neither path's first start
+    falls inside a measured wait. A card that never loads still reads red within the wait:
+    `loaded` reads false, and only after the whole bound. Each load's time is recorded:
     `Probe.loadTime(_:)` returns the seconds a load took, or nil when the wait expired, `loaded`
-    is read through it, and the warm-up and each row of A5's test print it into the `harness`
-    job's result bundles.
+    is read through it, and each warm-up load and each row of A5's test print it into the
+    `harness` job's result bundles.
 
 ## 3. Acceptance criteria
 
