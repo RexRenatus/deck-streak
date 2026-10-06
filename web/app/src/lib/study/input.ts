@@ -6,6 +6,7 @@
 import { resolve, type Action, type Intent, type Side } from '$lib/remote/actions';
 import { GamepadReader, type PadSnapshot } from '$lib/remote/gamepad';
 import { readKey, type KeyInput } from '$lib/remote/keys';
+import type { Mapping } from './mapping-store';
 
 /** The one local-storage key the key switch is kept under, on this device. */
 export const KEY_SWITCH = 'deck-streak.study.character-keys';
@@ -54,7 +55,8 @@ export class StudyInput {
   /** Whether the page's last key was Tab, which moves focus on purpose. */
   #tabbed = false;
 
-  constructor(target: InputTarget, storage: SwitchStorage | undefined) {
+  constructor(target: InputTarget, storage: SwitchStorage | undefined, mapping?: Mapping) {
+    void mapping;
     this.#target = target;
     this.#store = storage ?? new Unstored();
     this.#characterKeys = storage?.getItem(KEY_SWITCH) !== OFF;
