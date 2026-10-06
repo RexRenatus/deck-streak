@@ -10,6 +10,7 @@
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::Router;
 use axum::body::{Body, to_bytes};
@@ -464,4 +465,150 @@ async fn the_identities_list_names_methods_without_credential_ids() {
             "the list shows a blob as base64url"
         );
     }
+}
+
+/// The API as [`app`] builds it, on `clock`, which the test keeps so it can move the minute.
+async fn app_on(clock: Arc<ManualClock>) -> App {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let db = Db::open(&dir.path().join("deck-streak.db"))
+        .await
+        .expect("the database opens and migrates");
+    let readiness = Readiness::new();
+    readiness.database_opened(db.clone());
+    let owner = Owner::new(TelegramUserId::new(OWNER));
+    let gate = OwnerGate::new(
+        WebAppKey::from_bot_token(BOT_TOKEN),
+        owner,
+        Freshness::default(),
+    );
+    let access = OwnerAccess::new(gate, clock, StudyDayRule::default());
+    let config = LinkingConfig::from_setting(Some(ORIGIN)).expect("the origin is an https origin");
+    let router = router(
+        ApiState::new(readiness)
+            .with_owner(access)
+            .with_linking(config, owner),
+    );
+    App {
+        router,
+        db,
+        _dir: dir,
+    }
+}
+
+/// The ceremony bound counts in the kernel clock's minute: the thirty-first start is refused until
+/// the minute turns, and served once it has (SPEC-359 R10).
+#[tokio::test]
+async fn the_ceremony_bound_serves_again_when_the_minute_turns() {
+    let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(STARTED_AT)));
+    let App {
+        router: app, _dir, ..
+    } = app_on(Arc::clone(&clock)).await;
+    let path = "/api/passkeys/sign-in/start";
+    let served = (
+        StatusCode::UNAUTHORIZED,
+        r#"{"reason":"not_linked"}"#.to_owned(),
+    );
+    let throttled = (
+        StatusCode::TOO_MANY_REQUESTS,
+        r#"{"reason":"too_many_ceremonies"}"#.to_owned(),
+    );
+    let starts: Vec<u32> = (1..=30).collect();
+    for attempt in examined("ceremony starts", starts) {
+        let answer = call(&app, "POST", path, None, "{}").await;
+        assert_eq!((answer.status, answer.body), served, "start {attempt}");
+    }
+    let refused = call(&app, "POST", path, None, "{}").await;
+    assert_eq!(
+        (refused.status, refused.body),
+        throttled,
+        "the thirty-first start"
+    );
+    // 03:30:10 plus 49 seconds is still the same minute; one more second turns it.
+    clock.advance(Duration::from_secs(49));
+    let still = call(&app, "POST", path, None, "{}").await;
+    assert_eq!(
+        (still.status, still.body),
+        throttled,
+        "a start before the minute turned"
+    );
+    clock.advance(Duration::from_secs(1));
+    let turned = call(&app, "POST", path, None, "{}").await;
+    assert_eq!(
+        (turned.status, turned.body),
+        served,
+        "a start once the minute turned"
+    );
+}
+
+/// With no passkey held, a sign-in start answers 401 `not_linked`; a sign-in finish with no
+/// ceremony cookie answers 401 `challenge_invalid` and clears the cookie (SPEC-359 R6, R8).
+#[tokio::test]
+async fn a_sign_in_answers_its_refusals_over_the_routes() {
+    let App {
+        router: app, _dir, ..
+    } = app().await;
+    let started = call(&app, "POST", "/api/passkeys/sign-in/start", None, "{}").await;
+    assert_eq!(
+        (started.status, started.body.as_str()),
+        (StatusCode::UNAUTHORIZED, r#"{"reason":"not_linked"}"#),
+        "a sign-in start with no passkey held"
+    );
+    let finished = call(&app, "POST", "/api/passkeys/sign-in/finish", None, "{}").await;
+    assert_eq!(
+        (finished.status, finished.body.as_str()),
+        (
+            StatusCode::UNAUTHORIZED,
+            r#"{"reason":"challenge_invalid"}"#
+        ),
+        "a sign-in finish with no ceremony cookie"
+    );
+    let cleared: Vec<String> = set_cookies(&finished)
+        .into_iter()
+        .map(|(pair, _)| pair)
+        .collect();
+    assert_eq!(
+        cleared,
+        ["__Host-deckstreak_ceremony=".to_owned()],
+        "the refused finish did not clear the ceremony cookie"
+    );
+}
+
+/// A registration finish takes its flow id from the one ceremony cookie: with it, the finish
+/// reaches its ceremony and refuses the empty response `passkey_invalid`; without it, the finish
+/// answers `challenge_invalid` (SPEC-359 R5, R8).
+#[tokio::test]
+async fn a_registration_finish_takes_its_flow_from_the_ceremony_cookie() {
+    let App {
+        router: app, _dir, ..
+    } = app().await;
+    let telegram = telegram_session(&app).await;
+    let link = link_session(&app, &telegram).await;
+    let start = "/api/passkeys/register/start";
+    let finish = "/api/passkeys/register/finish";
+
+    let started = call(&app, "POST", start, Some(&link), "{}").await;
+    assert_eq!(started.status, StatusCode::OK, "{}", started.body);
+    let (pair, _) = set_cookies(&started)
+        .into_iter()
+        .next()
+        .expect("the start set the ceremony cookie");
+    let ceremony = format!("{link}; {pair}");
+    let reached = call(&app, "POST", finish, Some(&ceremony), "{}").await;
+    assert_eq!(
+        (reached.status, reached.body.as_str()),
+        (StatusCode::UNAUTHORIZED, r#"{"reason":"passkey_invalid"}"#),
+        "the finish did not reach the ceremony its cookie names"
+    );
+
+    let restarted = call(&app, "POST", start, Some(&link), "{}").await;
+    assert_eq!(restarted.status, StatusCode::OK, "{}", restarted.body);
+    let cookieless = call(&app, "POST", finish, Some(&link), "{}").await;
+    assert_eq!(
+        (cookieless.status, cookieless.body.as_str()),
+        (
+            StatusCode::UNAUTHORIZED,
+            r#"{"reason":"challenge_invalid"}"#
+        ),
+        "a finish with no ceremony cookie"
+    );
 }
