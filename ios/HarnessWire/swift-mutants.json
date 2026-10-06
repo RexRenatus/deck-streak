@@ -184,6 +184,30 @@
       "replace": "learningCount: UInt32(truncatingIfNeeded: queue.varint(4))",
       "killer": "HarnessWireTests.ResponseDecodingTests/test_a3_each_response_decodes_from_its_literal_bytes",
       "why": "the learning count is QueuedCards field 3"
+    },
+    {
+      "id": "SW34700",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "writer.stringField(3, endpoint)",
+      "replace": "writer.stringField(2, endpoint)",
+      "killer": "HarnessWireTests.RequestBytesTests/test_a6_the_login_request_writes_user_password_and_endpoint",
+      "why": "SyncLoginRequest writes the endpoint as field 3, not over the password's field 2 (SPEC-347 R10)"
+    },
+    {
+      "id": "SW34701",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "try WireMessage(bytes).string(1)",
+      "replace": "try WireMessage(bytes).string(2)",
+      "killer": "HarnessWireTests.ResponseDecodingTests/test_a7_the_host_key_and_the_engines_message_decode",
+      "why": "the host key is SyncAuth field 1, not its endpoint (SPEC-347 R10)"
+    },
+    {
+      "id": "SW34702",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "message: try error.string(1)",
+      "replace": "message: try error.string(4)",
+      "killer": "HarnessWireTests.ResponseDecodingTests/test_a7_the_host_key_and_the_engines_message_decode",
+      "why": "a BackendError's message is field 1, not its context (SPEC-347 R10)"
     }
   ]
 }

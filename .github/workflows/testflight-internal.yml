@@ -1,20 +1,38 @@
 name: testflight-internal
 
-# The internal TestFlight lane (SPEC-352 R1, R3 and R16; ADR-363 D2, under ADR-344): a dispatch on
-# dev, and nothing else, starts it, and its plan job reads the full history on Linux. No pull
-# request starts it, its token is read-only, and every action is pinned by its full commit SHA.
+# The internal TestFlight lane (SPEC-352 R1, R3, R16 and R22; ADR-363 D2, under ADR-344): a
+# dispatch on dev, and a push to dev that changes one of the app's inputs, start it, and nothing
+# else; its plan job reads the full history on Linux. No pull request starts it, its token is
+# read-only, and every action is pinned by its full commit SHA. The push filter names every crate
+# the XCFramework links (SPEC-352 A25 holds that set to the manifests), the iOS tree, the workspace
+# manifest, the lockfile and the toolchain pin, the two workflow files the lane runs, and the two
+# scripts its steps call.
 on:
   workflow_dispatch:
+  push:
+    branches: [dev]
+    paths:
+      - "crates/ffi/**"
+      - "crates/engine-core/**"
+      - "ios/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "rust-toolchain.toml"
+      - ".github/workflows/xcframework.yml"
+      - ".github/workflows/testflight-internal.yml"
+      - "scripts/ios_lane.py"
+      - "scripts/ios_icon.py"
 
 permissions:
   contents: read
 
-# The lane's runs on one ref take one group and wait their turn: a run in progress is never
-# cancelled and a waiting one is not replaced, up to queue: max's hundred waiting runs (ADR-292).
+# A dispatch and a push wait in groups of their own, so neither replaces the other. No run in
+# progress is ever cancelled (SPEC-190 R9), so no build stops mid-upload; a newer run replaces the
+# one of its own event still waiting, so the next push build is dev's newest (SPEC-352 R16, R22).
 concurrency:
-  group: testflight-internal-${{ github.ref }}
+  group: testflight-internal-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: false
-  queue: max
+  queue: single
 
 jobs:
   plan:

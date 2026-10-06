@@ -186,3 +186,31 @@ flowchart TD
 The seams the web sync screens (#631) need: the OPFS media directory's name and layout, which their
 media transport fills; the deck list's empty state, whose one action opens their entry; and the
 Worker, whose lock their sync must hold while it writes the collection.
+
+## 5. Media, sound and speech through the core's face (part 2)
+
+Section 4's Worker-built `data:` URLs are superseded (ADR-361 D12). The Worker asks the engine for
+the shown card's two faces twice, inside the one queued operation, so no second actor appears: the
+first ask answers the media names the core wanted, and the second carries their bytes. The page
+plays the face's clips; the frame receives only the face's text. The install surface and the
+mapping screen sit beside the review.
+
+```mermaid
+flowchart TD
+  review["Review: the card is shown"] -->|"faces of the shown card"| worker["Worker: one queued operation"]
+  worker -->|"first ask, no files"| engine["Engine: the core's face call over a reader"]
+  engine -->|"both faces and the wanted names with limits"| worker
+  worker -->|"each wanted name, first limit bytes"| media["OPFS directory deck-streak-media"]
+  media -->|"bytes, or absent"| worker
+  worker -->|"second ask, with the files"| engine
+  engine -->|"both faces: text with data URLs, clips, omitted"| worker
+  worker -->|"the second answer"| review
+  review -->|"face text"| frame["Card frame: policy and sandbox unchanged"]
+  review -->|"autoplay on show and reveal, replay on demand"| player["Clip player: one page audio element"]
+  player -->|"sound: a page URL from bytes and type, revoked after"| audio["Page audio element"]
+  player -->|"speech: language and rate over 0.5"| speaker["speechSynthesis with the stored voice"]
+  voices["Voice picker: one key, per language"] --> speaker
+  mapping["Mapping screen at /study/mapping: one key, per mode"] -->|"keys and buttons"| input["Study input: readKey and GamepadReader"]
+  input -->|"one handler"| review
+  install["manifest.webmanifest and icons, linked from app.html"] --> app["The app, installable, no service worker"]
+```

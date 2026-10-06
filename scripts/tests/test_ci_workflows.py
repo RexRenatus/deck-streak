@@ -4972,6 +4972,12 @@ NOT_WORKFLOW_READS = {
             "umbrella_closure(where)",
             1,
         ),
+        (
+            "test_testflight_workflows",
+            "TheTestflightLanes.test_the_internal_push_filter_watches_every_crate_the_xcframework_links",
+            "umbrella_closure(REPO, package)",
+            1,
+        ),
     ),
     **allowed(
         "the loader's one read: a workflow file's bytes, decoded as strict utf-8 with no byte order mark",
@@ -6671,6 +6677,14 @@ DYNAMIC_IMPORTS = {
             1,
         ),
     ),
+    **allowed(
+        "names the exception class plistlib's XML parser raises on a malformed property list, to refuse it by name (SPEC-347 A13); a class caught, and it imports, runs and reads nothing",
+        ("test_ios_app_tree", "plist_of", "ExpatError", 1),
+    ),
+    **allowed(
+        "splits a settings value the test already holds as text into its scheme and host, to judge the sync endpoint (SPEC-347 A13); text in and parts out, and it imports, runs and reads nothing",
+        ("test_ios_app_tree", "settings_problems", "urlsplit(value.replace('$()', ''))", 1),
+    ),
 }
 
 
@@ -7465,6 +7479,334 @@ class TheHarnessLinksItsOwnRunsFramework(unittest.TestCase):
         for name, (job, wanted) in examined("planted harness jobs", list(plants.items())):
             with self.subTest(plant=name):
                 self.assertEqual(harness_link_problems({"jobs": {"harness": job}}), wanted, name)
+
+
+# The app's two steps in the `harness` job (SPEC-347 R13 and A14, ADR-358 D10): its generate line
+# opens its own test step, so the step "the project, generated", which each TestFlight lane copies,
+# keeps the harness's one line; both steps sit between the harness's last step and the report.
+APP_GENERATE = '"$RUNNER_TEMP/xcodegen/bin/xcodegen" generate --spec ios/app.yml'
+HARNESS_GENERATE = '"$RUNNER_TEMP/xcodegen/bin/xcodegen" generate --spec ios/project.yml'
+HARNESS_PROJECT = "the project, generated"
+HARNESS_LAST = "the required-reason symbols the Release executable imports, against the manifest"
+APP_TESTS = "the app's tests, Debug, on the iPhone and then the iPad"
+APP_ARCHIVE = "the app, archived unsigned for a device"
+HARNESS_REPORT = "the report"
+# What the app's test step runs: the app's scheme on both simulators, one after the other, with
+# its own derived data and result bundle, signed ad hoc on its command line because a simulator
+# refuses an unsigned test host the Keychain (SPEC-347 section 6), and its time written for the
+# report.
+APP_TEST_NEEDS = (
+    "xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug",
+    '-destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS"',
+    '-destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS"',
+    "-disable-concurrent-destination-testing",
+    '-derivedDataPath "$RUNNER_TEMP/app-debug"',
+    '-resultBundlePath "$RESULTS/app.xcresult"',
+    "CODE_SIGN_IDENTITY=-",
+    '> "$REPORT/app-seconds"',
+)
+# What the app's archive step runs: a Release archive for a generic device, then the executable's
+# required-reason imports read against the app's own privacy manifest, written for the report.
+APP_ARCHIVE_NEEDS = (
+    "xcodebuild archive -project ios/DeckStreak.xcodeproj -scheme DeckStreak",
+    "-configuration Release",
+    "-destination generic/platform=iOS",
+    '-archivePath "$RUNNER_TEMP/DeckStreak.xcarchive"',
+    "nm -u",
+    "ios/App/PrivacyInfo.xcprivacy",
+    '"app-symbols"',
+)
+# The report's rows for the app: its test cases, its test time, and its imports reading.
+APP_REPORT_NEEDS = ('cases_in("app")', 'minutes("app-seconds")', 'read("app-symbols")')
+# The signing settings only a command line may carry in this job, never its env or a step's.
+SIGNING_NAMES = ("CODE_SIGNING_ALLOWED", "CODE_SIGN_IDENTITY", "DEVELOPMENT" + "_TEAM")
+
+
+def run_joined(step):
+    """A run step's text with each shell continuation joined, so a command reads as one line."""
+    return re.sub(r"\\\n\s*", " ", str(step.get("run", "")))
+
+
+def app_steps_problems(workflow):
+    """Each way the Apple job body could fail to build and prove the app, named (SPEC-347 R13,
+    A14): the `harness` job, on the admitted runner, holds one step of each name; the harness's
+    generate step keeps its one line; the app's test step opens with the app's generate line and
+    runs its scheme on both simulators, signed ad hoc on its command line; its archive step builds
+    Release for a generic device with code signing off on its command line and reads the
+    executable's imports against the app's manifest; the two sit, in order, between the harness's
+    last step and the report, which carries their rows; no env of the job or of either step names
+    a signing setting; and no other job of the workflow names the app's spec or scheme."""
+    jobs = workflow.get("jobs") or {}
+    job = jobs.get("harness") or {}
+    steps = job.get("steps") or []
+    names = [step.get("name") for step in steps]
+    problems = []
+    if job.get("runs-on") != ADMITTED_RUNNERS["xcframework.yml"]:
+        problems.append(f"harness: it runs on {job.get('runs-on')!r}, not the admitted runner")
+    found = {}
+    for name in (HARNESS_PROJECT, HARNESS_LAST, APP_TESTS, APP_ARCHIVE, HARNESS_REPORT):
+        if names.count(name) != 1:
+            problems.append(f"harness: {names.count(name)} steps named {name!r}, not one")
+        else:
+            found[name] = steps[names.index(name)]
+    project = found.get(HARNESS_PROJECT)
+    if project is not None:
+        generates = [
+            line.strip()
+            for line in str(project.get("run", "")).splitlines()
+            if "xcodegen" in line and " generate " in line
+        ]
+        if generates != [HARNESS_GENERATE]:
+            problems.append(
+                f"harness: the step {HARNESS_PROJECT!r} does not hold the harness's one generate "
+                "line alone"
+            )
+    tests = found.get(APP_TESTS)
+    if tests is not None:
+        lines = [line.strip() for line in str(tests.get("run", "")).splitlines() if line.strip()]
+        if lines[:1] != [APP_GENERATE]:
+            problems.append(
+                "harness: the app's test step does not open with the app's generate line"
+            )
+        run = run_joined(tests)
+        problems += [
+            f"harness: the app's test step lacks {n}" for n in APP_TEST_NEEDS if n not in run
+        ]
+    archive = found.get(APP_ARCHIVE)
+    if archive is not None:
+        run = run_joined(archive)
+        problems += [
+            f"harness: the app's archive lacks {n}" for n in APP_ARCHIVE_NEEDS if n not in run
+        ]
+        if "CODE_SIGNING_ALLOWED=NO" not in run:
+            problems.append(
+                "harness: the app's archive does not turn code signing off on its command line"
+            )
+    report = found.get(HARNESS_REPORT)
+    if report is not None:
+        text = str(report.get("run", ""))
+        problems += [f"harness: the report lacks {n}" for n in APP_REPORT_NEEDS if n not in text]
+    if len(found) == 5:
+        at = [names.index(name) for name in (HARNESS_LAST, APP_TESTS, APP_ARCHIVE, HARNESS_REPORT)]
+        if at != list(range(at[0], at[0] + 4)):
+            problems.append(
+                "harness: the app's two steps do not sit, in order, between the harness's last "
+                "step and the report"
+            )
+    envs = [("its env", job.get("env"))] + [
+        (f"the env of {step.get('name')!r}", step.get("env"))
+        for step in (tests, archive)
+        if step is not None
+    ]
+    for where, env in envs:
+        problems += [
+            f"harness: {where} names {name}, which only a command line may set"
+            for name in SIGNING_NAMES
+            if name in str(env or {})
+        ]
+    for other in sorted(set(jobs) - {"harness"}):
+        text = str(jobs[other])
+        problems += [
+            f"{other}: it names {name}, which only the harness job may"
+            for name in ("ios/app.yml", "-scheme DeckStreak")
+            if name in text
+        ]
+    return problems
+
+
+class TheAppIsGeneratedTestedAndArchived(unittest.TestCase):
+    def test_the_app_is_generated_tested_and_archived_in_the_harness_job(self):
+        """SPEC-347 A14: the `harness` job generates the app's project in its own step, runs the
+        app's tests on both simulators and archives the app for a generic device with code signing
+        off, after the harness's steps and before the report, and nothing else changes."""
+        jobs = load("xcframework.yml")["jobs"]
+        self.assertEqual(app_steps_problems({"jobs": jobs}), [])
+        examined("harness steps", jobs["harness"].get("steps") or [])
+        examined("jobs", list(jobs))
+
+        # The controls: the good job is accepted, and each plant is refused by its rule's name.
+        test_run = (
+            APP_GENERATE
+            + "\nstarted=$(date +%s)\n"
+            + " \\\n  ".join(APP_TEST_NEEDS[:-1])
+            + '\necho "$(( $(date +%s) - started ))" '
+            + APP_TEST_NEEDS[-1]
+            + "\n"
+        )
+        archive_run = (
+            " ".join(APP_ARCHIVE_NEEDS[:4])
+            + " CODE_SIGNING_ALLOWED=NO\n"
+            + APP_ARCHIVE_NEEDS[4]
+            + ' "$app" > "$REPORT/app-imports"\npython3 - '
+            + APP_ARCHIVE_NEEDS[5]
+            + " "
+            + APP_ARCHIVE_NEEDS[6]
+            + "\n"
+        )
+        good_steps = [
+            {"uses": PLANTED_DOWNLOAD, "with": {"name": "xcframework"}},
+            {"name": HARNESS_PROJECT, "run": HARNESS_GENERATE + "\n"},
+            {
+                "name": "the tests, Debug, on the iPhone and then the iPad",
+                "run": "true\n",
+            },
+            {"name": HARNESS_LAST, "run": "true\n"},
+            {"name": APP_TESTS, "run": test_run},
+            {"name": APP_ARCHIVE, "run": archive_run},
+            {
+                "name": HARNESS_REPORT,
+                "if": "${{ always() }}",
+                "run": "\n".join(APP_REPORT_NEEDS),
+            },
+        ]
+
+        def harness(steps=None, **keys):
+            return {
+                "runs-on": ADMITTED_RUNNERS["xcframework.yml"],
+                "env": {"REPORT": "harness-report"},
+                "steps": good_steps if steps is None else steps,
+                **keys,
+            }
+
+        def step_with(name, **keys):
+            return harness([{**s, **keys} if s.get("name") == name else s for s in good_steps])
+
+        def without(name, piece, instead=""):
+            run = next(s["run"] for s in good_steps if s.get("name") == name)
+            assert run.count(piece) == 1, f"{piece!r} is not in the planted {name!r} once"
+            return step_with(name, run=run.replace(piece, instead))
+
+        def ordered(*names):
+            return harness([next(s for s in good_steps if s.get("name") == n) for n in names])
+
+        plants = {
+            "the good job": (harness(), []),
+            "no app test step": (
+                harness([s for s in good_steps if s.get("name") != APP_TESTS]),
+                [f"harness: 0 steps named {APP_TESTS!r}, not one"],
+            ),
+            "a second archive step": (
+                harness(good_steps + [good_steps[5]]),
+                [f"harness: 2 steps named {APP_ARCHIVE!r}, not one"],
+            ),
+            "the app generated in the harness's generate step": (
+                step_with(HARNESS_PROJECT, run=HARNESS_GENERATE + "\n" + APP_GENERATE + "\n"),
+                [
+                    "harness: the step 'the project, generated' does not hold the harness's one "
+                    "generate line alone"
+                ],
+            ),
+            "a test step the generate line does not open": (
+                step_with(APP_TESTS, run="set -e\n" + test_run),
+                ["harness: the app's test step does not open with the app's generate line"],
+            ),
+            "the iPhone alone": (
+                without(APP_TESTS, APP_TEST_NEEDS[2]),
+                [f"harness: the app's test step lacks {APP_TEST_NEEDS[2]}"],
+            ),
+            "both simulators at once": (
+                without(APP_TESTS, APP_TEST_NEEDS[3]),
+                [f"harness: the app's test step lacks {APP_TEST_NEEDS[3]}"],
+            ),
+            "code signing off in the test step": (
+                without(APP_TESTS, "CODE_SIGN_IDENTITY=-", "CODE_SIGNING_ALLOWED=NO"),
+                ["harness: the app's test step lacks CODE_SIGN_IDENTITY=-"],
+            ),
+            "the harness's result bundle": (
+                without(APP_TESTS, "$RESULTS/app.xcresult", "$RESULTS/debug.xcresult"),
+                [f"harness: the app's test step lacks {APP_TEST_NEEDS[5]}"],
+            ),
+            "a Debug archive": (
+                without(APP_ARCHIVE, "-configuration Release", "-configuration Debug"),
+                ["harness: the app's archive lacks -configuration Release"],
+            ),
+            "an archive for a simulator": (
+                without(
+                    APP_ARCHIVE,
+                    "-destination generic/platform=iOS",
+                    '-destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS"',
+                ),
+                ["harness: the app's archive lacks -destination generic/platform=iOS"],
+            ),
+            "signing on in the archive": (
+                without(APP_ARCHIVE, " CODE_SIGNING_ALLOWED=NO"),
+                ["harness: the app's archive does not turn code signing off on its command line"],
+            ),
+            "no imports read": (
+                without(APP_ARCHIVE, "nm -u"),
+                ["harness: the app's archive lacks nm -u"],
+            ),
+            "the imports against the harness's manifest": (
+                without(
+                    APP_ARCHIVE,
+                    "ios/App/PrivacyInfo.xcprivacy",
+                    "ios/Harness/PrivacyInfo.xcprivacy",
+                ),
+                ["harness: the app's archive lacks ios/App/PrivacyInfo.xcprivacy"],
+            ),
+            "a report with no app cases": (
+                without(HARNESS_REPORT, 'cases_in("app")'),
+                ['harness: the report lacks cases_in("app")'],
+            ),
+            "the app's steps after the report": (
+                ordered(
+                    HARNESS_PROJECT,
+                    HARNESS_LAST,
+                    HARNESS_REPORT,
+                    APP_TESTS,
+                    APP_ARCHIVE,
+                ),
+                [
+                    "harness: the app's two steps do not sit, in order, between the harness's "
+                    "last step and the report"
+                ],
+            ),
+            "the archive before the tests": (
+                ordered(
+                    HARNESS_PROJECT,
+                    HARNESS_LAST,
+                    APP_ARCHIVE,
+                    APP_TESTS,
+                    HARNESS_REPORT,
+                ),
+                [
+                    "harness: the app's two steps do not sit, in order, between the harness's "
+                    "last step and the report"
+                ],
+            ),
+            "signing in the job's env": (
+                harness(env={"REPORT": "harness-report", "CODE_SIGNING_ALLOWED": "NO"}),
+                ["harness: its env names CODE_SIGNING_ALLOWED, which only a command line may set"],
+            ),
+            "a team in the archive's env": (
+                step_with(APP_ARCHIVE, env={SIGNING_NAMES[2]: "planted"}),
+                [
+                    f"harness: the env of {APP_ARCHIVE!r} names {SIGNING_NAMES[2]}, which only a "
+                    "command line may set"
+                ],
+            ),
+            "the harness on another runner": (
+                harness(**{"runs-on": "macos-latest"}),
+                ["harness: it runs on 'macos-latest', not the admitted runner"],
+            ),
+        }
+        for name, (job, wanted) in examined("planted harness jobs", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(app_steps_problems({"jobs": {"harness": job}}), wanted, name)
+        other = {
+            "steps": [
+                {"run": APP_GENERATE},
+                {"run": "xcodebuild archive -scheme DeckStreak"},
+            ]
+        }
+        with self.subTest(plant="the app built by another job"):
+            self.assertEqual(
+                app_steps_problems({"jobs": {"harness": harness(), "xcframework": other}}),
+                [
+                    "xcframework: it names ios/app.yml, which only the harness job may",
+                    "xcframework: it names -scheme DeckStreak, which only the harness job may",
+                ],
+            )
 
 
 # The two simulators the card probe runs on, one after the other, as the harness job names them.

@@ -416,4 +416,51 @@ describe('the review', () => {
     review.act('show-answer');
     expect([review.side, review.escaped, review.status]).toEqual(['answer', true, 'escaped']);
   });
+
+  it('the frame shows the faces the engine completed', async () => {
+    // SPEC-350 A24, ADR-361 D12: the review asks for the shown card's faces and the frame shows
+    // their text, with the core's data: URLs inline; a side with replay clips shows Replay, which
+    // stays on its side and asks nothing of the engine; a done deck asks for no faces
+    const IMAGE = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+    const speech = { kind: 'speech' as const, text: 'der Hund', language: 'de-DE', rate: 0.5 };
+    const faced = {
+      question: { text: `<p>the dog</p><img src="${IMAGE}">`, css: '', autoplay: [speech], replay: [speech], omitted: [] },
+      answer: { text: '<p>der Hund</p>', css: '', autoplay: [], replay: [], omitted: ['bark.ogg'] },
+      wanted: []
+    };
+    class FacesClient extends FakeClient {
+      faces(card: bigint) {
+        this.calls.push(`faces ${card}`);
+        return Promise.resolve(faced);
+      }
+    }
+    const client = new FacesClient([head(view(1)), head(null)]);
+    const review = new Review(
+      async () => client,
+      () => 0,
+      () => undefined
+    );
+    review.start();
+    await review.settled();
+    expect(review.face?.view.question).toBe(`<p>the dog</p><img src="${IMAGE}">`);
+    expect(review.controls).toEqual(['show-answer', 'replay', 'bury', 'flag']);
+    review.act('replay');
+    expect([review.phase, review.side]).toEqual(['question', 'question']);
+    review.act('show-answer');
+    expect([review.face?.side, review.face?.view.answer]).toEqual(['answer', '<p>der Hund</p>']);
+    expect(review.controls).toEqual(['again', 'hard', 'good', 'easy', 'bury', 'flag']);
+    review.act('good');
+    await review.settled();
+    expect(review.phase).toBe('done');
+    expect(client.calls).toEqual(['card', 'faces 1', 'rate 1 3 0', 'card']);
+
+    // replay is a cell of each side, and of no other phase
+    for (const side of ['question', 'answer'] as const) {
+      expect(step({ phase: side, side }, 'replay')).toStrictEqual({ state: { phase: side, side }, effect: 'replay' });
+    }
+    expect(step({ phase: 'busy', side: 'answer' }, 'replay')).toStrictEqual({
+      state: { phase: 'busy', side: 'answer' },
+      effect: 'none'
+    });
+  });
 });

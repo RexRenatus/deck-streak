@@ -1,7 +1,7 @@
 // The Worker's session (SPEC-338 R3 to R6, ADR-348): the protocol's operations only, the tab lock
 // first, then the storage, then the engine.
 import { parseRequest } from './protocol';
-import type { CardView, Deck, ErrorCode, Head, Opened, Reply, Request, Snapshot } from './protocol';
+import type { CardView, Deck, ErrorCode, Faces, Head, MediaAsk, Opened, Reply, Request, Snapshot } from './protocol';
 
 /** The Web Lock that holds one collection per origin. */
 export const LOCK = 'deck-streak-collection';
@@ -30,6 +30,9 @@ export interface EngineModule {
   rate(card: bigint, rating: number, ms: number): void;
   bury(card: bigint): void;
   flag(card: bigint): number;
+  /** Both faces of the shown card, completed by the core with the media files `names` and
+   * `contents` carry, and each file it asked for and was not given (SPEC-350 R14, ADR-361 D12). */
+  faces(card: bigint, names: string[], contents: Uint8Array[]): Faces;
 }
 
 /** The bytes in one page of a module's linear memory. */
@@ -41,6 +44,15 @@ export interface SessionDeps {
   /** Null when the origin private file system is there to use, else why it is refused. */
   storage(): Promise<string | null>;
   load(): Promise<EngineModule>;
+  /** The first bytes of each file the core asked for, as the media directory holds them; a file it
+   * lacks is left out. A Worker with no media directory leaves this out (SPEC-350 R14). */
+  media?(wanted: readonly MediaAsk[]): Promise<MediaFile[]>;
+}
+
+/** A media file the Worker read for the core: its name and its first bytes. */
+export interface MediaFile {
+  name: string;
+  bytes: Uint8Array;
 }
 
 /** A session that ended: the code and the reason it answers from then on. */
@@ -107,6 +119,7 @@ export class Session {
     if (this.#ended !== null) return refuse(request.id, this.#ended.code, this.#ended.why);
     if (request.op === 'open') return this.#open(request.id, request.languages ?? []);
     if (!this.#opened) return refuse(request.id, 'not-open', `${request.op} before open`);
+    if (request.op === 'faces') return this.#faces(request.id, request.card);
     return this.#run(request.id, (engine) => this.#call(engine, request));
   }
 
@@ -161,6 +174,24 @@ export class Session {
   /** A trap's message is the panic the module recorded, when it recorded one. */
   #explain(engine: EngineModule, error: unknown): string {
     return (error instanceof WebAssembly.RuntimeError && engine.last_panic()) || describe(error);
+  }
+
+  /** Both faces of `card`. The core reads media synchronously and the media directory does not, so
+   * the first ask carries no file and names the files the core wants; when it wants any, the
+   * Worker reads them and asks again, and that answer is the reply. Both asks and the read run
+   * inside this one request, so no other request comes between them (SPEC-350 R14, ADR-361 D12). */
+  async #faces(id: number, card: bigint): Promise<Reply> {
+    const first = this.#run(id, (engine) => engine.faces(card, [], []));
+    const wanted = first.ok ? (first.value as Faces).wanted : [];
+    if (wanted.length === 0) return first;
+    const files = (await this.#deps.media?.(wanted)) ?? [];
+    return this.#run(id, (engine) =>
+      engine.faces(
+        card,
+        files.map((file) => file.name),
+        files.map((file) => file.bytes)
+      )
+    );
   }
 
   /** Runs an engine call. An error the engine returns leaves the session as it was; a trap spends

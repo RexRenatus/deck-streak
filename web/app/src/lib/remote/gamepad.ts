@@ -45,6 +45,15 @@ function leaning(axes: readonly number[], direction: (typeof STICK)[number]): nu
  */
 export class GamepadReader {
   #kept = new Map<number, Kept>();
+  readonly #buttons: ReadonlyMap<number, Intent>;
+  readonly #stick: typeof STICK;
+
+  /** A reader of `buttons` and `stick`: today's map unless the study screens pass a device's own
+   * (SPEC-350 R18). */
+  constructor(buttons: ReadonlyMap<number, Intent> = BUTTONS, stick: typeof STICK = STICK) {
+    this.#buttons = buttons;
+    this.#stick = stick;
+  }
 
   /** The readings of `snapshots`, one per gamepad. A gamepad they no longer name is forgotten. */
   read(snapshots: readonly PadSnapshot[]): PadReading[] {
@@ -67,19 +76,19 @@ export class GamepadReader {
     const pressed = snapshot.buttons.flatMap((down, index) => (down ? [index] : []));
     // A direction that was armed stays armed up to `STICK_FIRE`; any other, the first snapshot's
     // included, is armed only below `STICK_REARM`.
-    const armed = STICK.map((direction, at) => {
+    const armed = this.#stick.map((direction, at) => {
       const lean = leaning(snapshot.axes, direction);
       return before !== undefined && before.armed[at] ? lean <= STICK_FIRE : lean < STICK_REARM;
     });
     const fired: Intent[] = [];
     if (before !== undefined && snapshot.mapping === 'standard') {
       for (const index of pressed) {
-        const intent = BUTTONS.get(index);
+        const intent = this.#buttons.get(index);
         if (intent !== undefined && !before.buttons[index]) {
           fired.push(intent);
         }
       }
-      STICK.forEach((direction, at) => {
+      this.#stick.forEach((direction, at) => {
         if (before.armed[at] && !armed[at]) {
           fired.push(direction.intent);
         }
