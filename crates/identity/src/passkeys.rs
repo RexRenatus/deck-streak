@@ -138,7 +138,7 @@ pub(crate) enum State {
     Registration {
         state: PasskeyRegistration,
         session: Vec<u8>,
-        handle: Uuid,
+        user_handle: Uuid,
     },
     /// A sign-in, with the owner's passkeys as it read them.
     SignIn {
@@ -418,10 +418,10 @@ impl Passkeys {
             .map(|passkey| Uuid::from_slice(&passkey.user_handle))
             .transpose()
             .map_err(|_| Refusal::PasskeyInvalid)?;
-        let handle = held_handle.unwrap_or_else(Uuid::new_v4);
+        let user_handle = held_handle.unwrap_or_else(Uuid::new_v4);
         let (options, state) = quietly(|| {
             relying_party.webauthn().start_passkey_registration(
-                handle,
+                user_handle,
                 USER_NAME,
                 USER_NAME,
                 Some(excluded),
@@ -431,7 +431,7 @@ impl Passkeys {
         let flow = self.ceremonies.insert(State::Registration {
             state,
             session: digest(session.as_bytes()),
-            handle,
+            user_handle,
         })?;
         let options = serde_json::to_value(&options).map_err(|_| Refusal::PasskeyInvalid)?;
         Ok(Started { flow, options })
@@ -456,7 +456,7 @@ impl Passkeys {
         let State::Registration {
             state,
             session: started_in,
-            handle,
+            user_handle,
         } = ceremony.state
         else {
             return Err(Refusal::ChallengeInvalid.into());
@@ -478,7 +478,7 @@ impl Passkeys {
         let serialized = stored.to_string();
         let owner = self.owner.user().get();
         let credential_id = passkey.cred_id().as_ref().to_vec();
-        let user_handle = handle.as_bytes().to_vec();
+        let user_handle = user_handle.as_bytes().to_vec();
         let now = self.clock.now().epoch_millis();
         let mut transaction = db.write().await?;
         let row = sqlx::query!(
