@@ -145,6 +145,11 @@ fn a_public_origin_that_is_not_https_refuses_start() {
             !shown.contains(value),
             "the refusal of {value:?} shows the value: {shown}"
         );
+        assert!(
+            shown
+                .contains("an https origin: the scheme, a host and an optional port, nothing else"),
+            "the refusal of {value:?} does not name the setting's shape: {shown}"
+        );
     }
     let from_env = LinkingConfig::from_env(&Environment::from_vars([(
         PUBLIC_ORIGIN,

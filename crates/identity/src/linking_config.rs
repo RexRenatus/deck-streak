@@ -18,7 +18,7 @@ use crate::Refusal;
 /// The web client's `https` origin; unset, linking is off.
 pub const PUBLIC_ORIGIN: &str = "DECKSTREAK_PUBLIC_ORIGIN";
 /// The shape the setting must have, named in a refusal in place of the value.
-const SHAPE: &str = "an https origin: the scheme, a host and an optional port, nothing else";
+const SHAPE: &str = <OriginText as Setting>::SHAPE;
 /// The relying party's name, as the browser shows it: fixed text, no personal data.
 const RP_NAME: &str = "DeckStreak";
 
@@ -26,7 +26,8 @@ const RP_NAME: &str = "DeckStreak";
 struct OriginText(String);
 
 impl Setting for OriginText {
-    const SHAPE: &'static str = SHAPE;
+    const SHAPE: &'static str =
+        "an https origin: the scheme, a host and an optional port, nothing else";
 
     fn parse(text: &str) -> Option<Self> {
         Some(Self(text.to_owned()))
