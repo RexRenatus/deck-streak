@@ -9,7 +9,7 @@ import { readMedia, type MediaFolder } from './media';
 /** A directory in memory: its files by name, and the directories under it. */
 class FakeFolder implements MediaFolder {
   constructor(
-    readonly files = new Map<string, Uint8Array>(),
+    readonly files = new Map<string, Uint8Array<ArrayBuffer>>(),
     readonly folders = new Map<string, FakeFolder>()
   ) {}
 

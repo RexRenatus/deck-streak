@@ -1,6 +1,6 @@
 // The page's side of the web engine: EngineClient, which numbers each request and settles it by
 // the reply that carries its id (SPEC-338 R3, ADR-348).
-import type { Body, Deck, ErrorCode, Head, Opened, Rating, Reply, Snapshot } from './protocol';
+import type { Body, Deck, ErrorCode, Faces, Head, Opened, Rating, Reply, Snapshot } from './protocol';
 import { admitsOrigin } from './protocol';
 
 /** The Worker as the client sees it: a port to post to and hear from. */
@@ -115,8 +115,10 @@ export class EngineClient {
     return this.#send({ op: 'bury', card }) as Promise<null>;
   }
 
-  faces(_card: bigint): Promise<unknown> {
-    return Promise.resolve(null);
+  /** Both faces of the shown card, completed by the core with the media the Worker read; the page
+   * names the card alone, so no media file, limit or type is the page's to decide (SPEC-350 R14). */
+  faces(card: bigint): Promise<Faces> {
+    return this.#send({ op: 'faces', card }) as Promise<Faces>;
   }
 
   /** Toggles red on the shown card and resolves to its flag; another card is refused. */
