@@ -81,9 +81,9 @@ R4. **L11, the page guard.** One `WKUserScript`, at document start, in every fra
 R5. **L12, the document policy.** The factory hands the view `DocumentPolicy.prefix` followed by
     the card's markup, where the prefix is exactly:
 
-    ```html
-    <!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; media-src data:; font-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; object-src 'none'; form-action 'none'; base-uri 'none'">
-    ```
+```html
+<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; media-src data:; font-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; object-src 'none'; form-action 'none'; base-uri 'none'">
+```
 
     A policy a card adds can only narrow it. `DocumentPolicy.weaker(_:)` names every way a
     candidate policy is weaker than this one, as `RuleList.weaker(_:)` does for the rule list.
