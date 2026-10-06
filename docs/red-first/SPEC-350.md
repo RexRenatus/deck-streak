@@ -299,3 +299,14 @@ A30: green at aef11216
 - **Rows S35040 to S35043** hold the media reader: a name asked twice is wanted once, a file is
   read no further than its limit, a file not read is absent, and an extension is read without
   case. Each was proved KILLED by its killer.
+
+## Part 2: what the mutation pass added
+
+- **The mapping screen, mutation coverage, green when written.** The web stage's mutation pass
+  found six survivors in `MappingScreen.svelte`, and two tests in `mapping-store.test.ts` kill
+  them; each passed at the commit that added it. "the mapping screen says what it does, names its
+  columns and links back to the review" pins the screen's introduction, its key and gamepad
+  columns' headings and the back link's name. "a key a capture takes does nothing else on the
+  page, and Cancel shows only while a capture waits" pins the prevented default of the key a
+  capture takes, a key the page keeps while no capture waits and while a button's capture waits,
+  and no Cancel while no capture waits.

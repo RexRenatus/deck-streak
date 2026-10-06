@@ -362,4 +362,51 @@ describe('the mapping screen', () => {
     expect(stored()).toEqual({});
     expect(errors).toEqual([]);
   });
+
+  it('the mapping screen says what it does, names its columns and links back to the review', () => {
+    render(MappingScreen);
+    const intro = screen.getByText(
+      'Choose a key or a button below, then press the one you want on your remote. This device keeps its own mapping.'
+    );
+    expect(intro.tagName).toBe('P');
+    expect(screen.getAllByRole('columnheader').map((header) => header.textContent?.trim())).toEqual([
+      'Action',
+      'Key',
+      'Gamepad button'
+    ]);
+    expect(screen.getByRole('link', { name: 'Back to the review' }).getAttribute('href')).toBe('/study/review');
+    expect(errors).toEqual([]);
+  });
+
+  it('a key a capture takes does nothing else on the page, and Cancel shows only while a capture waits', () => {
+    render(MappingScreen);
+    const cancel = () => screen.queryByRole('button', { name: 'Cancel' });
+
+    /** Sends `name` to the page, and answers whether the page's own action for it was prevented. */
+    function prevented(name: string): boolean {
+      const event = new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true });
+      window.dispatchEvent(event);
+      flushSync();
+      return event.defaultPrevented;
+    }
+
+    // with no capture waiting there is no Cancel, and a key keeps the page's own action
+    expect(cancel()).toBeNull();
+    expect(prevented('k')).toBe(false);
+
+    // a key's capture shows Cancel, and the key it takes is the remote's answer alone
+    click('Change the key for Hard: 2');
+    expect(cancel()?.textContent?.trim()).toBe('Cancel');
+    expect(prevented('k')).toBe(true);
+    expect(cell('Change the key for Hard: k')).toBe('k');
+    expect(cancel()).toBeNull();
+
+    // a button's capture shows Cancel too; a key does not answer it, so the key keeps its action
+    click('Change the gamepad button for Hard: Button 13');
+    expect(cancel()?.textContent?.trim()).toBe('Cancel');
+    expect(prevented('j')).toBe(false);
+    press('Escape');
+    expect(cancel()).toBeNull();
+    expect(errors).toEqual([]);
+  });
 });
