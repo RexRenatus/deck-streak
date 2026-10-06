@@ -207,3 +207,15 @@ A36: green at e2d01121
   reading. The other two missed mutants are argued equivalent to the reviewer and recorded nowhere:
   `LinkingConfig::off` already returns the derived default, and `id_bytes` ORs a high nibble with a
   low one, so `|` and `^` agree on every input.
+- DISCLOSE: 4d015bf grows A27's test, `a_public_origin_that_is_not_https_refuses_start` in
+  `crates/identity/tests/linking_config.rs`, by one assertion that the refusal spells the setting's
+  shape as a literal, and moves that literal into `OriginText`'s `Setting` implementation in
+  `crates/identity/src/linking_config.rs`, the module's `SHAPE` now reading
+  `<OriginText as Setting>::SHAPE`, so one literal remains and the refusal's text is unchanged. It
+  is MUTATION COVERAGE, not red-first: the code it covers was green before it. The setting-shape
+  guard was red at b90c8dc: `['identity::OriginText (src/linking_config.rs) None'] != [] : 29
+  impl(s) examined`. A planted `scheme` to `schema` in the literal turned the new assertion red:
+  `the refusal of "http://app.example" does not name the setting's shape: the setting
+  DECKSTREAK_PUBLIC_ORIGIN is malformed: it must be an https origin: the schema, a host and an
+  optional port, nothing else`, and the plant was restored byte for byte. No assertion is removed or
+  loosened, and no line a red above quotes changes.
