@@ -232,4 +232,30 @@ describe('the Worker entry', () => {
       vi.resetModules();
     }
   });
+
+  it('the media directory is read through the injected storage', async () => {
+    // SPEC-350 A24, ADR-361 D12: the Worker reads media from one flat directory at the origin's
+    // root, through the storage its own scope gives it, no further than each limit
+    const { MEDIA_DIRECTORY, browserDeps } = await worker();
+    expect(MEDIA_DIRECTORY).toBe('deck-streak-media');
+    const absent = () => Promise.reject(new DOMException('absent', 'NotFoundError'));
+    const media = {
+      getDirectoryHandle: absent,
+      getFileHandle: async (name: string) =>
+        name === 'cat.mp3' ? { getFile: async () => new Blob([new Uint8Array([1, 2, 3])]) } : absent()
+    };
+    const root = {
+      getDirectoryHandle: async (name: string) => (name === 'deck-streak-media' ? media : absent()),
+      getFileHandle: absent
+    };
+    const storage = { getDirectory: async () => root as unknown as FileSystemDirectoryHandle };
+    const load = () => Promise.reject(new Error('no engine here'));
+    const deps = browserDeps(new URL('https://app.example/engine/'), load, { navigator: { storage } });
+    expect(
+      await deps.media?.([
+        { name: 'cat.mp3', limit: 2n },
+        { name: 'gone.ogg', limit: 2n }
+      ])
+    ).toEqual([{ name: 'cat.mp3', bytes: new Uint8Array([1, 2]) }]);
+  });
 });

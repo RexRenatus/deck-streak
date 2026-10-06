@@ -115,6 +115,10 @@ export class EngineClient {
     return this.#send({ op: 'bury', card }) as Promise<null>;
   }
 
+  faces(_card: bigint): Promise<unknown> {
+    return Promise.resolve(null);
+  }
+
   /** Toggles red on the shown card and resolves to its flag; another card is refused. */
   flag(card: bigint): Promise<number> {
     return this.#send({ op: 'flag', card }) as Promise<number>;
