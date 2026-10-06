@@ -75,6 +75,11 @@ were then committed alone and run over that shape, the containment census with t
 is quoted from the run at its commit.
 
 ```red-first
+A12: red at 341f85af: gesture.rs:52 left: ([], [WrongKind { write: Forget, target: Card(11) }, …(17)]) right: ([(Forget, Card(11)), (SetDueDate, Card(11)), (DeletePreset, Preset(13)), (ChangeNoteType, Note(12)), (DeleteCard, Card(11)), (DeleteNote, Note(12))], [WrongKind …(12)])
+A13: red at 341f85af: exempt.rs:323 left: (Err(WrongKind { write: Forget, target: Card(..) }), Some(1), Some(1), ..) right: (Ok(()), Some(0), Some(0), ..)
+A14: red at 341f85af: exempt.rs:359 left: [(Forget, "refused before the engine: the Forget write does not take Card(..)"), …(5) refused before the engine] right: [(Forget, "ran"), (SetDueDate, "ran"), (DeletePreset, "the engine refused it"), (ChangeNoteType, "ran"), (DeleteCard, "ran"), (DeleteNote, "ran")]
+A15: red at 48f55c8f: containment.rs:570 each UI adapter's entry file builds the gesture from the tap and runs it left: [] right: ["crates/ffi/src/engine.rs", "crates/web-engine/src/wasm.rs"]
 A16: not red: the shape's `OwnerGesture` derives nothing, so the probe that it is neither `Clone` nor `Copy` passes over the stub; it guards the type against a later derive
+A17: red at 48f55c8f: exempt.rs:157 the Forget tap returned its one card to the new queue left: (Err(WrongKind), Head { card_id: …, queue: 1, new: 0, learning: 1 }) right: (Ok(()), Head { card_id: …, queue: 0, new: 1, learning: 0 })
 A18: not red: mutation coverage of the native refusal text written with the shape, as A9 is for part 1's refusals
 ```
