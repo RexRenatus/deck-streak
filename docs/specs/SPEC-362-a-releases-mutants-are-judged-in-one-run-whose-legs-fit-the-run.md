@@ -40,6 +40,10 @@ before any mutant runs, so `ci` cannot pass and `main` cannot move:
   1585 tests run`). Its slowest test, `deck-streak-progression::xp_census
   only_progression_writes_xp_settlement_and_only_coordination_settles`, took 1144.5 s there and
   1378.5 s in `dev`'s push run 37392351782, against `CENSUS_SECONDS = 788`.
+- **Readings at this delivery's base.** The push run at the base commit, 37445796358, read that
+  census test at 1441.022 s and the workspace's nextest run at `Summary [2057.103s]` over 1588
+  tests. They are readings, not constants: `BASELINE_SECONDS` and `CENSUS_SECONDS` keep the figures
+  the signed ruling names (R5, R6), and R7 holds each leg to its own slowest baseline test.
 - **A census-only kill reads as a timeout.** The per-mutant `--timeout` is 1200 s (SPEC-327 R1), so a
   progression mutant that only the census catches, and one that no test catches, both run past it
   when the census takes 1378 s. cargo-mutants reports `Timeout`, which the verdict counts as
@@ -147,10 +151,21 @@ by a unittest, so it has no line in the fence.
 | `.config/nextest.toml` | CI | added: the `mutants` profile |
 | `.cargo/mutants.toml` | CI | changed: runs nextest under the `mutants` profile |
 | `scripts/tests/test_dispatch_shards.py` | CI scripts | changed: A1 to A5, A10, A11; `TheWholeTreeKeepsThirtyTwo` retired |
-| `scripts/tests/test_mutation_verdict.py` | CI scripts | changed: A6 to A8 |
+| `scripts/tests/test_mutation_verdict.py` | CI scripts | changed: A6 to A8; `cargo_report`'s Baseline names its log, which R7 reads |
 | `scripts/tests/test_mutation_workflows.py` | CI scripts | changed: A9 |
 | `scripts/tests/_mutants_finder.py` | CI scripts | changed: the bounds it reads |
+| `scripts/tests/test_ci_workflows.py` | CI scripts | changed: the census entries for the new tests' reads |
+| `scripts/tests/test_memory_scope.py` | CI scripts | changed: its byte pins read `--timeout 2200` |
+| `scripts/tests/test_memory_cap_verdict.py` | CI scripts | changed: its counts derived from the bound (143, 142); assertions unchanged |
+| `scripts/tests/fixtures/not-started-legs/empty/mutation-plan/listed.json` | CI scripts | added: an empty listing |
+| `scripts/tests/fixtures/not-started-legs/listed/mutation-plan/listed.json` | CI scripts | added: the plan's five mutants, listed |
+| `scripts/tests/fixtures/not-started-legs/listed/mutation-rust-shard-0/mutants.out/outcomes.json` | CI scripts | changed: the Baseline names its log |
+| `scripts/tests/fixtures/not-started-legs/listed/mutation-rust-shard-0/mutants.out/log/baseline.log` | CI scripts | added: a baseline log that times its test |
 | `scripts/mutation-rows.d/S36200-S36299.json` | CI scripts | added: the rows that pin each new constant |
+| `scripts/mutation-rows.d/S03900-S03999.json` | CI scripts | changed: S03913's mutant caps at the `ci` ceiling |
+| `scripts/mutation-rows.d/S12900-S12999.json` | CI scripts | changed: S12901's mutant caps at the ceiling; S12903 re-anchored to the battery's ceiling; S12904 to S12909 to 2200 |
+| `scripts/mutation-rows.d/S32700-S32799.json` | CI scripts | changed: S32700 and S32705 re-anchored to 1430 and 2200; S32706 to the ceiling |
+| `docs/red-first/SPEC-362.md` | docs | added: the red-first record |
 | `formal/tla/EveryLegCounted/EveryLegCounted.tla` | formal | added |
 | `formal/tla/EveryLegCounted/MCEveryLegCounted.cfg` | formal | added |
 | `formal/tla/EveryLegCounted/witness/PassMeansEveryLegCounted.cfg` | formal | added |

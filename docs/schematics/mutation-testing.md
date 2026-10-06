@@ -370,3 +370,43 @@ refuses a name the run already holds; the verdict downloads `mutation-rust-shard
 leg k stored, and the verdict reads whichever report the store holds for each leg. The TLA+ entry
 `formal/tla/EveryLegCounted` lets the verdict read any stored attempt, so its two properties hold
 under either reading of a re-run's upload.
+
+### 8.4 Where each step lives
+
+Read at this delivery's `039b003c`; the documents committed after it change none of the files
+cited. A line moves with any edit above it, so search by the item named beside it after that.
+
+| step | `path:line` |
+|---|---|
+| the run's concurrency group: a push to `dev` cancels a release pull request's run in flight | `.github/workflows/ci.yml:25-27` |
+| job `mutation-plan` | `.github/workflows/ci.yml:374` |
+| the diff's listing, `listed.json`, the population | `.github/workflows/ci.yml:417` |
+| the whole tree's listing, `whole.json` | `.github/workflows/ci.yml:423` |
+| `mutation-verdict.py shards` | `.github/workflows/ci.yml:432` |
+| artifact `mutation-plan` | `.github/workflows/ci.yml:437` |
+| `SECONDS_PER_MUTANT`, `BASELINE_SECONDS`, `CENSUS_SECONDS` | `scripts/mutation-verdict.py:849`, `:866`, `:872` |
+| `SHARD_BOUND_SECONDS`, `LEG_CEILING` | `scripts/mutation-verdict.py:876`, `:879` |
+| `MUTANT_TIMEOUT_SECONDS`, `TIMEOUT_MARGIN` | `scripts/mutation-verdict.py:882`, `:883` |
+| `fewest_shards`: the fewest legs within the bound, up to the ceiling | `scripts/mutation-verdict.py:911` |
+| `shards`: sized at the `ci` ceiling, its refusal, its headroom line | `scripts/mutation-verdict.py:1008`, `:1044`, `:1045`, `:1077-1081` |
+| job `mutation-rust`, its `timeout-minutes: 360`, its matrix of legs | `.github/workflows/ci.yml:445`, `:449`, `:453` |
+| leg k's `cargo mutants` command | `.github/workflows/ci.yml:514` |
+| nextest's `mutants` profile, which stops at the first failure | `.config/nextest.toml:8-9` |
+| cargo-mutants runs nextest under that profile | `.cargo/mutants.toml:17`, `:23` |
+| artifact `mutation-rust-shard-k`, no `overwrite` | `.github/workflows/ci.yml:521` |
+| job `mutation-verdict`, `if: always()` | `.github/workflows/ci.yml:644-646` |
+| the legs' download, `merge-multiple` | `.github/workflows/ci.yml:672-673` |
+| `judge --class rust` | `.github/workflows/ci.yml:687` |
+| `judge_rust` | `scripts/mutation-verdict.py:1389` |
+| `whole_reports`, walking the plan's legs 0..N-1 | `scripts/mutation-verdict.py:1218`, `:1234` |
+| R7: `baseline_void`, read for each whole leg | `scripts/mutation-verdict.py:1315`, `:1419-1422` |
+| R8: `population_gaps`, the listing as the population | `scripts/mutation-verdict.py:1368`, `:1423` |
+| `partition`: each listed mutant tested once | `scripts/mutation-verdict.py:1264`, `:1465` |
+| `examined_sum` | `scripts/mutation-verdict.py:1293`, `:1468` |
+| job `ci`, `if: always()`, needing every job | `.github/workflows/ci.yml:873-876` |
+| the battery's job `size`, and its `mutation-verdict.py size` | `.github/workflows/mutation-weekly.yml:61`, `:99` |
+| `size`: the battery's ceiling, its refusal, its headroom line | `scripts/mutation-verdict.py:925`, `:930`, `:943`, `:956` |
+| the battery's job `rust`, its `timeout-minutes: 360`, its matrix, its two leg commands | `.github/workflows/mutation-weekly.yml:108`, `:112`, `:116`, `:172`, `:174` |
+| the battery's verdict | `.github/workflows/mutation-weekly.yml:395`; `scripts/mutation-verdict.py:2109` |
+| the model of the legs and the verdict | `formal/tla/EveryLegCounted/EveryLegCounted.tla` |
+| the rows that pin each new constant and check | `scripts/mutation-rows.d/S36200-S36299.json` |

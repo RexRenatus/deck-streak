@@ -46,6 +46,11 @@ is `VOID` (exit 3) and writes no output.
 R4. **A scheduled run and a dispatch with no package keep 32.** `size` with no `--package` reads no
 listing and writes `shards=32` and the matrix `[0..31]`. A dispatch naming `miniapp` runs no rust
 leg and sizes as no package.
+Amended by SPEC-362 (R11): a scheduled run and a dispatch with no package are sized like any
+listing: `size` reads the whole tree's listing and takes the fewest legs within the bound, up to
+the battery run's job budget, `LEG_CEILING["battery"]`, which replaces `MAX_SHARDS` here, and
+refuses by name past it. `WHOLE_SHARDS` is retired. A dispatch naming `miniapp` is sized at one leg
+and runs no rust leg.
 
 R5. **The legs, their `--shard` argument and the battery read the one count.** The `rust` job
 `needs: size`, its matrix is `fromJSON(needs.size.outputs.matrix)`, its step `env:` sets `SHARD`

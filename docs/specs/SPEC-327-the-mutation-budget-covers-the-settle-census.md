@@ -60,6 +60,10 @@ R1. Every `cargo mutants` command in `.github/workflows/ci.yml` (lines 331, 337 
 R2. 1200 is the census's measured need, 788 s, times a 1.5 margin (1182), rounded up to the next
     hundred. The margin covers the spread of 0.66 to 1.33 between projected and measured shard times
     recorded beside the sizer.
+    Amended by SPEC-362 (R6): the need is re-derived by this rule. `CENSUS_SECONDS` is 1430, the
+    census test's 1378.452 s in push run 37392351782 plus its start; times 1.5 that is 2145, and
+    rounded up to the next hundred it is 2200, the figure of the owner's signed ruling that
+    SPEC-362 cites. R1's commands and `BOUNDS` read `--timeout 2200`.
 R3. `scripts/mutation-verdict.py` holds `CENSUS_SECONDS = {"deck-streak-progression": 788}`, a table
     apart from `SECONDS_PER_MUTANT`. Each listed mutant of a package it names is projected at its
     table cost plus that term; a mutant of any other package is projected exactly as before.
@@ -77,6 +81,9 @@ R7. The census's two tests run for every mutant of `deck-streak-progression` exa
     added, and no file under `crates/` changes.
 R8. The weekly battery's whole-tree shard count stays `WHOLE_SHARDS = 32` (SPEC-129 R4, row
     S12903).
+    Amended by SPEC-362 (R11): `WHOLE_SHARDS` is retired. The battery sizes the whole tree from its
+    listing at its own ceiling, `LEG_CEILING["battery"]`, and row S12903, under its own id, pins
+    that ceiling.
 
 ## 3. Acceptance criteria
 
