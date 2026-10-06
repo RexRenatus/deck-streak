@@ -6,7 +6,8 @@ use std::sync::Arc;
 
 use deck_streak_engine_core::dispatch::{Dispatcher, Refusal};
 use deck_streak_engine_core::face::Side;
-use deck_streak_engine_core::table::Transport;
+use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
+use deck_streak_engine_core::table::{ExemptWrite, Transport};
 
 use crate::allow_list::allowed;
 use crate::face::{CardFace, MediaFolder};
@@ -111,14 +112,21 @@ impl Engine {
     /// [`ExemptRefusal::NotTheTarget`] when the request names other than the target,
     /// [`ExemptRefusal::Undecodable`] when the request is not the write's own message, and
     /// [`ExemptRefusal::Engine`] when the engine refuses the checked write.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "a foreign caller's bytes cross the boundary owned, as the bindings pass them"
+    )]
     pub fn run_exempt(
         &self,
         write: ExemptTap,
         target: ExemptTarget,
         input: Vec<u8>,
     ) -> Result<Vec<u8>, ExemptRefusal> {
-        let _ = (&self.dispatcher, write, target, input);
-        Err(ExemptRefusal::WrongKind)
+        let gesture = OwnerGesture::from_tap(exempt_write(write), core_target(target))
+            .map_err(exempt_refusal)?;
+        self.dispatcher
+            .run_exempt(gesture, &input)
+            .map_err(exempt_refusal)
     }
 
     /// Completes the face of the card `card_id`: its question, or its answer when `answer` is
@@ -153,6 +161,38 @@ fn refusal(refusal: Refusal) -> EngineRefusal {
         Refusal::NotAllowed { service, method } | Refusal::NeedsGesture { service, method } => {
             EngineRefusal::NotAllowed { service, method }
         }
+    }
+}
+
+/// The core's exempt write for the write a tap names, one for one.
+fn exempt_write(tap: ExemptTap) -> ExemptWrite {
+    match tap {
+        ExemptTap::Forget => ExemptWrite::Forget,
+        ExemptTap::SetDueDate => ExemptWrite::SetDueDate,
+        ExemptTap::DeletePreset => ExemptWrite::DeletePreset,
+        ExemptTap::ChangeNoteType => ExemptWrite::ChangeNoteType,
+        ExemptTap::DeleteCard => ExemptWrite::DeleteCard,
+        ExemptTap::DeleteNote => ExemptWrite::DeleteNote,
+    }
+}
+
+/// The core's target for the target a tap names, by the same id.
+fn core_target(target: ExemptTarget) -> Target {
+    match target {
+        ExemptTarget::Card { id } => Target::Card(id),
+        ExemptTarget::Note { id } => Target::Note(id),
+        ExemptTarget::Preset { id } => Target::Preset(id),
+    }
+}
+
+/// The adapter's refusal for the core's: each reason by its own variant, and the engine's error
+/// bytes as the engine encoded them.
+fn exempt_refusal(refusal: GestureRefusal) -> ExemptRefusal {
+    match refusal {
+        GestureRefusal::WrongKind { .. } => ExemptRefusal::WrongKind,
+        GestureRefusal::NotTheTarget { .. } => ExemptRefusal::NotTheTarget,
+        GestureRefusal::Undecodable { .. } => ExemptRefusal::Undecodable,
+        GestureRefusal::Engine { error } => ExemptRefusal::Engine { error },
     }
 }
 
