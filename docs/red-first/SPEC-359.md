@@ -207,6 +207,7 @@ A36: green at e2d01121
   reading. The other two missed mutants are argued equivalent to the reviewer and recorded nowhere:
   `LinkingConfig::off` already returns the derived default, and `id_bytes` ORs a high nibble with a
   low one, so `|` and `^` agree on every input.
+- DISCLOSE: 831eeb0 records both of those equivalents in `scripts/mutation-equivalent.d/`.
 - DISCLOSE: 4d015bf grows A27's test, `a_public_origin_that_is_not_https_refuses_start` in
   `crates/identity/tests/linking_config.rs`, by one assertion that the refusal spells the setting's
   shape as a literal, and moves that literal into `OriginText`'s `Setting` implementation in
@@ -219,3 +220,20 @@ A36: green at e2d01121
   DECKSTREAK_PUBLIC_ORIGIN is malformed: it must be an https origin: the schema, a host and an
   optional port, nothing else`, and the plant was restored byte for byte. No assertion is removed or
   loosened, and no line a red above quotes changes.
+- DISCLOSE: e43f052 adds `the_passkey_library_writes_nothing_whatever_rust_log_says` to
+  `crates/kernel/tests/logging.rs`, a test of R13 that no line of the fence names. Under five
+  `RUST_LOG` values (`trace`, each of the library's two crates at `trace`, two of its modules at
+  `trace`, and a span directive at `trace`), an `error` event under each of the library's targets
+  writes nothing, while `info` events under `logging_control` and `webauthn_rsx` write their lines.
+  With no silence in the kernel's `subscriber` it was red: `under RUST_LOG=trace` with `left:
+  ["logging_control", "webauthn_rsx", "webauthn_rs", "webauthn_rs::interface", "webauthn_rs_core",
+  "webauthn_rs_core::core"]` against `right: ["logging_control", "webauthn_rsx"]`. Fixed `off`
+  directives for the two crates in the `EnvFilter` were measured first and refused: under the module
+  values and the span value the library's events were written again, and under `trace` they
+  silenced `webauthn_rsx` too.
+- DISCLOSE: e43f052 removes `quietly`, which the A29 bullet above names, and moves A29's capture
+  into `log_capture::hold_capture` around the kernel's `logging::silence`, so A29 reads the
+  library's events as the log filters them. A29's body changes after its red commit by that capture
+  line alone; its assertions and its positive control are unchanged. A planted `webauthn_rs_core`
+  to `webauthn_rs_cora` in `SILENCED_TARGETS` turned A29 red: `the credential id reached a log line
+  from webauthn_rs_core::core`, and the plant was restored byte for byte.

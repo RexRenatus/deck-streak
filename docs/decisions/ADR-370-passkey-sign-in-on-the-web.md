@@ -164,6 +164,7 @@ redirect.
 - Folding it into `challenge_invalid`: rejected because a forged signature would read as a stale
   ceremony, which hides the attack class from the audit events.
 - Chosen: every ceremony call into the library runs under a subscriber that records nothing (`quietly` in `passkeys.rs`), because the library's core traces ceremony state and credential ids (R13), chosen against a per-target filter in the daemon's subscriber, which an operator's log filter could re-open.
+- Chosen: the passkey library's two crates are silenced in the process's one subscriber by a filter of their own (`SILENCED_TARGETS` and `silence` in `crates/kernel/src/logging.rs`), outside the `EnvFilter`, so no `RUST_LOG` reaches it, and `quietly` is removed; `crates/kernel/tests/logging.rs` measures it under five `RUST_LOG` values beside a positive control. It supersedes the line above, chosen against fixed `off` directives added to the `EnvFilter`, which a longer target or a span directive in `RUST_LOG` re-opened when measured, and against the per-call silent subscriber, which the workspace's capture guard refuses outside its helper.
 
 ## Consequences
 

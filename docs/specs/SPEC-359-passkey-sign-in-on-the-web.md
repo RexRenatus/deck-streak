@@ -269,9 +269,13 @@ Part a:
 | `crates/api/src/router.rs` | `deck-streak-api` | changed: the routes joined |
 | `crates/api/src/lib.rs` | `deck-streak-api` | changed: the module |
 | `crates/api/tests/linking_routes.rs` | `deck-streak-api` | added: A30 to A34 |
+| `crates/api/tests/insights_routes.rs` | `deck-streak-api` | changed: the state's two expected Debug tails grow by `, linking: false` (4165549) |
 | `crates/coordination/src/data_rights_registry.rs` | `deck-streak-coordination` | changed: identity's port registered |
 | `crates/coordination/tests/data_rights_symmetry.rs` | `deck-streak-coordination` | changed: seeded `passkeys` rows |
+| `crates/coordination/tests/relight_order.rs` | `deck-streak-coordination` | changed: `STATICS` grows by the registry's `IDENTITY` static (a212650) |
 | `crates/daemon/src/role_api.rs` | `deck-streak-daemon` | changed: the api role reads the public origin and builds the relying party |
+| `crates/kernel/src/logging.rs` | `deck-streak-kernel` | changed: the passkey library's targets silenced at any level, in a filter `RUST_LOG` never reaches (R13) |
+| `crates/kernel/tests/logging.rs` | `deck-streak-kernel` | changed: R13's silence measured under five `RUST_LOG` values beside a positive control |
 | `.env.example`, `deploy/deck-streak.env.example` | repo, deploy | changed: the public origin's line, unset, with no example and named by its role |
 | `privacy.json`, `PRIVACY.md` | repo, docs | changed: the `passkeys` category and its line |
 | `docs/CONTEXT-MAP.md` | docs | changed: identity's own-tables row |
