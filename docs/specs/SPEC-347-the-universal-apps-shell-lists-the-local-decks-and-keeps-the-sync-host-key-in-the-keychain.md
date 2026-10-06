@@ -446,9 +446,11 @@ Files this part changes that section 4 does not name:
 - `docs/schematics/app-shell-login-and-deck-list.md`: section 8, the app's two steps
 - `docs/red-first/SPEC-347.md`: part 2's lines
 - `changelog.d/ios-app-shell-347.md`: part 2's entry
+- `scripts/tests/test_one_static_library.py`: its planted second generator spec moves from `ios/app.yml`, which R4 makes a tracked file, to `ios/planted.yml`, a path no tree holds, with the same plants and the same refusals; at `ios/app.yml` each plant would be listed twice
 
 `scripts/tests/test_ci_workflows.py`'s new class reads the workflow through `load`, as its
 neighbours do, so it lists nothing in `NOT_WORKFLOW_READS`.
+`scripts/tests/test_ci_workflows.py` lists two sites of `scripts/tests/test_ios_app_tree.py` in `DYNAMIC_IMPORTS`, the table the read census sums with `NOT_WORKFLOW_READS`: the exception class the property-list parser raises, caught to refuse a malformed property list by name, and the split of a settings value into its scheme and host. Neither reads a file, and neither reads a workflow.
 `scripts/tests/test_ios_thin_swift.py` counts each call R11 lists in both of its spellings, the call form (`.filter(`, `.first(where:`) and the trailing closure (`.filter {` or `.filter{`, `.first {` or `.first{`), so a call counts once however it is written; a planted tree for each trailing spelling is refused by the budgets' name.
 
 Part 1's rows, which this part leaves as they are:
