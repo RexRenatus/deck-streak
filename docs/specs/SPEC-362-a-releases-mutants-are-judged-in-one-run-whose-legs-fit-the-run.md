@@ -231,3 +231,17 @@ so it has no line in the fence.
   `docs/rulings/OWNER-RULING-2026-10-06-mutation-timeout-2200.md`, on `dev` before this delivery.
 - **The ceiling reading.** The ceiling counts every job the run can generate against 256 (all jobs count). If the
   limit counts matrix jobs only, the ceiling is conservative, never too large.
+
+## Amendment: the per-mutant budget is 2300 seconds
+
+Insert-only; every earlier byte is kept. The owner's signed ruling
+`docs/rulings/OWNER-RULING-2026-10-06-mutation-timeout-2300.md` supersedes three figures of the 2200
+ruling: `--timeout` becomes 2300 at the ten places that hold the bound equal (`.github/workflows/ci.yml`,
+`.github/workflows/mutation-weekly.yml` and `BOUNDS` in `scripts/tests/_mutants_finder.py`),
+`CENSUS_SECONDS` becomes 1521 and `BASELINE_SECONDS` 2141, each held with run 37438835490. R6 and R7
+read those figures, so R7's margin is the same 1.5: a census whose 1.5 times passes 2300 (a test over
+1533 s) still reads VOID by name, never a pass. `--build-timeout 600`, each Rust leg's
+`timeout-minutes` of 360 and `SHARD_BOUND_SECONDS` of 10800 are unchanged. The pins and rows that quote
+the figures follow them (`test_memory_scope.py`, `test_dispatch_shards.py`, `test_mutation_verdict.py`,
+`test_memory_cap_verdict.py`, `test_ci_workflows.py`, and the bands S12900, S32700 and S36200), and a
+row's id keeps the figure it was named for.
