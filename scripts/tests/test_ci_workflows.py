@@ -7452,7 +7452,9 @@ APP_TESTS = "the app's tests, Debug, on the iPhone and then the iPad"
 APP_ARCHIVE = "the app, archived unsigned for a device"
 HARNESS_REPORT = "the report"
 # What the app's test step runs: the app's scheme on both simulators, one after the other, with
-# its own derived data and result bundle, code signing off, and its time written for the report.
+# its own derived data and result bundle, signed ad hoc on its command line because a simulator
+# refuses an unsigned test host the Keychain (SPEC-347 section 6), and its time written for the
+# report.
 APP_TEST_NEEDS = (
     "xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug",
     '-destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS"',
@@ -7460,7 +7462,7 @@ APP_TEST_NEEDS = (
     "-disable-concurrent-destination-testing",
     '-derivedDataPath "$RUNNER_TEMP/app-debug"',
     '-resultBundlePath "$RESULTS/app.xcresult"',
-    "CODE_SIGNING_ALLOWED=NO",
+    "CODE_SIGN_IDENTITY=-",
     '> "$REPORT/app-seconds"',
 )
 # What the app's archive step runs: a Release archive for a generic device, then the executable's
@@ -7489,11 +7491,11 @@ def app_steps_problems(workflow):
     """Each way the Apple job body could fail to build and prove the app, named (SPEC-347 R13,
     A14): the `harness` job, on the admitted runner, holds one step of each name; the harness's
     generate step keeps its one line; the app's test step opens with the app's generate line and
-    runs its scheme on both simulators with code signing off; its archive step builds Release for
-    a generic device with code signing off on its command line and reads the executable's imports
-    against the app's manifest; the two sit, in order, between the harness's last step and the
-    report, which carries their rows; no env of the job or of either step names a signing setting;
-    and no other job of the workflow names the app's spec or scheme."""
+    runs its scheme on both simulators, signed ad hoc on its command line; its archive step builds
+    Release for a generic device with code signing off on its command line and reads the
+    executable's imports against the app's manifest; the two sit, in order, between the harness's
+    last step and the report, which carries their rows; no env of the job or of either step names
+    a signing setting; and no other job of the workflow names the app's spec or scheme."""
     jobs = workflow.get("jobs") or {}
     job = jobs.get("harness") or {}
     steps = job.get("steps") or []
@@ -7666,9 +7668,9 @@ class TheAppIsGeneratedTestedAndArchived(unittest.TestCase):
                 without(APP_TESTS, APP_TEST_NEEDS[3]),
                 [f"harness: the app's test step lacks {APP_TEST_NEEDS[3]}"],
             ),
-            "signing on in the test step": (
-                without(APP_TESTS, "CODE_SIGNING_ALLOWED=NO"),
-                ["harness: the app's test step lacks CODE_SIGNING_ALLOWED=NO"],
+            "code signing off in the test step": (
+                without(APP_TESTS, "CODE_SIGN_IDENTITY=-", "CODE_SIGNING_ALLOWED=NO"),
+                ["harness: the app's test step lacks CODE_SIGN_IDENTITY=-"],
             ),
             "the harness's result bundle": (
                 without(APP_TESTS, "$RESULTS/app.xcresult", "$RESULTS/debug.xcresult"),

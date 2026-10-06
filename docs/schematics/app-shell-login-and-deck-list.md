@@ -230,7 +230,7 @@ flowchart TB
 
 | step | runs | signing | reads |
 |---|---|---|---|
-| the app's tests, Debug, on the iPhone and then the iPad | `xcodegen generate --spec ios/app.yml`, then `xcodebuild test` of the `DeckStreak` scheme on both simulators, one after the other | off on its command line | its own derived data and result bundle `app.xcresult` |
+| the app's tests, Debug, on the iPhone and then the iPad | `xcodegen generate --spec ios/app.yml`, then `xcodebuild test` of the `DeckStreak` scheme on both simulators, one after the other | ad hoc on its command line, no team (SPEC-347 section 6's fallback) | its own derived data and result bundle `app.xcresult` |
 | the app, archived unsigned for a device | `xcodebuild archive` of the `DeckStreak` scheme, Release, `generic/platform=iOS`, then `nm -u` of the archived executable | off on its command line | `ios/App/PrivacyInfo.xcprivacy`, against the categories the harness's check names |
 | the report | as before, plus the app's minutes, its test cases on each simulator and its required-reason lines | none | the app's result bundle and its symbols file |
 

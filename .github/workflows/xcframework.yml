@@ -477,6 +477,8 @@ jobs:
           raise SystemExit(1 if undeclared else 0)
           PY
       - name: the app's tests, Debug, on the iPhone and then the iPad
+        # Signed ad hoc on its command line, because a simulator refuses an unsigned test host the
+        # Keychain (SPEC-347 section 6). Never a team; the archive below stays unsigned.
         id: app-tests
         run: |
           "$RUNNER_TEMP/xcodegen/bin/xcodegen" generate --spec ios/app.yml
@@ -487,7 +489,7 @@ jobs:
             -disable-concurrent-destination-testing \
             -derivedDataPath "$RUNNER_TEMP/app-debug" \
             -resultBundlePath "$RESULTS/app.xcresult" \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGN_IDENTITY=-
           echo "$(( $(date +%s) - started ))" > "$REPORT/app-seconds"
       - name: the app, archived unsigned for a device
         # Read after a red test step too, so the archive and its imports are measured at every

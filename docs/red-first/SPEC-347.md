@@ -79,3 +79,10 @@ of run 37390492155 at 0199b22a, which pushed A14's test (ccdf350f) before the st
   required-reason category its executable imports is declared: DiskSpace (`_fstatfs`, `_statfs`)
   and FileTimestamp (`_fstat`, `_fstatat`, `_lstat`, `_stat`), none undeclared. A15 is a build,
   not a test, so the test-selection probe decides its place in the fence (SPEC-347 section 3).
+- The commit that adds this paragraph takes that fallback: the step "the app's tests, Debug, on
+  the iPhone and then the iPad" signs ad hoc on its command line (`CODE_SIGN_IDENTITY=-`, no team)
+  where it turned code signing off, and the archive stays unsigned. A14's test changes with it,
+  after A14's green: `APP_TEST_NEEDS` asks for `CODE_SIGN_IDENTITY=-` in place of
+  `CODE_SIGNING_ALLOWED=NO`, and the planted test step that turns code signing off, the step as it
+  stood before this commit, is refused for lacking the ad-hoc identity. That plant is the changed
+  assertion's red, read in the same run as its green. No other assertion of A14 changed.
