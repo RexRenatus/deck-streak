@@ -1,8 +1,9 @@
 // SPEC-349 R5, R6: the planted cards, one for every channel in the iOS table of
 // docs/schematics/card-frame-channels.md (section 4), the layers the single-layer variants remove,
 // the declared UNOBSERVABLE and DEPTH sets, and the render-proof card. Every card points only at
-// the suite's own listeners on the loopback address, or at a file the suite wrote, and every
-// request it makes carries the card's own path, so an arrival names the channel that opened.
+// the suite's own listeners on the simulator host's non-loopback address (SPEC-355 section 6), or
+// at a file the suite wrote, and every request it makes carries the card's own path, so an arrival
+// names the channel that opened.
 import Foundation
 
 @testable import CardIsolation
