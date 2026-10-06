@@ -3,6 +3,8 @@
 //!
 //! It holds no engine type, so the native tests judge exactly the rule the `wasm32` module runs.
 
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt;
 
 /// Anki's four answers, in the order of its `Rating` enum.
@@ -210,3 +212,62 @@ impl fmt::Display for StudyError {
 }
 
 impl std::error::Error for StudyError {}
+
+/// The media files the Worker read for a face, each under the name the engine stores (SPEC-350
+/// R14). The core decides every cap and type; this only hands it the bytes it asked for.
+#[derive(Debug, Default)]
+pub struct Files {
+    by_name: HashMap<String, Vec<u8>>,
+}
+
+impl Files {
+    /// The files read, by name.
+    pub fn new(files: impl IntoIterator<Item = (String, Vec<u8>)>) -> Self {
+        Self {
+            by_name: files.into_iter().collect(),
+        }
+    }
+
+    /// The first `limit` bytes of `name` at most, or `None` when no file of that name was read.
+    #[must_use]
+    pub fn read(&self, name: &str, limit: u64) -> Option<Vec<u8>> {
+        let _ = limit;
+        self.by_name.get(name).cloned()
+    }
+}
+
+/// The core's reader over [`Files`] for one face call: it answers from the files, and records
+/// each name the core asked for that the files lack, with the limit asked, so the Worker can read
+/// those names and ask again (SPEC-350 R14, ADR-361 D12).
+#[derive(Debug)]
+pub struct Wanted<'a> {
+    files: &'a Files,
+    asked: RefCell<Vec<(String, u64)>>,
+}
+
+impl<'a> Wanted<'a> {
+    /// A reader over `files` that has recorded nothing yet.
+    #[must_use]
+    pub fn new(files: &'a Files) -> Self {
+        Self {
+            files,
+            asked: RefCell::new(Vec::new()),
+        }
+    }
+
+    /// The core's ask for `name`: the file's first `limit` bytes, or `None` and a record of it.
+    #[must_use]
+    pub fn ask(&self, name: &str, limit: u64) -> Option<Vec<u8>> {
+        let read = self.files.read(name, limit);
+        if read.is_none() {
+            self.asked.borrow_mut().push((name.to_owned(), limit));
+        }
+        read
+    }
+
+    /// Each name the core asked for and the files lacked, with its limit, in the order asked.
+    #[must_use]
+    pub fn into_names(self) -> Vec<(String, u64)> {
+        self.asked.into_inner()
+    }
+}

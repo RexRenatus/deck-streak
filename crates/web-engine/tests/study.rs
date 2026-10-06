@@ -5,8 +5,8 @@
 #![allow(clippy::print_stdout)]
 
 use deck_streak_web_engine::study::{
-    Answer, BuryOf, STUDY_CALLS, Shown, StudyError, admit, bury_of, engine_languages, service,
-    shown_for, toggled_red,
+    Answer, BuryOf, Files, STUDY_CALLS, Shown, StudyError, Wanted, admit, bury_of,
+    engine_languages, service, shown_for, toggled_red,
 };
 
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
@@ -231,4 +231,34 @@ fn the_engine_speaks_english_when_no_language_is_given() {
         engine_languages(vec!["ja".to_owned(), "en".to_owned()]),
         vec!["ja".to_owned(), "en".to_owned()]
     );
+}
+
+#[test]
+fn each_name_the_core_asks_for_is_wanted_once() {
+    // SPEC-350 R14: a name the files lack is wanted once, with the limit the core asked for; a
+    // name the files hold is answered and not wanted.
+    let files = Files::new([("kept.png".to_owned(), vec![1, 2, 3])]);
+    let wanted = Wanted::new(&files);
+    assert_eq!(wanted.ask("cat.mp3", 9), None);
+    assert_eq!(wanted.ask("cat.mp3", 9), None);
+    assert_eq!(wanted.ask("kept.png", 9), Some(vec![1, 2, 3]));
+    assert_eq!(wanted.ask("dog.ogg", 7), None);
+    assert_eq!(
+        wanted.into_names(),
+        vec![("cat.mp3".to_owned(), 9), ("dog.ogg".to_owned(), 7)]
+    );
+}
+
+#[test]
+fn a_file_is_read_no_further_than_its_limit() {
+    // SPEC-350 R14: the core asks for one byte past its cap and decides on the length it reads.
+    let files = Files::new([
+        ("long.wav".to_owned(), vec![1, 2, 3, 4, 5]),
+        ("short.wav".to_owned(), vec![6]),
+    ]);
+    assert_eq!(files.read("long.wav", 3), Some(vec![1, 2, 3]));
+    assert_eq!(files.read("long.wav", 0), Some(vec![]));
+    assert_eq!(files.read("short.wav", 3), Some(vec![6]));
+    assert_eq!(files.read("long.wav", u64::MAX), Some(vec![1, 2, 3, 4, 5]));
+    assert_eq!(files.read("absent.wav", 3), None);
 }
