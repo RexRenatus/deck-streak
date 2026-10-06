@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM passkeys WHERE id = ?1 AND telegram_user_id = ?2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "934ac804b0b336c6a8664026783326e8312ded7fd2501a441c3b42721047cb73"
+}

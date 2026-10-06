@@ -13,14 +13,24 @@
 //! The API mounts the routes. Nothing here is written to disk (ADR-024): the owner's id and a key
 //! derived from the bot token live in memory, and a session is kept as the SHA-256 of its id.
 //!
+//! SPEC-359 links passkeys to the owner's Telegram account for sign-in on the web: the public
+//! origin that turns linking on ([`linking_config`]), the link code and the owner's methods
+//! ([`linking`]), the passkey ceremonies, the counter rule and the `passkeys` table ([`passkeys`]),
+//! and that table's data rights ([`data_rights`]). A ceremony's state stays in memory and is never
+//! serialized; the table holds the owner's registered credentials alone (ADR-370).
+//!
 //! The context map (docs/CONTEXT-MAP.md) is binding: this crate depends only on what its line
 //! there declares, and a new edge is an ADR, never a fix to make code compile.
 #![forbid(unsafe_code)]
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
 
+pub mod data_rights;
 pub mod init_data;
+pub mod linking;
+pub mod linking_config;
 pub mod owner;
+pub mod passkeys;
 pub mod session;
 pub mod settings;
 
@@ -28,9 +38,15 @@ use axum::http::StatusCode;
 use axum::http::header::CONTENT_TYPE;
 use axum::response::{IntoResponse, Response};
 
+pub use data_rights::IdentityDataRights;
 pub use init_data::{Caller, WebAppKey, validate};
+pub use linking::{LinkCode, LinkCodes, Method};
+pub use linking_config::{LinkingConfig, RelyingParty};
 pub use owner::{IdentityError, Owner, OwnerGate};
-pub use session::{OwnerSession, SessionError, SessionToken, Sessions};
+pub use passkeys::{Ceremonies, FlowId, PasskeyError, Passkeys, SignedIn, Started};
+pub use session::{
+    FreshTelegramSession, LinkSession, OwnerSession, Proof, SessionError, SessionToken, Sessions,
+};
 pub use settings::Freshness;
 
 /// Why identity refused a request. A refusal carries one reason code, which is what the log and
@@ -47,6 +63,35 @@ pub enum Refusal {
     NotOwner,
     /// The request's cookie names no live session.
     NoSession,
+    /// The route needs a Telegram session whose handshake is at most five minutes old (SPEC-359
+    /// R3, R9).
+    ReauthRequired,
+    /// The link code is unknown, already redeemed or evicted (SPEC-359 R3).
+    LinkCodeInvalid,
+    /// The link code outlived its ten minutes (SPEC-359 R3).
+    LinkCodeExpired,
+    /// The ceremony is unknown, already used, evicted or another session's (SPEC-359 R7, R8).
+    ChallengeInvalid,
+    /// The ceremony outlived its five minutes (SPEC-359 R7).
+    ChallengeExpired,
+    /// The response names another origin or relying party (SPEC-359 R8).
+    OriginMismatch,
+    /// The response carries no user verification (SPEC-359 R8).
+    UvRequired,
+    /// The response's signature or shape does not verify (SPEC-359 R8).
+    PasskeyInvalid,
+    /// No passkey is held, or the credential is not one of the owner's (SPEC-359 R6).
+    NotLinked,
+    /// The assertion's counter does not advance the stored one (SPEC-359 R8).
+    CounterRegressed,
+    /// The credential is already registered (SPEC-359 R5).
+    AlreadyLinked,
+    /// The method is the account's last way in: Telegram, the primary (SPEC-359 R9).
+    LastMethod,
+    /// No public origin is configured, so linking is off (SPEC-359 R1).
+    LinkingOff,
+    /// No method has that id (SPEC-359 R9).
+    IdentityUnknown,
 }
 
 impl Refusal {
@@ -58,6 +103,20 @@ impl Refusal {
             Self::InitDataStale => "init_data_stale",
             Self::NotOwner => "not_owner",
             Self::NoSession => "no_session",
+            Self::ReauthRequired => "reauth_required",
+            Self::LinkCodeInvalid => "link_code_invalid",
+            Self::LinkCodeExpired => "link_code_expired",
+            Self::ChallengeInvalid => "challenge_invalid",
+            Self::ChallengeExpired => "challenge_expired",
+            Self::OriginMismatch => "origin_mismatch",
+            Self::UvRequired => "uv_required",
+            Self::PasskeyInvalid => "passkey_invalid",
+            Self::NotLinked => "not_linked",
+            Self::CounterRegressed => "counter_regressed",
+            Self::AlreadyLinked => "already_linked",
+            Self::LastMethod => "last_method",
+            Self::LinkingOff => "linking_off",
+            Self::IdentityUnknown => "identity_unknown",
         }
     }
 
@@ -70,6 +129,20 @@ impl Refusal {
                 StatusCode::UNAUTHORIZED
             }
             Self::NotOwner => StatusCode::FORBIDDEN,
+            Self::ReauthRequired
+            | Self::LinkCodeInvalid
+            | Self::LinkCodeExpired
+            | Self::ChallengeInvalid
+            | Self::ChallengeExpired
+            | Self::OriginMismatch
+            | Self::UvRequired
+            | Self::PasskeyInvalid
+            | Self::NotLinked
+            | Self::CounterRegressed
+            | Self::AlreadyLinked
+            | Self::LastMethod
+            | Self::LinkingOff
+            | Self::IdentityUnknown => StatusCode::BAD_REQUEST,
         }
     }
 }
