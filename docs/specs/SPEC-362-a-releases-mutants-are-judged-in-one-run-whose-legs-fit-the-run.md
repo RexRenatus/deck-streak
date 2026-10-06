@@ -7,8 +7,8 @@
   limit, bounded by the run's job budget, with the per-mutant timeout covering the census).
 - **Status:** delivered by the pull request that adds this file, with its tests and
   `docs/red-first/SPEC-362.md`. **Mutation band:** S36200-S36299. **Model:**
-  `formal/tla/EveryLegCounted`. Amends SPEC-039 R18, SPEC-129 R4 and SPEC-327 R2 and R8, each by
-  an amendment line in its own file. The per-mutant budget and the leg's 360 minutes are the
+  `formal/tla/EveryLegCounted`. Amends SPEC-039 R18, SPEC-129 R4 and SPEC-327 R2, R7 and R8, each by
+  an amendment line in its own file; it retires SPEC-129 A2 in SPEC-056 R14's shape. The per-mutant budget and the leg's 360 minutes are the
   owner's signed ruling, `docs/rulings/OWNER-RULING-2026-10-06-mutation-timeout-2200.md`.
 
 ## 1. The problem, measured
@@ -173,8 +173,10 @@ by a unittest, so it has no line in the fence.
 | `RELEASING.md` | release | changed: R12 |
 | `docs/schematics/mutation-testing.md` | docs | changed: the plan, legs, verdict and `ci` as drawn in this SPEC's schematic |
 | `docs/specs/SPEC-039-every-change-proves-its-tests-kill-its-mutants.md` | docs | amended: R18's bound and ceiling |
-| `docs/specs/SPEC-129-a-package-dispatch-is-sharded-by-its-projected-weight.md` | docs | amended: R4 |
-| `docs/specs/SPEC-327-the-mutation-budget-covers-the-settle-census.md` | docs | amended: R2's need, R8 |
+| `docs/specs/SPEC-056-every-pack-is-judged-on-the-box-and-nothing-of-the-hub-is-published.md` | docs | amended: section 7's row of A2, section 10 |
+| `docs/red-first/SPEC-129.md` | docs | changed: A2's lines in a retired fence |
+| `docs/specs/SPEC-129-a-package-dispatch-is-sharded-by-its-projected-weight.md` | docs | amended: R4; A2 retired (section 14) |
+| `docs/specs/SPEC-327-the-mutation-budget-covers-the-settle-census.md` | docs | amended: R2's need, R7, R8 |
 | `changelog.d/release-legs-362.md` | release | added |
 
 ## 5. What this does NOT do

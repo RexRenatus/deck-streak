@@ -79,7 +79,7 @@ times than it is listed is a failure. The delivery adds no second check of it.
 | id | criterion | decided by |
 |---|---|---|
 | A1 | a fixture listing of a small package sizes to 1, larger ones to the fewest shards within the bound, the count equals `shards`' on the same listing, a projection past the limit is refused with its projection and writes nothing, and an empty or unreadable listing is sized to 1 or VOID | `test_dispatch_shards.py` `TheDispatchIsSizedFromItsListing` |
-| A2 | with no package `size` reads no listing and writes 32 and the matrix 0 to 31 | `test_dispatch_shards.py` `TheWholeTreeKeepsThirtyTwo` |
+| ~~A2~~ | with no package `size` reads no listing and writes 32 and the matrix 0 to 31 | `test_dispatch_shards.py` `TheWholeTreeKeepsThirtyTwo` |
 | A3 | the rust matrix, its `--shard` argument and the battery's `--shards` read the size job's one count, no fixed count remains, and a plant that puts 32 back into any of the three goes red | `test_dispatch_shards.py` `TheWorkflowReadsTheOneCount` |
 | A4 | a report set beyond n fails the battery as `FOREIGN` and a set of exactly n passes | `test_dispatch_shards.py` `TheBatteryRefusesAForeignShardCount` |
 | A5 | the sized shards' mutants are the same set, and the same count, as the 32 shards' | `test_dispatch_shards.py` `TheExaminedTotalIsTheListing` |
@@ -88,7 +88,11 @@ times than it is listed is a failure. The delivery adds no second check of it.
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_small_package_takes_one_shard_and_a_large_one_the_fewest_within_the_bound
 A1: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_projection_past_the_limit_is_refused_with_its_projection_never_capped
+```
+```retired
 A2: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_no_package_is_thirty_two_shards_whatever_the_listing
+```
+```acceptance
 A3: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_matrix_the_argument_and_the_battery_read_the_sized_count
 A3: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_plant_that_puts_the_fixed_count_back_goes_red
 A4: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_a_report_beyond_the_count_fails_the_battery
@@ -659,3 +663,20 @@ A27: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py
 A27: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_a_literal_copy_of_each_finder_function_under_another_name_is_caught
 A28: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_a_copy_with_changed_logic_is_caught_only_under_the_finders_name
 ```
+
+## 14. Amendment: SPEC-362 retires A2
+
+Made by SPEC-362, insert-only: every earlier byte is kept in order. It inserts:
+
+- section 3: `~~` around A2 in the criteria table, so the table no longer states it;
+- section 3: the fence lines that set A2 apart in a `` ```retired `` fence between A1 and A3,
+  splitting the acceptance fence where its line stood;
+- this section.
+
+The retired criterion, why its subject is gone, and what judges it now:
+
+- A2 (with no package `size` reads no listing and writes 32 and the matrix 0 to 31): SPEC-362 R11
+  retired `WHOLE_SHARDS`, so a whole-tree dispatch is no longer a fixed 32 shards and the test
+  `TheWholeTreeKeepsThirtyTwo.test_no_package_is_thirty_two_shards_whatever_the_listing` is gone.
+- Its three inputs live on in SPEC-362 A10, `test_the_whole_tree_is_sized_from_its_listing`, which
+  sizes the whole tree from its listing instead.

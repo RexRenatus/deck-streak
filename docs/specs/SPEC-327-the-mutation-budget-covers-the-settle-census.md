@@ -79,6 +79,8 @@ R6. Rows S12904 to S12909, whose finds hold the weekly legs' `--timeout 300`, ar
 R7. The census's two tests run for every mutant of `deck-streak-progression` exactly as at the base.
     No nextest filter or profile, `.cargo/mutants.toml` key, skip attribute or test-name filter is
     added, and no file under `crates/` changes.
+    Amended by SPEC-362 (R9): `.config/nextest.toml` gains a `mutants` profile that every
+    cargo-mutants command runs nextest under. No filter is added by it and no test is skipped.
 R8. The weekly battery's whole-tree shard count stays `WHOLE_SHARDS = 32` (SPEC-129 R4, row
     S12903).
     Amended by SPEC-362 (R11): `WHOLE_SHARDS` is retired. The battery sizes the whole tree from its
