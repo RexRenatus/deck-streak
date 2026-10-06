@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -258,7 +259,8 @@ class TheWeeklyBattery(unittest.TestCase):
         found = jobs(text)
         rust = found.get("rust", "")
         # The legs are the sized matrix and the denominator is the size step's own count
-        # (SPEC-129 R4); a scheduled run and a dispatch with no package size to 32.
+        # (SPEC-129 R4); a scheduled run and a dispatch with no package are sized from the whole
+        # workspace's listing at the battery run's ceiling (SPEC-362 R11).
         self.assertRegex(rust, r"(?m)^\s+SHARDS: \$\{\{ needs\.size\.outputs\.shards \}\}$")
         self.assertIn('--shard "$SHARD/$SHARDS"', rust)
         self.assertIn("shard: ${{ fromJSON(needs.size.outputs.matrix) }}", rust)
@@ -984,6 +986,31 @@ class CargoMutantsRunsTheGatesTestTool(unittest.TestCase):
                 r"(?m)^\s*tool: cargo-nextest@0\.9\.146$",
                 f"{workflow_name}:{name} runs cargo-mutants without the nextest it names",
             )
+
+
+class EveryMutationCommandRunsTheMutantsProfile(unittest.TestCase):
+    def test_every_mutation_command_runs_the_mutants_profile(self):
+        # A caught mutant stops at its first failing test, and one no test kills still runs every
+        # test (SPEC-362 R9): every cargo-mutants command reads .cargo/mutants.toml, which runs
+        # nextest under the profile .config/nextest.toml declares, and no command turns it off.
+        nextest = REPO / ".config" / "nextest.toml"
+        self.assertTrue(nextest.is_file(), ".config/nextest.toml does not exist")
+        profiles = tomllib.loads(nextest.read_text(encoding="utf-8")).get("profile", {})
+        self.assertEqual(
+            profiles.get("mutants", {}).get("fail-fast"),
+            {"max-fail": 1, "terminate": "immediate"},
+        )
+        config = tomllib.loads((REPO / ".cargo" / "mutants.toml").read_text(encoding="utf-8"))
+        self.assertEqual(config.get("test_tool"), "nextest")
+        self.assertEqual(config.get("additional_cargo_test_args"), ["--profile", "mutants"])
+        commands = [
+            (name, command)
+            for name, command in mutants_commands(WORKFLOWS)
+            if name in (CI.name, WEEKLY.name)
+        ]
+        for name, command in examined("cargo-mutants commands of ci and the battery", commands):
+            for flag in ("--no-config", "--test-tool", "--cargo-test-arg"):
+                self.assertNotIn(flag, command, f"{name}: {command}")
 
 
 # --------------------------------------------------------------------------- SPEC-057

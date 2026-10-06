@@ -259,3 +259,154 @@ flowchart TD
 | `baseline_seconds` | the listing's packages, as a set | 371 plus each named package's term once; rows S32702 and S32703 |
 | `shards` and `size` | the computed baseline, into `fewest_shards` and `projected` | the pull request's plan and the package dispatch both pay it; row S32704 |
 | every `cargo mutants` command | `--timeout 1200 --build-timeout 600` | `BOUNDS` and the byte pins hold each command to it; rows S12904 to S12909 and S32705 |
+
+## 8. A release's mutants in one run of legs (SPEC-362, ADR-373)
+
+Schematic for SPEC-362 and ADR-373 (rows band S36200-S36299). It draws the data flow of a pull
+request's Rust mutants, the release pull request's included, and of the scheduled battery, as the
+build leaves them. Names are the jobs, artifacts and files the workflows write; section 8.4 cites
+each step by `path:line`. Where sections 1, 2, 4 and 7 name the bound of an hour, the 120-minute
+leg, the 32 whole-tree legs, `--timeout 1200` or a census of 788 s, this section supersedes them.
+
+### 8.1 A pull request's run, the release's included
+
+```mermaid
+flowchart TD
+    EV["pull_request into dev or main<br/>(the merge ref; a release's head is dev)"] --> PLAN
+
+    subgraph PLAN["job mutation-plan"]
+        D["git diff HEAD^1...HEAD<br/>-> git.diff"] --> L["cargo mutants --list --json --in-diff git.diff<br/>-> listed.json (the population)"]
+        L --> S["mutation-verdict.py shards<br/>fewest round-robin legs whose slowest is projected<br/>within SHARD_BOUND_SECONDS (half the leg's timeout)"]
+        S --> C{"legs N within<br/>LEG_CEILING for ci.yml?"}
+        C -- "no" --> R["REFUSED, whole: count, ceiling, projection<br/>(never capped)"]
+        C -- "yes" --> P["plan.json: legs 0..N-1, each its mutants<br/>prints: legs N of ceiling C"]
+    end
+
+    P --> ART1[("artifact mutation-plan<br/>git.diff, listed.json, plan.json")]
+    R --> ART1
+
+    ART1 --> M
+
+    subgraph M["job mutation-rust, matrix leg = 0..N-1 (one run)"]
+        LEG["leg k: cargo mutants --in-place --in-diff git.diff<br/>--sharding round-robin --shard k/N<br/>--timeout from the census; nextest profile mutants"]
+        LEG --> B["baseline: the leg's tests, unmutated<br/>(log: its slowest test)"]
+        B --> MU["each mutant: build, then tests until the first failure<br/>caught / missed / timeout / unviable"]
+        MU --> O["mutants.out: outcomes.json, logs"]
+    end
+
+    O --> ART2[("artifact mutation-rust-shard-k<br/>one per leg, latest attempt")]
+
+    ART1 --> V
+    ART2 --> V
+
+    subgraph V["job mutation-verdict (if: always())"]
+        V1["the population is listed.json:<br/>plan's legs hold each listed mutant once, else VOID"]
+        V2["every planned leg 0..N-1:<br/>no report or a partial one is VOID by name"]
+        V3["each leg: 1.5 x its slowest baseline test<br/>within the per-mutant timeout, else VOID"]
+        V4["reports hold each listed mutant once:<br/>in two legs FAIL, in none VOID"]
+        V5["judge: a missed mutant FAILS; caught, timeout<br/>and unviable are examined"]
+        V1 --> V2 --> V3 --> V4 --> V5
+    end
+
+    V5 --> CI{"job ci (if: always())<br/>needs every job, the verdict included"}
+    CI -- "every need success" --> OK["required check ci: success"]
+    CI -- "any other result" --> NO["required check ci: failure"]
+
+    NO -. "a leg VOID from a runner shutdown:<br/>Re-run failed jobs" .-> M
+```
+
+Reading it:
+
+- One run holds every leg. `LEG_CEILING` is 256 less the most jobs the run's other jobs can
+  generate, so the plan never asks for a matrix the run cannot start.
+- The plan's legs come from the tool's listing, and the verdict checks them against that listing,
+  so a sizing defect cannot shrink the population the verdict judges.
+- A leg that never reports is VOID because the verdict walks the plan's legs, never the artifacts
+  that arrived.
+- A push to `dev` while a release pull request's run is in flight starts a new run on the new head
+  and cancels this one (the workflow's concurrency group): the cancelled run decides nothing.
+
+### 8.2 The scheduled battery
+
+```mermaid
+flowchart TD
+    T["schedule (the default branch's workflow) or dispatch<br/>checks out dev"] --> SZ
+
+    subgraph SZ["job size"]
+        WL["cargo mutants --list --json (no diff)<br/>-> the whole tree's listing"] --> WS["the same sizing as shards,<br/>at mutation-weekly.yml's ceiling"]
+        WS --> WC{"legs within the battery's ceiling?"}
+        WC -- "no" --> WR["REFUSED, whole, by name"]
+        WC -- "yes" --> WP["plan: legs 0..N-1"]
+    end
+
+    WP --> WM["job rust legs 0..N-1<br/>the same leg command, no --in-diff"]
+    WM --> WA[("artifact per leg")]
+    WA --> BV["BATTERY: every planned leg counted;<br/>the listing is the population"]
+    BV --> SV["survivors: each surviving mutant filed once"]
+```
+
+The battery's legs were a fixed 32. They are sized from the listing like any diff's, so the
+battery judges the whole tree at the bound every leg can hold, and refuses by name when the tree
+outgrows the ceiling.
+
+### 8.3 A leg's report, as the verdict reads it
+
+```mermaid
+stateDiagram-v2
+    [*] --> Running: the matrix starts leg k
+    Running --> Whole: every dealt mutant has an outcome
+    Running --> Partial: timeout or shutdown after some outcomes
+    Running --> None: shutdown before any upload
+    Whole --> Counted: the verdict reads it
+    Partial --> Void: VOID by name
+    None --> Void: VOID by name
+    Void --> Running: Re-run failed jobs (a new attempt of leg k)
+    Counted --> [*]
+```
+
+An artifact's name is unique in its run, and the leg's upload sets no `overwrite`, whose default
+refuses a name the run already holds; the verdict downloads `mutation-rust-shard-*` with
+`merge-multiple: true`. So a re-run attempt's upload does not replace what an earlier attempt of
+leg k stored, and the verdict reads whichever report the store holds for each leg. The TLA+ entry
+`formal/tla/EveryLegCounted` lets the verdict read any stored attempt, so its two properties hold
+under either reading of a re-run's upload.
+
+### 8.4 Where each step lives
+
+Read at this delivery's `039b003c`; the documents committed after it change none of the files
+cited. A line moves with any edit above it, so search by the item named beside it after that.
+
+| step | `path:line` |
+|---|---|
+| the run's concurrency group: a push to `dev` cancels a release pull request's run in flight | `.github/workflows/ci.yml:25-27` |
+| job `mutation-plan` | `.github/workflows/ci.yml:374` |
+| the diff's listing, `listed.json`, the population | `.github/workflows/ci.yml:417` |
+| the whole tree's listing, `whole.json` | `.github/workflows/ci.yml:423` |
+| `mutation-verdict.py shards` | `.github/workflows/ci.yml:432` |
+| artifact `mutation-plan` | `.github/workflows/ci.yml:437` |
+| `SECONDS_PER_MUTANT`, `BASELINE_SECONDS`, `CENSUS_SECONDS` | `scripts/mutation-verdict.py:849`, `:866`, `:872` |
+| `SHARD_BOUND_SECONDS`, `LEG_CEILING` | `scripts/mutation-verdict.py:876`, `:879` |
+| `MUTANT_TIMEOUT_SECONDS`, `TIMEOUT_MARGIN` | `scripts/mutation-verdict.py:882`, `:883` |
+| `fewest_shards`: the fewest legs within the bound, up to the ceiling | `scripts/mutation-verdict.py:911` |
+| `shards`: sized at the `ci` ceiling, its refusal, its headroom line | `scripts/mutation-verdict.py:1008`, `:1044`, `:1045`, `:1077-1081` |
+| job `mutation-rust`, its `timeout-minutes: 360`, its matrix of legs | `.github/workflows/ci.yml:445`, `:449`, `:453` |
+| leg k's `cargo mutants` command | `.github/workflows/ci.yml:514` |
+| nextest's `mutants` profile, which stops at the first failure | `.config/nextest.toml:8-9` |
+| cargo-mutants runs nextest under that profile | `.cargo/mutants.toml:17`, `:23` |
+| artifact `mutation-rust-shard-k`, no `overwrite` | `.github/workflows/ci.yml:521` |
+| job `mutation-verdict`, `if: always()` | `.github/workflows/ci.yml:644-646` |
+| the legs' download, `merge-multiple` | `.github/workflows/ci.yml:672-673` |
+| `judge --class rust` | `.github/workflows/ci.yml:687` |
+| `judge_rust` | `scripts/mutation-verdict.py:1389` |
+| `whole_reports`, walking the plan's legs 0..N-1 | `scripts/mutation-verdict.py:1218`, `:1234` |
+| R7: `baseline_void`, read for each whole leg | `scripts/mutation-verdict.py:1315`, `:1419-1422` |
+| R8: `population_gaps`, the listing as the population | `scripts/mutation-verdict.py:1368`, `:1423` |
+| `partition`: each listed mutant tested once | `scripts/mutation-verdict.py:1264`, `:1465` |
+| `examined_sum` | `scripts/mutation-verdict.py:1293`, `:1468` |
+| job `ci`, `if: always()`, needing every job | `.github/workflows/ci.yml:873-876` |
+| the battery's job `size`, and its `mutation-verdict.py size` | `.github/workflows/mutation-weekly.yml:61`, `:99` |
+| `size`: the battery's ceiling, its refusal, its headroom line | `scripts/mutation-verdict.py:925`, `:930`, `:943`, `:956` |
+| the battery's job `rust`, its `timeout-minutes: 360`, its matrix, its two leg commands | `.github/workflows/mutation-weekly.yml:108`, `:112`, `:116`, `:172`, `:174` |
+| the battery's verdict | `.github/workflows/mutation-weekly.yml:395`; `scripts/mutation-verdict.py:2109` |
+| the model of the legs and the verdict | `formal/tla/EveryLegCounted/EveryLegCounted.tla` |
+| the rows that pin each new constant and check | `scripts/mutation-rows.d/S36200-S36299.json` |

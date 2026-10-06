@@ -1,0 +1,102 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S36200-THE-LEG-BOUND-IS-HALF-OF-ITS-JOBS-TIMEOUT",
+        "scripts/mutation-verdict.py",
+        "SHARD_BOUND_SECONDS = 10800",
+        "SHARD_BOUND_SECONDS = 10801",
+        "a leg's projected bound is half of its job's timeout-minutes, in seconds (SPEC-362 R2)",
+        "test_dispatch_shards.TheReleaseFitsOneRun.test_the_bound_is_half_of_every_legs_timeout"
+      ],
+      [
+        "S36201-THE-PULL-REQUEST-CEILING-IS-ITS-RUNS-JOB-BUDGET",
+        "scripts/mutation-verdict.py",
+        "\"ci\": 209",
+        "\"ci\": 210",
+        "the pull request run's leg ceiling is 256 less what ci.yml's other jobs can generate (SPEC-362 R3)",
+        "test_dispatch_shards.TheReleaseFitsOneRun.test_the_ceiling_is_the_runs_job_budget"
+      ],
+      [
+        "S36202-THE-BATTERY-CEILING-IS-ITS-RUNS-JOB-BUDGET",
+        "scripts/mutation-verdict.py",
+        "\"battery\": 234",
+        "\"battery\": 235",
+        "the battery run's leg ceiling is 256 less what the weekly workflow's other jobs can generate (SPEC-362 R3)",
+        "test_dispatch_shards.TheReleaseFitsOneRun.test_the_ceiling_is_the_runs_job_budget"
+      ],
+      [
+        "S36203-A-LISTING-PAST-THE-CEILING-IS-REFUSED-WHOLE",
+        "scripts/mutation-verdict.py",
+        "range(1, ceiling + 1)",
+        "range(1, ceiling + 2)",
+        "the sizer tries no leg count past the run's ceiling, so a listing beyond it is refused whole (SPEC-362 R3)",
+        "test_dispatch_shards.TheReleaseFitsOneRun.test_a_listing_beyond_the_ceiling_is_refused_whole"
+      ],
+      [
+        "S36204-THE-CENSUS-TERM-IS-THE-MEASURED-1430",
+        "scripts/mutation-verdict.py",
+        "\"deck-streak-progression\": 1430",
+        "\"deck-streak-progression\": 1429",
+        "the census term is the slowest measured census test plus its start (SPEC-362 R6)",
+        "test_dispatch_shards.TheGatesTimeoutCoversTheCensus.test_the_gates_timeout_covers_the_census_with_its_margin"
+      ],
+      [
+        "S36205-THE-PULL-REQUEST-LEG-KEEPS-THE-2200-SECOND-BUDGET",
+        ".github/workflows/ci.yml",
+        "--shard \"$SHARD/$SHARDS\" --timeout 2200 --build-timeout 600 --output \"$out\"",
+        "--shard \"$SHARD/$SHARDS\" --timeout 2100 --build-timeout 600 --output \"$out\"",
+        "each pull request leg's per-mutant timeout is the census times 1.5, rounded up to the hundred (SPEC-362 R6)",
+        "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
+      ],
+      [
+        "S36206-THE-PULL-REQUEST-LEG-RUNS-SIX-HOURS",
+        ".github/workflows/ci.yml",
+        "    timeout-minutes: 360\n",
+        "    timeout-minutes: 359\n",
+        "each pull request leg's job declares the 360 minutes a hosted job runs (SPEC-362 R2)",
+        "test_dispatch_shards.TheReleaseFitsOneRun.test_the_bound_is_half_of_every_legs_timeout"
+      ],
+      [
+        "S36207-A-LEGS-SLOWEST-TEST-KEEPS-ITS-MARGIN",
+        "scripts/mutation-verdict.py",
+        "TIMEOUT_MARGIN * slowest",
+        "1.0 * slowest",
+        "a leg is VOID when 1.5 times its slowest baseline test passes the per-mutant timeout (SPEC-362 R7)",
+        "test_mutation_verdict.ALegProvesItsTimeoutCoversItsTests.test_a_leg_whose_slowest_test_outgrows_the_timeout_is_void"
+      ],
+      [
+        "S36208-THE-LISTING-IS-THE-POPULATION",
+        "scripts/mutation-verdict.py",
+        "wanted = Counter(str(entry.get(\"name\")) for entry in listed)",
+        "wanted = Counter(dealt)",
+        "the plan's legs are held to the tool's own listing, never to themselves (SPEC-362 R8)",
+        "test_mutation_verdict.TheListingIsThePopulation.test_a_plan_that_does_not_partition_the_listing_is_void"
+      ],
+      [
+        "S36209-EVERY-PLANNED-LEG-IS-COUNTED",
+        "scripts/mutation-verdict.py",
+        "        for shard in range(len(planned)):\n",
+        "        for shard in sorted(int(p.name.rsplit(\"-\", 1)[1]) for p in root.glob(\"mutation-rust-shard-*\")):\n",
+        "the verdict walks every planned leg from 0 to n-1, never only the reports that arrived (SPEC-362 R8)",
+        "test_mutation_verdict.TheListingIsThePopulation.test_a_planned_leg_with_no_report_is_void"
+      ],
+      [
+        "S36210-A-CAUGHT-MUTANT-STOPS-AT-ITS-FIRST-FAILURE",
+        ".config/nextest.toml",
+        "max-fail = 1, terminate = \"immediate\" }",
+        "max-fail = 1, terminate = \"wait\" }",
+        "the mutants profile ends a mutant's test run at its first failure (SPEC-362 R9)",
+        "test_mutation_workflows.EveryMutationCommandRunsTheMutantsProfile.test_every_mutation_command_runs_the_mutants_profile"
+      ],
+      [
+        "S36211-THE-WHOLE-TREE-IS-SIZED-FROM-ITS-LISTING",
+        "scripts/mutation-verdict.py",
+        "    if package == MINIAPP:\n        count, note = 1,",
+        "    if package in (None, \"\", MINIAPP):\n        count, note = 1,",
+        "only the Mini App's dispatch is one leg; the whole tree is sized from its listing (SPEC-362 R11)",
+        "test_dispatch_shards.TheReleaseFitsOneRun.test_the_whole_tree_is_sized_from_its_listing"
+      ]
+    ]
+  }
+}

@@ -1,9 +1,9 @@
 name: mutation-weekly
 
 # The weekly full-repository mutation battery (SPEC-039 R12, ADR-057 D7): cargo-mutants over the
-# whole workspace in 32 round-robin shards, StrykerJS over the whole Mini App, the repository's own
-# Python whole in 16 round-robin shards (SPEC-087), and every hand-proved row, over dev, on
-# GitHub-hosted runners. Each file with a surviving mutant becomes one
+# whole workspace in the round-robin shards its own listing sizes (SPEC-362), StrykerJS over the
+# whole Mini App, the repository's own Python whole in 16 round-robin shards (SPEC-087), and every
+# hand-proved row, over dev, on GitHub-hosted runners. Each file with a surviving mutant becomes one
 # issue, deduplicated by title against the open issues and scrubbed before it is filed; a mutant the
 # equivalence record excuses is drafted as none (SPEC-057 R12).
 #
@@ -51,11 +51,13 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # The number of legs the rust job runs (SPEC-129): a dispatch that names a package lists that
-  # package's mutants with the listing job's command, builds nothing, and takes the fewest
-  # round-robin shards whose slowest the per-pull-request plan's projection puts within its bound;
-  # a scheduled run and a dispatch with no package take 32. The legs and the survivors' battery read
-  # this one count, so the mutants, the timeouts and the test tool are the 32-leg sweep's.
+  # The number of legs the rust job runs (SPEC-129, SPEC-362 R11): every run but the Mini App's
+  # lists its mutants with the listing job's command, the whole workspace or the one package a
+  # dispatch names, builds nothing, and takes the fewest round-robin shards whose slowest the
+  # per-pull-request plan's projection puts within its bound, at most the battery run's ceiling; a
+  # listing that needs more is refused whole, never capped. A Mini App dispatch takes 1 and lists
+  # nothing. The legs and the survivors' battery read this one count, so the mutants, the timeouts
+  # and the test tool are the sized sweep's.
   size:
     if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-24.04
@@ -71,26 +73,26 @@ jobs:
           ref: ${{ github.event_name == 'schedule' && 'dev' || github.ref }}
           persist-credentials: false
       - name: the pinned Rust toolchain (rust-toolchain.toml)
-        if: ${{ inputs.package && inputs.package != 'miniapp' }}
+        if: ${{ inputs.package != 'miniapp' }}
         run: rustup show
       - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
-        if: ${{ inputs.package && inputs.package != 'miniapp' }}
+        if: ${{ inputs.package != 'miniapp' }}
         with:
           tool: cargo-mutants@27.1.0
           fallback: none
       - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
-        if: ${{ inputs.package && inputs.package != 'miniapp' }}
+        if: ${{ inputs.package != 'miniapp' }}
         with:
           tool: cargo-nextest@0.9.146
           fallback: none
       - name: the package's mutants, in the order the shards take them
-        if: ${{ inputs.package && inputs.package != 'miniapp' }}
+        if: ${{ inputs.package != 'miniapp' }}
         run: |
           mkdir -p "$RUNNER_TEMP/size"
           if [ -n "$PACKAGE" ]; then
-            cargo mutants --no-shuffle --list --json --in-place --package="$PACKAGE" --timeout 1200 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"
+            cargo mutants --no-shuffle --list --json --in-place --package="$PACKAGE" --timeout 2200 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"
           else
-            cargo mutants --no-shuffle --list --json --in-place --timeout 1200 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"
+            cargo mutants --no-shuffle --list --json --in-place --timeout 2200 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"
           fi
       - name: the shards, the fewest whose slowest is projected within its bound
         id: size
@@ -107,7 +109,7 @@ jobs:
     needs: size
     if: ${{ github.event_name != 'pull_request' && inputs.package != 'miniapp' && inputs.package != 'python' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
@@ -153,10 +155,11 @@ jobs:
       # shard. In place, cargo-mutants applies no multiplier and bounds no build unless told:
       # --timeout bounds each mutant's tests and the unmutated baseline's, and --build-timeout each
       # mutant's build (the tool's timeouts chapter); the baseline's build is never bounded. The
-      # 1200 s covers the settle census's 788 s with a 1.5 margin (SPEC-327). A dispatch that names a
-      # package sweeps its mutants alone, round-robin over the shards its own listing sized (SPEC-129),
-      # and a run with no package sweeps 32; the input reaches the shell through the environment,
-      # never interpolated into it.
+      # 2200 s covers the settle census's 1430 s with a 1.5 margin (SPEC-327, SPEC-362 R6), and the
+      # verdict holds each leg's slowest baseline test to the same margin (R7). A dispatch that
+      # names a package sweeps its mutants alone, and any other run the whole workspace, round-robin
+      # over the shards its own listing sized (SPEC-129, SPEC-362 R11); the input reaches the shell
+      # through the environment, never interpolated into it.
       - name: cargo-mutants, one shard of the workspace, or of the one package a dispatch names
         env:
           PACKAGE: ${{ inputs.package }}
@@ -166,9 +169,9 @@ jobs:
           mkdir -p "$RUNNER_TEMP/mutation"
           rc=0
           if [ -n "$PACKAGE" ]; then
-            python3 scripts/memory_scope.py --report "$RUNNER_TEMP/mutation" -- cargo mutants --no-shuffle -vV --in-place --package="$PACKAGE" --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 1200 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
+            python3 scripts/memory_scope.py --report "$RUNNER_TEMP/mutation" -- cargo mutants --no-shuffle -vV --in-place --package="$PACKAGE" --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2200 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
           else
-            python3 scripts/memory_scope.py --report "$RUNNER_TEMP/mutation" -- cargo mutants --no-shuffle -vV --in-place --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 1200 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
+            python3 scripts/memory_scope.py --report "$RUNNER_TEMP/mutation" -- cargo mutants --no-shuffle -vV --in-place --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2200 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
           fi
           echo "$rc" > "$RUNNER_TEMP/mutation/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
@@ -322,7 +325,7 @@ jobs:
       - name: the whole tree's mutants, in the order the shards take them
         run: |
           mkdir -p "$RUNNER_TEMP/listing"
-          cargo mutants --no-shuffle --list --json --in-place --timeout 1200 --build-timeout 600 > "$RUNNER_TEMP/listing/whole.json"
+          cargo mutants --no-shuffle --list --json --in-place --timeout 2200 --build-timeout 600 > "$RUNNER_TEMP/listing/whole.json"
       - name: the whole Python population's mutants, which every Python record is bound against
         run: python3 scripts/mutation_python.py list --all --out "$RUNNER_TEMP/listing/python-whole.json"
       - name: keep the listing
@@ -437,7 +440,7 @@ jobs:
           shard="$RUNNER_TEMP/reports/mutants-shard-0"
           mkdir -p "$shard"
           rc=0
-          python3 scripts/memory_scope.py --report "$shard" -- cargo mutants --no-shuffle -vV --in-place -f crates/kernel/src/clock.rs --timeout 1200 --build-timeout 600 --output "$shard" || rc=$?
+          python3 scripts/memory_scope.py --report "$shard" -- cargo mutants --no-shuffle -vV --in-place -f crates/kernel/src/clock.rs --timeout 2200 --build-timeout 600 --output "$shard" || rc=$?
           echo "$rc" > "$shard/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
       - name: fetch the locked dependency graph, so the offline census finds every package

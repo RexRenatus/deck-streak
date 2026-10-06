@@ -248,6 +248,11 @@ R18. **The shards, and their bound.** `scripts/mutation-verdict.py shards` sizes
     The mutation jobs' own bounds (SPEC-038 section 8): `mutation-plan` 15 minutes, each
     `mutation-rust` shard 120, `mutation-rows` 90, `mutation-verdict` 10 and `mutation-web` 60.
     Section 8 records the release's measured plan.
+    Amended by SPEC-362 (R2, R3, R5, R8, R10): a shard, now a leg, is bounded by 10800 s, half of
+    each `mutation-rust` leg's `timeout-minutes: 360`; the most legs a plan may ask for is the
+    run's job budget, `LEG_CEILING["ci"]` (256 less the most jobs `ci.yml`'s other jobs can
+    generate), not 256; the baseline and the prices are SPEC-362's; and the verdict also holds the
+    plan's legs to the tool's own listing, `listed.json`, each listed mutant exactly once.
 
 ## 3. Acceptance criteria
 

@@ -10,8 +10,12 @@ factored the shared output writer without changing a result. The replay ran each
 ```red-first
 A1: red at 0e39853: 2 != 0 : usage: mutation-verdict.py [-h] [--root ROOT] [--base BASE] [--head HEAD]
 A1: green at ced6887
+```
+```retired
 A2: red at 0e39853: 2 != 0 : usage: mutation-verdict.py [-h] [--root ROOT] [--base BASE] [--head HEAD]
 A2: green at ced6887
+```
+```red-first
 A3: red at 0e39853: Lists differ: ['no size job'] != []
 A3: green at ced6887
 A4: red at 0e39853: 0 != 1 : battery: counted 3 of 3 reports whole
@@ -364,3 +368,7 @@ A22 new member: not red: pins an over-find the scan already had
 A20 to A22, A27, A28 replay: green at 680f97fa: test_mutation_workflows.py Ran 27 tests, OK
 A23 to A26 replay: green at 680f97fa: test_stand_in_census.py Ran 29 tests, OK
 ```
+
+Amendment: the lines of A2 moved into a `` ```retired `` fence, by inserted fence lines, because
+SPEC-362 R11 retired the fixed 32 shards the criterion pinned; SPEC-362 A10 judges the whole tree's
+size now.

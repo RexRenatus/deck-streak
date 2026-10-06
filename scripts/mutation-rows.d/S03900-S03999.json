@@ -101,8 +101,8 @@
         "S03913-A-DIFF-BEYOND-THE-MATRIX-IS-REFUSED",
         "scripts/mutation-verdict.py",
         "        return EXIT_FAIL\n    times = projected(costs, count, baseline)\n",
-        "        count = MAX_SHARDS\n    times = projected(costs, count, baseline)\n",
-        "a diff that needs more shards than a job matrix holds is refused with its projection, never capped (SPEC-039 R18)",
+        "        count = LEG_CEILING[\"ci\"]\n    times = projected(costs, count, baseline)\n",
+        "a diff that needs more legs than the pull request run's ceiling is refused with its projection, never capped (SPEC-039 R18, SPEC-362 R3)",
         "test_mutation_verdict.TheShardsFitTheirBound.test_the_plan_shards_the_listed_mutants_within_their_bound"
       ],
       [
