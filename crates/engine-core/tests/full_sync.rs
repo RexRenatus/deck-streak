@@ -20,13 +20,16 @@ use anki::card::CardId;
 use anki::collection::{Collection, CollectionBuilder};
 use anki::scheduler::answering::{CardAnswer, Rating};
 use anki::timestamp::TimestampMillis;
+use anki_proto::backend::BackendError;
+use anki_proto::backend::backend_error::Kind;
 use anki_proto::sync::SyncCollectionResponse;
 use anki_proto::sync::sync_collection_response::ChangesRequired;
-use deck_streak_engine_core::dispatch::Dispatcher;
+use deck_streak_engine_core::dispatch::{Dispatcher, Refusal};
 use deck_streak_engine_core::full_sync::{
     Confirmed, Counted, Counts, Direction, IdSets, Losses, Offer, Ready, SnapshotAnswer, Unsynced,
 };
 use deck_streak_engine_core::table::Transport;
+use prost::Message;
 
 /// `BackendCollectionService.OpenCollection`.
 const OPEN_COLLECTION: (u32, u32) = (3, 0);
@@ -181,6 +184,67 @@ fn the_unsynced_read_counts_reviews_and_changes_since_the_last_sync() {
         read.map(|unsynced| unsynced.map(|unsynced| unsynced.warns())),
         [Ok(true), Ok(true), Ok(false)],
         "an unsynced review warns, a schema change alone warns, and nothing unsynced does not"
+    );
+}
+
+#[test]
+fn each_unsynced_change_warns_on_its_own() {
+    let alone = [
+        Unsynced {
+            reviews: 1,
+            changed: false,
+            schema: false,
+        },
+        Unsynced {
+            reviews: 0,
+            changed: true,
+            schema: false,
+        },
+        Unsynced {
+            reviews: 0,
+            changed: false,
+            schema: true,
+        },
+        Unsynced::default(),
+    ];
+    assert_eq!(
+        alone.map(|unsynced| unsynced.warns()),
+        [true, true, true, false],
+        "an unsynced review, a changed collection and a changed schema each warn with neither of \
+         the others, and nothing unsynced does not"
+    );
+}
+
+/// A refusal's kind and message, decoded with the engine's own schema; `None` for a refusal the
+/// dispatcher makes before the engine sees the call.
+fn engine_error(refusal: Refusal) -> Option<(Kind, String)> {
+    match refusal {
+        Refusal::Engine { error } => {
+            let error = BackendError::decode(error.as_slice())
+                .expect("a refusal decodes as the engine's error");
+            Some((error.kind(), error.message))
+        }
+        Refusal::NotAllowed { .. } | Refusal::NeedsGesture { .. } => None,
+    }
+}
+
+#[test]
+fn a_reply_that_is_not_integers_is_the_engines_database_error() {
+    let synthetic = support::synthetic("unreadable-stamp");
+    let col = engine(&synthetic.collection);
+    col.storage
+        .db()
+        .execute("update col set mod = 1.5", [])
+        .expect("the test writes a modified stamp that is not an integer");
+    col.close(None).expect("the engine closes the collection");
+    assert_eq!(
+        open(&synthetic).id_sets().map_err(engine_error),
+        Err(Some((
+            Kind::DbError,
+            "the engine's reply to `select mod from col` is not the integers it selects".to_owned()
+        ))),
+        "a stamp the engine answers as a fraction is refused as the engine's database error \
+         naming the statement, and is never read as a guessed value"
     );
 }
 
