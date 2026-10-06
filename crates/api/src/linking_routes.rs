@@ -86,11 +86,11 @@ impl FromRef<Linking> for Sessions {
 /// is the configuration and the owner it serves; with none, or with no public origin configured,
 /// every route answers `linking_off`.
 pub(crate) fn routes(
-    access: OwnerAccess,
+    access: &OwnerAccess,
     readiness: Readiness,
     linking: Option<(LinkingConfig, Owner)>,
 ) -> Router {
-    let sessions = Sessions::from_ref(&access);
+    let sessions = Sessions::from_ref(access);
     let clock = access.clock();
     let passkeys = linking.and_then(|(config, owner)| {
         let on = config.relying_party().is_ok();
@@ -382,15 +382,12 @@ fn answer(status: StatusCode, body: &Value) -> Response {
 /// A call that did not complete: a refusal answers its status and reason code and is logged by
 /// the code alone; anything else is logged and answers 500.
 fn failed(error: &PasskeyError) -> Response {
-    match error.refusal() {
-        Some(refusal) => {
-            tracing::warn!(reason = refusal.reason(), "a linking request was refused");
-            refusal.into_response()
-        }
-        None => {
-            tracing::error!(%error, "a linking request failed");
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+    if let Some(refusal) = error.refusal() {
+        tracing::warn!(reason = refusal.reason(), "a linking request was refused");
+        refusal.into_response()
+    } else {
+        tracing::error!(%error, "a linking request failed");
+        StatusCode::INTERNAL_SERVER_ERROR.into_response()
     }
 }
 

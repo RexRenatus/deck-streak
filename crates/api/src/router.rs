@@ -231,11 +231,7 @@ pub fn router(state: ApiState) -> Router {
                     readiness.clone(),
                     inbox,
                 ))
-                .merge(linking_routes::routes(
-                    access.clone(),
-                    readiness.clone(),
-                    linking,
-                ))
+                .merge(linking_routes::routes(&access, readiness.clone(), linking))
                 .merge(notifications_routes::routes(access.clone(), readiness));
             match instruments {
                 Some(service) => routes.merge(insights_routes::routes(access, service)),

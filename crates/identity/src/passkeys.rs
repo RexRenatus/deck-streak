@@ -32,7 +32,7 @@ use crate::owner::Owner;
 use crate::session::{Proof, SessionError, SessionToken, Sessions};
 
 /// A ceremony is refused `challenge_expired` this long after it started (SPEC-359 R7).
-pub const CEREMONY_LIFETIME: Duration = Duration::from_secs(300);
+pub const CEREMONY_LIFETIME: Duration = Duration::from_mins(5);
 /// The most ceremonies kept at once; starting one more evicts the oldest (SPEC-359 R7).
 pub const MAX_LIVE_CEREMONIES: usize = 8;
 /// A flow id's length: 32 bytes from the operating system's generator (SPEC-359 R7).

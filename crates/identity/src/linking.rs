@@ -31,11 +31,11 @@ pub use crate::session::LINK_SESSION_LIFETIME;
 /// A link code's length: 16 bytes, 128 bits, from the operating system's generator (R3).
 pub const LINK_CODE_BYTES: usize = 16;
 /// A link code is refused `link_code_expired` this long after it was minted (R3).
-pub const LINK_CODE_LIFETIME: Duration = Duration::from_secs(600);
+pub const LINK_CODE_LIFETIME: Duration = Duration::from_mins(10);
 /// The most link codes kept at once; minting one more evicts the oldest (R3).
 pub const MAX_LIVE_LINK_CODES: usize = 8;
 /// How old a `telegram` session's handshake may be for a link code or a removal (R3, R9).
-pub const REAUTH_AGE: Duration = Duration::from_secs(300);
+pub const REAUTH_AGE: Duration = Duration::from_mins(5);
 /// The Telegram method's id in the owner's methods: never a `passkeys` row id (R9).
 pub const TELEGRAM_METHOD: i64 = 0;
 

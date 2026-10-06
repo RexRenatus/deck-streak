@@ -41,7 +41,7 @@ pub const ABSOLUTE_LIFETIME: Duration = Duration::from_hours(8);
 /// The most sessions kept at once: one owner, a few devices.
 pub const MAX_LIVE_SESSIONS: usize = 8;
 /// A `link` session ends this long after the redeem that opened it (SPEC-359 R2).
-pub const LINK_SESSION_LIFETIME: Duration = Duration::from_secs(600);
+pub const LINK_SESSION_LIFETIME: Duration = Duration::from_mins(10);
 /// A session id's length: 32 bytes from the operating system's generator.
 const ID_BYTES: usize = 32;
 
