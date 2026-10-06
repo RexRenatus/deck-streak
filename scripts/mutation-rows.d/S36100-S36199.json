@@ -1,0 +1,94 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S36100-THE-REFUSAL-RUNS-IN-EVERY-FRAME",
+        "ios/CardIsolation/Sources/CardIsolation/LinkActivationRefusal.swift",
+        "forMainFrameOnly: false",
+        "forMainFrameOnly: true",
+        "the link-activation refusal runs only in the main frame, so a nested frame's links are followed (SPEC-361 R3, L10)",
+        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
+      ],
+      [
+        "S36101-THE-REFUSAL-RUNS-AT-DOCUMENT-START",
+        "ios/CardIsolation/Sources/CardIsolation/LinkActivationRefusal.swift",
+        ".atDocumentStart",
+        ".atDocumentEnd",
+        "the link-activation refusal runs after the card's own script (SPEC-361 R3, L10)",
+        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
+      ],
+      [
+        "S36102-THE-REFUSAL-RUNS-IN-THE-APP-WORLD",
+        "ios/CardIsolation/Sources/CardIsolation/LinkActivationRefusal.swift",
+        "in: world",
+        "in: .page",
+        "the link-activation refusal runs in the page's world, which the card's own script shares (SPEC-361 R3, L10)",
+        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
+      ],
+      [
+        "S36103-THE-GUARD-RUNS-IN-EVERY-FRAME",
+        "ios/CardIsolation/Sources/CardIsolation/PageGuard.swift",
+        "forMainFrameOnly: false",
+        "forMainFrameOnly: true",
+        "the page guard runs only in the main frame, so a nested frame's detached links and document rewrites pass (SPEC-361 R4, L11)",
+        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
+      ],
+      [
+        "S36104-THE-GUARD-RUNS-AT-DOCUMENT-START",
+        "ios/CardIsolation/Sources/CardIsolation/PageGuard.swift",
+        ".atDocumentStart",
+        ".atDocumentEnd",
+        "the page guard runs after the card's own script, which has already taken the unguarded methods (SPEC-361 R4, L11)",
+        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
+      ],
+      [
+        "S36105-THE-GUARD-RUNS-IN-THE-PAGE-WORLD",
+        "ios/CardIsolation/Sources/CardIsolation/PageGuard.swift",
+        "in: .page",
+        "in: .defaultClient",
+        "the page guard wraps methods in a world the card's own script does not see (SPEC-361 R4, L11)",
+        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
+      ],
+      [
+        "S36106-THE-FACTORY-INSTALLS-THE-REFUSAL",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        "            configuration.userContentController.addUserScript(LinkActivationRefusal.userScript)\n",
+        "",
+        "the factory no longer installs the link-activation refusal (SPEC-361 R3, L10)",
+        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
+      ],
+      [
+        "S36107-THE-FACTORY-INSTALLS-THE-GUARD",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        "            configuration.userContentController.addUserScript(PageGuard.userScript)\n",
+        "",
+        "the factory no longer installs the page guard (SPEC-361 R4, L11)",
+        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
+      ],
+      [
+        "S36108-THE-POLICY-PRECEDES-THE-CARD",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        "        let html = DocumentPolicy.prefixed(html)\n",
+        "",
+        "the factory hands the card's markup with no document policy ahead of it (SPEC-361 R5, L12)",
+        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
+      ],
+      [
+        "S36109-THE-LINK-PREVIEW-IS-OFF",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        "allowsLinkPreview = false",
+        "allowsLinkPreview = true",
+        "a long press on a link inside a card shows a preview of it (SPEC-361 R6, L13)",
+        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
+      ],
+      [
+        "S36110-THE-CONTEXT-MENU-IS-ANSWERED",
+        "ios/CardIsolation/Sources/CardIsolation/WindowRefusal.swift",
+        "contextMenuConfigurationForElement",
+        "contextMenuForElement",
+        "the window refusal no longer answers the context-menu request, so the engine's own menu can open a link (SPEC-361 R6, L13)",
+        "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
+      ]
+    ]
+  }
+}
