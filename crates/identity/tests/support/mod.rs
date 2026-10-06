@@ -153,7 +153,7 @@ pub const RP_ID: &str = "app.example";
 /// Another origin: a reserved name.
 pub const ELSEWHERE: &str = "https://elsewhere.example";
 
-/// The authenticator data's flags (WebAuthn 6.1).
+/// The authenticator data's flags (`WebAuthn` 6.1).
 pub const USER_PRESENT: u8 = 0x01;
 /// User verified.
 pub const USER_VERIFIED: u8 = 0x04;
@@ -185,12 +185,12 @@ impl Cbor {
             self.0
                 .push(major | u8::try_from(value).expect("a small value"));
         } else if let Ok(byte) = u8::try_from(value) {
-            self.0.extend([major | 24, byte]);
+            self.0.extend([major | 0x18, byte]);
         } else if let Ok(short) = u16::try_from(value) {
-            self.0.push(major | 25);
+            self.0.push(major | 0x19);
             self.0.extend(short.to_be_bytes());
         } else {
-            self.0.push(major | 26);
+            self.0.push(major | 0x1a);
             self.0
                 .extend(u32::try_from(value).expect("a 32-bit value").to_be_bytes());
         }

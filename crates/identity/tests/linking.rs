@@ -217,7 +217,7 @@ async fn a_link_code_redeems_once() {
 async fn a_link_code_needs_a_fresh_telegram_session() {
     let world = fixture().await;
     let session = open_telegram(&world);
-    world.clock.advance(Duration::from_secs(300));
+    world.clock.advance(Duration::from_mins(5));
     assert!(
         mint(&world, &session).is_ok(),
         "a Telegram session of 300 seconds minted no code"
@@ -496,7 +496,7 @@ async fn unlinking_needs_a_fresh_telegram_session() {
     );
     assert_eq!(world.rows().await, 1, "a refused removal deleted the row");
     let fresh = open_telegram(&world);
-    world.clock.advance(Duration::from_secs(300));
+    world.clock.advance(Duration::from_mins(5));
     assert!(
         remove(&world, &fresh, row).await.is_ok(),
         "a Telegram session of 300 seconds could not remove a passkey"
@@ -537,6 +537,10 @@ async fn removing_a_passkey_ends_its_sessions() {
 /// A29: no secret of the linking flow reaches a log line or an error, beside a positive control
 /// that the capture saw each audit event; each audit event names the event and the row id alone,
 /// and a ceremony's `Debug` is its redacted form.
+#[allow(
+    clippy::too_many_lines,
+    reason = "one census: every linking step runs under one capture beside its positive control"
+)]
 #[tokio::test]
 async fn no_linking_secret_reaches_a_log() {
     let captured = Captured::default();

@@ -249,7 +249,7 @@ async fn a_passkey_challenge_expires_at_three_hundred_seconds() {
         .start_sign_in(&world.db)
         .await
         .expect("a start");
-    world.clock.advance(Duration::from_secs(300));
+    world.clock.advance(Duration::from_mins(5));
     assert_eq!(
         finish(
             &world,

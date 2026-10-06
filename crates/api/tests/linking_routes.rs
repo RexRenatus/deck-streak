@@ -38,11 +38,11 @@ const OWNER_PAYLOAD: &str = concat!(
     "%22username%22%3A%22synthetic_owner%22%7D",
     "&hash=79502d49032542c5030e80b666d03f5af53e053f97d387806adb0aa843ddeb2d",
 );
-/// A credential id the A34 row holds: bytes 0xA0 to 0xAF, as SQLite's hex spells them.
+/// A credential id the A34 row holds: bytes 0xA0 to 0xAF, as `SQLite`'s hex spells them.
 const CREDENTIAL_HEX: &str = "A0A1A2A3A4A5A6A7A8A9AAABACADAEAF";
 /// The same credential id, base64url.
 const CREDENTIAL_B64: &str = "oKGio6SlpqeoqaqrrK2urw";
-/// A user handle the A34 row holds: bytes 0xC0 to 0xCF, as SQLite's hex spells them.
+/// A user handle the A34 row holds: bytes 0xC0 to 0xCF, as `SQLite`'s hex spells them.
 const HANDLE_HEX: &str = "C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF";
 /// The same user handle, base64url.
 const HANDLE_B64: &str = "wMHCw8TFxsfIycrLzM3Ozw";
