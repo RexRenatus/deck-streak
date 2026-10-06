@@ -413,5 +413,50 @@ class TheScriptSwitchLivesInOneFile(unittest.TestCase):
                 self.assertEqual(script_switch_problems(Path(scratch))[0], wanted, name)
 
 
+# The value each definition of the switch is given: after `=`, or as a computed property's body.
+SWITCH_VALUE = re.compile(r"\bstatic\s+(?:let|var)\s+switchedOn\b[^=\n{]*(?:=|\{)\s*(\w+)")
+
+
+def script_switch_values(root):
+    """The value each definition of the switch in `SWITCH_FILE` under `root` is given, in order,
+    with whole-line comments set aside; none when the file is missing or defines no switch."""
+    path = Path(root) / SWITCH_FILE
+    if not path.is_file():
+        return []
+    code = code_of(path.read_bytes().decode("utf-8", errors="replace"))
+    return [found.group(1) for found in SWITCH_VALUE.finditer(code)]
+
+
+class TheScriptSwitchDefaultsOff(unittest.TestCase):
+    def test_the_script_switch_defaults_off(self):
+        # The behaviour first: the switch defaults off on iOS pending a measured containment
+        # layer (SPEC-355 section 7), so its one definition gives it false.
+        values = examined("switch definitions", script_switch_values(REPO))
+        self.assertEqual(values, ["false"], f"{SWITCH_FILE}: the value the switch is given")
+
+        # The controls: a planted switch off reads false, and each planted switch on reads true.
+        on = GOOD_SWITCH.replace("switchedOn = false", "switchedOn = true")
+        plants = {
+            "the switch off": (GOOD_SWITCH, ["false"]),
+            "the switch on": (on, ["true"]),
+            "the switch on, with its type": (
+                "public enum CardScripts {\n    public static let switchedOn: Bool = true\n}\n",
+                ["true"],
+            ),
+            "the switch on, computed": (SECOND_SWITCH, ["true"]),
+            "the switch on, off only in a comment": (
+                "// public static let switchedOn = false\n" + on,
+                ["true"],
+            ),
+            "no switch": ("public enum CardScripts {}\n", []),
+        }
+        for name, (source, wanted) in examined("planted switches", list(plants.items())):
+            with self.subTest(plant=name), tempfile.TemporaryDirectory() as scratch:
+                path = Path(scratch) / SWITCH_FILE
+                path.parent.mkdir(parents=True)
+                path.write_text(source, encoding="utf-8")
+                self.assertEqual(script_switch_values(Path(scratch)), wanted, name)
+
+
 if __name__ == "__main__":
     unittest.main()

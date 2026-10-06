@@ -3,6 +3,8 @@
 // planted suite (A5, A6) is their proof.
 // SPEC-355 A4: the card view's scripts run only when the switch is on and the factory reads every
 // control back from the view it built; each control removed in turn leaves the scripts off.
+// SPEC-355 section 7: the switch defaults off on iOS pending a measured containment layer, so the
+// view the factory builds by default is the scripts-off card view.
 import WebKit
 import XCTest
 
@@ -90,5 +92,42 @@ final class FactoryTests: XCTestCase {
             XCTAssertEqual(verdict, row.verdict, "\(row.name): the switch's verdict")
             XCTAssertTrue(loaded, "\(row.name): the view never finished loading the card")
         }
+    }
+
+    /// The switch's default, read from the view the factory builds when nothing names the switch:
+    /// built with the switch off, every control read back, and the card's own script not run. A
+    /// reference view with page JavaScript on runs the same card's script, so the marker the
+    /// default view leaves unset is one that can be set.
+    @MainActor
+    func test_the_factory_default_build_is_the_scripts_off_card_view() async throws {
+        let html = Planted.document(id: "factory", head: "", body: "<script>\(ranMarker)</script><p>a card</p>")
+        let reference = CardWebViewFactory.make(layers: [], ruleList: nil)
+        reference.loadHTMLString(html, baseURL: nil)
+        let shipped = try await CardWebViewFactory.makeCardWebView(html: html)
+        var loaded: [String: Bool] = [:]
+        var ran: [String: Bool] = [:]
+        for (name, view) in examined("views", [("reference", reference), ("default", shipped)]) {
+            Probe.mount(view)
+            loaded[name] = await Probe.loaded(view)
+            ran[name] = await Probe.evaluate(view, "String(document.documentElement.dataset.ran === '1')") == "true"
+            view.removeFromSuperview()
+        }
+        let switchedOn = CardScripts.switchedOn
+        let builtOn = CardWebViewFactory.built(of: shipped)?.switchedOn
+        let verdict = CardWebViewFactory.verdict(of: shipped)
+        let wanted: CardScripts.Verdict = .off(missing: [])
+        let builtText = builtOn.map { String($0) } ?? "none"
+        let verdictText = verdict.map { String(describing: $0) } ?? "none"
+        let views = ["reference", "default"]
+        let readings = views.map { "\($0) loaded=\(loaded[$0] ?? false) ran=\(ran[$0] ?? false)" }
+        print("factory default build: switchedOn=\(switchedOn) built=\(builtText) verdict=\(verdictText)")
+        print("factory default build: \(readings.joined(separator: ", "))")
+        // The behaviour first: the card's script ran in the reference view and not in the view the
+        // factory builds by default, and both views finished loading the card.
+        XCTAssertEqual(ran, ["reference": true, "default": false], "the views in which the card's script ran")
+        XCTAssertEqual(loaded, ["reference": true, "default": true], "the views that finished loading the card")
+        XCTAssertFalse(switchedOn, "the switch defaults on")
+        XCTAssertEqual(builtOn, false, "the switch the default view was built under")
+        XCTAssertEqual(verdict, wanted, "the default view's verdict: the switch off, every control present")
     }
 }
