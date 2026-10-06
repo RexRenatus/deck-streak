@@ -200,6 +200,8 @@ enum Variant: Hashable, Sendable {
     case scriptedReference(Set<CardLayer>)
     /// The scripted view's controls, scripts on, with one control removed (SPEC-355 R8).
     case scriptedWithout(CardLayer)
+    /// The scripts-off card view with one layer removed (SPEC-361 R10).
+    case shippedWithout(CardLayer)
 
     var layers: Set<CardLayer> {
         switch self {
@@ -208,6 +210,7 @@ enum Variant: Hashable, Sendable {
         case .without(let layer): return Set(BASE).subtracting([layer])
         case .scriptedReference(let held): return Set(CardLayer.allCases).subtracting([.L2]).subtracting(held)
         case .scriptedWithout(let control): return Set(CardLayer.allCases).subtracting([.L2, control])
+        case .shippedWithout(let layer): return Set(CardLayer.allCases).subtracting([layer])
         }
     }
 
@@ -379,6 +382,9 @@ final class Probe {
                 let page = directory.appendingPathComponent("\(UUID().uuidString).html")
                 try Data(html.utf8).write(to: page)
                 view.loadFileURL(page, allowingReadAccessTo: directory)
+            } else if layers.contains(.L12) {
+                // A view that carries L12 is handed its card the one way the factory hands one.
+                CardWebViewFactory.load(html, into: view)
             } else {
                 view.loadHTMLString(html, baseURL: nil)
             }
@@ -487,6 +493,17 @@ final class PlantedCardTests: XCTestCase {
         XCTAssertEqual(shippedReached, [], "cards that reached their probe from the card view")
         XCTAssertEqual(
             connections.filter { $0.value != 0 }, [:], "the cards whose card view opened a connection")
+        // The planted control (SPEC-361 A7): from the scripts-off view with L10 removed, each
+        // followed link opens a connection, so the card view's zero is not a blind suite's.
+        for name in examined("followed links", ["nav-self", "nav-blank"]) {
+            let card = try XCTUnwrap(PLANTED.first { $0.id == name }, "\(name) is not planted")
+            let (_, took) = try await reference(card, probe)
+            let (open, _) = try await probe.show(card, in: .shippedWithout(.L10), window: window(took))
+            print("followed \(name): shipped without L10 connections=\(open.arrivals.connections)")
+            XCTAssertGreaterThanOrEqual(
+                open.arrivals.connections, 1,
+                "\(name) opened no connection from the scripts-off view without L10, so its zero proves nothing")
+        }
         XCTAssertEqual(notLoaded, [], "cards the card view never finished loading, so nothing was judged")
         XCTAssertEqual(
             silent, Set(UNOBSERVABLE.keys),
@@ -622,6 +639,40 @@ final class PlantedCardTests: XCTestCase {
     /// Whether a reference reads that the engine has no such interface (ABSENT_ALLOWED).
     private func absent(_ reading: Reading) -> Bool {
         reading.record == "absent"
+    }
+
+    @MainActor
+    func test_a_planted_card_reaches_nothing_from_the_scripted_view() async throws {
+        let probe = try await Probe.make()
+        var opened: [String: String] = [:]
+        var notLoaded: [String] = []
+        for card in examined("planted cards", PLANTED) {
+            let (_, took) = try await reference(card, probe)
+            let (reading, _) = try await probe.show(card, in: .scripted, window: window(took))
+            let arrivals = reading.arrivals
+            print("scripted view \(card.id): connections=\(arrivals.connections) datagrams=\(arrivals.datagrams) \(reading.summary)")
+            if !arrivals.paths.isEmpty || arrivals.connections > 0 || arrivals.datagrams > 0 {
+                opened[card.id] = "paths=\(arrivals.paths) connections=\(arrivals.connections) datagrams=\(arrivals.datagrams)"
+            }
+            if !reading.loaded {
+                notLoaded.append(card.id)
+            }
+        }
+        // The behaviour first: no planted card, its planted click included, opens a connection, a
+        // path or a datagram from the scripted view.
+        XCTAssertEqual(opened, [:], "planted cards whose scripted view reached a listener")
+        // The planted control: from the scripted view with L10 removed, each followed link opens a
+        // connection, so the scripted view's zero is not a blind suite's.
+        for name in examined("followed links", ["nav-self", "nav-blank"]) {
+            let card = try XCTUnwrap(PLANTED.first { $0.id == name }, "\(name) is not planted")
+            let (_, took) = try await reference(card, probe)
+            let (open, _) = try await probe.show(card, in: .scriptedWithout(.L10), window: window(took))
+            print("followed \(name): scripted without L10 connections=\(open.arrivals.connections)")
+            XCTAssertGreaterThanOrEqual(
+                open.arrivals.connections, 1,
+                "\(name) opened no connection from the scripted view without L10, so its zero proves nothing")
+        }
+        XCTAssertEqual(notLoaded, [], "planted cards the scripted view never finished loading, so nothing was judged")
     }
 
     @MainActor
@@ -863,5 +914,79 @@ final class PlantedCardTests: XCTestCase {
         XCTAssertEqual(scripted.text, reference.text, "the scripted view's text against the reference view's")
         XCTAssertTrue(reference.ran, "the reference's script did not run, so the comparison proves nothing")
         XCTAssertTrue(reference.text.contains("the dog"), "the reference shows no hint: \(reference.text)")
+    }
+
+    /// What the app's script reads of the `permitted` card's three loads.
+    struct PermittedReading: Decodable, CustomStringConvertible {
+        /// The image's natural width: above zero once it decoded.
+        var image = 0
+        /// Every font face's status, joined: `loaded` once the one face loaded.
+        var font = ""
+        /// The audio element's ready state: 1 or more once its metadata is read.
+        var audio = 0
+
+        var all: Bool { image > 0 && font == "loaded" && audio >= 1 }
+        var description: String { "image=\(image) font=\(font) audio=\(audio)" }
+    }
+
+    private static let permittedScript = """
+        JSON.stringify({
+          image: (document.getElementById('permitted-image') || { naturalWidth: 0 }).naturalWidth,
+          font: Array.from(document.fonts).map((face) => face.status).join(','),
+          audio: (document.getElementById('permitted-audio') || { readyState: 0 }).readyState
+        })
+        """
+
+    @MainActor
+    func test_the_permitted_loads_load_in_both_card_views() async throws {
+        let probe = try await Probe.make()
+        // The reference is the control: every layer off, so its reading shows the app's script can
+        // see each load at all.
+        let builds: [(name: String, build: @MainActor () throws -> WKWebView)] = [
+            ("reference", {
+                let view = CardWebViewFactory.make(layers: [], ruleList: nil)
+                view.loadHTMLString(PERMITTED, baseURL: nil)
+                return view
+            }),
+            ("shipped", {
+                try CardWebViewFactory.build(html: PERMITTED, ruleList: probe.ruleList, switchedOn: false)
+            }),
+            ("scripted", {
+                try CardWebViewFactory.build(html: PERMITTED, ruleList: probe.ruleList, switchedOn: true)
+            }),
+        ]
+        var readings: [String: PermittedReading] = [:]
+        var notLoaded: [String] = []
+        for (name, build) in examined("permitted views", builds) {
+            let view = try build()
+            Probe.mount(view)
+            let loaded = await Probe.loaded(view)
+            _ = await Probe.evaluate(view, "document.fonts.load('16px permitted'); 'asked'")
+            var reading = PermittedReading()
+            _ = await Probe.poll(10) {
+                if let text = await Probe.evaluate(view, Self.permittedScript),
+                   let read = try? JSONDecoder().decode(PermittedReading.self, from: Data(text.utf8)) {
+                    reading = read
+                }
+                return reading.all
+            }
+            view.removeFromSuperview()
+            print("permitted \(name): loaded=\(loaded) \(reading)")
+            readings[name] = reading
+            if !loaded {
+                notLoaded.append(name)
+            }
+        }
+        // The behaviour first: each card view loads the card's data: image, font and audio.
+        for name in ["shipped", "scripted"] {
+            let reading = try XCTUnwrap(readings[name], "the \(name) view was not shown")
+            XCTAssertGreaterThan(reading.image, 0, "the \(name) view's data: image did not decode: \(reading)")
+            XCTAssertEqual(reading.font, "loaded", "the \(name) view's data: font did not load: \(reading)")
+            XCTAssertGreaterThanOrEqual(reading.audio, 1, "the \(name) view's data: audio read no metadata: \(reading)")
+        }
+        // The control: the reference reads all three, so a card view's zero is never a blind read.
+        let reference = try XCTUnwrap(readings["reference"], "the reference view was not shown")
+        XCTAssertTrue(reference.all, "the reference read the permitted loads short: \(reference)")
+        XCTAssertEqual(notLoaded, [], "views that never finished loading the card, so nothing was judged")
     }
 }

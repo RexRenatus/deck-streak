@@ -44,11 +44,19 @@ public enum CardWebViewFactory {
             throw CardViewRefusal.ruleListDidNotCompile
         }
         let view = make(layers: Set(CardLayer.allCases), ruleList: ruleList, switchedOn: switchedOn)
+        load(html, into: view)
+        return view
+    }
+
+    /// Hands `html` to `view` the one way a card is loaded (SPEC-361 R5, R8): as a string with no
+    /// base URL. Internal, so only a test target reaches it beside the factory.
+    /// This is the stub L12's criteria are red against: it hands the card over with no policy and
+    /// keeps no record of what it handed.
+    static func load(_ html: String, into view: WKWebView) {
         // L7, no file access: the card is handed over as a string with no base URL, never as a
         // file, so its document has no origin that can read one.
         // It does NOT stop a load the card's markup names; the rule list (L3) does.
         view.loadHTMLString(html, baseURL: nil)
-        return view
     }
 
     /// The probe's door: a view with only `layers` on, for the planted suite's reference and

@@ -1,6 +1,7 @@
 // SPEC-349 R5, R6: the planted cards, one for every channel in the iOS table of
 // docs/schematics/card-frame-channels.md (section 4), the layers the single-layer variants remove,
-// the declared UNOBSERVABLE and DEPTH sets, and the render-proof card. Every card points only at
+// the declared UNOBSERVABLE and DEPTH sets, and the render-proof card. SPEC-355 R7 to R11 and
+// SPEC-361 R10 add the scripted cards, the controls and the `permitted` card (sections 7 and 8). Every card points only at
 // the suite's own listeners on the simulator host's non-loopback address (SPEC-355 section 6), or
 // at a file the suite wrote, and every request it makes carries the card's own path, so an arrival
 // names the channel that opened.
@@ -266,9 +267,9 @@ let RENDER = Planted.document(
 // SPEC-355 R7 to R11: the scripted cards of the schematic's section 7, the controls a scripted
 // view must carry, and the declared sets the scripted variants measure against.
 
-/// The controls a scripted card view must carry (SPEC-355 R1), named one by one: every layer but
+/// The controls a scripted card view must carry (SPEC-361 R2), named one by one: every layer but
 /// L2, which is the verdict itself.
-let CONTROLS: [CardLayer] = [.L1, .L3, .L4, .L5, .L6, .L7, .L8]
+let CONTROLS: [CardLayer] = [.L1, .L3, .L4, .L5, .L6, .L7, .L8, .L10, .L11, .L12, .L13]
 
 /// One scripted card: the planted card, and the controls that hold its channel in the scripted
 /// view, which its reference removes. Its card's `alone` is the control whose removal alone, every
@@ -318,29 +319,33 @@ let SCRIPTED: [Scripted] = scriptedCards()
 // One statement per card, so the compiler type-checks each card's markup on its own.
 private func scriptedCards() -> [Scripted] {
     var cards: [Scripted] = []
-    cards.append(scripted("script-fetch", held: [.L3], alone: nil, .path) { a in
+    // Every load a script makes is held by L3 and L12, the document's policy, as predicted in the
+    // schematic's section 8 (SPEC-361 R10): so no control alone opens one.
+    cards.append(scripted("script-fetch", held: [.L3, .L12], alone: nil, .path) { a in
         "fetch('\(a.under("script-fetch"))/1').catch(() => {});"
     })
-    cards.append(scripted("script-xhr", held: [.L3], alone: nil, .path) { a in
+    cards.append(scripted("script-xhr", held: [.L3, .L12], alone: nil, .path) { a in
         "const request = new XMLHttpRequest(); request.open('GET', '\(a.under("script-xhr"))/1'); request.send();"
     })
-    cards.append(scripted("script-websocket", held: [.L3], alone: nil, .connection) { a in
+    cards.append(scripted("script-websocket", held: [.L3, .L12], alone: nil, .connection) { a in
         "try { new WebSocket('ws://\(Listeners.host):\(a.tcpPort)/script-websocket/1'); } catch (error) {}"
     })
-    cards.append(scripted("script-eventsource", held: [.L3], alone: nil, .path) { a in
+    cards.append(scripted("script-eventsource", held: [.L3, .L12], alone: nil, .path) { a in
         "new EventSource('\(a.under("script-eventsource"))/1');"
     })
-    cards.append(scripted("script-beacon", held: [.L3], alone: nil, .path) { a in
+    cards.append(scripted("script-beacon", held: [.L3, .L12], alone: nil, .path) { a in
         "navigator.sendBeacon('\(a.under("script-beacon"))/1', 'card');"
     })
-    cards.append(scripted("script-image", held: [.L3], alone: nil, .path) { a in
+    cards.append(scripted("script-image", held: [.L3, .L12], alone: nil, .path) { a in
         "const image = new Image(); image.src = '\(a.under("script-image"))/1';"
     })
-    cards.append(scripted("script-worker", held: [.L3], alone: nil, .path) { a in
+    cards.append(scripted("script-worker", held: [.L3, .L12], alone: nil, .path) { a in
         "const source = \"fetch('\(a.under("script-worker"))/1').catch(() => {});\";"
             + " new Worker(URL.createObjectURL(new Blob([source], { type: 'text/javascript' })));"
     })
-    cards.append(scripted("script-link", held: [.L3], alone: nil, .connection) { a in
+    // L3 alone opens the `preconnect` hint, as predicted in section 8: the policy governs the
+    // style sheet's load, never the hint's early connection.
+    cards.append(scripted("script-link", held: [.L3, .L12], alone: .L3, .connection) { a in
         "const early = document.createElement('link'); early.rel = 'preconnect'; early.href = '\(a.origin)';"
             + " document.head.appendChild(early); const sheet = document.createElement('link');"
             + " sheet.rel = 'stylesheet'; sheet.href = '\(a.under("script-link"))/1'; document.head.appendChild(sheet);"
@@ -352,7 +357,8 @@ private func scriptedCards() -> [Scripted] {
         "let tries = 0; const go = () => { tries += 1; location.assign('\(a.under("script-nav"))/1');"
             + " if (tries < 5) { setTimeout(go, 200); } }; setTimeout(go, 0);"
     })
-    cards.append(scripted("script-form", held: [.L3, .L5], alone: nil, .path) { a in
+    // L12's `form-action` holds the form as well, as predicted in section 8.
+    cards.append(scripted("script-form", held: [.L3, .L5, .L12], alone: nil, .path) { a in
         "const form = document.createElement('form'); form.method = 'post';"
             + " form.action = '\(a.under("script-form"))/1'; document.body.appendChild(form);"
             + " setTimeout(() => form.submit(), 0);"
@@ -382,7 +388,9 @@ private func scriptedCards() -> [Scripted] {
         "const frame = document.createElement('iframe'); frame.title = 'srcdoc';"
             + " frame.srcdoc = \"<script>\(peer("window", stun(a)))<\\/script>\"; document.body.appendChild(frame);"
     })
-    cards.append(scripted("webrtc-written-frame", held: [.L8], alone: .L8, .datagram) { a in
+    // L11 holds the written frame as well as L8, as predicted in section 8: the page guard refuses
+    // the `document.open` and `write` that would give the frame its script.
+    cards.append(scripted("webrtc-written-frame", held: [.L8, .L11], alone: nil, .datagram) { a in
         "const frame = document.createElement('iframe'); frame.title = 'written'; document.body.appendChild(frame);"
             + " frame.contentDocument.open(); frame.contentDocument.write(\"<script>\(peer("window", stun(a)))<\\/script>\");"
             + " frame.contentDocument.close();"
@@ -410,6 +418,55 @@ private func scriptedCards() -> [Scripted] {
             + " navigator.mediaDevices.getUserMedia({ video: true, audio: true })"
             + ".then(() => note('granted'), (error) => note(error.name)); } else { note('absent'); }"
     })
+    // SPEC-361 R10: a link a card's own script activates, the channel of #677. WebKit opens an
+    // early connection to a clicked link's host before any delegate is asked, so each is observed
+    // by `connection`. L10 holds a connected link's activation, in every frame and through a closed
+    // shadow root; L11 holds a detached link's and one written into a frame's opened document,
+    // which no listener can see. Held and alone as predicted in the schematic's section 8.
+    cards.append(scripted("script-click-self", held: [.L10], alone: .L10, .connection) { a in
+        "const link = document.createElement('a'); link.href = '\(a.under("script-click-self"))/1';"
+            + " link.textContent = 'open'; document.body.appendChild(link); setTimeout(() => link.click(), 0);"
+    })
+    cards.append(scripted("script-click-blank", held: [.L10], alone: .L10, .connection) { a in
+        "const link = document.createElement('a'); link.target = '_blank';"
+            + " link.href = '\(a.under("script-click-blank"))/1'; link.textContent = 'open';"
+            + " document.body.appendChild(link); setTimeout(() => link.click(), 0);"
+    })
+    cards.append(scripted("script-click-detached", held: [.L11], alone: .L11, .connection) { a in
+        "const link = document.createElement('a'); link.target = '_blank';"
+            + " link.href = '\(a.under("script-click-detached"))/1'; setTimeout(() => link.click(), 0);"
+    })
+    cards.append(scripted("script-dispatch-detached", held: [.L11], alone: .L11, .connection) { a in
+        "const link = document.createElement('a'); link.target = '_blank';"
+            + " link.href = '\(a.under("script-dispatch-detached"))/1';"
+            + " setTimeout(() => link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })), 0);"
+    })
+    // WebKit follows a focused link on an Enter `keydown` whose key identifier is Enter, through
+    // a simulated click, so the event names the identifier as well as the key.
+    cards.append(scripted("script-enter-key", held: [.L10], alone: .L10, .connection) { a in
+        "const link = document.createElement('a'); link.href = '\(a.under("script-enter-key"))/1';"
+            + " link.textContent = 'open'; document.body.appendChild(link); setTimeout(() => { link.focus();"
+            + " link.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter',"
+            + " keyIdentifier: 'Enter', keyCode: 13, bubbles: true, cancelable: true })); }, 0);"
+    })
+    cards.append(scripted("script-closed-shadow", held: [.L10], alone: .L10, .connection) { a in
+        "const host = document.createElement('div'); document.body.appendChild(host);"
+            + " const root = host.attachShadow({ mode: 'closed' }); const link = document.createElement('a');"
+            + " link.target = '_blank'; link.href = '\(a.under("script-closed-shadow"))/1'; link.textContent = 'open';"
+            + " root.appendChild(link); setTimeout(() => link.click(), 0);"
+    })
+    cards.append(scripted("script-written-link", held: [.L11], alone: .L11, .connection) { a in
+        "const frame = document.createElement('iframe'); frame.title = 'written'; document.body.appendChild(frame);"
+            + " const inner = frame.contentDocument; inner.open();"
+            + " inner.write(\"<a id='written' target='_blank' href='\(a.under("script-written-link"))/1'>open</a>\");"
+            + " inner.close(); setTimeout(() => inner.getElementById('written').click(), 0);"
+    })
+    cards.append(scripted("script-frame-link", held: [.L10], alone: .L10, .connection) { a in
+        "const frame = document.createElement('iframe'); frame.title = 'blank'; document.body.appendChild(frame);"
+            + " const inner = frame.contentDocument; const link = inner.createElement('a'); link.target = '_blank';"
+            + " link.href = '\(a.under("script-frame-link"))/1'; link.textContent = 'open';"
+            + " (inner.body || inner.documentElement).appendChild(link); setTimeout(() => link.click(), 0);"
+    })
     return cards
 }
 
@@ -427,10 +484,13 @@ let ABSENT_ALLOWED: Set<String> = ["webtransport"]
 let BLIND_SCRIPTED: Set<String> = ["capture", "script-open"]
 
 /// The declared set of controls with no scripted channel of their own: removing one alone, every
-/// other control on, opens nothing (A10 measures it). L8 opens every peer connection but the
-/// `srcdoc` frame's, which L5 also holds; L3 and L9, which SPEC-361 retires, shared every load,
-/// L3, L5 and L9 every navigation, and L5 and L6 the window, as measured on both simulators.
-let DEPTH_SCRIPTED: Set<CardLayer> = [.L1, .L3, .L4, .L5, .L6, .L7]
+/// other control on, opens nothing (SPEC-361 A12 measures it). Declared by prediction in the
+/// schematic's section 8: L3 alone opens `script-link`'s hint; L8 alone every peer connection
+/// but the `srcdoc` frame's, which L5 also holds, and the written frame's, which L11 also holds;
+/// L10 alone every connected link's activation; L11 alone every detached or written link's.
+/// L12 shares every load with L3, L5 every navigation with L3, L6 the window with L5, and L13 the
+/// long press with L6's context-menu arm, which no planted card can make.
+let DEPTH_SCRIPTED: Set<CardLayer> = [.L1, .L4, .L5, .L6, .L7, .L12, .L13]
 
 /// SPEC-355 R10: the lookup card. A static and a script-added `dns-prefetch`, and a script's
 /// fetch, each of a `.local` name whose first label is the card's id and whose second only this
@@ -477,3 +537,44 @@ let RENDER_SCRIPT = Planted.document(
         + "<script>\(ranMarker) const hint = document.getElementById('hint');"
         + " document.getElementById('toggle').addEventListener('click', () => { hint.hidden = !hint.hidden; });"
         + " hint.hidden = false;</script>")
+
+/// SPEC-361 R10: the `permitted` card's font, a TrueType face named `permitted` whose one drawn glyph
+/// is the letter p, as base64.
+let permittedFont = [
+    "AAEAAAAKAIAAAwAgT1MvMkVQRAAAAAEoAAAAYGNtYXAADADDAAABkAAAADRnbHlmG9gb1gAAAcwAAAA0aGVhZC7f",
+    "broAAACsAAAANmhoZWEFFgFgAAAA5AAAACRobXR4AiYAMgAAAYgAAAAGbG9jYQAaAA0AAAHEAAAABm1heHAABAAG",
+    "AAABCAAAACBuYW1lsWe/QwAAAgAAAABmcG9zdABXAAAAAAJoAAAAJgABAAAAAQAAEz98C18PPPUAAwPoAAAAAObq",
+    "lY8AAAAA5uqVjwAyAAABwgK8AAAAAwACAAAAAAAAAAEAAAMg/zgAAAH0ADIAMgHCAAEAAAAAAAAAAAAAAAAAAAAB",
+    "AAEAAAACAAQAAQAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAwH0AZAABQAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "AAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAPz8/PwAAAHAAcAMg/zgAAAMgAMgAAAAAAAAAAAAAAAAAAAAgAAAB9AAy",
+    "ADIAAAAAAAIAAAADAAAAFAADAAEAAAAUAAQAIAAAAAQABAABAAAAcP//AAAAcP///5EAAQAAAAAAAAANABoAAAAB",
+    "ADIAAAHCArwAAwAAMxEhETIBkAK8/UQAAAEAMgAAAcICvAADAAAzESERMgGQArz9RAAAAAAEADYAAQAAAAAAAQAJ",
+    "AAAAAQAAAAAAAgAHAAkAAwABBAkAAQASABAAAwABBAkAAgAOACJwZXJtaXR0ZWRSZWd1bGFyAHAAZQByAG0AaQB0",
+    "AHQAZQBkAFIAZQBnAHUAbABhAHIAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAABTAAA=",
+].joined()
+
+/// The `permitted` card's audio clip: a tenth of a second of silence, 8 kHz mono WAV, as base64.
+let permittedAudio = [
+    "UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICA",
+    "gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA",
+    "gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA",
+    "gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA",
+    "gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA",
+    "gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA",
+    "gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA",
+    "gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA",
+    "gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA",
+    "gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA",
+    "gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA",
+    "gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA",
+    "gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==",
+].joined()
+
+/// SPEC-361 R10: the card's own permitted loads, each a `data:` URL: an image, a font and an audio
+/// clip. They load by design in the scripts-off and the scripted view (A15).
+let PERMITTED = Planted.document(
+    id: "permitted",
+    head: "<style>@font-face { font-family: permitted; src: url('data:font/ttf;base64,\(permittedFont)'); }"
+        + " body { font: 16px permitted, sans-serif; }</style>",
+    body: "<p>permitted</p><img id=\"permitted-image\" alt=\"\" src=\"\(pixel)\">"
+        + "<audio id=\"permitted-audio\" preload=\"auto\" src=\"data:audio/wav;base64,\(permittedAudio)\"></audio>")

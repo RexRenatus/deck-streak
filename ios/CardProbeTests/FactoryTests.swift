@@ -3,6 +3,8 @@
 // planted suite (A5, A6) is their proof.
 // SPEC-355 A4: the card view's scripts run only when the switch is on and the factory reads every
 // control back from the view it built; each control removed in turn leaves the scripts off.
+// SPEC-361 A5: the same over SPEC-361 R2's eleven controls. L12 is read back from the string the
+// factory's own load handed the view, and L13 from the view and its UI delegate (R8).
 // SPEC-355 section 7: the switch defaults off on iOS pending a measured containment layer, so the
 // view the factory builds by default is the scripts-off card view.
 import WebKit
@@ -50,6 +52,13 @@ final class FactoryTests: XCTestCase {
         XCTAssertTrue(loaded, "the factory's view never finished loading the card")
     }
 
+    /// The controls a removal also takes from the read-back, each with why (SPEC-361 R8). Each makes
+    /// its row's expected verdict more exact: it names one more missing control.
+    static let alsoTakes: [CardLayer: (controls: Set<CardLayer>, why: String)] = [
+        .L6: (controls: [.L13], why: "R8 reads L13 through the UI delegate, which must be L6's WindowRefusal"),
+        .L7: (controls: [.L12], why: "L12's read-back is written only by the factory's load, which this card is handed past"),
+    ]
+
     @MainActor
     func test_the_card_view_runs_scripts_only_with_every_control() async throws {
         let probe = try await Probe.make()
@@ -62,17 +71,31 @@ final class FactoryTests: XCTestCase {
             (name: "every control, the switch off", view: off, verdict: .off(missing: []), runs: false),
         ]
         for control in examined("required controls removed in turn", CONTROLS) {
-            // L4 and L7 are removed after the build, as a careless caller would: a named handler,
-            // and a card handed over with a base URL. Every other control is left out of the build.
-            let leftOut: Set<CardLayer> = control == .L4 || control == .L7 ? [] : [control]
+            // L4, L7 and L12 are removed after the build, as a careless caller would: a named
+            // handler, a card handed over with a base URL, and a card handed over past the
+            // factory's load, so with no policy. Every other control is left out of the build.
+            let leftOut: Set<CardLayer> = [.L4, .L7, .L12].contains(control) ? [] : [control]
             let layers = Set(CardLayer.allCases).subtracting(leftOut)
             let view = CardWebViewFactory.make(
                 layers: layers, ruleList: layers.contains(.L3) ? probe.ruleList : nil, switchedOn: true)
             if control == .L4 {
                 view.configuration.userContentController.add(bridge, name: "bridge")
             }
-            view.loadHTMLString(html, baseURL: control == .L7 ? URL(string: "https://card.invalid/") : nil)
-            rows.append((name: "without \(control.rawValue), the switch on", view: view, verdict: .off(missing: [control]), runs: false))
+            switch control {
+            case .L7:
+                view.loadHTMLString(html, baseURL: URL(string: "https://card.invalid/"))
+            case .L12:
+                view.loadHTMLString(html, baseURL: nil)
+            default:
+                CardWebViewFactory.load(html, into: view)
+            }
+            var missing: Set<CardLayer> = [control]
+            var name = "without \(control.rawValue), the switch on"
+            if let also = Self.alsoTakes[control] {
+                missing.formUnion(also.controls)
+                name += ", which also takes \(also.controls.map(\.rawValue).sorted()): \(also.why)"
+            }
+            rows.append((name: name, view: view, verdict: .off(missing: missing), runs: false))
         }
         for row in rows {
             Probe.mount(row.view)
