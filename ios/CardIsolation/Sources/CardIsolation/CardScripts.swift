@@ -4,7 +4,7 @@
 /// carrying every control it has.
 public enum CardScripts {
     /// The switch. It is defined here and nowhere else under `ios/` (SPEC-355 A5).
-    public static let switchedOn = true
+    public static let switchedOn = false
 
     /// The controls a scripted card view must carry, each read back from the view built: every
     /// layer but L2, which is the verdict itself.
