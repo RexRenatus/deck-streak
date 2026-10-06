@@ -164,17 +164,17 @@ flowchart TD
   cer -->|no| r1["401 challenge_invalid"]
   cer -->|"yes, taken out of the store"| age{"younger than 300 s"}
   age -->|no| r2["401 challenge_expired"]
-  age -->|yes| org{"origin and RP id are the configured ones"}
+  age -->|yes| known{"credential id is a stored row"}
+  known -->|no| r6["401 not_linked"]
+  known -->|yes| own{"row's Telegram user id is the owner's"}
+  own -->|no| r7["403 not_owner"]
+  own -->|yes| org{"origin and RP id are the configured ones"}
   org -->|no| r3["401 origin_mismatch"]
   org -->|yes| uv{"user verified flag set"}
   uv -->|no| r4["401 uv_required"]
   uv -->|yes| sig{"signature verifies"}
   sig -->|no| r5["401 passkey_invalid"]
-  sig -->|yes| known{"credential id is a stored row"}
-  known -->|no| r6["401 not_linked"]
-  known -->|yes| own{"row's Telegram user id is the owner's"}
-  own -->|no| r7["403 not_owner"]
-  own -->|yes| ctr{"both zero, or presented above stored"}
+  sig -->|yes| ctr{"both zero, or presented above stored"}
   ctr -->|no| r8["401 counter_regressed"]
   ctr -->|yes| cas{"update matched the counter read"}
   cas -->|no| r8
