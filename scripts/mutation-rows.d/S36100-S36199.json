@@ -88,6 +88,14 @@
         "contextMenuForElement",
         "the window refusal no longer answers the context-menu request, so the engine's own menu can open a link (SPEC-361 R6, L13)",
         "test_card_web_view_layers.TheScriptSwitchLivesInOneFile.test_the_script_switch_lives_in_one_file_and_every_control_is_set"
+      ],
+      [
+        "S36111-THE-HARNESS-BOUND-HOLDS-THE-PLANTED-SUITE",
+        ".github/workflows/xcframework.yml",
+        "    timeout-minutes: 150\n",
+        "    timeout-minutes: 90\n",
+        "the harness job is cancelled at its own bound before the planted suite and the steps after it finish (SPEC-361 R15, A16)",
+        "test_ci_workflows.TheHarnessLinksItsOwnRunsFramework.test_the_harness_job_timeout_holds_the_planted_suite"
       ]
     ]
   }
