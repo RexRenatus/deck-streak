@@ -120,16 +120,20 @@ impl Refusal {
         }
     }
 
-    /// The answer's status: 401 for who the caller is not proved to be, 403 for a proved caller
-    /// who is not the owner.
+    /// The answer's status: 401 for who the caller is not proved to be and for a ceremony or code
+    /// that does not verify, 403 for a proved caller who is not the owner, 409 for a credential or
+    /// a method the account holds, and 404 for linking off or a method no one holds (SPEC-359 R8).
     #[must_use]
+    #[allow(
+        clippy::match_same_arms,
+        reason = "counter_regressed answers 401 on its own line, the line row S35927 mutates"
+    )]
     pub const fn status(self) -> StatusCode {
         match self {
-            Self::InitDataInvalid | Self::InitDataStale | Self::NoSession => {
-                StatusCode::UNAUTHORIZED
-            }
-            Self::NotOwner => StatusCode::FORBIDDEN,
-            Self::ReauthRequired
+            Self::InitDataInvalid
+            | Self::InitDataStale
+            | Self::NoSession
+            | Self::ReauthRequired
             | Self::LinkCodeInvalid
             | Self::LinkCodeExpired
             | Self::ChallengeInvalid
@@ -137,12 +141,11 @@ impl Refusal {
             | Self::OriginMismatch
             | Self::UvRequired
             | Self::PasskeyInvalid
-            | Self::NotLinked
-            | Self::CounterRegressed
-            | Self::AlreadyLinked
-            | Self::LastMethod
-            | Self::LinkingOff
-            | Self::IdentityUnknown => StatusCode::BAD_REQUEST,
+            | Self::NotLinked => StatusCode::UNAUTHORIZED,
+            Self::CounterRegressed => StatusCode::UNAUTHORIZED,
+            Self::NotOwner => StatusCode::FORBIDDEN,
+            Self::AlreadyLinked | Self::LastMethod => StatusCode::CONFLICT,
+            Self::LinkingOff | Self::IdentityUnknown => StatusCode::NOT_FOUND,
         }
     }
 }

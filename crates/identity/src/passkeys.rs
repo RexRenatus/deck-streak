@@ -19,6 +19,7 @@ use deck_streak_kernel::{Clock, Db, KernelError, UtcMillis};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use subtle::ConstantTimeEq;
+use tracing::subscriber::NoSubscriber;
 use webauthn_rs::prelude::{
     CredentialID, Passkey, PasskeyAuthentication, PasskeyRegistration, RegisterPublicKeyCredential,
     Uuid, WebauthnError,
@@ -178,12 +179,16 @@ impl Ceremonies {
         }
     }
 
-    /// Keeps `state` under a NEW flow id, and returns the id: the only time it exists in the
-    /// clear.
+    /// Keeps `state` under a NEW flow id, evicting the oldest ceremony when
+    /// [`MAX_LIVE_CEREMONIES`] are live, and returns the id: the only time it exists in the clear.
     fn insert(&self, state: State) -> Result<FlowId, PasskeyError> {
         let mut id = [0_u8; FLOW_ID_BYTES];
         getrandom::fill(&mut id).map_err(|_| PasskeyError::Random)?;
         let mut live = self.lock();
+        // The store is in insertion order, so its first ceremony is the oldest.
+        if live.len() >= MAX_LIVE_CEREMONIES {
+            live.remove(0);
+        }
         live.push(Ceremony {
             digest: digest(&id),
             began: self.clock.now(),
@@ -200,13 +205,20 @@ impl Ceremonies {
     /// [`Refusal::ChallengeExpired`] when it is [`CEREMONY_LIFETIME`] old.
     pub fn take(&self, flow: &str) -> Result<Ceremony, Refusal> {
         let presented = digest(&id_bytes(flow).ok_or(Refusal::ChallengeInvalid)?);
+        let now = self.clock.now();
         let mut live = self.lock();
         let at = live
             .iter()
             .position(|ceremony| bool::from(ceremony.digest.ct_eq(&presented)))
             .ok_or(Refusal::ChallengeInvalid)?;
-        let ceremony = live[at].clone();
+        let ceremony = live.remove(at);
         drop(live);
+        let age = now
+            .epoch_millis()
+            .saturating_sub(ceremony.began.epoch_millis());
+        if age >= millis(CEREMONY_LIFETIME) {
+            return Err(Refusal::ChallengeExpired);
+        }
         Ok(ceremony)
     }
 
@@ -234,14 +246,34 @@ impl fmt::Debug for Ceremonies {
 /// stored counters are both zero, or the presented one is greater.
 #[must_use]
 pub const fn counter_advances(stored: u32, presented: u32) -> bool {
-    let _ = (stored, presented);
-    true
+    (stored == 0 && presented == 0) || presented > stored
 }
 
 /// The refusal a library error answers (SPEC-359 R8).
 const fn refusal_of(error: &WebauthnError) -> Refusal {
-    let _ = error;
-    Refusal::ChallengeInvalid
+    match error {
+        WebauthnError::InvalidRPOrigin
+        | WebauthnError::CredentialCrossOrigin
+        | WebauthnError::InvalidRPIDHash => Refusal::OriginMismatch,
+        WebauthnError::UserNotVerified => Refusal::UvRequired,
+        WebauthnError::CredentialPossibleCompromise => Refusal::CounterRegressed,
+        WebauthnError::MismatchedChallenge | WebauthnError::ChallengeNotFound => {
+            Refusal::ChallengeInvalid
+        }
+        _ => Refusal::PasskeyInvalid,
+    }
+}
+
+/// Runs `call` into the library with no subscriber. The library's own debug and trace events carry
+/// a ceremony's state, the credential id and the public key, which never reach a log at any level
+/// (SPEC-359 R13), so they are dropped here rather than left to the log filter.
+fn quietly<T>(call: impl FnOnce() -> T) -> T {
+    tracing::subscriber::with_default(NoSubscriber::default(), call)
+}
+
+/// A lifetime in whole milliseconds; every lifetime here is far below `i64::MAX`.
+pub(crate) fn millis(lifetime: Duration) -> i64 {
+    i64::try_from(lifetime.as_millis()).unwrap_or(i64::MAX)
 }
 
 /// The SHA-256 of `bytes`.
@@ -380,11 +412,22 @@ impl Passkeys {
             .iter()
             .map(|passkey| CredentialID::from(passkey.credential_id.clone()))
             .collect::<Vec<_>>();
-        let handle = Uuid::new_v4();
-        let (options, state) = relying_party
-            .webauthn()
-            .start_passkey_registration(handle, USER_NAME, USER_NAME, Some(excluded))
-            .map_err(|error| refusal_of(&error))?;
+        // One user handle for the owner: the held passkeys' own, or a NEW random one for the first.
+        let held_handle = held
+            .first()
+            .map(|passkey| Uuid::from_slice(&passkey.user_handle))
+            .transpose()
+            .map_err(|_| Refusal::PasskeyInvalid)?;
+        let handle = held_handle.unwrap_or_else(Uuid::new_v4);
+        let (options, state) = quietly(|| {
+            relying_party.webauthn().start_passkey_registration(
+                handle,
+                USER_NAME,
+                USER_NAME,
+                Some(excluded),
+            )
+        })
+        .map_err(|error| refusal_of(&error))?;
         let flow = self.ceremonies.insert(State::Registration {
             state,
             session: digest(session.as_bytes()),
@@ -418,13 +461,17 @@ impl Passkeys {
         else {
             return Err(Refusal::ChallengeInvalid.into());
         };
-        let _ = started_in;
+        if !bool::from(digest(session.as_bytes()).ct_eq(&started_in)) {
+            return Err(Refusal::ChallengeInvalid.into());
+        }
         let credential = serde_json::from_value::<RegisterPublicKeyCredential>(response.clone())
             .map_err(|_| Refusal::PasskeyInvalid)?;
-        let passkey = relying_party
-            .webauthn()
-            .finish_passkey_registration(&credential, &state)
-            .map_err(|error| refusal_of(&error))?;
+        let passkey = quietly(|| {
+            relying_party
+                .webauthn()
+                .finish_passkey_registration(&credential, &state)
+        })
+        .map_err(|error| refusal_of(&error))?;
         let stored = serde_json::to_value(&passkey).map_err(|_| Refusal::PasskeyInvalid)?;
         let counter = stored["cred"]["counter"].as_i64().unwrap_or(0);
         let backup_state = i64::from(stored["cred"]["backup_state"].as_bool().unwrap_or(false));
@@ -448,8 +495,19 @@ impl Passkeys {
             now
         )
         .fetch_one(&mut *transaction)
-        .await?;
+        .await
+        .map_err(|error| match error {
+            sqlx::Error::Database(database) if database.is_unique_violation() => {
+                PasskeyError::from(Refusal::AlreadyLinked)
+            }
+            other => PasskeyError::from(other),
+        })?;
         transaction.commit().await?;
+        tracing::info!(
+            event = "passkey_registered",
+            row = row.id,
+            "a passkey was registered"
+        );
         Ok(row.id)
     }
 
@@ -462,14 +520,19 @@ impl Passkeys {
     pub async fn start_sign_in(&self, db: &Db) -> Result<Started, PasskeyError> {
         let relying_party = self.relying_party()?;
         let held = self.held(db).await?;
+        if held.is_empty() {
+            return Err(Refusal::NotLinked.into());
+        }
         let passkeys = held
             .iter()
             .map(|passkey| passkey.passkey.clone())
             .collect::<Vec<_>>();
-        let (options, state) = relying_party
-            .webauthn()
-            .start_passkey_authentication(&passkeys)
-            .map_err(|error| refusal_of(&error))?;
+        let (options, state) = quietly(|| {
+            relying_party
+                .webauthn()
+                .start_passkey_authentication(&passkeys)
+        })
+        .map_err(|error| refusal_of(&error))?;
         let flow = self.ceremonies.insert(State::SignIn { state, held })?;
         let options = serde_json::to_value(&options).map_err(|_| Refusal::PasskeyInvalid)?;
         Ok(Started { flow, options })
@@ -485,10 +548,12 @@ impl Passkeys {
         credential: &webauthn_rs::prelude::PublicKeyCredential,
     ) -> Result<i64, PasskeyError> {
         let relying_party = self.relying_party()?;
-        let result = relying_party
-            .webauthn()
-            .finish_passkey_authentication(credential, state)
-            .map_err(|error| refusal_of(&error))?;
+        let result = quietly(|| {
+            relying_party
+                .webauthn()
+                .finish_passkey_authentication(credential, state)
+        })
+        .map_err(|error| refusal_of(&error))?;
         let passkey = held
             .iter()
             .find(|passkey| passkey.credential_id.as_slice() == result.cred_id().as_ref())
@@ -523,7 +588,27 @@ impl Passkeys {
         backup: bool,
         credential: &str,
     ) -> Result<(), PasskeyError> {
-        let _ = (db, row, read, presented, backup, credential);
+        let counter = i64::from(presented);
+        let read = i64::from(read);
+        let backup_state = i64::from(backup);
+        let now = self.clock.now().epoch_millis();
+        let mut transaction = db.write().await?;
+        let advanced = sqlx::query!(
+            "UPDATE passkeys SET credential = ?1, counter = ?2, backup_state = ?3, \
+             last_used_at = ?4 WHERE id = ?5 AND counter = ?6",
+            credential,
+            counter,
+            backup_state,
+            now,
+            row,
+            read
+        )
+        .execute(&mut *transaction)
+        .await?;
+        if advanced.rows_affected() != 1 {
+            return Err(Refusal::CounterRegressed.into());
+        }
+        transaction.commit().await?;
         Ok(())
     }
 

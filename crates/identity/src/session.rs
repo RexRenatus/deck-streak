@@ -156,10 +156,15 @@ struct Live {
 
 impl Live {
     /// Whether the session is still live at `now`: less than the idle timeout since its last
-    /// request, and less than the absolute lifetime since it began.
+    /// request, and less than its lifetime since it began: the absolute lifetime, or for a `link`
+    /// session [`LINK_SESSION_LIFETIME`] (SPEC-359 R4).
     fn is_live(&self, now: UtcMillis) -> bool {
         let since = |then: UtcMillis| now.epoch_millis().saturating_sub(then.epoch_millis());
-        since(self.seen) < millis(IDLE_TIMEOUT) && since(self.began) < millis(ABSOLUTE_LIFETIME)
+        let lifetime = match self.proof {
+            Proof::Link => LINK_SESSION_LIFETIME,
+            Proof::Telegram | Proof::Linked(_) => ABSOLUTE_LIFETIME,
+        };
+        since(self.seen) < millis(IDLE_TIMEOUT) && since(self.began) < millis(lifetime)
     }
 }
 
@@ -272,8 +277,9 @@ impl Sessions {
         Ok(SessionToken(hex(&id)))
     }
 
-    /// The owner of the live session `token` names, refreshing its idle timer; `None` when it
-    /// names none, or its session has ended.
+    /// The owner of the live `telegram` or `linked` session `token` names, refreshing its idle
+    /// timer; `None` when it names none, its session has ended, or it is a `link` session, which
+    /// reaches the linking routes alone (SPEC-359 R2, R4).
     #[must_use]
     pub fn admit(&self, token: &str) -> Option<Owner> {
         let presented = digest(&id_bytes(token)?);
@@ -282,6 +288,9 @@ impl Sessions {
         let session = live
             .iter_mut()
             .find(|session| bool::from(session.digest.ct_eq(&presented)))?;
+        if session.proof == Proof::Link {
+            return None;
+        }
         session.seen = now;
         Some(session.owner)
     }
@@ -312,8 +321,10 @@ impl Sessions {
         reason = "ending the sessions is the effect; how many ended is only a report"
     )]
     pub fn end_opened_by(&self, row: i64) -> usize {
-        let _ = row;
-        0
+        let mut live = self.live_at(self.clock.now());
+        let before = live.len();
+        live.retain(|session| session.proof != Proof::Linked(row));
+        before - live.len()
     }
 
     /// Ends the session `token` names, on the server; whether a live one was ended.

@@ -88,10 +88,17 @@ impl LinkingConfig {
             setting: PUBLIC_ORIGIN,
             expected: SHAPE,
         };
-        let Some(text) = value.map(str::trim) else {
+        let Some(text) = value.map(str::trim).filter(|text| !text.is_empty()) else {
             return Ok(Self::off());
         };
         let origin = Url::parse(text).map_err(|_| malformed())?;
+        if origin.scheme() != "https" {
+            return Err(malformed());
+        }
+        // An origin alone: a path, a query, a fragment or a user name makes the text more.
+        if origin.origin().ascii_serialization() != text {
+            return Err(malformed());
+        }
         let host = origin.host_str().ok_or_else(malformed)?.to_owned();
         let webauthn = WebauthnBuilder::new(&host, &origin)
             .and_then(|builder| builder.rp_name(RP_NAME).build())

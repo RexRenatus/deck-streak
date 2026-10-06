@@ -23,8 +23,8 @@ use webauthn_rs::prelude::{Base64UrlSafeData, PublicKeyCredential};
 
 use crate::Refusal;
 use crate::owner::Owner;
-use crate::passkeys::{PasskeyError, Passkeys, SignedIn, State, base64url, digest};
-use crate::session::{SessionToken, Sessions};
+use crate::passkeys::{PasskeyError, Passkeys, SignedIn, State, base64url, digest, millis};
+use crate::session::{Proof, SessionToken, Sessions};
 
 pub use crate::session::LINK_SESSION_LIFETIME;
 
@@ -82,12 +82,18 @@ impl LinkCodes {
         }
     }
 
-    /// Keeps a NEW code for `owner`, and returns it: the only time it exists in the clear.
+    /// Keeps a NEW code for `owner`, evicting the oldest when [`MAX_LIVE_LINK_CODES`] are live,
+    /// and returns it: the only time it exists in the clear.
     fn insert(&self, owner: Owner) -> Result<LinkCode, PasskeyError> {
-        let code = [0_u8; LINK_CODE_BYTES];
+        let mut code = [0_u8; LINK_CODE_BYTES];
+        getrandom::fill(&mut code).map_err(|_| PasskeyError::Random)?;
         let mut live = self.lock();
+        // The store is in insertion order, so its first code is the oldest.
+        if live.len() >= MAX_LIVE_LINK_CODES {
+            live.remove(0);
+        }
         live.push(Live {
-            digest: code.to_vec(),
+            digest: digest(&code),
             owner,
             minted: self.clock.now(),
         });
@@ -102,15 +108,22 @@ impl LinkCodes {
     /// [`Refusal::LinkCodeInvalid`] when no live code is `code`, and [`Refusal::LinkCodeExpired`]
     /// when it is [`LINK_CODE_LIFETIME`] old.
     pub fn take(&self, code: &str) -> Result<Owner, Refusal> {
-        let presented = code_bytes(code).ok_or(Refusal::LinkCodeInvalid)?;
-        let live = self.lock();
+        let presented = digest(&code_bytes(code).ok_or(Refusal::LinkCodeInvalid)?);
+        let now = self.clock.now();
+        let mut live = self.lock();
         let at = live
             .iter()
             .position(|kept| bool::from(kept.digest.ct_eq(&presented)))
             .ok_or(Refusal::LinkCodeInvalid)?;
-        let owner = live[at].owner;
+        let kept = live.remove(at);
         drop(live);
-        Ok(owner)
+        let age = now
+            .epoch_millis()
+            .saturating_sub(kept.minted.epoch_millis());
+        if age >= millis(LINK_CODE_LIFETIME) {
+            return Err(Refusal::LinkCodeExpired);
+        }
+        Ok(kept.owner)
     }
 
     /// The SHA-256 digests the store keeps, oldest first: what R3's "kept only as its SHA-256"
@@ -156,6 +169,13 @@ fn code_bytes(code: &str) -> Option<Vec<u8>> {
 /// for any other proof or an older handshake.
 pub fn fresh_telegram(sessions: &Sessions, token: &str) -> Result<Owner, Refusal> {
     let admitted = sessions.admit_proof(token).ok_or(Refusal::NoSession)?;
+    let age = admitted
+        .now
+        .epoch_millis()
+        .saturating_sub(admitted.began.epoch_millis());
+    if admitted.proof != Proof::Telegram || age > millis(REAUTH_AGE) {
+        return Err(Refusal::ReauthRequired);
+    }
     Ok(admitted.owner)
 }
 
@@ -201,7 +221,9 @@ impl Passkeys {
     pub fn mint_link_code(&self, session: &str) -> Result<LinkCode, PasskeyError> {
         self.relying_party()?;
         let owner = fresh_telegram(&self.sessions, session)?;
-        self.codes.insert(owner)
+        let code = self.codes.insert(owner)?;
+        tracing::info!(event = "link_code_minted", "a link code was minted");
+        Ok(code)
     }
 
     /// Redeems `code`: ends the session the request arrived with, if any, and opens a `link`
@@ -220,7 +242,9 @@ impl Passkeys {
         if let Some(arriving) = arriving {
             self.sessions.end_session(arriving);
         }
-        Ok(self.sessions.open_link(owner)?)
+        let session = self.sessions.open_link(owner)?;
+        tracing::info!(event = "link_code_redeemed", "a link code was redeemed");
+        Ok(session)
     }
 
     /// Finishes the sign-in `flow` names: the credential must be one of the configured owner's
@@ -244,13 +268,20 @@ impl Passkeys {
         };
         let credential = serde_json::from_value::<PublicKeyCredential>(response.clone())
             .map_err(|_| Refusal::PasskeyInvalid)?;
-        let found = credential_row(db, credential.get_credential_id()).await?;
-        let _ = found;
+        let Some((_, user)) = credential_row(db, credential.get_credential_id()).await? else {
+            return Err(Refusal::NotLinked.into());
+        };
+        if user != self.owner.user().get() {
+            return Err(Refusal::NotOwner.into());
+        }
         let row = self
             .verify_assertion(db, &state, &held, &credential)
             .await?;
-        let _ = arriving;
+        if let Some(arriving) = arriving {
+            self.sessions.end_session(arriving);
+        }
         let session = self.sessions.open_linked(self.owner, row)?;
+        tracing::info!(event = "passkey_signed_in", row, "a passkey signed in");
         Ok(SignedIn {
             session,
             row,
@@ -305,6 +336,10 @@ impl Passkeys {
     /// `identity_unknown` for an id no passkey of the owner has, or a store failure.
     pub async fn remove(&self, db: &Db, session: &str, id: i64) -> Result<(), PasskeyError> {
         self.relying_party()?;
+        fresh_telegram(&self.sessions, session)?;
+        if id == TELEGRAM_METHOD {
+            return Err(Refusal::LastMethod.into());
+        }
         let owner = self.owner.user().get();
         let mut transaction = db.write().await?;
         let removed = sqlx::query!(
@@ -315,10 +350,11 @@ impl Passkeys {
         .execute(&mut *transaction)
         .await?;
         transaction.commit().await?;
-        let _ = session;
         if removed.rows_affected() != 1 {
             return Err(Refusal::IdentityUnknown.into());
         }
+        self.sessions.end_opened_by(id);
+        tracing::info!(event = "passkey_removed", row = id, "a passkey was removed");
         Ok(())
     }
 }
