@@ -328,3 +328,38 @@ A30: green at aef11216
   so an empty walk would have passed it. It now reports through a local `examined` helper that
   prints the same line and fails when the count is zero; no assertion was removed or loosened, and
   the test is green.
+
+## Part 2: the rebuild
+
+- **The icons are built from text, and the branch was rebuilt so that no commit holds a binary
+  file.** The public scrub refuses every binary file in the tree and in its history, and the first
+  cut committed the three icons as PNG files at step 7's green. Before anything was pushed, the
+  branch was rebuilt locally from f10a2333: step 7's red and green were made again, the icons now
+  built at build time by an endpoint at each icon's path that the build prerenders, and every later
+  commit was taken from its first-cut commit by path, with the same subject. The script in "what the
+  reds and greens disclosed" above made the first cut's icons; no commit on this branch holds them,
+  and ADR-361 D16's amendment records the change.
+- **A28's test was rebuilt too, red first.** It had read each icon from `static/`; at d97ce3ce it
+  reads each icon from the endpoint at its path, checks the endpoint is prerendered and answers
+  `image/png`, and checks every chunk's checksum and the pixels the image data inflates to. Its red
+  at d97ce3ce is the manifest's assertion, as before: `AssertionError: expected null to deeply
+  equal { name: 'DeckStreak', …(4) }`. It is green at e8723819, where StrykerJS killed all 42
+  mutants of `web/app/src/lib/icon.ts` and the three endpoints with it. A30's red was re-measured at
+  876861a9 and reads as its line above.
+- **The red-first lines above name the rebuilt commits.** Commits 9edb096a to f10a2333 are
+  unchanged. Each first-cut commit after them, and the commit that replaced it:
+  - 1ea03704 -> d97ce3ce, step 7's red;
+  - 5307dd94 -> e8723819, step 7's green;
+  - 55398e36 -> 876861a9, step 8's red;
+  - 0e47c89b -> aef11216, step 8's green;
+  - 40e4d4f5 -> 2867f22d, the rows;
+  - 74ba7cd1 -> 046974dd, this record's reds and greens, written with the rebuilt commits' names;
+  - 882a4c11 -> ac35bd23, the mapping screen's mutation coverage;
+  - d6760976 -> 49b4c61c, the player's turn;
+  - 19c55fac -> 1df3f5ed, the media reader's and the voices' mutation coverage;
+  - ad2e0f13 -> ee12bee7, the media census's examined count.
+- **Paths.** SPEC-350 section 10's path bullet names `web/app/static/icon-192.png`,
+  `web/app/static/icon-512.png` and `web/app/static/apple-touch-icon.png`, which no commit on this
+  branch touches. In their place the branch touches `web/app/src/lib/icon.ts`,
+  `web/app/src/routes/icon-192.png/+server.ts`, `web/app/src/routes/icon-512.png/+server.ts` and
+  `web/app/src/routes/apple-touch-icon.png/+server.ts`.

@@ -297,6 +297,16 @@ Chosen against:
   do not change.
 - Waiting for drawn art: rejected because none has been supplied, and the install criteria need an
   icon now.
+- Committed PNG files: rejected because the public scrub refuses every binary file in the tree and
+  in its history.
+
+Amended before the pull request was opened: the icons are built from text at build time, so no
+icon is made once or committed, and the tree and its history hold no binary file.
+
+- Chosen: an endpoint at each icon's path that the build prerenders into the file the site serves
+  there, encoding the plain square with the platform's own deflate (`web/app/src/lib/icon.ts`).
+  `vite build` already runs SvelteKit's prerender pass, so the endpoints add neither a build step
+  nor a dependency, the two reasons a generator in the build lost above.
 
 ## Decision Outcome
 
