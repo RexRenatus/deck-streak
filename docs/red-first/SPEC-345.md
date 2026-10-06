@@ -65,3 +65,16 @@ this pull request's CI ran; both are green at the cure. The red lines above are 
 round's: A1 to A8 are the build round's own measurements at 24e5ed54 and beae6cdf, as the record's
 opening says, and A9 to A11 were never red. The later build and fix rounds added no line to this
 record, and the mutation rows' proofs and the wasm boundary census they added are theirs.
+
+## Part 2: the owner-gesture token and the containment census
+
+Part 2 of SPEC-345 (R7 to R10, A12 to A18; sections 7 to 9). The amendments came first, then the
+shape: an `OwnerGesture` whose `from_tap` refuses every target, a `run_exempt` that refuses every
+gesture, and a native entry that refuses every tap and names no gesture. The tests of A12 to A18
+were then committed alone and run over that shape, the containment census with them. Each red below
+is quoted from the run at its commit.
+
+```red-first
+A16: not red: the shape's `OwnerGesture` derives nothing, so the probe that it is neither `Clone` nor `Copy` passes over the stub; it guards the type against a later derive
+A18: not red: mutation coverage of the native refusal text written with the shape, as A9 is for part 1's refusals
+```
