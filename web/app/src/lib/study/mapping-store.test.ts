@@ -117,8 +117,8 @@ describe('the mapping', () => {
     store.bindButton('easy', 7);
     store.bindButton('flag', 0);
     store.setStick(false);
-    const keys = [[' ', 'confirm'], ['Enter', 'confirm'], ['2', 'hard'], ['4', 'easy'], ['u', 'undo'], ['-', 'bury'], ['r', 'replay'], ['j', 'again']];
-    const buttons = [[1, 'confirm'], [14, 'again'], [13, 'hard'], [4, 'undo'], [5, 'bury'], [2, 'replay'], [7, 'easy'], [0, 'flag']];
+    const keys: [string, string][] = [[' ', 'confirm'], ['Enter', 'confirm'], ['2', 'hard'], ['4', 'easy'], ['u', 'undo'], ['-', 'bury'], ['r', 'replay'], ['j', 'again']];
+    const buttons: [number, string][] = [[1, 'confirm'], [14, 'again'], [13, 'hard'], [4, 'undo'], [5, 'bury'], [2, 'replay'], [7, 'easy'], [0, 'flag']];
     expect(JSON.parse(storage.getItem(STORED) ?? 'null')).toEqual({ keyboard: keys, gamepad: buttons, stick: false });
     expect(store.mapping).toEqual({ keys: new Map(keys), buttons: new Map(buttons), stick: [] });
     // the device reads it back

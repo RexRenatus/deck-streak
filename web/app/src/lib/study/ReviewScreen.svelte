@@ -9,6 +9,8 @@
   // while a card is shown, a gamepad is connected and the page is visible. The face's clips play
   // through the page's one audio element and its speaker (SPEC-350 R15, R16): the Replay control
   // shows while the side has replay clips, and a voice picker for each language the card speaks.
+  // The input reads the remote's mapping this device stores, and the nav links to its screen
+  // (SPEC-350 R18, ADR-361 D15).
   import { onMount } from 'svelte';
   import CardFrame from '$lib/card/CardFrame.svelte';
   import { m } from '$lib/paraglide/messages.js';
@@ -18,6 +20,7 @@
   import AnswerButtons from './AnswerButtons.svelte';
   import { Player } from './audio';
   import { deviceStorage, StudyInput } from './input';
+  import { MappingStore } from './mapping-store';
   import { statusText } from './refusal';
   import { Review, type ClipPlayer, type StudyClient } from './review';
   import { deviceSpeaker } from './speech';
@@ -59,7 +62,8 @@
       side: () => review.side,
       focus: () => region.focus()
     },
-    deviceStorage()
+    deviceStorage(),
+    new MappingStore(deviceStorage()).mapping
   );
 
   const holder = new WakeLockHolder(navigator.wakeLock);
@@ -227,5 +231,6 @@
 
   <nav class="mt-4">
     <a href="/study" class="inline-flex min-h-11 items-center rounded-md border px-4">{m.study_back_to_decks()}</a>
+    <a href="/study/mapping" class="inline-flex min-h-11 items-center rounded-md border px-4">{m.study_mapping_title()}</a>
   </nav>
 </main>

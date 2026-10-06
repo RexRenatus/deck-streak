@@ -3,6 +3,7 @@
 // `GamepadReader` reads each frame's snapshots, and `resolve` reads an intent against the side. A
 // switch kept per device turns the single-character keys off (WCAG 2.1.4), and focus returns to the
 // review after every action and when a pointer moves it into the card frame.
+// SPEC-350 R18: the readers take this device's stored mapping, through #663's defaulted parameters.
 import { resolve, type Action, type Intent, type Side } from '$lib/remote/actions';
 import { GamepadReader, type PadSnapshot } from '$lib/remote/gamepad';
 import { readKey, type KeyInput } from '$lib/remote/keys';
@@ -42,6 +43,32 @@ export interface InputTarget {
   focus(): void;
 }
 
+/** The key switch on this device: whether single-character keys fire (WCAG 2.1.4). The review and
+ * the mapping screen each bind it (SPEC-350 R18, ADR-361 D15). */
+export class KeySwitch {
+  readonly #store: Pick<SwitchStorage, 'setItem'>;
+  #on: boolean;
+
+  constructor(storage: SwitchStorage | undefined) {
+    this.#store = storage ?? new Unstored();
+    this.#on = storage?.getItem(KEY_SWITCH) !== OFF;
+  }
+
+  /** Whether single-character keys fire on this device. */
+  get on(): boolean {
+    return this.#on;
+  }
+
+  set on(on: boolean) {
+    this.#on = on;
+    try {
+      this.#store.setItem(KEY_SWITCH, on ? 'on' : OFF);
+    } catch {
+      // storage the browser refuses keeps the switch for this page only
+    }
+  }
+}
+
 /** A key the switch silences: one character, with no Control or Command (WCAG 2.1.4). */
 function silenced(event: KeyInput): boolean {
   return event.key.length === 1 && !event.ctrlKey && !event.metaKey;
@@ -49,38 +76,35 @@ function silenced(event: KeyInput): boolean {
 
 export class StudyInput {
   readonly #target: InputTarget;
-  readonly #store: Pick<SwitchStorage, 'setItem'>;
-  readonly #reader = new GamepadReader();
-  #characterKeys: boolean;
+  readonly #switch: KeySwitch;
+  readonly #mapping: Mapping | undefined;
+  readonly #reader: GamepadReader;
   /** Whether the page's last key was Tab, which moves focus on purpose. */
   #tabbed = false;
 
+  /** `mapping` is this device's stored mapping (SPEC-350 R18), passed to #663's readers; with
+   * none, they read today's map. */
   constructor(target: InputTarget, storage: SwitchStorage | undefined, mapping?: Mapping) {
-    void mapping;
     this.#target = target;
-    this.#store = storage ?? new Unstored();
-    this.#characterKeys = storage?.getItem(KEY_SWITCH) !== OFF;
+    this.#switch = new KeySwitch(storage);
+    this.#mapping = mapping;
+    this.#reader = new GamepadReader(mapping?.buttons, mapping?.stick);
   }
 
   /** Whether single-character keys fire on this device. */
   get characterKeys(): boolean {
-    return this.#characterKeys;
+    return this.#switch.on;
   }
 
   set characterKeys(on: boolean) {
-    this.#characterKeys = on;
-    try {
-      this.#store.setItem(KEY_SWITCH, on ? 'on' : OFF);
-    } catch {
-      // storage the browser refuses keeps the switch for this page only
-    }
+    this.#switch.on = on;
   }
 
   /** A `keydown` on the page. */
   key(event: KeyInput): void {
     this.#tabbed = event.key === 'Tab';
-    if (!this.#characterKeys && silenced(event)) return;
-    this.#intent(readKey(event));
+    if (!this.#switch.on && silenced(event)) return;
+    this.#intent(readKey(event, this.#mapping?.keys));
   }
 
   /** One animation frame's gamepad snapshots. */

@@ -551,4 +551,43 @@ describe('the review screen', () => {
     expect(screen.queryByRole('button', { name: 'Replay' })).toBeNull();
     expect(screen.queryAllByRole('combobox')).toEqual([]);
   });
+
+  // SPEC-350 R18; ADR-361 D15. The review reads the remote's mapping this device stores, a key's
+  // and a button's, and links to the screen that changes it.
+  it('the review reads the mapping this device stores, and links to its screen', async () => {
+    localStorage.setItem(
+      'deck-streak.study.mapping',
+      JSON.stringify({ keyboard: [[' ', 'confirm'], ['j', 'good']], gamepad: [[0, 'confirm'], [7, 'good']] })
+    );
+    withGamepads();
+    const remote = pad(1);
+    gamepads = [null, remote];
+    const client = new FakeClient([head(view(1)), head(view(2)), head(view(3))]);
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+
+    // 3 no longer rates Good, and j does
+    await fireEvent.keyDown(window, { key: ' ' });
+    await fireEvent.keyDown(window, { key: '3' });
+    await settle();
+    expect(client.calls).toEqual(['card']);
+    await fireEvent.keyDown(window, { key: 'j' });
+    await settle();
+    expect(client.calls).toEqual(['card', 'rate 1 3 0', 'card']);
+
+    // button 15 no longer rates Good, and button 7 does
+    runFrame();
+    remote.buttons[0].pressed = true;
+    runFrame();
+    remote.buttons[15].pressed = true;
+    runFrame();
+    await settle();
+    expect(client.calls.slice(3)).toEqual([]);
+    remote.buttons[7].pressed = true;
+    runFrame();
+    await settle();
+    expect(client.calls.slice(3)).toEqual(['rate 2 3 0', 'card']);
+
+    expect(screen.getByRole('link', { name: 'Remote mapping' }).getAttribute('href')).toBe('/study/mapping');
+  });
 });
