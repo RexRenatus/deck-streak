@@ -110,12 +110,12 @@ class TheDispatchIsSizedFromItsListing(unittest.TestCase):
     function; a projection past the matrix's limit is refused with its projection."""
 
     def test_a_small_package_takes_one_shard_and_a_large_one_the_fewest_within_the_bound(self):
-        # Costs and bound are the plan's: the daemon costs 80 s a mutant on a 1768 s baseline, and
-        # 112 mutants project to 10728 s of a 10800 s bound; the ingest costs 126 s, 71 to a leg.
+        # Costs and bound are the plan's: the daemon costs 80 s a mutant on a 2141 s baseline, and
+        # 108 mutants project to 10781 s of a 10800 s bound; the ingest costs 126 s, 68 to a leg.
         cases = [
             ("deck-streak-kernel", 5, 1),
-            ("deck-streak-daemon", 112, 1),
-            ("deck-streak-daemon", 113, 2),
+            ("deck-streak-daemon", 108, 1),
+            ("deck-streak-daemon", 109, 2),
             ("deck-streak-ingest", 150, 3),
         ]
         for package, count, expected in examined("listings sized", cases):
@@ -300,29 +300,29 @@ class TheReleaseFitsOneRun(unittest.TestCase):
         self.assertEqual(derived, {"ci": 209, "battery": 234})
 
     def test_a_listing_beyond_the_ceiling_is_refused_whole(self):
-        # 71 ingest mutants of 126 s fit a leg's 10800 s after its 1768 s baseline, so the
-        # battery's 234 legs hold 16614 and the pull request's 209 legs hold 14839.
-        code, out, written = size(entries("deck-streak-ingest", 16615), "deck-streak-ingest")
+        # 68 ingest mutants of 126 s fit a leg's 10800 s after its 2141 s baseline, so the
+        # battery's 234 legs hold 15912 and the pull request's 209 legs hold 14212.
+        code, out, written = size(entries("deck-streak-ingest", 15913), "deck-streak-ingest")
         self.assertEqual(code, 1, out)
         self.assertIn(
-            "REFUSED: 16615 mutant(s), projected at 2093490 s serially, need more than 234 legs",
+            "REFUSED: 15913 mutant(s), projected at 2005038 s serially, need more than 234 legs",
             out,
         )
         self.assertEqual(written, {}, "a refused sizing wrote outputs")
-        code, out, written = size(entries("deck-streak-ingest", 16614), "deck-streak-ingest")
+        code, out, written = size(entries("deck-streak-ingest", 15912), "deck-streak-ingest")
         self.assertEqual((code, written.get("shards")), (0, "234"), out)
-        code, out, planned = plan_shards(entries("deck-streak-ingest", 14840))
+        code, out, planned = plan_shards(entries("deck-streak-ingest", 14213))
         self.assertEqual(code, 1, out)
         self.assertIn(
-            "REFUSED: 14840 mutant(s), projected at 1869840 s serially, need more than 209 legs",
+            "REFUSED: 14213 mutant(s), projected at 1790838 s serially, need more than 209 legs",
             out,
         )
         self.assertNotIn("shards", planned)
 
     def test_the_whole_tree_is_sized_from_its_listing(self):
-        # 14840 ingest mutants need 210 legs: one past the pull request's ceiling, within the
+        # 14213 ingest mutants need 210 legs: one past the pull request's ceiling, within the
         # battery's, which sizes the whole tree as it sizes a package.
-        cases = [(entries("deck-streak-kernel", 5), 1), (entries("deck-streak-ingest", 14840), 210)]
+        cases = [(entries("deck-streak-kernel", 5), 1), (entries("deck-streak-ingest", 14213), 210)]
         for listing, expected in examined("whole-tree listings", cases):
             code, out, written = size(listing)
             self.assertEqual(code, 0, out)
@@ -1200,9 +1200,9 @@ def bash_runs(scripts):
 
 #: The settle census's measured need in seconds, the one literal SPEC-327 A1 holds the gate's
 #: budget and the sizer's census term to, re-derived by SPEC-362 R6: the slowest census test passed
-#: at 1378.452 s in push run 37392351782's `rust` job, and nextest started the census tests up to
-#: 51 s into a leg's baseline run, so a run that holds them needs 51 + 1379 = 1430 s.
-CENSUS_NEED_SECONDS = 1430
+#: at 1469.349 s in push run 37438835490's `rust` job, and nextest started the census tests up to
+#: 51 s into a leg's baseline run, so a run that holds them needs 51 + 1470 = 1521 s.
+CENSUS_NEED_SECONDS = 1521
 
 
 class TheGatesTimeoutCoversTheCensus(unittest.TestCase):
@@ -1430,11 +1430,11 @@ class EveryMutationCommandKeepsTheGatesBounds(unittest.TestCase):
 HEAD_COMMANDS = {
     "size": (
         'cargo mutants --no-shuffle --list --json --in-place ${PACKAGE:+--package "$PACKAGE"} '
-        '--timeout 2200 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"'
+        '--timeout 2300 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"'
     ),
     "rust": (
         'cargo mutants --no-shuffle -vV --in-place ${PACKAGE:+--package "$PACKAGE"} '
-        '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2200 --build-timeout 600 '
+        '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2300 --build-timeout 600 '
         '--output "$RUNNER_TEMP/mutation" || rc=$?'
     ),
 }

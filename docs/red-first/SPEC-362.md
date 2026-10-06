@@ -61,3 +61,17 @@ assertions unchanged; and it gave `test_mutation_verdict.py`'s `cargo_report` Ba
 
 A12 plants, by hand on `PYTHON_SHARD_MUTANTS`: 19 reads `2 != 1 : 20 listed`, 21 reads `1 != 2 : 21 listed`
 and 0 reads `ZeroDivisionError`; each fails the pin, and the file is restored byte-equal.
+
+**The signed 2300 s budget, red first.** The pins moved alone, in the commit before the figures: the
+byte pins over `BOUNDS`, `CENSUS_NEED_SECONDS`, the census and baseline sums of
+`test_mutation_verdict.py`, R7's boundary, the cap verdict's examined counts and the dispatch counts
+derived from the new baseline (`docs/rulings/OWNER-RULING-2026-10-06-mutation-timeout-2300.md`).
+Each read red at e0b635cc, the base's code, for the figure and for nothing else.
+
+```red-first
+B1: red at e0b635cc: AssertionError: 1430 != 1521
+B2: red at e0b635cc: AssertionError: 1768 != 2141
+B3: red at e0b635cc: AssertionError: '--timeout 2300' not found in 'cargo mutants --no-shuffle --list --json --in-place --package="$PACKAGE" --timeout 2200 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"'
+B4: red at e0b635cc: AssertionError: 3198 != 3662 : the baseline a plan naming the census package pays
+B5: red at e0b635cc: AssertionError: "VOID mutation-rust-shard-1: the baseline's slowest test ran 1534.0 s, and 1.5 times it passes the 2300 s per-mutant timeout" not found
+```
