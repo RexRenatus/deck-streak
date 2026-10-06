@@ -96,6 +96,20 @@ stays on loopback. 9492065d pins `script-open` as described above. Both change t
 files after the reds of A6, A7 and A10, and neither changes a criterion's words, assertion or
 tolerance.
 
+A7 read green on both simulators at d54a04d1, in the `apple-on-change` run 37396949465's `harness`
+job (job 112058823654).
+
+The switch defaults off on iOS pending a measured containment layer (SPEC-355 section 7). The
+test of the default, `TheScriptSwitchDefaultsOff.test_the_script_switch_defaults_off` in
+`scripts/tests/test_card_web_view_layers.py`, was committed before the default changed (dd597508)
+and read red there, run locally from `scripts/tests`: `AssertionError: Lists differ: ['true'] !=
+['false']`, the one failure of the module's three tests (`examined 1 switch definitions`). The
+default changed in 9ab49047, where the module read `Ran 3 tests` and OK, the test's six planted
+switches each read as planted. The simulator test of the default,
+`FactoryTests/test_the_factory_default_build_is_the_scripts_off_card_view`, committed beside it in
+dd597508, runs only on the simulators, and no run of it precedes the change, so its red is not
+recorded.
+
 ```red-first
 A1: red at 436d23f7: CardScriptsTests.swift:35: XCTAssertEqual failed: ("off(missing: Set([]))") is not equal to ("run") - switch on, present ["L1", "L3", "L4", "L5", "L6", "L7", "L8", "L9"] (run 37371807357 attempt 2, job card-isolation, host; Executed 1 test, with 1 failure; examined 512 cases)
 A1: green at 8ae87c02
@@ -108,6 +122,7 @@ A5: red at 7fa48227: AssertionError: Lists differ: [] != ['ios/CardIsolation/Sou
 A5: green at 8ae87c02
 A6: red at 748c31cf: PlantedCardTests.swift:499: XCTAssertEqual failed: ("["nav-blank": 1, "nav-self": 1]") is not equal to ("[:]") - the cards whose card view opened a connection; PlantedCardTests.swift:510: ("0") is less than ("1") - the hold counted no refused attempt for nav-self, and for nav-blank (run 37371807357 attempt 2, job harness, iPhone 17 and iPad (A16); followed nav-self and nav-blank: without L9 connections=1)
 A7: red at 748c31cf: PlantedCardTests.swift:683: XCTAssertEqual failed: (18 cards) is not equal to ("[]") - scripted cards whose script did not run in the scripted view, so their absence proves nothing; PlantedCardTests.swift:684: ("["script-nav", "script-form", "script-open", "webrtc-srcdoc-frame", "capture"]") is not equal to ("[]") - a blind reference, corrected at 723e3020 (run 37371807357 attempt 2, job harness, iPhone 17 and iPad (A16))
+A7: green at d54a04d1
 A8: red at 748c31cf: PlantedCardTests.swift:719: XCTAssertEqual failed: ("["webrtc-stun", "webrtc-turn-tcp", "webrtc-blank-frame", "webrtc-srcdoc-frame", "webrtc-written-frame"]") is not equal to ("[]") - peer-connection cards whose script did not run in the scripted view; PlantedCardTests.swift:720: ("["webrtc-srcdoc-frame"]") is not equal to ("[]") - a reference that sent nothing, corrected at 723e3020 (run 37371807357 attempt 2, job harness, iPhone 17 and iPad (A16))
 A8: green at 8ae87c02
 A9: red at 748c31cf: PlantedCardTests.swift:784: XCTAssertTrue failed - the scripted card's record shows a bridge, or none; PlantedCardTests.swift:785: ("Optional(false)") is not equal to ("Optional(true)") - the scripted card's script did not run (run 37371807357 attempt 2, job harness, iPhone 17 and iPad (A16); the reference read the planted cookie and storage)
