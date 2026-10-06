@@ -140,11 +140,21 @@ pub enum FailReason {
     TimedOut,
     /// Any other failure inside the engine.
     EngineFailed,
+    /// The class's stop was set, or could not be read (R36).
+    WritesStopped,
+    /// The process's zone is not pinned as a POSIX rule that names no zone file (R3).
+    ZoneNotPinned,
+    /// The take's backup could not be written (R34).
+    BackupFailed,
+    /// The take's backup failed its restore check (R34).
+    BackupCheckFailed,
+    /// A count other than the review-log rows and the due count moved (R35).
+    CountsMoved,
 }
 
 impl FailReason {
     /// Every code.
-    pub const ALL: [Self; 11] = [
+    pub const ALL: [Self; 16] = [
         Self::EngineDayDiffers,
         Self::ZoneDiffers,
         Self::ZoneObservesDaylightSaving,
@@ -156,6 +166,11 @@ impl FailReason {
         Self::WriteFailed,
         Self::TimedOut,
         Self::EngineFailed,
+        Self::WritesStopped,
+        Self::ZoneNotPinned,
+        Self::BackupFailed,
+        Self::BackupCheckFailed,
+        Self::CountsMoved,
     ];
 
     /// The code as `skip_days` stores it.
@@ -173,6 +188,11 @@ impl FailReason {
             Self::WriteFailed => "write_failed",
             Self::TimedOut => "timed_out",
             Self::EngineFailed => "engine_failed",
+            Self::WritesStopped => "writes_stopped",
+            Self::ZoneNotPinned => "zone_not_pinned",
+            Self::BackupFailed => "backup_failed",
+            Self::BackupCheckFailed => "backup_check_failed",
+            Self::CountsMoved => "counts_moved",
         }
     }
 
@@ -590,4 +610,98 @@ pub async fn skip_set_on(connection: &mut SqliteConnection) -> Result<Vec<StudyD
         .collect();
     days.sort_unstable();
     Ok(days)
+}
+
+/// One moved card's scheduling state, as the take records it before its reschedule (R22) and as
+/// the reschedule left it (R26): what the undo restores, and what it compares first.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CardState {
+    /// The card's id.
+    pub card_id: i64,
+    /// Its due.
+    pub due: i64,
+    /// Its queue.
+    pub queue: i64,
+    /// Its type.
+    pub kind: i64,
+    /// Its interval, in days.
+    pub interval: i64,
+    /// Its ease factor, in permille.
+    pub ease_factor: i64,
+    /// Its original deck's id (a filtered deck's card), else 0.
+    pub original_deck: i64,
+    /// Its original due (a filtered deck's card), else 0.
+    pub original_due: i64,
+    /// Its modification time, in seconds.
+    pub mtime: i64,
+}
+
+impl SkipStore {
+    /// Records each moved card's prior state for the skip `id` (R22): one `skip_card_snapshot` row
+    /// a card, all in one transaction, committed before the reschedule.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the write fails; then no row is recorded.
+    pub async fn record_prior(
+        &self,
+        id: SkipId,
+        cards: &[CardState],
+        now: UtcMillis,
+    ) -> Result<(), KernelError> {
+        let skip = id.get();
+        let created = now.epoch_millis();
+        let mut write = self.db.write().await?;
+        for card in cards {
+            sqlx::query(
+                "INSERT INTO skip_card_snapshot (skip_id, card_id, prior_due, prior_queue, \
+                 prior_type, prior_interval, prior_ease_factor, prior_original_deck_id, \
+                 prior_original_due, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            )
+            .bind(skip)
+            .bind(card.card_id)
+            .bind(card.due)
+            .bind(card.queue)
+            .bind(card.kind)
+            .bind(card.interval)
+            .bind(card.ease_factor)
+            .bind(card.original_deck)
+            .bind(card.original_due)
+            .bind(created)
+            .execute(&mut *write)
+            .await?;
+        }
+        write.commit().await?;
+        Ok(())
+    }
+
+    /// Records each moved card's state as the reschedule left it, with its modification time
+    /// (R26), on the rows [`SkipStore::record_prior`] wrote for the skip `id`, in one transaction.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the write fails; then no row changes.
+    pub async fn record_left(&self, id: SkipId, cards: &[CardState]) -> Result<(), KernelError> {
+        let skip = id.get();
+        let mut write = self.db.write().await?;
+        for card in cards {
+            sqlx::query(
+                "UPDATE skip_card_snapshot SET left_due = ?3, left_queue = ?4, left_type = ?5, \
+                 left_interval = ?6, left_ease_factor = ?7, left_mtime = ?8 \
+                 WHERE skip_id = ?1 AND card_id = ?2",
+            )
+            .bind(skip)
+            .bind(card.card_id)
+            .bind(card.due)
+            .bind(card.queue)
+            .bind(card.kind)
+            .bind(card.interval)
+            .bind(card.ease_factor)
+            .bind(card.mtime)
+            .execute(&mut *write)
+            .await?;
+        }
+        write.commit().await?;
+        Ok(())
+    }
 }

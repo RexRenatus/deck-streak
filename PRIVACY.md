@@ -52,11 +52,12 @@ The lawful basis of each is the contract (GDPR Article 6(1)(b)): the service you
 is kept for a fixed period. Each is kept until you erase it, which is how an account is deleted here.
 
 Outside its database, DeckStreak holds a private copy of your collection, your own Anki data,
-refreshed from your sync server; when the owner runs the sync server on the same host, that
-server's store (each sync user's collection, media index and media files) and its daily snapshots;
-and, in memory only, your Telegram user id in a signed-in session, and the bot's place in the queue
-of your messages. The bot reads the messages and button taps you
-send it to answer them, keeps none of their text, and answers nobody but you.
+refreshed from your sync server, and beside it the one backup of that copy a skip day's write makes
+before it changes a card, which an erase removes and an export leaves out; when the owner runs the
+sync server on the same host, that server's store (each sync user's collection, media index and
+media files) and its daily snapshots; and, in memory only, your Telegram user id in a signed-in
+session, and the bot's place in the queue of your messages. The bot reads the messages and button
+taps you send it to answer them, keeps none of their text, and answers nobody but you.
 
 ## Your copy of your data, and erasing it
 
