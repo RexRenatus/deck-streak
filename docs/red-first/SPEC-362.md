@@ -66,12 +66,8 @@ and 0 reads `ZeroDivisionError`; each fails the pin, and the file is restored by
 byte pins over `BOUNDS`, `CENSUS_NEED_SECONDS`, the census and baseline sums of
 `test_mutation_verdict.py`, R7's boundary, the cap verdict's examined counts and the dispatch counts
 derived from the new baseline (`docs/rulings/OWNER-RULING-2026-10-06-mutation-timeout-2300.md`).
-Each read red at e0b635cc, the base's code, for the figure and for nothing else.
-
-```red-first
-A5: red at e0b635cc: AssertionError: 1430 != 1521
-A3: red at e0b635cc: AssertionError: 1768 != 2141
-A4: red at e0b635cc: AssertionError: '--timeout 2300' not found in 'cargo mutants --no-shuffle --list --json --in-place --package="$PACKAGE" --timeout 2200 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"'
-A5: red at e0b635cc: AssertionError: 3198 != 3662
-A6: red at e0b635cc: AssertionError: "VOID mutation-rust-shard-1: the baseline's slowest test" not found, the 2300 s per-mutant timeout being absent
-```
+Each read red at 10c7ced6, the pins alone on the base's code, for the figure and for nothing else. They
+move earlier criteria's literals, so they are disclosed here with no fence lines: the census pin reads
+`1430 != 1521`, the baseline pin `1768 != 2141`, the byte pins over `BOUNDS` read `--timeout 2200` where
+they hold 2300, the census package's baseline sum `3198 != 3662`, and R7's boundary test finds no VOID
+line naming the 2300 s timeout. The criteria's own lines above stay as recorded.
