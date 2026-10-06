@@ -201,3 +201,8 @@ needed after all, it is a STOP for the seat, never a silent addition (it raises 
   does not work; the render card (A12) proves an ordinary script does.
 - **The scripts-off view regresses.** R12 keeps SPEC-349's suite running against it, so a change
   to a layer reads red there first.
+
+## 7. Amendment: the switch defaults off on iOS
+
+The switch defaults off on iOS pending a measured containment layer. Every line above in which the
+switch turns on, or card scripts run, on iPhone and iPad reads with this default.
