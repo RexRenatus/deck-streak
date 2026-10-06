@@ -164,7 +164,9 @@ A12: cargo test -p deck-streak-engine-core --test graph
 The model's properties are decided by the formal checker, which this repository's CI does not run;
 section 8 names them and their witnesses.
 
-## 4. File manifest (part a)
+## 4. File manifest
+
+Part a of four; the later parts add their own files.
 
 | file | context | change |
 |---|---|---|
