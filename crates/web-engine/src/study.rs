@@ -231,8 +231,9 @@ impl Files {
     /// The first `limit` bytes of `name` at most, or `None` when no file of that name was read.
     #[must_use]
     pub fn read(&self, name: &str, limit: u64) -> Option<Vec<u8>> {
-        let _ = limit;
-        self.by_name.get(name).cloned()
+        let bytes = self.by_name.get(name)?;
+        let end = usize::try_from(limit).map_or(bytes.len(), |limit| limit.min(bytes.len()));
+        Some(bytes[..end].to_vec())
     }
 }
 
@@ -259,8 +260,9 @@ impl<'a> Wanted<'a> {
     #[must_use]
     pub fn ask(&self, name: &str, limit: u64) -> Option<Vec<u8>> {
         let read = self.files.read(name, limit);
-        if read.is_none() {
-            self.asked.borrow_mut().push((name.to_owned(), limit));
+        let mut asked = self.asked.borrow_mut();
+        if read.is_none() && !asked.iter().any(|(wanted, _)| wanted == name) {
+            asked.push((name.to_owned(), limit));
         }
         read
     }
