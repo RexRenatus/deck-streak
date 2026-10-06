@@ -276,4 +276,13 @@ describe('the voice', () => {
     refused.choose('de-DE', 'petra');
     expect(refused.voiceFor(VOICES, 'de-DE')).toBe(PETRA);
   });
+
+  it('the voice choices are kept under their own name on this device', () => {
+    // the name is written here, so a change to it reddens this test
+    const storage = new MemoryStorage();
+    new VoiceChoices(storage).choose('de-DE', 'markus');
+    expect([...storage.items.keys()]).toEqual(['deck-streak.study.voices']);
+    expect(JSON.parse(storage.getItem('deck-streak.study.voices') ?? '')).toEqual({ 'de-DE': 'markus' });
+    expect(new VoiceChoices(storage).voiceFor(VOICES, 'de-DE')).toBe(MARKUS);
+  });
 });

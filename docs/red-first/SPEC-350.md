@@ -310,3 +310,13 @@ A30: green at aef11216
   page, and Cancel shows only while a capture waits" pins the prevented default of the key a
   capture takes, a key the page keeps while no capture waits and while a button's capture waits,
   and no Cancel while no capture waits.
+- **The Worker's media and the voices, mutation coverage, green when written.** The same pass
+  found a survivor in `worker.ts` and one in `voice.ts`, each killed by a test that passed at the
+  commit that added it. `worker.test.ts` "a scope with no navigator reads no media, and throws
+  nothing" pins the media read in a Worker scope with no navigator, and `voice.test.ts` "the voice
+  choices are kept under their own name on this device" pins the one storage key every language's
+  choice is kept under, written in the test.
+- **One rewrite with no change of behaviour.** The player's turn in `audio.ts` was a counter
+  compared only for equality, so counting down in place of up was a mutant no test could tell
+  from the original. The turn is now a token compared by identity; `audio.test.ts`, which holds a
+  later sequence stopping the last, is unchanged and green.

@@ -258,4 +258,12 @@ describe('the Worker entry', () => {
       ])
     ).toEqual([{ name: 'cat.mp3', bytes: new Uint8Array([1, 2]) }]);
   });
+
+  it('a scope with no navigator reads no media, and throws nothing', async () => {
+    const { browserDeps } = await worker();
+    const load = () => Promise.reject(new Error('no engine here'));
+    const deps = browserDeps(new URL('https://app.example/engine/'), load, {});
+    expect(deps.media).toBeTypeOf('function');
+    expect(await deps.media?.([{ name: 'cat.mp3', limit: 2n }])).toEqual([]);
+  });
 });
