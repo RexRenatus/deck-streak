@@ -1,7 +1,7 @@
-// The six requests the harness sends and the three responses it reads (SPEC-339 R9), field by
-// field as the engine's messages number them at the pinned rev. An encoder writes exactly the
-// fields its request carries; a decoder reads exactly the fields the harness shows and skips the
-// rest whole.
+// The seven requests the harness and the app send and the five responses they read (SPEC-339 R9,
+// SPEC-347 R10), field by field as the engine's messages number them at the pinned rev. An
+// encoder writes exactly the fields its request carries; a decoder reads exactly the fields its
+// caller shows and skips the rest whole.
 
 /// A card's rating, as the engine's `CardAnswer.Rating` numbers it.
 public enum Rating: Int32, Sendable {
@@ -89,7 +89,11 @@ public enum Requests {
     /// `SyncLoginRequest`: `username` (1), `password` (2) and `endpoint` (3), each written, an
     /// empty endpoint included, because the endpoint is never optional here (SPEC-347 R10).
     public static func syncLogin(username: String, password: String, endpoint: String) -> [UInt8] {
-        []
+        var writer = WireWriter()
+        writer.stringField(1, username)
+        writer.stringField(2, password)
+        writer.stringField(3, endpoint)
+        return writer.bytes
     }
 }
 
@@ -168,13 +172,15 @@ public enum Responses {
     /// `SyncAuth`: the host key, `hkey` (1). Its `endpoint` (2) and `io_timeout_secs` (3), and any
     /// field the app never reads, are skipped whole.
     public static func syncAuth(_ bytes: [UInt8]) throws -> String {
-        ""
+        try WireMessage(bytes).string(1)
     }
 
     /// `BackendError`: its `message` (1) and `kind` (2). Its `help_page` (3), `context` (4) and any
     /// other field are skipped whole.
     public static func engineMessage(_ bytes: [UInt8]) throws -> EngineMessage {
-        EngineMessage(message: "", kind: 0)
+        let error = try WireMessage(bytes)
+        return EngineMessage(
+            message: try error.string(1), kind: Int32(truncatingIfNeeded: error.varint(2)))
     }
 
     /// `QueuedCards`: `cards` (1), `new_count` (2), `learning_count` (3), `review_count` (4).
