@@ -111,7 +111,9 @@ export class StudyInput {
   }
 
   #intent(intent: Intent | null): void {
-    const action = intent && resolve(intent, this.#target.side());
+    // `resolve` fires only show answer on the question side, and replay plays on either side
+    // (SPEC-350 R15), so the review maps it here and `$lib/remote` stays as #663 left it
+    const action = intent === 'replay' ? 'replay' : intent && resolve(intent, this.#target.side());
     if (action === null) return;
     this.#target.act(action);
     this.#target.focus();
