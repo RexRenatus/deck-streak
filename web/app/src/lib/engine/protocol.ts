@@ -3,7 +3,8 @@
 // an error code and a message. Nothing else crosses: no SQL, no service index, no engine handle.
 
 /** The operations the Worker serves, and nothing else. The last six are the review's (SPEC-350 R4):
- * the deck list, the current deck, the card view, and a rating, bury or flag of the shown card. */
+ * the deck list, the current deck, the card view, and a rating, bury or flag of the shown card.
+ * `faces`, after them, completes both faces of the shown card with its media (SPEC-350 R14). */
 export const OPS = [
   'open',
   'seed',
@@ -18,7 +19,8 @@ export const OPS = [
   'card',
   'rate',
   'bury',
-  'flag'
+  'flag',
+  'faces'
 ] as const;
 export type Op = (typeof OPS)[number];
 
@@ -39,7 +41,7 @@ export type Request =
   | { id: number; op: 'next' | 'undo' | 'memory' | 'close' | 'decks' | 'card' }
   | { id: number; op: 'seed'; count: number }
   | { id: number; op: 'answer'; rating: Rating; ms: number }
-  | { id: number; op: 'snapshot' | 'bury' | 'flag'; card: bigint }
+  | { id: number; op: 'snapshot' | 'bury' | 'flag' | 'faces'; card: bigint }
   | { id: number; op: 'study'; deck: bigint }
   | { id: number; op: 'rate'; card: bigint; rating: Rating; ms: number };
 
@@ -100,6 +102,36 @@ export interface Head {
   card: CardView | null;
 }
 
+/** One clip of a face, in the core's order: a sound as its bytes and the media type the core's table
+ * gives its name (null when the table holds none), or speech as its text, its BCP 47 language and
+ * the native platform's rate (SPEC-350 R15, R16; SPEC-348 P3). */
+export type Clip =
+  | { kind: 'sound'; name: string; type: string | null; bytes: Uint8Array }
+  | { kind: 'speech'; text: string; language: string; rate: number };
+
+/** One face as the core completed it: its text, with each media file inline as the core's `data:`
+ * URL, the note type's CSS, the clips that play on show and on replay, and each name it omitted. */
+export interface FaceView {
+  text: string;
+  css: string;
+  autoplay: Clip[];
+  replay: Clip[];
+  omitted: string[];
+}
+
+/** A media file the core asked for and was not given: its name, and the bytes it may read of it. */
+export interface MediaAsk {
+  name: string;
+  limit: bigint;
+}
+
+/** What `faces` answers: both faces of the shown card, and the files the core still wants. */
+export interface Faces {
+  question: FaceView;
+  answer: FaceView;
+  wanted: MediaAsk[];
+}
+
 export type Reply =
   | { id: number; ok: true; value: unknown }
   | { id: number | null; ok: false; code: ErrorCode; message: string };
@@ -139,7 +171,8 @@ const ARGS: Record<Op, Record<string, (value: unknown) => boolean>> = {
   study: { deck: engineId },
   rate: { card: engineId, rating: (value) => whole(value, 1, 4), ms: (value) => whole(value, 0, U32) },
   bury: { card: engineId },
-  flag: { card: engineId }
+  flag: { card: engineId },
+  faces: { card: engineId }
 };
 
 /** Reads a request off the wire. Anything but an operation of `OPS` with exactly its arguments,
