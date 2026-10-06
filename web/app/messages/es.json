@@ -90,5 +90,8 @@
   "study_undo": "Deshacer",
   "study_bury": "Enterrar",
   "study_flag": "Marcar",
-  "study_character_keys": "Atajos de una sola tecla"
+  "study_character_keys": "Atajos de una sola tecla",
+  "study_replay": "Repetir",
+  "study_voice": "Voz para {language}",
+  "study_voice_default": "Voz predeterminada"
 }

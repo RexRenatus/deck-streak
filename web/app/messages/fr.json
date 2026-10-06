@@ -90,5 +90,8 @@
   "study_undo": "Annuler",
   "study_bury": "Enfouir",
   "study_flag": "Drapeau",
-  "study_character_keys": "Raccourcis à une touche"
+  "study_character_keys": "Raccourcis à une touche",
+  "study_replay": "Rejouer",
+  "study_voice": "Voix pour {language}",
+  "study_voice_default": "Voix par défaut"
 }

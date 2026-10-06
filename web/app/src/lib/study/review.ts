@@ -182,7 +182,10 @@ export class Review {
 
   /** The languages the shown card speaks in, each once, for the voice picker (SPEC-350 R16). */
   get languages(): string[] {
-    return [];
+    const faces = this.#faces;
+    if (faces === null) return [];
+    const clips = [faces.question, faces.answer].flatMap((face) => [...face.autoplay, ...face.replay]);
+    return [...new Set(clips.flatMap((clip) => (clip.kind === 'speech' ? [clip.language] : [])))];
   }
 
   /** Loads the first card. */

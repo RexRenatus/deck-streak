@@ -30,7 +30,7 @@ export function deviceStorage(): SwitchStorage | undefined {
 }
 
 /** The switch's store on a device with none: it keeps nothing, and the switch lives for the page. */
-class Unstored implements Pick<SwitchStorage, 'setItem'> {
+export class Unstored implements Pick<SwitchStorage, 'setItem'> {
   setItem(): void {}
 }
 

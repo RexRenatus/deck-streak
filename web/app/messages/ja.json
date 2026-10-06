@@ -90,5 +90,8 @@
   "study_undo": "元に戻す",
   "study_bury": "延期",
   "study_flag": "フラグ",
-  "study_character_keys": "1 キーのショートカット"
+  "study_character_keys": "1 キーのショートカット",
+  "study_replay": "もう一度再生",
+  "study_voice": "{language} の音声",
+  "study_voice_default": "既定の音声"
 }

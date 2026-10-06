@@ -1,4 +1,4 @@
-// SPEC-350 R15, A26; ADR-361 D12: the page's player of a face's clips. It plays them in the order
+// SPEC-350 R15, A26; ADR-361 D7, D12: the page's player of a face's clips. It plays them in the order
 // the core gave, a sound from a page URL made from its bytes and the type the core named, and a
 // speech clip through the speaker. Nothing it plays reaches the card frame, and it decides no type,
 // cap or order of its own.

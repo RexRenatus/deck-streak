@@ -190,5 +190,8 @@
   "study_undo": "Undo",
   "study_bury": "Bury",
   "study_flag": "Flag",
-  "study_character_keys": "Single-key shortcuts"
+  "study_character_keys": "Single-key shortcuts",
+  "study_replay": "Replay",
+  "study_voice": "Voice for {language}",
+  "study_voice_default": "Default voice"
 }

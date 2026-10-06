@@ -90,5 +90,8 @@
   "study_undo": "復原",
   "study_bury": "擱置",
   "study_flag": "旗標",
-  "study_character_keys": "單鍵快速鍵"
+  "study_character_keys": "單鍵快速鍵",
+  "study_replay": "重播",
+  "study_voice": "{language} 的語音",
+  "study_voice_default": "預設語音"
 }

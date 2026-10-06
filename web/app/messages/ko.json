@@ -90,5 +90,8 @@
   "study_undo": "실행 취소",
   "study_bury": "보류",
   "study_flag": "플래그",
-  "study_character_keys": "한 키 단축키"
+  "study_character_keys": "한 키 단축키",
+  "study_replay": "다시 재생",
+  "study_voice": "{language} 음성",
+  "study_voice_default": "기본 음성"
 }
