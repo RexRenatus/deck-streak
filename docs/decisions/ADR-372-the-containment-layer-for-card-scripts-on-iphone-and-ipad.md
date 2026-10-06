@@ -180,6 +180,30 @@ minutes. The bound that held before the suite grew now cancels the job at its ow
 - A shorter suite: rejected because it changes the containment evidence that D7 holds
   unloosened, and a cheaper check would prove less than the channels it names.
 
+### D11. The planted suite starts WebKit once per test process, before any measured load wait
+
+Two `harness` runs at one head read one red, and only there: the suite's first test, on the first
+simulator, read its first row not loaded at the 10-second wait (#681). The test builds every
+row's view and starts every load before it mounts the first, in a host process that has not yet
+started WebKit's GPU and networking processes. Those two took 6.3 and 3.7 seconds in the first
+run and 7.3 and 12.7 seconds in the second, against 1.4 to 4.3 seconds on the second simulator,
+where the same test passed both times. The cost is the host's first start of WebKit, paid once
+per process, and whichever wait runs first pays it.
+
+- Chosen, because the cost is paid once per process, so one load that absorbs it under its own
+  bound leaves every measured wait as it was: `Probe.warmUp()` loads one planted card in a view
+  the factory builds, under `Probe.warmUpSeconds` (60 seconds), once per process, and every test
+  class that loads a card asserts it from `setUp`. A host where WebKit never starts fails every
+  test with the warm-up's message, so the warm-up hides nothing.
+- Rejected, because it is a bound edit (ruling 530) and lengthens every wait that runs to its
+  bound, a card that never loads included: raising the 10-second wait.
+- Rejected, because it changes what the factory test measures, every row live at once: starting
+  each row's load only when its view is mounted.
+- Rejected, because it lets the red pass without curing it (ruling 530): an expected-failure mark
+  or a retry.
+- Rejected, because XCTest's order is no contract: reordering the suite so that another test runs
+  first.
+
 ## Decision Outcome
 
 Card scripts on iPhone and iPad run only when the switch is on and the factory reads back every
@@ -188,6 +212,8 @@ policy; navigations and windows by the gate and the window refusal; a link's act
 cancelled before the engine follows it, from a world the card cannot reach; and the page's own
 entry points that would bypass that refusal are closed in every frame. The `harness` job that
 runs the planted suite is bounded at 150 minutes, so the proof finishes inside its limit (D10).
+The planted suite starts WebKit once per test process before any measured load wait, so a cold
+first test's 10-second wait measures the card and not the host's first start (D11).
 
 ### Consequences
 
@@ -197,10 +223,11 @@ runs the planted suite is bounded at 150 minutes, so the proof finishes inside i
 - Bad: a card cannot follow a link, open a document for writing, or use `eval`.
 - Bad: a tap on an inline element inside a `summary` or `label` no longer toggles it.
 - Neutral: the context-menu arm and the preview switch are proved on a device, not in CI.
+- Neutral: each simulator's run gains the warm-up's one load and A17's whole 10-second wait.
 
 ### Confirmation
 
-SPEC-361's A1 to A16, in the `card-isolation` and `harness` jobs on every pull request that
+SPEC-361's A1 to A17, in the `card-isolation` and `harness` jobs on every pull request that
 touches `ios/`; D1, a reading on a device, is held.
 
 ## What would make this wrong

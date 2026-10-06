@@ -150,6 +150,18 @@ R15. **The `harness` job's bound holds the planted suite.** The card view's plan
     held by `HARNESS_TIMEOUT_MINUTES` in `scripts/tests/test_ci_workflows.py` beside the engine
     jobs' bands. No other job, step or line of any workflow changes.
 
+R16. **The load wait holds for a cold first test (#681).** The planted suite's measured load wait,
+    `Probe.loadSeconds`, stays 10 seconds, and its assertion stays `loaded` true, with no
+    tolerance, skip or retry. `Probe.warmUp()` starts WebKit once per test process, before any
+    measured wait: it loads one planted card in a view the factory builds, mounted, under its own
+    bound, `Probe.warmUpSeconds`, 60 seconds. Every test class in `ios/CardProbeTests` that loads
+    a card asserts it from `setUp`, so a fresh simulator's first test is measured after the host
+    has started WebKit, never while it starts. A card that never loads still reads red within the
+    wait: `loaded` reads false, and only after the whole bound. Each load's time is recorded:
+    `Probe.loadTime(_:)` returns the seconds a load took, or nil when the wait expired, `loaded`
+    is read through it, and the warm-up and each row of A5's test print it into the `harness`
+    job's result bundles.
+
 ## 3. Acceptance criteria
 
 `$IPHONE_SIM`, `$IPAD_SIM` and `$SIM_OS` are the `harness` job's own. A simulator criterion is
@@ -173,6 +185,7 @@ green only when its test passed on both destinations in one CI run.
 | A14 | a scripted card renders as in the reference and its script runs, under L12 | `xcodebuild test` `PlantedCardTests/test_a_scripted_card_renders_and_its_script_runs` | not red: SPEC-355's criterion, kept |
 | A15 | the card's permitted loads load: the `permitted` card's `data:` image decodes, its `data:` font loads and its `data:` audio reads its metadata, in the shipped and the scripted view | `xcodebuild test` `PlantedCardTests/test_the_permitted_loads_load_in_both_card_views` | the `permitted` card is absent from the stub's `Planted.swift` |
 | A16 | the `harness` job's `timeout-minutes` is a digit string inside 150 to 180 (R15) | `scripts/tests/test_ci_workflows.py` `TheHarnessLinksItsOwnRunsFramework/test_the_harness_job_timeout_holds_the_planted_suite` | the job's bound is 90 |
+| A17 | the load wait holds for a cold first test: the once-per-process warm-up loads its card within its own bound, asserted from `setUp` before every test of `FactoryTests` and `PlantedCardTests`, the measured waits unchanged; and a card that never loads reads not loaded only after the whole wait (R16) | `xcodebuild test` `FactoryTests/test_the_card_view_runs_scripts_only_with_every_control` (the suite's first test, which runs the warm-up's `setUp` assertion first) and `FactoryTests/test_the_load_wait_reads_a_card_that_never_loads_as_not_loaded` | before any warm-up, the suite's first test read its first row not loaded at the 10-second wait on the first simulator |
 
 ```acceptance
 A1: swift test --package-path ios/CardIsolation --filter CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present
@@ -191,6 +204,7 @@ A13: xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -destinati
 A14: xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:CardProbeTests/PlantedCardTests/test_a_scripted_card_renders_and_its_script_runs
 A15: xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:CardProbeTests/PlantedCardTests/test_the_permitted_loads_load_in_both_card_views
 A16: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_harness_job_timeout_holds_the_planted_suite
+A17: xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:CardProbeTests/FactoryTests/test_the_card_view_runs_scripts_only_with_every_control -only-testing:CardProbeTests/FactoryTests/test_the_load_wait_reads_a_card_that_never_loads_as_not_loaded
 ```
 
 Every enumerating test prints `examined N <what>` and fails on 0 (A1 every case of the switch
@@ -234,8 +248,8 @@ section 3a names their proof on a device, held.
 | `ios/CardIsolation/Tests/CardIsolationTests/DocumentPolicyTests.swift` | `ios-harness` | added (A4) |
 | `ios/CardIsolation/Tests/CardIsolationTests/ConnectionHoldTests.swift` | `ios-harness` | removed with L9, when the base still holds it |
 | `ios/CardIsolation/swift-mutants.json` | mutation | changed: `SW36100` onward appended; L9's entries leave with L9 |
-| `ios/CardProbeTests/FactoryTests.swift` | `ios-harness` | changed: A5 over the new `CONTROLS`; the hold removed |
-| `ios/CardProbeTests/PlantedCardTests.swift` | `ios-harness` | changed: A8 and A15 added; A7's control moves to `shippedWithout(.L10)`; the variant; the hold removed |
+| `ios/CardProbeTests/FactoryTests.swift` | `ios-harness` | changed: A5 over the new `CONTROLS`; the hold removed; R16's warm-up asserted from `setUp`, each row's load time printed, and A17's test of a card that never loads |
+| `ios/CardProbeTests/PlantedCardTests.swift` | `ios-harness` | changed: A8 and A15 added; A7's control moves to `shippedWithout(.L10)`; the variant; the hold removed; R16's `Probe.loadSeconds`, `Probe.loadTime(_:)` and `Probe.warmUp()`, the warm-up asserted from `setUp` |
 | `ios/CardProbeTests/Planted.swift` | `ios-harness` | changed: R10's cards, `CONTROLS`, `DEPTH_SCRIPTED` and held sets |
 | `scripts/tests/test_card_web_view_layers.py` | CI | changed: R12's tokens |
 | `.github/workflows/xcframework.yml` | CI | changed: the `harness` job's bound, 90 -> 150 minutes (R15) |
