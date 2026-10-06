@@ -2771,6 +2771,10 @@ ENGINE_JOB = "engine"
 # compiles every dependency before about 140 s of tests, takes about five minutes, so the timeout
 # holds at least two cold runs and ends a hung sync test within half an hour, not six hours.
 ENGINE_TIMEOUT_MINUTES = range(10, 31)
+# The apple harness job's timeout (SPEC-361 A16): the card view's planted suite alone ran about
+# fifty minutes on a hosted macOS runner and the whole job projects to 85 to 98 minutes, so the
+# band holds about one and a half runs and stays at most half the hosted job's limit.
+HARNESS_TIMEOUT_MINUTES = range(150, 181)
 
 
 def engine_job_problems(workflow):
@@ -7431,6 +7435,18 @@ class TheHarnessLinksItsOwnRunsFramework(unittest.TestCase):
         self.assertIn("harness", list(jobs))
         examined("harness steps", jobs["harness"].get("steps") or [])
         self.assertEqual(harness_link_problems({"jobs": jobs}), [])
+
+    def test_the_harness_job_timeout_holds_the_planted_suite(self):
+        """SPEC-361 A16: the `harness` job's `timeout-minutes` is a digit string inside the band the
+        planted suite's measured run needs, so a PR's harness is not cancelled at its own bound."""
+        job = load("xcframework.yml")["jobs"]["harness"]
+        examined("harness keys", list(job))
+        minutes = str(job.get("timeout-minutes") or "")
+        band = f"{HARNESS_TIMEOUT_MINUTES.start} to {HARNESS_TIMEOUT_MINUTES.stop - 1}"
+        self.assertTrue(
+            minutes.isdigit() and int(minutes) in HARNESS_TIMEOUT_MINUTES,
+            f"the harness job's timeout is {minutes or 'unset'}, not {band} minutes",
+        )
 
         # The controls: the good job is accepted, and each plant is refused by its rule's name.
         good = {
