@@ -235,7 +235,6 @@ A11: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -desti
 A12: python3 -m unittest discover -s scripts/tests -p test_ios_thin_swift.py -k test_every_swift_file_keeps_its_role_its_doors_and_its_budget
 A13: python3 -m unittest discover -s scripts/tests -p test_ios_app_tree.py -k test_the_app_tree_carries_the_seam_and_keeps_the_credential_in_the_keychain
 A14: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_app_is_generated_tested_and_archived_in_the_harness_job
-A15: xcodebuild archive -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Release -destination generic/platform=iOS -archivePath "$RUNNER_TEMP/DeckStreak.xcarchive" CODE_SIGNING_ALLOWED=NO
 ```
 
 ## 4. File manifest
@@ -453,6 +452,7 @@ neighbours do, so it lists nothing in `NOT_WORKFLOW_READS`.
 `scripts/tests/test_ci_workflows.py` lists two sites of `scripts/tests/test_ios_app_tree.py` in `DYNAMIC_IMPORTS`, the table the read census sums with `NOT_WORKFLOW_READS`: the exception class the property-list parser raises, caught to refuse a malformed property list by name, and the split of a settings value into its scheme and host. Neither reads a file, and neither reads a workflow.
 `scripts/tests/test_ios_thin_swift.py` counts each call R11 lists in both of its spellings, the call form (`.filter(`, `.first(where:`) and the trailing closure (`.filter {` or `.filter{`, `.first {` or `.first{`), so a call counts once however it is written; a planted tree for each trailing spelling is refused by the budgets' name.
 R13's test step signs ad hoc on its command line (`CODE_SIGN_IDENTITY=-`) where it turned code signing off: at the app's first commit A10 read `status -34018` (`errSecMissingEntitlement`) on both devices, because the simulator refuses an unsigned test host the Keychain, and this is section 6's fallback for that risk (ADR-358, "What would make this wrong"). No team and no signing setting enters any file, and the archive keeps code signing off on its command line. A14 asks the test step for the ad-hoc identity in place of `CODE_SIGNING_ALLOWED=NO`, and its planted test step that turns code signing off is refused for lacking it.
+A15 is a build, not a test: the test-selection probe (`acceptance-has-a-test`) read its fence line as a command it cannot resolve to a test, so A15 leaves section 3's fence, as section 3 provides, and its row stays. Its run's lines are quoted in the pull request's body, and the red-first record quotes its reading at the app's first commit.
 
 Part 1's rows, which this part leaves as they are:
 

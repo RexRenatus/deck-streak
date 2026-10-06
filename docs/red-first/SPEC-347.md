@@ -86,3 +86,6 @@ of run 37390492155 at 0199b22a, which pushed A14's test (ccdf350f) before the st
   `CODE_SIGNING_ALLOWED=NO`, and the planted test step that turns code signing off, the step as it
   stood before this commit, is refused for lacking the ad-hoc identity. That plant is the changed
   assertion's red, read in the same run as its green. No other assertion of A14 changed.
+- The test-selection probe read A15's fence line as a command it cannot resolve to a test, so the
+  commit that adds this line takes A15 out of SPEC-347 section 3's fence, as that section provides;
+  its row stays, and its run's lines, quoted above, are quoted in the pull request's body.
