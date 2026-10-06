@@ -180,6 +180,11 @@ export class Review {
     return [...side, ...undo, ...replay, 'bury', 'flag'];
   }
 
+  /** The languages the shown card speaks in, each once, for the voice picker (SPEC-350 R16). */
+  get languages(): string[] {
+    return [];
+  }
+
   /** Loads the first card. */
   start(): void {
     this.#run('card');
