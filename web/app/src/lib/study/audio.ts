@@ -36,8 +36,9 @@ export class Player {
   readonly #audio: AudioOut;
   readonly #urls: ObjectUrls;
   readonly #speaker: Speaker;
-  /** The sequence playing now: a sequence that is no longer the last asked stops at its next clip. */
-  #turn = 0;
+  /** The sequence playing now, by identity: a sequence that is no longer the last asked stops at its
+   * next clip. */
+  #turn: object = {};
 
   constructor(audio: AudioOut, urls: ObjectUrls, speaker: Speaker) {
     this.#audio = audio;
@@ -49,7 +50,8 @@ export class Player {
    * later sequence stopped them, and false when the browser blocked a sound: nothing after it plays,
    * and the side's Replay control asks again once the page may play. */
   async play(clips: readonly Clip[]): Promise<boolean> {
-    const turn = ++this.#turn;
+    const turn = {};
+    this.#turn = turn;
     this.#audio.pause();
     this.#speaker.cancel();
     try {
