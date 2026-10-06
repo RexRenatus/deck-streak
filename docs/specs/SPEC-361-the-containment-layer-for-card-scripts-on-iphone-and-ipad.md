@@ -263,7 +263,7 @@ section 3a names their proof on a device, held.
 | `ios/swift-roles.json` | `ios-harness` | changed: the three new sources and three new tests registered; L9's two files leave with L9 |
 | `scripts/mutation-rows.d/S35500-S35599.json` | mutation | changed: L9's rows S35503 and S35504 leave with L9 |
 | `docs/specs/SPEC-355-card-scripts-on-iphone-and-ipad.md` and `docs/red-first/SPEC-355.md` | docs | changed: A3 retired insert-only (SPEC-056 R14); SPEC-355 section 8 appended |
-| `docs/specs/SPEC-056-every-pack-is-judged-on-the-box-and-nothing-of-the-hub-is-published.md` | docs | changed: section 7's row for SPEC-355's A3 and section 10, insert-only |
+| `docs/specs/SPEC-056-every-pack-is-judged-on-the-box-and-nothing-of-the-hub-is-published.md` | docs | changed: section 7's row for SPEC-355's A3 and section 11, insert-only |
 | `changelog.d/card-scripts-ios-355.md` | docs | changed: L9's clause and the #677 sentence leave |
 
 One workflow change is ruled, the `harness` job's bound in `xcframework.yml` (R15); no other
