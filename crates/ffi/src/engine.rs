@@ -6,7 +6,8 @@ use std::sync::Arc;
 
 use deck_streak_engine_core::dispatch::{Dispatcher, Refusal};
 use deck_streak_engine_core::face::Side;
-use deck_streak_engine_core::table::Transport;
+use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
+use deck_streak_engine_core::table::{ExemptWrite, Transport};
 
 use crate::allow_list::allowed;
 use crate::face::{CardFace, MediaFolder};
@@ -101,6 +102,33 @@ impl Engine {
             .map_err(refusal)
     }
 
+    /// Runs one owner's tap on an exempt write: the tap names the write and its one target, and
+    /// the engine runs the write only when the request names exactly that target (SPEC-345 R9).
+    /// This is the adapter's one exempt entry, and the only place it builds a gesture.
+    ///
+    /// # Errors
+    ///
+    /// [`ExemptRefusal::WrongKind`] when the target is not of the kind the write takes,
+    /// [`ExemptRefusal::NotTheTarget`] when the request names other than the target,
+    /// [`ExemptRefusal::Undecodable`] when the request is not the write's own message, and
+    /// [`ExemptRefusal::Engine`] when the engine refuses the checked write.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "a foreign caller's bytes cross the boundary owned, as the bindings pass them"
+    )]
+    pub fn run_exempt(
+        &self,
+        write: ExemptTap,
+        target: ExemptTarget,
+        input: Vec<u8>,
+    ) -> Result<Vec<u8>, ExemptRefusal> {
+        let gesture = OwnerGesture::from_tap(exempt_write(write), core_target(target))
+            .map_err(exempt_refusal)?;
+        self.dispatcher
+            .run_exempt(gesture, &input)
+            .map_err(exempt_refusal)
+    }
+
     /// Completes the face of the card `card_id`: its question, or its answer when `answer` is
     /// set, in one closed page lit for `night`, with the clips to autoplay when the client wishes
     /// it and the card's preset allows it (SPEC-348 R5). Its media are read from the media folder
@@ -135,6 +163,108 @@ fn refusal(refusal: Refusal) -> EngineRefusal {
         }
     }
 }
+
+/// The core's exempt write for the write a tap names, one for one.
+fn exempt_write(tap: ExemptTap) -> ExemptWrite {
+    match tap {
+        ExemptTap::Forget => ExemptWrite::Forget,
+        ExemptTap::SetDueDate => ExemptWrite::SetDueDate,
+        ExemptTap::DeletePreset => ExemptWrite::DeletePreset,
+        ExemptTap::ChangeNoteType => ExemptWrite::ChangeNoteType,
+        ExemptTap::DeleteCard => ExemptWrite::DeleteCard,
+        ExemptTap::DeleteNote => ExemptWrite::DeleteNote,
+    }
+}
+
+/// The core's target for the target a tap names, by the same id.
+fn core_target(target: ExemptTarget) -> Target {
+    match target {
+        ExemptTarget::Card { id } => Target::Card(id),
+        ExemptTarget::Note { id } => Target::Note(id),
+        ExemptTarget::Preset { id } => Target::Preset(id),
+    }
+}
+
+/// The adapter's refusal for the core's: each reason by its own variant, and the engine's error
+/// bytes as the engine encoded them.
+fn exempt_refusal(refusal: GestureRefusal) -> ExemptRefusal {
+    match refusal {
+        GestureRefusal::WrongKind { .. } => ExemptRefusal::WrongKind,
+        GestureRefusal::NotTheTarget { .. } => ExemptRefusal::NotTheTarget,
+        GestureRefusal::Undecodable { .. } => ExemptRefusal::Undecodable,
+        GestureRefusal::Engine { error } => ExemptRefusal::Engine { error },
+    }
+}
+
+/// The exempt write an owner's tap names (SPEC-345 R3, R9): one for each row of the core's
+/// exempt table.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum ExemptTap {
+    /// Forget one card: it returns to the new queue.
+    Forget,
+    /// Set one card's due date.
+    SetDueDate,
+    /// Delete one preset.
+    DeletePreset,
+    /// Change one note's note type.
+    ChangeNoteType,
+    /// Delete one card.
+    DeleteCard,
+    /// Delete one note.
+    DeleteNote,
+}
+
+/// The one thing a tap's write acts on, by the engine's id.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum ExemptTarget {
+    /// A card.
+    Card {
+        /// The card's id.
+        id: i64,
+    },
+    /// A note.
+    Note {
+        /// The note's id.
+        id: i64,
+    },
+    /// A preset (a deck options group).
+    Preset {
+        /// The preset's id.
+        id: i64,
+    },
+}
+
+/// Why a tap's write did not run. A native client reads it as a thrown error, beside
+/// [`EngineRefusal`], whose variants and text it leaves as they are.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Error)]
+pub enum ExemptRefusal {
+    /// The target is not of the kind the tap's write takes.
+    WrongKind,
+    /// The request names other than the tap's one target: none, another, or more than one.
+    NotTheTarget,
+    /// The request is not the tap's own write's message.
+    Undecodable,
+    /// The engine refused the checked write.
+    Engine {
+        /// The engine's `BackendError`, as the engine encoded it.
+        error: Vec<u8>,
+    },
+}
+
+impl fmt::Display for ExemptRefusal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::WrongKind => f.write_str("the tap's target is not of the kind its write takes"),
+            Self::NotTheTarget => f.write_str("the request names other than the tap's one target"),
+            Self::Undecodable => f.write_str("the request is not the tap's own write"),
+            Self::Engine { error } => {
+                write!(f, "the engine refused the write ({} bytes)", error.len())
+            }
+        }
+    }
+}
+
+impl std::error::Error for ExemptRefusal {}
 
 /// The launch argument a UI test names its seeded collection's directory with (ADR-359 D6).
 const COLLECTION_DIRECTORY: &str = "-DSCollectionDirectory";

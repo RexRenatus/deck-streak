@@ -133,8 +133,12 @@ A12: red at 5c7fcad: AssertionError: 0 != 3 : examined 0
 A12: green at 96eee0b
 A13: red at 9e913f9: AssertionError: 'other' != 'scripts'
 A13: green at 6b5bd84
+```
+```retired
 A14: red at d8b6517: AssertionError: 8 != 9 : 321 listed
 A14: green at b9d43e2
+```
+```red-first
 A15: red at 9e913f9: AssertionError: 0 != 3 : mutation: scripts: verdict: ok
 A15: green at 6b5bd84
 A16: red at 9e913f9: AssertionError: 'EQUIVALENT scripts/guard.py:2:14: replace + with - in guard' not found in 'mutation: scripts: verdict: ok\nexamined 0\n'
@@ -190,3 +194,6 @@ A26: green at 8414b6c5
 A27: red at e4a543d1: AssertionError: N2 `if ! cmd; then other=1; fi`: passed the census unseen
 A27: green at 8414b6c5
 ```
+
+Amendment: the lines of A14 moved into a `` ```retired `` fence, by inserted fence lines, because
+SPEC-362 R14 resized the Python matrix to 20 mutants a shard; SPEC-362 A12 judges the size now.

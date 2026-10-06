@@ -339,3 +339,49 @@ fn a_panic_logs_one_redacted_json_event_and_never_the_value() {
         "the default panic hook wrote to stderr:\n{stderr}"
     );
 }
+
+/// The `RUST_LOG` values the passkey library's silence is measured under (SPEC-359 R13): everything
+/// at `trace`; each of the library's crates named at `trace`; a module under each named at `trace`,
+/// a longer target, which `EnvFilter` ranks above a shorter one; and a span the events sit in named
+/// at `trace`, which `EnvFilter` reads before any target. Each keeps `info` for the controls.
+const SILENCE_FILTERS: [&str; 5] = [
+    "trace",
+    "info,webauthn_rs_core=trace",
+    "info,webauthn_rs=trace",
+    "info,webauthn_rs_core::core=trace,webauthn_rs::interface=trace",
+    "info,[ceremony]=trace",
+];
+
+#[test]
+#[ignore = "a child process: the_passkey_library_writes_nothing_whatever_rust_log_says runs it"]
+fn child_logs_under_the_passkey_librarys_targets() {
+    logging::install(&Redactor::new()).expect("the first install in this process");
+    let ceremony = tracing::info_span!("ceremony");
+    let _entered = ceremony.enter();
+    tracing::info!(target: "logging_control", probe = "r13", "the positive control");
+    tracing::info!(target: "webauthn_rsx", probe = "r13", "a crate the silence does not name");
+    tracing::error!(target: "webauthn_rs", probe = "r13", "the library's root");
+    tracing::error!(target: "webauthn_rs::interface", probe = "r13", "a module of the library");
+    tracing::error!(target: "webauthn_rs_core", probe = "r13", "the core's root");
+    tracing::error!(target: "webauthn_rs_core::core", probe = "r13", "a module of the core");
+}
+
+/// SPEC-359 R13: an `error` event under the passkey library's targets writes nothing, whatever
+/// `RUST_LOG` says, while a control at `info` under another target writes its line, and so does a
+/// target that only begins with the library's name.
+#[test]
+fn the_passkey_library_writes_nothing_whatever_rust_log_says() {
+    println!("examined {} RUST_LOG value(s)", SILENCE_FILTERS.len());
+    for filter in SILENCE_FILTERS {
+        let lines = events_of("child_logs_under_the_passkey_librarys_targets", filter);
+        let targets: Vec<String> = probed(&lines, "r13")
+            .iter()
+            .map(|event| event["target"].as_str().unwrap_or("no target").to_owned())
+            .collect();
+        assert_eq!(
+            targets,
+            ["logging_control", "webauthn_rsx"],
+            "under RUST_LOG={filter}: {lines:#?}"
+        );
+    }
+}

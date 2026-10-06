@@ -158,4 +158,16 @@ describe('EngineClient', () => {
     new EngineClient(port, ORIGIN).open();
     expect(port.sent).toStrictEqual([{ id: 1, op: 'open' }]);
   });
+
+  it('faces sends the card and resolves to both faces', async () => {
+    // SPEC-350 A24: the page asks for the shown card's faces by its id alone
+    const port = new FakePort();
+    const client = new EngineClient(port, ORIGIN);
+    const faces = client.faces(1001n);
+    expect(port.sent).toEqual([{ id: 1, op: 'faces', card: 1001n }]);
+    const face = { text: '<img src="data:,">', css: '.card {}', autoplay: [], replay: [], omitted: ['gone.png'] };
+    const value = { question: face, answer: face, wanted: [] };
+    port.reply({ id: 1, ok: true, value }, ORIGIN);
+    expect(await faces).toEqual(value);
+  });
 });

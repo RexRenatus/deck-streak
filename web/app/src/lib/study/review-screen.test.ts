@@ -6,6 +6,7 @@ import { flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EngineError } from '$lib/engine/client';
 import type { CardView, Head } from '$lib/engine/protocol';
+import type { Clip, Faces } from '$lib/engine/protocol';
 import { telegram } from '$lib/telegram.svelte';
 import { KEY_SWITCH } from './input';
 import type { StudyClient } from './review';
@@ -493,5 +494,100 @@ describe('the review screen', () => {
     window.dispatchEvent(new FocusEvent('blur'));
     await settle();
     expect(document.activeElement).toBe(review());
+  });
+
+  // SPEC-350 R15, R16; ADR-361 D7, D8, D13. The screen plays the face through its player, shows the
+  // Replay control while the side has replay clips, and offers a voice picker for each language the
+  // card speaks; a card the engine gave no faces shows neither.
+  it('the review screen plays the face, and offers its replay and its voices', async () => {
+    const hund: Clip = { kind: 'speech', text: 'der Hund', language: 'de-DE', rate: 0.5 };
+    const bark: Clip = { kind: 'sound', name: 'bark.ogg', type: null, bytes: new Uint8Array([1]) };
+    const faces: Faces = {
+      question: { text: '<p>the dog</p>', css: '', autoplay: [hund], replay: [hund], omitted: [] },
+      answer: { text: '<p>der Hund</p>', css: '', autoplay: [], replay: [hund, bark], omitted: [] },
+      wanted: []
+    };
+    class FacesClient extends FakeClient {
+      faces(card: bigint): Promise<Faces> {
+        this.calls.push(`faces ${card}`);
+        return Promise.resolve(faces);
+      }
+    }
+    const played: string[][] = [];
+    const player = {
+      play: async (clips: readonly Clip[]) => {
+        played.push(clips.map((clip) => (clip.kind === 'speech' ? clip.text : clip.name)));
+        return true;
+      }
+    };
+    const client = new FacesClient([head(view(1))]);
+    const shown = render(ReviewScreen, { client: async () => client, player });
+    await settle();
+
+    // the question's face shows and its clips play; Replay replays them, and focus returns
+    expect(body().text).toBe('the dog');
+    expect(played).toEqual([['der Hund']]);
+    button('Replay').click();
+    await settle();
+    expect(played).toEqual([['der Hund'], ['der Hund']]);
+    expect(document.activeElement).toBe(review());
+
+    // the voice picker offers a voice for the card's language
+    const labels = screen.getAllByRole('combobox').map((select) =>
+      [...(select.closest('label')?.childNodes ?? [])]
+        .filter((node) => node !== select)
+        .map((node) => node.textContent)
+        .join('')
+        .trim()
+    );
+    expect(labels).toEqual(['Voice for de-DE']);
+    expect(client.calls).toEqual(['card', 'faces 1']);
+    shown.unmount();
+
+    // a card the engine gave no faces has no Replay control and no voice picker
+    render(ReviewScreen, { client: async () => new FakeClient([head(view(2))]) });
+    await settle();
+    expect(body().text).toBe('question 2');
+    expect(screen.queryByRole('button', { name: 'Replay' })).toBeNull();
+    expect(screen.queryAllByRole('combobox')).toEqual([]);
+  });
+
+  // SPEC-350 R18; ADR-361 D15. The review reads the remote's mapping this device stores, a key's
+  // and a button's, and links to the screen that changes it.
+  it('the review reads the mapping this device stores, and links to its screen', async () => {
+    localStorage.setItem(
+      'deck-streak.study.mapping',
+      JSON.stringify({ keyboard: [[' ', 'confirm'], ['j', 'good']], gamepad: [[0, 'confirm'], [7, 'good']] })
+    );
+    withGamepads();
+    const remote = pad(1);
+    gamepads = [null, remote];
+    const client = new FakeClient([head(view(1)), head(view(2)), head(view(3))]);
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+
+    // 3 no longer rates Good, and j does
+    await fireEvent.keyDown(window, { key: ' ' });
+    await fireEvent.keyDown(window, { key: '3' });
+    await settle();
+    expect(client.calls).toEqual(['card']);
+    await fireEvent.keyDown(window, { key: 'j' });
+    await settle();
+    expect(client.calls).toEqual(['card', 'rate 1 3 0', 'card']);
+
+    // button 15 no longer rates Good, and button 7 does
+    runFrame();
+    remote.buttons[0].pressed = true;
+    runFrame();
+    remote.buttons[15].pressed = true;
+    runFrame();
+    await settle();
+    expect(client.calls.slice(3)).toEqual([]);
+    remote.buttons[7].pressed = true;
+    runFrame();
+    await settle();
+    expect(client.calls.slice(3)).toEqual(['rate 2 3 0', 'card']);
+
+    expect(screen.getByRole('link', { name: 'Remote mapping' }).getAttribute('href')).toBe('/study/mapping');
   });
 });

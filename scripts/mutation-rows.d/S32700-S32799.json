@@ -4,9 +4,9 @@
       [
         "S32700-THE-CENSUS-TERM-IS-THE-MEASURED-788",
         "scripts/mutation-verdict.py",
-        "\"deck-streak-progression\": 788",
+        "\"deck-streak-progression\": 1430",
         "\"deck-streak-progression\": 0",
-        "the settle census's term is the 788 s measured in the pull request's CI, the slower census test after its latest start, and a progression mutant is projected with it (SPEC-327 R4)",
+        "the settle census's term is the 1430 s measured in dev's push run, the slowest census test after its latest start, and a progression mutant is projected with it (SPEC-327 R4, SPEC-362 R6)",
         "test_mutation_verdict.ACensusPackagePaysTheCensus.test_each_mutant_of_a_census_package_is_projected_with_the_census"
       ],
       [
@@ -44,17 +44,17 @@
       [
         "S32705-THE-RUN-STEP-KEEPS-THE-1200-SECOND-BUDGET",
         ".github/workflows/ci.yml",
-        "--shard \"$SHARD/$SHARDS\" --timeout 1200 --build-timeout 600 --output \"$out\"",
+        "--shard \"$SHARD/$SHARDS\" --timeout 2200 --build-timeout 600 --output \"$out\"",
         "--shard \"$SHARD/$SHARDS\" --timeout 300 --build-timeout 600 --output \"$out\"",
-        "the pull request's mutation run, its baseline included, keeps the 1200 s per-mutant budget that covers the settle census; 300 s timed every progression baseline out (SPEC-327 R1)",
+        "the pull request's mutation run, its baseline included, keeps the 2200 s per-mutant budget that covers the settle census; 300 s timed every progression baseline out (SPEC-327 R1, SPEC-362 R6)",
         "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
       ],
       [
         "S32706-THE-SIZER-TRIES-THE-SHARD-CAP",
         "scripts/mutation-verdict.py",
-        "range(1, MAX_SHARDS + 1)",
-        "range(1, MAX_SHARDS - 1)",
-        "the sizer tries every shard count up to and including the cap, so a listing that needs exactly the cap is sized and never refused (SPEC-129 R2)",
+        "range(1, ceiling + 1)",
+        "range(1, ceiling - 1)",
+        "the sizer tries every leg count up to and including the run's ceiling, so a listing that needs exactly the ceiling is sized and never refused (SPEC-129 R2, SPEC-362 R3)",
         "test_mutation_verdict.TheShardsFitTheirBound.test_a_listing_that_needs_exactly_the_shard_cap_is_sized_at_the_cap"
       ]
     ]

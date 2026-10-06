@@ -15,3 +15,9 @@
 # cargo test, one process per binary, identity's log test failed the unmutated baseline on two of
 # thirty-two CI runners, so cargo-mutants refused the shard (exit 4, SPEC-039 section 8).
 test_tool = "nextest"
+
+# The tests run under nextest's `mutants` profile (.config/nextest.toml, SPEC-362 R9), which stops a
+# mutant's run at its first failing test. cargo-mutants passes these to the test phase only, after
+# any `--cargo-test-arg` and any arguments after `--`, so every command gets the profile from here
+# and none spells it.
+additional_cargo_test_args = ["--profile", "mutants"]

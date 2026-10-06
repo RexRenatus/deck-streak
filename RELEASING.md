@@ -51,6 +51,23 @@ step never runs. The release pull request's `mutation-verdict` counts every shar
 jobs", which runs that shard again and the jobs that need it. Never re-run the whole workflow, which
 repeats every shard of the release's run, and never merge while a shard is missing.
 
+**`dev` merges nothing while the release pull request's run is in flight.** Its head is `dev`, so
+a push to `dev` updates the release pull request, and `ci.yml`'s concurrency group cancels the run
+in progress and starts another on the new head. A cancelled run decides nothing, and a run that
+keeps being cancelled never releases. Hold every merge into `dev` until the release pull request's
+`ci` reports (SPEC-362 R12).
+
+**The plan prints its headroom.** The release's Rust mutants run in one run, as every pull
+request's do, in legs sized from the tool's own listing (SPEC-362, ADR-373). `mutation-plan`
+prints `legs N of ceiling C`, where C is the most legs the run holds beside its other jobs, and a
+plan that needs more than C is refused whole, by name, never capped.
+
+**Cut a release before its range reaches the ceiling.** A release pull request's plan lists every
+mutant `dev` gained since the last release, so the range only grows until it ships, and a range past
+the ceiling cannot be judged by any run. The scheduled battery's plan of the whole tree, the largest
+range a release can carry, prints the same line: when its N nears the pull request run's ceiling,
+cut a release.
+
 ## 3. Tag it on main
 
 ```sh

@@ -9,7 +9,8 @@
   "outcomes": [
     {
       "scenario": "Baseline",
-      "summary": "Success"
+      "summary": "Success",
+      "log_path": "log/baseline.log"
     },
     {
       "scenario": {
