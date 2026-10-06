@@ -48,6 +48,14 @@
         "allowsContentJavaScript = true",
         "page JavaScript runs whatever the switch decided (SPEC-355 R2, L2)",
         "test_card_web_view_layers.OneFactoryBuildsTheCardWebView.test_one_file_builds_the_card_web_view_and_it_carries_every_layer"
+      ],
+      [
+        "S35506-THE-SWITCH-DEFAULTS-OFF",
+        "ios/CardIsolation/Sources/CardIsolation/CardScripts.swift",
+        "switchedOn = false",
+        "switchedOn = true",
+        "the card-script switch defaults on, where it defaults off pending a measured containment layer (SPEC-355 R1, section 7)",
+        "test_card_web_view_layers.TheScriptSwitchDefaultsOff.test_the_script_switch_defaults_off"
       ]
     ]
   }
