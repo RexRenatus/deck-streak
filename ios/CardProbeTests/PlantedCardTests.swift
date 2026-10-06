@@ -287,14 +287,58 @@ final class Probe {
         return await check() ? Date().timeIntervalSince(start) : nil
     }
 
+    /// The bound of every measured load wait: how long a card is given to report that it has
+    /// loaded. It is the wait the planted suite has always measured (SPEC-361 R16).
+    static let loadSeconds: TimeInterval = 10
+
+    /// The bound of the warm-up's one load: it holds the host's first start of WebKit, which a
+    /// cold first test's measured wait would otherwise pay (SPEC-361 R16, ADR-372 D11).
+    static let warmUpSeconds: TimeInterval = 60
+
+    /// The warm-up's reading, once per process: nil until it has run.
+    private static var warmedUp: Bool?
+
+    /// Whether the card document `view` was handed reports that it has finished loading, read once.
+    private static func reportsLoaded(_ view: WKWebView) async -> Bool {
+        await evaluate(
+            view,
+            "String(document.readyState === 'complete' && !!document.querySelector('meta[name=\"planted-card\"]'))"
+        ) == "true"
+    }
+
+    /// The seconds the card document `view` was handed took to finish loading, or nil when it had
+    /// not finished within `loadSeconds` (SPEC-361 R16).
+    static func loadTime(_ view: WKWebView) async -> TimeInterval? {
+        await poll(Probe.loadSeconds) {
+            await reportsLoaded(view)
+        }
+    }
+
     /// Whether the card document `view` was handed has finished loading.
     static func loaded(_ view: WKWebView) async -> Bool {
-        await poll(10) {
-            await evaluate(
-                view,
-                "String(document.readyState === 'complete' && !!document.querySelector('meta[name=\"planted-card\"]'))"
-            ) == "true"
-        } != nil
+        await loadTime(view) != nil
+    }
+
+    /// Starts WebKit once per test process, before any measured wait: one planted card in a view
+    /// the factory builds, mounted and waited for under `warmUpSeconds`. Returns whether it loaded;
+    /// every later call returns the first reading (SPEC-361 R16, ADR-372 D11).
+    static func warmUp() async -> Bool {
+        if let reading = warmedUp {
+            return reading
+        }
+        let ruleList = await RuleList.compile()
+        let view = CardWebViewFactory.make(layers: Set(CardLayer.allCases), ruleList: ruleList)
+        CardWebViewFactory.load(Planted.document(id: "warm-up", head: "", body: "<p>a card</p>"), into: view)
+        mount(view)
+        let took = await poll(Probe.warmUpSeconds) {
+            await reportsLoaded(view)
+        }
+        view.stopLoading()
+        view.removeFromSuperview()
+        let loaded = took != nil
+        print("card probe warm-up: loaded=\(loaded) took=\(took.map { String(format: "%.2f", $0) } ?? "none")")
+        warmedUp = loaded
+        return loaded
     }
 
     /// Takes one snapshot of `view` and decodes its pixels.
@@ -439,6 +483,13 @@ final class Probe {
 }
 
 final class PlantedCardTests: XCTestCase {
+    /// SPEC-361 R16: WebKit has started before any measured wait, once per process (ADR-372 D11).
+    override func setUp() async throws {
+        try await super.setUp()
+        let warmedUp = await Probe.warmUp()
+        XCTAssertTrue(warmedUp, "the card probe warm-up: WebKit never started, so no card could load")
+    }
+
     /// Prints how many were judged, and refuses zero (the tdd pack's contract).
     func examined<T>(_ what: String, _ items: [T]) -> [T] {
         print("examined \(items.count) \(what)")

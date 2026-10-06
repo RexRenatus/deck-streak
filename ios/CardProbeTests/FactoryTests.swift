@@ -7,6 +7,8 @@
 // factory's own load handed the view, and L13 from the view and its UI delegate (R8).
 // SPEC-355 section 7: the switch defaults off on iOS pending a measured containment layer, so the
 // view the factory builds by default is the scripts-off card view.
+// SPEC-361 A17: WebKit has started before any measured wait, once per process, and a card that
+// never loads reads not loaded only after the whole wait (R16, #681).
 import WebKit
 import XCTest
 
@@ -22,6 +24,13 @@ struct ObservableLayers: Equatable {
 }
 
 final class FactoryTests: XCTestCase {
+    /// SPEC-361 R16: WebKit has started before any measured wait, once per process (ADR-372 D11).
+    override func setUp() async throws {
+        try await super.setUp()
+        let warmedUp = await Probe.warmUp()
+        XCTAssertTrue(warmedUp, "the card probe warm-up: WebKit never started, so no card could load")
+    }
+
     /// Prints how many were judged, and refuses zero (the tdd pack's contract).
     func examined<T>(_ what: String, _ items: [T]) -> [T] {
         print("examined \(items.count) \(what)")
@@ -99,12 +108,14 @@ final class FactoryTests: XCTestCase {
         }
         for row in rows {
             Probe.mount(row.view)
-            let loaded = await Probe.loaded(row.view)
+            let took = await Probe.loadTime(row.view)
+            let loaded = took != nil
             let ran = await Probe.evaluate(row.view, "String(document.documentElement.dataset.ran === '1')") == "true"
             let verdict = CardWebViewFactory.verdict(of: row.view)
             row.view.configuration.userContentController.removeAllScriptMessageHandlers()
             row.view.removeFromSuperview()
-            print("factory \(row.name): loaded=\(loaded) ran=\(ran) verdict=\(verdict.map { String(describing: $0) } ?? "none")")
+            let tookText = took.map { String(format: "%.2f", $0) } ?? "none"
+            print("factory \(row.name): loaded=\(loaded) took=\(tookText) ran=\(ran) verdict=\(verdict.map { String(describing: $0) } ?? "none")")
             // The behaviour first: the card's script runs exactly when the switch is on and every
             // control is present.
             XCTAssertEqual(ran, row.runs, "\(row.name): whether the card's script ran")
@@ -148,5 +159,24 @@ final class FactoryTests: XCTestCase {
         XCTAssertFalse(switchedOn, "the switch defaults on")
         XCTAssertEqual(builtOn, false, "the switch the default view was built under")
         XCTAssertEqual(verdict, wanted, "the default view's verdict: the switch off, every control present")
+    }
+
+    /// SPEC-361 A17 (R16, #681): a card view the factory builds, handed a document without the
+    /// planted-card `meta`, never reports that it has loaded, and the wait reads it not loaded only
+    /// after its whole bound, so the wait a cold first test holds cannot hide a card that never loads.
+    @MainActor
+    func test_the_load_wait_reads_a_card_that_never_loads_as_not_loaded() async throws {
+        let view = try await CardWebViewFactory.makeCardWebView(html: "<p>a card with no planted-card meta</p>")
+        Probe.mount(view)
+        defer { view.removeFromSuperview() }
+        let start = Date()
+        let loaded = await Probe.loaded(view)
+        let elapsed = Date().timeIntervalSince(start)
+        let line = "card probe never loads: loaded=\(loaded) elapsed=\(String(format: "%.2f", elapsed))"
+            + " bound=\(Probe.loadSeconds)"
+        print(line)
+        XCTAssertFalse(loaded, "a card with no planted-card meta read loaded: \(line)")
+        XCTAssertGreaterThanOrEqual(
+            elapsed, Probe.loadSeconds, "the wait read the card not loaded before its whole bound: \(line)")
     }
 }
