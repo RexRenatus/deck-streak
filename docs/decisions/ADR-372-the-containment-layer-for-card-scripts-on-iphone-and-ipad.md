@@ -164,13 +164,30 @@ and the suite measures it in every frame kind a card can make.
 - A TLA+ model of "no card script runs before every guard is installed": rejected because it would
   state the engine's behaviour as an assumption, not prove code the app owns.
 
+### D10. The `harness` job's bound rises to 150 minutes, inside a band of 150 to 180
+
+The planted suite is the containment evidence, and it grew with the layer: the card view's run
+alone takes about fifty minutes on a hosted macOS runner, and the whole job projects to 85 to 98
+minutes. The bound that held before the suite grew now cancels the job at its own limit.
+
+- Chosen: the job's `timeout-minutes` is 150, held inside 150 to 180 by a band test beside the
+  engine jobs' bands. It is about one and a half times the projected run and at most half the
+  hosted job's limit, so a hung run still ends well inside it.
+- Re-running at 90: rejected because the measured run overruns that bound, so a re-run is a coin
+  flip, and every later pull request inherits the suite and the overrun.
+- The planted suite in a job of its own: rejected because it would put a second hosted macOS
+  runner on every pull request and a new check name for the land bar to learn.
+- A shorter suite: rejected because it changes the containment evidence that D7 holds
+  unloosened, and a cheaper check would prove less than the channels it names.
+
 ## Decision Outcome
 
 Card scripts on iPhone and iPad run only when the switch is on and the factory reads back every
 control from the view it built. Loads are refused twice, by the rule list and by the document's
 policy; navigations and windows by the gate and the window refusal; a link's activation is
 cancelled before the engine follows it, from a world the card cannot reach; and the page's own
-entry points that would bypass that refusal are closed in every frame.
+entry points that would bypass that refusal are closed in every frame. The `harness` job that
+runs the planted suite is bounded at 150 minutes, so the proof finishes inside its limit (D10).
 
 ### Consequences
 
@@ -183,7 +200,7 @@ entry points that would bypass that refusal are closed in every frame.
 
 ### Confirmation
 
-SPEC-361's A1 to A15, in the `card-isolation` and `harness` jobs on every pull request that
+SPEC-361's A1 to A16, in the `card-isolation` and `harness` jobs on every pull request that
 touches `ios/`; D1, a reading on a device, is held.
 
 ## What would make this wrong

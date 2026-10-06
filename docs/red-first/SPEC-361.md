@@ -22,6 +22,7 @@ A12: red at fc0a34dd: red not measured (one push); predicted PlantedCardTests.sw
 A13: not red: SPEC-355's criterion, kept; with L9 gone it is L3's proof
 A14: not red: SPEC-355's criterion, kept
 A15: not red: over the factory's stubs (fc0a34dd) no L12 is built until the layer's commit (a550da38), so nothing blocks the `permitted` card's data: image, font and audio, and the criterion, which reads those loads accepted in both card views, holds over the stub
+A16: red at 8a37b8ea: AssertionError: False is not true : the harness job's timeout is 90, not 150 to 180 minutes (local, scripts/tests, `python3 -B -m unittest test_ci_workflows.TheHarnessLinksItsOwnRunsFramework`); green at 464b63c9, where the bound is 150
 ```
 
 A9 and A12 at 8e4a808b read one probe-validity red, the same on both simulators of one `harness`

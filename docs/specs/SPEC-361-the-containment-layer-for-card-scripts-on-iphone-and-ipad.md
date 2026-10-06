@@ -140,8 +140,15 @@ R13. **Mutation rows** hold each part: `SW36100` onward in `ios/CardIsolation/sw
     `in: .page`) each still occur exactly once in `CardWebViewFactory.swift`: L10 and L11 build
     their user scripts in their own files for that reason.
 
-R14. No workflow, property list, project manifest or entitlement changes. The `harness` job runs
-    the whole `CardProbe` scheme, so new tests run where SPEC-355's do.
+R14. No property list, project manifest or entitlement changes, and no workflow change but R15's.
+    The `harness` job runs the whole `CardProbe` scheme, so new tests run where SPEC-355's do.
+
+R15. **The `harness` job's bound holds the planted suite.** The card view's planted suite ran
+    about fifty minutes on a hosted macOS runner, and the whole job projects to 85 to 98 minutes,
+    so the job's 90-minute bound is cancelled by this delivery's own cards. The `harness` job's
+    `timeout-minutes` is 150, inside a band of 150 to 180 (at most half the hosted job's limit),
+    held by `HARNESS_TIMEOUT_MINUTES` in `scripts/tests/test_ci_workflows.py` beside the engine
+    jobs' bands. No other job, step or line of any workflow changes.
 
 ## 3. Acceptance criteria
 
@@ -165,6 +172,7 @@ green only when its test passed on both destinations in one CI run.
 | A13 | a lookup a card asks for reaches the witness from the reference and never from either shipped view, L9 retired | `xcodebuild test` `PlantedCardTests/test_a_lookup_a_card_asks_for_reaches_the_witness_only_from_the_reference` | not red: SPEC-355's criterion, kept; with L9 gone it is L3's proof |
 | A14 | a scripted card renders as in the reference and its script runs, under L12 | `xcodebuild test` `PlantedCardTests/test_a_scripted_card_renders_and_its_script_runs` | not red: SPEC-355's criterion, kept |
 | A15 | the card's permitted loads load: the `permitted` card's `data:` image decodes, its `data:` font loads and its `data:` audio reads its metadata, in the shipped and the scripted view | `xcodebuild test` `PlantedCardTests/test_the_permitted_loads_load_in_both_card_views` | the `permitted` card is absent from the stub's `Planted.swift` |
+| A16 | the `harness` job's `timeout-minutes` is a digit string inside 150 to 180 (R15) | `scripts/tests/test_ci_workflows.py` `TheHarnessLinksItsOwnRunsFramework/test_the_harness_job_timeout_holds_the_planted_suite` | the job's bound is 90 |
 
 ```acceptance
 A1: swift test --package-path ios/CardIsolation --filter CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present
@@ -182,6 +190,7 @@ A12: xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -destinati
 A13: xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:CardProbeTests/PlantedCardTests/test_a_lookup_a_card_asks_for_reaches_the_witness_only_from_the_reference
 A14: xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:CardProbeTests/PlantedCardTests/test_a_scripted_card_renders_and_its_script_runs
 A15: xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:CardProbeTests/PlantedCardTests/test_the_permitted_loads_load_in_both_card_views
+A16: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_harness_job_timeout_holds_the_planted_suite
 ```
 
 Every enumerating test prints `examined N <what>` and fails on 0 (A1 every case of the switch
@@ -229,6 +238,8 @@ section 3a names their proof on a device, held.
 | `ios/CardProbeTests/PlantedCardTests.swift` | `ios-harness` | changed: A8 and A15 added; A7's control moves to `shippedWithout(.L10)`; the variant; the hold removed |
 | `ios/CardProbeTests/Planted.swift` | `ios-harness` | changed: R10's cards, `CONTROLS`, `DEPTH_SCRIPTED` and held sets |
 | `scripts/tests/test_card_web_view_layers.py` | CI | changed: R12's tokens |
+| `.github/workflows/xcframework.yml` | CI | changed: the `harness` job's bound, 90 -> 150 minutes (R15) |
+| `scripts/tests/test_ci_workflows.py` | CI | changed: the band and its test (A16) |
 | `scripts/mutation-rows.d/S36100-S36199.json` | mutation | added: rows killed by A6 |
 | `docs/schematics/card-frame-channels.md` | docs | changed: one section appended, insert-only |
 | `docs/decisions/ADR-372-the-containment-layer-for-card-scripts-on-iphone-and-ipad.md` | docs | added |
@@ -241,8 +252,9 @@ section 3a names their proof on a device, held.
 | `docs/specs/SPEC-056-every-pack-is-judged-on-the-box-and-nothing-of-the-hub-is-published.md` | docs | changed: section 7's row for SPEC-355's A3 and section 10, insert-only |
 | `changelog.d/card-scripts-ios-355.md` | docs | changed: L9's clause and the #677 sentence leave |
 
-No workflow file, no property list, no project manifest and no other file changes. If the cut
-shows one is needed after all, it is a STOP for the seat, never a silent addition (it raises
+One workflow change is ruled, the `harness` job's bound in `xcframework.yml` (R15); no other
+workflow file, no property list, no project manifest and no other file changes. If the cut
+shows another is needed after all, it is a STOP for the seat, never a silent addition (it raises
 #602's wall).
 
 ## 5. What this does NOT do
