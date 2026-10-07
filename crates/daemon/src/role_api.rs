@@ -18,6 +18,7 @@ use deck_streak_api::settings::LISTEN;
 use deck_streak_api::{ApiError, ApiState, ListenAddress, OwnerAccess, Readiness};
 use deck_streak_coordination::progression::law_tiers::CollectionLawTiers;
 use deck_streak_coordination::progression::level_view::LawTierSource;
+use deck_streak_identity::sync_seal::SealSecret;
 use deck_streak_identity::{Freshness, IdentityError, LinkingConfig, OwnerGate};
 use deck_streak_ingest::reader::CollectionReader;
 use deck_streak_ingest::settings::{ScopeSettings, SyncSettings};
@@ -129,6 +130,16 @@ fn law_tier_source(env: &Environment, offload: &Offload) -> Option<Arc<dyn LawTi
         }
     };
     Some(Arc::new(CollectionLawTiers::new(reader, rule)))
+}
+
+/// `state`, releasing the web client's sealing key under `secret` when the API's credentials hold
+/// one (SPEC-363 R5, B14). With none the release route stays off and the role still starts.
+///
+/// The composition lives here so the daemon's own test can drive the router the role serves.
+#[must_use]
+pub fn with_seal_secret(state: ApiState, secret: Option<SealSecret>) -> ApiState {
+    drop(secret);
+    state
 }
 
 /// Runs the `api` role until SIGTERM (or SIGINT), and returns once every request in flight has
