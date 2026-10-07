@@ -1,10 +1,10 @@
 ---------------------------- MODULE SyncCredential ----------------------------
-\* @phx covers crates/engine-core/src/credential.rs anchor=on_obtained digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/credential.rs anchor=may_send digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/credential.rs anchor=classify digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/credential.rs anchor=on_outcome digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/credential.rs anchor=on_removed digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/api/src/sync_seal_routes.rs anchor=release digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/engine-core/src/credential.rs anchor=on_obtained digest=sha256:380742ef98a28ccdf4358d7637ffcf7fd97b59521cbce3a96a7da27c8c9ac07e
+\* @phx covers crates/engine-core/src/credential.rs anchor=may_send digest=sha256:bcdc87dd7031d3e43f4c2ee240d65c3cb74a8b2239162d08f4f85c2f9f23d207
+\* @phx covers crates/engine-core/src/credential.rs anchor=classify digest=sha256:d40d0054d5cc7f95b96316cb3d3a0dd493f78bfcd813bd0741c80a695f99ca9b
+\* @phx covers crates/engine-core/src/credential.rs anchor=on_outcome digest=sha256:7589ecced4b13ca2a28f6af26e59bf09a5bc247bd9e5d622cce0c7c2da5dbcac
+\* @phx covers crates/engine-core/src/credential.rs anchor=on_removed digest=sha256:0ddadfdcda9101e86f8878c9a4dee4bdccfc75bb5a63943bd9f1d2eaf201bfcd
+\* @phx covers crates/api/src/sync_seal_routes.rs anchor=release digest=sha256:5f8b94533c69ab7823140033b49b58c9ec4c43348e5809f033f3189ff99afa4b
 \* @phx cites #654, #631, #618
 \* @phx property NoKeyAtRestAfterSignOut ramp=report
 \* @phx property NoSendAfterSignOut ramp=report
@@ -74,6 +74,26 @@
 \* - SessionOpens, SessionEnds -> an owner session opened, and ended by its bounds, a logout or a
 \*   passkey's removal.
 \* - Restart -> a Worker's memory, login and send cleared, as a closed tab or a reloaded page.
+\*
+\* The re-read against the code, at the stamp. Each covered item, beside the action it maps to:
+\* - `credential.rs::on_obtained` stores at `current.next()` only when `started == current`, and
+\*   discards otherwise, a missing next generation included: `LandLogin`'s guard
+\*   `login[w] = gen /\ gen < MaxGen`.
+\* - `credential.rs::may_send` is `sealed && held == current`: `StartSend`'s guard. A stored record
+\*   is at the current generation in every state, since `gen` moves only with `sealed`
+\*   (`LandLogin`, `SignOut`, `DropStale`, `Refused` and `Failed`), so the code's flag and the
+\*   model's record agree.
+\* - `credential.rs::classify` reads no error as accepted, the decoded kind `SYNC_AUTH_ERROR`
+\*   alone as refused, and every other answer, an undecodable one included, as failed: the split
+\*   of `Accepted`, `Refused` and `Failed`.
+\* - `credential.rs::on_outcome` drops only a refusal with `sent == current`: `Refused`'s guard
+\*   `inflight[w] = gen`. `Failed` drops nothing.
+\* - `credential.rs::on_removed` is `current.next()`, `None` at the maximum: `Removed`, which keeps
+\*   `MaxGen` where the code answers `None`, so no login is kept again.
+\* - `sync_seal_routes.rs::release` answers 404 with no seal secret, refuses a cross-site request,
+\*   answers 401 without an owner session and 429 past its bound, and 400 for a bad seal id, all
+\*   before it derives a key: `Unseal`'s `session` guard. A release that is off never unseals, which
+\*   is a subset of the model's behaviours.
 
 EXTENDS Integers
 
