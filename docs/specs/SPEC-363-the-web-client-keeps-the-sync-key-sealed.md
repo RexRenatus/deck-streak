@@ -120,6 +120,8 @@ R5. **The sealing key.** `crates/identity/src/sync_seal.rs` makes a 32-byte key 
     release route off. Its `Debug` prints no byte of the secret. The API unit's `LoadCredential=`
     line for that role ships with the owner's host step (#161), not in this delivery, because a
     unit that names a missing credential fails to start.
+    The sealing key is identity's second finalized HMAC, so this extends SPEC-024 A6's finalize
+    census by this one site.
 
 R6. **The release.** `POST /api/sync/seal-key` releases the key for one seal id to an owner session
     (proof `telegram` or `linked`); a `link` session and a request with no session are refused
@@ -211,6 +213,7 @@ section 8 names them and their witnesses.
 | `crates/identity/src/sync_seal.rs` | identity | added |
 | `crates/identity/src/lib.rs` | identity | `pub mod sync_seal` |
 | `crates/identity/tests/sync_seal.rs` | identity | added |
+| `crates/identity/tests/boundary.rs` | identity | the finalize census admits the sealing key's one site |
 | `crates/api/src/sync_seal_routes.rs` | api | added |
 | `crates/api/src/router.rs` | api | mounts the release route |
 | `crates/api/src/lib.rs` | api | the module and its line in the route list |
