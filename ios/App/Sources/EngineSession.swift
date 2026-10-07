@@ -90,11 +90,6 @@ actor EngineSession {
             path: directory.appending(path: "voice-choices.tsv").path(percentEncoded: false))
     }
 
-    /// The collection's decks by name, filtered decks included, in the engine's order (R7).
-    func deckNames() throws -> [String] {
-        try decks().map(\.name)
-    }
-
     /// The collection's decks with their ids, filtered decks included, in the engine's order (R7).
     func decks() throws -> [Deck] {
         try Responses.deckNames(

@@ -1,3 +1,5 @@
+import AVFAudio
+
 /// A voice installed on the device, as the voice picker and the engine's choice read it; its
 /// quality is 0 default, 1 enhanced and 2 premium (SPEC-348 R14).
 struct InstalledVoice: Equatable, Sendable {
@@ -5,12 +7,21 @@ struct InstalledVoice: Equatable, Sendable {
     let name: String
     let language: String
     let quality: Int
+
+    /// The quality in a word, as the picker shows it.
+    var qualityInWords: String {
+        ["Default", "Enhanced", "Premium"][min(max(quality, 0), 2)]
+    }
 }
 
 /// The device's installed voices (SPEC-348 R13, R14).
 enum InstalledVoices {
-    /// Every installed voice.
+    /// Every installed voice, its quality numbered from 0 as the adapter's are.
     static func all() -> [InstalledVoice] {
-        []
+        AVSpeechSynthesisVoice.speechVoices().map { voice in
+            InstalledVoice(
+                identifier: voice.identifier, name: voice.name, language: voice.language,
+                quality: voice.quality.rawValue - 1)
+        }
     }
 }

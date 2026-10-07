@@ -11,12 +11,33 @@ enum ReviewPhase: Equatable, Sendable {
 /// rating without importing the codec.
 enum Rating: Int32, CaseIterable, Sendable { case again, hard, good, easy }
 
-/// The review screen in the detail pane (SPEC-348 R9).
+/// The review screen in the detail pane (SPEC-348 R9): the deck's name, its counts and the
+/// controls, then the card, then the answer bar inside the bottom safe area. The haptics are
+/// the screen's: one impact when a rating is sent, one success when the designed end shows (R12).
 struct ReviewView: View {
-    let model: ReviewModel
+    @Bindable var model: ReviewModel
     let back: () -> Void
 
     var body: some View {
-        EmptyView()
+        VStack(spacing: 0) {
+            ReviewChrome(model: model)
+            if model.phase == .finished {
+                Text("Congratulations! You have finished this deck for now.")
+                    .font(.title3)
+                    .multilineTextAlignment(.center)
+                    .padding()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                CardFaceView(document: model.face.document)
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            AnswerBar(model: model, back: back)
+        }
+        .sensoryFeedback(.impact, trigger: model.answered)
+        .sensoryFeedback(.success, trigger: model.phase) { _, phase in phase == .finished }
+        .sheet(isPresented: $model.showingVoices) {
+            VoicePickerView(model: model)
+        }
     }
 }
