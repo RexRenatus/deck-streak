@@ -199,7 +199,6 @@ SPEC and ADR-377 record the change, and their tests keep their names):
 | `web/app/src/lib/engine/protocol.test.ts` | miniapp | A10, and `:16` |
 | `web/app/src/lib/engine/session.test.ts` | miniapp | `:231` and `:405` |
 | `web/app/tests-study/study.spec.ts` | miniapp | `:114`'s loop reads two grades |
-| `scripts/mutation-equivalent.d/miniapp.json` | scripts | changed only if StrykerJS reports a mutant on a changed file that is shown equivalent, each record with its reason (section 9) |
 
 ## 5. What this does NOT do
 
