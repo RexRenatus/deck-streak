@@ -1,5 +1,7 @@
 // The web engine's Worker entry (SPEC-338 R3, ADR-348): the session served on the Worker's own
 // scope, over the browser's Web Locks, origin private file system and the module the build ships.
+import { CredentialStore } from './credential';
+import type { CredentialEngine } from './credential';
 import { readMedia } from './media';
 import { admitsOrigin } from './protocol';
 import type { EngineModule, LockAnswer, SessionDeps } from './session';
@@ -26,7 +28,38 @@ interface WorkerGlobals {
   FileSystemFileHandle?: { prototype: object };
 }
 
+/** The parts of a Worker's global scope the credential store reads (SPEC-363 R9 to R14). */
+export interface CredentialGlobals {
+  indexedDB: IDBFactory;
+  fetch(input: string, init: RequestInit): Promise<Response>;
+  crypto: Pick<Crypto, 'subtle' | 'getRandomValues'>;
+  BroadcastChannel: new (name: string) => BroadcastChannel;
+  location: { origin: string };
+}
+
 export type ImportModule = (url: string) => Promise<unknown>;
+
+/** `load`, run once: every later call answers the first call's promise, a refusal included. The
+ * session and the credential store share one module, and wasm-bindgen's init must not run twice
+ * at once. */
+export function once<T>(load: () => Promise<T>): () => Promise<T> {
+  let loaded: Promise<T> | null = null;
+  return () => (loaded ??= load());
+}
+
+/** The Worker's credential store over the scope's indexed database, fetch, Web Crypto and
+ * broadcast channel, deciding through the module `load` answers. The database, fetch and channel
+ * are reached only when a credential operation runs, so a scope without them still studies. */
+export function browserCredential(scope: CredentialGlobals, load: () => Promise<CredentialEngine>): CredentialStore {
+  return new CredentialStore({
+    origin: scope.location.origin,
+    indexedDB: () => scope.indexedDB,
+    fetch: (input, init) => scope.fetch(input, init),
+    crypto: scope.crypto,
+    channel: (name) => new scope.BroadcastChannel(name),
+    load
+  });
+}
 
 /** The default loader: a module import of the bindings' URL, decided when it is called. */
 function importModule(url: string): Promise<unknown> {
@@ -101,12 +134,12 @@ export function browserDeps(
 export function start(scope: object = globalThis, load: ImportModule = importModule): boolean {
   if (!('DedicatedWorkerGlobalScope' in scope)) return false;
   const worker = scope as unknown as WorkerScope &
-    WorkerGlobals & { location: { href: string; origin: string } };
-  serve(
-    worker,
-    browserDeps(new URL(ENGINE_BASE, worker.location.href), load, worker),
-    worker.location.origin
-  );
+    WorkerGlobals &
+    CredentialGlobals & { location: { href: string; origin: string } };
+  const deps = browserDeps(new URL(ENGINE_BASE, worker.location.href), load, worker);
+  // the module wasm-bindgen writes carries the session's exports and the credential's five
+  const engine = once(deps.load) as () => Promise<EngineModule & CredentialEngine>;
+  serve(worker, { ...deps, load: engine, credential: browserCredential(worker, engine) }, worker.location.origin);
   return true;
 }
 
