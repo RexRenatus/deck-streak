@@ -41,6 +41,7 @@ use sqlite_wasm_vfs::sahpool::OpfsSAHPoolUtil;
 use sqlite_wasm_vfs::sahpool::install;
 use wasm_bindgen::prelude::*;
 
+use deck_streak_engine_core::credential::{self, Generation, Kept, Outcome};
 use deck_streak_engine_core::dispatch::{Dispatcher, Read, Refusal};
 use deck_streak_engine_core::face::{Clip, Face, Side};
 use deck_streak_engine_core::gesture::{OwnerGesture, Target};
@@ -305,6 +306,61 @@ pub fn run_exempt(write: u32, target: i64, input: &[u8]) -> Result<Vec<u8>, JsVa
     };
     let gesture = OwnerGesture::from_tap(write, target).map_err(refuse)?;
     dispatcher()?.run_exempt(gesture, input).map_err(refuse)
+}
+
+/// Whether the Worker keeps a sync login it started at generation `started` while the store reads
+/// `current` (SPEC-363 R4): the generation to store it at, or nothing when a removal or another
+/// kept login came first. The core's rule decides; this only carries it across the boundary.
+#[wasm_bindgen]
+#[must_use]
+pub fn credential_on_obtained(started: u64, current: u64) -> Option<u64> {
+    match credential::on_obtained(Generation::from(started), Generation::from(current)) {
+        Kept::Store { at } => Some(u64::from(at)),
+        Kept::Discard => None,
+    }
+}
+
+/// Whether the Worker may send the sync key it holds at generation `held` while the store reads
+/// `current` and a sealed record is or is not stored (SPEC-363 R4). The core's rule decides.
+#[wasm_bindgen]
+#[must_use]
+pub fn credential_may_send(held: u64, current: u64, sealed: bool) -> bool {
+    credential::may_send(Generation::from(held), Generation::from(current), sealed)
+}
+
+/// A sync's answer as the core's rule reads it (SPEC-363 R4): 0 accepted when there is no error,
+/// 1 refused, 2 failed. `error` is the engine error's bytes, as the dispatcher's refusal carries
+/// them.
+#[wasm_bindgen]
+#[must_use]
+pub fn credential_classify(error: Option<Vec<u8>>) -> u8 {
+    match credential::classify(error.as_deref()) {
+        Outcome::Accepted => 0,
+        Outcome::Refused => 1,
+        Outcome::Failed => 2,
+    }
+}
+
+/// Whether an answer to a send at generation `sent` drops the key while the store reads `current`
+/// (SPEC-363 R4). `outcome` is [`credential_classify`]'s number; any other number reads as failed,
+/// which never drops the key. The core's rule decides.
+#[wasm_bindgen]
+#[must_use]
+pub fn credential_on_outcome(sent: u64, current: u64, outcome: u8) -> bool {
+    let outcome = match outcome {
+        0 => Outcome::Accepted,
+        1 => Outcome::Refused,
+        _ => Outcome::Failed,
+    };
+    credential::on_outcome(Generation::from(sent), Generation::from(current), outcome)
+}
+
+/// The generation a removal moves the store to from `current` (SPEC-363 R4), or nothing at the
+/// maximum, where the Worker deletes the record and stores no key again. The core's rule decides.
+#[wasm_bindgen]
+#[must_use]
+pub fn credential_on_removed(current: u64) -> Option<u64> {
+    credential::on_removed(Generation::from(current)).map(u64::from)
 }
 
 /// One deck of the tree as JSON: its id as a decimal string, its name, level, new, learning and

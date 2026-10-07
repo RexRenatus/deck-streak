@@ -19,6 +19,10 @@
 //! and that table's data rights ([`data_rights`]). A ceremony's state stays in memory and is never
 //! serialized; the table holds the owner's registered credentials alone (ADR-370).
 //!
+//! SPEC-363 makes the key the web client's sync key is sealed under: the seal secret, read once at
+//! start, and the sealing key for a browser's seal id, which the API releases to the owner's live
+//! session alone ([`sync_seal`]). Nothing per browser is stored (ADR-374).
+//!
 //! The context map (docs/CONTEXT-MAP.md) is binding: this crate depends only on what its line
 //! there declares, and a new edge is an ADR, never a fix to make code compile.
 #![forbid(unsafe_code)]
@@ -33,6 +37,7 @@ pub mod owner;
 pub mod passkeys;
 pub mod session;
 pub mod settings;
+pub mod sync_seal;
 
 use axum::http::StatusCode;
 use axum::http::header::CONTENT_TYPE;

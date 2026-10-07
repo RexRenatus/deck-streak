@@ -19,6 +19,8 @@
 //! through coordination's capture use case. SPEC-359 adds the linking routes ([`linking_routes`]):
 //! the link code, the passkey ceremonies and the owner's methods, over identity's linking use
 //! cases.
+//! SPEC-363 adds the release of the web client's sealing key ([`sync_seal_routes`]): the key for
+//! one seal id, to the owner's session alone, and off while the service holds no seal secret.
 //!
 //! The context map (docs/CONTEXT-MAP.md) is binding: this crate depends only on what its line
 //! there declares, and a new edge is an ADR, never a fix to make code compile.
@@ -41,6 +43,7 @@ pub mod serve;
 pub mod session_routes;
 pub mod settings;
 pub mod streak_routes;
+pub mod sync_seal_routes;
 pub mod wallet_routes;
 pub mod xp_routes;
 

@@ -36,6 +36,7 @@ use deck_streak_coordination::drills::{DrillNotes, RealFs};
 use deck_streak_coordination::inbox_capture::InboxCaptures;
 use deck_streak_coordination::instruments::InstrumentService;
 use deck_streak_coordination::progression::level_view::LawTierSource;
+use deck_streak_identity::sync_seal::SealSecret;
 use deck_streak_identity::{LinkingConfig, Owner};
 use deck_streak_kernel::Courses;
 use tower::ServiceBuilder;
@@ -63,6 +64,7 @@ use crate::notifications_routes;
 use crate::progress_routes;
 use crate::session_routes::{self, OwnerAccess};
 use crate::streak_routes;
+use crate::sync_seal_routes;
 use crate::wallet_routes;
 use crate::xp_routes;
 
@@ -89,21 +91,25 @@ pub struct ApiState {
     courses: Option<Courses>,
     inbox: Option<Arc<InboxCaptures<RealFs>>>,
     linking: Option<(LinkingConfig, Owner)>,
+    seal: Option<Arc<SealSecret>>,
 }
 
 impl std::fmt::Debug for ApiState {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter
-            .debug_struct("ApiState")
-            .field("readiness", &self.readiness)
+        let mut line = formatter.debug_struct("ApiState");
+        line.field("readiness", &self.readiness)
             .field("owner", &self.owner)
             .field("instruments", &self.instruments.is_some())
             .field("law_tiers", &self.law_tiers.is_some())
             .field("drills", &self.drills.is_some())
             .field("courses", &self.courses.is_some())
             .field("inbox", &self.inbox.is_some())
-            .field("linking", &self.linking.is_some())
-            .finish()
+            .field("linking", &self.linking.is_some());
+        // The seal port is named only while it is held: off is the release's default (SPEC-363 R5).
+        if self.seal.is_some() {
+            line.field("seal", &true);
+        }
+        line.finish()
     }
 }
 
@@ -120,6 +126,7 @@ impl ApiState {
             courses: None,
             inbox: None,
             linking: None,
+            seal: None,
         }
     }
 
@@ -142,6 +149,14 @@ impl ApiState {
     #[must_use]
     pub fn with_linking(mut self, config: LinkingConfig, owner: Owner) -> Self {
         self.linking = Some((config, owner));
+        self
+    }
+
+    /// This state, releasing the web client's sealing key under `secret` (SPEC-363 R5, R6).
+    /// Without it the release route answers 404 `sync_seal_off`.
+    #[must_use]
+    pub fn with_seal(mut self, secret: SealSecret) -> Self {
+        self.seal = Some(Arc::new(secret));
         self
     }
 
@@ -197,6 +212,7 @@ pub fn router(state: ApiState) -> Router {
     let courses = state.courses.clone().unwrap_or_default();
     let inbox = state.inbox.clone();
     let linking = state.linking.clone();
+    let seal = state.seal.clone();
     let routes = health::routes().with_state(state);
     let routes = match owner {
         Some(access) => {
@@ -221,6 +237,7 @@ pub fn router(state: ApiState) -> Router {
                 ))
                 .merge(law_routes::routes(access.clone(), readiness.clone()))
                 .merge(session_routes::routes(access.clone()))
+                .merge(sync_seal_routes::routes(access.clone(), seal))
                 .merge(drill_routes::routes(
                     access.clone(),
                     readiness.clone(),

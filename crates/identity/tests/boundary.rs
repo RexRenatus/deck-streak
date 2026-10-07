@@ -8,6 +8,10 @@
 //! artifacts too: `verify_slice` is called exactly once, in `init_data.rs`, and an HMAC is
 //! finalized exactly once, to derive the key, so no MAC's bytes leave it to be compared by hand
 //! under another name. The refusal is proved on a planted file in `tests/fixtures/`.
+//!
+//! The sealing key is the second HMAC finalized to derive a key, in `sync_seal.rs` (SPEC-363,
+//! ADR-374): it leaves the crate only as the key the API releases and is never compared, so the
+//! finalize list names exactly those two sites, and a third still fails.
 
 // An integration test is test code: its helpers panic on a failed fixture, and the examined count
 // is printed on purpose.
@@ -248,11 +252,15 @@ fn the_hash_is_compared_only_through_verify_slice() {
     assert_eq!(verified, vec!["init_data.rs".to_owned()]);
 
     // An HMAC is finalized once, to derive the key; every other is consumed by verify_slice.
+    // The sealing key is the second, derived in sync_seal.rs (SPEC-363, ADR-374).
     let finalized: Vec<String> = sources
         .iter()
         .flat_map(|(path, text)| std::iter::repeat_n(name(path), calls(text, ".finalize")))
         .collect();
-    assert_eq!(finalized, vec!["init_data.rs".to_owned()]);
+    assert_eq!(
+        finalized,
+        vec!["init_data.rs".to_owned(), "sync_seal.rs".to_owned()]
+    );
 
     // And no clause of the crate names a hash and compares it.
     let findings: Vec<String> = sources

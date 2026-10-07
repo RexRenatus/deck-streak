@@ -1,0 +1,150 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S36301-A-LOGIN-IS-KEPT-ONLY-AT-ITS-GENERATION",
+        "engine-core",
+        "src/credential.rs",
+        "if started == current =>",
+        "if true =>",
+        "credential::a_login_is_kept_only_at_the_generation_it_started",
+        "a login is kept only at the generation it started at; kept at any, a login in flight across a sign-out would store its key again and the sign-out would not hold (SPEC-363 A2)"
+      ],
+      [
+        "S36302-A-SEND-NEEDS-THE-HELD-GENERATION",
+        "engine-core",
+        "src/credential.rs",
+        "sealed && held == current",
+        "sealed",
+        "credential::a_send_needs_the_held_generation_to_be_current",
+        "a send needs the generation the sender holds to be current; without it, a Worker that read its key before a removal would still send it (SPEC-363 A3)"
+      ],
+      [
+        "S36303-A-SEND-NEEDS-A-SEALED-RECORD",
+        "engine-core",
+        "src/credential.rs",
+        "sealed && held == current",
+        "held == current",
+        "credential::a_send_needs_the_held_generation_to_be_current",
+        "a send needs a sealed record stored at that generation; without it, a send would go out with no stored key behind it (SPEC-363 A3)"
+      ],
+      [
+        "S36304-ONLY-THE-SERVERS-REFUSAL-IS-A-REFUSAL",
+        "engine-core",
+        "src/credential.rs",
+        "decoded.kind == i32::from(Kind::SyncAuthError)",
+        "decoded.kind == decoded.kind",
+        "credential::only_the_sync_servers_refusal_is_a_refusal",
+        "only the sync server's refusal classifies as refused; with every decoded kind refused, a network or server-message failure would drop the owner's key (SPEC-363 A4)"
+      ],
+      [
+        "S36305-A-REFUSAL-DROPS-ONLY-ITS-OWN-GENERATION",
+        "engine-core",
+        "src/credential.rs",
+        "outcome == Outcome::Refused && sent == current",
+        "outcome == Outcome::Refused",
+        "credential::a_refusal_drops_only_the_generation_it_refused",
+        "a refusal drops the key only when it refused the current generation; without the clause, a late refusal of an older key would drop the new login's key (SPEC-363 A5)"
+      ],
+      [
+        "S36306-A-REMOVAL-RAISES-THE-GENERATION",
+        "engine-core",
+        "src/credential.rs",
+        "current.next()\n}",
+        "Some(current)\n}",
+        "credential::a_removal_raises_the_generation_and_it_never_wraps",
+        "a removal names the next generation; returning the one it was given, a login in flight across the removal would be kept (SPEC-363 A6)"
+      ],
+      [
+        "S36307-THE-GENERATION-NEVER-WRAPS",
+        "engine-core",
+        "src/credential.rs",
+        "self.0.checked_add(1)",
+        "Some(self.0.wrapping_add(1))",
+        "credential::a_removal_raises_the_generation_and_it_never_wraps",
+        "the generation never wraps at its maximum; wrapping, it would fall to zero and an old login's generation would read as current again (SPEC-363 A6)"
+      ],
+      [
+        "S36308-THE-SEAL-KEY-IS-LABELLED",
+        "identity",
+        "src/sync_seal.rs",
+        "mac.update(SEAL_LABEL);",
+        "",
+        "sync_seal::the_seal_key_is_the_labelled_hmac_of_the_seal_id",
+        "the sealing key is the HMAC of the label then the seal id; unlabelled, the key would be the bare HMAC of the id under a secret another use could share (SPEC-363 A9)"
+      ],
+      [
+        "S36309-A-SHORT-SECRET-REFUSES",
+        "identity",
+        "src/sync_seal.rs",
+        "bytes.len() < MIN_SECRET_BYTES",
+        "false",
+        "sync_seal::a_seal_secret_under_32_bytes_refuses_start",
+        "a seal secret under 32 bytes refuses start; accepted, a short secret would seal every web client's key under a guessable key (SPEC-363 A10)"
+      ],
+      [
+        "S36310-THE-RELEASE-NEEDS-AN-OWNER-SESSION",
+        "api",
+        "src/sync_seal_routes.rs",
+        "_owner: OwnerSession,",
+        "",
+        "sync_seal_routes::the_seal_key_is_released_only_to_an_owner_session",
+        "the release answers an owner session alone; without the extractor, a link session or no session at all would receive the sealing key (SPEC-363 A11)"
+      ],
+      [
+        "S36311-A-SEAL-ID-IS-SIXTEEN-BYTES",
+        "identity",
+        "src/sync_seal.rs",
+        "decoded.len() == SEAL_ID_BYTES",
+        "true",
+        "sync_seal::a_seal_id_that_is_not_sixteen_bytes_does_not_parse",
+        "a seal id parses only from 16 decoded bytes; without the test, an id of another length would be read and the parse would not hold its shape (SPEC-363 A18)"
+      ],
+      [
+        "S36312-THE-RELEASE-HAS-A-BOUND",
+        "api",
+        "src/sync_seal_routes.rs",
+        "RELEASES_PER_MINUTE: u32 = 30;",
+        "RELEASES_PER_MINUTE: u32 = 3000;",
+        "sync_seal_routes::the_release_has_a_bound_of_its_own",
+        "the release admits 30 in a minute and refuses the 31st; at 3000, a stolen session could draw keys for many seal ids before any bound held (SPEC-363 A13)"
+      ],
+      [
+        "S36313-THE-RELEASE-IS-NOT-STORED",
+        "api",
+        "src/sync_seal_routes.rs",
+        "\"no-store\"",
+        "\"private\"",
+        "sync_seal_routes::the_release_is_not_stored_and_not_cross_site",
+        "the released key is answered no-store; as private, a browser cache would keep the sealing key on disk (SPEC-363 A14)"
+      ],
+      [
+        "S36314-THE-RELEASE-IS-NOT-CROSS-SITE",
+        "api",
+        "src/sync_seal_routes.rs",
+        "_state_change: StateChange,",
+        "",
+        "sync_seal_routes::the_release_is_not_stored_and_not_cross_site",
+        "the release refuses a cross-site or non-JSON request; without the guard, another site could make the owner's browser ask for the key (SPEC-363 A14)"
+      ],
+      [
+        "S36315-THE-RELEASE-IS-OFF-WITHOUT-A-SECRET",
+        "api",
+        "src/sync_seal_routes.rs",
+        "None => Err(refused(StatusCode::NOT_FOUND, \"sync_seal_off\")),",
+        "None => SealSecret::new(&[0; 32]).map(|secret| Self(Arc::new(secret))).map_err(|_| refused(StatusCode::NOT_FOUND, \"sync_seal_off\")),",
+        "sync_seal_routes::the_release_is_off_without_the_seal_secret",
+        "with no seal secret the route answers 404 sync_seal_off; otherwise it would release keys made from a secret nobody configured (SPEC-363 A15)"
+      ],
+      [
+        "S36316-A-MISSING-SECRET-TURNS-THE-RELEASE-OFF",
+        "daemon",
+        "src/wiring.rs",
+        "\"no seal secret is configured: the sync seal release is off\"\n            );\n            return Ok(None);",
+        "\"no seal secret is configured: the sync seal release is off\"\n            );\n            return Err(CredentialError::Missing { id }.into());",
+        "lib::wiring::tests::a_missing_seal_secret_turns_the_release_off",
+        "an absent seal secret turns the release off and the API still starts; refused, a host with no seal secret would not start the API at all (SPEC-363 A17)"
+      ]
+    ]
+  }
+}
