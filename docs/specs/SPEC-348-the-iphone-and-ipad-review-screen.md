@@ -231,7 +231,7 @@ R20. **CI.** The Apple job's `harness` job gains one step, "the review screen's 
 | A20 | Choosing the fixture's deck shows its counts and the first card; Show Answer reveals the four ratings; Good shows the next card | the same step: `DeckStreakUITests/ReviewFlowTests/test_a20_show_reveal_rate_next` |
 | A21 | The image card renders its `data:` image in the factory's view: the image element named by its `alt` text is the fixture PNG's size, not a broken image's | the same step: `DeckStreakUITests/ReviewFlowTests/test_a21_the_image_card_renders_its_image` |
 | A22 | The voice picker lists "System default" and says when no voice is installed | the same step: `DeckStreakUITests/ReviewFlowTests/test_a22_the_voice_picker_names_the_default` |
-| A23 | The codec's new requests and decoders equal their literal bytes, a two-level deck tree included, and a tree past 32 levels is refused | `harness-wire` job, step "the codec's tests, on the host": `HarnessWireTests.RequestBytesTests/test_a23_review_requests_encode_to_their_literal_bytes`, `HarnessWireTests.ResponseDecodingTests/test_a23_the_deck_tree_decodes_depth_first` |
+| A23 | The codec's new requests and decoders equal their literal bytes: the current deck, the states sent to be described, each rating's own state, the intervals and the queued card's five states | `harness-wire` job, step "the codec's tests, on the host": `HarnessWireTests.RequestBytesTests/test_a23_review_requests_encode_to_their_literal_bytes`, `HarnessWireTests.ResponseDecodingTests/test_a23_the_intervals_and_the_five_states_decode` |
 
 ```acceptance
 A1: cargo test -p deck-streak-engine-core --test review_pairs -- --exact the_review_pairs_run_natively_and_no_other_pair_joins
@@ -257,7 +257,7 @@ A20: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -desti
 A21: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakUITests/ReviewFlowTests/test_a21_the_image_card_renders_its_image
 A22: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakUITests/ReviewFlowTests/test_a22_the_voice_picker_names_the_default
 A23: swift test --package-path ios/HarnessWire --filter HarnessWireTests.RequestBytesTests/test_a23_review_requests_encode_to_their_literal_bytes
-A23: swift test --package-path ios/HarnessWire --filter HarnessWireTests.ResponseDecodingTests/test_a23_the_deck_tree_decodes_depth_first
+A23: swift test --package-path ios/HarnessWire --filter HarnessWireTests.ResponseDecodingTests/test_a23_the_intervals_and_the_five_states_decode
 ```
 
 **The red each shows first.** A1 and A2 are red at their tests commit on the refusal of (7,4): the
@@ -399,8 +399,8 @@ one Part 1 test. Part 2's codec lines carry rows in
 ## 10. Amendments: what part 2 delivers
 
 Part 2 delivers R9 to R20, and section 7's rows A12 to A23 now sit in section 3, with their lines
-in its fence. It was cut at `dev` `f3392ec3`. Ten points move from the text above; ADR-359 D8 and
-D9 decide the two that change a requirement, and the rest are named here.
+in its fence. It was cut at `dev` `f3392ec3`. Twelve points move from the text above; ADR-359 D8
+and D9 decide the two that change a requirement, and the rest are named here.
 
 - **R18's population (ADR-359 D9).** A13 judges every Swift file git tracks under `ios/` outside
   `ios/CardIsolation/` and outside a test target, as `scripts/tests/test_card_web_view_layers.py`
@@ -448,6 +448,17 @@ D9 decide the two that change a requirement, and the rest are named here.
   unchanged, so a face's page carries both doctypes, the policy's first.
 - **The fragment.** This part's entry is `changelog.d/ios-review-screen-348.md`, a new file,
   because part 1's `changelog.d/ios-review-348.md` was folded into `CHANGELOG.md` by the release.
+- **The deck counts move to a later part.** This part leaves the sidebar's counts to IOS-2c, as
+  the design's own cut allows: R15, ADR-359 D4, A23's tree half (`Requests.deckTree(now:)`,
+  `Responses.deckTree(_:)`, the two-level tree and the refusal past 32 levels) and the sidebar's
+  change are unchanged in this part; delivered by IOS-2c. The sidebar keeps (7,13), whose
+  `DeckName` already carries the id (7,22) needs. The review screen's three counts (R9) come from
+  (13,3) and stay in this part. A23's second test is
+  `test_a23_the_intervals_and_the_five_states_decode`, over the intervals' `StringList` and the
+  queued card's five states, and A23's row names what this part's codec adds.
+- **SPEC-339 A3's new card names all five states.** The queue's decoder now reads the again, hard
+  and easy states beside the current and good ones, so `test_a3`'s new card, whose bytes carry all
+  five, expects them; its learning card carries two and expects two.
 
 Files this part changes that section 4 does not name:
 
