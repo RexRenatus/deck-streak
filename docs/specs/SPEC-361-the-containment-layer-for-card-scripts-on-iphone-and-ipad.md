@@ -152,16 +152,19 @@ R15. **The `harness` job's bound holds the planted suite.** The card view's plan
 
 R16. **The load wait holds for a cold first test (#681).** The planted suite's measured load wait,
     `Probe.loadSeconds`, stays 10 seconds, and its assertion stays `loaded` true, with no
-    tolerance, skip or retry. A warm-up of the scripts-off path alone did not cover the
-    scripts-on path: after it loaded in 3.78 seconds on the iPhone simulator and 4.54 seconds on
-    the iPad simulator, the first scripts-on load still took 9.37 and 7.14 seconds against the
-    10-second wait, while every other load took 0.17 seconds or less. So `Probe.warmUp()` loads
-    both paths once per test process, before any measured wait: one planted card in a scripts-off
-    view the factory builds, then one card whose script runs in a scripts-on view, each mounted,
-    under its own bound, `Probe.warmUpSeconds`, 60 seconds. Every test class in
-    `ios/CardProbeTests` that loads a card asserts it from `setUp`, so neither path's first start
-    falls inside a measured wait. A card that never loads still reads red within the wait:
-    `loaded` reads false, and only after the whole bound. Each load's time is recorded:
+    tolerance, skip or retry. `Probe.warmUp()` loads both paths once per test process, before
+    any measured wait: one planted card in a scripts-off view the factory builds, then one card
+    whose script runs in a scripts-on view, each mounted, under its own bound,
+    `Probe.warmUpSeconds`, 60 seconds. Every test class in `ios/CardProbeTests` that loads a card
+    asserts it from `setUp`. After that warm-up, A5's test still read its first row at 4.23
+    seconds on the iPhone simulator and 10.15 seconds on the iPad simulator, while its other 12
+    rows read 0.01 seconds or less, because it built and started all 13 views, each with its own
+    WebContent process, before it mounted the first. So A5's test builds each row's view and
+    starts its load just before its mount, and tears it down before the next row's view is
+    built, so every row's wait measures its own load. A card that never loads still reads red
+    within the wait: `loaded` reads false, and only after the whole bound. A load that ends
+    during the poll's final check, after the bound, reads loaded with a `took` past
+    `Probe.loadSeconds`, and the land reading names any such reading. Each load's time is recorded:
     `Probe.loadTime(_:)` returns the seconds a load took, or nil when the wait expired, `loaded`
     is read through it, and each warm-up load and each row of A5's test print it into the
     `harness` job's result bundles.
@@ -189,7 +192,7 @@ green only when its test passed on both destinations in one CI run.
 | A14 | a scripted card renders as in the reference and its script runs, under L12 | `xcodebuild test` `PlantedCardTests/test_a_scripted_card_renders_and_its_script_runs` | not red: SPEC-355's criterion, kept |
 | A15 | the card's permitted loads load: the `permitted` card's `data:` image decodes, its `data:` font loads and its `data:` audio reads its metadata, in the shipped and the scripted view | `xcodebuild test` `PlantedCardTests/test_the_permitted_loads_load_in_both_card_views` | the `permitted` card is absent from the stub's `Planted.swift` |
 | A16 | the `harness` job's `timeout-minutes` is a digit string inside 150 to 180 (R15) | `scripts/tests/test_ci_workflows.py` `TheHarnessLinksItsOwnRunsFramework/test_the_harness_job_timeout_holds_the_planted_suite` | the job's bound is 90 |
-| A17 | the load wait holds for a cold first test: the once-per-process warm-up loads its card within its own bound, asserted from `setUp` before every test of `FactoryTests` and `PlantedCardTests`, the measured waits unchanged; and a card that never loads reads not loaded only after the whole wait (R16) | `xcodebuild test` `FactoryTests/test_the_card_view_runs_scripts_only_with_every_control` (the suite's first test, which runs the warm-up's `setUp` assertion first) and `FactoryTests/test_the_load_wait_reads_a_card_that_never_loads_as_not_loaded` | before any warm-up, the suite's first test read its first row not loaded at the 10-second wait on the first simulator |
+| A17 | the load wait holds for a cold first test: the once-per-process warm-up loads its two cards, one on each path, each within its own bound, asserted from `setUp` before every test of `FactoryTests` and `PlantedCardTests`, the measured waits unchanged; and a card that never loads reads not loaded only after the whole wait (R16) | `xcodebuild test` `FactoryTests/test_the_card_view_runs_scripts_only_with_every_control` (the suite's first test, which runs the warm-up's `setUp` assertion first) and `FactoryTests/test_the_load_wait_reads_a_card_that_never_loads_as_not_loaded` | before any warm-up, the suite's first test read its first row not loaded at the 10-second wait on the first simulator |
 
 ```acceptance
 A1: swift test --package-path ios/CardIsolation --filter CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present
