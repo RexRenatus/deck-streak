@@ -167,7 +167,7 @@ describe("the credential census's population", () => {
   it('the census examines the credential module and every Worker module', () => {
     const paths = examined('production modules under web/app/src', production(SOURCE)).map(({ path }) => path);
     const judged = ['lib/engine/credential.ts', ...WORKER_MODULES, 'lib/sync/sign-out.ts'];
-    expect(judged.filter((module) => !paths.includes(join(SOURCE, module)))).toEqual([]);
+    for (const module of judged) expect(paths).toContain(join(SOURCE, module));
     // no test file is in the population, so a test's import of the credential module is never judged
     expect(paths.filter((path) => /\.(test|spec)\./.test(path))).toEqual([]);
   });
