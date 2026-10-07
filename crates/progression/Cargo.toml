@@ -14,6 +14,9 @@ workspace = true
 [dependencies]
 deck-streak-kernel.workspace = true
 deck-streak-ingest.workspace = true
+# ADR-371 D3: the per-review XP rule and its table; progression translates an ingest review into
+# it at its edge.
+deck-streak-xp.workspace = true
 # SPEC-040: the data-rights port's rows are JSON values (ADR-029).
 serde_json.workspace = true
 # ADR-003: the XP ledger's queries run through the kernel's Db, checked into .sqlx/, and a refused

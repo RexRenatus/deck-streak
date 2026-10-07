@@ -860,3 +860,19 @@ SPEC-324 amends the settle census twice, and ADR-197 round 9 and ADR-325 decide 
 The criteria are SPEC-324's: A2 (the joined name), A6 (the owner's own operation, and an admitted
 file accepted) and A7 (a re-export progression's macro writes), each decided by its fenced command
 there.
+
+## 17. Amendments: the per-review rule moved to the XP crate (SPEC-360)
+
+SPEC-360 and ADR-371 move the per-review rule out of progression, unchanged.
+
+- **The rule.** R1's and R4's rule, the product rounded half to even and the study-event guard it
+  starts with, now lives in `crates/xp/src/review_xp.rs`, the `deck-streak-xp` crate.
+  Progression's `review_xp` keeps its path and signature and is the translation at its edge: it
+  builds the crate's facts from an ingest review and maps ingest's tier.
+- **The constants.** R2's per-review constants, the base and the ease, maturity, type and tier
+  multipliers, are read from `deck-streak-xp`'s table, parsed once from `economy.json`; progression
+  keeps the day-level constants.
+- **The rows.** `S07201-REVIEW-XP-ROUNDING` and `S07202-MATURE-BOUNDARY` keep their ids, finds and
+  replaces, and take the crate cell `xp` and the killer
+  `review_xp::the_xp_crates_review_xp_matches_the_parity_golden_for_every_case`. Section 9's two
+  rows above stay as written, read with this section. No row id is retired.
