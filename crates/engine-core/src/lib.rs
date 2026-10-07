@@ -22,6 +22,9 @@
 //! - [`credential`]: the rule that keeps, sends and drops the sync key: its generation, a login
 //!   kept only at the generation it started at, a send only at the held one, and a drop only on
 //!   the server's refusal of the current one (SPEC-363 R3).
+//! - [`one_way`]: the one-way sync's steps in the order the choice's model checks them, each
+//!   reading its side from its file: the server copy, the backup, the re-check and the write
+//!   (SPEC-364 R4-R8).
 //!
 //! The core depends on the engine and on no crate of this workspace; only the two client
 //! adapters depend on it (ADR-356 D4, held by the graph census).
@@ -35,4 +38,5 @@ pub mod full_sync;
 pub mod gesture;
 pub mod login_guard;
 pub mod media;
+pub mod one_way;
 pub mod table;
