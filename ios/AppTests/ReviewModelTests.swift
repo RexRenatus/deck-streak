@@ -1,7 +1,9 @@
-// The review model against the review fixture (SPEC-348 A15, A18), and the player's refusal of a
-// sound it cannot play (section 10). Each model opens its own fresh copy of the fixture, whose deck
+// The review model against the review fixture (SPEC-348 A15, A18), the player's refusal of a
+// sound it cannot play (section 10), and the end of a sound the player already replaced, which
+// leaves the new list where it is. Each model opens its own fresh copy of the fixture, whose deck
 // `Review` holds a text card, an image card, a sound card and a speech card, in that order. The
 // model's VoiceOver reading and installed voices are handed in, so a test decides both.
+import AVFoundation
 import Foundation
 import XCTest
 
@@ -81,6 +83,25 @@ final class ReviewModelTests: XCTestCase {
             "a sound the player refuses shows one line naming its file")
     }
 
+    @MainActor
+    func test_a_replaced_sounds_end_leaves_the_new_list_where_it_is() async throws {
+        let player = ClipPlayer()
+        let quiet = silence(seconds: 4)
+        player.play([.sound(name: "a.wav", bytes: quiet), .sound(name: "b.wav", bytes: quiet)])
+        let replaced = try XCTUnwrap(player.sound, "the first list's first sound plays")
+        player.play([.sound(name: "c.wav", bytes: quiet), .sound(name: "d.wav", bytes: quiet)])
+        let current = try XCTUnwrap(player.sound, "the second list's first sound plays")
+
+        // The replaced sound's end arrives after the second list began, as a late callback does.
+        player.audioPlayerDidFinishPlaying(replaced, successfully: true)
+        try await Task.sleep(for: .milliseconds(500))
+
+        XCTAssertEqual(
+            player.queue, [.sound(name: "d.wav", bytes: quiet)],
+            "the replaced sound's end leaves the second list's queue where it was")
+        XCTAssertTrue(player.sound === current, "the second list's first sound still plays")
+    }
+
     // MARK: - Steps
 
     /// A model over a fresh copy of the fixture, started on its deck `Review`, and that copy.
@@ -105,4 +126,21 @@ final class ReviewModelTests: XCTestCase {
             await model.perform(.rate(.easy))
         }
     }
+}
+
+/// A WAVE file of `seconds` of silence: 8000 samples a second, 16 bits, one channel.
+private func silence(seconds: Int) -> Data {
+    func littleEndian(_ value: Int, _ count: Int) -> [UInt8] {
+        (0..<count).map { UInt8(truncatingIfNeeded: value >> (8 * $0)) }
+    }
+    let size = 2 * 8000 * seconds
+    let pieces: [[UInt8]] = [
+        Array("RIFF".utf8), littleEndian(36 + size, 4), Array("WAVE".utf8),
+        Array("fmt ".utf8), littleEndian(16, 4), littleEndian(1, 2), littleEndian(1, 2),
+        littleEndian(8000, 4), littleEndian(16000, 4), littleEndian(2, 2), littleEndian(16, 2),
+        Array("data".utf8), littleEndian(size, 4), [UInt8](repeating: 0, count: size),
+    ]
+    var bytes = Data()
+    for piece in pieces { bytes.append(contentsOf: piece) }
+    return bytes
 }

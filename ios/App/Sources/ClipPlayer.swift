@@ -16,8 +16,9 @@ final class ClipPlayer: NSObject {
     /// Called with one line naming a sound the player refused.
     var refused: (String) -> Void = { _ in }
 
-    private var queue: [ReviewClip] = []
-    private var sound: AVAudioPlayer?
+    /// The clips left to play, and the sound now playing; the tests read both.
+    private(set) var queue: [ReviewClip] = []
+    private(set) var sound: AVAudioPlayer?
     private let synthesizer = AVSpeechSynthesizer()
 
     override init() {
