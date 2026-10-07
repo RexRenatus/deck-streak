@@ -485,7 +485,13 @@ describe("the Worker's credential store, case by case", () => {
       }
     };
     const store = new CredentialStore(workerDeps(world.database, world.release, world.bus, engine));
-    await expect(store.forget()).rejects.toThrow('the core did not answer');
+    // the rejection is the step's own error: `rejects.toThrow` with a message would also pass a null
+    const failure = await store.forget().then(
+      () => null,
+      (error: unknown) => error
+    );
+    expect(failure).toBeInstanceOf(Error);
+    expect((failure as Error).message).toBe('the core did not answer');
     expect(await readStored(world.database)).toEqual(record);
   });
 });
