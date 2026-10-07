@@ -26,7 +26,7 @@ async function endSession(fetch: typeof globalThis.fetch): Promise<boolean> {
  * forget succeeded. Answers whether the session ended; a forget that failed rejects after the
  * session's end was sent, so the page can say the key may remain. */
 export async function signOut(engine: Forgetter, fetch: typeof globalThis.fetch): Promise<boolean> {
-  let ended = false;
+  let ended: boolean;
   try {
     await engine.forgetSync();
   } finally {
