@@ -80,6 +80,16 @@ describe('the review input', () => {
 
     expect(record.acted).toEqual(['show-answer', 'good', 'good', 'again', 'bury', 'flag']);
 
+    // Hard and Easy are gone: keys 2 and 4, the d-pad's up and down and the stick's vertical axis
+    // fire nothing on the answer side
+    input.key(key('2'));
+    input.key(key('4'));
+    input.pads([pad([13])]);
+    input.pads([pad([13, 12])]);
+    input.pads([pad([], [0, 0.9, 0, 0])]);
+    input.pads([pad([], [0, -0.9, 0, 0])]);
+    expect(record.acted).toEqual(['show-answer', 'good', 'good', 'again', 'bury', 'flag']);
+
     // a grade on the question side fires nothing, as the remote's reviewer has it
     record.side = 'question';
     input.key(key('4'));
@@ -99,9 +109,9 @@ describe('the review input', () => {
     input.key(key('Enter'));
     input.key(key('1', { ctrlKey: true }));
     input.pads([pad()]);
-    input.pads([pad([13])]);
-    input.click('easy');
-    expect(record.acted).toEqual(['good', 'flag', 'hard', 'easy']);
+    input.pads([pad([14])]);
+    input.click('bury');
+    expect(record.acted).toEqual(['good', 'flag', 'again', 'bury']);
     expect(input.characterKeys).toBe(false);
 
     // switched on, kept under the one key, and read back by the next screen on this device
@@ -109,7 +119,7 @@ describe('the review input', () => {
     expect([...storage.items]).toEqual([[KEY_SWITCH, 'on']]);
     record.acted = [];
     for (const name of CHARACTER_KEYS) input.key(key(name));
-    expect(record.acted).toEqual(['again', 'hard', 'good', 'easy', 'undo', 'bury', 'replay', 'good']);
+    expect(record.acted).toEqual(['again', 'good', 'undo', 'bury', 'replay', 'good']);
     expect(new StudyInput(review, storage).characterKeys).toBe(true);
     input.characterKeys = false;
     expect([...storage.items]).toEqual([[KEY_SWITCH, 'off']]);
@@ -148,11 +158,11 @@ describe('the review input', () => {
     expect(record.focused).toBe(1);
 
     // after an action by key, by gamepad and by click, focus returns to the review
-    input.key(key('2'));
+    input.key(key('1'));
     input.pads([pad()]);
-    input.pads([pad([12])]);
+    input.pads([pad([15])]);
     input.click('flag');
-    expect([record.acted, record.focused]).toEqual([['hard', 'easy', 'flag'], 4]);
+    expect([record.acted, record.focused]).toEqual([['again', 'good', 'flag'], 4]);
     // a key that fires nothing moves nothing
     input.key(key('x'));
     expect(record.focused).toBe(4);

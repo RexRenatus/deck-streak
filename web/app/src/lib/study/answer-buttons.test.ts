@@ -24,12 +24,10 @@ describe('the answer buttons', () => {
         return true;
       }
     });
-    expect(names).toEqual(['Again <1m', 'Hard <6m', 'Good <10m', 'Easy 4d']);
+    expect(names).toEqual(['Again <1m', 'Good <10m']);
 
-    // native buttons in the tab order, none disabled, so Tab reaches all four in grade order
+    // native buttons in the tab order, none disabled, so Tab reaches both in grade order
     expect(buttons.map((button) => [button.tagName, button.getAttribute('type'), button.tabIndex])).toEqual([
-      ['BUTTON', 'button', 0],
-      ['BUTTON', 'button', 0],
       ['BUTTON', 'button', 0],
       ['BUTTON', 'button', 0]
     ]);
@@ -37,6 +35,6 @@ describe('the answer buttons', () => {
 
     // each answers its own grade
     for (const button of buttons) await fireEvent.click(button);
-    expect(answered).toEqual(['again', 'hard', 'good', 'easy']);
+    expect(answered).toEqual(['again', 'good']);
   });
 });
