@@ -487,10 +487,33 @@ jobs:
             -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
             -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" \
             -disable-concurrent-destination-testing \
+            -skip-testing:DeckStreakTests/ReviewModelTests \
+            -skip-testing:DeckStreakTests/ReviewSessionTests \
+            -skip-testing:DeckStreakUITests/ReviewFlowTests \
             -derivedDataPath "$RUNNER_TEMP/app-debug" \
             -resultBundlePath "$RESULTS/app.xcresult" \
             CODE_SIGN_IDENTITY=-
           echo "$(( $(date +%s) - started ))" > "$REPORT/app-seconds"
+      - name: the review screen's tests, Debug, on the iPhone and then the iPad
+        # The review screen's three classes, which the app's step skips, over its derived data and
+        # with the review fixture named to the test runner on the command line alone (SPEC-348
+        # R20, ADR-359 D8). Run after a red app step too, as the archive is.
+        id: review-tests
+        if: ${{ !cancelled() && steps.app-tests.outcome != 'skipped' }}
+        run: |
+          cp -R engine-artifact/review-fixture "$RUNNER_TEMP/review-fixture"
+          started=$(date +%s)
+          TEST_RUNNER_DS_REVIEW_FIXTURE="$RUNNER_TEMP/review-fixture" xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug \
+            -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
+            -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" \
+            -disable-concurrent-destination-testing \
+            -only-testing:DeckStreakTests/ReviewModelTests \
+            -only-testing:DeckStreakTests/ReviewSessionTests \
+            -only-testing:DeckStreakUITests/ReviewFlowTests \
+            -derivedDataPath "$RUNNER_TEMP/app-debug" \
+            -resultBundlePath "$RESULTS/review.xcresult" \
+            CODE_SIGN_IDENTITY=-
+          echo "$(( $(date +%s) - started ))" > "$REPORT/review-seconds"
       - name: the app, archived unsigned for a device
         # Read after a red test step too, so the archive and its imports are measured at every
         # run (SPEC-347 A15); a cancelled run, or a test step that never ran, skips it.
@@ -596,6 +619,7 @@ jobs:
           debug_cases = cases_in("debug")
           release_cases = cases_in("release")
           app_cases = cases_in("app")
+          review_cases = cases_in("review")
           release = results / "release.xcresult"
           metrics = tool("metrics", "--path", str(release)) if release.exists() else None
           found = []
@@ -617,6 +641,7 @@ jobs:
               ("Release app bytes", read("app-bytes") or "not measured"),
               ("Release executable bytes", read("executable-bytes") or "not measured"),
               ("app's tests, Debug, both simulators", minutes("app-seconds")),
+              ("review screen's tests, Debug, both simulators", minutes("review-seconds")),
           ]
           for simulator in simulators:
               for label, pick, wanted in figures:
@@ -634,7 +659,10 @@ jobs:
               "|---|---|",
           ] + [f"| {name} | {value} |" for name, value in rows]
           lines += ["", "| test | result |", "|---|---|"]
-          for label, cases in (("Debug", debug_cases), ("Release", release_cases), ("App", app_cases)):
+          for label, cases in (
+              ("Debug", debug_cases), ("Release", release_cases), ("App", app_cases),
+              ("Review", review_cases),
+          ):
               lines += [f"| {label} `{c.get('nodeIdentifier')}` | {per_simulator(c)} |" for c in cases]
               if not cases:
                   lines.append(f"| {label}: no test result was read | not measured |")

@@ -16,6 +16,35 @@ struct Refusal: Error, Equatable {
     let sentence: String
 }
 
+/// A deck as the sidebar lists it: its id, which (7,22) takes, and its name (SPEC-348 R9).
+struct Deck: Hashable, Sendable {
+    let id: Int64
+    let name: String
+}
+
+/// A face as the review screen shows it: the engine's document for the factory's view, the clips
+/// it plays and replays, the media it could not show, and the languages its speech uses, each
+/// once, for the voice picker (SPEC-348 R9, R13, R14).
+struct ReviewFace: Equatable, Sendable {
+    var document: String
+    var autoplay: [ReviewClip]
+    var replay: [ReviewClip]
+    var omitted: [String]
+    var languages: [String]
+
+    /// The face before the first card and after the last: nothing to show and nothing to play.
+    static let empty = ReviewFace(
+        document: "", autoplay: [], replay: [], omitted: [], languages: [])
+}
+
+/// One language the current face speaks, with the installed voices the picker offers for it and
+/// the one chosen, nil for the system's default (SPEC-348 R14).
+struct VoiceLanguage: Equatable, Sendable {
+    var language: String
+    var options: [InstalledVoice]
+    var chosen: String?
+}
+
 /// The one owner of the engine: every engine call runs here, off the main actor, one at a time
 /// (SPEC-347 R7, R8). The actor serialises the calls; the engine itself is `Sendable` because the
 /// adapter's Rust side is `Send + Sync`.
@@ -25,7 +54,7 @@ actor EngineSession {
     /// Opens the collection at its one fixed path under Application Support, beside its media
     /// folder, creating the directory on the first launch (R7). The engine creates a collection
     /// that is not there yet, so a fresh install opens one holding the engine's default deck alone.
-    func open() throws {
+    func open(arguments: [String] = ProcessInfo.processInfo.arguments) throws {
         let directory = URL.applicationSupportDirectory.appending(
             path: "DeckStreak", directoryHint: .isDirectory)
         let media = directory.appending(path: "collection.media", directoryHint: .isDirectory)
@@ -44,6 +73,11 @@ actor EngineSession {
     func deckNames() throws -> [String] {
         try Responses.deckNames(call(EngineCall.deckNames, Requests.deckNames(includeFiltered: true)))
             .map(\.name)
+    }
+
+    /// The collection's decks with their ids, filtered decks included, in the engine's order.
+    func decks() throws -> [Deck] {
+        []
     }
 
     /// Signs in through the engine and returns the host key its `SyncAuth` carries (R8). The

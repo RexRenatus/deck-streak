@@ -60,6 +60,18 @@ public enum Requests {
         return writer.bytes
     }
 
+    /// `DeckId`: `did` (1), the deck (7,22) makes the current one, so the queue is its own
+    /// (SPEC-348 R9).
+    public static func setCurrentDeck(_ deckID: Int64) -> [UInt8] {
+        []
+    }
+
+    /// `SchedulingStates`: `current` (1), `again` (2), `hard` (3), `good` (4) and `easy` (5), each
+    /// the opaque state the queue gave, for (13,24) to describe (SPEC-348 R11).
+    public static func describeNextStates(_ card: QueuedCard) -> [UInt8] {
+        []
+    }
+
     /// `RenderExistingCardRequest`: `card_id` (1), with `browser` (2) and `partial_render` (3)
     /// false and so omitted, so the engine renders the whole template.
     public static func renderExistingCard(cardID: Int64) -> [UInt8] {
@@ -108,20 +120,37 @@ public struct DeckName: Equatable, Sendable {
     }
 }
 
-/// One card of `QueuedCards`, with the two states an answer of Good sends back.
+/// One card of `QueuedCards`, with its current state and the four states an answer sends back,
+/// one per rating. The three beside Good's default to empty, so the five-argument call the harness
+/// makes still reads (SPEC-348 section 10).
 public struct QueuedCard: Equatable, Sendable {
     public var cardID: Int64
     public var noteID: Int64
     public var queue: Int32
     public var currentState: [UInt8]
+    public var againState: [UInt8]
+    public var hardState: [UInt8]
     public var goodState: [UInt8]
+    public var easyState: [UInt8]
 
-    public init(cardID: Int64, noteID: Int64, queue: Int32, currentState: [UInt8], goodState: [UInt8]) {
+    public init(
+        cardID: Int64, noteID: Int64, queue: Int32, currentState: [UInt8],
+        againState: [UInt8] = [], hardState: [UInt8] = [], goodState: [UInt8],
+        easyState: [UInt8] = []
+    ) {
         self.cardID = cardID
         self.noteID = noteID
         self.queue = queue
         self.currentState = currentState
+        self.againState = againState
+        self.hardState = hardState
         self.goodState = goodState
+        self.easyState = easyState
+    }
+
+    /// The state an answer of `rating` sends back as its new state: the rating's own (R10).
+    public func state(for rating: Rating) -> [UInt8] {
+        []
     }
 }
 
@@ -206,6 +235,12 @@ public enum Responses {
             queue: Int32(truncatingIfNeeded: queued.varint(2)),
             currentState: states.lengthDelimited(1) ?? [],
             goodState: states.lengthDelimited(4) ?? [])
+    }
+
+    /// `StringList`: `vals` (1), each a UTF-8 string, in order: the intervals (13,24) gives, one
+    /// per rating (SPEC-348 R11).
+    public static func stringList(_ bytes: [UInt8]) throws -> [String] {
+        []
     }
 
     /// The question's nodes of a `RenderCardResponse`: `question_nodes` (1), never the answer's
