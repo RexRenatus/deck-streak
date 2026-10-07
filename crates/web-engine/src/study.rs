@@ -77,6 +77,11 @@ pub mod service {
     pub const CARD_RENDERING: u32 = 27;
 }
 
+/// The sync calls the web client reaches through its own exports, never through `run_method`:
+/// service, method, and the method's name (SPEC-364 R1; ADR-375 D11). The parity guard reads them
+/// beside [`STUDY_CALLS`] as the web column of the core's table.
+pub const SYNC_CALLS: [(u32, u32, &str); 0] = [];
+
 /// The study calls `run_method` admits: service, method, and the method's name. Every pair
 /// outside it is refused, the exempt writes of ADR-337 included (#623). The last eight are the
 /// review's: the deck list, the card view, its labels and undo label, bury and flag (SPEC-350 R1).

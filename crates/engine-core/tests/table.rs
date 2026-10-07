@@ -219,3 +219,43 @@ fn the_review_pairs_are_ordinary_on_the_web() {
         );
     }
 }
+
+#[test]
+fn the_web_column_admits_the_sync_login_and_the_normal_sync() {
+    let decided: Vec<((u32, u32), Decision, Decision)> = [(1, 3), (1, 5), (1, 6)]
+        .into_iter()
+        .map(|(service, method)| {
+            (
+                (service, method),
+                decide(Transport::Native, service, method),
+                decide(Transport::Web, service, method),
+            )
+        })
+        .collect();
+    assert_eq!(
+        decided,
+        vec![
+            ((1, 3), Decision::Admit, Decision::Admit),
+            ((1, 5), Decision::NotAllowed, Decision::Admit),
+            ((1, 6), Decision::NeedsGesture, Decision::NeedsGesture),
+        ],
+        "(native, web): both admit the login, the normal sync is the web's alone, and the one-way \
+         sync needs a gesture on both"
+    );
+    let one_way: Vec<(u32, u32, &str, TargetKind)> = EXEMPT
+        .iter()
+        .filter(|row| row.write == ExemptWrite::OneWaySync)
+        .map(|row| (row.service, row.method, row.name, row.kind))
+        .collect();
+    assert_eq!(
+        one_way,
+        vec![(
+            1,
+            6,
+            "BackendSyncService.FullUploadOrDownload",
+            TargetKind::Collection
+        )],
+        "the one-way sync is one exempt write whose target is the collection"
+    );
+    support::examined("sync pair(s)", decided);
+}

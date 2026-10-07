@@ -42,6 +42,8 @@ pub enum ExemptWrite {
     DeleteCard,
     /// Delete one note.
     DeleteNote,
+    /// The full-sync choice's one-way write, upload or download, of the open collection.
+    OneWaySync,
 }
 
 /// The kind of the one target an exempt write takes.
@@ -53,6 +55,8 @@ pub enum TargetKind {
     Note,
     /// A preset (a deck options group), by id.
     Preset,
+    /// The open collection as a whole: the one-way sync's target.
+    Collection,
 }
 
 /// One ordinary call, with the transports that may make it.

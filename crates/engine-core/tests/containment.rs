@@ -686,6 +686,13 @@ fn plant(root: &Path) {
         "crates/ingest/src/skip_write.rs",
         "writer.set_due_date(path, &moved, &spec)\n",
     );
+    for crate_name in ["daemon", "bot", "coordination", "ingest"] {
+        write(
+            root,
+            &format!("crates/{crate_name}/src/one_way.rs"),
+            "dispatcher.run_one_way(gesture, write, &auth)\n",
+        );
+    }
 }
 
 /// What the census refuses in the planted tree, one line per plant.
@@ -705,6 +712,10 @@ fn planted_refusals() -> Vec<&'static str> {
         "crates/ingest/tests/sync.rs: `.block_on(RslibEngine.full_download(&copy, &login)); col.remove_notes(&ids);` found 1, held 0",
         "crates/ingest/tests/sync.rs: `.block_on(RslibEngine.full_download(&copy, &login))` found 0, held 1",
         "crates/ingest/src/skip_write.rs: `writer.set_due_date(path, &moved, &spec)` found 2, held 1",
+        "crates/daemon/src/one_way.rs: `dispatcher.run_one_way(gesture, write, &auth)` found 1, held 0",
+        "crates/bot/src/one_way.rs: `dispatcher.run_one_way(gesture, write, &auth)` found 1, held 0",
+        "crates/coordination/src/one_way.rs: `dispatcher.run_one_way(gesture, write, &auth)` found 1, held 0",
+        "crates/ingest/src/one_way.rs: `dispatcher.run_one_way(gesture, write, &auth)` found 1, held 0",
     ]
 }
 

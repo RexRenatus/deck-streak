@@ -193,6 +193,7 @@ fn exempt_refusal(refusal: GestureRefusal) -> ExemptRefusal {
         GestureRefusal::NotTheTarget { .. } => ExemptRefusal::NotTheTarget,
         GestureRefusal::Undecodable { .. } => ExemptRefusal::Undecodable,
         GestureRefusal::Engine { error } => ExemptRefusal::Engine { error },
+        GestureRefusal::NeedsTheChoice => ExemptRefusal::Engine { error: Vec::new() },
     }
 }
 

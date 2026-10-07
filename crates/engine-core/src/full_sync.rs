@@ -230,6 +230,13 @@ impl Confirmed {
             Err(self)
         }
     }
+
+    /// The direction the owner confirmed, read by the core's backup step, which writes the device's
+    /// collection for a download and reads the counted server copy again for an upload (ADR-375
+    /// D12). Crate-private: an adapter reads a state's direction from nothing but its own tap.
+    pub(crate) const fn direction(&self) -> Direction {
+        self.direction
+    }
 }
 
 /// A confirmed direction whose backup holds the replaced side: a download is ready from here, and

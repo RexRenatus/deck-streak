@@ -1,19 +1,22 @@
 //! The dispatcher: the engine's backend, held privately, behind the table (SPEC-345 R1, R2, R4).
 
 use std::collections::BTreeSet;
+use std::path::Path;
 use std::sync::{Arc, Mutex, PoisonError};
 
 use anki::backend::{Backend, init_backend};
 use anki_proto::backend::BackendError;
 use anki_proto::backend::backend_error::Kind;
-use anki_proto::collection::OpenCollectionRequest;
+use anki_proto::collection::{CloseCollectionRequest, OpenCollectionRequest};
+use anki_proto::sync::{FullUploadOrDownloadRequest, SyncAuth};
 use prost::Message;
 
 use crate::face::{self, Face, Side};
-use crate::full_sync::{IdSets, Unsynced};
+use crate::full_sync::{IdSets, Unsynced, Write};
 use crate::gesture::{GestureRefusal, OwnerGesture};
 use crate::login_guard;
 use crate::media::Reader;
+use crate::one_way;
 use crate::table::{Decision, Transport, decide};
 
 /// The one read of a card the page may make: its scheduling fields, by id (moved from the web
@@ -27,6 +30,8 @@ const SYNC_LOGIN: (u32, u32) = (1, 3);
 /// The engine's collection open, `BackendCollectionService.OpenCollection`: the one admitted call
 /// whose request the core keeps a field of, the media folder a face reads (SPEC-348 R5).
 const OPEN_COLLECTION: (u32, u32) = (3, 0);
+const CLOSE_COLLECTION: (u32, u32) = (3, 1);
+const FULL_SYNC: (u32, u32) = (1, 6);
 /// Every review-log id: the reviews a full sync can lose (SPEC-357 R5, R9).
 const REVIEW_IDS_SQL: &str = "select id from revlog";
 /// Every card id.
@@ -48,6 +53,9 @@ pub struct Dispatcher {
     transport: Transport,
     /// The media folder the last successful open named, shared by every clone of this dispatcher.
     media_folder: Arc<Mutex<Option<String>>>,
+    /// The start message this engine began from, which a private engine of the one-way sync
+    /// starts from too, so it reads and writes in this engine's language and settings.
+    start: Arc<[u8]>,
 }
 
 /// Why the dispatcher did not answer a call with the engine's reply.
@@ -95,6 +103,7 @@ impl Dispatcher {
             backend,
             transport,
             media_folder: Arc::default(),
+            start: Arc::from(message),
         })
     }
 
@@ -148,6 +157,60 @@ impl Dispatcher {
         self.backend
             .run_service_method(service, method, &request)
             .map_err(|error| GestureRefusal::Engine { error })
+    }
+
+    /// Runs the full-sync choice's one write: the one-way sync the owner confirmed, built by the
+    /// core from the choice's [`Write`] and never from a caller's bytes (SPEC-364 R3). Crate-private:
+    /// only [`crate::one_way::write`] reaches it, after the write's last check.
+    #[allow(
+        clippy::needless_pass_by_value,
+        reason = "the gesture and the write are taken whole, so one tap makes one write"
+    )]
+    pub(crate) fn run_one_way(
+        &self,
+        gesture: OwnerGesture,
+        write: Write,
+        auth: &SyncAuth,
+    ) -> Result<(), GestureRefusal> {
+        let _ = gesture;
+        self.full_sync(&one_way::request(&write, auth))
+            .map_err(|error| GestureRefusal::Engine { error })
+    }
+
+    /// A private engine on `collection`: started from this engine's own start message, with the
+    /// file open and no media folder, so it touches no media. It holds the file until
+    /// [`Self::close`].
+    pub(crate) fn private(&self, collection: &Path) -> Result<Self, Refusal> {
+        let path = utf8(collection)?;
+        let engine = Self::start(Transport::Native, &self.start)
+            .map_err(|message| failed(&format!("the private engine does not start: {message}")))?;
+        let request = OpenCollectionRequest {
+            collection_path: path.to_owned(),
+            ..OpenCollectionRequest::default()
+        };
+        let (service, method) = OPEN_COLLECTION;
+        engine.run(service, method, &request.encode_to_vec())?;
+        Ok(engine)
+    }
+
+    /// Runs the engine's one-way sync with a request the core built: the choice's write on the
+    /// open collection, or the fetch of a server copy into a private engine's empty file. Its
+    /// error is the engine's encoded `BackendError`.
+    pub(crate) fn full_sync(&self, request: &FullUploadOrDownloadRequest) -> Result<(), Vec<u8>> {
+        let (service, method) = FULL_SYNC;
+        self.backend
+            .run_service_method(service, method, &request.encode_to_vec())
+            .map(drop)
+    }
+
+    /// Closes a private engine's collection, so its file is whole and free for the next reader.
+    pub(crate) fn close(&self) -> Result<(), Refusal> {
+        let (service, method) = CLOSE_COLLECTION;
+        let request = CloseCollectionRequest::default();
+        self.backend
+            .run_service_method(service, method, &request.encode_to_vec())
+            .map(drop)
+            .map_err(|error| Refusal::Engine { error })
     }
 
     /// Runs one fixed read of the open collection and returns the engine's JSON reply: its first
@@ -284,6 +347,26 @@ impl Dispatcher {
         media: &dyn Reader,
     ) -> Result<Face, Refusal> {
         face::complete(&self.backend, card, side, autoplay, media)
+    }
+}
+
+/// `path` as the engine's open request names it: a path that is not UTF-8 is refused, never
+/// rewritten into another path.
+fn utf8(path: &Path) -> Result<&str, Refusal> {
+    path.to_str()
+        .ok_or_else(|| failed("the one-way sync's path is not UTF-8"))
+}
+
+/// A refusal of the core's own, in the engine's error shape: an encoded `BackendError` of kind
+/// `INVALID_INPUT` whose message names what failed.
+fn failed(message: &str) -> Refusal {
+    Refusal::Engine {
+        error: BackendError {
+            message: message.to_owned(),
+            kind: Kind::InvalidInput.into(),
+            ..BackendError::default()
+        }
+        .encode_to_vec(),
     }
 }
 
