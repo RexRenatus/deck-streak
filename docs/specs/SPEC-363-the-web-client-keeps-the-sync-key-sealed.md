@@ -139,6 +139,7 @@ R6. **The release.** `POST /api/sync/seal-key` releases the key for one seal id 
 R7. **No secret in a record.** The seal secret, a seal id and a released key never reach a log
     line, a span field, an error or a response body other than the one that releases the key
     (SPEC-359 R13's rule, applied to this route).
+    A16's capture is one more routed capture the kernel's capture census counts.
 
 R8. **Nothing else moves.** The web session's cookie, bounds and routes, the ceremony routes, the
     edge's sync route and its log, the card frame and its policy, and the core's table are
@@ -220,6 +221,7 @@ Part 1 of 2; the next pull request adds its own files (section 7).
 | `crates/api/src/router.rs` | api | mounts the release route |
 | `crates/api/src/lib.rs` | api | the module and its line in the route list |
 | `crates/api/tests/sync_seal_routes.rs` | api | added |
+| `crates/kernel/tests/log_capture_class.rs` | kernel | the capture census counts A16's routed capture |
 | `crates/daemon/src/wiring.rs` | daemon | reads the seal secret when the API's credentials hold it |
 | `docs/specs/SPEC-363-the-web-client-keeps-the-sync-key-sealed.md` | docs | added |
 | `docs/decisions/ADR-374-the-web-sync-key-is-sealed-under-a-key-the-service-releases-to-the-owners-session.md` | docs | added |
