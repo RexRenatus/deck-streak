@@ -59,6 +59,7 @@ use deck_streak_coordination::sync_cycle::{
 };
 use deck_streak_curriculum::store::stored_bands;
 use deck_streak_identity::Owner;
+use deck_streak_identity::sync_seal::{SealError, SealSecret};
 use deck_streak_ingest::engine::{AnkiEngine, RslibEngine};
 use deck_streak_ingest::gate::{ChangeGate, GateError};
 use deck_streak_ingest::reader::CollectionReader;
@@ -69,6 +70,7 @@ use deck_streak_ingest::sync::{SyncError, SyncReport, Syncer};
 use deck_streak_ingest::sync_runs::{SqliteSyncRuns, Trigger};
 use deck_streak_ingest::window::WindowError;
 use deck_streak_insights::dark_fields::DarkFields;
+use deck_streak_kernel::CredentialError;
 use deck_streak_kernel::{
     Clock, Conventions, ConventionsError, Courses, CoursesError, CredentialLoader,
     CredentialsDirectory, Db, Environment, KernelError, Offload, PortFuture, Redactor, Setting,
@@ -211,6 +213,39 @@ pub fn inbox_captures(env: &Environment) -> Option<Arc<InboxCaptures<RealFs>>> {
         root.path().to_path_buf(),
         layout,
     )))
+}
+
+/// The unit credential role the API reads its seal secret under (SPEC-363 R5). The unit's line
+/// that loads it ships with the owner's host step, not with this code: a unit that names a missing
+/// credential fails to start.
+pub const SEAL_SECRET_ROLE: &str = "sync-seal-secret";
+
+/// Why the seal secret refuses the API's start. It names the credential's role, never a byte of it.
+#[derive(Debug, thiserror::Error)]
+pub enum SealSecretError {
+    /// The credential holds fewer bytes than a seal secret needs.
+    #[error("the credential {SEAL_SECRET_ROLE} is too short to be a seal secret")]
+    TooShort(#[source] SealError),
+    /// The credential could not be read; the error names its role.
+    #[error(transparent)]
+    Credential(#[from] CredentialError),
+}
+
+/// The seal secret the API's credentials hold, read once at start through `loader` (SPEC-363 R5,
+/// A17). An absent credential turns the release off rather than refusing start: `None`, with one
+/// info line naming the role and never a value. One shorter than 32 bytes refuses start by the
+/// role, and so does every other error, as the API's other credentials do. The API's role does not
+/// compose this reader yet, so the release stays off in production until a later change does.
+///
+/// # Errors
+///
+/// [`SealSecretError::TooShort`] for a secret under 32 bytes, and
+/// [`SealSecretError::Credential`] for a credential that is empty, unreadable or not text.
+pub fn seal_secret(loader: &CredentialLoader) -> Result<Option<SealSecret>, SealSecretError> {
+    let secret = loader.load(SEAL_SECRET_ROLE)?;
+    SealSecret::new(secret.expose().as_bytes())
+        .map(Some)
+        .map_err(SealSecretError::TooShort)
 }
 
 /// The recompute's fold, with every step registered in its phase (SPEC-071 R19): phase 1's
@@ -1522,6 +1557,62 @@ mod tests {
             vec!["#[tokio::test(flavor = \"multi_thread\")]"],
             "a planted unbounded attribute is refused by its line"
         );
+    }
+
+    /// A17: the API starts with the release off when its credentials hold no seal secret, and
+    /// refuses start by the credential's role when they hold one under 32 bytes (SPEC-363 R5).
+    #[test]
+    fn a_missing_seal_secret_turns_the_release_off() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let loader = || {
+            CredentialLoader::new(
+                CredentialsDirectory::new(directory.path()).expect("an absolute path"),
+                Redactor::new(),
+            )
+        };
+        let absent = super::seal_secret(&loader());
+        assert!(
+            matches!(absent, Ok(None)),
+            "no seal secret turns the release off: {absent:?}"
+        );
+
+        let path = directory.path().join(super::SEAL_SECRET_ROLE);
+        let refused = vec![
+            ("an empty seal secret", String::new()),
+            ("a seal secret of 16 bytes", "q".repeat(16)),
+            ("a seal secret of 31 bytes", "q".repeat(31)),
+        ];
+        println!("examined {} seal secrets that refuse start", refused.len());
+        for (what, value) in refused {
+            std::fs::write(&path, format!("{value}\n")).expect("a credential");
+            let error = super::seal_secret(&loader()).expect_err("the secret refuses start");
+            let text = error.to_string();
+            assert!(
+                text.contains(super::SEAL_SECRET_ROLE),
+                "{what} refuses start by the credential's role: {text}"
+            );
+            assert!(
+                value.is_empty() || !text.contains(value.as_str()),
+                "{what} is never named by its value"
+            );
+        }
+
+        let accepted = vec![
+            ("a seal secret of 32 bytes", "q".repeat(32)),
+            ("a seal secret of 100 bytes", "q".repeat(100)),
+        ];
+        println!(
+            "examined {} seal secrets that turn the release on",
+            accepted.len()
+        );
+        for (what, value) in accepted {
+            std::fs::write(&path, format!("{value}\n")).expect("a credential");
+            let read = super::seal_secret(&loader());
+            assert!(
+                matches!(read, Ok(Some(_))),
+                "{what} turns the release on: {read:?}"
+            );
+        }
     }
 }
 
