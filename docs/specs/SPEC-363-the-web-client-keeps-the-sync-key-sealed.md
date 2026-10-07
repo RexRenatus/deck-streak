@@ -192,7 +192,9 @@ A18: cargo test -p deck-streak-identity --test sync_seal -- --exact a_seal_id_th
 The model's properties are decided by the formal checker, which this repository's CI does not run;
 section 8 names them and their witnesses.
 
-## 4. File manifest (part 1)
+## 4. File manifest
+
+Part 1 of 2; the next pull request adds its own files (section 7).
 
 | path | context | change |
 |---|---|---|
