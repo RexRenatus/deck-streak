@@ -324,6 +324,23 @@ R17. `PRIVACY.md` says what this browser keeps (the collection, its media and th
 | B13 | a record that does not open under its released key is deleted, and the status reads `absent` | `... credential.test.ts -t "a record that does not open is deleted"`; red: the stub keeps a record that fails to open |
 | B14 | the API role composes the seal secret: absent, the release is off; present, an owner's session gets the release | `cargo nextest run -p deck-streak-daemon --test seal_release_composed`; red: the stub composition ignores the secret |
 
+```acceptance
+B1: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "a login that lands after a forget stores nothing"
+B2: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "a worker whose generation is stale sends nothing"
+B3: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "a refusal of an older generation keeps the newer record"
+B4: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "a network failure keeps the sealed record"
+B5: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "a refused or unreachable release keeps the record"
+B6: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "the sealed record opens only for its own endpoint and user"
+B7: pnpm exec vitest run web/app/src/lib/engine/credential-reach.test.ts -t "no worker reply carries a secret"
+B8: pnpm exec vitest run web/app/src/lib/engine/credential-reach.test.ts -t "only the worker imports the credential module"
+B9: pnpm exec vitest run web/app/src/lib/sync/sign-out.test.ts -t "sign-out forgets the sync key first, offline too"
+B10: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "every study op answers the same in each credential state"
+B11: pnpm exec vitest run web/app/src/lib/engine/protocol.test.ts -t "the credential ops answer a status word"
+B12: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "the key goes only to its own origin's sync route"
+B13: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "a record that does not open is deleted"
+B14: cargo nextest run -p deck-streak-daemon --test seal_release_composed
+```
+
 Part 2's manifest: `web/app/src/lib/engine/credential.ts`, `web/app/src/lib/engine/credential.test.ts`,
 `web/app/src/lib/engine/credential-reach.test.ts`, `web/app/src/lib/engine/protocol.ts`,
 `web/app/src/lib/engine/protocol.test.ts`, `web/app/src/lib/engine/session.ts`,
