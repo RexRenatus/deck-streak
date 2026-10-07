@@ -5,6 +5,7 @@ import type { CredentialDeps } from './credential';
 import {
   Bus,
   ENDPOINT,
+  MAX,
   NETWORK_ERROR,
   ORIGIN,
   ReleaseService,
@@ -15,6 +16,7 @@ import {
   loginAnswering,
   readStored,
   sentinel,
+  standIn,
   studyEngine,
   workerDeps,
   writeStored
@@ -98,6 +100,29 @@ function watchedCrypto() {
     }
   });
   return { imported, crypto: { subtle, getRandomValues: fixedCrypto.getRandomValues } };
+}
+
+/** The fixed Web Crypto, whose decrypt waits at a gate the test opens; `reached` settles once a
+ * decrypt has begun. */
+function gatedCrypto() {
+  let reach = () => {};
+  const reached = new Promise<void>((begun) => (reach = begun));
+  let open = () => {};
+  const gate = new Promise<void>((opened) => (open = opened));
+  const subtle = new Proxy(crypto.subtle, {
+    get(target, name) {
+      const value = Reflect.get(target, name) as unknown;
+      if (name === 'decrypt') {
+        return async (...args: Parameters<SubtleCrypto['decrypt']>) => {
+          reach();
+          await gate;
+          return target.decrypt(...args);
+        };
+      }
+      return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(target) : value;
+    }
+  });
+  return { reached, open: () => open(), crypto: { subtle, getRandomValues: fixedCrypto.getRandomValues } };
 }
 
 describe("the Worker's credential store", () => {
@@ -321,5 +346,146 @@ describe("the Worker's credential store", () => {
     const answer = await worker(world).forSend(ENDPOINT);
     expect(await readStored(world.database)).toEqual({ generation: 2n, sealed: undefined });
     expect(answer).toBe('absent');
+  });
+});
+
+// Mutation coverage, written after green: each case pins one behaviour of the store that B1 to B14
+// reach only in part.
+describe("the Worker's credential store, case by case", () => {
+  it("a forget heard on the channel clears another Worker's memory", async () => {
+    const world = origin();
+    const a = worker(world);
+    const b = worker(world);
+    await a.obtain(loginAnswering(HOST_KEY).login, USER, PASSWORD);
+    await b.forget();
+    await b.obtain(loginAnswering(OTHER_KEY).login, USER, PASSWORD);
+    // A heard the forget, so it holds nothing from generation 1 and opens B's record
+    expect(await a.forSend(ENDPOINT)).toEqual({ generation: 3n, key: OTHER_KEY });
+  });
+
+  it('a message from another origin changes nothing a Worker holds', async () => {
+    const world = origin();
+    const a = worker(world);
+    await a.obtain(loginAnswering(HOST_KEY).login, USER, PASSWORD);
+    const asked = world.release.urls.length;
+    world.bus.deliver(null, null, 'https://elsewhere.example');
+    expect(await a.forSend(ENDPOINT)).toEqual({ generation: 1n, key: HOST_KEY });
+    expect(world.release.urls.slice(asked)).toEqual([]);
+    // the control: the same message from the Worker's own origin clears its memory, so it asks again
+    world.bus.deliver(null, null, ORIGIN);
+    expect(await a.forSend(ENDPOINT)).toEqual({ generation: 1n, key: HOST_KEY });
+    expect(world.release.urls.slice(asked)).toEqual([`${ORIGIN}/api/sync/seal-key`]);
+  });
+
+  it("at the generation's maximum a forget still stops a held Worker", async () => {
+    const world = origin();
+    expect(await worker(world).status()).toBe('absent');
+    await writeStored(world.database, 'generation', MAX - 1n);
+    const a = worker(world);
+    expect(await a.obtain(loginAnswering(HOST_KEY).login, USER, PASSWORD)).toBe('held');
+    // B forgets on a bus A does not hear, and the generation cannot rise past its maximum
+    expect(await worker(world, new Bus()).forget()).toBe('absent');
+    expect(await a.status()).toBe('absent');
+    expect(await a.forSend(ENDPOINT)).toBe('absent');
+    const b = worker(world);
+    expect(await b.obtain(loginAnswering(OTHER_KEY).login, USER, PASSWORD)).toBe('absent');
+    expect(await readStored(world.database)).toEqual({ generation: MAX, sealed: undefined });
+  });
+
+  it('a Worker that holds nothing answers absent with no record, and sealed with one', async () => {
+    const world = origin();
+    const fresh = worker(world);
+    expect(await fresh.forSend(ENDPOINT)).toBe('absent');
+    expect(await fresh.status()).toBe('absent');
+    expect(world.release.urls).toEqual([]);
+    await worker(world).obtain(loginAnswering(HOST_KEY).login, USER, PASSWORD);
+    expect(await worker(world).status()).toBe('sealed');
+  });
+
+  it('a login the core discards leaves the Worker holding nothing', async () => {
+    const world = origin();
+    const login = heldLogin(HOST_KEY);
+    const a = worker(world);
+    const b = worker(world);
+    const obtained = a.obtain(login.login, USER, PASSWORD);
+    await login.started;
+    await b.forget();
+    expect(await b.obtain(loginAnswering(OTHER_KEY).login, USER, PASSWORD)).toBe('held');
+    login.land();
+    expect(await obtained).toBe('sealed');
+    // A kept nothing in memory, so it opens B's record
+    expect(await a.forSend(ENDPOINT)).toEqual({ generation: 2n, key: OTHER_KEY });
+  });
+
+  it('a record replaced while another Worker failed to open it is kept', async () => {
+    const world = origin();
+    await worker(world).obtain(loginAnswering(HOST_KEY).login, USER, PASSWORD);
+    world.release.version = 2;
+    const gated = gatedCrypto();
+    const sent = worker(world, world.bus, { crypto: gated.crypto }).forSend(ENDPOINT);
+    await gated.reached;
+    expect(await worker(world).obtain(loginAnswering(OTHER_KEY).login, USER, PASSWORD)).toBe('held');
+    gated.open();
+    expect(await sent).toBe('sealed');
+    const kept = await readStored(world.database);
+    expect(kept.generation).toBe(2n);
+    expect(await opens(world.release, kept.sealed as SealedRecord, ENDPOINT, USER, 2n)).toBe(OTHER_KEY);
+  });
+
+  it("the release is asked as JSON with the page's own session, and only an ok answer's key is a key", async () => {
+    const world = origin();
+    const asked: [string | undefined, RequestCredentials | undefined, string | null][] = [];
+    const recorded = (input: string, init: RequestInit) => {
+      asked.push([init.method, init.credentials, new Headers(init.headers).get('content-type')]);
+      return world.release.fetch(input, init);
+    };
+    const login = loginAnswering(HOST_KEY);
+    expect(await worker(world, world.bus, { fetch: recorded }).obtain(login.login, USER, PASSWORD)).toBe('held');
+    expect(asked).toEqual([['POST', 'same-origin', 'application/json']]);
+    const answers: [string, () => Promise<Response>][] = [
+      [
+        'a key with a failed status',
+        async () => Response.json({ key: await world.release.keyFor('any') }, { status: 503 })
+      ],
+      ['no key', async () => Response.json({})],
+      ['a key that is not text', async () => Response.json({ key: 7 })]
+    ];
+    for (const [what, answer] of answers) {
+      const other = origin();
+      const unsent = loginAnswering(HOST_KEY);
+      expect(await worker(other, other.bus, { fetch: answer }).obtain(unsent.login, USER, PASSWORD), what).toBe(
+        'offline'
+      );
+      expect(unsent.calls, what).toEqual([]);
+    }
+  });
+
+  it('a database at a newer version makes the store reject', async () => {
+    const world = origin();
+    await new Promise<void>((resolve, reject) => {
+      const opened = world.database.open('deck-streak-credential', 2);
+      opened.onsuccess = () => {
+        opened.result.close();
+        resolve();
+      };
+      opened.onerror = () => reject(opened.error);
+    });
+    await expect(worker(world).status()).rejects.toMatchObject({ name: 'VersionError' });
+  });
+
+  it('a step the core cannot answer aborts its transaction, and the record stands', async () => {
+    const world = origin();
+    await worker(world).obtain(loginAnswering(HOST_KEY).login, USER, PASSWORD);
+    const record = await readStored(world.database);
+    expect(record).toEqual({ generation: 1n, sealed: expect.objectContaining({ user: USER }) });
+    const engine = {
+      ...standIn(),
+      credential_on_removed(): bigint | undefined {
+        throw new Error('the core did not answer');
+      }
+    };
+    const store = new CredentialStore(workerDeps(world.database, world.release, world.bus, engine));
+    await expect(store.forget()).rejects.toThrow('the core did not answer');
+    expect(await readStored(world.database)).toEqual(record);
   });
 });

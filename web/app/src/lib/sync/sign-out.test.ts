@@ -65,4 +65,15 @@ describe("the page's sign-out", () => {
     await expect(signOut(failing, online)).rejects.toThrow('the engine did not load');
     expect(sent.map(([url, init]) => [url, init?.method])).toEqual([['/api/session', 'DELETE']]);
   });
+
+  it("sign-out sends the session's end with the page's own session", async () => {
+    // mutation coverage, written after green: the session's cookie rides only a same-origin request
+    const sent: (RequestInit | undefined)[] = [];
+    const online = async (_input: RequestInfo | URL, init?: RequestInit) => {
+      sent.push(init);
+      return new Response(null, { status: 204 });
+    };
+    expect(await signOut({ forgetSync: async () => 'absent' }, online)).toBe(true);
+    expect(sent.map((init) => init?.credentials)).toEqual(['same-origin']);
+  });
 });
