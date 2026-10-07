@@ -40,6 +40,18 @@ A20: red at 15d28e1a: run 37667605394, job `harness`, on the iPhone and on the i
 A21: red at 15d28e1a: run 37667605394, job `harness`, on the iPhone and on the iPad: ReviewFlowTests.swift:92: XCTAssertEqual failed: ("[0.0, 0.0]") is not equal to ("[64.0, 64.0]") - A21: the image named by its alt text is the fixture PNG's 64 by 64, not a broken image's size
 A22: red at 15d28e1a: run 37667605394, job `harness`, on the iPhone and on the iPad: ReviewFlowTests.swift:112: XCTAssertEqual failed: ("[false, false]") is not equal to ("[true, false]") - A22: the picker lists System default, and says so when no voice is installed (installed: true)
 A23: red at 15d28e1a: run 37667605394, job `harness-wire`: RequestBytesTests.swift:88: XCTAssertEqual failed: ("[]") is not equal to ("[8, 1]") - DeckId, the default deck; ResponseDecodingTests.swift:124: XCTAssertEqual failed: ("[]") is not equal to ("["<1m", "<6m", "<10m", "4d"]") - StringList; ResponseDecodingTests.swift:151: XCTAssertEqual failed: ("[[], [], [], []]") is not equal to ("[[34], [35], [36], [37]]") - each rating's own state
+A12: green at edce06bf
+A13: green at edce06bf
+A14: green at edce06bf
+A15: green at edce06bf
+A16: green at edce06bf
+A17: green at 4339c673
+A18: green at edce06bf
+A19: green at 4339c673
+A20: green at edce06bf
+A21: green at edce06bf
+A22: green at edce06bf
+A23: green at edce06bf
 ```
 
 46938f8e, A1's and A2's green, also grew `crates/engine-core/tests/table.rs`'s `NATIVE` set from
@@ -86,3 +98,32 @@ Part 2 (R9 to R20, A12 to A23). Its documents were committed first (3319d9f5), a
   XCTAssertEqual failed: ("[]") is not equal to ("["The sound noise.wav could not be played."]")`.
 - The code (5e678f82, 73864e2f and f3559685) was committed before these red lines, which could be
   written only once CI had read the reds. No test file changed between 15d28e1a and f3559685.
+- A12 to A23 were read at edce06bf, the pull request's third head: A12 to A14 in run 37684801761,
+  job `hygiene`; A15 to A22 in run 37684802369, job `harness`, on the iPhone and on the iPad; A23
+  in the same run, job `harness-wire`. All but A17 and A19 were green there, and their green lines
+  name it.
+- A17 and A19 were red at edce06bf for a reason their red lines do not name. On both simulators
+  each read the first card's Easy interval as `5d` against A1's `4d`
+  (`ReviewSessionTests.swift:66`, and `ReviewFlowTests.swift:41` on the Easy rating's value). The
+  cause was the review fixture, not the review screen: the engine seeds a review interval's fuzz
+  from the card's id, and the part-1 builder in `crates/ffi/tests/support/review.rs` kept the ids
+  the engine gave from its clock, so the word could change from run to run. The builder now fixes
+  its four ids (4339c673), and the text card, which the review screen shows first, carries one
+  measured to read A1's four words in this fixture. The core's own fixed id reads `5d` here: the
+  engine's load balancer counts each new card's position as a day's load, and this deck's sound
+  and speech cards sit inside the Easy range. The builder's comment records the measurement.
+- The fix's test, `review_pairs::the_review_fixture_shows_first_the_card_whose_intervals_a1_pins`
+  in `crates/ffi/tests/review_pairs.rs`, makes the app's calls over the fixture: it asserts the
+  four fixed ids, then that the first queued card is the text card and that its four words are
+  A1's. It was committed alone at 384e12d9 and was red there, at the ids:
+  ``review_pairs.rs:239:5: assertion `left == right` failed: the review fixture's text, image,
+  sound and speech cards carry their fixed ids left: [1791415240048, 1791415240052, 1791415240054,
+  1791415240055] right: [1000007, 1000008, 1000009, 1000010]``. It was green at 4339c673, with the
+  crate's other tests. After A17's and A19's red lines, three commits change a test file: these
+  two and edce06bf, which adds the player's test below. None changes an assertion of A17 or A19.
+  A17's and A19's green lines name 4339c673, which the pull request's fourth head carries, and
+  that head's run reads them.
+- The player's test from section 10,
+  `test_a_replaced_sounds_end_leaves_the_new_list_where_it_is`, was red at edce06bf on both
+  simulators (`ReviewModelTests.swift:99` and `:102`), and its green is 1381a8c6, the guard that
+  lets a clip's end start the next clip only while that clip is still the current one.

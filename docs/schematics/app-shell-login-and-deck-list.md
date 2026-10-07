@@ -192,7 +192,7 @@ sequenceDiagram
   S->>D: the collection's fixed path, its media folder
   S->>E: run(3, 0, OpenCollection)
   E->>D: creates the collection when absent (its default deck)
-  M->>S: deckNames()
+  M->>S: decks()
   S->>E: run(7, 13, include_filtered)
   E-->>S: deck names
   S-->>M: names, in the engine's order
