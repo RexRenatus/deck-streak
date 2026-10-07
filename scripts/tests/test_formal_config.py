@@ -34,6 +34,7 @@ EXPECTED = {
             "tla/MintReadsTheFinalBase": 180,
             "tla/RelightOrder": 360,
             "tla/StagedNoJournal": 120,
+            "tla/SyncCredential": 60,
             "tla/SyncSnapshotWindow": 60,
             "tla/WalletFloor": 240,
         },
