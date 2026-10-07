@@ -200,6 +200,24 @@ What it was chosen AGAINST:
 | (1,3) and (1,5) left `web: false` until part b2 | (1,5) is `native: false`, so b1 could prove its endpoint guard and its media refusal on no transport at all |
 | The sync service exempted from the parity guard | an equality guard with an exemption is a weaker guard, and the exemption would outlive the part that needed it |
 
+### D12. `back_up` reads the confirmed direction through one crate-private accessor
+
+`one_way::back_up(dispatcher, confirmed, backup, copy)` branches on the direction the owner
+confirmed: a download writes the open collection into `backup` with `VACUUM INTO` and reads it
+back, and an upload reads the counted server copy again from `copy`. `Confirmed` keeps that
+direction in a private field, so `full_sync.rs` gains one insert-only accessor in `impl Confirmed`,
+after `backed_up`: `pub(crate) const fn direction(&self) -> Direction`. It is crate-private, so an
+adapter gains nothing; no covered anchor of `full_sync.rs` changes text, so every `@phx covers`
+digest holds; and a read of a state is a stuttering step of `FullSyncChoice`, so the model is
+unchanged (R11).
+
+What it was chosen AGAINST:
+
+| alternative | why it lost |
+|---|---|
+| `back_up` takes the direction from its caller | an adapter that names Upload on a confirmed download would back the device up with the server copy and skip the `VACUUM INTO` whenever the copy holds every device id |
+| `back_up(dispatcher, counted, direction, backup, copy)` confirms inside the core | it amends R5, the schematic's order (`Counted::confirm`, then `back_up` over the `Confirmed`) and D3's wording, for no gain in soundness over a crate-private read |
+
 ## Consequences
 
 - Good, because the engine's protocol, its status handling and its file moves stay the engine's,

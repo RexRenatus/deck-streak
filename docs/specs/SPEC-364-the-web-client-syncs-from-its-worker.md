@@ -230,6 +230,7 @@ section 8 maps the driver's steps to them.
 | `crates/engine-core/src/dispatch.rs` | R2 on (1,5) in `run`; R3 `run_one_way`; the dispatcher keeps its start message and its open collection's path |
 | `crates/engine-core/src/gesture.rs` | R3: `Target::Collection`, `GestureRefusal::NeedsTheChoice`; `checked` refuses `OneWaySync` before it decodes |
 | `crates/engine-core/src/one_way.rs` (new) | R4 to R8: `count`, `back_up`, `recheck`, `write` |
+| `crates/engine-core/src/full_sync.rs` | one insert-only crate-private accessor, `Confirmed::direction`, on which `back_up` branches (`ADR-375` D12); no covered anchor changes |
 | `crates/engine-core/src/lib.rs` | the module |
 | `crates/engine-core/Cargo.toml` | the test support's dev-dependency for the engine's own sync server |
 | `crates/engine-core/tests/support/sync_server.rs` (new), `crates/engine-core/tests/support/mod.rs` | the engine's own sync server on a loopback port |
