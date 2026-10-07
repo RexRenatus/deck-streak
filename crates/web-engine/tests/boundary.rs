@@ -22,7 +22,7 @@ fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
 /// Each boundary function the census reads: its name, why it owes what it owes, and the
 /// statements its body holds for it. A statement is compared with every blank removed, so a
 /// reflow by rustfmt changes nothing.
-const OWED: [(&str, &str, &[&str]); 24] = [
+const OWED: [(&str, &str, &[&str]); 29] = [
     (
         "create_backend",
         "starts the core's dispatcher on the web transport and keeps it",
@@ -239,6 +239,31 @@ const OWED: [(&str, &str, &[&str]); 24] = [
             "set(&ask, \"limit\", &limit.into())?;",
             "array.push(&ask);",
         ],
+    ),
+    (
+        "credential_on_obtained",
+        "lets the core's sync key rule decide whether a login is kept, and at which generation",
+        &["credential::on_obtained(Generation::from(started), Generation::from(current))"],
+    ),
+    (
+        "credential_may_send",
+        "lets the core's sync key rule decide whether the held key may be sent",
+        &["credential::may_send(Generation::from(held), Generation::from(current), sealed)"],
+    ),
+    (
+        "credential_classify",
+        "lets the core's sync key rule read a sync's answer as accepted, refused or failed",
+        &["credential::classify(error.as_deref())"],
+    ),
+    (
+        "credential_on_outcome",
+        "lets the core's sync key rule decide whether an answer drops the key",
+        &["credential::on_outcome(Generation::from(sent), Generation::from(current), outcome)"],
+    ),
+    (
+        "credential_on_removed",
+        "lets the core's sync key rule name the generation a removal moves the store to",
+        &["credential::on_removed(Generation::from(current))"],
     ),
 ];
 

@@ -19,12 +19,16 @@
 //! - [`login_guard`]: the endpoint guard on the engine's sync login (SPEC-347 R2).
 //! - [`media`]: the rules a face's media references pass: the name rule, the closed type table,
 //!   the two caps and the `data:` rewrite (SPEC-348 R3).
+//! - [`credential`]: the rule that keeps, sends and drops the sync key: its generation, a login
+//!   kept only at the generation it started at, a send only at the held one, and a drop only on
+//!   the server's refusal of the current one (SPEC-363 R3).
 //!
 //! The core depends on the engine and on no crate of this workspace; only the two client
 //! adapters depend on it (ADR-356 D4, held by the graph census).
 
 #![forbid(unsafe_code)]
 
+pub mod credential;
 pub mod dispatch;
 pub mod face;
 pub mod full_sync;
