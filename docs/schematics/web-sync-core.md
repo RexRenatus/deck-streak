@@ -113,7 +113,7 @@ sequenceDiagram
     W-->>P: the status word (absent, sealed, needs-sign-in, offline)
   else a key
     W->>E: sync(key, endpoint)
-    E->>E: decide (1,5) web: Admit; guard the endpoint; sync_media false
+    E->>E: decide (1,5) web: Admit, guard the endpoint, sync_media false
     E->>F: run_service_method(1,5)
     F->>S: synchronous XMLHttpRequest, anki-sync header, zstd body
     S-->>F: zstd body + size header, or a status
