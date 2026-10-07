@@ -7,7 +7,7 @@
   "ios/App/Sources/DeckListView.swift": {"role": "view", "decisions": 3},
   "ios/App/Sources/DeckStreakApp.swift": {"role": "entry", "decisions": 0},
   "ios/App/Sources/EngineSession.swift": {"role": "session", "decisions": 4},
-  "ios/App/Sources/InstalledVoices.swift": {"role": "speech", "decisions": 0},
+  "ios/App/Sources/InstalledVoices.swift": {"role": "speech", "decisions": 1},
   "ios/App/Sources/ReviewChrome.swift": {"role": "view", "decisions": 1},
   "ios/App/Sources/ReviewModel.swift": {"role": "model", "decisions": 6},
   "ios/App/Sources/ReviewSession.swift": {"role": "session", "decisions": 4},

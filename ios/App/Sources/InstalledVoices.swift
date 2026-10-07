@@ -14,7 +14,7 @@ struct InstalledVoice: Equatable, Sendable {
     }
 }
 
-/// The device's installed voices (SPEC-348 R13, R14).
+/// The device's installed voices, and the voice a line of speech speaks in (SPEC-348 R13, R14).
 enum InstalledVoices {
     /// Every installed voice, its quality numbered from 0 as the adapter's are.
     static func all() -> [InstalledVoice] {
@@ -23,5 +23,11 @@ enum InstalledVoices {
                 identifier: voice.identifier, name: voice.name, language: voice.language,
                 quality: voice.quality.rawValue - 1)
         }
+    }
+
+    /// The voice `identifier` names when it is installed, otherwise the language's own.
+    static func voice(_ identifier: String?, language: String) -> AVSpeechSynthesisVoice? {
+        identifier.flatMap(AVSpeechSynthesisVoice.init(identifier:))
+            ?? AVSpeechSynthesisVoice(language: language)
     }
 }
