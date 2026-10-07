@@ -234,6 +234,7 @@ already depends on.
 Parts b, c and d are excluded in section 5 (#631). Each is specified, with its own
 requirements and acceptance criteria, when it is built: part b after #623's gesture token has
 its own design and #654 is decided, and parts c and d after part b.
+Part b is SPEC-364, built in three pull requests, b1 to b3.
 
 ## 8. Formal model
 
