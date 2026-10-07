@@ -12,6 +12,10 @@
 //! The module does no I/O and reads no clock. `formal/tla/SyncCredential` models these rules over
 //! two Workers, a sign-out, a restart and the session's end.
 
+use anki_proto::backend::BackendError;
+use anki_proto::backend::backend_error::Kind;
+use prost::Message;
+
 /// The count that orders every write of the sync key: it rises at every kept login and every
 /// removal, never falls, and stops at its maximum rather than wrap.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -66,37 +70,44 @@ pub enum Outcome {
 
 /// Decides whether a login that started at `started` is kept, now that the store holds `current`.
 #[must_use]
-pub fn on_obtained(_started: Generation, current: Generation) -> Kept {
+pub fn on_obtained(started: Generation, current: Generation) -> Kept {
     match current.next() {
-        Some(at) => Kept::Store { at },
-        None => Kept::Discard,
+        Some(at) if started == current => Kept::Store { at },
+        _ => Kept::Discard,
     }
 }
 
 /// Whether a sender holding `held` may send, with `current` stored and `sealed` saying whether a
 /// sealed record is stored.
 #[must_use]
-pub fn may_send(_held: Generation, _current: Generation, _sealed: bool) -> bool {
-    true
+pub fn may_send(held: Generation, current: Generation, sealed: bool) -> bool {
+    sealed && held == current
 }
 
 /// Reads a sync's answer: `None` is success, `Some` is the engine's encoded `BackendError`.
+///
+/// Only the kind `SYNC_AUTH_ERROR` is a refusal, because the sync server's refusal is the one
+/// answer that says the key no longer works. Every other kind, a kind the engine does not name and
+/// bytes that do not decode are failures that keep the key (ADR-374 D6).
 #[must_use]
 pub fn classify(error: Option<&[u8]>) -> Outcome {
-    match error {
-        None => Outcome::Accepted,
-        Some(_) => Outcome::Refused,
+    let Some(bytes) = error else {
+        return Outcome::Accepted;
+    };
+    match BackendError::decode(bytes) {
+        Ok(decoded) if decoded.kind == i32::from(Kind::SyncAuthError) => Outcome::Refused,
+        _ => Outcome::Failed,
     }
 }
 
 /// Whether the answer to a send made at `sent` drops the key, with `current` stored now.
 #[must_use]
-pub fn on_outcome(_sent: Generation, _current: Generation, outcome: Outcome) -> bool {
-    outcome == Outcome::Refused
+pub fn on_outcome(sent: Generation, current: Generation, outcome: Outcome) -> bool {
+    outcome == Outcome::Refused && sent == current
 }
 
 /// The generation a removal stores, or `None` at the maximum.
 #[must_use]
 pub fn on_removed(current: Generation) -> Option<Generation> {
-    Some(current)
+    current.next()
 }
