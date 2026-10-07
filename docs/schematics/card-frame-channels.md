@@ -262,3 +262,209 @@ depth.
 `webrtc` card sent 1 datagram to the UDP listener (`datagrams=1`), and `typeof window.webkit`
 read `undefined`: with no message handler, L4 leaves card script no `webkit` object at all. The
 reference view, which registers a handler for the `bridge` card, read `object`.
+
+## 7. iPhone and iPad with card scripts on (SPEC-355, ADR-366)
+
+Kind: state machine (the switch's decision), component (the two new layers), data flow (every
+script-driven channel and the control that holds it). Read at
+`ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift` lines 4-91 and
+`ios/CardProbeTests/Planted.swift` lines 224-236 at 05aef786.
+
+The layers L1 to L7 are section 4's. Two join them:
+
+| layer | what it is |
+|---|---|
+| L8 | a `WKUserScript` at document start, in every frame, in the page's content world, that deletes every global named `^(webkit)?RTC` and `WebTransport` |
+| L9 | the store's one proxy configuration: an HTTP CONNECT proxy at the app's loopback `ConnectionHold`, failover off, no excluded domain; the hold answers no byte and closes each connection |
+
+L2 is no longer fixed: it is the verdict of the one switch.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Built: the factory builds the view with every control it can
+    Built --> ReadBack: present is read from the configuration and the view
+    ReadBack --> Run: switch on and L1, L3 to L9 all present
+    ReadBack --> Off: switch off, or any of them missing
+    Run --> [*]: page JavaScript on, the card loaded as a string
+    Off --> [*]: page JavaScript off (today's view), the card loaded as a string
+```
+
+`Built` fails closed before either verdict when the rule list does not compile (SPEC-349 R4): no
+view at all. `Off` names the missing controls, which the probe reads.
+
+```mermaid
+flowchart LR
+    subgraph app[the app]
+      factory[CardWebViewFactory]
+      hold[ConnectionHold, loopback]
+    end
+    subgraph view[the card view]
+      card[card document, opaque origin]
+      l8[L8 user script, every frame]
+      store[L1 non-persistent store]
+    end
+    factory -->|builds, reads back| view
+    l8 -->|deletes peer-connection globals before card script| card
+    card -->|any connection| store
+    store -->|L9 CONNECT| hold
+    hold -->|no byte, closed| store
+    card -.->|peer connection: no constructor| l8
+```
+
+| channel | the planted card (scripts on) | observable | held in the scripted view by (predicted) | control alone (predicted) |
+|---|---|---|---|---|
+| `script-fetch` | `fetch` of the listener under its id | path | L3, L9 | none |
+| `script-xhr` | `XMLHttpRequest` to the listener | path | L3, L9 | none |
+| `script-websocket` | a `WebSocket` to the listener | connection | L3, L9 | none |
+| `script-eventsource` | an `EventSource` on the listener | path | L3, L9 | none |
+| `script-beacon` | `navigator.sendBeacon` to the listener | path | L3, L9 | none |
+| `script-image` | a script-made `Image` with the listener's URL | path | L3, L9 | none |
+| `script-worker` | a worker from a `blob:` URL that fetches the listener | path | L3, L9 | none |
+| `script-link` | a script-added `link rel=preconnect` and `rel=stylesheet` | connection | L3, L9 | none |
+| `script-nav` | `location.assign` to the listener, in a loop | connection | L5, L9 | none |
+| `script-form` | a script-submitted form to the listener | path | L5, L9 | none |
+| `script-open` | `window.open` of the listener | window | L6 | L6 |
+| `webrtc-stun` | a peer connection with a STUN server at the UDP listener | datagram | L8 | L8 |
+| `webrtc-turn-tcp` | a peer connection with a TURN-over-TCP server at the TCP listener | connection | L8 | L8 |
+| `webrtc-blank-frame` | the same, from an appended blank frame's globals | datagram | L8 | L8 |
+| `webrtc-srcdoc-frame` | the same, from a frame given `srcdoc` | datagram | L8 | L8 |
+| `webrtc-written-frame` | the same, from a frame written by `document.write` | datagram | L8 | L8 |
+| `webtransport` | a `WebTransport` to the UDP listener | datagram | L8 | L8, or UNOBSERVABLE when the engine has none (the marker reads `absent`) |
+| `lookup` | a static and a script-added `link rel=dns-prefetch` of `<id>.local` | query (the witness) | measured | measured |
+| `dialog` | `alert`, `confirm`, `prompt` | the refusal's recorded asks, and `confirm` reading false | L6 | depth |
+| `capture` | `getUserMedia` for camera and microphone | the refusal's recorded asks, and the rejection's name | L6 | depth |
+| `app-state` | reads the default store's cookie and storage at the planted origin, a file the app wrote, `window.webkit`, a stored credential | the values read, written into its own body | L1, L4, L7 | none |
+| `render-script` | a hint toggle that sets its marker | marker and body text | (opens by design) | - |
+
+The `#677` channel, on the scripts-off view: `nav-self` and `nav-blank` open no connection with
+L9 present; removed alone, L9 opens one each, and the hold's count reads each refused attempt.
+
+Every scripted card's reference is the scripted view with its own control off, and must reach on
+both simulators; `app-state`'s reference is a view on the default store at the planted origin,
+which must read every planted value but the credential (no reference can reach a stored
+credential; its card's marker proves the attempt ran).
+
+## 8. iPhone and iPad: the containment layer for card scripts (SPEC-361, ADR-372)
+
+Kind: component (the layer's parts and where each lives), state machine (the switch's decision
+with the new required set), data flow (every channel a card can open, and the part that closes
+it). Read at `ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift`,
+`ios/CardIsolation/Sources/CardIsolation/CardScripts.swift` and `ios/CardProbeTests/Planted.swift`
+at f10fa8c2, and at the cut's base before the build writes.
+
+The switch defaults off on iOS pending a measured containment layer. This section is that layer.
+L1 to L8 are sections 4 and 7's; L9 is retired and its number is not reused. Four parts join:
+
+| layer | what it is | where it lives |
+|---|---|---|
+| L10 | the link-activation refusal: a `WKUserScript` at document start, in every frame, in a content world the app owns, that cancels the default of every `click` and `auxclick` whose composed path holds a link or whose target can host a shadow root | `LinkActivationRefusal.swift` |
+| L11 | the page guard: a `WKUserScript` at document start, in every frame, in the page's world, that refuses `click()` and `dispatchEvent` on a node that is not connected, and every `document.open`, `write` and `writeln` | `PageGuard.swift` |
+| L12 | the document policy: a `Content-Security-Policy` `meta` the factory places first in the card's document, admitting only `data:` images, media and fonts and inline style and script | `DocumentPolicy.swift` |
+| L13 | the view's link preview off, with L6's context-menu arm offering nothing that opens a link | `CardWebViewFactory.swift`, `WindowRefusal.swift` |
+
+```mermaid
+stateDiagram-v2
+    [*] --> Compiled: the rule list compiles before any view exists
+    [*] --> NoView: the rule list does not compile (SPEC-349 R4)
+    Compiled --> Built: one configuration, every layer it can build, L12's prefix before the card
+    Built --> ReadBack: present is read from the configuration, the handed string and the view
+    ReadBack --> Run: switch on and L1, L3 to L8, L10 to L13 all present
+    ReadBack --> Off: switch off, or any of them missing
+    Run --> [*]: page JavaScript on
+    Off --> [*]: page JavaScript off, every other layer still in place
+    NoView --> [*]: no card view at all
+```
+
+```mermaid
+flowchart LR
+    subgraph app[the app, CardIsolation]
+      list[L3 rule list, compiled first]
+      factory[CardWebViewFactory]
+      policy[L12 DocumentPolicy.prefix]
+    end
+    subgraph config[the view's configuration]
+      l8[L8 user script, page world]
+      l11[L11 user script, page world]
+      l10[L10 user script, app world]
+      store[L1 non-persistent store]
+    end
+    subgraph view[the card view]
+      doc[card document, opaque origin, policy first]
+      gate[L5 gate]
+      refusal[L6 window refusal, context-menu arm]
+      preview[L13 link preview off]
+    end
+    list --> factory
+    policy --> factory
+    factory -->|builds, reads back| config
+    factory -->|hands policy then card, no base URL| doc
+    l8 -->|deletes peer-connection globals| doc
+    l11 -->|wraps click, dispatchEvent, open, write| doc
+    l10 -->|capture listener on each frame's window| doc
+```
+
+Where each channel closes. A click on a link never reaches `handleClick`, so the engine opens no
+early connection, asks no delegate and sends no ping:
+
+```mermaid
+flowchart TD
+    act["a card activates an element"] --> conn{"is the element connected?"}
+    conn -->|no| l11a["L11 throws NotAllowedError: refused"]
+    conn -->|yes| cap["click reaches the frame's window, capture phase"]
+    cap --> l10{"L10: a link on the path, or a target that can host a shadow root?"}
+    l10 -->|yes| cancel["default cancelled: no handleClick, no early connection, no ping"]
+    l10 -->|no| other["the element's own default, a button or a form control"]
+    other --> form["a form: L5 refuses the navigation, L12 form-action, L3 the load"]
+    rewrite["document.open or write"] --> l11b["L11 throws: L10's listeners are never erased"]
+    load["any load the document makes, a speculation-rules prefetch on a press included"] --> l3["L3 blocks every URL but data:"]
+    load --> l12["L12 admits only data: images, media, fonts"]
+    hint["link rel=preconnect or dns-prefetch"] --> l3
+    nav["a navigation or a new window"] --> l5["L5 cancels; L6 returns no window"]
+    peer["a peer connection or a datagram transport"] --> l8b["L8: no constructor in any frame"]
+    press["a person's long press on a link"] --> l13["L13: no preview; L6: no menu item opens it"]
+```
+
+The planted cards that prove it, with scripts on. Held is the set of controls that hold the
+channel in the scripted view, which the card's reference removes; alone is the control whose
+removal, every other control on, opens it. Both are predicted, as section 7's were; a measurement
+that contradicts one is a STOP for the seat.
+
+| card | channel | observable | held (predicted) | alone (predicted) |
+|---|---|---|---|---|
+| `script-fetch`, `script-xhr`, `script-eventsource`, `script-beacon`, `script-image`, `script-worker` | a script's load | path | L3, L12 | none |
+| `script-websocket` | a WebSocket | connection | L3, L12 | none |
+| `script-link` | a script-added `preconnect` hint and style sheet | connection | L3, L12 | L3 (the hint) |
+| `script-nav` | `location.assign`, in a loop | connection | L3, L5 | none |
+| `script-form` | a script-submitted form | path | L3, L5, L12 | none |
+| `script-open` | `window.open` | window | L5, L6 | none |
+| `webrtc-stun`, `webrtc-turn-tcp`, `webrtc-blank-frame` | a peer connection | datagram, connection | L8 | L8 |
+| `webrtc-srcdoc-frame` | the same, from a `srcdoc` frame | datagram | L5, L8 | none |
+| `webrtc-written-frame` | the same, from a frame written by `document.write` | datagram | L8, L11 | none |
+| `webtransport` | a datagram transport | datagram | L8 | L8, or UNOBSERVABLE when the engine has none |
+| `script-click-self` | a connected self link's `click()` | connection | L10 | L10 |
+| `script-click-blank` | a connected `_blank` link's `click()` | connection | L10 | L10 |
+| `script-enter-key` | an Enter `keydown` dispatched on a focused link | connection | L10 | L10 |
+| `script-closed-shadow` | a `_blank` link in a closed shadow root, clicked from inside it | connection | L10 | L10 |
+| `script-frame-link` | a `_blank` link in an appended blank frame, clicked | connection | L10 | L10 |
+| `script-click-detached` | a detached `_blank` link's `click()` | connection | L11 | L11 |
+| `script-dispatch-detached` | a detached link sent a `MouseEvent` click | connection | L11 | L11 |
+| `script-written-link` | a frame's document opened, a `_blank` link written and clicked | connection | L10, L11 | none |
+| `lookup` | a static and a script-added `dns-prefetch`, and a fetch, of a `.local` name | query (the witness) | L3 | measured |
+| `dialog`, `capture` | script dialogs, media capture | the refusal's recorded asks | L6 | depth |
+| `app-state` | the app's stores, a file, the bridge, a credential | the values read | L1, L4, L7 | none |
+| `render-script` | a hint toggle | marker and body text | (opens by design, under L12) | - |
+| `permitted` | a `data:` image, font and audio clip | each loaded, read by the app's script | (loads by design in both views) | - |
+
+The declared sets: `CONTROLS` is L1, L3, L4, L5, L6, L7, L8, L10, L11, L12, L13, and
+`DEPTH_SCRIPTED`, the controls that open nothing alone, is L1, L4, L5, L6, L7, L12, L13.
+
+Every planted card of section 5 is also shown in the scripted view, with its planted click, and
+must open nothing there. On the scripts-off view, `nav-self` and `nav-blank` open no connection;
+from that view with L10 removed (the variant `shippedWithout(.L10)`), each opens one, which is
+the planted control proving the suite sees #677's channel. The same two cards from the scripted
+view with L10 removed are the scripted view's control.
+
+The card's own permitted loads are its document, handed as a string with no base URL, and
+`data:` URLs, which the rule list does not act on and the policy admits only as images, media
+and fonts. The `permitted` card proves the layer leaves them; every other card proves it leaves
+nothing else.

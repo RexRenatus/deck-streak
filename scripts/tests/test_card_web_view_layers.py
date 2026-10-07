@@ -24,10 +24,13 @@ PROBE_PLIST = "ios/CardProbeHost/Info.plist"
 # The one transport answer the probe host may give: local networking, and nothing else.
 PROBE_TRANSPORT = {"NSAllowsLocalNetworking": True}
 # Each layer the factory's source can show, with the token that shows it (the schematic's
-# section 4). L4 is an absence the handler rule below holds for the whole tree.
+# section 4). L4 is an absence the handler rule below holds for the whole tree. L2 shows twice:
+# the configuration's default is off, and each navigation's preference follows the switch's
+# verdict (SPEC-355 R2, ADR-366 D1).
 LAYER_TOKENS = (
     ("L1", "WKWebsiteDataStore.nonPersistent()"),
     ("L2", "allowsContentJavaScript = false"),
+    ("L2", "allowsContentJavaScript = verdict == .run"),
     ("L3", "userContentController.add(ruleList)"),
     ("L5", "navigationDelegate = gate"),
     ("L6", "uiDelegate = refusal"),
@@ -131,6 +134,7 @@ GOOD_FACTORY = """import WebKit
 let configuration = WKWebViewConfiguration()
 configuration.websiteDataStore = WKWebsiteDataStore.nonPersistent()
 configuration.defaultWebpagePreferences.allowsContentJavaScript = false
+preferences.allowsContentJavaScript = verdict == .run
 configuration.userContentController.add(ruleList)
 let view = WKWebView(frame: .zero, configuration: configuration)
 view.navigationDelegate = gate
@@ -267,11 +271,11 @@ class OneFactoryBuildsTheCardWebView(unittest.TestCase):
             ),
         }
         for layer, token in LAYER_TOKENS:
-            plants[f"the factory without {layer}"] = (
+            plants[f"the factory without {layer} ({token})"] = (
                 {"factory": GOOD_FACTORY.replace(token, "")},
                 [f"{FACTORY}: lacks {layer} ({token})"],
             )
-            plants[f"the factory with {layer} only in a comment"] = (
+            plants[f"the factory with {layer} ({token}) only in a comment"] = (
                 {"factory": GOOD_FACTORY.replace(token, "") + f"// {token}\n"},
                 [f"{FACTORY}: lacks {layer} ({token})"],
             )
@@ -279,6 +283,252 @@ class OneFactoryBuildsTheCardWebView(unittest.TestCase):
             with self.subTest(plant=name), tempfile.TemporaryDirectory() as scratch:
                 plant(Path(scratch), **shape)
                 self.assertEqual(card_view_problems(Path(scratch))[0], wanted, name)
+
+
+# The one file that may define the card-script switch (SPEC-355 R1, ADR-366 D1).
+SWITCH_FILE = "ios/CardIsolation/Sources/CardIsolation/CardScripts.swift"
+SWITCH_DEFINITION = re.compile(r"\bstatic\s+(?:let|var)\s+switchedOn\b")
+# The files that hold a control's tokens beside the factory (SPEC-361 R3, R4 and R6). L10 and L11
+# build their user scripts in their own files, so the factory's L8 tokens each stay its own.
+LINK = "ios/CardIsolation/Sources/CardIsolation/LinkActivationRefusal.swift"
+GUARD = "ios/CardIsolation/Sources/CardIsolation/PageGuard.swift"
+WINDOW = "ios/CardIsolation/Sources/CardIsolation/WindowRefusal.swift"
+# Each control built for scripted cards, with the file and the tokens that show it set (SPEC-355
+# R3, SPEC-361 R3 to R6, the schematic's sections 7 and 8). L8's user script and L11's run at
+# document start, in every frame, in the page's own world; L10's in a world the app owns. The
+# factory installs L10 and L11, hands L12's policy before the card, and turns the link preview
+# off; the window refusal answers the context menu (L13).
+CONTROL_TOKENS = (
+    ("L8", FACTORY, "forMainFrameOnly: false"),
+    ("L8", FACTORY, ".atDocumentStart"),
+    ("L8", FACTORY, "in: .page"),
+    ("L10", LINK, "injectionTime: .atDocumentStart"),
+    ("L10", LINK, "forMainFrameOnly: false"),
+    ("L10", LINK, "in: world"),
+    ("L10", LINK, "static let world = WKContentWorld.world(name:"),
+    ("L10", FACTORY, "addUserScript(LinkActivationRefusal.userScript)"),
+    ("L11", GUARD, "injectionTime: .atDocumentStart"),
+    ("L11", GUARD, "forMainFrameOnly: false"),
+    ("L11", GUARD, "in: .page"),
+    ("L11", FACTORY, "addUserScript(PageGuard.userScript)"),
+    ("L12", FACTORY, "let html = DocumentPolicy.prefixed(html)"),
+    ("L13", FACTORY, "allowsLinkPreview = false"),
+    ("L13", WINDOW, "contextMenuConfigurationForElement"),
+)
+
+
+def script_switch_problems(root):
+    """Every rule of the card-script switch the tree at `root` breaks, each named, and what was
+    judged: every Swift file under `ios/`, test targets included, and each file that defines the
+    switch, once per definition. A control's file that is missing is named once."""
+    root = Path(root)
+    problems = []
+    judged = {"swift files": [], "switch definitions": []}
+    sources = sorted((root / "ios").rglob("*.swift")) if (root / "ios").is_dir() else []
+    for path in sources:
+        relative = path.relative_to(root).as_posix()
+        judged["swift files"].append(relative)
+        code = code_of(path.read_bytes().decode("utf-8", errors="replace"))
+        for _ in SWITCH_DEFINITION.finditer(code):
+            judged["switch definitions"].append(relative)
+            if relative != SWITCH_FILE:
+                problems.append(f"{relative}: defines switchedOn, which only {SWITCH_FILE} may")
+    count = judged["switch definitions"].count(SWITCH_FILE)
+    if count != 1:
+        problems.append(f"{SWITCH_FILE}: defines switchedOn {count} times, not once")
+    codes = {}
+    for layer, relative, token in CONTROL_TOKENS:
+        if relative not in codes:
+            path = root / relative
+            codes[relative] = (
+                code_of(path.read_bytes().decode("utf-8", errors="replace"))
+                if path.is_file()
+                else None
+            )
+            if codes[relative] is None:
+                problems.append(f"{relative}: missing")
+        if codes[relative] is not None and token not in codes[relative]:
+            problems.append(f"{relative}: lacks {layer} ({token})")
+    return problems, judged
+
+
+GOOD_SWITCH = """public enum CardScripts {
+    // The planted switch: defined once.
+    public static let switchedOn = false
+}
+"""
+SECOND_SWITCH = "extension CardScripts {\n    static var switchedOn: Bool { true }\n}\n"
+GOOD_SCRIPTED_FACTORY = (
+    GOOD_FACTORY
+    + "let removal = WKUserScript(source: s, injectionTime: .atDocumentStart,"
+    + " forMainFrameOnly: false, in: .page)\n"
+    + "configuration.userContentController.addUserScript(LinkActivationRefusal.userScript)\n"
+    + "configuration.userContentController.addUserScript(PageGuard.userScript)\n"
+    + "let html = DocumentPolicy.prefixed(html)\n"
+    + "view.allowsLinkPreview = false\n"
+)
+GOOD_LINK = """import WebKit
+// The planted link-activation refusal: its world and its user script, every token once.
+public enum LinkActivationRefusal {
+    static let world = WKContentWorld.world(name: "card-link-activation-refusal")
+    static let userScript = WKUserScript(
+        source: source, injectionTime: .atDocumentStart, forMainFrameOnly: false, in: world)
+}
+"""
+GOOD_GUARD = """import WebKit
+// The planted page guard: its user script, every token once.
+public enum PageGuard {
+    static let userScript = WKUserScript(
+        source: source, injectionTime: .atDocumentStart, forMainFrameOnly: false, in: .page)
+}
+"""
+GOOD_WINDOW = """import WebKit
+// The planted window refusal: its context-menu arm.
+final class WindowRefusal: NSObject, WKUIDelegate {
+    func webView(
+        _ webView: WKWebView,
+        contextMenuConfigurationForElement elementInfo: WKContextMenuElementInfo,
+        completionHandler: @escaping (UIContextMenuConfiguration?) -> Void
+    ) {
+        completionHandler(nil)
+    }
+}
+"""
+GOOD_CONTROLS = {LINK: GOOD_LINK, GUARD: GOOD_GUARD, WINDOW: GOOD_WINDOW}
+# How each file that holds a control is named in a plant.
+CONTROL_FILE_NAMES = {
+    FACTORY: "the factory",
+    LINK: "the link-activation refusal",
+    GUARD: "the page guard",
+    WINDOW: "the window refusal",
+}
+
+
+class TheScriptSwitchLivesInOneFile(unittest.TestCase):
+    def test_the_script_switch_lives_in_one_file_and_every_control_is_set(self):
+        # The behaviour first: exactly one definition of the switch under ios/, in its own file,
+        # and the factory sets every control's token.
+        problems, judged = script_switch_problems(REPO)
+        self.assertEqual(judged["switch definitions"], [SWITCH_FILE])
+        self.assertEqual(problems, [])
+        examined("Swift files under ios/", judged["swift files"])
+
+        # The controls: the good tree is accepted, and each plant is refused by its rule's name.
+        switch = {SWITCH_FILE: GOOD_SWITCH}
+        controls = {**switch, **GOOD_CONTROLS}
+        only = f"which only {SWITCH_FILE} may"
+        plants = {
+            "the good tree": ({"factory": GOOD_SCRIPTED_FACTORY, "extra": controls}, []),
+            "no switch": (
+                {"factory": GOOD_SCRIPTED_FACTORY, "extra": GOOD_CONTROLS},
+                [f"{SWITCH_FILE}: defines switchedOn 0 times, not once"],
+            ),
+            "the switch defined twice in its file": (
+                {
+                    "factory": GOOD_SCRIPTED_FACTORY,
+                    "extra": {**controls, SWITCH_FILE: GOOD_SWITCH + SECOND_SWITCH},
+                },
+                [f"{SWITCH_FILE}: defines switchedOn 2 times, not once"],
+            ),
+            "a second switch in the harness": (
+                {
+                    "factory": GOOD_SCRIPTED_FACTORY,
+                    "extra": {**controls, "ios/Harness/Sources/Scripts.swift": SECOND_SWITCH},
+                },
+                [f"ios/Harness/Sources/Scripts.swift: defines switchedOn, {only}"],
+            ),
+            "a second switch in a test target": (
+                {
+                    "factory": GOOD_SCRIPTED_FACTORY,
+                    "extra": {**controls, "ios/CardProbeTests/Switch.swift": SECOND_SWITCH},
+                },
+                [f"ios/CardProbeTests/Switch.swift: defines switchedOn, {only}"],
+            ),
+            "the switch only in a comment": (
+                {
+                    "factory": GOOD_SCRIPTED_FACTORY,
+                    "extra": {
+                        **controls,
+                        SWITCH_FILE: "// public static let switchedOn = true\n",
+                    },
+                },
+                [f"{SWITCH_FILE}: defines switchedOn 0 times, not once"],
+            ),
+            "no factory": ({"factory": None, "extra": controls}, [f"{FACTORY}: missing"]),
+        }
+        for relative in GOOD_CONTROLS:
+            plants[f"no {CONTROL_FILE_NAMES[relative]}"] = (
+                {
+                    "factory": GOOD_SCRIPTED_FACTORY,
+                    "extra": {name: text for name, text in controls.items() if name != relative},
+                },
+                [f"{relative}: missing"],
+            )
+        for layer, relative, token in CONTROL_TOKENS:
+            good = GOOD_SCRIPTED_FACTORY if relative == FACTORY else GOOD_CONTROLS[relative]
+            named = CONTROL_FILE_NAMES[relative]
+            for name, text in (
+                (f"{named} without {layer}'s {token}", good.replace(token, "")),
+                (
+                    f"{named} with {layer}'s {token} only in a comment",
+                    good.replace(token, "") + f"// {token}\n",
+                ),
+            ):
+                shape = (
+                    {"factory": text, "extra": controls}
+                    if relative == FACTORY
+                    else {"factory": GOOD_SCRIPTED_FACTORY, "extra": {**controls, relative: text}}
+                )
+                plants[name] = (shape, [f"{relative}: lacks {layer} ({token})"])
+        for name, (shape, wanted) in examined("planted trees", list(plants.items())):
+            with self.subTest(plant=name), tempfile.TemporaryDirectory() as scratch:
+                plant(Path(scratch), **shape)
+                self.assertEqual(script_switch_problems(Path(scratch))[0], wanted, name)
+
+
+# The value each definition of the switch is given: after `=`, or as a computed property's body.
+SWITCH_VALUE = re.compile(r"\bstatic\s+(?:let|var)\s+switchedOn\b[^=\n{]*(?:=|\{)\s*(\w+)")
+
+
+def script_switch_values(root):
+    """The value each definition of the switch in `SWITCH_FILE` under `root` is given, in order,
+    with whole-line comments set aside; none when the file is missing or defines no switch."""
+    path = Path(root) / SWITCH_FILE
+    if not path.is_file():
+        return []
+    code = code_of(path.read_bytes().decode("utf-8", errors="replace"))
+    return [found.group(1) for found in SWITCH_VALUE.finditer(code)]
+
+
+class TheScriptSwitchDefaultsOff(unittest.TestCase):
+    def test_the_script_switch_defaults_off(self):
+        # The behaviour first: the switch defaults off on iOS pending a measured containment
+        # layer (SPEC-355 section 7), so its one definition gives it false.
+        values = examined("switch definitions", script_switch_values(REPO))
+        self.assertEqual(values, ["false"], f"{SWITCH_FILE}: the value the switch is given")
+
+        # The controls: a planted switch off reads false, and each planted switch on reads true.
+        on = GOOD_SWITCH.replace("switchedOn = false", "switchedOn = true")
+        plants = {
+            "the switch off": (GOOD_SWITCH, ["false"]),
+            "the switch on": (on, ["true"]),
+            "the switch on, with its type": (
+                "public enum CardScripts {\n    public static let switchedOn: Bool = true\n}\n",
+                ["true"],
+            ),
+            "the switch on, computed": (SECOND_SWITCH, ["true"]),
+            "the switch on, off only in a comment": (
+                "// public static let switchedOn = false\n" + on,
+                ["true"],
+            ),
+            "no switch": ("public enum CardScripts {}\n", []),
+        }
+        for name, (source, wanted) in examined("planted switches", list(plants.items())):
+            with self.subTest(plant=name), tempfile.TemporaryDirectory() as scratch:
+                path = Path(scratch) / SWITCH_FILE
+                path.parent.mkdir(parents=True)
+                path.write_text(source, encoding="utf-8")
+                self.assertEqual(script_switch_values(Path(scratch)), wanted, name)
 
 
 if __name__ == "__main__":

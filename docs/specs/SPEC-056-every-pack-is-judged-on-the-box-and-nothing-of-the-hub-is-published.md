@@ -303,6 +303,7 @@ and its SPEC's dated amendment section says why its subject is gone and what jud
 | SPEC-054 | A11 | the adapter's cargo run is bounded | the box run's vault-duties pack, which runs the rows it bounded |
 | SPEC-087 | A14 | `shards --python-listed` sizes the Python matrix at the ceiling of listed over 40, clamped to 1 to 32 | SPEC-362 A12, which sizes it at 20 listed mutants a shard |
 | SPEC-129 | A2 | with no package `size` reads no listing and writes 32 and the matrix 0 to 31 | SPEC-362 A10, which sizes the whole tree from its listing |
+| SPEC-355 | A3 | the hold answers no byte, closes and counts every connection | nothing: the hold is removed (SPEC-361 R2); SPEC-361 A7 and A8 judge the channel it held |
 
 ## 8. Amendment, 2026-09-28: a retirement SPEC-057 made
 
@@ -405,3 +406,13 @@ every retirement. It inserts, in the table's order:
 
 - section 7: the row of SPEC-087's A14;
 - this amendment line.
+
+## 11. Amendment: a retirement SPEC-361 made
+
+Made by SPEC-361's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. That delivery retired SPEC-355's A3 in R14's form, when SPEC-361 removed
+L9, the connection hold, and the test A3 ran, and A18's test holds section 7 equal to every
+retirement the delivered SPECs hold. It inserts:
+
+- section 7: the row of SPEC-355's A3, in the table's order;
+- this section.
