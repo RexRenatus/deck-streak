@@ -36,16 +36,16 @@
       [
         "S36204-THE-CENSUS-TERM-IS-THE-MEASURED-1430",
         "scripts/mutation-verdict.py",
-        "\"deck-streak-progression\": 1430",
-        "\"deck-streak-progression\": 1429",
+        "\"deck-streak-progression\": 1521",
+        "\"deck-streak-progression\": 1520",
         "the census term is the slowest measured census test plus its start (SPEC-362 R6)",
         "test_dispatch_shards.TheGatesTimeoutCoversTheCensus.test_the_gates_timeout_covers_the_census_with_its_margin"
       ],
       [
         "S36205-THE-PULL-REQUEST-LEG-KEEPS-THE-2200-SECOND-BUDGET",
         ".github/workflows/ci.yml",
+        "--shard \"$SHARD/$SHARDS\" --timeout 2300 --build-timeout 600 --output \"$out\"",
         "--shard \"$SHARD/$SHARDS\" --timeout 2200 --build-timeout 600 --output \"$out\"",
-        "--shard \"$SHARD/$SHARDS\" --timeout 2100 --build-timeout 600 --output \"$out\"",
         "each pull request leg's per-mutant timeout is the census times 1.5, rounded up to the hundred (SPEC-362 R6)",
         "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
       ],

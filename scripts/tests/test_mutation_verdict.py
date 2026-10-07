@@ -859,18 +859,18 @@ class TheShardsFitTheirBound(unittest.TestCase):
 
     def test_a_listing_that_needs_exactly_the_shard_cap_is_sized_at_the_cap(self):
         module = verdict_module()
-        # One mutant per leg fits (1768 + 6000 <= 10800); two to a leg do not, so the fewest is the
+        # One mutant per leg fits (2141 + 6000 <= 10800); two to a leg do not, so the fewest is the
         # ceiling itself, and a search that stops short of it would refuse the listing.
         for key, ceiling in examined("ceilings", [("ci", 209), ("battery", 234)]):
             costs = [6000] * ceiling
-            sized = module.fewest_shards(costs, 1768, module.LEG_CEILING[key])
+            sized = module.fewest_shards(costs, 2141, module.LEG_CEILING[key])
             self.assertEqual(sized, ceiling, key)
             # One mutant more needs a leg past the ceiling: no count, so the sizing refuses it.
-            beyond = module.fewest_shards([*costs, 6000], 1768, module.LEG_CEILING[key])
+            beyond = module.fewest_shards([*costs, 6000], 2141, module.LEG_CEILING[key])
             self.assertIsNone(beyond, key)
         # With no ceiling named, the pull request's.
-        self.assertEqual(module.fewest_shards([6000] * 209, 1768), 209)
-        self.assertIsNone(module.fewest_shards([6000] * 210, 1768))
+        self.assertEqual(module.fewest_shards([6000] * 209, 2141), 209)
+        self.assertIsNone(module.fewest_shards([6000] * 210, 2141))
 
 
 def sharded(test):
@@ -890,9 +890,9 @@ def sharded(test):
 
 #: The package the settle census lives in (SPEC-327). Every value the class below expects is
 #: computed from literals, never from the sizer's own constants: progression's table cost is the
-#: table's highest, 126 s, coordination's 64 s and the api's 54 s, the baseline 1768 s, the
-#: workspace's nextest run in run 37410215011 plus its start, and the census term 1430 s, the
-#: slowest census test's 1378.452 s in push run 37392351782 after a start of up to 51 s
+#: table's highest, 126 s, coordination's 64 s and the api's 54 s, the baseline 2141 s, the
+#: workspace's nextest run in run 37438835490 plus its start, and the census term 1521 s, the
+#: slowest census test's 1469.349 s in push run 37438835490 after a start of up to 51 s
 #: (SPEC-362 R5, R6).
 CENSUS_PACKAGE = "deck-streak-progression"
 
@@ -910,29 +910,29 @@ def census_shards(test, packages):
 
 class ACensusPackagePaysTheCensus(unittest.TestCase):
     """SPEC-327 A3 to A6 (R4 to R6): a mutant of progression is projected with the settle census's
-    1430 s, and a plan or a dispatch that lists one pays the term once in its baseline."""
+    1521 s, and a plan or a dispatch that lists one pays the term once in its baseline."""
 
     def test_each_mutant_of_a_census_package_is_projected_with_the_census(self):
         sharding = census_shards(self, [CENSUS_PACKAGE, CENSUS_PACKAGE, "deck-streak-coordination"])
-        # Each progression mutant costs 126 + 1430 = 1556 s; the coordination mutant 64 s, as at
+        # Each progression mutant costs 126 + 1521 = 1647 s; the coordination mutant 64 s, as at
         # the base.
-        self.assertEqual(sharding["serial_seconds"], 1556 + 1556 + 64)
+        self.assertEqual(sharding["serial_seconds"], 1647 + 1647 + 64)
         self.assertEqual(sharding["count"], 1)
-        # One leg: the baseline, 1768 + 1430 = 3198 s, then the three mutants.
+        # One leg: the baseline, 2141 + 1521 = 3662 s, then the three mutants.
         projected = [shard["projected_seconds"] for shard in sharding["shards"]]
-        self.assertEqual(projected, [3198 + 1556 + 1556 + 64])
+        self.assertEqual(projected, [3662 + 1647 + 1647 + 64])
         other = census_shards(self, ["deck-streak-coordination"] * 3)
         self.assertEqual(other["serial_seconds"], 3 * 64)
-        self.assertEqual([shard["projected_seconds"] for shard in other["shards"]], [1768 + 3 * 64])
+        self.assertEqual([shard["projected_seconds"] for shard in other["shards"]], [2141 + 3 * 64])
 
     def test_a_plan_naming_a_census_package_pays_the_census_once_in_its_baseline(self):
         sharding = census_shards(self, [CENSUS_PACKAGE, CENSUS_PACKAGE, "deck-streak-coordination"])
-        # Two progression mutants pay the term once: 1768 + 1430, never 1768 + 2 * 1430.
-        self.assertEqual(sharding["baseline_seconds"], 1768 + 1430)
+        # Two progression mutants pay the term once: 2141 + 1521, never 2141 + 2 * 1521.
+        self.assertEqual(sharding["baseline_seconds"], 2141 + 1521)
         other = census_shards(self, ["deck-streak-coordination", "deck-streak-api"])
-        self.assertEqual(other["baseline_seconds"], 1768)
+        self.assertEqual(other["baseline_seconds"], 2141)
         self.assertEqual(
-            [shard["projected_seconds"] for shard in other["shards"]], [1768 + 64 + 54]
+            [shard["projected_seconds"] for shard in other["shards"]], [2141 + 64 + 54]
         )
 
     def test_the_592_listing_fits_its_bound(self):
@@ -947,9 +947,9 @@ class ACensusPackagePaysTheCensus(unittest.TestCase):
         sharding = census_shards(self, packages)
         projected = [shard["projected_seconds"] for shard in sharding["shards"]]
         self.assertEqual(sharding["count"], 12)
-        self.assertEqual(max(projected), 9612)
+        self.assertEqual(max(projected), 10440)
         self.assertTrue(all(seconds <= 10800 for seconds in projected), projected)
-        self.assertEqual(sharding["serial_seconds"], 4 * 126 + 8 * 54 + 10 * 64 + 45 * 1556)
+        self.assertEqual(sharding["serial_seconds"], 4 * 126 + 8 * 54 + 10 * 64 + 45 * 1647)
         held = [name for shard in sharding["shards"] for name in shard["mutants"]]
         self.assertEqual(len(examined("listed mutants held by a shard", held)), 67)
 
@@ -970,11 +970,11 @@ class ACensusPackagePaysTheCensus(unittest.TestCase):
             )
             written = sink.read_text(encoding="utf-8")
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
-        # Five mutants at 1556 s on a 3198 s baseline: one leg projects 10978 s, past the bound,
-        # so two, the slowest 3198 + 3 * 1556.
+        # Five mutants at 1647 s on a 3662 s baseline: one leg projects 11897 s, past the bound,
+        # so two, the slowest 3662 + 3 * 1647.
         self.assertIn(
-            "mutation: size: 2 shard(s) for 5 listed mutant(s), projected at 7780 s serially, "
-            "the slowest at 7866 s of its 10800 s bound",
+            "mutation: size: 2 shard(s) for 5 listed mutant(s), projected at 8235 s serially, "
+            "the slowest at 8603 s of its 10800 s bound",
             done.stdout,
         )
         self.assertEqual(written, "shards=2\nmatrix=[0, 1]\n")
@@ -1078,22 +1078,22 @@ class TheLegsAreSizedToTheRun(unittest.TestCase):
                 "deck-streak-fsrs7": 2,
             },
         )
-        self.assertEqual(module.BASELINE_SECONDS, 1768)
-        self.assertEqual(module.CENSUS_SECONDS, {"deck-streak-progression": 1430})
+        self.assertEqual(module.BASELINE_SECONDS, 2141)
+        self.assertEqual(module.CENSUS_SECONDS, {"deck-streak-progression": 1521})
         self.assertEqual(module.SHARD_BOUND_SECONDS, 10800)
         self.assertEqual(module.LEG_CEILING, {"ci": 209, "battery": 234})
-        self.assertEqual((module.MUTANT_TIMEOUT_SECONDS, module.TIMEOUT_MARGIN), (2200, 1.5))
+        self.assertEqual((module.MUTANT_TIMEOUT_SECONDS, module.TIMEOUT_MARGIN), (2300, 1.5))
 
     def test_the_whole_tree_is_sized_at_the_batterys_ceiling(self):
-        # 71 ingest mutants of 126 s fit a leg's 10800 s after its 1768 s baseline: 14840 need
+        # 68 ingest mutants of 126 s fit a leg's 10800 s after its 2141 s baseline: 14213 need
         # 210 legs, past the pull request's 209 and within the battery's 234.
-        many = listing(["deck-streak-ingest"] * 14840)
+        many = listing(["deck-streak-ingest"] * 14213)
         for package in examined("battery scopes", [None, "deck-streak-ingest"]):
             done, written = dispatch_size(many, package)
             self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
             self.assertEqual(written.get("shards"), "210", done.stdout)
             self.assertIn("legs 210 of ceiling 234", done.stdout)
-        beyond = listing(["deck-streak-ingest"] * 16615)
+        beyond = listing(["deck-streak-ingest"] * 15913)
         refused, written = dispatch_size(beyond)
         self.assertEqual(refused.returncode, 1, refused.stdout + refused.stderr)
         self.assertIn("need more than 234 legs", refused.stdout)
@@ -1120,19 +1120,19 @@ class ALegProvesItsTimeoutCoversItsTests(unittest.TestCase):
     def test_a_leg_whose_slowest_test_outgrows_the_timeout_is_void(self):
         fixture, planned = sharded(self)
         reports = {shard: ("0", shard_outcomes(names)) for shard, names in enumerate(planned)}
-        # 1.5 x 1467 s is 2200.5 s, past the 2200 s timeout.
-        slow = shard_reports(fixture.out / "slow", reports, logs={1: baseline_log("1467.000")})
+        # 1.5 x 1534 s is 2301 s, past the 2300 s timeout.
+        slow = shard_reports(fixture.out / "slow", reports, logs={1: baseline_log("1534.000")})
         done = fixture.judge("rust", "--shard-reports", slow)
         self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
         self.assertIn(
-            "VOID mutation-rust-shard-1: the baseline's slowest test ran 1467.0 s, and 1.5 times "
-            "it passes the 2200 s per-mutant timeout, so a mutant only that test kills could read "
+            "VOID mutation-rust-shard-1: the baseline's slowest test ran 1534.0 s, and 1.5 times "
+            "it passes the 2300 s per-mutant timeout, so a mutant only that test kills could read "
             "as a timeout",
             done.stdout,
         )
         self.assertNotIn("VOID mutation-rust-shard-0", done.stdout)
         # Exactly at the timeout, and within it: every leg counted, and the run whole.
-        for seconds in examined("baselines within the timeout", ["1466.6666666666667", "1466.000"]):
+        for seconds in examined("baselines within the timeout", ["1533.3333333333333", "1533.000"]):
             within = shard_reports(
                 fixture.out / f"within-{seconds}", reports, logs={1: baseline_log(seconds)}
             )

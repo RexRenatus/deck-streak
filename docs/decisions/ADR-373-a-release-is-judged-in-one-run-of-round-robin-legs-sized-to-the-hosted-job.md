@@ -146,3 +146,23 @@ Chosen against:
   sizing it, and the next growth in per-mutant cost eats the margin again.
 - Sizing the Python legs by measured per-mutant cost, as `fewest_shards` does for Rust: rejected for
   this delivery, because the Python listing carries no per-mutant cost; it is a follow-up idea.
+
+## Amendment: D3, the per-mutant budget is 2300 seconds
+
+Insert-only; every earlier byte is kept. The owner's signed ruling
+`docs/rulings/OWNER-RULING-2026-10-06-mutation-timeout-2300.md` raises the per-mutant budget to 2300
+seconds, the census term to 1521 and the baseline to 2141, from run 37438835490, so a release's
+progression legs read as judged instead of VOID under R7. Every mutant is still examined: a mutant that
+timed out at the old budget was scored examined, and at the new one it is caught or missed, never a
+pass. The raise is a weakening by ADR-199's letter, admitted by that ruling.
+
+Chosen against:
+
+- Keeping the old budget: rejected, because R7 voids the census leg at the measured reading, so no
+  release could be judged at all.
+- A budget above 2300: rejected, because it is headroom beyond any measured census, and the budget is
+  derived from the measured census, with R7 naming a later overrun.
+- Admitting a release past its mutation gate once: rejected, because it lands a tree whose mutants were
+  never examined.
+- Waiting for the census test's own speed-up: rejected as the cure for this delivery, because no
+  release can be judged until it lands; it stays the cure that can lower the budget again.

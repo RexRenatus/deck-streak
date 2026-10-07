@@ -36,34 +36,34 @@ OUTPUT = re.compile(r"--output (\S+)")
 # listing are each two lines since SPEC-129's literal package words, one per branch; each is pinned.
 CI_LEG = (
     'cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" '
-    '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2200 --build-timeout 600 '
+    '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2300 --build-timeout 600 '
     '--output "$out" || rc=$?'
 )
 WEEKLY_LEGS = (
     'cargo mutants --no-shuffle -vV --in-place --package="$PACKAGE" '
-    '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2200 --build-timeout 600 '
+    '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2300 --build-timeout 600 '
     '--output "$RUNNER_TEMP/mutation" || rc=$?',
     "cargo mutants --no-shuffle -vV --in-place "
-    '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2200 --build-timeout 600 '
+    '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2300 --build-timeout 600 '
     '--output "$RUNNER_TEMP/mutation" || rc=$?',
 )
 REHEARSAL_LEG = (
-    "cargo mutants --no-shuffle -vV --in-place -f crates/kernel/src/clock.rs --timeout 2200 "
+    "cargo mutants --no-shuffle -vV --in-place -f crates/kernel/src/clock.rs --timeout 2300 "
     '--build-timeout 600 --output "$shard" || rc=$?'
 )
 LISTINGS = {
     CI: [
         'cargo mutants --no-shuffle --list --json --in-diff "$RUNNER_TEMP/mutation/git.diff" '
-        '--timeout 2200 --build-timeout 600 > "$RUNNER_TEMP/mutation/listed.json"',
-        "cargo mutants --no-shuffle --list --json --timeout 2200 --build-timeout 600 "
+        '--timeout 2300 --build-timeout 600 > "$RUNNER_TEMP/mutation/listed.json"',
+        "cargo mutants --no-shuffle --list --json --timeout 2300 --build-timeout 600 "
         '> "$RUNNER_TEMP/mutation/whole.json"',
     ],
     WEEKLY: [
         'cargo mutants --no-shuffle --list --json --in-place --package="$PACKAGE" '
-        '--timeout 2200 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"',
+        '--timeout 2300 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"',
         "cargo mutants --no-shuffle --list --json --in-place "
-        '--timeout 2200 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"',
-        "cargo mutants --no-shuffle --list --json --in-place --timeout 2200 --build-timeout 600 "
+        '--timeout 2300 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"',
+        "cargo mutants --no-shuffle --list --json --in-place --timeout 2300 --build-timeout 600 "
         '> "$RUNNER_TEMP/listing/whole.json"',
     ],
 }
