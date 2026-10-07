@@ -169,8 +169,8 @@ export class CredentialStore {
       });
       if (response.status === 401) return 'needs-sign-in';
       if (!response.ok) return 'offline';
-      const { key } = (await response.json()) as { key?: unknown };
-      if (typeof key !== 'string') return 'offline';
+      // A body with no string key fails to decode or import, and the catch answers it offline.
+      const { key } = (await response.json()) as { key: string };
       return await this.#deps.crypto.subtle.importKey('raw', fromBase64url(key), 'AES-GCM', false, [
         'encrypt',
         'decrypt'
