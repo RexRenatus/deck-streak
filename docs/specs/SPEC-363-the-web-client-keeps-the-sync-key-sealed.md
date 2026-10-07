@@ -307,6 +307,8 @@ R17. `PRIVACY.md` says what this browser keeps (the collection, its media and th
     that signing out removes the key and clearing the site's data removes all of it, and that none
     of it is the service's store.
 
+## 7a. Acceptance criteria (part 2)
+
 | id | criterion | delivered by |
 |---|---|---|
 | B1 | a login that lands after a forget stores nothing, and the generation stays raised | `pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "a login that lands after a forget stores nothing"`; red: the stub stores every login |
