@@ -242,7 +242,17 @@ pub enum SealSecretError {
 /// [`SealSecretError::TooShort`] for a secret under 32 bytes, and
 /// [`SealSecretError::Credential`] for a credential that is empty, unreadable or not text.
 pub fn seal_secret(loader: &CredentialLoader) -> Result<Option<SealSecret>, SealSecretError> {
-    let secret = loader.load(SEAL_SECRET_ROLE)?;
+    let secret = match loader.load(SEAL_SECRET_ROLE) {
+        Ok(secret) => secret,
+        Err(CredentialError::Missing { id }) => {
+            tracing::info!(
+                role = id,
+                "no seal secret is configured: the sync seal release is off"
+            );
+            return Ok(None);
+        }
+        Err(error) => return Err(error.into()),
+    };
     SealSecret::new(secret.expose().as_bytes())
         .map(Some)
         .map_err(SealSecretError::TooShort)
