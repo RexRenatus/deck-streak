@@ -167,7 +167,18 @@ R16. **The load wait holds for a cold first test (#681).** The planted suite's m
     `Probe.loadSeconds`, and the land reading names any such reading. Each load's time is recorded:
     `Probe.loadTime(_:)` returns the seconds a load took, or nil when the wait expired, `loaded`
     is read through it, and each warm-up load and each row of A5's test print it into the
-    `harness` job's result bundles.
+    `harness` job's result bundles. A5's test also holds one keeper card across its rows:
+    `Probe.keeper(ruleList:)` loads and mounts one planted card in a scripts-off view the factory
+    builds, under `Probe.warmUpSeconds`, and the test calls it before the first row's view is
+    built, holds it across every row and removes it after the last, so no row's wait pays the
+    relaunch of WebKit's GPU and networking processes that the previous row's teardown caused
+    (ADR-372 D11). The keeper is not a row and is not timed as one, it changes no row's wait,
+    reading or assertion, and its own load is asserted; it prints
+    `card probe keeper: loaded= took=`. The owner's signed ruling,
+    `docs/rulings/OWNER-RULING-2026-10-07-factory-row-load-wait.md`, is the authority for the
+    factory rows' land gate, that every factory row loads within its own `Probe.loadSeconds` wait
+    by that wait, on both destinations, on two `apple / harness` runs of the same head, and for
+    the keeper.
 
 ## 3. Acceptance criteria
 
@@ -255,8 +266,8 @@ section 3a names their proof on a device, held.
 | `ios/CardIsolation/Tests/CardIsolationTests/DocumentPolicyTests.swift` | `ios-harness` | added (A4) |
 | `ios/CardIsolation/Tests/CardIsolationTests/ConnectionHoldTests.swift` | `ios-harness` | removed with L9, when the base still holds it |
 | `ios/CardIsolation/swift-mutants.json` | mutation | changed: `SW36100` onward appended; L9's entries leave with L9 |
-| `ios/CardProbeTests/FactoryTests.swift` | `ios-harness` | changed: A5 over the new `CONTROLS`; the hold removed; R16's warm-up asserted from `setUp`, each row's load time printed, and A17's test of a card that never loads |
-| `ios/CardProbeTests/PlantedCardTests.swift` | `ios-harness` | changed: A8 and A15 added; A7's control moves to `shippedWithout(.L10)`; the variant; the hold removed; R16's `Probe.loadSeconds`, `Probe.loadTime(_:)` and `Probe.warmUp()`, the warm-up asserted from `setUp` |
+| `ios/CardProbeTests/FactoryTests.swift` | `ios-harness` | changed: A5 over the new `CONTROLS`; the hold removed; R16's warm-up asserted from `setUp`, each row's load time printed, and A17's test of a card that never loads; the keeper held across the rows (D11) |
+| `ios/CardProbeTests/PlantedCardTests.swift` | `ios-harness` | changed: A8 and A15 added; A7's control moves to `shippedWithout(.L10)`; the variant; the hold removed; R16's `Probe.loadSeconds`, `Probe.loadTime(_:)` and `Probe.warmUp()`, the warm-up asserted from `setUp`; the keeper added (D11) |
 | `ios/CardProbeTests/Planted.swift` | `ios-harness` | changed: R10's cards, `CONTROLS`, `DEPTH_SCRIPTED` and held sets |
 | `scripts/tests/test_card_web_view_layers.py` | CI | changed: R12's tokens |
 | `.github/workflows/xcframework.yml` | CI | changed: the `harness` job's bound, 90 -> 150 minutes (R15) |

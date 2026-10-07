@@ -193,6 +193,16 @@ their waits began. The cause: the test built and started 13 views, each with its
 non-persistent store and so its own WebContent process, before it mounted the first, and their
 launches, and a networking relaunch, fell inside the first row's wait.
 
+With each row's view built just before its own wait, a row whose wait follows the previous row's
+teardown still pays WebKit's relaunch of its GPU and networking processes, which exit when no
+page holds them. The owner's signed ruling,
+`docs/rulings/OWNER-RULING-2026-10-07-factory-row-load-wait.md`, is the authority for the factory
+rows' land gate, that every factory row loads within its own `Probe.loadSeconds` wait by that
+wait, on both destinations, on two `apple / harness` runs of the same head, and it admits the
+keeper chosen below by name. The keeper was chosen against a pause between rows, a rolling keep
+of the previous row's view, reordering the suite and raising the 10-second wait, each rejected
+below.
+
 - Chosen, because then every row's wait measures its own load and no other view's start: the
   warm-up stays, and each factory row's view is built and loaded just before its mount and torn
   down before the next row's view is built. `Probe.warmUp()` loads one planted card in a
@@ -200,6 +210,14 @@ launches, and a networking relaunch, fell inside the first row's wait.
   under `Probe.warmUpSeconds` (60 seconds), once per process, and every test class that loads a
   card asserts it from `setUp`. A host where WebKit never starts on either path fails every test
   with the warm-up's message, so the warm-up hides nothing.
+- Chosen beside that build, because then no row's wait pays a relaunch another view's teardown
+  caused: the keeper. `Probe.keeper(ruleList:)` loads and mounts one planted card in a scripts-off
+  view the factory builds, under the unchanged `Probe.warmUpSeconds`, and the factory test calls
+  it before the first row's view is built, holds it across every row and removes it after the
+  last. While it lives, WebKit's GPU and networking processes have a page to serve. It is not a
+  row and is not timed as one: nothing is read from it, and it starts no load inside any row's
+  wait, so every row's build, wait, readings and assertions are unchanged. Its own load is
+  asserted, so it only adds a way to fail. It prints `card probe keeper: loaded= took=`.
 - Rejected, because it puts all 13 views' process launches inside the first measured wait, which
   then took 4.23 and 10.15 seconds: building every row's view, and starting its load, before
   mounting the first.
@@ -209,6 +227,11 @@ launches, and a networking relaunch, fell inside the first row's wait.
   or a retry.
 - Rejected, because XCTest's order is no contract: reordering the suite so that another test runs
   first.
+- Rejected, because it is a new wait that would move a row's own process launch out of that row's
+  wait whenever WebKit started one during it, and WebKit does not promise to, so it buys nothing
+  certain: a pause between rows.
+- Rejected, because it puts two rows' views live at once, against the lazy order chosen above:
+  keeping the previous row's view alive until the next row's view loads (a rolling keep).
 
 ## Decision Outcome
 
@@ -220,7 +243,10 @@ entry points that would bypass that refusal are closed in every frame. The `harn
 runs the planted suite is bounded at 150 minutes, so the proof finishes inside its limit (D10).
 The planted suite starts WebKit once per test process before any measured load wait, and the
 factory test builds and loads each row's view just before its mount and tears it down before the
-next, so every row's 10-second wait measures its own load (D11).
+next, so every row's 10-second wait measures its own load (D11). One keeper card, a scripts-off
+planted card the factory builds and loads under the warm-up bound, is mounted before the first
+row's view is built, held across every row and removed after the last, so no row's wait pays the
+relaunch of WebKit's shared processes; it is not a row, and its own load is asserted (D11).
 
 ### Consequences
 
