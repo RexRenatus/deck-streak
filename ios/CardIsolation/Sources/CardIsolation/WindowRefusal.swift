@@ -1,6 +1,10 @@
 import WebKit
+#if os(iOS)
+import UIKit
+#endif
 
-/// The card view's UI delegate, layer L6 (SPEC-349 R2, ADR-360 D1).
+/// The card view's UI delegate, layer L6 (SPEC-349 R2, ADR-360 D1), with the refusal arms a
+/// scripted card meets (SPEC-355 R5): no window, no dialog shown, no capture and no motion.
 @MainActor
 public final class WindowRefusal: NSObject, WKUIDelegate {
     override public init() {
@@ -16,4 +20,65 @@ public final class WindowRefusal: NSObject, WKUIDelegate {
     ) -> WKWebView? {
         nil
     }
+
+    /// A script's alert completes with no UI shown.
+    /// It does NOT stop the script that asked from running on.
+    public func webView(
+        _ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String,
+        initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping @MainActor @Sendable () -> Void
+    ) {
+        completionHandler()
+    }
+
+    /// A script's confirm is answered false, with no UI shown.
+    /// It does NOT stop the script that asked from running on.
+    public func webView(
+        _ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String,
+        initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping @MainActor @Sendable (Bool) -> Void
+    ) {
+        completionHandler(false)
+    }
+
+    /// A script's prompt is answered with nothing, with no UI shown.
+    /// It does NOT stop the script that asked from running on.
+    public func webView(
+        _ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String,
+        defaultText: String?, initiatedByFrame frame: WKFrameInfo,
+        completionHandler: @escaping @MainActor @Sendable (String?) -> Void
+    ) {
+        completionHandler(nil)
+    }
+
+    /// A request for the camera or the microphone is denied, with no UI shown.
+    /// It does NOT stop a script from asking again; each request is denied.
+    public func webView(
+        _ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin,
+        initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType,
+        decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void
+    ) {
+        decisionHandler(.deny)
+    }
+
+    #if os(iOS)
+    /// A request for the device's orientation and motion is denied, with no UI shown. iOS only:
+    /// macOS has no such request.
+    /// It does NOT stop a script from asking again; each request is denied.
+    public func webView(
+        _ webView: WKWebView, requestDeviceOrientationAndMotionPermissionFor origin: WKSecurityOrigin,
+        initiatedByFrame frame: WKFrameInfo,
+        decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void
+    ) {
+        decisionHandler(.deny)
+    }
+
+    /// A long press on a link offers no menu, so no menu item opens the link (SPEC-361 R6, L13).
+    /// iOS only: macOS asks no such question of the delegate.
+    /// It does NOT stop a tap on the link; the link-activation refusal (L10) does.
+    public func webView(
+        _ webView: WKWebView, contextMenuConfigurationForElement elementInfo: WKContextMenuElementInfo,
+        completionHandler: @escaping @MainActor @Sendable (UIContextMenuConfiguration?) -> Void
+    ) {
+        completionHandler(nil)
+    }
+    #endif
 }
