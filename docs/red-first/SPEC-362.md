@@ -61,3 +61,13 @@ assertions unchanged; and it gave `test_mutation_verdict.py`'s `cargo_report` Ba
 
 A12 plants, by hand on `PYTHON_SHARD_MUTANTS`: 19 reads `2 != 1 : 20 listed`, 21 reads `1 != 2 : 21 listed`
 and 0 reads `ZeroDivisionError`; each fails the pin, and the file is restored byte-equal.
+
+**The signed 2300 s budget, red first.** The pins moved alone, in the commit before the figures: the
+byte pins over `BOUNDS`, `CENSUS_NEED_SECONDS`, the census and baseline sums of
+`test_mutation_verdict.py`, R7's boundary, the cap verdict's examined counts and the dispatch counts
+derived from the new baseline (`docs/rulings/OWNER-RULING-2026-10-06-mutation-timeout-2300.md`).
+Each read red at 10c7ced6, the pins alone on the base's code, for the figure and for nothing else. They
+move earlier criteria's literals, so they are disclosed here with no fence lines: the census pin reads
+`1430 != 1521`, the baseline pin `1768 != 2141`, the byte pins over `BOUNDS` read `--timeout 2200` where
+they hold 2300, the census package's baseline sum `3198 != 3662`, and R7's boundary test finds no VOID
+line naming the 2300 s timeout. The criteria's own lines above stay as recorded.

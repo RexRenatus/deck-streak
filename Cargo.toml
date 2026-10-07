@@ -53,6 +53,7 @@ deck-streak-mcp = { path = "crates/mcp" }
 deck-streak-daemon = { path = "crates/daemon" }
 deck-streak-ffi = { path = "crates/ffi" }
 deck-streak-engine-core = { path = "crates/engine-core" }
+deck-streak-xp = { path = "crates/xp" }
 # ADR-029: the parity oracle's golden reader. So far only a proving crate's dev-dependencies name
 # them; later ADRs cite ADR-029 rather than admitting them again.
 serde = { version = "1.0.229", features = ["derive"] }

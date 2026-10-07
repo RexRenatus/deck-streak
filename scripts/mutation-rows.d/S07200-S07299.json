@@ -3,20 +3,20 @@
     "MUTATIONS": [
       [
         "S07201-REVIEW-XP-ROUNDING",
-        "progression",
+        "xp",
         "src/review_xp.rs",
         ".round_ties_even() as u32",
         ".round() as u32",
-        "xp_review::review_xp_matches_the_parity_golden_for_every_combination",
+        "review_xp::the_xp_crates_review_xp_matches_the_parity_golden_for_every_case",
         "a review's XP rounds half to even as the predecessor's round() does (SPEC-072 R1, A1)"
       ],
       [
         "S07202-MATURE-BOUNDARY",
-        "progression",
+        "xp",
         "src/review_xp.rs",
         "review.interval >= economy.mature_interval_days",
         "review.interval > economy.mature_interval_days",
-        "xp_review::review_xp_matches_the_parity_golden_for_every_combination",
+        "review_xp::the_xp_crates_review_xp_matches_the_parity_golden_for_every_case",
         "a card at the mature interval earns the mature multiplier (SPEC-072 R1, A1)"
       ],
       [

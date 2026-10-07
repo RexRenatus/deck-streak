@@ -5179,13 +5179,13 @@ NOT_WORKFLOW_READS = {
         (
             "test_dispatch_shards",
             "TheReleaseFitsOneRun.test_a_listing_beyond_the_ceiling_is_refused_whole",
-            "size(entries('deck-streak-ingest', 16615), 'deck-streak-ingest')",
+            "size(entries('deck-streak-ingest', 15913), 'deck-streak-ingest')",
             1,
         ),
         (
             "test_dispatch_shards",
             "TheReleaseFitsOneRun.test_a_listing_beyond_the_ceiling_is_refused_whole",
-            "size(entries('deck-streak-ingest', 16614), 'deck-streak-ingest')",
+            "size(entries('deck-streak-ingest', 15912), 'deck-streak-ingest')",
             1,
         ),
         (
@@ -5237,7 +5237,7 @@ NOT_WORKFLOW_READS = {
         (
             "test_dispatch_shards",
             "TheReleaseFitsOneRun.test_a_listing_beyond_the_ceiling_is_refused_whole",
-            "plan_shards(entries('deck-streak-ingest', 14840))",
+            "plan_shards(entries('deck-streak-ingest', 14213))",
             1,
         ),
         (
