@@ -134,6 +134,13 @@ final class FactoryTests: XCTestCase {
             }
             rows.append((name: name, setting: .without(control), load: load, verdict: .off(missing: missing), runs: false))
         }
+        // WebKit's GPU and networking processes exit when no page holds them, so a row whose wait
+        // followed the previous row's teardown paid their relaunch. One kept card, loaded before
+        // the first row's view is built and taken down after the last row, holds them. It is not a
+        // row: nothing is read from it, and it starts no load inside any row's wait (ADR-372 D11).
+        let keeper = await Probe.keeper(ruleList: probe.ruleList)
+        XCTAssertNotNil(keeper, "the keeper never loaded, so WebKit's shared processes were not held across the rows")
+        defer { keeper?.removeFromSuperview() }
         for row in rows {
             let view = try build(row)
             Probe.mount(view)

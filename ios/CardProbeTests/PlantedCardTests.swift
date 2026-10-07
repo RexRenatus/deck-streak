@@ -358,6 +358,26 @@ final class Probe {
         return loaded
     }
 
+    /// A planted card in a scripts-off view the factory builds, mounted, waited for under
+    /// `warmUpSeconds` and left mounted for the caller to take down. While it lives, WebKit's GPU
+    /// and networking processes have a page to serve, so a measured wait that follows another
+    /// view's teardown does not pay their relaunch (ADR-372 D11). Returns nil when it never loaded.
+    static func keeper(ruleList: WKContentRuleList?) async -> WKWebView? {
+        let view = CardWebViewFactory.make(
+            layers: Set(CardLayer.allCases), ruleList: ruleList, switchedOn: false)
+        CardWebViewFactory.load(Planted.document(id: "keeper", head: "", body: "<p>a card</p>"), into: view)
+        mount(view)
+        let took = await poll(Probe.warmUpSeconds) {
+            await reportsLoaded(view)
+        }
+        print("card probe keeper: loaded=\(took != nil) took=\(took.map { String(format: "%.2f", $0) } ?? "none")")
+        guard took != nil else {
+            view.removeFromSuperview()
+            return nil
+        }
+        return view
+    }
+
     /// Takes one snapshot of `view` and decodes its pixels.
     static func snapshot(_ view: WKWebView) async -> ViewSnapshot {
         await withCheckedContinuation { (continuation: CheckedContinuation<ViewSnapshot, Never>) in
