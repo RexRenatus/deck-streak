@@ -193,7 +193,7 @@ fn exempt_refusal(refusal: GestureRefusal) -> ExemptRefusal {
         GestureRefusal::NotTheTarget { .. } => ExemptRefusal::NotTheTarget,
         GestureRefusal::Undecodable { .. } => ExemptRefusal::Undecodable,
         GestureRefusal::Engine { error } => ExemptRefusal::Engine { error },
-        GestureRefusal::NeedsTheChoice => ExemptRefusal::Engine { error: Vec::new() },
+        GestureRefusal::NeedsTheChoice => ExemptRefusal::NeedsTheChoice,
     }
 }
 
@@ -250,6 +250,9 @@ pub enum ExemptRefusal {
         /// The engine's `BackendError`, as the engine encoded it.
         error: Vec<u8>,
     },
+    /// The tap is a one-way sync's, which runs only through the full-sync choice's own write
+    /// (SPEC-364 R3).
+    NeedsTheChoice,
 }
 
 impl fmt::Display for ExemptRefusal {
@@ -260,6 +263,9 @@ impl fmt::Display for ExemptRefusal {
             Self::Undecodable => f.write_str("the request is not the tap's own write"),
             Self::Engine { error } => {
                 write!(f, "the engine refused the write ({} bytes)", error.len())
+            }
+            Self::NeedsTheChoice => {
+                f.write_str("the one-way sync runs only through the full-sync choice's write")
             }
         }
     }
