@@ -220,6 +220,18 @@ R20. **CI.** The Apple job's `harness` job gains one step, "the review screen's 
 | A9 | Voice choices persist across reopening, `chosen` forgets a voice no longer installed, `options` falls back to the primary subtag and orders by quality then name, and a damaged line is skipped | `cargo test -p deck-streak-ffi --test voices -- --exact a_voice_choice_survives_and_follows_the_installed_set` |
 | A10 | The collection directory is the default with no argument; the argument's when an absolute path to an existing directory; every other value refused by name, each by its own test | `cargo test -p deck-streak-ffi --test seam` |
 | A11 | The review fixture writes a collection whose deck `Review` holds the four cards and whose media folder holds the PNG and the WAV | `cargo test -p deck-streak-ffi --test fixture -- --exact the_review_fixture_holds_four_cards_and_two_files` |
+| A12 | Every Swift file under `ios/` is registered, the `card` and `speech` doors hold, and each new file's decisions equal the register and sit under its ceiling; planted breaks are refused by name | `python3 -m unittest discover -s scripts/tests -p test_ios_thin_swift.py` |
+| A13 | No message handler, scheme handler, file load or second web-view constructor exists under `ios/`; the card role calls the factory and configures nothing; planted breaks are refused by name | `python3 -m unittest discover -s scripts/tests -p test_ios_review_screen.py -k the_card_frame_is_the_factorys_alone` |
+| A14 | The bar names Again, Hard, Good and Easy in order with no `.accessibilityLabel` override, sits in a bottom safe-area inset, and declares one impact and one success `.sensoryFeedback` | `python3 -m unittest discover -s scripts/tests -p test_ios_review_screen.py -k the_answer_bar_is_named_placed_and_felt` |
+| A15 | On the fixture, the model goes question, answer, rating, next, through four cards to the designed end | `harness` job, step "the review screen's tests, Debug, on the iPhone and then the iPad": `DeckStreakTests/ReviewModelTests/test_a15_the_loop_reaches_the_designed_end` |
+| A16 | Two taps on one rating send one answer: the session's count of sent answers is one, and the next shown card is the fixture's second | the same step: `DeckStreakTests/ReviewSessionTests/test_a16_a_double_tap_answers_once` |
+| A17 | The four rating buttons carry, in order, the literal intervals A1 pins for a new card | the same step: `DeckStreakTests/ReviewSessionTests/test_a17_each_rating_shows_its_interval` |
+| A18 | The sound card's autoplay plan is its clip, empty while VoiceOver runs, and the speech card's voice falls back to the language's when the chosen one is absent | the same step: `DeckStreakTests/ReviewModelTests/test_a18_the_clip_plan_follows_the_face_and_voiceover` |
+| A19 | On both simulators the four rating buttons sit in the bottom fifth of the window, each at least 44 by 44 pt, their names the titles and their values the intervals | the same step: `DeckStreakUITests/ReviewFlowTests/test_a19_the_ratings_sit_at_the_bottom_named_by_their_titles` |
+| A20 | Choosing the fixture's deck shows its counts and the first card; Show Answer reveals the four ratings; Good shows the next card | the same step: `DeckStreakUITests/ReviewFlowTests/test_a20_show_reveal_rate_next` |
+| A21 | The image card renders its `data:` image in the factory's view: the image element named by its `alt` text is the fixture PNG's size, not a broken image's | the same step: `DeckStreakUITests/ReviewFlowTests/test_a21_the_image_card_renders_its_image` |
+| A22 | The voice picker lists "System default" and says when no voice is installed | the same step: `DeckStreakUITests/ReviewFlowTests/test_a22_the_voice_picker_names_the_default` |
+| A23 | The codec's new requests and decoders equal their literal bytes, a two-level deck tree included, and a tree past 32 levels is refused | `harness-wire` job, step "the codec's tests, on the host": `HarnessWireTests.RequestBytesTests/test_a23_review_requests_encode_to_their_literal_bytes`, `HarnessWireTests.ResponseDecodingTests/test_a23_the_deck_tree_decodes_depth_first` |
 
 ```acceptance
 A1: cargo test -p deck-streak-engine-core --test review_pairs -- --exact the_review_pairs_run_natively_and_no_other_pair_joins
@@ -233,6 +245,19 @@ A8: cargo test -p deck-streak-ffi --test face -- --exact the_native_document_is_
 A9: cargo test -p deck-streak-ffi --test voices -- --exact a_voice_choice_survives_and_follows_the_installed_set
 A10: cargo test -p deck-streak-ffi --test seam
 A11: cargo test -p deck-streak-ffi --test fixture -- --exact the_review_fixture_holds_four_cards_and_two_files
+A12: python3 -m unittest discover -s scripts/tests -p test_ios_thin_swift.py
+A13: python3 -m unittest discover -s scripts/tests -p test_ios_review_screen.py -k the_card_frame_is_the_factorys_alone
+A14: python3 -m unittest discover -s scripts/tests -p test_ios_review_screen.py -k the_answer_bar_is_named_placed_and_felt
+A15: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakTests/ReviewModelTests/test_a15_the_loop_reaches_the_designed_end
+A16: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakTests/ReviewSessionTests/test_a16_a_double_tap_answers_once
+A17: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakTests/ReviewSessionTests/test_a17_each_rating_shows_its_interval
+A18: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakTests/ReviewModelTests/test_a18_the_clip_plan_follows_the_face_and_voiceover
+A19: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakUITests/ReviewFlowTests/test_a19_the_ratings_sit_at_the_bottom_named_by_their_titles
+A20: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakUITests/ReviewFlowTests/test_a20_show_reveal_rate_next
+A21: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakUITests/ReviewFlowTests/test_a21_the_image_card_renders_its_image
+A22: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakUITests/ReviewFlowTests/test_a22_the_voice_picker_names_the_default
+A23: swift test --package-path ios/HarnessWire --filter HarnessWireTests.RequestBytesTests/test_a23_review_requests_encode_to_their_literal_bytes
+A23: swift test --package-path ios/HarnessWire --filter HarnessWireTests.ResponseDecodingTests/test_a23_the_deck_tree_decodes_depth_first
 ```
 
 **The red each shows first.** A1 and A2 are red at their tests commit on the refusal of (7,4): the
@@ -245,6 +270,12 @@ red over a stub that returns nothing; A10 over a stub that returns the default f
 so its refusal tests and its directory test fail. A11 is red over a fixture builder that writes
 nothing. A5's plants and A9's damaged line are positive controls: each
 names what must be refused, so a rule that went blind fails.
+
+A12 to A14 are red at their tests commit, before the Swift: A12 on its positive artifacts (the
+register's `card` and `speech` files, absent), A13 on the card role's factory call (absent), A14
+on the bar's four titles (absent). A15 to A22 are red over a `ReviewModel` whose `perform` does
+nothing, each on its first positive assertion. A23 is red over decoders that return empty values.
+Every Swift criterion runs on the Apple job, never on the Linux box.
 
 ## 4. File manifest
 
@@ -326,26 +357,7 @@ names what must be refused, so a rule that went blind fails.
 
 ## 7. Delivered by the next pull request
 
-| id | criterion | delivered by |
-|---|---|---|
-| A12 | Every Swift file under `ios/` is registered, the `card` and `speech` doors hold, and each new file's decisions equal the register and sit under its ceiling; planted breaks are refused by name | `python3 -m unittest discover -s scripts/tests -p test_ios_thin_swift.py` |
-| A13 | No message handler, scheme handler, file load or second web-view constructor exists under `ios/`; the card role calls the factory and configures nothing; planted breaks are refused by name | `python3 -m unittest discover -s scripts/tests -p test_ios_review_screen.py -k the_card_frame_is_the_factorys_alone` |
-| A14 | The bar names Again, Hard, Good and Easy in order with no `.accessibilityLabel` override, sits in a bottom safe-area inset, and declares one impact and one success `.sensoryFeedback` | `python3 -m unittest discover -s scripts/tests -p test_ios_review_screen.py -k the_answer_bar_is_named_placed_and_felt` |
-| A15 | On the fixture, the model goes question, answer, rating, next, through four cards to the designed end | `harness` job, step "the review screen's tests, Debug, on the iPhone and then the iPad": `DeckStreakTests/ReviewModelTests/test_a15_the_loop_reaches_the_designed_end` |
-| A16 | Two taps on one rating send one answer: the session's count of sent answers is one, and the next shown card is the fixture's second | the same step: `DeckStreakTests/ReviewSessionTests/test_a16_a_double_tap_answers_once` |
-| A17 | The four rating buttons carry, in order, the literal intervals A1 pins for a new card | the same step: `DeckStreakTests/ReviewSessionTests/test_a17_each_rating_shows_its_interval` |
-| A18 | The sound card's autoplay plan is its clip, empty while VoiceOver runs, and the speech card's voice falls back to the language's when the chosen one is absent | the same step: `DeckStreakTests/ReviewModelTests/test_a18_the_clip_plan_follows_the_face_and_voiceover` |
-| A19 | On both simulators the four rating buttons sit in the bottom fifth of the window, each at least 44 by 44 pt, their names the titles and their values the intervals | the same step: `DeckStreakUITests/ReviewFlowTests/test_a19_the_ratings_sit_at_the_bottom_named_by_their_titles` |
-| A20 | Choosing the fixture's deck shows its counts and the first card; Show Answer reveals the four ratings; Good shows the next card | the same step: `DeckStreakUITests/ReviewFlowTests/test_a20_show_reveal_rate_next` |
-| A21 | The image card renders its `data:` image in the factory's view: the image element named by its `alt` text is the fixture PNG's size, not a broken image's | the same step: `DeckStreakUITests/ReviewFlowTests/test_a21_the_image_card_renders_its_image` |
-| A22 | The voice picker lists "System default" and says when no voice is installed | the same step: `DeckStreakUITests/ReviewFlowTests/test_a22_the_voice_picker_names_the_default` |
-| A23 | The codec's new requests and decoders equal their literal bytes, a two-level deck tree included, and a tree past 32 levels is refused | `harness-wire` job, step "the codec's tests, on the host": `HarnessWireTests.RequestBytesTests/test_a23_review_requests_encode_to_their_literal_bytes`, `HarnessWireTests.ResponseDecodingTests/test_a23_the_deck_tree_decodes_depth_first` |
-
-A12 to A14 are red at their tests commit, before the Swift: A12 on its positive artifacts (the
-register's `card` and `speech` files, absent), A13 on the card role's factory call (absent), A14
-on the bar's four titles (absent). A15 to A22 are red over a `ReviewModel` whose `perform` does
-nothing, each on its first positive assertion. A23 is red over decoders that return empty values.
-Every Swift criterion runs on the Apple job, never on the Linux box.
+Part 2's criteria, A12 to A23, now sit in section 3 with their lines in its fence (section 10).
 
 ## 8. Mutation rows
 
@@ -383,3 +395,90 @@ one Part 1 test. Part 2's codec lines carry rows in
 - `ios/swift-roles.json`: unchanged in this part; delivered by part 2
 - `scripts/tests/test_ios_thin_swift.py`: unchanged in this part; delivered by part 2
 - `scripts/tests/test_ios_review_screen.py`: unchanged in this part; delivered by part 2
+
+## 10. Amendments: what part 2 delivers
+
+Part 2 delivers R9 to R20, and section 7's rows A12 to A23 now sit in section 3, with their lines
+in its fence. It was cut at `dev` `f3392ec3`. Ten points move from the text above; ADR-359 D8 and
+D9 decide the two that change a requirement, and the rest are named here.
+
+- **R18's population (ADR-359 D9).** A13 judges every Swift file git tracks under `ios/` outside
+  `ios/CardIsolation/` and outside a test target, as `scripts/tests/test_card_web_view_layers.py`
+  names one (a directory under `ios/` named `Tests` or ending in `Tests`), and prints each path it
+  skips with their count. The factory's own guard counts script message handlers, and the card
+  probe's tests name R18's words to prove the factory refuses them; neither is a card frame the
+  app builds.
+- **R20's step and its place (ADR-359 D8).** "The review screen's tests, Debug, on the iPhone and
+  then the iPad" sits between "the app's tests, Debug, on the iPhone and then the iPad" and "the
+  app, archived unsigned for a device", with the id `review-tests`, and runs as the archive does:
+  after a red app step too, and not when the run is cancelled or the app step never ran. It runs
+  `-only-testing:` the three classes `DeckStreakTests/ReviewModelTests`,
+  `DeckStreakTests/ReviewSessionTests` and `DeckStreakUITests/ReviewFlowTests` over the app step's
+  derived data, into its own result bundle, and the app's step carries the three matching
+  `-skip-testing:` lines, so each review test runs once. SPEC-347 A14's order rule holds the
+  three app steps together between the harness's last step and the report. R20 is decided by the
+  class `TheReviewScreenIsTestedOnBothSimulators` in `scripts/tests/test_ci_workflows.py`.
+- **The fixture reaches the tests.** The step copies `review-fixture` from the run's artifact into
+  the runner's temporary directory and names it on its command line as
+  `TEST_RUNNER_DS_REVIEW_FIXTURE`, which the test process reads as `DS_REVIEW_FIXTURE`; each test
+  copies it into a fresh directory, and the UI tests launch the app with `-DSCollectionDirectory`
+  and that directory. A15 to A22's fence lines take SPEC-347's form; the step adds the fixture.
+- **Signing.** The step signs ad hoc on its command line (`CODE_SIGN_IDENTITY=-`), as the app's
+  step does (SPEC-347 section 10), in place of turning code signing off. No team and no signing
+  setting enters a file.
+- **The app's project.** `ios/app.yml` gains the `CardIsolation` package and the DeckStreak
+  target's dependency on it, as `ios/project.yml` names them for the harness.
+- **R7's parameter.** The function is `collection_directory(fallback, arguments)` (ADR-359 D6),
+  `collectionDirectory(fallback:arguments:)` in Swift; the app passes the directory `open()` used
+  before as `fallback`, and its own launch arguments.
+- **R17's doors.** The census requires exactly one `card` file and at least one `speech` file.
+  `AVFAudio` is a door beside `AVFoundation`, admitting `speech` files alone, because the player,
+  the audio session and the synthesizer are declared in that module, and a census blind to it
+  would be a hole. The planted view that imports `WebKit` is now refused as a file only a `card`
+  file may be.
+- **The codec grows by addition.** `QueuedCard` keeps `goodState` and its five-argument
+  initialiser, which the harness and an existing mutant read; the other states are added beside
+  it, and `state(for:)` reads each rating's own.
+- **A sound the player refuses.** When `AVAudioPlayer(data:)` refuses a clip's bytes, the review
+  screen shows one line naming the file, and the face's other clips play on. Swift holds no media
+  cap, no type table and no list of sound types: the core's rules decide which files reach a clip
+  (R3).
+- **The factory as #682 leaves it.** Its layers are L1 to L8 and L10 to L13, and it prefixes its
+  document policy ahead of the face's own doctype. The card view hands `CardFace.document` to it
+  unchanged, so a face's page carries both doctypes, the policy's first.
+- **The fragment.** This part's entry is `changelog.d/ios-review-screen-348.md`, a new file,
+  because part 1's `changelog.d/ios-review-348.md` was folded into `CHANGELOG.md` by the release.
+
+Files this part changes that section 4 does not name:
+
+- `ios/app.yml`: the `CardIsolation` package and the DeckStreak target's dependency on it
+- `scripts/tests/test_ci_workflows.py`: R20's class, the review step in SPEC-347 A14's order rule, and the app step's skips
+- `changelog.d/ios-review-screen-348.md`: part 2's entry
+
+Part 1's rows, which this part leaves as they are:
+
+- `crates/engine-core/src/table.rs`: unchanged in this part; delivered by part 1
+- `crates/engine-core/src/face.rs`: unchanged in this part; delivered by part 1
+- `crates/engine-core/src/media.rs`: unchanged in this part; delivered by part 1
+- `crates/engine-core/src/dispatch.rs`: unchanged in this part; delivered by part 1
+- `crates/engine-core/src/lib.rs`: unchanged in this part; delivered by part 1
+- `crates/engine-core/Cargo.toml`: unchanged in this part; delivered by part 1
+- `Cargo.toml`: unchanged in this part; delivered by part 1
+- `Cargo.lock`: unchanged in this part; delivered by part 1
+- `crates/engine-core/tests/review_pairs.rs`: unchanged in this part; delivered by part 1
+- `crates/engine-core/tests/face.rs`: unchanged in this part; delivered by part 1
+- `crates/engine-core/tests/table.rs`: unchanged in this part; delivered by part 1
+- `crates/ffi/src/allow_list.rs`: unchanged in this part; delivered by part 1
+- `crates/ffi/src/engine.rs`: unchanged in this part; delivered by part 1
+- `crates/ffi/src/face.rs`: unchanged in this part; delivered by part 1
+- `crates/ffi/src/voices.rs`: unchanged in this part; delivered by part 1
+- `crates/ffi/src/lib.rs`: unchanged in this part; delivered by part 1
+- `crates/ffi/examples/review-fixture.rs`: unchanged in this part; delivered by part 1
+- `crates/ffi/tests/review_pairs.rs`: unchanged in this part; delivered by part 1
+- `crates/ffi/tests/face.rs`: unchanged in this part; delivered by part 1
+- `crates/ffi/tests/voices.rs`: unchanged in this part; delivered by part 1
+- `crates/ffi/tests/seam.rs`: unchanged in this part; delivered by part 1
+- `crates/ffi/tests/fixture.rs`: unchanged in this part; delivered by part 1
+- `crates/ffi/tests/refusal_text.rs`: unchanged in this part; delivered by part 1
+- `crates/ffi/tests/support/review.rs`: unchanged in this part; delivered by part 1
+- `changelog.d/ios-review-348.md`: unchanged in this part; delivered by part 1 and folded into the changelog by the release
