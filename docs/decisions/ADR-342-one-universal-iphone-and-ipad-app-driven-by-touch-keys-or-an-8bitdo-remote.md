@@ -79,3 +79,17 @@ Proposed option: one universal app, three kinds of input.
 
 - SPEC-334 (rows 1.2, 1.4 and 1.5; R4, R15).
 - ADR-335 (the SwiftUI client), ADR-336 (the web client).
+
+## Amendment: the web maps two grades, Again and Good (SPEC-366)
+
+ADR-377 amends the Decision Outcome's mapping as the web client reads it. The web maps show
+answer, Again, Good, undo, bury, flag and replay audio: Hard and Easy leave its default map, its
+mapping screen and its messages, and a stored Hard or Easy binding is dropped when the mapping is
+read. Key `1` is Again and key `3` is Good; on the gamepad, the d-pad's left is Again and its right
+is Good; on the stick, left is Again and right is Good. Keys `2` and `4`, the d-pad's up and down
+and the stick's up and down fire nothing. The native client's list stands until the native half of
+the two-button work amends it. The rest of the record stands.
+
+- Two grades on the web, Again and Good: chosen because every surface that grades a card offers exactly two grades.
+- Keys `2` and `4` and the d-pad's up and down kept as aliases of the two grades: rejected because a Hard or Easy press would record a grade the learner did not press.
+- Amending this record only when the native client changes too: rejected because it would state four grades for the web while the web offers two.
