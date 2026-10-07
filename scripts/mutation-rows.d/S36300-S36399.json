@@ -144,6 +144,15 @@
         "\"no seal secret is configured: the sync seal release is off\"\n            );\n            return Err(CredentialError::Missing { id }.into());",
         "lib::wiring::tests::a_missing_seal_secret_turns_the_release_off",
         "an absent seal secret turns the release off and the API still starts; refused, a host with no seal secret would not start the API at all (SPEC-363 A17)"
+      ],
+      [
+        "S36317-THE-ROLE-COMPOSES-THE-SEAL-SECRET",
+        "daemon",
+        "src/role_api.rs",
+        "Some(secret) => state.with_seal(secret),",
+        "Some(_) => state,",
+        "seal_release_composed::an_owner_session_gets_the_release_when_the_role_holds_a_seal_secret",
+        "the API role composes the seal secret it reads; dropped, a host that holds the secret would still answer the release off, and no web client could keep its sync key sealed (SPEC-363 B14)"
       ]
     ]
   }
