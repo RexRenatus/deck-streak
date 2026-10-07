@@ -153,3 +153,22 @@ describe('where the sync key reaches', () => {
     ]);
   });
 });
+
+/** Logs how many `what` a census examined, and fails on an empty population, so a census that
+ * judged nothing never reads as a pass. */
+function examined<T>(what: string, items: T[]): T[] {
+  console.log(`examined ${items.length} ${what}`);
+  expect(items.length, `examined 0 ${what}: the population is empty, so nothing was judged`).toBeGreaterThan(0);
+  return items;
+}
+
+// Written after green: the census's own population, so B8's answer is over the modules it must judge.
+describe("the credential census's population", () => {
+  it('the census examines the credential module and every Worker module', () => {
+    const paths = examined('production modules under web/app/src', production(SOURCE)).map(({ path }) => path);
+    const judged = ['lib/engine/credential.ts', ...WORKER_MODULES, 'lib/sync/sign-out.ts'];
+    expect(judged.filter((module) => !paths.includes(join(SOURCE, module)))).toEqual([]);
+    // no test file is in the population, so a test's import of the credential module is never judged
+    expect(paths.filter((path) => /\.(test|spec)\./.test(path))).toEqual([]);
+  });
+});
