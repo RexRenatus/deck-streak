@@ -46,7 +46,9 @@ function kindOf(bytes: Uint8Array): number | null {
         const value = varint();
         if (tag >> 3 === 2) kind = value;
       } else if ((tag & 7) === 2) {
-        at += varint();
+        // the length is read first: `at += varint()` would add it to the offset before the read
+        const length = varint();
+        at += length;
         if (at > bytes.length) throw new RangeError('truncated');
       } else {
         throw new RangeError('wire type');

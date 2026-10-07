@@ -4,9 +4,7 @@
 // every decision: what a login stores, whether a held key may be sent, what a sync's answer means
 // and where a removal moves the generation. Only the Worker's modules import it (R15).
 import { admitsOrigin } from './protocol';
-
-/** What the credential operations answer: a status word, never a value (R15). */
-export type StatusWord = 'absent' | 'sealed' | 'held' | 'needs-sign-in' | 'offline';
+import type { StatusWord } from './protocol';
 
 /** The browser's database of the sealed record, its one object store, and the channel every
  * Worker of the origin hears a forget on. */
@@ -20,7 +18,8 @@ export const RELEASE_ROUTE = '/api/sync/seal-key';
 /** The first field of every record's additional data. */
 export const LABEL = 'deck-streak sync credential v1';
 
-/** The core's answer numbers for a sync's outcome, as `credential_classify` gives them. */
+/** The core's number for a refused sync, as `credential_classify` gives it: a record that does not
+ * open under its released key is refused (ADR-374 D11). */
 const REFUSED = 1;
 
 /** PR 1's five exports, as `wasm-bindgen` writes them: each u64 a bigint. */
@@ -201,41 +200,51 @@ export class CredentialStore {
     const at = engine.credential_on_obtained(started, started) ?? started;
     const iv = this.#deps.crypto.getRandomValues(new Uint8Array(12));
     const ciphertext = await this.#deps.crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv },
+      { name: 'AES-GCM', iv, additionalData: this.#bound(user, at) },
       key,
       new TextEncoder().encode(hostKey)
     );
-    void at;
     const kept = await transact(database, ({ generation }, store) => {
-      const kept = generation + 1n;
+      const kept = engine.credential_on_obtained(started, generation);
+      if (kept === undefined) return undefined;
       store.put(kept, 'generation');
       store.put({ iv, ciphertext, seal, user } satisfies Sealed, 'sealed');
       return kept;
     });
-    this.#held = { generation: kept, key: hostKey };
+    if (kept !== undefined) this.#held = { generation: kept, key: hostKey };
     return this.status();
   }
 
   /** The key a sync request to `endpoint` carries, or the status word of a store that sends none.
    * The endpoint is the Worker's own origin's sync route, or this throws before anything is sent. */
   async forSend(endpoint: string): Promise<Sendable | StatusWord> {
-    void endpoint;
+    if (endpoint !== this.#endpoint) throw new Error(`the sync key goes only to ${this.#endpoint}`);
     const { engine, database } = await this.#ready();
     const held = this.#held;
-    if (held !== null) return { generation: held.generation, key: held.key };
+    if (held !== null) {
+      const allowed = await transact(database, ({ generation, sealed }) =>
+        engine.credential_may_send(held.generation, generation, sealed !== undefined)
+      );
+      if (allowed) return { generation: held.generation, key: held.key };
+      this.#held = null;
+      return this.status();
+    }
     const { generation, sealed } = await transact(database, (stored) => stored);
     if (sealed === undefined) return 'absent';
     const key = await this.#release(sealed.seal);
-    if (key === 'needs-sign-in') {
-      await transact(database, (stored, store) => this.#remove(engine, stored, store));
-    }
     if (typeof key === 'string') return key;
     try {
-      const opened = await this.#deps.crypto.subtle.decrypt({ name: 'AES-GCM', iv: sealed.iv }, key, sealed.ciphertext);
+      const opened = await this.#deps.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: sealed.iv, additionalData: this.#bound(sealed.user, generation) },
+        key,
+        sealed.ciphertext
+      );
       this.#held = { generation, key: new TextDecoder().decode(opened) };
     } catch {
-      void REFUSED;
-      return 'sealed';
+      await transact(database, (stored, store) => {
+        if (engine.credential_on_outcome(generation, stored.generation, REFUSED)) this.#remove(engine, stored, store);
+      });
+      return this.status();
     }
     return this.forSend(endpoint);
   }
@@ -246,9 +255,8 @@ export class CredentialStore {
     const { engine, database } = await this.#ready();
     const outcome = engine.credential_classify(error);
     await transact(database, (stored, store) => {
-      if (outcome !== 0) this.#remove(engine, stored, store);
+      if (engine.credential_on_outcome(sent, stored.generation, outcome)) this.#remove(engine, stored, store);
     });
-    void sent;
     return this.status();
   }
 
@@ -268,7 +276,7 @@ export class CredentialStore {
     const held = this.#held;
     return transact(database, ({ generation, sealed }) => {
       if (held !== null && engine.credential_may_send(held.generation, generation, sealed !== undefined)) {
-        return held.key as StatusWord;
+        return 'held';
       }
       return sealed === undefined ? 'absent' : 'sealed';
     });
