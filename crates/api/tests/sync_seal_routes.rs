@@ -602,9 +602,20 @@ async fn no_seal_secret_id_or_key_reaches_a_record() {
         ],
     );
     examined("captured lines", texts.clone());
+    // The state's debug line is a record too: it names the seal port it holds and no byte of it.
+    let state_line = format!(
+        "{:?}",
+        ApiState::new(Readiness::new()).with_seal(
+            SealSecret::new(secret_text().as_bytes()).expect("the secret is long enough"),
+        )
+    );
+    assert!(
+        state_line.ends_with(", seal: true }"),
+        "the state names the seal port it holds: {state_line}"
+    );
     for (what, secret) in &secrets {
         assert!(!secret.is_empty(), "{what} is known to the test");
-        for text in &texts {
+        for text in texts.iter().chain([&state_line]) {
             assert!(
                 !text.contains(secret.as_str()),
                 "{what} reaches a record: {text}"

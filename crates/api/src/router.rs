@@ -96,18 +96,20 @@ pub struct ApiState {
 
 impl std::fmt::Debug for ApiState {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter
-            .debug_struct("ApiState")
-            .field("readiness", &self.readiness)
+        let mut line = formatter.debug_struct("ApiState");
+        line.field("readiness", &self.readiness)
             .field("owner", &self.owner)
             .field("instruments", &self.instruments.is_some())
             .field("law_tiers", &self.law_tiers.is_some())
             .field("drills", &self.drills.is_some())
             .field("courses", &self.courses.is_some())
             .field("inbox", &self.inbox.is_some())
-            .field("linking", &self.linking.is_some())
-            .field("seal", &self.seal.is_some())
-            .finish()
+            .field("linking", &self.linking.is_some());
+        // The seal port is named only while it is held: off is the release's default (SPEC-363 R5).
+        if self.seal.is_some() {
+            line.field("seal", &true);
+        }
+        line.finish()
     }
 }
 
