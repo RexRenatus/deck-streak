@@ -249,15 +249,15 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
         cases = [
             (0, 1),
             (1, 1),
-            (40, 1),
-            (41, 2),
-            (80, 2),
-            (81, 3),
-            (320, 8),
-            (321, 9),
-            (840, 21),
-            (1280, 32),
-            (1281, 32),
+            (20, 1),
+            (21, 2),
+            (40, 2),
+            (41, 3),
+            (160, 8),
+            (161, 9),
+            (420, 21),
+            (640, 32),
+            (641, 32),
             (2000, 32),
         ]
         for count, shards in examined("listing sizes", cases):
@@ -265,7 +265,7 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
                 {"name": f"scripts/guard.py:{n}:1: replace + with - in guard", "file": SCRIPT}
                 for n in range(1, count + 1)
             ]
-            expected = min(32, max(1, math.ceil(count / 40)))
+            expected = min(32, max(1, math.ceil(count / 20)))
             self.assertEqual(expected, shards, count)
             _done, written = shard_the_plan(fixture, entries)
             plan = json.loads((fixture.out / "plan.json").read_text(encoding="utf-8"))
@@ -447,7 +447,7 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
         self.assertRegex(named.stdout, rf"(?m)^examined {killed}$")
 
     def test_a_missing_or_partial_python_shard_is_void(self):
-        text = "".join(f"def f{i}(x):\n    return x + {i}\n" for i in range(27))
+        text = "".join(f"def f{i}(x):\n    return x + {i}\n" for i in range(17))
         fixture = changed_fixture(self, head_text=text)
         shard_the_plan(fixture, listed(SCRIPT, text))
         entries = [file_entry(SCRIPT, text, {}, slot=(shard, 3)) for shard in range(3)]
@@ -456,7 +456,7 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
             write_shard(whole, shard, report_of([entries[shard]], shard=f"{shard}/3"))
         green = judged(fixture, "scripts", whole)
         self.assertEqual(green.returncode, 0, green.stdout + green.stderr)
-        self.assertRegex(green.stdout, r"(?m)^examined 81$")
+        self.assertRegex(green.stdout, r"(?m)^examined 51$")
         cases = {
             "last": (2, None, "no report"),
             "first": (0, None, "no report"),

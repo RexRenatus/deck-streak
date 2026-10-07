@@ -5,8 +5,8 @@
         "S12901-A-PROJECTION-PAST-THE-LIMIT-IS-REFUSED-NOT-CAPPED",
         "scripts/mutation-verdict.py",
         "    return next(fitting, None)\n",
-        "    return next(fitting, MAX_SHARDS)\n",
-        "a listing that needs more shards than the matrix holds gives no count, so the sizing refuses it with its projection and never caps it (SPEC-129 R3)",
+        "    return next(fitting, ceiling)\n",
+        "a listing that needs more legs than the run's ceiling gives no count, so the sizing refuses it with its projection and never caps it (SPEC-129 R3, SPEC-362 R3)",
         "test_dispatch_shards.TheDispatchIsSizedFromItsListing.test_a_projection_past_the_limit_is_refused_with_its_projection_never_capped"
       ],
       [
@@ -20,57 +20,57 @@
       [
         "S12903-THE-WHOLE-TREE-KEEPS-THIRTY-TWO-SHARDS",
         "scripts/mutation-verdict.py",
-        "WHOLE_SHARDS = 32\n",
-        "WHOLE_SHARDS = 31\n",
-        "a scheduled run and a dispatch with no package are sized to the 32 shards the weekly battery has always run (SPEC-129 R4)",
-        "test_dispatch_shards.TheWholeTreeKeepsThirtyTwo.test_no_package_is_thirty_two_shards_whatever_the_listing"
+        "    ceiling = LEG_CEILING[\"battery\"]\n",
+        "    ceiling = LEG_CEILING[\"ci\"]\n",
+        "a scheduled run and a dispatch with no package are sized from the whole workspace's listing at the battery run's ceiling, never the pull request run's (SPEC-129 R4, SPEC-362 R11)",
+        "test_dispatch_shards.TheReleaseFitsOneRun.test_the_whole_tree_is_sized_from_its_listing"
       ],
       [
         "S12904-THE-RUST-LEG-KEEPS-THE-GATES-TIMEOUT",
         ".github/workflows/mutation-weekly.yml",
-        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 1200 --build-timeout 600",
-        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 2400 --build-timeout 600",
-        "the rust leg's per-mutant timeout is the 1200 seconds of the owner's signed ruling (SPEC-327), and a raised timeout is a weakened gate (SPEC-129 R5)",
+        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 2300 --build-timeout 600",
+        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 4400 --build-timeout 600",
+        "the rust leg's per-mutant timeout is the 2300 seconds of the owner's signed ruling (SPEC-327, SPEC-362 R6), and a raised timeout is a weakened gate (SPEC-129 R5)",
         "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
       ],
       [
         "S12905-THE-RUST-LEG-KEEPS-THE-GATES-BUILD-TIMEOUT",
         ".github/workflows/mutation-weekly.yml",
-        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 1200 --build-timeout 600",
-        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 1200 --build-timeout 1200",
-        "the rust leg's build timeout is the 600 seconds the 32-leg dispatch always ran: a raised build timeout is a weakened gate (SPEC-129 R5)",
+        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 2300 --build-timeout 600",
+        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 2300 --build-timeout 1200",
+        "the rust leg's build timeout is the 600 seconds the sweep always ran: a raised build timeout is a weakened gate (SPEC-129 R5)",
         "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
       ],
       [
         "S12906-THE-RUST-LEG-BUILD-TIMEOUT-IS-A-WHOLE-VALUE",
         ".github/workflows/mutation-weekly.yml",
-        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 1200 --build-timeout 600",
-        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 1200 --build-timeout 6000",
-        "a build timeout raised by an appended digit is a weakened gate, not the 600 seconds the 32-leg dispatch always ran (SPEC-129 R5)",
+        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 2300 --build-timeout 600",
+        "--package=\"$PACKAGE\" --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 2300 --build-timeout 6000",
+        "a build timeout raised by an appended digit is a weakened gate, not the 600 seconds the sweep always ran (SPEC-129 R5)",
         "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
       ],
       [
         "S12907-THE-WHOLE-TREE-LEG-KEEPS-THE-GATES-TIMEOUT",
         ".github/workflows/mutation-weekly.yml",
-        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 1200 --build-timeout 600",
-        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 2400 --build-timeout 600",
-        "the rust leg's per-mutant timeout is the 1200 seconds of the owner's signed ruling (SPEC-327), and a raised timeout is a weakened gate, in the branch with no package, which the scheduled sweep runs (SPEC-129 R5, section 8)",
+        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 2300 --build-timeout 600",
+        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 4400 --build-timeout 600",
+        "the rust leg's per-mutant timeout is the 2300 seconds of the owner's signed ruling (SPEC-327, SPEC-362 R6), and a raised timeout is a weakened gate, in the branch with no package, which the scheduled sweep runs (SPEC-129 R5, section 8)",
         "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
       ],
       [
         "S12908-THE-WHOLE-TREE-LEG-KEEPS-THE-GATES-BUILD-TIMEOUT",
         ".github/workflows/mutation-weekly.yml",
-        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 1200 --build-timeout 600",
-        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 1200 --build-timeout 1200",
-        "the rust leg's build timeout is the 600 seconds the 32-leg dispatch always ran: a raised build timeout is a weakened gate, in the branch with no package, which the scheduled sweep runs (SPEC-129 R5, section 8)",
+        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 2300 --build-timeout 600",
+        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 2300 --build-timeout 1200",
+        "the rust leg's build timeout is the 600 seconds the sweep always ran: a raised build timeout is a weakened gate, in the branch with no package, which the scheduled sweep runs (SPEC-129 R5, section 8)",
         "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
       ],
       [
         "S12909-THE-WHOLE-TREE-LEG-BUILD-TIMEOUT-IS-A-WHOLE-VALUE",
         ".github/workflows/mutation-weekly.yml",
-        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 1200 --build-timeout 600",
-        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 1200 --build-timeout 6000",
-        "a build timeout raised by an appended digit is a weakened gate, not the 600 seconds the 32-leg dispatch always ran, in the branch with no package, which the scheduled sweep runs (SPEC-129 R5, section 8)",
+        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 2300 --build-timeout 600",
+        "--in-place --sharding round-robin --shard \"$SHARD/$SHARDS\" --timeout 2300 --build-timeout 6000",
+        "a build timeout raised by an appended digit is a weakened gate, not the 600 seconds the sweep always ran, in the branch with no package, which the scheduled sweep runs (SPEC-129 R5, section 8)",
         "test_dispatch_shards.EveryMutationCommandKeepsTheGatesBounds.test_every_cargo_mutants_command_carries_the_gates_own_bounds"
       ],
       [

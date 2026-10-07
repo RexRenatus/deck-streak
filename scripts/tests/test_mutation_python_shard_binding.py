@@ -6,7 +6,7 @@ it sits in (`mutation-python-shard-<k>` holds `k/<count>`), and the mutants it e
 plan's listing for that shard, as a multiset. Any other layout is VOID, naming the shard.
 
 The population is generated from a plan's shards, never listed by hand: for each of three plans
-(2, 3 and 4 shards, sized by the runner's own ceiling of listed over 40), every shard's report is
+(2, 3 and 4 shards, sized by the runner's own ceiling of listed over 20), every shard's report is
 laid out in every wrong way the class holds, and the correct layout is the control. No mutant is
 run here: each report is written in the runner's own schema, with the real coordinates its
 `list_source` gives.
@@ -43,7 +43,7 @@ from test_mutation_python_verdict import (
 )
 from test_mutation_verdict import Fixture
 
-#: The plans' shard counts, each reached by listing that many forty-mutant shards' worth.
+#: The plans' shard counts, each reached by listing that many twenty-mutant shards' worth.
 COUNTS = (2, 3, 4)
 #: The shard field's malformed spellings, as a function of the slot and the plan's count.
 MALFORMED = (
@@ -109,7 +109,7 @@ def run_controls(chosen):
 
 def population_text(count):
     """A script whose listing has just enough mutants for `count` shards: three a function."""
-    functions = -(-(40 * (count - 1) + 1) // 3)
+    functions = -(-(20 * (count - 1) + 1) // 3)
     return "".join(f"def f{i}(x):\n    return x + {i}\n" for i in range(functions))
 
 
@@ -280,6 +280,17 @@ def listing_members(plan):
         slots = plan.correct()
         slots[k] = None
         yield "missing", f"shard {k}'s report is missing", slots, {k}
+
+
+class ThePythonMatrixIsSizedToTheHostedJob(unittest.TestCase):
+    """SPEC-362 R14: at most twenty listed mutants a shard, clamped to 1 to 32 shards. The numbers
+    are literals here, so a mutant of the rule's constant changes what it is held against."""
+
+    def test_the_matrix_takes_twenty_listed_mutants_a_shard_clamped_to_thirty_two(self):
+        program = verdict_program()
+        for listed_count, shards in ((20, 1), (21, 2), (68, 4), (32 * 20 + 1, 32)):
+            sized = program.python_shards([{"name": f"m{i}"} for i in range(listed_count)])
+            self.assertEqual(sized["count"], shards, f"{listed_count} listed")
 
 
 class TheReportIsBoundToItsSlotAndItsListing(unittest.TestCase):

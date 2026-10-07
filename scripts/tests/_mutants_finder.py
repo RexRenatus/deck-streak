@@ -10,7 +10,7 @@ attribute, so what one importer passes cannot reach another in the same process.
 import re
 import string
 
-BOUNDS = "--timeout 1200 --build-timeout 600"
+BOUNDS = "--timeout 2300 --build-timeout 600"
 
 
 def no_wrapper(words, program):

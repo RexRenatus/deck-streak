@@ -367,8 +367,10 @@ jobs:
   #
   # The plan: the event's case, the diff, and, when Rust changed, the shards. cargo-mutants lists
   # the diff's mutants (building nothing) and the plan takes the fewest round-robin shards whose
-  # slowest is projected within an hour, half a shard's timeout, a progression mutant and its
-  # shard's baseline each charged the settle census's 788 s (SPEC-327).
+  # slowest is projected within three hours, half a shard's timeout, a progression mutant and its
+  # shard's baseline each charged the settle census's 1521 s (SPEC-327). The shards never pass the
+  # run's ceiling, 256 jobs less every other job the run can start: a diff that needs more is
+  # refused whole, never capped, and every plan prints its legs against that ceiling (SPEC-362).
   mutation-plan:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -412,13 +414,13 @@ jobs:
           fallback: none
       - name: the diff's mutants, as cargo-mutants itself lists them
         if: ${{ steps.plan.outputs.rust == 'true' }}
-        run: cargo mutants --no-shuffle --list --json --in-diff "$RUNNER_TEMP/mutation/git.diff" --timeout 1200 --build-timeout 600 > "$RUNNER_TEMP/mutation/listed.json"
+        run: cargo mutants --no-shuffle --list --json --in-diff "$RUNNER_TEMP/mutation/git.diff" --timeout 2300 --build-timeout 600 > "$RUNNER_TEMP/mutation/listed.json"
       # Every equivalence record is bound against the whole tree's mutants, not the diff's alone, so
       # a change that moves or rewrites a recorded mutant's code is judged wherever it lands
       # (SPEC-057 R8). Like the diff's, this listing builds nothing.
       - name: the whole tree's mutants, which every record is bound against
         if: ${{ steps.plan.outputs.rust == 'true' }}
-        run: cargo mutants --no-shuffle --list --json --timeout 1200 --build-timeout 600 > "$RUNNER_TEMP/mutation/whole.json"
+        run: cargo mutants --no-shuffle --list --json --timeout 2300 --build-timeout 600 > "$RUNNER_TEMP/mutation/whole.json"
       # The repository's own Python (SPEC-087, ADR-073): the runner lists the diff's mutants and the
       # whole population's, running no test, and the plan sizes the Python matrix from the first.
       - name: the diff's Python mutants, as the runner itself lists them
@@ -444,7 +446,7 @@ jobs:
     needs: [mutation-plan]
     if: ${{ needs.mutation-plan.outputs.listed != '0' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
@@ -509,7 +511,7 @@ jobs:
           out="$RUNNER_TEMP/shards/mutation-rust-shard-$SHARD"
           mkdir -p "$out"
           rc=0
-          python3 scripts/memory_scope.py --report "$out" -- cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 1200 --build-timeout 600 --output "$out" || rc=$?
+          python3 scripts/memory_scope.py --report "$out" -- cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2300 --build-timeout 600 --output "$out" || rc=$?
           echo "$rc" > "$out/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
       - name: keep the shard's report

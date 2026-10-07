@@ -225,14 +225,14 @@ class TheUntouchedShard(Scenes):
             mutation_lines(done),
             [
                 "crates/fix/src/lib.rs: 1 changed code line(s)",
-                "cargo-mutants examined 51 (caught 51, missed 0, timeout 0), unviable 0, "
-                "of 51 on the diff",
+                "cargo-mutants examined 137 (caught 137, missed 0, timeout 0), unviable 0, "
+                "of 137 on the diff",
                 "missed 0: equivalent 0, unexplained 0",
-                "examined 51 by cargo-mutants and 0 by rows",
+                "examined 137 by cargo-mutants and 0 by rows",
                 "verdict: ok",
             ],
         )
-        self.assertEqual(done.stdout.splitlines()[-1], "examined 51")
+        self.assertEqual(done.stdout.splitlines()[-1], "examined 137")
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
 
 
@@ -259,12 +259,12 @@ class TheNamedKill(Scenes):
         self.assertIn(f"mutation-rust-shard-0: MISSED {missed}", found)
         self.assertIn("verdict: FAIL: 2 finding(s)", found)
         self.assertIn(
-            "cargo-mutants examined 51 (caught 50, missed 1, timeout 0), unviable 0, "
-            "of 51 on the diff",
+            "cargo-mutants examined 137 (caught 136, missed 1, timeout 0), unviable 0, "
+            "of 137 on the diff",
             found,
         )
-        self.assertIn("examined 50 by cargo-mutants and 0 by rows", found)
-        self.assertEqual(done.stdout.splitlines()[-1], "examined 50")
+        self.assertIn("examined 136 by cargo-mutants and 0 by rows", found)
+        self.assertEqual(done.stdout.splitlines()[-1], "examined 136")
         # The control: the same shard whose record counts no kill reads its log for nothing.
         quiet = self.judge(
             self.write_all(
@@ -320,7 +320,7 @@ class TheAttribution(Scenes):
                     self.assertIn(name, found[0].group(4))
                 # No mutant is scored: nothing is named, and every mutant stands as counted.
                 self.assertFalse([x for x in mutation_lines(done) if f"MEMORY-CAP {first}" in x])
-                self.assertEqual(done.stdout.splitlines()[-1], "examined 51")
+                self.assertEqual(done.stdout.splitlines()[-1], "examined 137")
 
     def test_a_status_line_is_placed_or_refused_as_the_verdict_reads_it(self):
         self.world()
@@ -598,11 +598,11 @@ class TheWholeValues(Scenes):
                     [f"mutation-rust-shard-0: MEMORY-CAP {stopped}: {CAP_TEXT}"],
                     done.stdout,
                 )
-                self.assertIn("examined 50 by cargo-mutants and 0 by rows", found)
+                self.assertIn("examined 136 by cargo-mutants and 0 by rows", found)
                 missed = int(summary == "MissedMutant")
                 self.assertIn(f"missed {missed}: equivalent 0, unexplained {missed}", found)
                 self.assertIn("verdict: FAIL: 1 finding(s)", found)
-                self.assertEqual(done.stdout.splitlines()[-1], "examined 50")
+                self.assertEqual(done.stdout.splitlines()[-1], "examined 136")
 
     def test_a_miss_the_report_counts_and_never_lists_is_still_unnamed_beside_a_stopped_one(self):
         self.world()
