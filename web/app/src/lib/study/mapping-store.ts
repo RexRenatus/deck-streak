@@ -19,9 +19,7 @@ export type Mode = 'gamepad' | 'keyboard';
 export const INTENTS: readonly Intent[] = [
   'confirm',
   'again',
-  'hard',
   'good',
-  'easy',
   'undo',
   'bury',
   'flag',
@@ -107,7 +105,7 @@ export class MappingStore {
     this.#write({ ...this.#stored, gamepad: rebound(this.mapping.buttons, intent, button) });
   }
 
-  /** Turns the left stick's four grades on or off; on is the default, so it is not stored. */
+  /** Turns the left stick's two grades on or off; on is the default, so it is not stored. */
   setStick(on: boolean): void {
     this.#write({ ...this.#stored, stick: on ? undefined : false });
   }

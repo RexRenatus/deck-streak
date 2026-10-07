@@ -11,9 +11,7 @@
 export type Intent =
   | 'confirm'
   | 'again'
-  | 'hard'
   | 'good'
-  | 'easy'
   | 'undo'
   | 'bury'
   | 'flag'
@@ -26,7 +24,7 @@ export type Action = 'show-answer' | Exclude<Intent, 'confirm'>;
 export type Side = 'question' | 'answer';
 
 /** The grades, each of which ends the card and returns the review to the question side. */
-const GRADES: readonly Action[] = ['again', 'hard', 'good', 'easy'];
+const GRADES: readonly Action[] = ['again', 'good'];
 
 /** The action `intent` fires on `side`, or `null` when it fires nothing there. */
 export function resolve(intent: Intent, side: Side): Action | null {
