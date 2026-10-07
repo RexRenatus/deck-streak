@@ -9,8 +9,12 @@
 
 use std::fmt;
 
+use hmac::{Hmac, KeyInit, Mac};
 use serde_json::Value;
+use sha2::Sha256;
 use webauthn_rs::prelude::Base64UrlSafeData;
+
+use crate::passkeys::base64url;
 
 /// The fixed label the sealing key's HMAC reads before the seal id, so a key made under the seal
 /// secret for any other purpose can never equal a sealing key.
@@ -28,9 +32,12 @@ pub enum SealError {
     TooShort,
 }
 
-/// The service's seal secret. Its `Debug` prints `SealSecret(..)`.
+type HmacSha256 = Hmac<Sha256>;
+
+/// The service's seal secret, held only as the HMAC keyed with it. Its `Debug` prints
+/// `SealSecret(..)`.
 #[derive(Clone)]
-pub struct SealSecret(Vec<u8>);
+pub struct SealSecret(HmacSha256);
 
 impl SealSecret {
     /// The seal secret `bytes`.
@@ -39,14 +46,24 @@ impl SealSecret {
     ///
     /// [`SealError::TooShort`] when `bytes` holds fewer than [`MIN_SECRET_BYTES`].
     pub fn new(bytes: &[u8]) -> Result<Self, SealError> {
-        Ok(Self(bytes.to_vec()))
+        if bytes.len() < MIN_SECRET_BYTES {
+            return Err(SealError::TooShort);
+        }
+        // RFC 2104 takes a key of any length, hashing one longer than a block, so HMAC refuses no
+        // key here; the one refusal its keying could give is a length, and the length is this one.
+        HmacSha256::new_from_slice(bytes)
+            .map(Self)
+            .map_err(|_| SealError::TooShort)
     }
 
-    /// The sealing key for `id`.
+    /// The sealing key for `id`: the HMAC-SHA-256 under the seal secret over [`SEAL_LABEL`] then
+    /// the id's 16 bytes.
     #[must_use]
     pub fn key_for(&self, id: &SealId) -> SealKey {
-        let _ = (&self.0, id.0);
-        SealKey([0; 32])
+        let mut mac = self.0.clone();
+        mac.update(SEAL_LABEL);
+        mac.update(&id.0);
+        SealKey(mac.finalize().into_bytes().into())
     }
 }
 
@@ -63,16 +80,22 @@ pub struct SealId([u8; SEAL_ID_BYTES]);
 impl SealId {
     /// The seal id `text` spells, or `None` unless it is exactly 22 unpadded base64url characters
     /// that decode to [`SEAL_ID_BYTES`] bytes.
+    ///
+    /// The decoder webauthn-rs carries also reads padding and the standard alphabet, so the id is
+    /// written back and must spell `text` again: only the one canonical spelling of 16 bytes, 22
+    /// characters whose last carries no bit past the 128th, parses.
     #[must_use]
     pub fn parse(text: &str) -> Option<Self> {
         let decoded = serde_json::from_value::<Base64UrlSafeData>(Value::String(text.to_owned()))
             .ok()
             .map(Vec::from)?;
-        let mut id = [0_u8; SEAL_ID_BYTES];
-        for (slot, byte) in id.iter_mut().zip(decoded) {
-            *slot = byte;
+        if decoded.len() == SEAL_ID_BYTES {
+            let mut id = [0_u8; SEAL_ID_BYTES];
+            id.copy_from_slice(&decoded);
+            (base64url(&id) == text).then_some(Self(id))
+        } else {
+            None
         }
-        Some(Self(id))
     }
 }
 
@@ -89,7 +112,7 @@ impl SealKey {
     /// The key as 43 unpadded base64url characters, the one form it leaves the service in.
     #[must_use]
     pub fn encoded(&self) -> String {
-        crate::passkeys::base64url(&self.0)
+        base64url(&self.0)
     }
 }
 
