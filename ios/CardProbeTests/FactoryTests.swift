@@ -73,30 +73,58 @@ final class FactoryTests: XCTestCase {
         let probe = try await Probe.make()
         let html = Planted.document(id: "factory", head: "", body: "<script>\(ranMarker)</script><p>a card</p>")
         let bridge = Recorder()
-        let on = try CardWebViewFactory.build(html: html, ruleList: probe.ruleList, switchedOn: true)
-        let off = try CardWebViewFactory.build(html: html, ruleList: probe.ruleList, switchedOn: false)
-        var rows: [(name: String, view: WKWebView, verdict: CardScripts.Verdict, runs: Bool)] = [
-            (name: "every control, the switch on", view: on, verdict: .run, runs: true),
-            (name: "every control, the switch off", view: off, verdict: .off(missing: []), runs: false),
+        // What a row's view is made from: every control with the switch set, or every control but
+        // one with the switch on.
+        enum Setting { case everyControl(switchedOn: Bool), without(CardLayer) }
+        // How a row's card is handed to its view: by the factory's load, with a base URL, or past
+        // the factory's load with none.
+        enum Load { case factory, baseURL, pastTheFactory }
+        // A row carries what to build, not a built view. Its view is built and its load started
+        // just before its mount, and torn down before the next row's view is built, so every
+        // row's wait measures its own load and no other view's start (ADR-372 D11).
+        typealias Row = (name: String, setting: Setting, load: Load, verdict: CardScripts.Verdict, runs: Bool)
+        func build(_ row: Row) throws -> WKWebView {
+            switch row.setting {
+            case .everyControl(switchedOn: let switchedOn):
+                // The factory builds and loads it, so its load is the factory's.
+                return try CardWebViewFactory.build(html: html, ruleList: probe.ruleList, switchedOn: switchedOn)
+            case .without(let control):
+                // L4, L7 and L12 are removed after the build, as a careless caller would: a named
+                // handler, a card handed over with a base URL, and a card handed over past the
+                // factory's load, so with no policy. Every other control is left out of the build.
+                let leftOut: Set<CardLayer> = [.L4, .L7, .L12].contains(control) ? [] : [control]
+                let layers = Set(CardLayer.allCases).subtracting(leftOut)
+                let view = CardWebViewFactory.make(
+                    layers: layers, ruleList: layers.contains(.L3) ? probe.ruleList : nil, switchedOn: true)
+                if control == .L4 {
+                    view.configuration.userContentController.add(bridge, name: "bridge")
+                }
+                switch row.load {
+                case .baseURL:
+                    view.loadHTMLString(html, baseURL: URL(string: "https://card.invalid/"))
+                case .pastTheFactory:
+                    view.loadHTMLString(html, baseURL: nil)
+                case .factory:
+                    CardWebViewFactory.load(html, into: view)
+                }
+                return view
+            }
+        }
+        var rows: [Row] = [
+            (name: "every control, the switch on", setting: .everyControl(switchedOn: true), load: .factory,
+             verdict: .run, runs: true),
+            (name: "every control, the switch off", setting: .everyControl(switchedOn: false), load: .factory,
+             verdict: .off(missing: []), runs: false),
         ]
         for control in examined("required controls removed in turn", CONTROLS) {
-            // L4, L7 and L12 are removed after the build, as a careless caller would: a named
-            // handler, a card handed over with a base URL, and a card handed over past the
-            // factory's load, so with no policy. Every other control is left out of the build.
-            let leftOut: Set<CardLayer> = [.L4, .L7, .L12].contains(control) ? [] : [control]
-            let layers = Set(CardLayer.allCases).subtracting(leftOut)
-            let view = CardWebViewFactory.make(
-                layers: layers, ruleList: layers.contains(.L3) ? probe.ruleList : nil, switchedOn: true)
-            if control == .L4 {
-                view.configuration.userContentController.add(bridge, name: "bridge")
-            }
+            let load: Load
             switch control {
             case .L7:
-                view.loadHTMLString(html, baseURL: URL(string: "https://card.invalid/"))
+                load = .baseURL
             case .L12:
-                view.loadHTMLString(html, baseURL: nil)
+                load = .pastTheFactory
             default:
-                CardWebViewFactory.load(html, into: view)
+                load = .factory
             }
             var missing: Set<CardLayer> = [control]
             var name = "without \(control.rawValue), the switch on"
@@ -104,16 +132,17 @@ final class FactoryTests: XCTestCase {
                 missing.formUnion(also.controls)
                 name += ", which also takes \(also.controls.map(\.rawValue).sorted()): \(also.why)"
             }
-            rows.append((name: name, view: view, verdict: .off(missing: missing), runs: false))
+            rows.append((name: name, setting: .without(control), load: load, verdict: .off(missing: missing), runs: false))
         }
         for row in rows {
-            Probe.mount(row.view)
-            let took = await Probe.loadTime(row.view)
+            let view = try build(row)
+            Probe.mount(view)
+            let took = await Probe.loadTime(view)
             let loaded = took != nil
-            let ran = await Probe.evaluate(row.view, "String(document.documentElement.dataset.ran === '1')") == "true"
-            let verdict = CardWebViewFactory.verdict(of: row.view)
-            row.view.configuration.userContentController.removeAllScriptMessageHandlers()
-            row.view.removeFromSuperview()
+            let ran = await Probe.evaluate(view, "String(document.documentElement.dataset.ran === '1')") == "true"
+            let verdict = CardWebViewFactory.verdict(of: view)
+            view.configuration.userContentController.removeAllScriptMessageHandlers()
+            view.removeFromSuperview()
             let tookText = took.map { String(format: "%.2f", $0) } ?? "none"
             print("factory \(row.name): loaded=\(loaded) took=\(tookText) ran=\(ran) verdict=\(verdict.map { String(describing: $0) } ?? "none")")
             // The behaviour first: the card's script runs exactly when the switch is on and every
