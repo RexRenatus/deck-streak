@@ -47,6 +47,8 @@ export interface SessionDeps {
   /** The first bytes of each file the core asked for, as the media directory holds them; a file it
    * lacks is left out. A Worker with no media directory leaves this out (SPEC-350 R14). */
   media?(wanted: readonly MediaAsk[]): Promise<MediaFile[]>;
+  /** The Worker's sync credential store, which the two credential operations reach (SPEC-363 R15). */
+  credential?: { status(): Promise<string>; forget(): Promise<string> };
 }
 
 /** A media file the Worker read for the core: its name and its first bytes. */
@@ -117,6 +119,9 @@ export class Session {
     if (!('request' in parsed)) return refuse(parsed.id, 'bad-request', parsed.message);
     const request = parsed.request;
     if (this.#ended !== null) return refuse(request.id, this.#ended.code, this.#ended.why);
+    if ((await this.#deps.credential?.status()) === 'sealed') {
+      return refuse(request.id, 'storage-refused', 'the sync key is sealed');
+    }
     if (request.op === 'open') return this.#open(request.id, request.languages ?? []);
     if (!this.#opened) return refuse(request.id, 'not-open', `${request.op} before open`);
     if (request.op === 'faces') return this.#faces(request.id, request.card);
