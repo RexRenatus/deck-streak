@@ -26,7 +26,7 @@ const REFUSED = 1;
 export interface CredentialEngine {
   credential_on_obtained(started: bigint, current: bigint): bigint | undefined;
   credential_may_send(held: bigint, current: bigint, sealed: boolean): boolean;
-  credential_classify(error?: Uint8Array | null): number;
+  credential_classify(error?: Uint8Array): number;
   credential_on_outcome(sent: bigint, current: bigint, outcome: number): boolean;
   credential_on_removed(current: bigint): bigint | undefined;
 }
@@ -60,7 +60,7 @@ export interface Sendable {
 /** The sealed record: the nonce, the sealed host key, the seal id its key is released for, and the
  * user it was obtained for. */
 interface Sealed {
-  iv: Uint8Array;
+  iv: Uint8Array<ArrayBuffer>;
   ciphertext: ArrayBuffer;
   seal: string;
   user: string;
