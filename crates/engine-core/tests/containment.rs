@@ -49,8 +49,9 @@ const ENGINE_NAMES: [&str; 22] = [
     "init_backend",
 ];
 
-/// The gesture's names: its type, its one constructor and the dispatcher's exempt entry.
-const GESTURE_NAMES: [&str; 3] = ["OwnerGesture", "from_tap", "run_exempt"];
+/// The gesture's names: its type, its one constructor, the dispatcher's exempt entry and the
+/// full-sync choice's one-way door (SPEC-364 R3).
+const GESTURE_NAMES: [&str; 4] = ["OwnerGesture", "from_tap", "run_exempt", "run_one_way"];
 
 /// The two UI adapters' exempt entries: outside the core, the only files that may name the gesture.
 const ENTRY_FILES: [&str; 2] = ["crates/ffi/src/engine.rs", "crates/web-engine/src/wasm.rs"];

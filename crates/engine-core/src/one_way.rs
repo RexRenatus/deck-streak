@@ -50,10 +50,9 @@ pub enum Unwritten {
 /// The engine's one-way request for `write`, built by the core alone: the confirmed direction,
 /// the checked `auth`, and no media (SPEC-364 R3).
 pub fn request(write: &Write, auth: &SyncAuth) -> FullUploadOrDownloadRequest {
-    let _ = write.direction();
     FullUploadOrDownloadRequest {
         auth: Some(auth.clone()),
-        upload: true,
+        upload: write.direction() == Direction::Upload,
         server_usn: None,
     }
 }
@@ -63,7 +62,9 @@ pub fn request(write: &Write, auth: &SyncAuth) -> FullUploadOrDownloadRequest {
 ///
 /// # Errors
 ///
-/// A [`Reason`] when the endpoint rule, the engine or a read refuses.
+/// [`Reason::OpenCollection`] when `copy` names the open collection, [`Reason::HoldsRows`] when
+/// its collection already holds a row, and another [`Reason`] when the endpoint rule, the engine
+/// or a read refuses.
 pub fn count(
     dispatcher: &Dispatcher,
     answer: &SyncCollectionResponse,
@@ -76,25 +77,36 @@ pub fn count(
     Ok(Counted::show(offer, device, server))
 }
 
-/// The backup of the side the write replaces, made and read back by the core (SPEC-364 R5).
+/// The backup of the side the write replaces, made and read back by the core (SPEC-364 R5): a
+/// download's is the device's collection written into the empty file `backup` by the engine, and
+/// an upload's is the server copy counted into `copy`. Either is read from its file.
 ///
 /// # Errors
 ///
-/// The unchanged state and its [`Reason`] when the backup cannot be made or read, or lacks an id.
+/// The unchanged state and its [`Reason`] when the backup cannot be made or read, or lacks an id:
+/// [`Reason::OpenCollection`] and [`Reason::HoldsRows`] refuse a download's `backup` before the
+/// engine writes into it.
 pub fn back_up(
     dispatcher: &Dispatcher,
     confirmed: Confirmed,
-    _backup: &Path,
-    _copy: &Path,
+    backup: &Path,
+    copy: &Path,
 ) -> Result<BackedUp, Refused<Confirmed>> {
     let from_file = match confirmed.direction() {
-        Direction::Download | Direction::Upload => dispatcher.id_sets(),
+        Direction::Download => fillable(dispatcher, backup)
+            .and_then(|()| {
+                dispatcher
+                    .execute(BACKUP_SQL, backup)
+                    .map_err(Reason::Engine)
+            })
+            .and_then(|()| read(dispatcher, backup)),
+        Direction::Upload => read(dispatcher, copy),
     };
     match from_file {
         Ok(from_file) => confirmed
             .backed_up(&from_file)
             .map_err(|state| refused(state, Reason::Unheld)),
-        Err(refusal) => Err(refused(confirmed, Reason::Engine(refusal))),
+        Err(reason) => Err(refused(confirmed, reason)),
     }
 }
 
@@ -103,15 +115,15 @@ pub fn back_up(
 ///
 /// # Errors
 ///
-/// The unchanged state and its [`Reason`] when the fresh copy cannot be fetched or read.
+/// The unchanged state and its [`Reason`] when the fresh copy cannot be fetched or read, `fresh`
+/// naming the open collection or a collection that holds a row among them.
 pub fn recheck(
     dispatcher: &Dispatcher,
     checked: Checked,
     auth: &SyncAuth,
     fresh: &Path,
 ) -> Result<Result<Ready, Counted>, Refused<Checked>> {
-    let _ = auth;
-    match read(dispatcher, fresh) {
+    match fetched(dispatcher, auth, fresh) {
         Ok(server) => Ok(checked.rechecked(server)),
         Err(reason) => Err(refused(checked, reason)),
     }
@@ -132,10 +144,7 @@ pub fn write(
     let device_now = dispatcher
         .id_sets()
         .map_err(|refusal| Unwritten::Refused(Reason::Engine(refusal)))?;
-    let _ = device_now;
-    let write = ready
-        .at_write(&IdSets::default())
-        .map_err(Unwritten::Recount)?;
+    let write = ready.at_write(&device_now).map_err(Unwritten::Recount)?;
     dispatcher
         .run_one_way(gesture, write, auth)
         .map_err(|refusal| Unwritten::Refused(Reason::Gesture(refusal)))
@@ -149,8 +158,14 @@ fn refused<S>(state: S, reason: Reason) -> Refused<S> {
     }
 }
 
-/// The server's collection fetched into the file `path` by a private engine, and its ids.
+/// The engine's statement that writes the open collection, whole, into the empty file its one
+/// parameter names (SPEC-364 R5).
+const BACKUP_SQL: &str = "VACUUM INTO ?";
+
+/// The server's collection fetched into the file `path` by a private engine, and its ids. The
+/// path is refused first unless it may be filled.
 fn fetched(dispatcher: &Dispatcher, auth: &SyncAuth, path: &Path) -> Result<IdSets, Reason> {
+    fillable(dispatcher, path)?;
     let private = dispatcher.private(path).map_err(Reason::Engine)?;
     let request = FullUploadOrDownloadRequest {
         auth: Some(auth.clone()),
@@ -164,6 +179,25 @@ fn fetched(dispatcher: &Dispatcher, auth: &SyncAuth, path: &Path) -> Result<IdSe
     let ids = ids.map_err(Reason::Engine)?;
     closed.map_err(Reason::Engine)?;
     Ok(ids)
+}
+
+/// Refuses a path the core must not write a collection into: the collection the dispatcher has
+/// open, however it is spelled, or a file whose collection already holds a row (SPEC-364 R4, R5).
+fn fillable(dispatcher: &Dispatcher, path: &Path) -> Result<(), Reason> {
+    if dispatcher.opens(path) {
+        return Err(Reason::OpenCollection);
+    }
+    if path.exists() && holds_a_row(&read(dispatcher, path)?) {
+        return Err(Reason::HoldsRows);
+    }
+    Ok(())
+}
+
+/// Whether `ids` name a review, a card or a note.
+fn holds_a_row(ids: &IdSets) -> bool {
+    [&ids.reviews, &ids.cards, &ids.notes]
+        .iter()
+        .any(|set| !set.is_empty())
 }
 
 /// The ids a private engine reads from the file `path`.
