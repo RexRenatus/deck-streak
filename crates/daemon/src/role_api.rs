@@ -18,6 +18,7 @@ use deck_streak_api::settings::LISTEN;
 use deck_streak_api::{ApiError, ApiState, ListenAddress, OwnerAccess, Readiness};
 use deck_streak_coordination::progression::law_tiers::CollectionLawTiers;
 use deck_streak_coordination::progression::level_view::LawTierSource;
+use deck_streak_identity::sync_seal::SealSecret;
 use deck_streak_identity::{Freshness, IdentityError, LinkingConfig, OwnerGate};
 use deck_streak_ingest::reader::CollectionReader;
 use deck_streak_ingest::settings::{ScopeSettings, SyncSettings};
@@ -51,6 +52,9 @@ pub enum ApiRoleError {
     /// The database could not be opened; the role drained and stopped.
     #[error("the database could not be opened")]
     Database(#[source] WiringError),
+    /// The seal secret is held and refuses start, by its role (SPEC-363 R5).
+    #[error(transparent)]
+    SealSecret(#[from] wiring::SealSecretError),
 }
 
 /// Why the role stopped serving.
@@ -131,6 +135,18 @@ fn law_tier_source(env: &Environment, offload: &Offload) -> Option<Arc<dyn LawTi
     Some(Arc::new(CollectionLawTiers::new(reader, rule)))
 }
 
+/// `state`, releasing the web client's sealing key under `secret` when the API's credentials hold
+/// one (SPEC-363 R5, B14). With none the release route stays off and the role still starts.
+///
+/// The composition lives here so the daemon's own test can drive the router the role serves.
+#[must_use]
+pub fn with_seal_secret(state: ApiState, secret: Option<SealSecret>) -> ApiState {
+    match secret {
+        Some(secret) => state.with_seal(secret),
+        None => state,
+    }
+}
+
 /// Runs the `api` role until SIGTERM (or SIGINT), and returns once every request in flight has
 /// finished. `redactor` is the one the process's log writer reads: every credential the role
 /// loads is registered with it.
@@ -146,10 +162,11 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     let state = StateDirectory::from_env(env)?;
     let freshness = Freshness::from_env(env)?;
     let credentials = CredentialsDirectory::from_env(env)?;
-    let gate = OwnerGate::load(
-        &CredentialLoader::new(credentials, redactor.clone()),
-        freshness,
-    )?;
+    let loader = CredentialLoader::new(credentials, redactor.clone());
+    let gate = OwnerGate::load(&loader, freshness)?;
+    // The seal secret is read beside the other credentials, before anything is bound: an absent one
+    // turns the release off, and one that is held and malformed refuses start (SPEC-363 R5).
+    let seal = wiring::seal_secret(&loader)?;
     // The conventions refuse start here, before anything is bound (SPEC-094 R2).
     let _conventions = Conventions::load(env)?;
     // So does a public origin that is set and is not an https origin (SPEC-359 R1).
@@ -168,11 +185,12 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     let access = OwnerAccess::new(gate, Arc::clone(&clock), kernel.study_day_rule);
     let late = wiring::LateInstruments::new();
     let offload = Offload::new(kernel.offload_workers, clock);
-    let router = deck_streak_api::router(
+    let router = deck_streak_api::router(with_seal_secret(
         api_state(env, &offload, readiness.clone(), access)
             .with_linking(linking, owner)
             .with_instruments(Arc::new(late.clone())),
-    );
+        seal,
+    ));
     tracing::info!(listen = %bound, "the api role serves");
     notifier.notify(NotifyState::Ready);
     let heartbeat = lifecycle::spawn_heartbeat(notifier.clone(), env);

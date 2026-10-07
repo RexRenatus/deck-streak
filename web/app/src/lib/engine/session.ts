@@ -1,7 +1,19 @@
 // The Worker's session (SPEC-338 R3 to R6, ADR-348): the protocol's operations only, the tab lock
 // first, then the storage, then the engine.
 import { parseRequest } from './protocol';
-import type { CardView, Deck, ErrorCode, Faces, Head, MediaAsk, Opened, Reply, Request, Snapshot } from './protocol';
+import type {
+  CardView,
+  Deck,
+  ErrorCode,
+  Faces,
+  Head,
+  MediaAsk,
+  Opened,
+  Reply,
+  Request,
+  Snapshot,
+  StatusWord
+} from './protocol';
 
 /** The Web Lock that holds one collection per origin. */
 export const LOCK = 'deck-streak-collection';
@@ -47,6 +59,9 @@ export interface SessionDeps {
   /** The first bytes of each file the core asked for, as the media directory holds them; a file it
    * lacks is left out. A Worker with no media directory leaves this out (SPEC-350 R14). */
   media?(wanted: readonly MediaAsk[]): Promise<MediaFile[]>;
+  /** The Worker's sync credential store, which the two credential operations reach and nothing
+   * else does (SPEC-363 R15, R16). A Worker without one answers `absent`. */
+  credential?: { status(): Promise<StatusWord>; forget(): Promise<StatusWord> };
 }
 
 /** A media file the Worker read for the core: its name and its first bytes. */
@@ -116,6 +131,9 @@ export class Session {
     const parsed = parseRequest(data);
     if (!('request' in parsed)) return refuse(parsed.id, 'bad-request', parsed.message);
     const request = parsed.request;
+    if (request.op === 'credential-status' || request.op === 'credential-forget') {
+      return this.#credential(request.id, request.op);
+    }
     if (this.#ended !== null) return refuse(request.id, this.#ended.code, this.#ended.why);
     if (request.op === 'open') return this.#open(request.id, request.languages ?? []);
     if (!this.#opened) return refuse(request.id, 'not-open', `${request.op} before open`);
@@ -134,6 +152,19 @@ export class Session {
       this.#opened = true;
       return opened;
     });
+  }
+
+  /** A credential operation's status word. It is served before the session's own state is read, so
+   * a tab whose session ended, or never opened, still forgets the sync key (SPEC-363 R14); a store
+   * that fails answers `storage-refused`. */
+  async #credential(id: number, op: 'credential-status' | 'credential-forget'): Promise<Reply> {
+    const store = this.#deps.credential;
+    if (store === undefined) return { id, ok: true, value: 'absent' };
+    try {
+      return { id, ok: true, value: op === 'credential-status' ? await store.status() : await store.forget() };
+    } catch (error) {
+      return refuse(id, 'storage-refused', describe(error));
+    }
   }
 
   /** The lock, then the storage, then the module, its pool and its engine, in `languages`. */

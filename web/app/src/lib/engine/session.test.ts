@@ -665,3 +665,40 @@ describe('the Worker session', () => {
     ]);
   });
 });
+
+// Mutation coverage for SPEC-363 R15, written after green: the two credential operations reach the
+// Worker's credential store and nothing else, before the collection opens too.
+describe("the Worker session's credential operations", () => {
+  const sessionWith = (credential: SessionDeps['credential']) =>
+    new Session({
+      lock: async () => 'held',
+      storage: async () => null,
+      load: async () => new FakeEngine(),
+      credential
+    });
+
+  it('a Worker with no credential store answers absent', async () => {
+    const { log, session } = browser(new FakeEngine());
+    expect(await session.handle({ id: 1, op: 'credential-status' })).toEqual({ id: 1, ok: true, value: 'absent' });
+    expect(log).toEqual([]);
+  });
+
+  it("each credential operation answers its own store's word, before open too", async () => {
+    const session = sessionWith({ status: async () => 'held', forget: async () => 'absent' });
+    expect(await session.handle({ id: 1, op: 'credential-forget' })).toEqual({ id: 1, ok: true, value: 'absent' });
+    expect(await session.handle({ id: 2, op: 'credential-status' })).toEqual({ id: 2, ok: true, value: 'held' });
+    // the collection still opens after them
+    expect(await session.handle({ id: 3, op: 'open' })).toMatchObject({ id: 3, ok: true });
+    expect(await session.handle({ id: 4, op: 'credential-status' })).toEqual({ id: 4, ok: true, value: 'held' });
+  });
+
+  it('a store that fails answers storage-refused with its reason', async () => {
+    const session = sessionWith({
+      status: () => Promise.reject(new Error('the database is gone')),
+      forget: async () => 'absent'
+    });
+    expect(await session.handle({ id: 1, op: 'credential-status' })).toEqual(
+      refusal(1, 'storage-refused', 'the database is gone')
+    );
+  });
+});

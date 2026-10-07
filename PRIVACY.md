@@ -60,6 +60,15 @@ media files) and its daily snapshots; and, in memory only, your Telegram user id
 session, and the bot's place in the queue of your messages. The bot reads the messages and button
 taps you send it to answer them, keeps none of their text, and answers nobody but you.
 
+In the web app, your browser keeps three things on your device, outside DeckStreak's database: the
+copy of your collection the web app studies, its media files, and the key your sync login returns,
+sealed so that it opens only under a second key the service releases to your own signed-in session,
+beside the sync user name it belongs to. The sync password you type is used for that one login and
+kept nowhere. Signing out of the web app removes the sealed key first and then ends your session,
+so the key is gone even when your device is offline; clearing this site's data in your browser
+removes all three. None of it is the service's store: an export of your data does not include it,
+and only your browser holds it.
+
 ## Your copy of your data, and erasing it
 
 From Telegram, the bot answers two commands, and only yours:

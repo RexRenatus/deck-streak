@@ -307,6 +307,8 @@ R17. `PRIVACY.md` says what this browser keeps (the collection, its media and th
     that signing out removes the key and clearing the site's data removes all of it, and that none
     of it is the service's store.
 
+## 7a. Acceptance criteria (part 2)
+
 | id | criterion | delivered by |
 |---|---|---|
 | B1 | a login that lands after a forget stores nothing, and the generation stays raised | `pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "a login that lands after a forget stores nothing"`; red: the stub stores every login |
@@ -322,6 +324,24 @@ R17. `PRIVACY.md` says what this browser keeps (the collection, its media and th
 | B11 | the credential operations answer a status word and never a value | `pnpm exec vitest run web/app/src/lib/engine/protocol.test.ts -t "the credential ops answer a status word"`; red: the protocol has no credential op |
 | B12 | the key goes only to the Worker's own origin's sync route; a planted foreign endpoint is refused and nothing is sent | `... credential.test.ts -t "the key goes only to its own origin's sync route"`; red: the stub sends to the endpoint it is given |
 | B13 | a record that does not open under its released key is deleted, and the status reads `absent` | `... credential.test.ts -t "a record that does not open is deleted"`; red: the stub keeps a record that fails to open |
+| B14 | the API role composes the seal secret: absent, the release is off; present, an owner's session gets the release | `cargo nextest run -p deck-streak-daemon --test seal_release_composed`; red: the stub composition ignores the secret |
+
+```acceptance
+B1: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "a login that lands after a forget stores nothing"
+B2: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "a worker whose generation is stale sends nothing"
+B3: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "a refusal of an older generation keeps the newer record"
+B4: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "a network failure keeps the sealed record"
+B5: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "a refused or unreachable release keeps the record"
+B6: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "the sealed record opens only for its own endpoint and user"
+B7: pnpm exec vitest run web/app/src/lib/engine/credential-reach.test.ts -t "no worker reply carries a secret"
+B8: pnpm exec vitest run web/app/src/lib/engine/credential-reach.test.ts -t "only the worker imports the credential module"
+B9: pnpm exec vitest run web/app/src/lib/sync/sign-out.test.ts -t "sign-out forgets the sync key first, offline too"
+B10: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "every study op answers the same in each credential state"
+B11: pnpm exec vitest run web/app/src/lib/engine/protocol.test.ts -t "the credential ops answer a status word"
+B12: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "the key goes only to its own origin's sync route"
+B13: pnpm exec vitest run web/app/src/lib/engine/credential.test.ts -t "a record that does not open is deleted"
+B14: cargo nextest run -p deck-streak-daemon --test seal_release_composed
+```
 
 Part 2's manifest: `web/app/src/lib/engine/credential.ts`, `web/app/src/lib/engine/credential.test.ts`,
 `web/app/src/lib/engine/credential-reach.test.ts`, `web/app/src/lib/engine/protocol.ts`,
@@ -330,7 +350,9 @@ Part 2's manifest: `web/app/src/lib/engine/credential.ts`, `web/app/src/lib/engi
 `web/app/src/lib/sync/sign-out.ts`, `web/app/src/lib/sync/sign-out.test.ts`, `PRIVACY.md`,
 `docs/red-first/SPEC-363.md` (its rows), and a `changelog.d/` fragment. Its TypeScript is held
 by the mutation run over each changed file whole; an equivalent mutant is recorded, never
-disabled.
+disabled. Part 2 also composes the seal-secret reader in the API role, so its manifest admits two
+Rust paths, `crates/daemon/src/role_api.rs` and `crates/daemon/tests/seal_release_composed.rs`
+(B14, held by mutation row `S36317`), beside one doc sentence of `crates/daemon/src/wiring.rs`.
 
 ## 8. Formal model
 

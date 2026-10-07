@@ -234,8 +234,8 @@ pub enum SealSecretError {
 /// The seal secret the API's credentials hold, read once at start through `loader` (SPEC-363 R5,
 /// A17). An absent credential turns the release off rather than refusing start: `None`, with one
 /// info line naming the role and never a value. One shorter than 32 bytes refuses start by the
-/// role, and so does every other error, as the API's other credentials do. The API's role does not
-/// compose this reader yet, so the release stays off in production until a later change does.
+/// role, and so does every other error, as the API's other credentials do. The API's role composes
+/// this reader at start, beside its other credentials, and an absent secret leaves the release off.
 ///
 /// # Errors
 ///
