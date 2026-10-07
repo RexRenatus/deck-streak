@@ -208,6 +208,30 @@
       "replace": "message: try error.string(4)",
       "killer": "HarnessWireTests.ResponseDecodingTests/test_a7_the_host_key_and_the_engines_message_decode",
       "why": "a BackendError's message is field 1, not its context (SPEC-347 R10)"
+    },
+    {
+      "id": "SW34800",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "[againState, hardState, goodState, easyState][Int(rating.rawValue)]",
+      "replace": "[againState, goodState, goodState, easyState][Int(rating.rawValue)]",
+      "killer": "HarnessWireTests.RequestBytesTests/test_a23_review_requests_encode_to_their_literal_bytes",
+      "why": "an answer rated Hard sends back Hard's own state, not Good's (SPEC-348 R10, R19)"
+    },
+    {
+      "id": "SW34801",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "writer.int64Field(1, deckID)",
+      "replace": "writer.int64Field(2, deckID)",
+      "killer": "HarnessWireTests.RequestBytesTests/test_a23_review_requests_encode_to_their_literal_bytes",
+      "why": "DeckId writes the deck as field 1, the one (7,22) reads (SPEC-348 R9, R19)"
+    },
+    {
+      "id": "SW34806",
+      "file": "Sources/HarnessWire/Messages.swift",
+      "find": "try WireMessage(bytes).repeated(1).map { value in",
+      "replace": "try WireMessage(bytes).repeated(2).map { value in",
+      "killer": "HarnessWireTests.ResponseDecodingTests/test_a23_the_intervals_and_the_five_states_decode",
+      "why": "a StringList's values are its field 1, the intervals (13,24) gives (SPEC-348 R11, R19)"
     }
   ]
 }

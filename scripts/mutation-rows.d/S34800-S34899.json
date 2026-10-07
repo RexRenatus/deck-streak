@@ -280,6 +280,88 @@
         "seam::a_missing_directory_is_refused",
         "A missing collection directory is refused by name as missing; unchecked, it is refused as not a directory (SPEC-348 R7, A10)"
       ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S34840-ONLY-THE-CARD-FILE-IMPORTS-WEBKIT",
+        "scripts/tests/test_ios_thin_swift.py",
+        "    \"imports WebKit\": (imports(\"WebKit\"), {\"card\"}),",
+        "    \"imports WebKit\": (imports(\"WebKit\"), {\"card\", \"view\"}),",
+        "only the card file may import WebKit; opened to the view role, a view could build or configure a web view of its own beside the factory's (SPEC-348 R17, A12)",
+        "test_ios_thin_swift.EverySwiftFileKeepsItsRole.test_every_swift_file_keeps_its_role_its_doors_and_its_budget"
+      ],
+      [
+        "S34841-ONLY-SPEECH-FILES-IMPORT-AVFOUNDATION",
+        "scripts/tests/test_ios_thin_swift.py",
+        "    \"imports AVFoundation\": (imports(\"AVFoundation\"), {\"speech\"}),",
+        "    \"imports AVFoundation\": (imports(\"AVFoundation\"), {\"speech\", \"model\"}),",
+        "only a speech file may import AVFoundation; opened to the model role, the model could play or speak a clip itself, past the player (SPEC-348 R17, A12)",
+        "test_ios_thin_swift.EverySwiftFileKeepsItsRole.test_every_swift_file_keeps_its_role_its_doors_and_its_budget"
+      ],
+      [
+        "S34842-THE-SPEECH-CEILING-IS-FIVE",
+        "scripts/tests/test_ios_thin_swift.py",
+        "    \"speech\": 5,",
+        "    \"speech\": 6,",
+        "a speech file holds at most five decisions; raised to six, the player could grow a sixth branch unseen (SPEC-348 R17, A12)",
+        "test_ios_thin_swift.EverySwiftFileKeepsItsRole.test_every_swift_file_keeps_its_role_its_doors_and_its_budget"
+      ],
+      [
+        "S34843-NO-FILE-LOADS-A-FILE-URL",
+        "scripts/tests/test_ios_review_screen.py",
+        "        \"loadFileURL\",",
+        "",
+        "no Swift file under ios/ names loadFileURL; dropped from the names, a frame could load a file from disk beside the factory's document (SPEC-348 R18, A13)",
+        "test_ios_review_screen.TheCardFrameIsTheFactorysAlone.test_the_card_frame_is_the_factorys_alone"
+      ],
+      [
+        "S34844-NO-FILE-NAMES-A-SCHEME-HANDLER",
+        "scripts/tests/test_ios_review_screen.py",
+        "        \"WKURLSchemeHandler\",",
+        "",
+        "no Swift file under ios/ names WKURLSchemeHandler; dropped from the names, the app could serve a card frame a scheme of its own (SPEC-348 R18, A13)",
+        "test_ios_review_screen.TheCardFrameIsTheFactorysAlone.test_the_card_frame_is_the_factorys_alone"
+      ],
+      [
+        "S34845-ONE-FILE-CONSTRUCTS-THE-WEB-VIEW",
+        "scripts/tests/test_ios_review_screen.py",
+        "        if path.startswith(ISOLATION) or is_test_target(path):",
+        "        if path.startswith(\"ios/\") or is_test_target(path):",
+        "only the card view's own package is left to its censuses; with the whole ios/ tree exempted, an app file could construct a second web view or name a bridge unseen (SPEC-348 R18, A13)",
+        "test_ios_review_screen.TheCardFrameIsTheFactorysAlone.test_the_card_frame_is_the_factorys_alone"
+      ],
+      [
+        "S34846-NO-TITLE-IS-OVERRIDDEN",
+        "scripts/tests/test_ios_review_screen.py",
+        "    if LABEL_OVERRIDE in bar:",
+        "    if False:",
+        "the bar overrides no rating's accessible name with .accessibilityLabel(; without the check, a label could hide the titles VoiceOver reads (SPEC-348 R10, A14)",
+        "test_ios_review_screen.TheAnswerBarIsNamedPlacedAndFelt.test_the_answer_bar_is_named_placed_and_felt"
+      ],
+      [
+        "S34847-THE-RATINGS-KEEP-THEIR-ORDER",
+        "scripts/tests/test_ios_review_screen.py",
+        "    if len(at) == len(TITLES) and at != sorted(at):",
+        "    if False:",
+        "the bar names Again, Hard, Good and Easy in that order; without the check, the ratings could be shown out of order (SPEC-348 R10, A14)",
+        "test_ios_review_screen.TheAnswerBarIsNamedPlacedAndFelt.test_the_answer_bar_is_named_placed_and_felt"
+      ],
+      [
+        "S34848-THE-REVIEW-STEP-SITS-AFTER-THE-APPS-TESTS",
+        "scripts/tests/test_ci_workflows.py",
+        "        order = (HARNESS_LAST, APP_TESTS, REVIEW_TESTS, APP_ARCHIVE, HARNESS_REPORT)",
+        "        order = (HARNESS_LAST, APP_TESTS, APP_ARCHIVE, HARNESS_REPORT)",
+        "the review step sits second of the app's three steps, between its tests and its archive; dropped from the order, the rule no longer places it and refuses the job that runs it there (SPEC-348 R20; SPEC-347 A14)",
+        "test_ci_workflows.TheAppIsGeneratedTestedAndArchived.test_the_app_is_generated_tested_and_archived_in_the_harness_job"
+      ],
+      [
+        "S34849-THE-REVIEW-STEP-NAMES-ITS-FIXTURE",
+        "scripts/tests/test_ci_workflows.py",
+        "            for n in (*REVIEW_FIXTURE_NEEDS, *REVIEW_TEST_NEEDS)",
+        "            for n in REVIEW_TEST_NEEDS",
+        "the review step copies the review fixture and names it on its test command's line; with the fixture's needs dropped, a step that runs the review tests over no fixture is admitted (SPEC-348 R20)",
+        "test_ci_workflows.TheReviewScreenIsTestedOnBothSimulators.test_the_review_screen_is_tested_on_both_simulators_in_the_harness_job"
+      ]
     ]
   }
 }
