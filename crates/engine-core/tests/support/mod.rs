@@ -1,10 +1,13 @@
 //! Support for the engine core's integration tests (SPEC-345): the examined count every
-//! enumerating test reports, and a synthetic collection the engine itself builds.
+//! enumerating test reports, a synthetic collection the engine itself builds, and the engine's own
+//! sync server on a loopback port (SPEC-364).
 
 #![allow(
     dead_code,
     reason = "each test target includes this module and calls the part it needs"
 )]
+
+pub mod sync_server;
 
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
