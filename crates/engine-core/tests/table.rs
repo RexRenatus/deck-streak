@@ -33,8 +33,8 @@ const NATIVE: [(u32, u32); 10] = [
     (27, 6),
 ];
 
-/// The web engine's study calls (SPEC-345 M4).
-const WEB: [(u32, u32); 16] = [
+/// The web engine's study calls (SPEC-345 M4) and its sync calls (SPEC-364 R1).
+const WEB: [(u32, u32); 18] = [
     (3, 0),
     (3, 1),
     (3, 8),
@@ -52,10 +52,22 @@ const WEB: [(u32, u32); 16] = [
     (3, 7),
     (13, 14),
     (5, 4),
+    // The sync login and the normal sync (SPEC-364 R1).
+    (1, 3),
+    (1, 5),
 ];
 
-/// The six exempt writes, the never-list's entries 2, 3, 6, 7 and 8 (SPEC-345 M8).
-const HELD: [(u32, u32); 6] = [(5, 2), (11, 5), (13, 17), (13, 19), (23, 15), (25, 7)];
+/// The seven exempt writes, the never-list's entries 2, 3, 6, 7 and 8 (SPEC-345 M8), and the
+/// full-sync choice's one-way sync (SPEC-364 R1).
+const HELD: [(u32, u32); 7] = [
+    (5, 2),
+    (11, 5),
+    (13, 17),
+    (13, 19),
+    (23, 15),
+    (25, 7),
+    (1, 6),
+];
 
 /// The highest service and method index the census sends: past every index the engine numbers.
 const LAST: u32 = 64;
@@ -149,6 +161,13 @@ fn each_exempt_write_names_its_engine_call_and_its_target_kind() {
                 7,
                 "NotesService.RemoveNotes",
                 TargetKind::Note,
+            ),
+            (
+                ExemptWrite::OneWaySync,
+                1,
+                6,
+                "BackendSyncService.FullUploadOrDownload",
+                TargetKind::Collection,
             ),
         ]
     );

@@ -50,8 +50,16 @@ const NATIVE: [(u32, u32); 10] = [
     (13, 24),
     (27, 6),
 ];
-/// The six exempt writes, held for a gesture on every transport (SPEC-345 M8).
-const HELD: [(u32, u32); 6] = [(5, 2), (11, 5), (13, 17), (13, 19), (23, 15), (25, 7)];
+/// The seven exempt writes, held for a gesture on every transport (SPEC-345 M8; SPEC-364 R1).
+const HELD: [(u32, u32); 7] = [
+    (1, 6),
+    (5, 2),
+    (11, 5),
+    (13, 17),
+    (13, 19),
+    (23, 15),
+    (25, 7),
+];
 /// The highest service and method index the census sends: past every index the engine numbers.
 const LAST: u32 = 64;
 

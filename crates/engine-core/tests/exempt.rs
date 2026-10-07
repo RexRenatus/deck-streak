@@ -368,6 +368,13 @@ fn a_request_naming_more_than_its_gestures_target_is_refused() {
             (ExemptWrite::ChangeNoteType, String::from("ran")),
             (ExemptWrite::DeleteCard, String::from("ran")),
             (ExemptWrite::DeleteNote, String::from("ran")),
+            (
+                ExemptWrite::OneWaySync,
+                String::from(
+                    "refused before the engine: the one-way sync runs only through the full-sync \
+                     choice's write",
+                ),
+            ),
         ],
         "a request naming exactly its gesture's target passes the check and reaches the engine"
     );
@@ -390,7 +397,9 @@ fn a_request_naming_more_than_its_gestures_target_is_refused() {
             expected.push((
                 write,
                 named,
-                Err(if named == "no message" {
+                Err(if write == ExemptWrite::OneWaySync {
+                    GestureRefusal::NeedsTheChoice
+                } else if named == "no message" {
                     GestureRefusal::Undecodable { write }
                 } else {
                     GestureRefusal::NotTheTarget { write, target }
