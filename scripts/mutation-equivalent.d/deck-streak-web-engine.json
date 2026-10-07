@@ -224,6 +224,24 @@
       "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test the browser tests of web/app/tests-engine/engine.spec.ts ('opens, answers and undoes over OPFS') of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
+    },
+    {
+      "file": "crates/web-engine/src/wasm.rs",
+      "mutant": "delete match arm 0 in credential_on_outcome",
+      "anchor": "pub fn credential_on_outcome(sent: u64, current: u64, outcome: u8) -> bool {\n    let outcome = match outcome {\n        0 => Outcome::Accepted,\n        1 => Outcome::Refused,\n        _ => Outcome::Failed,\n    };\n    credential::on_outcome(Generation::from(sent), Generation::from(current), outcome)\n}",
+      "reason": "The mutated match arm of `credential_on_outcome` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. On wasm32 too it answers as the original does: without the arm, 0 reads as failed, and `credential::on_outcome` (`crates/engine-core/src/credential.rs` line 106) drops the key only on a refusal, so an accepted answer and a failed one both keep it.",
+      "reached_by": "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+      "issue": "#303"
+    },
+    {
+      "file": "crates/web-engine/src/wasm.rs",
+      "mutant": "delete match arm 1 in credential_on_outcome",
+      "anchor": "pub fn credential_on_outcome(sent: u64, current: u64, outcome: u8) -> bool {\n    let outcome = match outcome {\n        0 => Outcome::Accepted,\n        1 => Outcome::Refused,\n        _ => Outcome::Failed,\n    };\n    credential::on_outcome(Generation::from(sent), Generation::from(current), outcome)\n}",
+      "reason": "The mutated match arm of `credential_on_outcome` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. The native census `boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher` holds the body's call to `credential::on_outcome`, and engine-core's `credential::a_refusal_drops_only_the_generation_it_refused` holds the refusal rule it calls (SPEC-363 A5); no test runs this export on wasm32 yet, and part 2's Worker store is its first caller (SPEC-363 section 7).",
+      "reached_by": "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+      "issue": "#303"
     }
   ]
 }

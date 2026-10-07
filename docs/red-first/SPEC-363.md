@@ -127,3 +127,23 @@ A18: green at 7294f8f5
 - **The reader is not composed yet.** A17 proves `seal_secret`, the daemon's reader of the
   `sync-seal-secret` credential. The API's role does not call it in this delivery, so the release
   stays off in production until a later change composes it.
+
+## What the mutation pass added
+
+The diff's own mutants were listed and run before the push, with `cargo mutants --in-diff` over
+`git diff origin/dev...HEAD`: 65 listed and 65 tested, of which 51 were caught, 2 missed, 0 timed
+out and 12 unviable. The 12 unviable are `Default::default()` replacements that do not compile;
+they are recorded as unviable, never as caught.
+
+The two missed mutants each delete a match arm of `credential_on_outcome` in
+`crates/web-engine/src/wasm.rs`: arm 0, accepted, and arm 1, refused. That module is built only for
+`wasm32`, so a native build compiles each mutant as the unchanged crate, and the boundary census
+(A8) reads the body's call to the core's rule, not the arms that pick its outcome. Both are
+recorded equivalent in `scripts/mutation-equivalent.d/deck-streak-web-engine.json` under #303, the
+class of every record that file already holds:
+
+- Deleting arm 0 changes no answer on any target: 0 then reads as failed, and the core's
+  `on_outcome` drops the key only on a refusal, so an accepted answer and a failed one both keep it.
+- Deleting arm 1 would read a refusal as failed on `wasm32`. No native test can see it; A5 holds
+  the core's rule the export calls, and part 2's Worker store is the export's first caller
+  (SPEC-363 section 7).
