@@ -322,6 +322,7 @@ R17. `PRIVACY.md` says what this browser keeps (the collection, its media and th
 | B11 | the credential operations answer a status word and never a value | `pnpm exec vitest run web/app/src/lib/engine/protocol.test.ts -t "the credential ops answer a status word"`; red: the protocol has no credential op |
 | B12 | the key goes only to the Worker's own origin's sync route; a planted foreign endpoint is refused and nothing is sent | `... credential.test.ts -t "the key goes only to its own origin's sync route"`; red: the stub sends to the endpoint it is given |
 | B13 | a record that does not open under its released key is deleted, and the status reads `absent` | `... credential.test.ts -t "a record that does not open is deleted"`; red: the stub keeps a record that fails to open |
+| B14 | the API role composes the seal secret: absent, the release is off; present, an owner's session gets the release | `cargo nextest run -p deck-streak-daemon --test seal_release_composed`; red: the stub composition ignores the secret |
 
 Part 2's manifest: `web/app/src/lib/engine/credential.ts`, `web/app/src/lib/engine/credential.test.ts`,
 `web/app/src/lib/engine/credential-reach.test.ts`, `web/app/src/lib/engine/protocol.ts`,
@@ -330,7 +331,9 @@ Part 2's manifest: `web/app/src/lib/engine/credential.ts`, `web/app/src/lib/engi
 `web/app/src/lib/sync/sign-out.ts`, `web/app/src/lib/sync/sign-out.test.ts`, `PRIVACY.md`,
 `docs/red-first/SPEC-363.md` (its rows), and a `changelog.d/` fragment. Its TypeScript is held
 by the mutation run over each changed file whole; an equivalent mutant is recorded, never
-disabled.
+disabled. Part 2 also composes the seal-secret reader in the API role, so its manifest admits two
+Rust paths, `crates/daemon/src/role_api.rs` and `crates/daemon/tests/seal_release_composed.rs`
+(B14, held by mutation row `S36317`), beside one doc sentence of `crates/daemon/src/wiring.rs`.
 
 ## 8. Formal model
 
