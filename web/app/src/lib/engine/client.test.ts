@@ -170,4 +170,21 @@ describe('EngineClient', () => {
     port.reply({ id: 1, ok: true, value }, ORIGIN);
     expect(await faces).toEqual(value);
   });
+
+  it('the credential operations send no argument and resolve to a status word', async () => {
+    // SPEC-363 R14, R15: the page asks the Worker for the credential's status and to forget it, and
+    // hears back one word
+    const port = new FakePort();
+    const client = new EngineClient(port, ORIGIN);
+    const status = client.credentialStatus();
+    const forgotten = client.forgetSync();
+    expect(port.sent).toEqual([
+      { id: 1, op: 'credential-status' },
+      { id: 2, op: 'credential-forget' }
+    ]);
+    port.reply({ id: 2, ok: true, value: 'absent' }, ORIGIN);
+    port.reply({ id: 1, ok: true, value: 'held' }, ORIGIN);
+    expect(await status).toBe('held');
+    expect(await forgotten).toBe('absent');
+  });
 });
