@@ -40,6 +40,7 @@ flowchart TB
     agent[agent: Claude Code runner]
   end
   kernel[kernel: shared kernel]
+  xp[xp: the per-review XP rule, no I/O]
 
   daemon --> api & bot & coordination
   api --> coordination
@@ -53,6 +54,9 @@ flowchart TB
   analytics & progression & curriculum & quests & discipline & readings & insights --> ingest
   domain --> kernel
   acl --> kernel
+  progression --> xp
 ```
+
+The XP crate was drawn by SPEC-360; the clients' edges to it are #639's.
 
 The Mini App (`web/app`) is outside the crate graph: it reaches `api` over HTTPS only.

@@ -1418,6 +1418,7 @@ version = "0.3.0"
 dependencies = [
  "deck-streak-ingest",
  "deck-streak-kernel",
+ "deck-streak-xp",
  "serde",
  "serde_json",
  "sha2 0.11.0",
@@ -1529,6 +1530,14 @@ dependencies = [
  "sqlite-wasm-vfs",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+]
+
+[[package]]
+name = "deck-streak-xp"
+version = "0.3.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
