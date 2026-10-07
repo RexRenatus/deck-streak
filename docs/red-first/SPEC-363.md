@@ -147,3 +147,64 @@ class of every record that file already holds:
 - Deleting arm 1 would read a refusal as failed on `wasm32`. No native test can see it; A5 holds
   the core's rule the export calls, and part 2's Worker store is the export's first caller
   (SPEC-363 section 7).
+
+Correction (verify round 1): A8's red prints one line per export, e.g. `` `fn credential_on_obtained(` occurs 0 times, not once ``.
+
+## Part 2: the reds and greens
+
+Part 2 of SPEC-363 delivers B1 to B14 (section 7). Each line's command is the criterion's line in
+section 7's table, run at the commit named. B1 to B13 were committed red together, at 08b25dd8,
+against stubs that each hold the red its row names; B14 was committed red at 4160a2aa against a
+stub composition that ignores the secret, and each module then turned green in its own commit.
+
+```red-first
+B1: red at 08b25dd8: AssertionError: expected { generation: 2n, sealed: { …(4) } } to deeply equal { generation: 1n, sealed: undefined }
+B1: green at 5332f387
+B2: red at 08b25dd8: AssertionError: expected { generation: 1n, key: 'host-key-one' } to be 'absent' // Object.is equality
+B2: green at 5332f387
+B3: red at 08b25dd8: AssertionError: expected 3n to be 2n // Object.is equality
+B3: green at 5332f387
+B4: red at 08b25dd8: AssertionError: a network error: expected { generation: 2n, sealed: undefined } to deeply equal { generation: 1n, sealed: { …(4) } }
+B4: green at 5332f387
+B5: red at 08b25dd8: AssertionError: expected { generation: 2n, sealed: undefined } to deeply equal { generation: 1n, sealed: { …(4) } }
+B5: green at 5332f387
+B6: red at 08b25dd8: AssertionError: expected null to be 'host-key-one' // Object.is equality
+B6: green at 5332f387
+B7: red at 08b25dd8: AssertionError: expected [ 'obtain carries the host key', …(2) ] to deeply equal []
+B7: green at 7cf48c93
+B8: red at 08b25dd8: AssertionError: expected [ 'lib/sync/sign-out.ts' ] to deeply equal []
+B8: green at 404eb316
+B9: red at 08b25dd8: AssertionError: expected [ 'end' ] to deeply equal [ 'forget', 'end' ]
+B9: green at 404eb316
+B10: red at 08b25dd8: AssertionError: sealed: expected [ { id: 1, ok: false, …(2) }, …(14) ] to deeply equal [ { id: 1, ok: true, …(1) }, …(14) ]
+B10: green at 7cf48c93
+B11: red at 08b25dd8: AssertionError: expected { id: 1, …(1) } to deeply equal { request: { id: 1, …(1) } }
+B11: green at 8d9a94b0
+B12: red at 08b25dd8: AssertionError: promise resolved "{ generation: 1n, key: 'host-key-one' }" instead of rejecting
+B12: green at 5332f387
+B13: red at 08b25dd8: AssertionError: expected { generation: 1n, sealed: { …(4) } } to deeply equal { generation: 2n, sealed: undefined }
+B13: green at 5332f387
+B14: red at 4160a2aa: panicked at crates/daemon/tests/seal_release_composed.rs:142:5: assertion `left == right` failed: the owner's session is released the key identity makes for its seal id; left: (404, "")
+B14: green at 3b969772
+```
+
+## What part 2's record discloses
+
+- The red commit 08b25dd8 runs under Vitest, which strips types, so each red above is an assertion
+  on the missing behaviour; the commit does not type-check, because its tests import names the
+  modules gain only in their green commits. The type check reads clean from 4d8f54e1, which types
+  the stored nonce and the classify argument and changes no behaviour.
+- `protocol.test.ts`'s existing test "each study operation parses its arguments and refuses any
+  other" was red at 08b25dd8 too: its list of operations grew, insert-only, before `OPS` did, and
+  it is green at 8d9a94b0.
+- B8's red names the stub sign-out, which imported the credential module; the census's planted
+  page import is its positive control, refused by name at every commit.
+- The test stand-in for the core's five exports, `credential-stand-in.test.support.ts`, read a
+  length-delimited field's length after it had moved past it, so a sync refusal classified as a
+  failure; 5332f387 corrects it. B3's and B4's reds stand: their stubs dropped the key on every
+  answer the stand-in classified as anything but accepted.
+- B14's second test, "the release is off when the role holds no seal secret", was green at the
+  stub, which left the release off whatever the role held; it pins the absent arm, and B14's red
+  is its first test's.
+- Each green is named at the commit that turned it green, measured there; the head carries every
+  one of them, and changes none of their tests.
