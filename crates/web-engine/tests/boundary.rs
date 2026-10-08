@@ -22,7 +22,7 @@ fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
 /// Each boundary function the census reads: its name, why it owes what it owes, and the
 /// statements its body holds for it. A statement is compared with every blank removed, so a
 /// reflow by rustfmt changes nothing.
-const OWED: [(&str, &str, &[&str]); 30] = [
+const OWED: [(&str, &str, &[&str]); 31] = [
     (
         "create_backend",
         "starts the core's dispatcher on the web transport and keeps it",
@@ -57,6 +57,7 @@ const OWED: [(&str, &str, &[&str]); 30] = [
             "call(service::COLLECTION, 0, &request.encode_to_vec())?",
             "query(Read::NoteCount)?",
             "serde_json::json!({ \"existed\": existed, \"notes\": notes })",
+            "LAST_ANSWER.with(|kept| *kept.borrow_mut() = None)",
         ],
     ),
     (
@@ -121,12 +122,30 @@ const OWED: [(&str, &str, &[&str]); 30] = [
             ".collect()",
         ],
     ),
+    // The undo of the review's own last answer (SPEC-371 R6, R7): the offer reads and judges and
+    // writes nothing, and the undo runs only for the record the offer named, through the gesture.
+    (
+        "undo_offer",
+        "offers only the review's own last answer, judged against the engine now, with the card as one line of text",
+        &[
+            "LAST_ANSWER.with(|kept| kept.borrow().clone())",
+            "call(service::COLLECTION, 7, &[])?",
+            "undo_answer::judge(&recorded, &now, review_of(recorded.review)?, last.card)",
+            "call(service::CARD_RENDERING, 14,",
+            "preserve_media_filenames: true",
+        ],
+    ),
     (
         "undo",
-        "undoes through the collection service and forgets the kept card",
+        "undoes only the offered answer, judged again, through the owner's gesture on its card, then forgets the record and the kept card",
         &[
-            "call(service::COLLECTION, 8, &[])?",
-            "*kept.borrow_mut() = None",
+            "last_answer_for(kept.borrow().as_ref(), card, step)",
+            "call(service::COLLECTION, 7, &[])?",
+            "undo_answer::judge(&recorded, &now, review_of(recorded.review)?, card)",
+            "OwnerGesture::from_tap(ExemptWrite::Undo, Target::Card(card))",
+            ".run_exempt(gesture, &recorded.encode_to_vec())",
+            "LAST_ANSWER.with(|kept| *kept.borrow_mut() = None)",
+            "SHOWN.with(|kept| *kept.borrow_mut() = None)",
         ],
     ),
     (
@@ -156,6 +175,9 @@ const OWED: [(&str, &str, &[&str]); 30] = [
             "grade.pick(states.again, states.good)",
             "OwnerAnswer::from_press(shown.card, pressed(grade))",
             ".run_answer(answer, &request.encode_to_vec())",
+            "query(Read::NewestReview)?",
+            "newest.card == shown.card",
+            "LAST_ANSWER.with(|kept| *kept.borrow_mut() = recorded)",
         ],
     ),
     (
@@ -277,9 +299,10 @@ const OWED: [(&str, &str, &[&str]); 30] = [
 ];
 
 /// What the boundary no longer holds (SPEC-365 A11): `rate` never calls `AnswerCard` through
-/// `call`, and no export answers the queue's head. Each is a text whose presence is refused, with
+/// `call`, and no export answers the queue's head; and no call runs Undo (3,8) through `call`,
+/// with no argument or any other (SPEC-371 A17). Each is a text whose presence is refused, with
 /// the function that must not hold it, or `None` for the whole source.
-const RETIRED: [(Option<&str>, &str, &str); 2] = [
+const RETIRED: [(Option<&str>, &str, &str); 3] = [
     (
         Some("rate"),
         "call(service::SCHEDULER, 4,",
@@ -289,6 +312,11 @@ const RETIRED: [(Option<&str>, &str, &str); 2] = [
         None,
         "pub fn answer(",
         "answers no card but the kept one: the queue-head export is gone",
+    ),
+    (
+        None,
+        "call(service::COLLECTION, 8,",
+        "undoes only through the owner's gesture, never through `call`",
     ),
 ];
 
@@ -409,13 +437,23 @@ fn a_retired_text_planted_back_is_refused_by_name() {
         1,
     );
     let queue_head = format!("{source}\npub fn answer(rating: u32) -> u32 {{\n    rating\n}}\n");
-    let refused = (retired(&through_call), retired(&queue_head));
+    let undo_by_call = format!(
+        "{source}\npub fn redo() -> u32 {{\n    call(service::COLLECTION, 8, &[]);\n    0\n}}\n"
+    );
+    let refused = (
+        retired(&through_call),
+        retired(&queue_head),
+        retired(&undo_by_call),
+    );
     assert!(
         refused.0.iter().any(|line| line.starts_with("rate "))
             && refused
                 .1
                 .iter()
-                .any(|line| line.starts_with("src/wasm.rs ")),
+                .any(|line| line.starts_with("src/wasm.rs ") && line.contains("pub fn answer("))
+            && refused.2.iter().any(|line| {
+                line.starts_with("src/wasm.rs ") && line.contains("call(service::COLLECTION, 8,")
+            }),
         "a retired text planted back is not refused by name: {refused:?}"
     );
 }

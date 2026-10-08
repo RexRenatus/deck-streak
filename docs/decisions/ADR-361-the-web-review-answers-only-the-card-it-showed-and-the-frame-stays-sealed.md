@@ -368,3 +368,13 @@ reaches only the card the review showed.
 - A token of its own for answering, outside `EXEMPT`: chosen because answering is not a never-list write.
 - The owner-gesture token for every grade, with the rows in `EXEMPT`: rejected because it would put every grade under the owner-taps ruling's conditions.
 - Keeping the grade pairs ordinary: rejected because three doors would still record a grade with no press behind it.
+
+## Amendment: a token for undo, for the review's own last answer only (SPEC-371)
+
+ADR-382 amends D1, for undo only. The rest of D1 stands.
+
+- **D1 (`:37-55`).** D1 rejected a token for undo (`:50-51`). For the undo of the review's own
+  last answer that rejection gives way: Undo is an exempt write behind the owner's gesture, checked
+  at the write against a record the Worker kept when the answer was made (ADR-382 D1 to D4). Bury
+  and flag stay ordinary calls, as D1 decided, and Undo no longer reverts them.
+- **D2 (`:57-72`)** is unchanged in effect: a confirmed undo still clears the kept card.

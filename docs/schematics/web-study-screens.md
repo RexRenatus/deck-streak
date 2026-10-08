@@ -78,7 +78,7 @@ flowchart LR
 | edge | carries | never carries |
 |---|---|---|
 | input to the machine | an intent (`confirm`, a grade, `undo`, `bury`, `flag`, `replay`), read against the side | a key or button the map does not name; a key typed into a control; a repeat |
-| the machine to `EngineClient` | `decks`, `study`, `card`, `rate`, `bury`, `flag`, `undo` and `open` with the languages | `next`, `answer`, `seed`, `snapshot` (the harness's) or any pair |
+| the machine to `EngineClient` | `decks`, `study`, `card`, `rate`, `bury`, `flag`, `undoOffer`, `undo` with the card and step the offer named (SPEC-371 R9, R12) and `open` with the languages | `next`, `answer`, `seed`, `snapshot` (the harness's) or any pair |
 | `EngineClient` to the Session | a numbered request; the reply settles it by id | a message from any origin but the page's own |
 | the Session to the engine | one named export per operation, each crossing the Dispatcher on the web column | `run_method`, `run_exempt`, SQL |
 | the host to the frame | the composed `srcdoc`: the frame policy, the card's CSS, the card's body with its classes, and (part 2) `data:` URLs in `src` | a script, a `blob:` or network URL, a token, a message channel |
@@ -127,11 +127,19 @@ sequenceDiagram
       W-->>P: refused, not-shown
     end
   end
-  opt undo
-    L->>P: u, or the remote's undo
-    P->>W: undo
-    W->>E: Undo (3,8), the kept card cleared
-    Note over P,W: the next card request shows the undone card again
+  opt undo, the review's own last answer only (SPEC-371 R9, R10)
+    L->>P: u, the remote's undo, or the bar's Undo answer button
+    P->>W: undoOffer
+    W->>E: GetUndoStatus (3,7) and the newest review, judged against the Worker's record
+    W-->>P: the offer with the card as text, the answer and the state it returns to, or none and why
+    P->>P: confirming, the dialog with focus on Keep it
+    alt the Undo action again, or the dialog's Undo answer button
+      P->>W: undo with the offer's card and step
+      W->>E: the owner's gesture for Undo, checked at the write, then Undo (3,8)
+      Note over P,W: the record and the kept card cleared, and the next card request shows the undone card again
+    else Keep it, Escape or any other action
+      P->>P: back to the side, nothing sent, the other action not carried out
+    end
   end
   opt bury or flag
     L->>P: minus, Control or Command with 1, or the remote
@@ -153,8 +161,15 @@ stateDiagram-v2
   loading --> refused: a refusal
   question --> answer: show answer
   answer --> busy: a grade
-  question --> busy: bury or undo
-  answer --> busy: bury or undo
+  question --> busy: bury, or undo asking for the offer
+  answer --> busy: bury, or undo asking for the offer
+  busy --> confirming: offered
+  busy --> question: not-offered from the question, with its notice
+  busy --> answer: not-offered from the answer, with its notice
+  confirming --> busy: undo, or the Undo answer button
+  confirming --> question: keep, Escape or another action, from the question
+  confirming --> answer: keep, Escape or another action, from the answer
+  busy --> loading: undo-refused, with its notice
   answer --> answer: flag settled
   question --> question: flag settled
   busy --> loading: settled

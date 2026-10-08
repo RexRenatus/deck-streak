@@ -1,4 +1,5 @@
-//! The core's table, judged over every pair a transport can send (SPEC-345 A1, A2; SPEC-365 A1).
+//! The core's table, judged over every pair a transport can send (SPEC-345 A1, A2; SPEC-365 A1;
+//! SPEC-371 A1, A2).
 //!
 //! The expected sets are literals written from the SPEC's measurement (M1, M4, M8), never read
 //! from the core, so a row the table loses, gains, renumbers or marks for the wrong transport fails
@@ -19,11 +20,11 @@ use deck_streak_engine_core::table::{
 };
 
 /// The pairs the native adapter's allow-list holds (SPEC-345 M1), with the review screen's three
-/// (SPEC-348 R1), less `AnswerCard`, which only an owner's press records (SPEC-365 R4, R6).
-const NATIVE: [(u32, u32); 9] = [
+/// (SPEC-348 R1), less `AnswerCard`, which only an owner's press records (SPEC-365 R4, R6), and
+/// less `Undo`, which only an owner's gesture runs (SPEC-371 R2).
+const NATIVE: [(u32, u32); 8] = [
     (1, 3),
     (3, 0),
-    (3, 8),
     (7, 4),
     (7, 13),
     (7, 22),
@@ -32,12 +33,13 @@ const NATIVE: [(u32, u32); 9] = [
     (27, 6),
 ];
 
-/// The web engine's study calls (SPEC-345 M4), less `AnswerCard` (SPEC-365 R4, R7), and its sync
+/// The web engine's study calls (SPEC-345 M4), less `AnswerCard` (SPEC-365 R4, R7) and `Undo`
+/// (SPEC-371 R2), with `HtmlToTextLine`, the card as one line of text (SPEC-371 R8), and its sync
 /// calls (SPEC-364 R1).
 const WEB: [(u32, u32); 17] = [
     (3, 0),
     (3, 1),
-    (3, 8),
+    (27, 14),
     (13, 3),
     (23, 8),
     (25, 0),
@@ -56,9 +58,11 @@ const WEB: [(u32, u32); 17] = [
     (1, 5),
 ];
 
-/// The seven exempt writes, the never-list's entries 2, 3, 6, 7 and 8 (SPEC-345 M8), and the
-/// full-sync choice's one-way sync (SPEC-364 R1).
-const HELD: [(u32, u32); 7] = [
+/// The eight exempt writes, the never-list's entries 2, 3, 6, 7 and 8 (SPEC-345 M8), the
+/// full-sync choice's one-way sync (SPEC-364 R1), and the undo of the review's own last answer
+/// (SPEC-371 R2).
+const HELD: [(u32, u32); 8] = [
+    (3, 8),
     (5, 2),
     (11, 5),
     (13, 17),
@@ -127,59 +131,74 @@ fn every_pair_is_admitted_held_or_refused_by_its_transport() {
 fn each_exempt_write_names_its_engine_call_and_its_target_kind() {
     let table: Vec<_> = EXEMPT
         .iter()
-        .map(|row| (row.write, row.service, row.method, row.name, row.kind))
+        .map(|row| {
+            (
+                format!("{:?}", row.write),
+                row.service,
+                row.method,
+                row.name,
+                row.kind,
+            )
+        })
         .collect();
     assert_eq!(
         table,
         vec![
             (
-                ExemptWrite::Forget,
+                "Forget".to_owned(),
                 13,
                 17,
                 "SchedulerService.ScheduleCardsAsNew",
                 TargetKind::Card,
             ),
             (
-                ExemptWrite::SetDueDate,
+                "SetDueDate".to_owned(),
                 13,
                 19,
                 "SchedulerService.SetDueDate",
                 TargetKind::Card,
             ),
             (
-                ExemptWrite::DeletePreset,
+                "DeletePreset".to_owned(),
                 11,
                 5,
                 "DeckConfigService.RemoveDeckConfig",
                 TargetKind::Preset,
             ),
             (
-                ExemptWrite::ChangeNoteType,
+                "ChangeNoteType".to_owned(),
                 23,
                 15,
                 "NotetypesService.ChangeNotetype",
                 TargetKind::Note,
             ),
             (
-                ExemptWrite::DeleteCard,
+                "DeleteCard".to_owned(),
                 5,
                 2,
                 "CardsService.RemoveCards",
                 TargetKind::Card,
             ),
             (
-                ExemptWrite::DeleteNote,
+                "DeleteNote".to_owned(),
                 25,
                 7,
                 "NotesService.RemoveNotes",
                 TargetKind::Note,
             ),
             (
-                ExemptWrite::OneWaySync,
+                "OneWaySync".to_owned(),
                 1,
                 6,
                 "BackendSyncService.FullUploadOrDownload",
                 TargetKind::Collection,
+            ),
+            (
+                "Undo".to_owned(),
+                3,
+                8,
+                "CollectionService.Undo",
+                TargetKind::Card,
             ),
         ]
     );

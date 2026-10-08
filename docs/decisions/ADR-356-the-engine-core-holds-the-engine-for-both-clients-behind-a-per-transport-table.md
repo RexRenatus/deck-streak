@@ -263,3 +263,19 @@ which replace nothing the device holds. (11,7) and (13,26) stay refused.
 
 - (1,6) as an exempt write that needs both the gesture and the choice's `Write`: chosen because the restore after eviction and every full-sync conflict need a write, and the choice's counts, backup and re-check then come before it.
 - (1,6) kept refused, as D6 had it: rejected because neither client would then have a one-way write at all; ADR-375 D5 names the other options and why each lost.
+
+## Amendment: Undo reverts only the review's own last answer (SPEC-371)
+
+ADR-382 amends D2, D4 and D6. The rest of each stands.
+
+- **D2 (the table, `:150-152`).** Undo (3,8) leaves the ordinary rows and joins the exempt table
+  as `ExemptWrite::Undo`, `TargetKind::Card`, deciding `NeedsGesture` on both transports.
+  HtmlToTextLine (27,14) joins the ordinary rows, web only, so the review can show the card it
+  would undo as one line of text. ADR-382 D1 and D6 decide both, and name what each was chosen
+  against.
+- **D4 (containment, `:156-160`).** The census's engine names gain `undo`, and its held lines gain
+  four entries outside the core, each with its reason, and the boundary census's owed literals of
+  `undo` that name the gesture (ADR-382 D9).
+- **D6 (the first exempt table, `:164-166`).** The table holds eight rows. The eighth, Undo,
+  reverts only the review's own last answer while it has not synced, and is checked at the write
+  (ADR-382 D2, D3). The undo after a sync this record anticipated (`:192`) is still unbuilt.

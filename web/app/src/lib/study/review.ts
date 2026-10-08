@@ -2,27 +2,41 @@
 // every event passes through `step`, so the review's behaviour is the table's. The page keeps only
 // which side is shown; the engine side keeps the card it showed, and every rating, bury and flag
 // names that card. A gesture while a request is in flight finds no cell and fires nothing.
+// SPEC-371 R9; ADR-382. An undo press asks the engine for an offer of the review's own last answer
+// and writes nothing; the offer moves the review to `confirming`, where only the Undo action again
+// writes, naming the offered card and step, and every other action keeps the answer and is not
+// carried out.
 import { frameDocument } from '$lib/card/frame-document';
 import { EngineError } from '$lib/engine/client';
-import type { CardView, Clip, Counts, ErrorCode, Faces, Head, Rating } from '$lib/engine/protocol';
+import type { CardView, Clip, Counts, ErrorCode, Faces, Head, Rating, UndoOffer } from '$lib/engine/protocol';
 import { sideAfter, type Action, type Side } from '$lib/remote/actions';
 
-/** The schematic's states: a card loading, a side shown, a request in flight, a refusal, done. */
-export type Phase = 'loading' | 'question' | 'answer' | 'busy' | 'refused' | 'done';
+/** The schematic's states: a card loading, a side shown, a request in flight, an undo offered and
+ * asking to be confirmed, a refusal, done. */
+export type Phase = 'loading' | 'question' | 'answer' | 'busy' | 'confirming' | 'refused' | 'done';
 
-/** What moves the machine: an action, or the outcome of the request in flight. */
+/** What moves the machine: an action, keeping an offered answer, or the outcome of the request in
+ * flight. */
 export type ReviewEvent =
   | Action
+  | 'keep'
   | 'view'
   | 'empty'
   | 'settled'
   | 'flagged'
   | 'not-shown'
   | 'refusal'
-  | 'retry';
+  | 'retry'
+  | 'offered'
+  | 'not-offered'
+  | 'undo-refused';
 
 /** The request a step asks for. */
-export type Effect = 'none' | 'card' | 'rate' | 'bury' | 'flag' | 'undo' | 'replay';
+export type Effect = 'none' | 'card' | 'rate' | 'bury' | 'flag' | 'offer' | 'undo' | 'replay';
+
+/** The answer an offer names: its card, the step the confirmation carries back, its text, its
+ * grade and the state it returns to (SPEC-371 R7). */
+export type Offer = Extract<UndoOffer, { offer: object }>['offer'];
 
 /** The machine's state: its phase, and the side the review shows or returns to. */
 export interface ReviewState {
@@ -30,16 +44,24 @@ export interface ReviewState {
   side: Side;
 }
 
-/** One cell: the next phase (`side` is the side's own phase) and the request it asks for. */
+/** One cell: the next phase (`side` is the side's own phase) and the request it asks for. A cell
+ * that `keeps` carries out no action, so the side stays where it was. */
 interface Cell {
   phase: Phase | 'side';
   effect: Effect;
+  keeps?: true;
 }
 
 const RATE: Cell = { phase: 'busy', effect: 'rate' };
 const BURY: Cell = { phase: 'busy', effect: 'bury' };
 const FLAG: Cell = { phase: 'busy', effect: 'flag' };
+/** An undo press asks for the offer, and writes nothing (SPEC-371 R9). */
+const OFFER: Cell = { phase: 'busy', effect: 'offer' };
+/** The confirmation of an offer, the one cell whose request is the undo (A21). */
 const UNDO: Cell = { phase: 'busy', effect: 'undo' };
+/** While an offer asks, keeping it and every other action return to the side, and that action is
+ * not carried out. */
+const KEEP: Cell = { phase: 'side', effect: 'none', keeps: true };
 const NEXT: Cell = { phase: 'loading', effect: 'card' };
 const REFUSED: Cell = { phase: 'refused', effect: 'none' };
 /** Replay plays the side's replay clips and stays on the side (SPEC-350 R15). */
@@ -52,9 +74,27 @@ const TABLE: Record<Phase, Partial<Record<ReviewEvent, Cell>>> = {
     empty: { phase: 'done', effect: 'none' },
     refusal: REFUSED
   },
-  question: { 'show-answer': { phase: 'answer', effect: 'none' }, undo: UNDO, bury: BURY, flag: FLAG, replay: REPLAY },
-  answer: { again: RATE, good: RATE, undo: UNDO, bury: BURY, flag: FLAG, replay: REPLAY },
-  busy: { settled: NEXT, 'not-shown': NEXT, flagged: { phase: 'side', effect: 'none' }, refusal: REFUSED },
+  question: { 'show-answer': { phase: 'answer', effect: 'none' }, undo: OFFER, bury: BURY, flag: FLAG, replay: REPLAY },
+  answer: { again: RATE, good: RATE, undo: OFFER, bury: BURY, flag: FLAG, replay: REPLAY },
+  busy: {
+    settled: NEXT,
+    'not-shown': NEXT,
+    flagged: { phase: 'side', effect: 'none' },
+    refusal: REFUSED,
+    offered: { phase: 'confirming', effect: 'none' },
+    'not-offered': { phase: 'side', effect: 'none' },
+    'undo-refused': NEXT
+  },
+  confirming: {
+    undo: UNDO,
+    keep: KEEP,
+    'show-answer': KEEP,
+    again: KEEP,
+    good: KEEP,
+    bury: KEEP,
+    flag: KEEP,
+    replay: KEEP
+  },
   refused: { retry: NEXT },
   done: {}
 };
@@ -63,8 +103,9 @@ const TABLE: Record<Phase, Partial<Record<ReviewEvent, Cell>>> = {
 export function step(state: ReviewState, event: ReviewEvent): { state: ReviewState; effect: Effect } {
   const cell = TABLE[state.phase][event];
   if (cell === undefined) return { state, effect: 'none' };
-  // a new card shows its question; an action moves the side as the remote's reviewer does
-  const side = event === 'view' ? 'question' : sideAfter(event as Action, state.side);
+  // a new card shows its question; an action moves the side as the remote's reviewer does, and an
+  // action that is kept rather than carried out moves nothing
+  const side = event === 'view' ? 'question' : cell.keeps ? state.side : sideAfter(event as Action, state.side);
   return { state: { phase: cell.phase === 'side' ? side : cell.phase, side }, effect: cell.effect };
 }
 
@@ -84,7 +125,10 @@ export interface StudyClient {
   rate(card: bigint, rating: Rating, ms: number): Promise<null>;
   bury(card: bigint): Promise<null>;
   flag(card: bigint): Promise<number>;
-  undo(): Promise<null>;
+  /** Reverts the answer an offer named, by its card and its step (SPEC-371 R12). */
+  undo(card: bigint, step: number): Promise<null>;
+  /** The offer of the review's own last answer, or why there is none; it writes nothing. */
+  undoOffer(): Promise<UndoOffer>;
   /** Both faces of the shown card, completed by the core with its media (SPEC-350 R14). A client
    * without it shows the card view's own sides, as part 1 does. */
   faces?(card: bigint): Promise<Faces>;
@@ -118,6 +162,8 @@ export class Review {
   #refusal: ErrorCode | null = null;
   /** A refusal the review recovered from, announced until the next gesture. */
   #notice: Status | null = null;
+  /** The answer the engine offered to undo, kept until its confirmation sends it. */
+  #offer: Offer | null = null;
   #shownAt = 0;
   #inFlight: Promise<void> = Promise.resolve();
 
@@ -153,6 +199,11 @@ export class Review {
     return this.#counts;
   }
 
+  /** The answer the review asks to undo, while it asks, or `null` (SPEC-371 R10). */
+  get offer(): Offer | null {
+    return this.#state.phase === 'confirming' ? this.#offer : null;
+  }
+
   /** Whether the frame refuses the face it shows, which then shows a message in its place. */
   get escaped(): boolean {
     const face = this.#face;
@@ -169,12 +220,13 @@ export class Review {
   }
 
   /** The controls the face shows: a card the frame refused keeps them (A12); undo only while the
-   * engine names an undoable action (R7). They stay shown while a request is in flight. */
+   * review's own last answer can be undone, which a synced one cannot (SPEC-371 R7). They stay
+   * shown while a request is in flight. */
   get controls(): Action[] {
     const face = this.#face;
     if (face === null) return [];
     const side: Action[] = face.side === 'question' ? ['show-answer'] : ['again', 'good'];
-    const undo: Action[] = face.view.undo ? ['undo'] : [];
+    const undo: Action[] = face.view.undo === 'answer' ? ['undo'] : [];
     // Replay only on a side with replay clips; a blocked play leaves it there to ask again (R15)
     const replay: Action[] = this.#faces?.[face.side].replay.length ? ['replay'] : [];
     return [...side, ...undo, ...replay, 'bury', 'flag'];
@@ -196,10 +248,24 @@ export class Review {
 
   /** The one handler every source reaches: a key, a gamepad, the stick and a click (R8). */
   act(action: Action): void {
-    // undo acts only while the engine names an undoable action
-    if (action === 'undo' && !this.#view?.undo) return;
+    // undo asks only while the review's own last answer can be undone; a
+    // synced one is announced and nothing is sent (SPEC-371 R9)
+    if (action === 'undo') {
+      const undo = this.#view?.undo ?? null;
+      if (undo === null) return;
+      if (undo === 'synced') {
+        this.#announce('undo-synced');
+        return;
+      }
+    }
     this.#notice = null;
     this.#fire(action);
+  }
+
+  /** Keeps the offered answer: "Keep it" and Escape (SPEC-371 R10). */
+  keep(): void {
+    this.#notice = null;
+    this.#fire('keep');
   }
 
   /** Asks again after a refusal. */
@@ -215,6 +281,13 @@ export class Review {
       current = this.#inFlight;
       await current;
     } while (current !== this.#inFlight);
+  }
+
+  /** Announces `notice` on the side the review shows, and moves nothing. */
+  #announce(notice: Status): void {
+    if (this.#state.phase !== 'question' && this.#state.phase !== 'answer') return;
+    this.#notice = notice;
+    this.#onChange();
   }
 
   #fire(event: ReviewEvent): void {
@@ -275,13 +348,16 @@ export class Review {
       this.#shownAt = this.#now();
       return head.card === null ? 'empty' : 'view';
     }
+    if (effect === 'offer') return this.#offered(await client.undoOffer());
     const card = (this.#view as CardView).id;
     if (effect === 'rate') {
       await client.rate(card, RATING[event as Action] as Rating, Math.round(this.#now() - this.#shownAt));
     } else if (effect === 'bury') {
       await client.bury(card);
     } else if (effect === 'undo') {
-      await client.undo();
+      const offer = this.#offer as Offer;
+      this.#offer = null;
+      await client.undo(offer.card, offer.step);
     } else {
       const flag = await client.flag(card);
       this.#view = { ...(this.#view as CardView), flag };
@@ -290,11 +366,27 @@ export class Review {
     return 'settled';
   }
 
-  /** A refusal: a stale card loads the queue's head again, and says so; any other is announced. */
+  /** The offer kept for its confirmation, or why none was made, as the notice the side shows. */
+  #offered(offered: UndoOffer): ReviewEvent {
+    if (offered.offer === null) {
+      this.#notice = offered.why === 'synced' ? 'undo-synced' : 'not-undoable';
+      return 'not-offered';
+    }
+    this.#offer = offered.offer;
+    return 'offered';
+  }
+
+  /** A refusal: a stale card loads the queue's head again, and says so; a refused undo loads the
+   * next card, and says why (SPEC-371 R9); any other is announced. */
   #refused(error: unknown): void {
     if (error instanceof EngineError && error.code === 'not-shown') {
       this.#notice = 'not-shown';
       this.#fire('not-shown');
+      return;
+    }
+    if (error instanceof EngineError && (error.code === 'undo-synced' || error.code === 'not-undoable')) {
+      this.#notice = error.code;
+      this.#fire('undo-refused');
       return;
     }
     this.#refusal = error instanceof EngineError ? error.code : 'engine-failed';
