@@ -297,6 +297,51 @@
         "const MODIFIED_SQL: &str = \"select max((select max(mod) from cards), (select max(mod) from notes), (select max(mtime_secs) from decks), (select max(mtime_secs) from deck_config), (select max(mtime_secs) from notetypes)) -- ",
         "one_way::an_edit_dated_at_or_below_the_greatest_returns_the_upload_to_the_counts",
         "the upload re-check stamp is the greatest usn and the schema stamp, never the greatest modified time; read by modified time, an edit dated at or below the newest row would let an upload overwrite it unseen (SPEC-364 A18)"
+      ],
+      [
+        "S36435-THE-SYNC-LOGIN-EXPORT-IS-METHOD-THREE",
+        "web-engine",
+        "src/wasm.rs",
+        ".run(service::SYNC, 3,",
+        ".run(service::SYNC, 4,",
+        "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+        "the sync login export reaches the engine's SyncLogin, method 3 of the sync service, through the dispatcher; at another method the owner's password would go to an engine call the export does not mean, and a reader would lose which method the login is pinned to (SPEC-364 B6)"
+      ],
+      [
+        "S36436-THE-SYNC-EXPORT-IS-METHOD-FIVE",
+        "web-engine",
+        "src/wasm.rs",
+        ".run(service::SYNC, 5,",
+        ".run(service::SYNC, 6,",
+        "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+        "the normal sync export reaches the engine's SyncCollection, method 5 of the sync service, through the dispatcher; at another method the host key would go to an engine call the export does not mean, and a reader would lose which method the sync is pinned to (SPEC-364 B6)"
+      ],
+      [
+        "S36437-THE-SYNC-EXPORT-ASKS-NO-MEDIA",
+        "web-engine",
+        "src/wasm.rs",
+        "sync_media: false",
+        "sync_media: true",
+        "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+        "the normal sync from the Worker asks for no media, which the core refuses until media sync lands; asking for media would turn every browser sync into a refusal, and a reader would lose that the export never asks for it (SPEC-364 B6)"
+      ],
+      [
+        "S36438-AN-ENGINE-REFUSAL-KEEPS-ITS-BYTES",
+        "web-engine",
+        "src/wasm.rs",
+        "Refusal::Engine { error } => Uint8Array::from(error.as_slice()).into()",
+        "Refusal::Engine { error } => refuse(\"engine error\")",
+        "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+        "an engine refusal reaches the Worker as the engine's own error bytes, which the credential module classifies to tell a refused key from a lost network; a text in their place would read every refusal as offline and keep a refused key, and a reader would lose the bytes the classification needs (SPEC-364 B6)"
+      ],
+      [
+        "S36439-THE-LOGIN-ANSWERS-THE-HOST-KEY",
+        "web-engine",
+        "src/wasm.rs",
+        "Ok(auth.hkey)",
+        "Ok(String::new())",
+        "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+        "the sync login answers the host key the engine returned, which the Worker seals and sends on each sync; an empty answer would store a key no server accepts, and a reader would lose that the export hands the engine's key back (SPEC-364 B6)"
       ]
     ]
   }
