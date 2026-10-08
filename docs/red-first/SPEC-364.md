@@ -167,3 +167,48 @@ and the native adapter ran again on a clean tree and passed, with clippy clean.
   A1 to A21, the whole of `full_sync`, and the whole test sets of the core, the web engine and the
   native adapter ran again on a clean tree and passed, with clippy clean. This record's own commit
   changes no path under `crates/`.
+
+## Three test edits between A1's red and its green
+
+Three commits between A1's red at c98b4a79 and its green at 01c42f7f edit a test file. Each is
+growth the base brief's step 4 orders, admitted insert-only under ruling 591, and none removes a
+name or rewrites an assertion.
+
+- **9073554 grows the containment census by one gesture name** (step 4.7). In
+  `crates/engine-core/tests/containment.rs`, `GESTURE_NAMES` holds four names where it held three,
+  adding `run_one_way`, and its doc comment names the one-way door. The three earlier names and the
+  census's assertions are unchanged.
+- **09a1b52 reads the web side's sync calls beside its study calls** (step 4.8). In
+  `crates/engine-core/tests/parity.rs`, the web set is `STUDY_CALLS` and `SYNC_CALLS` joined, and
+  its examined label names both. The comparison with the core's web column is unchanged.
+- **a83483d adds a fifth sentence** (step 4.6). In `crates/ffi/tests/exempt.rs`, the list of exempt
+  refusals gains `NeedsTheChoice` and its sentence. The four earlier sentences and the assertion
+  that reads them are unchanged.
+
+## Mutation coverage: three tests for the diff's own mutants
+
+The diff's own mutants, run at 48dfcade, left five missed. 96f92e33 adds three tests for them. Each
+is mutation coverage, not a red: the code each reaches stood before it, so each passed at its own
+commit and takes no line in the fence. Each was run by hand at 8e8aef53 on a clean tree against the
+mutant it covers, and the source was put back by its checksum after each run.
+
+- **`one_way::a_server_copy_is_fetched_into_a_file_whose_collection_holds_no_row`** plants an
+  existing file whose collection holds no review, card or note, fetches the server's copy into it,
+  and reads the server's ids back from the file. A5 fetched only into an absent path, so the check
+  that a planted file holds no row was reached by no test. With that check answering true, and
+  again with its negation deleted, the test failed at `one_way.rs:1114:5`, `a file whose collection
+  holds no row is fetched into: Err(HoldsRows)`, exit 101 each.
+- **`one_way::a_copy_path_that_is_not_utf8_is_the_cores_own_refusal`** gives the fetch a copy path
+  that is not UTF-8 and asserts the core's refusal, its kind and message byte for byte, and that
+  nothing is written at the path. With the refusal's message deleted it failed at
+  `one_way.rs:1157:5` (left `Err(Some((InvalidInput, "")))`), exit 101. With its kind deleted it
+  passed, exit 0: the kind is the proto3 default, so the bytes are equal. That mutant is recorded
+  as equivalent in `scripts/mutation-equivalent.d/deck-streak-engine-core.json` at 25930076.
+- **`dispatch::tests::a_close_with_no_collection_open_is_the_engines_refusal`** is a unit test in
+  `crates/engine-core/src/dispatch.rs`, because the dispatcher's close is crate-private and both of
+  its callers reach it only with a collection open. It closes a dispatcher that opened none and
+  asserts the engine's own refusal, its kind and message byte for byte. With close answering
+  `Ok(())` it failed at `dispatch.rs:494:9` (left `Ok(())`), exit 101.
+
+The unmutated runs of all three passed, one test selected each. This record's own commit changes no
+path under `crates/`.
