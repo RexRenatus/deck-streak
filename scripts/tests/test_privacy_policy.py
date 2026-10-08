@@ -8,9 +8,12 @@ against a number written here, and each census is paired with a planted policy i
 
 import json
 import re
+import tempfile
 import unittest
+from pathlib import Path
 
 from _support import REPO, examined
+from test_one_static_library import tracked_paths
 from test_sync_server_runbook import OFFSITE_PERIOD
 
 POLICY = REPO / "PRIVACY.md"
@@ -171,6 +174,226 @@ class ThePolicyDisclosesWhatAnEraseLeaves(unittest.TestCase):
         self.assertRegex(readme, r"(?m)^## Privacy$")
         self.assertIn("[PRIVACY.md](PRIVACY.md)", readme)
         self.assertIn("PRIVACY.md", ABOUT.read_text(encoding="utf-8"))
+
+
+# SPEC-368: the section that says what DeckStreak trains or fits on a learner's data.
+MODELS = "## Models and your data"
+PARAGRAPH = (
+    "DeckStreak does not train, fine-tune or fit a model on your data, and does not build a "
+    "dataset from it. The scheduling parameters in your collection come from your Anki app: "
+    "DeckStreak reads them, and the memory state Anki stores for each card, to schedule the cards "
+    "you study, and does not fit them to your reviews. An AI duty runs only when the host's AI "
+    "route is configured, which it is not by default. Each run sends the cards that duty covers "
+    "and a summary of your leeches, lapses and graded practice, not your journal, as the context "
+    "of that one run, and DeckStreak's database keeps neither the prompt nor the reply. A reply "
+    "that passes its checks is written to your own vault. What the model's provider keeps is set "
+    "by that provider's terms."
+)
+OLD_SENTENCE = "DeckStreak never uses your data to train a model."
+# What a delivery that trips a guard below owes: the page, and its changelog entry (SPEC-368 R7).
+OWED = (
+    f"the section `{MODELS}` of PRIVACY.md says what DeckStreak does with a learner's data, so "
+    "amend that section and its changelog entry in the same delivery"
+)
+TABLE = REPO / "crates" / "engine-core" / "src" / "table.rs"
+AI_SAFETY = REPO / "ai-safety.json"
+# The words a fitting method of the engine allow-list would hold.
+FITTING_WORDS = ("Params", "Fsrs", "Retention", "Simulate", "Benchmark", "Dataset")
+FITTING_CALLS = re.compile(
+    r"compute_parameters|ComputeParameters|ComputeFsrsParams|compute_params|optimal_retention"
+    r"|evaluate_params|ExportDataset|export_dataset"
+)
+# The crates that depend on the Anki engine or on a review-memory crate name their dependency at
+# the start of a manifest line.
+ENGINE_DEPENDENCY = re.compile(r"(?m)^(?:anki|fsrs7|fsrs6)\b")
+EMBEDDING_WORDS = re.compile(r"embedding|similarity|cosine", re.IGNORECASE)
+EMBEDDING_SUFFIXES = (".rs", ".js", ".ts", ".svelte", ".swift")
+EMBEDDING_ROOTS = ("crates/", "web/", "ios/")
+DECLARED_CLASSES = "scripts/tests/test_declared_write_classes.py"
+# Frame embedding in two comments, exempt by exact path and exact line text; the declared list of
+# write classes, exempt by its path (SPEC-368 R7).
+FRAME_COMMENTS = (
+    (
+        "web/app/src/lib/card/policy.js",
+        " * itself included, is checked against the embedding page's `frame-src`, "
+        "so 'none' holds every frame",
+    ),
+    (
+        "web/app/src/lib/csp.test.ts",
+        "    // included, is checked against the embedding page's frame-src, "
+        "so 'none' holds every frame to",
+    ),
+)
+# The one parked path that is not drill-named: it belongs to the parked drill surface (#158).
+PARKED = ("crates/vault/src/readings_tree.rs",)
+
+
+def models_section(policy):
+    """The text under the models heading, up to the next heading, or empty when it is absent."""
+    _, found, rest = policy.partition(MODELS)
+    return rest.split("\n## ", 1)[0] if found else ""
+
+
+def table_methods(source):
+    """Each `Service.Method` name of the engine allow-list's two tables."""
+    names = []
+    for const in ("pub const ORDINARY", "pub const EXEMPT"):
+        _, _, rest = source.partition(const)
+        names += re.findall(r'name: "([A-Za-z]+\.[A-Za-z]+)"', rest.split("\n];", 1)[0])
+    return names
+
+
+def refuse_fitting_methods(methods):
+    """Refuse a method of the allow-list that holds a fitting word, by its name."""
+    fitting = [m for m in methods if any(word in m for word in FITTING_WORDS)]
+    if fitting:
+        raise AssertionError(f"the engine allow-list holds {fitting}: {OWED}")
+
+
+def engine_crates(tracked):
+    """The crates whose manifest depends on the Anki engine or a review-memory crate."""
+    crates = []
+    for path in tracked:
+        parts = path.split("/")
+        if len(parts) == 3 and parts[0] == "crates" and parts[2] == "Cargo.toml":
+            if ENGINE_DEPENDENCY.search((REPO / path).read_text(encoding="utf-8")):
+                crates.append(parts[1])
+    return sorted(crates)
+
+
+def refuse_fitting_calls(root, paths):
+    """Refuse a line of the given files that names a fitting call, by file and line."""
+    hits = []
+    for path in paths:
+        text = (root / path).read_text(encoding="utf-8", errors="replace")
+        for number, line in enumerate(text.splitlines(), 1):
+            if FITTING_CALLS.search(line):
+                hits.append(f"{path}:{number}")
+    if hits:
+        raise AssertionError(f"an engine crate names a fitting call at {hits}: {OWED}")
+
+
+def tool_holders(data):
+    """The id of every AI task that holds a tool."""
+    return [str(t.get("id") or t.get("name")) for t in data["tasks"] if t.get("tools")]
+
+
+def refuse_tools(data):
+    """Refuse an AI task that holds a tool, by its id."""
+    holders = tool_holders(data)
+    if holders:
+        raise AssertionError(f"the AI task(s) {holders} hold a tool: {OWED}")
+
+
+def embedding_population(tracked):
+    """The files A5 reads, with the count of drill-named and parked paths dropped by name.
+
+    Both are dropped from the listing before any file is opened, so a skipped path is never
+    read; the counts are printed by the caller so the blind spot is never silent.
+    """
+    listed = [
+        p for p in tracked if p.startswith(EMBEDDING_ROOTS) and p.endswith(EMBEDDING_SUFFIXES)
+    ]
+    drill = [p for p in listed if "drill" in p.casefold()]
+    parked = [p for p in listed if p in PARKED]
+    kept = [p for p in listed if "drill" not in p.casefold() and p not in PARKED]
+    return kept, len(drill), len(parked)
+
+
+def embedding_lines(root, paths):
+    """Each line of the given files that holds an embedding word, as (path, line text)."""
+    found = []
+    for path in paths:
+        text = (root / path).read_text(encoding="utf-8", errors="replace")
+        found += [(path, line) for line in text.splitlines() if EMBEDDING_WORDS.search(line)]
+    return found
+
+
+def refuse_embeddings(found):
+    """Refuse every line that is not exempt, and every exemption that matched nothing.
+
+    Returns how many lines the exemptions matched.
+    """
+    matched = {key: 0 for key in FRAME_COMMENTS}
+    declared = 0
+    unexplained = []
+    for path, line in found:
+        if (path, line) in matched:
+            matched[(path, line)] += 1
+        elif path == DECLARED_CLASSES:
+            declared += 1
+        else:
+            unexplained.append(f"{path}: {line.strip()}")
+    stale = [path for (path, _), count in matched.items() if count == 0]
+    if declared == 0:
+        stale.append(DECLARED_CLASSES)
+    if unexplained or stale:
+        raise AssertionError(
+            f"an embedding or similarity word at {unexplained}, stale exemption(s) {stale}: {OWED}"
+        )
+    return sum(matched.values()) + declared
+
+
+class ThePolicyStatesWhatDeckStreakFitsOnYourData(unittest.TestCase):
+    def test_the_policy_states_what_deckstreak_trains_and_fits(self):
+        policy = POLICY.read_text(encoding="utf-8")
+        self.assertIn(flat(PARAGRAPH), flat(models_section(policy)))
+        self.assertNotIn(flat(OLD_SENTENCE), flat(policy))
+
+    def test_the_engine_allow_list_holds_no_fitting_method(self):
+        methods = examined("engine methods", table_methods(TABLE.read_text(encoding="utf-8")))
+        refuse_fitting_methods(methods)
+        plant = "SchedulerService.ComputeFsrsParams"
+        with self.assertRaises(AssertionError) as refused:
+            refuse_fitting_methods([*methods, plant])
+        self.assertIn(plant, str(refused.exception))
+        self.assertIn(MODELS, str(refused.exception))
+
+    def test_no_engine_crate_names_a_fitting_call(self):
+        tracked = tracked_paths(REPO)
+        crates = examined("engine crates", engine_crates(tracked))
+        roots = tuple(f"crates/{name}/" for name in crates)
+        files = [p for p in tracked if p.startswith(roots) and p.endswith(".rs")]
+        print(f"examined {len(files)} files in {len(crates)} crates")
+        self.assertTrue(files, "examined 0 files: the population is empty, so nothing was judged")
+        refuse_fitting_calls(REPO, files)
+        with tempfile.TemporaryDirectory() as tmp:
+            crate = Path(tmp) / "crates" / "planted" / "src"
+            crate.mkdir(parents=True)
+            (crate / "lib.rs").write_text("fn fit() { compute_params(); }\n", encoding="utf-8")
+            with self.assertRaises(AssertionError) as refused:
+                refuse_fitting_calls(Path(tmp), ["crates/planted/src/lib.rs"])
+        self.assertIn("crates/planted/src/lib.rs:1", str(refused.exception))
+        self.assertIn(MODELS, str(refused.exception))
+
+    def test_no_ai_task_holds_a_tool(self):
+        data = json.loads(AI_SAFETY.read_text(encoding="utf-8"))
+        examined("AI tasks", data["tasks"])
+        refuse_tools(data)
+        runs = [flat(line) for line in POLICY.read_text(encoding="utf-8").splitlines()]
+        self.assertTrue(
+            any("`agent-runs`" in line and "never the prompt or the reply" in line for line in runs)
+        )
+        with self.assertRaises(AssertionError) as refused:
+            refuse_tools({"tasks": [{"id": "planted-task", "tools": ["x"]}]})
+        self.assertIn("planted-task", str(refused.exception))
+        self.assertIn(MODELS, str(refused.exception))
+
+    def test_no_code_computes_an_embedding_or_similarity(self):
+        kept, drill, parked = embedding_population(tracked_paths(REPO))
+        self.assertEqual(parked, len(PARKED), "the parked path is not in the tree once")
+        files = examined("files", [*kept, DECLARED_CLASSES])
+        matched = refuse_embeddings(embedding_lines(REPO, files))
+        print(f"examined {matched} exempt lines matched")
+        print(f"examined {drill} drill-named paths skipped, {parked} parked path skipped")
+        with tempfile.TemporaryDirectory() as tmp:
+            planted = Path(tmp) / "crates" / "planted.rs"
+            planted.parent.mkdir()
+            planted.write_text("let v = embedding(card);\n", encoding="utf-8")
+            with self.assertRaises(AssertionError) as refused:
+                refuse_embeddings(embedding_lines(Path(tmp), ["crates/planted.rs"]))
+        self.assertIn("crates/planted.rs", str(refused.exception))
+        self.assertIn(MODELS, str(refused.exception))
 
 
 if __name__ == "__main__":
