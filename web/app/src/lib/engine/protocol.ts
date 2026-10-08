@@ -46,7 +46,21 @@ export type Request =
   | { id: number; op: 'snapshot' | 'bury' | 'flag' | 'faces'; card: bigint }
   | { id: number; op: 'study'; deck: bigint }
   | { id: number; op: 'rate'; card: bigint; rating: Rating; ms: number }
-  | { id: number; op: 'credential-status' | 'credential-forget' };
+  | { id: number; op: 'credential-status' | 'credential-forget' }
+  | { id: number; op: 'sync-login'; user: string; password: string }
+  | { id: number; op: 'sync' };
+
+/** What a normal sync found the collections need, in the engine's order: the engine answers the
+ * index, and this list names it (SPEC-364 R18). */
+export const REQUIRED = ['no-changes', 'normal-sync', 'full-sync', 'full-download', 'full-upload'] as const;
+export type Required = (typeof REQUIRED)[number];
+
+/** What `sync` answers: the store's status word after the sync settled, and what the collections
+ * need, or null when no sync was answered. */
+export interface Synced {
+  status: StatusWord;
+  required: Required | null;
+}
 
 /** What the credential operations answer, and all they answer: whether this origin keeps a sealed
  * sync key, whether the Worker holds it open, and why it could not be opened (SPEC-363 R15). Never a

@@ -26,14 +26,23 @@ export class StudyEngine {
   readonly #make: () => WorkerLike;
   readonly #origin: string;
   readonly #languages: () => string[];
+  readonly #persist: () => Promise<unknown>;
   #started: Started | null = null;
   #closed: Promise<void> = Promise.resolve();
 
-  /** `make` starts the Worker; `origin` is the page's own, the only one whose replies are heard. */
-  constructor(make: () => WorkerLike, page: PageLike, origin: string, languages: () => string[]) {
+  /** `make` starts the Worker; `origin` is the page's own, the only one whose replies are heard;
+   * `persist` asks the browser to keep the origin's storage (SPEC-364 R19). */
+  constructor(
+    make: () => WorkerLike,
+    page: PageLike,
+    origin: string,
+    languages: () => string[],
+    persist: () => Promise<unknown> = async () => undefined
+  ) {
     this.#make = make;
     this.#origin = origin;
     this.#languages = languages;
+    this.#persist = persist;
     page.addEventListener('pagehide', () => this.#close());
   }
 

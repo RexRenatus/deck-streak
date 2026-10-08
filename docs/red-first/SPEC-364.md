@@ -221,3 +221,52 @@ A1 to A21, the whole of `full_sync`, the three coverage tests, and the whole tes
 the web engine and the native adapter ran again on a clean tree and passed, with clippy clean. The
 diff's own mutants ran there too: every one was caught or does not build, apart from the kind
 deletion recorded as equivalent above.
+
+## Part b2: the Worker's sync
+
+Part b2 (SPEC-364 sections 11 to 18) adds the normal sync from the Worker: two engine exports, a
+sync module that only the Worker imports, the Worker's `sync-login` and `sync` operations, the
+browser tests against the engine's own sync server, and a request for persistent storage at every
+session start. Its fence is SPEC-364 section 12, B1 to B7. The SPEC, ADR-375's amendment and the
+schematic were committed first (bfcff100), before any test or code of this part.
+
+### The tests commit
+
+This commit carries the tests of B1 to B7 and the stubs they compile against, before any code they
+judge. The stub `sync.ts` keeps the key between syncs and never settles; `StudyEngine` takes a
+`persist` and never calls it; `src/wasm.rs` holds neither sync export; and the Worker's protocol
+does not yet list `sync-login` or `sync`, so the Worker answers both as unknown operations. Each
+fence line ran on this commit's tree, the browser lines in Chromium only, with these results:
+
+- B4, its first test (`-t "each sync takes its key from the store and settles"`): exit 1,
+  `AssertionError: expected { status: 'absent', …(1) } to deeply equal { status: 'absent', required: null }`
+  at `sync.test.ts:84:31`. The stub sent the key the store had just forgotten.
+- B4, its second test (`-t "a send that throws anything but the engine's bytes still settles"`):
+  exit 1, `AssertionError: expected [ 'obtain', 'forSend' ] to deeply equal [ 'obtain', 'forSend', …(3) ]`
+  at `sync.test.ts:134:25`. The stub never settles a send.
+- B6 (`cargo test -p deck-streak-web-engine --test boundary`): exit 101. The census panicked at
+  `boundary.rs:442:5`, `6 retired text(s) judged`, its left naming
+  "sync_login: `fn sync_login(` occurs 0 times, not once" and the same for `sync_collection` and
+  `sync_refusal`; the new control panicked at `boundary.rs:482:40`, "each sync export has one body".
+  The existing test `a_boundary_function_that_answers_a_constant_is_refused_by_name`, unedited, also
+  failed, at `boundary.rs:508:40`: it plants a constant body into every function the census owes,
+  and the three new entries have no body yet. It greens with the exports.
+- B7 (`-t "every session start asks for persistent storage"`): exit 1,
+  `AssertionError: expected [] to deeply equal [ 'ask 1' ]` at `engine.test.ts:257:19`.
+- B1 is not decidable at this commit. Its test failed, exit 1, at `sync.spec.ts:99:47` with
+  `Received: {"code": "bad-request", "message": "unknown operation sync-login"}`: a red for another
+  reason than its criterion's. Its red is measured at the implementation commit, where the browser
+  transport still refuses, so `sync-login` answers `offline` and not `held`.
+- B2 and B3 are not red, as the SPEC says: the refusal they assert lives in the pinned engine, and
+  each is held by a control measured on the engine with its fix reverted. At this commit their tests
+  also failed, at `sync.spec.ts:125:47` and `sync.spec.ts:149:47`, on the same unknown operation,
+  which is not their criterion's red.
+- B5 is not red: an absence census, held by its planted controls. At this commit two of its new
+  tests failed, which is not the criterion's red either: the reply test at
+  `credential-reach.test.ts:208:49`, because both operations were answered `bad-request`
+  ("unknown operation sync-login", "unknown operation sync") and the census asserts each was
+  answered ok; and the import census at `credential-reach.test.ts:227:40`
+  (`expected [] to deeply equal [ 'lib/engine/worker.ts' ]`), because no module imports the stub
+  yet. Its three other tests passed.
+
+A commit cannot name itself, so the fence lines that name this commit are written by the next one.

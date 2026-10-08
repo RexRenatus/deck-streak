@@ -12,7 +12,8 @@ import type {
   Reply,
   Request,
   Snapshot,
-  StatusWord
+  StatusWord,
+  Synced
 } from './protocol';
 
 /** The Web Lock that holds one collection per origin. */
@@ -61,6 +62,9 @@ export interface SessionDeps {
   /** The Worker's sync credential store, which the two credential operations reach and nothing
    * else does (SPEC-363 R15, R16). A Worker without one answers `absent`. */
   credential?: { status(): Promise<StatusWord>; forget(): Promise<StatusWord> };
+  /** The Worker's sync, which the two sync operations reach; typed by its shape, so this module
+   * never imports it (SPEC-364 R17, R18). A Worker without one answers as a store with no key. */
+  sync?: { login(user: string, password: string): Promise<StatusWord>; sync(): Promise<Synced> };
 }
 
 /** A media file the Worker read for the core: its name and its first bytes. */

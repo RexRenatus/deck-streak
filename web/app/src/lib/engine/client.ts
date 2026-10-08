@@ -1,6 +1,6 @@
 // The page's side of the web engine: EngineClient, which numbers each request and settles it by
 // the reply that carries its id (SPEC-338 R3, ADR-348).
-import type { Body, Deck, ErrorCode, Faces, Head, Opened, Rating, Reply, Snapshot, StatusWord } from './protocol';
+import type { Body, Deck, ErrorCode, Faces, Head, Opened, Rating, Reply, Snapshot, StatusWord, Synced } from './protocol';
 import { admitsOrigin } from './protocol';
 
 /** The Worker as the client sees it: a port to post to and hear from. */
@@ -132,5 +132,17 @@ export class EngineClient {
    * (SPEC-363 R14). The page's sign-out calls it first. */
   forgetSync(): Promise<StatusWord> {
     return this.#send({ op: 'credential-forget' }) as Promise<StatusWord>;
+  }
+
+  /** Signs in to sync as `user`: the Worker keeps the host key sealed and answers a status word,
+   * never the key (SPEC-364 R17). */
+  syncLogin(user: string, password: string): Promise<StatusWord> {
+    return this.#send({ op: 'sync-login', user, password }) as Promise<StatusWord>;
+  }
+
+  /** A normal sync with the kept key: the status word after it, and what the collections need
+   * (SPEC-364 R18). */
+  sync(): Promise<Synced> {
+    return this.#send({ op: 'sync' }) as Promise<Synced>;
   }
 }

@@ -11,6 +11,7 @@ import {
   ReleaseService,
   loginAnswering,
   sentinel,
+  standIn,
   studyEngine,
   workerDeps
 } from './credential-stand-in.test.support';
@@ -69,6 +70,18 @@ function importers(sources: Source[]): string[] {
     .filter(({ path, text }) =>
       [...text.matchAll(SPECIFIER)].some((match) => target(path, match[1] ?? match[2]) === CREDENTIAL)
     )
+    .map(({ path }) => relative(SOURCE, path))
+    .sort();
+}
+
+/** The sync module, which only the Worker's entry imports (SPEC-364 R17, B5). */
+const SYNC = join(SOURCE, 'lib', 'engine', 'sync');
+
+/** The modules that import `module`, a file under web/app/src named without its extension, each by
+ * its path under web/app/src. */
+function importersOf(sources: Source[], module: string): string[] {
+  return sources
+    .filter(({ path, text }) => [...text.matchAll(SPECIFIER)].some((match) => target(path, match[1] ?? match[2]) === module))
     .map(({ path }) => relative(SOURCE, path))
     .sort();
 }
@@ -149,6 +162,75 @@ describe('where the sync key reaches', () => {
       text: `<script lang="ts">\n  import { CredentialStore } from '$lib/engine/credential';\n</script>\n`
     };
     expect(importers([...sources, planted]).filter((path) => !WORKER_MODULES.includes(path))).toEqual([
+      'routes/planted/+page.svelte'
+    ]);
+  });
+
+  it('no reply to sync-login or sync carries a secret, and each answered ok', async () => {
+    // SPEC-364 B5: the host key the engine's login answers, the password and the user
+    const hostKey = sentinel('host', 'key', 'sync', 'reach');
+    const password = sentinel('pass', 'word', 'sync', 'reach');
+    const user = sentinel('sync', 'user', 'sync', 'reach');
+    const release = new ReleaseService();
+    const engine = { ...standIn(), sync_login: () => hostKey, sync_collection: () => 1 };
+    const store = new CredentialStore(workerDeps(new IDBFactory(), release, new Bus(), engine));
+    const { serve } = await import('./worker');
+    const { Sync } = await import('./sync');
+    const replies: unknown[] = [];
+    let hear: (event: MessageEvent) => void = () => {};
+    const session = serve(
+      { postMessage: (reply) => replies.push(reply), addEventListener: (_, listener) => (hear = listener) },
+      {
+        lock: async () => 'held',
+        storage: async () => null,
+        load: async () => studyEngine(),
+        credential: store,
+        sync: new Sync(store, async () => engine, ENDPOINT)
+      },
+      ORIGIN
+    );
+    const requests = [{ op: 'open' }, { op: 'sync-login', user, password }, { op: 'sync' }, { op: 'credential-status' }];
+    for (const [id, body] of requests.entries()) hear(new MessageEvent('message', { data: { id, ...body } }));
+    // the session answers in order, so its next answer comes after every reply above is posted
+    const last = await session.handle({ id: requests.length, op: 'sync' });
+    const answers: [string, unknown][] = [
+      ...replies.map((reply, at): [string, unknown] => [`reply ${at}`, reply]),
+      ['a last sync', last]
+    ];
+    const secrets: [string, string][] = [
+      ['the host key', hostKey],
+      ['the password', password],
+      ['the user', user],
+      ...release.keys.map((key, at): [string, string] => [`released key ${at}`, key])
+    ];
+    expect(leaks(answers, secrets)).toEqual([]);
+    // each new operation answered ok, so the scan judged answers and not refusals
+    expect(answers.map(([, answer]) => answer)).toEqual([
+      { id: 0, ok: true, value: { existed: true, notes: 3 } },
+      { id: 1, ok: true, value: 'held' },
+      { id: 2, ok: true, value: { status: 'held', required: 'normal-sync' } },
+      { id: 3, ok: true, value: 'held' },
+      { id: 4, ok: true, value: { status: 'held', required: 'normal-sync' } }
+    ]);
+    expect(release.keys).toHaveLength(1);
+    // the positive control: a planted sync reply that carries the host key is caught by name
+    expect(leaks([['a planted sync reply', { id: 9, ok: true, value: { status: 'held', key: hostKey } }]], secrets)).toEqual([
+      'a planted sync reply carries the host key'
+    ]);
+  });
+
+  it('only the worker imports the sync module', () => {
+    // SPEC-364 B5: the census of every production module under web/app/src
+    const sources = production(SOURCE);
+    console.log(`examined ${sources.length} production modules under web/app/src`);
+    expect(sources.length).toBeGreaterThan(0);
+    expect(importersOf(sources, SYNC)).toEqual(['lib/engine/worker.ts']);
+    // the positive control: a planted page that imports the sync module is refused by name
+    const planted = {
+      path: join(SOURCE, 'routes', 'planted', '+page.svelte'),
+      text: `<script lang="ts">\n  import { Sync } from '$lib/engine/sync';\n</script>\n`
+    };
+    expect(importersOf([...sources, planted], SYNC).filter((path) => path !== 'lib/engine/worker.ts')).toEqual([
       'routes/planted/+page.svelte'
     ]);
   });
