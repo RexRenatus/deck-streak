@@ -1294,6 +1294,39 @@ class TheCaddyInstall(Case):
         named = [ln for ln in calls if "--adapter caddyfile" in ln]
         self.assertTrue(any(ln.startswith("caddy validate") for ln in named), calls)
 
+    def test_a_reload_reads_a_caddyfile_under_another_name_with_the_caddyfile_adapter(self):
+        w = self.world
+        caddyfile = w.caddy_dir / "site.conf"
+        caddyfile.write_text("example.org {\n\trespond 200\n}\n", encoding="utf-8")
+        setting = {"DECKSTREAK_DEPLOY_CADDYFILE": str(caddyfile)}
+        w.ship("v1.0.0")
+        self.ok(w.deploy("v1.0.0"))
+        failing = w.log / "caddy-reload-fails"
+
+        def reloads():
+            return [ln for ln in w.text("caddy.log").splitlines() if ln.startswith("caddy reload")]
+
+        self.ok(w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config(), **setting))
+        self.assertEqual(len(reloads()), 1, "the install reloads once")
+        self.ok(w.run(ROLLBACK, "caddy-remove", **self.config(), **setting))
+        self.assertEqual(len(reloads()), 2, "the removal reloads once")
+        failing.write_text("1")
+        done = w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config(), **setting)
+        self.assertNotEqual(done.returncode, 0, "a failed reload refuses the install")
+        self.assertIn("the Caddy reload failed", done.stderr)
+        self.assertEqual(len(reloads()), 4, "the failed install restores and reloads again")
+        self.ok(w.run(DEPLOY, "caddy-install", "v1.0.0", **self.config(), **setting))
+        self.assertEqual(len(reloads()), 5, "a good install reloads once")
+        failing.write_text("1")
+        done = w.run(ROLLBACK, "caddy-remove", **self.config(), **setting)
+        self.assertNotEqual(done.returncode, 0, "a failed reload refuses the removal")
+        self.assertIn("the Caddy reload failed", done.stderr)
+        seen = reloads()
+        self.assertEqual(len(seen), 7, "the failed removal restores and reloads again")
+        for line in seen:
+            self.assertIn("--adapter caddyfile", line, "every reload names its adapter")
+            self.assertIn(f"--config {caddyfile}", line, "the reload reads the live file")
+
     UNWRITTEN = "the candidate Caddyfile could not be written"
     NOT_PLAIN = ("symlink-to-file", "hard-link-to-file", "symlink-to-dir", "dir-with-file", "fifo")
 

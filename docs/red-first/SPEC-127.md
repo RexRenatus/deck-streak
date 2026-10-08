@@ -271,3 +271,15 @@ which it can read no environment. After it, fifty-six tests pass.
 
 The rows S12741 to S12746 were added in a later commit. Each is killed by the test of A39, and every
 row of the band is proved killed by its full id on a clean committed tree.
+
+## Amendment: the reload names its adapter (issue #674)
+
+The test of A40 is committed alone first, against `deploy.sh` as it stands. It runs in CI only,
+because `test_deploy_scripts.py` executes the deploy scripts. Its red line is quoted from CI's log
+of the job that runs that module, and its green line names the commit that adds `--adapter
+caddyfile` to the four reloads. Both lines join the fence at the top of this file in the record
+commit.
+
+```text
+A40: red at <C1 sha>: <the failure line, quoted from CI>
+```
