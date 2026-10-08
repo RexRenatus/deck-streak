@@ -82,6 +82,7 @@
   "study_review_title": "複習",
   "study_question_frame": "卡片的問題",
   "study_answer_frame": "卡片的答案",
+  "study_late_review": "這張卡片的到期日是之前的某一天，因此這次複習不計入那一天的連續紀錄。",
   "study_show_answer": "顯示答案",
   "study_again": "重來",
   "study_good": "良好",

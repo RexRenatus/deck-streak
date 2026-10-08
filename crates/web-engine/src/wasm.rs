@@ -48,6 +48,7 @@ use deck_streak_engine_core::credential::{self, Generation, Kept, Outcome};
 use deck_streak_engine_core::dispatch::{Dispatcher, Read, Refusal};
 use deck_streak_engine_core::face::{Clip, Face, Side};
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
+use deck_streak_engine_core::late;
 use deck_streak_engine_core::media::{Reader, TYPES};
 use deck_streak_engine_core::table::{ExemptWrite, Transport};
 use deck_streak_engine_core::undo_answer::{self, Review};
@@ -556,6 +557,8 @@ fn joined(nodes: &[RenderedTemplateNode]) -> String {
 /// ordinal and flag, both sides rendered in full with sound and speech tags stripped, the note
 /// type's CSS, the four interval labels for the states read with it, and the engine's undo label.
 /// The card is kept with those states and its flag for `rate`, `bury` and `flag` (SPEC-350 R2, R3).
+/// It carries `late`, the core's answer whether the card is past its due day in the engine's day,
+/// so its review cannot count toward the streak for that day (SPEC-376 R4).
 #[wasm_bindgen]
 pub fn current_card() -> Result<String, JsValue> {
     SHOWN.with(|kept| *kept.borrow_mut() = None);
@@ -607,6 +610,9 @@ pub fn current_card() -> Result<String, JsValue> {
         }
         None => None,
     };
+    let day = dispatcher()?
+        .engine_day()
+        .map_err(|_| refuse("the engine's day was not read"))?;
     let view = serde_json::json!({
         "counts": counts,
         "card": {
@@ -618,6 +624,7 @@ pub fn current_card() -> Result<String, JsValue> {
             "css": rendered.css,
             "labels": labels.vals,
             "undo": undo_view(judged),
+            "late": late::past_due_day(&card, day),
         },
     });
     SHOWN.with(|kept| {

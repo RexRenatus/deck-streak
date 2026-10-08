@@ -82,6 +82,7 @@
   "study_review_title": "復習",
   "study_question_frame": "カードの問題",
   "study_answer_frame": "カードの解答",
+  "study_late_review": "このカードの期日は前の日だったため、この復習はその日の連続記録には数えられません。",
   "study_show_answer": "解答を表示",
   "study_again": "もう一度",
   "study_good": "普通",

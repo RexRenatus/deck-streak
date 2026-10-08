@@ -8,6 +8,7 @@ use anki::backend::{Backend, init_backend};
 use anki_proto::backend::BackendError;
 use anki_proto::backend::backend_error::Kind;
 use anki_proto::collection::{CloseCollectionRequest, OpenCollectionRequest, UndoStatus};
+use anki_proto::scheduler::SchedTimingTodayResponse;
 use anki_proto::sync::{FullUploadOrDownloadRequest, SyncAuth};
 use prost::Message;
 
@@ -34,6 +35,10 @@ const REVIEW_SQL: &str = "select cid, usn from revlog where id = ?";
 /// The engine's undo status, `CollectionService.GetUndoStatus`: its label and its last step, which
 /// an undo of the review's own last answer compares with its record (SPEC-371 R5).
 const GET_UNDO_STATUS: (u32, u32) = (3, 7);
+/// The engine's timing of today, `SchedulerService.SchedTimingToday`: the day count and the next
+/// rollover a card's due is judged in (SPEC-376 R3). The core makes it itself; no adapter pair
+/// names it.
+const SCHED_TIMING_TODAY: (u32, u32) = (13, 5);
 /// The engine's sync login, `BackendSyncService.SyncLogin`: the one admitted call whose request
 /// the core reads, to guard its endpoint (SPEC-347 R2).
 const SYNC_LOGIN: (u32, u32) = (1, 3);
@@ -459,9 +464,15 @@ impl Dispatcher {
     /// [`Refusal::Engine`] when the engine cannot run the read, a closed collection among them, or
     /// answers it with a reply that is not the timing's message.
     pub fn engine_day(&self) -> Result<EngineDay, Refusal> {
+        let reply = self
+            .backend
+            .run_service_method(SCHED_TIMING_TODAY.0, SCHED_TIMING_TODAY.1, &[])
+            .map_err(|error| Refusal::Engine { error })?;
+        let timing = SchedTimingTodayResponse::decode(reply.as_slice())
+            .map_err(|_| failed("the engine's timing of today is not its message"))?;
         Ok(EngineDay {
-            days_elapsed: 0,
-            next_day_at: 0,
+            days_elapsed: timing.days_elapsed,
+            next_day_at: timing.next_day_at,
         })
     }
 
