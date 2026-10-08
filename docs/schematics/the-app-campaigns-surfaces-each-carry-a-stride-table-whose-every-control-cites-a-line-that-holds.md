@@ -31,10 +31,10 @@ cut, and `scripts/threat_model.py` holds every one in CI (SPEC-375 R5, A2).
 | surface | entry point |
 |---|---|
 | the iPhone and iPad client | `ios/App/Sources/DeckStreakApp.swift:5:@main` |
-| the web client | `web/app/src/routes/study/review/+page.svelte:7:<ReviewScreen`, `web/app/src/lib/engine/worker.ts:74:scope.addEventListener('message'`, `crates/api/src/sync_seal_routes.rs:40:pub const SEAL_KEY_PATH` |
+| the web client | `web/app/src/routes/study/review/+page.svelte:7:<ReviewScreen`, `web/app/src/lib/engine/worker.ts:76:scope.addEventListener('message'`, `crates/api/src/sync_seal_routes.rs:40:pub const SEAL_KEY_PATH` |
 | the sync service | `deploy/systemd/deck-streak-sync-server.service:21:ExecStart=`, `deploy/scripts/sync-server.sh:19:set -euo pipefail` |
-| the engine and its boundaries | `crates/engine-core/src/lib.rs:36:#![forbid(unsafe_code)]`, `crates/ffi/src/lib.rs:21:#![forbid(unsafe_code)]`, `crates/web-engine/src/wasm.rs:120:#[wasm_bindgen]` |
-| the build and release lanes | `.github/workflows/testflight-internal.yml:26:permissions:`, `.github/workflows/testflight-release.yml:9:tags:`, `.github/workflows/release.yml:17:permissions:` |
+| the engine and its boundaries | `crates/engine-core/src/lib.rs:36:#![forbid(unsafe_code)]`, `crates/ffi/src/lib.rs:21:#![forbid(unsafe_code)]`, `crates/web-engine/src/wasm.rs:124:#[wasm_bindgen]` |
+| the build and release lanes | `.github/workflows/testflight-internal.yml:26:permissions:`, `.github/workflows/testflight-release.yml:9:tags:`, `.github/workflows/release.yml:19:permissions:` |
 
 ## 3. Components and trust boundaries
 
@@ -74,7 +74,7 @@ flowchart LR
 
 | id | threat | asset | control | pinned by |
 |---|---|---|---|---|
-| S2 | a message from another origin poses as the page to the Worker | what the Worker holds | the Worker's channel admits a message only from its own origin: `web/app/src/lib/engine/credential.ts:148:channel.addEventListener('message'`, `web/app/src/lib/engine/protocol.ts:236:export function admitsOrigin(sender: string, own: string): boolean {` | `web/app/src/lib/engine/credential.test.ts:367:a message from another origin changes nothing a Worker holds` |
+| S2 | a message from another origin poses as the page to the Worker | what the Worker holds | the Worker's channel admits a message only from its own origin: `web/app/src/lib/engine/credential.ts:148:channel.addEventListener('message'`, `web/app/src/lib/engine/protocol.ts:259:export function admitsOrigin(sender: string, own: string): boolean {` | `web/app/src/lib/engine/credential.test.ts:367:a message from another origin changes nothing a Worker holds` |
 | T2 | a frame loads a page from elsewhere into the review | the review page | the page's policy lets no frame source load: `web/app/src/lib/card/policy.js:11:export const PAGE_FRAME_SRC = ['none'];`, `web/app/svelte.config.js:31:'frame-src': PAGE_FRAME_SRC` | `web/app/src/lib/csp.test.ts:90:the page policy lets no frame navigate` |
 | R2 | a sealing key is released and no record says so | the seal on the web's sync record | each release writes a record of itself: `crates/api/src/sync_seal_routes.rs:103:tracing::info!("a sealing key was released");` | `crates/api/tests/sync_seal_routes.rs:558:async fn no_seal_secret_id_or_key_reaches_a_record()` |
 | I3 | a card face reads the page, the learner's reviews or the network | the review history and the sync key | the card frame is sandboxed with no allowance, and its own policy fetches only data: `web/app/src/lib/card/policy.js:18:export const FRAME_SANDBOX = '';`, `web/app/src/lib/card/policy.js:26:default-src 'none'; img-src data:` | `web/app/src/lib/card/card-frame.test.ts:19:the card frame is a sandboxed srcdoc frame with no token`, `web/app/src/lib/card/policy.test.ts:36:the card frame's policy fetches only data and runs no script` |
@@ -109,13 +109,13 @@ flowchart LR
 
 | id | threat | asset | control | pinned by |
 |---|---|---|---|---|
-| S5 | a build from a commit off main is published as a release | the published release | the release refuses a tag whose commit is not on main: `.github/workflows/release.yml:57:git merge-base --is-ancestor "$GITHUB_SHA" origin/main` | `scripts/tests/test_release_workflow.py:190:def test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard` |
+| S5 | a build from a commit off main is published as a release | the published release | the release refuses a tag whose commit is not on main: `.github/workflows/release.yml:64:git merge-base --is-ancestor "$GITHUB_SHA" origin/main` | `scripts/tests/test_release_workflow.py:202:def test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard` |
 | T5 | a moved action tag changes what a lane runs | the built app | every action is pinned by its commit: `.github/workflows/testflight-internal.yml:46:actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1` | `scripts/tests/test_testflight_workflows.py:278:def test_the_lanes_are_hardened_pinned_uncached_and_queued` |
-| T6 | a release ships a server the audit refused | the released server | the release waits on the server audit: `.github/workflows/release.yml:30:needs: [audit-sync-server]` | `scripts/tests/test_release_workflow.py:322:def test_the_release_waits_on_the_server_audit` |
-| R5 | a published artifact cannot be traced to the run that built it | the published release | the release attests its build's provenance: `.github/workflows/release.yml:119:actions/attest-build-provenance@` | `scripts/tests/test_release_workflow.py:144:def test_the_release_workflow_is_read_only_and_pinned` |
+| T6 | a release ships a server the audit refused | the released server | the release waits on the server audit: `.github/workflows/release.yml:33:needs: [audit-sync-server]` | `scripts/tests/test_release_workflow.py:511:def test_the_release_waits_on_the_server_audit` |
+| R5 | a published artifact cannot be traced to the run that built it | the published release | the release attests its build's provenance: `.github/workflows/release.yml:126:actions/attest-build-provenance@` | `scripts/tests/test_release_workflow.py:156:def test_the_release_workflow_is_read_only_and_pinned` |
 | I8 | a later step reads the checkout's token | the repository token | the checkout keeps no credential: `.github/workflows/testflight-internal.yml:49:persist-credentials: false` | `scripts/tests/test_testflight_workflows.py:278:def test_the_lanes_are_hardened_pinned_uncached_and_queued` |
 | D5 | a stuck or doubled run holds the lane | the lane's runs | the lane queues its runs and bounds each job: `.github/workflows/testflight-internal.yml:32:concurrency:`, `.github/workflows/testflight-internal.yml:40:timeout-minutes:` | `scripts/tests/test_testflight_workflows.py:278:def test_the_lanes_are_hardened_pinned_uncached_and_queued` |
-| E5 | a step writes to the repository it builds, or reads a credential outside its job | the repository | the workflow's token reads only, and only the app job names an environment: `.github/workflows/release.yml:18:contents: read`, `.github/workflows/testflight-internal.yml:62:environment:` | `scripts/tests/test_release_workflow.py:144:def test_the_release_workflow_is_read_only_and_pinned`, `scripts/tests/test_testflight_workflows.py:242:def test_only_the_app_job_names_an_environment_and_reads_a_credential` |
+| E5 | a step writes to the repository it builds, or reads a credential outside its job | the repository | the workflow's token reads only, and only the app job names an environment: `.github/workflows/release.yml:20:contents: read`, `.github/workflows/testflight-internal.yml:62:environment:` | `scripts/tests/test_release_workflow.py:156:def test_the_release_workflow_is_read_only_and_pinned`, `scripts/tests/test_testflight_workflows.py:242:def test_only_the_app_job_names_an_environment_and_reads_a_credential` |
 
 ## 9. Where each test pins the model
 
