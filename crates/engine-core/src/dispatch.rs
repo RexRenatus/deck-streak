@@ -469,3 +469,38 @@ fn unreadable(sql: &str) -> Refusal {
         .encode_to_vec(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use anki_proto::backend::BackendError;
+    use anki_proto::backend::backend_error::Kind;
+    use prost::Message;
+
+    use super::{Dispatcher, Refusal};
+    use crate::table::Transport;
+
+    /// A close with no collection open reaches the engine and answers the engine's own refusal, so
+    /// a private engine's close never reports a success the engine did not give. `close` is
+    /// crate-private, so only a test inside the crate can call it with no collection open.
+    #[test]
+    fn a_close_with_no_collection_open_is_the_engines_refusal() {
+        let engine = Dispatcher::start(Transport::Native, &[])
+            .expect("the engine starts from the default init");
+
+        let closed = engine.close().map_err(|refusal| match refusal {
+            Refusal::Engine { error } => {
+                let error = BackendError::decode(error.as_slice())
+                    .expect("a refusal decodes as the engine's error");
+                Some((error.kind(), error.message))
+            }
+            Refusal::NotAllowed { .. } | Refusal::NeedsGesture { .. } => None,
+        });
+
+        assert_eq!(
+            closed,
+            Err(Some((Kind::InvalidInput, "CollectionNotOpen".to_owned()))),
+            "a close with no collection open is the engine's own refusal, its kind and message \
+             byte for byte"
+        );
+    }
+}

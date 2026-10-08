@@ -15,6 +15,8 @@
 mod support;
 
 use std::collections::BTreeSet;
+use std::ffi::OsStr;
+use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 
 use anki::card::CardId;
@@ -23,11 +25,14 @@ use anki::notes::{Note, NoteId};
 use anki::scheduler::answering::{CardAnswer, Rating};
 use anki::sync::login::{SyncAuth as EngineAuth, sync_login};
 use anki::timestamp::TimestampMillis;
+use anki_proto::backend::BackendError;
+use anki_proto::backend::backend_error::Kind;
 use anki_proto::collection::OpenCollectionRequest;
 use anki_proto::scheduler::{GetQueuedCardsRequest, QueuedCards, card_answer};
 use anki_proto::sync::sync_collection_response::ChangesRequired;
 use anki_proto::sync::{SyncAuth, SyncCollectionResponse};
 use deck_streak_engine_core::dispatch::Dispatcher;
+use deck_streak_engine_core::dispatch::Refusal;
 use deck_streak_engine_core::full_sync::{
     Checked, Counted, Counts, Direction, IdSets, Losses, Offer, Ready, SnapshotAnswer,
 };
@@ -1076,5 +1081,90 @@ fn the_stamp_reads_every_synced_tables_greatest_usn_and_the_schema() {
         judged, expected,
         "(write, the core's stamp moved, it equals the engine's hash read apart from the core): \
          each synced table's greatest usn, and the schema stamp, moves the stamp"
+    );
+}
+
+#[test]
+fn a_server_copy_is_fetched_into_a_file_whose_collection_holds_no_row() {
+    if sync_server::role().as_deref() == Some(SERVER) {
+        return sync_server::serve();
+    }
+    let server =
+        SyncServer::start("a_server_copy_is_fetched_into_a_file_whose_collection_holds_no_row");
+    let (engine_auth, auth) = logged_in(&server);
+    let donor = support::synthetic("one-way-no-row-donor");
+    answer(&donor.collection, donor.cards[0]);
+    let donor_ids = held(&donor.collection);
+    seed(&engine_auth, &donor.collection);
+    let device = support::synthetic("one-way-no-row-device");
+    let copy = device.dir.join("empty.anki2");
+    engine(&copy)
+        .close(None)
+        .expect("the engine closes the collection it created");
+    assert_eq!(
+        rows(held(&copy)),
+        [BTreeSet::new(), BTreeSet::new(), BTreeSet::new()],
+        "the planted file's collection holds no review, card or note"
+    );
+    let dispatcher = open(&device);
+
+    let fetched = one_way::count(&dispatcher, &full_sync_required(), &auth, &copy)
+        .map(|counted| counted.counts());
+
+    assert!(
+        fetched.is_ok(),
+        "a file whose collection holds no row is fetched into: {fetched:?}"
+    );
+    assert_eq!(
+        rows(held(&copy)),
+        rows(donor_ids),
+        "the copy, opened by a fresh engine, holds the server's reviews, cards and notes"
+    );
+}
+
+/// A step's refusal in the engine's error shape, decoded with the engine's own schema: its kind
+/// and message; `None` for a reason the engine's error shape does not carry.
+fn engine_refusal(reason: Reason) -> Option<(Kind, String)> {
+    match reason {
+        Reason::Engine(Refusal::Engine { error }) => {
+            let error = BackendError::decode(error.as_slice())
+                .expect("a refusal decodes as the engine's error");
+            Some((error.kind(), error.message))
+        }
+        Reason::Engine(Refusal::NotAllowed { .. } | Refusal::NeedsGesture { .. })
+        | Reason::Gesture(_)
+        | Reason::OpenCollection
+        | Reason::HoldsRows
+        | Reason::Unheld => None,
+    }
+}
+
+#[test]
+fn a_copy_path_that_is_not_utf8_is_the_cores_own_refusal() {
+    let device = support::synthetic("one-way-not-utf8");
+    let copy = device.dir.join(OsStr::from_bytes(b"copy-\xff.anki2"));
+    let dispatcher = open(&device);
+
+    let refused = one_way::count(
+        &dispatcher,
+        &full_sync_required(),
+        &SyncAuth::default(),
+        &copy,
+    )
+    .map(|counted| counted.counts())
+    .map_err(engine_refusal);
+
+    assert_eq!(
+        refused,
+        Err(Some((
+            Kind::InvalidInput,
+            "the one-way sync's path is not UTF-8".to_owned()
+        ))),
+        "a copy path that is not UTF-8 is the core's own refusal, its kind and message byte for \
+         byte, and is never rewritten into another path"
+    );
+    assert!(
+        !copy.exists(),
+        "nothing is written at a path the core refused"
     );
 }
