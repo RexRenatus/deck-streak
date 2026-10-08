@@ -4,11 +4,12 @@
 
 /** The operations the Worker serves, and nothing else. Six are the review's (SPEC-350 R4): the deck
  * list, the current deck, the card view, and a rating, bury or flag of the shown card. `faces`, after
- * them, completes both faces of the shown card with its media (SPEC-350 R14). The last two read and
- * forget the sync credential, each answering a status word (SPEC-363 R15). A grade is recorded only
- * by `rate`, on the card shown: no operation answers the queue's head (SPEC-365 R9). `undo-offer`
- * reads the review's own last answer and writes nothing, and `undo` reverts only the answer an
- * offer named, by its card and its step (SPEC-371 R12). */
+ * them, completes both faces of the shown card with its media (SPEC-350 R14). The next two log in to
+ * the sync server and run a normal sync (SPEC-364 R17, R18). The last two read and forget the sync
+ * credential, each answering a status word (SPEC-363 R15). A grade is recorded only by `rate`, on
+ * the card shown: no operation answers the queue's head (SPEC-365 R9). `undo-offer` reads the
+ * review's own last answer and writes nothing, and `undo` reverts only the answer an offer named, by
+ * its card and its step (SPEC-371 R12). */
 export const OPS = [
   'open',
   'seed',
@@ -25,6 +26,8 @@ export const OPS = [
   'bury',
   'flag',
   'faces',
+  'sync-login',
+  'sync',
   'credential-status',
   'credential-forget'
 ] as const;
@@ -52,7 +55,21 @@ export type Request =
   | { id: number; op: 'snapshot' | 'bury' | 'flag' | 'faces'; card: bigint }
   | { id: number; op: 'study'; deck: bigint }
   | { id: number; op: 'rate'; card: bigint; rating: Rating; ms: number }
-  | { id: number; op: 'credential-status' | 'credential-forget' };
+  | { id: number; op: 'credential-status' | 'credential-forget' }
+  | { id: number; op: 'sync-login'; user: string; password: string }
+  | { id: number; op: 'sync' };
+
+/** What a normal sync found the collections need, in the engine's order: the engine answers the
+ * index, and this list names it (SPEC-364 R18). */
+export const REQUIRED = ['no-changes', 'normal-sync', 'full-sync', 'full-download', 'full-upload'] as const;
+export type Required = (typeof REQUIRED)[number];
+
+/** What `sync` answers: the store's status word after the sync settled, and what the collections
+ * need, or null when no sync was answered. */
+export interface Synced {
+  status: StatusWord;
+  required: Required | null;
+}
 
 /** What the credential operations answer, and all they answer: whether this origin keeps a sealed
  * sync key, whether the Worker holds it open, and why it could not be opened (SPEC-363 R15). Never a
@@ -187,6 +204,10 @@ const languages = (value: unknown) =>
     value.length >= 1 &&
     value.length <= LANGUAGES &&
     value.every((tag) => typeof tag === 'string' && TAG.test(tag)));
+/** At most this many characters in a sync login's user or password (SPEC-364 R17). */
+const LOGIN = 1024;
+/** A sync login's user or password: a non-empty string of at most `LOGIN` characters. */
+const loginText = (value: unknown) => typeof value === 'string' && value.length >= 1 && value.length <= LOGIN;
 
 /** Each operation's arguments, and the test each must pass: the engine's own types bound them. */
 const ARGS: Record<Op, Record<string, (value: unknown) => boolean>> = {
@@ -205,6 +226,8 @@ const ARGS: Record<Op, Record<string, (value: unknown) => boolean>> = {
   bury: { card: engineId },
   flag: { card: engineId },
   faces: { card: engineId },
+  'sync-login': { user: loginText, password: loginText },
+  sync: {},
   'credential-status': {},
   'credential-forget': {}
 };
