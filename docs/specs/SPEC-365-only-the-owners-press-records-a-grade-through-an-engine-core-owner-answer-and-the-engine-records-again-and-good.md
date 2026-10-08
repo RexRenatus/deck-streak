@@ -239,11 +239,13 @@ SPEC and ADR-376 record the change, and their tests keep their names):
 | `docs/red-first/SPEC-365.md` | docs | added |
 | `docs/LEXICON.md` | docs | two glossary rows (R11) |
 | `changelog.d/grade-token-365.md` | docs | added |
+| `docs/specs/SPEC-366-the-web-review-offers-two-grades-again-and-good-on-its-buttons-keys-remote-and-stick.md` | docs | an insert-only amendment section appended (corrected citations) |
+| `docs/red-first/SPEC-366.md` | docs | one correction line appended after its fence |
 | `crates/engine-core/src/answer.rs` | engine-core | added (R1 to R3), with a native press's two codec steps (R6; ADR-376 D15) |
 | `crates/engine-core/src/lib.rs` | engine-core | `pub mod answer` and its line in the module list |
 | `crates/engine-core/src/table.rs` | engine-core | AnswerCard leaves `ORDINARY` and becomes `ANSWERED`'s one row; `Decision::NeedsAnswer`; `decide` (R4) |
 | `crates/engine-core/src/dispatch.rs` | engine-core | `Refusal::NeedsAnswer`, its arm in `run`, and `run_answer` (R3, R5) |
-| `crates/engine-core/tests/answer.rs` | engine-core | added (A3 to A6) |
+| `crates/engine-core/tests/answer.rs` | engine-core | added (A3 to A6), and the refusals' sentences, added by the mutation pass |
 | `crates/engine-core/tests/table.rs` | engine-core | `NATIVE` and `WEB` drop (13,4); an `ANSWERED` set and a fourth arm (A1) |
 | `crates/engine-core/tests/dispatch.rs` | engine-core | A2; SPEC-345 A3's ordinary call |
 | `crates/engine-core/tests/exempt.rs` | engine-core | `answer_next` answers through `run_answer` |
@@ -254,6 +256,7 @@ SPEC and ADR-376 record the change, and their tests keep their names):
 | `crates/ffi/src/engine.rs` | ffi | `Engine::answer`, `PressedGrade` and `PressRefusal`; `NeedsAnswer` in `refusal()` (R6) |
 | `crates/ffi/tests/round_trip.rs` | ffi | A12 and A13; `good_answer` and `a4_answers_the_card` answer through `Engine::answer` |
 | `crates/ffi/tests/exempt.rs` | ffi | `answered` answers through `Engine::answer` |
+| `crates/ffi/tests/refusal_text.rs` | ffi | the press refusals' sentences, added by the mutation pass |
 | `crates/ffi/tests/review_pairs.rs` | ffi | the native list drops (13,4) |
 | `crates/web-engine/src/study.rs` | web-engine | `grade`, `StudyError::NotAGrade`; `Answer` removed; `STUDY_CALLS` drops (13,4) (R7) |
 | `crates/web-engine/src/wasm.rs` | web-engine | `rate` through `run_answer`; `answer` removed; `NeedsAnswer` in `call()` (R7) |
