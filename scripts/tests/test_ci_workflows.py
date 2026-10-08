@@ -2775,6 +2775,10 @@ ENGINE_TIMEOUT_MINUTES = range(10, 31)
 # fifty minutes on a hosted macOS runner and the whole job projects to 85 to 98 minutes, so the
 # band holds about one and a half runs and stays at most half the hosted job's limit.
 HARNESS_TIMEOUT_MINUTES = range(150, 181)
+# The release job's timeout (SPEC-367 A1): its slowest measured run was cancelled at the old bound
+# after 60:26, so the band starts at one and a half times that run, rounded up to the minute, and
+# ends at twice it, rounded down to the ten, so a hung test still ends within two hours.
+RELEASE_TIMEOUT_MINUTES = range(91, 121)
 
 
 def engine_job_problems(workflow):
@@ -8384,6 +8388,21 @@ class TheCardViewIsProvedOnBothSimulators(unittest.TestCase):
         for name, (jobs, wanted) in examined("planted card-view jobs", list(plants.items())):
             with self.subTest(plant=name):
                 self.assertEqual(card_probe_problems(jobs), wanted, name)
+
+
+class TheReleaseJobOutlastsItsSlowestRun(unittest.TestCase):
+    def test_the_release_job_timeout_holds_its_slowest_measured_run(self):
+        """SPEC-367 A1: the `release` job's `timeout-minutes` is a digit string inside the band
+        its slowest measured run needs, so a pull request's release job is not cancelled at its
+        own bound."""
+        job = load("ci.yml")["jobs"]["release"]
+        examined("release keys", list(job))
+        minutes = str(job.get("timeout-minutes") or "")
+        band = f"{RELEASE_TIMEOUT_MINUTES.start} to {RELEASE_TIMEOUT_MINUTES.stop - 1}"
+        self.assertTrue(
+            minutes.isdigit() and int(minutes) in RELEASE_TIMEOUT_MINUTES,
+            f"the release job's timeout is {minutes or 'unset'}, not {band} minutes",
+        )
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 // The page's side of the web engine: EngineClient, which numbers each request and settles it by
 // the reply that carries its id (SPEC-338 R3, ADR-348).
-import type { Body, Deck, ErrorCode, Faces, Head, Opened, Rating, Reply, Snapshot } from './protocol';
+import type { Body, Deck, ErrorCode, Faces, Head, Opened, Rating, Reply, Snapshot, StatusWord } from './protocol';
 import { admitsOrigin } from './protocol';
 
 /** The Worker as the client sees it: a port to post to and hear from. */
@@ -124,5 +124,17 @@ export class EngineClient {
   /** Toggles red on the shown card and resolves to its flag; another card is refused. */
   flag(card: bigint): Promise<number> {
     return this.#send({ op: 'flag', card }) as Promise<number>;
+  }
+
+  /** Whether this origin keeps a sealed sync key, and whether the Worker holds it open: a status
+   * word, never the key (SPEC-363 R15). */
+  credentialStatus(): Promise<StatusWord> {
+    return this.#send({ op: 'credential-status' }) as Promise<StatusWord>;
+  }
+
+  /** Forgets the sync key in every Worker of this origin, and resolves to the status word after
+   * (SPEC-363 R14). The page's sign-out calls it first. */
+  forgetSync(): Promise<StatusWord> {
+    return this.#send({ op: 'credential-forget' }) as Promise<StatusWord>;
   }
 }

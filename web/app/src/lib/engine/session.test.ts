@@ -228,7 +228,7 @@ describe('the Worker session', () => {
     // each argument's edges pass the parse and reach the session's state, here not yet open
     const fresh = browser(new FakeEngine());
     for (const request of [
-      { id: 3, op: 'answer', rating: 4, ms: 2 ** 32 - 1 },
+      { id: 3, op: 'answer', rating: 3, ms: 2 ** 32 - 1 },
       { id: 4, op: 'seed', count: 2 ** 32 - 1 },
       { id: 5, op: 'snapshot', card: 2n ** 63n - 1n },
       { id: 6, op: 'answer', rating: 1, ms: 0 },
@@ -402,7 +402,7 @@ describe('the Worker session', () => {
     const { session } = browser(engine);
     await session.handle({ id: 1, op: 'open' });
     engine.failures.answer = 'engine error 0: no card is queued';
-    expect(await session.handle({ id: 2, op: 'answer', rating: 2, ms: 5 })).toEqual(
+    expect(await session.handle({ id: 2, op: 'answer', rating: 1, ms: 5 })).toEqual(
       refusal(2, 'engine-failed', 'engine error 0: no card is queued')
     );
     expect(await session.handle({ id: 3, op: 'next' })).toEqual({ id: 3, ok: true, value: null });
@@ -663,5 +663,42 @@ describe('the Worker session', () => {
       ['faces', 1001n, [], []],
       ['faces', 1001n, [], []]
     ]);
+  });
+});
+
+// Mutation coverage for SPEC-363 R15, written after green: the two credential operations reach the
+// Worker's credential store and nothing else, before the collection opens too.
+describe("the Worker session's credential operations", () => {
+  const sessionWith = (credential: SessionDeps['credential']) =>
+    new Session({
+      lock: async () => 'held',
+      storage: async () => null,
+      load: async () => new FakeEngine(),
+      credential
+    });
+
+  it('a Worker with no credential store answers absent', async () => {
+    const { log, session } = browser(new FakeEngine());
+    expect(await session.handle({ id: 1, op: 'credential-status' })).toEqual({ id: 1, ok: true, value: 'absent' });
+    expect(log).toEqual([]);
+  });
+
+  it("each credential operation answers its own store's word, before open too", async () => {
+    const session = sessionWith({ status: async () => 'held', forget: async () => 'absent' });
+    expect(await session.handle({ id: 1, op: 'credential-forget' })).toEqual({ id: 1, ok: true, value: 'absent' });
+    expect(await session.handle({ id: 2, op: 'credential-status' })).toEqual({ id: 2, ok: true, value: 'held' });
+    // the collection still opens after them
+    expect(await session.handle({ id: 3, op: 'open' })).toMatchObject({ id: 3, ok: true });
+    expect(await session.handle({ id: 4, op: 'credential-status' })).toEqual({ id: 4, ok: true, value: 'held' });
+  });
+
+  it('a store that fails answers storage-refused with its reason', async () => {
+    const session = sessionWith({
+      status: () => Promise.reject(new Error('the database is gone')),
+      forget: async () => 'absent'
+    });
+    expect(await session.handle({ id: 1, op: 'credential-status' })).toEqual(
+      refusal(1, 'storage-refused', 'the database is gone')
+    );
   });
 });

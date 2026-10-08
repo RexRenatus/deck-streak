@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { OPS, parseRequest } from './protocol';
+import { OPS, STATUS_WORDS, parseRequest } from './protocol';
 
 // SPEC-350 A6: the review's six operations cross the Worker's wire with exactly their arguments,
 // each within the engine's type, and `open` takes an optional list of language tags (R4).
@@ -13,7 +13,7 @@ describe('the study operations on the wire', () => {
       { id: 3, op: 'study', deck: 1n },
       { id: 4, op: 'study', deck: I64 },
       { id: 5, op: 'rate', card: 1001n, rating: 1, ms: 0 },
-      { id: 6, op: 'rate', card: I64, rating: 4, ms: 2 ** 32 - 1 },
+      { id: 6, op: 'rate', card: I64, rating: 3, ms: 2 ** 32 - 1 },
       { id: 7, op: 'bury', card: 1001n },
       { id: 8, op: 'flag', card: 1001n },
       { id: 9, op: 'open' },
@@ -41,6 +41,10 @@ describe('the study operations on the wire', () => {
       [{ id: 1, op: 'rate', card: 1001n, rating: 0, ms: 0 }, "rate's rating is malformed"],
       [{ id: 1, op: 'rate', card: 1001n, rating: 5, ms: 0 }, "rate's rating is malformed"],
       [{ id: 1, op: 'rate', card: 1001n, rating: 2.5, ms: 0 }, "rate's rating is malformed"],
+      [{ id: 1, op: 'rate', card: 1001n, rating: 2, ms: 0 }, "rate's rating is malformed"],
+      [{ id: 1, op: 'rate', card: 1001n, rating: 4, ms: 0 }, "rate's rating is malformed"],
+      [{ id: 1, op: 'answer', rating: 2, ms: 0 }, "answer's rating is malformed"],
+      [{ id: 1, op: 'answer', rating: 4, ms: 0 }, "answer's rating is malformed"],
       [{ id: 1, op: 'rate', card: 1001n, rating: 3 }, "rate's ms is malformed"],
       [{ id: 1, op: 'rate', card: 1001n, rating: 3, ms: -1 }, "rate's ms is malformed"],
       [{ id: 1, op: 'rate', card: 1001n, rating: 3, ms: 1.5 }, "rate's ms is malformed"],
@@ -82,7 +86,9 @@ describe('the study operations on the wire', () => {
       'rate',
       'bury',
       'flag',
-      'faces'
+      'faces',
+      'credential-status',
+      'credential-forget'
     ]);
   });
 
@@ -99,5 +105,21 @@ describe('the study operations on the wire', () => {
       id: 9,
       message: 'faces takes no names'
     });
+  });
+
+  it('the credential ops answer a status word, and take no argument', () => {
+    // SPEC-363 B11 (R15): the two credential operations carry nothing but their id, so no key, user
+    // or password crosses the wire to the Worker through them, and each answers one of five words
+    expect(parseRequest({ id: 1, op: 'credential-status' })).toEqual({ request: { id: 1, op: 'credential-status' } });
+    expect(parseRequest({ id: 2, op: 'credential-forget' })).toEqual({ request: { id: 2, op: 'credential-forget' } });
+    expect(parseRequest({ id: 3, op: 'credential-status', key: 'k' })).toEqual({
+      id: 3,
+      message: 'credential-status takes no key'
+    });
+    expect(parseRequest({ id: 4, op: 'credential-forget', user: 'u' })).toEqual({
+      id: 4,
+      message: 'credential-forget takes no user'
+    });
+    expect(STATUS_WORDS).toEqual(['absent', 'sealed', 'held', 'needs-sign-in', 'offline']);
   });
 });

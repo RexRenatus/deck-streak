@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { EngineError } from '$lib/engine/client';
 import type { CardView, Head } from '$lib/engine/protocol';
-import { Review, step, type Effect, type Phase, type ReviewEvent, type StudyClient } from './review';
+import { Review, step, type Effect, type Phase, type ReviewEvent, type ReviewState, type StudyClient } from './review';
 
 // SPEC-350 R2, R7, R10, A11, A12; ADR-361. The review's machine shows a card's question, reveals
 // its answer, rates the shown card with the time since its question showed, and moves on; while a
@@ -128,7 +128,7 @@ describe('the review', () => {
     expect(review.phase).toBe('question');
     review.act('show-answer');
     expect([review.phase, review.side]).toEqual(['answer', 'answer']);
-    expect(review.controls).toEqual(['again', 'hard', 'good', 'easy', 'bury', 'flag']);
+    expect(review.controls).toEqual(['again', 'good', 'bury', 'flag']);
 
     // a rating names the shown card, its grade and the milliseconds since its question showed
     time = 3500.4;
@@ -191,7 +191,7 @@ describe('the review', () => {
     review.act('show-answer');
     client.hold();
     review.act('good');
-    for (const action of ['good', 'again', 'easy', 'bury', 'flag', 'show-answer'] as const) review.act(action);
+    for (const action of ['good', 'again', 'bury', 'flag', 'show-answer'] as const) review.act(action);
     await flush();
     expect([review.phase, client.calls]).toEqual(['busy', ['card', 'rate 1 3 0']]);
     client.release();
@@ -201,12 +201,12 @@ describe('the review', () => {
     // a card the engine no longer shows is refused as not-shown, and the queue's head loads again
     review.act('show-answer');
     client.refusals.rate = new EngineError('not-shown', 'not the shown card');
-    review.act('hard');
+    review.act('again');
     await review.settled();
     expect([review.phase, review.status, client.calls.slice(3)]).toEqual([
       'question',
       'not-shown',
-      ['rate 2 2 0', 'card']
+      ['rate 2 1 0', 'card']
     ]);
 
     // any other refusal is announced, fires nothing more, and a retry asks again
@@ -228,7 +228,7 @@ describe('the review', () => {
     ]);
 
     // the step table itself drops every gesture in flight
-    for (const action of ['again', 'hard', 'good', 'easy', 'bury', 'flag', 'undo', 'show-answer'] as const) {
+    for (const action of ['again', 'good', 'bury', 'flag', 'undo', 'show-answer'] as const) {
       expect(step({ phase: 'busy', side: 'answer' }, action), action).toEqual({
         state: { phase: 'busy', side: 'answer' },
         effect: 'none'
@@ -250,11 +250,11 @@ describe('the review', () => {
     expect(review.controls).toEqual(['show-answer', 'bury', 'flag']);
     expect([review.phase, review.escaped, review.status]).toEqual(['question', true, 'escaped']);
     review.act('show-answer');
-    expect(review.controls).toEqual(['again', 'hard', 'good', 'easy', 'bury', 'flag']);
+    expect(review.controls).toEqual(['again', 'good', 'bury', 'flag']);
     expect([review.phase, review.escaped, review.status]).toEqual(['answer', true, 'escaped']);
-    review.act('easy');
+    review.act('good');
     await review.settled();
-    expect(client.calls).toEqual(['card', 'rate 1 4 0', 'card']);
+    expect(client.calls).toEqual(['card', 'rate 1 3 0', 'card']);
 
     // the next card renders, and the status region is quiet again
     expect([review.phase, review.escaped, review.status]).toEqual(['question', false, null]);
@@ -284,7 +284,7 @@ describe('the review', () => {
       'busy',
       'question',
       { view: view(1), side: 'answer' },
-      ['again', 'hard', 'good', 'easy', 'bury', 'flag']
+      ['again', 'good', 'bury', 'flag']
     ]);
     // the rating lands and the next card's load is held: the rated card's answer stays
     client.release();
@@ -321,7 +321,7 @@ describe('the review', () => {
 
     // the deck is done: nothing shows
     review.act('show-answer');
-    review.act('easy');
+    review.act('good');
     await review.settled();
     expect([review.phase, review.face, review.escaped, review.controls]).toEqual(['done', null, false, []]);
   });
@@ -337,9 +337,7 @@ describe('the review', () => {
       ['question', 'bury', 'busy', 'bury'],
       ['question', 'flag', 'busy', 'flag'],
       ['answer', 'again', 'busy', 'rate'],
-      ['answer', 'hard', 'busy', 'rate'],
       ['answer', 'good', 'busy', 'rate'],
-      ['answer', 'easy', 'busy', 'rate'],
       ['answer', 'undo', 'busy', 'undo'],
       ['answer', 'bury', 'busy', 'bury'],
       ['answer', 'flag', 'busy', 'flag'],
@@ -355,6 +353,11 @@ describe('the review', () => {
       });
     }
     examined('cells', cells);
+    // and no others: Hard and Easy have no cell on the answer side, so they fire nothing there
+    for (const gone of ['hard', 'easy']) {
+      const state: ReviewState = { phase: 'answer', side: 'answer' };
+      expect(step(state, gone as unknown as ReviewEvent), gone).toStrictEqual({ state, effect: 'none' });
+    }
     // a new card shows its question, whatever side the last one ended on
     expect(step({ phase: 'loading', side: 'answer' }, 'view').state).toStrictEqual({ phase: 'question', side: 'question' });
     // a flag's reply returns to the side the review was on
@@ -448,7 +451,7 @@ describe('the review', () => {
     expect([review.phase, review.side]).toEqual(['question', 'question']);
     review.act('show-answer');
     expect([review.face?.side, review.face?.view.answer]).toEqual(['answer', '<p>der Hund</p>']);
-    expect(review.controls).toEqual(['again', 'hard', 'good', 'easy', 'bury', 'flag']);
+    expect(review.controls).toEqual(['again', 'good', 'bury', 'flag']);
     review.act('good');
     await review.settled();
     expect(review.phase).toBe('done');

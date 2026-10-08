@@ -19,9 +19,7 @@
   const NAMES: Record<Intent, () => string> = {
     confirm: m.study_mapping_confirm,
     again: m.study_again,
-    hard: m.study_hard,
     good: m.study_good,
-    easy: m.study_easy,
     undo: m.study_undo,
     bury: m.study_bury,
     flag: m.study_flag,

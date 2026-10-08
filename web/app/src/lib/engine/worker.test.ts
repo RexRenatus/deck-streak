@@ -1,7 +1,19 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it, vi } from 'vitest';
+import {
+  Bus,
+  ORIGIN,
+  ReleaseService,
+  fixedCrypto,
+  loginAnswering,
+  readStored,
+  sentinel,
+  standIn
+} from './credential-stand-in.test.support';
 import type { EngineModule, SessionDeps } from './session';
+import type { CredentialGlobals } from './worker';
 
 /** The module under test, loaded inside each test. It starts itself when it loads, so a fault in
  * that start must fail a test: a static import that throws fails the file's load, which reports
@@ -265,5 +277,99 @@ describe('the Worker entry', () => {
     const deps = browserDeps(new URL('https://app.example/engine/'), load, {});
     expect(deps.media).toBeTypeOf('function');
     expect(await deps.media?.([{ name: 'cat.mp3', limit: 2n }])).toEqual([]);
+  });
+
+  it("the credential store reads the Worker's own database, fetch, crypto and channel", async () => {
+    // SPEC-363 R9 to R14: the store is built over the scope's globals, and fetch is called on the
+    // scope itself, as a browser's fetch must be
+    const { browserCredential } = await worker();
+    const database = new IDBFactory();
+    const release = new ReleaseService();
+    const bus = new Bus();
+    const called: unknown[] = [];
+    const scope: CredentialGlobals = {
+      location: { origin: ORIGIN },
+      indexedDB: database,
+      crypto: fixedCrypto,
+      fetch(input, init) {
+        called.push(this);
+        return release.fetch(input, init);
+      },
+      BroadcastChannel: function (name: string) {
+        return bus.join(name);
+      } as unknown as CredentialGlobals['BroadcastChannel']
+    };
+    const user = sentinel('sync', 'user');
+    const store = browserCredential(scope, async () => standIn());
+    expect(await store.obtain(loginAnswering(sentinel('host', 'key')).login, user, sentinel('pass', 'word'))).toBe(
+      'held'
+    );
+    expect(await readStored(database)).toEqual({ generation: 1n, sealed: expect.objectContaining({ user }) });
+    expect(called).toEqual([scope]);
+    expect(release.urls).toEqual([`${ORIGIN}/api/sync/seal-key`]);
+    expect(bus.names).toEqual(['deck-streak-credential']);
+  });
+
+  it('the session and the credential store share one module load', async () => {
+    // SPEC-363: wasm-bindgen's init must not run twice at once, so one load serves both
+    const { once, start } = await worker();
+    let loads = 0;
+    const shared = once(async () => (loads += 1));
+    expect(await Promise.all([shared(), shared()])).toEqual([1, 1]);
+    let tries = 0;
+    const refused = once(() => Promise.reject(new Error(`refused ${(tries += 1)}`)));
+    await expect(refused()).rejects.toThrow('refused 1');
+    await expect(refused()).rejects.toThrow('refused 1');
+
+    const answered: unknown[] = [];
+    let heard = () => {};
+    const replies = (count: number) =>
+      new Promise<void>((resolve) => {
+        heard = () => answered.length >= count && resolve();
+        heard();
+      });
+    const scope = Object.assign(new FakeScope(), {
+      postMessage: (reply: unknown) => {
+        answered.push(reply);
+        heard();
+      },
+      DedicatedWorkerGlobalScope: class {},
+      location: { href: `${ORIGIN}/assets/worker-abc.js`, origin: ORIGIN },
+      navigator: {
+        locks: { request: async (_name: string, _options: object, grant: (lock: object) => unknown) => grant({}) },
+        storage: { getDirectory: async () => ({}) }
+      },
+      FileSystemFileHandle: class {
+        createSyncAccessHandle() {}
+      },
+      indexedDB: new IDBFactory(),
+      crypto: fixedCrypto,
+      fetch: new ReleaseService().fetch,
+      BroadcastChannel: function (name: string) {
+        return new Bus().join(name);
+      }
+    });
+    const imported: string[] = [];
+    const { inits, module } = bindings();
+    const engine = Object.assign(module, standIn(), {
+      install_storage: async () => 0,
+      init: () => undefined,
+      open: () => JSON.stringify({ existed: false, notes: 0 })
+    });
+    expect(
+      start(scope, async (url) => {
+        imported.push(url);
+        return engine;
+      })
+    ).toBe(true);
+    await scope.send({ id: 1, op: 'credential-status' });
+    await scope.send({ id: 2, op: 'open' });
+    await replies(2);
+    expect(answered).toEqual([
+      { id: 1, ok: true, value: 'absent' },
+      { id: 2, ok: true, value: { existed: false, notes: 0 } }
+    ]);
+    expect(imported).toEqual([`${ORIGIN}/engine/${STEM}.js`]);
+    expect(inits).toHaveLength(1);
   });
 });

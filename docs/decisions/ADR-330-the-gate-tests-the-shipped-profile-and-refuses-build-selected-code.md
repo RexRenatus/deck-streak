@@ -63,3 +63,7 @@ build, and the release job is expected to take about as long as the whole `rust`
 ## More Information
 
 #473; SPEC-330; ADR-017 and ADR-055 (the gate and its jobs).
+
+## Amendment: the bound is 100 minutes, and the slice matrix is not the answer (ADR-378)
+
+Insert-only; every earlier byte is kept. ADR-378 supersedes this record's bound of 60 and its slice matrix: each slice would pay its own release build, and the census test alone would keep the slice holding it past 60 minutes on the measured slow runner. The rest of this decision stands.

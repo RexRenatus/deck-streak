@@ -85,3 +85,7 @@ fails `bash scripts/check.sh test-release` and passes without it, and a planted 
 - Mutation rows: none. The change is a shell stage, YAML and TOML; no Rust or Python function is
   added whose mutant a row could reach, and the Python test reads files rather than computing.
 - FORMAL: not applicable, no state machine and no arithmetic invariant.
+
+## Amendment: the release job's bound is 100 minutes (ADR-378)
+
+Insert-only; every earlier byte is kept. CI's own timing showed the job near its bound of 60: the slowest measured release job was cancelled at 60:26, and ADR-378 raises `timeout-minutes` to 100, held by `RELEASE_TIMEOUT_MINUTES` in `scripts/tests/test_ci_workflows.py` (SPEC-367). The slice matrix section 6 names is rejected there for a measured reason; R1 to R3 are unchanged.
