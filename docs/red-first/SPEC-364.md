@@ -221,3 +221,123 @@ A1 to A21, the whole of `full_sync`, the three coverage tests, and the whole tes
 the web engine and the native adapter ran again on a clean tree and passed, with clippy clean. The
 diff's own mutants ran there too: every one was caught or does not build, apart from the kind
 deletion recorded as equivalent above.
+
+## Part b2: the Worker's sync
+
+Part b2 (SPEC-364 sections 11 to 18) adds the normal sync from the Worker: two engine exports, a
+sync module that only the Worker imports, the Worker's `sync-login` and `sync` operations, the
+browser tests against the engine's own sync server, and a request for persistent storage at every
+session start. Its fence is SPEC-364 section 12, B1 to B7. The SPEC, ADR-375's amendment and the
+schematic were committed first (bfcff100), before any test or code of this part.
+
+### The tests commit
+
+This commit carries the tests of B1 to B7 and the stubs they compile against, before any code they
+judge. The stub `sync.ts` keeps the key between syncs and never settles; `StudyEngine` takes a
+`persist` and never calls it; `src/wasm.rs` holds neither sync export; and the Worker's protocol
+does not yet list `sync-login` or `sync`, so the Worker answers both as unknown operations. Each
+fence line ran on this commit's tree, the browser lines in Chromium only, with these results:
+
+- B4, its first test (`-t "each sync takes its key from the store and settles"`): exit 1,
+  `AssertionError: expected { status: 'absent', …(1) } to deeply equal { status: 'absent', required: null }`
+  at `sync.test.ts:84:31`. The stub sent the key the store had just forgotten.
+- B4, its second test (`-t "a send that throws anything but the engine's bytes still settles"`):
+  exit 1, `AssertionError: expected [ 'obtain', 'forSend' ] to deeply equal [ 'obtain', 'forSend', …(3) ]`
+  at `sync.test.ts:134:25`. The stub never settles a send.
+- B6 (`cargo test -p deck-streak-web-engine --test boundary`): exit 101. The census panicked at
+  `boundary.rs:442:5`, `6 retired text(s) judged`, its left naming
+  "sync_login: `fn sync_login(` occurs 0 times, not once" and the same for `sync_collection` and
+  `sync_refusal`; the new control panicked at `boundary.rs:482:40`, "each sync export has one body".
+  The existing test `a_boundary_function_that_answers_a_constant_is_refused_by_name`, unedited, also
+  failed, at `boundary.rs:508:40`: it plants a constant body into every function the census owes,
+  and the three new entries have no body yet. It greens with the exports.
+- B7 (`-t "every session start asks for persistent storage"`): exit 1,
+  `AssertionError: expected [] to deeply equal [ 'ask 1' ]` at `engine.test.ts:257:19`.
+- B1 is not decidable at this commit. Its test failed, exit 1, at `sync.spec.ts:99:47` with
+  `Received: {"code": "bad-request", "message": "unknown operation sync-login"}`: a red for another
+  reason than its criterion's. Its red is measured at the implementation commit, where the browser
+  transport still refuses, so `sync-login` answers `offline` and not `held`.
+- B2 and B3 are not red, as the SPEC says: the refusal they assert lives in the pinned engine, and
+  each is held by a control measured on the engine with its fix reverted. At this commit their tests
+  also failed, at `sync.spec.ts:125:47` and `sync.spec.ts:149:47`, on the same unknown operation,
+  which is not their criterion's red.
+- B5 is not red: an absence census, held by its planted controls. At this commit two of its new
+  tests failed, which is not the criterion's red either: the reply test at
+  `credential-reach.test.ts:208:49`, because both operations were answered `bad-request`
+  ("unknown operation sync-login", "unknown operation sync") and the census asserts each was
+  answered ok; and the import census at `credential-reach.test.ts:227:40`
+  (`expected [] to deeply equal [ 'lib/engine/worker.ts' ]`), because no module imports the stub
+  yet. Its three other tests passed.
+
+A commit cannot name itself, so the fence lines that name this commit are written by the next one.
+
+### The implementation commit
+
+The tests commit above is b819c750. Its reds were measured again on its own clean tree before this
+commit, with the same exits and failing lines. This commit carries the implementation at the old
+engine pin: the two exports and `sync_refusal` in `src/wasm.rs`, the two operations in the Worker's
+protocol, session and client, the Worker's sync module over the credential store, and the session
+start's request for persistent storage. It also grows the existing tests, insert-only: the
+protocol's operation list and its login bounds, the session's sync operations, the Worker's one
+store, and the client's two requests.
+
+At this commit B4, B5, B6 and B7 pass by their fence lines. B1 is red here for its own reason: the
+pinned engine cannot sync from the browser, so the login never reaches the server. Run on this
+commit's tree in Chromium, B1's test failed, exit 1, at `sync.spec.ts:99:47`, with
+`Expected: "held"` and an `engine-failed` reply whose message ends
+`time not implemented on this platform`: the engine trapped on the standard library's clock, which
+has no source on `wasm32-unknown-unknown`. SPEC-364 section 12
+names M1's refusal as this red; the run shows the clock's trap comes first, and the engine pin's
+second patch, `wasm-clock-threads`, is the one that removes it. The trap ended the session, as a
+trap does. B1 turns green with the engine pin that carries all three patches. B2 and B3 failed at this
+commit on the same trap, at `sync.spec.ts:125:47` and `sync.spec.ts:149:47`.
+
+```red-first
+B4: red at b819c750: AssertionError: expected { status: 'absent', …(1) } to deeply equal { status: 'absent', required: null } at sync.test.ts:84:31; and AssertionError: expected [ 'obtain', 'forSend' ] to deeply equal [ 'obtain', 'forSend', …(3) ] at sync.test.ts:134:25
+B5: not red: an absence census (no reply carries the host key, no page module imports sync.ts), held by its planted controls, each refused by name; its new tests fail at b819c750 only because both operations are unknown there
+B6: red at b819c750: panicked at crates/web-engine/tests/boundary.rs:442:5: 6 retired text(s) judged; left: (["sync_login: `fn sync_login(` occurs 0 times, not once", "sync_collection: `fn sync_collection(` occurs 0 times, not once", "sync_refusal: `fn sync_refusal(` occurs 0 times, not once"], [])
+B7: red at b819c750: AssertionError: expected [] to deeply equal [ 'ask 1' ] at engine.test.ts:257:19
+```
+
+The greens of B4, B6 and B7, and B1's red, name this commit, so the next commit writes them.
+
+### The engine pin commit
+
+The implementation commit above is 85d01a6e. Its lines follow: B4, B6 and B7 by their fence lines,
+and B1's red, quoted from the Chromium run on its clean tree without the toolchain's path in the
+trap's location. This commit moves the engine pin to the fork's three patches, `browser-xhr`,
+`wasm-clock-threads` and `wasm-collection-size`, so B2 and B3 are recorded here as not red, each
+with its control: the fork built with that one fix reverted, and the test red in Chromium.
+
+- B2's control reverted the `wasm32` status source's downcast in the engine's network error
+  mapping. Its test failed, exit 1, at `sync.spec.ts:132:32` (`toEqual`), with `"status": "absent"`
+  expected and `"status": "held"` received: a refused key was kept.
+- B3's control dropped the browser transport's response-URL check. Its test failed, exit 1, at
+  `sync.spec.ts:149:47`, with `Expected: "offline"` and `Received: "held"`: a redirected answer was
+  taken.
+- The third patch has its own control, the same way: with the sync meta's `wasm32` arm reverted to
+  the file system's size, B1's test failed, exit 1, at `sync.spec.ts:100:32`, with
+  `"required": "full-upload"` expected and `"required": null` received: the login was held, and the
+  normal sync stopped before its first request.
+- Each control was restored by an edit, and the fork's tree read back clean. With all three patches,
+  B1, B2 and B3 pass in Chromium (3 passed, exit 0), on the fork's committed patches and again on
+  this commit's tree. B1 turns green at this commit; a commit cannot name itself, so B1's green line
+  is written by the next one.
+
+```red-first
+B1: red at 85d01a6e: Expected: "held"; and {"code": "engine-failed"; and time not implemented on this platform at sync.spec.ts:99:47
+B2: not red: the refusal it asserts lives in the engine pin; its control, the fork without the wasm32 status source's downcast, is red in Chromium at sync.spec.ts:132:32 with "status": "absent" expected and "status": "held" received
+B3: not red: the refusal it asserts lives in the engine pin; its control, the fork without the response-URL check, is red in Chromium at sync.spec.ts:149:47 with Expected: "offline" and Received: "held"
+B4: green at 85d01a6e
+B6: green at 85d01a6e
+B7: green at 85d01a6e
+```
+
+### The changelog commit
+
+The engine pin commit above is 42d9ded0. B1 is green there in Chromium: run on its tree with the
+web engine built at the new pin, B1, B2 and B3 passed, exit 0 (3 passed).
+
+```red-first
+B1: green at 42d9ded0
+```

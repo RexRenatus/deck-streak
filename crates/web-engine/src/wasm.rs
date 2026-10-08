@@ -37,6 +37,10 @@ use anki_proto::scheduler::GetQueuedCardsRequest;
 use anki_proto::scheduler::QueuedCards;
 use anki_proto::scheduler::SchedulingState;
 use anki_proto::scheduler::SchedulingStates;
+use anki_proto::sync::SyncAuth;
+use anki_proto::sync::SyncCollectionRequest;
+use anki_proto::sync::SyncCollectionResponse;
+use anki_proto::sync::SyncLoginRequest;
 use prost::Message;
 use sqlite_wasm_vfs::sahpool::OpfsSAHPoolCfgBuilder;
 use sqlite_wasm_vfs::sahpool::OpfsSAHPoolUtil;
@@ -506,6 +510,57 @@ pub fn credential_on_outcome(sent: u64, current: u64, outcome: u8) -> bool {
 #[must_use]
 pub fn credential_on_removed(current: u64) -> Option<u64> {
     credential::on_removed(Generation::from(current)).map(u64::from)
+}
+
+/// A sync call's refusal as the Worker reads it (SPEC-364 R17, ADR-375 D16): the engine's own
+/// error keeps its bytes, which the credential module's classifier reads to tell a refused key
+/// from a lost network; any other refusal is the boundary's.
+fn sync_refusal(refusal: Refusal) -> JsValue {
+    match refusal {
+        Refusal::Engine { error } => Uint8Array::from(error.as_slice()).into(),
+        Refusal::NotAllowed { service, method }
+        | Refusal::NeedsGesture { service, method }
+        | Refusal::NeedsAnswer { service, method } => {
+            refuse(StudyError::CallRefused { service, method })
+        }
+    }
+}
+
+/// Logs in to the sync server at `endpoint` and answers its host key (SPEC-364 R17, ADR-375 D16).
+/// The login reaches the engine through the dispatcher, whose web column admits it, never through
+/// the study allow-list; an engine refusal is thrown as the engine's error bytes.
+#[wasm_bindgen]
+pub fn sync_login(endpoint: String, user: String, password: String) -> Result<String, JsValue> {
+    let request = SyncLoginRequest {
+        username: user,
+        password,
+        endpoint: Some(endpoint),
+    };
+    let reply = dispatcher()?
+        .run(service::SYNC, 3, &request.encode_to_vec())
+        .map_err(sync_refusal)?;
+    let auth: SyncAuth = decode(&reply)?;
+    Ok(auth.hkey)
+}
+
+/// Runs a normal sync with the host key `key` against `endpoint`, with no media and the engine's
+/// own timeout, and answers what the server requires next as the engine's number (SPEC-364 R18,
+/// ADR-375 D16). An engine refusal is thrown as the engine's error bytes.
+#[wasm_bindgen]
+pub fn sync_collection(key: String, endpoint: String) -> Result<u32, JsValue> {
+    let request = SyncCollectionRequest {
+        auth: Some(SyncAuth {
+            hkey: key,
+            endpoint: Some(endpoint),
+            io_timeout_secs: None,
+        }),
+        sync_media: false,
+    };
+    let reply = dispatcher()?
+        .run(service::SYNC, 5, &request.encode_to_vec())
+        .map_err(sync_refusal)?;
+    let response: SyncCollectionResponse = decode(&reply)?;
+    u32::try_from(response.required).map_err(refuse)
 }
 
 /// One deck of the tree as JSON: its id as a decimal string, its name, level, new, learning and

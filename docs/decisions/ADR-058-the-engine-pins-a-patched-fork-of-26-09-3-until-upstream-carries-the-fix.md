@@ -221,3 +221,27 @@ This amends the list in "The sources" above and nothing else: the fork, its patc
 stand. Vendoring the scheduler's source into the tree, which would have kept `allow-git` at two
 sources, was rejected in ADR-353 D1, because the copy is re-synced by hand and the lockfile records
 no provenance for it. SPEC-055's R3 and A1 point here.
+
+## Note, appended by SPEC-364: the pin moves to the browser's sync transport
+
+SPEC-364's part b2 adds three patches to the fork's branch `wasm32-26.09.3`, each its own commit over
+`c538de55a23e695234e794029fce0dafff2d36a9`, and a new tag, `deckstreak-pin-26.09.3-wasm32-sync`,
+names the third; the earlier tag stays where it is. The root manifest's `[patch]` entry takes
+`anki` and `anki_proto` by `rev` from the new tag's commit. `browser-xhr` replaces `browser-fetch`'s
+refusal of the sync with a synchronous request from the dedicated Worker; `browser-fetch`'s other
+gates stay, so its row is amended here, not removed. Every patch is still a `cfg` on the target or a
+dependency line both targets share, so the native engine is the one this ADR pinned. Read with
+ADR-336 and ADR-348, which this note leaves as they stand.
+
+| record | measured |
+|---|---|
+| the pinned commit | `2cfa70478a1174f49cf98fc71a8b8c47fc54b3fb`, the head of branch `wasm32-26.09.3`, tagged `deckstreak-pin-26.09.3-wasm32-sync` (`git ls-remote`) |
+| its range | thirteen commits over `57382da`, one per patch; none adds a workflow file (`git diff --stat 57382da 2cfa704 -- .github` is empty) |
+| `git diff --stat 26.09.3 2cfa704` on the fork | 24 files changed, 500 insertions(+), 71 deletions(-) |
+
+| patch | commit | reason | removal condition |
+|---|---|---|---|
+| `browser-fetch` (amended) | `cebf678517c65530baca83f63f4838771073f9b2` | its refusal of the sync is replaced by `browser-xhr`; its other gates stay | upstream gates those per target |
+| `browser-xhr` | `5dbd27443794cc0575a54506b93882f5fcbee295` | the browser's asynchronous fetch never answers while the engine blocks the Worker, so the sync request is a synchronous request from the dedicated Worker | upstream builds its sync transport for the browser |
+| `wasm-clock-threads` | `6f7acd1887eb02f106699413d963523e9b0102f9` | tokio has no time driver on `wasm32`, where a timer panics, and the browser gives the engine no thread | tokio drives timers on `wasm32`, and upstream starts no thread for a sync's abort or a background media sync |
+| `wasm-collection-size` | `2cfa70478a1174f49cf98fc71a8b8c47fc54b3fb` | the browser gives the engine no file system on `wasm32`, so a normal sync could not read the collection file's size before its first request; the sync meta reads the open collection's SQLite page count times its page size instead, and the upload size check keeps the real size | upstream reads the collection's size without the file system on `wasm32` |

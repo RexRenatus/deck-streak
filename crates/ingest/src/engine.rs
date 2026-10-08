@@ -5,10 +5,10 @@
 //! own types and never Anki's (the anti-corruption layer of docs/CONTEXT-MAP.md). [`RslibEngine`]
 //! is the adapter over the engine at upstream tag `26.09.3`, which the root manifest's `[patch]`
 //! entry replaces with the maintainer's fork at revision
-//! `c538de55a23e695234e794029fce0dafff2d36a9`, the fork's tag `deckstreak-pin-26.09.3-wasm32`:
+//! `2cfa70478a1174f49cf98fc71a8b8c47fc54b3fb`, the fork's tag `deckstreak-pin-26.09.3-wasm32-sync`:
 //! that tag plus the fix that stops the engine's protobuf build script rerunning on every cargo
 //! command (ADR-058, SPEC-055) and the web engine's `wasm32` patches, each gated off the native
-//! build (ADR-348, SPEC-338).
+//! build (ADR-348, SPEC-338), the browser's sync transport among them (SPEC-364).
 //!
 //! The skip day's write to the collection has a second port, [`CollectionWrite`], which only
 //! [`RslibEngine`] implements and only the skip's write module names (SPEC-083 A24, ADR-321 D14):
