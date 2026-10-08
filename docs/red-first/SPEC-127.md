@@ -78,6 +78,8 @@ A33: green at dc8e42216b229361a1def85bd1230884c9f11e00
 A34: green at dc8e42216b229361a1def85bd1230884c9f11e00
 A35: green at dc8e42216b229361a1def85bd1230884c9f11e00
 A38: green at b46e2daa3a29f0a4db575f971f107febb989e105
+A40: red at f1011c7b435a456e6a2789ab602ede496113133c: AssertionError: '--adapter caddyfile' not found in 'caddy reload --config <temp dir>/host/etc/caddy/site.conf imports=1' : every reload names its adapter
+A40: green at 98632e9477c74aa27bedad9c3041e2be99eba4db
 ```
 
 ## Fix round 1 (PR #357)
@@ -277,9 +279,10 @@ row of the band is proved killed by its full id on a clean committed tree.
 The test of A40 is committed alone first, against `deploy.sh` as it stands. It runs in CI only,
 because `test_deploy_scripts.py` executes the deploy scripts. Its red line is quoted from CI's log
 of the job that runs that module, and its green line names the commit that adds `--adapter
-caddyfile` to the four reloads. Both lines join the fence at the top of this file in the record
-commit.
+caddyfile` to the four reloads. Both lines are in the fence at the top of this file.
 
-```text
-A40: red at <C1 sha>: <the failure line, quoted from CI>
-```
+The red line is CI's: the job that runs the module read the new test failing by its own assertion at
+the first commit, and it was the only failing test of that run. The fix followed
+(98632e9477c74aa27bedad9c3041e2be99eba4db), which changes `deploy.sh` and edits no test file: each
+of the four reloads names `--adapter caddyfile`. Rows S12747 to S12750 were added in the record
+commit, and rows S12703 and S12707 were re-anchored to the new line, each with the same meaning.
