@@ -6,9 +6,9 @@
 #![allow(clippy::print_stdout)]
 
 use deck_streak_web_engine::study::{
-    BuryOf, Files, Grade, LastAnswer, Recorded, Returns, STUDY_CALLS, Shown, StudyError,
-    UndoRefusal, Wanted, admit, bury_of, engine_languages, grade, last_answer_for, media_type,
-    service, shown_for, toggled_red, undo_view,
+    Files, Grade, LastAnswer, Recorded, Returns, STUDY_CALLS, Shown, StudyError, UndoRefusal,
+    Wanted, admit, engine_languages, grade, last_answer_for, media_type, service, shown_for,
+    undo_view,
 };
 
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
@@ -232,28 +232,6 @@ fn only_the_shown_card_is_rated_buried_or_flagged() {
     assert_eq!(
         StudyError::NotShown.to_string(),
         "not-shown: the card is not the one on screen"
-    );
-}
-
-#[test]
-fn the_flag_toggles_red() {
-    // SPEC-350 R7: no flag turns red, red turns to none, and any other flag turns red.
-    assert_eq!(toggled_red(0), 1);
-    assert_eq!(toggled_red(1), 0);
-    assert_eq!(toggled_red(2), 1);
-    assert_eq!(toggled_red(7), 1);
-}
-
-#[test]
-fn bury_is_the_users_bury_of_the_shown_card() {
-    // SPEC-350 R2: one card, no note, and the user's bury, the engine's mode 2.
-    assert_eq!(
-        bury_of(42),
-        BuryOf {
-            card_ids: vec![42],
-            note_ids: vec![],
-            mode: 2,
-        }
     );
 }
 

@@ -27,6 +27,8 @@
 //! - [`one_way`]: the one-way sync's steps in the order the choice's model checks them, each
 //!   reading its side from its file: the server copy, the backup, the re-check and the write
 //!   (SPEC-364 R4-R8).
+//! - [`review`]: the review's flag and bury rules both clients share: red, the flag the flag
+//!   action sets, the user's bury mode and the bury of one card (SPEC-358 R2).
 //! - [`undo_answer`]: the rule an undo of the review's own last answer passes: its record, the
 //!   review row it names, the refusals and the state the card returns to (SPEC-371 R3).
 //!
@@ -44,5 +46,6 @@ pub mod gesture;
 pub mod login_guard;
 pub mod media;
 pub mod one_way;
+pub mod review;
 pub mod table;
 pub mod undo_answer;
