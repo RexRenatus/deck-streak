@@ -41,6 +41,10 @@ jobs:
             echo "the tag $tag is not a SemVer release tag" >&2
             exit 1
           fi
+          if [ "$GITHUB_REF" != "refs/tags/$tag" ]; then
+            echo "the ref $GITHUB_REF is not the tag $tag" >&2
+            exit 1
+          fi
           if [ "$(git cat-file -t "refs/tags/$tag")" != tag ]; then
             echo "the tag $tag is a lightweight tag; a release is an annotated tag" >&2
             exit 1

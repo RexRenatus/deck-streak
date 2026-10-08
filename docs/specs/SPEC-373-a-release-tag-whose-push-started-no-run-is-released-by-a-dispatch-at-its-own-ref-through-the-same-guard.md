@@ -99,6 +99,8 @@ branch, the tag, in `gh run list --workflow release.yml --json event,headBranch,
 | file | context | change |
 |---|---|---|
 | `.github/workflows/release.yml` | release | the dispatch event, the ref check in the guard, the header and group comments |
+| `.github/workflows/testflight-release.yml` | app lanes | the ref check, byte for byte as release.yml's, in the ancestry step SPEC-352 A18 pins to it |
+| `scripts/tests/test_workflow_concurrency.py` | class tests | the tag-trigger fixture's replaced block now holds the whole `on:` block, `workflow_dispatch:` included |
 | `scripts/tests/test_release_workflow.py` | release tests | A1 to A4; A18's environment gains `GITHUB_REF`; A8's event pin becomes the two events |
 | `scripts/tests/test_rulesets.py` | runbook tests | A5 |
 | `scripts/tests/test_ci_workflows.py` | the read census | entries for the new and changed call sites of `test_release_workflow.py`, nothing else |
@@ -125,6 +127,8 @@ branch, the tag, in `gh run list --workflow release.yml --json event,headBranch,
 - The app's workflows that a release tag's push also starts (`RELEASING.md` section 8) keep their
   tag-push triggers, so a tag whose push started no run still starts none of them (#475's scope is
   the release workflow).
+- testflight-release.yml's ancestry step is pinned to release.yml's guard step (SPEC-352 A18), so
+  the ref check is carried there too (#475).
 - A tag cut before `main` carries this change has no dispatch trigger at its commit, so it cannot
   take the second path (#475).
 - This delivery makes no release, tag or dispatch; the first dispatched release is the maintainer's

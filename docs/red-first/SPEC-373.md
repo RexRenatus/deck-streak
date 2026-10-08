@@ -31,6 +31,6 @@ A3: red at 1116ce46: AssertionError: 'workflow_dispatch' not found in ['push'] :
 A3: green at 3b36cebb
 A4: red at 1116ce46: AssertionError: 'workflow_dispatch' not found in ['push'] : release.yml declares no workflow_dispatch trigger
 A4: green at 3b36cebb
-A5: red at 1116ce46: AssertionError: 'gh workflow run release.yml --ref vX.Y.Z' not found in section 3 of RELEASING.md
+A5: red at 1116ce46: AssertionError: 'gh workflow run release.yml --ref vX.Y.Z' not found in '## 3. Tag it on main\n\n```sh\n...'
 A5: green at 3b36cebb
 ```
