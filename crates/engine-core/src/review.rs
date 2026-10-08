@@ -2,7 +2,13 @@
 //!
 //! The web engine's `wasm32` module and the native adapter both take them from here: the flag the
 //! flag action sets, and the user's bury of the one shown card. They moved from the web engine's
-//! study rule unchanged in behaviour (SPEC-350 R2, R7).
+//! study rule unchanged in behaviour (SPEC-350 R2, R7). Beside them sit the two requests the native
+//! adapter sends for a bury and a flag, encoded here because the adapter holds no protobuf codec of
+//! its own (SPEC-358 R3).
+
+use anki_proto::cards::SetFlagRequest;
+use anki_proto::scheduler::BuryOrSuspendCardsRequest;
+use prost::Message;
 
 /// The engine's number for the red flag.
 pub const RED: u32 = 1;
@@ -36,4 +42,24 @@ pub fn bury_of(card: i64) -> BuryOf {
         note_ids: Vec::new(),
         mode: BURY_USER,
     }
+}
+
+/// The engine's `BuryOrSuspendCardsRequest` for `bury`, encoded: the bytes the native adapter sends
+/// for (13,14) (SPEC-358 R3).
+#[must_use]
+pub fn bury_request(bury: BuryOf) -> Vec<u8> {
+    BuryOrSuspendCardsRequest {
+        card_ids: bury.card_ids,
+        note_ids: bury.note_ids,
+        mode: bury.mode,
+    }
+    .encode_to_vec()
+}
+
+/// The engine's `SetFlagRequest` that sets `flag` on the one card `card`, encoded: the bytes the
+/// native adapter sends for (5,4) (SPEC-358 R3).
+#[must_use]
+pub fn flag_request(card: i64, flag: u32) -> Vec<u8> {
+    let card_ids = vec![card];
+    SetFlagRequest { card_ids, flag }.encode_to_vec()
 }

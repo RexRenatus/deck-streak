@@ -113,6 +113,7 @@ same commit.
 | A second copy in the adapter or in Swift | two copies of one rule (ruling 299 OQ7) |
 | Swift building the request bytes | Swift would hold the mode and the toggle, and the census counts both |
 | A new closed core read of the card's flags | a statement for a value the queued card already carries |
+| A protobuf writer in the native adapter for the two requests | a second codec beside the core's; the core already encodes the native press's request (SPEC-365), and encodes these two the same way |
 
 ### D6. The native device backup, and retention in one core function
 

@@ -46,7 +46,7 @@ flowchart TB
 
   subgraph Core["Core: crates/engine-core"]
     DP["Dispatcher: tables, login guard on every SyncAuth call, id_sets, unsynced"]
-    RW["review.rs: RED, toggled_red, BURY_USER, BuryOf, bury_of"]
+    RW["review.rs: RED, toggled_red, BURY_USER, BuryOf, bury_of; bury_request, flag_request"]
     FS["full_sync.rs: Counted, Confirmed, BackedUp, Checked, Ready, Write; retention"]
   end
 

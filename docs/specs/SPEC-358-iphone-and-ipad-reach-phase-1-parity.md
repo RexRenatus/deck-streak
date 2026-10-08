@@ -254,7 +254,7 @@ A40: swift test --package-path ios/HarnessWire --filter HarnessWireTests.Respons
 
 | file | context | change |
 |---|---|---|
-| `crates/engine-core/src/review.rs` | core | added: `RED`, `toggled_red`, `BURY_USER`, `BuryOf`, `bury_of`, moved |
+| `crates/engine-core/src/review.rs` | core | added: `RED`, `toggled_red`, `BURY_USER`, `BuryOf`, `bury_of`, moved; and `bury_request` and `flag_request`, the two requests the native adapter sends, encoded, since the adapter holds no protobuf codec (R3) |
 | `crates/engine-core/src/lib.rs` | core | `pub mod review;` |
 | `crates/engine-core/src/table.rs` | core | (13,14), (5,4) `native: true` |
 | `crates/engine-core/tests/review.rs` | core tests | added: the two moved tests |

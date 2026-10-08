@@ -11,6 +11,7 @@ use deck_streak_engine_core::answer::{
 use deck_streak_engine_core::dispatch::{Dispatcher, Refusal};
 use deck_streak_engine_core::face::Side;
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
+use deck_streak_engine_core::review::{self, bury_of, bury_request, flag_request, toggled_red};
 use deck_streak_engine_core::table::{ExemptWrite, Transport};
 
 use crate::allow_list::allowed;
@@ -201,7 +202,8 @@ impl Engine {
     ///
     /// [`EngineRefusal::Engine`] when the engine refuses the bury.
     pub fn bury(&self, card_id: i64) -> Result<(), EngineRefusal> {
-        let _ = card_id;
+        // `SchedulerService.BuryOrSuspendCards`, through the allow-list as every call goes.
+        self.run(13, 14, bury_request(bury_of(card_id)))?;
         Ok(())
     }
 
@@ -212,7 +214,9 @@ impl Engine {
     ///
     /// [`EngineRefusal::Engine`] when the engine refuses the flag.
     pub fn flag(&self, card_id: i64, flag: u32) -> Result<u32, EngineRefusal> {
-        let _ = card_id;
+        let flag = toggled_red(flag);
+        // `CardsService.SetFlag`, through the allow-list as every call goes.
+        self.run(5, 4, flag_request(card_id, flag))?;
         Ok(flag)
     }
 }
@@ -222,7 +226,7 @@ impl Engine {
 #[uniffi::export]
 #[must_use]
 pub fn red_flag() -> u32 {
-    0
+    review::RED
 }
 
 /// The adapter's clock: the milliseconds since the epoch an answer records as its time.
