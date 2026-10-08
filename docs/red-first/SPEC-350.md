@@ -376,3 +376,13 @@ A30: green at aef11216
   manifest's assertion, which runs first. At 9ef7bc7e the census and A28 are green, the build writes
   the three files at 192, 512 and 180 pixels as before, and StrykerJS killed all 39 mutants of
   `web/app/src/lib/icon.ts` and the three endpoints (33, 2, 2 and 2), with none surviving.
+
+## Issue 685: the fence, line by line
+
+SPEC-350 section 14's fence holds three lines for A29, the criterion #685 delivers. Each resolves to a test this delivery adds.
+
+| # | criterion | test | added or named |
+|---|---|---|---|
+| 1 | A29 | `scripts/tests/test_release_workflow.py` `test_the_release_carries_the_module_at_web_engine` | added |
+| 2 | A29 | `scripts/tests/test_release_workflow.py` `test_the_release_builds_and_gates_the_module_as_ci_does` | added |
+| 3 | A29 | `scripts/tests/test_release_workflow.py` `test_an_over_budget_module_stops_the_release_before_the_draft` | added |
