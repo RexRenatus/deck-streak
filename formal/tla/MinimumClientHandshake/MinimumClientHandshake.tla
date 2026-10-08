@@ -1,10 +1,10 @@
 ------------------------ MODULE MinimumClientHandshake ------------------------
-\* @phx covers crates/engine-core/src/handshake.rs anchor=decide digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/dispatch.rs anchor=handshake digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/dispatch.rs anchor=run digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/dispatch.rs anchor=full_sync digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/dispatch.rs anchor=private digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/ffi/src/engine.rs anchor=run digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/engine-core/src/handshake.rs anchor=decide digest=sha256:d486fba067bef7eefe3105c7e055ab2a6c1c61708f5c6dbc4da9e0cea4a5d36b
+\* @phx covers crates/engine-core/src/dispatch.rs anchor=handshake digest=sha256:65248cdf27d007c5dae3cbc9580a7cb816bf5612c9c16a5557d17f1b1e0ee522
+\* @phx covers crates/engine-core/src/dispatch.rs anchor=run digest=sha256:7d8ef89725a70c5bc94a09c985b44f116c29cce3ee3a5a71f7b2280706bde6f1
+\* @phx covers crates/engine-core/src/dispatch.rs anchor=full_sync digest=sha256:9abfdb273db3ced7e798f27554371a364f20391f28328d8a4c9822eeefa5ed8b
+\* @phx covers crates/engine-core/src/dispatch.rs anchor=private digest=sha256:c02985295519aea882e799ce355e6e6dd541a0685ad5f9d89d25aa765951a175
+\* @phx covers crates/ffi/src/engine.rs anchor=run digest=sha256:4079a05198a7a2dac97552d4e45c78493ff2a098852b9f53f8469308430fa078
 \* @phx cites #671
 \* @phx property EverySyncFollowsAnAdmittingRead ramp=report
 \* @phx witness witness/EverySyncWaitsForARead.cfg kills=EverySyncFollowsAnAdmittingRead
