@@ -421,7 +421,10 @@ removal (ADR-127, the amendment of the same title).
 
 The fence command for A40 is the one test by name, which runs in CI only because
 `test_deploy_scripts.py` executes the deploy scripts:
-`python3 -m unittest scripts.tests.test_deploy_scripts.TheCaddyInstall.test_a_reload_reads_a_caddyfile_under_another_name_with_the_caddyfile_adapter`.
+
+```acceptance
+A40: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_reload_reads_a_caddyfile_under_another_name_with_the_caddyfile_adapter
+```
 
 Four rows in `scripts/mutation-rows.d/S12700-S12799.json` pin it, one per changed reload line (the
 install's reload, the install's restoring reload, the removal's reload and the removal's restoring
