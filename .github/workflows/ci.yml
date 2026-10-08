@@ -152,7 +152,7 @@ jobs:
   # target/release, which the cache does not hold, so this job compiles its own.
   release:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 100
     env:
       CARGO_INCREMENTAL: "0"
     steps:

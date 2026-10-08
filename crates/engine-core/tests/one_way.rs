@@ -31,6 +31,7 @@ use anki_proto::collection::OpenCollectionRequest;
 use anki_proto::scheduler::{GetQueuedCardsRequest, QueuedCards, card_answer};
 use anki_proto::sync::sync_collection_response::ChangesRequired;
 use anki_proto::sync::{SyncAuth, SyncCollectionResponse};
+use deck_streak_engine_core::answer::{Grade, OwnerAnswer};
 use deck_streak_engine_core::dispatch::Dispatcher;
 use deck_streak_engine_core::dispatch::Refusal;
 use deck_streak_engine_core::full_sync::{
@@ -46,8 +47,6 @@ use support::sync_server::{self, PASSWORD, SERVER, SyncServer, USERNAME};
 const OPEN_COLLECTION: (u32, u32) = (3, 0);
 /// `SchedulerService.GetQueuedCards`.
 const GET_QUEUED_CARDS: (u32, u32) = (13, 3);
-/// `SchedulerService.AnswerCard`.
-const ANSWER_CARD: (u32, u32) = (13, 4);
 
 /// The test's own engine handle on a closed collection file: the door the tests use to make
 /// reviews and to read a file back, which the core does not offer an adapter.
@@ -246,8 +245,9 @@ fn now_millis() -> i64 {
     i64::try_from(millis).expect("the clock's milliseconds fit an i64")
 }
 
-/// Answers the card at the head of the queue Good, through the dispatcher's ordinary calls, as a
-/// client studies while the choice is open, and returns its id.
+/// Answers the card at the head of the queue Good, through the owner's answer door (SPEC-365 R3),
+/// after the dispatcher's ordinary queue read, as a client studies while the choice is open, and
+/// returns its id.
 fn answer_next(dispatcher: &Dispatcher) -> i64 {
     let request = GetQueuedCardsRequest {
         fetch_limit: 1,
@@ -273,9 +273,11 @@ fn answer_next(dispatcher: &Dispatcher) -> i64 {
         answered_at_millis: now_millis(),
         milliseconds_taken: 1000,
     };
-    let (service, method) = ANSWER_CARD;
     dispatcher
-        .run(service, method, &answer.encode_to_vec())
+        .run_answer(
+            OwnerAnswer::from_press(card, Grade::Good),
+            &answer.encode_to_vec(),
+        )
         .expect("the answer reaches the engine");
     card
 }
@@ -1131,7 +1133,9 @@ fn engine_refusal(reason: Reason) -> Option<(Kind, String)> {
                 .expect("a refusal decodes as the engine's error");
             Some((error.kind(), error.message))
         }
-        Reason::Engine(Refusal::NotAllowed { .. } | Refusal::NeedsGesture { .. })
+        Reason::Engine(
+            Refusal::NotAllowed { .. } | Refusal::NeedsGesture { .. } | Refusal::NeedsAnswer { .. },
+        )
         | Reason::Gesture(_)
         | Reason::OpenCollection
         | Reason::HoldsRows

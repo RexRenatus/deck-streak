@@ -1,14 +1,13 @@
-// The seven requests the harness and the app send and the five responses they read (SPEC-339 R9,
-// SPEC-347 R10), field by field as the engine's messages number them at the pinned rev. An
-// encoder writes exactly the fields its request carries; a decoder reads exactly the fields its
-// caller shows and skips the rest whole.
+// The nine requests the harness and the app send and the six responses they read (SPEC-339 R9,
+// SPEC-347 R10, SPEC-348 R19), field by field as the engine's messages number them at the pinned
+// rev. An encoder writes exactly the fields its request carries; a decoder reads exactly the
+// fields its caller shows and skips the rest whole.
 
-/// A card's rating, as the engine's `CardAnswer.Rating` numbers it.
+/// A card's rating, as the engine's `CardAnswer.Rating` numbers it: Again and Good alone, the two
+/// grades a press records (SPEC-365 R13).
 public enum Rating: Int32, Sendable {
     case again = 0
-    case hard = 1
     case good = 2
-    case easy = 3
 }
 
 /// `CardAnswer`: the scheduling states travel as the encoded messages the queue gave.
@@ -60,6 +59,26 @@ public enum Requests {
         return writer.bytes
     }
 
+    /// `DeckId`: `did` (1), the deck (7,22) makes the current one, so the queue is its own
+    /// (SPEC-348 R9).
+    public static func setCurrentDeck(_ deckID: Int64) -> [UInt8] {
+        var writer = WireWriter()
+        writer.int64Field(1, deckID)
+        return writer.bytes
+    }
+
+    /// `SchedulingStates`: `current` (1), `again` (2), `hard` (3), `good` (4) and `easy` (5), each
+    /// the opaque state the queue gave, for (13,24) to describe (SPEC-348 R11).
+    public static func describeNextStates(_ card: QueuedCard) -> [UInt8] {
+        var writer = WireWriter()
+        writer.bytesField(1, card.currentState)
+        writer.bytesField(2, card.againState)
+        writer.bytesField(3, card.hardState)
+        writer.bytesField(4, card.goodState)
+        writer.bytesField(5, card.easyState)
+        return writer.bytes
+    }
+
     /// `RenderExistingCardRequest`: `card_id` (1), with `browser` (2) and `partial_render` (3)
     /// false and so omitted, so the engine renders the whole template.
     public static func renderExistingCard(cardID: Int64) -> [UInt8] {
@@ -108,20 +127,38 @@ public struct DeckName: Equatable, Sendable {
     }
 }
 
-/// One card of `QueuedCards`, with the two states an answer of Good sends back.
+/// One card of `QueuedCards`, with its current state and the four states an answer sends back,
+/// one per rating. The three beside Good's default to empty, so the five-argument call the harness
+/// makes still reads (SPEC-348 section 10).
 public struct QueuedCard: Equatable, Sendable {
     public var cardID: Int64
     public var noteID: Int64
     public var queue: Int32
     public var currentState: [UInt8]
+    public var againState: [UInt8]
+    public var hardState: [UInt8]
     public var goodState: [UInt8]
+    public var easyState: [UInt8]
 
-    public init(cardID: Int64, noteID: Int64, queue: Int32, currentState: [UInt8], goodState: [UInt8]) {
+    public init(
+        cardID: Int64, noteID: Int64, queue: Int32, currentState: [UInt8],
+        againState: [UInt8] = [], hardState: [UInt8] = [], goodState: [UInt8],
+        easyState: [UInt8] = []
+    ) {
         self.cardID = cardID
         self.noteID = noteID
         self.queue = queue
         self.currentState = currentState
+        self.againState = againState
+        self.hardState = hardState
         self.goodState = goodState
+        self.easyState = easyState
+    }
+
+    /// The state an answer of `rating` sends back as its new state: the rating's own (R10). The
+    /// states sit in the ratings' own order, so the rating's number picks its state.
+    public func state(for rating: Rating) -> [UInt8] {
+        [againState, hardState, goodState, easyState][Int(rating.rawValue)]
     }
 }
 
@@ -194,8 +231,8 @@ public enum Responses {
     }
 
     /// `QueuedCard`: `card` (1), a `Card` whose `id` (1) and `note_id` (2) the harness reads;
-    /// `queue` (2); and `states` (3), a `SchedulingStates` whose `current` (1) and `good` (4) an
-    /// answer of Good sends back as they came.
+    /// `queue` (2); and `states` (3), a `SchedulingStates` whose `current` (1), `again` (2),
+    /// `hard` (3), `good` (4) and `easy` (5) an answer sends back as they came.
     static func queuedCard(_ bytes: [UInt8]) throws -> QueuedCard {
         let queued = try WireMessage(bytes)
         let card = try WireMessage(queued.lengthDelimited(1) ?? [])
@@ -205,7 +242,22 @@ public enum Responses {
             noteID: Int64(bitPattern: card.varint(2)),
             queue: Int32(truncatingIfNeeded: queued.varint(2)),
             currentState: states.lengthDelimited(1) ?? [],
-            goodState: states.lengthDelimited(4) ?? [])
+            againState: states.lengthDelimited(2) ?? [],
+            hardState: states.lengthDelimited(3) ?? [],
+            goodState: states.lengthDelimited(4) ?? [],
+            easyState: states.lengthDelimited(5) ?? [])
+    }
+
+    /// `StringList`: `vals` (1), each a UTF-8 string, in order: the intervals (13,24) gives, one
+    /// per rating (SPEC-348 R11).
+    /// Each value is read as the one string field of a message of its own, so it meets the
+    /// codec's one UTF-8 check.
+    public static func stringList(_ bytes: [UInt8]) throws -> [String] {
+        try WireMessage(bytes).repeated(1).map { value in
+            var field = WireWriter()
+            field.bytesField(1, value)
+            return try WireMessage(field.bytes).string(1)
+        }
     }
 
     /// The question's nodes of a `RenderCardResponse`: `question_nodes` (1), never the answer's

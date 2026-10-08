@@ -23,6 +23,8 @@ pub enum Decision {
     Admit,
     /// An exempt write: never through `run`, only for an owner's gesture.
     NeedsGesture,
+    /// The one answer: never through `run`, only for an owner's press (SPEC-365 R4).
+    NeedsAnswer,
     /// Every other pair.
     NotAllowed,
 }
@@ -115,7 +117,7 @@ impl Exempt {
 /// adapter's own table equal to its column.
 /// A pair one transport may make is not thereby admitted on the other: the native client neither
 /// closes the collection nor adds notes through this table (ADR-356 D2).
-pub const ORDINARY: [Ordinary; 19] = [
+pub const ORDINARY: [Ordinary; 18] = [
     Ordinary {
         service: 1,
         method: 3,
@@ -195,13 +197,6 @@ pub const ORDINARY: [Ordinary; 19] = [
     },
     Ordinary {
         service: 13,
-        method: 4,
-        name: "SchedulerService.AnswerCard",
-        native: true,
-        web: true,
-    },
-    Ordinary {
-        service: 13,
         method: 14,
         name: "SchedulerService.BuryOrSuspendCards",
         native: false,
@@ -250,6 +245,34 @@ pub const ORDINARY: [Ordinary; 19] = [
         web: true,
     },
 ];
+
+/// The one call that records a grade, held for an owner's press (SPEC-365 R4; ADR-376 D5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Answered {
+    /// The backend service's index, as the engine numbers it.
+    pub service: u32,
+    /// The method's index within that service.
+    pub method: u32,
+    /// The engine's name for the call, `Service.Method`.
+    pub name: &'static str,
+}
+
+impl Answered {
+    /// Whether this row is the call at `service` and `method`.
+    #[must_use]
+    pub fn is(&self, service: u32, method: u32) -> bool {
+        self.service == service && self.method == method
+    }
+}
+
+/// The calls that record a grade: `AnswerCard` alone. Neither transport makes it through `run`; the
+/// dispatcher runs it only for an owner's answer, which names the card and the grade a press
+/// named (SPEC-365 R3, R4).
+pub const ANSWERED: [Answered; 1] = [Answered {
+    service: 13,
+    method: 4,
+    name: "SchedulerService.AnswerCard",
+}];
 
 /// The exempt writes: the never-list's entries 2 (Forget), 6 (set due date), 3 (delete a preset),
 /// 7 (change note type) and 8 (delete a card or a note), each one method with one target (SPEC-345
@@ -310,8 +333,8 @@ pub const EXEMPT: [Exempt; 7] = [
 ];
 
 /// What the table decides for `service` and `method` on `transport`: admitted when an ordinary
-/// row holds the pair and marks the transport, held for a gesture when an exempt row holds it, and
-/// refused otherwise.
+/// row holds the pair and marks the transport, held for an owner's answer when the answered row
+/// holds it, held for a gesture when an exempt row holds it, and refused otherwise.
 #[must_use]
 pub fn decide(transport: Transport, service: u32, method: u32) -> Decision {
     let ordinary = ORDINARY
@@ -319,6 +342,8 @@ pub fn decide(transport: Transport, service: u32, method: u32) -> Decision {
         .any(|row| (row.service, row.method) == (service, method) && row.admits(transport));
     if ordinary {
         Decision::Admit
+    } else if ANSWERED.iter().any(|row| row.is(service, method)) {
+        Decision::NeedsAnswer
     } else if EXEMPT.iter().any(|row| row.is(service, method)) {
         Decision::NeedsGesture
     } else {

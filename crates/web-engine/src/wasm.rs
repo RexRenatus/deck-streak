@@ -41,6 +41,7 @@ use sqlite_wasm_vfs::sahpool::OpfsSAHPoolUtil;
 use sqlite_wasm_vfs::sahpool::install;
 use wasm_bindgen::prelude::*;
 
+use deck_streak_engine_core::answer::{self, OwnerAnswer};
 use deck_streak_engine_core::credential::{self, Generation, Kept, Outcome};
 use deck_streak_engine_core::dispatch::{Dispatcher, Read, Refusal};
 use deck_streak_engine_core::face::{Clip, Face, Side};
@@ -50,7 +51,7 @@ use deck_streak_engine_core::table::{ExemptWrite, Transport};
 use js_sys::{Array, Object, Reflect, Uint8Array};
 
 use crate::study::{
-    Answer, Files, Shown, StudyError, Wanted, admit, bury_of, engine_languages, media_type,
+    Files, Grade, Shown, StudyError, Wanted, admit, bury_of, engine_languages, grade, media_type,
     service, shown_for, toggled_red,
 };
 use crate::synthetic::fields;
@@ -88,7 +89,9 @@ fn call(service: u32, method: u32, input: &[u8]) -> Result<Vec<u8>, JsValue> {
                 Ok(err) => refuse(format!("engine error {}: {}", err.kind, err.message)),
                 Err(_) => refuse("engine error (undecodable)"),
             },
-            Refusal::NotAllowed { service, method } | Refusal::NeedsGesture { service, method } => {
+            Refusal::NotAllowed { service, method }
+            | Refusal::NeedsGesture { service, method }
+            | Refusal::NeedsAnswer { service, method } => {
                 refuse(StudyError::CallRefused { service, method })
             }
         })
@@ -244,29 +247,6 @@ pub fn next_card() -> Result<Option<i64>, JsValue> {
     Ok(first_queued()?
         .and_then(|queued| queued.card)
         .map(|card| card.id))
-}
-
-/// Answers the next card with a wire rating, 1 to 4, as a reviewer does. Returns its card id.
-#[wasm_bindgen]
-pub fn answer(rating: u32, milliseconds_taken: u32) -> Result<i64, JsValue> {
-    let answer = Answer::from_wire(rating).map_err(refuse)?;
-    let queued = first_queued()?.ok_or_else(|| refuse("no card is queued"))?;
-    let card = queued
-        .card
-        .ok_or_else(|| refuse("a queued card without its card"))?;
-    let states = queued
-        .states
-        .ok_or_else(|| refuse("a queued card without its states"))?;
-    let request = CardAnswer {
-        card_id: card.id,
-        current_state: states.current,
-        new_state: answer.pick(states.again, states.hard, states.good, states.easy),
-        rating: answer.rating(),
-        answered_at_millis: now_millis(),
-        milliseconds_taken,
-    };
-    call(service::SCHEDULER, 4, &request.encode_to_vec())?;
-    Ok(card.id)
 }
 
 /// Undoes the last operation, as the reviewer's undo does, and forgets the kept card: the undone
@@ -478,12 +458,13 @@ pub fn current_card() -> Result<String, JsValue> {
     Ok(view.to_string())
 }
 
-/// Rates the kept card, and no other, with a wire rating, 1 to 4: the engine answers it with the
-/// states kept when it was shown and the next state the rating picks, then the kept card is
-/// forgotten (SPEC-350 R2).
+/// Rates the kept card, and no other, with a wire rating, 1 for Again or 3 for Good: the core
+/// records it as the owner's answer to that card, with the states kept when it was shown and the
+/// next state its grade picks, then the kept card is forgotten (SPEC-350 R2, SPEC-365 R7). Hard
+/// and Easy are refused by name before anything reaches the engine.
 #[wasm_bindgen]
 pub fn rate(card: i64, rating: u32, milliseconds: u32) -> Result<(), JsValue> {
-    let answer = Answer::from_wire(rating).map_err(refuse)?;
+    let grade = grade(rating).map_err(refuse)?;
     let shown = SHOWN
         .with(|kept| shown_for(kept.borrow().as_ref(), card).cloned())
         .map_err(refuse)?;
@@ -491,14 +472,27 @@ pub fn rate(card: i64, rating: u32, milliseconds: u32) -> Result<(), JsValue> {
     let request = CardAnswer {
         card_id: shown.card,
         current_state: states.current,
-        new_state: answer.pick(states.again, states.hard, states.good, states.easy),
-        rating: answer.rating(),
+        new_state: grade.pick(states.again, states.good),
+        rating: grade.rating(),
         answered_at_millis: now_millis(),
         milliseconds_taken: milliseconds,
     };
-    call(service::SCHEDULER, 4, &request.encode_to_vec())?;
+    let answer = OwnerAnswer::from_press(shown.card, pressed(grade));
+    dispatcher()?
+        .run_answer(answer, &request.encode_to_vec())
+        .map_err(refuse)?;
     SHOWN.with(|kept| *kept.borrow_mut() = None);
     Ok(())
+}
+
+/// The core's grade for the grade the wire named, one for one. The study rule keeps its own grade
+/// because it holds no engine type, so the native tests judge the rule this module runs; this is
+/// where the press becomes the core's (SPEC-365 R7).
+fn pressed(grade: Grade) -> answer::Grade {
+    match grade {
+        Grade::Again => answer::Grade::Again,
+        Grade::Good => answer::Grade::Good,
+    }
 }
 
 /// Buries the kept card, and no other, as the user's bury of that card alone, then forgets it

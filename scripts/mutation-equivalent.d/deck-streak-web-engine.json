@@ -155,33 +155,6 @@
     },
     {
       "file": "crates/web-engine/src/wasm.rs",
-      "mutant": "replace answer -> Result<i64, JsValue> with Ok(0)",
-      "anchor": "pub fn answer(rating: u32, milliseconds_taken: u32) -> Result<i64, JsValue> {\n    let answer = Answer::from_wire(rating).map_err(refuse)?;\n    let queued = first_queued()?.ok_or_else(|| refuse(\"no card is queued\"))?;\n    let card = queued\n        .card\n        .ok_or_else(|| refuse(\"a queued card without its card\"))?;\n    let states = queued\n        .states\n        .ok_or_else(|| refuse(\"a queued card without its states\"))?;\n    let request = CardAnswer {\n        card_id: card.id,\n        current_state: states.current,\n        new_state: answer.pick(states.again, states.hard, states.good, states.easy),\n        rating: answer.rating(),\n        answered_at_millis: now_millis(),\n        milliseconds_taken,\n    };\n    call(service::SCHEDULER, 4, &request.encode_to_vec())?;\n    Ok(card.id)\n}",
-      "reason": "The mutated function `answer` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
-      "reached_by": "study::a_rating_on_the_wire_picks_its_answer_and_its_next_state",
-      "issue": "#303"
-    },
-    {
-      "file": "crates/web-engine/src/wasm.rs",
-      "mutant": "replace answer -> Result<i64, JsValue> with Ok(1)",
-      "anchor": "pub fn answer(rating: u32, milliseconds_taken: u32) -> Result<i64, JsValue> {\n    let answer = Answer::from_wire(rating).map_err(refuse)?;\n    let queued = first_queued()?.ok_or_else(|| refuse(\"no card is queued\"))?;\n    let card = queued\n        .card\n        .ok_or_else(|| refuse(\"a queued card without its card\"))?;\n    let states = queued\n        .states\n        .ok_or_else(|| refuse(\"a queued card without its states\"))?;\n    let request = CardAnswer {\n        card_id: card.id,\n        current_state: states.current,\n        new_state: answer.pick(states.again, states.hard, states.good, states.easy),\n        rating: answer.rating(),\n        answered_at_millis: now_millis(),\n        milliseconds_taken,\n    };\n    call(service::SCHEDULER, 4, &request.encode_to_vec())?;\n    Ok(card.id)\n}",
-      "reason": "The mutated function `answer` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
-      "reached_by": "study::a_rating_on_the_wire_picks_its_answer_and_its_next_state",
-      "issue": "#303"
-    },
-    {
-      "file": "crates/web-engine/src/wasm.rs",
-      "mutant": "replace answer -> Result<i64, JsValue> with Ok(-1)",
-      "anchor": "pub fn answer(rating: u32, milliseconds_taken: u32) -> Result<i64, JsValue> {\n    let answer = Answer::from_wire(rating).map_err(refuse)?;\n    let queued = first_queued()?.ok_or_else(|| refuse(\"no card is queued\"))?;\n    let card = queued\n        .card\n        .ok_or_else(|| refuse(\"a queued card without its card\"))?;\n    let states = queued\n        .states\n        .ok_or_else(|| refuse(\"a queued card without its states\"))?;\n    let request = CardAnswer {\n        card_id: card.id,\n        current_state: states.current,\n        new_state: answer.pick(states.again, states.hard, states.good, states.easy),\n        rating: answer.rating(),\n        answered_at_millis: now_millis(),\n        milliseconds_taken,\n    };\n    call(service::SCHEDULER, 4, &request.encode_to_vec())?;\n    Ok(card.id)\n}",
-      "reason": "The mutated function `answer` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
-      "reached_by": "study::a_rating_on_the_wire_picks_its_answer_and_its_next_state",
-      "issue": "#303"
-    },
-    {
-      "file": "crates/web-engine/src/wasm.rs",
       "mutant": "replace memory_pages -> u32 with 0",
       "anchor": "pub fn memory_pages() -> u32 {\n    u32::try_from(core::arch::wasm32::memory_size::<0>()).unwrap_or(u32::MAX)\n}",
       "reason": "The mutated function `memory_pages` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",

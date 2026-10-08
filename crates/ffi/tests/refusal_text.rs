@@ -5,7 +5,7 @@
 //! carries its fields as data for a client that branches on them, and its text for a person who
 //! reads the error a client shows; each variant's text names what refused the call and why.
 
-use deck_streak_ffi::engine::{CollectionDirectoryRefusal, Engine, EngineRefusal};
+use deck_streak_ffi::engine::{CollectionDirectoryRefusal, Engine, EngineRefusal, PressRefusal};
 
 /// `BackendCollectionService.CloseCollection`: a real engine call the allow-list leaves out.
 const CLOSE_COLLECTION: (u32, u32) = (3, 1);
@@ -54,6 +54,29 @@ fn each_collection_directory_refusal_reads_as_its_own_sentence() {
             "the collection directory is not an absolute path",
             "the collection directory does not exist",
             "the collection directory is not a directory",
+        ]
+    );
+}
+
+/// MUTATION COVERAGE (SPEC-365 R6): each press refusal reads as its own sentence and none is
+/// empty.
+#[test]
+fn each_press_refusal_reads_as_its_own_sentence() {
+    assert_eq!(
+        [
+            PressRefusal::Undecodable.to_string(),
+            PressRefusal::NotTheCard.to_string(),
+            PressRefusal::NotTheGrade.to_string(),
+            PressRefusal::Engine {
+                error: vec![8, 1, 18],
+            }
+            .to_string(),
+        ],
+        [
+            "the states the card was shown with are not the engine's states",
+            "the answer names another card than the press",
+            "the answer names another grade than the press",
+            "the engine refused the answer (3 bytes)",
         ]
     );
 }

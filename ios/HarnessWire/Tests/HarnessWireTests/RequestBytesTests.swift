@@ -81,4 +81,45 @@ final class RequestBytesTests: XCTestCase {
             bytes([0x0a, 0x04, 0x75, 0x73, 0x65, 0x72], [0x12, 0x02, 0x70, 0x77], [0x1a, 0x00]),
             "SyncLoginRequest, an empty endpoint")
     }
+
+    func test_a23_review_requests_encode_to_their_literal_bytes() {
+        // DeckId: did (1), a varint, key `08`. The default deck is 1; a deck the learner made
+        // carries its creation time in milliseconds, 1700000000000, `80 d0 95 ff bc 31`.
+        XCTAssertEqual(Requests.setCurrentDeck(1), bytes([0x08, 0x01]), "DeckId, the default deck")
+        XCTAssertEqual(
+            Requests.setCurrentDeck(1_700_000_000_000),
+            bytes([0x08, 0x80, 0xd0, 0x95, 0xff, 0xbc, 0x31]),
+            "DeckId, a made deck")
+
+        // SchedulingStates: current (1), again (2), hard (3), good (4) and easy (5), each the
+        // opaque state the queue gave, length-delimited, so their keys are `0a`, `12`, `1a`, `22`
+        // and `2a`. Each state here is one byte naming its field, so a swapped pair shows.
+        let card = QueuedCard(
+            cardID: 300, noteID: 200, queue: 0, currentState: [0x01], againState: [0x02],
+            hardState: [0x03], goodState: [0x04], easyState: [0x05])
+        XCTAssertEqual(
+            Requests.describeNextStates(card),
+            bytes(
+                [0x0a, 0x01, 0x01], [0x12, 0x01, 0x02], [0x1a, 0x01, 0x03], [0x22, 0x01, 0x04],
+                [0x2a, 0x01, 0x05]),
+            "SchedulingStates")
+
+        // Each grade's answer sends back the grade's own state (SPEC-348 R10), and the two
+        // grades are Again and Good (SPEC-365 R13).
+        XCTAssertEqual(card.state(for: .again), [0x02], "Again's state")
+        XCTAssertEqual(card.state(for: .good), [0x04], "Good's state")
+
+        // CardAnswer rated Again: card_id (1) 300 `ac 02`, current_state (2), new_state (3) Again's
+        // own state, rating (4) AGAIN = 0, written though it is zero, answered_at_millis (5) 1 and
+        // milliseconds_taken (6) 2.
+        XCTAssertEqual(
+            Requests.answerCard(
+                CardAnswer(
+                    cardID: 300, currentState: card.currentState, newState: card.state(for: .again),
+                    rating: .again, answeredAtMillis: 1, millisecondsTaken: 2)),
+            bytes(
+                [0x08, 0xac, 0x02], [0x12, 0x01, 0x01], [0x1a, 0x01, 0x02], [0x20, 0x00],
+                [0x28, 0x01], [0x30, 0x02]),
+            "CardAnswer, rated Again")
+    }
 }

@@ -7,10 +7,12 @@ import Observation
 @MainActor
 @Observable
 final class AppModel {
-    /// The collection's decks by name, in the engine's order.
-    var deckNames: [String] = []
+    /// The collection's decks, in the engine's order.
+    var decks: [Deck] = []
     /// The deck the learner chose, kept here so it survives the split view's collapse.
-    var chosenDeck: String?
+    var chosenDeck: Deck?
+    /// The chosen deck's review, which the detail pane shows (SPEC-348 R9).
+    private(set) var review: ReviewModel?
     /// The open's or the list's refusal, as its sentence, shown in place of the list.
     var refusal: String?
     /// Whether the account sheet is shown.
@@ -48,10 +50,17 @@ final class AppModel {
         started = true
         do {
             try await session.open()
-            deckNames = try await session.deckNames()
+            decks = try await session.decks()
         } catch {
             refusal = sentence(error)
         }
+    }
+
+    /// Opens the chosen deck's review, which makes it the current deck (7,22) and shows its first
+    /// card, or closes the review when no deck is chosen (SPEC-348 R9).
+    func openReview() async {
+        review = chosenDeck.map { ReviewModel(deck: $0, session: ReviewSession(engine: session)) }
+        await review?.start()
     }
 
     /// Signs in as the configured user at the configured endpoint with the typed password (R8).

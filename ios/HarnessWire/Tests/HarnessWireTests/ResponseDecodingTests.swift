@@ -42,7 +42,9 @@ final class ResponseDecodingTests: XCTestCase {
             Queue(
                 cards: [
                     QueuedCard(
-                        cardID: 300, noteID: 200, queue: 0, currentState: [0x01], goodState: [0x04])
+                        cardID: 300, noteID: 200, queue: 0, currentState: [0x01],
+                        againState: [0x02], hardState: [0x03], goodState: [0x04],
+                        easyState: [0x05])
                 ],
                 newCount: 1, learningCount: 0, reviewCount: 0),
             "QueuedCards, a new card")
@@ -110,5 +112,44 @@ final class ResponseDecodingTests: XCTestCase {
         XCTAssertEqual(
             try Responses.engineMessage(unkinded), EngineMessage(message: "no", kind: 0),
             "BackendError, its kind omitted")
+    }
+
+    func test_a23_the_intervals_and_the_five_states_decode() throws {
+        // StringList { vals (1) }: the four intervals (13,24) gives a new card on the default
+        // preset (SPEC-348 A1), `<1m`, `<6m`, `<10m` and `4d`, in the ratings' order, with a varint
+        // field 2 no StringList holds between them, which is skipped.
+        let intervals = bytes(
+            [0x0a, 0x03, 0x3c, 0x31, 0x6d], [0x0a, 0x03, 0x3c, 0x36, 0x6d], [0x10, 0x01],
+            [0x0a, 0x04, 0x3c, 0x31, 0x30, 0x6d], [0x0a, 0x02, 0x34, 0x64])
+        XCTAssertEqual(
+            try Responses.stringList(intervals), ["<1m", "<6m", "<10m", "4d"], "StringList")
+        XCTAssertEqual(try Responses.stringList([]), [], "StringList, empty")
+        XCTAssertThrowsError(try Responses.stringList(bytes([0x0a, 0x01, 0xff])), "not UTF-8") {
+            XCTAssertEqual($0 as? WireError, .invalidUTF8)
+        }
+
+        // QueuedCards with one new card, Card { id (1) 7 }, whose SchedulingStates carry all five
+        // states, each one byte naming its rating: current `21`, again `22`, hard `23`, good `24`
+        // and easy `25`. The card is 4 + 2 + 15 = 21 (`15`) bytes; new_count (2) is 1.
+        let queue = bytes(
+            [0x0a, 0x15], [0x0a, 0x02, 0x08, 0x07],
+            [0x1a, 0x0f], [0x0a, 0x01, 0x21], [0x12, 0x01, 0x22], [0x1a, 0x01, 0x23],
+            [0x22, 0x01, 0x24], [0x2a, 0x01, 0x25],
+            [0x10, 0x01])
+        let decoded = try Responses.queue(queue)
+        XCTAssertEqual(
+            decoded,
+            Queue(
+                cards: [
+                    QueuedCard(
+                        cardID: 7, noteID: 0, queue: 0, currentState: [0x21], againState: [0x22],
+                        hardState: [0x23], goodState: [0x24], easyState: [0x25])
+                ],
+                newCount: 1, learningCount: 0, reviewCount: 0),
+            "QueuedCards, five states")
+        let card = try XCTUnwrap(decoded.cards.first)
+        XCTAssertEqual(
+            [card.state(for: .again), card.state(for: .good)], [[0x22], [0x24]],
+            "each grade's own state")
     }
 }

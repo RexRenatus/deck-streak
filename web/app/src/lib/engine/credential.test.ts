@@ -285,7 +285,7 @@ describe("the Worker's credential store", () => {
       { op: 'open' },
       { op: 'seed', count: 2 },
       { op: 'next' },
-      { op: 'answer', rating: 3, ms: 1000 },
+      { op: 'rate', card: 1001n, rating: 3, ms: 1000 },
       { op: 'snapshot', card: 1001n },
       { op: 'undo' },
       { op: 'memory' },

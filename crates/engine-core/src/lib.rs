@@ -9,6 +9,8 @@
 //!
 //! - [`table`]: the transports, the ordinary table with its transport columns, the exempt table
 //!   and the decision for a pair (R2, R3).
+//! - [`answer`]: the owner's answer, one press on one card with one grade, Again or Good, its
+//!   refusal, and the codec steps of a native press (SPEC-365 R1 to R3, R6).
 //! - [`dispatch`]: the dispatcher, its refusal and its fixed reads (R1, R4).
 //! - [`face`]: a card's face, completed as the engine's own reviewer completes it: its text, its
 //!   sound and speech clips, and what autoplay and replay play (SPEC-348 R2, R4).
@@ -31,6 +33,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod answer;
 pub mod credential;
 pub mod dispatch;
 pub mod face;

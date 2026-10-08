@@ -252,11 +252,11 @@ describe('the review screen', () => {
 
     // a rating in flight and the next card keep the lock; the done deck shows no card, and releases it
     await fireEvent.click(button('Show answer'));
-    await fireEvent.click(button('Easy 4d'));
+    await fireEvent.click(button('Good <10m'));
     await settle();
-    expect([client.calls, again.released]).toEqual([['card', 'rate 1 4 0', 'card'], 0]);
+    expect([client.calls, again.released]).toEqual([['card', 'rate 1 3 0', 'card'], 0]);
     await fireEvent.click(button('Show answer'));
-    await fireEvent.click(button('Easy 4d'));
+    await fireEvent.click(button('Good <10m'));
     await settle();
     expect([status(), again.released, lock.requests]).toEqual(['This deck is done for today.', 1, 2]);
 
@@ -410,9 +410,9 @@ describe('the review screen', () => {
     ]);
     expect(document.activeElement).toBe(review());
     await fireEvent.click(button('Show answer'));
-    await fireEvent.click(button('Hard <6m'));
+    await fireEvent.click(button('Again <1m'));
     await settle();
-    expect([client.calls, status()]).toEqual([['card', 'card', 'rate 1 2 0', 'card'], '']);
+    expect([client.calls, status()]).toEqual([['card', 'card', 'rate 1 1 0', 'card'], '']);
 
     // the done deck: announced, no card and no controls, and the way back to the deck list
     await fireEvent.click(button('Show answer'));

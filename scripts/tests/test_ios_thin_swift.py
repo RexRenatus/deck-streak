@@ -1,15 +1,18 @@
 """Every Swift file under `ios/` keeps its role, its doors and its budget (SPEC-347 R11 and A12,
-ADR-358 D9).
+ADR-358 D9; SPEC-348 R17 and A12).
 
 The app's Swift is thin: the engine decides, and Swift shows what the engine answers. This census
 holds that shape over every Swift file git tracks under `ios/`, through the register
 `ios/swift-roles.json`, in four readings:
 
 - the register is closed: every file is listed once, with a role its path admits, and the register
-  lists no file git does not track;
+  lists no file git does not track; it names exactly one `card` file and at least one `speech`
+  file (SPEC-348 R17);
 - doors: of the app's own roles, only `session` imports the engine or the codec or names
   `FileManager`, only `credential` reaches the Keychain, only `config` reads the info dictionary,
-  none imports `WebKit`, and none but `wire` names a JSON or property-list coder;
+  only `card` imports `WebKit`, only `speech` imports `AVFoundation` or `AVFAudio` (the module
+  that declares the player, the audio session and the synthesizer), and none but `wire` names a
+  JSON or property-list coder;
 - names no file may hold, harness and test files included; the network names are admitted only in
   the card view's sources and the tests of the card view and its probe (ADR-358 D9), and each
   admission is printed by its file and its name;
@@ -31,7 +34,17 @@ from test_one_static_library import tracked_paths
 
 REGISTER = "ios/swift-roles.json"
 # The app's own roles, each with its ceiling: the most decisions one file of that role may hold.
-CEILINGS = {"entry": 0, "view": 3, "model": 6, "session": 4, "credential": 4, "config": 2}
+# `card` holds the factory's view and `speech` plays clips and reads voices (SPEC-348 R17).
+CEILINGS = {
+    "entry": 0,
+    "view": 3,
+    "model": 6,
+    "session": 4,
+    "credential": 4,
+    "config": 2,
+    "card": 2,
+    "speech": 5,
+}
 APP_ROLES = frozenset(CEILINGS)
 # The roles whose decisions are counted exactly: the app's, and the codec's, which has no ceiling.
 COUNTED = APP_ROLES | {"wire"}
@@ -69,7 +82,9 @@ DOORS = {
         re.compile(r"\binfoDictionary\b|\bforInfoDictionaryKey\b"),
         {"config"},
     ),
-    "imports WebKit": (imports("WebKit"), set()),
+    "imports WebKit": (imports("WebKit"), {"card"}),
+    "imports AVFoundation": (imports("AVFoundation"), {"speech"}),
+    "imports AVFAudio": (imports("AVFAudio"), {"speech"}),
     "names a JSON or property-list coder": (CODERS, {"wire"}),
 }
 # Names no Swift file may hold, read over the whole text, comments and strings included: a network
@@ -288,6 +303,7 @@ def thin_swift_problems(sources, register_text):
     problems = []
     judged = {"files": [], "doors": [], "decisions": [], "admissions": []}
     entries = register_entries(register_text, problems)
+    held = {"card": [], "speech": []}
     for path in sorted(sources):
         text = sources[path]
         judged["files"].append(path)
@@ -305,6 +321,8 @@ def thin_swift_problems(sources, register_text):
             role, recorded = None, None
         if role is None and len(admitted) == 1:
             (role,) = admitted
+        if role in held:
+            held[role].append(path)
         problems.extend(forbidden_problems(path, text, role, judged))
         if role not in COUNTED:
             continue
@@ -319,7 +337,19 @@ def thin_swift_problems(sources, register_text):
         problems.extend(budget_problems(path, code, role, recorded, judged))
     for path in sorted(set(entries) - set(sources)):
         problems.append(f"{path}: the register: lists a file git does not track")
+    problems.extend(role_problems(held))
     return problems, judged
+
+
+def role_problems(held):
+    """SPEC-348 R17: the one file that holds the factory's view, and the files that play and
+    speak, each registered by its role. `held` maps each of the two roles to its files."""
+    problems = []
+    if len(held["card"]) != 1:
+        problems.append(f"{REGISTER}: the roles: {len(held['card'])} 'card' files, not one")
+    if not held["speech"]:
+        problems.append(f"{REGISTER}: the roles: no 'speech' file")
+    return problems
 
 
 def live_tree():
@@ -377,6 +407,20 @@ GOOD_SOURCES = {
         '            Text("case for \\(name) of \\(names.first ?? "none, if empty")")\n'
         "        }\n    }\n}\n"
     ),
+    APP + "CardFaceView.swift": (
+        "import SwiftUI\nimport WebKit\n\nstruct CardFaceView: View {\n    let view: WKWebView?\n"
+        '    var body: some View {\n        if view == nil { Text("Loading") }\n    }\n}\n'
+    ),
+    APP + "ClipPlayer.swift": (
+        "import AVFoundation\n\nfinal class ClipPlayer {\n"
+        "    private let synthesizer = AVSpeechSynthesizer()\n    func stop() {\n"
+        "        if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }\n    }\n}\n"
+    ),
+    APP + "InstalledVoices.swift": (
+        "import AVFAudio\n\nenum InstalledVoices {\n"
+        "    static func all() -> [AVSpeechSynthesisVoice] {\n"
+        "        AVSpeechSynthesisVoice.speechVoices().filter { !$0.identifier.isEmpty }\n    }\n}\n"
+    ),
     APP + "AccountView.swift": (
         "import SwiftUI\n\nstruct AccountView: View {\n    let signedIn: Bool\n"
         "    let busy: Bool\n"
@@ -419,6 +463,9 @@ GOOD_REGISTER = {
     APP + "SyncConfiguration.swift": {"role": "config", "decisions": 1},
     APP + "DeckListView.swift": {"role": "view", "decisions": 1},
     APP + "AccountView.swift": {"role": "view", "decisions": 2},
+    APP + "CardFaceView.swift": {"role": "card", "decisions": 1},
+    APP + "ClipPlayer.swift": {"role": "speech", "decisions": 1},
+    APP + "InstalledVoices.swift": {"role": "speech", "decisions": 1},
     WIRE: {"role": "wire", "decisions": 1},
     "ios/HarnessWire/Package.swift": {"role": "manifest"},
     HARNESS: {"role": "harness"},
@@ -467,10 +514,16 @@ def edit(path, old, new):
 
 
 def unlisted(*register_problems):
-    """The problems of a tree whose register is unread: its own, then every file unlisted."""
-    return list(register_problems) + [
-        f"{path}: the register: not listed" for path in sorted(GOOD_SOURCES)
-    ]
+    """The problems of a tree whose register is unread: its own, then every file unlisted, then
+    the two roles SPEC-348 R17 requires, which no unread register can name."""
+    return (
+        list(register_problems)
+        + [f"{path}: the register: not listed" for path in sorted(GOOD_SOURCES)]
+        + [
+            f"{REGISTER}: the roles: 0 'card' files, not one",
+            f"{REGISTER}: the roles: no 'speech' file",
+        ]
+    )
 
 
 MODEL = APP + "AppModel.swift"
@@ -479,6 +532,9 @@ CONFIG = APP + "SyncConfiguration.swift"
 LIST = APP + "DeckListView.swift"
 ACCOUNT = APP + "AccountView.swift"
 ENTRY = APP + "DeckStreakApp.swift"
+CARD = APP + "CardFaceView.swift"
+CLIP = APP + "ClipPlayer.swift"
+VOICES = APP + "InstalledVoices.swift"
 PLANTS = {
     "the good tree": ({}, []),
     "every decision token, each counted once": (
@@ -600,7 +656,70 @@ PLANTS = {
     ),
     "WebKit in a view": (
         {"sources": edit(LIST, "import SwiftUI\n", "import SwiftUI\nimport WebKit\n")},
-        [f"{LIST}: the doors: imports WebKit, which no app file may"],
+        [f"{LIST}: the doors: imports WebKit, which only a 'card' file may"],
+    ),
+    "WebKit in a speech file": (
+        {"sources": edit(CLIP, "import AVFoundation\n", "import AVFoundation\nimport WebKit\n")},
+        [f"{CLIP}: the doors: imports WebKit, which only a 'card' file may"],
+    ),
+    "AVFoundation in the model": (
+        {
+            "sources": edit(
+                MODEL, "import Observation\n", "import AVFoundation\nimport Observation\n"
+            )
+        },
+        [f"{MODEL}: the doors: imports AVFoundation, which only a 'speech' file may"],
+    ),
+    "AVFAudio in the model": (
+        {"sources": edit(MODEL, "import Observation\n", "import AVFAudio\nimport Observation\n")},
+        [f"{MODEL}: the doors: imports AVFAudio, which only a 'speech' file may"],
+    ),
+    "AVFoundation in the card file": (
+        {"sources": edit(CARD, "import SwiftUI\n", "import AVFoundation\nimport SwiftUI\n")},
+        [f"{CARD}: the doors: imports AVFoundation, which only a 'speech' file may"],
+    ),
+    "a speech file at its ceiling of five decisions": (
+        {
+            "sources": {CLIP: "import AVFoundation\nif\nguard\ncase\nwhile\nfor\n"},
+            "entries": {CLIP: {"role": "speech", "decisions": 5}},
+        },
+        [],
+    ),
+    "a speech file at six decisions": (
+        {
+            "sources": {CLIP: "import AVFoundation\nif\nguard\ncase\nwhile\nfor\nrepeat\n"},
+            "entries": {CLIP: {"role": "speech", "decisions": 6}},
+        },
+        [f"{CLIP}: the budgets: 6 counted, over the 'speech' ceiling of 5"],
+    ),
+    "a card file at its ceiling of two decisions": (
+        {
+            "sources": {CARD: "import WebKit\nif\nguard\n"},
+            "entries": {CARD: {"role": "card", "decisions": 2}},
+        },
+        [],
+    ),
+    "a card file at three decisions": (
+        {
+            "sources": {CARD: "import WebKit\nif\nguard\ncase\n"},
+            "entries": {CARD: {"role": "card", "decisions": 3}},
+        },
+        [f"{CARD}: the budgets: 3 counted, over the 'card' ceiling of 2"],
+    ),
+    "a second card file": (
+        {
+            "sources": {APP + "SecondCardView.swift": "import WebKit\n"},
+            "entries": {APP + "SecondCardView.swift": {"role": "card", "decisions": 0}},
+        },
+        [f"{REGISTER}: the roles: 2 'card' files, not one"],
+    ),
+    "no card file": (
+        {"sources": {CARD: None}, "entries": {CARD: None}},
+        [f"{REGISTER}: the roles: 0 'card' files, not one"],
+    ),
+    "no speech file": (
+        {"sources": {CLIP: None, VOICES: None}, "entries": {CLIP: None, VOICES: None}},
+        [f"{REGISTER}: the roles: no 'speech' file"],
     ),
     "a JSON coder in the model": (
         {"sources": edit(MODEL, "    var chosen: String?\n", "    let coder = JSONDecoder()\n")},

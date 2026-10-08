@@ -11,13 +11,14 @@ use anki_proto::collection::{CloseCollectionRequest, OpenCollectionRequest};
 use anki_proto::sync::{FullUploadOrDownloadRequest, SyncAuth};
 use prost::Message;
 
+use crate::answer::{AnswerRefusal, OwnerAnswer};
 use crate::face::{self, Face, Side};
 use crate::full_sync::{IdSets, Unsynced, Write};
 use crate::gesture::{GestureRefusal, OwnerGesture};
 use crate::login_guard;
 use crate::media::Reader;
 use crate::one_way;
-use crate::table::{Decision, ExemptWrite, Transport, decide};
+use crate::table::{ANSWERED, Decision, ExemptWrite, Transport, decide};
 
 /// The one read of a card the page may make: its scheduling fields, by id (moved from the web
 /// engine, which passed it to the engine's database door itself).
@@ -99,6 +100,14 @@ pub enum Refusal {
         /// The method index the adapter sent.
         method: u32,
     },
+    /// The pair records a grade, which only an owner's answer reaches; the engine never saw it
+    /// (SPEC-365 R5).
+    NeedsAnswer {
+        /// The service index the adapter sent.
+        service: u32,
+        /// The method index the adapter sent.
+        method: u32,
+    },
     /// The engine answered an admitted call with an error: its encoded `BackendError` message.
     Engine {
         /// The engine's error, as protobuf bytes.
@@ -138,12 +147,13 @@ impl Dispatcher {
     ///
     /// # Errors
     ///
-    /// [`Refusal::NeedsGesture`] for an exempt write, [`Refusal::NotAllowed`] for every other pair
-    /// this transport may not make, and [`Refusal::Engine`] when the engine answers an admitted
-    /// call with an error, or when the login guard refuses a sync login's or a normal sync's
-    /// endpoint, or a normal sync's media, in the engine's own error shape before the engine sees
-    /// it (SPEC-347 R2, SPEC-364 R2). When the engine opens a collection, the core keeps the media
-    /// folder and the collection path its request named (SPEC-348 R5, SPEC-364 R4).
+    /// [`Refusal::NeedsGesture`] for an exempt write, [`Refusal::NeedsAnswer`] for the call that
+    /// records a grade, [`Refusal::NotAllowed`] for every other pair this transport may not make,
+    /// and [`Refusal::Engine`] when the engine answers an admitted call with an error, or when the
+    /// login guard refuses a sync login's or a normal sync's endpoint, or a normal sync's media, in
+    /// the engine's own error shape before the engine sees it (SPEC-347 R2, SPEC-364 R2). When the
+    /// engine opens a collection, the core keeps the media folder and the collection path its
+    /// request named (SPEC-348 R5, SPEC-364 R4).
     pub fn run(&self, service: u32, method: u32, input: &[u8]) -> Result<Vec<u8>, Refusal> {
         match decide(self.transport, service, method) {
             Decision::Admit => {
@@ -164,6 +174,7 @@ impl Dispatcher {
                 Ok(reply)
             }
             Decision::NeedsGesture => Err(Refusal::NeedsGesture { service, method }),
+            Decision::NeedsAnswer => Err(Refusal::NeedsAnswer { service, method }),
             Decision::NotAllowed => Err(Refusal::NotAllowed { service, method }),
         }
     }
@@ -287,6 +298,24 @@ impl Dispatcher {
             .run_db_command_bytes(request.to_string().as_bytes())
             .map(drop)
             .map_err(|error| Refusal::Engine { error })
+    }
+
+    /// Records the grade one owner's press names, consuming the answer (SPEC-365 R3). The request
+    /// is decoded as the engine's `CardAnswer` and checked against the press's card and grade, and
+    /// the engine runs the message the check passed, encoded again, never the caller's bytes.
+    ///
+    /// # Errors
+    ///
+    /// [`AnswerRefusal::Undecodable`] when the request is not a `CardAnswer`,
+    /// [`AnswerRefusal::NotTheCard`] when it names another card, [`AnswerRefusal::NotTheGrade`]
+    /// when its rating is not the pressed grade's, and [`AnswerRefusal::Engine`] when the engine
+    /// refuses the checked answer.
+    pub fn run_answer(&self, answer: OwnerAnswer, input: &[u8]) -> Result<Vec<u8>, AnswerRefusal> {
+        let request = answer.checked(input)?;
+        let [row] = ANSWERED;
+        self.backend
+            .run_service_method(row.service, row.method, &request)
+            .map_err(|error| AnswerRefusal::Engine { error })
     }
 
     /// Runs one fixed read of the open collection and returns the engine's JSON reply: its first
@@ -493,7 +522,9 @@ mod tests {
                     .expect("a refusal decodes as the engine's error");
                 Some((error.kind(), error.message))
             }
-            Refusal::NotAllowed { .. } | Refusal::NeedsGesture { .. } => None,
+            Refusal::NotAllowed { .. }
+            | Refusal::NeedsGesture { .. }
+            | Refusal::NeedsAnswer { .. } => None,
         });
 
         assert_eq!(

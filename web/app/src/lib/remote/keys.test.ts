@@ -35,9 +35,7 @@ const ANSWER_SIDE: [string, Init, Action][] = [
   [' ', {}, 'good'],
   ['Enter', {}, 'good'],
   ['1', {}, 'again'],
-  ['2', {}, 'hard'],
   ['3', {}, 'good'],
-  ['4', {}, 'easy'],
   ['u', {}, 'undo'],
   ['-', {}, 'bury'],
   ['r', {}, 'replay'],
@@ -55,6 +53,13 @@ describe('the key reader', () => {
     console.log(`examined ${ANSWER_SIDE.length} keys`);
     expect(fire(keydown(' '), 'question')).toBe('show-answer');
     expect(fire(keydown('Enter'), 'question')).toBe('show-answer');
+
+    // keys 2 and 4 name no grade now: they fire nothing and are left to the page
+    for (const key of ['2', '4']) {
+      const event = keydown(key);
+      expect(fire(event, 'answer'), `${key} on the answer side`).toBeNull();
+      expect(event.prevented(), `${key} is not prevented`).toBe(false);
+    }
   });
 
   it('a repeat, a control, a modifier or the question side fires nothing', () => {
@@ -99,9 +104,7 @@ describe('the key reader', () => {
     const MOVES: [Action | null, Side, Side][] = [
       ['show-answer', 'question', 'answer'],
       ['again', 'answer', 'question'],
-      ['hard', 'answer', 'question'],
       ['good', 'answer', 'question'],
-      ['easy', 'answer', 'question'],
       ['undo', 'answer', 'answer'],
       ['bury', 'answer', 'answer'],
       ['flag', 'answer', 'answer'],

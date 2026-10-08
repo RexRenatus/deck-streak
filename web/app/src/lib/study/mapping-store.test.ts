@@ -114,11 +114,11 @@ describe('the mapping', () => {
     // and moves to Again, which loses 1
     store.bindKey('again', 'j');
     store.bindButton('good', 7);
-    store.bindButton('easy', 7);
+    store.bindButton('again', 7);
     store.bindButton('flag', 0);
     store.setStick(false);
-    const keys: [string, string][] = [[' ', 'confirm'], ['Enter', 'confirm'], ['2', 'hard'], ['4', 'easy'], ['u', 'undo'], ['-', 'bury'], ['r', 'replay'], ['j', 'again']];
-    const buttons: [number, string][] = [[1, 'confirm'], [14, 'again'], [13, 'hard'], [4, 'undo'], [5, 'bury'], [2, 'replay'], [7, 'easy'], [0, 'flag']];
+    const keys: [string, string][] = [[' ', 'confirm'], ['Enter', 'confirm'], ['u', 'undo'], ['-', 'bury'], ['r', 'replay'], ['j', 'again']];
+    const buttons: [number, string][] = [[1, 'confirm'], [4, 'undo'], [5, 'bury'], [2, 'replay'], [7, 'again'], [0, 'flag']];
     expect(JSON.parse(storage.getItem(STORED) ?? 'null')).toEqual({ keyboard: keys, gamepad: buttons, stick: false });
     expect(store.mapping).toEqual({ keys: new Map(keys), buttons: new Map(buttons), stick: [] });
     // the device reads it back
@@ -137,6 +137,27 @@ describe('the mapping', () => {
     store.restore('gamepad');
     expect(JSON.parse(storage.getItem(STORED) ?? 'null')).toEqual({});
     expect(store.mapping).toEqual(DEFAULTS);
+  });
+
+  it('a stored mapping that names Hard or Easy loads without them and is not written back', () => {
+    const value = {
+      keyboard: [['j', 'good'], ['2', 'hard'], ['k', 'again'], ['4', 'easy']],
+      gamepad: [[7, 'good'], [13, 'hard'], [8, 'bury'], [12, 'easy']],
+      stick: false
+    };
+    const storage = holding(value);
+    const before = storage.getItem(STORED);
+    const store = new MappingStore(storage);
+    // the Hard and Easy pairs are dropped, every other pair is kept
+    expect(store.mapping).toEqual({
+      keys: new Map([['j', 'good'], ['k', 'again']]),
+      buttons: new Map([[7, 'good'], [8, 'bury']]),
+      stick: []
+    });
+    // and loading writes nothing: the stored value stays as it was
+    expect(storage.getItem(STORED)).toBe(before);
+    expect(JSON.parse(before ?? 'null')).toEqual(value);
+    expect([...storage.items.keys()]).toEqual([STORED]);
   });
 
   it('a value the page cannot read is no mapping, and a refused storage keeps a change for the page', () => {
@@ -253,9 +274,7 @@ describe('the mapping screen', () => {
       'Action',
       'Show answer, then Good',
       'Again',
-      'Hard',
       'Good',
-      'Easy',
       'Undo',
       'Bury',
       'Flag',
@@ -395,14 +414,14 @@ describe('the mapping screen', () => {
     expect(prevented('k')).toBe(false);
 
     // a key's capture shows Cancel, and the key it takes is the remote's answer alone
-    click('Change the key for Hard: 2');
+    click('Change the key for Again: 1');
     expect(cancel()?.textContent?.trim()).toBe('Cancel');
     expect(prevented('k')).toBe(true);
-    expect(cell('Change the key for Hard: k')).toBe('k');
+    expect(cell('Change the key for Again: k')).toBe('k');
     expect(cancel()).toBeNull();
 
     // a button's capture shows Cancel too; a key does not answer it, so the key keeps its action
-    click('Change the gamepad button for Hard: Button 13');
+    click('Change the gamepad button for Again: Button 14');
     expect(cancel()?.textContent?.trim()).toBe('Cancel');
     expect(prevented('j')).toBe(false);
     press('Escape');

@@ -135,6 +135,37 @@ buttons work either way.
 | autoplay regardless | the card's speech and VoiceOver's reading of the card talk over each other on every show |
 | an in-app autoplay setting | a setting needs storage and a screen; the preset's own flag already turns autoplay off per deck |
 
+### D8. The review screen's tests run in their own step after the app's tests, and the app's step skips them
+
+The `harness` job runs A15 to A22 in a step of their own, "the review screen's tests, Debug, on
+the iPhone and then the iPad", between the app's tests and the app's archive, over the app step's
+derived data, with the review fixture copied into the runner's temporary directory and named on
+the step's command line. The app's step skips the three review classes, so each test runs once,
+and the report carries the step's cases and time beside the app's. The step runs after a red app
+step, as the archive does, so a red shell test does not hide the review screen's reading.
+
+| alternative | why it lost |
+|---|---|
+| the review tests inside the app's step | the fixture would be named to every app test, the shell's fresh-install criterion included, and the review screen's reading and time could not be told from the shell's |
+| the step after the archive or after the report | SPEC-347 A14 holds the app's steps together between the harness's last step and the report; after the report the review's rows would be missing from it |
+| a job of its own for the review screen | R20 adds no job: a job is another macOS runner, another download of the engine and another context to require |
+| the step without the app step's skips | each review test would run twice, once with no fixture named, and be red there |
+
+### D9. A13 judges the app's Swift, not the isolation package or the test targets
+
+A13 reads every Swift file git tracks under `ios/` outside `ios/CardIsolation/` and outside a test
+target, by the test-target rule `scripts/tests/test_card_web_view_layers.py` already holds,
+imported and not copied, and prints each path it skips with their count. R18's words occur in two
+places that are no card frame the app builds: the factory's guard, which counts the script message
+handlers a configuration is given, and the card probe's tests, which name them to prove the
+factory refuses them.
+
+| alternative | why it lost |
+|---|---|
+| every Swift file under `ios/`, as R18 words it | the factory and the card probe's tests hold R18's names by design, so the rule would refuse dev's own tree or need exceptions by file |
+| a list of admitted files, each by its path | each new file in a test target or in the isolation package would need a census edit, and a list of paths drifts where a rule does not |
+| a copy of the test-target rule in the new module | two spellings of one rule, free to drift apart; the import keeps one |
+
 ## Consequences
 
 - The card's isolation is unchanged: the review screen hands the factory one string, and a media
@@ -145,6 +176,8 @@ buttons work either way.
 - Parity gaps are named, not hidden: `voices=`, video clips, CSS fonts and inline iPhone video are
   the review-parity follow-up's (#666).
 - The census gains two roles and no ceiling rises.
+- The `harness` job gains one step and its report one row; no job, runner or required context
+  is added (D8).
 
 ## What would make this wrong
 
@@ -154,3 +187,16 @@ buttons work either way.
   amendment, with the measurement.
 - A device's VoiceOver users asking for autoplay: D7 becomes a setting.
 - A second recursive message, or a codec the census can read generated: D4 reopens ADR-358 D5.
+
+## Amendment: the adapter picks a native answer's next state (SPEC-365)
+
+ADR-376 amends D5. A native press answers through the adapter's `Engine::answer`, which takes the
+card, its grade, Again or Good, and the states the card was shown with, as the codec keeps them,
+and picks the grade's own next state beside the token that records the grade. The codec's
+`Rating` names two grades, Again and Good, and the native client sends no next state of its own
+choosing. D5's ground stands: the states are those the card was shown with, never read again at
+answer time. The rest of the record stands.
+
+- The pick in the adapter, from the states the card was shown with: chosen because the next state is then chosen beside the token, as the web's `rate` chooses it, and the native code chooses none.
+- The pick kept in the codec, with the codec's `CardAnswer` sent through the adapter: rejected because the native code would still choose a next state the token does not check.
+- A core `answer(card, rating)` that reads the states again at answer time: rejected for D5's own reason, that the interval the learner read and the one applied could differ.

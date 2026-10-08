@@ -24,9 +24,7 @@ const MAPPED: [number, Intent][] = [
   [0, 'confirm'],
   [1, 'confirm'],
   [14, 'again'],
-  [13, 'hard'],
   [15, 'good'],
-  [12, 'easy'],
   [4, 'undo'],
   [5, 'bury'],
   [3, 'flag'],
@@ -53,7 +51,7 @@ describe('the gamepad reader', () => {
 
     const unmapped = new GamepadReader();
     unmapped.read([pad([])]);
-    expect(fired(unmapped, pad([6, 7, 8, 9, 10, 11, 16]))).toEqual([]);
+    expect(fired(unmapped, pad([6, 7, 8, 9, 10, 11, 12, 13, 16]))).toEqual([]);
   });
 
   it('a non-standard mapping fires nothing and reports its raw indices', () => {
@@ -83,9 +81,7 @@ describe('the gamepad reader', () => {
   it('the left stick fires past its threshold and re-arms below the lower one', () => {
     const directions: [number, number, Intent][] = [
       [0, -1, 'again'],
-      [1, 1, 'hard'],
-      [0, 1, 'good'],
-      [1, -1, 'easy']
+      [0, 1, 'good']
     ];
     for (const [axis, sign, intent] of directions) {
       const lean = (value: number) => {
@@ -111,6 +107,13 @@ describe('the gamepad reader', () => {
       expect(fired(leaning, lean(0.9)), `${intent} after the baseline`).toEqual([intent]);
     }
     console.log(`examined ${directions.length} stick directions`);
+
+    // the stick's vertical axis names no grade now: it fires nothing in either direction
+    for (const sign of [1, -1]) {
+      const vertical = new GamepadReader();
+      vertical.read([pad([], [0, 0, 0, 0])]);
+      expect(fired(vertical, pad([], [0, sign * 0.9, 0, 0])), `axis 1 at ${sign}`).toEqual([]);
+    }
   });
 
   it('a gamepad that leaves is read again from a new baseline', () => {
