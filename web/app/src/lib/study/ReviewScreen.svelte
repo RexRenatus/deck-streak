@@ -194,7 +194,7 @@
           classes={`card card${face.view.ordinal + 1}${telegram.colorScheme === 'dark' ? ' nightMode night_mode' : ''}`}
         />
       </div>
-      {#if shown.phase === 'confirming' && shown.offer !== null}
+      {#if shown.offer !== null}
         {@const offer = shown.offer}
         <div
           role="alertdialog"

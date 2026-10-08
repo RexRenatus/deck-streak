@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { fireEvent, render, screen, within } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EngineError } from '$lib/engine/client';
@@ -651,5 +651,94 @@ describe('the review screen', () => {
     expect(client.calls.slice(3)).toEqual(['rate 2 3 0', 'card']);
 
     expect(screen.getByRole('link', { name: 'Remote mapping' }).getAttribute('href')).toBe('/study/mapping');
+  });
+
+  // MUTATION COVERAGE, SPEC-371 R10: the confirmation names each state the card goes back to.
+  it('the confirmation names every state the card goes back to', async () => {
+    const wanted = {
+      new: "Goes back to: New, in today's queue",
+      learning: "Goes back to: Learning, in today's queue",
+      review: "Goes back to: Review, in today's queue",
+      relearning: "Goes back to: Relearning, in today's queue",
+      preview: "Goes back to: Preview, in today's queue"
+    } as const;
+    const seen: string[] = [];
+    for (const returns of Object.keys(wanted) as (keyof typeof wanted)[]) {
+      const client = new FakeClient([head(view(2, { undo: 'answer' }))]);
+      client.offered = { offer: { card: 1n, step: 7, text: 'front', grade: 'good', returns } };
+      render(ReviewScreen, { client: async () => client });
+      await settle();
+      await fireEvent.click(button('Show answer'));
+      await fireEvent.keyDown(window, { key: 'u' });
+      await settle();
+      seen.push(screen.getByRole('alertdialog').textContent?.replace(/\s+/g, ' ') ?? '');
+      cleanup();
+    }
+    expect(seen.map((text, i) => text.includes(Object.values(wanted)[i]))).toEqual([true, true, true, true, true]);
+  });
+
+  it('the confirmation says so for a card with no text, and names an Again answer', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'answer' }))]);
+    client.offered = { offer: { card: 1n, step: 7, text: '', grade: 'again', returns: 'new' } };
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+    await fireEvent.click(button('Show answer'));
+    await fireEvent.keyDown(window, { key: 'u' });
+    await settle();
+    const text = screen.getByRole('alertdialog').textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(text).toContain('Card: This card has no text to show.');
+    expect(text).toContain('Your answer: Again');
+  });
+
+  it('keeping the answer, by its button or by Escape, gives the focus back to the review', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'answer' }))]);
+    client.offered = { offer: { card: 1n, step: 7, text: 'front', grade: 'good', returns: 'new' } };
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+    await fireEvent.click(button('Show answer'));
+    await fireEvent.keyDown(window, { key: 'u' });
+    await settle();
+    await fireEvent.click(button('Keep it'));
+    await settle();
+    expect([screen.queryByRole('alertdialog'), document.activeElement]).toEqual([null, review()]);
+    // asked again, Escape keeps it and the focus goes the same way
+    await fireEvent.keyDown(window, { key: 'u' });
+    await settle();
+    expect(document.activeElement).toBe(button('Keep it'));
+    await fireEvent.keyDown(window, { key: 'Escape' });
+    await settle();
+    expect([screen.queryByRole('alertdialog'), document.activeElement]).toEqual([null, review()]);
+  });
+
+  it('while it asks, the undo key confirms rather than keeps', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'answer' })), head(view(1))]);
+    client.offered = { offer: { card: 1n, step: 7, text: 'front', grade: 'good', returns: 'new' } };
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+    await fireEvent.click(button('Show answer'));
+    await fireEvent.keyDown(window, { key: 'u' });
+    await settle();
+    await fireEvent.keyDown(window, { key: 'u' });
+    await settle();
+    expect([screen.queryByRole('alertdialog'), client.calls]).toEqual([
+      null,
+      ['card', 'undo-offer', 'undo 1 7', 'card']
+    ]);
+  });
+
+  it('outside the confirmation, Escape keeps a notice standing and every other key is the input\'s', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'synced' }))]);
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+    // a key on the question side reveals the answer: it reaches the input, and nothing keeps
+    await fireEvent.keyDown(window, { key: ' ' });
+    await settle();
+    expect(body().text).toBe('answer 2');
+    await fireEvent.keyDown(window, { key: 'u' });
+    await settle();
+    expect(status()).toBe('Your last answer has synced, so it can no longer be undone.');
+    await fireEvent.keyDown(window, { key: 'Escape' });
+    await settle();
+    expect(status()).toBe('Your last answer has synced, so it can no longer be undone.');
   });
 });

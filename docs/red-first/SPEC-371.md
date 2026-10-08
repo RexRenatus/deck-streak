@@ -225,3 +225,38 @@ A28: green at 2c68b183
   new). The 6 unviable replace a body with a `Default::default()` value of a type that derives no
   `Default`. The engine core's 26 viable mutants and the 13 viable in `src/study.rs` were all
   caught, as were 9 in `src/wasm.rs`.
+- **The page's StrykerJS survivors, killed by nine tests (MUTATION COVERAGE: each is green at the
+  round's base, so none is red first).** Each line names the test, the mutants it kills as file:line
+  and mutator, and the test that StrykerJS's report names in `killedBy`.
+  - `review.test.ts` "a confirmation refused as synced reloads the card and says so": `review.ts:387`
+    ConditionalExpression and StringLiteral on the `undo-synced` code; `killedBy` reads this test.
+  - `review.test.ts` "an offer the Worker declines for another reason says the answer can no longer
+    be undone": `review.ts:372` ConditionalExpression and the `not-undoable` StringLiteral;
+    `killedBy` reads this test.
+  - `review.test.ts` "a synced press on the answer side announces itself and tells the screen":
+    `review.ts:288` ConditionalExpression, EqualityOperator and StringLiteral on the second operand,
+    and `review.ts:290` the removed `onChange` call; `killedBy` reads this test.
+  - `review.test.ts` "a synced press while a request is in flight announces nothing":
+    `review.ts:288` ConditionalExpression on the whole guard; `killedBy` reads this test.
+  - `review-screen.test.ts` "the confirmation names every state the card goes back to":
+    `ReviewScreen.svelte:65`, `:67`, `:68` and `:69` ArrowFunction; `killedBy` reads this test.
+  - `review-screen.test.ts` "the confirmation says so for a card with no text, and names an Again
+    answer": `ReviewScreen.svelte:209` and `:214` ConditionalExpression, StringLiteral and
+    CallExpression; `killedBy` reads this test.
+  - `review-screen.test.ts` "keeping the answer, by its button or by Escape, gives the focus back to
+    the review": `ReviewScreen.svelte:126` the removed `region.focus()`; `killedBy` reads this test.
+  - `review-screen.test.ts` "while it asks, the undo key confirms rather than keeps":
+    `ReviewScreen.svelte:132` LogicalOperator and the ConditionalExpression on the `Escape` operand;
+    `killedBy` reads this test.
+  - `review-screen.test.ts` "outside the confirmation, Escape keeps a notice standing and every
+    other key is the input's": `ReviewScreen.svelte:132` ConditionalExpression on the `confirming`
+    operand; `killedBy` reads this test.
+- **Five mutants were equivalent, so two lines were rewritten, none excluded.**
+  `ReviewScreen.svelte:197` read `shown.phase === 'confirming' && shown.offer !== null`, but
+  `Review.offer` is non-null exactly while the phase is `confirming`, so each operand, and the `||`
+  form, changed nothing a reader could see. It now reads `shown.offer !== null`. `review.ts:253`
+  read `action === 'undo' && this.#state.phase !== 'confirming'`, but the view says `answer` for
+  every confirmation (an offer is asked only from that state), so the second operand and its
+  string-literal mutant changed nothing. It now reads `action === 'undo'`. After the rewrites the
+  run read no survivor and no uncovered mutant, and `killedBy` names a test for each mutant of
+  these two lines.

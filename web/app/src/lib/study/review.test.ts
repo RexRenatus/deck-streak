@@ -609,4 +609,90 @@ describe('the review', () => {
       ['card', 'undo-offer', 'undo 1 7', 'card']
     ]);
   });
+
+  // MUTATION COVERAGE, SPEC-371 R9: a refused confirmation names its code, whichever of the two the
+  // engine gives.
+  it('a confirmation refused as synced reloads the card and says so', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'answer' })), head(view(3))]);
+    const review = new Review(
+      async () => client,
+      () => 0,
+      () => undefined
+    );
+    review.start();
+    await review.settled();
+    review.act('undo');
+    await review.settled();
+    client.refusals.undo = new EngineError('undo-synced', 'undo-synced: the answer has synced');
+    review.act('undo');
+    await review.settled();
+    expect([review.phase, review.view?.id, review.status, client.calls]).toEqual([
+      'question',
+      3n,
+      'undo-synced',
+      ['card', 'undo-offer', 'undo 1 7', 'card']
+    ]);
+  });
+
+  it('an offer the Worker declines for another reason says the answer can no longer be undone', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'answer' }))]);
+    client.offered = { offer: null, why: 'none' };
+    const review = new Review(
+      async () => client,
+      () => 0,
+      () => undefined
+    );
+    review.start();
+    await review.settled();
+    review.act('undo');
+    await review.settled();
+    expect([review.phase, review.status, review.offer, client.calls]).toEqual([
+      'question',
+      'not-undoable',
+      null,
+      ['card', 'undo-offer']
+    ]);
+  });
+
+  it('a synced press on the answer side announces itself and tells the screen', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'synced' }))]);
+    let changes = 0;
+    const review = new Review(
+      async () => client,
+      () => 0,
+      () => changes++
+    );
+    review.start();
+    await review.settled();
+    review.act('show-answer');
+    const before = changes;
+    review.act('undo');
+    expect([review.phase, review.side, review.status, changes - before, client.calls]).toEqual([
+      'answer',
+      'answer',
+      'undo-synced',
+      1,
+      ['card']
+    ]);
+  });
+
+  it('a synced press while a request is in flight announces nothing', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'synced' })), head(view(3))]);
+    let changes = 0;
+    const review = new Review(
+      async () => client,
+      () => 0,
+      () => changes++
+    );
+    review.start();
+    await review.settled();
+    client.hold();
+    review.act('bury');
+    const before = changes;
+    review.act('undo');
+    expect([review.phase, review.status, changes - before]).toEqual(['busy', null, 0]);
+    client.release();
+    await review.settled();
+    expect([review.phase, review.view?.id, review.status]).toEqual(['question', 3n, null]);
+  });
 });

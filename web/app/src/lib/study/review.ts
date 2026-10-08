@@ -248,9 +248,9 @@ export class Review {
 
   /** The one handler every source reaches: a key, a gamepad, the stick and a click (R8). */
   act(action: Action): void {
-    // outside the confirmation, undo asks only while the review's own last answer can be undone; a
+    // undo asks only while the review's own last answer can be undone; a
     // synced one is announced and nothing is sent (SPEC-371 R9)
-    if (action === 'undo' && this.#state.phase !== 'confirming') {
+    if (action === 'undo') {
       const undo = this.#view?.undo ?? null;
       if (undo === null) return;
       if (undo === 'synced') {
