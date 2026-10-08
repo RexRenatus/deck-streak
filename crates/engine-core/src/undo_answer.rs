@@ -8,6 +8,7 @@
 
 use anki_proto::collection::UndoStatus;
 use anki_proto::scheduler::SchedulingState;
+use anki_proto::scheduler::scheduling_state::{self, Normal, filtered, normal};
 
 /// The record of the review's own last answer, as the page carries it back in a confirmation:
 /// the engine's undo status right after the answer, and the id of the review-log row it wrote.
@@ -58,22 +59,69 @@ pub enum Returns {
     Preview,
 }
 
-/// Whether the recorded answer may be undone now, for `card`.
+/// Whether the recorded answer may be undone now, for `card`: `now` is the engine's undo status
+/// and `review` the recorded review row, both read at the moment of the undo.
 ///
 /// # Errors
 ///
-/// The [`UndoRefusal`] that holds.
+/// The first refusal that holds, in this order: [`UndoRefusal::Gone`] when the review row is
+/// absent, [`UndoRefusal::NotTheCard`] when it is of another card, [`UndoRefusal::Synced`] when a
+/// sync has sent it, [`UndoRefusal::Gone`] when the engine has nothing to undo, and
+/// [`UndoRefusal::Changed`] when the engine's last step or undo label is not the record's.
 pub fn judge(
-    _recorded: &Recorded,
-    _now: &UndoStatus,
-    _review: Option<Review>,
-    _card: i64,
+    recorded: &Recorded,
+    now: &UndoStatus,
+    review: Option<Review>,
+    card: i64,
 ) -> Result<(), UndoRefusal> {
+    let Some(review) = review else {
+        return Err(UndoRefusal::Gone);
+    };
+    if review.cid != card {
+        return Err(UndoRefusal::NotTheCard);
+    }
+    if review.usn != -1 {
+        return Err(UndoRefusal::Synced);
+    }
+    if now.undo.is_empty() {
+        return Err(UndoRefusal::Gone);
+    }
+    let then = recorded.status.as_ref();
+    let last_step = then.map_or(0, |then| then.last_step);
+    let label = then.map_or("", |then| then.undo.as_str());
+    if now.last_step != last_step {
+        return Err(UndoRefusal::Changed);
+    }
+    if now.undo != label {
+        return Err(UndoRefusal::Changed);
+    }
     Ok(())
 }
 
-/// The kind of state `state` is, the state the card was in when it was answered.
+/// The kind of state `state` is: the state the card was in when it was answered, so the state an
+/// undo returns it to. A filtered card's rescheduling state answers its original's kind, and a
+/// filtered preview answers [`Returns::Preview`].
 #[must_use]
-pub fn returns_to(_state: &SchedulingState) -> Returns {
-    Returns::New
+pub fn returns_to(state: &SchedulingState) -> Returns {
+    match &state.kind {
+        Some(scheduling_state::Kind::Normal(state)) => normal_kind(Some(state)),
+        Some(scheduling_state::Kind::Filtered(state)) => match &state.kind {
+            Some(filtered::Kind::Rescheduling(rescheduling)) => {
+                normal_kind(rescheduling.original_state.as_ref())
+            }
+            Some(filtered::Kind::Preview(_)) => Returns::Preview,
+            None => Returns::New,
+        },
+        None => Returns::New,
+    }
+}
+
+/// The kind of a normal state, or new when there is none.
+fn normal_kind(state: Option<&Normal>) -> Returns {
+    match state.and_then(|state| state.kind.as_ref()) {
+        Some(normal::Kind::Learning(_)) => Returns::Learning,
+        Some(normal::Kind::Review(_)) => Returns::Review,
+        Some(normal::Kind::Relearning(_)) => Returns::Relearning,
+        Some(normal::Kind::New(_)) | None => Returns::New,
+    }
 }

@@ -164,7 +164,7 @@ impl OwnerGesture {
                 (only(&request.card_ids, id), request.encode_to_vec())
             }
             ExemptWrite::Undo => {
-                let recorded = Recorded::decode(input).unwrap_or_default();
+                let recorded = Recorded::decode(input).map_err(undecodable)?;
                 return Ok(Checked::Undo { card: id, recorded });
             }
             ExemptWrite::DeleteNote => {

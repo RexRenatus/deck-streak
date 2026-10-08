@@ -297,7 +297,15 @@ fn the_web_reads_a_card_as_one_line_of_text() {
         preserve_media_filenames: true,
     }
     .encode_to_vec();
+    // the engine renders through the open collection, so the web dispatcher opens one first
+    let synthetic = support::synthetic("text-line");
     let web = Dispatcher::start(Transport::Web, &[]).expect("the web engine starts");
+    web.run(
+        OPEN_COLLECTION.0,
+        OPEN_COLLECTION.1,
+        &support::open_request(&synthetic),
+    )
+    .expect("the web dispatcher opens the collection");
     let line = web
         .run(HTML_TO_TEXT_LINE.0, HTML_TO_TEXT_LINE.1, &request)
         .map(|reply| {

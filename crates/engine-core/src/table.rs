@@ -114,7 +114,7 @@ impl Exempt {
 /// study calls (SPEC-345 M1, M4); a parity test holds each adapter's own table equal to its column.
 /// A pair one transport may make is not thereby admitted on the other: the native client neither
 /// closes the collection nor adds notes through this table (ADR-356 D2).
-pub const ORDINARY: [Ordinary; 16] = [
+pub const ORDINARY: [Ordinary; 17] = [
     Ordinary {
         service: 1,
         method: 3,
@@ -227,6 +227,13 @@ pub const ORDINARY: [Ordinary; 16] = [
         native: false,
         web: true,
     },
+    Ordinary {
+        service: 27,
+        method: 14,
+        name: "CardRenderingService.HtmlToTextLine",
+        native: false,
+        web: true,
+    },
 ];
 
 /// The one call that records a grade, held for an owner's press (SPEC-365 R4; ADR-376 D5).
@@ -259,7 +266,7 @@ pub const ANSWERED: [Answered; 1] = [Answered {
 
 /// The exempt writes: the never-list's entries 2 (Forget), 6 (set due date), 3 (delete a preset),
 /// 7 (change note type) and 8 (delete a card or a note), each one method with one target (SPEC-345
-/// M8). The one-way sync, the scheduler switch and every other never-list method stay unlisted, so
+/// M8), and the undo of the review's own last answer, on its card (SPEC-371 R2). The one-way sync, the scheduler switch and every other never-list method stay unlisted, so
 /// `run` refuses them as not allowed (ADR-356 D6).
 pub const EXEMPT: [Exempt; 7] = [
     Exempt {
