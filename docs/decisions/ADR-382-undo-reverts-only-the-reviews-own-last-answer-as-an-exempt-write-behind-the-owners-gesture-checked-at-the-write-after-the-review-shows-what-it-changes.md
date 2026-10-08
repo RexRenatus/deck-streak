@@ -15,7 +15,7 @@ sections take, with no existing line changed (the sections' text is at the end o
 - ADR-356 D2 (the table): Undo leaves the ordinary rows and joins the exempt table; HtmlToTextLine
   joins the ordinary rows, web only.
 - ADR-356 D4 (containment): the census names `undo` and holds its four lines outside the core.
-- ADR-356 D6 (the first exempt table): the table holds seven rows.
+- ADR-356 D6 (the first exempt table): the table holds eight rows.
 - ADR-361 D1, for undo only: its rejection of a token for undo gives way for the review's own
   last answer; bury and flag stay ordinary.
 - ADR-337's Decision Outcome: the exempt table also holds the undo of an unsynced answer.
@@ -199,7 +199,7 @@ ADR-382 amends D2, D4 and D6. The rest of each stands.
 - **D4 (containment, `:156-160`).** The census's engine names gain `undo`, and its held lines gain
   four entries outside the core, each with its reason, and the boundary census's owed literals of
   `undo` that name the gesture (ADR-382 D9).
-- **D6 (the first exempt table, `:164-166`).** The table holds seven rows. The seventh, Undo,
+- **D6 (the first exempt table, `:164-166`).** The table holds eight rows. The eighth, Undo,
   reverts only the review's own last answer while it has not synced, and is checked at the write
   (ADR-382 D2, D3). The undo after a sync this record anticipated (`:192`) is still unbuilt.
 ```

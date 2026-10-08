@@ -44,6 +44,8 @@ pub enum ExemptWrite {
     DeleteCard,
     /// Delete one note.
     DeleteNote,
+    /// The full-sync choice's one-way write, upload or download, of the open collection.
+    OneWaySync,
     /// Undo the review's own last answer, on the card it answered (SPEC-371 R2).
     Undo,
 }
@@ -57,6 +59,8 @@ pub enum TargetKind {
     Note,
     /// A preset (a deck options group), by id.
     Preset,
+    /// The open collection as a whole: the one-way sync's target.
+    Collection,
 }
 
 /// One ordinary call, with the transports that may make it.
@@ -111,16 +115,24 @@ impl Exempt {
 /// The ordinary calls, each marked with the transports that may make it.
 ///
 /// The native column is the native adapter's allow-list and the web column is the web engine's
-/// study calls (SPEC-345 M1, M4); a parity test holds each adapter's own table equal to its column.
+/// study calls with its sync calls (SPEC-345 M1, M4; SPEC-364 R1); a parity test holds each
+/// adapter's own table equal to its column.
 /// A pair one transport may make is not thereby admitted on the other: the native client neither
 /// closes the collection nor adds notes through this table (ADR-356 D2).
-pub const ORDINARY: [Ordinary; 17] = [
+pub const ORDINARY: [Ordinary; 18] = [
     Ordinary {
         service: 1,
         method: 3,
         name: "BackendSyncService.SyncLogin",
         native: true,
-        web: false,
+        web: true,
+    },
+    Ordinary {
+        service: 1,
+        method: 5,
+        name: "BackendSyncService.SyncCollection",
+        native: false,
+        web: true,
     },
     Ordinary {
         service: 3,
@@ -266,9 +278,12 @@ pub const ANSWERED: [Answered; 1] = [Answered {
 
 /// The exempt writes: the never-list's entries 2 (Forget), 6 (set due date), 3 (delete a preset),
 /// 7 (change note type) and 8 (delete a card or a note), each one method with one target (SPEC-345
-/// M8), and the undo of the review's own last answer, on its card (SPEC-371 R2). The one-way sync, the scheduler switch and every other never-list method stay unlisted, so
-/// `run` refuses them as not allowed (ADR-356 D6).
-pub const EXEMPT: [Exempt; 7] = [
+/// M8), the full-sync choice's one-way sync, whose one target is the open collection and which
+/// runs only through the choice's own write, never through `run_exempt` (SPEC-364 R1, R3; ADR-375
+/// D5), and the undo of the review's own last answer, on its card (SPEC-371 R2). The scheduler
+/// switch and every other never-list method stay unlisted, so `run` refuses them as not allowed
+/// (ADR-356 D6).
+pub const EXEMPT: [Exempt; 8] = [
     Exempt {
         write: ExemptWrite::Forget,
         service: 13,
@@ -310,6 +325,13 @@ pub const EXEMPT: [Exempt; 7] = [
         method: 7,
         name: "NotesService.RemoveNotes",
         kind: TargetKind::Note,
+    },
+    Exempt {
+        write: ExemptWrite::OneWaySync,
+        service: 1,
+        method: 6,
+        name: "BackendSyncService.FullUploadOrDownload",
+        kind: TargetKind::Collection,
     },
     Exempt {
         write: ExemptWrite::Undo,

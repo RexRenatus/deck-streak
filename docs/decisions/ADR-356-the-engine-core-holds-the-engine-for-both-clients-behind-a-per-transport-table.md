@@ -253,6 +253,17 @@ gesture row, name or assertion removed or narrowed. The rest of D2 and D4 stands
 - The same census file, extended: chosen because the population and the walker are the same.
 - A second census file for the answer: rejected because it copies the walker, and two walkers must then be kept equal.
 
+## Amendment: the one-way sync is an exempt write (SPEC-364)
+
+ADR-375 D5 amends D6. (1,6) joins `EXEMPT` as `OneWaySync`, its target the collection, and
+`run_exempt` refuses it: it runs only through the core's full-sync driver, with the owner's
+gesture and the choice's `Write`. The gesture still names one call, (1,6) on the open collection,
+so the one-call shape stands: the server copies are fetched on private engines into empty files,
+which replace nothing the device holds. (11,7) and (13,26) stay refused.
+
+- (1,6) as an exempt write that needs both the gesture and the choice's `Write`: chosen because the restore after eviction and every full-sync conflict need a write, and the choice's counts, backup and re-check then come before it.
+- (1,6) kept refused, as D6 had it: rejected because neither client would then have a one-way write at all; ADR-375 D5 names the other options and why each lost.
+
 ## Amendment: Undo reverts only the review's own last answer (SPEC-371)
 
 ADR-382 amends D2, D4 and D6. The rest of each stands.
@@ -265,6 +276,6 @@ ADR-382 amends D2, D4 and D6. The rest of each stands.
 - **D4 (containment, `:156-160`).** The census's engine names gain `undo`, and its held lines gain
   four entries outside the core, each with its reason, and the boundary census's owed literals of
   `undo` that name the gesture (ADR-382 D9).
-- **D6 (the first exempt table, `:164-166`).** The table holds seven rows. The seventh, Undo,
+- **D6 (the first exempt table, `:164-166`).** The table holds eight rows. The eighth, Undo,
   reverts only the review's own last answer while it has not synced, and is checked at the write
   (ADR-382 D2, D3). The undo after a sync this record anticipated (`:192`) is still unbuilt.

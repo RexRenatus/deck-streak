@@ -56,15 +56,16 @@ const ENGINE_NAMES: [&str; 24] = [
     "undo",
 ];
 
-/// The gesture's names: its type, its one constructor and the dispatcher's exempt entry; and the
-/// answer's, the same three (SPEC-365 R8).
-const GESTURE_NAMES: [&str; 6] = [
+/// The gesture's names: its type, its one constructor, the dispatcher's exempt entry and the
+/// full-sync choice's one-way door (SPEC-364 R3); and the answer's three (SPEC-365 R8).
+const GESTURE_NAMES: [&str; 7] = [
     "OwnerGesture",
     "from_tap",
     "run_exempt",
     "OwnerAnswer",
     "from_press",
     "run_answer",
+    "run_one_way",
 ];
 
 /// The two UI adapters' exempt entries: outside the core, the only files that may name the gesture.
@@ -802,6 +803,13 @@ fn plant(root: &Path) {
         "crates/ingest/src/engine.rs",
         "col.answer_card(&mut answer)\n",
     );
+    for crate_name in ["daemon", "bot", "coordination", "ingest"] {
+        write(
+            root,
+            &format!("crates/{crate_name}/src/one_way.rs"),
+            "dispatcher.run_one_way(gesture, write, &auth)\n",
+        );
+    }
 }
 
 /// What the census refuses in the planted tree, one line per plant.
@@ -824,6 +832,10 @@ fn planted_refusals() -> Vec<&'static str> {
         "crates/coordination/src/lib.rs: `let answer = OwnerAnswer::from_press(card, Grade::Good);` found 1, held 0",
         "crates/bot/src/lib.rs: `dispatcher.run_answer(answer, &input)` found 1, held 0",
         "crates/ingest/src/engine.rs: `col.answer_card(&mut answer)` found 1, held 0",
+        "crates/daemon/src/one_way.rs: `dispatcher.run_one_way(gesture, write, &auth)` found 1, held 0",
+        "crates/bot/src/one_way.rs: `dispatcher.run_one_way(gesture, write, &auth)` found 1, held 0",
+        "crates/coordination/src/one_way.rs: `dispatcher.run_one_way(gesture, write, &auth)` found 1, held 0",
+        "crates/ingest/src/one_way.rs: `dispatcher.run_one_way(gesture, write, &auth)` found 1, held 0",
     ]
 }
 

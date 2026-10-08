@@ -8,7 +8,7 @@
 - **Context(s):** `deck-streak-engine-core` (`crates/engine-core`), `deck-streak-ffi`
   (`crates/ffi`), `deck-streak-web-engine` (`crates/web-engine`), and `miniapp` (`web/app`).
 - **Decided by:** ADR-382 (this SPEC's own). It amends ADR-356 D2 (the table), D4 (containment)
-  and D6 (the exempt table, now seven rows), ADR-361 D1 for undo only, and ADR-337's Decision
+  and D6 (the exempt table, now eight rows), ADR-361 D1 for undo only, and ADR-337's Decision
   Outcome. Each amended ADR gains an insert-only amendment section at its end, in the form
   SPEC-365's sections take (`## Amendment: <title> (SPEC-371)`, opening "ADR-382 amends"), and no
   existing line of any of them changes. ADR-301 gains a dated note at `:107` only if the build's

@@ -65,6 +65,8 @@ pub fn grade(rating: u32) -> Result<Grade, StudyError> {
 /// The backend's services the study calls use, by index of its generated dispatcher at the
 /// pinned commit (read from the `wasm32` build's `backend.rs`).
 pub mod service {
+    /// The sync service.
+    pub const SYNC: u32 = 1;
     /// The collection service.
     pub const COLLECTION: u32 = 3;
     /// The cards service.
@@ -80,6 +82,14 @@ pub mod service {
     /// The card rendering service.
     pub const CARD_RENDERING: u32 = 27;
 }
+
+/// The sync calls the web client reaches through its own exports, never through `run_method`:
+/// service, method, and the method's name (SPEC-364 R1; ADR-375 D11). The parity guard reads them
+/// beside [`STUDY_CALLS`] as the web column of the core's table.
+pub const SYNC_CALLS: [(u32, u32, &str); 2] = [
+    (service::SYNC, 3, "sync_login"),
+    (service::SYNC, 5, "sync_collection"),
+];
 
 /// The study calls `run_method` admits: service, method, and the method's name. Every pair
 /// outside it is refused, the exempt writes of ADR-337 included (#623), Undo among them, which only

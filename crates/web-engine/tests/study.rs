@@ -309,6 +309,20 @@ fn a_sound_takes_the_type_the_table_gives_its_name() {
 }
 
 #[test]
+fn the_sync_calls_are_the_login_and_the_normal_sync() {
+    // The oracle, written apart from the list: the sync service is the backend's first, its login
+    // is its method 3 and its normal sync its method 5, each named as the engine names its method
+    // (SPEC-364 R1). The one-way sync (1,6) is the core's alone and never the web engine's.
+    let calls = deck_streak_web_engine::study::SYNC_CALLS.to_vec();
+    assert_eq!(
+        calls,
+        vec![(1, 3, "sync_login"), (1, 5, "sync_collection")],
+        "the web side names the sync login and the normal sync, and no other sync pair"
+    );
+    examined("sync call(s)", calls);
+}
+
+#[test]
 fn a_confirmation_reaches_only_the_kept_answer_at_its_step() {
     // SPEC-371 R7: the page confirms only what it was offered, so a confirmation that names another
     // card, another step, or an answer when none is kept is refused as changed.

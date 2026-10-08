@@ -1,20 +1,23 @@
 //! The dispatcher: the engine's backend, held privately, behind the table (SPEC-345 R1, R2, R4).
 
 use std::collections::BTreeSet;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use anki::backend::{Backend, init_backend};
 use anki_proto::backend::BackendError;
 use anki_proto::backend::backend_error::Kind;
-use anki_proto::collection::{OpenCollectionRequest, UndoStatus};
+use anki_proto::collection::{CloseCollectionRequest, OpenCollectionRequest, UndoStatus};
+use anki_proto::sync::{FullUploadOrDownloadRequest, SyncAuth};
 use prost::Message;
 
 use crate::answer::{AnswerRefusal, OwnerAnswer};
 use crate::face::{self, Face, Side};
-use crate::full_sync::{IdSets, Unsynced};
+use crate::full_sync::{IdSets, Unsynced, Write};
 use crate::gesture::{Checked, GestureRefusal, OwnerGesture, Target};
 use crate::login_guard;
 use crate::media::Reader;
+use crate::one_way;
 use crate::table::{ANSWERED, Decision, EXEMPT, ExemptWrite, Transport, decide};
 use crate::undo_answer::{self, Recorded, Review};
 
@@ -36,14 +39,37 @@ const SYNC_LOGIN: (u32, u32) = (1, 3);
 /// The engine's collection open, `BackendCollectionService.OpenCollection`: the one admitted call
 /// whose request the core keeps a field of, the media folder a face reads (SPEC-348 R5).
 const OPEN_COLLECTION: (u32, u32) = (3, 0);
+/// The engine's collection close, `BackendCollectionService.CloseCollection`: a private engine's
+/// last call, so its file is whole for the next reader.
+const CLOSE_COLLECTION: (u32, u32) = (3, 1);
+/// The engine's one-way sync, `BackendSyncService.FullUploadOrDownload`: the choice's write, and
+/// a private engine's fetch of a server copy (SPEC-364 R3, R4).
+const FULL_SYNC: (u32, u32) = (1, 6);
+/// The engine's normal sync, `BackendSyncService.SyncCollection`: admitted on the web, its
+/// endpoint guarded and its media refused before the engine sees it (SPEC-364 R2).
+const SYNC_COLLECTION: (u32, u32) = (1, 5);
 /// Every review-log id: the reviews a full sync can lose (SPEC-357 R5, R9).
 const REVIEW_IDS_SQL: &str = "select id from revlog";
 /// Every card id.
 const CARD_IDS_SQL: &str = "select id from cards";
 /// Every note id.
 const NOTE_IDS_SQL: &str = "select id from notes";
-/// The collection's modified stamp, which an upload's re-check compares (SPEC-357 R7).
-const MODIFIED_SQL: &str = "select mod from col";
+/// The upload re-check stamp, which an upload's re-check compares beside the ids (SPEC-364 R6,
+/// ADR-375 D13, SPEC-357 R7 as amended): the engine's `fnvhash` of the greatest row usn over every
+/// synced table that carries one, graves included, and the schema stamp. A normal sync and a full
+/// upload move it; a download's restamp of `col.usn`, `col.mod` and `col.ls` leaves it still.
+const MODIFIED_SQL: &str = "select fnvhash((select max(usn) from ( \
+                            select max(usn) as usn from cards union all \
+                            select max(usn) from notes union all \
+                            select max(usn) from revlog union all \
+                            select max(usn) from graves union all \
+                            select max(usn) from decks union all \
+                            select max(usn) from deck_config union all \
+                            select max(usn) from notetypes union all \
+                            select max(usn) from templates union all \
+                            select max(usn) from tags union all \
+                            select max(usn) from config)), \
+                            (select scm from col))";
 /// What a sync has not sent, in one statement: the reviews whose sequence number marks them
 /// unsynced, and whether the collection or its schema changed since its last sync (SPEC-357 R9).
 const UNSYNCED_SQL: &str = "select (select count() from revlog where usn = -1), \
@@ -57,6 +83,12 @@ pub struct Dispatcher {
     transport: Transport,
     /// The media folder the last successful open named, shared by every clone of this dispatcher.
     media_folder: Arc<Mutex<Option<String>>>,
+    /// The start message this engine began from, which a private engine of the one-way sync
+    /// starts from too, so it reads and writes in this engine's language and settings.
+    start: Arc<[u8]>,
+    /// The collection path the last successful open named, shared by every clone of this
+    /// dispatcher: the file no server copy and no backup may be written into (SPEC-364 R4, R5).
+    open: Arc<Mutex<Option<PathBuf>>>,
 }
 
 /// Why the dispatcher did not answer a call with the engine's reply.
@@ -116,6 +148,8 @@ impl Dispatcher {
             backend,
             transport,
             media_folder: Arc::default(),
+            start: Arc::from(message),
+            open: Arc::default(),
         })
     }
 
@@ -127,15 +161,19 @@ impl Dispatcher {
     ///
     /// [`Refusal::NeedsGesture`] for an exempt write, [`Refusal::NeedsAnswer`] for the call that
     /// records a grade, [`Refusal::NotAllowed`] for every other pair this transport may not make,
-    /// and [`Refusal::Engine`] when the engine answers an admitted
-    /// call with an error, or when the login guard refuses a sync login's endpoint in the
-    /// engine's own error shape before the engine sees it (SPEC-347 R2). When the engine opens a
-    /// collection, the core keeps the media folder its request named (SPEC-348 R5).
+    /// and [`Refusal::Engine`] when the engine answers an admitted call with an error, or when the
+    /// login guard refuses a sync login's or a normal sync's endpoint, or a normal sync's media, in
+    /// the engine's own error shape before the engine sees it (SPEC-347 R2, SPEC-364 R2). When the
+    /// engine opens a collection, the core keeps the media folder and the collection path its
+    /// request named (SPEC-348 R5, SPEC-364 R4).
     pub fn run(&self, service: u32, method: u32, input: &[u8]) -> Result<Vec<u8>, Refusal> {
         match decide(self.transport, service, method) {
             Decision::Admit => {
                 if (service, method) == SYNC_LOGIN {
                     login_guard::check(input).map_err(|error| Refusal::Engine { error })?;
+                }
+                if (service, method) == SYNC_COLLECTION {
+                    login_guard::check_sync(input).map_err(|error| Refusal::Engine { error })?;
                 }
                 let reply = self
                     .backend
@@ -143,6 +181,7 @@ impl Dispatcher {
                     .map_err(|error| Refusal::Engine { error })?;
                 if (service, method) == OPEN_COLLECTION {
                     self.keep_media_folder(input);
+                    self.keep_open_path(input);
                 }
                 Ok(reply)
             }
@@ -159,8 +198,9 @@ impl Dispatcher {
     ///
     /// # Errors
     ///
-    /// [`GestureRefusal::NotTheTarget`] when the request names other than the gesture's target,
-    /// [`GestureRefusal::Undecodable`] when it is not the write's message, and
+    /// [`GestureRefusal::NeedsTheChoice`] for a one-way sync's gesture, which only the full-sync
+    /// choice's write runs, [`GestureRefusal::NotTheTarget`] when the request names other than the
+    /// gesture's target, [`GestureRefusal::Undecodable`] when it is not the write's message, and
     /// [`GestureRefusal::Engine`] when the engine refuses the checked write.
     pub fn run_exempt(
         &self,
@@ -225,6 +265,105 @@ impl Dispatcher {
         }
     }
 
+    /// Runs the full-sync choice's one write: the one-way sync the owner confirmed, built by the
+    /// core from the choice's [`Write`] and never from a caller's bytes (SPEC-364 R3). Crate-private:
+    /// only [`crate::one_way::write`] reaches it, after the write's last check. It consumes a
+    /// one-way sync's gesture and refuses a gesture of any other write.
+    #[allow(
+        clippy::needless_pass_by_value,
+        reason = "the gesture and the write are taken whole, so one tap makes one write"
+    )]
+    pub(crate) fn run_one_way(
+        &self,
+        gesture: OwnerGesture,
+        write: Write,
+        auth: &SyncAuth,
+    ) -> Result<(), GestureRefusal> {
+        let (named, target) = gesture.parts();
+        if named != ExemptWrite::OneWaySync {
+            return Err(GestureRefusal::WrongKind {
+                write: named,
+                target,
+            });
+        }
+        self.full_sync(&one_way::request(&write, auth))
+            .map_err(|error| GestureRefusal::Engine { error })
+    }
+
+    /// A private engine on `collection`: started from this engine's own start message, with the
+    /// file open and no media folder, so it touches no media. It holds the file until
+    /// [`Self::close`].
+    pub(crate) fn private(&self, collection: &Path) -> Result<Self, Refusal> {
+        let path = utf8(collection)?;
+        let engine = Self::start(Transport::Native, &self.start)
+            .map_err(|message| failed(&format!("the private engine does not start: {message}")))?;
+        let request = OpenCollectionRequest {
+            collection_path: path.to_owned(),
+            ..OpenCollectionRequest::default()
+        };
+        let (service, method) = OPEN_COLLECTION;
+        engine.run(service, method, &request.encode_to_vec())?;
+        Ok(engine)
+    }
+
+    /// Runs the engine's one-way sync with a request the core built: the choice's write on the
+    /// open collection, or the fetch of a server copy into a private engine's empty file. Its
+    /// auth meets the login's endpoint rule first (SPEC-364 R2). Its error is the engine's
+    /// encoded `BackendError`, or the guard's in the same shape.
+    pub(crate) fn full_sync(&self, request: &FullUploadOrDownloadRequest) -> Result<(), Vec<u8>> {
+        login_guard::check_auth(&request.auth.clone().unwrap_or_default())?;
+        let (service, method) = FULL_SYNC;
+        self.backend
+            .run_service_method(service, method, &request.encode_to_vec())
+            .map(drop)
+    }
+
+    /// Closes a private engine's collection, so its file is whole and free for the next reader.
+    pub(crate) fn close(&self) -> Result<(), Refusal> {
+        let (service, method) = CLOSE_COLLECTION;
+        let request = CloseCollectionRequest::default();
+        self.backend
+            .run_service_method(service, method, &request.encode_to_vec())
+            .map(drop)
+            .map_err(|error| Refusal::Engine { error })
+    }
+
+    /// Whether `path` names the collection this engine has open: as its open request named it, or
+    /// as the same file reached by another spelling.
+    pub(crate) fn opens(&self, path: &Path) -> bool {
+        let open = self
+            .open
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone();
+        open.is_some_and(|open| {
+            open == path
+                || matches!(
+                    (open.canonicalize(), path.canonicalize()),
+                    (Ok(open), Ok(path)) if open == path
+                )
+        })
+    }
+
+    /// Runs one of the core's fixed statements over the open collection, with `path` bound as its
+    /// one parameter, through the engine's database door (SPEC-364 R5).
+    ///
+    /// # Errors
+    ///
+    /// [`Refusal::Engine`] when the path is not UTF-8 or the engine cannot run the statement.
+    pub(crate) fn execute(&self, sql: &'static str, path: &Path) -> Result<(), Refusal> {
+        let request = serde_json::json!({
+            "kind": "query",
+            "sql": sql,
+            "args": [utf8(path)?],
+            "first_row_only": true,
+        });
+        self.backend
+            .run_db_command_bytes(request.to_string().as_bytes())
+            .map(drop)
+            .map_err(|error| Refusal::Engine { error })
+    }
+
     /// Records the grade one owner's press names, consuming the answer (SPEC-365 R3). The request
     /// is decoded as the engine's `CardAnswer` and checked against the press's card and grade, and
     /// the engine runs the message the check passed, encoded again, never the caller's bytes.
@@ -271,9 +410,9 @@ impl Dispatcher {
             .run_db_command_bytes(request.to_string().as_bytes())
     }
 
-    /// Every review-log, card and note id of the open collection, and its modified stamp: what a
-    /// full sync's counts, its backup check and its re-check compare (SPEC-357 R5, R9). Every row,
-    /// by the core's fixed statements; no adapter passes SQL.
+    /// Every review-log, card and note id of the open collection, and its upload re-check stamp:
+    /// what a full sync's counts, its backup check and its re-check compare (SPEC-357 R5, R9;
+    /// SPEC-364 R6). Every row, by the core's fixed statements; no adapter passes SQL.
     ///
     /// # Errors
     ///
@@ -369,6 +508,16 @@ impl Dispatcher {
             .unwrap_or_else(PoisonError::into_inner) = folder;
     }
 
+    /// Keeps the collection path a successful open's request named, replacing the last one.
+    fn keep_open_path(&self, input: &[u8]) {
+        let path = OpenCollectionRequest::decode(input)
+            .ok()
+            .map(|request| request.collection_path)
+            .filter(|path| !path.is_empty())
+            .map(PathBuf::from);
+        *self.open.lock().unwrap_or_else(PoisonError::into_inner) = path;
+    }
+
     /// Completes `card`'s face for `side`, as the engine's own reviewer completes it, reading its
     /// media through `media` (SPEC-348 R2). `autoplay` is the client's wish.
     ///
@@ -383,6 +532,26 @@ impl Dispatcher {
         media: &dyn Reader,
     ) -> Result<Face, Refusal> {
         face::complete(&self.backend, card, side, autoplay, media)
+    }
+}
+
+/// `path` as the engine's open request names it: a path that is not UTF-8 is refused, never
+/// rewritten into another path.
+fn utf8(path: &Path) -> Result<&str, Refusal> {
+    path.to_str()
+        .ok_or_else(|| failed("the one-way sync's path is not UTF-8"))
+}
+
+/// A refusal of the core's own, in the engine's error shape: an encoded `BackendError` of kind
+/// `INVALID_INPUT` whose message names what failed.
+fn failed(message: &str) -> Refusal {
+    Refusal::Engine {
+        error: BackendError {
+            message: message.to_owned(),
+            kind: Kind::InvalidInput.into(),
+            ..BackendError::default()
+        }
+        .encode_to_vec(),
     }
 }
 
@@ -403,4 +572,41 @@ fn unreadable_error(sql: &str) -> Vec<u8> {
         ..BackendError::default()
     }
     .encode_to_vec()
+}
+
+#[cfg(test)]
+mod tests {
+    use anki_proto::backend::BackendError;
+    use anki_proto::backend::backend_error::Kind;
+    use prost::Message;
+
+    use super::{Dispatcher, Refusal};
+    use crate::table::Transport;
+
+    /// A close with no collection open reaches the engine and answers the engine's own refusal, so
+    /// a private engine's close never reports a success the engine did not give. `close` is
+    /// crate-private, so only a test inside the crate can call it with no collection open.
+    #[test]
+    fn a_close_with_no_collection_open_is_the_engines_refusal() {
+        let engine = Dispatcher::start(Transport::Native, &[])
+            .expect("the engine starts from the default init");
+
+        let closed = engine.close().map_err(|refusal| match refusal {
+            Refusal::Engine { error } => {
+                let error = BackendError::decode(error.as_slice())
+                    .expect("a refusal decodes as the engine's error");
+                Some((error.kind(), error.message))
+            }
+            Refusal::NotAllowed { .. }
+            | Refusal::NeedsGesture { .. }
+            | Refusal::NeedsAnswer { .. } => None,
+        });
+
+        assert_eq!(
+            closed,
+            Err(Some((Kind::InvalidInput, "CollectionNotOpen".to_owned()))),
+            "a close with no collection open is the engine's own refusal, its kind and message \
+             byte for byte"
+        );
+    }
 }

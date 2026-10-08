@@ -1,0 +1,69 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S36901-WRITE-BIT",
+        "mcp",
+        "src/grants.rs",
+        "            Self::Write => 4,",
+        "            Self::Write => 1,",
+        "guard::the_write_grant_holds_core_and_write_and_no_other",
+        "the write scope takes a bit of its own, so the write grant holds core and write and the read grant never holds write; a shared bit would erase the line between the read and write grants (SPEC-369 A5)"
+      ],
+      [
+        "S36902-WRITE-NAME",
+        "mcp",
+        "src/grants.rs",
+        "            Self::Write => \"write\",",
+        "            Self::Write => \"law_track\",",
+        "settings::the_write_credential_grants_core_and_write",
+        "the write scope is named write, so a grant's scope names say which grant changes data; a reader would see the law track's name on the write grant (SPEC-369 A1)"
+      ],
+      [
+        "S36903-ALL-SCOPES",
+        "mcp",
+        "src/grants.rs",
+        "    pub const ALL: [Self; 3] = [Self::Core, Self::LawTrack, Self::Write];",
+        "    pub const ALL: [Self; 3] = [Self::Core, Self::LawTrack, Self::LawTrack];",
+        "settings::the_write_credential_grants_core_and_write",
+        "every scope, write included, is listed once, so a grant's names show the write scope it holds; a reader would lose the write grant's write (SPEC-369 A1)"
+      ],
+      [
+        "S36904-READ-GRANT",
+        "mcp",
+        "src/grants.rs",
+        "            Scopes::NONE.with(Scope::Core),",
+        "            Scopes::NONE.with(Scope::Core).with(Scope::Write),",
+        "guard::the_write_grant_holds_core_and_write_and_no_other",
+        "the core credential's grant is the read grant, core alone; with write it would let the read token reach every write tool (SPEC-369 A5)"
+      ],
+      [
+        "S36905-WRITE-GRANT",
+        "mcp",
+        "src/grants.rs",
+        "            Scopes::NONE.with(Scope::Core).with(Scope::Write),",
+        "            Scopes::NONE.with(Scope::Core),",
+        "settings::the_write_credential_grants_core_and_write",
+        "the write credential grants core and write; core alone would leave no token able to reach a write tool (SPEC-369 A1)"
+      ],
+      [
+        "S36906-WRITE-ID",
+        "mcp",
+        "src/settings.rs",
+        "pub const WRITE_CREDENTIAL: &str = \"mcp-write-token\";",
+        "pub const WRITE_CREDENTIAL: &str = \"mcp-write-tokens\";",
+        "settings::the_write_credential_grants_core_and_write",
+        "the write credential's id is mcp-write-token, the name it is provisioned under; another id would load nothing and grant no write, with no refusal to say so (SPEC-369 A1)"
+      ],
+      [
+        "S36907-WRITE-SHARED",
+        "mcp",
+        "src/grants.rs",
+        "                if bool::from(write.digest.ct_eq(&other.digest)) {",
+        "                if bool::from(write.digest.ct_ne(&other.digest)) {",
+        "settings::the_write_credential_cannot_share_a_value",
+        "a write credential holding the core or law-track credential's value refuses start, compared in constant time; without it one token would hold both grants' scopes (SPEC-369 A4)"
+      ]
+    ]
+  }
+}

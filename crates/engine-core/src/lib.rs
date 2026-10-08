@@ -24,6 +24,9 @@
 //! - [`credential`]: the rule that keeps, sends and drops the sync key: its generation, a login
 //!   kept only at the generation it started at, a send only at the held one, and a drop only on
 //!   the server's refusal of the current one (SPEC-363 R3).
+//! - [`one_way`]: the one-way sync's steps in the order the choice's model checks them, each
+//!   reading its side from its file: the server copy, the backup, the re-check and the write
+//!   (SPEC-364 R4-R8).
 //! - [`undo_answer`]: the rule an undo of the review's own last answer passes: its record, the
 //!   review row it names, the refusals and the state the card returns to (SPEC-371 R3).
 //!
@@ -40,5 +43,6 @@ pub mod full_sync;
 pub mod gesture;
 pub mod login_guard;
 pub mod media;
+pub mod one_way;
 pub mod table;
 pub mod undo_answer;

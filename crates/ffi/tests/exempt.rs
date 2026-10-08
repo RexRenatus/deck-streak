@@ -204,6 +204,10 @@ fn each_exempt_refusal_reads_as_its_own_sentence() {
             ExemptRefusal::Engine { error: vec![0; 4] },
             "the engine refused the write (4 bytes)",
         ),
+        (
+            ExemptRefusal::NeedsTheChoice,
+            "the one-way sync runs only through the full-sync choice's write",
+        ),
     ];
     let read: Vec<(String, &str)> = sentences
         .iter()

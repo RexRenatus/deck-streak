@@ -50,8 +50,10 @@ const NATIVE: [(u32, u32); 8] = [
     (13, 24),
     (27, 6),
 ];
-/// The seven exempt writes, held for a gesture on every transport (SPEC-345 M8, SPEC-371 R2).
-const HELD: [(u32, u32); 7] = [
+/// The eight exempt writes, held for a gesture on every transport (SPEC-345 M8; SPEC-364 R1;
+/// SPEC-371 R2).
+const HELD: [(u32, u32); 8] = [
+    (1, 6),
     (3, 8),
     (5, 2),
     (11, 5),

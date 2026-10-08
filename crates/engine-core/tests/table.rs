@@ -15,7 +15,9 @@ mod support;
 
 use std::collections::BTreeSet;
 
-use deck_streak_engine_core::table::{Decision, EXEMPT, ORDINARY, TargetKind, Transport, decide};
+use deck_streak_engine_core::table::{
+    Decision, EXEMPT, ExemptWrite, ORDINARY, TargetKind, Transport, decide,
+};
 
 /// The pairs the native adapter's allow-list holds (SPEC-345 M1), with the review screen's three
 /// (SPEC-348 R1), less `AnswerCard`, which only an owner's press records (SPEC-365 R4, R6), and
@@ -32,8 +34,9 @@ const NATIVE: [(u32, u32); 8] = [
 ];
 
 /// The web engine's study calls (SPEC-345 M4), less `AnswerCard` (SPEC-365 R4, R7) and `Undo`
-/// (SPEC-371 R2), with `HtmlToTextLine`, the card as one line of text (SPEC-371 R8).
-const WEB: [(u32, u32); 15] = [
+/// (SPEC-371 R2), with `HtmlToTextLine`, the card as one line of text (SPEC-371 R8), and its sync
+/// calls (SPEC-364 R1).
+const WEB: [(u32, u32); 17] = [
     (3, 0),
     (3, 1),
     (27, 14),
@@ -50,11 +53,15 @@ const WEB: [(u32, u32); 15] = [
     (3, 7),
     (13, 14),
     (5, 4),
+    // The sync login and the normal sync (SPEC-364 R1).
+    (1, 3),
+    (1, 5),
 ];
 
-/// The seven exempt writes, the never-list's entries 2, 3, 6, 7 and 8 (SPEC-345 M8), and the undo
-/// of the review's own last answer (SPEC-371 R2).
-const HELD: [(u32, u32); 7] = [
+/// The eight exempt writes, the never-list's entries 2, 3, 6, 7 and 8 (SPEC-345 M8), the
+/// full-sync choice's one-way sync (SPEC-364 R1), and the undo of the review's own last answer
+/// (SPEC-371 R2).
+const HELD: [(u32, u32); 8] = [
     (3, 8),
     (5, 2),
     (11, 5),
@@ -62,6 +69,7 @@ const HELD: [(u32, u32); 7] = [
     (13, 19),
     (23, 15),
     (25, 7),
+    (1, 6),
 ];
 
 /// The one call that records a grade, `SchedulerService.AnswerCard`, held on both transports for
@@ -179,6 +187,13 @@ fn each_exempt_write_names_its_engine_call_and_its_target_kind() {
                 TargetKind::Note,
             ),
             (
+                "OneWaySync".to_owned(),
+                1,
+                6,
+                "BackendSyncService.FullUploadOrDownload",
+                TargetKind::Collection,
+            ),
+            (
                 "Undo".to_owned(),
                 3,
                 8,
@@ -253,4 +268,44 @@ fn the_review_pairs_are_ordinary_on_the_web() {
             "{name} ({service}, {method}) on the native transport"
         );
     }
+}
+
+#[test]
+fn the_web_column_admits_the_sync_login_and_the_normal_sync() {
+    let decided: Vec<((u32, u32), Decision, Decision)> = [(1, 3), (1, 5), (1, 6)]
+        .into_iter()
+        .map(|(service, method)| {
+            (
+                (service, method),
+                decide(Transport::Native, service, method),
+                decide(Transport::Web, service, method),
+            )
+        })
+        .collect();
+    assert_eq!(
+        decided,
+        vec![
+            ((1, 3), Decision::Admit, Decision::Admit),
+            ((1, 5), Decision::NotAllowed, Decision::Admit),
+            ((1, 6), Decision::NeedsGesture, Decision::NeedsGesture),
+        ],
+        "(native, web): both admit the login, the normal sync is the web's alone, and the one-way \
+         sync needs a gesture on both"
+    );
+    let one_way: Vec<(u32, u32, &str, TargetKind)> = EXEMPT
+        .iter()
+        .filter(|row| row.write == ExemptWrite::OneWaySync)
+        .map(|row| (row.service, row.method, row.name, row.kind))
+        .collect();
+    assert_eq!(
+        one_way,
+        vec![(
+            1,
+            6,
+            "BackendSyncService.FullUploadOrDownload",
+            TargetKind::Collection
+        )],
+        "the one-way sync is one exempt write whose target is the collection"
+    );
+    support::examined("sync pair(s)", decided);
 }
