@@ -44,9 +44,10 @@ filter, the engine line by `--exact`.
 | 5 | A5 | `crates/engine-core/tests/review_templates.rs` | added |
 
 ```red-first
-A1: red at PENDING: AssertionError: cloze ordinal 0 question: the body: expected '<p>the head card question</p>' to be 'The <span class="cloze" data-cloze="d…' // Object.is equality
-A2: red at PENDING: AssertionError: reversed ordinal 0 answer: the body: expected '<p>the head card answer</p>' to be 'der Hund\n\n<hr id="answer">\n\nthe d…' // Object.is equality
-A3: red at PENDING: AssertionError: cloze ordinal 0 question: the style element: expected '.card {\n  font-family: arial;\n  fon…' to be '.card {\n  font-family: arial;\n  fon…' // Object.is equality
-A4: red at PENDING: AssertionError: cloze ordinal 1 question: data-card-refused, srcdoc and status: expected { refused: 'escaped', …(2) } to deeply equal { refused: null, srcdoc: true, …(1) }
-A5: red at PENDING: assertion `left == right` failed: cloze ordinal 0: the question face's CSS left: "" right: ".card {\r\n  font-family: arial;\r\n  font-size: 20px;\r\n  text-align: center;\r\n}\r\n\r\n.cloze {\r\n  font-weight: bold;\r\n  color: blue;\r\n}\r.nightMode .cloze {\n  color: lightblue;\n}\n"
+A1: red at 4443b048: AssertionError: cloze ordinal 0 question: the body: expected '<p>the head card question</p>' to be 'The <span class="cloze" data-cloze="d…' // Object.is equality
+A2: red at 4443b048: AssertionError: reversed ordinal 0 answer: the body: expected '<p>the head card answer</p>' to be 'der Hund\n\n<hr id="answer">\n\nthe d…' // Object.is equality
+A3: red at 4443b048: AssertionError: cloze ordinal 0 question: the style element: expected '.card {\n  font-family: arial;\n  fon…' to be '.card {\n  font-family: arial;\n  fon…' // Object.is equality
+A4: red at 4443b048: AssertionError: cloze ordinal 1 question: data-card-refused, srcdoc and status: expected { refused: 'escaped', …(2) } to deeply equal { refused: null, srcdoc: true, …(1) }
+A5: red at 4443b048: assertion `left == right` failed: cloze ordinal 0: the question face's CSS left: "" right: ".card {\r\n  font-family: arial;\r\n  font-size: 20px;\r\n  text-align: center;\r\n}\r\n\r\n.cloze {\r\n  font-weight: bold;\r\n  color: blue;\r\n}\r.nightMode .cloze {\n  color: lightblue;\n}\n"
+A5: green at PENDING
 ```

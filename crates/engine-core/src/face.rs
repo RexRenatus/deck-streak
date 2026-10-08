@@ -216,7 +216,7 @@ pub(crate) fn complete(
     };
     Ok(Face {
         text,
-        css: String::new(),
+        css: rendered.css,
         autoplay,
         replay,
         omitted: budget.into_omitted(),
