@@ -1261,6 +1261,7 @@ version = "0.3.0"
 dependencies = [
  "anki",
  "deck-streak-engine-core",
+ "reqwest 0.12.28",
  "tokio",
  "uniffi",
 ]

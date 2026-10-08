@@ -3,7 +3,8 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::thread;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use deck_streak_engine_core::answer::{
     AnswerRefusal, Grade, OwnerAnswer, answer_request, shown_states,
@@ -11,6 +12,7 @@ use deck_streak_engine_core::answer::{
 use deck_streak_engine_core::dispatch::{Dispatcher, Refusal};
 use deck_streak_engine_core::face::Side;
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
+use deck_streak_engine_core::handshake;
 use deck_streak_engine_core::table::{ExemptWrite, Transport};
 
 use crate::allow_list::allowed;
@@ -85,7 +87,10 @@ impl Engine {
             .map_err(|reason| EngineRefusal::Start { reason })
     }
 
-    /// Runs one allowed call: the request's protobuf bytes in, the response's out.
+    /// Runs one allowed call: the request's protobuf bytes in, the response's out. Before a sync
+    /// login, the sync service's statement of its minimum client level is read at the login's
+    /// endpoint and handed to the core, which refuses the login unless the statement admits this
+    /// client (SPEC-374 R8).
     ///
     /// # Errors
     ///
@@ -100,6 +105,11 @@ impl Engine {
         // the engine's dispatch, whatever it would have done there.
         if allowed(service, method).is_none() {
             return Err(EngineRefusal::NotAllowed { service, method });
+        }
+        if (service, method) == SYNC_LOGIN
+            && let Some(url) = handshake::statement_url(&input)
+        {
+            self.dispatcher.handshake(read_statement(&url).as_deref());
         }
         self.dispatcher
             .run(service, method, &input)
@@ -265,6 +275,65 @@ impl fmt::Display for PressRefusal {
 }
 
 impl std::error::Error for PressRefusal {}
+
+/// The engine's sync login, `BackendSyncService.SyncLogin`: the one call the statement's read
+/// precedes (SPEC-374 R8).
+const SYNC_LOGIN: (u32, u32) = (1, 3);
+/// The longest the statement's read may take, from its connection to its body's last byte.
+const STATEMENT_TIMEOUT: Duration = Duration::from_secs(10);
+/// The most bytes the statement's body may hold.
+const STATEMENT_CAP: usize = 1024;
+
+/// Reads the sync service's statement at `url` (SPEC-374 R8): the body of a 200, an empty body
+/// for any other status, a body over the cap or one that breaks off, and `None` when nothing
+/// answered. The read runs on a scoped thread with a runtime of its own, so a caller inside a runtime never blocks one.
+fn read_statement(url: &str) -> Option<Vec<u8>> {
+    thread::scope(|scope| {
+        scope
+            .spawn(|| {
+                tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .ok()?
+                    .block_on(statement(url))
+            })
+            .join()
+            .ok()
+            .flatten()
+    })
+}
+
+/// The statement's one request: a `GET` that sends no credential and follows no redirect.
+async fn statement(url: &str) -> Option<Vec<u8>> {
+    #[expect(
+        clippy::disallowed_types,
+        reason = "the statement's read is the one place the static library makes an HTTP client"
+    )]
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "the statement's read is the one place the static library makes an HTTP client"
+    )]
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(STATEMENT_TIMEOUT)
+        .build()
+        .ok()?;
+    let mut response = client.get(url).send().await.ok()?;
+    if response.status() != reqwest::StatusCode::OK {
+        return Some(Vec::new());
+    }
+    let mut body = Vec::new();
+    loop {
+        match response.chunk().await {
+            Ok(Some(chunk)) => body.extend_from_slice(&chunk),
+            Ok(None) => return Some(body),
+            Err(_) => return Some(Vec::new()),
+        }
+        if body.len() > STATEMENT_CAP {
+            return Some(Vec::new());
+        }
+    }
+}
 
 /// The adapter's refusal for the core's: a pair the native column does not admit reads as one the
 /// allow-list does not carry, since the two are equal, and so do an exempt write and the answer,
