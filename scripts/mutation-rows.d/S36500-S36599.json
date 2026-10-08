@@ -43,8 +43,8 @@
         "src/answer.rs",
         "Self::Good => 2,",
         "Self::Good => 1,",
-        "answer::a_press_answers_its_one_card_with_its_grade",
-        "a Good press checks against the engine's Good rating, 2; as 1, every Good press would be refused or record Hard (SPEC-365 A3)"
+        "answer::a_press_records_only_its_own_grade",
+        "a Good press checks against the engine's Good rating, 2; as 1, a Good press would record Hard, and the check would refuse the Good the owner pressed (SPEC-365 A5)"
       ],
       [
         "S36506-AGAIN-IS-THE-ENGINES-AGAIN",
@@ -52,8 +52,8 @@
         "src/answer.rs",
         "Self::Again => 0,",
         "Self::Again => 2,",
-        "answer::a_press_answers_its_one_card_with_its_grade",
-        "an Again press checks against the engine's Again rating, 0; as 2, every Again press would be refused and the owner could never fail a card (SPEC-365 A3)"
+        "answer::a_press_records_only_its_own_grade",
+        "an Again press checks against the engine's Again rating, 0; as 2, an Again press would record Good and the owner could never fail a card (SPEC-365 A5)"
       ],
       [
         "S36507-GOOD-PICKS-GOODS-STATE",

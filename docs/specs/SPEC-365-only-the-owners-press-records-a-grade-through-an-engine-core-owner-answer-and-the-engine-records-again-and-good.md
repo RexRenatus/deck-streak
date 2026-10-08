@@ -369,8 +369,8 @@ Each row names a behaviour of R1 to R7, its mutant and the one test that kills i
 | `S36502-RUN-HOLDS-AN-ANSWER-FOR-THE-OWNER` | `engine-core` `src/dispatch.rs` | `run`'s `NeedsAnswer` arm refuses `NotAllowed` | `dispatch::an_answer_through_run_is_held_for_the_owner_and_leaves_the_card` |
 | `S36503-A-PRESS-ANSWERS-ONLY-ITS-CARD` | `engine-core` `src/answer.rs` | `request.card_id != card` becomes `request.card_id != request.card_id` | `answer::a_press_for_one_card_cannot_answer_another` |
 | `S36504-A-PRESS-RECORDS-ONLY-ITS-GRADE` | `engine-core` `src/answer.rs` | `request.rating != grade.rating()` becomes `request.rating != request.rating` | `answer::a_press_records_only_its_own_grade` |
-| `S36505-GOOD-IS-THE-ENGINES-GOOD` | `engine-core` `src/answer.rs` | `Self::Good => 2,` becomes `Self::Good => 1,` | `answer::a_press_answers_its_one_card_with_its_grade` |
-| `S36506-AGAIN-IS-THE-ENGINES-AGAIN` | `engine-core` `src/answer.rs` | `Self::Again => 0,` becomes `Self::Again => 2,` | `answer::a_press_answers_its_one_card_with_its_grade` |
+| `S36505-GOOD-IS-THE-ENGINES-GOOD` | `engine-core` `src/answer.rs` | `Self::Good => 2,` becomes `Self::Good => 1,` | `answer::a_press_records_only_its_own_grade` |
+| `S36506-AGAIN-IS-THE-ENGINES-AGAIN` | `engine-core` `src/answer.rs` | `Self::Again => 0,` becomes `Self::Again => 2,` | `answer::a_press_records_only_its_own_grade` |
 | `S36507-GOOD-PICKS-GOODS-STATE` | `engine-core` `src/answer.rs` | `Self::Good => good,` becomes `Self::Good => again,` | `answer::a_press_answers_its_one_card_with_its_grade` |
 | `S36508-AN-UNDECODABLE-REQUEST-IS-REFUSED` | `engine-core` `src/answer.rs` | the decode's refusal becomes `.unwrap_or_default()` | `answer::a_request_that_is_not_a_card_answer_is_refused` |
 | `S36509-THE-ENGINE-RUNS-ONLY-THE-CHECKED-ANSWER` | `engine-core` `src/dispatch.rs` | `run_answer` falls back to the caller's bytes when the check refuses | `answer::a_press_for_one_card_cannot_answer_another` |
@@ -381,6 +381,11 @@ Each row names a behaviour of R1 to R7, its mutant and the one test that kills i
 | `S36514-THE-NATIVE-PRESS-KEEPS-ITS-GRADE` | `ffi` `src/engine.rs` | `PressedGrade::Again => Grade::Again,` becomes `PressedGrade::Again => Grade::Good,` | `round_trip::a_native_press_answers_only_its_card_with_its_grade` |
 | `S36515-THE-NATIVE-ANSWER-PICKS-ITS-GRADES-STATE` | `ffi` `src/engine.rs` | `grade.pick(states.again, states.good)` swaps its arguments | `round_trip::a_native_press_answers_only_its_card_with_its_grade` |
 | `S36516-THE-NATIVE-ANSWER-REFUSES-UNDECODABLE-STATES` | `ffi` `src/engine.rs` | the states' decode refusal becomes `.unwrap_or_default()` | `round_trip::a_native_press_answers_only_its_card_with_its_grade` |
+
+`S36505` and `S36506` are killed by A5's test, not A3's. A3's request takes its rating from
+`Grade::rating`, the value those two mutants change, so it moves with them and A3 passes; A5
+spells every other rating literally and refuses it, so a press whose grade reads another rating
+records it, and A5 fails.
 
 Removing (13,4) from `ALLOW_LIST` and `STUDY_CALLS` leaves no text a row could anchor on. Putting
 it back would break each array's declared length, so the mutant would not compile. The parity test
