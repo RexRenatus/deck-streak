@@ -1,12 +1,14 @@
-//! SPEC-338 A1, A2 and A17: the study rule the web engine's `wasm32` module runs, judged natively.
+//! SPEC-338 A1, A2 and A17, and SPEC-371 A16: the study rule the web engine's `wasm32` module runs,
+//! judged natively, with the undo's mirrors of the core's verdicts (SPEC-371 R6, R7).
 
 // The examined helper prints its count on purpose; clippy.toml's in-test allowances cover only
 // `#[test]` bodies.
 #![allow(clippy::print_stdout)]
 
 use deck_streak_web_engine::study::{
-    BuryOf, Files, Grade, STUDY_CALLS, Shown, StudyError, Wanted, admit, bury_of, engine_languages,
-    grade, media_type, service, shown_for, toggled_red,
+    BuryOf, Files, Grade, LastAnswer, Recorded, Returns, STUDY_CALLS, Shown, StudyError,
+    UndoRefusal, Wanted, admit, bury_of, engine_languages, grade, last_answer_for, media_type,
+    service, shown_for, toggled_red, undo_view,
 };
 
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
@@ -77,22 +79,35 @@ fn run_method_admits_only_the_study_calls() {
         }),
         "AnswerCard"
     );
-    // The oracle, written apart from the table: the seven calls open, close, undo, the queue,
-    // the notetype names and the two calls that seed a synthetic collection.
+    // SPEC-371 A16 (R6): Undo is an exempt write, held for the owner's gesture, so `run_method`
+    // refuses it as it refuses Forget; the card's one line of text is a study call.
+    assert_eq!(
+        (admit(3, 8), admit(27, 14)),
+        (
+            Err(StudyError::CallRefused {
+                service: 3,
+                method: 8
+            }),
+            Ok("html_to_text_line")
+        ),
+        "Undo is refused and HtmlToTextLine admitted"
+    );
+    // The oracle, written apart from the table: the six calls open, close, the queue, the
+    // notetype names and the two calls that seed a synthetic collection.
     let study = [
         (3, 0, "open_collection"),
         (3, 1, "close_collection"),
-        (3, 8, "undo"),
         (13, 3, "get_queued_cards"),
         (23, 8, "get_notetype_names"),
         (25, 0, "new_note"),
         (25, 2, "add_notes"),
-        // The review's eight: the deck list, the card view, its labels and undo label, bury and
-        // flag (SPEC-350 R1, M10).
+        // The review's nine: the deck list, the card view, its labels and undo label, bury and
+        // flag (SPEC-350 R1, M10), and the card's one line of text (SPEC-371 R6).
         (7, 4, "deck_tree"),
         (7, 22, "set_current_deck"),
         (27, 6, "render_existing_card"),
         (27, 9, "strip_av_tags"),
+        (27, 14, "html_to_text_line"),
         (13, 24, "describe_next_states"),
         (3, 7, "get_undo_status"),
         (13, 14, "bury_or_suspend_cards"),
@@ -106,9 +121,10 @@ fn run_method_admits_only_the_study_calls() {
         );
     }
     // ADR-337's exempt writes, by index at the pinned commit: Forget, set due date, upgrading the
-    // scheduler, deleting a preset, updating presets, deleting cards, changing a note's type and
-    // deleting notes. Each is refused by name.
+    // scheduler, deleting a preset, updating presets, deleting cards, changing a note's type,
+    // deleting notes and, since SPEC-371, undo. Each is refused by name.
     let exempt = [
+        (3, 8, "undo"),
         (13, 17, "schedule_cards_as_new"),
         (13, 19, "set_due_date"),
         (13, 26, "upgrade_scheduler"),
@@ -165,12 +181,11 @@ fn run_method_admits_only_the_study_calls() {
 #[test]
 fn the_study_calls_are_the_reviews_pairs() {
     // The oracle, written apart from the table (SPEC-350 R1, M10): DEV's seven calls, less the
-    // answer only an owner's press records (SPEC-365 R7), then the review's eight, each named as
-    // the engine names its method.
+    // answer only an owner's press records (SPEC-365 R7) and the undo only the owner's gesture
+    // runs (SPEC-371 R6), then the review's nine, each named as the engine names its method.
     let review = vec![
         (3, 0, "open_collection"),
         (3, 1, "close_collection"),
-        (3, 8, "undo"),
         (13, 3, "get_queued_cards"),
         (23, 8, "get_notetype_names"),
         (25, 0, "new_note"),
@@ -179,6 +194,7 @@ fn the_study_calls_are_the_reviews_pairs() {
         (7, 22, "set_current_deck"),
         (27, 6, "render_existing_card"),
         (27, 9, "strip_av_tags"),
+        (27, 14, "html_to_text_line"),
         (13, 24, "describe_next_states"),
         (3, 7, "get_undo_status"),
         (13, 14, "bury_or_suspend_cards"),
@@ -304,4 +320,101 @@ fn the_sync_calls_are_the_login_and_the_normal_sync() {
         "the web side names the sync login and the normal sync, and no other sync pair"
     );
     examined("sync call(s)", calls);
+}
+
+#[test]
+fn a_confirmation_reaches_only_the_kept_answer_at_its_step() {
+    // SPEC-371 R7: the page confirms only what it was offered, so a confirmation that names another
+    // card, another step, or an answer when none is kept is refused as changed.
+    let kept = LastAnswer {
+        card: 42,
+        grade: Grade::Good,
+        returns: Returns::Learning,
+        recorded: Recorded {
+            step: 7,
+            label: "Answer Card".to_owned(),
+            review: 1001,
+        },
+    };
+    assert_eq!(last_answer_for(Some(&kept), 42, 7), Ok(&kept));
+    let stale = vec![(41, 7), (42, 8), (41, 8), (42, 6)];
+    for (card, step) in examined("stale confirmation(s)", stale) {
+        assert_eq!(
+            last_answer_for(Some(&kept), card, step),
+            Err(StudyError::NotUndoable(UndoRefusal::Changed)),
+            "card {card} at step {step}"
+        );
+    }
+    assert_eq!(
+        last_answer_for(None, 42, 7),
+        Err(StudyError::NotUndoable(UndoRefusal::Changed))
+    );
+}
+
+#[test]
+fn a_refused_undo_reads_as_its_own_sentence() {
+    // SPEC-371 R12: the session reads the prefix, `undo-synced` for a synced answer and
+    // `not-undoable` for every other refusal, so each sentence is held whole.
+    let sentences = vec![
+        (UndoRefusal::Synced, "undo-synced: the answer has synced"),
+        (UndoRefusal::Gone, "not-undoable: the answer is gone"),
+        (
+            UndoRefusal::NotTheCard,
+            "not-undoable: the answer is of another card",
+        ),
+        (
+            UndoRefusal::Changed,
+            "not-undoable: something changed after the answer",
+        ),
+    ];
+    for (refusal, sentence) in examined("undo refusal(s)", sentences) {
+        assert_eq!(
+            StudyError::NotUndoable(refusal).to_string(),
+            sentence,
+            "{refusal:?}"
+        );
+    }
+}
+
+#[test]
+fn the_offer_names_its_grade_and_state_and_why_none_is_made() {
+    // SPEC-371 R7: the offer's words, each written here apart from the rule.
+    assert_eq!([Grade::Again.word(), Grade::Good.word()], ["again", "good"]);
+    let kinds = vec![
+        (Returns::New, "new"),
+        (Returns::Learning, "learning"),
+        (Returns::Review, "review"),
+        (Returns::Relearning, "relearning"),
+        (Returns::Preview, "preview"),
+    ];
+    for (kind, word) in examined("kind(s) of state", kinds) {
+        assert_eq!(kind.word(), word, "{kind:?}");
+    }
+    // a synced answer is not offered and the page says so; any other refusal offers nothing
+    let reasons = vec![
+        (UndoRefusal::Synced, "synced"),
+        (UndoRefusal::Gone, "none"),
+        (UndoRefusal::NotTheCard, "none"),
+        (UndoRefusal::Changed, "none"),
+    ];
+    for (refusal, why) in examined("reason(s) for no offer", reasons) {
+        assert_eq!(refusal.why(), why, "{refusal:?}");
+    }
+}
+
+#[test]
+fn the_card_view_offers_an_undo_only_for_the_reviews_own_unsynced_answer() {
+    // SPEC-371 R7: `answer` when the core admits the kept answer, `synced` when it has synced, and
+    // nothing when no answer is kept or any other refusal holds.
+    let views = vec![
+        (None, None),
+        (Some(Ok(())), Some("answer")),
+        (Some(Err(UndoRefusal::Synced)), Some("synced")),
+        (Some(Err(UndoRefusal::Gone)), None),
+        (Some(Err(UndoRefusal::NotTheCard)), None),
+        (Some(Err(UndoRefusal::Changed)), None),
+    ];
+    for (judged, view) in examined("judged record(s)", views) {
+        assert_eq!(undo_view(judged), view, "{judged:?}");
+    }
 }

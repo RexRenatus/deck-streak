@@ -12,7 +12,8 @@ import type {
   Reply,
   Request,
   Snapshot,
-  StatusWord
+  StatusWord,
+  UndoOffer
 } from './protocol';
 
 /** The Web Lock that holds one collection per origin. */
@@ -30,7 +31,12 @@ export interface EngineModule {
   close(): void;
   seed(count: number): number;
   next_card(): bigint | undefined;
-  undo(): void;
+  /** Reverts the review's own last answer, the one the offer named by `card` and `step`, through
+   * the owner's gesture, checked at the write (SPEC-371 R7). */
+  undo(card: bigint, step: number): void;
+  /** The offer of the review's own last answer, or why there is none: JSON, the card's id as a
+   * decimal string. It writes nothing (SPEC-371 R7). */
+  undo_offer(): string;
   snapshot(card: bigint): string;
   last_panic(): string | undefined;
   memory_pages(): number;
@@ -102,8 +108,29 @@ function toHead(text: string): Head {
   return { counts: head.counts, card: head.card === null ? null : { ...head.card, id: BigInt(head.card.id) } };
 }
 
+/** The offer with its card's id as a bigint. */
+function toOffer(text: string): UndoOffer {
+  const read = JSON.parse(text) as
+    | { offer: Omit<Extract<UndoOffer, { offer: object }>['offer'], 'card'> & { card: string } }
+    | Extract<UndoOffer, { offer: null }>;
+  return read.offer === null ? read : { offer: { ...read.offer, card: BigInt(read.offer.card) } };
+}
+
 /** The prefix of the module's refusal of a card other than the one it showed. */
 const NOT_SHOWN = 'not-shown:';
+
+/** The prefixes of the module's refusals of an undo: the answer has synced, or it can no longer be
+ * undone for any other reason (SPEC-371 R12). */
+const UNDO_SYNCED = 'undo-synced:';
+const NOT_UNDOABLE = 'not-undoable:';
+
+/** The code a refusal the engine returned answers, by its message's prefix. */
+function refusalCode(why: string): ErrorCode {
+  if (why.startsWith(NOT_SHOWN)) return 'not-shown';
+  if (why.startsWith(UNDO_SYNCED)) return 'undo-synced';
+  if (why.startsWith(NOT_UNDOABLE)) return 'not-undoable';
+  return 'engine-failed';
+}
 
 /** One Worker's session over one collection. It answers one request at a time, in order; it
  * takes the Web Lock before the storage and the storage before the engine, so a second tab and
@@ -226,7 +253,8 @@ export class Session {
 
   /** Runs an engine call. An error the engine returns leaves the session as it was; a trap spends
    * the module, so the session ends. The module's refusal of a card it did not show answers
-   * `not-shown` (SPEC-350 R2). */
+   * `not-shown` (SPEC-350 R2), and its refusal of an undo `undo-synced` or `not-undoable`
+   * (SPEC-371 R12). */
   #run(id: number, call: (engine: EngineModule) => unknown): Reply {
     const engine = this.#engine as EngineModule;
     try {
@@ -234,7 +262,7 @@ export class Session {
     } catch (error) {
       const why = this.#explain(engine, error);
       if (error instanceof WebAssembly.RuntimeError) return this.#end(id, 'engine-failed', why);
-      return refuse(id, why.startsWith(NOT_SHOWN) ? 'not-shown' : 'engine-failed', why);
+      return refuse(id, refusalCode(why), why);
     }
   }
 
@@ -247,8 +275,10 @@ export class Session {
       case 'snapshot':
         return toSnapshot(engine.snapshot(request.card));
       case 'undo':
-        engine.undo();
+        engine.undo(request.card, request.step);
         return null;
+      case 'undo-offer':
+        return toOffer(engine.undo_offer());
       case 'memory':
         return engine.memory_pages() * PAGE_BYTES;
       case 'decks':

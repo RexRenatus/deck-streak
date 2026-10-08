@@ -1,5 +1,6 @@
 //! SPEC-345 A12 (R7; ADR-356 D5): an owner's gesture takes one target of its write's kind, and
-//! its one constructor refuses a target of another kind, naming the write and the target.
+//! its one constructor refuses a target of another kind, naming the write and the target. Since
+//! SPEC-371 (R2), Undo is the eighth write, and takes a card.
 
 #![allow(
     clippy::expect_used,
@@ -23,7 +24,7 @@ const TARGETS: [Target; 4] = [
 /// The one target of each write that a gesture takes, by the kinds the owner-taps ruling names:
 /// written here, not read from the exempt table, so the test does not compare the code with
 /// itself.
-const TAKEN: [(ExemptWrite, Target); 7] = [
+const TAKEN: [(ExemptWrite, Target); 8] = [
     (ExemptWrite::Forget, Target::Card(11)),
     (ExemptWrite::SetDueDate, Target::Card(11)),
     (ExemptWrite::DeletePreset, Target::Preset(13)),
@@ -31,6 +32,7 @@ const TAKEN: [(ExemptWrite, Target); 7] = [
     (ExemptWrite::DeleteCard, Target::Card(11)),
     (ExemptWrite::DeleteNote, Target::Note(12)),
     (ExemptWrite::OneWaySync, Target::Collection),
+    (ExemptWrite::Undo, Target::Card(11)),
 ];
 
 #[test]
@@ -67,7 +69,7 @@ fn a_gesture_takes_one_target_of_its_writes_kind() {
             .flat_map(|row| TARGETS.map(|target| (row.write, target)))
             .collect(),
     );
-    assert_eq!(taps.len(), 28, "seven writes by four kinds of target");
+    assert_eq!(taps.len(), 32, "eight writes by four kinds of target");
     assert_eq!(
         GestureRefusal::WrongKind {
             write: ExemptWrite::Forget,

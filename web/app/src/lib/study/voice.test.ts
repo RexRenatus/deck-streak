@@ -4,7 +4,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { CardView, Clip, Faces, FaceView } from '$lib/engine/protocol';
+import type { CardView, Clip, Faces, FaceView, UndoOffer } from '$lib/engine/protocol';
 import { Review, type StudyClient } from './review';
 import { deviceSpeaker, NATIVE_DEFAULT_RATE, WebSpeaker, type Synthesis, type Utterance } from './speech';
 import { VOICE_CHOICES, VoiceChoices, type Voice } from './voice';
@@ -131,7 +131,7 @@ const CARD: CardView = {
   answer: '<p>answer</p>',
   css: '',
   labels: ['<1m', '<6m', '<10m', '4d'],
-  undo: ''
+  undo: null
 };
 
 /** The engine with one card whose faces speak German, a sound and Japanese. */
@@ -158,6 +158,9 @@ class SpeakingClient implements StudyClient {
   }
   async undo(): Promise<null> {
     return null;
+  }
+  async undoOffer(): Promise<UndoOffer> {
+    return { offer: null, why: 'none' };
   }
 }
 
