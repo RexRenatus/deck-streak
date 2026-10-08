@@ -104,22 +104,22 @@ final class RequestBytesTests: XCTestCase {
                 [0x2a, 0x01, 0x05]),
             "SchedulingStates")
 
-        // Each rating's answer sends back the rating's own state (SPEC-348 R10).
+        // Each grade's answer sends back the grade's own state (SPEC-348 R10), and the two
+        // grades are Again and Good (SPEC-365 R13).
         XCTAssertEqual(card.state(for: .again), [0x02], "Again's state")
-        XCTAssertEqual(card.state(for: .hard), [0x03], "Hard's state")
         XCTAssertEqual(card.state(for: .good), [0x04], "Good's state")
-        XCTAssertEqual(card.state(for: .easy), [0x05], "Easy's state")
 
-        // CardAnswer rated Hard: card_id (1) 300 `ac 02`, current_state (2), new_state (3) Hard's
-        // own state, rating (4) HARD = 1, answered_at_millis (5) 1 and milliseconds_taken (6) 2.
+        // CardAnswer rated Again: card_id (1) 300 `ac 02`, current_state (2), new_state (3) Again's
+        // own state, rating (4) AGAIN = 0, written though it is zero, answered_at_millis (5) 1 and
+        // milliseconds_taken (6) 2.
         XCTAssertEqual(
             Requests.answerCard(
                 CardAnswer(
-                    cardID: 300, currentState: card.currentState, newState: card.state(for: .hard),
-                    rating: .hard, answeredAtMillis: 1, millisecondsTaken: 2)),
+                    cardID: 300, currentState: card.currentState, newState: card.state(for: .again),
+                    rating: .again, answeredAtMillis: 1, millisecondsTaken: 2)),
             bytes(
-                [0x08, 0xac, 0x02], [0x12, 0x01, 0x01], [0x1a, 0x01, 0x03], [0x20, 0x01],
+                [0x08, 0xac, 0x02], [0x12, 0x01, 0x01], [0x1a, 0x01, 0x02], [0x20, 0x00],
                 [0x28, 0x01], [0x30, 0x02]),
-            "CardAnswer, rated Hard")
+            "CardAnswer, rated Again")
     }
 }

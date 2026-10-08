@@ -18,27 +18,28 @@ final class ReviewModelTests: XCTestCase {
     func test_a15_the_loop_reaches_the_designed_end() async throws {
         let (model, _) = try await started(voiceOver: true, installed: [])
         var phases: [ReviewPhase] = []
-        for _ in 0..<4 {
+        // Good sends each new card ten minutes into learning, so the four new cards show first
+        // and then each again, within the learn-ahead limit, until a second Good graduates it.
+        for _ in 0..<8 {
             phases.append(model.phase)
             await model.perform(.showAnswer)
             phases.append(model.phase)
-            await model.perform(.rate(.easy))
+            await model.perform(.rate(.good))
         }
         phases.append(model.phase)
         XCTAssertEqual(
             phases,
-            [
-                .question, .answer, .question, .answer, .question, .answer, .question, .answer,
-                .finished,
-            ],
-            "A15: question, answer, rating and next, through four cards to the designed end")
+            Array(repeating: [ReviewPhase.question, .answer], count: 8).flatMap { $0 }
+                + [.finished],
+            "A15: question, answer, rating and next, through four cards each pressed Good twice to "
+                + "the designed end")
     }
 
     @MainActor
     func test_a18_the_clip_plan_follows_the_face_and_voiceover() async throws {
         // The sound card, third, with VoiceOver off: its autoplay plan is its clip.
         let (sounding, directory) = try await started(voiceOver: false, installed: [])
-        await answeredEasy(sounding, cards: 2)
+        await answeredGood(sounding, cards: 2)
         let tone = try Data(contentsOf: directory.appending(path: "collection.media/tone.wav"))
         XCTAssertEqual(
             sounding.plan, [.sound(name: "tone.wav", bytes: tone)],
@@ -46,13 +47,13 @@ final class ReviewModelTests: XCTestCase {
 
         // The same card with VoiceOver running: nothing plays by itself.
         let (quiet, _) = try await started(voiceOver: true, installed: [])
-        await answeredEasy(quiet, cards: 2)
+        await answeredGood(quiet, cards: 2)
         XCTAssertEqual(quiet.plan, [], "A18: while VoiceOver runs the autoplay plan is empty")
 
         // The speech card, fourth, with the chosen voice installed: the plan names it.
         let (chosen, _) = try await started(voiceOver: false, installed: [testVoice])
         await chosen.choose(voice: testVoice.identifier, for: "en-US")
-        await answeredEasy(chosen, cards: 3)
+        await answeredGood(chosen, cards: 3)
         XCTAssertEqual(
             chosen.plan,
             [
@@ -65,7 +66,7 @@ final class ReviewModelTests: XCTestCase {
         // The same choice with the voice absent: the plan names none, so the language's speaks.
         let (absent, _) = try await started(voiceOver: false, installed: [])
         await absent.choose(voice: testVoice.identifier, for: "en-US")
-        await answeredEasy(absent, cards: 3)
+        await answeredGood(absent, cards: 3)
         XCTAssertEqual(
             absent.plan,
             [.speech(text: "a spoken card", language: "en-US", rate: 0.5, voice: nil)],
@@ -118,12 +119,13 @@ final class ReviewModelTests: XCTestCase {
         return (model, directory)
     }
 
-    /// Reveals and answers Easy, which graduates a new card out of the queue, `cards` times.
+    /// Reveals and answers Good, `cards` times: each press sends a new card ten minutes into
+    /// learning, so the next new card shows next (SPEC-365 R13).
     @MainActor
-    private func answeredEasy(_ model: ReviewModel, cards: Int) async {
+    private func answeredGood(_ model: ReviewModel, cards: Int) async {
         for _ in 0..<cards {
             await model.perform(.showAnswer)
-            await model.perform(.rate(.easy))
+            await model.perform(.rate(.good))
         }
     }
 }

@@ -237,3 +237,18 @@ The adapters' test lines that name the gesture:
 - chosen: hold the native adapter's test lines by text; rejected: rename R9's entry, which moves a requirement's name to satisfy a test.
 - The boundary census's `OWED` literals that name the export and the gesture's constructor, held by text as #600's census literals are: chosen because they are data a test compares, not calls, and a held literal copied or extended still fails by name.
 - String literals stripped before the gesture's names are read: rejected because the census reads the engine's names in literals too, and a literal can carry a call into a macro, so one stripping rule serves both.
+
+## Amendment: the answer is held by its own token and its own table set (SPEC-365)
+
+ADR-376 amends D2 and D4. D2's two tables, ordinary and exempt, gain a third set, `ANSWERED`, whose
+one row is AnswerCard (service 13, method 4): `decide` answers `Decision::NeedsAnswer` for it on both
+transports, `Dispatcher::run` refuses it with `Refusal::NeedsAnswer`, and `Dispatcher::run_answer`
+is the one door that records a grade, consuming an `OwnerAnswer` that holds one card and one grade.
+D4's census holds the answer's names, entry calls and held lines as it holds the gesture's, with no
+gesture row, name or assertion removed or narrowed. The rest of D2 and D4 stands.
+
+- A third set, `ANSWERED`: chosen because the table test's arms and `run`'s refusal then tell "only by a press" apart from "never".
+- AnswerCard kept in the ordinary table with both transport marks false: rejected because `run` would refuse it as not allowed, and a reader could not tell a held answer from a forbidden call.
+- AnswerCard in `EXEMPT`: rejected because `EXEMPT` is the never-list's exemption under ADR-301, and joining it would put every grade under the owner-taps ruling's conditions.
+- The same census file, extended: chosen because the population and the walker are the same.
+- A second census file for the answer: rejected because it copies the walker, and two walkers must then be kept equal.

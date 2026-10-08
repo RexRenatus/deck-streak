@@ -22,7 +22,7 @@ fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
 /// Each boundary function the census reads: its name, why it owes what it owes, and the
 /// statements its body holds for it. A statement is compared with every blank removed, so a
 /// reflow by rustfmt changes nothing.
-const OWED: [(&str, &str, &[&str]); 29] = [
+const OWED: [(&str, &str, &[&str]); 30] = [
     (
         "create_backend",
         "starts the core's dispatcher on the web transport and keeps it",
@@ -149,12 +149,21 @@ const OWED: [(&str, &str, &[&str]); 29] = [
     ),
     (
         "rate",
-        "answers only the kept card, with the states kept when it was shown",
+        "records only the kept card's press, as the owner's answer, with the state its grade picks",
         &[
-            "Answer::from_wire(rating)",
+            "grade(rating)",
             "shown_for(kept.borrow().as_ref(), card)",
-            "answer.pick(states.again, states.hard, states.good, states.easy)",
-            "call(service::SCHEDULER, 4, &request.encode_to_vec())?",
+            "grade.pick(states.again, states.good)",
+            "OwnerAnswer::from_press(shown.card, pressed(grade))",
+            ".run_answer(answer, &request.encode_to_vec())",
+        ],
+    ),
+    (
+        "pressed",
+        "gives the core the grade the wire named, one for one (SPEC-365 R7)",
+        &[
+            "Grade::Again => answer::Grade::Again,",
+            "Grade::Good => answer::Grade::Good,",
         ],
     ),
     (
@@ -267,6 +276,22 @@ const OWED: [(&str, &str, &[&str]); 29] = [
     ),
 ];
 
+/// What the boundary no longer holds (SPEC-365 A11): `rate` never calls `AnswerCard` through
+/// `call`, and no export answers the queue's head. Each is a text whose presence is refused, with
+/// the function that must not hold it, or `None` for the whole source.
+const RETIRED: [(Option<&str>, &str, &str); 2] = [
+    (
+        Some("rate"),
+        "call(service::SCHEDULER, 4,",
+        "records a grade only through the owner's answer, never through `call`",
+    ),
+    (
+        None,
+        "pub fn answer(",
+        "answers no card but the kept one: the queue-head export is gone",
+    ),
+];
+
 /// `text` with every blank removed.
 fn squeezed(text: &str) -> String {
     text.chars().filter(|c| !c.is_whitespace()).collect()
@@ -332,6 +357,26 @@ fn problems(source: &str) -> Vec<String> {
     found
 }
 
+/// Each text of [`RETIRED`] that `source` still holds, named with where and why it is refused.
+fn retired(source: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    for (name, text, why) in RETIRED {
+        let held = match name {
+            Some(name) => {
+                body(source, name).is_ok_and(|body| squeezed(body).contains(&squeezed(text)))
+            }
+            None => squeezed(source).contains(&squeezed(text)),
+        };
+        if held {
+            found.push(format!(
+                "{} {why}, and holds `{text}`",
+                name.unwrap_or("src/wasm.rs")
+            ));
+        }
+    }
+    found
+}
+
 fn boundary() -> String {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/wasm.rs");
     fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()))
@@ -343,7 +388,36 @@ fn each_boundary_function_reaches_the_engine_through_the_dispatcher() {
     let functions = examined("boundary function(s) of src/wasm.rs", OWED.to_vec());
     let statements: usize = functions.iter().map(|(_, _, owed)| owed.len()).sum();
     println!("examined {statements} owed statement(s)");
-    assert_eq!(problems(&source), Vec::<String>::new());
+    let retired_texts = examined("retired text(s)", RETIRED.to_vec());
+    assert_eq!(
+        (problems(&source), retired(&source)),
+        (Vec::<String>::new(), Vec::<String>::new()),
+        "{} retired text(s) judged",
+        retired_texts.len()
+    );
+}
+
+/// The control for [`RETIRED`] (SPEC-365 A11): each text planted back is refused by name, so a
+/// census gone blind fails here rather than passing over a source it no longer reads.
+#[test]
+fn a_retired_text_planted_back_is_refused_by_name() {
+    let source = boundary();
+    let rate = body(&source, "rate").expect("rate has one body");
+    let through_call = source.replacen(
+        rate,
+        "{\n    call(service::SCHEDULER, 4, &[])?;\n    Ok(())\n}",
+        1,
+    );
+    let queue_head = format!("{source}\npub fn answer(rating: u32) -> u32 {{\n    rating\n}}\n");
+    let refused = (retired(&through_call), retired(&queue_head));
+    assert!(
+        refused.0.iter().any(|line| line.starts_with("rate "))
+            && refused
+                .1
+                .iter()
+                .any(|line| line.starts_with("src/wasm.rs ")),
+        "a retired text planted back is not refused by name: {refused:?}"
+    );
 }
 
 #[test]

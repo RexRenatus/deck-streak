@@ -3,12 +3,11 @@
 // rev. An encoder writes exactly the fields its request carries; a decoder reads exactly the
 // fields its caller shows and skips the rest whole.
 
-/// A card's rating, as the engine's `CardAnswer.Rating` numbers it.
+/// A card's rating, as the engine's `CardAnswer.Rating` numbers it: Again and Good alone, the two
+/// grades a press records (SPEC-365 R13).
 public enum Rating: Int32, Sendable {
     case again = 0
-    case hard = 1
     case good = 2
-    case easy = 3
 }
 
 /// `CardAnswer`: the scheduling states travel as the encoded messages the queue gave.

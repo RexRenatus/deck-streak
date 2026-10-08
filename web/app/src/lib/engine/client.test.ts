@@ -28,12 +28,12 @@ describe('EngineClient', () => {
     const client = new EngineClient(port, ORIGIN);
     const opened = client.open();
     const next = client.next();
-    const answered = client.answer(3, 1200);
+    const rated = client.rate(1001n, 3, 1200);
 
     expect(port.sent).toEqual([
       { id: 1, op: 'open' },
       { id: 2, op: 'next' },
-      { id: 3, op: 'answer', rating: 3, ms: 1200 }
+      { id: 3, op: 'rate', card: 1001n, rating: 3, ms: 1200 }
     ]);
     expect(client.waiting).toBe(3);
     // out of order, with a reply to an id never sent, a reply with no id and a message that is
@@ -42,18 +42,18 @@ describe('EngineClient', () => {
     port.reply({ id: 99, ok: true, value: 'stray' });
     port.reply({ ok: true, value: 'no id' });
     port.reply(null);
-    port.reply({ id: 3, ok: false, code: 'not-open', message: 'answer before open' });
+    port.reply({ id: 3, ok: false, code: 'not-open', message: 'rate before open' });
     port.reply({ id: 1, ok: true, value: { existed: false, notes: 0 } });
 
     await expect(next).resolves.toBe(1001n);
     await expect(opened).resolves.toEqual({ existed: false, notes: 0 });
-    const refused = await answered.then(
+    const refused = await rated.then(
       () => 'resolved',
       (error: unknown) => error
     );
     expect(refused).toBeInstanceOf(EngineError);
     expect(refused).toBeInstanceOf(Error);
-    expect(refused).toMatchObject({ code: 'not-open', message: 'answer before open' });
+    expect(refused).toMatchObject({ code: 'not-open', message: 'rate before open' });
     expect(client.waiting).toBe(0);
   });
 
@@ -65,7 +65,7 @@ describe('EngineClient', () => {
       client.undo(),
       client.snapshot(1001n),
       client.close(),
-      client.answer(1, 0)
+      client.rate(1001n, 1, 0)
     ];
 
     expect(port.sent).toEqual([
@@ -73,7 +73,7 @@ describe('EngineClient', () => {
       { id: 2, op: 'undo' },
       { id: 3, op: 'snapshot', card: 1001n },
       { id: 4, op: 'close' },
-      { id: 5, op: 'answer', rating: 1, ms: 0 }
+      { id: 5, op: 'rate', card: 1001n, rating: 1, ms: 0 }
     ]);
     for (const id of [1, 2, 3, 4, 5]) port.reply({ id, ok: true, value: id * 10 });
     await expect(Promise.all(calls)).resolves.toEqual([10, 20, 30, 40, 50]);

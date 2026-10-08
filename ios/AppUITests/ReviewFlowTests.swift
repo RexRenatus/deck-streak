@@ -11,9 +11,10 @@ import XCTest
 /// How long a test waits for the app to show what the engine answered before it reads it.
 private let engineWait: TimeInterval = 30
 
-/// The ratings' titles, in the bar's order, and the intervals A1 pins for a new card.
-private let titles = ["Again", "Hard", "Good", "Easy"]
-private let intervals = ["<1m", "<6m", "<10m", "4d"]
+/// The two grades' titles, in the bar's order, and the intervals A1 pins for a new card for each
+/// (SPEC-365 R13).
+private let titles = ["Again", "Good"]
+private let intervals = ["<1m", "<10m"]
 
 /// What A19 reads of one rating button.
 private struct RatingReading: Equatable {
@@ -30,7 +31,9 @@ final class ReviewFlowTests: XCTestCase {
         tapWhenShown(app.staticTexts["deck-row-Review"].firstMatch)
         tapWhenShown(app.buttons["Show Answer"].firstMatch)
         let buttons = titles.map { app.buttons[$0].firstMatch }
-        _ = reading(until: Array(repeating: true, count: 4)) { buttons.map { shown($0) } }
+        _ = reading(until: Array(repeating: true, count: titles.count)) {
+            buttons.map { shown($0) }
+        }
         let window = app.windows.firstMatch.frame
         let read = buttons.map { button in
             RatingReading(
@@ -43,7 +46,7 @@ final class ReviewFlowTests: XCTestCase {
             zip(titles, intervals).map {
                 RatingReading(name: $0, value: $1, inTheBottomFifth: true, atLeast44By44: true)
             },
-            "A19: the four ratings sit in the bottom fifth, at least 44 by 44 pt, named by their "
+            "A19: the two grades sit in the bottom fifth, at least 44 by 44 pt, named by their "
                 + "titles, their values the intervals")
     }
 
@@ -61,7 +64,7 @@ final class ReviewFlowTests: XCTestCase {
 
         tapWhenShown(app.buttons["Show Answer"].firstMatch)
         let ratings = titles.map { app.buttons[$0].firstMatch }
-        let revealed = reading(until: Array(repeating: true, count: 4)) {
+        let revealed = reading(until: Array(repeating: true, count: titles.count)) {
             ratings.map { shown($0) }
         }
 
@@ -73,18 +76,18 @@ final class ReviewFlowTests: XCTestCase {
             [first, revealed.map { $0 ? "shown" : notShown }, [next ? "shown" : notShown]],
             [
                 ["4 new", "0 learning", "0 to review", "shown"],
-                Array(repeating: "shown", count: 4),
+                Array(repeating: "shown", count: titles.count),
                 ["shown"],
             ],
-            "A20: the deck shows its counts and the text card; Show Answer reveals the four "
-                + "ratings; Good shows the image card")
+            "A20: the deck shows its counts and the text card; Show Answer reveals the two "
+                + "grades; Good shows the image card")
     }
 
     @MainActor
     func test_a21_the_image_card_renders_its_image() throws {
         let app = try launchedOnTheFixture()
         tapWhenShown(app.staticTexts["deck-row-Review"].firstMatch)
-        answerEasy(app, cards: 1)
+        answerGood(app, cards: 1)
         let image = app.webViews.images["a grey dot"].firstMatch
         let size = reading(until: [64, 64]) {
             image.exists ? [image.frame.width.rounded(), image.frame.height.rounded()] : [0, 0]
@@ -99,7 +102,7 @@ final class ReviewFlowTests: XCTestCase {
     func test_a22_the_voice_picker_names_the_default() throws {
         let app = try launchedOnTheFixture()
         tapWhenShown(app.staticTexts["deck-row-Review"].firstMatch)
-        answerEasy(app, cards: 3)
+        answerGood(app, cards: 3)
         tapWhenShown(app.buttons["Voices"].firstMatch)
 
         // The speech card speaks en-US; the sentence shows when no English voice is installed.
@@ -133,12 +136,13 @@ final class ReviewFlowTests: XCTestCase {
         return app
     }
 
-    /// Reveals and answers Easy, which graduates a new card out of the queue, `cards` times.
+    /// Reveals and answers Good, `cards` times: each press sends a new card ten minutes into
+    /// learning, so the next new card shows next (SPEC-365 R13).
     @MainActor
-    private func answerEasy(_ app: XCUIApplication, cards: Int) {
+    private func answerGood(_ app: XCUIApplication, cards: Int) {
         for _ in 0..<cards {
             tapWhenShown(app.buttons["Show Answer"].firstMatch)
-            tapWhenShown(app.buttons["Easy"].firstMatch)
+            tapWhenShown(app.buttons["Good"].firstMatch)
         }
     }
 

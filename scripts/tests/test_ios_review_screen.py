@@ -9,10 +9,10 @@ constructs a web view or its configuration, and none names a script message hand
 handler, a file load or file access; the one file the register gives the role `card` calls the
 factory and names no configuration.
 
-A14 reads the bar and the screen that holds it: the bar names Again, Hard, Good and Easy as
-string literals in that order and overrides no accessible name with `.accessibilityLabel(`, so
-each title is its button's name; the screen holds the bar in a bottom safe-area inset, and
-declares one impact and one success `.sensoryFeedback`, and no other.
+A14 reads the bar and the screen that holds it: the bar names Again and Good, the two grades a
+press records (SPEC-365 R13), as string literals in that order and overrides no accessible name
+with `.accessibilityLabel(`, so each title is its button's name; the screen holds the bar in a
+bottom safe-area inset, and declares one impact and one success `.sensoryFeedback`, and no other.
 
 Each census is a function of the data it is handed, so every planted control is a dict: the test
 hands it the live tree, then planted trees that each break one rule and must be refused by that
@@ -46,7 +46,7 @@ CONFIGURATION = re.compile(r"\bconfiguration\b", re.IGNORECASE)
 
 BAR = "ios/App/Sources/AnswerBar.swift"
 SCREEN = "ios/App/Sources/ReviewView.swift"
-TITLES = ("Again", "Hard", "Good", "Easy")
+TITLES = ("Again", "Good")
 LABEL_OVERRIDE = ".accessibilityLabel("
 # The bar is the content of a bottom inset: the inset's closure opens with the bar.
 BOTTOM_INSET = re.compile(r"\.safeAreaInset\(\s*edge:\s*\.bottom\b[^{]*\{\s*AnswerBar\(")
@@ -250,9 +250,7 @@ BAR_GOOD = {
         "import SwiftUI\n\nstruct AnswerBar: View {\n    let intervals: [String]\n"
         "    var body: some View {\n        HStack {\n"
         '            RatingButton(title: "Again", interval: intervals[0])\n'
-        '            RatingButton(title: "Hard", interval: intervals[1])\n'
         '            RatingButton(title: "Good", interval: intervals[2])\n'
-        '            RatingButton(title: "Easy", interval: intervals[3])\n'
         "        }\n    }\n}\n"
     ),
     SCREEN: (
@@ -282,14 +280,14 @@ BAR_PLANTS = {
     "the ratings out of order": (
         bar_tree(
             BAR,
-            '"Again", interval: intervals[0])\n            RatingButton(title: "Hard"',
-            '"Hard", interval: intervals[0])\n            RatingButton(title: "Again"',
+            '"Again", interval: intervals[0])\n            RatingButton(title: "Good"',
+            '"Good", interval: intervals[0])\n            RatingButton(title: "Again"',
         ),
-        [f"{BAR}: the titles: not in the order Again, Hard, Good, Easy"],
+        [f"{BAR}: the titles: not in the order Again, Good"],
     ),
     "a title absent": (
-        bar_tree(BAR, '"Easy"', '"Simple"'),
-        [f"{BAR}: the titles: 'Easy' is absent"],
+        bar_tree(BAR, '"Good"', '"Simple"'),
+        [f"{BAR}: the titles: 'Good' is absent"],
     ),
     "a title overridden": (
         bar_tree(
