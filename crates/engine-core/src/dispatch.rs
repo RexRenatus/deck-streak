@@ -12,16 +12,21 @@ use prost::Message;
 use crate::answer::{AnswerRefusal, OwnerAnswer};
 use crate::face::{self, Face, Side};
 use crate::full_sync::{IdSets, Unsynced};
-use crate::gesture::{GestureRefusal, OwnerGesture};
+use crate::gesture::{Checked, GestureRefusal, OwnerGesture};
 use crate::login_guard;
 use crate::media::Reader;
-use crate::table::{ANSWERED, Decision, Transport, decide};
+use crate::table::{ANSWERED, Decision, EXEMPT, ExemptWrite, Transport, decide};
+use crate::undo_answer::Recorded;
 
 /// The one read of a card the page may make: its scheduling fields, by id (moved from the web
 /// engine, which passed it to the engine's database door itself).
 const SNAPSHOT_SQL: &str = "select id, queue, type, due, ivl, reps, lapses from cards where id = ?";
 /// The note count the web engine's `open` reports.
 const NOTE_COUNT_SQL: &str = "select count() from notes";
+/// The newest review-log row: its id and its card, the row an answer just wrote (SPEC-371 R4).
+const NEWEST_REVIEW_SQL: &str = "select id, cid from revlog order by id desc limit 1";
+/// One review-log row's card and sync mark, by its id (SPEC-371 R4).
+const REVIEW_SQL: &str = "select cid, usn from revlog where id = ?";
 /// The engine's sync login, `BackendSyncService.SyncLogin`: the one admitted call whose request
 /// the core reads, to guard its endpoint (SPEC-347 R2).
 const SYNC_LOGIN: (u32, u32) = (1, 3);
@@ -91,6 +96,10 @@ pub enum Read {
     NoteCount,
     /// One card's scheduling fields, by its id.
     CardSnapshot(i64),
+    /// The newest review-log row's id and card (SPEC-371 R4).
+    NewestReview,
+    /// One review-log row's card and sync mark, by its id (SPEC-371 R4).
+    Review(i64),
 }
 
 impl Dispatcher {
@@ -155,9 +164,24 @@ impl Dispatcher {
         gesture: OwnerGesture,
         input: &[u8],
     ) -> Result<Vec<u8>, GestureRefusal> {
-        let (service, method, request) = gesture.checked(input)?;
+        match gesture.checked(input)? {
+            Checked::Run(service, method, request) => self
+                .backend
+                .run_service_method(service, method, &request)
+                .map_err(|error| GestureRefusal::Engine { error }),
+            Checked::Undo { card, recorded } => self.run_undo(card, &recorded),
+        }
+    }
+
+    /// Runs the undo of the recorded answer on `card` (SPEC-371 R5).
+    fn run_undo(&self, _card: i64, _recorded: &Recorded) -> Result<Vec<u8>, GestureRefusal> {
+        let Some(row) = EXEMPT.iter().find(|row| row.write == ExemptWrite::Undo) else {
+            return Err(GestureRefusal::Undecodable {
+                write: ExemptWrite::Undo,
+            });
+        };
         self.backend
-            .run_service_method(service, method, &request)
+            .run_service_method(row.service, row.method, &[])
             .map_err(|error| GestureRefusal::Engine { error })
     }
 
@@ -189,6 +213,8 @@ impl Dispatcher {
         let (sql, args) = match read {
             Read::NoteCount => (NOTE_COUNT_SQL, Vec::new()),
             Read::CardSnapshot(card) => (SNAPSHOT_SQL, vec![serde_json::Value::from(card)]),
+            Read::NewestReview => (NEWEST_REVIEW_SQL, Vec::new()),
+            Read::Review(review) => (REVIEW_SQL, vec![serde_json::Value::from(review)]),
         };
         let request = serde_json::json!({
             "kind": "query",

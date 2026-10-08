@@ -28,6 +28,7 @@ use deck_streak_engine_core::answer::{Grade, OwnerAnswer};
 use deck_streak_engine_core::dispatch::{Dispatcher, Read};
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
 use deck_streak_engine_core::table::{EXEMPT, ExemptWrite, Transport};
+use deck_streak_engine_core::undo_answer::Recorded;
 use prost::Message;
 use serde_json::Value;
 
@@ -204,6 +205,16 @@ fn delete_card(cards: Vec<i64>) -> Vec<u8> {
     RemoveCardsRequest { card_ids: cards }.encode_to_vec()
 }
 
+/// An undo's record naming the review row `review`. The fixture holds no answer, so no record names
+/// a row it holds; `undo_answer.rs` holds the undo of a recorded answer (SPEC-371 A4 to A13).
+fn undo(review: i64) -> Vec<u8> {
+    Recorded {
+        status: None,
+        review,
+    }
+    .encode_to_vec()
+}
+
 fn delete_note(notes: Vec<i64>, cards: Vec<i64>) -> Vec<u8> {
     RemoveNotesRequest {
         note_ids: notes,
@@ -216,9 +227,10 @@ fn delete_note(notes: Vec<i64>, cards: Vec<i64>) -> Vec<u8> {
 /// default preset.
 fn target(write: ExemptWrite, fixture: &Fixture) -> Target {
     match write {
-        ExemptWrite::Forget | ExemptWrite::SetDueDate | ExemptWrite::DeleteCard => {
-            Target::Card(fixture.cards[0])
-        }
+        ExemptWrite::Forget
+        | ExemptWrite::SetDueDate
+        | ExemptWrite::DeleteCard
+        | ExemptWrite::Undo => Target::Card(fixture.cards[0]),
         ExemptWrite::ChangeNoteType | ExemptWrite::DeleteNote => Target::Note(fixture.notes[0]),
         ExemptWrite::DeletePreset => Target::Preset(DEFAULT_PRESET),
     }
@@ -235,6 +247,7 @@ fn only_the_target(write: ExemptWrite, fixture: &Fixture) -> Vec<u8> {
         ExemptWrite::ChangeNoteType => change_note_type(fixture, vec![note]),
         ExemptWrite::DeleteCard => delete_card(vec![card]),
         ExemptWrite::DeleteNote => delete_note(vec![note], Vec::new()),
+        ExemptWrite::Undo => undo(0),
     }
 }
 
@@ -291,6 +304,7 @@ fn naming_more(write: ExemptWrite, fixture: &Fixture) -> Vec<(&'static str, Vec<
                 delete_note(vec![note], vec![card]),
             ),
         ],
+        ExemptWrite::Undo => vec![("a review row the collection lacks", undo(1))],
     }
 }
 
@@ -349,13 +363,18 @@ fn a_request_naming_more_than_its_gestures_target_is_refused() {
             let synthetic = support::synthetic(&format!("only-the-target-{write:?}"));
             let fixture = fixture(&synthetic);
             let dispatcher = opened(&synthetic);
+            let target = target(write, &fixture);
             let result = tap(
                 &dispatcher,
                 write,
-                target(write, &fixture),
+                target,
                 &only_the_target(write, &fixture),
             );
-            (write, outcome(result))
+            // each collection numbers its own cards, so the target is named by its role
+            (
+                write,
+                outcome(result).replace(&format!("{target:?}"), "its target"),
+            )
         })
         .collect();
     let engine_refuses_its_default_preset = String::from("the engine refused it");
@@ -368,6 +387,13 @@ fn a_request_naming_more_than_its_gestures_target_is_refused() {
             (ExemptWrite::ChangeNoteType, String::from("ran")),
             (ExemptWrite::DeleteCard, String::from("ran")),
             (ExemptWrite::DeleteNote, String::from("ran")),
+            // the fixture holds no answer, so an undo's record names no row it holds (SPEC-371 R5)
+            (
+                ExemptWrite::Undo,
+                String::from(
+                    "refused before the engine: the Undo request names other than its target"
+                ),
+            ),
         ],
         "a request naming exactly its gesture's target passes the check and reaches the engine"
     );

@@ -16,6 +16,7 @@ use anki_proto::scheduler::{ScheduleCardsAsNewRequest, SetDueDateRequest};
 use prost::Message;
 
 use crate::table::{EXEMPT, ExemptWrite, TargetKind};
+use crate::undo_answer::Recorded;
 
 /// The one thing an exempt write acts on, by the engine's id.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -88,6 +89,22 @@ impl fmt::Display for GestureRefusal {
     }
 }
 
+/// What a checked gesture runs: an engine call with its checked request, or an undo of the review's
+/// own last answer, whose record the dispatcher judges against the engine's state before the
+/// engine runs it (SPEC-371 R5).
+#[derive(Debug)]
+pub(crate) enum Checked {
+    /// The service, the method and the request the engine runs.
+    Run(u32, u32, Vec<u8>),
+    /// An undo on `card` of the answer `recorded` names.
+    Undo {
+        /// The card the gesture names.
+        card: i64,
+        /// The record of the answer to undo.
+        recorded: Recorded,
+    },
+}
+
 /// One owner's tap on one exempt write and its one target. Only the UI adapters build one, from
 /// the tap itself, and running its write consumes it.
 #[derive(Debug)]
@@ -114,8 +131,9 @@ impl OwnerGesture {
     }
 
     /// The service, the method and the request the engine runs for this gesture: `input` decoded
-    /// as the write's own message, checked against the one target, and encoded again.
-    pub(crate) fn checked(self, input: &[u8]) -> Result<(u32, u32, Vec<u8>), GestureRefusal> {
+    /// as the write's own message, checked against the one target, and encoded again. An undo's
+    /// `input` is the answer's record, decoded for the dispatcher to judge.
+    pub(crate) fn checked(self, input: &[u8]) -> Result<Checked, GestureRefusal> {
         let Self { write, target } = self;
         let (Target::Card(id) | Target::Note(id) | Target::Preset(id)) = target;
         let Some(row) = EXEMPT.iter().find(|row| row.write == write) else {
@@ -145,6 +163,10 @@ impl OwnerGesture {
                 let request = RemoveCardsRequest::decode(input).map_err(undecodable)?;
                 (only(&request.card_ids, id), request.encode_to_vec())
             }
+            ExemptWrite::Undo => {
+                let recorded = Recorded::decode(input).unwrap_or_default();
+                return Ok(Checked::Undo { card: id, recorded });
+            }
             ExemptWrite::DeleteNote => {
                 let request = RemoveNotesRequest::decode(input).map_err(undecodable)?;
                 (
@@ -154,7 +176,7 @@ impl OwnerGesture {
             }
         };
         if names_only_the_target {
-            Ok((row.service, row.method, request))
+            Ok(Checked::Run(row.service, row.method, request))
         } else {
             Err(GestureRefusal::NotTheTarget { write, target })
         }

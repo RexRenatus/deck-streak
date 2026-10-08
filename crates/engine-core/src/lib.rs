@@ -24,6 +24,8 @@
 //! - [`credential`]: the rule that keeps, sends and drops the sync key: its generation, a login
 //!   kept only at the generation it started at, a send only at the held one, and a drop only on
 //!   the server's refusal of the current one (SPEC-363 R3).
+//! - [`undo_answer`]: the rule an undo of the review's own last answer passes: its record, the
+//!   review row it names, the refusals and the state the card returns to (SPEC-371 R3).
 //!
 //! The core depends on the engine and on no crate of this workspace; only the two client
 //! adapters depend on it (ADR-356 D4, held by the graph census).
@@ -39,3 +41,4 @@ pub mod gesture;
 pub mod login_guard;
 pub mod media;
 pub mod table;
+pub mod undo_answer;

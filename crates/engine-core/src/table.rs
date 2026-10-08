@@ -44,6 +44,8 @@ pub enum ExemptWrite {
     DeleteCard,
     /// Delete one note.
     DeleteNote,
+    /// Undo the review's own last answer, on the card it answered (SPEC-371 R2).
+    Undo,
 }
 
 /// The kind of the one target an exempt write takes.
@@ -112,7 +114,7 @@ impl Exempt {
 /// study calls (SPEC-345 M1, M4); a parity test holds each adapter's own table equal to its column.
 /// A pair one transport may make is not thereby admitted on the other: the native client neither
 /// closes the collection nor adds notes through this table (ADR-356 D2).
-pub const ORDINARY: [Ordinary; 17] = [
+pub const ORDINARY: [Ordinary; 16] = [
     Ordinary {
         service: 1,
         method: 3,
@@ -139,13 +141,6 @@ pub const ORDINARY: [Ordinary; 17] = [
         method: 7,
         name: "CollectionService.GetUndoStatus",
         native: false,
-        web: true,
-    },
-    Ordinary {
-        service: 3,
-        method: 8,
-        name: "CollectionService.Undo",
-        native: true,
         web: true,
     },
     Ordinary {
@@ -266,7 +261,7 @@ pub const ANSWERED: [Answered; 1] = [Answered {
 /// 7 (change note type) and 8 (delete a card or a note), each one method with one target (SPEC-345
 /// M8). The one-way sync, the scheduler switch and every other never-list method stay unlisted, so
 /// `run` refuses them as not allowed (ADR-356 D6).
-pub const EXEMPT: [Exempt; 6] = [
+pub const EXEMPT: [Exempt; 7] = [
     Exempt {
         write: ExemptWrite::Forget,
         service: 13,
@@ -308,6 +303,13 @@ pub const EXEMPT: [Exempt; 6] = [
         method: 7,
         name: "NotesService.RemoveNotes",
         kind: TargetKind::Note,
+    },
+    Exempt {
+        write: ExemptWrite::Undo,
+        service: 3,
+        method: 8,
+        name: "CollectionService.Undo",
+        kind: TargetKind::Card,
     },
 ];
 
