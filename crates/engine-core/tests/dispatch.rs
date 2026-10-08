@@ -1,4 +1,4 @@
-//! The dispatcher on a synthetic collection (SPEC-345 A3, A4).
+//! The dispatcher on a synthetic collection (SPEC-345 A3, A4; SPEC-365 A2).
 //!
 //! Each test builds its own collection of two Basic notes with the engine's own API, then drives a
 //! native dispatcher the way the native adapter does: each request encoded as protobuf bytes, each
@@ -19,6 +19,7 @@ use anki_proto::scheduler::card_answer::Rating;
 use anki_proto::scheduler::{
     CardAnswer, GetQueuedCardsRequest, QueuedCards, ScheduleCardsAsNewRequest,
 };
+use deck_streak_engine_core::answer::{Grade, OwnerAnswer};
 use deck_streak_engine_core::dispatch::{Dispatcher, Read, Refusal};
 use deck_streak_engine_core::table::Transport;
 use prost::Message;
@@ -108,10 +109,17 @@ fn an_ordinary_call_reaches_the_engine_and_an_exempt_one_does_not() {
         answered_at_millis: now_millis(),
         milliseconds_taken: 1000,
     };
+    // The card's row changes through the owner's answer, the one door that records a grade
+    // (SPEC-365 R3), so the held write below has a row it could have reset.
     assert_eq!(
-        run(&dispatcher, ANSWER_CARD, &answer.encode_to_vec()).map(|_| ()),
+        dispatcher
+            .run_answer(
+                OwnerAnswer::from_press(card, Grade::Good),
+                &answer.encode_to_vec()
+            )
+            .map(|_| ()),
         Ok(()),
-        "the answer reaches the engine"
+        "the owner's answer reaches the engine"
     );
     let answered = snapshot(&dispatcher, card).expect("the snapshot reads");
     assert_eq!(
@@ -135,6 +143,53 @@ fn an_ordinary_call_reaches_the_engine_and_an_exempt_one_does_not() {
         snapshot(&dispatcher, card),
         Ok(answered),
         "the held write left the card's row as it was"
+    );
+}
+
+#[test]
+fn an_answer_through_run_is_held_for_the_owner_and_leaves_the_card() {
+    let synthetic = support::synthetic("answer-through-run");
+    let dispatcher = dispatcher();
+    run(
+        &dispatcher,
+        OPEN_COLLECTION,
+        &support::open_request(&synthetic),
+    )
+    .expect("the native dispatcher opens the collection");
+    let request = GetQueuedCardsRequest {
+        fetch_limit: 1,
+        intraday_learning_only: false,
+    };
+    let queued = run(&dispatcher, GET_QUEUED_CARDS, &request.encode_to_vec())
+        .expect("the queue is admitted");
+    let first = QueuedCards::decode(queued.as_slice())
+        .expect("the queue decodes")
+        .cards
+        .into_iter()
+        .next()
+        .expect("a new card is queued");
+    let card = first.card.expect("a queued card carries its card").id;
+    let states = first.states.expect("a queued card carries its states");
+    let answer = CardAnswer {
+        card_id: card,
+        current_state: states.current,
+        new_state: states.good,
+        rating: Rating::Good as i32,
+        answered_at_millis: now_millis(),
+        milliseconds_taken: 1000,
+    };
+    let through_run = run(&dispatcher, ANSWER_CARD, &answer.encode_to_vec()).map(|_| ());
+    let after = snapshot(&dispatcher, card).expect("the snapshot reads");
+    assert_eq!(
+        (through_run, after[REPS].as_i64()),
+        (
+            Err(Refusal::NeedsAnswer {
+                service: 13,
+                method: 4
+            }),
+            Some(0)
+        ),
+        "a valid answer through run is held for the owner's press, and the card is not answered: {after}"
     );
 }
 

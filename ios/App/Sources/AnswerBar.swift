@@ -4,9 +4,10 @@ import SwiftUI
 enum ReviewAction: Equatable, Sendable { case showAnswer, rate(Rating), replay, stop }
 
 /// The bottom bar, the width of the detail pane (SPEC-348 R10, R11, R16): Show Answer, one
-/// button the width of the bar; then Again, Hard, Good and Easy, Good the primary one, each
-/// named by its title with its interval as its value; and at the designed end, the way back to
-/// the deck list. A button is disabled unless the phase is the one its gesture starts from.
+/// button the width of the bar; then Again and Good, the two grades a press records, Good the
+/// primary one, each named by its title with its interval as its value (SPEC-365 R13); and at the
+/// designed end, the way back to the deck list. A button is disabled unless the phase is the one
+/// its gesture starts from.
 struct AnswerBar: View {
     let model: ReviewModel
     let back: () -> Void
@@ -20,9 +21,7 @@ struct AnswerBar: View {
                 .buttonStyle(.borderedProminent)
             } else if model.revealed {
                 rating(.again, "Again", .bordered)
-                rating(.hard, "Hard", .bordered)
                 rating(.good, "Good", .borderedProminent)
-                rating(.easy, "Easy", .bordered)
             } else {
                 Button {
                     Task { await model.perform(.showAnswer) }

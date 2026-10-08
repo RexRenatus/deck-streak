@@ -280,7 +280,6 @@ export function studyEngine(): EngineModule {
     close: () => undefined,
     seed: (count) => count,
     next_card: () => 1001n,
-    answer: () => 1001n,
     undo: () => undefined,
     snapshot: (card) => JSON.stringify([Number(card), 2, 2, 5, 3, 1, 0]),
     last_panic: () => undefined,

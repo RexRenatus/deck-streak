@@ -37,8 +37,9 @@ const GET_QUEUED_CARDS: (u32, u32) = (13, 3);
 /// `SchedulerService.DescribeNextStates`.
 const DESCRIBE_NEXT_STATES: (u32, u32) = (13, 24);
 
-/// The native column with the review screen's three pairs (SPEC-345 M1, SPEC-347 R1, SPEC-348 R1).
-const NATIVE: [(u32, u32); 10] = [
+/// The native column with the review screen's three pairs (SPEC-345 M1, SPEC-347 R1, SPEC-348 R1),
+/// less `AnswerCard`, which only an owner's press records (SPEC-365 R4).
+const NATIVE: [(u32, u32); 9] = [
     (1, 3),
     (3, 0),
     (3, 8),
@@ -46,12 +47,13 @@ const NATIVE: [(u32, u32); 10] = [
     (7, 13),
     (7, 22),
     (13, 3),
-    (13, 4),
     (13, 24),
     (27, 6),
 ];
 /// The six exempt writes, held for a gesture on every transport (SPEC-345 M8).
 const HELD: [(u32, u32); 6] = [(5, 2), (11, 5), (13, 17), (13, 19), (23, 15), (25, 7)];
+/// `AnswerCard`, held for an owner's press on every transport (SPEC-365 R4).
+const ANSWERED: [(u32, u32); 1] = [(13, 4)];
 /// The highest service and method index the census sends: past every index the engine numbers.
 const LAST: u32 = 64;
 
@@ -194,23 +196,32 @@ fn the_review_pairs_run_natively_and_no_other_pair_joins() {
     assert_eq!(described.vals, NEW_CARD_INTERVALS, "a new card's intervals");
 
     // Every pair outside the native column stays refused on the native dispatcher: held for a
-    // gesture when it is an exempt write, not allowed otherwise.
+    // gesture when it is an exempt write, held for a press when it records a grade, not allowed
+    // otherwise.
     let others: Vec<(u32, u32)> = (0..=LAST)
         .flat_map(|service| (0..=LAST).map(move |method| (service, method)))
         .filter(|pair| !NATIVE.contains(pair))
         .collect();
     let others = support::examined("pair(s) outside the native column", others);
-    let (mut for_gesture, mut refused, mut answered) = (Vec::new(), 0_usize, Vec::new());
+    let (mut for_gesture, mut for_answer, mut refused, mut answered) =
+        (Vec::new(), Vec::new(), 0_usize, Vec::new());
     for &(service, method) in &others {
         match dispatcher.run(service, method, &[]) {
             Err(Refusal::NeedsGesture { .. }) => for_gesture.push((service, method)),
+            Err(Refusal::NeedsAnswer { .. }) => for_answer.push((service, method)),
             Err(Refusal::NotAllowed { .. }) => refused += 1,
             Ok(_) | Err(Refusal::Engine { .. }) => answered.push((service, method)),
         }
     }
     assert_eq!(
-        (for_gesture, refused, answered),
-        (HELD.to_vec(), 4225 - NATIVE.len() - HELD.len(), Vec::new()),
-        "the pairs outside the native column: held, refused, and reaching the engine"
+        (for_gesture, for_answer, refused, answered),
+        (
+            HELD.to_vec(),
+            ANSWERED.to_vec(),
+            4225 - NATIVE.len() - HELD.len() - ANSWERED.len(),
+            Vec::new()
+        ),
+        "the pairs outside the native column: held for a gesture, held for a press, refused, and \
+         reaching the engine"
     );
 }

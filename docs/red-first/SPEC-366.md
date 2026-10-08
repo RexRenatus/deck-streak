@@ -56,3 +56,5 @@ A11: green at 74f5c99f
 A12: red at dada2b70: AssertionError: messages/en.json names a grade the review no longer offers: expected [ 'study_hard', 'study_easy' ] to deeply equal []
 A12: green at 74f5c99f
 ```
+
+Correction (verify round 1): A8's red at c874856c is the deep-equality failure of the loaded mapping against one that holds no Hard or Easy pair: INTENTS at c874856c still named hard and easy, so the stored pairs survived the read (mapping-store.test.ts:152).

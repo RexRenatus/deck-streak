@@ -224,7 +224,9 @@ fn engine_error(refusal: Refusal) -> Option<(Kind, String)> {
                 .expect("a refusal decodes as the engine's error");
             Some((error.kind(), error.message))
         }
-        Refusal::NotAllowed { .. } | Refusal::NeedsGesture { .. } => None,
+        Refusal::NotAllowed { .. } | Refusal::NeedsGesture { .. } | Refusal::NeedsAnswer { .. } => {
+            None
+        }
     }
 }
 

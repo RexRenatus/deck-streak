@@ -1,5 +1,6 @@
-//! The study rule, the same on every target: a wire rating to Anki's answer and to the next state
-//! that answer selects, and the table of study calls `run_method` admits (SPEC-338 R1, ADR-348).
+//! The study rule, the same on every target: a wire rating to the grade a press records and to the
+//! next state that grade selects (SPEC-338 R1, SPEC-365 R7), and the table of study calls
+//! `run_method` admits (ADR-348).
 //!
 //! It holds no engine type, so the native tests judge exactly the rule the `wasm32` module runs.
 
@@ -7,54 +8,48 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 
-/// Anki's four answers, in the order of its `Rating` enum.
+/// The two grades a press records (SPEC-365 R7): the wire's 1 and 3, as Anki's buttons number
+/// Again and Good. The core records the same two, and no type here names a third.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Answer {
-    /// Rating 0: the card is forgotten.
+pub enum Grade {
+    /// The card was forgotten.
     Again,
-    /// Rating 1: recalled with difficulty.
-    Hard,
-    /// Rating 2: recalled.
+    /// The card was recalled.
     Good,
-    /// Rating 3: recalled easily.
-    Easy,
 }
 
-impl Answer {
-    /// The answer a wire rating names. The page sends 1 to 4, as Anki's buttons number them.
-    ///
-    /// # Errors
-    /// [`StudyError::RatingOutOfRange`] for any other number, before anything reaches the engine.
-    pub fn from_wire(rating: u32) -> Result<Self, StudyError> {
-        match rating {
-            1 => Ok(Self::Again),
-            2 => Ok(Self::Hard),
-            3 => Ok(Self::Good),
-            4 => Ok(Self::Easy),
-            other => Err(StudyError::RatingOutOfRange(other)),
-        }
-    }
-
-    /// Anki's `Rating` value for this answer, 0 to 3.
+impl Grade {
+    /// Anki's `Rating` value for this grade: 0 for Again, 2 for Good.
     #[must_use]
     pub fn rating(self) -> i32 {
         match self {
             Self::Again => 0,
-            Self::Hard => 1,
             Self::Good => 2,
-            Self::Easy => 3,
         }
     }
 
-    /// The next state this answer selects out of the scheduler's four, in their field order.
+    /// The next state this grade selects, out of the states the card was shown with.
     #[must_use]
-    pub fn pick<T>(self, again: T, hard: T, good: T, easy: T) -> T {
+    pub fn pick<T>(self, again: T, good: T) -> T {
         match self {
             Self::Again => again,
-            Self::Hard => hard,
             Self::Good => good,
-            Self::Easy => easy,
         }
+    }
+}
+
+/// The grade a wire rating names: 1 is Again and 3 is Good (SPEC-365 R7).
+///
+/// # Errors
+/// [`StudyError::NotAGrade`] for 2 and 4, Hard and Easy, which no press records, and
+/// [`StudyError::RatingOutOfRange`] for any number outside 1 to 4, before anything reaches the
+/// engine.
+pub fn grade(rating: u32) -> Result<Grade, StudyError> {
+    match rating {
+        1 => Ok(Grade::Again),
+        3 => Ok(Grade::Good),
+        2 | 4 => Err(StudyError::NotAGrade(rating)),
+        other => Err(StudyError::RatingOutOfRange(other)),
     }
 }
 
@@ -78,14 +73,14 @@ pub mod service {
 }
 
 /// The study calls `run_method` admits: service, method, and the method's name. Every pair
-/// outside it is refused, the exempt writes of ADR-337 included (#623). The last eight are the
-/// review's: the deck list, the card view, its labels and undo label, bury and flag (SPEC-350 R1).
-pub const STUDY_CALLS: [(u32, u32, &str); 16] = [
+/// outside it is refused, the exempt writes of ADR-337 included (#623), and so is the answer, which
+/// only an owner's press records (SPEC-365 R7). The last eight are the review's: the deck list,
+/// the card view, its labels and undo label, bury and flag (SPEC-350 R1).
+pub const STUDY_CALLS: [(u32, u32, &str); 15] = [
     (service::COLLECTION, 0, "open_collection"),
     (service::COLLECTION, 1, "close_collection"),
     (service::COLLECTION, 8, "undo"),
     (service::SCHEDULER, 3, "get_queued_cards"),
-    (service::SCHEDULER, 4, "answer_card"),
     (service::NOTETYPES, 8, "get_notetype_names"),
     (service::NOTES, 0, "new_note"),
     (service::NOTES, 2, "add_notes"),
@@ -183,6 +178,8 @@ pub fn engine_languages(languages: Vec<String>) -> Vec<String> {
 pub enum StudyError {
     /// A wire rating outside 1 to 4.
     RatingOutOfRange(u32),
+    /// A wire rating of 2 or 4, Hard or Easy, which no press records (SPEC-365 R7).
+    NotAGrade(u32),
     /// A service and method outside the study calls.
     CallRefused {
         /// The service index asked for.
@@ -199,6 +196,9 @@ impl fmt::Display for StudyError {
         match self {
             Self::RatingOutOfRange(rating) => {
                 write!(f, "rating {rating} is outside 1 to 4")
+            }
+            Self::NotAGrade(rating) => {
+                write!(f, "rating {rating} is not a grade: a press records 1 or 3")
             }
             Self::CallRefused { service, method } => {
                 write!(
