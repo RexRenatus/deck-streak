@@ -376,3 +376,24 @@ A30: green at aef11216
   manifest's assertion, which runs first. At 9ef7bc7e the census and A28 are green, the build writes
   the three files at 192, 512 and 180 pixels as before, and StrykerJS killed all 39 mutants of
   `web/app/src/lib/icon.ts` and the three endpoints (33, 2, 2 and 2), with none surviving.
+
+## Issue 685: the fence, line by line
+
+SPEC-350 section 14's fence holds three lines for A29, the criterion #685 delivers. Each resolves to a test this delivery adds.
+
+| # | criterion | test | added or named |
+|---|---|---|---|
+| 1 | A29 | `scripts/tests/test_release_workflow.py` `test_the_release_carries_the_module_at_web_engine` | added |
+| 2 | A29 | `scripts/tests/test_release_workflow.py` `test_the_release_builds_and_gates_the_module_as_ci_does` | added |
+| 3 | A29 | `scripts/tests/test_release_workflow.py` `test_an_over_budget_module_stops_the_release_before_the_draft` | added |
+
+The second commit makes the release build, gate and stage the module, and greens A29's three tests.
+
+## Issue 685: the reds and greens
+
+Each line's command is the criterion's first line in SPEC-350 section 14's fence, run at the commit named. A29's other two tests were red at the same commit, read by name in CI's hygiene job: `test_the_release_builds_and_gates_the_module_as_ci_does` with `AssertionError: 0 != 1 : 0 release steps run `rustup target add wasm32-unknown-unknown``, and `test_an_over_budget_module_stops_the_release_before_the_draft` with `AssertionError: no step has `python3 scripts/web-engine-size.py` in its run`. All three are green at the second commit.
+
+```red-first
+A29: red at b203dbdbca156325cb4c0754eaddf55287e492d7: AssertionError: Lists differ: [] != ['./web/engine/deck_streak_web_engine.js',[42 chars]asm']
+A29: green at d20184e88d9d338ac7244c18d88d43e318e2af2b
+```

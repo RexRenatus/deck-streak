@@ -378,3 +378,111 @@ ADR-382 amends D1, for undo only. The rest of D1 stands.
   at the write against a record the Worker kept when the answer was made (ADR-382 D1 to D4). Bury
   and flag stay ordinary calls, as D1 decided, and Undo no longer reverts them.
 - **D2 (`:57-72`)** is unchanged in effect: a confirmed undo still clears the kept card.
+
+## Amendment: the release builds, gates and stages the web engine's module (#685), and the alternatives each decision was chosen against
+
+D9 decided that the release stages the module beside the app at `/engine/`, held to the size gate,
+and D14 moved that step and its criterion, A29, to #685. These decisions are that step. SPEC-350
+section 12 states it and section 14 holds A29's tests. D9 and D14 stand as written.
+
+### D17. The release builds the module with CI's own steps, copied byte for byte
+
+After its Node setup, the release job runs the five steps CI's `web-engine` job runs to make and
+measure the module: the pinned toolchain and its wasm32 target, the bindings generator and the
+optimiser downloaded at their pinned releases with each digest checked, the C compiler and archiver
+SQLite's source needs, `scripts/web-engine-build.sh` with CI's compiler, archiver and output
+directory (`target/web-engine`), and the size gate (D19). Each is CI's step byte for byte, and a
+test holds each pair equal, so the release ships a module built the way the module CI's browser
+tests ran over was built. The release job already sets `CARGO_INCREMENTAL` to `0` as that job does
+and sets no `RUSTFLAGS`, so the build's only wasm32 settings stay on the build script's command line
+(ADR-348). The release restores no cache, and builds the module from the tag's tree alone.
+
+Chosen against:
+
+- A separate job that builds the module and hands it to the release job as an artifact: rejected because it adds an upload and a download to the path that publishes, the release workflow's two jobs are pinned by its tests, and one tag's build would be split across two runners.
+- The module CI's `web-engine` job built for the tag's commit, fetched from that run: rejected because no CI run is guaranteed at a tag's commit, and the release builds once, from the tag (ADR-062).
+- A shared install script that both workflows call: rejected because it edits `ci.yml`, whose web-engine steps CI's own checks pin by their text, and every open pull request touching `ci.yml` would take a merge round.
+- Other build flags or another compiler in the release: rejected because the release would ship a module built otherwise than the one CI's browser tests ran over.
+- Restoring CI's Rust cache before the build: rejected because a cache another run saved could feed the release's build, and the release workflow promises that no step uses one.
+
+### D18. The stage runs after the app's build, so the tarball carries the module at `web/engine/`
+
+After the app's build, the release runs CI's stage step, `bash scripts/web-engine-stage.sh`, which
+copies the module and its bindings from `target/web-engine` into `web/app/build/engine/` and
+refuses, naming the file, when either is missing (SPEC-350 A22). The tarball step is unchanged: its
+copy of `web/app/build` into `web/` carries both files to `web/engine/`, and the manifest, the
+digests and the attestation cover them. The app's Worker loads its bindings and module from
+`/engine/` at the origin's root (`worker.ts` `ENGINE_BASE`), so an origin that serves the release's
+`web/` at its root answers that URL, as the study suite's server answers it over the staged build.
+The stage follows the app's build and precedes the tarball, the order CI's `web-engine` job runs
+them in.
+
+Chosen against:
+
+- Copying the two files into the tarball's `web/engine/` inside the tarball step: rejected because it repeats the stage's checks in a second place and edits the tarball step, whose text the second release path's tests and rows hold.
+- Staging at another path, or under a hashed name: rejected because the Worker's URL is fixed at `/engine/` and pinned by `worker.test.ts`, so the published Worker could not load a module anywhere else.
+- Copying the module into `web/app/static/engine/` before the app's build: rejected because the build's inputs would hold generated files in a tracked source directory, which a local build would leave behind untracked.
+
+### D19. The size gate stops the release before the draft
+
+The release runs CI's size gate, `python3 scripts/web-engine-size.py`, over the module and the
+bindings it built: after the Node setup, because the gate measures brotli with Node and reads VOID
+without it, and before the app's dependencies, the stage, the tarball and the draft. The bound is
+ADR-336's 8000000 bytes `gzip -9` for module plus bindings, the script's `BUDGET` (SPEC-350 M12).
+The gate exits 1 over the bound and 2 when it cannot measure. Either exit fails the step; the step
+carries no `continue-on-error` and its command no `||`, and no later step carries an `if`, so a
+refused module stops the job and no draft release exists.
+
+Chosen against:
+
+- A warning in the job's summary, with the release published anyway: rejected because #685 asks the release to hold the module to the bound, and a warning publishes the module it warns about.
+- Gating the staged copy under `web/app/build/engine/` after the stage: rejected because the gate would wait on the app's install and build for the same bytes, and a refusal would come later than it needs to.
+- A second budget for the release alone: rejected because the bound has one home, ADR-336 and the script's `BUDGET`, and two bounds would drift apart.
+
+### D20. Three tests decide A29, and their red is read in CI
+
+A29 is decided by three tests in `scripts/tests/test_release_workflow.py`, in the class
+`TheReleaseCarriesTheWebEngine`. The first runs the release's own steps from the app's build to the
+draft under bash in a planted tree, and reads the tarball they write: the module and the bindings
+sit at `web/engine/`, the manifest holds each one's digest, and the same steps without the stage
+pack the app alone. The second holds each of the release's six web engine steps equal to the CI
+step that runs the same command, in CI's order. The third holds the gate between the module's
+build and the stage, as one command, with no `continue-on-error` on it and no `if` after it. The
+tests plant fixed bytes, so each digest is a known input's; they add one subprocess site, listed in
+`test_ci_workflows.py`'s census, and import nothing new but `hashlib`. The module runs in CI only,
+so each red is read by name in CI's hygiene job.
+
+Chosen against:
+
+- Building the real module inside the test: rejected because the wasm32 release build is the costliest step of CI's web-engine job, the hygiene job runs every test module, and that build is already proved in the web-engine job.
+- Reading a published release's tarball: rejected because the test would need the network and a release that already exists, so it could not be red before the change.
+- A text-only test of the workflow's lines: rejected because A29's claim is about the tarball the release's own steps assemble, and text alone would pass a stage that writes somewhere else.
+
+### D21. An insert-only amendment of SPEC-350 and this record
+
+#685 is SPEC-350's own follow-up: R17's last sentence, A29, D9 and D14 already name it. So the
+release's change is decided by new last sections of SPEC-350 (12 to 14) and by D17 to D22 here,
+and no earlier line of either changes. The release's schematic gains a section that draws the
+module from its build to `/engine/`.
+
+Chosen against:
+
+- A new SPEC and ADR for the release step: rejected because A29 and R17 already state the criterion and name its owner, and a second record would split one criterion across two SPECs.
+
+### D22. The release job's bound rises to 150 minutes
+
+The release job already builds the daemon and the sync server from cold; the module adds a cold
+wasm32 release build of the engine, for which CI's `web-engine` job is given 20 to 60 minutes with
+its browser tests (`test_ci_workflows.py` `WEB_ENGINE_TIMEOUT_MINUTES`). The job's
+`timeout-minutes` rises from 90 to 150, that band's top above the old bound. Rows S19011 and S19016
+anchor on the bound's line and move with it, each keeping its mutant and its killer.
+
+Chosen against:
+
+- Keeping 90 minutes: rejected because no measured release run holds the module's build within it, and a run cut at its bound leaves a tag with no release that only a new patch tag can recover, since every run of a tag reads the tag's own workflow.
+- A bound derived at the cut from measured release runs: rejected because no release has yet run with the module, and the bound must be in the tag's tree before its first run.
+
+What would make these wrong: a tag whose module differs from CI's in behaviour, though both were
+built by the same steps at one commit, would call for the browser tests in the release (SPEC-350
+section 13); and a release run that ends near its new bound would call for D22's bound to be
+measured again.

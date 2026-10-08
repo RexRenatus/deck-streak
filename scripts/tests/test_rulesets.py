@@ -97,5 +97,32 @@ class TheCommittedRulesetsAreTheReleaseWorkflow(unittest.TestCase):
         self.assertEqual([text for text in lines[heading + 1 :] if text.strip()][0], line)
 
 
+class TheReleaseRunbookRecoversATagWithNoRun(unittest.TestCase):
+    """SPEC-373 R7 (ADR-384 D6): the runbook releases a tag whose push started no run by a manual
+    dispatch at the tag's own ref, and never by moving, deleting or pushing the tag again."""
+
+    def test_the_runbook_releases_a_tag_with_no_run_by_a_dispatch_at_its_own_ref(self):
+        text = (REPO / "RELEASING.md").read_text(encoding="utf-8")
+        lines = text.splitlines()
+        start, end = "## 3. Tag it on main", "## 4. Deploy the tag"
+        self.assertIn(start, lines)
+        self.assertIn(end, lines)
+        section = "\n".join(lines[lines.index(start) : lines.index(end)])
+        self.assertIn("gh workflow run release.yml --ref vX.Y.Z", section)
+        self.assertIn("gh run list --workflow release.yml --commit", section)
+        moves = [
+            "git push --force",
+            "git push -f",
+            "git push --delete",
+            "git push origin :refs/tags/",
+            "git tag -f",
+            "git tag --force",
+            "git tag -d",
+            "git tag --delete",
+        ]
+        for move in examined("tag-moving commands", moves):
+            self.assertNotIn(move, text, f"the runbook never moves a release tag: {move}")
+
+
 if __name__ == "__main__":
     unittest.main()

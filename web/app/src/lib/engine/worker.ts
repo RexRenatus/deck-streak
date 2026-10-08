@@ -1,11 +1,13 @@
 // The web engine's Worker entry (SPEC-338 R3, ADR-348): the session served on the Worker's own
 // scope, over the browser's Web Locks, origin private file system and the module the build ships.
-import { CredentialStore } from './credential';
+import { CredentialStore, SYNC_ROUTE } from './credential';
 import type { CredentialEngine } from './credential';
 import { readMedia } from './media';
 import { admitsOrigin } from './protocol';
 import type { EngineModule, LockAnswer, SessionDeps } from './session';
 import { Session } from './session';
+import { Sync } from './sync';
+import type { SyncEngine } from './sync';
 
 /** The bindings and module `wasm-bindgen --target web` writes for `deck-streak-web-engine`. */
 export const ENGINE_BINDINGS = 'deck_streak_web_engine.js';
@@ -137,9 +139,13 @@ export function start(scope: object = globalThis, load: ImportModule = importMod
     WorkerGlobals &
     CredentialGlobals & { location: { href: string; origin: string } };
   const deps = browserDeps(new URL(ENGINE_BASE, worker.location.href), load, worker);
-  // the module wasm-bindgen writes carries the session's exports and the credential's five
-  const engine = once(deps.load) as () => Promise<EngineModule & CredentialEngine>;
-  serve(worker, { ...deps, load: engine, credential: browserCredential(worker, engine) }, worker.location.origin);
+  // the module wasm-bindgen writes carries the session's exports, the credential's five and the
+  // sync's two; the sync takes its key from the one store the credential operations reach, and
+  // sends it only to the Worker's own origin's sync route (SPEC-364 R17, R18)
+  const engine = once(deps.load) as () => Promise<EngineModule & CredentialEngine & SyncEngine>;
+  const credential = browserCredential(worker, engine);
+  const sync = new Sync(credential, engine, worker.location.origin + SYNC_ROUTE);
+  serve(worker, { ...deps, load: engine, credential, sync }, worker.location.origin);
   return true;
 }
 
