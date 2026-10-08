@@ -94,14 +94,23 @@ A18: green at 46e416bd
 A19: red at 68bc0e0e: left [] right ["crates/coordination/src/lib.rs: `col.undo();` found 1, held 0"]
 A19: green at 46e416bd
 A20: red at 68bc0e0e: expected {} to deeply equal { 'src/lib/study/review.ts': 1 }
+A20: green at 2c68b183
 A21: red at 68bc0e0e: expected [ 'answer', 'question' ] to deeply equal [ 'confirming' ]
+A21: green at 2c68b183
 A22: red at 68bc0e0e: messages/en.json lacks an undo message: expected [ 'study_undo_answer', …(14) ] to deeply equal []
+A22: green at 2c68b183
 A23: red at f2076d70: expected ['question', ['card', 'undo', 'card']] to deeply equal ['confirming', ['card', 'undo-offer']]
+A23: green at 2c68b183
 A24: red at f2076d70: again: expected 'question' to be 'confirming'
+A24: green at 2c68b183
 A25: red at f2076d70: expected ['question', null, ['card', 'undo', 'card']] to deeply equal ['question', 'undo-synced', ['card']]
+A25: green at 2c68b183
 A26: red at f2076d70: expected ['question', 3n, null, ['card', 'undo', 'card']] to deeply equal ['question', 3n, 'not-undoable', ['card', 'undo-offer', 'undo 1 7', 'card']]
+A26: green at 2c68b183
 A27: red at f2076d70: TestingLibraryElementError: Unable to find an accessible element with the role "alertdialog"
+A27: green at 2c68b183
 A28: red at f2076d70: code bad-request, message "undo takes no card", where undo-synced was expected
+A28: green at 2c68b183
 ```
 
 ## What the record discloses
@@ -141,7 +150,7 @@ A28: red at f2076d70: code bad-request, message "undo takes no card", where undo
 - **`exempt.rs`'s Undo arm names its target "its target".** Each per-write synthetic collection
   numbers its own cards, and the fixture holds no answer, so the Undo request's record names no
   row and is refused before the engine.
-- **The page's commit, the one after 9f149817, greens A20 to A28.** It carries the review's
+- **The page's commit, 2c68b183, greens A20 to A28.** It carries the review's
   machine, the Worker protocol, the dialog and the fifteen messages in every locale; each of A20
   to A28 is measured green at that commit, and the commit after it writes their `green at` lines.
   A28's green shows both codes by name, `undo-synced` and `not-undoable`, each from its own
