@@ -464,16 +464,19 @@ R15. **The runtime.** A fork patch, `wasm-clock-threads`: on `wasm32` the engine
     sync's abort is sent inline rather than from a thread, and a media sync in the background
     refuses.
 
-R16. **The pin.** The fork's branch `wasm32-26.09.3` gains exactly two commits over
+R16. **The pin.** The fork's branch `wasm32-26.09.3` gains exactly three commits over
     `c538de55a23e695234e794029fce0dafff2d36a9`, one per patch (`browser-xhr`, then
-    `wasm-clock-threads`), each body `Patch:`, `Reason:` and `Removal condition:` as the ten before
-    it. A NEW lightweight tag, `deckstreak-pin-26.09.3-wasm32-sync`, names the second; the earlier
+    `wasm-clock-threads`, then `wasm-collection-size`), each body `Patch:`, `Reason:` and `Removal condition:` as the ten before
+    it. A NEW lightweight tag, `deckstreak-pin-26.09.3-wasm32-sync`, names the third; the earlier
     tag stays where it is, unmoved. The root manifest's `[patch]` takes `anki` and `anki_proto` by
     `rev` from the new tag's commit, its comment still naming ADR-058 and #233; `Cargo.lock` moves
-    by `cargo update -p anki -p anki_proto` alone; ADR-058 gains a note naming both patches and the
+    by `cargo update -p anki -p anki_proto` alone; ADR-058 gains a note naming the three patches and the
     new commit; and the pin's description in `crates/ingest/src/engine.rs` names the new commit.
     The native engine is unchanged: every edit is a `cfg` on `wasm32` or a dependency line both
-    targets share.
+    targets share. The third patch, `wasm-collection-size`, exists because a normal sync reads the
+    collection's size from the file system before its first request, and `wasm32` has none: on
+    `wasm32` the sync meta reads the open collection's SQLite page count times its page size, so
+    the upload size check still reads the collection's real size.
 
 R17. **`sync_login`.** The web engine exports `sync_login(endpoint, user, password)`, which sends
     the engine's `SyncLoginRequest` (the endpoint set) through the dispatcher on (1,3) and answers
@@ -553,7 +556,10 @@ B7: pnpm --dir web/app exec vitest run src/lib/study/engine.test.ts -t "every se
 - `scripts/mutation-rows.d/S36400-S36499.json`
 - `changelog.d/web-sync-worker-364.md` (new)
 
-The fork's files, outside this repository, at the new tag's commit: <FORK-FILES>.
+The fork's files, outside this repository, at the new tag's commit: Cargo.lock, rslib/Cargo.toml,
+rslib/src/backend/mod.rs, rslib/src/backend/sync.rs, rslib/src/error/network.rs,
+rslib/src/sync/collection/meta.rs, rslib/src/sync/http_client/io_monitor.rs and
+rslib/src/sync/http_client/mod.rs.
 
 ## 14. What this does NOT do (part b2)
 
@@ -580,7 +586,7 @@ The fork's files, outside this repository, at the new tag's commit: <FORK-FILES>
   anki_proto`, or every locked build refuses.
 - An export beside `call()` that skips the dispatcher: B6's census holds both sync exports by
   name, and its new control refuses a sync export that reaches `admit(` or `run_method(`.
-- The native engine must not change: `cargo test -p anki` in the fork before and after the two
+- The native engine must not change: `cargo test -p anki` in the fork before and after the three
   commits, with equal results.
 - The synchronous request holds the Worker for the sync's length: study waits (R18), bounded by
   the request's timeout (D19).

@@ -289,7 +289,7 @@ commit's tree in Chromium, B1's test failed, exit 1, at `sync.spec.ts:99:47`, wi
 has no source on `wasm32-unknown-unknown`. SPEC-364 section 12
 names M1's refusal as this red; the run shows the clock's trap comes first, and the engine pin's
 second patch, `wasm-clock-threads`, is the one that removes it. The trap ended the session, as a
-trap does. B1 turns green with the engine pin that carries both patches. B2 and B3 failed at this
+trap does. B1 turns green with the engine pin that carries all three patches. B2 and B3 failed at this
 commit on the same trap, at `sync.spec.ts:125:47` and `sync.spec.ts:149:47`.
 
 ```red-first
@@ -300,3 +300,35 @@ B7: red at b819c750: AssertionError: expected [] to deeply equal [ 'ask 1' ] at 
 ```
 
 The greens of B4, B6 and B7, and B1's red, name this commit, so the next commit writes them.
+
+### The engine pin commit
+
+The implementation commit above is 85d01a6e. Its lines follow: B4, B6 and B7 by their fence lines,
+and B1's red, quoted from the Chromium run on its clean tree without the toolchain's path in the
+trap's location. This commit moves the engine pin to the fork's three patches, `browser-xhr`,
+`wasm-clock-threads` and `wasm-collection-size`, so B2 and B3 are recorded here as not red, each
+with its control: the fork built with that one fix reverted, and the test red in Chromium.
+
+- B2's control reverted the `wasm32` status source's downcast in the engine's network error
+  mapping. Its test failed, exit 1, at `sync.spec.ts:132:32` (`toEqual`), with `"status": "absent"`
+  expected and `"status": "held"` received: a refused key was kept.
+- B3's control dropped the browser transport's response-URL check. Its test failed, exit 1, at
+  `sync.spec.ts:149:47`, with `Expected: "offline"` and `Received: "held"`: a redirected answer was
+  taken.
+- The third patch has its own control, the same way: with the sync meta's `wasm32` arm reverted to
+  the file system's size, B1's test failed, exit 1, at `sync.spec.ts:100:32`, with
+  `"required": "full-upload"` expected and `"required": null` received: the login was held, and the
+  normal sync stopped before its first request.
+- Each control was restored by an edit, and the fork's tree read back clean. With all three patches,
+  B1, B2 and B3 pass in Chromium (3 passed, exit 0), on the fork's committed patches and again on
+  this commit's tree. B1 turns green at this commit; a commit cannot name itself, so B1's green line
+  is written by the next one.
+
+```red-first
+B1: red at 85d01a6e: Expected: "held"; and {"code": "engine-failed"; and time not implemented on this platform at sync.spec.ts:99:47
+B2: not red: the refusal it asserts lives in the engine pin; its control, the fork without the wasm32 status source's downcast, is red in Chromium at sync.spec.ts:132:32 with "status": "absent" expected and "status": "held" received
+B3: not red: the refusal it asserts lives in the engine pin; its control, the fork without the response-URL check, is red in Chromium at sync.spec.ts:149:47 with Expected: "offline" and Received: "held"
+B4: green at 85d01a6e
+B6: green at 85d01a6e
+B7: green at 85d01a6e
+```
