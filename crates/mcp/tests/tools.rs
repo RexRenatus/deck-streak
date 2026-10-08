@@ -4,7 +4,10 @@
 //! null, never 0 (R15 to R17; SPEC-077 R12; ADR-329 D7). The output schema admits each pending
 //! number as null, as the SPEC's pending-null rule declares them nullable and required.
 //!
-//! Every call goes through the served stack with the law-track token, built from parts.
+//! SPEC-369 A7 and A8: the portable roster is the golden less the withdrawn `export_data` and
+//! `erase_all_data`, and no grant lists or reaches either (R8; ADR-380).
+//!
+//! Every call goes through the served stack with a granted token, built from parts.
 
 // An integration test is test code: its helpers panic on a failed fixture, and the examined count
 // is printed on purpose.
@@ -20,10 +23,22 @@ use std::sync::Arc;
 
 use deck_streak_coordination::law::LawBlock;
 use serde_json::{Map, Value, json};
-use support::{ScriptedLaw, Served, call_law_track, full_block, law_token, list_tools};
+use support::{
+    ScriptedLaw, Served, WITHDRAWN, call_law_track, core_token, full_block, law_token, list_tools,
+    rpc, write_token,
+};
 
-/// The predecessor's roster entry of each tool, from the committed golden.
+/// The portable roster: the predecessor's roster entry of each tool the golden holds, less every
+/// tool [`WITHDRAWN`] names (SPEC-369 R8).
 fn roster() -> Vec<Value> {
+    golden_roster()
+        .into_iter()
+        .filter(|tool| !WITHDRAWN.iter().any(|name| tool["name"] == *name))
+        .collect()
+}
+
+/// The predecessor's roster entry of each tool, from the committed golden, every tool included.
+fn golden_roster() -> Vec<Value> {
     let mut tools = Vec::new();
     let examined = golden::each_case("mcp_roster", |case| {
         tools.extend(
@@ -36,6 +51,14 @@ fn roster() -> Vec<Value> {
     });
     assert_eq!(examined.count, 1, "the roster golden holds one case");
     tools
+}
+
+/// The names of `tools`, each a roster entry or a served tool.
+fn names(tools: &[Value]) -> BTreeSet<String> {
+    tools
+        .iter()
+        .map(|tool| tool["name"].as_str().expect("a tool's name").to_owned())
+        .collect()
 }
 
 /// The roster golden's ordered output fields of `get_law_track`.
@@ -280,4 +303,92 @@ async fn the_output_schema_admits_each_pending_number_as_null() {
             "the output schema's {field} ({declared}) admits null"
         );
     }
+}
+
+#[test]
+fn the_withdrawn_tools_leave_the_portable_roster() {
+    let golden = golden_roster();
+    let portable = roster();
+
+    // The portable roster is the golden less exactly the two withdrawn tools.
+    let left: BTreeSet<String> = names(&golden)
+        .difference(&names(&portable))
+        .cloned()
+        .collect();
+    assert_eq!(
+        left,
+        BTreeSet::from(["erase_all_data".to_owned(), "export_data".to_owned()]),
+        "the tools the portable roster leaves"
+    );
+
+    // So it counts 31 tools and names neither.
+    assert_eq!(portable.len(), 31, "the portable roster's tools");
+    for name in ["export_data", "erase_all_data"] {
+        assert!(
+            !names(&portable).contains(name),
+            "{name} is in the portable roster"
+        );
+    }
+
+    // And every withdrawn name is a tool of the golden.
+    let withdrawn: Vec<&str> = WITHDRAWN.to_vec();
+    println!("examined {} withdrawn tool(s)", withdrawn.len());
+    assert!(
+        !withdrawn.is_empty(),
+        "examined 0 withdrawn tools: the population is empty, so nothing was judged"
+    );
+    for name in withdrawn {
+        assert!(
+            names(&golden).contains(name),
+            "{name} is not in the roster golden"
+        );
+    }
+}
+
+/// The code the pinned router answers a call of a tool it does not hold: its
+/// `ErrorData::invalid_params`, whose code is `ErrorCode::INVALID_PARAMS` (rmcp's
+/// `handler/server/router/tool.rs` and `model.rs`).
+const UNKNOWN_TOOL: i64 = -32_602;
+
+#[tokio::test(flavor = "current_thread")]
+async fn no_grant_reaches_a_withdrawn_tool() {
+    let served = Served::start(ScriptedLaw::answering(full_block())).await;
+    let mut judged = 0;
+    for (what, token) in [
+        ("the read token", core_token()),
+        ("the law-track token", law_token()),
+        ("the write token", write_token()),
+    ] {
+        let reply = served.post("/mcp", Some(&token), &list_tools()).await;
+        assert_eq!(reply.status, 200, "{what}, tools/list: {}", reply.text());
+        let result = reply.result();
+        let listed = result["tools"]
+            .as_array()
+            .unwrap_or_else(|| panic!("{what}: no tools: {result}"))
+            .clone();
+        assert!(!listed.is_empty(), "{what}: an empty tool list");
+
+        for name in ["export_data", "erase_all_data"] {
+            // The list does not name it.
+            assert!(!names(&listed).contains(name), "{what} lists {name}");
+
+            // A call of it answers the router's unknown-tool error, and no result.
+            let call = rpc(4, "tools/call", &json!({"name": name, "arguments": {}}));
+            let reply = served.post("/mcp", Some(&token), &call).await;
+            assert_eq!(reply.status, 200, "{what}, {name}: {}", reply.text());
+            let answer = reply.json();
+            assert!(
+                answer.get("result").is_none(),
+                "{what}, {name}: a result: {answer}"
+            );
+            assert_eq!(
+                answer["error"]["code"],
+                json!(UNKNOWN_TOOL),
+                "{what}, {name}: {answer}"
+            );
+            judged += 1;
+        }
+    }
+    println!("examined {judged} of 6 calls of a withdrawn tool");
+    assert_eq!(judged, 6, "every grant called every withdrawn tool");
 }

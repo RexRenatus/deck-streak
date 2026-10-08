@@ -1,6 +1,9 @@
 //! SPEC-119 A2 to A6: the guard's credentials, read only through the credential loader, and every
 //! refusal by the credential's id (R6, R7, R8; T15). A1 and A39 (section 14): the listen address
 //! must be loopback, and the role reads its tokens only through the loader (R3, R6; ADR-329 D6).
+//! SPEC-369 A1 to A4: the optional write credential grants `core` and `write`, a missing one grants
+//! nothing, a broken one refuses start by its id, and it may share a value with no other credential
+//! (R3 to R5).
 
 // An integration test is test code: its helpers panic on a failed fixture, and the examined count
 // is printed on purpose.
@@ -18,6 +21,9 @@ use deck_streak_mcp::{Grants, ListenAddress, ListenRefusal, McpError, Scopes};
 
 const CORE: &str = "mcp-core-token";
 const LAW_TRACK: &str = "mcp-law-track-token";
+/// The write credential's id, written here as a literal and never read from the crate's constant:
+/// a test built from the constant would move with a mutant of it (SPEC-369 A1).
+const WRITE: &str = "mcp-write-token";
 
 /// A token of `length` characters, built from parts at run time.
 fn token(stem: &str, length: usize) -> String {
@@ -234,6 +240,150 @@ fn two_credentials_with_one_value_refuse_start() {
     assert_eq!(
         scope_names(&distinct),
         vec![vec!["core"], vec!["core", "law_track"]]
+    );
+}
+
+#[test]
+fn the_write_credential_grants_core_and_write() {
+    let grants = load(&[
+        (CORE, Credential::Text(token("core", 40))),
+        (LAW_TRACK, Credential::Text(token("law", 40))),
+        (WRITE, Credential::Text(token("write", 40))),
+    ])
+    .expect("the three credentials start");
+    assert_eq!(
+        scope_names(&grants),
+        vec![
+            vec!["core"],
+            vec!["core", "law_track"],
+            vec!["core", "write"]
+        ]
+    );
+}
+
+#[test]
+fn a_missing_write_credential_grants_nothing() {
+    let grants = load(&[
+        (CORE, Credential::Text(token("core", 40))),
+        (LAW_TRACK, Credential::Text(token("law", 40))),
+    ])
+    .expect("a missing write credential still starts");
+    assert_eq!(
+        scope_names(&grants),
+        vec![vec!["core"], vec!["core", "law_track"]]
+    );
+}
+
+#[test]
+fn a_broken_write_credential_refuses_start() {
+    // An empty, an unreadable and a non-text write credential refuse start by its id.
+    let mut judged = 0;
+    for (form, credential) in broken() {
+        let refused = load(&[
+            (CORE, Credential::Text(token("core", 40))),
+            (LAW_TRACK, Credential::Text(token("law", 40))),
+            (WRITE, credential),
+        ]);
+        let by_id = match &refused {
+            Err(McpError::Credential(CredentialError::Empty { id })) => {
+                form == "empty" && *id == WRITE
+            }
+            Err(McpError::Credential(CredentialError::Unreadable { id, .. })) => {
+                form == "unreadable" && *id == WRITE
+            }
+            Err(McpError::Credential(CredentialError::NotText { id })) => {
+                form == "non-text" && *id == WRITE
+            }
+            _ => false,
+        };
+        assert!(by_id, "a {form} write credential: {refused:?}");
+        judged += 1;
+    }
+
+    // So does a write token of 31 characters, and one holding a carriage return.
+    let short = load(&[
+        (CORE, Credential::Text(token("core", 40))),
+        (WRITE, Credential::Text(token("write", 31))),
+    ]);
+    assert!(
+        matches!(short, Err(McpError::WeakCredential { id: WRITE })),
+        "a 31-character write token: {short:?}"
+    );
+    judged += 1;
+    let carriage = load(&[
+        (CORE, Credential::Text(token("core", 40))),
+        (WRITE, Credential::Text(format!("{}\r", token("write", 40)))),
+    ]);
+    assert!(
+        matches!(
+            carriage,
+            Err(McpError::UnpresentableCredential { id: WRITE })
+        ),
+        "a write token ending in a carriage return: {carriage:?}"
+    );
+    judged += 1;
+    println!("examined {judged} of 5 broken write credentials");
+    assert_eq!(judged, 5, "every broken form reached its assertion");
+}
+
+#[test]
+fn the_write_credential_cannot_share_a_value() {
+    // A write token equal to the core token refuses start, naming both credentials.
+    let value = token("shared", 40);
+    let with_core = load(&[
+        (CORE, Credential::Text(value.clone())),
+        (LAW_TRACK, Credential::Text(token("law", 40))),
+        (WRITE, Credential::Text(value)),
+    ]);
+    assert!(
+        matches!(
+            with_core,
+            Err(McpError::SharedCredential {
+                first: CORE,
+                second: WRITE
+            })
+        ),
+        "a write token equal to the core token: {with_core:?}"
+    );
+
+    // So does one equal to the law-track token.
+    let value = token("shared", 40);
+    let with_law = load(&[
+        (CORE, Credential::Text(token("core", 40))),
+        (LAW_TRACK, Credential::Text(value.clone())),
+        (WRITE, Credential::Text(value)),
+    ]);
+    assert!(
+        matches!(
+            with_law,
+            Err(McpError::SharedCredential {
+                first: LAW_TRACK,
+                second: WRITE
+            })
+        ),
+        "a write token equal to the law-track token: {with_law:?}"
+    );
+
+    // Three values that differ only in their last character are three grants.
+    let ending = |last: char| {
+        let mut value = token("shared", 40);
+        value.pop();
+        value.push(last);
+        value
+    };
+    let distinct = load(&[
+        (CORE, Credential::Text(ending('x'))),
+        (LAW_TRACK, Credential::Text(ending('y'))),
+        (WRITE, Credential::Text(ending('z'))),
+    ])
+    .expect("three values start");
+    assert_eq!(
+        scope_names(&distinct),
+        vec![
+            vec!["core"],
+            vec!["core", "law_track"],
+            vec!["core", "write"]
+        ]
     );
 }
 
