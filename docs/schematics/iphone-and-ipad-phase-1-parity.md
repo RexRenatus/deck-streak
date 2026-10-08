@@ -129,13 +129,13 @@ sequenceDiagram
   D->>V: normal sync request
   alt NO_CHANGES or NORMAL
     V-->>D: answer
-    D-->>E: done; a new endpoint is not followed
+    D-->>E: done#59; a new endpoint is not followed
     E->>D: unsynced
     D-->>M: reviews not yet synced, collection changed
     Note over M: status line at the sidebar's foot
   else offline or refused
     D-->>E: refused by name
-    E-->>M: status says so; every review stays on the device
+    E-->>M: status says so#59; every review stays on the device
   else FULL
     D-->>M: the choice (2.2)
   end
@@ -165,7 +165,7 @@ sequenceDiagram
     D->>D: download_ready, at_write
     O->>SC: the confirm tap is the gesture
     E->>D: the one-way call (Write)
-    E->>E: reopen; status refreshed
+    E->>E: reopen#59; status refreshed
   else upload
     E->>D: backed_up(server copy)
     D-->>SC: refused by name at the snapshot step (owner session not yet native)
@@ -191,7 +191,7 @@ sequenceDiagram
   E-->>RM: the intent, or nothing
   RM->>S: resolve(intent, side)
   S->>E: resolve
-  E-->>RM: the action (question side: confirm only; answer side: confirm is Good)
+  E-->>RM: the action (question side: confirm only#59; answer side: confirm is Good)
   RM->>RM: perform(action)
   RM->>S: engine call (answer, bury, flag, undo, replay)
   RM->>E: Awake::wanted(review shown, scene, gamepad, key drove)
