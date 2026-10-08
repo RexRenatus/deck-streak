@@ -1,9 +1,10 @@
 import SwiftUI
 
 /// Where a review stands (SPEC-348 R10, the schematic's state machine). A call in flight has its
-/// own phase, written before the call is awaited, so the bar is disabled while it runs.
+/// own phase, written before the call is awaited, so the bar is disabled while it runs; a bury
+/// or a flag runs in `marking` (SPEC-358 R5).
 enum ReviewPhase: Equatable, Sendable {
-    case loading, question, revealing, answer, answering, finished, refused
+    case loading, question, revealing, answer, answering, marking, finished, refused
 }
 
 /// A rating as the answer bar names it, in the bar's order (SPEC-348 R10): Again and Good alone,

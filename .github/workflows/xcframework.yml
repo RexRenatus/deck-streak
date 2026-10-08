@@ -639,6 +639,7 @@ jobs:
           release_cases = cases_in("release")
           app_cases = cases_in("app")
           review_cases = cases_in("review")
+          review_actions_cases = cases_in("review-actions")
           release = results / "release.xcresult"
           metrics = tool("metrics", "--path", str(release)) if release.exists() else None
           found = []
@@ -661,6 +662,7 @@ jobs:
               ("Release executable bytes", read("executable-bytes") or "not measured"),
               ("app's tests, Debug, both simulators", minutes("app-seconds")),
               ("review screen's tests, Debug, both simulators", minutes("review-seconds")),
+              ("bury and flag tests, Debug, both simulators", minutes("review-actions-seconds")),
           ]
           for simulator in simulators:
               for label, pick, wanted in figures:
@@ -681,6 +683,7 @@ jobs:
           for label, cases in (
               ("Debug", debug_cases), ("Release", release_cases), ("App", app_cases),
               ("Review", review_cases),
+              ("Review actions", review_actions_cases),
           ):
               lines += [f"| {label} `{c.get('nodeIdentifier')}` | {per_simulator(c)} |" for c in cases]
               if not cases:

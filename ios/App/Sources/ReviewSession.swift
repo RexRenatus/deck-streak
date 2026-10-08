@@ -9,12 +9,14 @@ struct ReviewCounts: Equatable, Sendable {
 }
 
 /// What the session shows next: a card's question with the queue's counts and the four
-/// intervals, or the designed end (SPEC-348 R10, R11).
+/// intervals, or the designed end (SPEC-348 R10, R11); and the card's flag, 0 at the end
+/// (SPEC-358 R5).
 struct ReviewStep: Equatable, Sendable {
     var phase: ReviewPhase
     var face: ReviewFace
     var counts: ReviewCounts
     var intervals: [String]
+    var flag: UInt32
 }
 
 /// One review of one deck, over the engine's session: the queue's head card, the time it was
@@ -23,6 +25,8 @@ struct ReviewStep: Equatable, Sendable {
 /// finds no head and sends nothing.
 actor ReviewSession {
     private let engine: EngineSession
+    /// The engine's red flag, which the model compares a card's flag with (SPEC-358 R5).
+    nonisolated let red: UInt32
     /// The answers this session has sent; a double tap must raise it once (A16).
     private(set) var sentAnswers = 0
     /// The card shown, until its answer is sent.
@@ -32,6 +36,7 @@ actor ReviewSession {
 
     init(engine: EngineSession) {
         self.engine = engine
+        red = engine.red
     }
 
     /// Makes `deck` the current deck (7,22), so the queue is its own.
@@ -46,21 +51,41 @@ actor ReviewSession {
             new: queue.newCount, learning: queue.learningCount, review: queue.reviewCount)
         guard let card = queue.cards.first else {
             head = nil
-            return ReviewStep(phase: .finished, face: .empty, counts: counts, intervals: [])
+            return ReviewStep(
+                phase: .finished, face: .empty, counts: counts, intervals: [], flag: 0)
         }
         let intervals = try await engine.intervals(card)
         let face = try await engine.face(
             card.cardID, answer: false, autoplay: autoplay, installed: installed)
         head = card
         shownAt = Date()
-        return ReviewStep(phase: .question, face: face, counts: counts, intervals: intervals)
+        return ReviewStep(
+            phase: .question, face: face, counts: counts, intervals: intervals, flag: card.flag)
     }
 
     /// The shown card's answer face, or the empty face when no card is shown.
     func reveal(autoplay: Bool, installed: [InstalledVoice]) async throws -> ReviewFace {
-        guard let card = head else { return .empty }
-        return try await engine.face(
-            card.cardID, answer: true, autoplay: autoplay, installed: installed)
+        try await shown(ReviewFace.empty) { card in
+            try await engine.face(
+                card.cardID, answer: true, autoplay: autoplay, installed: installed)
+        }
+    }
+
+    /// Buries the shown card as the user's bury; nothing when no card is shown (SPEC-358 R5).
+    func bury() async throws {
+        try await shown(()) { card in
+            try await engine.bury(card)
+        }
+    }
+
+    /// Toggles red on the shown card and keeps the engine's answer on the head card, so the
+    /// next press toggles from it; the new flag, or nil when no card is shown (SPEC-358 R5).
+    func flag() async throws -> UInt32? {
+        try await shown(nil) { card in
+            let flag = try await engine.flag(card)
+            head?.flag = flag
+            return flag
+        }
     }
 
     /// Sends the press of `rating` on the shown card, with the states the card was shown with, at
@@ -83,5 +108,14 @@ actor ReviewSession {
     /// Records `identifier` as the voice for `language`, or clears the choice given nil.
     func choose(voice identifier: String?, language: String) async throws {
         try await engine.choose(voice: identifier, language: language)
+    }
+
+    /// The one read of the shown card that reveal, bury and flag share: `work` over the head
+    /// card, or `none` when no card is shown.
+    private func shown<Value>(
+        _ none: Value, _ work: (QueuedCard) async throws -> Value
+    ) async throws -> Value {
+        guard let card = head else { return none }
+        return try await work(card)
     }
 }

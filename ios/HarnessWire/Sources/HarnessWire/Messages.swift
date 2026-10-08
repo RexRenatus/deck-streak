@@ -233,7 +233,8 @@ public enum Responses {
             reviewCount: UInt32(truncatingIfNeeded: queue.varint(4)))
     }
 
-    /// `QueuedCard`: `card` (1), a `Card` whose `id` (1) and `note_id` (2) the harness reads;
+    /// `QueuedCard`: `card` (1), a `Card` whose `id` (1), `note_id` (2) and `flags` (17) the
+    /// harness reads;
     /// `queue` (2); and `states` (3), a `SchedulingStates` whose `current` (1), `again` (2),
     /// `hard` (3), `good` (4) and `easy` (5) an answer sends back as they came.
     static func queuedCard(_ bytes: [UInt8]) throws -> QueuedCard {
@@ -248,7 +249,8 @@ public enum Responses {
             againState: states.lengthDelimited(2) ?? [],
             hardState: states.lengthDelimited(3) ?? [],
             goodState: states.lengthDelimited(4) ?? [],
-            easyState: states.lengthDelimited(5) ?? [])
+            easyState: states.lengthDelimited(5) ?? [],
+            flag: UInt32(truncatingIfNeeded: card.varint(17)))
     }
 
     /// `StringList`: `vals` (1), each a UTF-8 string, in order: the intervals (13,24) gives, one
