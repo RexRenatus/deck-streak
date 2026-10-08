@@ -37,8 +37,9 @@ const GET_QUEUED_CARDS: (u32, u32) = (13, 3);
 /// `SchedulerService.DescribeNextStates`.
 const DESCRIBE_NEXT_STATES: (u32, u32) = (13, 24);
 
-/// The native column with the review screen's three pairs (SPEC-345 M1, SPEC-347 R1, SPEC-348 R1).
-const NATIVE: [(u32, u32); 10] = [
+/// The native column with the review screen's three pairs (SPEC-345 M1, SPEC-347 R1, SPEC-348 R1),
+/// less `AnswerCard`, which only an owner's press records (SPEC-365 R4).
+const NATIVE: [(u32, u32); 9] = [
     (1, 3),
     (3, 0),
     (3, 8),
@@ -46,12 +47,13 @@ const NATIVE: [(u32, u32); 10] = [
     (7, 13),
     (7, 22),
     (13, 3),
-    (13, 4),
     (13, 24),
     (27, 6),
 ];
 /// The six exempt writes, held for a gesture on every transport (SPEC-345 M8).
 const HELD: [(u32, u32); 6] = [(5, 2), (11, 5), (13, 17), (13, 19), (23, 15), (25, 7)];
+/// `AnswerCard`, held for an owner's press on every transport (SPEC-365 R4).
+const ANSWERED: [(u32, u32); 1] = [(13, 4)];
 /// The highest service and method index the census sends: past every index the engine numbers.
 const LAST: u32 = 64;
 
@@ -215,8 +217,8 @@ fn the_review_pairs_run_natively_and_no_other_pair_joins() {
         (for_gesture, for_answer, refused, answered),
         (
             HELD.to_vec(),
-            Vec::new(),
-            4225 - NATIVE.len() - HELD.len(),
+            ANSWERED.to_vec(),
+            4225 - NATIVE.len() - HELD.len() - ANSWERED.len(),
             Vec::new()
         ),
         "the pairs outside the native column: held for a gesture, held for a press, refused, and \

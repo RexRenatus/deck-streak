@@ -1,5 +1,5 @@
 //! Round trips through the adapter's one entry point against a synthetic collection (SPEC-336 A1
-//! to A6).
+//! to A6), and through its answer entry, an owner's press (SPEC-365 A12, A13).
 //!
 //! Each test builds its own collection with the engine's own API before the adapter runs: one
 //! Basic note in the default deck, and a second, empty deck. It then drives the adapter the way a
@@ -265,6 +265,26 @@ fn written(
     (rows, reviews)
 }
 
+/// The owner's press of Good on the first queued card, with the states the queue gave it, through
+/// the adapter's answer entry (SPEC-365 R6).
+fn press_good(
+    engine: &Engine,
+    synthetic: &Synthetic,
+    queued: &Result<Vec<u8>, EngineRefusal>,
+) -> Result<Vec<u8>, PressRefusal> {
+    let states = queued
+        .as_ref()
+        .map(|bytes| {
+            let head = wire::repeated(bytes, 1)
+                .into_iter()
+                .next()
+                .unwrap_or_default();
+            wire::bytes(&head, 3)
+        })
+        .unwrap_or_default();
+    engine.answer(synthetic.card_id, PressedGrade::Good, states, 4_000)
+}
+
 /// The two flags of an `OpChanges` a scheduling change sets: `card` and `study_queues`.
 fn card_and_queues(changes: &[u8]) -> (u64, u64) {
     (wire::varint(changes, 1), wire::varint(changes, 10))
@@ -329,14 +349,13 @@ fn a4_answers_the_card() {
     let engine = engine();
     let opened = call(&engine, OPEN_COLLECTION, open_request(&synthetic));
     let queued = call(&engine, GET_QUEUED_CARDS, queue_request());
-    let answered = call(&engine, ANSWER_CARD, good_answer(&synthetic, &queued))
-        .map(|bytes| card_and_queues(&bytes));
+    let answered = press_good(&engine, &synthetic, &queued).map(|bytes| card_and_queues(&bytes));
     let after =
         call(&engine, GET_QUEUED_CARDS, queue_request()).map(|bytes| read_queue(&bytes).new);
     assert_eq!(
         (opened, answered, after),
         (Ok(Vec::new()), Ok((1, 1)), Ok(0)),
-        "A4: AnswerCard rates the card Good, reports a card and queue change, and the card leaves the new queue"
+        "A4: an owner's press rates the card Good, reports a card and queue change, and the card leaves the new queue"
     );
 }
 
@@ -346,16 +365,16 @@ fn a5_undoes_the_answer() {
     let engine = engine();
     let opened = call(&engine, OPEN_COLLECTION, open_request(&synthetic));
     let queued = call(&engine, GET_QUEUED_CARDS, queue_request());
-    let answered = call(&engine, ANSWER_CARD, good_answer(&synthetic, &queued));
+    let answered = press_good(&engine, &synthetic, &queued);
     let undone = call(&engine, UNDO, Vec::new()).map(|bytes| {
         String::from_utf8(wire::bytes(&bytes, 2)).expect("an operation name is UTF-8")
     });
     let after = call(&engine, GET_QUEUED_CARDS, queue_request()).map(|bytes| read_queue(&bytes));
     assert_eq!(
-        (opened, refused_by(&answered), undone, after),
+        (opened, answered.map(|_| ()), undone, after),
         (
             Ok(Vec::new()),
-            "nobody",
+            Ok(()),
             Ok(ANSWER_OPERATION.to_owned()),
             Ok(untouched(&synthetic))
         ),

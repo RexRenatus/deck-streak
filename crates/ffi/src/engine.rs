@@ -178,8 +178,8 @@ impl Engine {
         milliseconds_taken: u32,
     ) -> Result<Vec<u8>, PressRefusal> {
         let grade = core_grade(grade);
-        let states = shown_states(&states).unwrap_or_default();
-        let next = grade.pick(states.good, states.again);
+        let states = shown_states(&states).map_err(press_refusal)?;
+        let next = grade.pick(states.again, states.good);
         let request = answer_request(
             card,
             states.current,

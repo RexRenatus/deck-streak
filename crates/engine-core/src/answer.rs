@@ -98,7 +98,7 @@ impl std::error::Error for AnswerRefusal {}
 
 /// One owner's press on one card with one grade. Only the UI adapters build one, from the press
 /// itself, and recording its grade consumes it.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct OwnerAnswer {
     card: i64,
     grade: Grade,
@@ -111,16 +111,24 @@ impl OwnerAnswer {
         Self { card, grade }
     }
 
-    /// The request the engine runs for this answer.
-    #[expect(
-        clippy::unnecessary_wraps,
-        clippy::no_effect_underscore_binding,
-        reason = "the red stub (SPEC-365 A4 to A6): it reads the press and checks nothing yet"
-    )]
+    /// The request the engine runs for this answer: the caller's `CardAnswer`, decoded, checked
+    /// against the press and encoded again, so the engine never runs the caller's own bytes.
     pub(crate) fn checked(self, input: &[u8]) -> Result<Vec<u8>, AnswerRefusal> {
         let Self { card, grade } = self;
-        let _unchecked = (card, grade);
-        Ok(input.to_vec())
+        let request = CardAnswer::decode(input).map_err(|_| AnswerRefusal::Undecodable)?;
+        if request.card_id != card {
+            return Err(AnswerRefusal::NotTheCard {
+                pressed: card,
+                named: request.card_id,
+            });
+        }
+        if request.rating != grade.rating() {
+            return Err(AnswerRefusal::NotTheGrade {
+                pressed: grade,
+                named: request.rating,
+            });
+        }
+        Ok(request.encode_to_vec())
     }
 }
 

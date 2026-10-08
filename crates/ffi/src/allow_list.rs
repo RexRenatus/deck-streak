@@ -20,12 +20,14 @@ pub struct Call {
     pub name: &'static str,
 }
 
-/// The allow-list: open a collection, list its decks, get the next card, answer it, undo,
-/// render a card (SPEC-339 R10), a call that reads the card and writes nothing, log in to a sync
-/// server (SPEC-347 R1), whose endpoint the core guards before the engine sees it, and the review
+/// The allow-list: open a collection, list its decks, get the next card, undo, render a card
+/// (SPEC-339 R10), a call that reads the card and writes nothing, log in to a sync server
+/// (SPEC-347 R1), whose endpoint the core guards before the engine sees it, and the review
 /// screen's three (SPEC-348 R1): read the deck tree, choose the current deck, the one write Anki
-/// itself makes when a deck is chosen, and describe a card's next states as intervals.
-pub const ALLOW_LIST: [Call; 10] = [
+/// itself makes when a deck is chosen, and describe a card's next states as intervals. A card is
+/// answered only through the adapter's answer entry, `Engine::answer`, an owner's press
+/// (SPEC-365 R6).
+pub const ALLOW_LIST: [Call; 9] = [
     Call {
         service: 3,
         method: 0,
@@ -50,11 +52,6 @@ pub const ALLOW_LIST: [Call; 10] = [
         service: 13,
         method: 3,
         name: "SchedulerService.GetQueuedCards",
-    },
-    Call {
-        service: 13,
-        method: 4,
-        name: "SchedulerService.AnswerCard",
     },
     Call {
         service: 13,

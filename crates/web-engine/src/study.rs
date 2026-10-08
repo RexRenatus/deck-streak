@@ -122,14 +122,14 @@ pub mod service {
 }
 
 /// The study calls `run_method` admits: service, method, and the method's name. Every pair
-/// outside it is refused, the exempt writes of ADR-337 included (#623). The last eight are the
-/// review's: the deck list, the card view, its labels and undo label, bury and flag (SPEC-350 R1).
-pub const STUDY_CALLS: [(u32, u32, &str); 16] = [
+/// outside it is refused, the exempt writes of ADR-337 included (#623), and so is the answer, which
+/// only an owner's press records (SPEC-365 R7). The last eight are the review's: the deck list,
+/// the card view, its labels and undo label, bury and flag (SPEC-350 R1).
+pub const STUDY_CALLS: [(u32, u32, &str); 15] = [
     (service::COLLECTION, 0, "open_collection"),
     (service::COLLECTION, 1, "close_collection"),
     (service::COLLECTION, 8, "undo"),
     (service::SCHEDULER, 3, "get_queued_cards"),
-    (service::SCHEDULER, 4, "answer_card"),
     (service::NOTETYPES, 8, "get_notetype_names"),
     (service::NOTES, 0, "new_note"),
     (service::NOTES, 2, "add_notes"),

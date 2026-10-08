@@ -14,19 +14,13 @@
 
 mod support;
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
-use deck_streak_ffi::engine::{Engine, ExemptRefusal, ExemptTap, ExemptTarget};
+use deck_streak_ffi::engine::{Engine, ExemptRefusal, ExemptTap, ExemptTarget, PressedGrade};
 use support::{Synthetic, open_request, synthetic, wire};
 
 /// `BackendCollectionService.OpenCollection`, as the engine's generated dispatch numbers it.
 const OPEN_COLLECTION: (u32, u32) = (3, 0);
 /// `SchedulerService.GetQueuedCards`.
 const GET_QUEUED_CARDS: (u32, u32) = (13, 3);
-/// `SchedulerService.AnswerCard`.
-const ANSWER_CARD: (u32, u32) = (13, 4);
-/// The engine's rating for Good (`CardAnswer.Rating.GOOD`).
-const GOOD: u64 = 2;
 /// The engine's queue for a new card (`QueuedCards.Queue.NEW`).
 const NEW_QUEUE: u64 = 0;
 /// The engine's queue for a card in learning (`QueuedCards.Queue.LEARNING`).
@@ -81,8 +75,8 @@ fn queue(engine: &Engine) -> Head {
     }
 }
 
-/// Opens the synthetic collection and answers its one card Good, through ordinary calls, so the
-/// card leaves the new queue.
+/// Opens the synthetic collection and answers its one card Good, through an owner's press on the
+/// states the queue gave it (SPEC-365 R6), so the card leaves the new queue.
 fn answered(synthetic: &Synthetic) -> std::sync::Arc<Engine> {
     let engine = Engine::new(Vec::new()).expect("the engine starts from the default init message");
     let (service, method) = OPEN_COLLECTION;
@@ -102,29 +96,9 @@ fn answered(synthetic: &Synthetic) -> std::sync::Arc<Engine> {
             .expect("the new card is queued"),
         3,
     );
-    let answered_at = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_millis();
-    let mut answer = Vec::new();
-    wire::put_varint_field(
-        &mut answer,
-        1,
-        u64::try_from(synthetic.card_id).expect("a card id is positive"),
-    );
-    wire::put_bytes(&mut answer, 2, &wire::bytes(&states, 1));
-    wire::put_bytes(&mut answer, 3, &wire::bytes(&states, 4));
-    wire::put_varint_field(&mut answer, 4, GOOD);
-    wire::put_varint_field(
-        &mut answer,
-        5,
-        u64::try_from(answered_at).expect("the time fits 64 bits"),
-    );
-    wire::put_varint_field(&mut answer, 6, 4_000);
-    let (service, method) = ANSWER_CARD;
     engine
-        .run(service, method, answer)
-        .expect("the answer reaches the engine");
+        .answer(synthetic.card_id, PressedGrade::Good, states, 4_000)
+        .expect("the owner's press reaches the engine");
     engine
 }
 

@@ -112,7 +112,7 @@ impl Exempt {
 /// study calls (SPEC-345 M1, M4); a parity test holds each adapter's own table equal to its column.
 /// A pair one transport may make is not thereby admitted on the other: the native client neither
 /// closes the collection nor adds notes through this table (ADR-356 D2).
-pub const ORDINARY: [Ordinary; 18] = [
+pub const ORDINARY: [Ordinary; 17] = [
     Ordinary {
         service: 1,
         method: 3,
@@ -180,13 +180,6 @@ pub const ORDINARY: [Ordinary; 18] = [
         service: 13,
         method: 3,
         name: "SchedulerService.GetQueuedCards",
-        native: true,
-        web: true,
-    },
-    Ordinary {
-        service: 13,
-        method: 4,
-        name: "SchedulerService.AnswerCard",
         native: true,
         web: true,
     },
@@ -319,8 +312,8 @@ pub const EXEMPT: [Exempt; 6] = [
 ];
 
 /// What the table decides for `service` and `method` on `transport`: admitted when an ordinary
-/// row holds the pair and marks the transport, held for a gesture when an exempt row holds it, and
-/// refused otherwise.
+/// row holds the pair and marks the transport, held for an owner's answer when the answered row
+/// holds it, held for a gesture when an exempt row holds it, and refused otherwise.
 #[must_use]
 pub fn decide(transport: Transport, service: u32, method: u32) -> Decision {
     let ordinary = ORDINARY
@@ -328,6 +321,8 @@ pub fn decide(transport: Transport, service: u32, method: u32) -> Decision {
         .any(|row| (row.service, row.method) == (service, method) && row.admits(transport));
     if ordinary {
         Decision::Admit
+    } else if ANSWERED.iter().any(|row| row.is(service, method)) {
+        Decision::NeedsAnswer
     } else if EXEMPT.iter().any(|row| row.is(service, method)) {
         Decision::NeedsGesture
     } else {

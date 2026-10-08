@@ -19,6 +19,7 @@ use anki_proto::scheduler::card_answer::Rating;
 use anki_proto::scheduler::{
     CardAnswer, GetQueuedCardsRequest, QueuedCards, ScheduleCardsAsNewRequest,
 };
+use deck_streak_engine_core::answer::{Grade, OwnerAnswer};
 use deck_streak_engine_core::dispatch::{Dispatcher, Read, Refusal};
 use deck_streak_engine_core::table::Transport;
 use prost::Message;
@@ -108,10 +109,17 @@ fn an_ordinary_call_reaches_the_engine_and_an_exempt_one_does_not() {
         answered_at_millis: now_millis(),
         milliseconds_taken: 1000,
     };
+    // The card's row changes through the owner's answer, the one door that records a grade
+    // (SPEC-365 R3), so the held write below has a row it could have reset.
     assert_eq!(
-        run(&dispatcher, ANSWER_CARD, &answer.encode_to_vec()).map(|_| ()),
+        dispatcher
+            .run_answer(
+                OwnerAnswer::from_press(card, Grade::Good),
+                &answer.encode_to_vec()
+            )
+            .map(|_| ()),
         Ok(()),
-        "the answer reaches the engine"
+        "the owner's answer reaches the engine"
     );
     let answered = snapshot(&dispatcher, card).expect("the snapshot reads");
     assert_eq!(
