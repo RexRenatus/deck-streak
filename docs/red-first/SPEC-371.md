@@ -184,5 +184,44 @@ A28: green at 2c68b183
   - `web/app/src/routes/study.test.ts`: its card's `undo` reads `null`, the new type.
   - `web/app/tests-study/study.spec.ts`: "undo returns the rated card" presses "Undo answer",
     confirms in the dialog and still reaches the rated card, title kept.
-  - `web/app/src/lib/study/audio.test.ts` and `web/app/src/lib/study/voice.test.ts`: each client
-    answers `undoOffer`, and each card's `undo` reads `null`, as the type check requires.
+  - `web/app/src/lib/study/audio.test.ts`: its card's `undo` reads `null`, the new type, and its
+    fake client answers `undoOffer` with no offer; no assertion changed.
+  - `web/app/src/lib/study/voice.test.ts`: its card's `undo` reads `null`, the new type, and its
+    fake client answers `undoOffer` with no offer; no assertion changed.
+
+## What the mutation pass added
+
+- **Seventeen rows, `S37101` to `S37117`, each proved by hand before the commit that writes them,
+  f4356c31.** For each row the target's sha256 was read, its find counted once, the replacement
+  installed once and only its killer run, one test selected: the control passed, the mutant failed
+  by the killer's name for the row's reason, and the restored target matched its sha256. Rows
+  `S37101`, `S37112` and `S37117` pin `const` literals, which the generator never mutates. Rows
+  `S37113` to `S37116` mutate `src/wasm.rs`, which only the browser target compiles; their native
+  killer is the boundary census,
+  `boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher`, which reads that
+  file's text and names the owed statement each mutant removes or changes.
+- **A4's code path has no hand row.** Its success path is held by the generated
+  `Dispatcher::run_undo` body replacements, which A4's test kills: the `Ok(vec![])` body, installed
+  by hand, failed `undo_answer::an_undo_reverts_the_offered_answer` by name, the card left answered
+  and its review row still there, and the restored file matched. `S37109`, with A5's test its
+  killer, holds the check side.
+- **F5 has no row.** The retired text `call(service::COLLECTION, 8,` is already an entry of
+  `boundary.rs`'s `RETIRED`, killed by its own planted control,
+  `boundary::a_retired_text_planted_back_is_refused_by_name`; SPEC-371 section 9 lists seventeen
+  rows, and an eighteenth would go beyond it.
+- **Every row the gate would select dies.** A plan built the way the gate builds one over this
+  branch selected 95 rows, this band's seventeen with the rows already on the files and killers it
+  touches, and proving them read 95 killed, 0 survived, 0 void.
+- **`src/wasm.rs` was run whole, natively.** All 100 of its generated mutants ran: 65 caught, 35
+  missed. The 35 missed are exactly the 35 records of
+  `scripts/mutation-equivalent.d/deck-streak-web-engine.json`, one mutant to a record: 24 kept and
+  11 new, each new one a private helper of `undo`, `undo_offer` or `rate` (`no_offer`,
+  `engine_record`, `review_of`, `mirrored`, `returned` and `newest_review`) whose body no native
+  test reaches and whose text the census does not own. The kept `close` record is re-anchored on
+  `close`'s new body, which first clears the kept answer; its mutant is still missed natively. No
+  kept record was refuted.
+- **The diff's own mutants.** A run over this branch's diff generated 66: 48 caught, 6 unviable and
+  12 missed. All 12 missed are in `src/wasm.rs`, each one of the records above (`close` and the 11
+  new). The 6 unviable replace a body with a `Default::default()` value of a type that derives no
+  `Default`. The engine core's 26 viable mutants and the 13 viable in `src/study.rs` were all
+  caught, as were 9 in `src/wasm.rs`.
