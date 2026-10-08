@@ -27,3 +27,4 @@ A9: green at 2ea522eb
 A10: green at 2ea522eb
 ```
 A2: citations re-derived after dev moved twelve cited lines; read green at the merge ref in CI
+A2: citations re-derived again after the release build moved 5 cited lines; read green at the merge ref in CI
