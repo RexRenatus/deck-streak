@@ -372,4 +372,70 @@ describe('the Worker entry', () => {
     expect(imported).toEqual([`${ORIGIN}/engine/${STEM}.js`]);
     expect(inits).toHaveLength(1);
   });
+
+  it("the sync keeps its key in the credential operations' store and sends it only to the origin's sync route", async () => {
+    // SPEC-364 R17, R18: one store serves the credential operations and the sync, over one module
+    const { start } = await worker();
+    const answered: unknown[] = [];
+    let heard = () => {};
+    const replies = (count: number) =>
+      new Promise<void>((resolve) => {
+        heard = () => answered.length >= count && resolve();
+        heard();
+      });
+    const scope = Object.assign(new FakeScope(), {
+      postMessage: (reply: unknown) => {
+        answered.push(reply);
+        heard();
+      },
+      DedicatedWorkerGlobalScope: class {},
+      location: { href: `${ORIGIN}/assets/worker-abc.js`, origin: ORIGIN },
+      navigator: {
+        locks: { request: async (_name: string, _options: object, grant: (lock: object) => unknown) => grant({}) },
+        storage: { getDirectory: async () => ({}) }
+      },
+      FileSystemFileHandle: class {
+        createSyncAccessHandle() {}
+      },
+      indexedDB: new IDBFactory(),
+      crypto: fixedCrypto,
+      fetch: new ReleaseService().fetch,
+      BroadcastChannel: function (name: string) {
+        return new Bus().join(name);
+      }
+    });
+    const hostKey = sentinel('host', 'key', 'worker');
+    const sent: string[][] = [];
+    const { inits, module } = bindings();
+    const engine = Object.assign(module, standIn(), {
+      install_storage: async () => 0,
+      init: () => undefined,
+      open: () => JSON.stringify({ existed: false, notes: 0 }),
+      sync_login: (endpoint: string, user: string, password: string) => {
+        sent.push(['login', endpoint, user, password]);
+        return hostKey;
+      },
+      sync_collection: (key: string, endpoint: string) => {
+        sent.push(['sync', key, endpoint]);
+        return 1;
+      }
+    });
+    expect(start(scope, async () => engine)).toBe(true);
+    await scope.send({ id: 1, op: 'open' });
+    await scope.send({ id: 2, op: 'sync-login', user: 'a user', password: 'a password' });
+    await scope.send({ id: 3, op: 'credential-status' });
+    await scope.send({ id: 4, op: 'sync' });
+    await replies(4);
+    expect(answered).toEqual([
+      { id: 1, ok: true, value: { existed: false, notes: 0 } },
+      { id: 2, ok: true, value: 'held' },
+      { id: 3, ok: true, value: 'held' },
+      { id: 4, ok: true, value: { status: 'held', required: 'normal-sync' } }
+    ]);
+    expect(sent).toEqual([
+      ['login', `${ORIGIN}/anki-sync/`, 'a user', 'a password'],
+      ['sync', hostKey, `${ORIGIN}/anki-sync/`]
+    ]);
+    expect(inits).toHaveLength(1);
+  });
 });

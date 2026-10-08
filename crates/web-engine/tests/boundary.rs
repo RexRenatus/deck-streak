@@ -22,7 +22,7 @@ fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
 /// Each boundary function the census reads: its name, why it owes what it owes, and the
 /// statements its body holds for it. A statement is compared with every blank removed, so a
 /// reflow by rustfmt changes nothing.
-const OWED: [(&str, &str, &[&str]); 31] = [
+const OWED: [(&str, &str, &[&str]); 34] = [
     (
         "create_backend",
         "starts the core's dispatcher on the web transport and keeps it",
@@ -296,13 +296,43 @@ const OWED: [(&str, &str, &[&str]); 31] = [
         "lets the core's sync key rule name the generation a removal moves the store to",
         &["credential::on_removed(Generation::from(current))"],
     ),
+    (
+        "sync_login",
+        "sends the engine's sync login, its endpoint set, on (1,3) through the dispatcher and answers the host key (SPEC-364 B6, ADR-375 D16)",
+        &[
+            "endpoint: Some(endpoint)",
+            "dispatcher()?.run(service::SYNC, 3, &request.encode_to_vec())",
+            ".map_err(sync_refusal)?",
+            "Ok(auth.hkey)",
+        ],
+    ),
+    (
+        "sync_collection",
+        "sends the engine's normal sync with no media and no timeout override on (1,5) through the dispatcher (SPEC-364 B6, ADR-375 D16)",
+        &[
+            "endpoint: Some(endpoint)",
+            "io_timeout_secs: None",
+            "sync_media: false",
+            "dispatcher()?.run(service::SYNC, 5, &request.encode_to_vec())",
+            ".map_err(sync_refusal)?",
+        ],
+    ),
+    (
+        "sync_refusal",
+        "keeps an engine refusal's bytes for the credential module's classifier and answers any other refusal as the boundary's (SPEC-364 B6, ADR-375 D16)",
+        &[
+            "Refusal::Engine { error } => Uint8Array::from(error.as_slice()).into()",
+            "refuse(StudyError::CallRefused { service, method })",
+        ],
+    ),
 ];
 
-/// What the boundary no longer holds (SPEC-365 A11): `rate` never calls `AnswerCard` through
-/// `call`, and no export answers the queue's head; and no call runs Undo (3,8) through `call`,
-/// with no argument or any other (SPEC-371 A17). Each is a text whose presence is refused, with
+/// What the boundary no longer holds (SPEC-365 A11; SPEC-364 B6, ADR-375 D11): `rate` never calls
+/// `AnswerCard` through `call`, and no export answers the queue's head; no call runs Undo (3,8)
+/// through `call`, with no argument or any other (SPEC-371 A17); neither sync export reaches
+/// `admit` or `run_method`. Each is a text whose presence is refused, with
 /// the function that must not hold it, or `None` for the whole source.
-const RETIRED: [(Option<&str>, &str, &str); 3] = [
+const RETIRED: [(Option<&str>, &str, &str); 7] = [
     (
         Some("rate"),
         "call(service::SCHEDULER, 4,",
@@ -317,6 +347,26 @@ const RETIRED: [(Option<&str>, &str, &str); 3] = [
         None,
         "call(service::COLLECTION, 8,",
         "undoes only through the owner's gesture, never through `call`",
+    ),
+    (
+        Some("sync_login"),
+        "admit(",
+        "reaches the engine through the dispatcher alone, never through the study allow-list",
+    ),
+    (
+        Some("sync_login"),
+        "run_method(",
+        "reaches the engine through the dispatcher alone, never through `run_method`",
+    ),
+    (
+        Some("sync_collection"),
+        "admit(",
+        "reaches the engine through the dispatcher alone, never through the study allow-list",
+    ),
+    (
+        Some("sync_collection"),
+        "run_method(",
+        "reaches the engine through the dispatcher alone, never through `run_method`",
     ),
 ];
 
@@ -456,6 +506,37 @@ fn a_retired_text_planted_back_is_refused_by_name() {
             }),
         "a retired text planted back is not refused by name: {refused:?}"
     );
+}
+
+/// The control for the sync exports' rows of [`RETIRED`] (SPEC-364 B6, ADR-375 D11): `admit(` or
+/// `run_method(` planted into either export's body is refused by that export's name, so the
+/// census cannot pass over a sync that went through the study allow-list.
+#[test]
+fn a_sync_export_that_reaches_admit_or_run_method_is_refused_by_name() {
+    let source = boundary();
+    let exports = examined("sync export(s)", vec!["sync_login", "sync_collection"]);
+    let mut planted_count = 0_usize;
+    for name in exports {
+        let held = body(&source, name).expect("each sync export has one body");
+        for planted_call in [
+            "admit(service, method)?;",
+            "run_method(service, method, &[])?;",
+        ] {
+            let planted =
+                source.replacen(held, &format!("{{\n    {planted_call}\n{}", &held[1..]), 1);
+            let refused = retired(&planted);
+            let text = &planted_call[..=planted_call.find('(').expect("a call has a paren")];
+            assert!(
+                refused
+                    .iter()
+                    .any(|line| line.starts_with(&format!("{name} "))
+                        && line.ends_with(&format!("`{text}`"))),
+                "`{text}` planted in {name} is not refused by name: {refused:?}"
+            );
+            planted_count += 1;
+        }
+    }
+    assert_eq!(planted_count, 4, "examined {planted_count} of 4 plants");
 }
 
 #[test]
