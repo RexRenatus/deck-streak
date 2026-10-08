@@ -39,14 +39,16 @@ const DESCRIBE_NEXT_STATES: (u32, u32) = (13, 24);
 
 /// The native column with the review screen's three pairs (SPEC-345 M1, SPEC-347 R1, SPEC-348 R1),
 /// less `AnswerCard`, which only an owner's press records (SPEC-365 R4), and less `Undo`, which
-/// only the owner's gesture runs (SPEC-371 R2).
-const NATIVE: [(u32, u32); 8] = [
+/// only the owner's gesture runs (SPEC-371 R2), and with the review's bury and flag (SPEC-358 R1).
+const NATIVE: [(u32, u32); 10] = [
     (1, 3),
     (3, 0),
+    (5, 4),
     (7, 4),
     (7, 13),
     (7, 22),
     (13, 3),
+    (13, 14),
     (13, 24),
     (27, 6),
 ];
