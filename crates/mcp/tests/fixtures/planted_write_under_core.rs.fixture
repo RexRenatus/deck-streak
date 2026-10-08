@@ -1,6 +1,7 @@
-// A planted tool module that lets a write tool through on the read grant (SPEC-369 A6). It is
+// A planted tool module that lets write tools through on the read grant (SPEC-369 A6). It is
 // never compiled: A6's census must refuse exactly `planted_erase`, a tool annotated
-// `read_only_hint = false` that authorizes `Scope::Core`, and pass the other two.
+// `read_only_hint = false` that authorizes `Scope::Core`, and `planted_unmarked`, a tool with no
+// annotation (MCP reads it as not read-only) that authorizes `Scope::Core`, and pass the other two.
 //
 // A comment that says #[tool(annotations(read_only_hint = false))] fn commented_out() is prose,
 // and so is the string below.
@@ -39,6 +40,17 @@ impl PlantedServer {
     async fn planted_write(&self, mut extensions: Extensions) -> Result<String, CallToolResult> {
         let granted = granted(&mut extensions)?;
         if self.guard.authorize(granted, Scope::Write).is_err() {
+            return Err(denied());
+        }
+        Ok(String::new())
+    }
+
+    /// A tool with no annotation, which MCP reads as not read-only, that asks the guard for the
+    /// read grant's scope: the census refuses it.
+    #[tool(name = "planted_unmarked")]
+    async fn planted_unmarked(&self, mut extensions: Extensions) -> Result<String, CallToolResult> {
+        let granted = granted(&mut extensions)?;
+        if self.guard.authorize(granted, Scope::Core).is_err() {
             return Err(denied());
         }
         Ok(String::new())

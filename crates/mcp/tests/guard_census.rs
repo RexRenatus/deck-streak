@@ -12,9 +12,10 @@
 //! once, by the guard's parser. The refusal is proved on a planted file in `tests/fixtures/`. The
 //! census follows `crates/identity/tests/boundary.rs`.
 //!
-//! SPEC-369 A6 and A9: every tool annotated `read_only_hint = false` authorizes `Scope::Write`
-//! first (R7), and no source of the crate names a rights use case (R9). Each refuses its plant by
-//! name before it reads the crate, and prints what it examined.
+//! SPEC-369 A6 and A9: every tool whose annotations do not say `read_only_hint = true`, an
+//! unannotated one included, authorizes `Scope::Write` first (R7), and no source of the crate
+//! names a rights use case (R9). Each refuses its plants by name before it reads the crate, and
+//! prints what it examined.
 
 // An integration test is test code: its helpers panic on a failed fixture, and the examined count
 // is printed on purpose.
@@ -314,8 +315,8 @@ fn the_crate_root_forbids_unsafe_code() {
     assert_eq!(forbids, 1, "the crate root must forbid unsafe code once");
 }
 
-/// One tool a census found: its function's name, whether its attribute says
-/// `read_only_hint = false`, and the scope its first `authorize(` names, if it calls one.
+/// One tool a census found: its function's name, whether it is a write tool (its attribute does
+/// not say `read_only_hint = true`), and the scope its first `authorize(` names, if it calls one.
 #[derive(Debug)]
 struct Tool {
     name: String,
@@ -379,9 +380,11 @@ fn tools(text: &str) -> Vec<Tool> {
                 .unwrap_or_default()
                 .to_owned()
         });
+        // MCP reads a tool whose annotations do not say `readOnlyHint` true as one that may
+        // change data, so only `read_only_hint = true` makes a read tool (SPEC-369 R7).
         found.push(Tool {
             name,
-            write: attribute.contains("read_only_hint=false"),
+            write: !attribute.contains("read_only_hint=true"),
             first_scope,
         });
         at = close;
@@ -402,21 +405,22 @@ fn unguarded_writes(tools: &[Tool]) -> Vec<String> {
 fn every_write_tool_authorizes_the_write_scope() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
 
-    // The census refuses the planted write tool that asks for `core`, by its name, and passes the
-    // planted read tool and the planted write tool that asks for `write`.
+    // The census refuses, by name, the planted write tools that ask for `core`: the one annotated
+    // `read_only_hint = false` and the one with no annotation, which MCP reads as not read-only.
+    // It passes the planted read tool and the planted write tool that asks for `write`.
     let planted =
         fs::read_to_string(root.join("tests/fixtures/planted_write_under_core.rs.fixture"))
             .expect("the planted fixture");
     let planted = tools(&planted);
     assert_eq!(
         unguarded_writes(&planted),
-        vec!["planted_erase".to_owned()],
+        vec!["planted_erase".to_owned(), "planted_unmarked".to_owned()],
         "{planted:#?}"
     );
-    assert_eq!(planted.len(), 3, "{planted:#?}");
+    assert_eq!(planted.len(), 4, "{planted:#?}");
     assert_eq!(
         planted.iter().filter(|tool| tool.write).count(),
-        2,
+        3,
         "{planted:#?}"
     );
 
