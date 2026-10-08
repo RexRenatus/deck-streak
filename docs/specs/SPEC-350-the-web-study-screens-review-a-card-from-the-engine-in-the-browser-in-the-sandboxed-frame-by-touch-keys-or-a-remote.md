@@ -497,3 +497,9 @@ A28: pnpm exec vitest run web/app/src/lib/manifest.test.ts -t "the manifest meet
 A28: pnpm exec vitest run web/app/src/lib/csp.test.ts -t "the page policy admits WebAssembly compilation and nothing else new"
 A30: pnpm exec vitest run web/app/src/lib/study/mapping-store.test.ts -t "a stored mapping drives the review, and each mode keeps its default"
 ```
+
+## Amendment: A4 and A5 are decided in the core (SPEC-358)
+
+- SPEC-358 R2 moves the flag and bury rules into the shared core, and A4's and A5's tests move
+  with them, names kept: `crates/engine-core/tests/review.rs` `the_flag_toggles_red` and
+  `bury_is_the_users_bury_of_the_shown_card` (#633).
