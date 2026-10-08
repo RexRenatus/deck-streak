@@ -15,14 +15,14 @@ A7: red at 58a80184: AssertionError: Lists differ: [] != ['docs/schematics/model
 A8: red at 58a80184: AssertionError: Lists differ: [] != ['docs/schematics/model.md:23: X1: not a S[55 chars] id']
 A9: red at 58a80184: AssertionError: Lists differ: [] != ['docs/schematics/notes.md:3: trace: a con[72 chars]ace']
 A10: red at 58a80184: AssertionError: Tuples differ: (3, 'examined 0 model(s), 0 surface(s), 0 row(s), 0 citation(s)\n') != (0, 'examined 1 model(s), 1 surface(s), 6 row(s), 13 citation(s)\n')
-A1: green at <C2>
-A2: green at <C2>
-A3: green at <C2>
-A4: green at <C2>
-A5: green at <C2>
-A6: green at <C2>
-A7: green at <C2>
-A8: green at <C2>
-A9: green at <C2>
-A10: green at <C2>
+A1: green at 2ea522eb
+A2: green at 2ea522eb
+A3: green at 2ea522eb
+A4: green at 2ea522eb
+A5: green at 2ea522eb
+A6: green at 2ea522eb
+A7: green at 2ea522eb
+A8: green at 2ea522eb
+A9: green at 2ea522eb
+A10: green at 2ea522eb
 ```
