@@ -15,7 +15,15 @@ import unittest
 from pathlib import Path
 
 from _support import REPO, examined
-from test_ci_workflows import PINNED, action, entries, read_hardened, workflow_file_text
+from test_ci_workflows import (
+    PINNED,
+    action,
+    entries,
+    push,
+    read_hardened,
+    rendered,
+    workflow_file_text,
+)
 
 RELEASE = REPO / ".github" / "workflows" / "release.yml"
 CI = REPO / ".github" / "workflows" / "ci.yml"
@@ -221,7 +229,12 @@ class TheTagGuardRuns(unittest.TestCase):
                 done = subprocess.run(
                     ["bash", "-e", str(script)],
                     cwd=work,
-                    env={**env, "GITHUB_REF_NAME": tag, "GITHUB_SHA": sha},
+                    env={
+                        **env,
+                        "GITHUB_REF_NAME": tag,
+                        "GITHUB_REF": f"refs/tags/{tag}",
+                        "GITHUB_SHA": sha,
+                    },
                     capture_output=True,
                     text=True,
                 )
@@ -230,6 +243,178 @@ class TheTagGuardRuns(unittest.TestCase):
             self.assertEqual(verdicts["v1.0.0"], 0, f"an annotated tag on main: {verdicts}")
             self.assertNotEqual(verdicts["v1.1.0"], 0, f"a lightweight tag: {verdicts}")
             self.assertNotEqual(verdicts["v2.0.0"], 0, f"a tag off main: {verdicts}")
+
+
+def scratch_env():
+    """The environment a scratch guard run starts from: the inherited one with git's identity and
+    configuration pinned and every GITHUB_* name removed, so a run sees only the names its case
+    sets."""
+    env = {
+        **os.environ,
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_SYSTEM": "/dev/null",
+        "GIT_AUTHOR_NAME": "t",
+        "GIT_AUTHOR_EMAIL": "t@example.org",
+        "GIT_COMMITTER_NAME": "t",
+        "GIT_COMMITTER_EMAIL": "t@example.org",
+    }
+    for name in [name for name in env if name.startswith("GITHUB_")]:
+        del env[name]
+    return env
+
+
+def scratch_repository(tmp, env):
+    """A bare origin on `main`, and a clone of it: `v1.0.0` annotated and `v1.1.0` lightweight on
+    `main`, a later commit on `main`, and `v2.0.0` annotated on a `topic` branch off `main`. It
+    returns the clone and the commit of each tag, with the later commit as `later`."""
+    origin, work = tmp / "origin.git", tmp / "work"
+    git("init", "-q", "--bare", "-b", "main", str(origin), cwd=tmp, env=env)
+    git("clone", "-q", str(origin), str(work), cwd=tmp, env=env)
+    git("checkout", "-q", "-b", "main", cwd=work, env=env)
+    git("commit", "-q", "--allow-empty", "-m", "on main", cwd=work, env=env)
+    git("tag", "-a", "-m", "v1.0.0", "v1.0.0", cwd=work, env=env)
+    git("tag", "v1.1.0", cwd=work, env=env)
+    git("commit", "-q", "--allow-empty", "-m", "later on main", cwd=work, env=env)
+    git("push", "-q", "origin", "main", "v1.0.0", "v1.1.0", cwd=work, env=env)
+    later = git("rev-parse", "HEAD", cwd=work, env=env)
+    git("checkout", "-q", "-b", "topic", cwd=work, env=env)
+    git("commit", "-q", "--allow-empty", "-m", "off main", cwd=work, env=env)
+    git("tag", "-a", "-m", "v2.0.0", "v2.0.0", cwd=work, env=env)
+    git("push", "-q", "origin", "topic", "v2.0.0", cwd=work, env=env)
+    shas = {"later": later}
+    for tag in ("v1.0.0", "v1.1.0", "v2.0.0"):
+        shas[tag] = git("rev-parse", f"{tag}^{{commit}}", cwd=work, env=env)
+    return work, shas
+
+
+def run_guard(guard, work, env, **github):
+    """The tag guard, cut from release.yml's text, run under `bash -e` in a scratch clone with the
+    given GITHUB_* names added to the environment."""
+    script = work.parent / "guard.sh"
+    script.write_text(guard, encoding="utf-8")
+    return subprocess.run(
+        ["bash", "-e", str(script)],
+        cwd=work,
+        env={**env, **github},
+        capture_output=True,
+        text=True,
+    )
+
+
+class TheReleaseHasASecondPath(unittest.TestCase):
+    """SPEC-373 R1 to R3, R6 (ADR-384): a tag whose push started no run is released by a manual
+    dispatch at the tag's own ref, which skips nothing the push runs and joins the tag's group."""
+
+    def test_the_release_runs_on_a_tag_push_or_an_input_free_dispatch_and_nothing_skips_either(
+        self,
+    ):
+        workflow = read_release()
+        events = workflow["on"]
+        self.assertEqual(
+            list(events),
+            ["push", "workflow_dispatch"],
+            "the release runs on a tag push or a manual dispatch, and on nothing else",
+        )
+        self.assertIsNone(events["workflow_dispatch"], "the dispatch takes no input")
+        jobs = workflow["jobs"]
+        for name in examined("jobs", sorted(jobs)):
+            self.assertNotIn("if", jobs[name], f"the job {name} runs on every path")
+        steps = steps_of(workflow)
+        guard = steps[index_of(steps, "merge-base --is-ancestor")]
+        self.assertNotIn("if", guard, "the guard step runs on every path")
+
+    def test_a_push_and_a_dispatch_of_one_tag_render_one_group(self):
+        group = read_release()["concurrency"]["group"]
+        contexts = {
+            "push": push("refs/tags/v1.0.0", run_id="201"),
+            "workflow_dispatch": {
+                **push("refs/tags/v1.0.0", run_id="202"),
+                "github.event_name": "workflow_dispatch",
+            },
+        }
+        self.assertEqual(
+            {event: rendered(group, contexts[event]) for event in contexts},
+            {"push": "release-refs/tags/v1.0.0", "workflow_dispatch": "release-refs/tags/v1.0.0"},
+        )
+        declared = list(read_release()["on"])
+        for event in examined("events", contexts):
+            self.assertIn(event, declared, f"release.yml declares no {event} trigger")
+
+
+class TheSecondPathRunsTheTagGuard(unittest.TestCase):
+    """SPEC-373 R4, R5 (ADR-384): both paths run the one guard, which refuses a ref that is not
+    the tag it names, a lightweight tag and a tag off `main`."""
+
+    def test_the_guard_refuses_a_ref_that_is_not_the_tag_it_names(self):
+        steps = steps_of(read_release())
+        guard = steps[index_of(steps, "merge-base --is-ancestor")]["run"]
+        with tempfile.TemporaryDirectory() as tmp:
+            env = scratch_env()
+            work, shas = scratch_repository(Path(tmp), env)
+            cases = {
+                "a branch named as the tag": (
+                    {
+                        "GITHUB_REF": "refs/heads/v1.0.0",
+                        "GITHUB_REF_NAME": "v1.0.0",
+                        "GITHUB_SHA": shas["later"],
+                    },
+                    False,
+                ),
+                "no ref": (
+                    {"GITHUB_REF_NAME": "v1.0.0", "GITHUB_SHA": shas["v1.0.0"]},
+                    False,
+                ),
+                "the dev branch": (
+                    {
+                        "GITHUB_REF": "refs/heads/dev",
+                        "GITHUB_REF_NAME": "dev",
+                        "GITHUB_SHA": shas["later"],
+                    },
+                    False,
+                ),
+                "the tag's own ref": (
+                    {
+                        "GITHUB_REF": "refs/tags/v1.0.0",
+                        "GITHUB_REF_NAME": "v1.0.0",
+                        "GITHUB_SHA": shas["v1.0.0"],
+                    },
+                    True,
+                ),
+            }
+            for label in examined("cases", cases):
+                names, admitted = cases[label]
+                done = run_guard(guard, work, env, GITHUB_EVENT_NAME="workflow_dispatch", **names)
+                if admitted:
+                    self.assertEqual(done.returncode, 0, f"{label}: {done.stderr}")
+                else:
+                    self.assertNotEqual(done.returncode, 0, f"{label} is refused")
+                if label == "a branch named as the tag":
+                    self.assertIn("refs/heads/v1.0.0", done.stderr, f"{label} is named")
+
+    def test_both_paths_refuse_a_lightweight_tag_and_a_tag_off_main(self):
+        declared = list(read_release()["on"])
+        steps = steps_of(read_release())
+        guard = steps[index_of(steps, "merge-base --is-ancestor")]["run"]
+        with tempfile.TemporaryDirectory() as tmp:
+            env = scratch_env()
+            work, shas = scratch_repository(Path(tmp), env)
+            for event in examined("paths", ("push", "workflow_dispatch")):
+                verdicts = {}
+                for tag in ("v1.0.0", "v1.1.0", "v2.0.0"):
+                    done = run_guard(
+                        guard,
+                        work,
+                        env,
+                        GITHUB_EVENT_NAME=event,
+                        GITHUB_REF=f"refs/tags/{tag}",
+                        GITHUB_REF_NAME=tag,
+                        GITHUB_SHA=shas[tag],
+                    )
+                    verdicts[tag] = done.returncode
+                self.assertEqual(verdicts["v1.0.0"], 0, f"{event}: an annotated tag: {verdicts}")
+                self.assertNotEqual(verdicts["v1.1.0"], 0, f"{event}: a lightweight tag")
+                self.assertNotEqual(verdicts["v2.0.0"], 0, f"{event}: a tag off main")
+                self.assertIn(event, declared, f"release.yml declares no {event} trigger")
 
 
 class TheReleaseBuildsTheSyncServer(unittest.TestCase):
