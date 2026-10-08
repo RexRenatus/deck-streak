@@ -172,8 +172,8 @@
       [
         "S19022-A-RELEASE-DISPATCH-HOLDS-ONLY-DEFINED-KEYS",
         ".github/workflows/release.yml",
-        "      - 'v[0-9]+.[0-9]+.[0-9]+'\n",
-        "      - 'v[0-9]+.[0-9]+.[0-9]+'\n  workflow_dispatch:\n    Inputs:\n      tag:\n        type: string\n",
+        "  workflow_dispatch:\n",
+        "  workflow_dispatch:\n    Inputs:\n      tag:\n        type: string\n",
         "a dispatch trigger on release.yml holds only the keys GitHub's parser defines, read with case (SPEC-190 R12)",
         "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
       ],
