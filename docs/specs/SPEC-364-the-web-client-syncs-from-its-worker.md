@@ -276,8 +276,8 @@ Part b1.
 | `crates/engine-core/tests/support/sync_server.rs` (new), `crates/engine-core/tests/support/mod.rs` | the engine's own sync server on a loopback port; the stamp's oracle `stamp` (R6) |
 | `crates/engine-core/tests/one_way.rs` (new) | A4 to A11, A15 to A21; two mutation coverage tests, `a_server_copy_is_fetched_into_a_file_whose_collection_holds_no_row` and `a_copy_path_that_is_not_utf8_is_the_cores_own_refusal` (section 3) |
 | `crates/engine-core/tests/full_sync.rs` | R6: the `held` oracle reads the stamp, the not-integers test plants a schema stamp that is not an integer, and a review id that is not an integer keeps the core's own refusal asserted (section 3) |
-| `crates/engine-core/tests/table.rs`, `tests/login_guard.rs`, `tests/exempt.rs`, `tests/containment.rs` | A1, A2, A3, A12 |
-| `crates/engine-core/tests/gesture.rs`, `tests/review_pairs.rs`, `tests/parity.rs` | the existing tests that grow with the table (section 3) |
+| `crates/engine-core/tests/table.rs`, `crates/engine-core/tests/login_guard.rs`, `crates/engine-core/tests/exempt.rs`, `crates/engine-core/tests/containment.rs` | A1, A2, A3, A12 |
+| `crates/engine-core/tests/gesture.rs`, `crates/engine-core/tests/review_pairs.rs`, `crates/engine-core/tests/parity.rs` | the existing tests that grow with the table (section 3) |
 | `crates/ffi/src/engine.rs`, `crates/ffi/tests/exempt.rs` | the exempt refusal gains the case `NeedsTheChoice`, mapped and read as its own sentence (an error case, no new export); the four earlier sentences stay in one match of a private type, so their mutation row keeps its anchor |
 | `crates/web-engine/src/study.rs`, `crates/web-engine/tests/study.rs` | R1: `service::SYNC` and `SYNC_CALLS`, and A1's web-engine test (no export; `run_method` unchanged) |
 | `docs/specs/SPEC-364-the-web-client-syncs-from-its-worker.md`, `docs/decisions/ADR-375-the-web-client-syncs-from-its-worker.md`, `docs/schematics/web-sync-core.md` | this SPEC, its ADR, its schematic |
