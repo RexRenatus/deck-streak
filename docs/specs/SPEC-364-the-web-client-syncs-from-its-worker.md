@@ -248,23 +248,33 @@ its statement selects stays asserted, its message and kind byte for byte, by
 `full_sync::a_review_id_that_is_not_an_integer_is_the_cores_own_refusal`, which plants a review id
 that is not an integer.
 
+Three mutation coverage tests, each green at its own commit, hold what no criterion's test reached:
+`one_way::a_server_copy_is_fetched_into_a_file_whose_collection_holds_no_row` fetches the server's
+copy into an existing file whose collection holds no row, so a file is refused only for a row it
+holds; `one_way::a_copy_path_that_is_not_utf8_is_the_cores_own_refusal` asserts the core's refusal
+of a copy path that is not UTF-8, its kind and message byte for byte, before any network; and the
+crate's unit test `dispatch::tests::a_close_with_no_collection_open_is_the_engines_refusal` holds a
+private engine's close to the engine's own refusal when no collection is open.
+
 The model's properties are decided by the formal checker, which this repository's CI does not run;
 section 8 maps the driver's steps to them.
 
-## 4. File manifest (part b1)
+## 4. File manifest
+
+Part b1.
 
 | path | change |
 |---|---|
 | `crates/engine-core/src/table.rs` | R1: (1,3) web, the (1,5) row, the `OneWaySync` exempt row, `TargetKind::Collection` |
 | `crates/engine-core/src/login_guard.rs` | R2: the rule applied to a `SyncAuth`; the media refusal |
-| `crates/engine-core/src/dispatch.rs` | R2 on (1,5) in `run`; R3 `run_one_way`; the dispatcher keeps its start message and its open collection's path; R6: `MODIFIED_SQL` reads the upload re-check stamp |
+| `crates/engine-core/src/dispatch.rs` | R2 on (1,5) in `run`; R3 `run_one_way`; the dispatcher keeps its start message and its open collection's path; R6: `MODIFIED_SQL` reads the upload re-check stamp; a unit test, `a_close_with_no_collection_open_is_the_engines_refusal`, holds a private engine's close to the engine's own refusal (section 3) |
 | `crates/engine-core/src/gesture.rs` | R3: `Target::Collection`, `GestureRefusal::NeedsTheChoice`; `checked` refuses `OneWaySync` before it decodes |
 | `crates/engine-core/src/one_way.rs` (new) | R4 to R8: `count`, `back_up`, `recheck`, `write` |
 | `crates/engine-core/src/full_sync.rs` | one insert-only crate-private accessor, `Confirmed::direction`, on which `back_up` branches (`ADR-375` D12); no covered anchor changes |
 | `crates/engine-core/src/lib.rs` | the module |
-| `crates/engine-core/Cargo.toml` | the test support's dev-dependency for the engine's own sync server |
+| `crates/engine-core/Cargo.toml`, `Cargo.lock` | the test support's dev-dependency for the engine's own sync server, and its lock entry |
 | `crates/engine-core/tests/support/sync_server.rs` (new), `crates/engine-core/tests/support/mod.rs` | the engine's own sync server on a loopback port; the stamp's oracle `stamp` (R6) |
-| `crates/engine-core/tests/one_way.rs` (new) | A4 to A11, A15 to A21 |
+| `crates/engine-core/tests/one_way.rs` (new) | A4 to A11, A15 to A21; two mutation coverage tests, `a_server_copy_is_fetched_into_a_file_whose_collection_holds_no_row` and `a_copy_path_that_is_not_utf8_is_the_cores_own_refusal` (section 3) |
 | `crates/engine-core/tests/full_sync.rs` | R6: the `held` oracle reads the stamp, the not-integers test plants a schema stamp that is not an integer, and a review id that is not an integer keeps the core's own refusal asserted (section 3) |
 | `crates/engine-core/tests/table.rs`, `tests/login_guard.rs`, `tests/exempt.rs`, `tests/containment.rs` | A1, A2, A3, A12 |
 | `crates/engine-core/tests/gesture.rs`, `tests/review_pairs.rs`, `tests/parity.rs` | the existing tests that grow with the table (section 3) |
@@ -275,6 +285,7 @@ section 8 maps the driver's steps to them.
 | `docs/decisions/ADR-356-the-engine-core-holds-the-engine-for-both-clients-behind-a-per-transport-table.md` | R12's amendment of D6 |
 | `docs/specs/SPEC-357-the-full-sync-choice-and-the-web-sync-screens.md` | section 7 names this SPEC as part b; an insert-only amendment of R7 names the upload re-check stamp (R6) |
 | `scripts/mutation-rows.d/S36400-S36499.json` (new) | section 10 |
+| `scripts/mutation-equivalent.d/deck-streak-engine-core.json` | the equivalence record of the core's own refusal's kind, `INVALID_INPUT`, the protobuf default; the login guard's record re-bound from `check` to `refused`, where part c moved the same construction |
 | `docs/red-first/SPEC-364.md` | each criterion's red |
 | `changelog.d/web-sync-core-364.md` | the delivery's fragment |
 
