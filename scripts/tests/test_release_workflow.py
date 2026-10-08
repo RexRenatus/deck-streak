@@ -7,6 +7,7 @@ sync server from the fork and the commit the engine's patch entry pins, and ship
 tarball (SPEC-337 A1, A2), once a job before it has audited that server's dependency graph (SPEC-340
 A9)."""
 
+import hashlib
 import os
 import re
 import subprocess
@@ -36,6 +37,24 @@ UPSTREAM = "https://github.com/ankitects/anki.git"
 AUDIT_JOB = "audit-sync-server"
 AUDIT_SCRIPT = "bash scripts/audit-sync-server.sh"
 INSTALL = "taiki-e/install-action"
+# The web engine's module and its bindings, as CI's `web-engine` job builds, gates and stages them
+# (SPEC-350 R17, A29; ADR-361 D17 to D22), the steps that carry them, and the bytes a planted tree
+# holds in their place.
+ENGINE_FILES = {
+    "deck_streak_web_engine.js": b"export default function init() {}\n",
+    "deck_streak_web_engine_bg.wasm": b"\x00asm\x01\x00\x00\x00",
+}
+ENGINE_BUILD = "bash scripts/web-engine-build.sh"
+SIZE_GATE = "python3 scripts/web-engine-size.py"
+STAGE = "bash scripts/web-engine-stage.sh"
+ENGINE_STEPS = (
+    "rustup target add wasm32-unknown-unknown",
+    "/wasm-bindgen/releases/download/",
+    "sudo apt-get install",
+    ENGINE_BUILD,
+    SIZE_GATE,
+    STAGE,
+)
 
 
 def tag_glob(pattern):
@@ -533,6 +552,139 @@ class TheReleaseBuildsTheSyncServer(unittest.TestCase):
         audited = index_of(steps, AUDIT_SCRIPT)
         self.assertLess(steps.index(checkout[0]), audited)
         self.assertLess(steps.index(install[0]), audited)
+
+
+class TheReleaseCarriesTheWebEngine(unittest.TestCase):
+    """SPEC-350 R17 (A29; ADR-361 D17 to D22): the release builds the web engine's module and its
+    bindings with the steps CI's `web-engine` job runs, holds them to the size budget before the
+    draft exists, and stages them in the app's build, so the tarball carries them at `web/engine/`,
+    where the app's Worker loads `/engine/`."""
+
+    def test_the_release_carries_the_module_at_web_engine(self):
+        steps = steps_of(read_release())
+        built = index_of(steps, "pnpm --dir web/app build")
+        create = index_of(steps, "gh release create")
+        between = steps[built + 1 : create]
+        for step in between:
+            self.assertIn("run", step, "a step between the build and the draft runs a command")
+        plans = {
+            "the release": [str(step["run"]) for step in between],
+            "without the stage": [str(step["run"]) for step in between if STAGE not in step["run"]],
+        }
+        tarball = '"$RUNNER_TEMP/release/deck-streak-$GITHUB_REF_NAME.tar.gz"'
+        listing = f"tar -tzf {tarball}\necho ---\ntar -xOzf {tarball} ./MANIFEST.sha256\n"
+        ran = []
+        with tempfile.TemporaryDirectory() as tmp:
+            for number, (plan, runs) in enumerate(examined("plans", plans.items())):
+                base = Path(tmp) / f"plan-{number}"
+                root = base / "root"
+                planted = {
+                    **{f"target/web-engine/{name}": data for name, data in ENGINE_FILES.items()},
+                    "target/release/deckstreakd": b"daemon\n",
+                    "runner/sync-server/bin/anki-sync-server": b"sync\n",
+                    "web/app/build/index.html": b"<html></html>\n",
+                    "deploy/README": b"deploy\n",
+                    "agent/README": b"agent\n",
+                }
+                for name, data in planted.items():
+                    path = root / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(data)
+                (root / "scripts").symlink_to(REPO / "scripts")
+                script = base / "plan.sh"
+                script.write_text("\n".join(runs) + "\n" + listing, encoding="utf-8")
+                env_file = base / "github-env"
+                summary = base / "github-summary"
+                env_file.write_text("", encoding="utf-8")
+                summary.write_text("", encoding="utf-8")
+                env = {k: v for k, v in os.environ.items() if not k.startswith("GITHUB_")}
+                env.update(
+                    GITHUB_REF_NAME="v0.0.1",
+                    RUNNER_TEMP=str(root / "runner"),
+                    GITHUB_ENV=str(env_file),
+                    GITHUB_STEP_SUMMARY=str(summary),
+                )
+                done = subprocess.run(
+                    ["bash", "-e", str(script)],
+                    cwd=root,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(done.returncode, 0, done.stderr)
+                names, _, manifest = done.stdout.partition("\n---\n")
+                names = names.splitlines()
+                manifest = manifest.splitlines()
+                engine = sorted(
+                    name
+                    for name in names
+                    if name.startswith("./web/engine/") and not name.endswith("/")
+                )
+                if plan == "the release":
+                    self.assertEqual(
+                        engine,
+                        [f"./web/engine/{name}" for name in sorted(ENGINE_FILES)],
+                        f"{plan}: the tarball carries the module and its bindings at web/engine/",
+                    )
+                    self.assertEqual(
+                        sorted(line for line in manifest if "./web/engine/" in line),
+                        sorted(
+                            f"{hashlib.sha256(data).hexdigest()}  ./web/engine/{name}"
+                            for name, data in ENGINE_FILES.items()
+                        ),
+                        f"{plan}: the manifest holds each engine file's digest",
+                    )
+                    self.assertIn("./web/index.html", names, f"{plan}: the app is staged")
+                else:
+                    self.assertIn("./web/index.html", names, f"{plan}: the app is staged")
+                    self.assertEqual(engine, [], f"{plan}: no engine file without the stage")
+                ran.append(plan)
+        self.assertEqual(len(ran), len(plans), "every plan ran")
+
+    def test_the_release_builds_and_gates_the_module_as_ci_does(self):
+        release = steps_of(read_release())
+        ci = read_hardened(CI)["jobs"]["web-engine"]
+        indexes = []
+        for needle in examined("engine steps", ENGINE_STEPS):
+            held = [at for at, step in enumerate(release) if needle in step.get("run", "")]
+            self.assertEqual(len(held), 1, f"{len(held)} release steps run `{needle}`")
+            there = [step for step in ci["steps"] if needle in step.get("run", "")]
+            self.assertEqual(len(there), 1, f"{len(there)} CI steps run `{needle}`")
+            self.assertEqual(release[held[0]], there[0], f"the release step for `{needle}`")
+            indexes.append(held[0])
+        self.assertEqual(indexes, sorted(set(indexes)), "the release runs them in CI's order")
+        self.assertEqual(
+            read_release()["jobs"]["release"]["env"]["CARGO_INCREMENTAL"],
+            ci["env"]["CARGO_INCREMENTAL"],
+            "the release builds as CI does",
+        )
+        text = workflow_file_text(RELEASE)
+        self.assertNotIn("RUSTFLAGS", text)
+        self.assertNotIn(".cargo/config", text)
+
+    def test_an_over_budget_module_stops_the_release_before_the_draft(self):
+        workflow = read_release()
+        steps = steps_of(workflow)
+        gate = index_of(steps, SIZE_GATE)
+        order = [
+            index_of(steps, ENGINE_BUILD),
+            gate,
+            index_of(steps, "pnpm --dir web/app build"),
+            index_of(steps, STAGE),
+            index_of(steps, "MANIFEST.sha256"),
+            index_of(steps, "gh release create"),
+        ]
+        self.assertEqual(order, sorted(set(order)), "build, gate, app, stage, tarball, draft")
+        self.assertEqual(set(steps[gate]), {"name", "run"})
+        run = str(steps[gate]["run"])
+        self.assertTrue(run.startswith(SIZE_GATE), "the gate step runs the size script")
+        self.assertEqual(len(run.strip().splitlines()), 1, "the gate is one line")
+        for mark in "|;&":
+            self.assertNotIn(mark, run, "the gate's exit is the step's exit")
+        for step in examined("steps from the gate", steps[gate:]):
+            self.assertNotIn("if", step, "no step from the gate on runs after a failure")
+            self.assertNotIn("continue-on-error", step)
+        self.assertNotIn("continue-on-error", workflow["jobs"]["release"])
 
 
 if __name__ == "__main__":

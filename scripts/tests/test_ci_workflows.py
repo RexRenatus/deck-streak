@@ -6198,6 +6198,15 @@ NOT_WORKFLOW_READS = {
         ),
     ),
     **allowed(
+        "runs the release's steps from the app's build to the draft, cut from release.yml's loader-read text, and a tar listing of the tarball they write, under bash in planted trees; its output is the steps' own lines and the listing",
+        (
+            "test_release_workflow",
+            "TheReleaseCarriesTheWebEngine.test_the_release_carries_the_module_at_web_engine",
+            "subprocess.run(['bash', '-e', str(script)], cwd=root, env=env, capture_output=True, text=True)",
+            1,
+        ),
+    ),
+    **allowed(
         "runs git in a scratch repository with the arguments it is given; its output is a sha or nothing",
         (
             "test_release_workflow",
