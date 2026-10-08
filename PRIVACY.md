@@ -117,4 +117,13 @@ You can also export and erase on the host that runs DeckStreak:
 - **The cron-fire ledger** records which scheduled jobs ran, and none of your data. It is kept
   after an erase and pruned after 90 days, so an erase can never make a notification send twice.
 
-DeckStreak never uses your data to train a model.
+## Models and your data
+
+DeckStreak does not train, fine-tune or fit a model on your data, and does not build a dataset from
+it. The scheduling parameters in your collection come from your Anki app: DeckStreak reads them, and
+the memory state Anki stores for each card, to schedule the cards you study, and does not fit them
+to your reviews. An AI duty runs only when the host's AI route is configured, which it is not by
+default. Each run sends the cards that duty covers and a summary of your leeches, lapses and graded
+practice, not your journal, as the context of that one run, and DeckStreak's database keeps neither
+the prompt nor the reply. A reply that passes its checks is written to your own vault. What the
+model's provider keeps is set by that provider's terms.
