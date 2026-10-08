@@ -35,12 +35,23 @@ pub fn law_token() -> String {
     format!("served-law-{}", "l".repeat(30))
 }
 
-/// A guard over the core and law-track credentials, its limiter on a clock that never moves.
+/// The write credential's token, built from parts.
+pub fn write_token() -> String {
+    format!("served-write-{}", "w".repeat(30))
+}
+
+/// The roster golden's tools the server never serves, which no grant reaches (SPEC-369 R8;
+/// ADR-380): the portable roster is the golden less these.
+pub const WITHDRAWN: [&str; 0] = [];
+
+/// A guard over the core, law-track and write credentials, its limiter on a clock that never
+/// moves.
 pub fn guard() -> Arc<Guard> {
     let directory = tempfile::tempdir().expect("a temporary directory");
     for (id, value) in [
         ("mcp-core-token", core_token()),
         ("mcp-law-track-token", law_token()),
+        ("mcp-write-token", write_token()),
     ] {
         fs::write(directory.path().join(id), format!("{value}\n")).expect("a credential");
     }

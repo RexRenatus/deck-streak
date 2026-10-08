@@ -6,10 +6,15 @@
 //! blanked, splits the code into clauses at `;`, `{` and `}`, and refuses each clause that names a
 //! token or a digest (an identifier holding `token` or `digest`, in any case) and compares: `==`,
 //! `!=`, `.eq(`, `.ne(`, `.cmp(`, `.partial_cmp(`, `starts_with(` or `ends_with(`. It asserts the
-//! positive artifacts too: `ct_eq(` is called exactly twice, once in the guard's match, inside a
-//! fold with no early exit, and once in the grants' sharing rule; and the scheme is compared
-//! exactly once, by the guard's parser. The refusal is proved on a planted file in
-//! `tests/fixtures/`. The census follows `crates/identity/tests/boundary.rs`.
+//! positive artifacts too: `ct_eq(` is called exactly three times, once in the guard's match,
+//! inside a fold with no early exit, and twice in the grants' sharing rules (the law-track
+//! credential's, and the write credential's, SPEC-369 R4); and the scheme is compared exactly
+//! once, by the guard's parser. The refusal is proved on a planted file in `tests/fixtures/`. The
+//! census follows `crates/identity/tests/boundary.rs`.
+//!
+//! SPEC-369 A6 and A9: every tool annotated `read_only_hint = false` authorizes `Scope::Write`
+//! first (R7), and no source of the crate names a rights use case (R9). Each refuses its plant by
+//! name before it reads the crate, and prints what it examined.
 
 // An integration test is test code: its helpers panic on a failed fixture, and the examined count
 // is printed on purpose.
@@ -256,10 +261,14 @@ fn the_guard_compares_only_digests_in_constant_time() {
             .collect()
     };
 
-    // Two constant-time comparisons: the grants' sharing rule and the guard's match.
+    // Three constant-time comparisons: the grants' two sharing rules and the guard's match.
     assert_eq!(
         calling("ct_eq("),
-        vec!["grants.rs".to_owned(), "guard.rs".to_owned()]
+        vec![
+            "grants.rs".to_owned(),
+            "grants.rs".to_owned(),
+            "guard.rs".to_owned()
+        ]
     );
 
     // The match folds over every grant, with no early exit in its clause.
@@ -303,4 +312,169 @@ fn the_crate_root_forbids_unsafe_code() {
         .filter(|line| line.trim() == "#![forbid(unsafe_code)]")
         .count();
     assert_eq!(forbids, 1, "the crate root must forbid unsafe code once");
+}
+
+/// One tool a census found: its function's name, whether its attribute says
+/// `read_only_hint = false`, and the scope its first `authorize(` names, if it calls one.
+#[derive(Debug)]
+struct Tool {
+    name: String,
+    write: bool,
+    first_scope: Option<String>,
+}
+
+/// Where `pattern` next starts in `code`, at or after `from`.
+fn find(code: &[char], pattern: &str, from: usize) -> Option<usize> {
+    let pattern: Vec<char> = pattern.chars().collect();
+    (from..code.len()).find(|&at| code[at..].starts_with(&pattern))
+}
+
+/// The index just past the bracket that closes the one at `open`.
+fn closing(code: &[char], open: usize, (left, right): (char, char)) -> usize {
+    let mut depth = 0_usize;
+    for (at, c) in code.iter().enumerate().skip(open) {
+        if *c == left {
+            depth += 1;
+        } else if *c == right {
+            depth = depth.saturating_sub(1);
+            if depth == 0 {
+                return at + 1;
+            }
+        }
+    }
+    code.len()
+}
+
+/// Every tool of `text`: a function under a `#[tool(..)]` or `#[tool]` attribute, with comments
+/// and literals aside, so a tool that only a comment or a string spells is not one.
+fn tools(text: &str) -> Vec<Tool> {
+    let code: Vec<char> = code_of(text).chars().collect();
+    let mut found = Vec::new();
+    let mut at = 0;
+    while let Some(start) = find(&code, "#[tool", at) {
+        // `#[tool_router]` and `#[tool_handler]` are not tools.
+        if !matches!(code.get(start + 6), Some('(' | ']')) {
+            at = start + 6;
+            continue;
+        }
+        let end = closing(&code, start + 1, ('[', ']'));
+        let attribute: String = code[start..end]
+            .iter()
+            .filter(|c| !c.is_whitespace())
+            .collect();
+        let named = find(&code, "fn ", end).expect("a tool's function") + 3;
+        let name: String = code[named..]
+            .iter()
+            .take_while(|c| c.is_alphanumeric() || **c == '_')
+            .collect();
+        let open = find(&code, "{", named).expect("a tool's body");
+        let close = closing(&code, open, ('{', '}'));
+        let first_scope = find(&code[..close], "authorize(", open).map(|call| {
+            let arguments: String = code[call..closing(&code, call + 9, ('(', ')'))]
+                .iter()
+                .collect();
+            arguments
+                .split(|c: char| !(c.is_alphanumeric() || c == '_' || c == ':'))
+                .find(|word| word.starts_with("Scope::"))
+                .unwrap_or_default()
+                .to_owned()
+        });
+        found.push(Tool {
+            name,
+            write: attribute.contains("read_only_hint=false"),
+            first_scope,
+        });
+        at = close;
+    }
+    found
+}
+
+/// The names of the write tools in `tools` whose first scope check is not `Scope::Write`.
+fn unguarded_writes(tools: &[Tool]) -> Vec<String> {
+    tools
+        .iter()
+        .filter(|tool| tool.write && tool.first_scope.as_deref() != Some("Scope::Write"))
+        .map(|tool| tool.name.clone())
+        .collect()
+}
+
+#[test]
+fn every_write_tool_authorizes_the_write_scope() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+
+    // The census refuses the planted write tool that asks for `core`, by its name, and passes the
+    // planted read tool and the planted write tool that asks for `write`.
+    let planted =
+        fs::read_to_string(root.join("tests/fixtures/planted_write_under_core.rs.fixture"))
+            .expect("the planted fixture");
+    let planted = tools(&planted);
+    assert_eq!(
+        unguarded_writes(&planted),
+        vec!["planted_erase".to_owned()],
+        "{planted:#?}"
+    );
+    assert_eq!(planted.len(), 3, "{planted:#?}");
+    assert_eq!(
+        planted.iter().filter(|tool| tool.write).count(),
+        2,
+        "{planted:#?}"
+    );
+
+    // Every tool the crate serves.
+    let served: Vec<Tool> = examined("source file(s)", rust_files(&root.join("src")))
+        .iter()
+        .flat_map(|path| tools(&fs::read_to_string(path).expect("a readable source")))
+        .collect();
+    let served = examined("tool(s)", served);
+    println!(
+        "examined {} write tool(s)",
+        served.iter().filter(|tool| tool.write).count()
+    );
+    assert_eq!(
+        unguarded_writes(&served),
+        Vec::<String>::new(),
+        "{served:#?}"
+    );
+}
+
+/// The rights use cases the server never reaches (SPEC-369 R9): export and erase stay on the bot
+/// and the host.
+const RIGHTS_USE_CASES: [&str; 3] = ["data_rights_registry", "export_all", "erase_all"];
+
+/// Each rights use case `text` names, in [`RIGHTS_USE_CASES`]'s order. The raw text is read, so a
+/// comment or a string that names one counts as well.
+fn rights_named(text: &str) -> Vec<&'static str> {
+    RIGHTS_USE_CASES
+        .into_iter()
+        .filter(|name| text.contains(name))
+        .collect()
+}
+
+#[test]
+fn the_server_reaches_no_rights_use_case() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+
+    // The census refuses a planted line by the names it holds, and passes a line that holds none.
+    let planted = "    let answer = data_rights_registry::erase_all(learner)?;\n    Ok(answer)\n";
+    assert_eq!(
+        rights_named(planted),
+        vec!["data_rights_registry", "erase_all"]
+    );
+    assert_eq!(rights_named("    Ok(answer)\n"), Vec::<&str>::new());
+
+    // No source of the crate names one.
+    let findings: Vec<String> = examined("source file(s)", rust_files(&root.join("src")))
+        .iter()
+        .flat_map(|path| {
+            let text = fs::read_to_string(path).expect("a readable source");
+            let file = path
+                .file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            rights_named(&text)
+                .into_iter()
+                .map(move |name| format!("{file}: {name}"))
+        })
+        .collect();
+    assert_eq!(findings, Vec::<String>::new());
 }

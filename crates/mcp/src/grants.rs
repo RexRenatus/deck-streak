@@ -16,11 +16,13 @@ pub enum Scope {
     Core,
     /// The law track's tools.
     LawTrack,
+    /// The tools that change data: the write grant's alone (SPEC-369 R1, R6, R7).
+    Write,
 }
 
 impl Scope {
     /// Every scope, in the order [`Scopes::names`] lists them.
-    pub const ALL: [Self; 2] = [Self::Core, Self::LawTrack];
+    pub const ALL: [Self; 3] = [Self::Core, Self::LawTrack, Self::Write];
 
     /// The scope's name, the predecessor's spelling (`mcp_auth.py:SCOPE_LAW_TRACK`).
     #[must_use]
@@ -28,6 +30,7 @@ impl Scope {
         match self {
             Self::Core => "core",
             Self::LawTrack => "law_track",
+            Self::Write => "write",
         }
     }
 
@@ -36,6 +39,7 @@ impl Scope {
         match self {
             Self::Core => 1,
             Self::LawTrack => 2,
+            Self::Write => 4,
         }
     }
 }
