@@ -53,6 +53,11 @@ flowchart TD
   changed -->|"error code not-undoable"| refused
 ```
 
+While the dialog asks, the focus is on "Keep it", and the page's key reader leaves a key aimed at a
+button to that button, so key `u` does not confirm: the keyboard confirms through the dialog's "Undo
+answer" button, and remote button 4 confirms from the answer side; on the question side the remote's
+reader resolves no key but show answer, so there the bar's "Undo answer" button asks for the offer.
+
 ## 3. The check at the write, in the core
 
 ```mermaid

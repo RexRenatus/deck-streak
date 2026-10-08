@@ -30,7 +30,7 @@ function view(id: number, extra: Partial<CardView> = {}): CardView {
     answer: `<p>answer ${id}</p>`,
     css: '.card { color: navy; }',
     labels: ['<1m', '<6m', '<10m', '4d'],
-    undo: '',
+    undo: null,
     ...extra
   };
 }
@@ -313,12 +313,13 @@ describe('the review screen', () => {
   });
 
   it('undo, bury and flag act on the shown card', async () => {
-    const client = new FakeClient([head(view(1)), head(view(2, { undo: 'Undo Bury' })), head(view(1))]);
+    const client = new FakeClient([head(view(1)), head(view(2, { undo: 'answer' })), head(view(1))]);
+    client.offered = { offer: { card: 1n, step: 7, text: 'question 1', grade: 'good', returns: 'new' } };
     render(ReviewScreen, { client: async () => client });
     await settle();
 
     // nothing to undo: undo is disabled; the flag is off
-    expect([button('Undo').disabled, button('Flag').getAttribute('aria-pressed')]).toEqual([true, 'false']);
+    expect([button('Undo answer').disabled, button('Flag').getAttribute('aria-pressed')]).toEqual([true, 'false']);
 
     // the flag acts on the shown card on the question side, which stays, and shows it pressed
     await fireEvent.click(button('Flag'));
@@ -329,18 +330,21 @@ describe('the review screen', () => {
       "The card's question"
     ]);
 
-    // bury moves on, and the engine names an undoable action, so undo is enabled and returns the card
+    // bury moves on, and the engine says the review's own last answer can be undone, so undo is
+    // enabled; it asks, and its confirmation returns the card
     await fireEvent.click(button('Bury'));
     await settle();
-    expect([client.calls.slice(2), button('Undo').disabled, button('Flag').getAttribute('aria-pressed')]).toEqual([
+    expect([client.calls.slice(2), button('Undo answer').disabled, button('Flag').getAttribute('aria-pressed')]).toEqual([
       ['bury 1', 'card'],
       false,
       'false'
     ]);
-    await fireEvent.click(button('Undo'));
+    await fireEvent.click(button('Undo answer'));
+    await settle();
+    await fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Undo answer' }));
     await settle();
     expect([client.calls.slice(4), body().text, document.activeElement]).toEqual([
-      ['undo', 'card'],
+      ['undo-offer', 'undo 1 7', 'card'],
       'question 1',
       review()
     ]);
@@ -355,6 +359,8 @@ describe('the review screen', () => {
     };
     render(ReviewScreen, { client: async () => client });
     await settle();
+    // a key reaches the review's undo on the answer side, where #663's reader resolves it
+    await fireEvent.click(button('Show answer'));
     await fireEvent.keyDown(window, { key: 'u' });
     await settle();
     const dialog = screen.getByRole('alertdialog');

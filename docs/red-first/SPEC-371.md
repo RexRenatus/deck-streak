@@ -141,3 +141,39 @@ A28: red at f2076d70: code bad-request, message "undo takes no card", where undo
 - **`exempt.rs`'s Undo arm names its target "its target".** Each per-write synthetic collection
   numbers its own cards, and the fixture holds no answer, so the Undo request's record names no
   row and is refused before the engine.
+- **The page's commit, the one after 9f149817, greens A20 to A28.** It carries the review's
+  machine, the Worker protocol, the dialog and the fifteen messages in every locale; each of A20
+  to A28 is measured green at that commit, and the commit after it writes their `green at` lines.
+  A28's green shows both codes by name, `undo-synced` and `not-undoable`, each from its own
+  request.
+- **A27's test changed after its red, adding a step and no assertion.** It reveals the answer
+  before its first `u`, because the remote's reader (`resolve`) turns no key but show answer into
+  an action on the question side. Its red at f2076d70, no `alertdialog` because no confirmation
+  state existed, does not depend on the side.
+- **The keyboard and the dialog.** While the dialog asks, the focus is on "Keep it", and the key
+  reader leaves a key aimed at a button to that button, so key `u` does not confirm: the keyboard
+  confirms through the dialog's "Undo answer" button, and remote button 4 confirms from the answer
+  side; on the question side the bar's "Undo answer" button asks for the offer.
+- **Tests of the old undo, changed to the offer and its confirmation, each still asserting what it
+  covered.** `review.test.ts` "the review shows, reveals, rates and moves on" undoes through the
+  offer and the confirmation, and "the table has these cells and no others" names the new cells,
+  the question's and the answer's `undo` now asking for the offer; `review-screen.test.ts` "undo,
+  bury and flag act on the shown card" presses "Undo answer" and confirms in the dialog;
+  `session.test.ts`'s undo requests carry `card` and `step`, and "the session opens, answers and
+  undoes through the engine" asks for the offer first; `client.test.ts` sends `undo(card, step)`
+  and the offer; `protocol.test.ts` lists `undo-offer` after `undo` and parses `undo`'s card and
+  step; and `tests-engine/engine.spec.ts` undoes through the offer, its titles kept.
+- **Files outside the manifest's first draft, each changed because the new undo shape broke it,
+  each now a manifest row.**
+  - `web/app/src/lib/study/refusal.ts`: `STATUS_KEYS` names the two new statuses' messages.
+  - `web/app/src/lib/study/refusal.test.ts`: its status table gains `undo-synced` and
+    `not-undoable`.
+  - `web/app/src/lib/engine/credential.test.ts`: a bare `{ op: 'undo' }` is now refused as
+    `undo's card is malformed`, so its study list carries `card` and `step` and asks for the offer.
+  - `web/app/src/lib/engine/credential-stand-in.test.support.ts`: its study module answers
+    `undo_offer`.
+  - `web/app/src/routes/study.test.ts`: its card's `undo` reads `null`, the new type.
+  - `web/app/tests-study/study.spec.ts`: "undo returns the rated card" presses "Undo answer",
+    confirms in the dialog and still reaches the rated card, title kept.
+  - `web/app/src/lib/study/audio.test.ts` and `web/app/src/lib/study/voice.test.ts`: each client
+    answers `undoOffer`, and each card's `undo` reads `null`, as the type check requires.

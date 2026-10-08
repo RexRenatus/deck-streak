@@ -21,7 +21,7 @@ function view(id: number, extra: Partial<CardView> = {}): CardView {
     answer: `<p>answer ${id}</p>`,
     css: '.card { color: navy; }',
     labels: ['<1m', '<6m', '<10m', '4d'],
-    undo: '',
+    undo: null,
     ...extra
   };
 }
@@ -114,7 +114,7 @@ describe('the review', () => {
   it('the review shows, reveals, rates and moves on', async () => {
     const client = new FakeClient([
       head(view(1)),
-      head(view(2, { undo: 'Undo Answer Card' })),
+      head(view(2, { undo: 'answer' })),
       head(view(1, { ordinal: 1 })),
       head(null)
     ]);
@@ -149,7 +149,7 @@ describe('the review', () => {
     expect(client.calls).toEqual(['card', 'rate 1 3 2500', 'card']);
     expect([review.phase, review.side, review.view?.id]).toEqual(['question', 'question', 2n]);
 
-    // the engine names an undoable action: undo shows; the flag acts on the shown card and keeps its side
+    // the review's own last answer can be undone: undo shows; the flag acts on the shown card and keeps its side
     expect(review.controls).toEqual(['show-answer', 'undo', 'bury', 'flag']);
     review.act('flag');
     expect(review.phase).toBe('busy');
@@ -160,7 +160,11 @@ describe('the review', () => {
     await review.settled();
     expect([review.phase, review.side]).toEqual(['answer', 'answer']);
 
-    // undo returns the rated card, and bury moves on from it
+    // undo asks for the offer of the rated answer, its confirmation returns the rated card, and bury
+    // moves on from it
+    review.act('undo');
+    await review.settled();
+    expect(review.phase).toBe('confirming');
     review.act('undo');
     await review.settled();
     expect([review.phase, review.view?.id, review.view?.ordinal]).toEqual(['question', 1n, 1]);
@@ -175,7 +179,8 @@ describe('the review', () => {
       'card',
       'flag 2',
       'flag 2',
-      'undo',
+      'undo-offer',
+      'undo 1 7',
       'card',
       'bury 1',
       'card'
@@ -344,17 +349,28 @@ describe('the review', () => {
       ['loading', 'empty', 'done', 'none'],
       ['loading', 'refusal', 'refused', 'none'],
       ['question', 'show-answer', 'answer', 'none'],
-      ['question', 'undo', 'busy', 'undo'],
+      ['question', 'undo', 'busy', 'offer'],
       ['question', 'bury', 'busy', 'bury'],
       ['question', 'flag', 'busy', 'flag'],
       ['answer', 'again', 'busy', 'rate'],
       ['answer', 'good', 'busy', 'rate'],
-      ['answer', 'undo', 'busy', 'undo'],
+      ['answer', 'undo', 'busy', 'offer'],
       ['answer', 'bury', 'busy', 'bury'],
       ['answer', 'flag', 'busy', 'flag'],
       ['busy', 'settled', 'loading', 'card'],
       ['busy', 'not-shown', 'loading', 'card'],
       ['busy', 'refusal', 'refused', 'none'],
+      ['busy', 'offered', 'confirming', 'none'],
+      ['busy', 'not-offered', 'question', 'none'],
+      ['busy', 'undo-refused', 'loading', 'card'],
+      ['confirming', 'undo', 'busy', 'undo'],
+      ['confirming', 'keep', 'question', 'none'],
+      ['confirming', 'show-answer', 'question', 'none'],
+      ['confirming', 'again', 'question', 'none'],
+      ['confirming', 'good', 'question', 'none'],
+      ['confirming', 'bury', 'question', 'none'],
+      ['confirming', 'flag', 'question', 'none'],
+      ['confirming', 'replay', 'question', 'none'],
       ['refused', 'retry', 'loading', 'card']
     ];
     for (const [phase, event, to, effect] of cells) {
@@ -373,6 +389,11 @@ describe('the review', () => {
     expect(step({ phase: 'loading', side: 'answer' }, 'view').state).toStrictEqual({ phase: 'question', side: 'question' });
     // a flag's reply returns to the side the review was on
     expect(step({ phase: 'busy', side: 'answer' }, 'flagged')).toStrictEqual({
+      state: { phase: 'answer', side: 'answer' },
+      effect: 'none'
+    });
+    // while it asks, an action that is kept moves no side: a grade on the answer stays on the answer
+    expect(step({ phase: 'confirming', side: 'answer' }, 'good')).toStrictEqual({
       state: { phase: 'answer', side: 'answer' },
       effect: 'none'
     });

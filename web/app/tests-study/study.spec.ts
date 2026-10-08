@@ -139,13 +139,17 @@ test('undo returns the rated card', async ({ playwright, browserName, baseURL })
   const { context, page } = await studying(playwright, browserName, baseURL);
   try {
     const rated = await review(page);
-    const undo = page.getByRole('button', { name: 'Undo', exact: true });
+    const undo = page.getByRole('button', { name: 'Undo answer', exact: true });
     await expect(undo).toBeDisabled();
     await reveal(page, rated);
     await page.keyboard.press('3');
     await next(page, rated);
     await expect(undo).toBeEnabled();
     await undo.click();
+    // the review asks first (SPEC-371 R10): the dialog's own Undo answer confirms
+    const dialog = page.getByRole('alertdialog');
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Undo answer', exact: true }).click();
     await expect(page.getByTitle(QUESTION, { exact: true })).toHaveAttribute('srcdoc', new RegExp(`front ${rated} `));
   } finally {
     await context.close();

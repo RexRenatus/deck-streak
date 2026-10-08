@@ -10,9 +10,12 @@
   // through the page's one audio element and its speaker (SPEC-350 R15, R16): the Replay control
   // shows while the side has replay clips, and a voice picker for each language the card speaks.
   // The input reads the remote's mapping this device stores, and the nav links to its screen
-  // (SPEC-350 R18, ADR-361 D15).
+  // (SPEC-350 R18, ADR-361 D15). SPEC-371 R10; ADR-382: while the review asks to undo its own last
+  // answer, the control bar becomes a dialog that names the card as text, the answer and the state
+  // it goes back to, with the focus on keeping it; Escape keeps it too.
   import { onMount } from 'svelte';
   import CardFrame from '$lib/card/CardFrame.svelte';
+  import type { Returns } from '$lib/engine/protocol';
   import { m } from '$lib/paraglide/messages.js';
   import { snapshotOf } from '$lib/remote/gamepad';
   import { WakeLockHolder, type Conditions } from '$lib/remote/wake-lock';
@@ -49,12 +52,25 @@
       counts: review.counts,
       status: review.status,
       controls: review.controls,
-      languages: review.languages
+      languages: review.languages,
+      offer: review.offer
     };
   }
 
   let shown = $state.raw(read());
   const face = $derived(shown.face);
+
+  /** The state an offered answer's card goes back to, by its message. */
+  const RETURNS: Record<Returns, () => string> = {
+    new: () => m.undo_returns_new(),
+    learning: () => m.undo_returns_learning(),
+    review: () => m.undo_returns_review(),
+    relearning: () => m.undo_returns_relearning(),
+    preview: () => m.undo_returns_preview()
+  };
+
+  /** "Keep it", which takes the focus while the review asks (SPEC-371 R10). */
+  let keeper = $state<HTMLButtonElement>();
 
   const input = new StudyInput(
     {
@@ -104,6 +120,25 @@
     region.focus();
   }
 
+  /** Keeps the offered answer, and gives the focus back to the review. */
+  function keep(): void {
+    review.keep();
+    region.focus();
+  }
+
+  /** A key on the page: while the review asks, Escape keeps the answer; every key else is the
+   * input's. */
+  function key(event: KeyboardEvent): void {
+    if (shown.phase === 'confirming' && event.key === 'Escape') {
+      keep();
+      return;
+    }
+    input.key(event);
+  }
+
+  // while the review asks, the focus is on keeping the answer
+  $effect(() => keeper?.focus());
+
   $effect(() => holder.set(conditions(face !== null)));
   $effect(() => () => holder.set(conditions(false)));
 
@@ -127,7 +162,7 @@
 
 <!-- a11y-exception: the pointer's down event activates nothing; it marks the focus move it starts as a pointer's, which the window's blur reads -->
 <svelte:window
-  onkeydown={(event) => input.key(event)}
+  onkeydown={key}
   onpointerdown={() => input.pointer()}
   onblur={blurred}
   ongamepadconnected={connect}
@@ -159,51 +194,98 @@
           classes={`card card${face.view.ordinal + 1}${telegram.colorScheme === 'dark' ? ' nightMode night_mode' : ''}`}
         />
       </div>
-      {#if shown.controls.includes('show-answer')}
-        <button
-          type="button"
-          class="min-h-11 rounded-md bg-foreground px-4 font-medium text-background transition-colors duration-150"
-          onclick={() => input.click('show-answer')}
+      {#if shown.phase === 'confirming' && shown.offer !== null}
+        {@const offer = shown.offer}
+        <div
+          role="alertdialog"
+          aria-labelledby="undo-title"
+          aria-describedby="undo-unsynced"
+          class="flex flex-col gap-3 rounded-md border p-4"
         >
-          {m.study_show_answer()}
-        </button>
+          <h2 id="undo-title" class="text-lg font-semibold">{m.undo_title()}</h2>
+          <dl class="flex flex-col gap-1">
+            <div>
+              <dt class="inline font-medium">{m.undo_card()}</dt>{' '}<dd class="inline">
+                {offer.text === '' ? m.undo_no_text() : offer.text}
+              </dd>
+            </div>
+            <div>
+              <dt class="inline font-medium">{m.undo_answer()}</dt>{' '}<dd class="inline">
+                {offer.grade === 'again' ? m.study_again() : m.study_good()}
+              </dd>
+            </div>
+            <div>
+              <dt class="inline font-medium">{m.undo_returns()}</dt>{' '}<dd class="inline">
+                {RETURNS[offer.returns]()}
+              </dd>
+            </div>
+          </dl>
+          <p id="undo-unsynced">{m.undo_unsynced()}</p>
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              class="min-h-11 rounded-md border px-4 transition-colors duration-150"
+              onclick={() => input.click('undo')}
+            >
+              {m.study_undo_answer()}
+            </button>
+            <button
+              bind:this={keeper}
+              type="button"
+              class="min-h-11 rounded-md bg-foreground px-4 font-medium text-background transition-colors duration-150"
+              onclick={keep}
+            >
+              {m.undo_keep()}
+            </button>
+          </div>
+        </div>
       {:else}
-        <AnswerButtons labels={face.view.labels} onanswer={(grade) => input.click(grade)} />
-      {/if}
-      <div class="flex flex-wrap gap-2">
-        <button
-          type="button"
-          class="min-h-11 min-w-11 rounded-md border px-3 transition-colors duration-150 disabled:opacity-60"
-          disabled={!shown.controls.includes('undo')}
-          onclick={() => input.click('undo')}
-        >
-          {m.study_undo()}
-        </button>
-        {#if shown.controls.includes('replay')}
+        {#if shown.controls.includes('show-answer')}
+          <button
+            type="button"
+            class="min-h-11 rounded-md bg-foreground px-4 font-medium text-background transition-colors duration-150"
+            onclick={() => input.click('show-answer')}
+          >
+            {m.study_show_answer()}
+          </button>
+        {:else}
+          <AnswerButtons labels={face.view.labels} onanswer={(grade) => input.click(grade)} />
+        {/if}
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="min-h-11 min-w-11 rounded-md border px-3 transition-colors duration-150 disabled:opacity-60"
+            disabled={!shown.controls.includes('undo')}
+            onclick={() => input.click('undo')}
+          >
+            {m.study_undo_answer()}
+          </button>
+          {#if shown.controls.includes('replay')}
+            <button
+              type="button"
+              class="min-h-11 min-w-11 rounded-md border px-3 transition-colors duration-150"
+              onclick={() => input.click('replay')}
+            >
+              {m.study_replay()}
+            </button>
+          {/if}
           <button
             type="button"
             class="min-h-11 min-w-11 rounded-md border px-3 transition-colors duration-150"
-            onclick={() => input.click('replay')}
+            onclick={() => input.click('bury')}
           >
-            {m.study_replay()}
+            {m.study_bury()}
           </button>
-        {/if}
-        <button
-          type="button"
-          class="min-h-11 min-w-11 rounded-md border px-3 transition-colors duration-150"
-          onclick={() => input.click('bury')}
-        >
-          {m.study_bury()}
-        </button>
-        <button
-          type="button"
-          class="min-h-11 min-w-11 rounded-md border px-3 transition-colors duration-150 aria-pressed:border-foreground aria-pressed:bg-card aria-pressed:font-semibold"
-          aria-pressed={face.view.flag === 1}
-          onclick={() => input.click('flag')}
-        >
-          {m.study_flag()}
-        </button>
-      </div>
+          <button
+            type="button"
+            class="min-h-11 min-w-11 rounded-md border px-3 transition-colors duration-150 aria-pressed:border-foreground aria-pressed:bg-card aria-pressed:font-semibold"
+            aria-pressed={face.view.flag === 1}
+            onclick={() => input.click('flag')}
+          >
+            {m.study_flag()}
+          </button>
+        </div>
+      {/if}
     {/if}
     {#if shown.phase === 'refused'}
       <button

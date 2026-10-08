@@ -371,6 +371,14 @@ SPEC and ADR-382 record the change):
 | `web/app/messages/zh-Hans.json` | miniapp | 15 keys (R11) |
 | `web/app/messages/zh-Hant.json` | miniapp | 15 keys (R11) |
 | `web/app/tests-engine/engine.spec.ts` | miniapp | SPEC-338 A11's undo through the offer and the confirmation, title kept; its other `client.undo()` calls take `(card, step)` |
+| `web/app/src/lib/study/refusal.ts` | miniapp | `STATUS_KEYS` names the messages of `undo-synced` and `not-undoable` (R10, R12) |
+| `web/app/src/lib/study/refusal.test.ts` | miniapp | its status table gains `undo-synced` and `not-undoable` |
+| `web/app/src/lib/engine/credential.test.ts` | miniapp | its study requests ask for the offer, and `undo` carries `card` and `step` |
+| `web/app/src/lib/engine/credential-stand-in.test.support.ts` | miniapp | its study module answers `undo_offer` |
+| `web/app/src/routes/study.test.ts` | miniapp | its card's `undo` reads `null` |
+| `web/app/tests-study/study.spec.ts` | miniapp | "undo returns the rated card" confirms in the dialog, title kept |
+| `web/app/src/lib/study/audio.test.ts` | miniapp | its client answers `undoOffer`, and its card's `undo` reads `null` |
+| `web/app/src/lib/study/voice.test.ts` | miniapp | its client answers `undoOffer`, and its card's `undo` reads `null` |
 
 ## 5. What this does NOT do
 

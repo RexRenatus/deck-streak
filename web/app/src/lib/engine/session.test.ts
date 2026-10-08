@@ -60,10 +60,20 @@ class FakeEngine implements EngineModule {
     this.#call('next_card');
     return [...this.cards].find(([, card]) => card.reps === 0)?.[0];
   }
-  undo() {
-    this.#call('undo');
-    const [id, card] = this.journal.pop()!;
-    this.cards.set(id, card);
+  /** SPEC-371 R7: the undo names the answer the offer named, by its card and its step. */
+  undo(card: bigint, step: number) {
+    this.#call('undo', card, step);
+    const [id, held] = this.journal.pop()!;
+    this.cards.set(id, held);
+  }
+  /** The offer of the last answer the journal holds, its card's id a decimal string, or none. */
+  undo_offer() {
+    this.#call('undo_offer');
+    const last = this.journal.at(-1);
+    if (last === undefined) return JSON.stringify({ offer: null, why: 'none' });
+    const [id] = last;
+    const offer = { card: String(id), step: this.journal.length, text: `front ${id}`, grade: 'good', returns: 'new' };
+    return JSON.stringify({ offer });
   }
   snapshot(id: bigint) {
     this.#call('snapshot', id);
@@ -227,7 +237,9 @@ describe('the Worker session', () => {
       { id: 6, op: 'rate', card: 1001n, rating: 1, ms: 0 },
       { id: 7, op: 'seed', count: 1 },
       { id: 8, op: 'snapshot', card: 1n },
-      { id: Number.MAX_SAFE_INTEGER, op: 'undo' }
+      { id: 9, op: 'undo-offer' },
+      { id: 10, op: 'undo', card: 1n, step: 0 },
+      { id: Number.MAX_SAFE_INTEGER, op: 'undo', card: 2n ** 63n - 1n, step: 2 ** 32 - 1 }
     ]) {
       expect(await fresh.session.handle(request)).toEqual(
         refusal(request.id, 'not-open', `${request.op} before open`)
@@ -322,9 +334,14 @@ describe('the Worker session', () => {
       lapses: 0
     });
     expect(await ask({ id: 8, op: 'next' })).toBe(1002n);
-    expect(await ask({ id: 9, op: 'undo' })).toBeNull();
-    expect(await ask({ id: 10, op: 'snapshot', card: 1001n })).toEqual(before);
-    expect(await ask({ id: 11, op: 'snapshot', card: 9n })).toBeNull();
+    // the undo asks for the offer of the review's own last answer, then reverts the answer it named
+    // by its card and its step (SPEC-371 R12)
+    expect(await ask({ id: 9, op: 'undo-offer' })).toEqual({
+      offer: { card: 1001n, step: 1, text: 'front 1001', grade: 'good', returns: 'new' }
+    });
+    expect(await ask({ id: 10, op: 'undo', card: 1001n, step: 1 })).toBeNull();
+    expect(await ask({ id: 11, op: 'snapshot', card: 1001n })).toEqual(before);
+    expect(await ask({ id: 12, op: 'snapshot', card: 9n })).toBeNull();
     expect(engine.calls).toEqual([
       ['install_storage'],
       ['init'],
@@ -336,7 +353,8 @@ describe('the Worker session', () => {
       ['rate', 1001n, 3, 1200],
       ['snapshot', 1001n],
       ['next_card'],
-      ['undo'],
+      ['undo_offer'],
+      ['undo', 1001n, 1],
       ['snapshot', 1001n],
       ['snapshot', 9n]
     ]);
@@ -387,7 +405,7 @@ describe('the Worker session', () => {
       refusal(3, 'bad-request', 'the collection is already open')
     );
     expect(await session.handle({ id: 4, op: 'close' })).toEqual({ id: 4, ok: true, value: null });
-    expect(await session.handle({ id: 5, op: 'undo' })).toEqual(
+    expect(await session.handle({ id: 5, op: 'undo', card: 1001n, step: 1 })).toEqual(
       refusal(5, 'not-open', 'undo before open')
     );
     engine.existed = true;
@@ -439,7 +457,7 @@ describe('the Worker session', () => {
     engine.panic = 'panicked at rslib/src/undo.rs: the journal is empty';
     engine.failures.undo = new WebAssembly.RuntimeError('unreachable');
     const trapped = refusal(4, 'engine-failed', 'panicked at rslib/src/undo.rs: the journal is empty');
-    expect(await session.handle({ id: 4, op: 'undo' })).toEqual(trapped);
+    expect(await session.handle({ id: 4, op: 'undo', card: 1001n, step: 1 })).toEqual(trapped);
     const calls = engine.calls.length;
     expect(await session.handle({ id: 5, op: 'next' })).toEqual({ ...trapped, id: 5 });
     expect(await session.handle({ id: 6, op: 'open' })).toEqual({ ...trapped, id: 6 });
