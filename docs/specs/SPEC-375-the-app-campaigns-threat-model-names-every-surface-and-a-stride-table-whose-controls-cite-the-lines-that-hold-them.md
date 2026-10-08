@@ -161,6 +161,7 @@ clean. A10 calls `main` in-process and reads its exit and its examined line.
 | `docs/red-first/SPEC-375.md` | docs | added: the red-first record |
 | `scripts/threat_model.py` | checks | added: the reader |
 | `scripts/tests/test_threat_model.py` | checks | added: A1 to A10 |
+| `scripts/tests/test_ci_workflows.py` | checks | changed: `DYNAMIC_IMPORTS` lists the four dynamic sites of `test_threat_model.py` |
 | `scripts/mutation-python.json` | checks | changed: the reader's entry |
 | `scripts/mutation-rows.d/S37500-S37599.json` | checks | added: rows S37501 to S37504 |
 | `changelog.d/campaign-threat-model-375.md` | release | added |

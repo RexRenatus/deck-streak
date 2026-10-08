@@ -5,14 +5,24 @@ report and whose `main` prints an examined count of zero and exits 3. Each red w
 `hygiene` job on the first push, and each green on the second.
 
 ```red-first
-A1: red at <C1>: <failure>
-A2: red at <C1>: <failure>
-A3: red at <C1>: <failure>
-A4: red at <C1>: <failure>
-A5: red at <C1>: <failure>
-A6: red at <C1>: <failure>
-A7: red at <C1>: <failure>
-A8: red at <C1>: <failure>
-A9: red at <C1>: <failure>
-A10: red at <C1>: <failure>
+A1: red at 58a80184: AssertionError: Lists differ: [] != ['docs/schematics/the-app-campaigns-surfac[72 chars].md']
+A2: red at 58a80184: AssertionError: Lists differ: [] != ['S1', 'T1', 'R1', 'I1', 'I2', 'D1', 'E1',[157 chars]'E5']
+A3: red at 58a80184: AssertionError: Lists differ: [] != ['the iPhone and iPad client', 'the web cl[85 chars]nes']
+A4: red at 58a80184: AssertionError: Lists differ: [] != ['docs/schematics/model.md:17: S1: quote n[47 chars]ere']
+A5: red at 58a80184: AssertionError: Lists differ: [] != ['docs/schematics/model.md:17: S1: names n[424 chars]ere']
+A6: red at 58a80184: AssertionError: Lists differ: [] != ['docs/schematics/model.md:18: T1: the con[269 chars]:1:']
+A7: red at 58a80184: AssertionError: Lists differ: [] != ['docs/schematics/model.md:12: surfaces: s[211 chars]ace']
+A8: red at 58a80184: AssertionError: Lists differ: [] != ['docs/schematics/model.md:23: X1: not a S[55 chars] id']
+A9: red at 58a80184: AssertionError: Lists differ: [] != ['docs/schematics/notes.md:3: trace: a con[72 chars]ace']
+A10: red at 58a80184: AssertionError: Tuples differ: (3, 'examined 0 model(s), 0 surface(s), 0 row(s), 0 citation(s)\n') != (0, 'examined 1 model(s), 1 surface(s), 6 row(s), 13 citation(s)\n')
+A1: green at <C2>
+A2: green at <C2>
+A3: green at <C2>
+A4: green at <C2>
+A5: green at <C2>
+A6: green at <C2>
+A7: green at <C2>
+A8: green at <C2>
+A9: green at <C2>
+A10: green at <C2>
 ```
