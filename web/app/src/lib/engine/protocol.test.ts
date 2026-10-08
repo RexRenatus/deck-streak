@@ -87,6 +87,9 @@ describe('the study operations on the wire', () => {
       'bury',
       'flag',
       'faces',
+      // the sync's two join before the credential's two (SPEC-364 R17, R18)
+      'sync-login',
+      'sync',
       'credential-status',
       'credential-forget'
     ]);
@@ -121,5 +124,33 @@ describe('the study operations on the wire', () => {
       message: 'credential-forget takes no user'
     });
     expect(STATUS_WORDS).toEqual(['absent', 'sealed', 'held', 'needs-sign-in', 'offline']);
+  });
+
+  it('the sync login takes a bounded user and password, and a sync takes no argument', () => {
+    // SPEC-364 R17, R18: each of the login's two strings is non-empty and at most 1024 characters
+    const longest = 'x'.repeat(1024);
+    const admitted: Record<string, unknown>[] = [
+      { id: 1, op: 'sync-login', user: 'u', password: 'p' },
+      { id: 2, op: 'sync-login', user: longest, password: longest },
+      { id: 3, op: 'sync' }
+    ];
+    for (const request of admitted) {
+      expect(parseRequest(request), String(request.id)).toEqual({ request });
+    }
+    const refused: [Record<string, unknown>, string][] = [
+      [{ id: 1, op: 'sync-login', password: 'p' }, "sync-login's user is malformed"],
+      [{ id: 1, op: 'sync-login', user: '', password: 'p' }, "sync-login's user is malformed"],
+      [{ id: 1, op: 'sync-login', user: `${longest}x`, password: 'p' }, "sync-login's user is malformed"],
+      [{ id: 1, op: 'sync-login', user: ['u'], password: 'p' }, "sync-login's user is malformed"],
+      [{ id: 1, op: 'sync-login', user: 'u' }, "sync-login's password is malformed"],
+      [{ id: 1, op: 'sync-login', user: 'u', password: '' }, "sync-login's password is malformed"],
+      [{ id: 1, op: 'sync-login', user: 'u', password: `${longest}x` }, "sync-login's password is malformed"],
+      [{ id: 1, op: 'sync-login', user: 'u', password: 1 }, "sync-login's password is malformed"],
+      [{ id: 1, op: 'sync-login', user: 'u', password: 'p', key: 'k' }, 'sync-login takes no key'],
+      [{ id: 1, op: 'sync', key: 'k' }, 'sync takes no key']
+    ];
+    for (const [request, message] of refused) {
+      expect(parseRequest(request), message).toEqual({ id: 1, message });
+    }
   });
 });

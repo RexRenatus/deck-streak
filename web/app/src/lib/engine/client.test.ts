@@ -187,4 +187,21 @@ describe('EngineClient', () => {
     expect(await status).toBe('held');
     expect(await forgotten).toBe('absent');
   });
+
+  it('the sync operations send the login and nothing for a sync, and resolve to their answers', async () => {
+    // SPEC-364 R17, R18: the page sends the user and password once, to the Worker, and hears back a
+    // status word; a sync carries nothing and hears back the status and what the collections need
+    const port = new FakePort();
+    const client = new EngineClient(port, ORIGIN);
+    const login = client.syncLogin('a user', 'a password');
+    const synced = client.sync();
+    expect(port.sent).toEqual([
+      { id: 1, op: 'sync-login', user: 'a user', password: 'a password' },
+      { id: 2, op: 'sync' }
+    ]);
+    port.reply({ id: 2, ok: true, value: { status: 'held', required: 'full-upload' } }, ORIGIN);
+    port.reply({ id: 1, ok: true, value: 'held' }, ORIGIN);
+    expect(await login).toBe('held');
+    expect(await synced).toEqual({ status: 'held', required: 'full-upload' });
+  });
 });

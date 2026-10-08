@@ -34,7 +34,7 @@ function leaks(answers: [string, unknown][], secrets: [string, string][]): strin
 const SOURCE = resolve(import.meta.dirname, '..', '..');
 const CREDENTIAL = join(SOURCE, 'lib', 'engine', 'credential');
 /** The Worker's modules, the only ones that may import the credential module (R15). */
-const WORKER_MODULES = ['lib/engine/session.ts', 'lib/engine/worker.ts'];
+const WORKER_MODULES = ['lib/engine/session.ts', 'lib/engine/sync.ts', 'lib/engine/worker.ts'];
 
 interface Source {
   path: string;

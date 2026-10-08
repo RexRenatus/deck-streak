@@ -711,3 +711,133 @@ describe("the Worker session's credential operations", () => {
     );
   });
 });
+
+describe("the Worker session's sync operations", () => {
+  // SPEC-364 R17, R18 (ADR-375 D18): both sync operations need an open session, run on the
+  // session's queue, and answer the Worker's sync's own value; a trap ends the session
+  const opened = async (sync: SessionDeps['sync'], engine = new FakeEngine()) => {
+    const session = new Session({
+      lock: async () => 'held',
+      storage: async () => null,
+      load: async () => engine,
+      sync
+    });
+    expect(await session.handle({ id: 0, op: 'open' })).toMatchObject({ id: 0, ok: true });
+    return session;
+  };
+
+  it('both sync operations need an open session', async () => {
+    const asked: string[] = [];
+    const session = new Session({
+      lock: async () => 'held',
+      storage: async () => null,
+      load: async () => new FakeEngine(),
+      sync: {
+        login: async () => {
+          asked.push('login');
+          return 'held';
+        },
+        sync: async () => {
+          asked.push('sync');
+          return { status: 'held', required: 'no-changes' };
+        }
+      }
+    });
+    expect(await session.handle({ id: 1, op: 'sync-login', user: 'u', password: 'p' })).toEqual(
+      refusal(1, 'not-open', 'sync-login before open')
+    );
+    expect(await session.handle({ id: 2, op: 'sync' })).toEqual(refusal(2, 'not-open', 'sync before open'));
+    expect(asked).toEqual([]);
+  });
+
+  it('a Worker with no sync answers as a store with no key', async () => {
+    const session = await opened(undefined);
+    expect(await session.handle({ id: 1, op: 'sync-login', user: 'u', password: 'p' })).toEqual({
+      id: 1,
+      ok: true,
+      value: 'absent'
+    });
+    expect(await session.handle({ id: 2, op: 'sync' })).toEqual({
+      id: 2,
+      ok: true,
+      value: { status: 'absent', required: null }
+    });
+  });
+
+  it("each sync operation answers its sync's own value, the login with the request's user and password", async () => {
+    const logins: [string, string][] = [];
+    const session = await opened({
+      login: async (user, password) => {
+        logins.push([user, password]);
+        return 'needs-sign-in';
+      },
+      sync: async () => ({ status: 'sealed', required: 'full-download' })
+    });
+    expect(await session.handle({ id: 1, op: 'sync-login', user: 'a user', password: 'a password' })).toEqual({
+      id: 1,
+      ok: true,
+      value: 'needs-sign-in'
+    });
+    expect(logins).toEqual([['a user', 'a password']]);
+    expect(await session.handle({ id: 2, op: 'sync' })).toEqual({
+      id: 2,
+      ok: true,
+      value: { status: 'sealed', required: 'full-download' }
+    });
+  });
+
+  it('a study request waits for a sync on the queue, and is then answered', async () => {
+    const order: string[] = [];
+    let finish: () => void = () => undefined;
+    const session = await opened({
+      login: async () => 'held',
+      sync: () =>
+        new Promise((resolve) => {
+          finish = () => {
+            order.push('sync settled');
+            resolve({ status: 'held', required: 'normal-sync' });
+          };
+        })
+    });
+    const synced = session.handle({ id: 1, op: 'sync' }).then((reply) => {
+      order.push('sync answered');
+      return reply;
+    });
+    const next = session.handle({ id: 2, op: 'next' }).then((reply) => {
+      order.push('next answered');
+      return reply;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(order).toEqual([]);
+    finish();
+    expect(await synced).toEqual({ id: 1, ok: true, value: { status: 'held', required: 'normal-sync' } });
+    expect(await next).toEqual({ id: 2, ok: true, value: null });
+    expect(order).toEqual(['sync settled', 'sync answered', 'next answered']);
+  });
+
+  it('a trap in a sync ends the session, and any other throw answers engine-failed', async () => {
+    const engine = new FakeEngine();
+    let thrown: unknown = new TypeError('a synthetic failure');
+    const session = await opened(
+      {
+        login: async () => {
+          throw thrown;
+        },
+        sync: async () => {
+          throw thrown;
+        }
+      },
+      engine
+    );
+    // a throw that is not a trap leaves the session open
+    expect(await session.handle({ id: 1, op: 'sync' })).toEqual(refusal(1, 'engine-failed', 'a synthetic failure'));
+    expect(await session.handle({ id: 2, op: 'next' })).toEqual({ id: 2, ok: true, value: null });
+    // a trap spends the module: its panic is the message from then on
+    engine.panic = 'panicked at rslib/src/sync/mod.rs: the sync trapped';
+    thrown = new WebAssembly.RuntimeError('unreachable');
+    const trapped = refusal(3, 'engine-failed', 'panicked at rslib/src/sync/mod.rs: the sync trapped');
+    expect(await session.handle({ id: 3, op: 'sync-login', user: 'u', password: 'p' })).toEqual(trapped);
+    expect(await session.handle({ id: 4, op: 'next' })).toEqual({ ...trapped, id: 4 });
+    expect(await session.handle({ id: 5, op: 'sync' })).toEqual({ ...trapped, id: 5 });
+  });
+});

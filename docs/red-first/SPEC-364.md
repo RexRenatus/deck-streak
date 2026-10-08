@@ -270,3 +270,33 @@ fence line ran on this commit's tree, the browser lines in Chromium only, with t
   yet. Its three other tests passed.
 
 A commit cannot name itself, so the fence lines that name this commit are written by the next one.
+
+### The implementation commit
+
+The tests commit above is b819c750. Its reds were measured again on its own clean tree before this
+commit, with the same exits and failing lines. This commit carries the implementation at the old
+engine pin: the two exports and `sync_refusal` in `src/wasm.rs`, the two operations in the Worker's
+protocol, session and client, the Worker's sync module over the credential store, and the session
+start's request for persistent storage. It also grows the existing tests, insert-only: the
+protocol's operation list and its login bounds, the session's sync operations, the Worker's one
+store, and the client's two requests.
+
+At this commit B4, B5, B6 and B7 pass by their fence lines. B1 is red here for its own reason: the
+pinned engine cannot sync from the browser, so the login never reaches the server. Run on this
+commit's tree in Chromium, B1's test failed, exit 1, at `sync.spec.ts:99:47`, with
+`Expected: "held"` and an `engine-failed` reply whose message ends
+`time not implemented on this platform`: the engine trapped on the standard library's clock, which
+has no source on `wasm32-unknown-unknown`. SPEC-364 section 12
+names M1's refusal as this red; the run shows the clock's trap comes first, and the engine pin's
+second patch, `wasm-clock-threads`, is the one that removes it. The trap ended the session, as a
+trap does. B1 turns green with the engine pin that carries both patches. B2 and B3 failed at this
+commit on the same trap, at `sync.spec.ts:125:47` and `sync.spec.ts:149:47`.
+
+```red-first
+B4: red at b819c750: AssertionError: expected { status: 'absent', …(1) } to deeply equal { status: 'absent', required: null } at sync.test.ts:84:31; and AssertionError: expected [ 'obtain', 'forSend' ] to deeply equal [ 'obtain', 'forSend', …(3) ] at sync.test.ts:134:25
+B5: not red: an absence census (no reply carries the host key, no page module imports sync.ts), held by its planted controls, each refused by name; its new tests fail at b819c750 only because both operations are unknown there
+B6: red at b819c750: panicked at crates/web-engine/tests/boundary.rs:442:5: 6 retired text(s) judged; left: (["sync_login: `fn sync_login(` occurs 0 times, not once", "sync_collection: `fn sync_collection(` occurs 0 times, not once", "sync_refusal: `fn sync_refusal(` occurs 0 times, not once"], [])
+B7: red at b819c750: AssertionError: expected [] to deeply equal [ 'ask 1' ] at engine.test.ts:257:19
+```
+
+The greens of B4, B6 and B7, and B1's red, name this commit, so the next commit writes them.
