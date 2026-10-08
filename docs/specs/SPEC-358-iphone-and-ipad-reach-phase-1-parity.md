@@ -282,6 +282,7 @@ A40: swift test --package-path ios/HarnessWire --filter HarnessWireTests.Respons
 | `.github/workflows/xcframework.yml` | the Apple job | R8's step and its report row |
 | `scripts/mutation-rows.d/S35000-S35099.json` | rows | S35009 to S35013 re-anchored to the core; S35020 and S35021 re-anchored to `native: true`; S35019 untouched |
 | `scripts/mutation-rows.d/S35800-S35899.json` | rows | section 8's part a rows |
+| `scripts/mutation-equivalent.d/deck-streak-ffi.json` | equivalent records | added: `red_flag`'s body replaced with 1, which returns the core's `review::RED`, 1, unchanged |
 | `docs/specs/SPEC-350-the-web-study-screens-review-a-card-from-the-engine-in-the-browser-in-the-sandboxed-frame-by-touch-keys-or-a-remote.md` | documents | an amendment appended at its end: A4 and A5 are decided in the core |
 | `docs/specs/SPEC-358-iphone-and-ipad-reach-phase-1-parity.md`, `docs/decisions/ADR-369-the-remotes-map-the-ipad-layout-the-shared-flag-and-bury-rules-and-the-device-backup.md`, `docs/schematics/iphone-and-ipad-phase-1-parity.md`, `docs/red-first/SPEC-358.md`, `changelog.d/ios-parity-358.md` | documents | added |
 
