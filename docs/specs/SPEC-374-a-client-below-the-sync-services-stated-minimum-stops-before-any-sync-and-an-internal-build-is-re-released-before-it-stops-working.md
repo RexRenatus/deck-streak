@@ -291,3 +291,19 @@ at the cut, are these, and no requirement changes:
   `:316-318` (R5's `:249-255`, `:250` and `:252-254`).
 - The sync login's and the normal sync's rows are `table.rs:123-136`, and the one-way sync's
   `:329-335` (section 1's `:121-134` and `:326-332`).
+
+Three files section 4 names need no setup line, and part one leaves them as they are; each passes
+at the implementation commit with no statement handed to its dispatcher:
+
+- `crates/engine-core/tests/full_sync.rs` is unchanged: its dispatcher reads the collection's ids
+  and drives no sync pair that must reach the engine.
+- `crates/engine-core/tests/containment.rs` is unchanged: it is a census of the source, and drives
+  no sync.
+- `crates/ffi/tests/support/mod.rs` is unchanged: the admitting statement is answered by the
+  support module's sync server, the file section 4 names beside it.
+
+The diff's own mutants add one file to section 4's list:
+
+- `scripts/mutation-equivalent.d/deck-streak-engine-core.json` gains one record: deleting the
+  `kind` field of the refusal `admits` builds leaves the same bytes, because that kind is the
+  proto3 default, so no test can tell the two apart.

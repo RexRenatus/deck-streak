@@ -26,6 +26,7 @@ use anki_proto::sync::{SyncAuth, SyncCollectionRequest, SyncCollectionResponse, 
 use deck_streak_engine_core::dispatch::{Dispatcher, Refusal};
 use deck_streak_engine_core::full_sync::{Counted, Direction, Ready};
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
+use deck_streak_engine_core::handshake;
 use deck_streak_engine_core::one_way::{self, Reason, Unwritten};
 use deck_streak_engine_core::table::{ExemptWrite, Transport};
 use prost::Message;
@@ -411,4 +412,39 @@ fn the_latest_statement_decides_and_a_private_engine_obeys_it() {
         "the private engine obeys the parent's latest statement, below again"
     );
     support::examined("private fetch(es)", vec![below, admitting, below_again]);
+}
+
+/// MUTATION COVERAGE (SPEC-374 R8), written after the implementation and green at it: the URL the
+/// static library reads is the stated path at the scheme, host and port of the login's endpoint,
+/// its own path dropped, and a login the guard refuses, or one naming no endpoint, gives none, so
+/// nothing is read for it. The expected URLs are written out here, never built by the core.
+#[test]
+fn the_statement_url_is_the_stated_path_at_the_logins_origin() {
+    assert_eq!(
+        handshake::statement_url(&login("https://sync.example.invalid:8443/base/")),
+        Some("https://sync.example.invalid:8443/api/sync/minimum-client".to_owned()),
+        "an https endpoint: its origin, port kept and path dropped, then the stated path"
+    );
+    let loopback = closed_endpoint();
+    assert_eq!(
+        handshake::statement_url(&login(&loopback)),
+        Some(format!("{loopback}api/sync/minimum-client")),
+        "a loopback http endpoint the guard admits: the same origin and the stated path"
+    );
+    assert_eq!(
+        handshake::statement_url(&login("http://example.invalid/")),
+        None,
+        "plain http to a host that is not loopback is the guard's refusal, and nothing is read"
+    );
+    let no_endpoint = SyncLoginRequest {
+        username: USER.to_owned(),
+        password: SECRET.to_owned(),
+        endpoint: None,
+    }
+    .encode_to_vec();
+    assert_eq!(
+        handshake::statement_url(&no_endpoint),
+        None,
+        "a login naming no endpoint gives no statement URL"
+    );
 }
