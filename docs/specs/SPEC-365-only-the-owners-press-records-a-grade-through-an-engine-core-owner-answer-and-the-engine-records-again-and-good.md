@@ -281,6 +281,10 @@ SPEC and ADR-376 record the change, and their tests keep their names):
 | `ios/App/Sources/ReviewSession.swift` | native app | the app's rating type and the answer bar name two grades; tests' names kept (R13) |
 | `ios/App/Sources/ReviewView.swift` | native app | the app's rating type and the answer bar name two grades; tests' names kept (R13) |
 | `ios/AppTests/ReviewModelTests.swift` | native app | the app's rating type and the answer bar name two grades; tests' names kept (R13) |
+| `ios/App/Sources/ReviewModel.swift` | native app | its docs name the bar's two grades (R13) |
+| `ios/AppTests/ReviewSessionTests.swift` | native app | A17 reads Again's and Good's intervals; name kept (R13) |
+| `ios/AppUITests/ReviewFlowTests.swift` | native app | A19 and A20 read the two grades' buttons, and the helper presses Good; names kept (R13) |
+| `ios/HarnessWire/swift-mutants.json` | native codec | `SW34800` keeps its `find`; its mutant moves from Hard's arm, which no grade reaches, to Good's (R13) |
 | `scripts/tests/test_ios_review_screen.py` | scripts | SPEC-348 A14's bar names Again and Good; name kept (R13) |
 
 ## 5. What this does NOT do

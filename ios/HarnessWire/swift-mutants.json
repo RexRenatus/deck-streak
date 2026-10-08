@@ -213,9 +213,9 @@
       "id": "SW34800",
       "file": "Sources/HarnessWire/Messages.swift",
       "find": "[againState, hardState, goodState, easyState][Int(rating.rawValue)]",
-      "replace": "[againState, goodState, goodState, easyState][Int(rating.rawValue)]",
+      "replace": "[againState, hardState, againState, easyState][Int(rating.rawValue)]",
       "killer": "HarnessWireTests.RequestBytesTests/test_a23_review_requests_encode_to_their_literal_bytes",
-      "why": "an answer rated Hard sends back Hard's own state, not Good's (SPEC-348 R10, R19)"
+      "why": "an answer rated Good sends back Good's own state, not Again's (SPEC-348 R10, R19; SPEC-365 R13)"
     },
     {
       "id": "SW34801",
