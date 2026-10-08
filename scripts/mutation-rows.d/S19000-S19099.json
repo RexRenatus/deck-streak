@@ -84,8 +84,8 @@
       [
         "S19011-THE-RELEASE-WORKFLOW-HOLDS-ONLY-KEYS-GITHUB-DEFINES",
         ".github/workflows/release.yml",
-        "    timeout-minutes: 90\n",
-        "    timeout-minutes: 90\n    timeout-minute: 90\n",
+        "    timeout-minutes: 150\n",
+        "    timeout-minutes: 150\n    timeout-minute: 150\n",
         "every key release.yml holds in a job is one GitHub's workflow parser defines there, so the parser never refuses the workflow before a tag's run starts (SPEC-190 R11)",
         "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
       ],
@@ -124,8 +124,8 @@
       [
         "S19016-A-TAB-NEVER-INDENTS-A-RELEASE-WORKFLOW-LINE",
         ".github/workflows/release.yml",
-        "    timeout-minutes: 90\n",
-        "    \ttimeout-minutes: 90\n",
+        "    timeout-minutes: 150\n",
+        "    \ttimeout-minutes: 150\n",
         "no line of release.yml is indented with a tab, which YAML refuses, so the workflow is read as GitHub reads it (SPEC-190 R12)",
         "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
       ],

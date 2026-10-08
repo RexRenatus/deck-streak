@@ -386,3 +386,5 @@ SPEC-350 section 14's fence holds three lines for A29, the criterion #685 delive
 | 1 | A29 | `scripts/tests/test_release_workflow.py` `test_the_release_carries_the_module_at_web_engine` | added |
 | 2 | A29 | `scripts/tests/test_release_workflow.py` `test_the_release_builds_and_gates_the_module_as_ci_does` | added |
 | 3 | A29 | `scripts/tests/test_release_workflow.py` `test_an_over_budget_module_stops_the_release_before_the_draft` | added |
+
+The second commit makes the release build, gate and stage the module, and greens A29's three tests.
