@@ -332,3 +332,12 @@ B4: green at 85d01a6e
 B6: green at 85d01a6e
 B7: green at 85d01a6e
 ```
+
+### The changelog commit
+
+The engine pin commit above is 42d9ded0. B1 is green there in Chromium: run on its tree with the
+web engine built at the new pin, B1, B2 and B3 passed, exit 0 (3 passed).
+
+```red-first
+B1: green at 42d9ded0
+```
