@@ -8,7 +8,7 @@ browser's one-way write are parts b2 and b3 (section 7).
 
 ## The fence, line by line
 
-Each of the 16 lines of SPEC-364 section 3's fence resolves to a test this delivery adds, or to a
+Each of the 23 lines of SPEC-364 section 3's fence resolves to a test this delivery adds, or to a
 test that stands on `dev` and is named as it is.
 
 | # | criterion | test | added or named |
@@ -29,6 +29,13 @@ test that stands on `dev` and is named as it is.
 | 14 | A12 | `crates/engine-core/tests/containment.rs` `no_non_ui_caller_reaches_an_exempt_function` | named: dev's census, its planted callers grown by four and its refusals by four, insert-only (step 3b) |
 | 15 | A13 | `crates/engine-core/tests/graph.rs`, whole | named: unchanged |
 | 16 | A14 | `crates/engine-core/tests/parity.rs` `each_adapter_table_equals_its_transport_column` | named: dev's guard, its web side read as `STUDY_CALLS` with `SYNC_CALLS` (step 4) |
+| 17 | A15 | `crates/engine-core/tests/one_way.rs` `an_edit_that_adds_no_id_returns_the_upload_to_the_counts` | added (the stamp) |
+| 18 | A16 | `crates/engine-core/tests/one_way.rs` `a_tag_or_config_change_alone_returns_the_upload_to_the_counts` | added (the stamp) |
+| 19 | A17 | `crates/engine-core/tests/one_way.rs` `a_deletion_returns_the_upload_to_the_counts` | added (the stamp) |
+| 20 | A18 | `crates/engine-core/tests/one_way.rs` `an_edit_dated_at_or_below_the_greatest_returns_the_upload_to_the_counts` | added (the stamp) |
+| 21 | A19 | `crates/engine-core/tests/one_way.rs` `a_full_upload_after_the_count_returns_the_upload_to_the_counts` | added (the stamp) |
+| 22 | A20 | `crates/engine-core/tests/one_way.rs` `an_unchanged_server_rechecks_equal` | added (the stamp) |
+| 23 | A21 | `crates/engine-core/tests/one_way.rs` `the_stamp_reads_every_synced_tables_greatest_usn_and_the_schema` | added (the stamp) |
 
 ## The first red: the backup statement
 
@@ -57,7 +64,64 @@ A11: red at 943ac045: panicked at crates/engine-core/tests/one_way.rs:200:10: th
 A12: red at c98b4a79: panicked at crates/engine-core/tests/containment.rs:738:5: each planted caller, include, extended line, second copy and stale line is refused by name, and no comment is; the four planted `run_one_way` callers are absent from the left
 A13: not red: the core's dependency census stands on dev unchanged and this part adds a dev-dependency only, so it was green at the base (2 passed at 943ac045) and must stay green
 A14: not red: the parity guard stands on dev and was green at the base (1 passed at 943ac045); it reddens only in a tree that flips the web column without `SYNC_CALLS`
+A15: not red: the header stamp refuses every re-check, so a changed server already returned the upload to the counts at the tests commit (1 passed at 59f5d9c8); the stamp's rows in SPEC-364 section 10 are its red evidence
+A16: not red: the header stamp refuses every re-check, so a changed server already returned the upload to the counts at the tests commit (1 passed at 59f5d9c8); the stamp's rows in SPEC-364 section 10 are its red evidence
+A17: not red: the header stamp refuses every re-check, so a changed server already returned the upload to the counts at the tests commit (1 passed at 59f5d9c8); the stamp's rows in SPEC-364 section 10 are its red evidence
+A18: not red: the header stamp refuses every re-check, so a changed server already returned the upload to the counts at the tests commit (1 passed at 59f5d9c8); the stamp's rows in SPEC-364 section 10 are its red evidence
+A19: not red: the header stamp refuses every re-check, so a changed server already returned the upload to the counts at the tests commit (1 passed at 59f5d9c8); the stamp's rows in SPEC-364 section 10 are its red evidence
+A20: red at 59f5d9c8: panicked at crates/engine-core/tests/one_way.rs:1015:5: an unchanged server, downloaded by a second client and fetched again, carries the counted copy's stamp, and the upload is ready; left: (Ok(Err(Some(Losses { reviews: 0, cards: 0, notes: 0 }))), false)
+A21: red at 59f5d9c8: panicked at crates/engine-core/tests/one_way.rs:1075:5: (write, the core's stamp moved, it equals the engine's hash read apart from the core): each synced table's greatest usn, and the schema stamp, moves the stamp; left: [("update cards set usn = 100", false, false), ("update notes set usn = 101", false, false), ("update revlog set usn = 102", false, false), ...
+A1: green at 01c42f7f
+A2: green at 01c42f7f
+A3: green at 01c42f7f
+A4: green at 01c42f7f
+A5: green at 01c42f7f
+A6: green at 01c42f7f
+A7: green at 01c42f7f
+A8: green at 01c42f7f
+A9: green at 01c42f7f
+A10: green at 01c42f7f
+A11: green at 01c42f7f
+A12: green at 01c42f7f
+A20: green at 01c42f7f
+A21: green at 01c42f7f
 ```
+
+## The upload re-check stamp
+
+The owner's ruling, `docs/rulings/OWNER-RULING-2026-10-08-upload-recheck-stamp.md`, set the stamp
+the re-check compares (R6, ADR-375 D13). Its tests, A15 to A21, were committed at 59f5d9c8 over the
+header stamp `select mod from col` and run there on a clean tree. The stamp's statement followed at
+01c42f7f, where every line of the fence, A1 to A21, and the whole test sets of the core, the web engine
+and the native adapter ran again on a clean tree and passed, with clippy clean.
+
+- **A10 is the red the stamp turns green.** At 86e8d0e6, and again at 59f5d9c8, A10 failed at
+  `crates/engine-core/tests/one_way.rs:691:10`: `an unchanged server is ready for the upload:
+  Counted { offer: Offer { upload: true, download: true }, ...`. The fetch's download moves
+  `col.mod`, so the counted and the fresh copy never shared the header stamp. Its red line above
+  stays the one measured at 943ac045.
+- **A15 to A19 are not red.** The header stamp refuses every re-check, so each already returned the
+  upload to the counts at 59f5d9c8. What each would lose under a narrower stamp is held by SPEC-364
+  section 10's rows that drop a table or the schema stamp, or read the greatest modified time, each
+  killed by a named test.
+- **Three existing tests changed with R6, and each read red at 59f5d9c8 for its oracle's or its
+  fixture's reason; each is green at 01c42f7f.** A6 (`one_way.rs:309:5`) and SPEC-357's
+  `full_sync::the_id_reads_take_every_row` (`full_sync.rs:137:5`) compare the core's read with the
+  `held` oracle, which now computes the stamp apart from the core, while the core still read
+  `col.mod` (`modified: 1791443231449` against `-8548778104718257131`, and `1791443231190` against
+  `-5811412170459196523`). `full_sync::a_reply_that_is_not_integers_is_the_engines_database_error`
+  (`full_sync.rs:241:5`) now plants `scm = 1.5`, which the header stamp never read (`left:
+  Ok(IdSets { ...`). Its fixture moved from `mod = 1.5`, and its expected message from the core's
+  refusal of a reply that is not integers to the engine's own database error, because the stamp's
+  statement answers an integer or the engine's error, never a fraction. That message was measured
+  before the tests commit with the stamp's statement in the tree, uncommitted, and the tree was put
+  back first. The core's own refusal of such a reply stays in `dispatch.rs`; no fixture reaches it
+  now.
+- **A tag no note carries is planted by the test's own handle.** The engine registers a tag only
+  through a note, so A16's tag half inserts the tag row and moves `col.mod` with the test's SQL on
+  the second client, before its normal sync; the server registers the name at its own next usn.
+- **Every commit after 01c42f7f leaves `crates/` unchanged**, so each green above holds at the pushed
+  head.
 
 ## What the record discloses
 
