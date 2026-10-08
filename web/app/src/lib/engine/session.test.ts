@@ -228,7 +228,7 @@ describe('the Worker session', () => {
     // each argument's edges pass the parse and reach the session's state, here not yet open
     const fresh = browser(new FakeEngine());
     for (const request of [
-      { id: 3, op: 'answer', rating: 4, ms: 2 ** 32 - 1 },
+      { id: 3, op: 'answer', rating: 3, ms: 2 ** 32 - 1 },
       { id: 4, op: 'seed', count: 2 ** 32 - 1 },
       { id: 5, op: 'snapshot', card: 2n ** 63n - 1n },
       { id: 6, op: 'answer', rating: 1, ms: 0 },
@@ -402,7 +402,7 @@ describe('the Worker session', () => {
     const { session } = browser(engine);
     await session.handle({ id: 1, op: 'open' });
     engine.failures.answer = 'engine error 0: no card is queued';
-    expect(await session.handle({ id: 2, op: 'answer', rating: 2, ms: 5 })).toEqual(
+    expect(await session.handle({ id: 2, op: 'answer', rating: 1, ms: 5 })).toEqual(
       refusal(2, 'engine-failed', 'engine error 0: no card is queued')
     );
     expect(await session.handle({ id: 3, op: 'next' })).toEqual({ id: 3, ok: true, value: null });

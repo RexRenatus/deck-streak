@@ -53,7 +53,7 @@ const TABLE: Record<Phase, Partial<Record<ReviewEvent, Cell>>> = {
     refusal: REFUSED
   },
   question: { 'show-answer': { phase: 'answer', effect: 'none' }, undo: UNDO, bury: BURY, flag: FLAG, replay: REPLAY },
-  answer: { again: RATE, hard: RATE, good: RATE, easy: RATE, undo: UNDO, bury: BURY, flag: FLAG, replay: REPLAY },
+  answer: { again: RATE, good: RATE, undo: UNDO, bury: BURY, flag: FLAG, replay: REPLAY },
   busy: { settled: NEXT, 'not-shown': NEXT, flagged: { phase: 'side', effect: 'none' }, refusal: REFUSED },
   refused: { retry: NEXT },
   done: {}
@@ -75,8 +75,8 @@ const AUTOPLAY: readonly ReviewEvent[] = ['view', 'show-answer'];
 /** The effects the page carries out itself, with no request to the engine. */
 const LOCAL: readonly Effect[] = ['none', 'replay'];
 
-/** The four grades, as the wire numbers them. */
-const RATING: Partial<Record<Action, Rating>> = { again: 1, hard: 2, good: 3, easy: 4 };
+/** The two grades, as the wire numbers them. */
+const RATING: Partial<Record<Action, Rating>> = { again: 1, good: 3 };
 
 /** What the review asks of the engine: the study operations, and nothing else (R2, A17). */
 export interface StudyClient {
@@ -173,7 +173,7 @@ export class Review {
   get controls(): Action[] {
     const face = this.#face;
     if (face === null) return [];
-    const side: Action[] = face.side === 'question' ? ['show-answer'] : ['again', 'hard', 'good', 'easy'];
+    const side: Action[] = face.side === 'question' ? ['show-answer'] : ['again', 'good'];
     const undo: Action[] = face.view.undo ? ['undo'] : [];
     // Replay only on a side with replay clips; a blocked play leaves it there to ask again (R15)
     const replay: Action[] = this.#faces?.[face.side].replay.length ? ['replay'] : [];

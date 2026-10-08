@@ -23,7 +23,7 @@ flowchart LR
     routes["routes: the deck list and the review"]
     input["study/input.ts: readKey, GamepadReader, resolve (from remote/)"]
     machine["study/review.ts: the review's machine"]
-    buttons["AnswerButtons: four grades, each with its interval"]
+    buttons["AnswerButtons: two grades, Again and Good, each with its interval"]
     host["CardFrame: the frame's host element"]
     lock["WakeLockHolder (remote/wake-lock.ts)"]
     audio["one audio element (part 2)"]
@@ -117,7 +117,7 @@ sequenceDiagram
     P->>P: question side into the card frame
     L->>P: show answer (Space, Enter, a face button, a tap)
     P->>P: answer side into the card frame, intervals on the buttons
-    L->>P: a grade (1 to 4, the d-pad, the stick, a tap)
+    L->>P: a grade (Again or Good: a key, the d-pad, the stick, a tap)
     P->>W: rate with the card id, the rating and the milliseconds
     W->>E: is this the kept card
     alt the kept card
