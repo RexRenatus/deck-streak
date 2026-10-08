@@ -135,4 +135,49 @@ describe("the worker's sync", () => {
     // settled as a failure, the key is kept
     expect(await store.status()).toBe('held');
   });
+
+  it('a login the engine refuses answers needs-sign-in, and any other failure offline', async () => {
+    const engine = syncEngine(sentinel('host', 'key', 'login'));
+    const { store, sync } = worker(engine);
+    const user = sentinel('sync', 'user');
+    const password = sentinel('pass', 'word');
+
+    // the engine's refusal: its bytes classify as a refused key
+    engine.sync_login = () => {
+      throw engineError(SYNC_AUTH_ERROR);
+    };
+    expect(await sync.login(user, password)).toBe('needs-sign-in');
+    // the engine's lost network: its bytes classify as anything but a refusal
+    engine.sync_login = () => {
+      throw engineError(NETWORK_ERROR);
+    };
+    expect(await sync.login(user, password)).toBe('offline');
+    // a throw that is not the engine's bytes is offline, and the classifier is never asked of it,
+    // even one that would call everything a refusal
+    const asked: unknown[] = [];
+    engine.credential_classify = (error) => {
+      asked.push(error);
+      return 1;
+    };
+    engine.sync_login = () => {
+      throw new TypeError('a synthetic failure');
+    };
+    expect(await sync.login(user, password)).toBe('offline');
+    expect(asked).toEqual([]);
+    // no failed login leaves a key with the store
+    expect(store.steps).toEqual(['obtain', 'obtain', 'obtain']);
+    expect(await store.status()).toBe('absent');
+  });
+
+  it('a trap in the login is thrown again, for the session to end on', async () => {
+    const engine = syncEngine(sentinel('host', 'key', 'trap'));
+    const { store, sync } = worker(engine);
+    const trap = new WebAssembly.RuntimeError('unreachable');
+    engine.sync_login = () => {
+      throw trap;
+    };
+    await expect(sync.login(sentinel('sync', 'user'), sentinel('pass', 'word'))).rejects.toBe(trap);
+    expect(store.steps).toEqual(['obtain']);
+    expect(await store.status()).toBe('absent');
+  });
 });
