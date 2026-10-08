@@ -258,3 +258,48 @@ fn the_statement_is_read_first_and_only_an_admitting_one_reaches_the_login() {
         "an endpoint the guard refuses is never read, and the login keeps the guard's sentence"
     );
 }
+
+/// An admitting statement, `{"minimum_client_level":1}`, padded with JSON whitespace to `length`
+/// bytes of body, answered whole with its length stated.
+fn padded_answer(length: usize) -> &'static str {
+    let statement = r#"{"minimum_client_level":1}"#;
+    let body = format!("{statement}{}", " ".repeat(length - statement.len()));
+    let answer = format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {length}\r\n\
+         Connection: close\r\n\r\n{body}"
+    );
+    Box::leak(answer.into_boxed_str())
+}
+
+/// MUTATION COVERAGE (SPEC-374 R8, ADR-385 D6), written after the implementation and green at it:
+/// the read keeps a body of up to 1024 bytes, so an admitting statement of exactly 1024 reaches
+/// the login, and a body one byte over is dropped whole, so the same statement decides undecodable
+/// and nothing under the sync path is sent.
+#[test]
+fn the_statement_read_keeps_a_body_at_its_cap_and_drops_one_over_it() {
+    let at_cap = Recorder::start(padded_answer(1024));
+    let reached = logged_in(&at_cap.endpoint());
+    let lines = at_cap.lines();
+    assert!(
+        lines.first().map(String::as_str) == Some(STATEMENT_READ)
+            && lines.get(1).is_some_and(|line| line.starts_with(SYNC_POST)),
+        "an admitting statement of exactly 1024 bytes is kept and the login follows it: {lines:?}"
+    );
+    assert!(
+        reached
+            .as_ref()
+            .is_ok_and(|(kind, _)| *kind != INVALID_INPUT),
+        "the login reached the recorder, whose 503 the engine refuses in its own kind: {reached:?}"
+    );
+
+    let over_cap = Recorder::start(padded_answer(1025));
+    let refused = logged_in(&over_cap.endpoint());
+    assert_eq!(
+        (over_cap.lines(), refused),
+        (
+            vec![STATEMENT_READ.to_owned()],
+            Ok((INVALID_INPUT, UNDECODABLE.to_owned()))
+        ),
+        "a body one byte over the cap is dropped whole: the statement is undecodable"
+    );
+}
