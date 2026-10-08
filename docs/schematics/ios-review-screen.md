@@ -181,3 +181,33 @@ Where a value crosses a boundary:
 | the replay order | `qt/aqt/reviewer.py` lines 72 to 79 at PIN |
 | the preset's flags | `proto/anki/deck_config.proto` lines 172 and 181 at PIN |
 | the native column today | `crates/ffi/src/allow_list.rs` lines 23 to 56 at DEV; `crates/engine-core/src/table.rs` line 113 at ENG |
+
+## 5. Part 2: the review step in the `harness` job, and the factory as #682 leaves it
+
+Read at DeckStreak `dev` `f3392ec3dde43e80f47138f8ec5da8419a9e4b5c` (CUT). Kind: data flow.
+
+The review fixture travels from the engine's job to the review screen's tests, and the `harness`
+job's app steps run in this order (`.github/workflows/xcframework.yml` at CUT: the fixture written
+at lines 126 to 127 and uploaded at 175; "the app's tests" at 479; "the app, archived" at 494;
+"the report" at 532). The step between the app's tests and the archive is part 2's (ADR-359 D8).
+
+```mermaid
+flowchart TD
+  FX["xcframework job<br/>review-fixture written and uploaded"] --> DL["harness job<br/>engine-artifact/review-fixture"]
+  LAST["the required-reason symbols<br/>the harness's last step"] --> APP["the app's tests<br/>the whole scheme, the three review<br/>classes skipped"]
+  APP --> REV["the review screen's tests (review-tests)<br/>ReviewModelTests, ReviewSessionTests,<br/>ReviewFlowTests, on both simulators"]
+  DL -->|"copied into the runner's temporary directory"| REV
+  REV --> ARC["the app, archived<br/>after a red test step too"]
+  ARC --> REP["the report<br/>the app's and the review's cases and times"]
+  REV -->|"TEST_RUNNER_DS_REVIEW_FIXTURE on the command line"| TP["the test process<br/>reads DS_REVIEW_FIXTURE"]
+  TP -->|"copied into a fresh directory per test"| DIR["the test's collection directory"]
+  DIR -->|"-DSCollectionDirectory"| SEAM["collectionDirectory(fallback:arguments:)<br/>the engine adapter decides"]
+  SEAM --> OPEN["EngineSession.open<br/>the seeded collection"]
+```
+
+The factory the card view awaits is the one #682 leaves
+(`ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift` at CUT): its layers are L1 to
+L8 and L10 to L13 (lines 4 to 10; L9 is retired and its number not reused), against section 1's
+L1 to L7, and `load(_:into:)` (line 55) prefixes the document policy ahead of the HTML it is
+given. The card view hands `CardFace.document` to it unchanged, so the page carries the policy's
+doctype and then the face's own; nothing in the app sets anything on a configuration.

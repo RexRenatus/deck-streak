@@ -7610,14 +7610,16 @@ class TheHarnessLinksItsOwnRunsFramework(unittest.TestCase):
                 self.assertEqual(harness_link_problems({"jobs": {"harness": job}}), wanted, name)
 
 
-# The app's two steps in the `harness` job (SPEC-347 R13 and A14, ADR-358 D10): its generate line
-# opens its own test step, so the step "the project, generated", which each TestFlight lane copies,
-# keeps the harness's one line; both steps sit between the harness's last step and the report.
+# The app's steps in the `harness` job (SPEC-347 R13 and A14, ADR-358 D10; SPEC-348 R20, ADR-359
+# D8): its generate line opens its own test step, so the step "the project, generated", which each
+# TestFlight lane copies, keeps the harness's one line; the app's tests, the review screen's tests
+# and the archive sit, in that order, between the harness's last step and the report.
 APP_GENERATE = '"$RUNNER_TEMP/xcodegen/bin/xcodegen" generate --spec ios/app.yml'
 HARNESS_GENERATE = '"$RUNNER_TEMP/xcodegen/bin/xcodegen" generate --spec ios/project.yml'
 HARNESS_PROJECT = "the project, generated"
 HARNESS_LAST = "the required-reason symbols the Release executable imports, against the manifest"
 APP_TESTS = "the app's tests, Debug, on the iPhone and then the iPad"
+REVIEW_TESTS = "the review screen's tests, Debug, on the iPhone and then the iPad"
 APP_ARCHIVE = "the app, archived unsigned for a device"
 HARNESS_REPORT = "the report"
 # What the app's test step runs: the app's scheme on both simulators, one after the other, with
@@ -7662,9 +7664,10 @@ def app_steps_problems(workflow):
     generate step keeps its one line; the app's test step opens with the app's generate line and
     runs its scheme on both simulators, signed ad hoc on its command line; its archive step builds
     Release for a generic device with code signing off on its command line and reads the
-    executable's imports against the app's manifest; the two sit, in order, between the harness's
-    last step and the report, which carries their rows; no env of the job or of either step names
-    a signing setting; and no other job of the workflow names the app's spec or scheme."""
+    executable's imports against the app's manifest; the app's tests, the review screen's tests
+    (SPEC-348 R20) and the archive sit, in order, between the harness's last step and the report,
+    which carries their rows; no env of the job or of those steps names a signing setting; and no
+    other job of the workflow names the app's spec or scheme."""
     jobs = workflow.get("jobs") or {}
     job = jobs.get("harness") or {}
     steps = job.get("steps") or []
@@ -7673,7 +7676,14 @@ def app_steps_problems(workflow):
     if job.get("runs-on") != ADMITTED_RUNNERS["xcframework.yml"]:
         problems.append(f"harness: it runs on {job.get('runs-on')!r}, not the admitted runner")
     found = {}
-    for name in (HARNESS_PROJECT, HARNESS_LAST, APP_TESTS, APP_ARCHIVE, HARNESS_REPORT):
+    for name in (
+        HARNESS_PROJECT,
+        HARNESS_LAST,
+        APP_TESTS,
+        REVIEW_TESTS,
+        APP_ARCHIVE,
+        HARNESS_REPORT,
+    ):
         if names.count(name) != 1:
             problems.append(f"harness: {names.count(name)} steps named {name!r}, not one")
         else:
@@ -7715,16 +7725,17 @@ def app_steps_problems(workflow):
     if report is not None:
         text = str(report.get("run", ""))
         problems += [f"harness: the report lacks {n}" for n in APP_REPORT_NEEDS if n not in text]
-    if len(found) == 5:
-        at = [names.index(name) for name in (HARNESS_LAST, APP_TESTS, APP_ARCHIVE, HARNESS_REPORT)]
-        if at != list(range(at[0], at[0] + 4)):
+    if len(found) == 6:
+        order = (HARNESS_LAST, APP_TESTS, REVIEW_TESTS, APP_ARCHIVE, HARNESS_REPORT)
+        at = [names.index(name) for name in order]
+        if at != list(range(at[0], at[0] + len(order))):
             problems.append(
-                "harness: the app's two steps do not sit, in order, between the harness's last "
+                "harness: the app's three steps do not sit, in order, between the harness's last "
                 "step and the report"
             )
     envs = [("its env", job.get("env"))] + [
         (f"the env of {step.get('name')!r}", step.get("env"))
-        for step in (tests, archive)
+        for step in (tests, found.get(REVIEW_TESTS), archive)
         if step is not None
     ]
     for where, env in envs:
@@ -7781,6 +7792,7 @@ class TheAppIsGeneratedTestedAndArchived(unittest.TestCase):
             },
             {"name": HARNESS_LAST, "run": "true\n"},
             {"name": APP_TESTS, "run": test_run},
+            {"name": REVIEW_TESTS, "run": "true\n"},
             {"name": APP_ARCHIVE, "run": archive_run},
             {
                 "name": HARNESS_REPORT,
@@ -7815,7 +7827,7 @@ class TheAppIsGeneratedTestedAndArchived(unittest.TestCase):
                 [f"harness: 0 steps named {APP_TESTS!r}, not one"],
             ),
             "a second archive step": (
-                harness(good_steps + [good_steps[5]]),
+                harness(good_steps + [next(s for s in good_steps if s.get("name") == APP_ARCHIVE)]),
                 [f"harness: 2 steps named {APP_ARCHIVE!r}, not one"],
             ),
             "the app generated in the harness's generate step": (
@@ -7883,10 +7895,11 @@ class TheAppIsGeneratedTestedAndArchived(unittest.TestCase):
                     HARNESS_LAST,
                     HARNESS_REPORT,
                     APP_TESTS,
+                    REVIEW_TESTS,
                     APP_ARCHIVE,
                 ),
                 [
-                    "harness: the app's two steps do not sit, in order, between the harness's "
+                    "harness: the app's three steps do not sit, in order, between the harness's "
                     "last step and the report"
                 ],
             ),
@@ -7896,11 +7909,37 @@ class TheAppIsGeneratedTestedAndArchived(unittest.TestCase):
                     HARNESS_LAST,
                     APP_ARCHIVE,
                     APP_TESTS,
+                    REVIEW_TESTS,
                     HARNESS_REPORT,
                 ),
                 [
-                    "harness: the app's two steps do not sit, in order, between the harness's "
+                    "harness: the app's three steps do not sit, in order, between the harness's "
                     "last step and the report"
+                ],
+            ),
+            "no review step": (
+                harness([s for s in good_steps if s.get("name") != REVIEW_TESTS]),
+                [f"harness: 0 steps named {REVIEW_TESTS!r}, not one"],
+            ),
+            "the review step after the archive": (
+                ordered(
+                    HARNESS_PROJECT,
+                    HARNESS_LAST,
+                    APP_TESTS,
+                    APP_ARCHIVE,
+                    REVIEW_TESTS,
+                    HARNESS_REPORT,
+                ),
+                [
+                    "harness: the app's three steps do not sit, in order, between the harness's "
+                    "last step and the report"
+                ],
+            ),
+            "a team in the review step's env": (
+                step_with(REVIEW_TESTS, env={SIGNING_NAMES[2]: "planted"}),
+                [
+                    f"harness: the env of {REVIEW_TESTS!r} names {SIGNING_NAMES[2]}, which only a "
+                    "command line may set"
                 ],
             ),
             "signing in the job's env": (
@@ -7936,6 +7975,250 @@ class TheAppIsGeneratedTestedAndArchived(unittest.TestCase):
                     "xcframework: it names -scheme DeckStreak, which only the harness job may",
                 ],
             )
+
+
+# The review screen's step in the `harness` job (SPEC-348 R20, ADR-359 D8): the app's scheme on
+# both simulators, one after the other, limited to the review screen's three classes, over the app
+# step's derived data into its own result bundle, signed ad hoc on its command line as the app's
+# step is, and its time written for the report. It runs after a red app step too, as the archive
+# does.
+REVIEW_TEST_NEEDS = (
+    "xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug",
+    '-destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS"',
+    '-destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS"',
+    "-disable-concurrent-destination-testing",
+    "-only-testing:DeckStreakTests/ReviewModelTests",
+    "-only-testing:DeckStreakTests/ReviewSessionTests",
+    "-only-testing:DeckStreakUITests/ReviewFlowTests",
+    '-derivedDataPath "$RUNNER_TEMP/app-debug"',
+    '-resultBundlePath "$RESULTS/review.xcresult"',
+    "CODE_SIGN_IDENTITY=-",
+    '> "$REPORT/review-seconds"',
+)
+# The review fixture the engine's job uploads, copied into the runner's temporary directory and
+# named to the test runner on the test command's own line, which xcodebuild hands to the test
+# process as `DS_REVIEW_FIXTURE`; never through an env, so no other step's tests see it.
+REVIEW_FIXTURE = "TEST_RUNNER_DS_REVIEW_FIXTURE"
+REVIEW_FIXTURE_NEEDS = (
+    'cp -R engine-artifact/review-fixture "$RUNNER_TEMP/review-fixture"',
+    f'{REVIEW_FIXTURE}="$RUNNER_TEMP/review-fixture" xcodebuild test',
+)
+REVIEW_ID = "review-tests"
+REVIEW_IF = "${{ !cancelled() && steps.app-tests.outcome != 'skipped' }}"
+# The app's step skips the review screen's classes, so each review test runs once, with its fixture.
+REVIEW_SKIPS = tuple(
+    need.replace("-only-testing:", "-skip-testing:")
+    for need in REVIEW_TEST_NEEDS
+    if need.startswith("-only-testing:")
+)
+# The report's rows for the review screen: its test cases, read and listed, and its test time.
+REVIEW_REPORT_NEEDS = (
+    'cases_in("review")',
+    '("Review", review_cases)',
+    'minutes("review-seconds")',
+)
+
+
+def review_step_problems(workflow):
+    """Each way the `harness` job could fail to run the review screen's tests, named (SPEC-348
+    R20, ADR-359 D8): one step of its name, with its id and its condition, runs the app's scheme
+    on both simulators limited to the three review classes, over the app's derived data into its
+    own result bundle, signed ad hoc on its command line, with the review fixture copied into the
+    runner's temporary directory and named on the test command's line, never in an env; the app's
+    step skips those classes and names no fixture; and the report carries the step's cases and
+    time."""
+    job = (workflow.get("jobs") or {}).get("harness") or {}
+    steps = job.get("steps") or []
+    names = [step.get("name") for step in steps]
+    problems = []
+    if names.count(REVIEW_TESTS) != 1:
+        problems.append(
+            f"harness: {names.count(REVIEW_TESTS)} steps named {REVIEW_TESTS!r}, not one"
+        )
+    review = steps[names.index(REVIEW_TESTS)] if names.count(REVIEW_TESTS) == 1 else None
+    if review is not None:
+        for key, wanted in (("id", REVIEW_ID), ("if", REVIEW_IF)):
+            if review.get(key) != wanted:
+                problems.append(
+                    f"harness: the review step's {key} is {review.get(key)!r}, not {wanted!r}"
+                )
+        run = run_joined(review)
+        problems += [
+            f"harness: the review step lacks {n}"
+            for n in (*REVIEW_FIXTURE_NEEDS, *REVIEW_TEST_NEEDS)
+            if n not in run
+        ]
+    envs = [("its env", job.get("env"))]
+    if review is not None:
+        envs.append((f"the env of {REVIEW_TESTS!r}", review.get("env")))
+    problems += [
+        f"harness: {where} names {REVIEW_FIXTURE}, which only the review step's command line may set"
+        for where, env in envs
+        if REVIEW_FIXTURE in str(env or {})
+    ]
+    if names.count(APP_TESTS) == 1:
+        run = run_joined(steps[names.index(APP_TESTS)])
+        problems += [
+            f"harness: the app's test step lacks {n}" for n in REVIEW_SKIPS if n not in run
+        ]
+        if REVIEW_FIXTURE in run:
+            problems.append(f"harness: the app's test step names {REVIEW_FIXTURE}")
+    if names.count(HARNESS_REPORT) == 1:
+        text = str(steps[names.index(HARNESS_REPORT)].get("run", ""))
+        problems += [f"harness: the report lacks {n}" for n in REVIEW_REPORT_NEEDS if n not in text]
+    return problems
+
+
+class TheReviewScreenIsTestedOnBothSimulators(unittest.TestCase):
+    def test_the_review_screen_is_tested_on_both_simulators_in_the_harness_job(self):
+        """SPEC-348 R20: the `harness` job runs the review screen's tests on both simulators in a
+        step of their own, over the review fixture named on its command line, after the app's
+        tests, whose step skips them, and the report carries the step's cases and time."""
+        jobs = load("xcframework.yml")["jobs"]
+        self.assertEqual(review_step_problems({"jobs": jobs}), [])
+        examined("harness steps", jobs["harness"].get("steps") or [])
+
+        # The controls: the good job is accepted, and each plant is refused by its rule's name.
+        review_run = (
+            REVIEW_FIXTURE_NEEDS[0]
+            + "\nstarted=$(date +%s)\n"
+            + f'{REVIEW_FIXTURE}="$RUNNER_TEMP/review-fixture" '
+            + " \\\n  ".join(REVIEW_TEST_NEEDS[:-1])
+            + '\necho "$(( $(date +%s) - started ))" '
+            + REVIEW_TEST_NEEDS[-1]
+            + "\n"
+        )
+        app_run = (
+            APP_GENERATE
+            + "\nstarted=$(date +%s)\n"
+            + " \\\n  ".join((*APP_TEST_NEEDS[:-1], *REVIEW_SKIPS))
+            + '\necho "$(( $(date +%s) - started ))" '
+            + APP_TEST_NEEDS[-1]
+            + "\n"
+        )
+        good_steps = [
+            {"name": APP_TESTS, "id": "app-tests", "run": app_run},
+            {"name": REVIEW_TESTS, "id": REVIEW_ID, "if": REVIEW_IF, "run": review_run},
+            {
+                "name": HARNESS_REPORT,
+                "if": "${{ always() }}",
+                "run": "\n".join(REVIEW_REPORT_NEEDS),
+            },
+        ]
+
+        def harness(steps=None, **keys):
+            return {
+                "env": {"REPORT": "harness-report"},
+                "steps": good_steps if steps is None else steps,
+                **keys,
+            }
+
+        def step_with(name, **keys):
+            return harness([{**s, **keys} if s.get("name") == name else s for s in good_steps])
+
+        def without(name, piece, instead=""):
+            run = next(s["run"] for s in good_steps if s.get("name") == name)
+            assert run.count(piece) == 1, f"{piece!r} is not in the planted {name!r} once"
+            return step_with(name, run=run.replace(piece, instead))
+
+        plants = {
+            "the good job": (harness(), []),
+            "no review step": (
+                harness([s for s in good_steps if s.get("name") != REVIEW_TESTS]),
+                [f"harness: 0 steps named {REVIEW_TESTS!r}, not one"],
+            ),
+            "a review step with no id": (
+                step_with(REVIEW_TESTS, id=None),
+                [f"harness: the review step's id is None, not {REVIEW_ID!r}"],
+            ),
+            "a review step that waits on a green app step": (
+                step_with(REVIEW_TESTS, **{"if": None}),
+                [f"harness: the review step's if is None, not {REVIEW_IF!r}"],
+            ),
+            "the iPhone alone": (
+                without(REVIEW_TESTS, " \\\n  " + REVIEW_TEST_NEEDS[2]),
+                [f"harness: the review step lacks {REVIEW_TEST_NEEDS[2]}"],
+            ),
+            "both simulators at once": (
+                without(REVIEW_TESTS, REVIEW_TEST_NEEDS[3]),
+                [f"harness: the review step lacks {REVIEW_TEST_NEEDS[3]}"],
+            ),
+            "the flow's class left out": (
+                without(REVIEW_TESTS, REVIEW_TEST_NEEDS[6]),
+                [f"harness: the review step lacks {REVIEW_TEST_NEEDS[6]}"],
+            ),
+            "derived data of its own": (
+                without(REVIEW_TESTS, "$RUNNER_TEMP/app-debug", "$RUNNER_TEMP/review-debug"),
+                [f"harness: the review step lacks {REVIEW_TEST_NEEDS[7]}"],
+            ),
+            "the app's result bundle": (
+                without(REVIEW_TESTS, "$RESULTS/review.xcresult", "$RESULTS/app.xcresult"),
+                [f"harness: the review step lacks {REVIEW_TEST_NEEDS[8]}"],
+            ),
+            "code signing off in the review step": (
+                without(REVIEW_TESTS, "CODE_SIGN_IDENTITY=-", "CODE_SIGNING_ALLOWED=NO"),
+                ["harness: the review step lacks CODE_SIGN_IDENTITY=-"],
+            ),
+            "no time recorded": (
+                without(REVIEW_TESTS, REVIEW_TEST_NEEDS[-1], '> "$REPORT/app-seconds"'),
+                [f"harness: the review step lacks {REVIEW_TEST_NEEDS[-1]}"],
+            ),
+            "no fixture copied": (
+                without(REVIEW_TESTS, REVIEW_FIXTURE_NEEDS[0] + "\n"),
+                [f"harness: the review step lacks {REVIEW_FIXTURE_NEEDS[0]}"],
+            ),
+            "the fixture named in the step's env": (
+                harness(
+                    [
+                        {
+                            **s,
+                            "run": s["run"].replace(
+                                f'{REVIEW_FIXTURE}="$RUNNER_TEMP/review-fixture" ', ""
+                            ),
+                            "env": {REVIEW_FIXTURE: "${{ runner.temp }}/review-fixture"},
+                        }
+                        if s.get("name") == REVIEW_TESTS
+                        else s
+                        for s in good_steps
+                    ]
+                ),
+                [
+                    f"harness: the review step lacks {REVIEW_FIXTURE_NEEDS[1]}",
+                    f"harness: the env of {REVIEW_TESTS!r} names {REVIEW_FIXTURE}, which only the "
+                    "review step's command line may set",
+                ],
+            ),
+            "the fixture named in the job's env": (
+                harness(env={"REPORT": "harness-report", REVIEW_FIXTURE: "planted"}),
+                [
+                    f"harness: its env names {REVIEW_FIXTURE}, which only the review step's "
+                    "command line may set"
+                ],
+            ),
+            "the app's step runs the review tests": (
+                without(APP_TESTS, " \\\n  " + REVIEW_SKIPS[1]),
+                [f"harness: the app's test step lacks {REVIEW_SKIPS[1]}"],
+            ),
+            "the app's step names the fixture": (
+                without(
+                    APP_TESTS,
+                    APP_TEST_NEEDS[0],
+                    f'{REVIEW_FIXTURE}="$RUNNER_TEMP/review-fixture" ' + APP_TEST_NEEDS[0],
+                ),
+                [f"harness: the app's test step names {REVIEW_FIXTURE}"],
+            ),
+            "a report with no review cases": (
+                without(HARNESS_REPORT, 'cases_in("review")'),
+                ['harness: the report lacks cases_in("review")'],
+            ),
+            "a report that lists no review cases": (
+                without(HARNESS_REPORT, '("Review", review_cases)'),
+                ['harness: the report lacks ("Review", review_cases)'],
+            ),
+        }
+        for name, (job, wanted) in examined("planted harness jobs", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(review_step_problems({"jobs": {"harness": job}}), wanted, name)
 
 
 # The two simulators the card probe runs on, one after the other, as the harness job names them.

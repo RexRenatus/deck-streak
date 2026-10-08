@@ -18,6 +18,10 @@ packages:
     path: EnginePackage
   HarnessWire:
     path: HarnessWire
+  # The card view's isolation (SPEC-349): the one factory the review screen's card is built by
+  # (SPEC-348 R9).
+  CardIsolation:
+    path: CardIsolation
 targets:
   DeckStreak:
     type: application
@@ -31,6 +35,7 @@ targets:
       - package: EnginePackage
         product: DeckStreakFFI
       - package: HarnessWire
+      - package: CardIsolation
     settings:
       base:
         INFOPLIST_FILE: App/Info.plist

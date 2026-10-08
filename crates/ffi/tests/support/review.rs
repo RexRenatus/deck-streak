@@ -5,8 +5,10 @@
 //! One builder, written with the engine's own API before the adapter runs. The `review-fixture`
 //! example includes this file alone to write the fixture where the Apple job uploads it, and the
 //! adapter's tests include it to build the same collection in a scratch directory of their own.
-//! The image and the sound are built here from their bytes, never committed as binaries. It returns
-//! every failure as an error rather than panicking, because the example is not a test.
+//! The image and the sound are built here from their bytes, never committed as binaries. The four
+//! cards' ids are fixed, so the intervals the engine gives the first card do not change from run to
+//! run (`CARD_IDS` says what else they depend on). It returns every failure as an error rather than
+//! panicking, because the example is not a test.
 
 #![allow(
     dead_code,
@@ -39,10 +41,26 @@ const SOUND_FRONT: &str = "[sound:tone.wav]";
 const SPEECH_FRONT: &str = "[anki:tts lang=en_US]a spoken card[/anki:tts]";
 /// Every card's back. The stock Basic answer template opens with `{{FrontSide}}`.
 const BACK: &str = "the back";
+/// The four cards' ids, in the order the builder adds them: text, image, sound and speech. The
+/// engine seeds a review interval's fuzz from the card's id, so a new card's Easy interval is the
+/// same on every run only for the same id; the core's review-pairs test fixes its cards' ids for
+/// that reason. An id the engine gives from its clock read Easy as `4d` on one run and `5d` on
+/// another.
+///
+/// The text card, which the review screen shows first, carries `1_000_007`, measured through the
+/// adapter: its four intervals on the default preset are A1's `<1m`, `<6m`, `<10m` and `4d`. The
+/// core's `1_000_002` reads `5d` here. The engine's load balancer, which picks the day within the
+/// fuzz's range, counts each card's `due` as a day's load, and a new card's `due` is its position:
+/// this deck's sound and speech cards sit at 3 and 4, inside the Easy range of 3 to 5 days, where
+/// the core's two-card collection has none. The word therefore also moves with the days since the
+/// collection was made: `1_000_007` reads `4d` on the day the fixture is built and on the next, and
+/// `3d` two days on. It is the first id from `1_000_006` up that reads `4d` on the day the fixture
+/// is built.
+const CARD_IDS: [i64; 4] = [1_000_007, 1_000_008, 1_000_009, 1_000_010];
 /// The sound's sample rate: 16-bit mono samples a second.
 const SAMPLE_RATE: u32 = 8_000;
 
-/// The fixture's four cards, by what each shows.
+/// The fixture's four cards' fixed ids, by what each shows.
 pub struct Cards {
     /// The text card.
     pub text: i64,
@@ -70,7 +88,7 @@ pub struct Review {
 /// # Errors
 ///
 /// Any step the engine or the file system refuses: the directories, the two files, the
-/// collection, the deck, the stock Basic note type, a note, or a card's id.
+/// collection, the deck, the stock Basic note type, a note, or fixing a card's id.
 pub fn build(dir: &Path) -> Result<Review, Box<dyn Error>> {
     let media = dir.join("collection.media");
     std::fs::create_dir_all(&media)?;
@@ -82,23 +100,26 @@ pub fn build(dir: &Path) -> Result<Review, Box<dyn Error>> {
     let basic = col
         .get_notetype_by_name("Basic")?
         .ok_or("the engine created no stock Basic note type")?;
-    let mut card = |front: &str| -> Result<i64, Box<dyn Error>> {
+    let mut card = |front: &str, id: i64| -> Result<i64, Box<dyn Error>> {
         let mut note = basic.new_note();
         note.set_field(0, front)?;
         note.set_field(1, BACK)?;
         col.add_note(&mut note, deck)?;
-        let id = col.storage.db().query_row(
-            "select id from cards where nid = ?",
-            [note.id.0],
-            |row| row.get(0),
-        )?;
+        let fixed = col
+            .storage
+            .db()
+            .execute("update cards set id = ? where nid = ?", [id, note.id.0])?;
+        if fixed != 1 {
+            return Err(format!("the note holds {fixed} card(s), not one").into());
+        }
         Ok(id)
     };
+    let [text, image, sound, speech] = CARD_IDS;
     let cards = Cards {
-        text: card(TEXT_FRONT)?,
-        image: card(IMAGE_FRONT)?,
-        sound: card(SOUND_FRONT)?,
-        speech: card(SPEECH_FRONT)?,
+        text: card(TEXT_FRONT, text)?,
+        image: card(IMAGE_FRONT, image)?,
+        sound: card(SOUND_FRONT, sound)?,
+        speech: card(SPEECH_FRONT, speech)?,
     };
     col.close(None)?;
     Ok(Review {
