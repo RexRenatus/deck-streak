@@ -131,9 +131,16 @@ the never-list's exempt writes to a tap. Nothing holds a grade to a press.
 - A separate native half after this delivery — rejected, because this delivery must move the screen's answer path to the two-grade door, and it cannot move a caller that offers four grades without narrowing it.
 - Leaving the screen on the native `run` until a native half lands — rejected, because the allow-list loses AnswerCard here (D13), so the screen would answer through a refused pair.
 
+### D15. Where a native press's codec lives
+
+- The core's `answer.rs` carries the two codec steps of a native press: `shown_states` decodes the states the card was shown with, refusing `Undecodable`, and `answer_request` encodes the engine's `CardAnswer` from the next state the adapter picked. The native adapter keeps the decode's refusal, the grade's pick `grade.pick(states.again, states.good)`, its clock and the mint, so rows `S36515` and `S36516` anchor in `crates/ffi/src/engine.rs` — chosen, because the adapter depends on the engine core and the bindings runtime alone, and the core already holds the engine's messages and their codec (ADR-356 D1), so no dependency edge is added.
+- A dependency edge from the native adapter to the engine's message crate and its codec — rejected, because the edge is the design: it would give the adapter a second route to the engine's messages beside the core that holds them, added only to make code compile.
+- The core building the whole request from the card, the grade and the encoded states — rejected, because the pick would then leave the adapter, which D6 places there and rows `S36515` and `S36516` hold.
+- The native caller encoding its own `CardAnswer` — rejected for D6's reason: the native code would choose the next state.
+
 ## Decision Outcome
 
-D1 to D14 as chosen above. The core gains `answer.rs` (`Grade`, `OwnerAnswer`, `AnswerRefusal`),
+D1 to D15 as chosen above. The core gains `answer.rs` (`Grade`, `OwnerAnswer`, `AnswerRefusal`, and a native press's codec steps `shown_states` and `answer_request`),
 the `ANSWERED` row, `Decision::NeedsAnswer`, `Refusal::NeedsAnswer` and `Dispatcher::run_answer`.
 The native adapter gains `Engine::answer`, which picks the next state from the states the card was
 shown with, and AnswerCard leaves its allow-list; the native client offers Again and Good alone. The

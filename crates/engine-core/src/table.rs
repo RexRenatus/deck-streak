@@ -23,6 +23,8 @@ pub enum Decision {
     Admit,
     /// An exempt write: never through `run`, only for an owner's gesture.
     NeedsGesture,
+    /// The one answer: never through `run`, only for an owner's press (SPEC-365 R4).
+    NeedsAnswer,
     /// Every other pair.
     NotAllowed,
 }
@@ -238,6 +240,34 @@ pub const ORDINARY: [Ordinary; 18] = [
         web: true,
     },
 ];
+
+/// The one call that records a grade, held for an owner's press (SPEC-365 R4; ADR-376 D5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Answered {
+    /// The backend service's index, as the engine numbers it.
+    pub service: u32,
+    /// The method's index within that service.
+    pub method: u32,
+    /// The engine's name for the call, `Service.Method`.
+    pub name: &'static str,
+}
+
+impl Answered {
+    /// Whether this row is the call at `service` and `method`.
+    #[must_use]
+    pub fn is(&self, service: u32, method: u32) -> bool {
+        self.service == service && self.method == method
+    }
+}
+
+/// The calls that record a grade: `AnswerCard` alone. Neither transport makes it through `run`; the
+/// dispatcher runs it only for an owner's answer, which names the card and the grade a press
+/// named (SPEC-365 R3, R4).
+pub const ANSWERED: [Answered; 1] = [Answered {
+    service: 13,
+    method: 4,
+    name: "SchedulerService.AnswerCard",
+}];
 
 /// The exempt writes: the never-list's entries 2 (Forget), 6 (set due date), 3 (delete a preset),
 /// 7 (change note type) and 8 (delete a card or a note), each one method with one target (SPEC-345

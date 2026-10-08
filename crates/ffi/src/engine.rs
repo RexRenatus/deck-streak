@@ -154,13 +154,14 @@ impl Engine {
 }
 
 /// The adapter's refusal for the core's: a pair the native column does not admit reads as one the
-/// allow-list does not carry, since the two are equal.
+/// allow-list does not carry, since the two are equal, and so do an exempt write and the answer,
+/// which `run` never reaches.
 fn refusal(refusal: Refusal) -> EngineRefusal {
     match refusal {
         Refusal::Engine { error } => EngineRefusal::Engine { error },
-        Refusal::NotAllowed { service, method } | Refusal::NeedsGesture { service, method } => {
-            EngineRefusal::NotAllowed { service, method }
-        }
+        Refusal::NotAllowed { service, method }
+        | Refusal::NeedsGesture { service, method }
+        | Refusal::NeedsAnswer { service, method } => EngineRefusal::NotAllowed { service, method },
     }
 }
 

@@ -194,23 +194,32 @@ fn the_review_pairs_run_natively_and_no_other_pair_joins() {
     assert_eq!(described.vals, NEW_CARD_INTERVALS, "a new card's intervals");
 
     // Every pair outside the native column stays refused on the native dispatcher: held for a
-    // gesture when it is an exempt write, not allowed otherwise.
+    // gesture when it is an exempt write, held for a press when it records a grade, not allowed
+    // otherwise.
     let others: Vec<(u32, u32)> = (0..=LAST)
         .flat_map(|service| (0..=LAST).map(move |method| (service, method)))
         .filter(|pair| !NATIVE.contains(pair))
         .collect();
     let others = support::examined("pair(s) outside the native column", others);
-    let (mut for_gesture, mut refused, mut answered) = (Vec::new(), 0_usize, Vec::new());
+    let (mut for_gesture, mut for_answer, mut refused, mut answered) =
+        (Vec::new(), Vec::new(), 0_usize, Vec::new());
     for &(service, method) in &others {
         match dispatcher.run(service, method, &[]) {
             Err(Refusal::NeedsGesture { .. }) => for_gesture.push((service, method)),
+            Err(Refusal::NeedsAnswer { .. }) => for_answer.push((service, method)),
             Err(Refusal::NotAllowed { .. }) => refused += 1,
             Ok(_) | Err(Refusal::Engine { .. }) => answered.push((service, method)),
         }
     }
     assert_eq!(
-        (for_gesture, refused, answered),
-        (HELD.to_vec(), 4225 - NATIVE.len() - HELD.len(), Vec::new()),
-        "the pairs outside the native column: held, refused, and reaching the engine"
+        (for_gesture, for_answer, refused, answered),
+        (
+            HELD.to_vec(),
+            Vec::new(),
+            4225 - NATIVE.len() - HELD.len(),
+            Vec::new()
+        ),
+        "the pairs outside the native column: held for a gesture, held for a press, refused, and \
+         reaching the engine"
     );
 }

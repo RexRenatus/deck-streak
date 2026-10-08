@@ -239,7 +239,7 @@ SPEC and ADR-376 record the change, and their tests keep their names):
 | `docs/red-first/SPEC-365.md` | docs | added |
 | `docs/LEXICON.md` | docs | two glossary rows (R11) |
 | `changelog.d/grade-token-365.md` | docs | added |
-| `crates/engine-core/src/answer.rs` | engine-core | added (R1 to R3) |
+| `crates/engine-core/src/answer.rs` | engine-core | added (R1 to R3), with a native press's two codec steps (R6; ADR-376 D15) |
 | `crates/engine-core/src/lib.rs` | engine-core | `pub mod answer` and its line in the module list |
 | `crates/engine-core/src/table.rs` | engine-core | AnswerCard leaves `ORDINARY` and becomes `ANSWERED`'s one row; `Decision::NeedsAnswer`; `decide` (R4) |
 | `crates/engine-core/src/dispatch.rs` | engine-core | `Refusal::NeedsAnswer`, its arm in `run`, and `run_answer` (R3, R5) |
@@ -249,6 +249,7 @@ SPEC and ADR-376 record the change, and their tests keep their names):
 | `crates/engine-core/tests/exempt.rs` | engine-core | `answer_next` answers through `run_answer` |
 | `crates/engine-core/tests/review_pairs.rs` | engine-core | `NATIVE` drops (13,4) |
 | `crates/engine-core/tests/containment.rs` | engine-core | the answer's names and entry calls, `answer_card`, its held lines, the plants, and A7 (R8) |
+| `crates/engine-core/tests/full_sync.rs` | engine-core | `engine_error` reads `Refusal::NeedsAnswer` as a refusal made before the engine (R5) |
 | `crates/ffi/src/allow_list.rs` | ffi | AnswerCard leaves `ALLOW_LIST` (R6) |
 | `crates/ffi/src/engine.rs` | ffi | `Engine::answer`, `PressedGrade` and `PressRefusal`; `NeedsAnswer` in `refusal()` (R6) |
 | `crates/ffi/tests/round_trip.rs` | ffi | A12 and A13; `good_answer` and `a4_answers_the_card` answer through `Engine::answer` |
