@@ -212,3 +212,12 @@ mutant it covers, and the source was put back by its checksum after each run.
 
 The unmutated runs of all three passed, one test selected each. This record's own commit changes no
 path under `crates/`.
+
+## After the coverage tests: the fence again
+
+96f92e33 changes `crates/` after af575016, the tree the fence last ran on above. At b74cd568,
+whose `crates/` tree is 96f92e33's, every line of the fence,
+A1 to A21, the whole of `full_sync`, the three coverage tests, and the whole test sets of the core,
+the web engine and the native adapter ran again on a clean tree and passed, with clippy clean. The
+diff's own mutants ran there too: every one was caught or does not build, apart from the kind
+deletion recorded as equivalent above.
