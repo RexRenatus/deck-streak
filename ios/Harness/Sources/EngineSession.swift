@@ -3,12 +3,12 @@ import Foundation
 import HarnessWire
 
 /// The engine calls the harness makes, by the pairs the adapter's allow-list holds (SPEC-336,
-/// SPEC-339 R10). The adapter refuses any other pair before the engine sees it.
+/// SPEC-339 R10). The adapter refuses any other pair before the engine sees it. An answer is not
+/// one of them: it goes through the adapter's answer door (SPEC-365 R10).
 enum EngineCall {
     static let openCollection: (service: UInt32, method: UInt32) = (3, 0)
     static let deckNames: (service: UInt32, method: UInt32) = (7, 13)
     static let queuedCards: (service: UInt32, method: UInt32) = (13, 3)
-    static let answerCard: (service: UInt32, method: UInt32) = (13, 4)
     static let renderExistingCard: (service: UInt32, method: UInt32) = (27, 6)
 }
 
@@ -29,6 +29,17 @@ struct Refusal: Error, Equatable {
                 return "The engine refused the call with a \(error.count)-byte error."
             case .Start(let reason):
                 return "The engine could not start: \(reason)"
+            }
+        case let refusal as PressRefusal:
+            switch refusal {
+            case .Undecodable:
+                return "The engine could not read the states the card was shown with."
+            case .NotTheCard:
+                return "The answer named another card than the one pressed."
+            case .NotTheGrade:
+                return "The answer named another grade than the one pressed."
+            case .Engine(let error):
+                return "The engine refused the answer with a \(error.count)-byte error."
             }
         case let wire as WireError:
             return "The engine's answer could not be read: \(wire)."
@@ -103,19 +114,22 @@ actor EngineSession {
         return Studied(card: card, question: question, newCount: queue.newCount)
     }
 
-    /// Answers the shown card Good with the states the queue gave it, then reads the queue again
-    /// (R7).
+    /// Answers the shown card Good through the adapter's answer door, then reads the queue again
+    /// (R7). The press names the card and its grade and hands over the states the queue gave the
+    /// card; the adapter picks Good's state from them, so the harness chooses no next state of its
+    /// own (SPEC-365 R10).
     func answerGood() throws -> Studied {
         guard let card = head else {
             throw Refusal(sentence: "There is no card to answer.")
         }
+        guard let engine else {
+            throw Refusal(sentence: "The collection is not open.")
+        }
         let taken = shownAt.map { $0.duration(to: .now) } ?? .zero
-        let answer = CardAnswer(
-            cardID: card.cardID, currentState: card.currentState, newState: card.goodState,
-            rating: .good, answeredAtMillis: Int64(Date().timeIntervalSince1970 * 1000),
+        _ = try engine.answer(
+            card: card.cardID, grade: .good, states: Data(Requests.describeNextStates(card)),
             millisecondsTaken: UInt32(clamping: taken.components.seconds * 1000
                 + taken.components.attoseconds / 1_000_000_000_000_000))
-        _ = try call(EngineCall.answerCard, Requests.answerCard(answer))
         return try next()
     }
 
