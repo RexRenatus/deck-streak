@@ -288,3 +288,12 @@ named criterion's test:
 | S35712 | `id_sets` reads the first row only | A10 |
 | S35713 | the unsynced read counts synced reviews | A9 |
 | S35714 | `Unsynced::warns` needs every condition, not any | A9 |
+
+## Amendment: the upload re-check stamp
+
+For an upload's re-check, R7's "modified stamp" is the upload re-check stamp of the owner's ruling,
+`docs/rulings/OWNER-RULING-2026-10-08-upload-recheck-stamp.md`: one fixed integer statement, `fnvhash` of the
+greatest row usn over every synced table that carries one, graves included, and `col.scm`, which
+`Dispatcher::id_sets` reads where R9 names the modified stamp (SPEC-364 R6, ADR-375 D13). `Checked`
+reaches `Ready` only from a fresh server copy whose ids and upload re-check stamp equal the counted
+copy's; the rest of R7 stands as written.

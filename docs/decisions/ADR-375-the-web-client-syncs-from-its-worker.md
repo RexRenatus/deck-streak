@@ -218,6 +218,32 @@ What it was chosen AGAINST:
 | `back_up` takes the direction from its caller | an adapter that names Upload on a confirmed download would back the device up with the server copy and skip the `VACUUM INTO` whenever the copy holds every device id |
 | `back_up(dispatcher, counted, direction, backup, copy)` confirms inside the core | it amends R5, the schematic's order (`Counted::confirm`, then `back_up` over the `Confirmed`) and D3's wording, for no gain in soundness over a crate-private read |
 
+### D13. An upload's re-check compares the ids and the upload re-check stamp
+
+The owner's signed ruling, `docs/rulings/OWNER-RULING-2026-10-08-upload-recheck-stamp.md`, sets the value
+`Checked::rechecked` compares beside the ids: one fixed integer statement, `fnvhash` of the
+greatest row usn over every synced table that carries one, graves included, and `col.scm`.
+`Dispatcher::id_sets` reads it as `MODIFIED_SQL`, over `cards`, `notes`, `revlog`, `graves`,
+`decks`, `deck_config`, `notetypes`, `templates`, `tags` and `config`, each table's greatest read
+by its own `max(usn)`. `rechecked` is byte-unchanged. A normal sync moves the stamp: the server
+stamps tags, config and graves with its next usn, and an engine client stamps every other row it
+sends with the server's usn. A full upload moves it: the uploader sets `col.scm` to its millisecond
+clock. A download's restamp, which changes only `col.usn`, `col.mod` and `col.ls`, leaves it
+still. The stamp may depend on a client's clock on the full-upload arm only, and the reliance it
+admits is exactly the ruling's two: two uploads do not carry the same millisecond schema stamp, and
+no client writes a row usn below the server's, which the sync protocol never does.
+
+`tla/FullSyncChoice`'s abstract "the server changed" (a server copy whose ids changed, the stamp folded into them) is a fresh copy whose ids or upload re-check stamp differ from the counted copy's.
+
+What it was chosen AGAINST:
+
+| alternative | why it lost |
+|---|---|
+| a digest of every row, computed by the core | clock-free, but the engine's only SQL hash reads integers, so the core would read the whole collection five times per upload in the web worker |
+| SPEC-357 R7 as written: the collection's modified stamp | it blocks every upload re-check, since a download always moves `col.mod` |
+| the greatest row usn alone | it misses an uploaded edit whenever an unchanged row holds the greatest usn, since a full upload resets only the uploader's changed rows to usn 0 |
+| the greatest modified time of cards, notes, decks, presets and note types | narrower: a new tag name alone, a config change alone, a deletion, a full upload, and an edit dated at or below the greatest row's each leave it still |
+
 ## Consequences
 
 - Good, because the engine's protocol, its status handling and its file moves stay the engine's,

@@ -138,7 +138,13 @@ R5. **The backup, made and verified by the core.** `one_way::back_up(dispatcher,
     `backup` that names the open collection or a file that holds rows is refused.
 R6. **The re-check.** `one_way::recheck(dispatcher, checked, auth, fresh)` fetches a fresh server
     copy into the empty path `fresh` (R4's rules) and calls `Checked::rechecked`; a changed server
-    answers a new `Counted` over the fresh copy.
+    answers a new `Counted` over the fresh copy. The stamp `rechecked` compares beside the ids is
+    the upload re-check stamp of the owner's ruling, `docs/rulings/OWNER-RULING-2026-10-08-upload-recheck-stamp.md`:
+    `Dispatcher::id_sets` reads it by one fixed integer statement, `fnvhash` of the greatest row
+    usn over every synced table that carries one (`cards`, `notes`, `revlog`, `graves`, `decks`,
+    `deck_config`, `notetypes`, `templates`, `tags` and `config`) and `col.scm`. A normal sync and
+    a full upload move it; a download's restamp, which changes only `col.usn`, `col.mod` and
+    `col.ls`, leaves it still. `rechecked` is unchanged (ADR-375 D13).
 R7. **The write re-reads the device.** `one_way::write(dispatcher, ready, gesture, auth)` re-reads
     the open collection's ids, calls `Ready::at_write`, and only on its `Write` calls R3's
     `run_one_way`. A device that gained a row its backup lacks answers a new `Counted`.
@@ -190,6 +196,13 @@ support as `crates/ffi/tests/support/sync_server.rs` starts it, on a loopback po
 | A12 | Outside the core, `run_one_way` is named only in the entry files; a planted caller in each non-UI crate is refused by name; the census prints its count | `GESTURE_NAMES` without `run_one_way`: the planted caller passes | `containment::no_non_ui_caller_reaches_an_exempt_function` |
 | A13 | No new dependent of the core; the core's test support adds a dev-dependency only | not red: the graph census is green at the base and must stay green; it guards the dev-dependency, its planted dependent is the target's own control | `graph` (whole target) |
 | A14 | Each adapter's list still equals its transport's column, the web side read as `STUDY_CALLS` with `SYNC_CALLS` | not red: green at the base; it reddens only in a tree that flips the web column without `SYNC_CALLS` | `parity::each_adapter_table_equals_its_transport_column` |
+| A15 | A second client's note edit that adds no id, synced after the count, returns the upload to the counts | not red: the header stamp refuses every re-check, so a changed server already returns to the counts | `one_way::an_edit_that_adds_no_id_returns_the_upload_to_the_counts` |
+| A16 | A second client's new tag name alone, and its config change alone, each synced after the count, return the upload to the counts | not red: likewise | `one_way::a_tag_or_config_change_alone_returns_the_upload_to_the_counts` |
+| A17 | A second client's removal of an empty deck, synced after the count, returns the upload to the counts | not red: likewise | `one_way::a_deletion_returns_the_upload_to_the_counts` |
+| A18 | A second client's note edit dated at or below the greatest row's, synced after the count, returns the upload to the counts | not red: likewise | `one_way::an_edit_dated_at_or_below_the_greatest_returns_the_upload_to_the_counts` |
+| A19 | A second client's full upload after the count returns the upload to the counts | not red: likewise | `one_way::a_full_upload_after_the_count_returns_the_upload_to_the_counts` |
+| A20 | An unchanged server's copy, fetched again, carries the counted copy's stamp, and the upload is ready | the header stamp: the fetch's download moves `col.mod` | `one_way::an_unchanged_server_rechecks_equal` |
+| A21 | The stamp moves with each synced table's greatest usn and with `col.scm`, and equals the engine's hash of them read apart from the core | the header stamp moves with none of them | `one_way::the_stamp_reads_every_synced_tables_greatest_usn_and_the_schema` |
 
 ```acceptance
 A1: cargo test -p deck-streak-engine-core --test table -- --exact the_web_column_admits_the_sync_login_and_the_normal_sync
@@ -208,6 +221,13 @@ A11: cargo test -p deck-streak-engine-core --test one_way -- --exact an_evicted_
 A12: cargo test -p deck-streak-engine-core --test containment -- --exact no_non_ui_caller_reaches_an_exempt_function
 A13: cargo test -p deck-streak-engine-core --test graph
 A14: cargo test -p deck-streak-engine-core --test parity -- --exact each_adapter_table_equals_its_transport_column
+A15: cargo test -p deck-streak-engine-core --test one_way -- --exact an_edit_that_adds_no_id_returns_the_upload_to_the_counts
+A16: cargo test -p deck-streak-engine-core --test one_way -- --exact a_tag_or_config_change_alone_returns_the_upload_to_the_counts
+A17: cargo test -p deck-streak-engine-core --test one_way -- --exact a_deletion_returns_the_upload_to_the_counts
+A18: cargo test -p deck-streak-engine-core --test one_way -- --exact an_edit_dated_at_or_below_the_greatest_returns_the_upload_to_the_counts
+A19: cargo test -p deck-streak-engine-core --test one_way -- --exact a_full_upload_after_the_count_returns_the_upload_to_the_counts
+A20: cargo test -p deck-streak-engine-core --test one_way -- --exact an_unchanged_server_rechecks_equal
+A21: cargo test -p deck-streak-engine-core --test one_way -- --exact the_stamp_reads_every_synced_tables_greatest_usn_and_the_schema
 ```
 
 Existing tests the implementation commit grows with the table, insert-only (no assertion
@@ -218,6 +238,13 @@ per-write request tables gain the `OneWaySync` arm; the loop over every exempt w
 `NeedsTheChoice` for it, by name), `tests/parity.rs` (the web side reads `SYNC_CALLS` too), and the
 web engine's and native adapter's tests R1 and R13 name.
 
+R6's stamp changes three existing tests' oracle or fixture, and drops no assertion: the `held`
+oracles of `tests/one_way.rs` and `tests/full_sync.rs` read the stamp through the support's
+`stamp`, apart from the core, and
+`full_sync::a_reply_that_is_not_integers_is_the_engines_database_error` plants a schema stamp
+that is not an integer, which the engine's hash refuses as its own database error, since the
+stamp's statement answers no fraction.
+
 The model's properties are decided by the formal checker, which this repository's CI does not run;
 section 8 maps the driver's steps to them.
 
@@ -227,14 +254,15 @@ section 8 maps the driver's steps to them.
 |---|---|
 | `crates/engine-core/src/table.rs` | R1: (1,3) web, the (1,5) row, the `OneWaySync` exempt row, `TargetKind::Collection` |
 | `crates/engine-core/src/login_guard.rs` | R2: the rule applied to a `SyncAuth`; the media refusal |
-| `crates/engine-core/src/dispatch.rs` | R2 on (1,5) in `run`; R3 `run_one_way`; the dispatcher keeps its start message and its open collection's path |
+| `crates/engine-core/src/dispatch.rs` | R2 on (1,5) in `run`; R3 `run_one_way`; the dispatcher keeps its start message and its open collection's path; R6: `MODIFIED_SQL` reads the upload re-check stamp |
 | `crates/engine-core/src/gesture.rs` | R3: `Target::Collection`, `GestureRefusal::NeedsTheChoice`; `checked` refuses `OneWaySync` before it decodes |
 | `crates/engine-core/src/one_way.rs` (new) | R4 to R8: `count`, `back_up`, `recheck`, `write` |
 | `crates/engine-core/src/full_sync.rs` | one insert-only crate-private accessor, `Confirmed::direction`, on which `back_up` branches (`ADR-375` D12); no covered anchor changes |
 | `crates/engine-core/src/lib.rs` | the module |
 | `crates/engine-core/Cargo.toml` | the test support's dev-dependency for the engine's own sync server |
-| `crates/engine-core/tests/support/sync_server.rs` (new), `crates/engine-core/tests/support/mod.rs` | the engine's own sync server on a loopback port |
-| `crates/engine-core/tests/one_way.rs` (new) | A4 to A11 |
+| `crates/engine-core/tests/support/sync_server.rs` (new), `crates/engine-core/tests/support/mod.rs` | the engine's own sync server on a loopback port; the stamp's oracle `stamp` (R6) |
+| `crates/engine-core/tests/one_way.rs` (new) | A4 to A11, A15 to A21 |
+| `crates/engine-core/tests/full_sync.rs` | R6: the `held` oracle reads the stamp, and the not-integers test plants a schema stamp that is not an integer (section 3) |
 | `crates/engine-core/tests/table.rs`, `tests/login_guard.rs`, `tests/exempt.rs`, `tests/containment.rs` | A1, A2, A3, A12 |
 | `crates/engine-core/tests/gesture.rs`, `tests/review_pairs.rs`, `tests/parity.rs` | the existing tests that grow with the table (section 3) |
 | `crates/ffi/src/engine.rs`, `crates/ffi/tests/exempt.rs` | the exempt refusal gains the case `NeedsTheChoice`, mapped and read as its own sentence (an error case, no new export) |
@@ -242,7 +270,7 @@ section 8 maps the driver's steps to them.
 | `docs/specs/SPEC-364-the-web-client-syncs-from-its-worker.md`, `docs/decisions/ADR-375-the-web-client-syncs-from-its-worker.md`, `docs/schematics/web-sync-core.md` | this SPEC, its ADR, its schematic |
 | `docs/decisions/ADR-301-deckstreak-writes-to-the-collection-only-through-declared-write-classes.md` | R12's note |
 | `docs/decisions/ADR-356-the-engine-core-holds-the-engine-for-both-clients-behind-a-per-transport-table.md` | R12's amendment of D6 |
-| `docs/specs/SPEC-357-the-full-sync-choice-and-the-web-sync-screens.md` | section 7 names this SPEC as part b |
+| `docs/specs/SPEC-357-the-full-sync-choice-and-the-web-sync-screens.md` | section 7 names this SPEC as part b; an insert-only amendment of R7 names the upload re-check stamp (R6) |
 | `scripts/mutation-rows.d/S36400-S36499.json` (new) | section 10 |
 | `docs/red-first/SPEC-364.md` | each criterion's red |
 | `changelog.d/web-sync-core-364.md` | the delivery's fragment |
@@ -388,6 +416,9 @@ Band `S364`: rows `S36401` to `S36421` in `scripts/mutation-rows.d/S36400-S36499
 unique in its file at the cut; the build brief names each row's find, replacement and killer.
 `S36401` to `S36418` are `crates/engine-core`'s; `S36419` to `S36421` pin `SYNC_CALLS`'s literal
 values in `crates/web-engine/src/study.rs`, killed by the web engine's own test (a new row's
-killer lives in its row's crate). The delivery also re-kills every existing row on each file it
+killer lives in its row's crate). `S36423` to `S36434` pin R6's stamp in
+`crates/engine-core/src/dispatch.rs`: one row per synced table that drops it from the statement,
+one that drops `col.scm`, and one that reads the greatest modified time of cards, notes, decks,
+presets and note types instead; `S36422` is unused. The delivery also re-kills every existing row on each file it
 edits, and re-anchors none: `table.rs` 23, `dispatch.rs` 6, `gesture.rs` 3, `login_guard.rs` 5,
 `crates/ffi/src/engine.rs` 6 and `crates/web-engine/src/study.rs` 27 at `dee337bc`.
