@@ -330,7 +330,7 @@
         "web-engine",
         "src/wasm.rs",
         "Refusal::Engine { error } => Uint8Array::from(error.as_slice()).into()",
-        "Refusal::Engine { error } => refuse(\"engine error\")",
+        "Refusal::Engine { .. } => refuse(\"engine error\")",
         "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
         "an engine refusal reaches the Worker as the engine's own error bytes, which the credential module classifies to tell a refused key from a lost network; a text in their place would read every refusal as offline and keep a refused key, and a reader would lose the bytes the classification needs (SPEC-364 B6)"
       ],
