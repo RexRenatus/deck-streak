@@ -323,3 +323,36 @@ fn a_request_that_is_not_a_card_answer_is_refused() {
         "the same bytes are no SchedulingStates either, and a native press's states refuse them"
     );
 }
+
+/// MUTATION COVERAGE, not red first (SPEC-365 R3): added after the code to kill the mutant that
+/// answers every refusal with empty text. The web's `rate` hands this text to the page as its
+/// refusal, so each variant's sentence is held whole, with the values spelt here.
+#[test]
+fn each_answer_refusal_reads_as_its_own_sentence() {
+    let refusals = [
+        AnswerRefusal::Undecodable,
+        AnswerRefusal::NotTheCard {
+            pressed: 7,
+            named: 8,
+        },
+        AnswerRefusal::NotTheGrade {
+            pressed: Grade::Good,
+            named: 1,
+        },
+        AnswerRefusal::Engine {
+            error: vec![1, 2, 3],
+        },
+    ];
+    let sentences: Vec<String> = refusals.iter().map(ToString::to_string).collect();
+    assert_eq!(
+        sentences,
+        [
+            "the answer is not the engine's card answer",
+            "the press named card 7; the answer names card 8",
+            "the press named Good; the answer names rating 1",
+            "the engine refused the answer (3 bytes)",
+        ],
+        "each refusal reads as its own sentence, with the values it carries"
+    );
+    println!("examined {} of 4 refusal(s)", sentences.len());
+}
