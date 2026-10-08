@@ -393,7 +393,11 @@ delivers them:
 | `S35805-SET-FLAG-IS-ON-THE-ALLOW-LIST` | (5,4)'s allow-list call renumbered in `allow_list.rs` | `review_pairs::the_allow_list_carries_the_review_pairs` |
 | `S35806-NATIVE-BURY-USES-THE-CORES-BURY` | `bury_of(card_id)` replaced by an empty `BuryOf` in `engine.rs` | `review_actions::a_bury_buries_the_card_as_the_users_bury` |
 | `S35807-NATIVE-FLAG-TOGGLES` | `toggled_red(flag)` replaced by `flag` in `engine.rs` | `review_actions::a_flag_toggles_red_and_answers_the_new_flag` |
+| `S35808-RED-LIVES-ONCE-IN-THE-CORE` | a second `RED` planted back in `crates/web-engine/src/study.rs`, where the five lived before the move | `test_one_review_rule.TheFlagAndBuryRulesLiveOnceInTheCore.test_the_flag_and_bury_rules_live_once_in_the_core` |
 
+S35808 is A3's row: its mutant puts one of the five back where A3 forbids it, so the census is seen
+failing for its criterion's reason. Its killer is a Python test module, so CI's `mutation-rows`
+job proves it, read by its stem.
 S35009 to S35013 keep their ids and properties; their crate, path and killers move to the core.
 S35020 and S35021 keep their ids and properties; their finds read `native: true`. S35019, the
 (3,7) row, is untouched, and S35800 and S35803 are not written (section 7).
