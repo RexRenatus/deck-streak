@@ -100,7 +100,7 @@ const ANSWER_FIXTURE: &str =
 
 /// Each line outside the core that may name the engine or the gesture (SPEC-345 section 8): its
 /// file, its exact trimmed text, how many times the file holds it, and why.
-const HELD: [(&str, &str, usize, &str); 23] = [
+const HELD: [(&str, &str, usize, &str); 25] = [
     (
         "crates/ingest/src/engine.rs",
         "col.full_download(auth, engine_client())",
@@ -218,6 +218,18 @@ const HELD: [(&str, &str, usize, &str); 23] = [
     (
         "crates/web-engine/tests/boundary.rs",
         "\"dispatcher()?.run_exempt(gesture, input).map_err(refuse)\",",
+        1,
+        BOUNDARY_CENSUS_LITERAL,
+    ),
+    (
+        "crates/web-engine/tests/boundary.rs",
+        "\"OwnerAnswer::from_press(shown.card, pressed(grade))\",",
+        1,
+        BOUNDARY_CENSUS_LITERAL,
+    ),
+    (
+        "crates/web-engine/tests/boundary.rs",
+        "\".run_answer(answer, &request.encode_to_vec())\",",
         1,
         BOUNDARY_CENSUS_LITERAL,
     ),

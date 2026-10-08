@@ -347,6 +347,19 @@ describe('the Worker session', () => {
     expect(log).toEqual(OPENED);
   });
 
+  it('the session refuses the queue-head answer as an unknown operation', async () => {
+    // SPEC-365 A14: only an owner's press records a grade, through `rate` on the card shown; the
+    // queue-head `answer` is no operation, so the session refuses it before the engine sees it.
+    const engine = new FakeEngine();
+    const { session } = browser(engine);
+    expect((await session.handle({ id: 1, op: 'open' })).ok).toBe(true);
+    expect((await session.handle({ id: 2, op: 'seed', count: 1 })).ok).toBe(true);
+    expect(await session.handle({ id: 3, op: 'answer', rating: 3, ms: 1200 })).toEqual(
+      refusal(3, 'bad-request', 'unknown operation answer')
+    );
+    expect(engine.calls).toEqual([['install_storage'], ['init'], ['open'], ['seed', 1]]);
+  });
+
   it('a request before open answers not-open, and a closed collection reopens on its engine', async () => {
     const engine = new FakeEngine();
     const { log, session } = browser(engine);

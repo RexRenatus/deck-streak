@@ -258,7 +258,7 @@ SPEC and ADR-376 record the change, and their tests keep their names):
 | `crates/web-engine/src/study.rs` | web-engine | `grade`, `StudyError::NotAGrade`; `Answer` removed; `STUDY_CALLS` drops (13,4) (R7) |
 | `crates/web-engine/src/wasm.rs` | web-engine | `rate` through `run_answer`; `answer` removed; `NeedsAnswer` in `call()` (R7) |
 | `crates/web-engine/tests/study.rs` | web-engine | A9 and A10; the review's pairs drop (13,4) (`:68`, `:156`) |
-| `crates/web-engine/tests/boundary.rs` | web-engine | `rate`'s owed statements; `answer`'s entry removed (`OWED` 29 rows to 28) (A11) |
+| `crates/web-engine/tests/boundary.rs` | web-engine | `rate`'s owed statements and a `pressed` entry (`OWED` 29 rows to 30; the base holds no `answer` entry), and the retired texts with their planted control (A11) |
 | `scripts/mutation-equivalent.d/deck-streak-web-engine.json` | scripts | `answer`'s three records retire with the function (`:159`, `:168`, `:177`); `rate`'s re-anchor if its first lines move |
 | `scripts/mutation-rows.d/S36500-S36599.json` | scripts | added (section 9) |
 | `web/app/src/lib/engine/protocol.ts` | miniapp | the `answer` op leaves the op list and the request union (R9) |

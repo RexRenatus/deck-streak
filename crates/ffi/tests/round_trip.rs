@@ -17,7 +17,9 @@ mod support;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use deck_streak_ffi::engine::{Engine, EngineRefusal};
+use anki::collection::CollectionBuilder;
+use anki::decks::DeckId;
+use deck_streak_ffi::engine::{Engine, EngineRefusal, PressRefusal, PressedGrade};
 use support::synthetic::SECOND_DECK;
 use support::{Synthetic, open_request, synthetic, wire};
 
@@ -39,6 +41,14 @@ const GOOD: u64 = 2;
 const NEW_QUEUE: u64 = 0;
 /// The engine's name for the operation an answer records, which its undo reports.
 const ANSWER_OPERATION: &str = "Answer Card";
+/// The engine's card type for a card in learning (`cards.type`).
+const LEARNING: i64 = 1;
+/// The review log's button for Again and for Good (`revlog.ease`), the rating plus one.
+const AGAIN_EASE: i64 = 1;
+/// See [`AGAIN_EASE`].
+const GOOD_EASE: i64 = 3;
+/// Bytes that are no `SchedulingStates`: a length-delimited field 1 whose length runs past the end.
+const NO_MESSAGE: [u8; 3] = [0x0a, 0x05, 0x01];
 
 fn engine() -> Arc<Engine> {
     Engine::new(Vec::new()).expect("the engine starts from the default init message")
@@ -150,6 +160,109 @@ fn good_answer(synthetic: &Synthetic, queued: &Result<Vec<u8>, EngineRefusal>) -
     );
     wire::put_varint_field(&mut out, 6, 4_000);
     out
+}
+
+/// The milliseconds since the epoch, as the test's own clock reads them.
+fn now_millis() -> i64 {
+    let since = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("the clock reads after the epoch");
+    i64::try_from(since.as_millis()).expect("the time fits 64 bits")
+}
+
+/// Adds a second Basic note to the synthetic collection, before any engine opens it, and answers
+/// its one card's id.
+fn second_card(synthetic: &Synthetic) -> i64 {
+    let mut col = CollectionBuilder::new(&synthetic.collection)
+        .build()
+        .expect("the engine reopens the synthetic collection");
+    let basic = col
+        .get_notetype_by_name("Basic")
+        .expect("the engine reads its note types")
+        .expect("the stock Basic note type");
+    let mut note = basic.new_note();
+    note.set_field(0, "second front").expect("a front");
+    note.set_field(1, "second back").expect("a back");
+    col.add_note(&mut note, DeckId(1))
+        .expect("the engine adds the note");
+    let card = col
+        .storage
+        .db()
+        .query_row("select id from cards where nid = ?", [note.id.0], |row| {
+            row.get(0)
+        })
+        .expect("the note has its card");
+    col.close(None).expect("the engine closes the collection");
+    card
+}
+
+/// `GetQueuedCardsRequest { fetch_limit: 2 }`.
+fn two_queued() -> Vec<u8> {
+    let mut out = Vec::new();
+    wire::put_varint_field(&mut out, 1, 2);
+    out
+}
+
+/// Each queued card of a `QueuedCards` response with the encoded `SchedulingStates` the queue
+/// gave it, in the queue's order.
+fn shown(bytes: &[u8]) -> Vec<(i64, Vec<u8>)> {
+    wire::repeated(bytes, 1)
+        .iter()
+        .map(|queued| {
+            (
+                wire::signed(&wire::bytes(queued, 1), 1),
+                wire::bytes(queued, 3),
+            )
+        })
+        .collect()
+}
+
+/// The remaining learning steps a next state leaves: `SchedulingState.normal.learning
+/// .remaining_steps`, read from the states the engine itself gave (`again` is field 2, `good` 4).
+fn remaining_steps(states: &[u8], field: u64) -> i64 {
+    let state = wire::bytes(states, field);
+    let learning = wire::bytes(&wire::bytes(&state, 1), 2);
+    i64::try_from(wire::varint(&learning, 1)).expect("a step count fits 64 bits")
+}
+
+/// What the engine wrote, read from the collection file once the engine that held it is dropped:
+/// each card's `type`, `left` and `reps`, then each review's card, button, time taken and id, in
+/// the order they were logged.
+fn written(
+    synthetic: &Synthetic,
+    engine: Arc<Engine>,
+    cards: &[i64],
+) -> (Vec<[i64; 3]>, Vec<[i64; 4]>) {
+    drop(engine);
+    let col = CollectionBuilder::new(&synthetic.collection)
+        .build()
+        .expect("the engine reopens the collection");
+    let rows = cards
+        .iter()
+        .map(|card| {
+            col.storage
+                .db()
+                .query_row(
+                    "select type, left, reps from cards where id = ?",
+                    [card],
+                    |row| Ok([row.get(0)?, row.get(1)?, row.get(2)?]),
+                )
+                .expect("each card has its row")
+        })
+        .collect();
+    let reviews = col
+        .storage
+        .db()
+        .prepare("select cid, ease, time, id from revlog order by id")
+        .expect("the review log reads")
+        .query_map([], |row| {
+            Ok([row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?])
+        })
+        .expect("the review log reads")
+        .collect::<Result<Vec<_>, _>>()
+        .expect("each review reads");
+    col.close(None).expect("the engine closes the collection");
+    (rows, reviews)
 }
 
 /// The two flags of an `OpChanges` a scheduling change sets: `card` and `study_queues`.
@@ -275,5 +388,85 @@ fn a6_refuses_an_unlisted_call_and_keeps_serving() {
             Ok(vec!["Default".to_owned(), SECOND_DECK.to_owned()])
         ),
         "A6: each unlisted call is refused by the allow-list before the engine sees it, and the collection keeps serving the listed calls"
+    );
+}
+
+#[test]
+fn a_native_run_refuses_an_answer_and_leaves_the_card() {
+    // SPEC-365 A12: the native `run` holds no answer. AnswerCard is not allowed, so a valid
+    // answer with the states the queue gave never reaches the engine, and the card stays new.
+    let synthetic = synthetic("native-run-answer");
+    let engine = engine();
+    let opened = call(&engine, OPEN_COLLECTION, open_request(&synthetic));
+    let queued = call(&engine, GET_QUEUED_CARDS, queue_request());
+    let answered = call(&engine, ANSWER_CARD, good_answer(&synthetic, &queued));
+    let (rows, reviews) = written(&synthetic, engine, &[synthetic.card_id]);
+    assert_eq!(
+        (opened, answered, rows, reviews),
+        (
+            Ok(Vec::new()),
+            Err(EngineRefusal::NotAllowed {
+                service: ANSWER_CARD.0,
+                method: ANSWER_CARD.1
+            }),
+            vec![[0, 0, 0]],
+            Vec::new()
+        ),
+        "A12: the native run refuses AnswerCard as not allowed, and the card is not answered"
+    );
+}
+
+#[test]
+fn a_native_press_answers_only_its_card_with_its_grade() {
+    // SPEC-365 A13: a press answers its card with its grade's own next state, the one the engine
+    // gave for that grade, and leaves the other card; states that are no `SchedulingStates` are
+    // refused before the engine sees them.
+    let synthetic = synthetic("native-press");
+    let second = second_card(&synthetic);
+    let engine = engine();
+    let opened = call(&engine, OPEN_COLLECTION, open_request(&synthetic));
+    let queued = call(&engine, GET_QUEUED_CARDS, two_queued()).expect("the queue answers");
+    let [(first, first_states), (next, second_states)]: [(i64, Vec<u8>); 2] = shown(&queued)
+        .try_into()
+        .expect("the queue shows the two new cards");
+    let before = now_millis();
+    let again = engine
+        .answer(first, PressedGrade::Again, first_states.clone(), 3_000)
+        .map(|_| ());
+    let left_new = call(&engine, GET_QUEUED_CARDS, queue_request()).map(|bytes| read_queue(&bytes));
+    let good = engine
+        .answer(second, PressedGrade::Good, second_states.clone(), 4_000)
+        .map(|_| ());
+    let after = now_millis();
+    let undecodable = engine.answer(first, PressedGrade::Good, NO_MESSAGE.to_vec(), 0);
+    let (rows, reviews) = written(&synthetic, engine, &[first, second]);
+    let logged: Vec<[i64; 3]> = reviews
+        .iter()
+        .map(|&[card, ease, time, _]| [card, ease, time])
+        .collect();
+    let timed = reviews
+        .iter()
+        .all(|&[.., id]| (before..=after).contains(&id));
+    assert_eq!(
+        (
+            (opened, next, again, good),
+            rows,
+            logged,
+            timed,
+            left_new.map(|queued| (queued.card_id, queued.new)),
+            undecodable
+        ),
+        (
+            (Ok(Vec::new()), second, Ok(()), Ok(())),
+            vec![
+                [LEARNING, remaining_steps(&first_states, 2), 1],
+                [LEARNING, remaining_steps(&second_states, 4), 1],
+            ],
+            vec![[first, AGAIN_EASE, 3_000], [second, GOOD_EASE, 4_000]],
+            true,
+            Ok((second, 1)),
+            Err(PressRefusal::Undecodable)
+        ),
+        "A13: Again and Good each answer their own card once, into the engine's own next state for the grade, at the adapter's time; Again's press leaves the other card new at the queue's head; undecodable states are refused before the engine"
     );
 }

@@ -58,6 +58,50 @@ impl Answer {
     }
 }
 
+/// The two grades a press records (SPEC-365 R7): the wire's 1 and 3, as Anki's buttons number
+/// Again and Good. The core records the same two, and no type here names a third.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Grade {
+    /// The card was forgotten.
+    Again,
+    /// The card was recalled.
+    Good,
+}
+
+impl Grade {
+    /// Anki's `Rating` value for this grade: 0 for Again, 2 for Good.
+    #[must_use]
+    pub fn rating(self) -> i32 {
+        match self {
+            Self::Again => 0,
+            Self::Good => 2,
+        }
+    }
+
+    /// The next state this grade selects, out of the states the card was shown with.
+    #[must_use]
+    pub fn pick<T>(self, again: T, good: T) -> T {
+        match self {
+            Self::Again => again,
+            Self::Good => good,
+        }
+    }
+}
+
+/// The grade a wire rating names: 1 is Again and 3 is Good (SPEC-365 R7).
+///
+/// # Errors
+/// [`StudyError::NotAGrade`] for 2 and 4, Hard and Easy, which no press records, and
+/// [`StudyError::RatingOutOfRange`] for any number outside 1 to 4, before anything reaches the
+/// engine.
+pub fn grade(rating: u32) -> Result<Grade, StudyError> {
+    match rating {
+        1 | 2 => Ok(Grade::Again),
+        3 | 4 => Ok(Grade::Good),
+        other => Err(StudyError::RatingOutOfRange(other)),
+    }
+}
+
 /// The backend's services the study calls use, by index of its generated dispatcher at the
 /// pinned commit (read from the `wasm32` build's `backend.rs`).
 pub mod service {
@@ -183,6 +227,8 @@ pub fn engine_languages(languages: Vec<String>) -> Vec<String> {
 pub enum StudyError {
     /// A wire rating outside 1 to 4.
     RatingOutOfRange(u32),
+    /// A wire rating of 2 or 4, Hard or Easy, which no press records (SPEC-365 R7).
+    NotAGrade(u32),
     /// A service and method outside the study calls.
     CallRefused {
         /// The service index asked for.
@@ -199,6 +245,9 @@ impl fmt::Display for StudyError {
         match self {
             Self::RatingOutOfRange(rating) => {
                 write!(f, "rating {rating} is outside 1 to 4")
+            }
+            Self::NotAGrade(rating) => {
+                write!(f, "rating {rating} is not a grade: a press records 1 or 3")
             }
             Self::CallRefused { service, method } => {
                 write!(
