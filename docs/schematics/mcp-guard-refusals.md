@@ -58,8 +58,50 @@ SPEC-119 §9 lists each plant (a guard that admits no header, a scope check skip
 with `==`, the limiter consulted before the match, and the rest) with the criterion it must redden
 and its mutation row.
 
+## The grants, and what each reaches
+
+Read at `dev` `b0935c75`, with SPEC-369 applied. Three grants exist: the read grant `{core}` of
+the required `mcp-core-token`, the law-track grant `{core, law_track}` of the optional
+`mcp-law-track-token`, and the write grant `{core, write}` of the optional `mcp-write-token`
+(`crates/mcp/src/grants.rs`, `crates/mcp/src/settings.rs`). Every grant holds `core`, so
+admission is unchanged; a tool then authorizes the one scope it needs, and a tool that changes
+data needs `write`. `export_data` and `erase_all_data` are not served, so no grant reaches them.
+
+```mermaid
+flowchart TD
+    REQ["a request with a bearer"] --> MATCH{"does the bearer match a grant?"}
+    MATCH -->|"no, malformed or unknown"| UNAUTH["401 unauthorized, the refusal recorded in its bucket"]
+    MATCH -->|"read grant: core"| ADMIT["admitted"]
+    MATCH -->|"law-track grant: core and law_track"| ADMIT
+    MATCH -->|"write grant: core and write"| ADMIT
+    ADMIT --> CALL{"which tool does tools/call name?"}
+    CALL -->|"export_data or erase_all_data"| NOTOOL["JSON-RPC error: no such tool, nothing read"]
+    CALL -->|"get_law_track"| LAW{"does the grant hold law_track?"}
+    LAW -->|"yes"| ANSWER["answered"]
+    LAW -->|"no"| DENIED["tool error unauthorized, the limiter decides in the token's bucket, nothing read"]
+    CALL -->|"a read tool, readOnlyHint true"| ANSWER
+    CALL -->|"a write tool, readOnlyHint false"| WRITE{"does the grant hold write?"}
+    WRITE -->|"yes"| ANSWER
+    WRITE -->|"no"| DENIED
+```
+
+| request | no, malformed or unknown bearer | read grant `{core}` (`mcp-core-token`) | law-track grant `{core, law_track}` (`mcp-law-track-token`) | write grant `{core, write}` (`mcp-write-token`) |
+|---|---|---|---|---|
+| any request (`initialize`, `tools/list`) | 401 `unauthorized`, the refusal recorded in its bucket, the same response when rate-limited | admitted | admitted | admitted |
+| `get_law_track` (needs `law_track`) | 401 | tool error `unauthorized`, nothing read, the limiter decides in the token's bucket | answered | tool error `unauthorized` |
+| a read tool needing `core` (a later part of `#157`) | 401 | answered | answered | answered |
+| a write tool, `readOnlyHint` false (a later part of `#157`) | 401 | tool error `unauthorized` | tool error `unauthorized` | answered |
+| `export_data`, `erase_all_data` | 401 | JSON-RPC error: no such tool; nothing read | the same | the same |
+
+Export and erase stay on the bot's `/export` and `/delete` and the host's `deckstreakd data
+export` and `deckstreakd data erase --confirm ERASE`.
+
 ## Change note
 
 2026-10-03 (SPEC-119 T14, #158): a scope refusal passes through the limiter with the token's
 bucket before the tool error, as R13 and A20 say; the flowchart had sent it straight to the tool
 error. Nothing else changed.
+
+SPEC-369 (`#720`): a third grant, write, joins the read and law-track grants, and a tool
+that changes data needs it; the two withdrawn tools answer as unknown. The section "The grants,
+and what each reaches" is added before this note. Nothing else changed.

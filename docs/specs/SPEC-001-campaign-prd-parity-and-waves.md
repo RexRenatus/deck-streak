@@ -264,6 +264,7 @@ Amended (§14): the collection atlas returns as a data series the agent reads, n
 | `inert-peak-day` | Peak Day taper (law retrievability at an exam date) - library only | inert | - | - | exclude: inert in v9; it also needs an exam date, which the owner's no-dates rule forbids | #182 |
 | `inert-reading-rollover-signal` | Per-topic reading rollover lapse signal - no surface | inert | readings | W1 | build | #35 |
 | `mcp-server` | MCP server (FastMCP, Streamable HTTP) | platform | agent | W6 | build | #157 |
+Amended (§14): the server serves neither the predecessor's data-export tool nor its erase-everything tool, and a client's grant is read or write; export and erase stay on the bot and the host (`data-export-erase`, #14) (SPEC-369, #720).
 | `mcp-bearer-auth` | Fail-closed bearer auth for the law/drill MCP tools | platform | agent | W6 | build | #158 |
 | `http-health-metrics-dashboard` | Health, readiness, Prometheus metrics and HTML dashboard | ops | daemon | W0 | build | #18 |
 | `data-export-erase` | Data export and erasure (data rights) with a privacy completeness gate | platform | privacy | W0 | build | #14 |
@@ -425,3 +426,8 @@ rule (ADR-059).
       grants only (#267).
     - #282 (W6): the collection atlas, as a data series the agent reads, never an image; ADR-085
       stands (#270).
+- **The MCP server's roster and grants (ADR-380).** The server's roster carries neither
+  `export_data` nor `erase_all_data`: export and erase stay on the bot's `/export` and `/delete`
+  and the host's `deckstreakd data` commands (`data-export-erase`, #14). The core credential's
+  grant is read; an optional write credential grants write, and every tool that changes data
+  needs it (SPEC-369, SPEC-119 section 17, #720, parent #157).

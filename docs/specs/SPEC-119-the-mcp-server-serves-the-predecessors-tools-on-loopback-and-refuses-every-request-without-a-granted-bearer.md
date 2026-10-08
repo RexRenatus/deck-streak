@@ -865,3 +865,68 @@ A50: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -
 A51: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k every_service_carries_the_hardening_r2_names
 A52: python3 -m unittest discover -s scripts/tests -p test_rail_contract.py -k the_rail_contract_names_every_neutral_value
 ```
+
+## 17. Amendments: the server offers no export or erase tool, and its grant is read or write (SPEC-369, #720)
+
+This section amends the items it names, by SPEC-369 and ADR-380. No line above this section
+changes; where an item above and this section differ, this section holds. `#158` stays parked, and
+the counts below hold while it is.
+
+T17. **R6, three credentials.** `mcp-core-token` is required. `mcp-law-track-token` and
+     `mcp-write-token` each grant nothing when missing and refuse start, by their own id, on any
+     other loader error.
+
+T18. **R7, the write credential.** The write credential is held to the rules the others are: at
+     least 32 characters, every byte one a request can present. No two of the three credentials
+     share a value: a write credential equal to the core or the law-track credential refuses start
+     naming that credential first and `mcp-write-token` second.
+
+T19. **R8, three scopes.** The scope set is `core`, `law_track` and `write`. The core credential's
+     grant is the read grant `{core}`, the law-track credential's `{core, law_track}`, and the
+     write credential's `{core, write}`. No other grant holds `write`.
+
+T20. **R15 and R16's roster row `export_data` (`:141`)** is withdrawn: the server serves no
+     data-export tool.
+
+T21. **R15 and R16's roster row `erase_all_data` (`:142`)** is withdrawn: the server serves no
+     erase tool.
+
+T22. **R17, writes need `write`.** A tool whose annotations say `readOnlyHint` false authorizes
+     `write` before it reads or writes anything. A read tool authorizes its own scope: `core`, or
+     `law_track` for `get_law_track`.
+
+T23. **R21 (`:169-173`)** is withdrawn. Export and erase stay on the bot's `/export` and `/delete`
+     and the host's `deckstreakd data export` and `deckstreakd data erase --confirm ERASE`, which
+     call `export_all` and `erase_all` (SPEC-021 R1, unchanged).
+
+T24. **A26.** The portable roster is the golden less the two withdrawn names: 31 tools, 33 when
+     `#158`'s two drill tools land. The golden is unchanged; the reader declares the withdrawn
+     names (SPEC-369 R8).
+
+T25. **A30 (`:274`)** is withdrawn.
+
+T26. **A31 (`:275`)** is withdrawn.
+
+T27. **Section 6's risk "A leaked core token erases the ledger"** no longer holds: the core
+     token's grant is read-only, and no erase tool exists. A leaked write token reaches the write
+     tools once they are served, and the write credential is provisioned only then.
+
+T28. **Section 7's `mcp_erase_confirm` golden (`:385`)** is withdrawn: it was never generated.
+
+T29. **Section 9's row `S11924-ERASE-WORD`** is withdrawn: it was never written.
+
+T30. **Section 13's list of what the first slice does not do.** No later part serves
+     `export_data` or `erase_all_data`, so neither is counted among the core tools a later part of
+     `#157` serves.
+
+## 18. Acceptance criteria of the section 17 amendment
+
+SPEC-369's criteria decide this amendment, each by the command SPEC-369's acceptance fence gives
+it:
+
+- T17 and T18: SPEC-369 A1 to A4.
+- T19: SPEC-369 A1 and A5.
+- T20, T21, T23, T25 and T26: SPEC-369 A8 and A9.
+- T22: SPEC-369 A6.
+- T24: SPEC-369 A7.
+- T27 to T30 change text only, and no test decides them.
