@@ -7,24 +7,32 @@ use std::sync::{Arc, Mutex, PoisonError};
 use anki::backend::{Backend, init_backend};
 use anki_proto::backend::BackendError;
 use anki_proto::backend::backend_error::Kind;
-use anki_proto::collection::{CloseCollectionRequest, OpenCollectionRequest};
+use anki_proto::collection::{CloseCollectionRequest, OpenCollectionRequest, UndoStatus};
 use anki_proto::sync::{FullUploadOrDownloadRequest, SyncAuth};
 use prost::Message;
 
 use crate::answer::{AnswerRefusal, OwnerAnswer};
 use crate::face::{self, Face, Side};
 use crate::full_sync::{IdSets, Unsynced, Write};
-use crate::gesture::{GestureRefusal, OwnerGesture};
+use crate::gesture::{Checked, GestureRefusal, OwnerGesture, Target};
 use crate::login_guard;
 use crate::media::Reader;
 use crate::one_way;
-use crate::table::{ANSWERED, Decision, ExemptWrite, Transport, decide};
+use crate::table::{ANSWERED, Decision, EXEMPT, ExemptWrite, Transport, decide};
+use crate::undo_answer::{self, Recorded, Review};
 
 /// The one read of a card the page may make: its scheduling fields, by id (moved from the web
 /// engine, which passed it to the engine's database door itself).
 const SNAPSHOT_SQL: &str = "select id, queue, type, due, ivl, reps, lapses from cards where id = ?";
 /// The note count the web engine's `open` reports.
 const NOTE_COUNT_SQL: &str = "select count() from notes";
+/// The newest review-log row: its id and its card, the row an answer just wrote (SPEC-371 R4).
+const NEWEST_REVIEW_SQL: &str = "select id, cid from revlog order by id desc limit 1";
+/// One review-log row's card and sync mark, by its id (SPEC-371 R4).
+const REVIEW_SQL: &str = "select cid, usn from revlog where id = ?";
+/// The engine's undo status, `CollectionService.GetUndoStatus`: its label and its last step, which
+/// an undo of the review's own last answer compares with its record (SPEC-371 R5).
+const GET_UNDO_STATUS: (u32, u32) = (3, 7);
 /// The engine's sync login, `BackendSyncService.SyncLogin`: the one admitted call whose request
 /// the core reads, to guard its endpoint (SPEC-347 R2).
 const SYNC_LOGIN: (u32, u32) = (1, 3);
@@ -123,6 +131,10 @@ pub enum Read {
     NoteCount,
     /// One card's scheduling fields, by its id.
     CardSnapshot(i64),
+    /// The newest review-log row's id and card (SPEC-371 R4).
+    NewestReview,
+    /// One review-log row's card and sync mark, by its id (SPEC-371 R4).
+    Review(i64),
 }
 
 impl Dispatcher {
@@ -195,10 +207,62 @@ impl Dispatcher {
         gesture: OwnerGesture,
         input: &[u8],
     ) -> Result<Vec<u8>, GestureRefusal> {
-        let (service, method, request) = gesture.checked(input)?;
+        match gesture.checked(input)? {
+            Checked::Run(service, method, request) => self
+                .backend
+                .run_service_method(service, method, &request)
+                .map_err(|error| GestureRefusal::Engine { error }),
+            Checked::Undo { card, recorded } => self.run_undo(card, &recorded),
+        }
+    }
+
+    /// Runs the undo of the recorded answer on `card` (SPEC-371 R5): the engine's undo status and
+    /// the recorded review row are read at the write, the rule judges them against the record, and
+    /// only then does the engine undo, with an empty request. A refusal is the gesture's
+    /// `NotTheTarget`: the record names other than an undo of the card's own last answer.
+    fn run_undo(&self, card: i64, recorded: &Recorded) -> Result<Vec<u8>, GestureRefusal> {
+        let target = Target::Card(card);
+        let Some(row) = EXEMPT.iter().find(|row| row.write == ExemptWrite::Undo) else {
+            return Err(GestureRefusal::WrongKind {
+                write: ExemptWrite::Undo,
+                target,
+            });
+        };
+        let engine = |error| GestureRefusal::Engine { error };
+        let refused = |_| GestureRefusal::NotTheTarget {
+            write: ExemptWrite::Undo,
+            target,
+        };
+        let status = self
+            .backend
+            .run_service_method(GET_UNDO_STATUS.0, GET_UNDO_STATUS.1, &[])
+            .map_err(engine)?;
+        let now = UndoStatus::decode(status.as_slice()).map_err(|_| engine(status.clone()))?;
+        let review = self.review(recorded.review).map_err(engine)?;
+        undo_answer::judge(recorded, &now, review, card).map_err(refused)?;
         self.backend
-            .run_service_method(service, method, &request)
-            .map_err(|error| GestureRefusal::Engine { error })
+            .run_service_method(row.service, row.method, &[])
+            .map_err(engine)
+    }
+
+    /// The review-log row `id`, by the core's fixed read, or `None` when the collection lacks it.
+    /// An error is the engine's, encoded.
+    fn review(&self, id: i64) -> Result<Option<Review>, Vec<u8>> {
+        let reply = self.query(Read::Review(id))?;
+        let rows: serde_json::Value =
+            serde_json::from_slice(&reply).map_err(|_| unreadable_error(REVIEW_SQL))?;
+        let Some(row) = rows.pointer("/0") else {
+            return Ok(None);
+        };
+        let cid = row.pointer("/0").and_then(serde_json::Value::as_i64);
+        let usn = row
+            .pointer("/1")
+            .and_then(serde_json::Value::as_i64)
+            .and_then(|usn| i32::try_from(usn).ok());
+        match (cid, usn) {
+            (Some(cid), Some(usn)) => Ok(Some(Review { cid, usn })),
+            _ => Err(unreadable_error(REVIEW_SQL)),
+        }
     }
 
     /// Runs the full-sync choice's one write: the one-way sync the owner confirmed, built by the
@@ -325,9 +389,16 @@ impl Dispatcher {
     ///
     /// [`Refusal::Engine`] when the engine cannot run the read, a closed collection among them.
     pub fn read(&self, read: Read) -> Result<Vec<u8>, Refusal> {
+        self.query(read).map_err(|error| Refusal::Engine { error })
+    }
+
+    /// One fixed read's JSON reply, or the engine's error, encoded.
+    fn query(&self, read: Read) -> Result<Vec<u8>, Vec<u8>> {
         let (sql, args) = match read {
             Read::NoteCount => (NOTE_COUNT_SQL, Vec::new()),
             Read::CardSnapshot(card) => (SNAPSHOT_SQL, vec![serde_json::Value::from(card)]),
+            Read::NewestReview => (NEWEST_REVIEW_SQL, Vec::new()),
+            Read::Review(review) => (REVIEW_SQL, vec![serde_json::Value::from(review)]),
         };
         let request = serde_json::json!({
             "kind": "query",
@@ -337,7 +408,6 @@ impl Dispatcher {
         });
         self.backend
             .run_db_command_bytes(request.to_string().as_bytes())
-            .map_err(|error| Refusal::Engine { error })
     }
 
     /// Every review-log, card and note id of the open collection, and its upload re-check stamp:
@@ -490,13 +560,18 @@ fn failed(message: &str) -> Refusal {
 /// an adapter reads it as it reads any engine error and never a guessed value.
 fn unreadable(sql: &str) -> Refusal {
     Refusal::Engine {
-        error: BackendError {
-            message: format!("the engine's reply to `{sql}` is not the integers it selects"),
-            kind: Kind::DbError.into(),
-            ..BackendError::default()
-        }
-        .encode_to_vec(),
+        error: unreadable_error(sql),
     }
+}
+
+/// The engine's error for a fixed read whose reply is not what its statement selects, encoded.
+fn unreadable_error(sql: &str) -> Vec<u8> {
+    BackendError {
+        message: format!("the engine's reply to `{sql}` is not the integers it selects"),
+        kind: Kind::DbError.into(),
+        ..BackendError::default()
+    }
+    .encode_to_vec()
 }
 
 #[cfg(test)]

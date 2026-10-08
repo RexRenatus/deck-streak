@@ -281,6 +281,7 @@ export function studyEngine(): EngineModule {
     seed: (count) => count,
     next_card: () => 1001n,
     undo: () => undefined,
+    undo_offer: () => JSON.stringify({ offer: null, why: 'none' }),
     snapshot: (card) => JSON.stringify([Number(card), 2, 2, 5, 3, 1, 0]),
     last_panic: () => undefined,
     memory_pages: () => 17,

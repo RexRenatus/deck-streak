@@ -7,7 +7,7 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EngineError } from '$lib/engine/client';
-import type { CardView, Faces, Head } from '$lib/engine/protocol';
+import type { CardView, Faces, Head, UndoOffer } from '$lib/engine/protocol';
 import { telegram } from '$lib/telegram.svelte';
 import type { StudyClient } from './review';
 import ReviewScreen from './ReviewScreen.svelte';
@@ -72,7 +72,7 @@ function view(index: number, extra: Partial<CardView> = {}): CardView {
     answer: '<p>the head card answer</p>',
     css: card.card_css,
     labels: LABELS,
-    undo: '',
+    undo: null,
     ...extra
   };
 }
@@ -112,9 +112,14 @@ class FakeClient implements StudyClient {
     return this.#answer('flag', () => 1);
   }
 
-  undo(): Promise<null> {
-    this.calls.push('undo');
+  undo(card?: bigint, step?: number): Promise<null> {
+    this.calls.push(card === undefined ? 'undo' : `undo ${card} ${step}`);
     return this.#answer('undo', () => null);
+  }
+
+  undoOffer(): Promise<UndoOffer> {
+    this.calls.push('undo-offer');
+    return this.#answer('undo-offer', () => ({ offer: null, why: 'none' }) as UndoOffer);
   }
 
   faces(card: bigint): Promise<Faces> {

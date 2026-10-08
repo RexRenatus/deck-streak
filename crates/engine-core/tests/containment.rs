@@ -27,8 +27,9 @@ use std::path::Path;
 use deck_streak_engine_core::answer::{Grade, OwnerAnswer};
 use deck_streak_engine_core::gesture::{OwnerGesture, Target};
 
-/// The engine's write and door names (SPEC-345 R10), and the engine's own answer (SPEC-365 R8).
-const ENGINE_NAMES: [&str; 23] = [
+/// The engine's write and door names (SPEC-345 R10), the engine's own answer (SPEC-365 R8), and
+/// its undo (SPEC-371 R13).
+const ENGINE_NAMES: [&str; 24] = [
     "schedule_cards_as_new",
     "reschedule_cards_as_new",
     "reschedule_cards_as_new_defaults",
@@ -52,6 +53,7 @@ const ENGINE_NAMES: [&str; 23] = [
     "run_db_command_bytes",
     "init_backend",
     "answer_card",
+    "undo",
 ];
 
 /// The gesture's names: its type, its one constructor, the dispatcher's exempt entry and the
@@ -94,6 +96,13 @@ const SYNC_PROBE: &str = "SPEC-342 R10 and R11's probes against the engine's own
 /// as string literals, data and not calls.
 const BOUNDARY_CENSUS_LITERAL: &str =
     "a string literal of the web boundary census's own entry for the export: data, not a call";
+/// Why the bot may name `undo`: its command calls the bot's own undo of a habit check-in, a
+/// method of its own and not the engine's (SPEC-371 R13).
+const BOT_OWN_UNDO: &str =
+    "the bot's own undo of a habit check-in: its own method, not the engine's";
+/// Why the notification router's test may: its table names the bot's command as a string literal.
+const ROUTER_LITERAL: &str =
+    "a string literal of the notification router's own table: data, not a call";
 /// Why a fixture may answer a card through the engine's own `answer_card`: it builds a review
 /// history in the test's own scratch collection, which no product path runs (ADR-376 D10).
 const ANSWER_FIXTURE: &str =
@@ -101,7 +110,7 @@ const ANSWER_FIXTURE: &str =
 
 /// Each line outside the core that may name the engine or the gesture (SPEC-345 section 8): its
 /// file, its exact trimmed text, how many times the file holds it, and why.
-const HELD: [(&str, &str, usize, &str); 25] = [
+const HELD: [(&str, &str, usize, &str); 31] = [
     (
         "crates/ingest/src/engine.rs",
         "col.full_download(auth, engine_client())",
@@ -169,6 +178,30 @@ const HELD: [(&str, &str, usize, &str); 25] = [
         SYNC_PROBE,
     ),
     (
+        "crates/ingest/tests/undo_and_full_sync.rs",
+        "col.undo().expect(\"the answer is undone\");",
+        2,
+        SYNC_PROBE,
+    ),
+    (
+        "crates/ingest/tests/undo_and_full_sync.rs",
+        "matches!(col.undo(), Err(AnkiError::UndoEmpty)),",
+        1,
+        SYNC_PROBE,
+    ),
+    (
+        "crates/bot/src/commands.rs",
+        "Some(\"undo\") => self.undo().await,",
+        1,
+        BOT_OWN_UNDO,
+    ),
+    (
+        "crates/notifications/tests/one_router.rs",
+        "(\"Commands::undo\", \"send\"),",
+        1,
+        ROUTER_LITERAL,
+    ),
+    (
         "crates/ingest/tests/skip_write.rs",
         ".set_due_date(",
         1,
@@ -231,6 +264,18 @@ const HELD: [(&str, &str, usize, &str); 25] = [
     (
         "crates/web-engine/tests/boundary.rs",
         "\".run_answer(answer, &request.encode_to_vec())\",",
+        1,
+        BOUNDARY_CENSUS_LITERAL,
+    ),
+    (
+        "crates/web-engine/tests/boundary.rs",
+        "\"OwnerGesture::from_tap(ExemptWrite::Undo, Target::Card(card))\",",
+        1,
+        BOUNDARY_CENSUS_LITERAL,
+    ),
+    (
+        "crates/web-engine/tests/boundary.rs",
+        "\".run_exempt(gesture, &recorded.encode_to_vec())\",",
         1,
         BOUNDARY_CENSUS_LITERAL,
     ),
@@ -815,6 +860,49 @@ fn planted() {
         "each planted caller, include, extended line, second copy and stale line is refused by name, and no comment is"
     );
     support::examined("planted refusal(s)", refused);
+}
+
+/// SPEC-371 A19 (R13; ADR-382 D9): a planted `col.undo();` outside the entry files is refused by
+/// name, and its comment is not; and over the tree, the census counts `undo` only at its held
+/// lines.
+#[test]
+fn a_planted_undo_outside_the_entry_files_is_refused_by_name() {
+    let root = support::scratch("engine-core-containment", "planted-undo");
+    held_tree(&root);
+    append(
+        &root,
+        "crates/coordination/src/lib.rs",
+        "// col.undo(); in a comment is prose\ncol.undo();\n",
+    );
+    let refused = census(&root, &HELD).refused;
+    assert_eq!(
+        refused,
+        vec!["crates/coordination/src/lib.rs: `col.undo();` found 1, held 0".to_owned()],
+        "a planted undo outside the entry files is refused by name, and its comment is not"
+    );
+    support::examined("planted undo refusal(s)", refused);
+    let mut undo: Vec<String> = census(&support::workspace(), &HELD)
+        .callers
+        .iter()
+        .filter_map(|caller| {
+            let (file, rest) = caller.split_once(':')?;
+            let (_, text) = rest.split_once(": ")?;
+            (text.contains(".undo(") || text.contains("::undo")).then(|| format!("{file}: {text}"))
+        })
+        .collect();
+    undo.sort();
+    assert_eq!(
+        undo,
+        vec![
+            "crates/bot/src/commands.rs: Some(\"undo\") => self.undo().await,",
+            "crates/ingest/tests/undo_and_full_sync.rs: col.undo().expect(\"the answer is undone\");",
+            "crates/ingest/tests/undo_and_full_sync.rs: col.undo().expect(\"the answer is undone\");",
+            "crates/ingest/tests/undo_and_full_sync.rs: matches!(col.undo(), Err(AnkiError::UndoEmpty)),",
+            "crates/notifications/tests/one_router.rs: (\"Commands::undo\", \"send\"),",
+        ],
+        "outside the core, the census counts undo only at its four held entries"
+    );
+    support::examined("undo line(s) outside the core", undo);
 }
 
 /// Which of `Clone`, `Copy` and `Default` a type implements, read at compile time: an inherent

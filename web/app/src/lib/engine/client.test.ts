@@ -62,21 +62,24 @@ describe('EngineClient', () => {
     const client = new EngineClient(port, ORIGIN);
     const calls = [
       client.seed(25),
-      client.undo(),
+      client.undo(1001n, 4),
       client.snapshot(1001n),
       client.close(),
-      client.rate(1001n, 1, 0)
+      client.rate(1001n, 1, 0),
+      client.undoOffer()
     ];
 
+    // the undo names the answer an offer named, by its card and its step (SPEC-371 R12)
     expect(port.sent).toEqual([
       { id: 1, op: 'seed', count: 25 },
-      { id: 2, op: 'undo' },
+      { id: 2, op: 'undo', card: 1001n, step: 4 },
       { id: 3, op: 'snapshot', card: 1001n },
       { id: 4, op: 'close' },
-      { id: 5, op: 'rate', card: 1001n, rating: 1, ms: 0 }
+      { id: 5, op: 'rate', card: 1001n, rating: 1, ms: 0 },
+      { id: 6, op: 'undo-offer' }
     ]);
-    for (const id of [1, 2, 3, 4, 5]) port.reply({ id, ok: true, value: id * 10 });
-    await expect(Promise.all(calls)).resolves.toEqual([10, 20, 30, 40, 50]);
+    for (const id of [1, 2, 3, 4, 5, 6]) port.reply({ id, ok: true, value: id * 10 });
+    await expect(Promise.all(calls)).resolves.toEqual([10, 20, 30, 40, 50, 60]);
     // a second reply to a settled id settles nothing
     port.reply({ id: 1, ok: false, code: 'engine-failed', message: 'late' });
     expect(client.waiting).toBe(0);

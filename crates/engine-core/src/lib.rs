@@ -27,6 +27,8 @@
 //! - [`one_way`]: the one-way sync's steps in the order the choice's model checks them, each
 //!   reading its side from its file: the server copy, the backup, the re-check and the write
 //!   (SPEC-364 R4-R8).
+//! - [`undo_answer`]: the rule an undo of the review's own last answer passes: its record, the
+//!   review row it names, the refusals and the state the card returns to (SPEC-371 R3).
 //!
 //! The core depends on the engine and on no crate of this workspace; only the two client
 //! adapters depend on it (ADR-356 D4, held by the graph census).
@@ -43,3 +45,4 @@ pub mod login_guard;
 pub mod media;
 pub mod one_way;
 pub mod table;
+pub mod undo_answer;

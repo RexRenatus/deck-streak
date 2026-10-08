@@ -68,13 +68,17 @@ test('opens, answers and undoes over OPFS', async ({ playwright, browserName, ba
       await client.rate(shown, 3, 1500);
       const answered = String(shown);
       const after = read(await client.snapshot(card));
-      await client.undo();
+      // the undo asks for the offer of the review's own last answer, then confirms it (SPEC-371 R12)
+      const offered = await client.undoOffer();
+      if (offered.offer === null) throw new Error(`no offer: ${offered.why}`);
+      await client.undo(offered.offer.card, offered.offer.step);
       const undone = read(await client.snapshot(card));
       return {
         opened,
         seeded,
         card: String(card),
         answered,
+        offered: String(offered.offer.card),
         before,
         after,
         undone,
@@ -87,6 +91,7 @@ test('opens, answers and undoes over OPFS', async ({ playwright, browserName, ba
     expect(run.opened).toEqual({ existed: false, notes: 0 });
     expect(run.seeded).toBe(3);
     expect(run.answered).toBe(run.card);
+    expect(run.offered).toBe(run.card);
     expect(after.reps).toBe(before.reps + 1);
     expect(run.undone).toEqual(run.before);
     expect(['persisted', 'not-persisted', 'unsupported']).toContain(run.persistence);
@@ -257,7 +262,10 @@ test('measures the engine over a seeded collection', async ({ playwright, browse
       const before = read(await client.snapshot(card));
       const shown = (await window.measure('show', () => client.card())) as { card: { id: bigint } };
       await window.measure('answer', () => client.rate(shown.card.id, 3, 1500));
-      await window.measure('undo', () => client.undo());
+      const offered = await client.undoOffer();
+      if (offered.offer === null) throw new Error(`no offer: ${offered.why}`);
+      const { card: answered, step } = offered.offer;
+      await window.measure('undo', () => client.undo(answered, step));
       const undone = read(await client.snapshot(card));
       await client.close();
       return { opened, restored: before === undone, steps: window.report.steps };
@@ -308,7 +316,9 @@ test('measures the engine in a cross-site frame', async ({ playwright, browserNa
         const shown = (await client.card()).card!.id;
         await client.rate(shown, 3, 1200);
         const card = String(shown);
-        await client.undo();
+        const offered = await client.undoOffer();
+        if (offered.offer === null) throw new Error(`no offer: ${offered.why}`);
+        await client.undo(offered.offer.card, offered.offer.step);
         return { ok: true, opened, card };
       } catch (error) {
         return { ok: false, ...window.harness.refusal(error) };

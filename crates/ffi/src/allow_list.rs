@@ -2,8 +2,8 @@
 //!
 //! The engine numbers its backend services and their methods when it is built, and its own
 //! clients address a call by that pair. A backend service answers its own methods and, after them,
-//! the methods of the collection service it fronts, so `Undo` is reached through the backend
-//! collection service and `RenderExistingCard` through the backend card rendering service. The
+//! the methods of the service it fronts, so `RenderExistingCard` is reached through the backend
+//! card rendering service. The
 //! table below holds the pairs this adapter lets through, each with the engine's name for it, so a
 //! reader can check a number against the engine's generated dispatch.
 //! A pair the engine renumbers fails the round-trip and render tests, which call each entry and
@@ -20,14 +20,14 @@ pub struct Call {
     pub name: &'static str,
 }
 
-/// The allow-list: open a collection, list its decks, get the next card, undo, render a card
+/// The allow-list: open a collection, list its decks, get the next card, render a card
 /// (SPEC-339 R10), a call that reads the card and writes nothing, log in to a sync server
 /// (SPEC-347 R1), whose endpoint the core guards before the engine sees it, and the review
 /// screen's three (SPEC-348 R1): read the deck tree, choose the current deck, the one write Anki
 /// itself makes when a deck is chosen, and describe a card's next states as intervals. A card is
 /// answered only through the adapter's answer entry, `Engine::answer`, an owner's press
-/// (SPEC-365 R6).
-pub const ALLOW_LIST: [Call; 9] = [
+/// (SPEC-365 R6), and an undo is an exempt write, which `run` refuses (SPEC-371 R15).
+pub const ALLOW_LIST: [Call; 8] = [
     Call {
         service: 3,
         method: 0,
@@ -57,11 +57,6 @@ pub const ALLOW_LIST: [Call; 9] = [
         service: 13,
         method: 24,
         name: "SchedulerService.DescribeNextStates",
-    },
-    Call {
-        service: 3,
-        method: 8,
-        name: "CollectionService.Undo",
     },
     Call {
         service: 27,
