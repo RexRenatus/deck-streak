@@ -21,3 +21,16 @@ the dispatch path skip the guard. A5
 is red because section 3 of `RELEASING.md` holds neither the detection nor the recovery command.
 
 The second commit greens A1 to A5.
+
+```red-first
+A1: red at 1116ce46: AssertionError: Lists differ: ['push'] != ['push', 'workflow_dispatch']
+A1: green at 3b36cebb
+A2: red at 1116ce46: AssertionError: 0 == 0 : a branch named as the tag is refused
+A2: green at 3b36cebb
+A3: red at 1116ce46: AssertionError: 'workflow_dispatch' not found in ['push'] : release.yml declares no workflow_dispatch trigger
+A3: green at 3b36cebb
+A4: red at 1116ce46: AssertionError: 'workflow_dispatch' not found in ['push'] : release.yml declares no workflow_dispatch trigger
+A4: green at 3b36cebb
+A5: red at 1116ce46: AssertionError: 'gh workflow run release.yml --ref vX.Y.Z' not found in section 3 of RELEASING.md
+A5: green at 3b36cebb
+```
