@@ -64,7 +64,9 @@ final class ReviewSessionTests: XCTestCase {
         try await session.choose(review)
         let step = try await session.next(autoplay: false, installed: [])
         XCTAssertEqual(
-            step.intervals, ["<1m", "<6m", "<10m", "4d"],
-            "A17: Again, Hard, Good and Easy carry the intervals A1 pins for a new card")
+            Rating.allCases.map { step.intervals.dropFirst(Int($0.rawValue)).prefix(1).joined() },
+            ["<1m", "<10m"],
+            "A17: Again and Good carry the intervals A1 pins for a new card, each picked by its "
+                + "number as the bar picks it (SPEC-365 R13)")
     }
 }

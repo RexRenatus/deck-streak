@@ -1,6 +1,9 @@
 //! SPEC-345 A15 and A16 (R7, R10; ADR-356 D5, D8): outside the core, only the two UI adapters'
 //! entry files name the owner's gesture, and the engine's write and door names appear only at the
-//! held lines of SPEC-345 section 8; and the gesture is neither `Clone` nor `Copy`.
+//! held lines of SPEC-345 section 8; and the gesture is neither `Clone` nor `Copy`. SPEC-365 A7
+//! and A8 (R2, R8; ADR-376 D9) hold the owner's answer the same way: only the entry files name it,
+//! each builds it from a press and runs it, the engine's `answer_card` appears only at its held
+//! fixture lines, and the answer is neither `Clone`, `Copy` nor `Default`.
 //!
 //! The census reads every member's `src`, `tests`, `examples` and `benches` and its `build.rs`,
 //! with comments stripped and string literals kept, and judges every file outside the core. A held
@@ -21,10 +24,11 @@ use std::fs;
 use std::marker::PhantomData;
 use std::path::Path;
 
+use deck_streak_engine_core::answer::{Grade, OwnerAnswer};
 use deck_streak_engine_core::gesture::{OwnerGesture, Target};
 
-/// The engine's write and door names (SPEC-345 R10).
-const ENGINE_NAMES: [&str; 22] = [
+/// The engine's write and door names (SPEC-345 R10), and the engine's own answer (SPEC-365 R8).
+const ENGINE_NAMES: [&str; 23] = [
     "schedule_cards_as_new",
     "reschedule_cards_as_new",
     "reschedule_cards_as_new_defaults",
@@ -47,16 +51,31 @@ const ENGINE_NAMES: [&str; 22] = [
     "run_service_method",
     "run_db_command_bytes",
     "init_backend",
+    "answer_card",
 ];
 
-/// The gesture's names: its type, its one constructor and the dispatcher's exempt entry.
-const GESTURE_NAMES: [&str; 3] = ["OwnerGesture", "from_tap", "run_exempt"];
+/// The gesture's names: its type, its one constructor and the dispatcher's exempt entry; and the
+/// answer's, the same three (SPEC-365 R8).
+const GESTURE_NAMES: [&str; 6] = [
+    "OwnerGesture",
+    "from_tap",
+    "run_exempt",
+    "OwnerAnswer",
+    "from_press",
+    "run_answer",
+];
 
 /// The two UI adapters' exempt entries: outside the core, the only files that may name the gesture.
 const ENTRY_FILES: [&str; 2] = ["crates/ffi/src/engine.rs", "crates/web-engine/src/wasm.rs"];
 
-/// What each entry file's code owes: it builds the gesture from the tap and runs it.
-const ENTRY_CALLS: [&str; 2] = ["OwnerGesture::from_tap(", ".run_exempt("];
+/// What each entry file's code owes: it builds the gesture from the tap and runs it, and it builds
+/// the answer from the press and runs it (SPEC-365 R8).
+const ENTRY_CALLS: [&str; 4] = [
+    "OwnerGesture::from_tap(",
+    ".run_exempt(",
+    "OwnerAnswer::from_press(",
+    ".run_answer(",
+];
 
 /// The core, whose own lines R10 does not hold (SPEC-345 section 8).
 const CORE: &str = "crates/engine-core/";
@@ -74,10 +93,14 @@ const SYNC_PROBE: &str = "SPEC-342 R10 and R11's probes against the engine's own
 /// as string literals, data and not calls.
 const BOUNDARY_CENSUS_LITERAL: &str =
     "a string literal of the web boundary census's own entry for the export: data, not a call";
+/// Why a fixture may answer a card through the engine's own `answer_card`: it builds a review
+/// history in the test's own scratch collection, which no product path runs (ADR-376 D10).
+const ANSWER_FIXTURE: &str =
+    "a fixture's review in the test's own scratch collection, which no product path runs";
 
 /// Each line outside the core that may name the engine or the gesture (SPEC-345 section 8): its
 /// file, its exact trimmed text, how many times the file holds it, and why.
-const HELD: [(&str, &str, usize, &str); 20] = [
+const HELD: [(&str, &str, usize, &str); 25] = [
     (
         "crates/ingest/src/engine.rs",
         "col.full_download(auth, engine_client())",
@@ -197,6 +220,36 @@ const HELD: [(&str, &str, usize, &str); 20] = [
         "\"dispatcher()?.run_exempt(gesture, input).map_err(refuse)\",",
         1,
         BOUNDARY_CENSUS_LITERAL,
+    ),
+    (
+        "crates/web-engine/tests/boundary.rs",
+        "\"OwnerAnswer::from_press(shown.card, pressed(grade))\",",
+        1,
+        BOUNDARY_CENSUS_LITERAL,
+    ),
+    (
+        "crates/web-engine/tests/boundary.rs",
+        "\".run_answer(answer, &request.encode_to_vec())\",",
+        1,
+        BOUNDARY_CENSUS_LITERAL,
+    ),
+    (
+        "crates/ingest/tests/support/mod.rs",
+        "col.answer_card(&mut CardAnswer {",
+        2,
+        ANSWER_FIXTURE,
+    ),
+    (
+        "crates/ingest/tests/undo_and_full_sync.rs",
+        "col.answer_card(&mut CardAnswer {",
+        1,
+        ANSWER_FIXTURE,
+    ),
+    (
+        "crates/ingest/tests/skip_census.rs",
+        "\".answer_card(\",",
+        1,
+        SKIP_CENSUS_LITERAL,
     ),
 ];
 
@@ -571,7 +624,9 @@ fn held_tree(root: &Path) {
     for file in ENTRY_FILES {
         planted.entry(file).or_default().push_str(
             "let gesture = OwnerGesture::from_tap(write, target)?;\n\
-             self.dispatcher.run_exempt(gesture, &input)\n",
+             self.dispatcher.run_exempt(gesture, &input)\n\
+             let answer = OwnerAnswer::from_press(card, grade);\n\
+             self.dispatcher.run_answer(answer, &input)\n",
         );
     }
     for (file, text) in planted {
@@ -624,6 +679,7 @@ fn plant(root: &Path) {
         "// OwnerGesture::from_tap(write, target) in a comment is prose\n\
          /* dispatcher.run_exempt(gesture, &input) /* nested */ col.remove_notes(&ids) */\n\
          /// col.remove_notes(&ids)\n\
+         // OwnerAnswer::from_press(card, grade), .run_answer(answer, &input) and col.answer_card(&mut answer)\n\
          let gesture = OwnerGesture::from_tap(ExemptWrite::Forget, Target::Card(card));\n",
     );
     append(
@@ -686,6 +742,21 @@ fn plant(root: &Path) {
         "crates/ingest/src/skip_write.rs",
         "writer.set_due_date(path, &moved, &spec)\n",
     );
+    append(
+        root,
+        "crates/coordination/src/lib.rs",
+        "let answer = OwnerAnswer::from_press(card, Grade::Good);\n",
+    );
+    append(
+        root,
+        "crates/bot/src/lib.rs",
+        "dispatcher.run_answer(answer, &input)\n",
+    );
+    append(
+        root,
+        "crates/ingest/src/engine.rs",
+        "col.answer_card(&mut answer)\n",
+    );
 }
 
 /// What the census refuses in the planted tree, one line per plant.
@@ -705,6 +776,9 @@ fn planted_refusals() -> Vec<&'static str> {
         "crates/ingest/tests/sync.rs: `.block_on(RslibEngine.full_download(&copy, &login)); col.remove_notes(&ids);` found 1, held 0",
         "crates/ingest/tests/sync.rs: `.block_on(RslibEngine.full_download(&copy, &login))` found 0, held 1",
         "crates/ingest/src/skip_write.rs: `writer.set_due_date(path, &moved, &spec)` found 2, held 1",
+        "crates/coordination/src/lib.rs: `let answer = OwnerAnswer::from_press(card, Grade::Good);` found 1, held 0",
+        "crates/bot/src/lib.rs: `dispatcher.run_answer(answer, &input)` found 1, held 0",
+        "crates/ingest/src/engine.rs: `col.answer_card(&mut answer)` found 1, held 0",
     ]
 }
 
@@ -785,6 +859,27 @@ fn the_gesture_is_neither_clone_nor_copy() {
             ("File", (false, false, false)),
         ],
         "the gesture is neither Clone, Copy nor Default; the controls read as each type is"
+    );
+    support::examined("type(s) probed for Clone, Copy and Default", probed);
+}
+
+#[test]
+fn the_owner_answer_is_neither_clone_nor_copy() {
+    let probed = vec![
+        ("OwnerAnswer", traits!(OwnerAnswer)),
+        ("Grade", traits!(Grade)),
+        ("Vec<u8>", traits!(Vec<u8>)),
+        ("File", traits!(std::fs::File)),
+    ];
+    assert_eq!(
+        probed,
+        vec![
+            ("OwnerAnswer", (false, false, false)),
+            ("Grade", (true, true, false)),
+            ("Vec<u8>", (true, false, true)),
+            ("File", (false, false, false)),
+        ],
+        "the answer is neither Clone, Copy nor Default; the controls read as each type is"
     );
     support::examined("type(s) probed for Clone, Copy and Default", probed);
 }

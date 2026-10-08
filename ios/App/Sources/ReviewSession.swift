@@ -30,9 +30,6 @@ actor ReviewSession {
     /// When the head card's question was shown, for the answer's time taken.
     private var shownAt = Date()
 
-    /// The codec's ratings, in the app's order, so a rating's number picks its own.
-    private static let ratings: [HarnessWire.Rating] = [.again, .hard, .good, .easy]
-
     init(engine: EngineSession) {
         self.engine = engine
     }
@@ -66,20 +63,16 @@ actor ReviewSession {
             card.cardID, answer: true, autoplay: autoplay, installed: installed)
     }
 
-    /// Sends the shown card's answer with the rating's own state, at most once per shown card: the
-    /// head is cleared before the call is awaited.
+    /// Sends the press of `rating` on the shown card, with the states the card was shown with, at
+    /// most once per shown card: the head is cleared before the call is awaited. The adapter picks
+    /// the rating's state, so the session builds no next state of its own (SPEC-365 R12).
     func answer(_ rating: Rating) async throws {
         guard let card = head else { return }
         head = nil
         sentAnswers += 1
-        let now = Date()
-        let wire = Self.ratings[Int(rating.rawValue)]
         try await engine.answer(
-            CardAnswer(
-                cardID: card.cardID, currentState: card.currentState,
-                newState: card.state(for: wire), rating: wire,
-                answeredAtMillis: Int64(now.timeIntervalSince1970 * 1000),
-                millisecondsTaken: UInt32(clamping: Int64(now.timeIntervalSince(shownAt) * 1000))))
+            card, rating: rating,
+            millisecondsTaken: UInt32(clamping: Int64(Date().timeIntervalSince(shownAt) * 1000)))
     }
 
     /// The languages' installed voices and the choice for each, for the voice picker.

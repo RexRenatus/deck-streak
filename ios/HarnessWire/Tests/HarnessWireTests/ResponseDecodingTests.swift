@@ -149,9 +149,7 @@ final class ResponseDecodingTests: XCTestCase {
             "QueuedCards, five states")
         let card = try XCTUnwrap(decoded.cards.first)
         XCTAssertEqual(
-            [card.state(for: .again), card.state(for: .hard), card.state(for: .good),
-             card.state(for: .easy)],
-            [[0x22], [0x23], [0x24], [0x25]],
-            "each rating's own state")
+            [card.state(for: .again), card.state(for: .good)], [[0x22], [0x24]],
+            "each grade's own state")
     }
 }

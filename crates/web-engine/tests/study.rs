@@ -5,8 +5,8 @@
 #![allow(clippy::print_stdout)]
 
 use deck_streak_web_engine::study::{
-    Answer, BuryOf, Files, STUDY_CALLS, Shown, StudyError, Wanted, admit, bury_of,
-    engine_languages, media_type, service, shown_for, toggled_red,
+    BuryOf, Files, Grade, STUDY_CALLS, Shown, StudyError, Wanted, admit, bury_of, engine_languages,
+    grade, media_type, service, shown_for, toggled_red,
 };
 
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
@@ -20,22 +20,31 @@ fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
 
 #[test]
 fn a_rating_on_the_wire_picks_its_answer_and_its_next_state() {
-    // Anki's buttons number the answers 1 to 4; its Rating enum numbers them 0 to 3, and its
-    // scheduling states hold one next state per answer, in the same order.
-    let expected = [
-        (1, Answer::Again, 0, "again"),
-        (2, Answer::Hard, 1, "hard"),
-        (3, Answer::Good, 2, "good"),
-        (4, Answer::Easy, 3, "easy"),
+    // SPEC-365 A9: the wire names two grades. Hard (2) and Easy (4) are refused by name, before
+    // anything reaches the engine, and so is a number outside Anki's buttons.
+    let refused = [
+        (2, StudyError::NotAGrade(2)),
+        (4, StudyError::NotAGrade(4)),
+        (0, StudyError::RatingOutOfRange(0)),
+        (5, StudyError::RatingOutOfRange(5)),
     ];
-    for (wire, answer, rating, state) in examined("wire rating(s)", expected.to_vec()) {
-        let got = Answer::from_wire(wire);
-        assert_eq!(got, Ok(answer), "wire rating {wire}");
-        assert_eq!(answer.rating(), rating, "{answer:?}'s Rating");
+    for (wire, error) in examined("refused wire rating(s)", refused.to_vec()) {
+        assert_eq!(grade(wire), Err(error), "wire rating {wire}");
+    }
+    assert_eq!(
+        StudyError::NotAGrade(4).to_string(),
+        "rating 4 is not a grade: a press records 1 or 3"
+    );
+    // Anki's buttons number Again 1 and Good 3; its Rating enum numbers them 0 and 2, and each
+    // picks its own next state of the two the card was shown with.
+    let graded = [(1, Grade::Again, 0, "again"), (3, Grade::Good, 2, "good")];
+    for (wire, expected, rating, state) in examined("graded wire rating(s)", graded.to_vec()) {
+        assert_eq!(grade(wire), Ok(expected), "wire rating {wire}");
+        assert_eq!(expected.rating(), rating, "{expected:?}'s Rating");
         assert_eq!(
-            answer.pick("again", "hard", "good", "easy"),
+            expected.pick("again", "good"),
             state,
-            "{answer:?}'s next state"
+            "{expected:?}'s next state"
         );
     }
 }
@@ -43,7 +52,7 @@ fn a_rating_on_the_wire_picks_its_answer_and_its_next_state() {
 #[test]
 fn a_rating_outside_one_to_four_is_refused() {
     for wire in examined("out-of-range rating(s)", vec![0, 5, 6, 255, u32::MAX]) {
-        let refused = Answer::from_wire(wire);
+        let refused = grade(wire);
         assert_eq!(
             refused,
             Err(StudyError::RatingOutOfRange(wire)),
@@ -58,14 +67,23 @@ fn a_rating_outside_one_to_four_is_refused() {
 
 #[test]
 fn run_method_admits_only_the_study_calls() {
-    // The oracle, written apart from the table: the eight calls open, close, undo, the queue,
-    // the answer, the notetype names and the two calls that seed a synthetic collection.
+    // SPEC-365 A10: AnswerCard is no study call. Only an owner's press records a grade, through
+    // the core's answer door, so `run_method` refuses it as it refuses any other pair.
+    assert_eq!(
+        admit(13, 4),
+        Err(StudyError::CallRefused {
+            service: 13,
+            method: 4
+        }),
+        "AnswerCard"
+    );
+    // The oracle, written apart from the table: the seven calls open, close, undo, the queue,
+    // the notetype names and the two calls that seed a synthetic collection.
     let study = [
         (3, 0, "open_collection"),
         (3, 1, "close_collection"),
         (3, 8, "undo"),
         (13, 3, "get_queued_cards"),
-        (13, 4, "answer_card"),
         (23, 8, "get_notetype_names"),
         (25, 0, "new_note"),
         (25, 2, "add_notes"),
@@ -146,14 +164,14 @@ fn run_method_admits_only_the_study_calls() {
 
 #[test]
 fn the_study_calls_are_the_reviews_pairs() {
-    // The oracle, written apart from the table (SPEC-350 R1, M10): DEV's eight calls, then the
-    // review's eight, each named as the engine names its method.
+    // The oracle, written apart from the table (SPEC-350 R1, M10): DEV's seven calls, less the
+    // answer only an owner's press records (SPEC-365 R7), then the review's eight, each named as
+    // the engine names its method.
     let review = vec![
         (3, 0, "open_collection"),
         (3, 1, "close_collection"),
         (3, 8, "undo"),
         (13, 3, "get_queued_cards"),
-        (13, 4, "answer_card"),
         (23, 8, "get_notetype_names"),
         (25, 0, "new_note"),
         (25, 2, "add_notes"),

@@ -24,6 +24,7 @@ use anki_proto::scheduler::card_answer::Rating;
 use anki_proto::scheduler::{
     CardAnswer, GetQueuedCardsRequest, QueuedCards, ScheduleCardsAsNewRequest, SetDueDateRequest,
 };
+use deck_streak_engine_core::answer::{Grade, OwnerAnswer};
 use deck_streak_engine_core::dispatch::{Dispatcher, Read};
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
 use deck_streak_engine_core::table::{EXEMPT, ExemptWrite, Transport};
@@ -32,7 +33,6 @@ use serde_json::Value;
 
 const OPEN_COLLECTION: (u32, u32) = (3, 0);
 const GET_QUEUED_CARDS: (u32, u32) = (13, 3);
-const ANSWER_CARD: (u32, u32) = (13, 4);
 /// The snapshot's columns: `[id, queue, type, due, ivl, reps, lapses]`.
 const QUEUE: usize = 1;
 const TYPE: usize = 2;
@@ -125,7 +125,8 @@ fn now_millis() -> i64 {
     i64::try_from(millis).expect("the clock's milliseconds fit an i64")
 }
 
-/// Answers the card at the head of the queue Good, through ordinary calls, and returns its id.
+/// Answers the card at the head of the queue Good, through an owner's answer (SPEC-365 R3), and
+/// returns its id.
 fn answer_next(dispatcher: &Dispatcher) -> i64 {
     let request = GetQueuedCardsRequest {
         fetch_limit: 1,
@@ -151,10 +152,12 @@ fn answer_next(dispatcher: &Dispatcher) -> i64 {
         answered_at_millis: now_millis(),
         milliseconds_taken: 1000,
     };
-    let (service, method) = ANSWER_CARD;
     dispatcher
-        .run(service, method, &answer.encode_to_vec())
-        .expect("the answer reaches the engine");
+        .run_answer(
+            OwnerAnswer::from_press(card, Grade::Good),
+            &answer.encode_to_vec(),
+        )
+        .expect("the owner's answer reaches the engine");
     card
 }
 

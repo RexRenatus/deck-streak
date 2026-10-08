@@ -22,6 +22,10 @@ pub const CORE_CREDENTIAL: &str = "mcp-core-token";
 /// other loader error refuses start (R6).
 pub const LAW_TRACK_CREDENTIAL: &str = "mcp-law-track-token";
 
+/// The write token's credential id. It is optional: a missing file grants nothing, and any other
+/// loader error refuses start (SPEC-369 R3).
+pub const WRITE_CREDENTIAL: &str = "mcp-write-token";
+
 /// The fewest characters a loaded token may hold (R7).
 pub const MIN_CREDENTIAL_CHARS: usize = 32;
 

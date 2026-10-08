@@ -1,4 +1,4 @@
-//! The core's table, judged over every pair a transport can send (SPEC-345 A1, A2).
+//! The core's table, judged over every pair a transport can send (SPEC-345 A1, A2; SPEC-365 A1).
 //!
 //! The expected sets are literals written from the SPEC's measurement (M1, M4, M8), never read
 //! from the core, so a row the table loses, gains, renumbers or marks for the wrong transport fails
@@ -19,8 +19,8 @@ use deck_streak_engine_core::table::{
 };
 
 /// The pairs the native adapter's allow-list holds (SPEC-345 M1), with the review screen's three
-/// (SPEC-348 R1).
-const NATIVE: [(u32, u32); 10] = [
+/// (SPEC-348 R1), less `AnswerCard`, which only an owner's press records (SPEC-365 R4, R6).
+const NATIVE: [(u32, u32); 9] = [
     (1, 3),
     (3, 0),
     (3, 8),
@@ -28,18 +28,16 @@ const NATIVE: [(u32, u32); 10] = [
     (7, 13),
     (7, 22),
     (13, 3),
-    (13, 4),
     (13, 24),
     (27, 6),
 ];
 
-/// The web engine's study calls (SPEC-345 M4).
-const WEB: [(u32, u32); 16] = [
+/// The web engine's study calls (SPEC-345 M4), less `AnswerCard` (SPEC-365 R4, R7).
+const WEB: [(u32, u32); 15] = [
     (3, 0),
     (3, 1),
     (3, 8),
     (13, 3),
-    (13, 4),
     (23, 8),
     (25, 0),
     (25, 2),
@@ -57,6 +55,10 @@ const WEB: [(u32, u32); 16] = [
 /// The six exempt writes, the never-list's entries 2, 3, 6, 7 and 8 (SPEC-345 M8).
 const HELD: [(u32, u32); 6] = [(5, 2), (11, 5), (13, 17), (13, 19), (23, 15), (25, 7)];
 
+/// The one call that records a grade, `SchedulerService.AnswerCard`, held on both transports for
+/// an owner's press (SPEC-365 R4).
+const ANSWERED: [(u32, u32); 1] = [(13, 4)];
+
 /// The highest service and method index the census sends: past every index the engine numbers.
 const LAST: u32 = 64;
 
@@ -69,6 +71,7 @@ fn every_pair_is_admitted_held_or_refused_by_its_transport() {
         let pairs = support::examined(&format!("pair(s) on {transport:?}"), pairs);
         let mut admitted = BTreeSet::new();
         let mut held = BTreeSet::new();
+        let mut answered = BTreeSet::new();
         let mut refused = 0_usize;
         for &(service, method) in &pairs {
             match decide(transport, service, method) {
@@ -77,6 +80,9 @@ fn every_pair_is_admitted_held_or_refused_by_its_transport() {
                 }
                 Decision::NeedsGesture => {
                     held.insert((service, method));
+                }
+                Decision::NeedsAnswer => {
+                    answered.insert((service, method));
                 }
                 Decision::NotAllowed => refused += 1,
             }
@@ -92,8 +98,13 @@ fn every_pair_is_admitted_held_or_refused_by_its_transport() {
             "the pairs {transport:?} holds for a gesture"
         );
         assert_eq!(
+            answered,
+            ANSWERED.into_iter().collect::<BTreeSet<_>>(),
+            "the pairs {transport:?} holds for an owner's press"
+        );
+        assert_eq!(
             (pairs.len(), refused),
-            (4225, 4225 - ordinary.len() - HELD.len()),
+            (4225, 4225 - ordinary.len() - HELD.len() - ANSWERED.len()),
             "the pairs {transport:?} refuses as not allowed"
         );
     }

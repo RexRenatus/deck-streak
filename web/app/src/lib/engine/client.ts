@@ -69,10 +69,6 @@ export class EngineClient {
     return this.#send({ op: 'next' }) as Promise<bigint | null>;
   }
 
-  answer(rating: Rating, ms: number): Promise<bigint> {
-    return this.#send({ op: 'answer', rating, ms }) as Promise<bigint>;
-  }
-
   undo(): Promise<null> {
     return this.#send({ op: 'undo' }) as Promise<null>;
   }

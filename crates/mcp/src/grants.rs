@@ -7,20 +7,25 @@ use deck_streak_kernel::{CredentialError, CredentialLoader};
 use sha2::{Digest, Sha256};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
-use crate::settings::{CORE_CREDENTIAL, LAW_TRACK_CREDENTIAL, MIN_CREDENTIAL_CHARS, McpError};
+use crate::settings::{
+    CORE_CREDENTIAL, LAW_TRACK_CREDENTIAL, MIN_CREDENTIAL_CHARS, McpError, WRITE_CREDENTIAL,
+};
 
-/// A scope a grant can hold (R8). The set is closed: `core` and `law_track` (ADR-320 D5).
+/// A scope a grant can hold (R8). The set is closed: `core`, `law_track` and `write` (ADR-320 D5,
+/// ADR-380).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Scope {
     /// Every grant's scope: the request layer admits a request whose grant holds it.
     Core,
     /// The law track's tools.
     LawTrack,
+    /// The tools that change data: the write grant's alone (SPEC-369 R1, R6, R7).
+    Write,
 }
 
 impl Scope {
     /// Every scope, in the order [`Scopes::names`] lists them.
-    pub const ALL: [Self; 2] = [Self::Core, Self::LawTrack];
+    pub const ALL: [Self; 3] = [Self::Core, Self::LawTrack, Self::Write];
 
     /// The scope's name, the predecessor's spelling (`mcp_auth.py:SCOPE_LAW_TRACK`).
     #[must_use]
@@ -28,6 +33,7 @@ impl Scope {
         match self {
             Self::Core => "core",
             Self::LawTrack => "law_track",
+            Self::Write => "write",
         }
     }
 
@@ -36,6 +42,7 @@ impl Scope {
         match self {
             Self::Core => 1,
             Self::LawTrack => 2,
+            Self::Write => 4,
         }
     }
 }
@@ -119,11 +126,12 @@ pub struct Grants {
 }
 
 impl Grants {
-    /// Reads the core and law-track credentials through the loader and makes each a grant.
+    /// Reads the core, law-track and write credentials through the loader and makes each a grant.
     ///
-    /// The core credential is required, so every loader error refuses start by its id. A missing
-    /// law-track credential grants nothing, and any other loader error refuses start by its id
-    /// (R6). Two credentials holding one value refuse start (R7).
+    /// The core credential is required, so every loader error refuses start by its id. The
+    /// law-track and write credentials are optional and load through [`Self::optional`] (R6;
+    /// SPEC-369 R3, R5). Two credentials holding one value refuse start, each pair compared in
+    /// constant time (R7; SPEC-369 R4).
     ///
     /// # Errors
     ///
@@ -134,15 +142,11 @@ impl Grants {
             loader.load(CORE_CREDENTIAL)?.expose(),
             Scopes::NONE.with(Scope::Core),
         )?;
-        let law_track = match loader.load(LAW_TRACK_CREDENTIAL) {
-            Ok(secret) => Some(Grant::of(
-                LAW_TRACK_CREDENTIAL,
-                secret.expose(),
-                Scopes::NONE.with(Scope::Core).with(Scope::LawTrack),
-            )?),
-            Err(CredentialError::Missing { .. }) => None,
-            Err(error) => return Err(error.into()),
-        };
+        let law_track = Self::optional(
+            loader,
+            LAW_TRACK_CREDENTIAL,
+            Scopes::NONE.with(Scope::Core).with(Scope::LawTrack),
+        )?;
         if let Some(law_track) = &law_track
             && bool::from(law_track.digest.ct_eq(&core.digest))
         {
@@ -151,8 +155,43 @@ impl Grants {
                 second: LAW_TRACK_CREDENTIAL,
             });
         }
+        let write = Self::optional(
+            loader,
+            WRITE_CREDENTIAL,
+            Scopes::NONE.with(Scope::Core).with(Scope::Write),
+        )?;
+        if let Some(write) = &write {
+            let others = iter::once((CORE_CREDENTIAL, &core)).chain(
+                law_track
+                    .as_ref()
+                    .map(|law_track| (LAW_TRACK_CREDENTIAL, law_track)),
+            );
+            for (first, other) in others {
+                if bool::from(write.digest.ct_eq(&other.digest)) {
+                    return Err(McpError::SharedCredential {
+                        first,
+                        second: WRITE_CREDENTIAL,
+                    });
+                }
+            }
+        }
         Ok(Self {
-            grants: iter::once(core).chain(law_track).collect(),
+            grants: iter::once(core).chain(law_track).chain(write).collect(),
+        })
+    }
+
+    /// The grant of the optional credential `id`, holding `scopes`: a missing credential grants
+    /// nothing, and any other loader error refuses start by its id, by one arm for the law-track
+    /// and write credentials alike (R6; SPEC-369 R5).
+    fn optional(
+        loader: &CredentialLoader,
+        id: &'static str,
+        scopes: Scopes,
+    ) -> Result<Option<Grant>, McpError> {
+        Ok(match loader.load(id) {
+            Ok(secret) => Some(Grant::of(id, secret.expose(), scopes)?),
+            Err(CredentialError::Missing { .. }) => None,
+            Err(error) => return Err(error.into()),
         })
     }
 

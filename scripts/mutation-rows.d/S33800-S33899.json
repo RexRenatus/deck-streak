@@ -5,37 +5,37 @@
         "S33800-WIRE-RATING-TWO-IS-HARD",
         "web-engine",
         "src/study.rs",
-        "            2 => Ok(Self::Hard),",
-        "            2 => Ok(Self::Good),",
+        "2 | 4 => Err(StudyError::NotAGrade(rating)),",
+        "2 => Ok(Grade::Good),\n        4 => Err(StudyError::NotAGrade(rating)),",
         "study::a_rating_on_the_wire_picks_its_answer_and_its_next_state",
-        "the page's wire rating 2 is Anki's Hard; read as Good, the Hard button would schedule the card as recalled (SPEC-338 A1)"
+        "the page's wire rating 2 is Anki's Hard, which no press records; read as Good, the Hard button would schedule the card as recalled (SPEC-338 A1; re-anchored by SPEC-365 R7, which refuses 2 by name)"
       ],
       [
         "S33801-A-WIRE-RATING-PAST-FOUR-IS-REFUSED",
         "web-engine",
         "src/study.rs",
-        "            4 => Ok(Self::Easy),",
-        "            4 | 5 => Ok(Self::Easy),",
+        "3 => Ok(Grade::Good),",
+        "3 | 5 => Ok(Grade::Good),",
         "study::a_rating_outside_one_to_four_is_refused",
-        "a wire rating outside 1 to 4 is refused before the engine; admitting 5 as Easy would let a malformed answer through (SPEC-338 A2)"
+        "a wire rating outside 1 to 4 is refused before the engine; admitting 5 as Good would let a malformed answer through (SPEC-338 A2; re-anchored by SPEC-365 R7, which removed Easy's arm)"
       ],
       [
         "S33802-EASY-IS-ANKIS-RATING-THREE",
         "web-engine",
         "src/study.rs",
-        "            Self::Easy => 3,",
-        "            Self::Easy => 2,",
+        "            Self::Good => 2,",
+        "            Self::Good => 3,",
         "study::a_rating_on_the_wire_picks_its_answer_and_its_next_state",
-        "Easy is Anki's Rating 3; written as 2 the review log would record Good for an Easy answer (SPEC-338 A1)"
+        "a grade's rating is Anki's own: Good is Rating 2, and written as 3 the review log would record Easy for a Good answer (SPEC-338 A1; re-anchored by SPEC-365 R7, which removed Easy's arm of the same function)"
       ],
       [
         "S33803-GOOD-PICKS-THE-GOOD-STATE",
         "web-engine",
         "src/study.rs",
         "            Self::Good => good,",
-        "            Self::Good => easy,",
+        "            Self::Good => again,",
         "study::a_rating_on_the_wire_picks_its_answer_and_its_next_state",
-        "Good selects the scheduler's good next state; picking easy's would lengthen every Good interval (SPEC-338 A1)"
+        "Good selects the scheduler's good next state; picking Again's would send every Good card back into learning (SPEC-338 A1; re-targeted by SPEC-365 R7, which removed Easy's state from the pick)"
       ],
       [
         "S33804-ADMIT-MATCHES-THE-METHOD",

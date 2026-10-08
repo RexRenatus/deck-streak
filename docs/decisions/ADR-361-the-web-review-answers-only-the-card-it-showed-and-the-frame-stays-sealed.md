@@ -355,3 +355,16 @@ page-owned players, and the app becomes installable by a manifest alone.
 - UI Events 3.5.5 (key event target); HTML's activation-triggering input events and the sandboxed
   automatic-features flag; the Gamepad, Screen Wake Lock and Web Speech API specifications; the
   install criteria and autoplay policies cited in SPEC-350 section 1.2.
+
+## Amendment: an answer is held by a token, and a rating is one of two (SPEC-365)
+
+ADR-376 amends D1. D1 rejected "a token on every grade", and its "What would make this wrong" foresaw
+grades moving into `EXEMPT` with the owner-gesture token. Neither is what was built: AnswerCard
+leaves the ordinary pairs for the `ANSWERED` set, which `rate` reaches only through
+`Dispatcher::run_answer` with an `OwnerAnswer` minted from the kept card and the pressed grade. The
+wire's ratings are 1 for Again and 3 for Good; 2 and 4 are refused by name. D2 stands: a rating still
+reaches only the card the review showed.
+
+- A token of its own for answering, outside `EXEMPT`: chosen because answering is not a never-list write.
+- The owner-gesture token for every grade, with the rows in `EXEMPT`: rejected because it would put every grade under the owner-taps ruling's conditions.
+- Keeping the grade pairs ordinary: rejected because three doors would still record a grade with no press behind it.
