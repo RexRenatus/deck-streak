@@ -271,7 +271,7 @@ export class Review {
       this.#view =
         faces === undefined
           ? head.card
-          : { ...(head.card as CardView) };
+          : { ...(head.card as CardView), question: faces.question.text, answer: faces.answer.text };
       this.#shownAt = this.#now();
       return head.card === null ? 'empty' : 'view';
     }
