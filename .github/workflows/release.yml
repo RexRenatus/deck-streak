@@ -1,7 +1,8 @@
 name: release
 
 # Builds a tagged release once and publishes it (SPEC-062 R1, R2; ADR-062, ADR-017, ADR-034). It runs
-# on a push of a SemVer tag and nothing else, and refuses a tag whose commit is not on main. A
+# on a push of a SemVer tag, or on a manual dispatch made at that tag's own ref (SPEC-373,
+# ADR-384), and refuses a ref that is not the tag and a tag whose commit is not on main. A
 # first job audits the sync server's dependency graph (SPEC-340 R7, ADR-351 D5), and the release
 # job, which needs it, builds the release binary and the sync server from the engine's pin
 # (SPEC-337, ADR-347) and the Mini App, assembles one tarball with the deploy files, the agent files
@@ -13,6 +14,7 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -20,6 +22,7 @@ permissions:
 # One tag's runs take turns (the tag's group), a running one is never cancelled and a waiting one is
 # not replaced: `queue: max` keeps up to a hundred waiting runs in the group and cancels any beyond
 # them, where the default keeps one and replaces it (ADR-292).
+# A dispatch made at a tag's own ref runs at that ref, so it joins the tag's group (ADR-384).
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
@@ -47,6 +50,10 @@ jobs:
           tag="$GITHUB_REF_NAME"
           if ! [[ "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             echo "the tag $tag is not a SemVer release tag" >&2
+            exit 1
+          fi
+          if [ "$GITHUB_REF" != "refs/tags/$tag" ]; then
+            echo "the ref $GITHUB_REF is not the tag $tag" >&2
             exit 1
           fi
           if [ "$(git cat-file -t "refs/tags/$tag")" != tag ]; then

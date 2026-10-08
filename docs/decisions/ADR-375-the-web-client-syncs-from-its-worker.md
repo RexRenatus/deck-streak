@@ -244,6 +244,110 @@ What it was chosen AGAINST:
 | the greatest row usn alone | it misses an uploaded edit whenever an unchanged row holds the greatest usn, since a full upload resets only the uploader's changed rows to usn 0 |
 | the greatest modified time of cards, notes, decks, presets and note types | narrower: a new tag name alone, a config change alone, a deletion, a full upload, and an edit dated at or below the greatest row's each leave it still |
 
+### D14. A server's status reaches the engine's mapping through a wasm32-only source (part b2)
+
+On `wasm32` the `browser-xhr` transport answers a non-success status with an error whose source is a
+`wasm32`-only status type in the fork's `network.rs`. `From<HttpError>` downcasts that source and maps
+it with `error_for_status_code`, the mapping the native twin's statuses take, so a 403 reads as the
+engine's auth refusal and the credential module removes the key (Refused), while a lost network
+reads as a failure and keeps it (Failed). B2 holds it.
+
+What it was chosen AGAINST:
+
+- Chosen: a `wasm32`-only status source that `From<HttpError>` downcasts to `error_for_status_code`, because the status mapping stays the engine's one and a 403 drops the key on the web as it does natively
+- Every source-less status mapped: `or_bad_request` would read a source-less status as DatabaseCheckRequired
+- Every status as Other: a 403 would read as a failure, and the refused key would be kept
+- The Worker reading the status: a second status mapping, in TypeScript, beside the engine's
+
+### D15. A redirected answer is refused after the fact, as a failure (part b2)
+
+A synchronous request follows a redirect itself. The twin compares the answer's response URL with the
+request's and refuses a different one as `MISDIRECTED_REQUEST`, with no source, which the engine
+reads as a failure: the key is kept and nothing the redirected server answered is used. A
+cross-origin hop is stopped before it by the Worker's `connect-src 'self'`. B3 holds it.
+
+What it was chosen AGAINST:
+
+- Chosen: refuse the answer after the fact as `MISDIRECTED_REQUEST`, source-less, read as Failed, because no answer from a URL the endpoint guard never checked is used and a server's move does not drop the key
+- PERMANENT_REDIRECT with a Location: the engine's `meta_with_redirect` (lines 98-121) retries the request past the fixed route
+- Following the redirect: the engine would speak to an endpoint the guard never checked
+
+### D16. The sync is two exports of its own beside `call()` (part b2)
+
+`wasm.rs` gains `sync_login(endpoint, user, password)` and `sync_collection(key, endpoint)`. Each
+encodes the engine's request and sends it through `dispatcher()?.run(service::SYNC, method, ...)`,
+(1,3) and (1,5), and maps a refusal through one private `sync_refusal`: an engine refusal answers the
+engine's error bytes as a `Uint8Array`, which the credential module classifies; any other refusal
+answers the boundary's refusal. `sync_login` answers the host key; `sync_collection` answers the
+engine's `required` as a number, and `protocol.ts` turns it into a word. The boundary census owes
+three more statements (30 to 33) and retires two more names against `admit(` and `run_method(`
+(2 to 6). B6 holds it.
+
+What it was chosen AGAINST:
+
+- Chosen: two exports through `dispatcher()?.run(service::SYNC, ...)` with one private `sync_refusal`, because an engine refusal keeps its bytes for the credential module's classifier and the sync never enters `run_method`
+- Through `call()`: it turns the engine's error into a string, so the classifier would read no bytes
+- Through `run_method`: D11 keeps the sync out of `run_method` and `STUDY_CALLS`
+- The `required` word built in Rust: a second vocabulary beside `protocol.ts`'s, which the Worker already owns
+
+### D17. Every send settles (part b2)
+
+`sync.ts` takes the key with `forSend` at each send and settles that generation whatever happens: a
+success settles `(gen)`; the engine's bytes settle `(gen, bytes)`; any other throw settles
+`(gen, new Uint8Array())` and is thrown again. `tla/SyncCredential` maps them to `Accepted`,
+`Refused` and `Failed`. B4's second test holds it.
+
+What it was chosen AGAINST:
+
+- Chosen: settle on every path, empty bytes for a throw that is not the engine's, because the model gives every StartSend an Accepted, Refused or Failed and no fourth outcome
+- Leaving a throw that is not the engine's unsettled: the generation would stay open, a step the model lacks
+
+### D18. The sync runs on the session's queue (part b2)
+
+`session.ts` runs the sync as an async step on the same queue as study, the way `#faces` runs, so a
+study request waits for a running sync, then is answered, and none is refused. A `RuntimeError` the
+engine rethrows ends the session; any other throw answers `engine-failed`.
+
+What it was chosen AGAINST:
+
+- Chosen: the session's own queue, because one engine holds the collection and study only waits
+- A second Worker for the sync: two engines on one locked collection (M11)
+
+### D19. The request's total timeout is the engine's stall duration (part b2)
+
+The synchronous request's `timeout` is `SyncAuth.io_timeout_secs`, or the engine's default when it is
+unset, and its expiry answers the engine's own timeout error. The bound is total, not idle.
+
+What it was chosen AGAINST:
+
+- Chosen: the engine's stall duration as the request's total timeout, because a hung server can hold the Worker no longer than the bound the engine already declares
+- No timeout: a hung server would hold the Worker, and study with it
+- A stall monitor: it needs a clock, and the Worker's runtime drives none (R15)
+
+### D20. The browser tests run against the engine's own sync server (part b2)
+
+`crates/engine-core/examples/sync_server.rs` starts the engine's own sync server, and the Playwright
+config starts it as a second web server, ready at `/health`. The Vite config proxies `/anki-sync/`
+and `/anki-sync-moved/` to it and serves the test routes: the pass, forbid, redirect and drop modes,
+a recorder of the paths seen, and a stand-in for the key-sealing route. B1 to B3 run against it.
+
+What it was chosen AGAINST:
+
+- Chosen: the engine's own server behind the Vite proxy, because B1 to B3 then prove the transport against the engine's real protocol
+- Playwright request routing: it proves the router, not the transport
+- A step in the CI workflow: this part changes no workflow (#631), and a workflow change is reviewed under its own rules
+
+### D21. B1 observes the login and the normal sync; the full-sync arm moves to part b3 (part b2)
+
+B1 asserts the login, the normal sync's `full-upload` answer, the requests the server saw and the
+absence of a CSP violation. Section 7's arm "a review made in the browser is on the server
+afterwards" moves to part b3's C2.
+
+What it was chosen AGAINST:
+
+- Chosen: B1 without the full-sync arm, because the fork's `meta.rs` (lines 72-80) answers FullSyncRequired across schemas, so no review reaches the server through a normal sync in part b2
+- Keeping the arm in B1: unreachable in part b2, so B1 could never be green
+
 ## Consequences
 
 - Good, because the engine's protocol, its status handling and its file moves stay the engine's,
@@ -258,6 +362,10 @@ What it was chosen AGAINST:
   pool must be reserved before each.
 - Bad, because the fork grows by three patches, each needing an upstream answer to retire.
 - Neutral: a stall now ends at the request's timeout, not at the engine's inactivity watch.
+- Good, because a server's 403 drops the key on the web as it does natively (D14).
+- Bad, because a redirect is refused only after the request was sent: the redirected server saw it
+  (D15).
+- Bad, because the browser tests compile the native engine for the sync server (D20).
 
 ## What would make this wrong
 
@@ -269,3 +377,7 @@ What it was chosen AGAINST:
   would be lost, and `NoReviewLost` would need a bound on how long a backup is a place.
 - A part b2 design that routes the sync through `run_method`: D11's `SYNC_CALLS` would fold into
   `STUDY_CALLS`, with the web-engine tests that pin it.
+- A browser that drops a synchronous request's `timeout` or `responseURL` in dedicated Workers: D19
+  would lose its bound and D15 its check.
+- An upstream release that maps source-less statuses itself: D14's status source would retire with
+  its patch.
