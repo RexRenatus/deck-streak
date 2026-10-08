@@ -102,10 +102,11 @@ R5. **One load path for the optional credentials.** The law-track and write cred
 R6. **Write is the write grant's alone.** The law-track grant stays `{core, law_track}`, and the
     read grant `{core}`. No grant but the write grant holds `write`.
 
-R7. **A write tool needs write.** A tool whose annotations say `read_only_hint = false` authorizes
-    `Scope::Write` before it reads or writes anything; a read tool authorizes its own scope
-    (`core`, or `law_track` for `get_law_track`). At the base no write tool is served; a census
-    holds the rule for every tool that lands (A6).
+R7. **A write tool needs write.** A tool whose annotations do not say `read_only_hint = true` is a
+    write tool, an unannotated one included, since MCP's `readOnlyHint` defaults to false. It
+    authorizes `Scope::Write` before it reads or writes anything; a read tool authorizes its own
+    scope (`core`, or `law_track` for `get_law_track`). At the base no write tool is served; a
+    census holds the rule for every tool that lands (A6).
 
 R8. **Export and erase are withdrawn.** `export_data` and `erase_all_data` are never served, and
     no grant reaches either. The test side declares them in `WITHDRAWN`
@@ -142,7 +143,7 @@ engine-computed literal.
 | A3 | An empty, unreadable, non-text, 31-character and carriage-return-holding write credential each refuses start naming `mcp-write-token` | each loads `Ok` | `settings.rs` `a_broken_write_credential_refuses_start` (added) |
 | A4 | A write credential equal to the core credential refuses start with `SharedCredential` first `mcp-core-token`, second `mcp-write-token`; one equal to the law-track credential, first `mcp-law-track-token`, second `mcp-write-token` | both load `Ok` | `settings.rs` `the_write_credential_cannot_share_a_value` (added) |
 | A5 | Through the request layer the write token is admitted with the grant `["core", "write"]`; across the three grants and three scopes, the read grant is allowed `core` alone, the law-track grant `core` and `law_track`, and the write grant `core` and `write`, each refusal `Outcome::Denied` in the token's own bucket | the write token is refused 401: the layer saw `[]`, not `[Some(["core", "write"])]` | `crates/mcp/tests/guard.rs` `the_write_grant_holds_core_and_write_and_no_other` (added) |
-| A6 | Every tool annotated `read_only_hint = false` in `crates/mcp/src` authorizes `Scope::Write`. The census prints its examined tool count, refuses zero tools, and first refuses by name the planted `crates/mcp/tests/fixtures/planted_write_under_core.rs.fixture` (a write tool authorizing `Scope::Core`) | not red: a guard; at the base it examines 1 tool and 0 write tools | `crates/mcp/tests/guard_census.rs` `every_write_tool_authorizes_the_write_scope` (added) |
+| A6 | Every tool in `crates/mcp/src` whose annotations do not say `read_only_hint = true`, an unannotated one included, authorizes `Scope::Write`. The census prints its examined tool count, refuses zero tools, and first refuses by name the two plants in `crates/mcp/tests/fixtures/planted_write_under_core.rs.fixture` that authorize `Scope::Core` (a tool annotated `read_only_hint = false`, and an unannotated tool) | not red: a guard; at the base it examines 1 tool and 0 write tools | `crates/mcp/tests/guard_census.rs` `every_write_tool_authorizes_the_write_scope` (added) |
 | A7 | The portable roster (the golden less `WITHDRAWN`) counts 31 tools and names neither `export_data` nor `erase_all_data`, and every `WITHDRAWN` name is in the golden | it counts 33 and holds both names: `WITHDRAWN` is empty | `crates/mcp/tests/tools.rs` `the_withdrawn_tools_leave_the_portable_roster` (added) |
 | A8 | Under the read, law-track and write tokens, `tools/list` names neither withdrawn tool, and `tools/call` of each answers a JSON-RPC error with no `result`, carrying the exact unknown-tool code the pinned router answers | not red: neither tool is served at the base; the write leg's 401 at the stub is A1's reason, not this criterion's | `tools.rs` `no_grant_reaches_a_withdrawn_tool` (added) |
 | A9 | `crates/mcp/src` names none of `data_rights_registry`, `export_all` and `erase_all`. The census prints its examined file count, refuses zero, and first refuses a planted line by name | not red: a guard; the server reaches no rights use case at the base | `guard_census.rs` `the_server_reaches_no_rights_use_case` (added) |
@@ -176,6 +177,7 @@ not edited; SPEC-119 section 17 and ADR-380 record each change, and their tests 
 | SPEC-119 R15 and R16's roster rows `:141` and `:142` | withdrawn (T20, T21) |
 | SPEC-119 R17 | a tool that changes data needs `write` (T22) |
 | SPEC-119 R21 (`:169-173`) | withdrawn; export and erase stay on the bot and the host (T23) |
+| SPEC-119 A16 (`:203`), `guard_census::the_guard_compares_only_digests_in_constant_time` | its exact `ct_eq(` call-site pin moves from two sites to three, the third R4's write-credential check; the criterion's text is unchanged, and this row records the move |
 | SPEC-119 A26 | 31 tools, 33 with the two parked drill tools (T24) |
 | SPEC-119 A30 and A31 (`:274-275`) | withdrawn (T25, T26) |
 | SPEC-119 section 6's risk, section 7's `mcp_erase_confirm` (`:385`), section 9's `S11924-ERASE-WORD`, section 13's list | no longer, withdrawn, withdrawn, two fewer (T27 to T30) |
