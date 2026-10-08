@@ -919,7 +919,7 @@ T30. **Section 13's list of what the first slice does not do.** No later part se
      `export_data` or `erase_all_data`, so neither is counted among the core tools a later part of
      `#157` serves.
 
-## 18. Acceptance criteria of the section 17 amendment
+## 18. What decides the section 17 amendment
 
 SPEC-369's criteria decide this amendment, each by the command SPEC-369's acceptance fence gives
 it:
