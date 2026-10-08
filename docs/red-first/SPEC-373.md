@@ -19,3 +19,5 @@ and S37308 prove they observe a one-path break: the first splits the group by ev
 the dispatch path skip the guard. A5
 (`test_rulesets.TheReleaseRunbookRecoversATagWithNoRun.test_the_runbook_releases_a_tag_with_no_run_by_a_dispatch_at_its_own_ref`)
 is red because section 3 of `RELEASING.md` holds neither the detection nor the recovery command.
+
+The second commit greens A1 to A5.

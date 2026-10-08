@@ -82,7 +82,11 @@ class TheReleaseRunsOnSemverTags(unittest.TestCase):
     def test_the_release_runs_on_semver_tags_and_publishes_last(self):
         workflow = read_release()
         triggers = workflow["on"]
-        self.assertEqual(list(triggers), ["push"], "the release runs on a push, and only on one")
+        self.assertEqual(
+            list(triggers),
+            ["push", "workflow_dispatch"],
+            "the release runs on a push or a dispatch, and on nothing else",
+        )
         self.assertEqual(list(triggers["push"]), ["tags"], "the push filter is tags alone")
         globs = [tag_glob(pattern) for pattern in triggers["push"]["tags"]]
         admitted = ["v1.2.3", "v0.0.1", "v10.20.30"]
