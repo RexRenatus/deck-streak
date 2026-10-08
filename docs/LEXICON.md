@@ -52,3 +52,5 @@ leech in deck-streak-curriculum: hardcard
 | gate | agent | the packs' blocking checks, run on an output before it is delivered |
 | owner | identity | the single learner the deployment serves, pinned by configuration |
 | leech | curriculum | a card with eight or more lapses that is not suspended |
+| grade | engine-core | the owner's judgement of one answered card, Again or Good: the engine records it as rating 0 or 2, and no type names a third |
+| owner answer | engine-core | the token one press mints for one card and one grade (`OwnerAnswer`): the dispatcher's one door that records a grade consumes it, and refuses a request that names another card or another grade |

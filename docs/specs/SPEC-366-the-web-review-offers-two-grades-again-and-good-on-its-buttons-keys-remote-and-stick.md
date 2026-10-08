@@ -256,3 +256,9 @@ none.
 | C1 | The study suite shows the answer with two buttons, each with its interval, and a rating by key and one by button each show the next card | `web/app/tests-study/study.spec.ts` "show answer reveals the answer and the buttons show the intervals" and "a rating by key and one by button each show the next card" (shipped), in CI on the pull request |
 | C2 | Every changed production file's mutants are killed or recorded equivalent | `mutation-web`, on the pull request |
 | V1 | On the device, the review offers Again and Good by tap, key, remote and stick, and nothing else grades | the owner, in the acceptance session (`#718`) |
+
+## Amendment: corrected citations (SPEC-365's delivery)
+
+- R3 cites `actions.ts:36`; the line is `actions.ts:34`.
+- R7 cites `protocol.ts:207`; the line is `protocol.ts:209`.
+- Section 9 says each changed production file is mutated whole; CI's web mutation plan mutates five of the seven: `mapping-store.ts` (one added comment line) and `MappingScreen.svelte` (deletions only) are outside it.

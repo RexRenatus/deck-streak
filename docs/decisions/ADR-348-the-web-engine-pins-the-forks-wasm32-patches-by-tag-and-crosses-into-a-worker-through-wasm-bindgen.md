@@ -177,3 +177,15 @@ SPEC-335, SPEC-338; #623, #626, #631, #637. The Web Locks API
 (https://developer.mozilla.org/en-US/docs/Web/API/Web_Locks_API), the SyncAccessHandle pool VFS
 (https://sqlite.org/wasm/doc/trunk/persistence.md#vfs-opfs-sahpool) and the Cargo Book on `[patch]`
 (https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html).
+
+## Amendment: the JS boundary exports no queue-head answer, and the wire names two grades (SPEC-365)
+
+ADR-376 amends the boundary's description. The `answer` export, which answered the queue's head card,
+is removed: the engine chose that card, so no press named it. `rate` mints the answer from the kept
+card and records it through `Dispatcher::run_answer`, and the study rule's wire maps 1 to Again and
+3 to Good, refusing 2 and 4 by name. The Worker's protocol drops its `answer` op, which it then
+refuses as any op it does not name. The rest of the boundary stands.
+
+- Removing the `answer` export: chosen because only `rate` answers a card a press named.
+- Keeping `answer` and minting a token for the head card: rejected because it is a grade by script.
+- Keeping `answer` and always refusing: rejected because a dead export is a surface the boundary census must still carry.

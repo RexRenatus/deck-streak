@@ -187,3 +187,16 @@ factory refuses them.
   amendment, with the measurement.
 - A device's VoiceOver users asking for autoplay: D7 becomes a setting.
 - A second recursive message, or a codec the census can read generated: D4 reopens ADR-358 D5.
+
+## Amendment: the adapter picks a native answer's next state (SPEC-365)
+
+ADR-376 amends D5. A native press answers through the adapter's `Engine::answer`, which takes the
+card, its grade, Again or Good, and the states the card was shown with, as the codec keeps them,
+and picks the grade's own next state beside the token that records the grade. The codec's
+`Rating` names two grades, Again and Good, and the native client sends no next state of its own
+choosing. D5's ground stands: the states are those the card was shown with, never read again at
+answer time. The rest of the record stands.
+
+- The pick in the adapter, from the states the card was shown with: chosen because the next state is then chosen beside the token, as the web's `rate` chooses it, and the native code chooses none.
+- The pick kept in the codec, with the codec's `CardAnswer` sent through the adapter: rejected because the native code would still choose a next state the token does not check.
+- A core `answer(card, rating)` that reads the states again at answer time: rejected for D5's own reason, that the interval the learner read and the one applied could differ.
