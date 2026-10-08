@@ -98,6 +98,8 @@ pinned (ADR-348). Each patch is a `cfg` on `wasm32`; the native engine is the on
 
 ## 3. A normal sync (part b2)
 
+Part b2 as built is section 7: the export is `sync_collection`, and every send settles.
+
 ```mermaid
 sequenceDiagram
   participant P as page
@@ -208,3 +210,45 @@ stateDiagram-v2
 | `credential-reach`, `sync.test.ts`, `engine.test.ts` (b2) | the key's one holder, settle after every send, persistence each session | the `web` job |
 | the engine's browser tests (b2, b3) | the transport and the write in Chromium and WebKit against the engine's own sync server | the `web-engine` job, after the build and its size bound |
 | `formal/tla/FullSyncChoice` | the order; every covered anchor's digest unchanged | the formal checker outside this repository's CI |
+
+## 7. A normal sync as built (part b2)
+
+A sequence, read at dev `a6a44fa6` and the fork's `c538de55`. The Worker's `sync` takes the key at
+the send, the engine's export sends through the fork's synchronous transport, and the send settles
+on every path (ADR-375 D14 to D19).
+
+```mermaid
+sequenceDiagram
+  participant P as page
+  participant W as Worker session
+  participant S as sync module
+  participant C as credential module
+  participant E as web engine export sync_collection
+  participant X as fork transport browser-xhr
+  participant V as sync server
+  P->>W: sync
+  W->>S: the sync step, on the session queue
+  S->>C: forSend
+  C-->>S: key and generation
+  S->>E: sync_collection(key, endpoint)
+  E->>X: the engine's request, timeout the stall duration
+  X->>V: synchronous request from the Worker
+  V-->>X: answer
+  alt response URL is not the request's
+    X-->>E: MISDIRECTED_REQUEST, no source, read as Failed
+  else non-success status
+    X-->>E: the status source, downcast to error_for_status_code
+  else success
+    X-->>E: bytes, decoded by the size header
+  end
+  E-->>S: required, or the engine's error bytes
+  alt success
+    S->>C: settle(gen)
+  else the engine's error bytes
+    S->>C: settle(gen, bytes)
+  else any other throw
+    S->>C: settle(gen, empty bytes), then throw again
+  end
+  S-->>W: status and required
+  W-->>P: reply
+```

@@ -13,6 +13,7 @@ import type {
   Request,
   Snapshot,
   StatusWord,
+  Synced,
   UndoOffer
 } from './protocol';
 
@@ -67,6 +68,9 @@ export interface SessionDeps {
   /** The Worker's sync credential store, which the two credential operations reach and nothing
    * else does (SPEC-363 R15, R16). A Worker without one answers `absent`. */
   credential?: { status(): Promise<StatusWord>; forget(): Promise<StatusWord> };
+  /** The Worker's sync, which the two sync operations reach; typed by its shape, so this module
+   * never imports it (SPEC-364 R17, R18). A Worker without one answers as a store with no key. */
+  sync?: { login(user: string, password: string): Promise<StatusWord>; sync(): Promise<Synced> };
 }
 
 /** A media file the Worker read for the core: its name and its first bytes. */
@@ -163,6 +167,7 @@ export class Session {
     if (this.#ended !== null) return refuse(request.id, this.#ended.code, this.#ended.why);
     if (request.op === 'open') return this.#open(request.id, request.languages ?? []);
     if (!this.#opened) return refuse(request.id, 'not-open', `${request.op} before open`);
+    if (request.op === 'sync-login' || request.op === 'sync') return this.#sync(request);
     if (request.op === 'faces') return this.#faces(request.id, request.card);
     return this.#run(request.id, (engine) => this.#call(engine, request));
   }
@@ -231,6 +236,26 @@ export class Session {
   /** A trap's message is the panic the module recorded, when it recorded one. */
   #explain(engine: EngineModule, error: unknown): string {
     return (error instanceof WebAssembly.RuntimeError && engine.last_panic()) || describe(error);
+  }
+
+  /** A sync operation's answer (SPEC-364 R17, R18). It runs on the session's queue like any other
+   * request, so a study request waits for it and is then answered (ADR-375 D18). A Worker with no
+   * sync answers as a store with no key; a trap ends the session, and any other throw answers
+   * `engine-failed`. */
+  async #sync(request: Extract<Request, { op: 'sync-login' | 'sync' }>): Promise<Reply> {
+    const sync = this.#deps.sync;
+    if (sync === undefined) {
+      const absent: Synced = { status: 'absent', required: null };
+      return { id: request.id, ok: true, value: request.op === 'sync' ? absent : absent.status };
+    }
+    try {
+      const value = request.op === 'sync' ? await sync.sync() : await sync.login(request.user, request.password);
+      return { id: request.id, ok: true, value };
+    } catch (error) {
+      const why = this.#explain(this.#engine as EngineModule, error);
+      if (error instanceof WebAssembly.RuntimeError) return this.#end(request.id, 'engine-failed', why);
+      return refuse(request.id, 'engine-failed', why);
+    }
   }
 
   /** Both faces of `card`. The core reads media synchronously and the media directory does not, so

@@ -1290,7 +1290,7 @@ class EveryReleaseWorkflowQueuesEveryRun(unittest.TestCase):
         self.assertEqual(release_problems(read_workflow(text), text, others), [])
 
     def test_every_push_or_release_that_runs_for_a_tag_is_in_the_class(self):
-        tag = "on:\n  push:\n    tags:\n      - 'v[0-9]+.[0-9]+.[0-9]+'\n"
+        tag = "on:\n  push:\n    tags:\n      - 'v[0-9]+.[0-9]+.[0-9]+'\n  workflow_dispatch:\n"
         triggers = {
             "a push with a tags-ignore filter": (
                 "on:\n  push:\n    tags-ignore:\n      - 'v0.*'\n",

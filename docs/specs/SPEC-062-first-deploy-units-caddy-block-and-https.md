@@ -284,3 +284,5 @@ this SPEC names each step only.
   owner's go; the release itself stays downloadable, so a rollback needs only a kept tag.
 
 Amendment (2026-09-29): SPEC-127 makes a Caddy reload that fails after the file swap restore the previous site block and Caddyfile, which the last exclusion of section 6 left to #321 (ADR-127).
+
+Amendment (SPEC-373): R1's release also runs on a manual dispatch with no input, made at a release tag's own ref, for a tag whose push started no run (#475). The same guard refuses a ref that is not that tag, and the run joins the tag's group. A8's event pin is now the push and the dispatch, exactly.
