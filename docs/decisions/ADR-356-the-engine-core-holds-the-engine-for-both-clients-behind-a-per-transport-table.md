@@ -252,3 +252,19 @@ gesture row, name or assertion removed or narrowed. The rest of D2 and D4 stands
 - AnswerCard in `EXEMPT`: rejected because `EXEMPT` is the never-list's exemption under ADR-301, and joining it would put every grade under the owner-taps ruling's conditions.
 - The same census file, extended: chosen because the population and the walker are the same.
 - A second census file for the answer: rejected because it copies the walker, and two walkers must then be kept equal.
+
+## Amendment: Undo reverts only the review's own last answer (SPEC-371)
+
+ADR-382 amends D2, D4 and D6. The rest of each stands.
+
+- **D2 (the table, `:150-152`).** Undo (3,8) leaves the ordinary rows and joins the exempt table
+  as `ExemptWrite::Undo`, `TargetKind::Card`, deciding `NeedsGesture` on both transports.
+  HtmlToTextLine (27,14) joins the ordinary rows, web only, so the review can show the card it
+  would undo as one line of text. ADR-382 D1 and D6 decide both, and name what each was chosen
+  against.
+- **D4 (containment, `:156-160`).** The census's engine names gain `undo`, and its held lines gain
+  four entries outside the core, each with its reason, and the boundary census's owed literals of
+  `undo` that name the gesture (ADR-382 D9).
+- **D6 (the first exempt table, `:164-166`).** The table holds seven rows. The seventh, Undo,
+  reverts only the review's own last answer while it has not synced, and is checked at the write
+  (ADR-382 D2, D3). The undo after a sync this record anticipated (`:192`) is still unbuilt.

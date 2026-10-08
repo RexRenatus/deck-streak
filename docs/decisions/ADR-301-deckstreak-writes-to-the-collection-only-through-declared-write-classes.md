@@ -104,6 +104,11 @@ its own ADR in ADR-089's form.
 
 ### (a) The never-list
 
+- **Note (2026-10-08, #714, the first exempt tap):** the first exempt tap is built, under the
+  owner-taps ruling: Undo of the review's own last answer while it has not synced (SPEC-371,
+  ADR-382). It is reachable only from the review, writes only on the card the gesture names, and
+  is shown, with what it changes, before it is made.
+
 No write class makes any of these writes, at any rung, and no owner approval admits one. Each
 entry names what it protects.
 
