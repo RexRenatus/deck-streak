@@ -91,8 +91,8 @@ fn change_schema(collection: &Path) {
     col.close(None).expect("the engine closes the collection");
 }
 
-/// The ids and the modified stamp the test's own handle reads: the oracle the core's read is
-/// compared with.
+/// The ids the test's own handle reads, and the upload re-check stamp the support computes apart
+/// from the core: the oracle the core's read is compared with.
 fn held(collection: &Path) -> IdSets {
     let col = engine(collection);
     let db = col.storage.db();
@@ -108,9 +108,7 @@ fn held(collection: &Path) -> IdSets {
         reviews: ids("select id from revlog"),
         cards: ids("select id from cards"),
         notes: ids("select id from notes"),
-        modified: db
-            .query_row("select mod from col", [], |row| row.get(0))
-            .expect("the modified stamp reads"),
+        modified: support::stamp(&col),
     };
     col.close(None).expect("the engine closes the collection");
     sets
@@ -228,23 +226,23 @@ fn engine_error(refusal: Refusal) -> Option<(Kind, String)> {
     }
 }
 
+/// The engine's own database error when its hash reads a schema stamp that is a fraction.
+const FRACTION_REFUSED: &str = r#"DbError { info: "SqliteFailure(Error { code: Unknown, extended_code: 1 }, Some(\"Invalid function parameter type Real at index 1\"))", kind: Other }"#;
+
 #[test]
 fn a_reply_that_is_not_integers_is_the_engines_database_error() {
     let synthetic = support::synthetic("unreadable-stamp");
     let col = engine(&synthetic.collection);
     col.storage
         .db()
-        .execute("update col set mod = 1.5", [])
-        .expect("the test writes a modified stamp that is not an integer");
+        .execute("update col set scm = 1.5", [])
+        .expect("the test writes a schema stamp that is not an integer");
     col.close(None).expect("the engine closes the collection");
     assert_eq!(
         open(&synthetic).id_sets().map_err(engine_error),
-        Err(Some((
-            Kind::DbError,
-            "the engine's reply to `select mod from col` is not the integers it selects".to_owned()
-        ))),
-        "a stamp the engine answers as a fraction is refused as the engine's database error \
-         naming the statement, and is never read as a guessed value"
+        Err(Some((Kind::DbError, FRACTION_REFUSED.to_owned()))),
+        "a schema stamp that is not an integer is refused by the engine's hash as its own \
+         database error, and is never read as a guessed value"
     );
 }
 

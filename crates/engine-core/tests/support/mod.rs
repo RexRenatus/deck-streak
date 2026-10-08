@@ -12,7 +12,7 @@ pub mod sync_server;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use anki::collection::CollectionBuilder;
+use anki::collection::{Collection, CollectionBuilder};
 use anki::decks::DeckId;
 use anki_proto::collection::OpenCollectionRequest;
 use prost::Message;
@@ -109,4 +109,43 @@ pub fn open_request(synthetic: &Synthetic) -> Vec<u8> {
         media_db_path: text(&synthetic.dir.join("collection.media.db")),
     }
     .encode_to_vec()
+}
+
+/// Every synced table that carries a row usn: the tables the upload re-check stamp reads, named
+/// apart from the core's statement (SPEC-364 R6).
+pub const SYNCED_TABLES: [&str; 10] = [
+    "cards",
+    "notes",
+    "revlog",
+    "graves",
+    "decks",
+    "deck_config",
+    "notetypes",
+    "templates",
+    "tags",
+    "config",
+];
+
+/// The upload re-check stamp of `col`, computed apart from the core: each synced table's greatest
+/// usn by its own read, the greatest of them, and the schema stamp, hashed by the engine's own
+/// `fnvhash` (SPEC-364 R6).
+pub fn stamp(col: &Collection) -> i64 {
+    let db = col.storage.db();
+    let greatest = SYNCED_TABLES
+        .iter()
+        .filter_map(|table| {
+            db.query_row(&format!("select max(usn) from {table}"), [], |row| {
+                row.get::<_, Option<i64>>(0)
+            })
+            .expect("a table's greatest usn reads")
+        })
+        .max()
+        .expect("a collection holds a row in a synced table");
+    let schema: i64 = db
+        .query_row("select scm from col", [], |row| row.get(0))
+        .expect("the schema stamp reads");
+    db.query_row("select fnvhash(?1, ?2)", [greatest, schema], |row| {
+        row.get(0)
+    })
+    .expect("the engine hashes the stamp")
 }

@@ -1,5 +1,6 @@
 //! The one-way write in the order the full-sync choice's model checks it: the server copy, the
-//! backup, the re-check and the write, each read from its file by the core (SPEC-364 A3-A11).
+//! backup, the re-check and the write, each read from its file by the core (SPEC-364 A3-A11), and
+//! the upload re-check stamp the re-check compares (A15-A21).
 //!
 //! Each test builds its device and its server from the support's synthetic collections with the
 //! engine's own API, through a test-only engine handle of its own, and reads what each step left
@@ -18,6 +19,7 @@ use std::path::Path;
 
 use anki::card::CardId;
 use anki::collection::{Collection, CollectionBuilder};
+use anki::notes::{Note, NoteId};
 use anki::scheduler::answering::{CardAnswer, Rating};
 use anki::sync::login::{SyncAuth as EngineAuth, sync_login};
 use anki::timestamp::TimestampMillis;
@@ -70,8 +72,8 @@ fn answer(collection: &Path, card: i64) {
     col.close(None).expect("the engine closes the collection");
 }
 
-/// The ids and the modified stamp a fresh engine reads from `collection`'s file: the oracle each
-/// step's file is compared with.
+/// The ids a fresh engine reads from `collection`'s file, and its upload re-check stamp computed
+/// by the support apart from the core: the oracle each step's file is compared with.
 fn held(collection: &Path) -> IdSets {
     let col = engine(collection);
     let db = col.storage.db();
@@ -87,9 +89,7 @@ fn held(collection: &Path) -> IdSets {
         reviews: ids("select id from revlog"),
         cards: ids("select id from cards"),
         notes: ids("select id from notes"),
-        modified: db
-            .query_row("select mod from col", [], |row| row.get(0))
-            .expect("the modified stamp reads"),
+        modified: support::stamp(&col),
     };
     col.close(None).expect("the engine closes the collection");
     sets
@@ -758,5 +758,323 @@ fn an_evicted_device_is_offered_the_download_alone_and_restores_every_review() {
         (donor_ids.reviews.len(), rows(held(&device))),
         (2, rows(donor_ids)),
         "after the owner's download the evicted device holds every review the server holds"
+    );
+}
+
+/// The counts a changed server returns the upload to when the change added and removed no id.
+const NO_LOSS: Losses = Losses {
+    reviews: 0,
+    cards: 0,
+    notes: 0,
+};
+
+/// The first note of the collection `col` holds, read by the engine.
+fn first_note(col: &Collection) -> Note {
+    let id: i64 = col
+        .storage
+        .db()
+        .query_row("select min(id) from notes", [], |row| row.get(0))
+        .expect("the test's read of a note id runs");
+    col.storage
+        .get_note(NoteId(id))
+        .expect("the engine reads the note")
+        .expect("the note exists")
+}
+
+/// The second client's normal sync, which carries its change to the server.
+fn normal_sync(auth: &EngineAuth, collection: &Path) {
+    assert_eq!(
+        synced(auth, collection).required(),
+        ChangesRequired::NoChanges,
+        "the second client's change reaches the server by a normal sync"
+    );
+}
+
+/// An upload counted and backed up on a device seeded after `plant`, then a second client's
+/// `change`, which `send` carries to the server, then the re-check: its outcome with the counts it
+/// returned to as the upload's losses, and whether the stamp the oracle reads differs between the
+/// counted copy and the fresh one.
+fn rechecked_after(
+    server: &SyncServer,
+    test: &str,
+    plant: impl FnOnce(&Path),
+    change: impl FnOnce(&Path),
+    send: fn(&EngineAuth, &Path),
+) -> (Result<Result<(), Option<Losses>>, Reason>, bool) {
+    let (engine_auth, auth) = logged_in(server);
+    let device = support::synthetic(test);
+    plant(&device.collection);
+    seed(&engine_auth, &device.collection);
+    let dispatcher = open(&device);
+    let copy = device.dir.join("copy.anki2");
+    let checked = upload_checked(
+        &dispatcher,
+        counted(&dispatcher, &auth, &copy),
+        &device.dir.join("backup.anki2"),
+        &copy,
+    );
+    let second_client = support::scratch("engine-core-one-way", test).join("second.anki2");
+    download_to(&engine_auth, &second_client);
+    change(&second_client);
+    send(&engine_auth, &second_client);
+    let fresh = device.dir.join("fresh.anki2");
+
+    let rechecked = one_way::recheck(&dispatcher, checked, &auth, &fresh)
+        .map(|step| step.map(drop).map_err(|counted| counted.counts().upload))
+        .map_err(|refused| refused.reason);
+    drop(dispatcher);
+    (rechecked, held(&copy).modified != held(&fresh).modified)
+}
+
+/// Edits the first note's first field through the engine, and returns the note as edited.
+fn edit_first_note(col: &mut Collection, text: &str) -> Note {
+    let mut note = first_note(col);
+    note.set_field(0, text).expect("the note takes the edit");
+    col.update_note(&mut note)
+        .expect("the engine updates the note");
+    note
+}
+
+#[test]
+fn an_edit_that_adds_no_id_returns_the_upload_to_the_counts() {
+    if sync_server::role().as_deref() == Some(SERVER) {
+        return sync_server::serve();
+    }
+    let server = SyncServer::start("an_edit_that_adds_no_id_returns_the_upload_to_the_counts");
+
+    let rechecked = rechecked_after(
+        &server,
+        "one-way-edit-no-id",
+        |_| (),
+        |second| {
+            let mut col = engine(second);
+            edit_first_note(&mut col, "edited after the count");
+            col.close(None).expect("the engine closes the collection");
+        },
+        normal_sync,
+    );
+
+    assert_eq!(
+        rechecked,
+        (Ok(Err(Some(NO_LOSS))), true),
+        "a note edit that adds no id moves the stamp and returns the upload to the counts"
+    );
+}
+
+#[test]
+fn a_tag_or_config_change_alone_returns_the_upload_to_the_counts() {
+    if sync_server::role().as_deref() == Some(SERVER) {
+        return sync_server::serve();
+    }
+    let server = SyncServer::start("a_tag_or_config_change_alone_returns_the_upload_to_the_counts");
+
+    let tag = rechecked_after(
+        &server,
+        "one-way-new-tag",
+        |_| (),
+        |second| {
+            let col = engine(second);
+            let db = col.storage.db();
+            db.execute(
+                "insert into tags (tag, usn, collapsed, config) values ('planted', -1, 0, null)",
+                [],
+            )
+            .expect("the second client registers a tag no note carries");
+            db.execute("update col set mod = ?1", [now_millis()])
+                .expect("the second client's collection reads as changed");
+            col.close(None).expect("the engine closes the collection");
+        },
+        normal_sync,
+    );
+    let config = rechecked_after(
+        &server,
+        "one-way-config",
+        |_| (),
+        |second| {
+            let mut col = engine(second);
+            col.set_config_json("plantedAfterTheCount", &true, true)
+                .expect("the engine sets the config key");
+            col.close(None).expect("the engine closes the collection");
+        },
+        normal_sync,
+    );
+
+    assert_eq!(
+        [tag, config],
+        [
+            (Ok(Err(Some(NO_LOSS))), true),
+            (Ok(Err(Some(NO_LOSS))), true)
+        ],
+        "a new tag name alone, and a config change alone, each move the stamp and return the \
+         upload to the counts"
+    );
+}
+
+#[test]
+fn a_deletion_returns_the_upload_to_the_counts() {
+    if sync_server::role().as_deref() == Some(SERVER) {
+        return sync_server::serve();
+    }
+    let server = SyncServer::start("a_deletion_returns_the_upload_to_the_counts");
+    let deck = "Planted before the seed";
+
+    let rechecked = rechecked_after(
+        &server,
+        "one-way-deletion",
+        |device| {
+            let mut col = engine(device);
+            col.get_or_create_normal_deck(deck)
+                .expect("the engine adds an empty deck");
+            col.close(None).expect("the engine closes the collection");
+        },
+        |second| {
+            let mut col = engine(second);
+            let id = col
+                .get_deck_id(deck)
+                .expect("the engine reads the deck's id")
+                .expect("the deck reached the second client");
+            col.remove_decks_and_child_decks(&[id])
+                .expect("the engine removes the deck");
+            col.close(None).expect("the engine closes the collection");
+        },
+        normal_sync,
+    );
+
+    assert_eq!(
+        rechecked,
+        (Ok(Err(Some(NO_LOSS))), true),
+        "removing an empty deck adds and removes no review, card or note id, moves the stamp and \
+         returns the upload to the counts"
+    );
+}
+
+#[test]
+fn an_edit_dated_at_or_below_the_greatest_returns_the_upload_to_the_counts() {
+    if sync_server::role().as_deref() == Some(SERVER) {
+        return sync_server::serve();
+    }
+    let server = SyncServer::start(
+        "an_edit_dated_at_or_below_the_greatest_returns_the_upload_to_the_counts",
+    );
+
+    let rechecked = rechecked_after(
+        &server,
+        "one-way-edit-dated-below",
+        |_| (),
+        |second| {
+            let mut col = engine(second);
+            let dated = first_note(&col).mtime;
+            let note = edit_first_note(&mut col, "edited after the count, dated as before");
+            col.storage
+                .db()
+                .execute(
+                    "update notes set mod = ?1 where id = ?2",
+                    [dated.0, note.id.0],
+                )
+                .expect("the edit is dated at its old time, at or below the greatest row's");
+            col.close(None).expect("the engine closes the collection");
+        },
+        normal_sync,
+    );
+
+    assert_eq!(
+        rechecked,
+        (Ok(Err(Some(NO_LOSS))), true),
+        "a note edit dated at or below the greatest row's moves the stamp and returns the upload \
+         to the counts"
+    );
+}
+
+#[test]
+fn a_full_upload_after_the_count_returns_the_upload_to_the_counts() {
+    if sync_server::role().as_deref() == Some(SERVER) {
+        return sync_server::serve();
+    }
+    let server =
+        SyncServer::start("a_full_upload_after_the_count_returns_the_upload_to_the_counts");
+
+    let rechecked = rechecked_after(&server, "one-way-full-upload", |_| (), |_| (), seed);
+
+    assert_eq!(
+        rechecked,
+        (Ok(Err(Some(NO_LOSS))), true),
+        "a second client's full upload of the rows it downloaded moves the stamp and returns the \
+         upload to the counts"
+    );
+}
+
+#[test]
+fn an_unchanged_server_rechecks_equal() {
+    if sync_server::role().as_deref() == Some(SERVER) {
+        return sync_server::serve();
+    }
+    let server = SyncServer::start("an_unchanged_server_rechecks_equal");
+
+    let rechecked = rechecked_after(&server, "one-way-unchanged", |_| (), |_| (), |_, _| ());
+
+    assert_eq!(
+        rechecked,
+        (Ok(Ok(())), false),
+        "an unchanged server, downloaded by a second client and fetched again, carries the counted \
+         copy's stamp, and the upload is ready"
+    );
+}
+
+#[test]
+fn the_stamp_reads_every_synced_tables_greatest_usn_and_the_schema() {
+    let device = support::synthetic("one-way-stamp");
+    answer(&device.collection, device.cards[0]);
+    let col = engine(&device.collection);
+    let db = col.storage.db();
+    db.execute(
+        "insert into tags (tag, usn, collapsed, config) values ('planted', 0, 0, null)",
+        [],
+    )
+    .expect("the test plants a tag");
+    db.execute("insert into graves (oid, type, usn) values (1, 0, 0)", [])
+        .expect("the test plants a grave");
+    col.close(None).expect("the engine closes the collection");
+    let read = || {
+        let core = open(&device)
+            .id_sets()
+            .expect("the core reads the stamp")
+            .modified;
+        let col = engine(&device.collection);
+        let oracle = support::stamp(&col);
+        col.close(None).expect("the engine closes the collection");
+        (core, oracle)
+    };
+    let writes: Vec<String> = support::SYNCED_TABLES
+        .iter()
+        .zip(100..)
+        .map(|(table, usn)| format!("update {table} set usn = {usn}"))
+        .chain(std::iter::once("update col set scm = scm + 1".to_owned()))
+        .collect();
+    let expected: Vec<(String, bool, bool)> = writes
+        .iter()
+        .map(|write| (write.clone(), true, true))
+        .collect();
+
+    let mut before = read();
+    let judged: Vec<(String, bool, bool)> = support::examined("stamp writes", writes)
+        .into_iter()
+        .map(|write| {
+            let col = engine(&device.collection);
+            col.storage
+                .db()
+                .execute(&write, [])
+                .expect("the test's write runs");
+            col.close(None).expect("the engine closes the collection");
+            let after = read();
+            let judged = (write, after.0 != before.0, after.0 == after.1);
+            before = after;
+            judged
+        })
+        .collect();
+
+    assert_eq!(
+        judged, expected,
+        "(write, the core's stamp moved, it equals the engine's hash read apart from the core): \
+         each synced table's greatest usn, and the schema stamp, moves the stamp"
     );
 }
