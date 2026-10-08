@@ -86,7 +86,9 @@ A14: green at 46e416bd
 A15: red at f2076d70: left Err(NotAllowed{service: 27, method: 14}) right Ok("Hello world  cat.jpg  & a.mp3")
 A15: green at 46e416bd
 A16: red at f2076d70: left (Ok("undo"), Err(CallRefused{27,14})) right (Err(CallRefused{3,8}), Ok("html_to_text_line"))
+A16: green at b6030dd5
 A17: red at 68bc0e0e: undo's body lacks its owed statements, src/wasm.rs holds `call(service::COLLECTION, 8,`, undo_offer occurs 0 times
+A17: green at b6030dd5
 A18: red at f2076d70: left (Ok([]), Ok(()), Ok(()), Ok(1)) right (Ok([]), Ok(()), Err(NotAllowed{3,8}), Ok(0))
 A18: green at 46e416bd
 A19: red at 68bc0e0e: left [] right ["crates/coordination/src/lib.rs: `col.undo();` found 1, held 0"]
@@ -131,10 +133,11 @@ A28: red at f2076d70: code bad-request, message "undo takes no card", where undo
   red until `STUDY_CALLS` followed in the web engine.
 - **A green line names the commit before the one that writes it.** No commit can hold its own
   sha, so the commit that turns a criterion green also changes this record, naming what it greens,
-  and the commit after it writes the `green at` line. The web engine's commit greens A16 and A17,
-  `the_study_calls_are_the_reviews_pairs`,
-  `a_boundary_function_that_answers_a_constant_is_refused_by_name` and the parity test, and it
-  changes `crates/web-engine/tests/study.rs` only by adding the tests of R6 and R7's mirrors.
+  and the commit after it writes the `green at` line. The web engine's commit, b6030dd5, greens A16
+  and A17, `the_study_calls_are_the_reviews_pairs`,
+  `a_boundary_function_that_answers_a_constant_is_refused_by_name` and the parity test, each
+  measured at b6030dd5, and it changes `crates/web-engine/tests/study.rs` only by adding the tests
+  of R6 and R7's mirrors.
 - **`exempt.rs`'s Undo arm names its target "its target".** Each per-write synthetic collection
   numbers its own cards, and the fixture holds no answer, so the Undo request's record names no
   row and is refused before the engine.
