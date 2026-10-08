@@ -132,6 +132,9 @@ entry names what it protects.
 - A note that reached the collection in a package (ADR-151) is changed at its package's source and
   reaches Anki in a newer package, never through a write in the collection. A write there would be
   overwritten by the next newer package, or would leave the note forked from its source.
+- **Note (#631, SPEC-364):** Entry 4 stands. A one-way sync is the owner's tap through the core's
+  full-sync choice (ADR-375 D5, ADR-337), never a write class: the core counts both sides, makes
+  the backup and re-reads the device before the write, and no class makes it at any rung.
 
 ### (b) The backup and the batch
 

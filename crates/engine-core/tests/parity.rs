@@ -81,11 +81,13 @@ fn each_adapter_table_equals_its_transport_column() {
         &native,
     );
 
-    let web: BTreeSet<(u32, u32, String)> =
-        support::examined("web study call(s)", study::STUDY_CALLS.to_vec())
-            .iter()
-            .map(|&(service, method, name)| (service, method, name.to_owned()))
-            .collect();
+    let web: BTreeSet<(u32, u32, String)> = support::examined(
+        "web study and sync call(s)",
+        [study::STUDY_CALLS.as_slice(), study::SYNC_CALLS.as_slice()].concat(),
+    )
+    .iter()
+    .map(|&(service, method, name)| (service, method, name.to_owned()))
+    .collect();
     let core: BTreeSet<(u32, u32, String)> = column(Transport::Web)
         .into_iter()
         .map(|(service, method, name)| (service, method, snake(&name)))

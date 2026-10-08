@@ -2,12 +2,21 @@
   "records": [
     {
       "file": "crates/engine-core/src/login_guard.rs",
-      "mutant": "delete field kind from struct BackendError expression in check",
+      "mutant": "delete field kind from struct BackendError expression in refused",
       "anchor": "kind: Kind::InvalidInput.into(),",
       "reason": "INVALID_INPUT is 0 in backend.proto, the proto3 default, so deleting the field leaves the same value.",
-      "evidence": "check builds BackendError with ..BackendError::default(), and the default kind is the enum's zero, INVALID_INPUT. A proto3 scalar at its default is not encoded, so the bytes with the field and without it are equal, and no test can tell the two apart.",
+      "evidence": "refused builds BackendError with ..BackendError::default(), and the default kind is the enum's zero, INVALID_INPUT. A proto3 scalar at its default is not encoded, so the bytes with the field and without it are equal, and no test can tell the two apart.",
       "reached_by": "login_guard::a3_the_guard_admits_https_and_loopback_http_alone",
       "issue": "#625"
+    },
+    {
+      "file": "crates/engine-core/src/dispatch.rs",
+      "mutant": "delete field kind from struct BackendError expression in failed",
+      "anchor": "kind: Kind::InvalidInput.into(),",
+      "reason": "INVALID_INPUT is 0 in backend.proto, the proto3 default, so deleting the field leaves the same value.",
+      "evidence": "failed builds BackendError with ..BackendError::default(), and the engine's proto/anki/backend.proto, line 25, reads `INVALID_INPUT = 0;`, so the default kind is that zero. A proto3 scalar at its default is not encoded, so the bytes with the field and without it are equal. The anchor occurs once (1) in dispatch.rs, and the not-UTF-8 test, which asserts the refusal's kind and message byte-exact, passes with the field deleted.",
+      "reached_by": "one_way::a_copy_path_that_is_not_utf8_is_the_cores_own_refusal",
+      "issue": "#631"
     }
   ]
 }
