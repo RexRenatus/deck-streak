@@ -490,6 +490,7 @@ jobs:
             -skip-testing:DeckStreakTests/ReviewModelTests \
             -skip-testing:DeckStreakTests/ReviewSessionTests \
             -skip-testing:DeckStreakUITests/ReviewFlowTests \
+            -skip-testing:DeckStreakUITests/ReviewActionsFlowTests \
             -derivedDataPath "$RUNNER_TEMP/app-debug" \
             -resultBundlePath "$RESULTS/app.xcresult" \
             CODE_SIGN_IDENTITY=-
@@ -514,6 +515,24 @@ jobs:
             -resultBundlePath "$RESULTS/review.xcresult" \
             CODE_SIGN_IDENTITY=-
           echo "$(( $(date +%s) - started ))" > "$REPORT/review-seconds"
+      - name: the bury and flag tests, Debug, on the iPhone and then the iPad
+        # The review's bury and flag class, which the app's step skips, over its derived data and
+        # with a copy of the review fixture of its own named to the test runner on the command
+        # line alone (SPEC-358 R8). Run after a red app step too, as the review screen's step is.
+        id: review-actions-tests
+        if: ${{ !cancelled() && steps.app-tests.outcome != 'skipped' }}
+        run: |
+          cp -R engine-artifact/review-fixture "$RUNNER_TEMP/review-actions-fixture"
+          started=$(date +%s)
+          TEST_RUNNER_DS_REVIEW_FIXTURE="$RUNNER_TEMP/review-actions-fixture" xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug \
+            -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
+            -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" \
+            -disable-concurrent-destination-testing \
+            -only-testing:DeckStreakUITests/ReviewActionsFlowTests \
+            -derivedDataPath "$RUNNER_TEMP/app-debug" \
+            -resultBundlePath "$RESULTS/review-actions.xcresult" \
+            CODE_SIGN_IDENTITY=-
+          echo "$(( $(date +%s) - started ))" > "$REPORT/review-actions-seconds"
       - name: the app, archived unsigned for a device
         # Read after a red test step too, so the archive and its imports are measured at every
         # run (SPEC-347 A15); a cancelled run, or a test step that never ran, skips it.

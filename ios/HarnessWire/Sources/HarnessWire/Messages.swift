@@ -129,7 +129,8 @@ public struct DeckName: Equatable, Sendable {
 
 /// One card of `QueuedCards`, with its current state and the four states an answer sends back,
 /// one per rating. The three beside Good's default to empty, so the five-argument call the harness
-/// makes still reads (SPEC-348 section 10).
+/// makes still reads (SPEC-348 section 10). Its flag is the card's `Card.flags`, the engine's
+/// number, red as 1; it defaults to none, 0 (SPEC-358 R3).
 public struct QueuedCard: Equatable, Sendable {
     public var cardID: Int64
     public var noteID: Int64
@@ -139,11 +140,12 @@ public struct QueuedCard: Equatable, Sendable {
     public var hardState: [UInt8]
     public var goodState: [UInt8]
     public var easyState: [UInt8]
+    public var flag: UInt32
 
     public init(
         cardID: Int64, noteID: Int64, queue: Int32, currentState: [UInt8],
         againState: [UInt8] = [], hardState: [UInt8] = [], goodState: [UInt8],
-        easyState: [UInt8] = []
+        easyState: [UInt8] = [], flag: UInt32 = 0
     ) {
         self.cardID = cardID
         self.noteID = noteID
@@ -153,6 +155,7 @@ public struct QueuedCard: Equatable, Sendable {
         self.hardState = hardState
         self.goodState = goodState
         self.easyState = easyState
+        self.flag = flag
     }
 
     /// The state an answer of `rating` sends back as its new state: the rating's own (R10). The

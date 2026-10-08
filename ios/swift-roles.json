@@ -18,6 +18,7 @@
   "ios/AppTests/CredentialStoreTests.swift": {"role": "test"},
   "ios/AppTests/ReviewModelTests.swift": {"role": "test"},
   "ios/AppTests/ReviewSessionTests.swift": {"role": "test"},
+  "ios/AppUITests/ReviewActionsFlowTests.swift": {"role": "test"},
   "ios/AppUITests/ReviewFlowTests.swift": {"role": "test"},
   "ios/AppUITests/ShellFlowTests.swift": {"role": "test"},
   "ios/CardIsolation/Package.swift": {"role": "manifest"},

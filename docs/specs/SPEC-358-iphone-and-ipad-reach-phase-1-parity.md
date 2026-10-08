@@ -227,7 +227,7 @@ R34. **Part c: a deck check costs one small response.** A check of a shared or c
 | A5 | A native bury buries the card as the user's bury, and the queue moves on | a stub that returns without the call: the card's queue is unchanged | `crates/ffi/tests/review_actions.rs` `a_bury_buries_the_card_as_the_users_bury` |
 | A6 | A native flag turns the card red, and red to none, and answers the new flag | a stub that answers its input | `crates/ffi/tests/review_actions.rs` `a_flag_toggles_red_and_answers_the_new_flag` |
 | A11 | Bury shows the next card; flag shows "Flagged red" and clears it | no bury or flag control | `DeckStreakUITests/ReviewActionsFlowTests/test_a11_bury_moves_on_and_flag_toggles_red` |
-| A12 | The review keeps its card and side when the iPad's sidebar hides and returns | not red: SPEC-348 R16 holds the state in the model; this pins it for the layout | `DeckStreakUITests/ReviewActionsFlowTests/test_a12_the_review_survives_the_sidebar` |
+| A12 | The review keeps its card and side when the iPad's sidebar hides and returns; on the iPhone, which has no sidebar, the same test's compact-width form asserts that the review stands alone and that the card and its revealed side survive a turn to landscape and back to portrait | not red: SPEC-348 R16 holds the state in the model; this pins it for the layout | `DeckStreakUITests/ReviewActionsFlowTests/test_a12_the_review_survives_the_sidebar` |
 | A13 | Every Swift file keeps its role, its doors and its budget | a new file unregistered | `scripts/tests/test_ios_thin_swift.py` |
 | A14 | The harness job runs the new step on the iPhone and then the iPad, and reports it | no such step | `scripts/tests/test_ci_workflows.py` `test_the_review_actions_step_runs_on_the_iphone_and_then_the_ipad` |
 | A37 | The card frame stays as SPEC-348 R18 holds it, over every Swift file this part adds or edits | not red: an unchanged constraint (R27); the census already holds it, and this pins it for part a's files | `scripts/tests/test_ios_review_screen.py` `the_card_frame_is_the_factorys_alone` (SPEC-348 A13) |
@@ -250,7 +250,9 @@ A37: python3 -m unittest discover -s scripts/tests -p test_ios_review_screen.py 
 A40: swift test --package-path ios/HarnessWire --filter HarnessWireTests.ResponseDecodingTests/test_a40_the_queued_card_carries_its_flag
 ```
 
-## 4. File manifest (part a)
+## 4. File manifest
+
+Part a's files; parts b and c name theirs in their own pull requests (section 7).
 
 | file | context | change |
 |---|---|---|
@@ -276,7 +278,7 @@ A40: swift test --package-path ios/HarnessWire --filter HarnessWireTests.Respons
 | `ios/App/Sources/ReviewPlayback.swift` | model | added: replay and stop, moved from `perform`'s arms |
 | `ios/App/Sources/ReviewView.swift` | view | `ReviewPhase` gains `marking`, the phase a bury or a flag holds while it runs |
 | `ios/AppUITests/ReviewActionsFlowTests.swift` | UI tests | added: A11 and A12 |
-| `ios/swift-roles.json` | register | `ReviewPlayback.swift` as `model` with its count, and the changed files' counts; no ceiling rises |
+| `ios/swift-roles.json` | register | `ReviewPlayback.swift` as `model` with its count, `ReviewActionsFlowTests.swift` as `test`, and the changed files' counts; no ceiling rises |
 | `scripts/tests/test_one_review_rule.py` | census | added |
 | `scripts/tests/test_ci_workflows.py` | census | A14 |
 | `.github/workflows/xcframework.yml` | the Apple job | R8's step and its report row |
