@@ -1,0 +1,159 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S37101-THE-UNDO-ROW-IS-UNDO",
+        "engine-core",
+        "src/table.rs",
+        "        method: 8,\n        name: \"CollectionService.Undo\",",
+        "        method: 9,\n        name: \"CollectionService.Undo\",",
+        "table::each_exempt_write_names_its_engine_call_and_its_target_kind",
+        "the Undo exempt row names the engine's Undo, (3,8); as (3,9) a confirmed undo would run another collection call behind the owner's gesture, and the tool never mutates this literal in a const, so the row is planted by hand (SPEC-371 A2)"
+      ],
+      [
+        "S37102-AN-UNDO-TARGETS-A-CARD",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"CollectionService.Undo\",\n        kind: TargetKind::Card,",
+        "        name: \"CollectionService.Undo\",\n        kind: TargetKind::Note,",
+        "gesture::a_gesture_takes_one_target_of_its_writes_kind",
+        "an undo's gesture takes a card, the one whose answer it reverts; taking a note, a tap on the answered card would be refused and a note's id would be minted as the undo's target (SPEC-371 A2)"
+      ],
+      [
+        "S37103-A-GONE-REVIEW-IS-REFUSED",
+        "engine-core",
+        "src/undo_answer.rs",
+        "    let Some(review) = review else {\n        return Err(UndoRefusal::Gone);\n    };",
+        "    let Some(review) = review else {\n        return Ok(());\n    };",
+        "undo_answer::a_record_whose_review_is_gone_is_refused",
+        "a record whose review row is gone is refused as gone; admitted, an undo would revert whatever the engine's queue now holds in place of an answer that no longer exists (SPEC-371 A7)"
+      ],
+      [
+        "S37104-AN-UNDO-NAMES-ITS-CARD",
+        "engine-core",
+        "src/undo_answer.rs",
+        "review.cid != card",
+        "review.cid != review.cid",
+        "undo_answer::a_record_for_another_card_is_refused",
+        "the recorded review must be of the card the gesture names; unchecked, an undo on one card could revert another card's answer (SPEC-371 A8)"
+      ],
+      [
+        "S37105-A-SYNCED-ANSWER-IS-REFUSED",
+        "engine-core",
+        "src/undo_answer.rs",
+        "review.usn != -1",
+        "review.usn != review.usn",
+        "undo_answer::a_synced_answer_is_refused",
+        "an answer a sync has sent is refused as synced; unchecked, an undo would revert a review the server already holds (SPEC-371 A9)"
+      ],
+      [
+        "S37106-AN-EMPTY-QUEUE-IS-REFUSED",
+        "engine-core",
+        "src/undo_answer.rs",
+        "now.undo.is_empty()",
+        "false",
+        "undo_answer::an_empty_undo_queue_is_refused",
+        "an engine with nothing to undo has lost the answer and is refused as gone; unchecked, the empty queue reads as a change and the page shows the wrong reason (SPEC-371 A10)"
+      ],
+      [
+        "S37107-A-LATER-STEP-IS-REFUSED",
+        "engine-core",
+        "src/undo_answer.rs",
+        "now.last_step != last_step",
+        "now.last_step != now.last_step",
+        "undo_answer::a_later_step_is_refused",
+        "a later step under the same label is a change after the answer; with the step compared with itself, an undo would revert a later answer in place of the recorded one (SPEC-371 A11)"
+      ],
+      [
+        "S37108-ANOTHER-LABEL-IS-REFUSED",
+        "engine-core",
+        "src/undo_answer.rs",
+        "now.undo != label",
+        "now.undo != now.undo",
+        "undo_answer::another_undo_label_is_refused",
+        "another undo label at the same step is a change after the answer; with the label compared with itself, an undo would revert a bury or a flag in place of the answer (SPEC-371 A12)"
+      ],
+      [
+        "S37109-THE-WRITE-WAITS-FOR-THE-CHECK",
+        "engine-core",
+        "src/dispatch.rs",
+        "undo_answer::judge(recorded, &now, review, card).map_err(refused)?;",
+        "let _ = undo_answer::judge(recorded, &now, review, card).map_err(refused);",
+        "undo_answer::an_undo_after_a_later_change_is_refused_and_changes_nothing",
+        "the engine undoes only after the rule admits the record at the write; with the refusal discarded, an undo after a later bury reverts the bury and the answer stands (SPEC-371 A5)"
+      ],
+      [
+        "S37110-A-RECORD-THAT-IS-NOT-ONE-IS-REFUSED",
+        "engine-core",
+        "src/gesture.rs",
+        "Recorded::decode(input).map_err(undecodable)?",
+        "Recorded::decode(input).unwrap_or_default()",
+        "undo_answer::a_record_that_is_not_one_is_refused",
+        "an undo's request that is not a record is refused as undecodable before anything runs; decoded to an empty record, it reaches the rule and is refused for another reason than the one that holds (SPEC-371 A13)"
+      ],
+      [
+        "S37111-A-REVIEW-RETURNS-TO-REVIEW",
+        "engine-core",
+        "src/undo_answer.rs",
+        "Some(normal::Kind::Review(_)) => Returns::Review,",
+        "Some(normal::Kind::Review(_)) => Returns::Learning,",
+        "undo_answer::an_undone_answer_returns_its_card_to_the_state_it_left",
+        "an undone review returns its card to review; answered as learning, the confirmation would tell the owner the card returns to a state it never left (SPEC-371 A14)"
+      ],
+      [
+        "S37112-THE-TEXT-ROW-IS-HTML-TO-TEXT-LINE",
+        "engine-core",
+        "src/table.rs",
+        "        method: 14,\n        name: \"CardRenderingService.HtmlToTextLine\",",
+        "        method: 13,\n        name: \"CardRenderingService.HtmlToTextLine\",",
+        "table::every_pair_is_admitted_held_or_refused_by_its_transport",
+        "the web admits the engine's HtmlToTextLine, (27,14), which the offer reads the card's text through; as (27,13) the table would admit another rendering call and refuse the one the offer makes, and the tool never mutates this literal in a const, so the row is planted by hand (SPEC-371 A1)"
+      ],
+      [
+        "S37113-AN-UNDO-MATCHES-ITS-OFFER",
+        "web-engine",
+        "src/wasm.rs",
+        "last_answer_for(kept.borrow().as_ref(), card, step).cloned()",
+        "kept.borrow().clone().ok_or(StudyError::NotUndoable(UndoRefusal::Changed))",
+        "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+        "undo runs only for the card and step its offer named; without the comparison, a confirmation for an earlier offer would undo whatever answer is kept now, and the census refuses undo's body by name (SPEC-371 A17)"
+      ],
+      [
+        "S37114-AN-UNDO-TARGETS-ITS-CARD",
+        "web-engine",
+        "src/wasm.rs",
+        "OwnerGesture::from_tap(ExemptWrite::Undo, Target::Card(card))",
+        "OwnerGesture::from_tap(ExemptWrite::Undo, Target::Note(card))",
+        "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+        "undo mints the owner's gesture on the confirmed card; minted on any other target, the core refuses every undo, and the census refuses undo's body by name (SPEC-371 A17)"
+      ],
+      [
+        "S37115-RATE-RECORDS-ONLY-ITS-OWN-REVIEW",
+        "web-engine",
+        "src/wasm.rs",
+        ".filter(|newest| newest.card == shown.card)",
+        ".filter(|newest| newest.card == newest.card)",
+        "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+        "rate keeps an answer for undo only when the newest review is of the rated card; unchecked, it would keep another card's review as this answer's record, and the census refuses rate's body by name (SPEC-371 A17)"
+      ],
+      [
+        "S37116-AN-UNDO-CLEARS-ITS-RECORD",
+        "web-engine",
+        "src/wasm.rs",
+        "    LAST_ANSWER.with(|kept| *kept.borrow_mut() = None);\n    SHOWN.with(|kept| *kept.borrow_mut() = None);\n    Ok(())",
+        "    SHOWN.with(|kept| *kept.borrow_mut() = None);\n    Ok(())",
+        "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+        "undo forgets the record it undid; left set, the review would offer the same answer again after it was undone, and the census refuses undo's body by name (SPEC-371 A17)"
+      ],
+      [
+        "S37117-THE-CENSUS-NAMES-UNDO",
+        "engine-core",
+        "tests/containment.rs",
+        "    \"undo\",\n",
+        "    \"undone\",\n",
+        "containment::a_planted_undo_outside_the_entry_files_is_refused_by_name",
+        "the containment census counts the engine's undo by name; as undone, a planted col.undo() outside the entry files passes the census, and the tool never mutates this literal in a const, so the row is planted by hand (SPEC-371 A19)"
+      ]
+    ]
+  }
+}
