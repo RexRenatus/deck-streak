@@ -1,7 +1,8 @@
 // The Worker's sync (SPEC-364 R17, R18; ADR-375 D16, D17): the engine's three sync exports, reached
 // with the key the credential store gives at each send. Only the Worker imports this module, so the
 // key and the password never reach a page module; the store alone keeps the key, and every send it
-// gives is settled, whatever the engine answers.
+// gives is settled, whatever the engine answers. Before each, it reads the sync service's statement
+// of the oldest client it accepts and hands it to the engine, which decides (SPEC-374 R22 to R24).
 import type { Login, Sendable } from './credential';
 import { REQUIRED } from './protocol';
 import type { StatusWord, Synced } from './protocol';
@@ -25,9 +26,25 @@ export type Fetch = (input: string, init: RequestInit) => Promise<Response>;
  * answer, a redirect included (the browser hands one back unopened, with status 0), and for a body
  * over the cap or one that could not be read; nothing when no answer was read. */
 export async function readStatement(fetch: Fetch, url: string): Promise<Uint8Array | undefined> {
-  void fetch;
-  void url;
-  return undefined;
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'GET',
+      credentials: 'omit',
+      redirect: 'manual',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(STATEMENT_TIMEOUT_MS)
+    });
+  } catch {
+    return undefined;
+  }
+  if (response.status !== 200) return new Uint8Array();
+  try {
+    const body = new Uint8Array(await response.arrayBuffer());
+    return body.byteLength > STATEMENT_CAP ? new Uint8Array() : body;
+  } catch {
+    return new Uint8Array();
+  }
 }
 
 /** The engine's three sync exports and the classifier, as `wasm-bindgen` writes them. Each export
@@ -68,10 +85,12 @@ export class Sync {
    * (SPEC-374 R22 to R24): a refusal is thrown as the core's sentence, before the store is asked
    * for a key and before any sync request. */
   async #admit(engine: SyncEngine): Promise<void> {
-    engine.handshake(await readStatement(this.#fetch, new URL(STATEMENT_ROUTE, this.#endpoint).href));
+    const refusal = engine.handshake(await readStatement(this.#fetch, new URL(STATEMENT_ROUTE, this.#endpoint).href));
+    if (typeof refusal === 'string') throw new Error(refusal);
   }
 
-  /** Logs in through the engine and leaves the host key with the store. A refused login answers
+  /** Reads the statement first, and throws the core's sentence when it refuses (SPEC-374 R24).
+   * Logs in through the engine and leaves the host key with the store. A refused login answers
    * `needs-sign-in`; any other failure answers `offline`, and the store keeps no key. A trap is
    * thrown again, for the session to end on. */
   async login(user: string, password: string): Promise<StatusWord> {
@@ -86,7 +105,8 @@ export class Sync {
     }
   }
 
-  /** Runs one normal sync with the key the store gives for this send, and settles the send: a
+  /** Reads the statement first, and throws the core's sentence when it refuses (SPEC-374 R24).
+   * Runs one normal sync with the key the store gives for this send, and settles the send: a
    * success with no error, the engine's refusal with its bytes, and any other throw with empty
    * bytes before it is thrown again. A store that gives no key answers its status, and nothing is
    * sent. */
