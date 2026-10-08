@@ -143,3 +143,27 @@ and the native adapter ran again on a clean tree and passed, with clippy clean.
   is already open), so the stub's fetch replaced nothing; the core's refusal by name is the green's.
 - **Every red here was re-run at its commit on a clean tree**: A1, A2 and A12 at c98b4a79 and again
   at 943ac045, A3 to A11 at 943ac045, A6 at fbee2a7f and again at 943ac045, each exit 101.
+
+## After the stamp: the core's own refusal and the native adapter's anchor
+
+- **The core's own refusal is reached again, by the review ids.** The stamp's statement answers an
+  integer or the engine's own error, so the not-integers test above no longer reaches the core's
+  refusal of a reply that is not the integers its statement selects; the review ids' statement
+  does. `full_sync::a_review_id_that_is_not_an_integer_is_the_cores_own_refusal`, committed at
+  f84a0127, plants a review id that is not an integer and asserts the refusal's kind and message
+  byte for byte, naming `select id from revlog`. It is mutation coverage, not a red: the refusal
+  stood before it, so it passed at its own commit and takes no line in the fence. Two hand mutants
+  of the refusal, its message emptied and its kind changed, each failed it at `full_sync.rs:267:5`
+  with exit 101, and the unmutated run passed. This corrects the line above that says no fixture
+  reaches the refusal now.
+- **The native adapter's four earlier sentences are back in one match.** The one-way sync's
+  refusal had been told inside the match that an existing mutation row holds whole, closing brace
+  included, so that row's anchor occurred 0 times. d2fd428a tells the four earlier refusals from a
+  private type's match, verbatim, and the one-way sync's refusal beside it; no sentence changed, and
+  the row's anchor occurs once again.
+- **Two commits after 01c42f7f change `crates/`**, f84a0127 (a test) and d2fd428a (the native
+  adapter), so the line above that says every later commit leaves `crates/` unchanged no longer
+  holds. At af575016, whose `crates/` tree is d2fd428a's, every line of the fence,
+  A1 to A21, the whole of `full_sync`, and the whole test sets of the core, the web engine and the
+  native adapter ran again on a clean tree and passed, with clippy clean. This record's own commit
+  changes no path under `crates/`.
