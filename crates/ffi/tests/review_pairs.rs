@@ -60,14 +60,17 @@ const NEW_CARD_INTERVALS: [&str; 4] = ["<1m", "<6m", "<10m", "4d"];
 
 /// The allow-list this delivery leaves: four of the six calls before the app shell, the answer
 /// left to an owner's press (SPEC-365 R6) and the undo to the owner's gesture (SPEC-371 R15), the
-/// shell's login and the review screen's three pairs, each with the engine's name for it.
-const EXPECTED: [(u32, u32, &str); 8] = [
+/// shell's login and the review screen's three pairs, and the review's bury and flag (SPEC-358 R1),
+/// each with the engine's name for it.
+const EXPECTED: [(u32, u32, &str); 10] = [
     (1, 3, "BackendSyncService.SyncLogin"),
     (3, 0, "BackendCollectionService.OpenCollection"),
+    (5, 4, "CardsService.SetFlag"),
     (7, 4, "DecksService.DeckTree"),
     (7, 13, "DecksService.GetDeckNames"),
     (7, 22, "DecksService.SetCurrentDeck"),
     (13, 3, "SchedulerService.GetQueuedCards"),
+    (13, 14, "SchedulerService.BuryOrSuspendCards"),
     (13, 24, "SchedulerService.DescribeNextStates"),
     (27, 6, "CardRenderingService.RenderExistingCard"),
 ];

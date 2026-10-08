@@ -26,8 +26,9 @@ pub struct Call {
 /// screen's three (SPEC-348 R1): read the deck tree, choose the current deck, the one write Anki
 /// itself makes when a deck is chosen, and describe a card's next states as intervals. A card is
 /// answered only through the adapter's answer entry, `Engine::answer`, an owner's press
-/// (SPEC-365 R6), and an undo is an exempt write, which `run` refuses (SPEC-371 R15).
-pub const ALLOW_LIST: [Call; 8] = [
+/// (SPEC-365 R6), and an undo is an exempt write, which `run` refuses (SPEC-371 R15). The review's
+/// bury and flag join them (SPEC-358 R1): bury the shown card as the user's bury, and set its flag.
+pub const ALLOW_LIST: [Call; 10] = [
     Call {
         service: 3,
         method: 0,
@@ -67,6 +68,16 @@ pub const ALLOW_LIST: [Call; 8] = [
         service: 1,
         method: 3,
         name: "BackendSyncService.SyncLogin",
+    },
+    Call {
+        service: 13,
+        method: 14,
+        name: "SchedulerService.BuryOrSuspendCards",
+    },
+    Call {
+        service: 5,
+        method: 4,
+        name: "CardsService.SetFlag",
     },
 ];
 
