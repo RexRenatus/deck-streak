@@ -255,7 +255,17 @@ pub enum ExemptRefusal {
     NeedsTheChoice,
 }
 
-impl fmt::Display for ExemptRefusal {
+/// The four refusals an exempt tap's own write can meet, each told by its sentence. The one-way
+/// sync's refusal is told beside them by [`ExemptRefusal`]'s own `Display` (SPEC-364 R13), so
+/// these four sentences stay in one match.
+enum Told<'a> {
+    WrongKind,
+    NotTheTarget,
+    Undecodable,
+    Engine { error: &'a [u8] },
+}
+
+impl fmt::Display for Told<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::WrongKind => f.write_str("the tap's target is not of the kind its write takes"),
@@ -264,10 +274,23 @@ impl fmt::Display for ExemptRefusal {
             Self::Engine { error } => {
                 write!(f, "the engine refused the write ({} bytes)", error.len())
             }
-            Self::NeedsTheChoice => {
-                f.write_str("the one-way sync runs only through the full-sync choice's write")
-            }
         }
+    }
+}
+
+impl fmt::Display for ExemptRefusal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let told = match self {
+            Self::WrongKind => Told::WrongKind,
+            Self::NotTheTarget => Told::NotTheTarget,
+            Self::Undecodable => Told::Undecodable,
+            Self::Engine { error } => Told::Engine { error },
+            Self::NeedsTheChoice => {
+                return f
+                    .write_str("the one-way sync runs only through the full-sync choice's write");
+            }
+        };
+        told.fmt(f)
     }
 }
 
