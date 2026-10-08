@@ -26,6 +26,14 @@ A7: green at 2db78c8e075b6566c2dc2ca258c53b5e1c6b2870
 A16: red at f7d626917b62e15a0b4ce6adbccaf49434cf5cec: Expected: "held"; Received: "offline" at sync.spec.ts:99:47, in both browsers (CI job 113546776315)
 A17: red at f7d626917b62e15a0b4ce6adbccaf49434cf5cec: Expected: "held"; Received: "offline" at sync.spec.ts:125:47, in both browsers (CI job 113546776315)
 A18: red at f7d626917b62e15a0b4ce6adbccaf49434cf5cec: Expected value: "/anki-sync-moved/sync/hostKey"; Received array: [] at sync.spec.ts:151:33, in both browsers (CI job 113546776315)
+A19: red at b36789cca7b05e9e576524e2a4f5b975662c727f: AssertionError: expected undefined to deeply equal Uint8Array[ 123, 34, 109, 105, …(-83) ] at sync.test.ts
+A20: red at b36789cca7b05e9e576524e2a4f5b975662c727f: AssertionError: promise resolved "'held'" instead of rejecting at sync.test.ts
+A21: red at b36789cca7b05e9e576524e2a4f5b975662c727f: AssertionError: expected [ [ 'handshake', 'nothing' ], …(3) ] to deeply equal [ [ 'handshake', …(1) ], …(3) ] at worker.test.ts
+A22: red at b36789cca7b05e9e576524e2a4f5b975662c727f: `fn handshake(` occurs 0 times, not once, at boundary.rs each_boundary_function_reaches_the_engine_through_the_dispatcher
+A19: green at 0a9efff1167ec45c98f995f7e5dce8a44bbb683f
+A20: green at 0a9efff1167ec45c98f995f7e5dce8a44bbb683f
+A21: green at 0a9efff1167ec45c98f995f7e5dce8a44bbb683f
+A22: green at 0a9efff1167ec45c98f995f7e5dce8a44bbb683f
 ```
 
 A7's census reads the index, as at C1: its green was read with the green commit's set staged, before

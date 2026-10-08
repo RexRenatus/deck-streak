@@ -135,6 +135,42 @@
         "[(header::CACHE_CONTROL, \"no-cache\")],",
         "minimum_client_route::the_service_states_its_minimum_client_level_to_any_caller",
         "the statement is marked never to be stored, so a raised minimum reaches the next read; a cache could keep the old one (SPEC-374 R2, A6)"
+      ],
+      [
+        "S37415-THE-EXPORT-HANDS-THE-CORE-THE-STATEMENT",
+        "web-engine",
+        "src/wasm.rs",
+        "dispatcher()?.handshake(statement.as_deref());",
+        "dispatcher()?.handshake(None);",
+        "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+        "the export hands the core the statement the Worker read; handing nothing would leave every web sync refused as unread whatever the service states (SPEC-374 R23, A22)"
+      ],
+      [
+        "S37416-THE-EXPORT-ANSWERS-THE-STATEMENT-IT-WAS-HANDED",
+        "web-engine",
+        "src/wasm.rs",
+        "decide(statement.as_deref());",
+        "decide(None);",
+        "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+        "the export answers the decision on the statement it was handed; deciding on nothing would answer the unread sentence to an admitted client (SPEC-374 R23, A22)"
+      ],
+      [
+        "S37417-AN-ADMITTED-CLIENT-HEARS-NO-SENTENCE",
+        "web-engine",
+        "src/wasm.rs",
+        "Ok(()) => Ok(None),",
+        "Ok(()) => Ok(Some(String::new())),",
+        "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+        "an admitting statement answers no sentence, so the Worker goes on to the login; an empty sentence would stop every admitted sync (SPEC-374 R23, R24, A22)"
+      ],
+      [
+        "S37418-A-REFUSED-CLIENT-HEARS-THE-CORES-SENTENCE",
+        "web-engine",
+        "src/wasm.rs",
+        "Ok(Some(error.message))",
+        "Ok(Some(error.message).filter(|_| false))",
+        "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+        "a refused statement answers the core's sentence, so the Worker stops before the login; answering nothing would let a client below the minimum go on to a sync the core then refuses unexplained (SPEC-374 R23, R24, A22)"
       ]
     ]
   }
