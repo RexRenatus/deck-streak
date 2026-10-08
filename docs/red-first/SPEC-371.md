@@ -260,3 +260,4 @@ A28: green at 2c68b183
   string-literal mutant changed nothing. It now reads `action === 'undo'`. After the rewrites the
   run read no survivor and no uncovered mutant, and `killedBy` names a test for each mutant of
   these two lines.
+- The nine tests above and the two rewrites are at 3b226c6d7af01f5f9d18b7124e738f49e0d7387b.
