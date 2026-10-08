@@ -261,6 +261,7 @@ SPEC and ADR-376 record the change, and their tests keep their names):
 | `crates/web-engine/tests/boundary.rs` | web-engine | `rate`'s owed statements and a `pressed` entry (`OWED` 29 rows to 30; the base holds no `answer` entry), and the retired texts with their planted control (A11) |
 | `scripts/mutation-equivalent.d/deck-streak-web-engine.json` | scripts | `answer`'s three records retire with the function (`:159`, `:168`, `:177`); `rate`'s re-anchor if its first lines move |
 | `scripts/mutation-rows.d/S36500-S36599.json` | scripts | added (section 9) |
+| `scripts/mutation-rows.d/S33800-S33899.json` | scripts | `S33800` to `S33803` keep their ids and killers; their anchors move from the removed four-answer type to the two-grade rule that now holds each property, and `S33803`'s mutant picks Again's state, as no Easy state remains (R7) |
 | `web/app/src/lib/engine/protocol.ts` | miniapp | the `answer` op leaves the op list and the request union (R9) |
 | `web/app/src/lib/engine/client.ts` | miniapp | `answer` removed |
 | `web/app/src/lib/engine/session.ts` | miniapp | the engine's `answer` and its case removed |

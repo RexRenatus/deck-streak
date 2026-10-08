@@ -1,0 +1,150 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S36501-ANSWER-CARD-NEEDS-AN-ANSWER",
+        "engine-core",
+        "src/table.rs",
+        "} else if ANSWERED.iter().any(|row| row.is(service, method)) {",
+        "} else if ANSWERED.iter().any(|row| row.is(service, method)) && false {",
+        "table::every_pair_is_admitted_held_or_refused_by_its_transport",
+        "AnswerCard is held for an owner's answer on both transports; with the answered arm never matching, the table refuses it as not allowed and a reader loses the decision that names the one door a grade goes through (SPEC-365 A1)"
+      ],
+      [
+        "S36502-RUN-HOLDS-AN-ANSWER-FOR-THE-OWNER",
+        "engine-core",
+        "src/dispatch.rs",
+        "Decision::NeedsAnswer => Err(Refusal::NeedsAnswer { service, method }),",
+        "Decision::NeedsAnswer => Err(Refusal::NotAllowed { service, method }),",
+        "dispatch::an_answer_through_run_is_held_for_the_owner_and_leaves_the_card",
+        "run refuses an answer as held for the owner; refused as not allowed, a caller could not tell a grade sent the wrong way from a pair the transport never makes (SPEC-365 A2)"
+      ],
+      [
+        "S36503-A-PRESS-ANSWERS-ONLY-ITS-CARD",
+        "engine-core",
+        "src/answer.rs",
+        "request.card_id != card",
+        "request.card_id != request.card_id",
+        "answer::a_press_for_one_card_cannot_answer_another",
+        "an answer records only the card its press named; unchecked, a press on one card could grade another (SPEC-365 A4)"
+      ],
+      [
+        "S36504-A-PRESS-RECORDS-ONLY-ITS-GRADE",
+        "engine-core",
+        "src/answer.rs",
+        "request.rating != grade.rating()",
+        "request.rating != request.rating",
+        "answer::a_press_records_only_its_own_grade",
+        "an answer records only the grade its press named; unchecked, a request could record Hard, Easy or the other grade (SPEC-365 A5)"
+      ],
+      [
+        "S36505-GOOD-IS-THE-ENGINES-GOOD",
+        "engine-core",
+        "src/answer.rs",
+        "Self::Good => 2,",
+        "Self::Good => 1,",
+        "answer::a_press_answers_its_one_card_with_its_grade",
+        "a Good press checks against the engine's Good rating, 2; as 1, every Good press would be refused or record Hard (SPEC-365 A3)"
+      ],
+      [
+        "S36506-AGAIN-IS-THE-ENGINES-AGAIN",
+        "engine-core",
+        "src/answer.rs",
+        "Self::Again => 0,",
+        "Self::Again => 2,",
+        "answer::a_press_answers_its_one_card_with_its_grade",
+        "an Again press checks against the engine's Again rating, 0; as 2, every Again press would be refused and the owner could never fail a card (SPEC-365 A3)"
+      ],
+      [
+        "S36507-GOOD-PICKS-GOODS-STATE",
+        "engine-core",
+        "src/answer.rs",
+        "Self::Good => good,",
+        "Self::Good => again,",
+        "answer::a_press_answers_its_one_card_with_its_grade",
+        "Good picks the next state the engine gave for Good; picking Again's, a Good press would put the card back into learning (SPEC-365 A3)"
+      ],
+      [
+        "S36508-AN-UNDECODABLE-REQUEST-IS-REFUSED",
+        "engine-core",
+        "src/answer.rs",
+        "CardAnswer::decode(input).map_err(|_| AnswerRefusal::Undecodable)?",
+        "CardAnswer::decode(input).unwrap_or_default()",
+        "answer::a_request_that_is_not_a_card_answer_is_refused",
+        "a request that is not a CardAnswer is refused before the engine sees it; read as an empty answer, the engine would be handed a request no press made (SPEC-365 A6)"
+      ],
+      [
+        "S36509-THE-ENGINE-RUNS-ONLY-THE-CHECKED-ANSWER",
+        "engine-core",
+        "src/dispatch.rs",
+        "let request = answer.checked(input)?;",
+        "let request = answer.checked(input).unwrap_or_else(|_| input.to_vec());",
+        "answer::a_press_for_one_card_cannot_answer_another",
+        "the engine runs only the answer the check passed; falling back to the caller's bytes, a refused request would still be recorded (SPEC-365 A4)"
+      ],
+      [
+        "S36510-THE-ANSWER-ROW-IS-ANSWER-CARD",
+        "engine-core",
+        "src/table.rs",
+        "pub const ANSWERED: [Answered; 1] = [Answered {\n    service: 13,\n    method: 4,",
+        "pub const ANSWERED: [Answered; 1] = [Answered {\n    service: 13,\n    method: 5,",
+        "table::every_pair_is_admitted_held_or_refused_by_its_transport",
+        "the answered row is AnswerCard, (13, 4); as (13, 5), AnswerCard would be refused outright and the owner's answer would run another method (SPEC-365 A1)"
+      ],
+      [
+        "S36511-THE-WIRE-REFUSES-HARD-AND-EASY",
+        "web-engine",
+        "src/study.rs",
+        "2 | 4 => Err(StudyError::NotAGrade(rating)),",
+        "2 | 4 => Ok(Grade::Good),",
+        "study::a_rating_on_the_wire_picks_its_answer_and_its_next_state",
+        "the wire refuses Hard and Easy by name; read as Good, a stale page could record a grade the owner was never offered (SPEC-365 A9)"
+      ],
+      [
+        "S36512-RATE-RECORDS-THROUGH-THE-ANSWER",
+        "web-engine",
+        "src/wasm.rs",
+        "    dispatcher()?\n        .run_answer(answer, &request.encode_to_vec())\n        .map_err(refuse)?;",
+        "    call(service::SCHEDULER, 4, &request.encode_to_vec())?;",
+        "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+        "rate records the grade through the owner's answer; calling AnswerCard through call, the page's grade would skip the card and grade check (SPEC-365 A11)"
+      ],
+      [
+        "S36513-RATE-PICKS-ITS-GRADES-STATE",
+        "web-engine",
+        "src/wasm.rs",
+        "grade.pick(states.again, states.good)",
+        "grade.pick(states.good, states.again)",
+        "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+        "rate sends the next state its grade picks; swapped, the page's Again would record Good's state and Good Again's (SPEC-365 A11)"
+      ],
+      [
+        "S36514-THE-NATIVE-PRESS-KEEPS-ITS-GRADE",
+        "ffi",
+        "src/engine.rs",
+        "PressedGrade::Again => Grade::Again,",
+        "PressedGrade::Again => Grade::Good,",
+        "round_trip::a_native_press_answers_only_its_card_with_its_grade",
+        "a native Again press answers Again; read as Good, the app's Again button would pass every card it fails (SPEC-365 A13)"
+      ],
+      [
+        "S36515-THE-NATIVE-ANSWER-PICKS-ITS-GRADES-STATE",
+        "ffi",
+        "src/engine.rs",
+        "grade.pick(states.again, states.good)",
+        "grade.pick(states.good, states.again)",
+        "round_trip::a_native_press_answers_only_its_card_with_its_grade",
+        "the native answer sends the next state its grade picks from the shown states; swapped, each press would record the other grade's state (SPEC-365 A13)"
+      ],
+      [
+        "S36516-THE-NATIVE-ANSWER-REFUSES-UNDECODABLE-STATES",
+        "ffi",
+        "src/engine.rs",
+        "shown_states(&states).map_err(press_refusal)?",
+        "shown_states(&states).unwrap_or_default()",
+        "round_trip::a_native_press_answers_only_its_card_with_its_grade",
+        "states that are not the engine's SchedulingStates are refused before the engine sees them; read as empty states, the engine would be handed a next state no queue gave (SPEC-365 A13)"
+      ]
+    ]
+  }
+}
