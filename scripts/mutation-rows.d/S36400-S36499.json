@@ -1,0 +1,303 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S36401-THE-SYNC-LOGIN-IS-ADMITTED-ON-THE-WEB",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"BackendSyncService.SyncLogin\",\n        native: true,\n        web: true,",
+        "        name: \"BackendSyncService.SyncLogin\",\n        native: true,\n        web: false,",
+        "table::the_web_column_admits_the_sync_login_and_the_normal_sync",
+        "the sync login is admitted on the web transport too; refused there, the web client could never sign in to its sync server (SPEC-364 A1)"
+      ],
+      [
+        "S36402-THE-NORMAL-SYNC-IS-THE-WEBS",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"BackendSyncService.SyncCollection\",\n        native: false,\n        web: true,",
+        "        name: \"BackendSyncService.SyncCollection\",\n        native: false,\n        web: false,",
+        "table::the_web_column_admits_the_sync_login_and_the_normal_sync",
+        "the normal sync is admitted on the web transport; refused there, the web client could never sync its reviews (SPEC-364 A1)"
+      ],
+      [
+        "S36403-THE-NORMAL-SYNC-IS-METHOD-FIVE",
+        "engine-core",
+        "src/table.rs",
+        "        method: 5,\n        name: \"BackendSyncService.SyncCollection\",",
+        "        method: 4,\n        name: \"BackendSyncService.SyncCollection\",",
+        "table::the_web_column_admits_the_sync_login_and_the_normal_sync",
+        "the normal sync's row is the engine's method five; another number admits a call the table never named and leaves the normal sync refused (SPEC-364 A1)"
+      ],
+      [
+        "S36404-THE-ONE-WAY-SYNC-IS-METHOD-SIX",
+        "engine-core",
+        "src/table.rs",
+        "        method: 6,\n        name: \"BackendSyncService.FullUploadOrDownload\",",
+        "        method: 7,\n        name: \"BackendSyncService.FullUploadOrDownload\",",
+        "table::the_web_column_admits_the_sync_login_and_the_normal_sync",
+        "the one-way sync's exempt row is the engine's method six; another number lets the one-way sync through as an unlisted call and holds a call it never named for a gesture (SPEC-364 A1)"
+      ],
+      [
+        "S36405-THE-NORMAL-SYNC-IS-GUARDED",
+        "engine-core",
+        "src/dispatch.rs",
+        "if (service, method) == SYNC_COLLECTION {",
+        "if (service, method) == SYNC_COLLECTION && false {",
+        "login_guard::every_sync_call_reaches_only_a_guarded_endpoint_and_never_media",
+        "a normal sync passes the endpoint rule and the media refusal before the engine sees it; unguarded, a planted endpoint or a media sync would reach the engine (SPEC-364 A2)"
+      ],
+      [
+        "S36406-NO-MEDIA-UNTIL-PART-D",
+        "engine-core",
+        "src/login_guard.rs",
+        "if request.sync_media {",
+        "if request.sync_media && false {",
+        "login_guard::every_sync_call_reaches_only_a_guarded_endpoint_and_never_media",
+        "a normal sync that asks for media is refused until media sync is built; without it, a sync would move media the core does not yet guard (SPEC-364 A2)"
+      ],
+      [
+        "S36407-A-SYNC-AUTH-MEETS-THE-ENDPOINT-RULE",
+        "engine-core",
+        "src/login_guard.rs",
+        "endpoint_rule(auth.endpoint.clone())",
+        "endpoint_rule(auth.endpoint.clone()).and(None)",
+        "login_guard::every_sync_call_reaches_only_a_guarded_endpoint_and_never_media",
+        "a sync's auth meets the login's one endpoint rule; skipped, a normal sync or a one-way write could send the key to an endpoint the login would refuse (SPEC-364 A2)"
+      ],
+      [
+        "S36408-THE-ONE-WAY-NEEDS-THE-CHOICE",
+        "engine-core",
+        "src/gesture.rs",
+        "if write == ExemptWrite::OneWaySync {",
+        "if write == ExemptWrite::OneWaySync && false {",
+        "exempt::run_exempt_refuses_the_one_way_sync",
+        "the one-way sync is refused as an exempt run before anything is decoded; without it, a tap could reach the one-way write without the full-sync choice's checks (SPEC-364 A3)"
+      ],
+      [
+        "S36409-RUN-ONE-WAY-TAKES-ONLY-ITS-WRITE",
+        "engine-core",
+        "src/dispatch.rs",
+        "if named != ExemptWrite::OneWaySync {",
+        "if named != ExemptWrite::OneWaySync && false {",
+        "one_way::a_write_takes_only_a_one_way_gesture",
+        "the one-way write takes only a one-way gesture; without the check, a gesture for another write would run the collection's replace (SPEC-364 A3)"
+      ],
+      [
+        "S36410-THE-UPLOAD-FLAG-IS-THE-DIRECTION",
+        "engine-core",
+        "src/one_way.rs",
+        "upload: write.direction() == Direction::Upload,",
+        "upload: write.direction() != Direction::Upload,",
+        "one_way::the_write_sends_the_direction_the_owner_confirmed_and_no_media",
+        "the engine's request carries the direction the owner confirmed; reversed, a confirmed download would replace the server with the device (SPEC-364 A4)"
+      ],
+      [
+        "S36411-THE-ONE-WAY-SYNCS-NO-MEDIA",
+        "engine-core",
+        "src/one_way.rs",
+        "server_usn: None,",
+        "server_usn: Some(0),",
+        "one_way::the_write_sends_the_direction_the_owner_confirmed_and_no_media",
+        "the one-way write asks for no media sync; with a server usn the engine would go on to sync media the core does not guard (SPEC-364 A4)"
+      ],
+      [
+        "S36412-A-COPY-IS-NEVER-THE-OPEN-COLLECTION",
+        "engine-core",
+        "src/one_way.rs",
+        "if dispatcher.opens(path) {",
+        "if dispatcher.opens(path) && false {",
+        "one_way::a_server_copy_is_fetched_only_into_an_empty_file",
+        "a server copy is never fetched into the open collection; without the refusal, a fetch could aim at the live collection (SPEC-364 A5)"
+      ],
+      [
+        "S36413-A-COPY-GOES-ONLY-INTO-AN-EMPTY-FILE",
+        "engine-core",
+        "src/one_way.rs",
+        "if path.exists() && holds_a_row(&read(dispatcher, path)?) {",
+        "if path.exists() && holds_a_row(&read(dispatcher, path)?) && false {",
+        "one_way::a_server_copy_is_fetched_only_into_an_empty_file",
+        "a server copy or backup goes only into an empty file; without the refusal, a fetch would overwrite a backup that holds rows (SPEC-364 A5)"
+      ],
+      [
+        "S36414-THE-DOWNLOADS-BACKUP-IS-VACUUMED",
+        "engine-core",
+        "src/one_way.rs",
+        "\"VACUUM INTO ?\"",
+        "\"SELECT ?\"",
+        "one_way::a_downloads_backup_holds_every_device_id_before_the_write",
+        "a download's backup is the open collection written to its file by VACUUM INTO; without the statement no backup exists before the device is replaced (SPEC-364 A6)"
+      ],
+      [
+        "S36415-THE-BACKUP-IS-READ-FROM-ITS-FILE",
+        "engine-core",
+        "src/one_way.rs",
+        ".backed_up(&from_file)",
+        ".backed_up(&dispatcher.id_sets().unwrap_or(from_file))",
+        "one_way::an_uploads_backup_is_the_counted_server_copy",
+        "the backup check reads its ids from the backup's file; ids read anywhere else would pass a backup that lost rows (SPEC-364 A7)"
+      ],
+      [
+        "S36416-THE-RECHECK-FETCHES-FRESH",
+        "engine-core",
+        "src/one_way.rs",
+        "fetched(dispatcher, auth, fresh)",
+        "read(dispatcher, fresh).map(|ids| (ids, auth).0)",
+        "one_way::a_server_changed_after_the_count_returns_to_the_counts",
+        "an upload's re-check fetches a fresh server copy; without the fetch, a second client's sync after the count would be overwritten unseen (SPEC-364 A8)"
+      ],
+      [
+        "S36417-THE-WRITE-RE-READS-THE-DEVICE",
+        "engine-core",
+        "src/one_way.rs",
+        "ready.at_write(&device_now)",
+        "ready.at_write(&IdSets { modified: device_now.modified, ..IdSets::default() })",
+        "one_way::a_device_review_after_the_backup_refuses_the_download",
+        "the write re-reads the device's ids before a download; without them, a review made after the backup would be lost to the replace (SPEC-364 A9)"
+      ],
+      [
+        "S36418-THE-SIDES-ARE-NOT-SWAPPED",
+        "engine-core",
+        "src/one_way.rs",
+        "Counted::show(offer, device, server)",
+        "Counted::show(offer, server, device)",
+        "one_way::an_evicted_device_is_offered_the_download_alone_and_restores_every_review",
+        "the counts read the device as the device and the copy as the server; swapped, the choice screen would count each direction's losses on the wrong side (SPEC-364 A11)"
+      ],
+      [
+        "S36419-THE-SYNC-LOGIN-IS-METHOD-THREE-ON-THE-WEB",
+        "web-engine",
+        "src/study.rs",
+        "(service::SYNC, 3, \"sync_login\"),",
+        "(service::SYNC, 4, \"sync_login\"),",
+        "study::the_sync_calls_are_the_login_and_the_normal_sync",
+        "the web engine names the sync login as the engine's method three; another number names a call the core's table never admitted (SPEC-364 A1)"
+      ],
+      [
+        "S36420-THE-NORMAL-SYNC-IS-METHOD-FIVE-ON-THE-WEB",
+        "web-engine",
+        "src/study.rs",
+        "(service::SYNC, 5, \"sync_collection\"),",
+        "(service::SYNC, 6, \"sync_collection\"),",
+        "study::the_sync_calls_are_the_login_and_the_normal_sync",
+        "the web engine names the normal sync as the engine's method five; method six is the one-way sync, which needs the owner's gesture (SPEC-364 A1)"
+      ],
+      [
+        "S36421-THE-SYNC-SERVICE-IS-ONE",
+        "web-engine",
+        "src/study.rs",
+        "pub const SYNC: u32 = 1;",
+        "pub const SYNC: u32 = 2;",
+        "study::the_sync_calls_are_the_login_and_the_normal_sync",
+        "the sync calls are the engine's sync service, number one; another number names calls of a service the core never admitted for sync (SPEC-364 A1)"
+      ],
+      [
+        "S36423-THE-STAMP-READS-THE-CARDS",
+        "engine-core",
+        "src/dispatch.rs",
+        "select max(usn) as usn from cards union all",
+        "select max(usn) as usn from cards where 0 union all",
+        "one_way::the_stamp_reads_every_synced_tables_greatest_usn_and_the_schema",
+        "the upload re-check stamp reads the greatest usn of `cards`; dropped, a change confined to that table would let an upload overwrite it unseen (SPEC-364 A21)"
+      ],
+      [
+        "S36424-THE-STAMP-READS-THE-NOTES",
+        "engine-core",
+        "src/dispatch.rs",
+        "select max(usn) from notes union all",
+        "select max(usn) from notes where 0 union all",
+        "one_way::the_stamp_reads_every_synced_tables_greatest_usn_and_the_schema",
+        "the upload re-check stamp reads the greatest usn of `notes`; dropped, a change confined to that table would let an upload overwrite it unseen (SPEC-364 A21)"
+      ],
+      [
+        "S36425-THE-STAMP-READS-THE-REVIEWS",
+        "engine-core",
+        "src/dispatch.rs",
+        "select max(usn) from revlog union all",
+        "select max(usn) from revlog where 0 union all",
+        "one_way::the_stamp_reads_every_synced_tables_greatest_usn_and_the_schema",
+        "the upload re-check stamp reads the greatest usn of `revlog`; dropped, a change confined to that table would let an upload overwrite it unseen (SPEC-364 A21)"
+      ],
+      [
+        "S36426-THE-STAMP-READS-THE-GRAVES",
+        "engine-core",
+        "src/dispatch.rs",
+        "select max(usn) from graves union all",
+        "select max(usn) from graves where 0 union all",
+        "one_way::the_stamp_reads_every_synced_tables_greatest_usn_and_the_schema",
+        "the upload re-check stamp reads the greatest usn of `graves`; dropped, a change confined to that table would let an upload overwrite it unseen (SPEC-364 A21)"
+      ],
+      [
+        "S36427-THE-STAMP-READS-THE-DECKS",
+        "engine-core",
+        "src/dispatch.rs",
+        "select max(usn) from decks union all",
+        "select max(usn) from decks where 0 union all",
+        "one_way::the_stamp_reads_every_synced_tables_greatest_usn_and_the_schema",
+        "the upload re-check stamp reads the greatest usn of `decks`; dropped, a change confined to that table would let an upload overwrite it unseen (SPEC-364 A21)"
+      ],
+      [
+        "S36428-THE-STAMP-READS-THE-PRESETS",
+        "engine-core",
+        "src/dispatch.rs",
+        "select max(usn) from deck_config union all",
+        "select max(usn) from deck_config where 0 union all",
+        "one_way::the_stamp_reads_every_synced_tables_greatest_usn_and_the_schema",
+        "the upload re-check stamp reads the greatest usn of `deck_config`; dropped, a change confined to that table would let an upload overwrite it unseen (SPEC-364 A21)"
+      ],
+      [
+        "S36429-THE-STAMP-READS-THE-NOTE-TYPES",
+        "engine-core",
+        "src/dispatch.rs",
+        "select max(usn) from notetypes union all",
+        "select max(usn) from notetypes where 0 union all",
+        "one_way::the_stamp_reads_every_synced_tables_greatest_usn_and_the_schema",
+        "the upload re-check stamp reads the greatest usn of `notetypes`; dropped, a change confined to that table would let an upload overwrite it unseen (SPEC-364 A21)"
+      ],
+      [
+        "S36430-THE-STAMP-READS-THE-TEMPLATES",
+        "engine-core",
+        "src/dispatch.rs",
+        "select max(usn) from templates union all",
+        "select max(usn) from templates where 0 union all",
+        "one_way::the_stamp_reads_every_synced_tables_greatest_usn_and_the_schema",
+        "the upload re-check stamp reads the greatest usn of `templates`; dropped, a change confined to that table would let an upload overwrite it unseen (SPEC-364 A21)"
+      ],
+      [
+        "S36431-THE-STAMP-READS-THE-TAGS",
+        "engine-core",
+        "src/dispatch.rs",
+        "select max(usn) from tags union all",
+        "select max(usn) from tags where 0 union all",
+        "one_way::the_stamp_reads_every_synced_tables_greatest_usn_and_the_schema",
+        "the upload re-check stamp reads the greatest usn of `tags`; dropped, a change confined to that table would let an upload overwrite it unseen (SPEC-364 A21)"
+      ],
+      [
+        "S36432-THE-STAMP-READS-THE-CONFIG",
+        "engine-core",
+        "src/dispatch.rs",
+        "select max(usn) from config)),",
+        "select max(usn) from config where 0)),",
+        "one_way::a_tag_or_config_change_alone_returns_the_upload_to_the_counts",
+        "the upload re-check stamp reads the greatest usn of `config`; dropped, a second client's config change alone would let an upload overwrite it unseen (SPEC-364 A16)"
+      ],
+      [
+        "S36433-THE-STAMP-READS-THE-SCHEMA",
+        "engine-core",
+        "src/dispatch.rs",
+        "(select scm from col))\"",
+        "(select 0))\"",
+        "one_way::a_full_upload_after_the_count_returns_the_upload_to_the_counts",
+        "the upload re-check stamp reads the schema stamp; dropped, a second client's full upload after the count would be overwritten unseen (SPEC-364 A19)"
+      ],
+      [
+        "S36434-THE-STAMP-IS-NOT-THE-GREATEST-MODIFIED-TIME",
+        "engine-core",
+        "src/dispatch.rs",
+        "const MODIFIED_SQL: &str = \"",
+        "const MODIFIED_SQL: &str = \"select max((select max(mod) from cards), (select max(mod) from notes), (select max(mtime_secs) from decks), (select max(mtime_secs) from deck_config), (select max(mtime_secs) from notetypes)) -- ",
+        "one_way::an_edit_dated_at_or_below_the_greatest_returns_the_upload_to_the_counts",
+        "the upload re-check stamp is the greatest usn and the schema stamp, never the greatest modified time; read by modified time, an edit dated at or below the newest row would let an upload overwrite it unseen (SPEC-364 A18)"
+      ]
+    ]
+  }
+}
