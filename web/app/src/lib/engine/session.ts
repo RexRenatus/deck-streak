@@ -30,7 +30,6 @@ export interface EngineModule {
   close(): void;
   seed(count: number): number;
   next_card(): bigint | undefined;
-  answer(rating: number, ms: number): bigint;
   undo(): void;
   snapshot(card: bigint): string;
   last_panic(): string | undefined;
@@ -245,8 +244,6 @@ export class Session {
         return engine.seed(request.count);
       case 'next':
         return engine.next_card() ?? null;
-      case 'answer':
-        return engine.answer(request.rating, request.ms);
       case 'snapshot':
         return toSnapshot(engine.snapshot(request.card));
       case 'undo':

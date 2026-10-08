@@ -43,8 +43,8 @@ describe('the study operations on the wire', () => {
       [{ id: 1, op: 'rate', card: 1001n, rating: 2.5, ms: 0 }, "rate's rating is malformed"],
       [{ id: 1, op: 'rate', card: 1001n, rating: 2, ms: 0 }, "rate's rating is malformed"],
       [{ id: 1, op: 'rate', card: 1001n, rating: 4, ms: 0 }, "rate's rating is malformed"],
-      [{ id: 1, op: 'answer', rating: 2, ms: 0 }, "answer's rating is malformed"],
-      [{ id: 1, op: 'answer', rating: 4, ms: 0 }, "answer's rating is malformed"],
+      [{ id: 1, op: 'answer', rating: 2, ms: 0 }, 'unknown operation answer'],
+      [{ id: 1, op: 'answer', rating: 3, ms: 0 }, 'unknown operation answer'],
       [{ id: 1, op: 'rate', card: 1001n, rating: 3 }, "rate's ms is malformed"],
       [{ id: 1, op: 'rate', card: 1001n, rating: 3, ms: -1 }, "rate's ms is malformed"],
       [{ id: 1, op: 'rate', card: 1001n, rating: 3, ms: 1.5 }, "rate's ms is malformed"],
@@ -70,12 +70,12 @@ describe('the study operations on the wire', () => {
       expect(parseRequest(request), message).toEqual({ id: 1, message });
     }
 
-    // the six join the operations the Worker serves, after DEV's eight
+    // the six join the operations the Worker serves, after DEV's seven: the queue-head answer is
+    // gone, and a grade is recorded only by rate (SPEC-365 R9)
     expect(OPS).toEqual([
       'open',
       'seed',
       'next',
-      'answer',
       'undo',
       'snapshot',
       'memory',

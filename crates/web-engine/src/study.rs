@@ -1,62 +1,12 @@
-//! The study rule, the same on every target: a wire rating to Anki's answer and to the next state
-//! that answer selects, and the table of study calls `run_method` admits (SPEC-338 R1, ADR-348).
+//! The study rule, the same on every target: a wire rating to the grade a press records and to the
+//! next state that grade selects (SPEC-338 R1, SPEC-365 R7), and the table of study calls
+//! `run_method` admits (ADR-348).
 //!
 //! It holds no engine type, so the native tests judge exactly the rule the `wasm32` module runs.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
-
-/// Anki's four answers, in the order of its `Rating` enum.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Answer {
-    /// Rating 0: the card is forgotten.
-    Again,
-    /// Rating 1: recalled with difficulty.
-    Hard,
-    /// Rating 2: recalled.
-    Good,
-    /// Rating 3: recalled easily.
-    Easy,
-}
-
-impl Answer {
-    /// The answer a wire rating names. The page sends 1 to 4, as Anki's buttons number them.
-    ///
-    /// # Errors
-    /// [`StudyError::RatingOutOfRange`] for any other number, before anything reaches the engine.
-    pub fn from_wire(rating: u32) -> Result<Self, StudyError> {
-        match rating {
-            1 => Ok(Self::Again),
-            2 => Ok(Self::Hard),
-            3 => Ok(Self::Good),
-            4 => Ok(Self::Easy),
-            other => Err(StudyError::RatingOutOfRange(other)),
-        }
-    }
-
-    /// Anki's `Rating` value for this answer, 0 to 3.
-    #[must_use]
-    pub fn rating(self) -> i32 {
-        match self {
-            Self::Again => 0,
-            Self::Hard => 1,
-            Self::Good => 2,
-            Self::Easy => 3,
-        }
-    }
-
-    /// The next state this answer selects out of the scheduler's four, in their field order.
-    #[must_use]
-    pub fn pick<T>(self, again: T, hard: T, good: T, easy: T) -> T {
-        match self {
-            Self::Again => again,
-            Self::Hard => hard,
-            Self::Good => good,
-            Self::Easy => easy,
-        }
-    }
-}
 
 /// The two grades a press records (SPEC-365 R7): the wire's 1 and 3, as Anki's buttons number
 /// Again and Good. The core records the same two, and no type here names a third.
@@ -96,8 +46,9 @@ impl Grade {
 /// engine.
 pub fn grade(rating: u32) -> Result<Grade, StudyError> {
     match rating {
-        1 | 2 => Ok(Grade::Again),
-        3 | 4 => Ok(Grade::Good),
+        1 => Ok(Grade::Again),
+        3 => Ok(Grade::Good),
+        2 | 4 => Err(StudyError::NotAGrade(rating)),
         other => Err(StudyError::RatingOutOfRange(other)),
     }
 }

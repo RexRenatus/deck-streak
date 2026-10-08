@@ -5,12 +5,12 @@
 /** The operations the Worker serves, and nothing else. Six are the review's (SPEC-350 R4): the deck
  * list, the current deck, the card view, and a rating, bury or flag of the shown card. `faces`, after
  * them, completes both faces of the shown card with its media (SPEC-350 R14). The last two read and
- * forget the sync credential, each answering a status word (SPEC-363 R15). */
+ * forget the sync credential, each answering a status word (SPEC-363 R15). A grade is recorded only
+ * by `rate`, on the card shown: no operation answers the queue's head (SPEC-365 R9). */
 export const OPS = [
   'open',
   'seed',
   'next',
-  'answer',
   'undo',
   'snapshot',
   'memory',
@@ -43,7 +43,6 @@ export type Request =
   | { id: number; op: 'open'; languages?: string[] }
   | { id: number; op: 'next' | 'undo' | 'memory' | 'close' | 'decks' | 'card' }
   | { id: number; op: 'seed'; count: number }
-  | { id: number; op: 'answer'; rating: Rating; ms: number }
   | { id: number; op: 'snapshot' | 'bury' | 'flag' | 'faces'; card: bigint }
   | { id: number; op: 'study'; deck: bigint }
   | { id: number; op: 'rate'; card: bigint; rating: Rating; ms: number }
@@ -178,7 +177,6 @@ const ARGS: Record<Op, Record<string, (value: unknown) => boolean>> = {
   decks: {},
   card: {},
   seed: { count: (value) => whole(value, 1, U32) },
-  answer: { rating: (value) => grade(value), ms: (value) => whole(value, 0, U32) },
   snapshot: { card: engineId },
   study: { deck: engineId },
   rate: { card: engineId, rating: (value) => grade(value), ms: (value) => whole(value, 0, U32) },

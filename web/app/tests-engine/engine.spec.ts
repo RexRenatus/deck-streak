@@ -64,7 +64,9 @@ test('opens, answers and undoes over OPFS', async ({ playwright, browserName, ba
       const seeded = await client.seed(3);
       const card = (await client.next()) as bigint;
       const before = read(await client.snapshot(card));
-      const answered = String(await client.answer(3, 1500));
+      const shown = (await client.card()).card!.id;
+      await client.rate(shown, 3, 1500);
+      const answered = String(shown);
       const after = read(await client.snapshot(card));
       await client.undo();
       const undone = read(await client.snapshot(card));
@@ -103,7 +105,9 @@ test('the collection survives a page reload', async ({ playwright, browserName, 
       const client = window.harness.start();
       await client.open();
       await client.seed(5);
-      return String(await client.answer(3, 1500));
+      const shown = (await client.card()).card!.id;
+      await client.rate(shown, 3, 1500);
+      return String(shown);
     });
     await page.reload();
     await page.waitForFunction(() => window.harness !== undefined);
@@ -145,7 +149,12 @@ test('a second tab is refused', async ({ playwright, browserName, baseURL }) => 
       { code: 'collection-busy', message: 'another tab holds the collection' }
     ]);
     // The first tab's session is untouched by the second's refusal.
-    const answered = await first.evaluate(async () => String(await window.harness.client?.answer(3, 900)));
+    const answered = await first.evaluate(async () => {
+      const client = window.harness.client!;
+      const shown = (await client.card()).card!.id;
+      await client.rate(shown, 3, 900);
+      return String(shown);
+    });
     expect(answered).toMatch(/^\d+$/);
   } finally {
     await context.close();
@@ -246,7 +255,8 @@ test('measures the engine over a seeded collection', async ({ playwright, browse
       const opened = await window.measure('open existing (load, pool, engine)', () => client.open());
       const card = (await window.measure('queue', () => client.next())) as bigint;
       const before = read(await client.snapshot(card));
-      await window.measure('answer', () => client.answer(3, 1500));
+      const shown = (await window.measure('show', () => client.card())) as { card: { id: bigint } };
+      await window.measure('answer', () => client.rate(shown.card.id, 3, 1500));
       await window.measure('undo', () => client.undo());
       const undone = read(await client.snapshot(card));
       await client.close();
@@ -295,7 +305,9 @@ test('measures the engine in a cross-site frame', async ({ playwright, browserNa
       try {
         const opened = await client.open();
         await client.seed(2);
-        const card = String(await client.answer(3, 1200));
+        const shown = (await client.card()).card!.id;
+        await client.rate(shown, 3, 1200);
+        const card = String(shown);
         await client.undo();
         return { ok: true, opened, card };
       } catch (error) {

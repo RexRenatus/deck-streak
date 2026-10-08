@@ -60,13 +60,6 @@ class FakeEngine implements EngineModule {
     this.#call('next_card');
     return [...this.cards].find(([, card]) => card.reps === 0)?.[0];
   }
-  answer(rating: number, ms: number) {
-    this.#call('answer', rating, ms);
-    const [id, card] = [...this.cards].find(([, card]) => card.reps === 0)!;
-    this.journal.push([id, { ...card }]);
-    this.cards.set(id, { ...card, queue: rating === 1 ? 1 : 2, type: 2, ivl: rating, reps: 1 });
-    return id;
-  }
   undo() {
     this.#call('undo');
     const [id, card] = this.journal.pop()!;
@@ -196,13 +189,13 @@ describe('the Worker session', () => {
       [{ id: 7 }, refusal(7, 'bad-request', 'unknown operation undefined')],
       [{ id: 0, op: 'open', sql: 'delete from cards' }, refusal(0, 'bad-request', 'open takes no sql')],
       [{ id: 2, op: 'next', card: 1n }, refusal(2, 'bad-request', 'next takes no card')],
-      [{ id: 2, op: 'answer', rating: 5, ms: 0 }, refusal(2, 'bad-request', "answer's rating is malformed")],
-      [{ id: 2, op: 'answer', rating: 0, ms: 0 }, refusal(2, 'bad-request', "answer's rating is malformed")],
-      [{ id: 2, op: 'answer', rating: '3', ms: 0 }, refusal(2, 'bad-request', "answer's rating is malformed")],
-      [{ id: 2, op: 'answer', rating: 3 }, refusal(2, 'bad-request', "answer's ms is malformed")],
-      [{ id: 2, op: 'answer', rating: 3, ms: -1 }, refusal(2, 'bad-request', "answer's ms is malformed")],
-      [{ id: 2, op: 'answer', rating: 3, ms: 2.5 }, refusal(2, 'bad-request', "answer's ms is malformed")],
-      [{ id: 2, op: 'answer', rating: 3, ms: 2 ** 32 }, refusal(2, 'bad-request', "answer's ms is malformed")],
+      [{ id: 2, op: 'rate', card: 1001n, rating: 5, ms: 0 }, refusal(2, 'bad-request', "rate's rating is malformed")],
+      [{ id: 2, op: 'rate', card: 1001n, rating: 0, ms: 0 }, refusal(2, 'bad-request', "rate's rating is malformed")],
+      [{ id: 2, op: 'rate', card: 1001n, rating: '3', ms: 0 }, refusal(2, 'bad-request', "rate's rating is malformed")],
+      [{ id: 2, op: 'rate', card: 1001n, rating: 3 }, refusal(2, 'bad-request', "rate's ms is malformed")],
+      [{ id: 2, op: 'rate', card: 1001n, rating: 3, ms: -1 }, refusal(2, 'bad-request', "rate's ms is malformed")],
+      [{ id: 2, op: 'rate', card: 1001n, rating: 3, ms: 2.5 }, refusal(2, 'bad-request', "rate's ms is malformed")],
+      [{ id: 2, op: 'rate', card: 1001n, rating: 3, ms: 2 ** 32 }, refusal(2, 'bad-request', "rate's ms is malformed")],
       [{ id: 2, op: 'seed', count: 0 }, refusal(2, 'bad-request', "seed's count is malformed")],
       [{ id: 2, op: 'seed', count: 2 ** 32 }, refusal(2, 'bad-request', "seed's count is malformed")],
       [{ id: 2, op: 'seed', count: 1.5 }, refusal(2, 'bad-request', "seed's count is malformed")],
@@ -228,10 +221,10 @@ describe('the Worker session', () => {
     // each argument's edges pass the parse and reach the session's state, here not yet open
     const fresh = browser(new FakeEngine());
     for (const request of [
-      { id: 3, op: 'answer', rating: 3, ms: 2 ** 32 - 1 },
+      { id: 3, op: 'rate', card: 1001n, rating: 3, ms: 2 ** 32 - 1 },
       { id: 4, op: 'seed', count: 2 ** 32 - 1 },
       { id: 5, op: 'snapshot', card: 2n ** 63n - 1n },
-      { id: 6, op: 'answer', rating: 1, ms: 0 },
+      { id: 6, op: 'rate', card: 1001n, rating: 1, ms: 0 },
       { id: 7, op: 'seed', count: 1 },
       { id: 8, op: 'snapshot', card: 1n },
       { id: Number.MAX_SAFE_INTEGER, op: 'undo' }
@@ -316,8 +309,10 @@ describe('the Worker session', () => {
     expect(await ask({ id: 3, op: 'next' })).toBe(1001n);
     const before = await ask({ id: 4, op: 'snapshot', card: 1001n });
     expect(before).toEqual({ id: 1001n, queue: 0, type: 0, due: 0, interval: 0, reps: 0, lapses: 0 });
-    expect(await ask({ id: 5, op: 'answer', rating: 3, ms: 1200 })).toBe(1001n);
-    expect(await ask({ id: 6, op: 'snapshot', card: 1001n })).toEqual({
+    // the card is shown, then rated: a grade is recorded only on the card shown (SPEC-365 R9)
+    expect(((await ask({ id: 5, op: 'card' })) as { card: { id: bigint } }).card.id).toBe(1001n);
+    expect(await ask({ id: 6, op: 'rate', card: 1001n, rating: 3, ms: 1200 })).toBeNull();
+    expect(await ask({ id: 7, op: 'snapshot', card: 1001n })).toEqual({
       id: 1001n,
       queue: 2,
       type: 2,
@@ -326,10 +321,10 @@ describe('the Worker session', () => {
       reps: 1,
       lapses: 0
     });
-    expect(await ask({ id: 7, op: 'next' })).toBe(1002n);
-    expect(await ask({ id: 8, op: 'undo' })).toBeNull();
-    expect(await ask({ id: 9, op: 'snapshot', card: 1001n })).toEqual(before);
-    expect(await ask({ id: 10, op: 'snapshot', card: 9n })).toBeNull();
+    expect(await ask({ id: 8, op: 'next' })).toBe(1002n);
+    expect(await ask({ id: 9, op: 'undo' })).toBeNull();
+    expect(await ask({ id: 10, op: 'snapshot', card: 1001n })).toEqual(before);
+    expect(await ask({ id: 11, op: 'snapshot', card: 9n })).toBeNull();
     expect(engine.calls).toEqual([
       ['install_storage'],
       ['init'],
@@ -337,7 +332,8 @@ describe('the Worker session', () => {
       ['seed', 3],
       ['next_card'],
       ['snapshot', 1001n],
-      ['answer', 3, 1200],
+      ['current_card'],
+      ['rate', 1001n, 3, 1200],
       ['snapshot', 1001n],
       ['next_card'],
       ['undo'],
@@ -414,8 +410,8 @@ describe('the Worker session', () => {
     const engine = new FakeEngine();
     const { session } = browser(engine);
     await session.handle({ id: 1, op: 'open' });
-    engine.failures.answer = 'engine error 0: no card is queued';
-    expect(await session.handle({ id: 2, op: 'answer', rating: 1, ms: 5 })).toEqual(
+    engine.failures.rate = 'engine error 0: no card is queued';
+    expect(await session.handle({ id: 2, op: 'rate', card: 1001n, rating: 1, ms: 5 })).toEqual(
       refusal(2, 'engine-failed', 'engine error 0: no card is queued')
     );
     expect(await session.handle({ id: 3, op: 'next' })).toEqual({ id: 3, ok: true, value: null });

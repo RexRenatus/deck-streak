@@ -268,6 +268,7 @@ SPEC and ADR-376 record the change, and their tests keep their names):
 | `web/app/src/lib/engine/client.test.ts` | miniapp | the `answer` cases removed |
 | `web/app/src/lib/engine/protocol.test.ts` | miniapp | `answer` leaves the op list |
 | `web/app/src/lib/engine/credential.test.ts` | miniapp | its `answer` request becomes a `rate` |
+| `web/app/src/lib/engine/credential-stand-in.test.support.ts` | miniapp | its studying module drops the engine's `answer` |
 | `web/app/tests-engine/engine.spec.ts` | miniapp | five queue-head answers become show and rate; titles kept |
 | `ios/Harness/Sources/EngineSession.swift` | native harness | `answerGood` through `engine.answer`; the `PressRefusal` sentence (R10) |
 | `ios/App/Sources/EngineSession.swift` | native app | the answer path through `engine.answer` (R12) |
