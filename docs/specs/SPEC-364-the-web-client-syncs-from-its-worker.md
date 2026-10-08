@@ -22,6 +22,10 @@
   as one driver both clients call. Part b2 (the browser transport and the normal sync from the
   Worker) and part b3 (the full-sync write in the browser) are section 7. **Mutation band:**
   `S364` (section 10). **Model:** `formal/tla/FullSyncChoice`, unchanged (section 8).
+- **Part b2:** sections 11 to 18 record what part b2 delivered: the browser transport, the two
+  sync exports, the normal sync from the Worker, persistence at every session start and the test
+  server. Where they differ from section 7's outline, sections 11 to 18 hold. **Model:**
+  `formal/tla/SyncCredential`, unchanged (section 16).
 
 ## 1. The problem, measured
 
@@ -334,6 +338,9 @@ Part b1.
 
 ### Part b2: the browser transport and the normal sync (after b1)
 
+Part b2 is built: sections 11 to 18 hold what it delivered, and where they differ from this outline
+(the export's name, R18's study clause, B1's full-sync arm, B2's and B3's reds), they hold.
+
 R14. **The transport.** A fork patch, `browser-xhr`, replaces `browser-fetch`'s refusal (M1): the
     `wasm32` twin sends the engine's request with a synchronous `XMLHttpRequest` from the dedicated
     Worker, its body zstd-encoded in memory, the engine's own headers (the `anki-sync` header
@@ -436,3 +443,186 @@ one that drops `col.scm`, and one that reads the greatest modified time of cards
 presets and note types instead; `S36422` is unused. The delivery also re-kills every existing row on each file it
 edits, and re-anchors none: `table.rs` 23, `dispatch.rs` 6, `gesture.rs` 3, `login_guard.rs` 5,
 `crates/ffi/src/engine.rs` 6 and `crates/web-engine/src/study.rs` 27 at `dee337bc`.
+
+## 11. Requirements (part b2), as built
+
+R14. **The transport.** A fork patch, `browser-xhr`, replaces `browser-fetch`'s refusal (M1). On
+    `wasm32` the engine's sync request is a synchronous `XMLHttpRequest` from the dedicated Worker:
+    its body zstd-encoded in memory, the engine's own headers (the `anki-sync` header among them)
+    set on it, the method and URL read from the request the engine built, its answer read as bytes
+    and decoded by the size header, as the native twin reads it. An answer whose response URL is
+    not the request's is refused as `MISDIRECTED_REQUEST` with no source, which the engine reads as
+    a failure (ADR-375 D15). A non-success status reaches the engine's own status mapping through a
+    `wasm32`-only status source in the fork's `network.rs`, which `From<HttpError>` downcasts to
+    `error_for_status_code`, so a 403 reads as the engine's auth refusal, as natively (D14). The
+    request's timeout is the engine's stall duration (`SyncAuth.io_timeout_secs`, or the engine's
+    default), and its expiry answers the engine's own timeout error (D19).
+
+R15. **The runtime.** A fork patch, `wasm-clock-threads`: on `wasm32` the engine's runtime is
+    `Builder::new_current_thread().build()` with no `enable_*` call, so no timer and no IO driver
+    exist; the native engine keeps `enable_all()`. On `wasm32` the IO monitor reads no clock, a
+    sync's abort is sent inline rather than from a thread, and a media sync in the background
+    refuses.
+
+R16. **The pin.** The fork's branch `wasm32-26.09.3` gains exactly two commits over
+    `c538de55a23e695234e794029fce0dafff2d36a9`, one per patch (`browser-xhr`, then
+    `wasm-clock-threads`), each body `Patch:`, `Reason:` and `Removal condition:` as the ten before
+    it. A NEW lightweight tag, `deckstreak-pin-26.09.3-wasm32-sync`, names the second; the earlier
+    tag stays where it is, unmoved. The root manifest's `[patch]` takes `anki` and `anki_proto` by
+    `rev` from the new tag's commit, its comment still naming ADR-058 and #233; `Cargo.lock` moves
+    by `cargo update -p anki -p anki_proto` alone; ADR-058 gains a note naming both patches and the
+    new commit; and the pin's description in `crates/ingest/src/engine.rs` names the new commit.
+    The native engine is unchanged: every edit is a `cfg` on `wasm32` or a dependency line both
+    targets share.
+
+R17. **`sync_login`.** The web engine exports `sync_login(endpoint, user, password)`, which sends
+    the engine's `SyncLoginRequest` (the endpoint set) through the dispatcher on (1,3) and answers
+    the host key. An engine refusal answers the engine's error bytes as a `Uint8Array`; any other
+    refusal answers the boundary's refusal (ADR-375 D16). The Worker's `sync-login` operation takes
+    a non-empty bounded `user` and `password`, calls it through `sync.ts`, keeps the key only
+    through the credential module, and answers a status word: a refused login answers
+    `needs-sign-in`; any other failure answers `offline`, and the store keeps no key.
+
+R18. **`sync_collection`.** The web engine exports `sync_collection(key, endpoint)`, which sends the
+    engine's `SyncCollectionRequest` (its `SyncAuth` holding the key and the endpoint, no timeout
+    override, and `sync_media` false) on (1,5) and answers the engine's `required` as a number. The
+    Worker's `sync` operation answers `{status, required}`, `required` being one of `no-changes`,
+    `normal-sync`, `full-sync`, `full-download` or `full-upload` (the engine's number indexes that
+    list, in `protocol.ts`) or null. Both operations need an open session (`not-open` otherwise),
+    and a Worker with no sync store answers as a store with no key. Each sync takes its key from
+    the store at the send and settles it: a success settles the send, the engine's bytes settle it
+    with those bytes, and any other throw settles it with empty bytes and is thrown again (D17).
+    The sync runs on the session's queue (D18): a study request waits, then is answered; none is
+    refused.
+
+R19. **Persistence.** Every session start asks the browser for persistent storage, whatever it
+    answered before; the server copy stays the authoritative one.
+
+## 12. Acceptance criteria (part b2)
+
+| id | criterion | red at its tests commit | decided by |
+|---|---|---|---|
+| B1 | In Chromium and WebKit, a login and a normal sync from the Worker reach the engine's own sync server through the page's own origin: after the collection is opened and seeded, `sync-login` answers `held` and `sync` answers `{status: 'held', required: 'full-upload'}`, the server saw the login and at least one sync request, every one under `/anki-sync/`, and no CSP violation was reported | red at the implementation commit, not the tests commit: `browser-fetch`'s refusal (M1) makes `sync-login` answer `offline`, not `held` (at the tests commit `sync-login` is an unknown operation, a red for another reason); green at the pin-move commit | `sync.spec.ts`, "a login and a normal sync from the worker reach the server" |
+| B2 | A server's 403 drops the key, and a lost network keeps it: in forbid mode `sync` answers `{status: 'absent', required: null}`; in drop mode the status stays `held` | not red: the 403 mapping lives in the pinned fork. Control: with the status source's downcast arm reverted, B2 is red | `sync.spec.ts`, "a refused key is dropped and a lost network keeps it" |
+| B3 | A redirected answer is refused: a redirected login answers `offline` and the status stays `absent`; a redirected sync answers `required: null` and the status stays `held` | not red. Control: with the response-URL check dropped, B3 is red | `sync.spec.ts`, "a redirected sync answer is refused" |
+| B4 | Each sync takes its key from the store and settles every send, and a send that throws anything but the engine's bytes still settles | red: a stub `sync.ts` keeps the key between syncs and never settles | `sync.test.ts`, two tests |
+| B5 | The key reaches no reply and no page module: no reply to `sync-login` or `sync` carries the host key, no page module imports `sync.ts`, and each new operation answered ok, so the census is not vacuous | not red: an absence census, held by planted controls (a reply carrying the host key, a page module importing `sync.ts`), each refused by name | `credential-reach.test.ts` |
+| B6 | The two sync exports reach the engine through the dispatcher and never through `admit(` or `run_method(` | red: "`fn sync_login(` occurs 0 times, not once" | the `boundary` census |
+| B7 | Every session start asks for persistent storage | red: the constructor takes `persist` and calls it 0 times | `engine.test.ts`, "every session start asks for persistent storage" |
+
+```acceptance
+B1: pnpm --dir web/app exec playwright test --config playwright.engine.config.ts sync.spec.ts -g "a login and a normal sync from the worker reach the server"
+B2: pnpm --dir web/app exec playwright test --config playwright.engine.config.ts sync.spec.ts -g "a refused key is dropped and a lost network keeps it"
+B3: pnpm --dir web/app exec playwright test --config playwright.engine.config.ts sync.spec.ts -g "a redirected sync answer is refused"
+B4: pnpm --dir web/app exec vitest run src/lib/engine/sync.test.ts -t "each sync takes its key from the store and settles"
+B4: pnpm --dir web/app exec vitest run src/lib/engine/sync.test.ts -t "a send that throws anything but the engine's bytes still settles"
+B5: pnpm --dir web/app exec vitest run src/lib/engine/credential-reach.test.ts
+B6: cargo test -p deck-streak-web-engine --test boundary
+B7: pnpm --dir web/app exec vitest run src/lib/study/engine.test.ts -t "every session start asks for persistent storage"
+```
+
+## 13. File manifest (part b2)
+
+- `Cargo.toml`
+- `Cargo.lock`
+- `crates/ingest/src/engine.rs`
+- `crates/web-engine/src/wasm.rs`
+- `crates/web-engine/tests/boundary.rs`
+- `crates/engine-core/examples/sync_server.rs` (new)
+- `web/app/src/lib/engine/sync.ts` (new)
+- `web/app/src/lib/engine/sync.test.ts` (new)
+- `web/app/src/lib/engine/protocol.ts`
+- `web/app/src/lib/engine/protocol.test.ts`
+- `web/app/src/lib/engine/session.ts`
+- `web/app/src/lib/engine/session.test.ts`
+- `web/app/src/lib/engine/worker.ts`
+- `web/app/src/lib/engine/worker.test.ts`
+- `web/app/src/lib/engine/client.ts`
+- `web/app/src/lib/engine/client.test.ts`
+- `web/app/src/lib/engine/credential-reach.test.ts`
+- `web/app/src/lib/study/engine.ts`
+- `web/app/src/lib/study/engine.test.ts`
+- `web/app/vite.engine.config.ts`
+- `web/app/playwright.engine.config.ts`
+- `web/app/tests-engine/sync.spec.ts` (new)
+- `docs/specs/SPEC-364-the-web-client-syncs-from-its-worker.md`
+- `docs/decisions/ADR-375-the-web-client-syncs-from-its-worker.md`
+- `docs/decisions/ADR-058-the-engine-pins-a-patched-fork-of-26-09-3-until-upstream-carries-the-fix.md`
+- `docs/schematics/web-sync-core.md`
+- `docs/red-first/SPEC-364.md`
+- `scripts/mutation-rows.d/S36400-S36499.json`
+- `changelog.d/web-sync-worker-364.md` (new)
+
+The fork's files, outside this repository, at the new tag's commit: <FORK-FILES>.
+
+## 14. What this does NOT do (part b2)
+
+- No full-sync write, and no review proven on the server: part b3 (#631).
+- The server's `new_endpoint` is not followed (#631).
+- No media sync (#631).
+- No page: the sync screens are part c (#631).
+- No full-sync timeout (#631).
+- No CI workflow change (#631).
+- No native sync (#633).
+- The fork is not dropped: its removal conditions stand (#233).
+- No device proof (#637).
+
+## 15. Risks (part b2)
+
+- A cross-origin redirect is stopped by the Worker's `connect-src 'self'` before the hop, so only a
+  same-origin redirect reaches the response-URL check. The builder confirms the CSP header on the
+  Worker's script, and B1 asserts no violation.
+- The request's timeout is a total bound, the engine's default stall duration: a long normal sync
+  fails as a timeout, and the key is kept. Part b3 sizes it for a full sync (section 17).
+- The example's cold compile in CI: the second webServer's timeout is sized for a cold build. Past
+  the `web-engine` job's time bound, the CI change is its own reviewed change, outside this part.
+- `--locked` with the moved `[patch]`: `Cargo.lock` moves only by `cargo update -p anki -p
+  anki_proto`, or every locked build refuses.
+- An export beside `call()` that skips the dispatcher: B6's census holds both sync exports by
+  name, and its new control refuses a sync export that reaches `admit(` or `run_method(`.
+- The native engine must not change: `cargo test -p anki` in the fork before and after the two
+  commits, with equal results.
+- The synchronous request holds the Worker for the sync's length: study waits (R18), bounded by
+  the request's timeout (D19).
+
+## 16. Formal model (part b2)
+
+`formal/tla/SyncCredential` is unchanged. `forSend` is `StartSend`; `settle(gen)` is `Accepted`;
+`settle(gen, a refusal's bytes)` is `Refused`; `settle(gen, other or empty bytes)` is `Failed`; a
+Worker restart is `Restart`. The condition this part holds: every send settles (B4's second line).
+A send that does not settle is a step the model lacks, so the model would change first.
+
+## 17. What part b3 owes after part b2
+
+- (i) B1's full-sync arm, verbatim from section 7: "and a review made in the browser is on the
+  server afterwards". Section 7's whole B1 reads: "In Chromium and WebKit, a login and a normal sync
+  from the Worker reach the engine's own sync server through the page's own origin, and a review
+  made in the browser is on the server afterwards". The arm is unreachable in part b2, because the
+  fork's `meta.rs` (lines 72-80) answers FullSyncRequired across schemas, so it joins C2.
+- (ii) R20's "never ticks on `wasm32`" is mandatory: the full-sync `interval` in the fork's
+  `http_client/full_sync.rs` (lines 8 and 30-32) panics with no time driver.
+- (iii) The request's total timeout is sized for a full sync, or a stall bound is decided.
+- (iv) Part b3's patch builds on the `deckstreak-pin-26.09.3-wasm32-sync` commit, under a new tag
+  and a new ADR-058 note of the same shape.
+- (v) It reuses `crates/engine-core/examples/sync_server.rs`, the Vite proxy and the test routes.
+- (vi) The status source's arm exists (D14).
+- (vii) The boundary census is shared: C4 grows its owed statements.
+- (viii) The #730 overlap is shared: the paths part b2 shares with #730 are part b3's to re-measure too.
+
+## 18. Mutation rows (part b2)
+
+Band `S364`, rows `S36435` to `S36439` in `scripts/mutation-rows.d/S36400-S36499.json`: crate
+`web-engine`, file `src/wasm.rs`, killer
+`boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher`. Each find is spelled
+from the committed text after `cargo fmt` and occurs once in the file.
+
+| row | find | replace |
+|---|---|---|
+| `S36435-THE-SYNC-LOGIN-EXPORT-IS-METHOD-THREE` | `.run(service::SYNC, 3,` | `.run(service::SYNC, 4,` |
+| `S36436-THE-SYNC-EXPORT-IS-METHOD-FIVE` | `.run(service::SYNC, 5,` | `.run(service::SYNC, 6,` |
+| `S36437-THE-SYNC-EXPORT-ASKS-NO-MEDIA` | `sync_media: false` | `sync_media: true` |
+| `S36438-AN-ENGINE-REFUSAL-KEEPS-ITS-BYTES` | `Refusal::Engine { error } => Uint8Array::from(error.as_slice()).into()` | `Refusal::Engine { error } => refuse("engine error")` |
+| `S36439-THE-LOGIN-ANSWERS-THE-HOST-KEY` | `Ok(auth.hkey)` | `Ok(String::new())` |
+
+The TypeScript is held by StrykerJS with `break` 100 over each changed `.ts` file, with no hand
+rows. The fork carries no rows of this repository.
