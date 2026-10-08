@@ -59,3 +59,25 @@ not read from the script.
 ## More Information
 
 #321, SPEC-062 R7, ADR-062, SPEC-127.
+
+## Amendment: the reload names its adapter
+
+#674 found that the reloads read the live file by its name, so a Caddyfile under another name was
+read as JSON. One decision (SPEC-127, the amendment of the same title).
+
+### Decision
+
+Every `caddy reload` in `caddy_install` and `caddy_remove`, the restoring reload of each included,
+names `--adapter caddyfile`, as the validate and adapt calls beside them already do.
+
+### Chosen against
+
+- Refusing a setting whose file name does not start with `Caddyfile`: it refuses a working
+  configuration that the validation already admits, since validate and adapt name the adapter and
+  read such a file correctly.
+- Copying the file to a `Caddyfile`-named path before the reload: it adds a second copy to keep and
+  restore, and the reload would still read a name it did not choose.
+
+### Confirmation
+
+SPEC-127's A40, and the four script rows added for it.

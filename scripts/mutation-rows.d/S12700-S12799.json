@@ -20,8 +20,8 @@
       [
         "S12703-A-FAILED-RESTORING-RELOAD-STILL-EXITS-NON-ZERO",
         "deploy/deploy.sh",
-        "    mv -T \"$kept\" \"$file\"\n    put_back_block\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n    caddy reload --config \"$file\" || echo \"deploy: the restoring reload also failed\" >&2\n    exit 1\n",
-        "    mv -T \"$kept\" \"$file\"\n    put_back_block\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n    caddy reload --config \"$file\" || echo \"deploy: the restoring reload also failed\" >&2\n    exit 0\n",
+        "    mv -T \"$kept\" \"$file\"\n    put_back_block\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n    caddy reload --adapter caddyfile --config \"$file\" || echo \"deploy: the restoring reload also failed\" >&2\n    exit 1\n",
+        "    mv -T \"$kept\" \"$file\"\n    put_back_block\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n    caddy reload --adapter caddyfile --config \"$file\" || echo \"deploy: the restoring reload also failed\" >&2\n    exit 0\n",
         "an install whose reload and restoring reload fail still refuses, non-zero (SPEC-127 R2)",
         "test_deploy_scripts.TheCaddyInstall.test_a_failed_restoring_reload_is_named_apart_and_still_refuses"
       ],
@@ -52,7 +52,7 @@
       [
         "S12707-THE-REMOVAL-RELOADS-AGAIN-AFTER-RESTORING",
         "deploy/deploy.sh",
-        "    mv -T \"$kept\" \"$file\"\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n    caddy reload --config \"$file\" || echo \"deploy: the restoring reload also failed\" >&2\n",
+        "    mv -T \"$kept\" \"$file\"\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n    caddy reload --adapter caddyfile --config \"$file\" || echo \"deploy: the restoring reload also failed\" >&2\n",
         "    mv -T \"$kept\" \"$file\"\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n",
         "a removal whose reload fails reloads the restored files and names a second failure apart (SPEC-127 R4)",
         "test_deploy_scripts.TheCaddyInstall.test_a_failed_restoring_reload_of_the_removal_is_named_apart"
@@ -368,6 +368,38 @@
         "case $given in *\" $key \"*) echo \"deploy: $key is given twice\" >&2 ;; esac",
         "a Caddy step stops on a listed setting it received twice (SPEC-127 A39)",
         "test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other"
+      ],
+      [
+        "S12747-THE-INSTALL-RELOAD-NAMES-THE-CADDYFILE-ADAPTER",
+        "deploy/deploy.sh",
+        "mv -T \"$copy\" \"$file\" || { find \"$kept\" -delete; undo; }\nif ! caddy reload --adapter caddyfile --config \"$file\"; then\n",
+        "mv -T \"$copy\" \"$file\" || { find \"$kept\" -delete; undo; }\nif ! caddy reload --config \"$file\"; then\n",
+        "the install's reload reads the live file with the Caddyfile adapter, whatever the file is named (SPEC-127 A40)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_reload_reads_a_caddyfile_under_another_name_with_the_caddyfile_adapter"
+      ],
+      [
+        "S12748-THE-INSTALL-RESTORING-RELOAD-NAMES-THE-CADDYFILE-ADAPTER",
+        "deploy/deploy.sh",
+        "    put_back_block\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n    caddy reload --adapter caddyfile --config \"$file\" || echo \"deploy: the restoring reload also failed\" >&2\n",
+        "    put_back_block\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n    caddy reload --config \"$file\" || echo \"deploy: the restoring reload also failed\" >&2\n",
+        "the install's restoring reload reads the live file with the Caddyfile adapter (SPEC-127 A40)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_reload_reads_a_caddyfile_under_another_name_with_the_caddyfile_adapter"
+      ],
+      [
+        "S12749-THE-REMOVAL-RELOAD-NAMES-THE-CADDYFILE-ADAPTER",
+        "deploy/deploy.sh",
+        "[ -f \"$block\" ] && { had=$block.previous; mv -T \"$block\" \"$had\"; }\nif ! caddy reload --adapter caddyfile --config \"$file\"; then\n",
+        "[ -f \"$block\" ] && { had=$block.previous; mv -T \"$block\" \"$had\"; }\nif ! caddy reload --config \"$file\"; then\n",
+        "the removal's reload reads the live file with the Caddyfile adapter, whatever the file is named (SPEC-127 A40)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_reload_reads_a_caddyfile_under_another_name_with_the_caddyfile_adapter"
+      ],
+      [
+        "S12750-THE-REMOVAL-RESTORING-RELOAD-NAMES-THE-CADDYFILE-ADAPTER",
+        "deploy/deploy.sh",
+        "    mv -T \"$kept\" \"$file\"\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n    caddy reload --adapter caddyfile --config \"$file\" || echo \"deploy: the restoring reload also failed\" >&2\n",
+        "    mv -T \"$kept\" \"$file\"\n    echo \"deploy: the Caddy reload failed; the previous site file and Caddyfile were restored\" >&2\n    caddy reload --config \"$file\" || echo \"deploy: the restoring reload also failed\" >&2\n",
+        "the removal's restoring reload reads the live file with the Caddyfile adapter (SPEC-127 A40)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_reload_reads_a_caddyfile_under_another_name_with_the_caddyfile_adapter"
       ]
     ]
   }
