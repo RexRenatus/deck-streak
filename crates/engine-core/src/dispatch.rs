@@ -153,6 +153,12 @@ impl Dispatcher {
         })
     }
 
+    /// Hands the dispatcher the latest statement of the service's minimum client level: its body,
+    /// or `None` when no answer was read (SPEC-374 R4).
+    pub fn handshake(&self, statement: Option<&[u8]>) {
+        let _ = (self, statement);
+    }
+
     /// Runs one ordinary call: the request's protobuf bytes in, the response's out. The table
     /// decides before the engine sees the call, so a pair it does not admit never reaches the
     /// engine's dispatch, whatever it would have done there.
