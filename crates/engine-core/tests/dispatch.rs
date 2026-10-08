@@ -1,4 +1,4 @@
-//! The dispatcher on a synthetic collection (SPEC-345 A3, A4; SPEC-365 A2).
+//! The dispatcher on a synthetic collection (SPEC-345 A3, A4; SPEC-365 A2; SPEC-371 A3, A15).
 //!
 //! Each test builds its own collection of two Basic notes with the engine's own API, then drives a
 //! native dispatcher the way the native adapter does: each request encoded as protobuf bytes, each
@@ -15,6 +15,8 @@ mod support;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use anki_proto::card_rendering::HtmlToTextLineRequest;
+use anki_proto::generic::String as Text;
 use anki_proto::scheduler::card_answer::Rating;
 use anki_proto::scheduler::{
     CardAnswer, GetQueuedCardsRequest, QueuedCards, ScheduleCardsAsNewRequest,
@@ -33,6 +35,10 @@ const GET_QUEUED_CARDS: (u32, u32) = (13, 3);
 const ANSWER_CARD: (u32, u32) = (13, 4);
 /// `SchedulerService.ScheduleCardsAsNew`: Forget, an exempt write.
 const SCHEDULE_CARDS_AS_NEW: (u32, u32) = (13, 17);
+/// `CollectionService.Undo`, an exempt write since SPEC-371.
+const UNDO: (u32, u32) = (3, 8);
+/// `CardRenderingService.HtmlToTextLine`, measured from the engine's generated dispatch at the pin.
+const HTML_TO_TEXT_LINE: (u32, u32) = (27, 14);
 /// The snapshot's column for the card's repetitions: `[id, queue, type, due, ivl, reps, lapses]`.
 const REPS: usize = 5;
 
@@ -215,5 +221,101 @@ fn a_fixed_read_returns_its_one_card() {
             Ok(Some(Value::from(2)))
         ),
         "the snapshot of the second card names it, and the note count reads two"
+    );
+}
+
+/// SPEC-371 A3 (R2, R5): an undo through `run` is held for the owner's gesture on both transports,
+/// before the engine sees it, and the answered card stays answered.
+#[test]
+fn an_undo_through_run_is_held_for_the_owner_and_leaves_the_answer() {
+    let synthetic = support::synthetic("undo-through-run");
+    let dispatcher = dispatcher();
+    run(
+        &dispatcher,
+        OPEN_COLLECTION,
+        &support::open_request(&synthetic),
+    )
+    .expect("the native dispatcher opens the collection");
+    let request = GetQueuedCardsRequest {
+        fetch_limit: 1,
+        intraday_learning_only: false,
+    };
+    let queued = run(&dispatcher, GET_QUEUED_CARDS, &request.encode_to_vec())
+        .expect("the queue is admitted");
+    let first = QueuedCards::decode(queued.as_slice())
+        .expect("the queue decodes")
+        .cards
+        .into_iter()
+        .next()
+        .expect("a new card is queued");
+    let card = first.card.expect("a queued card carries its card").id;
+    let states = first.states.expect("a queued card carries its states");
+    let answer = CardAnswer {
+        card_id: card,
+        current_state: states.current,
+        new_state: states.good,
+        rating: Rating::Good as i32,
+        answered_at_millis: now_millis(),
+        milliseconds_taken: 1000,
+    };
+    dispatcher
+        .run_answer(
+            OwnerAnswer::from_press(card, Grade::Good),
+            &answer.encode_to_vec(),
+        )
+        .expect("the owner's press records the answer");
+    let through_run = run(&dispatcher, UNDO, &[]).map(|_| ());
+    let after = snapshot(&dispatcher, card).expect("the snapshot reads");
+    let web = Dispatcher::start(Transport::Web, &[]).expect("the web engine starts");
+    assert_eq!(
+        (
+            through_run,
+            after[REPS].as_i64(),
+            web.run(3, 8, &[]).map(|_| ())
+        ),
+        (
+            Err(Refusal::NeedsGesture {
+                service: 3,
+                method: 8
+            }),
+            Some(1),
+            Err(Refusal::NeedsGesture {
+                service: 3,
+                method: 8
+            }),
+        ),
+        "an undo through run is held for the owner's gesture on both transports, and the answer stands: {after}"
+    );
+}
+
+/// SPEC-371 A15 (R2, R8): on the web, (27,14) is the engine's `HtmlToTextLine`: known HTML reads as
+/// its known line of text, media file names kept; natively it is refused before the engine sees it.
+#[test]
+fn the_web_reads_a_card_as_one_line_of_text() {
+    let request = HtmlToTextLineRequest {
+        text: "<b>Hello</b><br>world <img src=\"cat.jpg\"> &amp; [sound:a.mp3]".to_owned(),
+        preserve_media_filenames: true,
+    }
+    .encode_to_vec();
+    let web = Dispatcher::start(Transport::Web, &[]).expect("the web engine starts");
+    let line = web
+        .run(HTML_TO_TEXT_LINE.0, HTML_TO_TEXT_LINE.1, &request)
+        .map(|reply| {
+            Text::decode(reply.as_slice())
+                .expect("the reply is a string")
+                .val
+        });
+    assert_eq!(
+        line,
+        Ok("Hello world  cat.jpg  & a.mp3".to_owned()),
+        "the web reads known HTML as its one line of text, media file names kept"
+    );
+    assert_eq!(
+        run(&dispatcher(), HTML_TO_TEXT_LINE, &request).map(|_| ()),
+        Err(Refusal::NotAllowed {
+            service: 27,
+            method: 14
+        }),
+        "the native transport refuses the text line before the engine sees it"
     );
 }

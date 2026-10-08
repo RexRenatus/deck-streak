@@ -343,6 +343,24 @@ describe('the Worker session', () => {
     expect(log).toEqual(OPENED);
   });
 
+  // SPEC-371 R12, A28: the module refuses an undo with its reason as a prefix, as it refuses a card
+  // it did not show; a synced answer reads `undo-synced`, and every other refusal `not-undoable`.
+  it('a refused undo reads as its own error code', async () => {
+    const engine = new FakeEngine();
+    const { session } = browser(engine);
+    expect((await session.handle({ id: 1, op: 'open' })).ok).toBe(true);
+    engine.failures.undo = 'undo-synced: the answer has synced';
+    expect(await session.handle({ id: 2, op: 'undo', card: 1001n, step: 4 })).toEqual(
+      refusal(2, 'undo-synced', 'undo-synced: the answer has synced')
+    );
+    engine.failures.undo = 'not-undoable: something changed after the answer';
+    expect(await session.handle({ id: 3, op: 'undo', card: 1001n, step: 4 })).toEqual(
+      refusal(3, 'not-undoable', 'not-undoable: something changed after the answer')
+    );
+    // an engine refusal leaves the session open
+    expect(await session.handle({ id: 4, op: 'snapshot', card: 9n })).toEqual({ id: 4, ok: true, value: null });
+  });
+
   it('the session refuses the queue-head answer as an unknown operation', async () => {
     // SPEC-365 A14: only an owner's press records a grade, through `rate` on the card shown; the
     // queue-head `answer` is no operation, so the session refuses it before the engine sees it.
