@@ -246,6 +246,32 @@ fn a_reply_that_is_not_integers_is_the_engines_database_error() {
     );
 }
 
+/// The core's own refusal of a reply that is not the integers its statement selects.
+const REVIEW_IDS_REFUSED: &str =
+    "the engine's reply to `select id from revlog` is not the integers it selects";
+
+#[test]
+fn a_review_id_that_is_not_an_integer_is_the_cores_own_refusal() {
+    let synthetic = support::synthetic("unreadable-review-id");
+    let col = engine(&synthetic.collection);
+    col.storage
+        .db()
+        .execute_batch(
+            "alter table revlog rename to revlog_held; \
+             create table revlog as select * from revlog_held; \
+             drop table revlog_held; \
+             insert into revlog (id, usn) values (1.5, 0);",
+        )
+        .expect("the test plants a review id that is not an integer");
+    col.close(None).expect("the engine closes the collection");
+    assert_eq!(
+        open(&synthetic).id_sets().map_err(engine_error),
+        Err(Some((Kind::DbError, REVIEW_IDS_REFUSED.to_owned()))),
+        "a review id that is not an integer is the core's own refusal, naming the statement, and \
+         is never read as a guessed value"
+    );
+}
+
 /// An answer that found a sealed snapshot, and one that did not.
 const FOUND: SnapshotAnswer = SnapshotAnswer { found: true };
 const NOT_FOUND: SnapshotAnswer = SnapshotAnswer { found: false };
