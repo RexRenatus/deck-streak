@@ -16,13 +16,13 @@ A4: red at 8c1fe7e2d3a50033d3551fe5dc3810f4269cae52: assertion `left == right` f
 A5: red at 8c1fe7e2d3a50033d3551fe5dc3810f4269cae52: assertion `left == right` failed: the statement's GET comes first: left: Some("POST /sync/hostKey HTTP/1.1") right: Some("GET /api/sync/minimum-client HTTP/1.1")
 A6: red at 8c1fe7e2d3a50033d3551fe5dc3810f4269cae52: assertion `left == right` failed: the service answers its minimum client level, exactly: left: (404, "") right: (200, "{\"minimum_client_level\":1}")
 A7: red at 8c1fe7e2d3a50033d3551fe5dc3810f4269cae52: AssertionError: Lists differ: ['MINIMUM_CLIENT_LEVEL is defined 0 time(s), not once: []'] != [] : the tree's minimum and level break R3
-A1: green at C2
-A2: green at C2
-A3: green at C2
-A4: green at C2
-A5: green at C2
-A6: green at C2
-A7: green at C2
+A1: green at 2db78c8e075b6566c2dc2ca258c53b5e1c6b2870
+A2: green at 2db78c8e075b6566c2dc2ca258c53b5e1c6b2870
+A3: green at 2db78c8e075b6566c2dc2ca258c53b5e1c6b2870
+A4: green at 2db78c8e075b6566c2dc2ca258c53b5e1c6b2870
+A5: green at 2db78c8e075b6566c2dc2ca258c53b5e1c6b2870
+A6: green at 2db78c8e075b6566c2dc2ca258c53b5e1c6b2870
+A7: green at 2db78c8e075b6566c2dc2ca258c53b5e1c6b2870
 ```
 
 A7's census reads the index, as at C1: its green was read with the green commit's set staged, before

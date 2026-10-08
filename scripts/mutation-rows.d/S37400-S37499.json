@@ -1,0 +1,141 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S37400-A-MINIMUM-EQUAL-TO-THE-LEVEL-ADMITS",
+        "engine-core",
+        "src/handshake.rs",
+        "Some(minimum) if minimum <= u64::from(CLIENT_LEVEL) => Outcome::Admitted,",
+        "Some(minimum) if minimum < u64::from(CLIENT_LEVEL) => Outcome::Admitted,",
+        "handshake::the_latest_statement_decides_and_a_private_engine_obeys_it",
+        "a statement whose minimum equals the client's level admits it; a strict comparison refuses the client the service still accepts (SPEC-374 R4, A3)"
+      ],
+      [
+        "S37401-A-MINIMUM-ABOVE-THE-LEVEL-REFUSES",
+        "engine-core",
+        "src/handshake.rs",
+        "Some(minimum) if minimum <= u64::from(CLIENT_LEVEL) => Outcome::Admitted,",
+        "Some(minimum) if minimum >= u64::from(CLIENT_LEVEL) => Outcome::Admitted,",
+        "handshake::a_client_below_the_minimum_is_refused_every_sync_before_the_engine",
+        "a statement whose minimum is above the client's level refuses it; the comparison turned over admits a client the service no longer accepts (SPEC-374 R4, A1)"
+      ],
+      [
+        "S37402-THE-CLIENT-LEVEL-IS-ONE",
+        "engine-core",
+        "src/handshake.rs",
+        "pub const CLIENT_LEVEL: u32 = 1;",
+        "pub const CLIENT_LEVEL: u32 = 2;",
+        "handshake::a_client_below_the_minimum_is_refused_every_sync_before_the_engine",
+        "the client's level is the literal 1 this release builds; a raised level admits a statement whose minimum is above the release's own (SPEC-374 R1, A1)"
+      ],
+      [
+        "S37403-THE-SYNC-CALLS-WAIT-FOR-AN-ADMITTING-STATEMENT",
+        "engine-core",
+        "src/dispatch.rs",
+        "self.admitted().map_err(|error| Refusal::Engine { error })?;",
+        "let _ = self.admitted().map_err(|error| Refusal::Engine { error });",
+        "handshake::a_client_below_the_minimum_is_refused_every_sync_before_the_engine",
+        "the sync login and the normal sync are refused before the engine unless the latest statement admitted the client; bypassed, a client below the minimum reaches the sync server (SPEC-374 R5, A1)"
+      ],
+      [
+        "S37404-THE-ONE-WAY-SYNC-WAITS-FOR-AN-ADMITTING-STATEMENT",
+        "engine-core",
+        "src/dispatch.rs",
+        "self.admitted()?;",
+        "let _ = self.admitted();",
+        "handshake::a_client_below_the_minimum_is_refused_every_sync_before_the_engine",
+        "the one-way sync is refused before the engine unless the latest statement admitted the client; bypassed, a client below the minimum writes the collection to the server (SPEC-374 R5, A1)"
+      ],
+      [
+        "S37405-A-NEW-DISPATCHER-STARTS-UNREAD",
+        "engine-core",
+        "src/dispatch.rs",
+        "handshake: Arc::default(),",
+        "handshake: Arc::new(Mutex::new(Outcome::Admitted)),",
+        "handshake::an_unread_or_unreadable_statement_refuses_every_sync",
+        "a dispatcher never handed a statement refuses every sync; one that starts admitted syncs without ever reading the service's minimum (SPEC-374 R4, A2)"
+      ],
+      [
+        "S37406-AN-UNDECODABLE-STATEMENT-REFUSES",
+        "engine-core",
+        "src/handshake.rs",
+        "None => Outcome::Undecodable,",
+        "None => Outcome::Admitted,",
+        "handshake::an_unread_or_unreadable_statement_refuses_every_sync",
+        "a statement that does not decode refuses with its sentence; admitted, a 404 or a redirect lets every client sync (SPEC-374 R4, A2)"
+      ],
+      [
+        "S37407-A-PRIVATE-ENGINE-SHARES-ITS-PARENTS-OUTCOME",
+        "engine-core",
+        "src/dispatch.rs",
+        "engine.handshake = Arc::clone(&self.handshake);",
+        "engine.handshake = Arc::default();",
+        "handshake::the_latest_statement_decides_and_a_private_engine_obeys_it",
+        "a private engine obeys its parent's latest statement; a cell of its own never learns of an admitting read, so a server copy is never fetched (SPEC-374 R7, A3)"
+      ],
+      [
+        "S37408-THE-BELOW-SENTENCE",
+        "engine-core",
+        "src/handshake.rs",
+        "pub const BELOW: &str = \"This version of DeckStreak is older than the oldest the sync service accepts. Update DeckStreak to sync.\";",
+        "pub const BELOW: &str = \"This version of DeckStreak is older than the sync service accepts.\";",
+        "handshake::a_client_below_the_minimum_is_refused_every_sync_before_the_engine",
+        "a client below the minimum says why in R6's exact sentence, which the app shows (SPEC-374 R6, A1)"
+      ],
+      [
+        "S37409-THE-UNREAD-SENTENCE",
+        "engine-core",
+        "src/handshake.rs",
+        "pub const UNREAD: &str = \"A network error occurred. The sync service's oldest accepted version could not be read, so nothing was synced.\";",
+        "pub const UNREAD: &str = \"A network error occurred.\";",
+        "handshake::an_unread_or_unreadable_statement_refuses_every_sync",
+        "a statement nobody answered refuses in R6's exact sentence, which begins with the network sentence the app's test reads (SPEC-374 R6, A2)"
+      ],
+      [
+        "S37410-THE-STATIC-LIBRARY-READS-BEFORE-THE-LOGIN",
+        "ffi",
+        "src/engine.rs",
+        "if (service, method) == SYNC_LOGIN",
+        "if (service, method) != SYNC_LOGIN",
+        "handshake::a_login_below_the_minimum_stops_before_any_sync_request_and_says_why",
+        "the static library reads the statement before the sync login alone; the pair test negated reads none before the login, so the core refuses it unread (SPEC-374 R8, A4)"
+      ],
+      [
+        "S37411-THE-STATEMENT-READ-FOLLOWS-NO-REDIRECT",
+        "ffi",
+        "src/engine.rs",
+        ".redirect(reqwest::redirect::Policy::none())",
+        ".redirect(reqwest::redirect::Policy::limited(10))",
+        "handshake::the_statement_is_read_first_and_only_an_admitting_one_reaches_the_login",
+        "the statement's read follows no redirect, so a 302 is undecodable; followed, a redirect's target decides the client's admission (SPEC-374 R8, A5)"
+      ],
+      [
+        "S37412-THE-STATEMENTS-PATH",
+        "api",
+        "src/minimum_client.rs",
+        "pub const MINIMUM_CLIENT: &str = \"/api/sync/minimum-client\";",
+        "pub const MINIMUM_CLIENT: &str = \"/api/sync/minimum-clients\";",
+        "minimum_client_route::the_service_states_its_minimum_client_level_to_any_caller",
+        "the service states its minimum at the one path every client reads; another path answers the clients 404, so every client refuses (SPEC-374 R2, A6)"
+      ],
+      [
+        "S37413-THE-MINIMUM-CLIENT-LEVEL-IS-ONE",
+        "api",
+        "src/minimum_client.rs",
+        "pub const MINIMUM_CLIENT_LEVEL: u32 = 1;",
+        "pub const MINIMUM_CLIENT_LEVEL: u32 = 2;",
+        "minimum_client_route::the_service_states_its_minimum_client_level_to_any_caller",
+        "the service states the literal minimum 1 this release accepts; a raised minimum refuses every client the same release builds (SPEC-374 R2, R3, A6)"
+      ],
+      [
+        "S37414-THE-STATEMENT-IS-NEVER-STORED",
+        "api",
+        "src/minimum_client.rs",
+        "[(header::CACHE_CONTROL, \"no-store\")],",
+        "[(header::CACHE_CONTROL, \"no-cache\")],",
+        "minimum_client_route::the_service_states_its_minimum_client_level_to_any_caller",
+        "the statement is marked never to be stored, so a raised minimum reaches the next read; a cache could keep the old one (SPEC-374 R2, A6)"
+      ]
+    ]
+  }
+}
