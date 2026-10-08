@@ -415,6 +415,8 @@ end in `.caddyfile` was read as JSON, while the validate and adapt calls beside 
 reload and the restoring reload of the install, and the reload and the restoring reload of the
 removal (ADR-127, the amendment of the same title).
 
+## Acceptance criteria of the reload-adapter amendment
+
 | id | criterion | test |
 |---|---|---|
 | A40 | with `DECKSTREAK_DEPLOY_CADDYFILE` naming a file whose name does not start with `Caddyfile`, an install and a removal each reload it, and a failing first reload of each is followed by the restoring reload; every one of those reloads carries `--adapter caddyfile` and reads the live file (#674) | `test_deploy_scripts.py` `a_reload_reads_a_caddyfile_under_another_name_with_the_caddyfile_adapter` |
