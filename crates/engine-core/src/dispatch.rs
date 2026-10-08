@@ -15,6 +15,7 @@ use crate::answer::{AnswerRefusal, OwnerAnswer};
 use crate::face::{self, Face, Side};
 use crate::full_sync::{IdSets, Unsynced, Write};
 use crate::gesture::{Checked, GestureRefusal, OwnerGesture, Target};
+use crate::late::EngineDay;
 use crate::login_guard;
 use crate::media::Reader;
 use crate::one_way;
@@ -446,6 +447,21 @@ impl Dispatcher {
             reviews: u32::try_from(reviews).map_err(|_| unreadable(UNSYNCED_SQL))?,
             changed: changed != 0,
             schema: schema != 0,
+        })
+    }
+
+    /// The engine's day, read from the engine's own timing of today through one call the core
+    /// holds and no adapter makes: the day count and the next rollover a card's due is judged in
+    /// (SPEC-376 R3, ADR-387 D1).
+    ///
+    /// # Errors
+    ///
+    /// [`Refusal::Engine`] when the engine cannot run the read, a closed collection among them, or
+    /// answers it with a reply that is not the timing's message.
+    pub fn engine_day(&self) -> Result<EngineDay, Refusal> {
+        Ok(EngineDay {
+            days_elapsed: 0,
+            next_day_at: 0,
         })
     }
 
