@@ -23,7 +23,12 @@ A4: green at 2db78c8e075b6566c2dc2ca258c53b5e1c6b2870
 A5: green at 2db78c8e075b6566c2dc2ca258c53b5e1c6b2870
 A6: green at 2db78c8e075b6566c2dc2ca258c53b5e1c6b2870
 A7: green at 2db78c8e075b6566c2dc2ca258c53b5e1c6b2870
+A16: red at f7d626917b62e15a0b4ce6adbccaf49434cf5cec: Expected: "held"; Received: "offline" at sync.spec.ts:99:47, in both browsers (CI job 113546776315)
+A17: red at f7d626917b62e15a0b4ce6adbccaf49434cf5cec: Expected: "held"; Received: "offline" at sync.spec.ts:125:47, in both browsers (CI job 113546776315)
+A18: red at f7d626917b62e15a0b4ce6adbccaf49434cf5cec: Expected value: "/anki-sync-moved/sync/hostKey"; Received array: [] at sync.spec.ts:151:33, in both browsers (CI job 113546776315)
 ```
 
 A7's census reads the index, as at C1: its green was read with the green commit's set staged, before
 that commit, and the commit holds exactly that set.
+
+Part one's fix round. A16 to A18 are the web Worker's three sync specs, red at part one's tip as CI's web-engine job read them, on a merge ref whose tree is that commit's: the core refused every web sync pair because the Worker handed it no statement. A19 to A22 were committed next, red, with stubs that keep every input but the behaviour: a statement read that reads nothing, a sync that hands the engine what it read and ignores the answer, and no export. The commit that turns them green follows, and each green line names it. A16 to A18 turn green only in CI's browsers, and their green lines are written when CI has read them.

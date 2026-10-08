@@ -2,10 +2,12 @@
 
 - **Issue:** #671
 - **Decided by:** ADR-385
-- **Status:** accepted (part one, the handshake; part two, the re-release check, is section 7)
+- **Status:** accepted (part one, the handshake and the web Worker's read of the statement; part
+  two, the re-release check, is section 7)
 - **Mutation band:** S37400-S37499 (`scripts/mutation-rows.d/S37400-S37499.json`)
 - **Model:** opus for part one (three crates, a network read in the static library, a request
-  allow-list site, a TLA+ model); sonnet for part two (one standard-library script and one workflow)
+  allow-list site, a TLA+ model); sonnet for part one's fix round (the web Worker's read) and for
+  part two (one standard-library script and one workflow)
 
 Every `path:line` below was read at `6f9ef860`.
 
@@ -54,6 +56,12 @@ Nothing tells a client that the sync service no longer accepts it.
   (`web/app/src/lib/engine/credential.ts:197`), the login (`:199`), then the first write, the sealed
   credential's store (`:207-213`). At this commit the web engine's network refuses every sync
   request (SPEC-364 R14, replaced by its part b2), so no web client syncs yet.
+- **Web, at `f7d62691`.** That commit holds SPEC-364 part b2, so the web client syncs through its
+  Worker (`web/app/src/lib/engine/sync.ts`), and the core's rule (R5) refuses every web sync pair,
+  because the Worker hands the core no statement. CI's web-engine job (job 113546776315, on a merge
+  ref whose tree is `f7d62691`'s) failed the three sync specs on both browsers, six failures: the
+  login read `offline` where `held` was expected (`web/app/tests-engine/sync.spec.ts:99`, `:125`),
+  and no request reached the moved sync route (`:151`).
 - **The internal build.** The internal lane runs on a manual dispatch or a push to `dev`
   (`.github/workflows/testflight-internal.yml:10-24`), one run per event at a time with none
   cancelled (`:32-35`), and uploads for internal testing only (`scripts/ios_lane.py:348`). An
@@ -120,7 +128,24 @@ No Swift file changes. SPEC-347's UI test of a refused login keeps its oracle: t
 endpoint cannot answer, so the refusal begins `A network error occurred.`.
 
 R12. On the web the same core rule (R5) refuses the sync pairs on `Transport::Web` until the web
-client hands the core an admitting statement; the web client's read is section 5's.
+client hands the core an admitting statement; the web client's read is R22 to R24.
+
+R22. The web Worker reads the statement before its sync login and before each normal sync:
+`GET /api/sync/minimum-client` at the Worker's own origin, through the Worker's own `fetch`, with
+no credential, no cache and no redirect followed, bounded by a 10-second timeout and a 1024-byte
+body. It hands the web engine nothing when no answer was read, and empty bytes for any status but
+200 (a redirect included, which the browser answers unopened with status 0), for a body over the
+bound, and for a body that could not be read. The read precedes the seal-key release, every request
+under the sync route and the first write.
+
+R23. The web engine's `handshake` export hands the Worker's statement to `Dispatcher::handshake`
+and answers nothing when the outcome admits, or the outcome's R6 sentence otherwise. The core
+decides; the export keeps no rule of its own.
+
+R24. A statement the core does not admit stops the sync call: the Worker throws the sentence, the
+credential store is not asked for a key, and the page's client rejects with the code
+`engine-failed` and the sentence as its message. An admitting statement lets the login and the
+normal sync proceed as SPEC-364 R17 and R18 state.
 
 ## 3. Acceptance criteria of part one
 
@@ -133,6 +158,13 @@ client hands the core an admitting statement; the web client's read is section 5
 | A5 | A native login reads the statement first: an admitting one is followed by the login's request, an unanswered one refuses with a sentence that begins `A network error occurred.`, a redirect is not followed, and an endpoint the guard refuses is never read | `crates/ffi/tests/handshake.rs` |
 | A6 | The service states its minimum to any caller: 200, the exact body and `Cache-Control: no-store`, with no owner configured | `crates/api/tests/minimum_client_route.rs` |
 | A7 | Each level is defined once and the minimum never exceeds the level, and a planted tree that breaks it is refused | `scripts/tests/test_client_level.py` |
+| A16 | With an admitting statement, a login and a normal sync from the web Worker reach the server, each through the page's own origin | `web/app/tests-engine/sync.spec.ts` |
+| A17 | With an admitting statement, a refused key is dropped and a lost network keeps it | `web/app/tests-engine/sync.spec.ts` |
+| A18 | With an admitting statement, a redirected sync answer is refused and nothing is synced | `web/app/tests-engine/sync.spec.ts` |
+| A19 | The Worker reads the statement at its own origin with no credential, no cache and no redirect followed, and hands on a 200 body of at most 1024 bytes, empty bytes for any other answer and for an over-long or unreadable body, and nothing when no answer was read | `web/app/src/lib/engine/sync.test.ts` |
+| A20 | A statement the core refuses stops the login and the normal sync before the store is asked for a key and before the engine syncs, with the core's sentence; an admitting one lets both through | `web/app/src/lib/engine/sync.test.ts` |
+| A21 | The Worker's sync reads the statement through the Worker's own `fetch` and hands the engine its exact bytes before the sync login and before the normal sync | `web/app/src/lib/engine/worker.test.ts` |
+| A22 | The `handshake` export hands the statement to the core's dispatcher and answers the core's own decision and sentence, keeping no rule of its own | `crates/web-engine/tests/boundary.rs` |
 
 ```acceptance
 A1: cargo test -p deck-streak-engine-core --test handshake -- --exact a_client_below_the_minimum_is_refused_every_sync_before_the_engine
@@ -142,11 +174,18 @@ A4: cargo test -p deck-streak-ffi --test handshake -- --exact a_login_below_the_
 A5: cargo test -p deck-streak-ffi --test handshake -- --exact the_statement_is_read_first_and_only_an_admitting_one_reaches_the_login
 A6: cargo test -p deck-streak-api --test minimum_client_route -- --exact the_service_states_its_minimum_client_level_to_any_caller
 A7: python3 -m unittest discover -s scripts/tests -p test_client_level.py -k test_the_minimum_never_exceeds_the_level_a_tree_builds
+A16: pnpm --dir web/app exec playwright test --config playwright.engine.config.ts sync.spec.ts -g "a login and a normal sync from the worker reach the server"
+A17: pnpm --dir web/app exec playwright test --config playwright.engine.config.ts sync.spec.ts -g "a refused key is dropped and a lost network keeps it"
+A18: pnpm --dir web/app exec playwright test --config playwright.engine.config.ts sync.spec.ts -g "a redirected sync answer is refused"
+A19: pnpm --dir web/app exec vitest run src/lib/engine/sync.test.ts -t "the statement is read at the same origin with no credential, no cache and no redirect followed"
+A20: pnpm --dir web/app exec vitest run src/lib/engine/sync.test.ts -t "a statement the core refuses stops the login and the sync before the store and says why"
+A21: pnpm --dir web/app exec vitest run src/lib/engine/worker.test.ts -t "the worker reads the statement through its own fetch and hands the engine its bytes before each sync"
+A22: cargo test -p deck-streak-web-engine --test boundary -- --exact each_boundary_function_reaches_the_engine_through_the_dispatcher
 ```
 
-#671's first acceptance bullet is A1 and A4: a client below the minimum stops before any sync
-write and says why, in the core for both transports and in the static library the iPhone and iPad
-app runs.
+#671's first acceptance bullet is A1, A4 and A20: a client below the minimum stops before any sync
+write and says why, in the core for both transports, in the static library the iPhone and iPad app
+runs, and in the web Worker.
 
 ## 4. File manifest
 
@@ -168,6 +207,15 @@ app runs.
 | `scripts/tests/test_client_level.py` | scripts | new: A7 |
 | `crates/notifications/tests/request_allow_list.rs` | request allow-list | the static library's site named |
 | `clippy.toml` | workspace | the comment names the allow-list; reasons unchanged |
+| `crates/web-engine/src/wasm.rs` | web engine | the `handshake` export (R23) |
+| `crates/web-engine/tests/boundary.rs` | web engine | the export's census row: A22 |
+| `web/app/src/lib/engine/sync.ts` | web Worker | the statement's read and its hand-off before each sync login and normal sync (R22, R24) |
+| `web/app/src/lib/engine/worker.ts` | web Worker | the Worker's own `fetch` handed to the sync |
+| `web/app/src/lib/engine/sync.test.ts` | web Worker | new: A19, A20; the stub engine's `handshake` and the sync's `fetch` as setup |
+| `web/app/src/lib/engine/worker.test.ts` | web Worker | new: A21; the stub engine's `handshake` as setup in the existing sync test |
+| `web/app/src/lib/engine/credential-reach.test.ts` | web Worker | the stub engine's `handshake` and the sync's `fetch` as setup; no assertion changes |
+| `web/app/vite.engine.config.ts` | engine tests | a stand-in statement at the same origin, admitting unless a test sets it, and the paths it was asked at |
+| `web/app/tests-engine/sync.spec.ts` | engine tests | A16 to A18 unchanged; a new spec of a refused and a moved statement |
 | `docs/specs/SPEC-041-*.md` (the file at the cut) | specs | an insert-only amendment naming the second site |
 | `formal/tla/MinimumClientHandshake/MinimumClientHandshake.tla`, `formal/tla/MinimumClientHandshake/MCMinimumClientHandshake.cfg`, `formal/tla/MinimumClientHandshake/witness/*.cfg` | formal | new: section 8 |
 | `scripts/mutation-rows.d/S37400-S37499.json` | rows | new band |
@@ -183,10 +231,9 @@ app runs.
 
 ## 5. What this does NOT cover
 
-- The web client's read of the statement: its Worker fetching the same-origin statement and handing
-  it to a web engine `handshake` export before its sync login and normal sync, and showing the
-  sentence. Its sync entry is #631's next part (SPEC-364 part b2); until it reads, R5 refuses every
-  web sync pair.
+- A web sync screen that tells a refused client from a failed engine by a code of its own and shows
+  the sentence in the app's own words: the Worker's refusal carries the core's sentence as
+  `engine-failed` (R24), and the sync screen is #631's next part.
 - The iPhone and iPad sync screens and the full-sync choice on them, whose every sync entry reads
   the statement first (#633).
 - Moving the internal lane to the app's scheme, which first ships a client that syncs (#625).
@@ -202,10 +249,15 @@ app runs.
   sentence. Detected by A6 before a release and by the client's sentence after one; the route
   ships with the API in the same release as the clients that read it (#625 ships the first).
 - A minimum raised between a client's read and its sync is obeyed at the next read, not the
-  current call. The model in section 8 states the window; every sync entry reads first (R8, #631,
+  current call. The model in section 8 states the window; every sync entry reads first (R8, R22,
   #633).
-- The core's rule refuses the web's sync pairs until #631 reads the statement. Detected by
-  #631's own sync tests at its cut.
+- The web Worker reads the statement only where its own origin serves it, through the edge's
+  existing `/api/*` proxy, so a deployment that serves the web app without the API refuses every
+  web sync with the undecodable or unread sentence. Detected by A6 before a release and by the
+  sentence after one, as for the native read.
+- The browser specs read a stand-in statement that the engine tests' server answers at the same
+  path as the API's route. Detected by A6 and A19, which each name the route's path as a literal,
+  and by A16 to A18, which fail if the Worker reads anywhere else.
 - A widened request allow-list could admit a request that is not the statement's. Detected by
   `request_allow_list.rs`, which names the site, and by the census of what the site requests (A4,
   A5 record every request).
@@ -276,6 +328,10 @@ a comparison that admits a minimum above the level, and a private engine that st
 covers `handshake.rs` and `dispatch.rs`'s handshake, refusal and private-engine items and the
 static library's `run`, and cites #671. Part two adds no interleaving the lane does not already
 hold: ADR-385 D8 records why it owes no model.
+
+The web Worker's read (R22) is the model's adapter on the web: it reads the statement or fails to,
+and the core's shared outcome decides. The web engine's `handshake` export keeps no rule of its own
+(R23, A22), so the entry's covered items stay the core's and the static library's.
 
 ## 9. Amendments: the lines part one's cut reads
 

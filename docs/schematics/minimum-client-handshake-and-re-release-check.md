@@ -60,25 +60,45 @@ write at `AppModel.swift:78` never runs on a refusal. No Swift file changes.
 
 ```mermaid
 sequenceDiagram
-    participant Worker as web Worker, the next part of the web sync
+    participant Page as page client
+    participant Worker as web Worker sync, sync.ts
+    participant Service as sync service, at the Worker's own origin
     participant Core as engine core Dispatcher, Transport Web
     participant Private as private engine
     participant Engine as the engine
-    Worker->>Core: handshake with the same-origin statement, owed by the next part
-    Worker->>Core: run the pair 1,3 or 1,5
+    Page->>Worker: a sync login, or a normal sync
+    Worker->>Service: GET the statement, no credential, no cache, redirect manual
+    alt answered 200 with a body of at most 1024 bytes
+        Service-->>Worker: the body
+    else any other status, a redirect included, or an over-long or unreadable body
+        Service-->>Worker: an answer read as empty bytes
+    else no answer within 10 seconds
+        Worker->>Worker: nothing read
+    end
+    Worker->>Core: the handshake export with what was read, the core decides
     alt admitted
+        Core-->>Worker: no sentence
+        Worker->>Core: run the pair 1,3 or 1,5
         Core->>Engine: the call
-    else not admitted, the default until a read
-        Core-->>Worker: refusal with the sentence, before the first write at credential.ts 207-213
+    else below, undecodable or unread
+        Core-->>Worker: the outcome's sentence
+        Worker-->>Page: refusal engine-failed with the sentence, before the seal-key release and any sync request
     end
     Core->>Private: start, sharing the latest outcome
-    Private->>Private: full sync, the pair 1,6, refused unless admitted, dispatch.rs 249-255
+    Private->>Private: full sync, the pair 1,6, refused unless admitted
 ```
 
-At this commit the web client's sync entry is `obtain()` (`web/app/src/lib/engine/credential.ts:193-216`):
-the seal-key release at `:197`, the login at `:199`, the first write at `:207-213`. The login runs
-through the core's `run`, so the core's refusal precedes the first write. The Worker's read is the
-next part of the web sync's (SPEC-374 section 5).
+From part one's fix round the Worker's sync is `web/app/src/lib/engine/sync.ts`: `login()` hands
+the credential store a login, whose `obtain()` (`web/app/src/lib/engine/credential.ts`) runs the
+seal-key release, the login and then the first write, and `sync()` takes the key for one send.
+Each reads the statement first, through the Worker's own `fetch`, and hands it to the web engine's
+`handshake` export, which hands it to the core and answers the core's sentence on a refusal, so a
+refusal precedes the seal-key release, every request under the sync route and the first write. The
+read follows no redirect: the browser hands a redirect back unopened, with status 0, and the Worker
+reads it as empty bytes, which the core decides is undecodable, as the static library's read does.
+The refusal reaches the page as `engine-failed` with the core's sentence (SPEC-374 R22 to R24). The
+core's own rule stays beneath it: a sync pair sent without an admitting statement is still refused
+before the engine (R5, R12).
 
 ## 4. The scheduled re-release check (part two)
 
@@ -118,6 +138,12 @@ The lane accepts a manual dispatch on `dev` (`.github/workflows/testflight-inter
 | the read's order, the unanswered read's network sentence, no redirect, no read for a refused endpoint | A5, `crates/ffi/tests/handshake.rs` |
 | the stop before the first Swift write | `AppModel.swift:76-78` order, unchanged; SPEC-347's UI test of a refused login, unchanged |
 | the read followed by the sync, with a raise in between | `formal/tla/MinimumClientHandshake/` |
+| the Worker's read: its own origin, no credential, no cache, no redirect followed, its bounds | A19, `web/app/src/lib/engine/sync.test.ts` |
+| a refused statement stops the login and the normal sync before the store, with the core's sentence | A20, `web/app/src/lib/engine/sync.test.ts` |
+| the Worker's own `fetch`, and the statement's bytes handed on before each sync | A21, `web/app/src/lib/engine/worker.test.ts` |
+| the export reaches the core's dispatcher and keeps no rule of its own | A22, `crates/web-engine/tests/boundary.rs` |
+| the Worker's login and normal sync, a refused key and a redirected sync, each after an admitting statement | A16 to A18, `web/app/tests-engine/sync.spec.ts` |
+| a below and a moved statement in a browser: the sentence, no sync request, the redirect not followed | the new spec in `web/app/tests-engine/sync.spec.ts` (coverage beside A20, not a criterion) |
 | the schedule, the token's permissions, the admitted credential reads | A8, `scripts/tests/test_ci_workflows.py` |
 | a build due before the next run reported and dispatched on dev | A9, `scripts/tests/test_testflight_age.py` |
 | healthy only after a read | A10, `scripts/tests/test_testflight_age.py` |

@@ -28,6 +28,9 @@ What the tree holds, at `6f9ef860` (SPEC-374 section 1 has every citation):
   with no sync (SPEC-352; the move is #625's), so no client that syncs has shipped.
 - The internal lane runs on a dispatch or a push to `dev` (`testflight-internal.yml:10-24`).
   Scheduled workflows run from the default branch's copy only (`mutation-weekly.yml:17-18`).
+- At `f7d62691`, which holds SPEC-364 part b2, the web client syncs through its Worker, and the
+  core's rule refused every web sync pair: CI's web-engine job failed the three sync specs on both
+  browsers, because the Worker handed the core no statement (D10).
 
 ## Decision Drivers
 
@@ -56,7 +59,7 @@ What the tree holds, at `6f9ef860` (SPEC-374 section 1 has every citation):
 - A stop in each client's own code (Swift, TypeScript): lost because Swift may make no request and two copies drift apart.
 - A stop only on a statement that reads below, admitting when none was read: lost because a client that cannot reach the statement route but can reach the sync server would sync below the minimum.
 - Changing the iPhone and iPad UI test's network-sentence oracle: lost because the unread sentence can begin with the engine's own network sentence, so the oracle stands unchanged.
-- The web client out of scope with no rule: lost because once #631's sync lands a tab left open across a release could sync below the minimum; the core's rule refuses it until #631 reads.
+- The web client out of scope with no rule: lost because once #631's sync lands a tab left open across a release could sync below the minimum; the core's rule refuses it unless the Worker's read admits (D10).
 
 ### D3. The re-release check
 
@@ -68,7 +71,7 @@ What the tree holds, at `6f9ef860` (SPEC-374 section 1 has every citation):
 
 ### D4. The tests and how the box-restricted modules bind them
 
-- **Chosen: part one's every criterion is a Rust or a standard Python test this box may run, so it lands in one push; part two's workflow criteria live in `test_ci_workflows.py`, read in CI, so it takes exactly two pushes, because that module runs only under its own rulings.**
+- **Chosen: part one's every criterion is a Rust or a standard Python test run before the push, so it lands in one push; part two's workflow criteria live in `test_ci_workflows.py`, read in CI, so it takes exactly two pushes, because that module runs only under its own rulings.** Part one's fix round (D10) adds web criteria in one more push: vitest tests run before the push, and three browser specs CI's web-engine job reads.
 - A new workflow-reading module run on the box: lost because it would read workflows outside the rulings that restrict the one module that already does.
 - A Swift test of the update sentence: lost because the stop lies in the static library before any Swift write, the Rust test reads the sentence the Swift view shows, and Swift runs only in CI.
 
@@ -101,6 +104,21 @@ What the tree holds, at `6f9ef860` (SPEC-374 section 1 has every citation):
 - **Chosen: a census test holding each level defined once and the minimum at or below the level, with a planted control, because no tree may state a minimum its own clients fail.**
 - No census: lost because a minimum raised past the level in one release would stop every client that release ships.
 
+### D10. Where and when the web client reads the statement, and in which delivery
+
+- **Chosen: the web Worker reads the statement through its own `fetch` before its sync login and before each normal sync, and hands it to a web engine `handshake` export that answers the core's decision, in part one's own fix round, because the Worker owns the web's network (D6), the core keeps the one rule (D2), and the fix round lands with part one.**
+- A separate later delivery for the web read, leaving web sync refused on `dev` between the two lands: lost because SPEC-364's web client already syncs on `dev`, so every web sync there would be refused from part one's land until that delivery's.
+- A read only before the sync login: lost because a tab left open across a raise would keep syncing below the minimum until its next login (D2).
+- Following a redirect, or sending the page's credentials: lost because the static library's read does neither (D6, SPEC-374 R8), and a statement moved off the origin is not the service's own.
+- The decision kept in the Worker's TypeScript: lost because two copies of the rule drift apart (D2); the export answers the core's own decision and sentence.
+- A web engine export that fetches the statement itself: lost because the engine owns no network on the web (D6); the Worker's `fetch` is the one network the browser gives it.
+
+### D11. How a refusal reaches the page
+
+- **Chosen: the Worker throws the core's sentence and the session answers it as `engine-failed` with that sentence as its message, because the page's refusal already carries a message and the page's status words are closed over the protocol's codes.**
+- A new protocol code for a client below the minimum: lost because the study screens' status map is exhaustive over the codes, so a new code changes screens this delivery does not touch, and the sync screen that would read it is #631's next part.
+- Answering `offline`, as a failed login does: lost because it hides the sentence #671 asks the client to show.
+
 ## Decision Outcome
 
 - D1: `CLIENT_LEVEL` in `crates/engine-core/src/handshake.rs`; `MINIMUM_CLIENT_LEVEL` in
@@ -109,23 +127,31 @@ What the tree holds, at `6f9ef860` (SPEC-374 section 1 has every citation):
 - D2: `Dispatcher::handshake` keeps the latest outcome, shared with private engines; `run` and
   `full_sync` refuse every sync pair unless it is admitted, with SPEC-374 R6's sentences.
 - D3, D7: part two's workflow and script (SPEC-374 section 7).
-- D4, D5: two deliveries; part one one push, part two two.
+- D4, D5: two deliveries; part one one push and one for its fix round (D10), part two two.
 - D6: the read in `crates/ffi/src/engine.rs`, a named allow-list site, no new package.
 - D8: `formal/tla/MinimumClientHandshake/`.
 - D9: `scripts/tests/test_client_level.py`.
+- D10: the Worker's read in `web/app/src/lib/engine/sync.ts`, wired with the Worker's own `fetch`
+  in `web/app/src/lib/engine/worker.ts`, handed to the `handshake` export in
+  `crates/web-engine/src/wasm.rs`.
+- D11: a refusal answered as `engine-failed` with the core's sentence; the protocol's codes
+  unchanged.
 
 ### Consequences
 
 - Every client that syncs carries the handshake from its first release; no client built earlier
   syncs (#625 ships the first).
-- The web client's sync stays refused until #631's Worker reads the statement.
+- The web client's Worker reads the statement before its sync login and before each normal sync
+  (D10), so no web sync is refused for want of a read, and a refused one shows the core's sentence
+  (D11).
 - A minimum is raised in two releases: the level first, the minimum later.
 - The re-release check goes live only when a release carries its workflow to `main`.
 
 ### Confirmation
 
-SPEC-374's A1 to A7, and A8 to A15 with part two; the TLA+ entry's witnesses caught and its
-property clean at its floor; the request allow-list's own test with the new site named.
+SPEC-374's A1 to A7 and A16 to A22, and A8 to A15 with part two; the TLA+ entry's witnesses
+caught and its property clean at its floor; the request allow-list's own test with the new site
+named.
 
 ## More Information
 
