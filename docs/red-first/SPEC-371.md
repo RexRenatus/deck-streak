@@ -129,6 +129,12 @@ A28: red at f2076d70: code bad-request, message "undo takes no card", where undo
   `each_adapter_table_equals_its_transport_column` compares the web `STUDY_CALLS` with the ordinary
   table's web column, so from 46e416bd, where (27,14) joined that column and (3,8) left it, it read
   red until `STUDY_CALLS` followed in the web engine.
+- **A green line names the commit before the one that writes it.** No commit can hold its own
+  sha, so the commit that turns a criterion green also changes this record, naming what it greens,
+  and the commit after it writes the `green at` line. The web engine's commit greens A16 and A17,
+  `the_study_calls_are_the_reviews_pairs`,
+  `a_boundary_function_that_answers_a_constant_is_refused_by_name` and the parity test, and it
+  changes `crates/web-engine/tests/study.rs` only by adding the tests of R6 and R7's mirrors.
 - **`exempt.rs`'s Undo arm names its target "its target".** Each per-write synthetic collection
   numbers its own cards, and the fixture holds no answer, so the Undo request's record names no
   row and is refused before the engine.
