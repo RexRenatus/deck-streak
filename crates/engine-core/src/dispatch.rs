@@ -45,8 +45,22 @@ const REVIEW_IDS_SQL: &str = "select id from revlog";
 const CARD_IDS_SQL: &str = "select id from cards";
 /// Every note id.
 const NOTE_IDS_SQL: &str = "select id from notes";
-/// The collection's modified stamp, which an upload's re-check compares (SPEC-357 R7).
-const MODIFIED_SQL: &str = "select mod from col";
+/// The upload re-check stamp, which an upload's re-check compares beside the ids (SPEC-364 R6,
+/// ADR-375 D13, SPEC-357 R7 as amended): the engine's `fnvhash` of the greatest row usn over every
+/// synced table that carries one, graves included, and the schema stamp. A normal sync and a full
+/// upload move it; a download's restamp of `col.usn`, `col.mod` and `col.ls` leaves it still.
+const MODIFIED_SQL: &str = "select fnvhash((select max(usn) from ( \
+                            select max(usn) as usn from cards union all \
+                            select max(usn) from notes union all \
+                            select max(usn) from revlog union all \
+                            select max(usn) from graves union all \
+                            select max(usn) from decks union all \
+                            select max(usn) from deck_config union all \
+                            select max(usn) from notetypes union all \
+                            select max(usn) from templates union all \
+                            select max(usn) from tags union all \
+                            select max(usn) from config)), \
+                            (select scm from col))";
 /// What a sync has not sent, in one statement: the reviews whose sequence number marks them
 /// unsynced, and whether the collection or its schema changed since its last sync (SPEC-357 R9).
 const UNSYNCED_SQL: &str = "select (select count() from revlog where usn = -1), \
@@ -297,9 +311,9 @@ impl Dispatcher {
             .map_err(|error| Refusal::Engine { error })
     }
 
-    /// Every review-log, card and note id of the open collection, and its modified stamp: what a
-    /// full sync's counts, its backup check and its re-check compare (SPEC-357 R5, R9). Every row,
-    /// by the core's fixed statements; no adapter passes SQL.
+    /// Every review-log, card and note id of the open collection, and its upload re-check stamp:
+    /// what a full sync's counts, its backup check and its re-check compare (SPEC-357 R5, R9;
+    /// SPEC-364 R6). Every row, by the core's fixed statements; no adapter passes SQL.
     ///
     /// # Errors
     ///
