@@ -404,3 +404,34 @@ The other half of that exclusion, a failed temporary directory of the operator's
 
 The insertion this amendment makes is this section, appended after the file's last line, and
 nothing above it is edited (SPEC-038 section 8, ruling (i)).
+
+## Amendment: the reload names its adapter
+
+This amendment closes #674. Every `caddy reload` in `caddy_install` and `caddy_remove` read the live
+file by its name: Caddy picks an adapter from the file name when none is given, so a Caddyfile that
+`DECKSTREAK_DEPLOY_CADDYFILE` names under a name that does not start with `Caddyfile` and does not
+end in `.caddyfile` was read as JSON, while the validate and adapt calls beside it already named
+`--adapter caddyfile`. Each reload now names the adapter too, whatever the file is called: the
+reload and the restoring reload of the install, and the reload and the restoring reload of the
+removal (ADR-127, the amendment of the same title).
+
+## Acceptance criteria of the reload-adapter amendment
+
+| id | criterion | test |
+|---|---|---|
+| A40 | with `DECKSTREAK_DEPLOY_CADDYFILE` naming a file whose name does not start with `Caddyfile`, an install and a removal each reload it, and a failing first reload of each is followed by the restoring reload; every one of those reloads carries `--adapter caddyfile` and reads the live file (#674) | `test_deploy_scripts.py` `a_reload_reads_a_caddyfile_under_another_name_with_the_caddyfile_adapter` |
+
+The fence command for A40 is the one test by name, which runs in CI only because
+`test_deploy_scripts.py` executes the deploy scripts:
+
+```acceptance
+A40: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_reload_reads_a_caddyfile_under_another_name_with_the_caddyfile_adapter
+```
+
+Four rows in `scripts/mutation-rows.d/S12700-S12799.json` pin it, one per changed reload line (the
+install's reload, the install's restoring reload, the removal's reload and the removal's restoring
+reload), each killed by the test of A40. Rows S12703 and S12707 contain a restoring reload line, so
+their find text moves to the new line with the same meaning.
+
+The insertion this amendment makes is this section, appended after the file's last line, and
+nothing above it is edited (SPEC-038 section 8, ruling (i)).
