@@ -94,7 +94,7 @@ R6. **No production file changes.** The delivery's net diff touches no file unde
     stripped set, class set and check are unchanged.
 R7. **Each test is seen red first.** The red commit carries the tests beside planted changes to the
     engine's render and the frame's composition; the greening commits remove them (ADR-383 D6).
-R8. **Rows pin the engine's side.** Four rows in `scripts/mutation-rows.d/S37200-S37299.json` mutate
+R8. **Rows pin the engine's side.** Three rows in `scripts/mutation-rows.d/S37200-S37299.json` mutate
     the face's CSS and its text joining in `crates/engine-core/src/face.rs`, each killed by R3's
     test (section 9).
 
@@ -134,9 +134,9 @@ with CSS that ends the style element is refused, so the observation can see a re
 | `web/app/src/lib/study/review-templates.golden.json` | `miniapp` | added (R1, R2) |
 | `web/app/src/lib/study/review-templates.test.ts` | `miniapp` | added (R4) |
 | `scripts/mutation-rows.d/S37200-S37299.json` | scripts | added (R8) |
-| `crates/engine-core/src/face.rs` | `engine-core` | planted in the red commit and restored in the next; no net change (R6, R7) |
-| `web/app/src/lib/study/review.ts` | `miniapp` | planted in the red commit and restored in a later one; no net change (R6, R7) |
-| `web/app/src/lib/card/frame-document.ts` | `miniapp` | planted in the red commit and restored in a later one; no net change (R6, R7) |
+| `crates/engine-core/src/face.rs` | `engine-core` | planted in the red commit and restored in the next; unchanged at the push (R6, R7) |
+| `web/app/src/lib/study/review.ts` | `miniapp` | planted in the red commit and restored in a later one; unchanged at the push (R6, R7) |
+| `web/app/src/lib/card/frame-document.ts` | `miniapp` | planted in the red commit and restored in a later one; unchanged at the push (R6, R7) |
 
 ## 5. What this does NOT cover
 
@@ -146,6 +146,8 @@ with CSS that ends the style element is refused, so the observation can see a re
   (`#651`).
 - Typed answers: no fixture template asks for a typed answer (`#611`).
 - The iPhone and iPad gaps: the native client's render is not pinned here (`#666`).
+- The face's fallback for a replacement other than FrontSide (a field with a filter the engine leaves
+  to the reviewer): this golden's inputs never reach it, so it is not pinned here (`#729`).
 
 ## 6. Risks
 
@@ -178,15 +180,14 @@ writer, the tests read it, and every production file's net diff is empty. 0 of t
 
 ## 9. Mutation rows
 
-Four rows in `scripts/mutation-rows.d/S37200-S37299.json`, table `MUTATIONS`, crate `engine-core`,
+Three rows in `scripts/mutation-rows.d/S37200-S37299.json`, table `MUTATIONS`, crate `engine-core`,
 file `src/face.rs`, each killed by `review_templates::the_engine_renders_the_template_cards_as_the_golden_file_records_them`:
 
 | row | mutates | what a reader would lose |
 |---|---|---|
 | `S37201-A-FACE-KEEPS-ITS-NOTE-TYPES-CSS` | the face's `css: rendered.css,` to an empty string | the note type's CSS, `.cloze` rule included, never reaches the frame (A3, A5) |
-| `S37202-A-FACE-KEEPS-ITS-TEMPLATES-TEXT` | a text node joined as empty | the template's own markup between fields vanishes, the reversed answer's rule included (A2, A5) |
-| `S37203-A-FACE-KEEPS-ITS-FIELDS-TEXT` | a replacement joined as empty | every field's text vanishes, the cloze deletions included (A1, A5) |
-| `S37204-FRONTSIDE-FILLS-ONLY-FRONTSIDE` | the `{{FrontSide}}` guard negated | the answer no longer opens with its question, and other fields read as the question (A2, A5) |
+| `S37202-A-FACE-KEEPS-ITS-TEMPLATES-TEXT` | a text node joined as empty | the template's own markup between fields vanishes, and the cloze question stops asking for deletion 1 (A1, A5) |
+| `S37204-FRONTSIDE-FILLS-ONLY-FRONTSIDE` | the `{{FrontSide}}` guard negated | the reversed answer no longer opens with its question, and other fields read as the question (A2, A5) |
 
 The existing rows on `src/face.rs` (`S34816` to `S34822`) are unchanged. No web rows: the web
 mutation run mutates each changed production file under `web/app`, and this delivery's net diff

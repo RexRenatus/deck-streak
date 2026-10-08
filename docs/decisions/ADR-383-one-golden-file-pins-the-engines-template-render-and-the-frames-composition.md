@@ -86,7 +86,7 @@ fail its own language's test, each seen red first.
 
 ### D7. Rows, and no model
 
-- Chosen: four rows in band `S37200-S37299` on `crates/engine-core/src/face.rs`, for the face's CSS, a text node, a replacement and the `{{FrontSide}}` guard, each killed by the Rust test; no web rows; no model, because the existing rows on that file pin sound, speech and autoplay and none pins the CSS or the joining, while the web has no production change for its mutation run to judge.
+- Chosen: three rows in band `S37200-S37299` on `crates/engine-core/src/face.rs`, for the face's CSS, a text node and the `{{FrontSide}}` guard, each killed by the Rust test; no web rows; no model, because the existing rows on that file pin sound, speech and autoplay and none pins the CSS or the joining, while the web has no production change for its mutation run to judge.
 - Chosen against: no rows, because a later edit to `face.rs` that dropped the CSS would then be caught only if the Rust test happened to be selected.
 - Chosen against: rows on `crates/web-engine/src/wasm.rs`, because only the wasm build compiles it, and a native killer cannot observe its mutants.
 - Chosen against: a TLA+ model, because the delivery adds no actor and no shared state: the golden is read-only test data.
@@ -96,7 +96,7 @@ fail its own language's test, each seen red first.
 D1 to D7 as chosen above. One golden file under `web/app/src/lib/study` holds the inputs, the frame
 CSS and the engine's render; the Rust test renders and compares, the web test drives the review
 screen and reads the frame; each is seen red through a planted change that the next commits
-remove; four rows pin the face's side.
+remove; three rows pin the face's side.
 
 ## Consequences
 
