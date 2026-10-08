@@ -42,7 +42,7 @@ pub fn write_token() -> String {
 
 /// The roster golden's tools the server never serves, which no grant reaches (SPEC-369 R8;
 /// ADR-380): the portable roster is the golden less these.
-pub const WITHDRAWN: [&str; 0] = [];
+pub const WITHDRAWN: [&str; 2] = ["erase_all_data", "export_data"];
 
 /// A guard over the core, law-track and write credentials, its limiter on a clock that never
 /// moves.
