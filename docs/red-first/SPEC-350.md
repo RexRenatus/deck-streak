@@ -388,3 +388,12 @@ SPEC-350 section 14's fence holds three lines for A29, the criterion #685 delive
 | 3 | A29 | `scripts/tests/test_release_workflow.py` `test_an_over_budget_module_stops_the_release_before_the_draft` | added |
 
 The second commit makes the release build, gate and stage the module, and greens A29's three tests.
+
+## Issue 685: the reds and greens
+
+Each line's command is the criterion's first line in SPEC-350 section 14's fence, run at the commit named. A29's other two tests were red at the same commit, read by name in CI's hygiene job: `test_the_release_builds_and_gates_the_module_as_ci_does` with `AssertionError: 0 != 1 : 0 release steps run `rustup target add wasm32-unknown-unknown``, and `test_an_over_budget_module_stops_the_release_before_the_draft` with `AssertionError: no step has `python3 scripts/web-engine-size.py` in its run`. All three are green at the second commit.
+
+```red-first
+A29: red at b203dbdbca156325cb4c0754eaddf55287e492d7: AssertionError: Lists differ: [] != ['./web/engine/deck_streak_web_engine.js',[42 chars]asm']
+A29: green at d20184e88d9d338ac7244c18d88d43e318e2af2b
+```
