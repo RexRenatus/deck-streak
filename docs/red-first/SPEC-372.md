@@ -9,11 +9,11 @@ test red:
   `css: String::new(),`, so a face carries no CSS. Restored in the engine's greening commit
   (ba90af44).
 - PW1, `web/app/src/lib/study/review.ts`: the review keeps the head card's own sides instead of the
-  faces' texts. Restored in the web's greening commit (PENDING).
+  faces' texts. Restored in the web's greening commit (c6598071).
 - PW2, `web/app/src/lib/card/frame-document.ts`: the composition trims the CSS's trailing newline
-  after normalising it. Restored in the web's greening commit (PENDING).
+  after normalising it. Restored in the web's greening commit (c6598071).
 - PW3, `web/app/src/lib/card/frame-document.ts`: the class check admits only `card card1`.
-  Restored in the web's greening commit (PENDING).
+  Restored in the web's greening commit (c6598071).
 
 Each red below is quoted from the run of that criterion's fence line at the red commit, from the
 worktree root, as SPEC-372 section 3 writes it; each is its test's first failing assertion. A3's
@@ -51,8 +51,8 @@ A3: red at 4443b048: AssertionError: cloze ordinal 0 question: the style element
 A4: red at 4443b048: AssertionError: cloze ordinal 1 question: data-card-refused, srcdoc and status: expected { refused: 'escaped', …(2) } to deeply equal { refused: null, srcdoc: true, …(1) }
 A5: red at 4443b048: assertion `left == right` failed: cloze ordinal 0: the question face's CSS left: "" right: ".card {\r\n  font-family: arial;\r\n  font-size: 20px;\r\n  text-align: center;\r\n}\r\n\r\n.cloze {\r\n  font-weight: bold;\r\n  color: blue;\r\n}\r.nightMode .cloze {\n  color: lightblue;\n}\n"
 A5: green at ba90af44
-A1: green at PENDING
-A2: green at PENDING
-A3: green at PENDING
-A4: green at PENDING
+A1: green at c6598071
+A2: green at c6598071
+A3: green at c6598071
+A4: green at c6598071
 ```
