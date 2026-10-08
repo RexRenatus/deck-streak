@@ -1,5 +1,6 @@
 //! Round trips through the adapter's one entry point against a synthetic collection (SPEC-336 A1
-//! to A6), and through its answer entry, an owner's press (SPEC-365 A12, A13).
+//! to A6), and through its answer entry, an owner's press (SPEC-365 A12, A13). Since SPEC-371
+//! (A18), SPEC-336 A5 is the adapter's refusal of an undo through that entry point.
 //!
 //! Each test builds its own collection with the engine's own API before the adapter runs: one
 //! Basic note in the default deck, and a second, empty deck. It then drives the adapter the way a
@@ -39,8 +40,6 @@ const ANSWER_CARD: (u32, u32) = (13, 4);
 const GOOD: u64 = 2;
 /// The engine's queue for a new card (`QueuedCards.Queue.NEW`).
 const NEW_QUEUE: u64 = 0;
-/// The engine's name for the operation an answer records, which its undo reports.
-const ANSWER_OPERATION: &str = "Answer Card";
 /// The engine's card type for a card in learning (`cards.type`).
 const LEARNING: i64 = 1;
 /// The review log's button for Again and for Good (`revlog.ease`), the rating plus one.
@@ -359,6 +358,9 @@ fn a4_answers_the_card() {
     );
 }
 
+/// SPEC-371 A18 (R15): an undo is an exempt write, held for the owner's gesture, so the adapter's
+/// one entry point refuses it before the engine sees it, and the answered card stays answered.
+/// The name is SPEC-336 A5's, kept.
 #[test]
 fn a5_undoes_the_answer() {
     let synthetic = synthetic("a5");
@@ -366,19 +368,21 @@ fn a5_undoes_the_answer() {
     let opened = call(&engine, OPEN_COLLECTION, open_request(&synthetic));
     let queued = call(&engine, GET_QUEUED_CARDS, queue_request());
     let answered = press_good(&engine, &synthetic, &queued);
-    let undone = call(&engine, UNDO, Vec::new()).map(|bytes| {
-        String::from_utf8(wire::bytes(&bytes, 2)).expect("an operation name is UTF-8")
-    });
-    let after = call(&engine, GET_QUEUED_CARDS, queue_request()).map(|bytes| read_queue(&bytes));
+    let undone = call(&engine, UNDO, Vec::new()).map(|_| ());
+    let after =
+        call(&engine, GET_QUEUED_CARDS, queue_request()).map(|bytes| read_queue(&bytes).new);
     assert_eq!(
         (opened, answered.map(|_| ()), undone, after),
         (
             Ok(Vec::new()),
             Ok(()),
-            Ok(ANSWER_OPERATION.to_owned()),
-            Ok(untouched(&synthetic))
+            Err(EngineRefusal::NotAllowed {
+                service: 3,
+                method: 8
+            }),
+            Ok(0)
         ),
-        "A5: Undo reverts the answer, names it, and the card is new and first again"
+        "A18: the entry point refuses Undo by its pair, and the answered card stays out of the new queue"
     );
 }
 

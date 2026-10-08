@@ -38,11 +38,11 @@ const GET_QUEUED_CARDS: (u32, u32) = (13, 3);
 const DESCRIBE_NEXT_STATES: (u32, u32) = (13, 24);
 
 /// The native column with the review screen's three pairs (SPEC-345 M1, SPEC-347 R1, SPEC-348 R1),
-/// less `AnswerCard`, which only an owner's press records (SPEC-365 R4).
-const NATIVE: [(u32, u32); 9] = [
+/// less `AnswerCard`, which only an owner's press records (SPEC-365 R4), and less `Undo`, which
+/// only the owner's gesture runs (SPEC-371 R2).
+const NATIVE: [(u32, u32); 8] = [
     (1, 3),
     (3, 0),
-    (3, 8),
     (7, 4),
     (7, 13),
     (7, 22),
@@ -50,9 +50,11 @@ const NATIVE: [(u32, u32); 9] = [
     (13, 24),
     (27, 6),
 ];
-/// The seven exempt writes, held for a gesture on every transport (SPEC-345 M8; SPEC-364 R1).
-const HELD: [(u32, u32); 7] = [
+/// The eight exempt writes, held for a gesture on every transport (SPEC-345 M8; SPEC-364 R1;
+/// SPEC-371 R2).
+const HELD: [(u32, u32); 8] = [
     (1, 6),
+    (3, 8),
     (5, 2),
     (11, 5),
     (13, 17),

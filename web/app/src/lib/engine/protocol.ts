@@ -7,12 +7,15 @@
  * them, completes both faces of the shown card with its media (SPEC-350 R14). The next two log in to
  * the sync server and run a normal sync (SPEC-364 R17, R18). The last two read and forget the sync
  * credential, each answering a status word (SPEC-363 R15). A grade is recorded only by `rate`, on
- * the card shown: no operation answers the queue's head (SPEC-365 R9). */
+ * the card shown: no operation answers the queue's head (SPEC-365 R9). `undo-offer` reads the
+ * review's own last answer and writes nothing, and `undo` reverts only the answer an offer named, by
+ * its card and its step (SPEC-371 R12). */
 export const OPS = [
   'open',
   'seed',
   'next',
   'undo',
+  'undo-offer',
   'snapshot',
   'memory',
   'close',
@@ -37,14 +40,17 @@ export type ErrorCode =
   | 'storage-refused'
   | 'engine-failed'
   | 'not-open'
-  | 'not-shown';
+  | 'not-shown'
+  | 'undo-synced'
+  | 'not-undoable';
 
 /** A wire rating, as Anki's buttons number the answers: again (1) and good (3). */
 export type Rating = 1 | 3;
 
 export type Request =
   | { id: number; op: 'open'; languages?: string[] }
-  | { id: number; op: 'next' | 'undo' | 'memory' | 'close' | 'decks' | 'card' }
+  | { id: number; op: 'next' | 'undo-offer' | 'memory' | 'close' | 'decks' | 'card' }
+  | { id: number; op: 'undo'; card: bigint; step: number }
   | { id: number; op: 'seed'; count: number }
   | { id: number; op: 'snapshot' | 'bury' | 'flag' | 'faces'; card: bigint }
   | { id: number; op: 'study'; deck: bigint }
@@ -110,7 +116,9 @@ export interface Counts {
 }
 
 /** The card the review shows: both sides rendered by the engine with sound and speech tags
- * stripped, the note type's CSS, the four interval labels and the engine's undo label. */
+ * stripped, the note type's CSS, the four interval labels, and whether the review's own last answer
+ * can be undone: `answer` when it can, `synced` when it has synced, `null` when there is none to
+ * undo (SPEC-371 R7). */
 export interface CardView {
   id: bigint;
   ordinal: number;
@@ -119,8 +127,21 @@ export interface CardView {
   answer: string;
   css: string;
   labels: string[];
-  undo: string;
+  undo: 'answer' | 'synced' | null;
 }
+
+/** The grade an offered answer gave, as the review names it. */
+export type OfferGrade = 'again' | 'good';
+
+/** The state an undone answer returns its card to. */
+export type Returns = 'new' | 'learning' | 'review' | 'relearning' | 'preview';
+
+/** What `undo-offer` answers: the review's own last answer, its card's text as one line, its grade
+ * and the state the card goes back to, with the card and the step a confirmation carries back; or
+ * no offer, and why: `synced` when it has synced, `none` for every other reason (SPEC-371 R7). */
+export type UndoOffer =
+  | { offer: { card: bigint; step: number; text: string; grade: OfferGrade; returns: Returns } }
+  | { offer: null; why: 'synced' | 'none' };
 
 /** What `card` answers: the queue's counts, and the card it shows, or `null` when the deck is done. */
 export interface Head {
@@ -192,7 +213,8 @@ const loginText = (value: unknown) => typeof value === 'string' && value.length 
 const ARGS: Record<Op, Record<string, (value: unknown) => boolean>> = {
   open: { languages },
   next: {},
-  undo: {},
+  undo: { card: engineId, step: (value) => whole(value, 0, U32) },
+  'undo-offer': {},
   memory: {},
   close: {},
   decks: {},

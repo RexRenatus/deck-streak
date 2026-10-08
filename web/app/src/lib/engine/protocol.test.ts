@@ -20,7 +20,10 @@ describe('the study operations on the wire', () => {
       { id: 10, op: 'open', languages: ['en'] },
       { id: 11, op: 'open', languages: ['zh-CN', 'en'] },
       { id: 12, op: 'open', languages: undefined },
-      { id: 13, op: 'open', languages: Array(8).fill('en') }
+      { id: 13, op: 'open', languages: Array(8).fill('en') },
+      { id: 14, op: 'undo-offer' },
+      { id: 15, op: 'undo', card: 1001n, step: 0 },
+      { id: 16, op: 'undo', card: I64, step: 2 ** 32 - 1 }
     ];
     for (const request of admitted) {
       expect(parseRequest(request), JSON.stringify(request, (_, v) => String(v))).toEqual({ request });
@@ -64,19 +67,30 @@ describe('the study operations on the wire', () => {
       [{ id: 1, op: 'open', languages: ['zh-CN-x'] }, "open's languages is malformed"],
       [{ id: 1, op: 'open', languages: Array(9).fill('en') }, "open's languages is malformed"],
       [{ id: 1, op: 'open', languages: [['en']] }, "open's languages is malformed"],
-      [{ id: 1, op: 'open', languages: ['en'], sql: 'x' }, 'open takes no sql']
+      [{ id: 1, op: 'open', languages: ['en'], sql: 'x' }, 'open takes no sql'],
+      [{ id: 1, op: 'undo' }, "undo's card is malformed"],
+      [{ id: 1, op: 'undo', card: 0n, step: 1 }, "undo's card is malformed"],
+      [{ id: 1, op: 'undo', card: 1001, step: 1 }, "undo's card is malformed"],
+      [{ id: 1, op: 'undo', card: 1001n }, "undo's step is malformed"],
+      [{ id: 1, op: 'undo', card: 1001n, step: -1 }, "undo's step is malformed"],
+      [{ id: 1, op: 'undo', card: 1001n, step: 1.5 }, "undo's step is malformed"],
+      [{ id: 1, op: 'undo', card: 1001n, step: 2 ** 32 }, "undo's step is malformed"],
+      [{ id: 1, op: 'undo', card: 1001n, step: 1, rating: 3 }, 'undo takes no rating'],
+      [{ id: 1, op: 'undo-offer', card: 1001n }, 'undo-offer takes no card']
     ];
     for (const [request, message] of refused) {
       expect(parseRequest(request), message).toEqual({ id: 1, message });
     }
 
     // the six join the operations the Worker serves, after DEV's seven: the queue-head answer is
-    // gone, and a grade is recorded only by rate (SPEC-365 R9)
+    // gone, and a grade is recorded only by rate (SPEC-365 R9); the undo's offer follows the undo
+    // (SPEC-371 R12)
     expect(OPS).toEqual([
       'open',
       'seed',
       'next',
       'undo',
+      'undo-offer',
       'snapshot',
       'memory',
       'close',

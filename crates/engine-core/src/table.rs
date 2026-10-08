@@ -46,6 +46,8 @@ pub enum ExemptWrite {
     DeleteNote,
     /// The full-sync choice's one-way write, upload or download, of the open collection.
     OneWaySync,
+    /// Undo the review's own last answer, on the card it answered (SPEC-371 R2).
+    Undo,
 }
 
 /// The kind of the one target an exempt write takes.
@@ -154,13 +156,6 @@ pub const ORDINARY: [Ordinary; 18] = [
         web: true,
     },
     Ordinary {
-        service: 3,
-        method: 8,
-        name: "CollectionService.Undo",
-        native: true,
-        web: true,
-    },
-    Ordinary {
         service: 5,
         method: 4,
         name: "CardsService.SetFlag",
@@ -244,6 +239,13 @@ pub const ORDINARY: [Ordinary; 18] = [
         native: false,
         web: true,
     },
+    Ordinary {
+        service: 27,
+        method: 14,
+        name: "CardRenderingService.HtmlToTextLine",
+        native: false,
+        web: true,
+    },
 ];
 
 /// The one call that records a grade, held for an owner's press (SPEC-365 R4; ADR-376 D5).
@@ -276,11 +278,12 @@ pub const ANSWERED: [Answered; 1] = [Answered {
 
 /// The exempt writes: the never-list's entries 2 (Forget), 6 (set due date), 3 (delete a preset),
 /// 7 (change note type) and 8 (delete a card or a note), each one method with one target (SPEC-345
-/// M8), and the full-sync choice's one-way sync, whose one target is the open collection and which
+/// M8), the full-sync choice's one-way sync, whose one target is the open collection and which
 /// runs only through the choice's own write, never through `run_exempt` (SPEC-364 R1, R3; ADR-375
-/// D5). The scheduler switch and every other never-list method stay unlisted, so `run` refuses them
-/// as not allowed (ADR-356 D6).
-pub const EXEMPT: [Exempt; 7] = [
+/// D5), and the undo of the review's own last answer, on its card (SPEC-371 R2). The scheduler
+/// switch and every other never-list method stay unlisted, so `run` refuses them as not allowed
+/// (ADR-356 D6).
+pub const EXEMPT: [Exempt; 8] = [
     Exempt {
         write: ExemptWrite::Forget,
         service: 13,
@@ -329,6 +332,13 @@ pub const EXEMPT: [Exempt; 7] = [
         method: 6,
         name: "BackendSyncService.FullUploadOrDownload",
         kind: TargetKind::Collection,
+    },
+    Exempt {
+        write: ExemptWrite::Undo,
+        service: 3,
+        method: 8,
+        name: "CollectionService.Undo",
+        kind: TargetKind::Card,
     },
 ];
 
