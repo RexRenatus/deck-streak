@@ -243,7 +243,10 @@ oracles of `tests/one_way.rs` and `tests/full_sync.rs` read the stamp through th
 `stamp`, apart from the core, and
 `full_sync::a_reply_that_is_not_integers_is_the_engines_database_error` plants a schema stamp
 that is not an integer, which the engine's hash refuses as its own database error, since the
-stamp's statement answers no fraction.
+stamp's statement answers no fraction. The core's own refusal of a reply that is not the integers
+its statement selects stays asserted, its message and kind byte for byte, by
+`full_sync::a_review_id_that_is_not_an_integer_is_the_cores_own_refusal`, which plants a review id
+that is not an integer.
 
 The model's properties are decided by the formal checker, which this repository's CI does not run;
 section 8 maps the driver's steps to them.
@@ -262,10 +265,10 @@ section 8 maps the driver's steps to them.
 | `crates/engine-core/Cargo.toml` | the test support's dev-dependency for the engine's own sync server |
 | `crates/engine-core/tests/support/sync_server.rs` (new), `crates/engine-core/tests/support/mod.rs` | the engine's own sync server on a loopback port; the stamp's oracle `stamp` (R6) |
 | `crates/engine-core/tests/one_way.rs` (new) | A4 to A11, A15 to A21 |
-| `crates/engine-core/tests/full_sync.rs` | R6: the `held` oracle reads the stamp, and the not-integers test plants a schema stamp that is not an integer (section 3) |
+| `crates/engine-core/tests/full_sync.rs` | R6: the `held` oracle reads the stamp, the not-integers test plants a schema stamp that is not an integer, and a review id that is not an integer keeps the core's own refusal asserted (section 3) |
 | `crates/engine-core/tests/table.rs`, `tests/login_guard.rs`, `tests/exempt.rs`, `tests/containment.rs` | A1, A2, A3, A12 |
 | `crates/engine-core/tests/gesture.rs`, `tests/review_pairs.rs`, `tests/parity.rs` | the existing tests that grow with the table (section 3) |
-| `crates/ffi/src/engine.rs`, `crates/ffi/tests/exempt.rs` | the exempt refusal gains the case `NeedsTheChoice`, mapped and read as its own sentence (an error case, no new export) |
+| `crates/ffi/src/engine.rs`, `crates/ffi/tests/exempt.rs` | the exempt refusal gains the case `NeedsTheChoice`, mapped and read as its own sentence (an error case, no new export); the four earlier sentences stay in one match of a private type, so their mutation row keeps its anchor |
 | `crates/web-engine/src/study.rs`, `crates/web-engine/tests/study.rs` | R1: `service::SYNC` and `SYNC_CALLS`, and A1's web-engine test (no export; `run_method` unchanged) |
 | `docs/specs/SPEC-364-the-web-client-syncs-from-its-worker.md`, `docs/decisions/ADR-375-the-web-client-syncs-from-its-worker.md`, `docs/schematics/web-sync-core.md` | this SPEC, its ADR, its schematic |
 | `docs/decisions/ADR-301-deckstreak-writes-to-the-collection-only-through-declared-write-classes.md` | R12's note |
