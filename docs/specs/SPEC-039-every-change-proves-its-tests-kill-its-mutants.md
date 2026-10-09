@@ -1356,3 +1356,14 @@ A78: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_refusal
 A79: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_refuses_every_name_that_reaches_what_it_has_not_read
 A80: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_missing_tool.py -k test_the_census_names_each_refusal_and_reads_annotations_and_dotted_names_whole
 ```
+
+## 38. Amendment: the web legs' bound is 100 minutes (SPEC-379)
+
+Insert-only; every earlier byte is kept. R18's list of the mutation jobs' own bounds names
+`mutation-web` 60, and section 8 read the release's Mini App files as swept inside
+`mutation-web`'s 60. The weekly battery's whole sweep has since been cut at that bound (job
+113826350088), so SPEC-379 R1 raises `mutation-web`'s `timeout-minutes` to 100, and the weekly
+battery's `web` job's with it, by its stated rule from measured whole-app sweeps, and
+`WEB_MUTATION_TIMEOUT_MINUTES` in `scripts/tests/test_ci_workflows.py` holds both inside 100 to 120
+(ADR-390). No other bound in R18 changes, R3's `mutation-web` still mutates every changed web
+file whole, and no StrykerJS setting changes.

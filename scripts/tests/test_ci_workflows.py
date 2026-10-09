@@ -2779,6 +2779,13 @@ HARNESS_TIMEOUT_MINUTES = range(150, 181)
 # after 60:26, so the band starts at one and a half times that run, rounded up to the minute, and
 # ends at twice it, rounded down to the ten, so a hung test still ends within two hours.
 RELEASE_TIMEOUT_MINUTES = range(91, 121)
+# The two web mutation legs' timeout (SPEC-379 R1, R2): the weekly battery's `web` job and the
+# pull request's `mutation-web` job each run StrykerJS over up to the whole Mini App. The band
+# starts at the bound its rule gives, the worst measured cost per mutant times the larger measured
+# count, one and a half times, plus the set-up and the report, rounded up to the five, so a leg set
+# back to 60 is refused; it ends at twice the projected whole sweep, rounded down to the ten, so a
+# hung test still ends within two hours.
+WEB_MUTATION_TIMEOUT_MINUTES = range(100, 121)
 
 
 def engine_job_problems(workflow):
@@ -8944,6 +8951,82 @@ class TheRereleaseCheck(unittest.TestCase):
         else:
             self.fail(f"the cron {fields} is neither daily nor weekly")
         self.assertGreaterEqual(lead, interval)
+
+
+# ------------------------------------------- the web mutation legs' bound (SPEC-379 R1, R2)
+
+# The jobs that run StrykerJS over the Mini App, each a (workflow file, job) pair: the weekly
+# battery's whole sweep, and the pull request's leg, which mutates every changed web file whole.
+WEB_MUTATION_LEGS = (("mutation-weekly.yml", "web"), ("ci.yml", "mutation-web"))
+
+
+def web_mutation_bound_problems(workflows):
+    """What the web mutation legs get wrong about their bound (SPEC-379 R1, R2): a leg missing, or
+    a leg whose `timeout-minutes` is unset, not a digit string, or outside the band, each named by
+    its workflow file and its job. `workflows` maps each file name to the workflow read from it. A
+    leg cut at its bound writes no report, so its verdict reads VOID and judges no mutant."""
+    band = f"{WEB_MUTATION_TIMEOUT_MINUTES.start} to {WEB_MUTATION_TIMEOUT_MINUTES.stop - 1}"
+    problems = []
+    for name, job_id in WEB_MUTATION_LEGS:
+        job = ((workflows.get(name) or {}).get("jobs") or {}).get(job_id)
+        if job is None:
+            problems.append(f"{name} has no {job_id} job")
+            continue
+        minutes = str(job.get("timeout-minutes") or "")
+        if not minutes.isdigit() or int(minutes) not in WEB_MUTATION_TIMEOUT_MINUTES:
+            problems.append(
+                f"{name}: the {job_id} job's timeout is {minutes or 'unset'}, not {band} minutes"
+            )
+    return problems
+
+
+class TheWebMutationLegsHoldTheWholeSweep(unittest.TestCase):
+    def test_both_web_mutation_legs_hold_the_whole_mini_app_sweep(self):
+        """SPEC-379 A1: the weekly battery's `web` job and `ci.yml`'s `mutation-web` job each
+        declare a `timeout-minutes` inside the band the whole Mini App's sweep needs, so neither
+        leg is cut before its report is written."""
+        legs = examined("web mutation legs", WEB_MUTATION_LEGS)
+        workflows = {name: load(name) for name, _ in legs}
+        self.assertEqual(web_mutation_bound_problems(workflows), [])
+
+    def test_a_web_leg_bound_outside_the_band_is_refused_by_its_leg(self):
+        """SPEC-379 A2: the checker accepts both legs at the band's floor and at its ceiling, and
+        refuses each leg's bound set back to 60, set one past the ceiling, or removed, naming that
+        leg alone. Every copy is planted from the workflow files with both bounds set here, so the
+        test pins the checker, not the tree's own bounds."""
+        texts = {name: workflow_file_text(WORKFLOWS / name) for name, _ in WEB_MUTATION_LEGS}
+        live = {
+            name: load(name)["jobs"][job_id].get("timeout-minutes")
+            for name, job_id in WEB_MUTATION_LEGS
+        }
+
+        def leg(name, job_id, minutes):
+            line = "" if minutes is None else f"    timeout-minutes: {minutes}\n"
+            old = f"    timeout-minutes: {live[name]}\n"
+            return planted_job(texts[name], job_id, (old, line))
+
+        floor = WEB_MUTATION_TIMEOUT_MINUTES.start
+        ceiling = WEB_MUTATION_TIMEOUT_MINUTES.stop - 1
+        band = f"{floor} to {ceiling}"
+        for minutes in (floor, ceiling):
+            with self.subTest(control=minutes):
+                both = {name: leg(name, job_id, minutes) for name, job_id in WEB_MUTATION_LEGS}
+                self.assertEqual(web_mutation_bound_problems(both), [])
+        plants = [
+            (
+                name,
+                job_id,
+                minutes,
+                f"{name}: the {job_id} job's timeout is {shown}, not {band} minutes",
+            )
+            for name, job_id in WEB_MUTATION_LEGS
+            for minutes, shown in ((60, "60"), (ceiling + 1, str(ceiling + 1)), (None, "unset"))
+        ]
+        for name, job_id, minutes, refusal in examined("planted web leg bounds", plants):
+            with self.subTest(leg=f"{name} {job_id}", minutes=minutes):
+                workflows = {other: leg(other, job, floor) for other, job in WEB_MUTATION_LEGS}
+                workflows[name] = leg(name, job_id, minutes)
+                self.assertEqual(web_mutation_bound_problems(workflows), [refusal])
 
 
 if __name__ == "__main__":
