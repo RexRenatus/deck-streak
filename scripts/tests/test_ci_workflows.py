@@ -4805,6 +4805,15 @@ NOT_WORKFLOW_READS = {
         ),
     ),
     **allowed(
+        "the card Playwright configuration, which card_projects reads for its project names; never handed to the reader",
+        (
+            "test_ci_workflows",
+            "card_projects",
+            "(REPO / CARD_PLAYWRIGHT_CONFIG).read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
         "calls run_step, which runs a cache step's shell over a planted lockfile's text and reads its outputs",
         (
             "test_ci_workflows",

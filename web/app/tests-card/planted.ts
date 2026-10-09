@@ -197,10 +197,12 @@ export const LAYERS: readonly Layer[] = ['W1', 'W2', 'W3', 'W4'];
 export const UNOBSERVABLE: readonly Unobservable[] = [
   { engine: 'chromium', id: 'dns-prefetch', why: 'a DNS lookup reaches no listener a test owns' },
   { engine: 'webkit', id: 'dns-prefetch', why: 'a DNS lookup reaches no listener a test owns' },
+  { engine: 'firefox', id: 'dns-prefetch', why: 'a DNS lookup reaches no listener a test owns' },
   { engine: 'webkit', id: 'prefetch', why: 'measured: WebKit under the suite sends no prefetch request' },
   { engine: 'chromium', id: 'preconnect', why: 'measured: Chromium under the suite opens no preconnect connection' },
   { engine: 'chromium', id: 'shadow-link', why: 'measured: Chromium under the suite opens no preconnect connection, in a shadow tree or out of one' },
   { engine: 'chromium', id: 'external-scheme', why: 'no listener sees a mail handler launch' },
+  { engine: 'firefox', id: 'external-scheme', why: 'no listener sees a mail handler launch' },
   { engine: 'webkit', id: 'external-scheme', why: 'no listener sees a mail handler launch' }
 ];
 
