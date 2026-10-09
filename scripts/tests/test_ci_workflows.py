@@ -6402,6 +6402,15 @@ NOT_WORKFLOW_READS = {
             1,
         ),
     ),
+    **allowed(
+        "the re-release script's own source, which the lead test parses as a syntax tree to read a constant; a production script, never handed to the reader",
+        (
+            "test_ci_workflows",
+            "TheRereleaseCheck.test_a15_the_rerelease_lead_covers_the_schedule_interval",
+            "script.read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
 }
 
 # Every site in the test directory that imports, runs code or reaches a namespace by a name held
@@ -6961,6 +6970,32 @@ DYNAMIC_IMPORTS = {
     **allowed(
         "splits a settings value the test already holds as text into its scheme and host, to judge the sync endpoint (SPEC-347 A13); text in and parts out, and it imports, runs and reads nothing",
         ("test_ios_app_tree", "settings_problems", "urlsplit(value.replace('$()', ''))", 1),
+    ),
+    **allowed(
+        "loads the re-release production script by the path the call names; never a module of the test directory",
+        ("test_testflight_age", "load_script", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_testflight_age",
+            "load_script",
+            "importlib.util.spec_from_file_location('testflight_age_under_test', SCRIPT)",
+            1,
+        ),
+        ("test_testflight_age", "load_script", "spec.loader.exec_module(module)", 1),
+    ),
+    **allowed(
+        "decodes a base64 segment of a token the test already holds as text, to check no credential part reaches a child or the log; text in and bytes out, and it imports, runs and reads nothing",
+        (
+            "test_testflight_age",
+            "TheCheckDecides.test_a14_no_credential_part_reaches_a_child_or_the_log.<locals>.decode",
+            "base64.urlsafe_b64decode(segment + '=' * (-len(segment) % 4))",
+            1,
+        ),
+        (
+            "test_testflight_age",
+            "TheCheckHoldsItsEdges.test_the_read_is_made_as_specified",
+            "base64.urlsafe_b64decode(head + '=' * (-len(head) % 4))",
+            1,
+        ),
     ),
 }
 
@@ -8579,8 +8614,8 @@ class TheRereleaseCheck(unittest.TestCase):
         self.assertNotIn("latest", job["runs-on"])
         self.assertEqual(job["environment"], "rerelease-read")
         self.assertEqual(job["permissions"], {"contents": "read", "actions": "write"})
-        self.assertEqual(job["concurrency"]["group"], "testflight-rerelease-check")
-        self.assertEqual(str(job["concurrency"]["cancel-in-progress"]).lower(), "false")
+        self.assertEqual(workflow["concurrency"]["group"], "testflight-rerelease-check")
+        self.assertEqual(str(workflow["concurrency"]["cancel-in-progress"]).lower(), "false")
         self.assertNotIn("env", job)
         self.assertNotIn("env", workflow)
         pin = None

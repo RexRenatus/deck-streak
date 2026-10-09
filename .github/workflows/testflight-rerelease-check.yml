@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: testflight-rerelease-check
+  cancel-in-progress: false
+
 jobs:
   rerelease:
     runs-on: ubuntu-24.04
@@ -15,9 +19,6 @@ jobs:
     permissions:
       contents: read
       actions: write
-    concurrency:
-      group: testflight-rerelease-check
-      cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
