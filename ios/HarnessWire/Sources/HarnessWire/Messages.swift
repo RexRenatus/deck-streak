@@ -129,7 +129,8 @@ public struct DeckName: Equatable, Sendable {
 
 /// One card of `QueuedCards`, with its current state and the four states an answer sends back,
 /// one per rating. The three beside Good's default to empty, so the five-argument call the harness
-/// makes still reads (SPEC-348 section 10).
+/// makes still reads (SPEC-348 section 10). Its flag is the card's `Card.flags`, the engine's
+/// number, red as 1; it defaults to none, 0 (SPEC-358 R3).
 public struct QueuedCard: Equatable, Sendable {
     public var cardID: Int64
     public var noteID: Int64
@@ -139,11 +140,12 @@ public struct QueuedCard: Equatable, Sendable {
     public var hardState: [UInt8]
     public var goodState: [UInt8]
     public var easyState: [UInt8]
+    public var flag: UInt32
 
     public init(
         cardID: Int64, noteID: Int64, queue: Int32, currentState: [UInt8],
         againState: [UInt8] = [], hardState: [UInt8] = [], goodState: [UInt8],
-        easyState: [UInt8] = []
+        easyState: [UInt8] = [], flag: UInt32 = 0
     ) {
         self.cardID = cardID
         self.noteID = noteID
@@ -153,6 +155,7 @@ public struct QueuedCard: Equatable, Sendable {
         self.hardState = hardState
         self.goodState = goodState
         self.easyState = easyState
+        self.flag = flag
     }
 
     /// The state an answer of `rating` sends back as its new state: the rating's own (R10). The
@@ -230,7 +233,8 @@ public enum Responses {
             reviewCount: UInt32(truncatingIfNeeded: queue.varint(4)))
     }
 
-    /// `QueuedCard`: `card` (1), a `Card` whose `id` (1) and `note_id` (2) the harness reads;
+    /// `QueuedCard`: `card` (1), a `Card` whose `id` (1), `note_id` (2) and `flags` (17) the
+    /// harness reads;
     /// `queue` (2); and `states` (3), a `SchedulingStates` whose `current` (1), `again` (2),
     /// `hard` (3), `good` (4) and `easy` (5) an answer sends back as they came.
     static func queuedCard(_ bytes: [UInt8]) throws -> QueuedCard {
@@ -245,7 +249,8 @@ public enum Responses {
             againState: states.lengthDelimited(2) ?? [],
             hardState: states.lengthDelimited(3) ?? [],
             goodState: states.lengthDelimited(4) ?? [],
-            easyState: states.lengthDelimited(5) ?? [])
+            easyState: states.lengthDelimited(5) ?? [],
+            flag: UInt32(truncatingIfNeeded: card.varint(17)))
     }
 
     /// `StringList`: `vals` (1), each a UTF-8 string, in order: the intervals (13,24) gives, one

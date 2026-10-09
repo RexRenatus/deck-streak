@@ -57,6 +57,9 @@ struct VoiceLanguage: Equatable, Sendable {
 /// adapter's Rust side is `Send + Sync`. The voice choices live here too, beside the collection
 /// and never inside it, because the engine's types stop at this file (SPEC-348 R6, R14).
 actor EngineSession {
+    /// The engine's red flag, read once from the adapter, so the app holds no copy of the
+    /// core's rule (SPEC-358 R3, ADR-369 O4).
+    nonisolated let red = redFlag()
     private var engine: Engine?
     private var choices = VoiceChoices.open(path: "")
 
@@ -125,6 +128,19 @@ actor EngineSession {
                 states: Data(Requests.describeNextStates(card)),
                 millisecondsTaken: millisecondsTaken)
         }
+    }
+
+    /// Buries `card` as the user's bury of one card, through the adapter (SPEC-358 R3).
+    func bury(_ card: QueuedCard) throws {
+        let engine = try started()
+        try refused { try engine.bury(cardId: card.cardID) }
+    }
+
+    /// Toggles red on `card` from the flag it carries, through the adapter, and answers the
+    /// card's new flag (SPEC-358 R3): the app builds no request and computes no flag.
+    func flag(_ card: QueuedCard) throws -> UInt32 {
+        let engine = try started()
+        return try refused { try engine.flag(cardId: card.cardID, flag: card.flag) }
     }
 
     /// The face of `cardID`: its question, or its answer when `answer` is set, with the clips to

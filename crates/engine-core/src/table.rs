@@ -159,7 +159,7 @@ pub const ORDINARY: [Ordinary; 18] = [
         service: 5,
         method: 4,
         name: "CardsService.SetFlag",
-        native: false,
+        native: true,
         web: true,
     },
     Ordinary {
@@ -194,7 +194,7 @@ pub const ORDINARY: [Ordinary; 18] = [
         service: 13,
         method: 14,
         name: "SchedulerService.BuryOrSuspendCards",
-        native: false,
+        native: true,
         web: true,
     },
     Ordinary {

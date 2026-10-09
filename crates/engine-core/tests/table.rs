@@ -21,14 +21,17 @@ use deck_streak_engine_core::table::{
 
 /// The pairs the native adapter's allow-list holds (SPEC-345 M1), with the review screen's three
 /// (SPEC-348 R1), less `AnswerCard`, which only an owner's press records (SPEC-365 R4, R6), and
-/// less `Undo`, which only an owner's gesture runs (SPEC-371 R2).
-const NATIVE: [(u32, u32); 8] = [
+/// less `Undo`, which only an owner's gesture runs (SPEC-371 R2), and with the review's bury and
+/// flag, which the native review runs as the web's does (SPEC-358 R1).
+const NATIVE: [(u32, u32); 10] = [
     (1, 3),
     (3, 0),
+    (5, 4),
     (7, 4),
     (7, 13),
     (7, 22),
     (13, 3),
+    (13, 14),
     (13, 24),
     (27, 6),
 ];
@@ -206,8 +209,8 @@ fn each_exempt_write_names_its_engine_call_and_its_target_kind() {
 
 /// The review's eight pairs (SPEC-350 R1, M10), each with the engine's name for it and what the
 /// native transport decides for it, written from the engine's protos at the pin, never read from
-/// the core: four new rows the web alone may call, and four both may (the card render, and the
-/// three the native review screen also calls, SPEC-348 R1).
+/// the core: two rows the web alone may call, and six both may (the card render, the three the
+/// native review screen also calls, SPEC-348 R1, and its bury and flag, SPEC-358 R1).
 const REVIEW: [(u32, u32, &str, Decision); 8] = [
     (7, 4, "DecksService.DeckTree", Decision::Admit),
     (7, 22, "DecksService.SetCurrentDeck", Decision::Admit),
@@ -239,9 +242,9 @@ const REVIEW: [(u32, u32, &str, Decision); 8] = [
         13,
         14,
         "SchedulerService.BuryOrSuspendCards",
-        Decision::NotAllowed,
+        Decision::Admit,
     ),
-    (5, 4, "CardsService.SetFlag", Decision::NotAllowed),
+    (5, 4, "CardsService.SetFlag", Decision::Admit),
 ];
 
 #[test]

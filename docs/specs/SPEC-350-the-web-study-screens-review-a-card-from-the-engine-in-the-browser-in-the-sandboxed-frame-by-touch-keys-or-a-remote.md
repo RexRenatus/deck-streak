@@ -150,8 +150,8 @@ R13. **The study suite.** A Playwright suite runs the built app over the real mo
 | A1 | The study calls are the review's sixteen pairs | the eight-pair table | `crates/web-engine/tests/study.rs` `the_study_calls_are_the_reviews_pairs` |
 | A2 | The core names each review pair ordinary on the web and the web column equals the study calls | `decide(Web, 7, 4)` reads `NotAllowed` | `crates/engine-core/tests/table.rs` `the_review_pairs_are_ordinary_on_the_web`; SPEC-345's `crates/engine-core/tests/parity.rs` `each_adapter_table_equals_its_transport_column` |
 | A3 | Only the shown card is rated, buried or flagged | a guard that admits any id | `crates/web-engine/tests/study.rs` `only_the_shown_card_is_rated_buried_or_flagged` |
-| A4 | The flag action toggles red, and a card with another flag turns red | a toggle that returns its input | `crates/web-engine/tests/study.rs` `the_flag_toggles_red` |
-| A5 | Bury is the user's bury of the one shown card | the scheduler's bury mode | `crates/web-engine/tests/study.rs` `bury_is_the_users_bury_of_the_shown_card` |
+| A4 | The flag action toggles red, and a card with another flag turns red | a toggle that returns its input | `crates/engine-core/tests/review.rs` `the_flag_toggles_red` |
+| A5 | Bury is the user's bury of the one shown card | the scheduler's bury mode | `crates/engine-core/tests/review.rs` `bury_is_the_users_bury_of_the_shown_card` |
 | A6 | Each study operation parses its arguments and refuses any other | `OPS` without them | `web/app/src/lib/engine/protocol.test.ts` "each study operation parses its arguments and refuses any other" |
 | A7 | Each study operation reaches its engine call, and a stale card is refused as `not-shown` | the session's default refusal | `web/app/src/lib/engine/session.test.ts` "each study operation reaches its engine call" |
 | A8 | The client posts each study operation and settles its answer | no such method | `web/app/src/lib/engine/client.test.ts` "the client posts each study operation and settles its answer" |
@@ -179,8 +179,8 @@ A1: cargo test -p deck-streak-web-engine --test study -- --exact the_study_calls
 A2: cargo test -p deck-streak-engine-core --test table -- --exact the_review_pairs_are_ordinary_on_the_web
 A2: cargo test -p deck-streak-engine-core --test parity -- --exact each_adapter_table_equals_its_transport_column
 A3: cargo test -p deck-streak-web-engine --test study -- --exact only_the_shown_card_is_rated_buried_or_flagged
-A4: cargo test -p deck-streak-web-engine --test study -- --exact the_flag_toggles_red
-A5: cargo test -p deck-streak-web-engine --test study -- --exact bury_is_the_users_bury_of_the_shown_card
+A4: cargo test -p deck-streak-engine-core --test review -- --exact the_flag_toggles_red
+A5: cargo test -p deck-streak-engine-core --test review -- --exact bury_is_the_users_bury_of_the_shown_card
 A6: pnpm exec vitest run web/app/src/lib/engine/protocol.test.ts -t "each study operation parses its arguments and refuses any other"
 A7: pnpm exec vitest run web/app/src/lib/engine/session.test.ts -t "each study operation reaches its engine call"
 A8: pnpm exec vitest run web/app/src/lib/engine/client.test.ts -t "the client posts each study operation and settles its answer"
@@ -559,3 +559,9 @@ A29: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -
 A29: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k the_release_builds_and_gates_the_module_as_ci_does
 A29: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k an_over_budget_module_stops_the_release_before_the_draft
 ```
+
+## Amendment: A4 and A5 are decided in the core (SPEC-358)
+
+- SPEC-358 R2 moves the flag and bury rules into the shared core, and A4's and A5's tests move
+  with them, names kept: `crates/engine-core/tests/review.rs` `the_flag_toggles_red` and
+  `bury_is_the_users_bury_of_the_shown_card` (#633).

@@ -24,6 +24,8 @@ final class ReviewModel {
     private(set) var plan: [ReviewClip] = []
     /// Whether the shown face is the answer, so the bar offers the two grades.
     private(set) var revealed = false
+    /// Whether the shown card carries the engine's red flag (SPEC-358 R5).
+    private(set) var flagged = false
     /// The answers sent, raised by one with each; the impact haptic's trigger (R12).
     private(set) var answered = 0
     /// One line each: a refusal's sentence, and each sound the player refused on this face.
@@ -60,6 +62,9 @@ final class ReviewModel {
 
     /// The one entry for the review screen's gestures (SPEC-348 R16). Show Answer starts only
     /// from a question and a rating only from an answer; each writes its phase before it awaits.
+    /// Bury and flag start from either side and write `marking`: a bury then shows the next
+    /// card, and a flag returns to the side it started from (SPEC-358 R5). Replay and stop go
+    /// to the player from any phase.
     func perform(_ action: ReviewAction) async {
         switch (action, phase) {
         case (.showAnswer, .question):
@@ -78,12 +83,21 @@ final class ReviewModel {
                 answered += 1
                 try await next()
             }
-        case (.replay, _):
-            player.play(face.replay)
-        case (.stop, _):
-            player.stop()
+        case (.bury, .question), (.bury, .answer):
+            phase = .marking
+            await run {
+                try await session.bury()
+                try await next()
+            }
+        case (.flag, .question), (.flag, .answer):
+            let side = phase
+            phase = .marking
+            await run {
+                flagged = try await session.flag() == session.red
+                phase = side
+            }
         default:
-            break
+            ReviewPlayback.perform(action, face: face, player: player)
         }
     }
 
@@ -106,6 +120,7 @@ final class ReviewModel {
         counts = step.counts
         intervals = step.intervals
         revealed = false
+        flagged = step.flag == session.red
         show(step.face)
         phase = step.phase
     }
