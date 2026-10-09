@@ -1,0 +1,188 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S38700-PRESET-FIELD-ORDER",
+        "ingest",
+        "src/preset.rs",
+        "        (fsrs6, ParameterField::Fsrs6),\n        (fsrs5, ParameterField::Fsrs5),\n",
+        "        (fsrs5, ParameterField::Fsrs5),\n        (fsrs6, ParameterField::Fsrs6),\n",
+        "preset::the_stored_vector_comes_from_the_newest_field_that_holds_one",
+        "the stored vector comes from the FSRS-6 field before the FSRS-5 one, the precedence the engine schedules with; swapped, a preset holding both reads its older vector (SPEC-387 R2, A2)"
+      ],
+      [
+        "S38701-PRESET-EMPTY-FIELD",
+        "ingest",
+        "src/preset.rs",
+        "    .find(|(values, _)| !values.is_empty())\n",
+        "    .find(|(values, _)| !values.is_empty() || true)\n",
+        "preset::the_stored_vector_comes_from_the_newest_field_that_holds_one",
+        "an empty field is skipped for the next one that holds values; taken, a preset fitted under an older generation reads as an empty FSRS-6 vector (SPEC-387 R2, A2)"
+      ],
+      [
+        "S38702-PRESET-NON-NEW-COUNT",
+        "ingest",
+        "src/preset.rs",
+        "    OR (odid != 0 AND odid IN (SELECT value FROM json_each(?1)))) AND type != 0\";\n",
+        "    OR (odid != 0 AND odid IN (SELECT value FROM json_each(?1)))) AND type >= 0\";\n",
+        "preset::every_preset_is_read_with_its_vector_retention_decks_and_non_new_cards",
+        "the count a parameter change recomputes leaves new cards out, as the engine's recompute set does; counted, every preset's non-new count grows by its new cards (SPEC-387 R1, A1)"
+      ],
+      [
+        "S38703-PRESET-DECK-IDS",
+        "ingest",
+        "src/preset.rs",
+        "                .filter(|(_, preset)| *preset == id)\n",
+        "                .filter(|(_, preset)| *preset == id || *preset != id)\n",
+        "preset::every_preset_is_read_with_its_vector_retention_decks_and_non_new_cards",
+        "a preset's decks are the normal decks that name it; kept whatever preset they name, every preset lists every deck and counts their cards (SPEC-387 R1, A1)"
+      ],
+      [
+        "S38704-PROPOSAL-DEFAULTS",
+        "ingest",
+        "src/preset.rs",
+        "        let proposed = defaults.to_vec();\n",
+        "        let proposed = preset.vector.clone();\n",
+        "preset::a_proposal_carries_the_released_defaults_and_records_the_undo_values",
+        "the proposed vector is the defaults the engine's deck-options read reports; read from the stored vector, the proposal would propose the fit it replaces (SPEC-387 R3, A3)"
+      ],
+      [
+        "S38705-PROPOSAL-UNDO-VALUES",
+        "ingest",
+        "src/preset.rs",
+        "        let prior = encode(&preset.vector);\n",
+        "        let prior = encode(&proposed);\n",
+        "preset::a_proposal_carries_the_released_defaults_and_records_the_undo_values",
+        "the record binds the stored vector as the undo values; bound from the proposed vector, the undo would restore the defaults rather than the fit (SPEC-387 R4, A3)"
+      ],
+      [
+        "S38706-PROPOSAL-RETENTION",
+        "ingest",
+        "src/preset.rs",
+        "        let retention = f64::from(preset.desired_retention);\n",
+        "        let retention = f64::from(0.9_f32);\n",
+        "preset::a_proposal_carries_the_released_defaults_and_records_the_undo_values",
+        "the record binds the preset's own desired retention; a fixed 0.9 loses the main preset's 0.85, which verify compares to judge retention kept (SPEC-387 R4, A3)"
+      ],
+      [
+        "S38707-ON-DEFAULTS",
+        "ingest",
+        "src/preset.rs",
+        "same(&preset.vector, defaults).then_some(",
+        "(same(&preset.vector, defaults) && false).then_some(",
+        "preset::a_preset_already_on_the_defaults_records_no_proposal",
+        "a preset already on the defaults records nothing; with the test false, it gets a proposal of the values it already holds (SPEC-387 R4, A4)"
+      ],
+      [
+        "S38708-OPEN-REUSED",
+        "ingest",
+        "src/preset.rs",
+        "open_proposal(&mut write, preset.id).await? {\n",
+        "open_proposal(&mut write, preset.id).await?.filter(|_| false) {\n",
+        "preset::a_preset_holds_at_most_one_open_proposal",
+        "a second propose answers the open proposal again; with the lookup's hit skipped, it inserts a second open row, which the partial unique index refuses as an error (SPEC-387 R4, A5)"
+      ],
+      [
+        "S38709-VERIFY-MOVED",
+        "ingest",
+        "src/preset.rs",
+        "            Some(held) if same(&held.vector, &found.proposed_vector) => (\n",
+        "            Some(held) if same(&held.vector, &found.prior_vector) => (\n",
+        "preset::verify_settles_an_open_proposal_once_by_what_the_copy_holds",
+        "verify settles moved when the copy holds the proposed vector; compared with the prior one, the untouched preset reads moved and the moved one diverged (SPEC-387 R7, A6)"
+      ],
+      [
+        "S38710-VERIFY-STAYS-OPEN",
+        "ingest",
+        "src/preset.rs",
+        "            Some(held) if same(&held.vector, &found.prior_vector) => (ProposalState::Open, None),\n",
+        "            Some(held) if same(&held.vector, &found.prior_vector) => (ProposalState::Diverged, None),\n",
+        "preset::verify_settles_an_open_proposal_once_by_what_the_copy_holds",
+        "while the copy still holds the prior vector the proposal stays open and nothing is recorded; settled diverged, a proposal the owner has not applied yet is closed (SPEC-387 R7, A6)"
+      ],
+      [
+        "S38711-VERIFY-RETENTION-KEPT",
+        "ingest",
+        "src/preset.rs",
+        "held.desired_retention.to_bits() == found.desired_retention.to_bits(),\n",
+        "held.desired_retention.to_bits() != found.desired_retention.to_bits(),\n",
+        "preset::verify_settles_an_open_proposal_once_by_what_the_copy_holds",
+        "a moved proposal records whether desired retention is unchanged, bit for bit; compared for inequality, a kept retention reads changed (SPEC-387 R7, A6)"
+      ],
+      [
+        "S38712-VERIFY-SETTLE-ONCE",
+        "ingest",
+        "src/preset.rs",
+        "        let settled = sqlx::query!(\n            \"UPDATE preset_proposals SET state = ?2, settled_at = ?3, retention_kept = ?4 \\\n             WHERE id = ?1 AND state = 'open'\",\n            proposal,\n            name,\n            settled_at,\n            retention_kept\n        )\n",
+        "        let settled = sqlx::query(\n            \"UPDATE preset_proposals SET state = ?2, settled_at = ?3, retention_kept = ?4 \\\n             WHERE id = ?1\",\n        )\n        .bind(proposal)\n        .bind(name)\n        .bind(settled_at)\n        .bind(retention_kept)\n",
+        "preset::verify_settles_an_open_proposal_once_by_what_the_copy_holds",
+        "the settle is guarded by the row's open state, so a settled proposal is never settled again; re-spelt at run time without the guard, a second verify re-settles it with a new time (SPEC-387 R7, A6)"
+      ],
+      [
+        "S38713-TEXT-STEPS",
+        "ingest",
+        "src/preset.rs",
+        "        \"Leave \\\"Reschedule cards on change\\\" off.\".to_owned(),\n",
+        "",
+        "preset::the_proposal_text_names_the_values_the_steps_the_reach_and_the_undo",
+        "the proposal's steps tell the owner to leave rescheduling off, so no due date moves; removed, the text no longer says it (SPEC-387 R6, A9)"
+      ],
+      [
+        "S38714-TEXT-VALUES",
+        "ingest",
+        "src/preset.rs",
+        "        .map(|value| format!(\"{value}\"))\n",
+        "        .map(|value| format!(\"{value:.4}\"))\n",
+        "preset::the_proposal_text_names_the_values_the_steps_the_reach_and_the_undo",
+        "each value is printed as the shortest text that parses back to the same number; at four places a pasted default parses to another value (SPEC-387 R6, A9)"
+      ],
+      [
+        "S38715-TEXT-UNDO",
+        "ingest",
+        "src/preset.rs",
+        "            values_line(&proposal.prior_vector)\n",
+        "            values_line(&proposal.proposed_vector)\n",
+        "preset::the_proposal_text_names_the_values_the_steps_the_reach_and_the_undo",
+        "the undo line holds the prior values; from the proposed ones, the undo would paste the defaults back (SPEC-387 R6, A9)"
+      ],
+      [
+        "S38716-LISTING-ORDER",
+        "ingest",
+        "src/preset.rs",
+        "        b.non_new_cards\n            .cmp(&a.non_new_cards)\n",
+        "        a.non_new_cards\n            .cmp(&b.non_new_cards)\n",
+        "preset::the_listing_puts_the_main_preset_first",
+        "the listing puts the preset with the most non-new cards first, so its first line is the main preset; fewest first, the main preset sinks (SPEC-387 R5, A10)"
+      ],
+      [
+        "S38717-ROLE-NAME",
+        "daemon",
+        "src/main.rs",
+        "            [name, command @ ..] if name == \"preset\" => {\n",
+        "            [name, command @ ..] if name == \"presets\" => {\n",
+        "bin::tests::the_preset_role_parses_its_three_commands_and_refuses_every_other_shape",
+        "the preset role is parsed by its name; spelt presets, `preset list` parses to no role (SPEC-387 R4, R5, A11)"
+      ],
+      [
+        "S38719-RIGHTS-ERASE",
+        "ingest",
+        "src/data_rights.rs",
+        "            sqlx::query!(\"DELETE FROM preset_proposals\")\n",
+        "            sqlx::query!(\"DELETE FROM sync_runs\")\n",
+        "data_rights::preset_proposals_are_exported_and_erased",
+        "the owner's erase deletes every preset_proposals row; aimed at another table, the proposals outlive the erase (SPEC-387 R9, A12)"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S38718-ONE-OPEN-INDEX",
+        "migrations/038701_ingest_preset_proposals.sql",
+        "CREATE UNIQUE INDEX preset_proposals_one_open ON preset_proposals (preset_id) WHERE state = 'open';\n",
+        "CREATE UNIQUE INDEX preset_proposals_one_open ON preset_proposals (preset_id);\n",
+        "ingest",
+        "preset::a_preset_holds_at_most_one_open_proposal",
+        "at most one proposal per preset is open, and a settled one leaves room for a new one beside it; with the index's WHERE dropped, a preset can never be proposed again after a settle (SPEC-387 R4, A5)"
+      ]
+    ]
+  }
+}
