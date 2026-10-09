@@ -18,6 +18,8 @@ const EXPECTED = {
   'engine-failed': 'study_refused_engine',
   'not-open': 'study_refused_not_open',
   'not-shown': 'study_refused_not_shown',
+  'undo-synced': 'undo_synced',
+  'not-undoable': 'undo_gone',
   escaped: 'study_card_escaped',
   done: 'study_done'
 };

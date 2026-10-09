@@ -3,7 +3,11 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
+use deck_streak_engine_core::answer::{
+    AnswerRefusal, Grade, OwnerAnswer, answer_request, shown_states,
+};
 use deck_streak_engine_core::dispatch::{Dispatcher, Refusal};
 use deck_streak_engine_core::face::Side;
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
@@ -151,16 +155,126 @@ impl Engine {
             .map(|face| CardFace::new(face, night))
             .map_err(refusal)
     }
+
+    /// Records one owner's press: `grade` on the card `card`, which the queue showed with the
+    /// encoded `SchedulingStates` in `states`, after `milliseconds_taken` (SPEC-365 R6). This is
+    /// the adapter's one answer entry, and the only place it builds an owner's answer: the request
+    /// names the press's card, its grade's rating and the next state its grade picks out of the
+    /// states the card was shown with, at the time the adapter's clock reads.
+    ///
+    /// # Errors
+    ///
+    /// [`PressRefusal::Undecodable`] when `states` are not the engine's `SchedulingStates`, before
+    /// the engine sees anything, and [`PressRefusal::Engine`] when the engine refuses the answer.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "a foreign caller's bytes cross the boundary owned, as the bindings pass them"
+    )]
+    pub fn answer(
+        &self,
+        card: i64,
+        grade: PressedGrade,
+        states: Vec<u8>,
+        milliseconds_taken: u32,
+    ) -> Result<Vec<u8>, PressRefusal> {
+        let grade = core_grade(grade);
+        let states = shown_states(&states).map_err(press_refusal)?;
+        let next = grade.pick(states.again, states.good);
+        let request = answer_request(
+            card,
+            states.current,
+            next,
+            grade,
+            now_millis(),
+            milliseconds_taken,
+        );
+        let answer = OwnerAnswer::from_press(card, grade);
+        self.dispatcher
+            .run_answer(answer, &request)
+            .map_err(press_refusal)
+    }
 }
 
+/// The adapter's clock: the milliseconds since the epoch an answer records as its time.
+fn now_millis() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |since| {
+            i64::try_from(since.as_millis()).unwrap_or(i64::MAX)
+        })
+}
+
+/// The core's grade for the grade a press names, one for one.
+fn core_grade(grade: PressedGrade) -> Grade {
+    match grade {
+        PressedGrade::Again => Grade::Again,
+        PressedGrade::Good => Grade::Good,
+    }
+}
+
+/// The adapter's refusal for the core's: each reason by its own variant, and the engine's error
+/// bytes as the engine encoded them.
+fn press_refusal(refusal: AnswerRefusal) -> PressRefusal {
+    match refusal {
+        AnswerRefusal::Undecodable => PressRefusal::Undecodable,
+        AnswerRefusal::NotTheCard { .. } => PressRefusal::NotTheCard,
+        AnswerRefusal::NotTheGrade { .. } => PressRefusal::NotTheGrade,
+        AnswerRefusal::Engine { error } => PressRefusal::Engine { error },
+    }
+}
+
+/// The grade an owner's press names (SPEC-365 R6): one of two, as the core records them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum PressedGrade {
+    /// The card was forgotten.
+    Again,
+    /// The card was recalled.
+    Good,
+}
+
+/// Why a press's answer was not recorded. A native client reads it as a thrown error, beside
+/// [`EngineRefusal`] and [`ExemptRefusal`], whose variants and text it leaves as they are.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Error)]
+pub enum PressRefusal {
+    /// The states the card was shown with are not the engine's `SchedulingStates`.
+    Undecodable,
+    /// The answer names another card than the press.
+    NotTheCard,
+    /// The answer names another grade than the press.
+    NotTheGrade,
+    /// The engine refused the checked answer.
+    Engine {
+        /// The engine's `BackendError`, as the engine encoded it.
+        error: Vec<u8>,
+    },
+}
+
+impl fmt::Display for PressRefusal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Undecodable => {
+                f.write_str("the states the card was shown with are not the engine's states")
+            }
+            Self::NotTheCard => f.write_str("the answer names another card than the press"),
+            Self::NotTheGrade => f.write_str("the answer names another grade than the press"),
+            Self::Engine { error } => {
+                write!(f, "the engine refused the answer ({} bytes)", error.len())
+            }
+        }
+    }
+}
+
+impl std::error::Error for PressRefusal {}
+
 /// The adapter's refusal for the core's: a pair the native column does not admit reads as one the
-/// allow-list does not carry, since the two are equal.
+/// allow-list does not carry, since the two are equal, and so do an exempt write and the answer,
+/// which `run` never reaches.
 fn refusal(refusal: Refusal) -> EngineRefusal {
     match refusal {
         Refusal::Engine { error } => EngineRefusal::Engine { error },
-        Refusal::NotAllowed { service, method } | Refusal::NeedsGesture { service, method } => {
-            EngineRefusal::NotAllowed { service, method }
-        }
+        Refusal::NotAllowed { service, method }
+        | Refusal::NeedsGesture { service, method }
+        | Refusal::NeedsAnswer { service, method } => EngineRefusal::NotAllowed { service, method },
     }
 }
 
@@ -193,6 +307,7 @@ fn exempt_refusal(refusal: GestureRefusal) -> ExemptRefusal {
         GestureRefusal::NotTheTarget { .. } => ExemptRefusal::NotTheTarget,
         GestureRefusal::Undecodable { .. } => ExemptRefusal::Undecodable,
         GestureRefusal::Engine { error } => ExemptRefusal::Engine { error },
+        GestureRefusal::NeedsTheChoice => ExemptRefusal::NeedsTheChoice,
     }
 }
 
@@ -249,9 +364,22 @@ pub enum ExemptRefusal {
         /// The engine's `BackendError`, as the engine encoded it.
         error: Vec<u8>,
     },
+    /// The tap is a one-way sync's, which runs only through the full-sync choice's own write
+    /// (SPEC-364 R3).
+    NeedsTheChoice,
 }
 
-impl fmt::Display for ExemptRefusal {
+/// The four refusals an exempt tap's own write can meet, each told by its sentence. The one-way
+/// sync's refusal is told beside them by [`ExemptRefusal`]'s own `Display` (SPEC-364 R13), so
+/// these four sentences stay in one match.
+enum Told<'a> {
+    WrongKind,
+    NotTheTarget,
+    Undecodable,
+    Engine { error: &'a [u8] },
+}
+
+impl fmt::Display for Told<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::WrongKind => f.write_str("the tap's target is not of the kind its write takes"),
@@ -261,6 +389,22 @@ impl fmt::Display for ExemptRefusal {
                 write!(f, "the engine refused the write ({} bytes)", error.len())
             }
         }
+    }
+}
+
+impl fmt::Display for ExemptRefusal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let told = match self {
+            Self::WrongKind => Told::WrongKind,
+            Self::NotTheTarget => Told::NotTheTarget,
+            Self::Undecodable => Told::Undecodable,
+            Self::Engine { error } => Told::Engine { error },
+            Self::NeedsTheChoice => {
+                return f
+                    .write_str("the one-way sync runs only through the full-sync choice's write");
+            }
+        };
+        told.fmt(f)
     }
 }
 

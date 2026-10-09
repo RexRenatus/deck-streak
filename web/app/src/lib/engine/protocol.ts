@@ -4,14 +4,18 @@
 
 /** The operations the Worker serves, and nothing else. Six are the review's (SPEC-350 R4): the deck
  * list, the current deck, the card view, and a rating, bury or flag of the shown card. `faces`, after
- * them, completes both faces of the shown card with its media (SPEC-350 R14). The last two read and
- * forget the sync credential, each answering a status word (SPEC-363 R15). */
+ * them, completes both faces of the shown card with its media (SPEC-350 R14). The next two log in to
+ * the sync server and run a normal sync (SPEC-364 R17, R18). The last two read and forget the sync
+ * credential, each answering a status word (SPEC-363 R15). A grade is recorded only by `rate`, on
+ * the card shown: no operation answers the queue's head (SPEC-365 R9). `undo-offer` reads the
+ * review's own last answer and writes nothing, and `undo` reverts only the answer an offer named, by
+ * its card and its step (SPEC-371 R12). */
 export const OPS = [
   'open',
   'seed',
   'next',
-  'answer',
   'undo',
+  'undo-offer',
   'snapshot',
   'memory',
   'close',
@@ -22,6 +26,8 @@ export const OPS = [
   'bury',
   'flag',
   'faces',
+  'sync-login',
+  'sync',
   'credential-status',
   'credential-forget'
 ] as const;
@@ -34,20 +40,36 @@ export type ErrorCode =
   | 'storage-refused'
   | 'engine-failed'
   | 'not-open'
-  | 'not-shown';
+  | 'not-shown'
+  | 'undo-synced'
+  | 'not-undoable';
 
 /** A wire rating, as Anki's buttons number the answers: again (1) and good (3). */
 export type Rating = 1 | 3;
 
 export type Request =
   | { id: number; op: 'open'; languages?: string[] }
-  | { id: number; op: 'next' | 'undo' | 'memory' | 'close' | 'decks' | 'card' }
+  | { id: number; op: 'next' | 'undo-offer' | 'memory' | 'close' | 'decks' | 'card' }
+  | { id: number; op: 'undo'; card: bigint; step: number }
   | { id: number; op: 'seed'; count: number }
-  | { id: number; op: 'answer'; rating: Rating; ms: number }
   | { id: number; op: 'snapshot' | 'bury' | 'flag' | 'faces'; card: bigint }
   | { id: number; op: 'study'; deck: bigint }
   | { id: number; op: 'rate'; card: bigint; rating: Rating; ms: number }
-  | { id: number; op: 'credential-status' | 'credential-forget' };
+  | { id: number; op: 'credential-status' | 'credential-forget' }
+  | { id: number; op: 'sync-login'; user: string; password: string }
+  | { id: number; op: 'sync' };
+
+/** What a normal sync found the collections need, in the engine's order: the engine answers the
+ * index, and this list names it (SPEC-364 R18). */
+export const REQUIRED = ['no-changes', 'normal-sync', 'full-sync', 'full-download', 'full-upload'] as const;
+export type Required = (typeof REQUIRED)[number];
+
+/** What `sync` answers: the store's status word after the sync settled, and what the collections
+ * need, or null when no sync was answered. */
+export interface Synced {
+  status: StatusWord;
+  required: Required | null;
+}
 
 /** What the credential operations answer, and all they answer: whether this origin keeps a sealed
  * sync key, whether the Worker holds it open, and why it could not be opened (SPEC-363 R15). Never a
@@ -94,7 +116,9 @@ export interface Counts {
 }
 
 /** The card the review shows: both sides rendered by the engine with sound and speech tags
- * stripped, the note type's CSS, the four interval labels and the engine's undo label. */
+ * stripped, the note type's CSS, the four interval labels, and whether the review's own last answer
+ * can be undone: `answer` when it can, `synced` when it has synced, `null` when there is none to
+ * undo (SPEC-371 R7). */
 export interface CardView {
   id: bigint;
   ordinal: number;
@@ -103,8 +127,21 @@ export interface CardView {
   answer: string;
   css: string;
   labels: string[];
-  undo: string;
+  undo: 'answer' | 'synced' | null;
 }
+
+/** The grade an offered answer gave, as the review names it. */
+export type OfferGrade = 'again' | 'good';
+
+/** The state an undone answer returns its card to. */
+export type Returns = 'new' | 'learning' | 'review' | 'relearning' | 'preview';
+
+/** What `undo-offer` answers: the review's own last answer, its card's text as one line, its grade
+ * and the state the card goes back to, with the card and the step a confirmation carries back; or
+ * no offer, and why: `synced` when it has synced, `none` for every other reason (SPEC-371 R7). */
+export type UndoOffer =
+  | { offer: { card: bigint; step: number; text: string; grade: OfferGrade; returns: Returns } }
+  | { offer: null; why: 'synced' | 'none' };
 
 /** What `card` answers: the queue's counts, and the card it shows, or `null` when the deck is done. */
 export interface Head {
@@ -167,24 +204,30 @@ const languages = (value: unknown) =>
     value.length >= 1 &&
     value.length <= LANGUAGES &&
     value.every((tag) => typeof tag === 'string' && TAG.test(tag)));
+/** At most this many characters in a sync login's user or password (SPEC-364 R17). */
+const LOGIN = 1024;
+/** A sync login's user or password: a non-empty string of at most `LOGIN` characters. */
+const loginText = (value: unknown) => typeof value === 'string' && value.length >= 1 && value.length <= LOGIN;
 
 /** Each operation's arguments, and the test each must pass: the engine's own types bound them. */
 const ARGS: Record<Op, Record<string, (value: unknown) => boolean>> = {
   open: { languages },
   next: {},
-  undo: {},
+  undo: { card: engineId, step: (value) => whole(value, 0, U32) },
+  'undo-offer': {},
   memory: {},
   close: {},
   decks: {},
   card: {},
   seed: { count: (value) => whole(value, 1, U32) },
-  answer: { rating: (value) => grade(value), ms: (value) => whole(value, 0, U32) },
   snapshot: { card: engineId },
   study: { deck: engineId },
   rate: { card: engineId, rating: (value) => grade(value), ms: (value) => whole(value, 0, U32) },
   bury: { card: engineId },
   flag: { card: engineId },
   faces: { card: engineId },
+  'sync-login': { user: loginText, password: loginText },
+  sync: {},
   'credential-status': {},
   'credential-forget': {}
 };

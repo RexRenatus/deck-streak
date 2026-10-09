@@ -58,17 +58,16 @@ const FIXTURE_CARD_IDS: [i64; 4] = [1_000_007, 1_000_008, 1_000_009, 1_000_010];
 /// core's test pins them. The app's A17 and A19 read the same four from the fixture's first card.
 const NEW_CARD_INTERVALS: [&str; 4] = ["<1m", "<6m", "<10m", "4d"];
 
-/// The allow-list this delivery leaves: the six calls before the app shell, the shell's login and
-/// the review screen's three pairs, each with the engine's name for it.
-const EXPECTED: [(u32, u32, &str); 10] = [
+/// The allow-list this delivery leaves: four of the six calls before the app shell, the answer
+/// left to an owner's press (SPEC-365 R6) and the undo to the owner's gesture (SPEC-371 R15), the
+/// shell's login and the review screen's three pairs, each with the engine's name for it.
+const EXPECTED: [(u32, u32, &str); 8] = [
     (1, 3, "BackendSyncService.SyncLogin"),
     (3, 0, "BackendCollectionService.OpenCollection"),
-    (3, 8, "CollectionService.Undo"),
     (7, 4, "DecksService.DeckTree"),
     (7, 13, "DecksService.GetDeckNames"),
     (7, 22, "DecksService.SetCurrentDeck"),
     (13, 3, "SchedulerService.GetQueuedCards"),
-    (13, 4, "SchedulerService.AnswerCard"),
     (13, 24, "SchedulerService.DescribeNextStates"),
     (27, 6, "CardRenderingService.RenderExistingCard"),
 ];

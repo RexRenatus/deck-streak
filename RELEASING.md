@@ -81,6 +81,22 @@ SemVer and annotated and that its commit is on `main`, builds the release binary
 once, attests the tarball's build provenance, and attaches the tarball and its `SHA256SUMS` to a
 draft release that its last step publishes.
 
+If the tag's push started no release run, this lists none:
+
+```sh
+gh run list --workflow release.yml --commit "$(git rev-parse 'vX.Y.Z^{commit}')"
+```
+
+Release the same tag by a manual dispatch at its own ref. The run checks the tag exactly as its
+push would have, and takes its turn in the tag's queue:
+
+```sh
+gh workflow run release.yml --ref vX.Y.Z
+```
+
+The dispatch works only for a tag whose commit carries the dispatch trigger. A release tag is
+never moved, deleted or pushed again.
+
 ## 4. Deploy the tag
 
 From the maintainer's machine, with the private deploy rail's configuration loaded:

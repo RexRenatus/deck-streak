@@ -16,6 +16,7 @@ use anki_proto::scheduler::{ScheduleCardsAsNewRequest, SetDueDateRequest};
 use prost::Message;
 
 use crate::table::{EXEMPT, ExemptWrite, TargetKind};
+use crate::undo_answer::Recorded;
 
 /// The one thing an exempt write acts on, by the engine's id.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -26,6 +27,8 @@ pub enum Target {
     Note(i64),
     /// A preset (a deck options group).
     Preset(i64),
+    /// The open collection as a whole: the one-way sync's target, which names no id.
+    Collection,
 }
 
 impl Target {
@@ -36,6 +39,7 @@ impl Target {
             Self::Card(_) => TargetKind::Card,
             Self::Note(_) => TargetKind::Note,
             Self::Preset(_) => TargetKind::Preset,
+            Self::Collection => TargetKind::Collection,
         }
     }
 }
@@ -67,6 +71,9 @@ pub enum GestureRefusal {
         /// The engine's `BackendError`, as the engine encoded it.
         error: Vec<u8>,
     },
+    /// A one-way sync gesture reached `run_exempt`: the one-way write runs only through the
+    /// full-sync choice's own write, after its counts, backup and checks (SPEC-364 R3).
+    NeedsTheChoice,
 }
 
 impl fmt::Display for GestureRefusal {
@@ -84,8 +91,27 @@ impl fmt::Display for GestureRefusal {
             Self::Engine { error } => {
                 write!(f, "the engine refused the write ({} bytes)", error.len())
             }
+            Self::NeedsTheChoice => {
+                f.write_str("the one-way sync runs only through the full-sync choice's write")
+            }
         }
     }
+}
+
+/// What a checked gesture runs: an engine call with its checked request, or an undo of the review's
+/// own last answer, whose record the dispatcher judges against the engine's state before the
+/// engine runs it (SPEC-371 R5).
+#[derive(Debug)]
+pub(crate) enum Checked {
+    /// The service, the method and the request the engine runs.
+    Run(u32, u32, Vec<u8>),
+    /// An undo on `card` of the answer `recorded` names.
+    Undo {
+        /// The card the gesture names.
+        card: i64,
+        /// The record of the answer to undo.
+        recorded: Recorded,
+    },
 }
 
 /// One owner's tap on one exempt write and its one target. Only the UI adapters build one, from
@@ -113,11 +139,26 @@ impl OwnerGesture {
         }
     }
 
+    /// The write this gesture names and its one target, read by the one-way write, which takes
+    /// only a one-way sync's gesture (SPEC-364 R3).
+    pub(crate) const fn parts(&self) -> (ExemptWrite, Target) {
+        (self.write, self.target)
+    }
+
     /// The service, the method and the request the engine runs for this gesture: `input` decoded
-    /// as the write's own message, checked against the one target, and encoded again.
-    pub(crate) fn checked(self, input: &[u8]) -> Result<(u32, u32, Vec<u8>), GestureRefusal> {
+    /// as the write's own message, checked against the one target, and encoded again. An undo's
+    /// `input` is the answer's record, decoded for the dispatcher to judge. A one-way sync's
+    /// gesture is refused before anything is decoded.
+    pub(crate) fn checked(self, input: &[u8]) -> Result<Checked, GestureRefusal> {
         let Self { write, target } = self;
-        let (Target::Card(id) | Target::Note(id) | Target::Preset(id)) = target;
+        // The one-way sync is the choice's write alone: it reaches the engine only through
+        // `run_one_way`, after its counts, backup and checks, so no bytes of it are decoded here.
+        if write == ExemptWrite::OneWaySync {
+            return Err(GestureRefusal::NeedsTheChoice);
+        }
+        let (Target::Card(id) | Target::Note(id) | Target::Preset(id)) = target else {
+            return Err(GestureRefusal::WrongKind { write, target });
+        };
         let Some(row) = EXEMPT.iter().find(|row| row.write == write) else {
             return Err(GestureRefusal::WrongKind { write, target });
         };
@@ -145,6 +186,10 @@ impl OwnerGesture {
                 let request = RemoveCardsRequest::decode(input).map_err(undecodable)?;
                 (only(&request.card_ids, id), request.encode_to_vec())
             }
+            ExemptWrite::Undo => {
+                let recorded = Recorded::decode(input).map_err(undecodable)?;
+                return Ok(Checked::Undo { card: id, recorded });
+            }
             ExemptWrite::DeleteNote => {
                 let request = RemoveNotesRequest::decode(input).map_err(undecodable)?;
                 (
@@ -152,9 +197,10 @@ impl OwnerGesture {
                     request.encode_to_vec(),
                 )
             }
+            ExemptWrite::OneWaySync => return Err(GestureRefusal::WrongKind { write, target }),
         };
         if names_only_the_target {
-            Ok((row.service, row.method, request))
+            Ok(Checked::Run(row.service, row.method, request))
         } else {
             Err(GestureRefusal::NotTheTarget { write, target })
         }

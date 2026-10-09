@@ -6061,7 +6061,130 @@ NOT_WORKFLOW_READS = {
         (
             "test_release_workflow",
             "TheTagGuardRuns.test_the_release_refuses_a_tag_off_main_or_lightweight_by_running_its_guard",
-            "subprocess.run(['bash', '-e', str(script)], cwd=work, env={**env, 'GITHUB_REF_NAME': tag, 'GITHUB_SHA': sha}, capture_output=True, text=True)",
+            "subprocess.run(['bash', '-e', str(script)], cwd=work, env={**env, 'GITHUB_REF_NAME': tag, 'GITHUB_REF': f'refs/tags/{tag}', 'GITHUB_SHA': sha}, capture_output=True, text=True)",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls git, which runs git in a scratch repository",
+        (
+            "test_release_workflow",
+            "scratch_repository",
+            "git('init', '-q', '--bare', '-b', 'main', str(origin), cwd=tmp, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "scratch_repository",
+            "git('clone', '-q', str(origin), str(work), cwd=tmp, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "scratch_repository",
+            "git('checkout', '-q', '-b', 'main', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "scratch_repository",
+            "git('commit', '-q', '--allow-empty', '-m', 'on main', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "scratch_repository",
+            "git('tag', '-a', '-m', 'v1.0.0', 'v1.0.0', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "scratch_repository",
+            "git('tag', 'v1.1.0', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "scratch_repository",
+            "git('commit', '-q', '--allow-empty', '-m', 'later on main', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "scratch_repository",
+            "git('push', '-q', 'origin', 'main', 'v1.0.0', 'v1.1.0', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "scratch_repository",
+            "git('rev-parse', 'HEAD', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "scratch_repository",
+            "git('checkout', '-q', '-b', 'topic', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "scratch_repository",
+            "git('commit', '-q', '--allow-empty', '-m', 'off main', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "scratch_repository",
+            "git('tag', '-a', '-m', 'v2.0.0', 'v2.0.0', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "scratch_repository",
+            "git('push', '-q', 'origin', 'topic', 'v2.0.0', cwd=work, env=env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "scratch_repository",
+            "git('rev-parse', f'{tag}^{{commit}}', cwd=work, env=env)",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs the release's tag guard, cut from release.yml's loader-read text, under bash in a scratch repository; its output is the guard's verdict",
+        (
+            "test_release_workflow",
+            "run_guard",
+            "subprocess.run(['bash', '-e', str(script)], cwd=work, env={**env, **github}, capture_output=True, text=True)",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls a helper that builds a scratch repository with git or runs the release's tag guard in one; it reads no file and no workflow's text reaches a reader",
+        (
+            "test_release_workflow",
+            "TheSecondPathRunsTheTagGuard.test_the_guard_refuses_a_ref_that_is_not_the_tag_it_names",
+            "scratch_repository(Path(tmp), env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "TheSecondPathRunsTheTagGuard.test_the_guard_refuses_a_ref_that_is_not_the_tag_it_names",
+            "run_guard(guard, work, env, GITHUB_EVENT_NAME='workflow_dispatch', **names)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "TheSecondPathRunsTheTagGuard.test_both_paths_refuse_a_lightweight_tag_and_a_tag_off_main",
+            "scratch_repository(Path(tmp), env)",
+            1,
+        ),
+        (
+            "test_release_workflow",
+            "TheSecondPathRunsTheTagGuard.test_both_paths_refuse_a_lightweight_tag_and_a_tag_off_main",
+            "run_guard(guard, work, env, GITHUB_EVENT_NAME=event, GITHUB_REF=f'refs/tags/{tag}', GITHUB_REF_NAME=tag, GITHUB_SHA=shas[tag])",
             1,
         ),
     ),
@@ -6071,6 +6194,15 @@ NOT_WORKFLOW_READS = {
             "test_release_workflow",
             "TheReleaseBuildsTheSyncServer.test_the_build_step_reads_the_fork_and_the_commit_from_the_engines_patch_entry",
             "subprocess.run(['bash', '-e', str(script)], cwd=roots[name], env={**os.environ, 'PATH': path, 'RUNNER_TEMP': str(runner)}, capture_output=True, text=True)",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs the release's steps from the app's build to the draft, cut from release.yml's loader-read text, and a tar listing of the tarball they write, under bash in planted trees; its output is the steps' own lines and the listing",
+        (
+            "test_release_workflow",
+            "TheReleaseCarriesTheWebEngine.test_the_release_carries_the_module_at_web_engine",
+            "subprocess.run(['bash', '-e', str(script)], cwd=root, env=env, capture_output=True, text=True)",
             1,
         ),
     ),
@@ -6274,6 +6406,15 @@ DYNAMIC_IMPORTS = {
         ),
     ),
     **allowed(
+        "runs the threat model reader as a script by its path, in-process; a production script",
+        (
+            "test_threat_model",
+            "scripted",
+            "runpy.run_path(str(SCRIPT), run_name='__main__')",
+            1,
+        ),
+    ),
+    **allowed(
         "loads a production script by the path the call names; never a module of the test directory",
         ("test_backup_units", "load_backup", "importlib.util.module_from_spec(spec)", 1),
         (
@@ -6387,6 +6528,14 @@ DYNAMIC_IMPORTS = {
             1,
         ),
         ("test_slo_evaluator", "load_evaluator", "spec.loader.exec_module(module)", 1),
+        ("test_threat_model", "load", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_threat_model",
+            "load",
+            "importlib.util.spec_from_file_location('threat_model', SCRIPT)",
+            1,
+        ),
+        ("test_threat_model", "load", "spec.loader.exec_module(module)", 1),
     ),
     **allowed(
         "imports a production module from scripts/, which the test puts on sys.path; never a module of the test directory",

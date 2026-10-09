@@ -11,6 +11,7 @@ use std::cell::RefCell;
 
 use anki_proto::backend::BackendError;
 use anki_proto::backend::BackendInit;
+use anki_proto::card_rendering::HtmlToTextLineRequest;
 use anki_proto::card_rendering::RenderCardResponse;
 use anki_proto::card_rendering::RenderExistingCardRequest;
 use anki_proto::card_rendering::RenderedTemplateNode;
@@ -34,24 +35,32 @@ use anki_proto::scheduler::BuryOrSuspendCardsRequest;
 use anki_proto::scheduler::CardAnswer;
 use anki_proto::scheduler::GetQueuedCardsRequest;
 use anki_proto::scheduler::QueuedCards;
+use anki_proto::scheduler::SchedulingState;
 use anki_proto::scheduler::SchedulingStates;
+use anki_proto::sync::SyncAuth;
+use anki_proto::sync::SyncCollectionRequest;
+use anki_proto::sync::SyncCollectionResponse;
+use anki_proto::sync::SyncLoginRequest;
 use prost::Message;
 use sqlite_wasm_vfs::sahpool::OpfsSAHPoolCfgBuilder;
 use sqlite_wasm_vfs::sahpool::OpfsSAHPoolUtil;
 use sqlite_wasm_vfs::sahpool::install;
 use wasm_bindgen::prelude::*;
 
+use deck_streak_engine_core::answer::{self, OwnerAnswer};
 use deck_streak_engine_core::credential::{self, Generation, Kept, Outcome};
 use deck_streak_engine_core::dispatch::{Dispatcher, Read, Refusal};
 use deck_streak_engine_core::face::{Clip, Face, Side};
-use deck_streak_engine_core::gesture::{OwnerGesture, Target};
+use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
 use deck_streak_engine_core::media::{Reader, TYPES};
 use deck_streak_engine_core::table::{ExemptWrite, Transport};
+use deck_streak_engine_core::undo_answer::{self, Review};
 use js_sys::{Array, Object, Reflect, Uint8Array};
 
 use crate::study::{
-    Answer, Files, Shown, StudyError, Wanted, admit, bury_of, engine_languages, media_type,
-    service, shown_for, toggled_red,
+    Files, Grade, LastAnswer, Recorded, Returns, Shown, StudyError, UndoRefusal, Wanted, admit,
+    bury_of, engine_languages, grade, last_answer_for, media_type, service, shown_for, toggled_red,
+    undo_view,
 };
 use crate::synthetic::fields;
 
@@ -68,6 +77,8 @@ thread_local! {
     static LAST_PANIC: RefCell<Option<String>> = const { RefCell::new(None) };
     /// The card the review last showed, with its states and its flag (SPEC-350 R2).
     static SHOWN: RefCell<Option<Shown<SchedulingStates>>> = const { RefCell::new(None) };
+    /// The review's own last answer, the one answer its undo may revert (SPEC-371 R6; ADR-382 D4).
+    static LAST_ANSWER: RefCell<Option<LastAnswer>> = const { RefCell::new(None) };
 }
 
 fn refuse(message: impl std::fmt::Display) -> JsValue {
@@ -88,7 +99,9 @@ fn call(service: u32, method: u32, input: &[u8]) -> Result<Vec<u8>, JsValue> {
                 Ok(err) => refuse(format!("engine error {}: {}", err.kind, err.message)),
                 Err(_) => refuse("engine error (undecodable)"),
             },
-            Refusal::NotAllowed { service, method } | Refusal::NeedsGesture { service, method } => {
+            Refusal::NotAllowed { service, method }
+            | Refusal::NeedsGesture { service, method }
+            | Refusal::NeedsAnswer { service, method } => {
                 refuse(StudyError::CallRefused { service, method })
             }
         })
@@ -149,9 +162,11 @@ pub fn create_backend(languages: Vec<String>) -> Result<(), JsValue> {
 }
 
 /// Opens the collection, creating it when the pool holds none. Returns JSON:
-/// `{"existed": bool, "notes": number}`, so a collection lost to eviction says so.
+/// `{"existed": bool, "notes": number}`, so a collection lost to eviction says so. No answer of
+/// another opening is kept for an undo (SPEC-371 R6).
 #[wasm_bindgen]
 pub fn open() -> Result<String, JsValue> {
+    LAST_ANSWER.with(|kept| *kept.borrow_mut() = None);
     let existed = POOL.with(|p| {
         p.borrow()
             .as_ref()
@@ -171,9 +186,11 @@ pub fn open() -> Result<String, JsValue> {
     Ok(serde_json::json!({ "existed": existed, "notes": notes }).to_string())
 }
 
-/// Closes the collection.
+/// Closes the collection, and forgets the review's own last answer, which no later opening may
+/// undo (SPEC-371 R6).
 #[wasm_bindgen]
 pub fn close() -> Result<(), JsValue> {
+    LAST_ANSWER.with(|kept| *kept.borrow_mut() = None);
     let request = CloseCollectionRequest {
         downgrade_to_schema11: false,
     };
@@ -246,36 +263,167 @@ pub fn next_card() -> Result<Option<i64>, JsValue> {
         .map(|card| card.id))
 }
 
-/// Answers the next card with a wire rating, 1 to 4, as a reviewer does. Returns its card id.
+/// The undo the review offers for its own last answer (SPEC-371 R7, R8), as JSON:
+/// `{"offer": {card, step, text, grade, returns}}` with the card's id as a decimal string, the step
+/// the record holds, the card's question as one line of text, the grade the answer recorded and the
+/// kind of state the undo returns the card to; or `{"offer": null, "why": "synced" | "none"}`. The
+/// core's rule judges the record against the engine now. It reads, and writes nothing.
 #[wasm_bindgen]
-pub fn answer(rating: u32, milliseconds_taken: u32) -> Result<i64, JsValue> {
-    let answer = Answer::from_wire(rating).map_err(refuse)?;
-    let queued = first_queued()?.ok_or_else(|| refuse("no card is queued"))?;
-    let card = queued
-        .card
-        .ok_or_else(|| refuse("a queued card without its card"))?;
-    let states = queued
-        .states
-        .ok_or_else(|| refuse("a queued card without its states"))?;
-    let request = CardAnswer {
-        card_id: card.id,
-        current_state: states.current,
-        new_state: answer.pick(states.again, states.hard, states.good, states.easy),
-        rating: answer.rating(),
-        answered_at_millis: now_millis(),
-        milliseconds_taken,
+pub fn undo_offer() -> Result<String, JsValue> {
+    let Some(last) = LAST_ANSWER.with(|kept| kept.borrow().clone()) else {
+        return Ok(no_offer(UndoRefusal::Gone));
     };
-    call(service::SCHEDULER, 4, &request.encode_to_vec())?;
-    Ok(card.id)
+    let recorded = engine_record(&last);
+    let now: UndoStatus = decode(&call(service::COLLECTION, 7, &[])?)?;
+    if let Err(refusal) =
+        undo_answer::judge(&recorded, &now, review_of(recorded.review)?, last.card)
+    {
+        return Ok(no_offer(mirrored(refusal)));
+    }
+    let render = RenderExistingCardRequest {
+        card_id: last.card,
+        browser: false,
+        partial_render: false,
+    };
+    let rendered: RenderCardResponse =
+        decode(&call(service::CARD_RENDERING, 6, &render.encode_to_vec())?)?;
+    let question = Text {
+        val: joined(&rendered.question_nodes),
+    };
+    let question: Text = decode(&call(
+        service::CARD_RENDERING,
+        9,
+        &question.encode_to_vec(),
+    )?)?;
+    let line = HtmlToTextLineRequest {
+        text: question.val,
+        preserve_media_filenames: true,
+    };
+    let text: Text = decode(&call(service::CARD_RENDERING, 14, &line.encode_to_vec())?)?;
+    Ok(serde_json::json!({
+        "offer": {
+            "card": last.card.to_string(),
+            "step": last.recorded.step,
+            "text": text.val,
+            "grade": last.grade.word(),
+            "returns": last.returns.word(),
+        },
+    })
+    .to_string())
 }
 
-/// Undoes the last operation, as the reviewer's undo does, and forgets the kept card: the undone
-/// card is shown again by the next card view (SPEC-350 R2).
+/// No offer, with the reason the page reads: `synced` for a synced answer, `none` otherwise.
+fn no_offer(refusal: UndoRefusal) -> String {
+    serde_json::json!({ "offer": null, "why": refusal.why() }).to_string()
+}
+
+/// Undoes the review's own last answer, and only the one its offer named (SPEC-371 R7): the
+/// confirmation's card and step must be the kept answer's, the core's rule judges the record again
+/// against the engine now, and the write runs only through the owner's gesture on that card, which
+/// the core judges once more at the write. Then the record and the kept card are forgotten, and the
+/// next card view shows the undone card again. A refusal reads as its own sentence, `undo-synced`
+/// for a synced answer and `not-undoable` for every other.
 #[wasm_bindgen]
-pub fn undo() -> Result<(), JsValue> {
-    call(service::COLLECTION, 8, &[])?;
+pub fn undo(card: i64, step: u32) -> Result<(), JsValue> {
+    let last = LAST_ANSWER
+        .with(|kept| last_answer_for(kept.borrow().as_ref(), card, step).cloned())
+        .map_err(refuse)?;
+    let recorded = engine_record(&last);
+    let now: UndoStatus = decode(&call(service::COLLECTION, 7, &[])?)?;
+    undo_answer::judge(&recorded, &now, review_of(recorded.review)?, card)
+        .map_err(|refusal| refuse(StudyError::NotUndoable(mirrored(refusal))))?;
+    let gesture = OwnerGesture::from_tap(ExemptWrite::Undo, Target::Card(card)).map_err(refuse)?;
+    dispatcher()?
+        .run_exempt(gesture, &recorded.encode_to_vec())
+        .map_err(|refusal| match refusal {
+            GestureRefusal::NotTheTarget { .. } => {
+                refuse(StudyError::NotUndoable(UndoRefusal::Changed))
+            }
+            other => refuse(other),
+        })?;
+    LAST_ANSWER.with(|kept| *kept.borrow_mut() = None);
     SHOWN.with(|kept| *kept.borrow_mut() = None);
     Ok(())
+}
+
+/// The core's record of the kept answer, which its rule judges and its exempt door decodes
+/// (SPEC-371 R5).
+fn engine_record(last: &LastAnswer) -> undo_answer::Recorded {
+    undo_answer::Recorded {
+        status: Some(UndoStatus {
+            undo: last.recorded.label.clone(),
+            redo: String::new(),
+            last_step: last.recorded.step,
+        }),
+        review: last.recorded.review,
+    }
+}
+
+/// The review-log row `id`, by the core's fixed read (SPEC-371 R4), or `None` when the collection
+/// lacks it.
+fn review_of(id: i64) -> Result<Option<Review>, JsValue> {
+    let rows = query(Read::Review(id))?;
+    let Some(row) = rows.pointer("/0") else {
+        return Ok(None);
+    };
+    let cid = row.pointer("/0").and_then(serde_json::Value::as_i64);
+    let usn = row
+        .pointer("/1")
+        .and_then(serde_json::Value::as_i64)
+        .and_then(|usn| i32::try_from(usn).ok());
+    match (cid, usn) {
+        (Some(cid), Some(usn)) => Ok(Some(Review { cid, usn })),
+        _ => Err(refuse(
+            "the review read answered other than a card and a sync mark",
+        )),
+    }
+}
+
+/// The study rule's word for the core's refusal, one for one: the study rule holds no engine type.
+fn mirrored(refusal: undo_answer::UndoRefusal) -> UndoRefusal {
+    match refusal {
+        undo_answer::UndoRefusal::Gone => UndoRefusal::Gone,
+        undo_answer::UndoRefusal::NotTheCard => UndoRefusal::NotTheCard,
+        undo_answer::UndoRefusal::Synced => UndoRefusal::Synced,
+        undo_answer::UndoRefusal::Changed => UndoRefusal::Changed,
+    }
+}
+
+/// The kind of state an undo returns a card to, by the core's rule, from the state the card was in
+/// when it was answered, as the study rule names it.
+fn returned(state: Option<&SchedulingState>) -> Returns {
+    let Some(state) = state else {
+        return Returns::New;
+    };
+    match undo_answer::returns_to(state) {
+        undo_answer::Returns::New => Returns::New,
+        undo_answer::Returns::Learning => Returns::Learning,
+        undo_answer::Returns::Review => Returns::Review,
+        undo_answer::Returns::Relearning => Returns::Relearning,
+        undo_answer::Returns::Preview => Returns::Preview,
+    }
+}
+
+/// The newest review-log row's id and card, by the core's fixed read (SPEC-371 R4), or `None` when
+/// the collection holds no review.
+fn newest_review(rows: &serde_json::Value) -> Result<Option<Newest>, JsValue> {
+    let Some(row) = rows.pointer("/0") else {
+        return Ok(None);
+    };
+    let id = row.pointer("/0").and_then(serde_json::Value::as_i64);
+    let card = row.pointer("/1").and_then(serde_json::Value::as_i64);
+    match (id, card) {
+        (Some(id), Some(card)) => Ok(Some(Newest { id, card })),
+        _ => Err(refuse(
+            "the newest review read answered other than a row and a card",
+        )),
+    }
+}
+
+/// The newest review-log row: its id and the card it reviewed.
+struct Newest {
+    id: i64,
+    card: i64,
 }
 
 /// One card's scheduling fields as JSON (`[id, queue, type, due, ivl, reps, lapses]`), or `null`.
@@ -361,6 +509,57 @@ pub fn credential_on_outcome(sent: u64, current: u64, outcome: u8) -> bool {
 #[must_use]
 pub fn credential_on_removed(current: u64) -> Option<u64> {
     credential::on_removed(Generation::from(current)).map(u64::from)
+}
+
+/// A sync call's refusal as the Worker reads it (SPEC-364 R17, ADR-375 D16): the engine's own
+/// error keeps its bytes, which the credential module's classifier reads to tell a refused key
+/// from a lost network; any other refusal is the boundary's.
+fn sync_refusal(refusal: Refusal) -> JsValue {
+    match refusal {
+        Refusal::Engine { error } => Uint8Array::from(error.as_slice()).into(),
+        Refusal::NotAllowed { service, method }
+        | Refusal::NeedsGesture { service, method }
+        | Refusal::NeedsAnswer { service, method } => {
+            refuse(StudyError::CallRefused { service, method })
+        }
+    }
+}
+
+/// Logs in to the sync server at `endpoint` and answers its host key (SPEC-364 R17, ADR-375 D16).
+/// The login reaches the engine through the dispatcher, whose web column admits it, never through
+/// the study allow-list; an engine refusal is thrown as the engine's error bytes.
+#[wasm_bindgen]
+pub fn sync_login(endpoint: String, user: String, password: String) -> Result<String, JsValue> {
+    let request = SyncLoginRequest {
+        username: user,
+        password,
+        endpoint: Some(endpoint),
+    };
+    let reply = dispatcher()?
+        .run(service::SYNC, 3, &request.encode_to_vec())
+        .map_err(sync_refusal)?;
+    let auth: SyncAuth = decode(&reply)?;
+    Ok(auth.hkey)
+}
+
+/// Runs a normal sync with the host key `key` against `endpoint`, with no media and the engine's
+/// own timeout, and answers what the server requires next as the engine's number (SPEC-364 R18,
+/// ADR-375 D16). An engine refusal is thrown as the engine's error bytes.
+#[wasm_bindgen]
+pub fn sync_collection(key: String, endpoint: String) -> Result<u32, JsValue> {
+    let request = SyncCollectionRequest {
+        auth: Some(SyncAuth {
+            hkey: key,
+            endpoint: Some(endpoint),
+            io_timeout_secs: None,
+        }),
+        sync_media: false,
+    };
+    let reply = dispatcher()?
+        .run(service::SYNC, 5, &request.encode_to_vec())
+        .map_err(sync_refusal)?;
+    let response: SyncCollectionResponse = decode(&reply)?;
+    u32::try_from(response.required).map_err(refuse)
 }
 
 /// One deck of the tree as JSON: its id as a decimal string, its name, level, new, learning and
@@ -455,6 +654,14 @@ pub fn current_card() -> Result<String, JsValue> {
     let answer: Text = decode(&call(service::CARD_RENDERING, 9, &answer.encode_to_vec())?)?;
     let labels: StringList = decode(&call(service::SCHEDULER, 24, &states.encode_to_vec())?)?;
     let undo: UndoStatus = decode(&call(service::COLLECTION, 7, &[])?)?;
+    let judged = match LAST_ANSWER.with(|kept| kept.borrow().clone()) {
+        Some(last) => {
+            let recorded = engine_record(&last);
+            let review = review_of(recorded.review)?;
+            Some(undo_answer::judge(&recorded, &undo, review, last.card).map_err(mirrored))
+        }
+        None => None,
+    };
     let view = serde_json::json!({
         "counts": counts,
         "card": {
@@ -465,7 +672,7 @@ pub fn current_card() -> Result<String, JsValue> {
             "answer": answer.val,
             "css": rendered.css,
             "labels": labels.vals,
-            "undo": undo.undo,
+            "undo": undo_view(judged),
         },
     });
     SHOWN.with(|kept| {
@@ -478,27 +685,60 @@ pub fn current_card() -> Result<String, JsValue> {
     Ok(view.to_string())
 }
 
-/// Rates the kept card, and no other, with a wire rating, 1 to 4: the engine answers it with the
-/// states kept when it was shown and the next state the rating picks, then the kept card is
-/// forgotten (SPEC-350 R2).
+/// Rates the kept card, and no other, with a wire rating, 1 for Again or 3 for Good: the core
+/// records it as the owner's answer to that card, with the states kept when it was shown and the
+/// next state its grade picks, then the kept card is forgotten (SPEC-350 R2, SPEC-365 R7). Hard
+/// and Easy are refused by name before anything reaches the engine. Once the answer is recorded,
+/// it is kept as the review's own last answer, with the engine's undo status and the review row it
+/// wrote, only when the newest review is of the rated card (SPEC-371 R6).
 #[wasm_bindgen]
 pub fn rate(card: i64, rating: u32, milliseconds: u32) -> Result<(), JsValue> {
-    let answer = Answer::from_wire(rating).map_err(refuse)?;
+    let grade = grade(rating).map_err(refuse)?;
     let shown = SHOWN
         .with(|kept| shown_for(kept.borrow().as_ref(), card).cloned())
         .map_err(refuse)?;
     let states = shown.states;
+    let returns = returned(states.current.as_ref());
     let request = CardAnswer {
         card_id: shown.card,
         current_state: states.current,
-        new_state: answer.pick(states.again, states.hard, states.good, states.easy),
-        rating: answer.rating(),
+        new_state: grade.pick(states.again, states.good),
+        rating: grade.rating(),
         answered_at_millis: now_millis(),
         milliseconds_taken: milliseconds,
     };
-    call(service::SCHEDULER, 4, &request.encode_to_vec())?;
+    let answer = OwnerAnswer::from_press(shown.card, pressed(grade));
+    dispatcher()?
+        .run_answer(answer, &request.encode_to_vec())
+        .map_err(refuse)?;
     SHOWN.with(|kept| *kept.borrow_mut() = None);
+    LAST_ANSWER.with(|kept| *kept.borrow_mut() = None);
+    let queue: UndoStatus = decode(&call(service::COLLECTION, 7, &[])?)?;
+    let newest = newest_review(&query(Read::NewestReview)?)?;
+    let recorded = newest
+        .filter(|newest| newest.card == shown.card)
+        .map(|newest| LastAnswer {
+            card: shown.card,
+            grade,
+            returns,
+            recorded: Recorded {
+                step: queue.last_step,
+                label: queue.undo,
+                review: newest.id,
+            },
+        });
+    LAST_ANSWER.with(|kept| *kept.borrow_mut() = recorded);
     Ok(())
+}
+
+/// The core's grade for the grade the wire named, one for one. The study rule keeps its own grade
+/// because it holds no engine type, so the native tests judge the rule this module runs; this is
+/// where the press becomes the core's (SPEC-365 R7).
+fn pressed(grade: Grade) -> answer::Grade {
+    match grade {
+        Grade::Again => answer::Grade::Again,
+        Grade::Good => answer::Grade::Good,
+    }
 }
 
 /// Buries the kept card, and no other, as the user's bury of that card alone, then forgets it

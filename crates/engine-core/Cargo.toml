@@ -28,3 +28,8 @@ url.workspace = true
 # ADR-359 D1: the encoder for a face's `data:` URLs (SPEC-348 R3); the engine's own dependencies
 # already bring this version, so it adds no package.
 base64.workspace = true
+
+[dev-dependencies]
+# ADR-375 (SPEC-364 section 3): the runtime that runs the engine's own sync server as a child of the
+# one-way tests, on a loopback port, as the native adapter's login tests run it.
+tokio = { workspace = true, features = ["rt"] }

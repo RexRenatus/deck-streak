@@ -20,7 +20,10 @@ describe('the study operations on the wire', () => {
       { id: 10, op: 'open', languages: ['en'] },
       { id: 11, op: 'open', languages: ['zh-CN', 'en'] },
       { id: 12, op: 'open', languages: undefined },
-      { id: 13, op: 'open', languages: Array(8).fill('en') }
+      { id: 13, op: 'open', languages: Array(8).fill('en') },
+      { id: 14, op: 'undo-offer' },
+      { id: 15, op: 'undo', card: 1001n, step: 0 },
+      { id: 16, op: 'undo', card: I64, step: 2 ** 32 - 1 }
     ];
     for (const request of admitted) {
       expect(parseRequest(request), JSON.stringify(request, (_, v) => String(v))).toEqual({ request });
@@ -43,8 +46,8 @@ describe('the study operations on the wire', () => {
       [{ id: 1, op: 'rate', card: 1001n, rating: 2.5, ms: 0 }, "rate's rating is malformed"],
       [{ id: 1, op: 'rate', card: 1001n, rating: 2, ms: 0 }, "rate's rating is malformed"],
       [{ id: 1, op: 'rate', card: 1001n, rating: 4, ms: 0 }, "rate's rating is malformed"],
-      [{ id: 1, op: 'answer', rating: 2, ms: 0 }, "answer's rating is malformed"],
-      [{ id: 1, op: 'answer', rating: 4, ms: 0 }, "answer's rating is malformed"],
+      [{ id: 1, op: 'answer', rating: 2, ms: 0 }, 'unknown operation answer'],
+      [{ id: 1, op: 'answer', rating: 3, ms: 0 }, 'unknown operation answer'],
       [{ id: 1, op: 'rate', card: 1001n, rating: 3 }, "rate's ms is malformed"],
       [{ id: 1, op: 'rate', card: 1001n, rating: 3, ms: -1 }, "rate's ms is malformed"],
       [{ id: 1, op: 'rate', card: 1001n, rating: 3, ms: 1.5 }, "rate's ms is malformed"],
@@ -64,19 +67,30 @@ describe('the study operations on the wire', () => {
       [{ id: 1, op: 'open', languages: ['zh-CN-x'] }, "open's languages is malformed"],
       [{ id: 1, op: 'open', languages: Array(9).fill('en') }, "open's languages is malformed"],
       [{ id: 1, op: 'open', languages: [['en']] }, "open's languages is malformed"],
-      [{ id: 1, op: 'open', languages: ['en'], sql: 'x' }, 'open takes no sql']
+      [{ id: 1, op: 'open', languages: ['en'], sql: 'x' }, 'open takes no sql'],
+      [{ id: 1, op: 'undo' }, "undo's card is malformed"],
+      [{ id: 1, op: 'undo', card: 0n, step: 1 }, "undo's card is malformed"],
+      [{ id: 1, op: 'undo', card: 1001, step: 1 }, "undo's card is malformed"],
+      [{ id: 1, op: 'undo', card: 1001n }, "undo's step is malformed"],
+      [{ id: 1, op: 'undo', card: 1001n, step: -1 }, "undo's step is malformed"],
+      [{ id: 1, op: 'undo', card: 1001n, step: 1.5 }, "undo's step is malformed"],
+      [{ id: 1, op: 'undo', card: 1001n, step: 2 ** 32 }, "undo's step is malformed"],
+      [{ id: 1, op: 'undo', card: 1001n, step: 1, rating: 3 }, 'undo takes no rating'],
+      [{ id: 1, op: 'undo-offer', card: 1001n }, 'undo-offer takes no card']
     ];
     for (const [request, message] of refused) {
       expect(parseRequest(request), message).toEqual({ id: 1, message });
     }
 
-    // the six join the operations the Worker serves, after DEV's eight
+    // the six join the operations the Worker serves, after DEV's seven: the queue-head answer is
+    // gone, and a grade is recorded only by rate (SPEC-365 R9); the undo's offer follows the undo
+    // (SPEC-371 R12)
     expect(OPS).toEqual([
       'open',
       'seed',
       'next',
-      'answer',
       'undo',
+      'undo-offer',
       'snapshot',
       'memory',
       'close',
@@ -87,6 +101,9 @@ describe('the study operations on the wire', () => {
       'bury',
       'flag',
       'faces',
+      // the sync's two join before the credential's two (SPEC-364 R17, R18)
+      'sync-login',
+      'sync',
       'credential-status',
       'credential-forget'
     ]);
@@ -121,5 +138,33 @@ describe('the study operations on the wire', () => {
       message: 'credential-forget takes no user'
     });
     expect(STATUS_WORDS).toEqual(['absent', 'sealed', 'held', 'needs-sign-in', 'offline']);
+  });
+
+  it('the sync login takes a bounded user and password, and a sync takes no argument', () => {
+    // SPEC-364 R17, R18: each of the login's two strings is non-empty and at most 1024 characters
+    const longest = 'x'.repeat(1024);
+    const admitted: Record<string, unknown>[] = [
+      { id: 1, op: 'sync-login', user: 'u', password: 'p' },
+      { id: 2, op: 'sync-login', user: longest, password: longest },
+      { id: 3, op: 'sync' }
+    ];
+    for (const request of admitted) {
+      expect(parseRequest(request), String(request.id)).toEqual({ request });
+    }
+    const refused: [Record<string, unknown>, string][] = [
+      [{ id: 1, op: 'sync-login', password: 'p' }, "sync-login's user is malformed"],
+      [{ id: 1, op: 'sync-login', user: '', password: 'p' }, "sync-login's user is malformed"],
+      [{ id: 1, op: 'sync-login', user: `${longest}x`, password: 'p' }, "sync-login's user is malformed"],
+      [{ id: 1, op: 'sync-login', user: ['u'], password: 'p' }, "sync-login's user is malformed"],
+      [{ id: 1, op: 'sync-login', user: 'u' }, "sync-login's password is malformed"],
+      [{ id: 1, op: 'sync-login', user: 'u', password: '' }, "sync-login's password is malformed"],
+      [{ id: 1, op: 'sync-login', user: 'u', password: `${longest}x` }, "sync-login's password is malformed"],
+      [{ id: 1, op: 'sync-login', user: 'u', password: 1 }, "sync-login's password is malformed"],
+      [{ id: 1, op: 'sync-login', user: 'u', password: 'p', key: 'k' }, 'sync-login takes no key'],
+      [{ id: 1, op: 'sync', key: 'k' }, 'sync takes no key']
+    ];
+    for (const [request, message] of refused) {
+      expect(parseRequest(request), message).toEqual({ id: 1, message });
+    }
   });
 });

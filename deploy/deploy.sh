@@ -325,11 +325,11 @@ caddy validate --adapter caddyfile --config "$copy" || undo
 caddy adapt --adapter caddyfile --config "$copy" --validate >/dev/null || undo
 cp -p "$file" "$kept" || undo
 mv -T "$copy" "$file" || { find "$kept" -delete; undo; }
-if ! caddy reload --config "$file"; then
+if ! caddy reload --adapter caddyfile --config "$file"; then
     mv -T "$kept" "$file"
     put_back_block
     echo "deploy: the Caddy reload failed; the previous site file and Caddyfile were restored" >&2
-    caddy reload --config "$file" || echo "deploy: the restoring reload also failed" >&2
+    caddy reload --adapter caddyfile --config "$file" || echo "deploy: the restoring reload also failed" >&2
     exit 1
 fi
 find "$kept" -delete
@@ -372,11 +372,11 @@ caddy adapt --adapter caddyfile --config "$copy" --validate >/dev/null || { [ ! 
 cp -p "$file" "$kept"
 mv -T "$copy" "$file"
 [ -f "$block" ] && { had=$block.previous; mv -T "$block" "$had"; }
-if ! caddy reload --config "$file"; then
+if ! caddy reload --adapter caddyfile --config "$file"; then
     [ -n "$had" ] && mv -T "$had" "$block"
     mv -T "$kept" "$file"
     echo "deploy: the Caddy reload failed; the previous site file and Caddyfile were restored" >&2
-    caddy reload --config "$file" || echo "deploy: the restoring reload also failed" >&2
+    caddy reload --adapter caddyfile --config "$file" || echo "deploy: the restoring reload also failed" >&2
     exit 1
 fi
 find "$kept" -delete

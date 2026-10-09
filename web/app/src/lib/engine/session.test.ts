@@ -60,17 +60,20 @@ class FakeEngine implements EngineModule {
     this.#call('next_card');
     return [...this.cards].find(([, card]) => card.reps === 0)?.[0];
   }
-  answer(rating: number, ms: number) {
-    this.#call('answer', rating, ms);
-    const [id, card] = [...this.cards].find(([, card]) => card.reps === 0)!;
-    this.journal.push([id, { ...card }]);
-    this.cards.set(id, { ...card, queue: rating === 1 ? 1 : 2, type: 2, ivl: rating, reps: 1 });
-    return id;
+  /** SPEC-371 R7: the undo names the answer the offer named, by its card and its step. */
+  undo(card: bigint, step: number) {
+    this.#call('undo', card, step);
+    const [id, held] = this.journal.pop()!;
+    this.cards.set(id, held);
   }
-  undo() {
-    this.#call('undo');
-    const [id, card] = this.journal.pop()!;
-    this.cards.set(id, card);
+  /** The offer of the last answer the journal holds, its card's id a decimal string, or none. */
+  undo_offer() {
+    this.#call('undo_offer');
+    const last = this.journal.at(-1);
+    if (last === undefined) return JSON.stringify({ offer: null, why: 'none' });
+    const [id] = last;
+    const offer = { card: String(id), step: this.journal.length, text: `front ${id}`, grade: 'good', returns: 'new' };
+    return JSON.stringify({ offer });
   }
   snapshot(id: bigint) {
     this.#call('snapshot', id);
@@ -196,13 +199,13 @@ describe('the Worker session', () => {
       [{ id: 7 }, refusal(7, 'bad-request', 'unknown operation undefined')],
       [{ id: 0, op: 'open', sql: 'delete from cards' }, refusal(0, 'bad-request', 'open takes no sql')],
       [{ id: 2, op: 'next', card: 1n }, refusal(2, 'bad-request', 'next takes no card')],
-      [{ id: 2, op: 'answer', rating: 5, ms: 0 }, refusal(2, 'bad-request', "answer's rating is malformed")],
-      [{ id: 2, op: 'answer', rating: 0, ms: 0 }, refusal(2, 'bad-request', "answer's rating is malformed")],
-      [{ id: 2, op: 'answer', rating: '3', ms: 0 }, refusal(2, 'bad-request', "answer's rating is malformed")],
-      [{ id: 2, op: 'answer', rating: 3 }, refusal(2, 'bad-request', "answer's ms is malformed")],
-      [{ id: 2, op: 'answer', rating: 3, ms: -1 }, refusal(2, 'bad-request', "answer's ms is malformed")],
-      [{ id: 2, op: 'answer', rating: 3, ms: 2.5 }, refusal(2, 'bad-request', "answer's ms is malformed")],
-      [{ id: 2, op: 'answer', rating: 3, ms: 2 ** 32 }, refusal(2, 'bad-request', "answer's ms is malformed")],
+      [{ id: 2, op: 'rate', card: 1001n, rating: 5, ms: 0 }, refusal(2, 'bad-request', "rate's rating is malformed")],
+      [{ id: 2, op: 'rate', card: 1001n, rating: 0, ms: 0 }, refusal(2, 'bad-request', "rate's rating is malformed")],
+      [{ id: 2, op: 'rate', card: 1001n, rating: '3', ms: 0 }, refusal(2, 'bad-request', "rate's rating is malformed")],
+      [{ id: 2, op: 'rate', card: 1001n, rating: 3 }, refusal(2, 'bad-request', "rate's ms is malformed")],
+      [{ id: 2, op: 'rate', card: 1001n, rating: 3, ms: -1 }, refusal(2, 'bad-request', "rate's ms is malformed")],
+      [{ id: 2, op: 'rate', card: 1001n, rating: 3, ms: 2.5 }, refusal(2, 'bad-request', "rate's ms is malformed")],
+      [{ id: 2, op: 'rate', card: 1001n, rating: 3, ms: 2 ** 32 }, refusal(2, 'bad-request', "rate's ms is malformed")],
       [{ id: 2, op: 'seed', count: 0 }, refusal(2, 'bad-request', "seed's count is malformed")],
       [{ id: 2, op: 'seed', count: 2 ** 32 }, refusal(2, 'bad-request', "seed's count is malformed")],
       [{ id: 2, op: 'seed', count: 1.5 }, refusal(2, 'bad-request', "seed's count is malformed")],
@@ -228,13 +231,15 @@ describe('the Worker session', () => {
     // each argument's edges pass the parse and reach the session's state, here not yet open
     const fresh = browser(new FakeEngine());
     for (const request of [
-      { id: 3, op: 'answer', rating: 3, ms: 2 ** 32 - 1 },
+      { id: 3, op: 'rate', card: 1001n, rating: 3, ms: 2 ** 32 - 1 },
       { id: 4, op: 'seed', count: 2 ** 32 - 1 },
       { id: 5, op: 'snapshot', card: 2n ** 63n - 1n },
-      { id: 6, op: 'answer', rating: 1, ms: 0 },
+      { id: 6, op: 'rate', card: 1001n, rating: 1, ms: 0 },
       { id: 7, op: 'seed', count: 1 },
       { id: 8, op: 'snapshot', card: 1n },
-      { id: Number.MAX_SAFE_INTEGER, op: 'undo' }
+      { id: 9, op: 'undo-offer' },
+      { id: 10, op: 'undo', card: 1n, step: 0 },
+      { id: Number.MAX_SAFE_INTEGER, op: 'undo', card: 2n ** 63n - 1n, step: 2 ** 32 - 1 }
     ]) {
       expect(await fresh.session.handle(request)).toEqual(
         refusal(request.id, 'not-open', `${request.op} before open`)
@@ -316,8 +321,10 @@ describe('the Worker session', () => {
     expect(await ask({ id: 3, op: 'next' })).toBe(1001n);
     const before = await ask({ id: 4, op: 'snapshot', card: 1001n });
     expect(before).toEqual({ id: 1001n, queue: 0, type: 0, due: 0, interval: 0, reps: 0, lapses: 0 });
-    expect(await ask({ id: 5, op: 'answer', rating: 3, ms: 1200 })).toBe(1001n);
-    expect(await ask({ id: 6, op: 'snapshot', card: 1001n })).toEqual({
+    // the card is shown, then rated: a grade is recorded only on the card shown (SPEC-365 R9)
+    expect(((await ask({ id: 5, op: 'card' })) as { card: { id: bigint } }).card.id).toBe(1001n);
+    expect(await ask({ id: 6, op: 'rate', card: 1001n, rating: 3, ms: 1200 })).toBeNull();
+    expect(await ask({ id: 7, op: 'snapshot', card: 1001n })).toEqual({
       id: 1001n,
       queue: 2,
       type: 2,
@@ -326,10 +333,15 @@ describe('the Worker session', () => {
       reps: 1,
       lapses: 0
     });
-    expect(await ask({ id: 7, op: 'next' })).toBe(1002n);
-    expect(await ask({ id: 8, op: 'undo' })).toBeNull();
-    expect(await ask({ id: 9, op: 'snapshot', card: 1001n })).toEqual(before);
-    expect(await ask({ id: 10, op: 'snapshot', card: 9n })).toBeNull();
+    expect(await ask({ id: 8, op: 'next' })).toBe(1002n);
+    // the undo asks for the offer of the review's own last answer, then reverts the answer it named
+    // by its card and its step (SPEC-371 R12)
+    expect(await ask({ id: 9, op: 'undo-offer' })).toEqual({
+      offer: { card: 1001n, step: 1, text: 'front 1001', grade: 'good', returns: 'new' }
+    });
+    expect(await ask({ id: 10, op: 'undo', card: 1001n, step: 1 })).toBeNull();
+    expect(await ask({ id: 11, op: 'snapshot', card: 1001n })).toEqual(before);
+    expect(await ask({ id: 12, op: 'snapshot', card: 9n })).toBeNull();
     expect(engine.calls).toEqual([
       ['install_storage'],
       ['init'],
@@ -337,14 +349,47 @@ describe('the Worker session', () => {
       ['seed', 3],
       ['next_card'],
       ['snapshot', 1001n],
-      ['answer', 3, 1200],
+      ['current_card'],
+      ['rate', 1001n, 3, 1200],
       ['snapshot', 1001n],
       ['next_card'],
-      ['undo'],
+      ['undo_offer'],
+      ['undo', 1001n, 1],
       ['snapshot', 1001n],
       ['snapshot', 9n]
     ]);
     expect(log).toEqual(OPENED);
+  });
+
+  // SPEC-371 R12, A28: the module refuses an undo with its reason as a prefix, as it refuses a card
+  // it did not show; a synced answer reads `undo-synced`, and every other refusal `not-undoable`.
+  it('a refused undo reads as its own error code', async () => {
+    const engine = new FakeEngine();
+    const { session } = browser(engine);
+    expect((await session.handle({ id: 1, op: 'open' })).ok).toBe(true);
+    engine.failures.undo = 'undo-synced: the answer has synced';
+    expect(await session.handle({ id: 2, op: 'undo', card: 1001n, step: 4 })).toEqual(
+      refusal(2, 'undo-synced', 'undo-synced: the answer has synced')
+    );
+    engine.failures.undo = 'not-undoable: something changed after the answer';
+    expect(await session.handle({ id: 3, op: 'undo', card: 1001n, step: 4 })).toEqual(
+      refusal(3, 'not-undoable', 'not-undoable: something changed after the answer')
+    );
+    // an engine refusal leaves the session open
+    expect(await session.handle({ id: 4, op: 'snapshot', card: 9n })).toEqual({ id: 4, ok: true, value: null });
+  });
+
+  it('the session refuses the queue-head answer as an unknown operation', async () => {
+    // SPEC-365 A14: only an owner's press records a grade, through `rate` on the card shown; the
+    // queue-head `answer` is no operation, so the session refuses it before the engine sees it.
+    const engine = new FakeEngine();
+    const { session } = browser(engine);
+    expect((await session.handle({ id: 1, op: 'open' })).ok).toBe(true);
+    expect((await session.handle({ id: 2, op: 'seed', count: 1 })).ok).toBe(true);
+    expect(await session.handle({ id: 3, op: 'answer', rating: 3, ms: 1200 })).toEqual(
+      refusal(3, 'bad-request', 'unknown operation answer')
+    );
+    expect(engine.calls).toEqual([['install_storage'], ['init'], ['open'], ['seed', 1]]);
   });
 
   it('a request before open answers not-open, and a closed collection reopens on its engine', async () => {
@@ -360,7 +405,7 @@ describe('the Worker session', () => {
       refusal(3, 'bad-request', 'the collection is already open')
     );
     expect(await session.handle({ id: 4, op: 'close' })).toEqual({ id: 4, ok: true, value: null });
-    expect(await session.handle({ id: 5, op: 'undo' })).toEqual(
+    expect(await session.handle({ id: 5, op: 'undo', card: 1001n, step: 1 })).toEqual(
       refusal(5, 'not-open', 'undo before open')
     );
     engine.existed = true;
@@ -401,8 +446,8 @@ describe('the Worker session', () => {
     const engine = new FakeEngine();
     const { session } = browser(engine);
     await session.handle({ id: 1, op: 'open' });
-    engine.failures.answer = 'engine error 0: no card is queued';
-    expect(await session.handle({ id: 2, op: 'answer', rating: 1, ms: 5 })).toEqual(
+    engine.failures.rate = 'engine error 0: no card is queued';
+    expect(await session.handle({ id: 2, op: 'rate', card: 1001n, rating: 1, ms: 5 })).toEqual(
       refusal(2, 'engine-failed', 'engine error 0: no card is queued')
     );
     expect(await session.handle({ id: 3, op: 'next' })).toEqual({ id: 3, ok: true, value: null });
@@ -412,7 +457,7 @@ describe('the Worker session', () => {
     engine.panic = 'panicked at rslib/src/undo.rs: the journal is empty';
     engine.failures.undo = new WebAssembly.RuntimeError('unreachable');
     const trapped = refusal(4, 'engine-failed', 'panicked at rslib/src/undo.rs: the journal is empty');
-    expect(await session.handle({ id: 4, op: 'undo' })).toEqual(trapped);
+    expect(await session.handle({ id: 4, op: 'undo', card: 1001n, step: 1 })).toEqual(trapped);
     const calls = engine.calls.length;
     expect(await session.handle({ id: 5, op: 'next' })).toEqual({ ...trapped, id: 5 });
     expect(await session.handle({ id: 6, op: 'open' })).toEqual({ ...trapped, id: 6 });
@@ -700,5 +745,135 @@ describe("the Worker session's credential operations", () => {
     expect(await session.handle({ id: 1, op: 'credential-status' })).toEqual(
       refusal(1, 'storage-refused', 'the database is gone')
     );
+  });
+});
+
+describe("the Worker session's sync operations", () => {
+  // SPEC-364 R17, R18 (ADR-375 D18): both sync operations need an open session, run on the
+  // session's queue, and answer the Worker's sync's own value; a trap ends the session
+  const opened = async (sync: SessionDeps['sync'], engine = new FakeEngine()) => {
+    const session = new Session({
+      lock: async () => 'held',
+      storage: async () => null,
+      load: async () => engine,
+      sync
+    });
+    expect(await session.handle({ id: 0, op: 'open' })).toMatchObject({ id: 0, ok: true });
+    return session;
+  };
+
+  it('both sync operations need an open session', async () => {
+    const asked: string[] = [];
+    const session = new Session({
+      lock: async () => 'held',
+      storage: async () => null,
+      load: async () => new FakeEngine(),
+      sync: {
+        login: async () => {
+          asked.push('login');
+          return 'held';
+        },
+        sync: async () => {
+          asked.push('sync');
+          return { status: 'held', required: 'no-changes' };
+        }
+      }
+    });
+    expect(await session.handle({ id: 1, op: 'sync-login', user: 'u', password: 'p' })).toEqual(
+      refusal(1, 'not-open', 'sync-login before open')
+    );
+    expect(await session.handle({ id: 2, op: 'sync' })).toEqual(refusal(2, 'not-open', 'sync before open'));
+    expect(asked).toEqual([]);
+  });
+
+  it('a Worker with no sync answers as a store with no key', async () => {
+    const session = await opened(undefined);
+    expect(await session.handle({ id: 1, op: 'sync-login', user: 'u', password: 'p' })).toEqual({
+      id: 1,
+      ok: true,
+      value: 'absent'
+    });
+    expect(await session.handle({ id: 2, op: 'sync' })).toEqual({
+      id: 2,
+      ok: true,
+      value: { status: 'absent', required: null }
+    });
+  });
+
+  it("each sync operation answers its sync's own value, the login with the request's user and password", async () => {
+    const logins: [string, string][] = [];
+    const session = await opened({
+      login: async (user, password) => {
+        logins.push([user, password]);
+        return 'needs-sign-in';
+      },
+      sync: async () => ({ status: 'sealed', required: 'full-download' })
+    });
+    expect(await session.handle({ id: 1, op: 'sync-login', user: 'a user', password: 'a password' })).toEqual({
+      id: 1,
+      ok: true,
+      value: 'needs-sign-in'
+    });
+    expect(logins).toEqual([['a user', 'a password']]);
+    expect(await session.handle({ id: 2, op: 'sync' })).toEqual({
+      id: 2,
+      ok: true,
+      value: { status: 'sealed', required: 'full-download' }
+    });
+  });
+
+  it('a study request waits for a sync on the queue, and is then answered', async () => {
+    const order: string[] = [];
+    let finish: () => void = () => undefined;
+    const session = await opened({
+      login: async () => 'held',
+      sync: () =>
+        new Promise((resolve) => {
+          finish = () => {
+            order.push('sync settled');
+            resolve({ status: 'held', required: 'normal-sync' });
+          };
+        })
+    });
+    const synced = session.handle({ id: 1, op: 'sync' }).then((reply) => {
+      order.push('sync answered');
+      return reply;
+    });
+    const next = session.handle({ id: 2, op: 'next' }).then((reply) => {
+      order.push('next answered');
+      return reply;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(order).toEqual([]);
+    finish();
+    expect(await synced).toEqual({ id: 1, ok: true, value: { status: 'held', required: 'normal-sync' } });
+    expect(await next).toEqual({ id: 2, ok: true, value: null });
+    expect(order).toEqual(['sync settled', 'sync answered', 'next answered']);
+  });
+
+  it('a trap in a sync ends the session, and any other throw answers engine-failed', async () => {
+    const engine = new FakeEngine();
+    let thrown: unknown = new TypeError('a synthetic failure');
+    const session = await opened(
+      {
+        login: async () => {
+          throw thrown;
+        },
+        sync: async () => {
+          throw thrown;
+        }
+      },
+      engine
+    );
+    // a throw that is not a trap leaves the session open
+    expect(await session.handle({ id: 1, op: 'sync' })).toEqual(refusal(1, 'engine-failed', 'a synthetic failure'));
+    expect(await session.handle({ id: 2, op: 'next' })).toEqual({ id: 2, ok: true, value: null });
+    // a trap spends the module: its panic is the message from then on
+    engine.panic = 'panicked at rslib/src/sync/mod.rs: the sync trapped';
+    thrown = new WebAssembly.RuntimeError('unreachable');
+    const trapped = refusal(3, 'engine-failed', 'panicked at rslib/src/sync/mod.rs: the sync trapped');
+    expect(await session.handle({ id: 3, op: 'sync-login', user: 'u', password: 'p' })).toEqual(trapped);
+    expect(await session.handle({ id: 4, op: 'next' })).toEqual({ ...trapped, id: 4 });
+    expect(await session.handle({ id: 5, op: 'sync' })).toEqual({ ...trapped, id: 5 });
   });
 });

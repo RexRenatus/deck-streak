@@ -92,3 +92,12 @@ construct, and a test proves the containment. The owner-taps ruling is on `dev`,
 
 - `docs/rulings/OWNER-RULING-2026-10-04-owner-taps.md`; ADR-301 (a) (the never-list).
 - SPEC-334 (R7, R8); ADR-335, ADR-336, ADR-338, ADR-339.
+
+## Amendment: the undo of an unsynced answer (SPEC-371)
+
+ADR-382 amends the Decision Outcome (`:41-44`), which names the exempt functions as the backend
+calls that make writes 1 to 8. The exempt table also holds Undo, for the review's own last answer
+while it has not synced. Whether that undo is the never-list's entry 1 is read two ways: the
+owner-taps ruling's table maps entry 1 to undoing an answer after it has synced, and ADR-361 D1
+says the never-list does not name undo. ADR-382 builds to the stricter reading: the undo meets all
+three of the ruling's conditions whichever reading holds.

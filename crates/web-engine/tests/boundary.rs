@@ -22,7 +22,7 @@ fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
 /// Each boundary function the census reads: its name, why it owes what it owes, and the
 /// statements its body holds for it. A statement is compared with every blank removed, so a
 /// reflow by rustfmt changes nothing.
-const OWED: [(&str, &str, &[&str]); 29] = [
+const OWED: [(&str, &str, &[&str]); 34] = [
     (
         "create_backend",
         "starts the core's dispatcher on the web transport and keeps it",
@@ -57,6 +57,7 @@ const OWED: [(&str, &str, &[&str]); 29] = [
             "call(service::COLLECTION, 0, &request.encode_to_vec())?",
             "query(Read::NoteCount)?",
             "serde_json::json!({ \"existed\": existed, \"notes\": notes })",
+            "LAST_ANSWER.with(|kept| *kept.borrow_mut() = None)",
         ],
     ),
     (
@@ -121,12 +122,30 @@ const OWED: [(&str, &str, &[&str]); 29] = [
             ".collect()",
         ],
     ),
+    // The undo of the review's own last answer (SPEC-371 R6, R7): the offer reads and judges and
+    // writes nothing, and the undo runs only for the record the offer named, through the gesture.
+    (
+        "undo_offer",
+        "offers only the review's own last answer, judged against the engine now, with the card as one line of text",
+        &[
+            "LAST_ANSWER.with(|kept| kept.borrow().clone())",
+            "call(service::COLLECTION, 7, &[])?",
+            "undo_answer::judge(&recorded, &now, review_of(recorded.review)?, last.card)",
+            "call(service::CARD_RENDERING, 14,",
+            "preserve_media_filenames: true",
+        ],
+    ),
     (
         "undo",
-        "undoes through the collection service and forgets the kept card",
+        "undoes only the offered answer, judged again, through the owner's gesture on its card, then forgets the record and the kept card",
         &[
-            "call(service::COLLECTION, 8, &[])?",
-            "*kept.borrow_mut() = None",
+            "last_answer_for(kept.borrow().as_ref(), card, step)",
+            "call(service::COLLECTION, 7, &[])?",
+            "undo_answer::judge(&recorded, &now, review_of(recorded.review)?, card)",
+            "OwnerGesture::from_tap(ExemptWrite::Undo, Target::Card(card))",
+            ".run_exempt(gesture, &recorded.encode_to_vec())",
+            "LAST_ANSWER.with(|kept| *kept.borrow_mut() = None)",
+            "SHOWN.with(|kept| *kept.borrow_mut() = None)",
         ],
     ),
     (
@@ -149,12 +168,24 @@ const OWED: [(&str, &str, &[&str]); 29] = [
     ),
     (
         "rate",
-        "answers only the kept card, with the states kept when it was shown",
+        "records only the kept card's press, as the owner's answer, with the state its grade picks",
         &[
-            "Answer::from_wire(rating)",
+            "grade(rating)",
             "shown_for(kept.borrow().as_ref(), card)",
-            "answer.pick(states.again, states.hard, states.good, states.easy)",
-            "call(service::SCHEDULER, 4, &request.encode_to_vec())?",
+            "grade.pick(states.again, states.good)",
+            "OwnerAnswer::from_press(shown.card, pressed(grade))",
+            ".run_answer(answer, &request.encode_to_vec())",
+            "query(Read::NewestReview)?",
+            "newest.card == shown.card",
+            "LAST_ANSWER.with(|kept| *kept.borrow_mut() = recorded)",
+        ],
+    ),
+    (
+        "pressed",
+        "gives the core the grade the wire named, one for one (SPEC-365 R7)",
+        &[
+            "Grade::Again => answer::Grade::Again,",
+            "Grade::Good => answer::Grade::Good,",
         ],
     ),
     (
@@ -265,6 +296,78 @@ const OWED: [(&str, &str, &[&str]); 29] = [
         "lets the core's sync key rule name the generation a removal moves the store to",
         &["credential::on_removed(Generation::from(current))"],
     ),
+    (
+        "sync_login",
+        "sends the engine's sync login, its endpoint set, on (1,3) through the dispatcher and answers the host key (SPEC-364 B6, ADR-375 D16)",
+        &[
+            "endpoint: Some(endpoint)",
+            "dispatcher()?.run(service::SYNC, 3, &request.encode_to_vec())",
+            ".map_err(sync_refusal)?",
+            "Ok(auth.hkey)",
+        ],
+    ),
+    (
+        "sync_collection",
+        "sends the engine's normal sync with no media and no timeout override on (1,5) through the dispatcher (SPEC-364 B6, ADR-375 D16)",
+        &[
+            "endpoint: Some(endpoint)",
+            "io_timeout_secs: None",
+            "sync_media: false",
+            "dispatcher()?.run(service::SYNC, 5, &request.encode_to_vec())",
+            ".map_err(sync_refusal)?",
+        ],
+    ),
+    (
+        "sync_refusal",
+        "keeps an engine refusal's bytes for the credential module's classifier and answers any other refusal as the boundary's (SPEC-364 B6, ADR-375 D16)",
+        &[
+            "Refusal::Engine { error } => Uint8Array::from(error.as_slice()).into()",
+            "refuse(StudyError::CallRefused { service, method })",
+        ],
+    ),
+];
+
+/// What the boundary no longer holds (SPEC-365 A11; SPEC-364 B6, ADR-375 D11): `rate` never calls
+/// `AnswerCard` through `call`, and no export answers the queue's head; no call runs Undo (3,8)
+/// through `call`, with no argument or any other (SPEC-371 A17); neither sync export reaches
+/// `admit` or `run_method`. Each is a text whose presence is refused, with
+/// the function that must not hold it, or `None` for the whole source.
+const RETIRED: [(Option<&str>, &str, &str); 7] = [
+    (
+        Some("rate"),
+        "call(service::SCHEDULER, 4,",
+        "records a grade only through the owner's answer, never through `call`",
+    ),
+    (
+        None,
+        "pub fn answer(",
+        "answers no card but the kept one: the queue-head export is gone",
+    ),
+    (
+        None,
+        "call(service::COLLECTION, 8,",
+        "undoes only through the owner's gesture, never through `call`",
+    ),
+    (
+        Some("sync_login"),
+        "admit(",
+        "reaches the engine through the dispatcher alone, never through the study allow-list",
+    ),
+    (
+        Some("sync_login"),
+        "run_method(",
+        "reaches the engine through the dispatcher alone, never through `run_method`",
+    ),
+    (
+        Some("sync_collection"),
+        "admit(",
+        "reaches the engine through the dispatcher alone, never through the study allow-list",
+    ),
+    (
+        Some("sync_collection"),
+        "run_method(",
+        "reaches the engine through the dispatcher alone, never through `run_method`",
+    ),
 ];
 
 /// `text` with every blank removed.
@@ -332,6 +435,26 @@ fn problems(source: &str) -> Vec<String> {
     found
 }
 
+/// Each text of [`RETIRED`] that `source` still holds, named with where and why it is refused.
+fn retired(source: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    for (name, text, why) in RETIRED {
+        let held = match name {
+            Some(name) => {
+                body(source, name).is_ok_and(|body| squeezed(body).contains(&squeezed(text)))
+            }
+            None => squeezed(source).contains(&squeezed(text)),
+        };
+        if held {
+            found.push(format!(
+                "{} {why}, and holds `{text}`",
+                name.unwrap_or("src/wasm.rs")
+            ));
+        }
+    }
+    found
+}
+
 fn boundary() -> String {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/wasm.rs");
     fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()))
@@ -343,7 +466,77 @@ fn each_boundary_function_reaches_the_engine_through_the_dispatcher() {
     let functions = examined("boundary function(s) of src/wasm.rs", OWED.to_vec());
     let statements: usize = functions.iter().map(|(_, _, owed)| owed.len()).sum();
     println!("examined {statements} owed statement(s)");
-    assert_eq!(problems(&source), Vec::<String>::new());
+    let retired_texts = examined("retired text(s)", RETIRED.to_vec());
+    assert_eq!(
+        (problems(&source), retired(&source)),
+        (Vec::<String>::new(), Vec::<String>::new()),
+        "{} retired text(s) judged",
+        retired_texts.len()
+    );
+}
+
+/// The control for [`RETIRED`] (SPEC-365 A11): each text planted back is refused by name, so a
+/// census gone blind fails here rather than passing over a source it no longer reads.
+#[test]
+fn a_retired_text_planted_back_is_refused_by_name() {
+    let source = boundary();
+    let rate = body(&source, "rate").expect("rate has one body");
+    let through_call = source.replacen(
+        rate,
+        "{\n    call(service::SCHEDULER, 4, &[])?;\n    Ok(())\n}",
+        1,
+    );
+    let queue_head = format!("{source}\npub fn answer(rating: u32) -> u32 {{\n    rating\n}}\n");
+    let undo_by_call = format!(
+        "{source}\npub fn redo() -> u32 {{\n    call(service::COLLECTION, 8, &[]);\n    0\n}}\n"
+    );
+    let refused = (
+        retired(&through_call),
+        retired(&queue_head),
+        retired(&undo_by_call),
+    );
+    assert!(
+        refused.0.iter().any(|line| line.starts_with("rate "))
+            && refused
+                .1
+                .iter()
+                .any(|line| line.starts_with("src/wasm.rs ") && line.contains("pub fn answer("))
+            && refused.2.iter().any(|line| {
+                line.starts_with("src/wasm.rs ") && line.contains("call(service::COLLECTION, 8,")
+            }),
+        "a retired text planted back is not refused by name: {refused:?}"
+    );
+}
+
+/// The control for the sync exports' rows of [`RETIRED`] (SPEC-364 B6, ADR-375 D11): `admit(` or
+/// `run_method(` planted into either export's body is refused by that export's name, so the
+/// census cannot pass over a sync that went through the study allow-list.
+#[test]
+fn a_sync_export_that_reaches_admit_or_run_method_is_refused_by_name() {
+    let source = boundary();
+    let exports = examined("sync export(s)", vec!["sync_login", "sync_collection"]);
+    let mut planted_count = 0_usize;
+    for name in exports {
+        let held = body(&source, name).expect("each sync export has one body");
+        for planted_call in [
+            "admit(service, method)?;",
+            "run_method(service, method, &[])?;",
+        ] {
+            let planted =
+                source.replacen(held, &format!("{{\n    {planted_call}\n{}", &held[1..]), 1);
+            let refused = retired(&planted);
+            let text = &planted_call[..=planted_call.find('(').expect("a call has a paren")];
+            assert!(
+                refused
+                    .iter()
+                    .any(|line| line.starts_with(&format!("{name} "))
+                        && line.ends_with(&format!("`{text}`"))),
+                "`{text}` planted in {name} is not refused by name: {refused:?}"
+            );
+            planted_count += 1;
+        }
+    }
+    assert_eq!(planted_count, 4, "examined {planted_count} of 4 plants");
 }
 
 #[test]

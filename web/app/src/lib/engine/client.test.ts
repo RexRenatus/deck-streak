@@ -28,12 +28,12 @@ describe('EngineClient', () => {
     const client = new EngineClient(port, ORIGIN);
     const opened = client.open();
     const next = client.next();
-    const answered = client.answer(3, 1200);
+    const rated = client.rate(1001n, 3, 1200);
 
     expect(port.sent).toEqual([
       { id: 1, op: 'open' },
       { id: 2, op: 'next' },
-      { id: 3, op: 'answer', rating: 3, ms: 1200 }
+      { id: 3, op: 'rate', card: 1001n, rating: 3, ms: 1200 }
     ]);
     expect(client.waiting).toBe(3);
     // out of order, with a reply to an id never sent, a reply with no id and a message that is
@@ -42,18 +42,18 @@ describe('EngineClient', () => {
     port.reply({ id: 99, ok: true, value: 'stray' });
     port.reply({ ok: true, value: 'no id' });
     port.reply(null);
-    port.reply({ id: 3, ok: false, code: 'not-open', message: 'answer before open' });
+    port.reply({ id: 3, ok: false, code: 'not-open', message: 'rate before open' });
     port.reply({ id: 1, ok: true, value: { existed: false, notes: 0 } });
 
     await expect(next).resolves.toBe(1001n);
     await expect(opened).resolves.toEqual({ existed: false, notes: 0 });
-    const refused = await answered.then(
+    const refused = await rated.then(
       () => 'resolved',
       (error: unknown) => error
     );
     expect(refused).toBeInstanceOf(EngineError);
     expect(refused).toBeInstanceOf(Error);
-    expect(refused).toMatchObject({ code: 'not-open', message: 'answer before open' });
+    expect(refused).toMatchObject({ code: 'not-open', message: 'rate before open' });
     expect(client.waiting).toBe(0);
   });
 
@@ -62,21 +62,24 @@ describe('EngineClient', () => {
     const client = new EngineClient(port, ORIGIN);
     const calls = [
       client.seed(25),
-      client.undo(),
+      client.undo(1001n, 4),
       client.snapshot(1001n),
       client.close(),
-      client.answer(1, 0)
+      client.rate(1001n, 1, 0),
+      client.undoOffer()
     ];
 
+    // the undo names the answer an offer named, by its card and its step (SPEC-371 R12)
     expect(port.sent).toEqual([
       { id: 1, op: 'seed', count: 25 },
-      { id: 2, op: 'undo' },
+      { id: 2, op: 'undo', card: 1001n, step: 4 },
       { id: 3, op: 'snapshot', card: 1001n },
       { id: 4, op: 'close' },
-      { id: 5, op: 'answer', rating: 1, ms: 0 }
+      { id: 5, op: 'rate', card: 1001n, rating: 1, ms: 0 },
+      { id: 6, op: 'undo-offer' }
     ]);
-    for (const id of [1, 2, 3, 4, 5]) port.reply({ id, ok: true, value: id * 10 });
-    await expect(Promise.all(calls)).resolves.toEqual([10, 20, 30, 40, 50]);
+    for (const id of [1, 2, 3, 4, 5, 6]) port.reply({ id, ok: true, value: id * 10 });
+    await expect(Promise.all(calls)).resolves.toEqual([10, 20, 30, 40, 50, 60]);
     // a second reply to a settled id settles nothing
     port.reply({ id: 1, ok: false, code: 'engine-failed', message: 'late' });
     expect(client.waiting).toBe(0);
@@ -186,5 +189,22 @@ describe('EngineClient', () => {
     port.reply({ id: 1, ok: true, value: 'held' }, ORIGIN);
     expect(await status).toBe('held');
     expect(await forgotten).toBe('absent');
+  });
+
+  it('the sync operations send the login and nothing for a sync, and resolve to their answers', async () => {
+    // SPEC-364 R17, R18: the page sends the user and password once, to the Worker, and hears back a
+    // status word; a sync carries nothing and hears back the status and what the collections need
+    const port = new FakePort();
+    const client = new EngineClient(port, ORIGIN);
+    const login = client.syncLogin('a user', 'a password');
+    const synced = client.sync();
+    expect(port.sent).toEqual([
+      { id: 1, op: 'sync-login', user: 'a user', password: 'a password' },
+      { id: 2, op: 'sync' }
+    ]);
+    port.reply({ id: 2, ok: true, value: { status: 'held', required: 'full-upload' } }, ORIGIN);
+    port.reply({ id: 1, ok: true, value: 'held' }, ORIGIN);
+    expect(await login).toBe('held');
+    expect(await synced).toEqual({ status: 'held', required: 'full-upload' });
   });
 });

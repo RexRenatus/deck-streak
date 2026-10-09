@@ -213,3 +213,158 @@ fn a4_a_refused_login_never_reaches_the_engine_and_names_no_secret() {
         "the guard's sentence names neither the endpoint nor the account"
     );
 }
+
+/// The rule a normal sync that asks for media breaks: media is a later part's (SPEC-364 R2).
+const MEDIA: &str = "a normal sync may not sync media";
+
+/// A sync auth naming `endpoint`, with a host key no server issued.
+fn sync_auth(endpoint: Option<&str>) -> anki_proto::sync::SyncAuth {
+    anki_proto::sync::SyncAuth {
+        hkey: String::from("planted-host-key"),
+        endpoint: endpoint.map(str::to_owned),
+        io_timeout_secs: None,
+    }
+}
+
+/// An encoded normal sync naming `endpoint`, asking for media when `media` is set.
+fn normal_sync(endpoint: Option<&str>, media: bool) -> Vec<u8> {
+    anki_proto::sync::SyncCollectionRequest {
+        auth: Some(sync_auth(endpoint)),
+        sync_media: media,
+    }
+    .encode_to_vec()
+}
+
+/// The message of the engine-shaped refusal a call answered, or what else it answered.
+fn message(refused: Result<Vec<u8>, Refusal>) -> String {
+    match refused {
+        Err(Refusal::Engine { error }) => decoded(&error).1,
+        other => format!("not an engine-shaped refusal: {other:?}"),
+    }
+}
+
+/// A refusal as the test reads it: the engine-shaped kind and sentence, or why it was not one.
+type Read = Result<(Kind, String), String>;
+
+/// The one-way write's guarded fetches, each refused by the rule it breaks: the refusals read.
+fn one_way_refusals() -> Vec<(&'static str, Read)> {
+    // The one-way write's endpoints each break the rule without naming a host a network could
+    // reach, so a guard that let one through fails on the engine's own error, at once.
+    let one_way_cases = [
+        ("an empty endpoint", Some(""), ABSENT),
+        (
+            "an endpoint that is not a URL",
+            Some("not a url"),
+            UNPARSEABLE,
+        ),
+        (
+            "a loopback endpoint carrying a user and a password",
+            Some("http://learner-one:hunter-two@127.0.0.1:1/"),
+            CREDENTIALS,
+        ),
+        (
+            "another scheme to loopback",
+            Some("ftp://127.0.0.1:1/"),
+            SCHEME,
+        ),
+    ];
+    let synthetic = support::synthetic("one-way-guarded-endpoint");
+    let native =
+        Dispatcher::start(Transport::Native, &[]).expect("the engine starts from the default init");
+    native
+        .run(3, 0, &support::open_request(&synthetic))
+        .expect("the native dispatcher opens the collection");
+    let answer = anki_proto::sync::SyncCollectionResponse {
+        required: anki_proto::sync::sync_collection_response::ChangesRequired::FullSync as i32,
+        ..anki_proto::sync::SyncCollectionResponse::default()
+    };
+    let mut fetched = Vec::new();
+    let mut expected = Vec::new();
+    for (at, (case, endpoint, rule)) in one_way_cases.into_iter().enumerate() {
+        let copy = synthetic.dir.join(format!("copy-{at}.anki2"));
+        let counted =
+            deck_streak_engine_core::one_way::count(&native, &answer, &sync_auth(endpoint), &copy);
+        let read = match counted {
+            Err(deck_streak_engine_core::one_way::Reason::Engine(Refusal::Engine { error })) => {
+                Ok(decoded(&error))
+            }
+            other => Err(format!("not an engine-shaped refusal: {other:?}")),
+        };
+        fetched.push((case, read));
+        expected.push((case, Ok((Kind::InvalidInput, rule.to_owned()))));
+    }
+    assert_eq!(
+        fetched, expected,
+        "each one-way write whose endpoint breaks the rule is refused before the engine, naming \
+         only the rule"
+    );
+    fetched
+}
+
+#[test]
+fn every_sync_call_reaches_only_a_guarded_endpoint_and_never_media() {
+    let fetched = one_way_refusals();
+
+    // The normal sync on the web transport, with no collection open: a request the guard let
+    // through would reach the engine and answer the engine's own error, never a network.
+    let web =
+        Dispatcher::start(Transport::Web, &[]).expect("the engine starts from the default init");
+    let normal_cases = [
+        ("an absent endpoint", normal_sync(None, false), ABSENT),
+        ("an empty endpoint", normal_sync(Some(""), false), ABSENT),
+        (
+            "no auth at all",
+            anki_proto::sync::SyncCollectionRequest::default().encode_to_vec(),
+            ABSENT,
+        ),
+        (
+            "an endpoint that is not a URL",
+            normal_sync(Some("not a url"), false),
+            UNPARSEABLE,
+        ),
+        (
+            "an endpoint carrying a user and a password",
+            normal_sync(
+                Some("https://learner-one:hunter-two@example.invalid/"),
+                false,
+            ),
+            CREDENTIALS,
+        ),
+        (
+            "plain http to a name",
+            normal_sync(Some("http://example.invalid/"), false),
+            SCHEME,
+        ),
+        (
+            "media over a guarded endpoint",
+            normal_sync(Some("http://127.0.0.1:1/"), true),
+            MEDIA,
+        ),
+    ];
+    let (service, method) = (1, 5);
+    let synced: Vec<(&str, String)> = normal_cases
+        .iter()
+        .map(|(case, request, _)| (*case, message(web.run(service, method, request))))
+        .collect();
+    let rules: Vec<(&str, String)> = normal_cases
+        .iter()
+        .map(|(case, _, rule)| (*case, (*rule).to_owned()))
+        .collect();
+    assert_eq!(
+        synced, rules,
+        "each normal sync whose endpoint breaks the rule, or that asks for media, is refused \
+         before the engine, naming only the rule"
+    );
+    let guarded = message(web.run(
+        service,
+        method,
+        &normal_sync(Some("http://127.0.0.1:1/"), false),
+    ));
+    let named = [ABSENT, UNPARSEABLE, CREDENTIALS, SCHEME, MEDIA];
+    assert!(
+        !named.contains(&guarded.as_str()),
+        "a guarded normal sync without media reaches the engine, which answers for itself: {guarded}"
+    );
+    support::examined("one-way endpoint(s)", fetched);
+    support::examined("normal sync request(s)", synced);
+}

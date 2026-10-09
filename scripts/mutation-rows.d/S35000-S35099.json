@@ -295,6 +295,102 @@
         "",
         "the stage copies the bindings beside the module; a stage that copied the module alone would leave a build whose Worker cannot start (SPEC-350 A22)",
         "test_web_engine_stage.TheStageCopiesTheModule.test_the_stage_copies_the_module_and_its_bindings"
+      ],
+      [
+        "S35044-THE-RELEASE-STAGES-THE-MODULE-IN-THE-APP-BUILD",
+        ".github/workflows/release.yml",
+        "        run: bash scripts/web-engine-stage.sh\n",
+        "        run: bash scripts/web-engine-stage.sh --to web/app/engine\n",
+        "the release stages the module and its bindings in the app's build, under `engine/`, so the tarball carries them at `web/engine/`, where the Worker loads `/engine/`; staged anywhere else, the published app has no engine (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_the_release_carries_the_module_at_web_engine"
+      ],
+      [
+        "S35045-THE-RELEASE-RUNS-THE-STAGE",
+        ".github/workflows/release.yml",
+        "      - name: the module and its bindings staged beside the build, under /engine/\n        run: bash scripts/web-engine-stage.sh\n",
+        "",
+        "the release runs the stage between the app's build and the tarball; without it the tarball's `web/` holds the app alone and its Worker finds no engine (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_the_release_carries_the_module_at_web_engine"
+      ],
+      [
+        "S35046-THE-RELEASE-STAGES-AFTER-THE-APP-BUILD",
+        ".github/workflows/release.yml",
+        "      - name: the Mini App, built once\n        run: pnpm --dir web/app build\n      - name: the module and its bindings staged beside the build, under /engine/\n        run: bash scripts/web-engine-stage.sh\n",
+        "      - name: the module and its bindings staged beside the build, under /engine/\n        run: bash scripts/web-engine-stage.sh\n      - name: the Mini App, built once\n        run: pnpm --dir web/app build\n",
+        "the stage runs after the app's build and before the tarball, the order CI's web-engine job runs them in, so the module is placed in the build the tarball packs (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_the_release_carries_the_module_at_web_engine"
+      ],
+      [
+        "S35047-THE-RELEASE-GATES-THE-MODULE-AFTER-ITS-BUILD",
+        ".github/workflows/release.yml",
+        "      - name: build the module and its bindings\n        run: bash scripts/web-engine-build.sh --cc clang-18 --ar llvm-ar-18 --out target/web-engine\n      - name: the size gate (8000000 bytes gzip -9, brotli beside it)\n        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js\n",
+        "      - name: the size gate (8000000 bytes gzip -9, brotli beside it)\n        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js\n      - name: build the module and its bindings\n        run: bash scripts/web-engine-build.sh --cc clang-18 --ar llvm-ar-18 --out target/web-engine\n",
+        "the size gate runs after the module's build, so it measures the module the release ships, in the order CI's web-engine job runs them (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_an_over_budget_module_stops_the_release_before_the_draft"
+      ],
+      [
+        "S35048-THE-SIZE-GATE-FAILS-THE-JOB",
+        ".github/workflows/release.yml",
+        "        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js\n",
+        "        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js\n        continue-on-error: true\n",
+        "a module over the budget fails the gate step and so the job, before the draft exists; a gate allowed to fail lets an over-budget module publish (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_an_over_budget_module_stops_the_release_before_the_draft"
+      ],
+      [
+        "S35049-THE-SIZE-GATE-EXIT-IS-THE-STEP-EXIT",
+        ".github/workflows/release.yml",
+        "        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js\n",
+        "        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js || true\n",
+        "the gate's exit is the step's exit; with `|| true` an over-budget refusal reads as a pass and the release publishes (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_an_over_budget_module_stops_the_release_before_the_draft"
+      ],
+      [
+        "S35050-NO-STEP-AFTER-THE-GATE-RUNS-ON-A-FAILURE",
+        ".github/workflows/release.yml",
+        "      - name: a draft release, so nothing is visible until the last upload\n",
+        "      - name: a draft release, so nothing is visible until the last upload\n        if: ${{ always() }}\n",
+        "no step from the gate to the publish runs after a failed step; a draft step with `always()` would make a release for a tag whose module the gate refused (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_an_over_budget_module_stops_the_release_before_the_draft"
+      ],
+      [
+        "S35051-THE-RELEASE-ADDS-THE-WASM32-TARGET",
+        ".github/workflows/release.yml",
+        "          rustup target add wasm32-unknown-unknown\n",
+        "          rustup target list --installed\n",
+        "the release adds the wasm32 target before the module's build, as CI's web-engine job does; without it the build fails at the tag instead of in CI (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_the_release_builds_and_gates_the_module_as_ci_does"
+      ],
+      [
+        "S35052-THE-RELEASE-CHECKS-THE-BINDINGS-GENERATOR",
+        ".github/workflows/release.yml",
+        "          echo \"$WASM_BINDGEN_SHA256  /tmp/wasm-bindgen.tgz\" | sha256sum -c -\n",
+        "          true\n",
+        "the release checks the bindings generator's download against its digest, as CI does; unchecked, a changed download writes the bindings the release ships (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_the_release_builds_and_gates_the_module_as_ci_does"
+      ],
+      [
+        "S35053-THE-RELEASE-CHECKS-THE-OPTIMISER",
+        ".github/workflows/release.yml",
+        "          echo \"$BINARYEN_SHA256  /tmp/binaryen.tgz\" | sha256sum -c -\n",
+        "          true\n",
+        "the release checks the optimiser's download against its digest, as CI does; unchecked, a changed download rewrites the module the release ships (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_the_release_builds_and_gates_the_module_as_ci_does"
+      ],
+      [
+        "S35054-THE-RELEASE-BUILDS-THE-MODULE-AS-CI-DOES",
+        ".github/workflows/release.yml",
+        "        run: bash scripts/web-engine-build.sh --cc clang-18 --ar llvm-ar-18 --out target/web-engine\n",
+        "        run: bash scripts/web-engine-build.sh --cc clang --ar llvm-ar --out target/web-engine\n",
+        "the release builds the module with CI's command, compiler and archiver, so it ships a module built as the one CI's browser tests ran over (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_the_release_builds_and_gates_the_module_as_ci_does"
+      ],
+      [
+        "S35055-THE-GATE-MEASURES-THE-SHIPPED-MODULE",
+        ".github/workflows/release.yml",
+        "        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js\n",
+        "        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine.js --bindings target/web-engine/deck_streak_web_engine.js\n",
+        "the gate measures the module and the bindings the stage ships, as CI's does; measuring the bindings in the module's place passes a module over the budget (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_the_release_builds_and_gates_the_module_as_ci_does"
       ]
     ]
   }

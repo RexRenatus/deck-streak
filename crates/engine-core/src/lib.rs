@@ -9,6 +9,8 @@
 //!
 //! - [`table`]: the transports, the ordinary table with its transport columns, the exempt table
 //!   and the decision for a pair (R2, R3).
+//! - [`answer`]: the owner's answer, one press on one card with one grade, Again or Good, its
+//!   refusal, and the codec steps of a native press (SPEC-365 R1 to R3, R6).
 //! - [`dispatch`]: the dispatcher, its refusal and its fixed reads (R1, R4).
 //! - [`face`]: a card's face, completed as the engine's own reviewer completes it: its text, its
 //!   sound and speech clips, and what autoplay and replay play (SPEC-348 R2, R4).
@@ -22,12 +24,18 @@
 //! - [`credential`]: the rule that keeps, sends and drops the sync key: its generation, a login
 //!   kept only at the generation it started at, a send only at the held one, and a drop only on
 //!   the server's refusal of the current one (SPEC-363 R3).
+//! - [`one_way`]: the one-way sync's steps in the order the choice's model checks them, each
+//!   reading its side from its file: the server copy, the backup, the re-check and the write
+//!   (SPEC-364 R4-R8).
+//! - [`undo_answer`]: the rule an undo of the review's own last answer passes: its record, the
+//!   review row it names, the refusals and the state the card returns to (SPEC-371 R3).
 //!
 //! The core depends on the engine and on no crate of this workspace; only the two client
 //! adapters depend on it (ADR-356 D4, held by the graph census).
 
 #![forbid(unsafe_code)]
 
+pub mod answer;
 pub mod credential;
 pub mod dispatch;
 pub mod face;
@@ -35,4 +43,6 @@ pub mod full_sync;
 pub mod gesture;
 pub mod login_guard;
 pub mod media;
+pub mod one_way;
 pub mod table;
+pub mod undo_answer;

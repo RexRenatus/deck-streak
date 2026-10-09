@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { CardView, Clip, Faces, FaceView, Head } from '$lib/engine/protocol';
+import type { CardView, Clip, Faces, FaceView, Head, UndoOffer } from '$lib/engine/protocol';
 import { Player, type AudioOut, type ObjectUrls, type Speaker, type SpeechClip } from './audio';
 import { Review, type StudyClient } from './review';
 
@@ -85,7 +85,7 @@ function view(id: number): CardView {
     answer: `<p>answer ${id}</p>`,
     css: '',
     labels: ['<1m', '<6m', '<10m', '4d'],
-    undo: ''
+    undo: null
   };
 }
 
@@ -119,6 +119,10 @@ class FacesClient implements StudyClient {
   async undo(): Promise<null> {
     this.calls.push('undo');
     return null;
+  }
+  async undoOffer(): Promise<UndoOffer> {
+    this.calls.push('undo-offer');
+    return { offer: null, why: 'none' };
   }
 }
 
