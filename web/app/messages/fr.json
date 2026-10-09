@@ -82,6 +82,7 @@
   "study_review_title": "Révision",
   "study_question_frame": "La question de la carte",
   "study_answer_frame": "La réponse de la carte",
+  "study_late_review": "Cette carte était à réviser un jour précédent, donc cette révision ne compte pas pour la série de ce jour-là.",
   "study_show_answer": "Afficher la réponse",
   "study_again": "À revoir",
   "study_good": "Correct",
