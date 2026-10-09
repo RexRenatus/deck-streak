@@ -21,6 +21,8 @@
 //! cases.
 //! SPEC-363 adds the release of the web client's sealing key ([`sync_seal_routes`]): the key for
 //! one seal id, to the owner's session alone, and off while the service holds no seal secret.
+//! SPEC-374 adds the statement of the oldest client level the sync service accepts
+//! ([`minimum_client`]), to any caller, beside the health routes.
 //!
 //! The context map (docs/CONTEXT-MAP.md) is binding: this crate depends only on what its line
 //! there declares, and a new edge is an ADR, never a fix to make code compile.
@@ -36,6 +38,7 @@ pub mod inbox_capture_route;
 pub mod insights_routes;
 pub mod law_routes;
 pub mod linking_routes;
+pub mod minimum_client;
 pub mod notifications_routes;
 pub mod progress_routes;
 pub mod router;

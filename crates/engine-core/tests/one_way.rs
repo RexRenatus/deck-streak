@@ -103,6 +103,7 @@ fn held(collection: &Path) -> IdSets {
 fn open(synthetic: &support::Synthetic) -> Dispatcher {
     let dispatcher =
         Dispatcher::start(Transport::Native, &[]).expect("the engine starts from the default init");
+    dispatcher.handshake(Some(br#"{"minimum_client_level":1}"#));
     let (service, method) = OPEN_COLLECTION;
     dispatcher
         .run(service, method, &support::open_request(synthetic))
@@ -115,6 +116,7 @@ fn open(synthetic: &support::Synthetic) -> Dispatcher {
 fn open_at(collection: &Path) -> Dispatcher {
     let dispatcher =
         Dispatcher::start(Transport::Native, &[]).expect("the engine starts from the default init");
+    dispatcher.handshake(Some(br#"{"minimum_client_level":1}"#));
     let request = OpenCollectionRequest {
         collection_path: collection
             .to_str()

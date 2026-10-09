@@ -140,11 +140,12 @@ export function start(scope: object = globalThis, load: ImportModule = importMod
     CredentialGlobals & { location: { href: string; origin: string } };
   const deps = browserDeps(new URL(ENGINE_BASE, worker.location.href), load, worker);
   // the module wasm-bindgen writes carries the session's exports, the credential's five and the
-  // sync's two; the sync takes its key from the one store the credential operations reach, and
-  // sends it only to the Worker's own origin's sync route (SPEC-364 R17, R18)
+  // sync's three; the sync reads the statement at the Worker's own origin first (SPEC-374 R22),
+  // takes its key from the one store the credential operations reach, and sends it only to the
+  // Worker's own origin's sync route (SPEC-364 R17, R18)
   const engine = once(deps.load) as () => Promise<EngineModule & CredentialEngine & SyncEngine>;
   const credential = browserCredential(worker, engine);
-  const sync = new Sync(credential, engine, worker.location.origin + SYNC_ROUTE);
+  const sync = new Sync(credential, engine, worker.location.origin + SYNC_ROUTE, (input, init) => worker.fetch(input, init));
   serve(worker, { ...deps, load: engine, credential, sync }, worker.location.origin);
   return true;
 }

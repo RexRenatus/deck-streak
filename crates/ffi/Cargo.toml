@@ -18,6 +18,11 @@ workspace = true
 deck-streak-engine-core.workspace = true
 # ADR-345 D2: the bindings generator's runtime and macros, pinned exactly.
 uniffi.workspace = true
+# ADR-385 D6 (SPEC-374 R8, R10): the HTTP client that reads the sync service's statement of its
+# minimum client level before a sync login, at the version and TLS stack the engine already links,
+# so it adds no package; and the runtime its one read runs on.
+reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls"] }
+tokio = { workspace = true, features = ["rt"] }
 
 [dev-dependencies]
 # ADR-022 and ADR-058: Anki's engine, for the round-trip tests' synthetic collections only

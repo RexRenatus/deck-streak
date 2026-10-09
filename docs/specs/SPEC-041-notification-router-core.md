@@ -697,3 +697,16 @@ A27: cargo test -p deck-streak-notifications --test one_router -- --exact a_modu
 A28: cargo test -p deck-streak-notifications --test one_router -- --exact a_unit_that_runs_a_test_file_is_refused
 A29: cargo test -p deck-streak-notifications --test one_router -- --exact a_command_reply_made_visible_outside_its_module_is_refused
 ```
+
+## 13. Amendment: the request allow-list names a second site (#671)
+
+SPEC-374 R9 and ADR-385 D6 add one named request site beside the bot transport's: the static
+library's read of the sync service's statement of its minimum client level, in
+`crates/ffi/src/engine.rs`, which makes reqwest's client under the same two scoped `#[expect]`
+attributes, one per lint and each with its reason, on the statement
+`let client = reqwest::Client::builder()`. A18's "the only suppression of either lint in the
+workspace is an `#[expect]` with a reason at the bot transport's client construction" now reads
+"at a named site: the bot transport's client construction or the static library's read of the
+statement". `crates/notifications/tests/request_allow_list.rs` names both sites, and
+`the_only_suppression_of_the_rule_is_an_expect_at_a_named_transport_site` finds each once and only
+them. The four paths, their reasons and every other refusal A18 states are unchanged.
