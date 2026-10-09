@@ -3,7 +3,8 @@
 Every Rust file git tracks is read as data, with its comments and its string and character
 literals removed, and each of `RED`, `toggled_red`, `BURY_USER`, `BuryOf` and `bury_of` must be
 defined exactly once, in `crates/engine-core/src/review.rs`, which both adapters reach. The census
-prints counts and the paths of the definitions it finds, never a file's text.
+prints counts and the paths of the definitions it finds, never a file's text. The parked Rust
+files are dropped by name before any open and counted (#158).
 """
 
 import re
@@ -13,6 +14,7 @@ from _support import REPO, examined
 from test_one_static_library import tracked_paths
 
 HOME = "crates/engine-core/src/review.rs"
+PARKED = "crates/vault/src/readings_tree.rs"
 RULES = ("RED", "toggled_red", "BURY_USER", "BuryOf", "bury_of")
 # A definition of a name: an item that introduces it, never a use, an import or a call.
 ITEM = r"\b(?:const|static|fn|struct|enum|union|type|trait|mod)\s+"
@@ -87,13 +89,29 @@ def problems(files):
     ]
 
 
+def parked(path):
+    """Whether `path` names the parked drill surface, read from the name alone."""
+    name = path.lower()
+    return "drill" in name or "readings_tree" in name
+
+
+def listing(paths):
+    """`paths` split into `(kept, skipped)` by `parked`, in input order; no file is opened."""
+    kept = [path for path in paths if not parked(path)]
+    skipped = [path for path in paths if parked(path)]
+    return kept, skipped
+
+
 def tracked_rust():
-    """Every Rust file git tracks, read as data and never printed."""
-    return {
+    """Every unparked Rust file git tracks, read as data and never printed, and the count of
+    parked ones dropped by name before any open."""
+    kept, skipped = listing([path for path in tracked_paths(REPO) if path.endswith(".rs")])
+    files = {
         path: (REPO / path).read_text(encoding="utf-8", errors="replace")
-        for path in tracked_paths(REPO)
-        if path.endswith(".rs") and (REPO / path).is_file()
+        for path in kept
+        if (REPO / path).is_file()
     }
+    return files, len(skipped)
 
 
 class TheFlagAndBuryRulesLiveOnceInTheCore(unittest.TestCase):
@@ -101,7 +119,11 @@ class TheFlagAndBuryRulesLiveOnceInTheCore(unittest.TestCase):
         """R2: each of the five is defined once in the workspace, in the core's review rule; a
         planted second copy is refused by its name, and a name in a comment or a string is not a
         definition."""
-        files = tracked_rust()
+        files, skipped = tracked_rust()
+        print(f"parked-skip: {skipped} Rust file(s) dropped by name before any open")
+        self.assertGreater(
+            skipped, 0, "parked-skip is 0: no parked file was dropped, so the census is red"
+        )
         found = definitions(files)
         for name, paths in found.items():
             print(f"{name}: {len(paths)} definition(s): {', '.join(paths) or 'none'}")
@@ -143,6 +165,20 @@ class TheFlagAndBuryRulesLiveOnceInTheCore(unittest.TestCase):
         for plant, (planted, wanted) in plants.items():
             with self.subTest(plant=plant):
                 self.assertEqual(problems(planted), wanted)
+        with self.subTest(plant="the listing drops the parked names, in order"):
+            planted = [HOME, "crates/x/src/drill_notes.rs", "crates/x/tests/Drill_cards.rs", PARKED]
+            planted.append("crates/x/src/a.rs")
+            self.assertEqual(
+                listing(planted),
+                (
+                    [HOME, "crates/x/src/a.rs"],
+                    ["crates/x/src/drill_notes.rs", "crates/x/tests/Drill_cards.rs", PARKED],
+                ),
+            )
+        with self.subTest(plant="the rule's own file is not parked"):
+            self.assertFalse(parked(HOME))
+        with self.subTest(plant="the parked file is parked"):
+            self.assertTrue(parked(PARKED))
         examined("Rust files", files)
 
 
