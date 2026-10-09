@@ -17,7 +17,7 @@ from _support import REPO
 
 SCRIPT = REPO / "scripts" / "testflight_age.py"
 NOW = "2030-01-10T12:00:00Z"
-NOW_EPOCH = 1894363200
+NOW_EPOCH = 1894276800
 GIT_IDENTITY = ["-c", "user.name=T", "-c", "user.email=t@example.invalid"]
 PARTS = ("KEY", "KEYID", "ISSUER", "APPID")
 # A DER signature whose r carries a sign byte and whose s is one byte short, and the raw r||s the

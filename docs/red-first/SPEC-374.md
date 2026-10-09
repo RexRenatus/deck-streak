@@ -58,3 +58,11 @@ A13: red at C1: AssertionError: 0 == 0
 A14: red at C1: AssertionError: 0 != 1 : one signature was asked for
 A15: red at C1: <the failure line, quoted from CI after push 1>
 ```
+A8: green at C2
+A9: green at C2
+A10: green at C2
+A11: green at C2
+A12: green at C2
+A13: green at C2
+A14: green at C2
+A15: green at C2
