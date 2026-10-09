@@ -3,17 +3,23 @@
  */
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ChoiceCounted, ChoiceConfirmed, Direction, StatusWord, Synced, Unsynced } from '$lib/engine/protocol';
-import { STATUS_WORDS } from '$lib/engine/protocol';
+import { REQUIRED, STATUS_WORDS } from '$lib/engine/protocol';
 import { m } from '$lib/paraglide/messages.js';
+import SyncRoute from '../../routes/sync/+page.svelte';
 import SyncScreen from './SyncScreen.svelte';
-import { statusText, type SyncClient } from './status';
+import { choosing, statusText, type SyncClient } from './status';
 
 // SPEC-377 R8, R10, R11, A10, A11, A13; ADR-388 D5, D11, D13. The sync screen posts the sync user
 // and password to the Worker once and keeps neither, says each status word in the owner's words,
 // shows the unsynced count the Worker answers, offline too, and says when the browser holds no
 // copy of the collection, offering the download alone.
+
+// The route draws the screen over the app's one engine, which is replaced before the route's
+// import runs.
+const route = vi.hoisted(() => ({ client: vi.fn(), lost: vi.fn() }));
+vi.mock('$lib/study/engine', () => ({ studyEngine: () => ({ client: route.client, lost: route.lost }) }));
 
 /** The engine's client as the sync screen sees it: each call recorded, each answer set. */
 class FakeSync implements SyncClient {
@@ -83,6 +89,30 @@ async function settle(): Promise<void> {
 
 function status(): string {
   return screen.getByRole('status').textContent?.trim() ?? '';
+}
+
+/** The text of each paragraph the screen shows, in order. */
+function texts(container: HTMLElement): string[] {
+  return [...container.querySelectorAll('p')].map((each) => each.textContent?.trim() ?? '');
+}
+
+/** Whether the sync and the sign-out buttons are disabled, in that order. */
+function disabled(): boolean[] {
+  return [m.sync_now(), m.sync_sign_out()].map(
+    (name) => (screen.getByRole('button', { name }) as HTMLButtonElement).disabled
+  );
+}
+
+/** A sync client whose first sync throws, as an engine that stopped does. */
+class FailingSync extends FakeSync {
+  failures = 1;
+
+  override async sync() {
+    if (this.failures === 0) return super.sync();
+    this.failures -= 1;
+    this.calls.push('sync');
+    throw new Error('the engine stopped');
+  }
 }
 
 function shown(fake: FakeSync, lost = false, ended: string[] = []) {
@@ -226,5 +256,133 @@ describe('the sync screen', () => {
     await settle();
     expect(screen.queryByText(m.sync_lost())).toBeNull();
     held.unmount();
+  });
+
+  it('offers the choice exactly when a sync answers that only a full sync can go on', () => {
+    expect(REQUIRED.map((required) => [required, choosing(required)])).toEqual([
+      ['no-changes', false],
+      ['normal-sync', false],
+      ['full-sync', true],
+      ['full-download', true],
+      ['full-upload', true]
+    ]);
+    expect(choosing(null)).toBe(false);
+    console.log(`examined ${REQUIRED.length + 1} sync answers`);
+  });
+
+  it('before the worker answers, the screen says it is working and offers nothing', async () => {
+    const view = render(SyncScreen, {
+      client: () => new Promise<SyncClient>(() => {}),
+      lost: () => true,
+      fetch: (async () => new Response(null, { status: 204 })) as typeof globalThis.fetch
+    });
+    // the first paint already says so: the open's act starts as the screen mounts
+    expect(texts(view.container)).toEqual(['', m.sync_working()]);
+    await settle();
+    expect(screen.getByRole('heading', { level: 1, name: m.sync_title() })).toBeTruthy();
+    expect(texts(view.container)).toEqual(['', m.sync_working()]);
+    expect(screen.queryAllByRole('button')).toEqual([]);
+    view.unmount();
+  });
+
+  it('a failed act says the engine stopped, and the next act clears it', async () => {
+    const fake = new FailingSync('held', { status: 'held', required: 'no-changes' }, [0]);
+    const view = shown(fake);
+    await settle();
+    expect(screen.queryByText(m.study_refused_engine())).toBeNull();
+    await fireEvent.click(screen.getByRole('button', { name: m.sync_now() }));
+    await settle();
+    expect(texts(view.container)).toEqual([m.sync_status_held(), m.study_refused_engine(), m.sync_unsynced({ count: 0 })]);
+    // the failed act has ended, so the owner may act again
+    expect(disabled()).toEqual([false, false]);
+    await fireEvent.click(screen.getByRole('button', { name: m.sync_now() }));
+    await settle();
+    expect(screen.queryByText(m.study_refused_engine())).toBeNull();
+    expect(screen.getByText(m.sync_in_step())).toBeTruthy();
+    expect(fake.calls.filter((call) => call === 'sync')).toHaveLength(2);
+    view.unmount();
+  });
+
+  it('the sync buttons wait while the worker works and while the choice is open', async () => {
+    const fake = new FakeSync('held', { status: 'held', required: 'full-sync' }, [5]);
+    fake.counted = {
+      status: 'held',
+      counts: { upload: { reviews: 1, cards: 1, notes: 1 }, download: { reviews: 2, cards: 2, notes: 2 } },
+      snapshot: { found: false }
+    };
+    const answer = fake.sync.bind(fake);
+    let release: () => void = () => {};
+    fake.sync = () => new Promise<Synced>((resolve) => (release = () => resolve(answer())));
+    const view = shown(fake);
+    await settle();
+    expect(disabled()).toEqual([false, false]);
+    await fireEvent.click(screen.getByRole('button', { name: m.sync_now() }));
+    await settle();
+    // the sync is with the Worker
+    expect(disabled()).toEqual([true, true]);
+    expect(screen.getByText(m.sync_working())).toBeTruthy();
+    release();
+    await settle();
+    // the sync answered that only a full sync can go on: the choice is open, and nothing is working
+    expect(screen.queryByText(m.sync_working())).toBeNull();
+    expect(screen.getByRole('heading', { level: 2, name: m.sync_choose() })).toBeTruthy();
+    expect(disabled()).toEqual([true, true]);
+    // a cancel closes the choice alone: nothing is written and the count is not read again
+    await fireEvent.click(screen.getByRole('button', { name: m.sync_choice_cancel() }));
+    await settle();
+    expect(screen.queryByRole('heading', { level: 2 })).toBeNull();
+    expect(disabled()).toEqual([false, false]);
+    expect(screen.queryByText(m.sync_choice_written())).toBeNull();
+    expect(fake.calls.filter((call) => call === 'unsynced')).toHaveLength(2);
+    view.unmount();
+  });
+
+  it('a written choice closes, says so and reads the count again, and the next sync clears the word', async () => {
+    const fake = new FakeSync('held', { status: 'held', required: 'full-download' }, [4, 4, 0]);
+    fake.counted = {
+      status: 'held',
+      counts: { upload: null, download: { reviews: 0, cards: 1, notes: 1 } },
+      snapshot: { found: false }
+    };
+    const view = shown(fake, true);
+    await settle();
+    await fireEvent.click(screen.getByRole('button', { name: m.sync_now() }));
+    await settle();
+    expect(screen.getByText(m.sync_full_required())).toBeTruthy();
+    await fireEvent.click(screen.getByRole('button', { name: m.sync_choice_restore() }));
+    await settle();
+    // the choice is closed, the browser holds the collection again, and the count is read again
+    expect(screen.queryByRole('heading', { level: 2 })).toBeNull();
+    expect(texts(view.container)).toEqual([m.sync_status_held(), m.sync_unsynced({ count: 0 }), m.sync_choice_written()]);
+    expect(fake.calls.filter((call) => call === 'unsynced')).toHaveLength(3);
+    fake.synced = { status: 'held', required: 'no-changes' };
+    await fireEvent.click(screen.getByRole('button', { name: m.sync_now() }));
+    await settle();
+    expect(texts(view.container)).toEqual([m.sync_status_held(), m.sync_unsynced({ count: 0 }), m.sync_in_step()]);
+    view.unmount();
+  });
+
+  it('the sign-in keeps the page where it is', async () => {
+    const view = shown(new FakeSync('absent'));
+    await settle();
+    const form = view.container.querySelector('form') as HTMLFormElement;
+    expect(await fireEvent.submit(form)).toBe(false);
+    view.unmount();
+  });
+
+  it("the route draws the sync screen over the app's one engine, and asks it whether the collection was lost", async () => {
+    for (const lost of [true, false]) {
+      const fake = new FakeSync('held');
+      route.client.mockResolvedValue(fake);
+      route.lost.mockReturnValue(lost);
+      const view = render(SyncRoute);
+      await settle();
+      const said = lost ? [m.sync_lost()] : [];
+      expect(texts(view.container), String(lost)).toEqual([m.sync_status_held(), ...said, m.sync_unsynced({ count: 7 })]);
+      expect(fake.calls, String(lost)).toEqual(['credentialStatus', 'unsynced']);
+      view.unmount();
+      route.client.mockReset();
+      route.lost.mockReset();
+    }
   });
 });

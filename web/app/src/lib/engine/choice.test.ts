@@ -207,4 +207,25 @@ describe("the worker's choice", () => {
     }
     console.log(`examined ${answers.length} snapshot answers that are not found`);
   });
+
+  it('a found answer is read only at a 200 that states whole seconds from zero, within the cap', async () => {
+    // an age of zero is a snapshot made this second
+    expect((await made(json({ found: true, age_seconds: 0 })).choice.count()).snapshot).toEqual({ found: true, age: 0 });
+    // a body of exactly the cap is read; one byte over is not (the 'too long' answer above)
+    const head = '{"found":false,"pad":"';
+    const exact = `${head}${'x'.repeat(1024 - head.length - 2)}"}`;
+    expect(new TextEncoder().encode(exact).byteLength).toBe(1024);
+    expect((await made(new Response(exact, { status: 200 })).choice.count()).snapshot).toEqual({ found: false });
+    // a stated answer at any status but 200, and an age with no word that says found, are unknown
+    const unknown: [string, Response][] = [
+      ['not found at 404', json({ found: false }, 404)],
+      ['found at 203', json({ found: true, age_seconds: 5 }, 203)],
+      ['an age alone', json({ age_seconds: 5 })],
+      ['an age beside a null word', json({ found: null, age_seconds: 5 })]
+    ];
+    for (const [what, answer] of unknown) {
+      expect((await made(answer).choice.count()).snapshot, what).toEqual({ found: null });
+    }
+    console.log(`examined ${unknown.length + 2} snapshot answers at the bounds`);
+  });
 });

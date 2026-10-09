@@ -6,7 +6,7 @@ import { flushSync } from 'svelte';
 import { describe, expect, it } from 'vitest';
 import type { ChoiceConfirmed, ChoiceCounted, Direction } from '$lib/engine/protocol';
 import { m } from '$lib/paraglide/messages.js';
-import { getLocale } from '$lib/paraglide/runtime.js';
+import { getLocale, overwriteGetLocale } from '$lib/paraglide/runtime.js';
 import ChoiceScreen from './ChoiceScreen.svelte';
 import { snapshotAge, type ChoiceClient } from './status';
 
@@ -54,6 +54,38 @@ function shown(fake: FakeChoice, lost = false) {
   const done: string[] = [];
   const view = render(ChoiceScreen, { client: fake, lost, ondone: (outcome: string) => done.push(outcome) });
   return { view, done };
+}
+
+/** The text of each paragraph the screen shows, in order. */
+function texts(container: HTMLElement): string[] {
+  return [...container.querySelectorAll('p')].map((each) => each.textContent?.trim() ?? '');
+}
+
+/** Each button the screen shows, by its name, with whether it is disabled. */
+function buttons(): [string, boolean][] {
+  return screen
+    .queryAllByRole('button')
+    .map((each) => [each.textContent?.trim() ?? '', (each as HTMLButtonElement).disabled]);
+}
+
+/** A choice whose count fails, as a Worker that stopped does. */
+class FailingChoice extends FakeChoice {
+  override async choiceCount(): Promise<ChoiceCounted> {
+    this.calls.push('choiceCount');
+    throw new Error('the Worker stopped');
+  }
+}
+
+/** A choice whose confirm waits until the test answers it, with an answer or a failure. */
+class HeldChoice extends FakeChoice {
+  answer: (value: ChoiceConfirmed | Error) => void = () => {};
+
+  override async choiceConfirm(direction: Direction): Promise<ChoiceConfirmed> {
+    this.calls.push(`choiceConfirm ${direction}`);
+    const value = await new Promise<ChoiceConfirmed | Error>((resolve) => (this.answer = resolve));
+    if (value instanceof Error) throw value;
+    return value;
+  }
 }
 
 function counted(
@@ -188,5 +220,107 @@ describe('the choice screen', () => {
       'choiceConfirm download',
       'choiceConfirm download'
     ]);
+  });
+
+  it('a cancel leaves nothing to tap, and a count answered after it changes nothing', async () => {
+    // with the counts shown
+    const fake = new FakeChoice(counted(UPLOAD, DOWNLOAD));
+    const showing = shown(fake);
+    await settle();
+    expect(screen.getByRole('heading', { level: 2, name: m.sync_choose() })).toBeTruthy();
+    await fireEvent.click(screen.getByRole('button', { name: m.sync_choice_cancel() }));
+    await settle();
+    expect([texts(showing.view.container), buttons(), showing.done]).toEqual([[], [], ['cancelled']]);
+    showing.view.unmount();
+    // while counting, the count answering after the cancel
+    let answer: (value: ChoiceCounted) => void = () => {};
+    const slow = new FakeChoice(new Promise<ChoiceCounted>((resolve) => (answer = resolve)));
+    const counting = shown(slow);
+    await settle();
+    await fireEvent.click(screen.getByRole('button', { name: m.sync_choice_cancel() }));
+    await settle();
+    answer(counted(UPLOAD, DOWNLOAD));
+    await settle();
+    expect([texts(counting.view.container), buttons(), counting.done]).toEqual([[], [], ['cancelled']]);
+    counting.view.unmount();
+  });
+
+  it('a count that counted nothing, or failed, offers no direction and says the choice replaced nothing', async () => {
+    const cases: [string, FakeChoice][] = [
+      ['nothing counted', new FakeChoice({ status: 'needs-sign-in', counts: null, snapshot: null })],
+      ['the count failed', new FailingChoice()]
+    ];
+    for (const [what, fake] of cases) {
+      const { view } = shown(fake);
+      await settle();
+      expect(texts(view.container), what).toEqual([m.sync_choice_refused()]);
+      expect(buttons(), what).toEqual([[m.sync_choice_cancel(), false]]);
+      view.unmount();
+    }
+    console.log(`examined ${cases.length} counts that offer nothing`);
+    // counts with both directions say no sentence beside them, and an upload with no snapshot
+    // answer waits
+    const { view } = shown(new FakeChoice(counted(UPLOAD, DOWNLOAD, null)));
+    await settle();
+    expect(texts(view.container)).toEqual([
+      m.sync_choice_upload_loses(UPLOAD),
+      m.sync_choice_snapshot_waits(),
+      m.sync_choice_download_loses(DOWNLOAD)
+    ]);
+    expect(buttons()).toEqual([
+      [m.sync_choice_upload(), true],
+      [m.sync_choice_download(), false],
+      [m.sync_choice_cancel(), false]
+    ]);
+    view.unmount();
+  });
+
+  it('a tap holds every button until the Worker answers, and a failed tap says it replaced nothing', async () => {
+    const fake = new HeldChoice(counted(UPLOAD, DOWNLOAD));
+    const { view, done } = shown(fake);
+    await settle();
+    const all = (held: boolean): [string, boolean][] => [
+      [m.sync_choice_upload(), held],
+      [m.sync_choice_download(), held],
+      [m.sync_choice_cancel(), held]
+    ];
+    expect(buttons()).toEqual(all(false));
+    await fireEvent.click(screen.getByRole('button', { name: m.sync_choice_download() }));
+    await settle();
+    expect(buttons()).toEqual(all(true));
+    fake.answer({ status: 'held', outcome: 'changed', why: 'server', counts: { upload: UPLOAD, download: DOWNLOAD } });
+    await settle();
+    expect(buttons()).toEqual(all(false));
+    expect(screen.getByText(m.sync_choice_changed_server())).toBeTruthy();
+    await fireEvent.click(screen.getByRole('button', { name: m.sync_choice_upload() }));
+    await settle();
+    expect(buttons()).toEqual(all(true));
+    fake.answer(new Error('the Worker stopped'));
+    await settle();
+    expect(buttons()).toEqual(all(false));
+    expect(texts(view.container)).toEqual([
+      m.sync_choice_refused(),
+      m.sync_choice_upload_loses(UPLOAD),
+      m.sync_choice_snapshot_age({ age: snapshotAge(7200, getLocale()) }),
+      m.sync_choice_download_loses(DOWNLOAD)
+    ]);
+    expect([fake.calls, done]).toEqual([['choiceCount', 'choiceConfirm download', 'choiceConfirm upload'], []]);
+    view.unmount();
+  });
+
+  it("the snapshot's age reads in the page's language", async () => {
+    const original = getLocale;
+    const fallback = new Intl.RelativeTimeFormat().resolvedOptions().locale;
+    // the page's language and the runtime's own say the age differently, so the screen's is judged
+    expect(snapshotAge(7200, 'fr')).not.toBe(snapshotAge(7200, fallback));
+    overwriteGetLocale(() => 'fr');
+    try {
+      const { view } = shown(new FakeChoice(counted(UPLOAD, DOWNLOAD, { found: true, age: 7200 })));
+      await settle();
+      expect(screen.getByText(m.sync_choice_snapshot_age({ age: snapshotAge(7200, 'fr') }))).toBeTruthy();
+      view.unmount();
+    } finally {
+      overwriteGetLocale(original);
+    }
   });
 });
