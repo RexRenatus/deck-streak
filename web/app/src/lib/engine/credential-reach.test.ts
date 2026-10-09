@@ -172,7 +172,7 @@ describe('where the sync key reaches', () => {
     const password = sentinel('pass', 'word', 'sync', 'reach');
     const user = sentinel('sync', 'user', 'sync', 'reach');
     const release = new ReleaseService();
-    const engine = { ...standIn(), sync_login: () => hostKey, sync_collection: () => 1 };
+    const engine = { ...standIn(), sync_login: () => hostKey, sync_collection: () => 1, handshake: () => undefined };
     const store = new CredentialStore(workerDeps(new IDBFactory(), release, new Bus(), engine));
     const { serve } = await import('./worker');
     const { Sync } = await import('./sync');
@@ -185,7 +185,7 @@ describe('where the sync key reaches', () => {
         storage: async () => null,
         load: async () => studyEngine(),
         credential: store,
-        sync: new Sync(store, async () => engine, ENDPOINT)
+        sync: new Sync(store, async () => engine, ENDPOINT, async () => new Response('{"minimum_client_level":1}', { status: 200 }))
       },
       ORIGIN
     );

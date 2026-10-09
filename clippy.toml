@@ -5,7 +5,9 @@ allow-dbg-in-tests = true
 allow-print-in-tests = true
 
 # Request capability is named by the compiler's resolved path (SPEC-041 A18): reqwest's client is
-# made only at the bot transport's annotated site, whatever name a source binds it to.
+# made only at the annotated sites the request allow-list names
+# (`crates/notifications/tests/request_allow_list.rs`: the bot transport's, and the static
+# library's read of the sync statement, SPEC-374 R9), whatever name a source binds it to.
 disallowed-types = [
     { path = "reqwest::Client", reason = "a request to the Bot API is made only by the bot transport's annotated site" },
 ]

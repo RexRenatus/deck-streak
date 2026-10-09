@@ -62,6 +62,14 @@ const RELEASE_ROUTE = '/api/sync/seal-key';
 /** The tests' own routes: `POST mode/<mode>` sets how the sync route answers and empties the
  * recorder; `GET seen` answers the sync paths the recorder saw since. */
 const TEST_ROUTE = '/test-sync/';
+/** The route where the service states the oldest client level it accepts (sync.ts's
+ * `STATEMENT_ROUTE`), and the route a redirected statement moves to (SPEC-374 R22). */
+const STATEMENT_ROUTE = '/api/sync/minimum-client';
+const STATEMENT_MOVED = '/api/sync/minimum-client-moved';
+/** How the statement route answers: a level the client meets, a level above any client, or a
+ * same-origin 307 whose target would admit, so a followed redirect shows. */
+const STATEMENTS = ['admit', 'below', 'moved'] as const;
+type Statement = (typeof STATEMENTS)[number];
 
 /** How the sync route answers: forwarded to the server, refused with a 403, moved by a
  * same-origin 307, or its connection dropped with no answer. */
@@ -73,7 +81,9 @@ type Mode = (typeof MODES)[number];
  * 32-byte key per seal id, drawn when that seal id is first asked for. */
 function syncRoutes(): Plugin {
   let mode: Mode = 'pass';
+  let statement: Statement = 'admit';
   const seen: string[] = [];
+  const statementAsked: string[] = [];
   const released = new Map<string, string>();
   return {
     name: 'deck-streak-sync-routes',
@@ -91,6 +101,8 @@ function syncRoutes(): Plugin {
           }
           mode = known;
           seen.length = 0;
+          statement = 'admit';
+          statementAsked.length = 0;
           response.end(mode);
           return;
         }
@@ -123,6 +135,38 @@ function syncRoutes(): Plugin {
             response.setHeader('Cache-Control', 'no-store');
             response.end(JSON.stringify({ key }));
           });
+          return;
+        }
+        if (request.method === 'POST' && path.startsWith(`${TEST_ROUTE}statement/`)) {
+          const wanted = path.slice(`${TEST_ROUTE}statement/`.length);
+          const known = STATEMENTS.find((each) => each === wanted);
+          if (known === undefined) {
+            response.statusCode = 400;
+            response.end(`no statement ${wanted}: one of ${STATEMENTS.join(', ')}`);
+            return;
+          }
+          statement = known;
+          statementAsked.length = 0;
+          response.end(statement);
+          return;
+        }
+        if (request.method === 'GET' && path === `${TEST_ROUTE}asked`) {
+          response.setHeader('Content-Type', 'application/json');
+          response.end(JSON.stringify(statementAsked));
+          return;
+        }
+        if (request.method === 'GET' && (path === STATEMENT_ROUTE || path === STATEMENT_MOVED)) {
+          statementAsked.push(path);
+          if (path === STATEMENT_ROUTE && statement === 'moved') {
+            response.statusCode = 307;
+            response.setHeader('Location', STATEMENT_MOVED);
+            response.end();
+            return;
+          }
+          const level = path === STATEMENT_ROUTE && statement === 'below' ? 9007199254740991 : 1;
+          response.setHeader('Content-Type', 'application/json');
+          response.setHeader('Cache-Control', 'no-store');
+          response.end(JSON.stringify({ minimum_client_level: level }));
           return;
         }
         if (path.startsWith(SYNC_ROUTE) || path.startsWith(MOVED_ROUTE)) seen.push(path);

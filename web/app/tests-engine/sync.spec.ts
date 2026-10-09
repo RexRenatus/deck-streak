@@ -18,6 +18,9 @@ import type { Harness } from '../engine-harness/main';
 /** How the sync route answers: see vite.engine.config.ts's `MODES`. */
 type Mode = 'pass' | 'forbid' | 'redirect' | 'drop';
 
+/** How the statement route answers: see vite.engine.config.ts's `STATEMENTS`. */
+type Statement = 'admit' | 'below' | 'moved';
+
 /** Opens the harness page and waits for its script. */
 async function boot(page: Page): Promise<void> {
   await page.goto('/index.html');
@@ -37,6 +40,17 @@ async function profile(
 async function answering(request: APIRequestContext, mode: Mode): Promise<void> {
   const response = await request.post(`/test-sync/mode/${mode}`);
   expect(response.status(), `the sync route's mode ${mode}`).toBe(200);
+}
+
+/** Sets how the statement route answers, and empties the recorder of the statements asked. */
+async function stating(request: APIRequestContext, answer: Statement): Promise<void> {
+  const response = await request.post(`/test-sync/statement/${answer}`);
+  expect(response.status(), `the statement route's answer ${answer}`).toBe(200);
+}
+
+/** The statement paths asked since the statement route's answer was last set. */
+async function asked(request: APIRequestContext): Promise<string[]> {
+  return (await (await request.get('/test-sync/asked')).json()) as string[];
 }
 
 /** The sync paths the route saw since its mode was last set. */
@@ -155,6 +169,42 @@ test('a redirected sync answer is refused', async ({ playwright, browserName, ba
     await answering(request, 'redirect');
     expect(await synced(page)).toEqual({ answer: { status: 'held', required: null }, status: 'held' });
     expect(await seen(request)).toContain('/anki-sync-moved/sync/meta');
+  } finally {
+    await context.close();
+  }
+});
+
+test('a statement that does not admit the client stops the sync before any sync request and says why', async ({
+  playwright,
+  browserName,
+  baseURL,
+  request
+}) => {
+  await answering(request, 'pass');
+  const { user, password } = account();
+  const below =
+    'This version of DeckStreak is older than the oldest the sync service accepts. Update DeckStreak to sync.';
+  const undecodable =
+    "The sync service's statement of the oldest version it accepts could not be read, so nothing was synced.";
+  const context = await profile(playwright, browserName, baseURL);
+  try {
+    const page = await context.newPage();
+    await boot(page);
+    await opened(page);
+    // a statement above this client's level stops the login and the sync, each with the core's sentence
+    await stating(request, 'below');
+    expect(await login(page, user, password)).toEqual({ code: 'engine-failed', message: below });
+    expect(await synced(page)).toEqual({ answer: { code: 'engine-failed', message: below }, status: 'absent' });
+    expect(await seen(request)).toEqual([]);
+    expect(await asked(request)).toEqual(['/api/sync/minimum-client', '/api/sync/minimum-client']);
+    // a redirected statement is not followed: it reads as no statement, and the login stops
+    await stating(request, 'moved');
+    expect(await login(page, user, password)).toEqual({ code: 'engine-failed', message: undecodable });
+    expect(await asked(request)).toEqual(['/api/sync/minimum-client']);
+    // a statement that admits lets the login through
+    await stating(request, 'admit');
+    expect(await login(page, user, password)).toBe('held');
+    expect(await page.evaluate(() => window.harness.violations)).toEqual([]);
   } finally {
     await context.close();
   }
