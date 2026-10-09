@@ -12,7 +12,10 @@
   // The input reads the remote's mapping this device stores, and the nav links to its screen
   // (SPEC-350 R18, ADR-361 D15). SPEC-371 R10; ADR-382: while the review asks to undo its own last
   // answer, the control bar becomes a dialog that names the card as text, the answer and the state
-  // it goes back to, with the focus on keeping it; Escape keeps it too.
+  // it goes back to, with the focus on keeping it; Escape keeps it too. SPEC-376 R5, R6; ADR-387: a
+  // card the engine marks past its due day shows one line, below the status line and above the card,
+  // on both sides, saying its review does not count toward the streak for that day; a card on time
+  // shows none.
   import { onMount } from 'svelte';
   import CardFrame from '$lib/card/CardFrame.svelte';
   import type { Returns } from '$lib/engine/protocol';
@@ -186,6 +189,9 @@
       {#if shown.status !== null}{statusText(shown.status)}{/if}
     </p>
     {#if face !== null}
+      {#if face.view.late}
+        <p class="text-sm">{m.study_late_review()}</p>
+      {/if}
       <div class="h-[55dvh] *:size-full *:border-0">
         <CardFrame
           html={face.side === 'answer' ? face.view.answer : face.view.question}

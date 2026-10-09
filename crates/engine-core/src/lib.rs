@@ -32,6 +32,8 @@
 //!   (SPEC-364 R4-R8).
 //! - [`undo_answer`]: the rule an undo of the review's own last answer passes: its record, the
 //!   review row it names, the refusals and the state the card returns to (SPEC-371 R3).
+//! - [`late`]: whether a review cannot count toward the streak for its card's due day: the
+//!   engine's day, and the rule that judges a card past its due day in it (SPEC-376 R1, R2).
 //!
 //! The core depends on the engine and on no crate of this workspace; only the two client
 //! adapters depend on it (ADR-356 D4, held by the graph census).
@@ -45,6 +47,7 @@ pub mod face;
 pub mod full_sync;
 pub mod gesture;
 pub mod handshake;
+pub mod late;
 pub mod login_guard;
 pub mod media;
 pub mod one_way;
