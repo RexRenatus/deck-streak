@@ -13,6 +13,7 @@ use deck_streak_engine_core::dispatch::{Dispatcher, Refusal};
 use deck_streak_engine_core::face::Side;
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
 use deck_streak_engine_core::handshake;
+use deck_streak_engine_core::review::{self, bury_of, bury_request, flag_request, toggled_red};
 use deck_streak_engine_core::table::{ExemptWrite, Transport};
 
 use crate::allow_list::allowed;
@@ -203,6 +204,39 @@ impl Engine {
             .run_answer(answer, &request)
             .map_err(press_refusal)
     }
+
+    /// Buries the card `card_id` as the user's bury of that card alone, so the queue moves on to
+    /// the next card (SPEC-358 R3).
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the engine refuses the bury.
+    pub fn bury(&self, card_id: i64) -> Result<(), EngineRefusal> {
+        // `SchedulerService.BuryOrSuspendCards`, through the allow-list as every call goes.
+        self.run(13, 14, bury_request(bury_of(card_id)))?;
+        Ok(())
+    }
+
+    /// Toggles red on the card `card_id`, whose flag is `flag` as its queued card carries it, and
+    /// answers the flag the card now carries: red to none, and any other flag to red (SPEC-358 R3).
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the engine refuses the flag.
+    pub fn flag(&self, card_id: i64, flag: u32) -> Result<u32, EngineRefusal> {
+        let flag = toggled_red(flag);
+        // `CardsService.SetFlag`, through the allow-list as every call goes.
+        self.run(5, 4, flag_request(card_id, flag))?;
+        Ok(flag)
+    }
+}
+
+/// The engine's number for the red flag, which the app reads once and compares a card's flag with,
+/// so it holds no copy of its own (SPEC-358 R3).
+#[uniffi::export]
+#[must_use]
+pub fn red_flag() -> u32 {
+    review::RED
 }
 
 /// The adapter's clock: the milliseconds since the epoch an answer records as its time.

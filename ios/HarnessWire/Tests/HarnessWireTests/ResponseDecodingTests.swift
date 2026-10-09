@@ -152,4 +152,19 @@ final class ResponseDecodingTests: XCTestCase {
             [card.state(for: .again), card.state(for: .good)], [[0x22], [0x24]],
             "each grade's own state")
     }
+
+    func test_a40_the_queued_card_carries_its_flag() throws {
+        // SPEC-358 A40: QueuedCards with two cards. The first is Card { id (1) 7, flags (17) 1 }:
+        // field 17's varint tag is 17 << 3 = 136, written `88 01`, and red is the engine's flag 1,
+        // so the card is 2 + 3 = 5 bytes and its QueuedCard 2 + 5 = 7. The second is Card { id (1)
+        // 8 } with no flag, 2 bytes, its QueuedCard 4.
+        let queue = bytes(
+            [0x0a, 0x07], [0x0a, 0x05], [0x08, 0x07], [0x88, 0x01, 0x01],
+            [0x0a, 0x04], [0x0a, 0x02], [0x08, 0x08])
+        let cards = try Responses.queue(queue).cards
+        XCTAssertEqual(
+            cards.map(\.flag), [1, 0],
+            "A40: the red card carries Card.flags (17) as 1, and the card with none carries 0")
+        XCTAssertEqual(cards.map(\.cardID), [7, 8], "each card's id decodes beside its flag")
+    }
 }

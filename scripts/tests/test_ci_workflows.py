@@ -2779,6 +2779,13 @@ HARNESS_TIMEOUT_MINUTES = range(150, 181)
 # after 60:26, so the band starts at one and a half times that run, rounded up to the minute, and
 # ends at twice it, rounded down to the ten, so a hung test still ends within two hours.
 RELEASE_TIMEOUT_MINUTES = range(91, 121)
+# The two web mutation legs' timeout (SPEC-379 R1, R2): the weekly battery's `web` job and the
+# pull request's `mutation-web` job each run StrykerJS over up to the whole Mini App. The band
+# starts at the bound its rule gives, the worst measured cost per mutant times the larger measured
+# count, one and a half times, plus the set-up and the report, rounded up to the five, so a leg set
+# back to 60 is refused; it ends at twice the projected whole sweep, rounded down to the ten, so a
+# hung test still ends within two hours.
+WEB_MUTATION_TIMEOUT_MINUTES = range(100, 121)
 
 
 def engine_job_problems(workflow):
@@ -7815,6 +7822,7 @@ HARNESS_PROJECT = "the project, generated"
 HARNESS_LAST = "the required-reason symbols the Release executable imports, against the manifest"
 APP_TESTS = "the app's tests, Debug, on the iPhone and then the iPad"
 REVIEW_TESTS = "the review screen's tests, Debug, on the iPhone and then the iPad"
+REVIEW_ACTIONS_TESTS = "the bury and flag tests, Debug, on the iPhone and then the iPad"
 APP_ARCHIVE = "the app, archived unsigned for a device"
 HARNESS_REPORT = "the report"
 # What the app's test step runs: the app's scheme on both simulators, one after the other, with
@@ -7876,6 +7884,7 @@ def app_steps_problems(workflow):
         HARNESS_LAST,
         APP_TESTS,
         REVIEW_TESTS,
+        REVIEW_ACTIONS_TESTS,
         APP_ARCHIVE,
         HARNESS_REPORT,
     ):
@@ -7920,8 +7929,10 @@ def app_steps_problems(workflow):
     if report is not None:
         text = str(report.get("run", ""))
         problems += [f"harness: the report lacks {n}" for n in APP_REPORT_NEEDS if n not in text]
-    if len(found) == 6:
+    if len(found) == 7:
         order = (HARNESS_LAST, APP_TESTS, REVIEW_TESTS, APP_ARCHIVE, HARNESS_REPORT)
+        # The bury and flag step sits right after the review screen's step (SPEC-358 R8).
+        order = order[:3] + (REVIEW_ACTIONS_TESTS,) + order[3:]
         at = [names.index(name) for name in order]
         if at != list(range(at[0], at[0] + len(order))):
             problems.append(
@@ -7988,6 +7999,7 @@ class TheAppIsGeneratedTestedAndArchived(unittest.TestCase):
             {"name": HARNESS_LAST, "run": "true\n"},
             {"name": APP_TESTS, "run": test_run},
             {"name": REVIEW_TESTS, "run": "true\n"},
+            {"name": REVIEW_ACTIONS_TESTS, "run": "true\n"},
             {"name": APP_ARCHIVE, "run": archive_run},
             {
                 "name": HARNESS_REPORT,
@@ -8091,6 +8103,7 @@ class TheAppIsGeneratedTestedAndArchived(unittest.TestCase):
                     HARNESS_REPORT,
                     APP_TESTS,
                     REVIEW_TESTS,
+                    REVIEW_ACTIONS_TESTS,
                     APP_ARCHIVE,
                 ),
                 [
@@ -8105,6 +8118,7 @@ class TheAppIsGeneratedTestedAndArchived(unittest.TestCase):
                     APP_ARCHIVE,
                     APP_TESTS,
                     REVIEW_TESTS,
+                    REVIEW_ACTIONS_TESTS,
                     HARNESS_REPORT,
                 ),
                 [
@@ -8123,6 +8137,7 @@ class TheAppIsGeneratedTestedAndArchived(unittest.TestCase):
                     APP_TESTS,
                     APP_ARCHIVE,
                     REVIEW_TESTS,
+                    REVIEW_ACTIONS_TESTS,
                     HARNESS_REPORT,
                 ),
                 [
@@ -8416,6 +8431,258 @@ class TheReviewScreenIsTestedOnBothSimulators(unittest.TestCase):
                 self.assertEqual(review_step_problems({"jobs": {"harness": job}}), wanted, name)
 
 
+# The bury and flag step in the `harness` job (SPEC-358 R8 and A14): the app's scheme on the
+# iPhone and then the iPad, one after the other, limited to the review's bury and flag class, over
+# the app step's derived data into its own result bundle, signed ad hoc on its command line, with a
+# copy of the review fixture of its own named on the test command's line, and its time written for
+# the report. It runs after a red app step too, as the review screen's step does, and the app's
+# step skips its class, so each of its tests runs once, with its fixture.
+REVIEW_ACTIONS_TEST_NEEDS = (
+    "xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug",
+    '-destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS"',
+    '-destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS"',
+    "-disable-concurrent-destination-testing",
+    "-only-testing:DeckStreakUITests/ReviewActionsFlowTests",
+    '-derivedDataPath "$RUNNER_TEMP/app-debug"',
+    '-resultBundlePath "$RESULTS/review-actions.xcresult"',
+    "CODE_SIGN_IDENTITY=-",
+    '> "$REPORT/review-actions-seconds"',
+)
+# A copy of its own: the review screen's step copies the fixture to its own path first, and a copy
+# onto an existing directory lands inside it.
+REVIEW_ACTIONS_FIXTURE_NEEDS = (
+    'cp -R engine-artifact/review-fixture "$RUNNER_TEMP/review-actions-fixture"',
+    f'{REVIEW_FIXTURE}="$RUNNER_TEMP/review-actions-fixture" xcodebuild test',
+)
+REVIEW_ACTIONS_ID = "review-actions-tests"
+REVIEW_ACTIONS_SKIP = "-skip-testing:DeckStreakUITests/ReviewActionsFlowTests"
+# The report's rows for the step: its test cases, read and listed, and its test time.
+REVIEW_ACTIONS_REPORT_NEEDS = (
+    'cases_in("review-actions")',
+    '("Review actions", review_actions_cases)',
+    'minutes("review-actions-seconds")',
+)
+
+
+def review_actions_step_problems(workflow):
+    """Each way the `harness` job could fail to run the review's bury and flag tests, named
+    (SPEC-358 R8, A14): one step of its name, with its id and its condition, runs the app's scheme
+    on the iPhone and then the iPad, one after the other, limited to the bury and flag class, over
+    the app's derived data into its own result bundle, signed ad hoc on its command line, with a
+    copy of the review fixture of its own named on the test command's line, never in its env; the
+    app's step skips the class; and the report carries the step's cases and time."""
+    job = (workflow.get("jobs") or {}).get("harness") or {}
+    steps = job.get("steps") or []
+    names = [step.get("name") for step in steps]
+    problems = []
+    count = names.count(REVIEW_ACTIONS_TESTS)
+    if count != 1:
+        problems.append(f"harness: {count} steps named {REVIEW_ACTIONS_TESTS!r}, not one")
+    step = steps[names.index(REVIEW_ACTIONS_TESTS)] if count == 1 else None
+    if step is not None:
+        for key, wanted in (("id", REVIEW_ACTIONS_ID), ("if", REVIEW_IF)):
+            if step.get(key) != wanted:
+                problems.append(
+                    f"harness: the bury and flag step's {key} is {step.get(key)!r}, not {wanted!r}"
+                )
+        run = run_joined(step)
+        problems += [
+            f"harness: the bury and flag step lacks {n}"
+            for n in (*REVIEW_ACTIONS_FIXTURE_NEEDS, *REVIEW_ACTIONS_TEST_NEEDS)
+            if n not in run
+        ]
+        iphone, ipad = (run.find(n) for n in REVIEW_ACTIONS_TEST_NEEDS[1:3])
+        if -1 < ipad < iphone:
+            problems.append("harness: the bury and flag step names the iPad before the iPhone")
+        if REVIEW_FIXTURE in str(step.get("env") or {}):
+            problems.append(
+                f"harness: the env of {REVIEW_ACTIONS_TESTS!r} names {REVIEW_FIXTURE}, which only "
+                "its command line may set"
+            )
+    if names.count(APP_TESTS) == 1:
+        if REVIEW_ACTIONS_SKIP not in run_joined(steps[names.index(APP_TESTS)]):
+            problems.append(f"harness: the app's test step lacks {REVIEW_ACTIONS_SKIP}")
+    if names.count(HARNESS_REPORT) == 1:
+        text = str(steps[names.index(HARNESS_REPORT)].get("run", ""))
+        problems += [
+            f"harness: the report lacks {n}" for n in REVIEW_ACTIONS_REPORT_NEEDS if n not in text
+        ]
+    return problems
+
+
+class TheReviewActionsStepRunsOnTheIphoneAndThenTheIpad(unittest.TestCase):
+    def test_the_review_actions_step_runs_on_the_iphone_and_then_the_ipad(self):
+        """SPEC-358 A14 (R8): the `harness` job runs the review's bury and flag tests on the
+        iPhone and then the iPad in a step of their own, over a copy of the review fixture named on
+        its command line, after the app's tests, whose step skips them, and the report carries the
+        step's cases and time."""
+        jobs = load("xcframework.yml")["jobs"]
+        self.assertEqual(review_actions_step_problems({"jobs": jobs}), [])
+        examined("harness steps", jobs["harness"].get("steps") or [])
+
+        # The controls: the good job is accepted, and each plant is refused by its rule's name.
+        def actions_run(needs):
+            return (
+                REVIEW_ACTIONS_FIXTURE_NEEDS[0]
+                + "\nstarted=$(date +%s)\n"
+                + f'{REVIEW_FIXTURE}="$RUNNER_TEMP/review-actions-fixture" '
+                + " \\\n  ".join(needs[:-1])
+                + '\necho "$(( $(date +%s) - started ))" '
+                + needs[-1]
+                + "\n"
+            )
+
+        needs = REVIEW_ACTIONS_TEST_NEEDS
+        app_run = (
+            APP_GENERATE
+            + "\nstarted=$(date +%s)\n"
+            + " \\\n  ".join((*APP_TEST_NEEDS[:-1], REVIEW_ACTIONS_SKIP))
+            + '\necho "$(( $(date +%s) - started ))" '
+            + APP_TEST_NEEDS[-1]
+            + "\n"
+        )
+        actions = {
+            "name": REVIEW_ACTIONS_TESTS,
+            "id": REVIEW_ACTIONS_ID,
+            "if": REVIEW_IF,
+            "run": actions_run(needs),
+        }
+        good_steps = [
+            {"name": APP_TESTS, "id": "app-tests", "run": app_run},
+            actions,
+            {
+                "name": HARNESS_REPORT,
+                "if": "${{ always() }}",
+                "run": "\n".join(REVIEW_ACTIONS_REPORT_NEEDS),
+            },
+        ]
+
+        def harness(steps=None, **keys):
+            return {
+                "env": {"REPORT": "harness-report"},
+                "steps": good_steps if steps is None else steps,
+                **keys,
+            }
+
+        def step_with(name, **keys):
+            return harness([{**s, **keys} if s.get("name") == name else s for s in good_steps])
+
+        def without(name, piece, instead=""):
+            run = next(s["run"] for s in good_steps if s.get("name") == name)
+            assert run.count(piece) == 1, f"{piece!r} is not in the planted {name!r} once"
+            return step_with(name, run=run.replace(piece, instead))
+
+        plants = {
+            "the good job": (harness(), []),
+            "no bury and flag step": (
+                harness([s for s in good_steps if s.get("name") != REVIEW_ACTIONS_TESTS]),
+                [f"harness: 0 steps named {REVIEW_ACTIONS_TESTS!r}, not one"],
+            ),
+            "a second bury and flag step": (
+                harness(good_steps + [actions]),
+                [f"harness: 2 steps named {REVIEW_ACTIONS_TESTS!r}, not one"],
+            ),
+            "a step with no id": (
+                step_with(REVIEW_ACTIONS_TESTS, id=None),
+                [f"harness: the bury and flag step's id is None, not {REVIEW_ACTIONS_ID!r}"],
+            ),
+            "a step that waits on a green app step": (
+                step_with(REVIEW_ACTIONS_TESTS, **{"if": None}),
+                [f"harness: the bury and flag step's if is None, not {REVIEW_IF!r}"],
+            ),
+            "the iPhone alone": (
+                without(REVIEW_ACTIONS_TESTS, " \\\n  " + needs[2]),
+                [f"harness: the bury and flag step lacks {needs[2]}"],
+            ),
+            "the iPad first": (
+                step_with(
+                    REVIEW_ACTIONS_TESTS,
+                    run=actions_run((needs[0], needs[2], needs[1], *needs[3:])),
+                ),
+                ["harness: the bury and flag step names the iPad before the iPhone"],
+            ),
+            "both simulators at once": (
+                without(REVIEW_ACTIONS_TESTS, needs[3]),
+                [f"harness: the bury and flag step lacks {needs[3]}"],
+            ),
+            "the class left out": (
+                without(REVIEW_ACTIONS_TESTS, needs[4]),
+                [f"harness: the bury and flag step lacks {needs[4]}"],
+            ),
+            "derived data of its own": (
+                without(
+                    REVIEW_ACTIONS_TESTS, "$RUNNER_TEMP/app-debug", "$RUNNER_TEMP/actions-debug"
+                ),
+                [f"harness: the bury and flag step lacks {needs[5]}"],
+            ),
+            "the review screen's result bundle": (
+                without(
+                    REVIEW_ACTIONS_TESTS,
+                    "$RESULTS/review-actions.xcresult",
+                    "$RESULTS/review.xcresult",
+                ),
+                [f"harness: the bury and flag step lacks {needs[6]}"],
+            ),
+            "code signing off in the step": (
+                without(REVIEW_ACTIONS_TESTS, "CODE_SIGN_IDENTITY=-", "CODE_SIGNING_ALLOWED=NO"),
+                ["harness: the bury and flag step lacks CODE_SIGN_IDENTITY=-"],
+            ),
+            "no time recorded": (
+                without(REVIEW_ACTIONS_TESTS, needs[-1], '> "$REPORT/review-seconds"'),
+                [f"harness: the bury and flag step lacks {needs[-1]}"],
+            ),
+            "no fixture copied": (
+                without(REVIEW_ACTIONS_TESTS, REVIEW_ACTIONS_FIXTURE_NEEDS[0] + "\n"),
+                [f"harness: the bury and flag step lacks {REVIEW_ACTIONS_FIXTURE_NEEDS[0]}"],
+            ),
+            "the review screen's fixture copy": (
+                step_with(
+                    REVIEW_ACTIONS_TESTS,
+                    run=actions["run"].replace("review-actions-fixture", "review-fixture"),
+                ),
+                [
+                    f"harness: the bury and flag step lacks {REVIEW_ACTIONS_FIXTURE_NEEDS[0]}",
+                    f"harness: the bury and flag step lacks {REVIEW_ACTIONS_FIXTURE_NEEDS[1]}",
+                ],
+            ),
+            "the fixture named in the step's env": (
+                step_with(
+                    REVIEW_ACTIONS_TESTS,
+                    run=actions["run"].replace(
+                        f'{REVIEW_FIXTURE}="$RUNNER_TEMP/review-actions-fixture" ', ""
+                    ),
+                    env={REVIEW_FIXTURE: "${{ runner.temp }}/review-actions-fixture"},
+                ),
+                [
+                    f"harness: the bury and flag step lacks {REVIEW_ACTIONS_FIXTURE_NEEDS[1]}",
+                    f"harness: the env of {REVIEW_ACTIONS_TESTS!r} names {REVIEW_FIXTURE}, which "
+                    "only its command line may set",
+                ],
+            ),
+            "the app's step runs the class": (
+                without(APP_TESTS, " \\\n  " + REVIEW_ACTIONS_SKIP),
+                [f"harness: the app's test step lacks {REVIEW_ACTIONS_SKIP}"],
+            ),
+            "a report with no bury and flag cases": (
+                without(HARNESS_REPORT, 'cases_in("review-actions")'),
+                ['harness: the report lacks cases_in("review-actions")'],
+            ),
+            "a report that lists no bury and flag cases": (
+                without(HARNESS_REPORT, '("Review actions", review_actions_cases)'),
+                ['harness: the report lacks ("Review actions", review_actions_cases)'],
+            ),
+            "a report with no bury and flag time": (
+                without(HARNESS_REPORT, 'minutes("review-actions-seconds")'),
+                ['harness: the report lacks minutes("review-actions-seconds")'],
+            ),
+        }
+        for name, (job, wanted) in examined("planted harness jobs", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(
+                    review_actions_step_problems({"jobs": {"harness": job}}), wanted, name
+                )
+
+
 # The two simulators the card probe runs on, one after the other, as the harness job names them.
 CARD_PROBE_NEEDS = (
     "xcodebuild test",
@@ -8684,6 +8951,82 @@ class TheRereleaseCheck(unittest.TestCase):
         else:
             self.fail(f"the cron {fields} is neither daily nor weekly")
         self.assertGreaterEqual(lead, interval)
+
+
+# ------------------------------------------- the web mutation legs' bound (SPEC-379 R1, R2)
+
+# The jobs that run StrykerJS over the Mini App, each a (workflow file, job) pair: the weekly
+# battery's whole sweep, and the pull request's leg, which mutates every changed web file whole.
+WEB_MUTATION_LEGS = (("mutation-weekly.yml", "web"), ("ci.yml", "mutation-web"))
+
+
+def web_mutation_bound_problems(workflows):
+    """What the web mutation legs get wrong about their bound (SPEC-379 R1, R2): a leg missing, or
+    a leg whose `timeout-minutes` is unset, not a digit string, or outside the band, each named by
+    its workflow file and its job. `workflows` maps each file name to the workflow read from it. A
+    leg cut at its bound writes no report, so its verdict reads VOID and judges no mutant."""
+    band = f"{WEB_MUTATION_TIMEOUT_MINUTES.start} to {WEB_MUTATION_TIMEOUT_MINUTES.stop - 1}"
+    problems = []
+    for name, job_id in WEB_MUTATION_LEGS:
+        job = ((workflows.get(name) or {}).get("jobs") or {}).get(job_id)
+        if job is None:
+            problems.append(f"{name} has no {job_id} job")
+            continue
+        minutes = str(job.get("timeout-minutes") or "")
+        if not minutes.isdigit() or int(minutes) not in WEB_MUTATION_TIMEOUT_MINUTES:
+            problems.append(
+                f"{name}: the {job_id} job's timeout is {minutes or 'unset'}, not {band} minutes"
+            )
+    return problems
+
+
+class TheWebMutationLegsHoldTheWholeSweep(unittest.TestCase):
+    def test_both_web_mutation_legs_hold_the_whole_mini_app_sweep(self):
+        """SPEC-379 A1: the weekly battery's `web` job and `ci.yml`'s `mutation-web` job each
+        declare a `timeout-minutes` inside the band the whole Mini App's sweep needs, so neither
+        leg is cut before its report is written."""
+        legs = examined("web mutation legs", WEB_MUTATION_LEGS)
+        workflows = {name: load(name) for name, _ in legs}
+        self.assertEqual(web_mutation_bound_problems(workflows), [])
+
+    def test_a_web_leg_bound_outside_the_band_is_refused_by_its_leg(self):
+        """SPEC-379 A2: the checker accepts both legs at the band's floor and at its ceiling, and
+        refuses each leg's bound set back to 60, set one past the ceiling, or removed, naming that
+        leg alone. Every copy is planted from the workflow files with both bounds set here, so the
+        test pins the checker, not the tree's own bounds."""
+        texts = {name: workflow_file_text(WORKFLOWS / name) for name, _ in WEB_MUTATION_LEGS}
+        live = {
+            name: load(name)["jobs"][job_id].get("timeout-minutes")
+            for name, job_id in WEB_MUTATION_LEGS
+        }
+
+        def leg(name, job_id, minutes):
+            line = "" if minutes is None else f"    timeout-minutes: {minutes}\n"
+            old = f"    timeout-minutes: {live[name]}\n"
+            return planted_job(texts[name], job_id, (old, line))
+
+        floor = WEB_MUTATION_TIMEOUT_MINUTES.start
+        ceiling = WEB_MUTATION_TIMEOUT_MINUTES.stop - 1
+        band = f"{floor} to {ceiling}"
+        for minutes in (floor, ceiling):
+            with self.subTest(control=minutes):
+                both = {name: leg(name, job_id, minutes) for name, job_id in WEB_MUTATION_LEGS}
+                self.assertEqual(web_mutation_bound_problems(both), [])
+        plants = [
+            (
+                name,
+                job_id,
+                minutes,
+                f"{name}: the {job_id} job's timeout is {shown}, not {band} minutes",
+            )
+            for name, job_id in WEB_MUTATION_LEGS
+            for minutes, shown in ((60, "60"), (ceiling + 1, str(ceiling + 1)), (None, "unset"))
+        ]
+        for name, job_id, minutes, refusal in examined("planted web leg bounds", plants):
+            with self.subTest(leg=f"{name} {job_id}", minutes=minutes):
+                workflows = {other: leg(other, job, floor) for other, job in WEB_MUTATION_LEGS}
+                workflows[name] = leg(name, job_id, minutes)
+                self.assertEqual(web_mutation_bound_problems(workflows), [refusal])
 
 
 if __name__ == "__main__":

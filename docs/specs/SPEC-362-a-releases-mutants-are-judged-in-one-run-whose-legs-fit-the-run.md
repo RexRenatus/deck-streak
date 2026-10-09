@@ -245,3 +245,11 @@ read those figures, so R7's margin is the same 1.5: a census whose 1.5 times pas
 the figures follow them (`test_memory_scope.py`, `test_dispatch_shards.py`, `test_mutation_verdict.py`,
 `test_memory_cap_verdict.py`, `test_ci_workflows.py`, and the bands S12900, S32700 and S36200), and a
 row's id keeps the figure it was named for.
+
+## Amendment: the web legs' bound is 100 minutes (SPEC-379)
+
+Insert-only; every earlier byte is kept. Section 5 records the release's StrykerJS job inside its
+60 minutes and leaves the web sweep's growth to #693. The weekly battery's whole sweep has since
+been cut at that bound (job 113826350088), so SPEC-379 raises both web legs' `timeout-minutes` to
+100 by measurement, held inside 100 to 120 (ADR-390). The web sweep is still not sharded, and its
+StrykerJS settings are unchanged: sharding stays #693.

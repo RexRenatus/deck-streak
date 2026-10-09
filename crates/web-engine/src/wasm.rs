@@ -54,14 +54,14 @@ use deck_streak_engine_core::face::{Clip, Face, Side};
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
 use deck_streak_engine_core::late;
 use deck_streak_engine_core::media::{Reader, TYPES};
+use deck_streak_engine_core::review::{bury_of, toggled_red};
 use deck_streak_engine_core::table::{ExemptWrite, Transport};
 use deck_streak_engine_core::undo_answer::{self, Review};
 use js_sys::{Array, Object, Reflect, Uint8Array};
 
 use crate::study::{
     Files, Grade, LastAnswer, Recorded, Returns, Shown, StudyError, UndoRefusal, Wanted, admit,
-    bury_of, engine_languages, grade, last_answer_for, media_type, service, shown_for, toggled_red,
-    undo_view,
+    engine_languages, grade, last_answer_for, media_type, service, shown_for, undo_view,
 };
 use crate::synthetic::fields;
 

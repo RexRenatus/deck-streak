@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// The review screen's top, above the card (SPEC-348 R9, R13, R14): the deck's name; the replay,
-/// stop and voice buttons; the queue's new, learning and review counts, each a number with its
+/// stop and voice buttons, and the bury and flag buttons, the flag's title beside its icon
+/// (SPEC-358 R5); the queue's new, learning and review counts, each a number with its
 /// word; a line naming how many media files the face could not show; and one line per note, a
 /// refusal's sentence or a sound the player refused.
 struct ReviewChrome: View {
@@ -33,6 +34,23 @@ struct ReviewChrome: View {
                     Label("Voices", systemImage: "person.wave.2")
                         .frame(minWidth: 44, minHeight: 44)
                 }
+                Button {
+                    Task { await model.perform(.bury) }
+                } label: {
+                    Label("Bury", systemImage: "eye.slash")
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+                .accessibilityIdentifier("bury")
+                .disabled(!idle)
+                Button {
+                    Task { await model.perform(.flag) }
+                } label: {
+                    Label(flagTitle.title, systemImage: flagTitle.symbol)
+                        .labelStyle(.titleAndIcon)
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+                .accessibilityIdentifier("flag")
+                .disabled(!idle)
             }
             .labelStyle(.iconOnly)
             HStack(spacing: 16) {
@@ -51,5 +69,16 @@ struct ReviewChrome: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
+    }
+
+    /// Whether a bury or a flag may start: from a card's question or its answer, never while a
+    /// call runs (SPEC-358 R5).
+    private var idle: Bool {
+        model.phase == .question || model.phase == .answer
+    }
+
+    /// The flag button's title and symbol: an icon with a text label, never a colour alone.
+    private var flagTitle: (title: String, symbol: String) {
+        model.flagged ? ("Flagged red", "flag.fill") : ("Flag", "flag")
     }
 }

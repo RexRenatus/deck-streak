@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// A gesture on the review screen, which `ReviewModel.perform` takes (SPEC-348 R16).
-enum ReviewAction: Equatable, Sendable { case showAnswer, rate(Rating), replay, stop }
+/// A gesture on the review screen, which `ReviewModel.perform` takes (SPEC-348 R16); bury and
+/// flag act on the shown card (SPEC-358 R5).
+enum ReviewAction: Equatable, Sendable { case showAnswer, rate(Rating), replay, stop, bury, flag }
 
 /// The bottom bar, the width of the detail pane (SPEC-348 R10, R11, R16): Show Answer, one
 /// button the width of the bar; then Again and Good, the two grades a press records, Good the
