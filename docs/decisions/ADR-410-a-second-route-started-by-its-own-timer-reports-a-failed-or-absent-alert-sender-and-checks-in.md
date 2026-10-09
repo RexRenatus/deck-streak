@@ -144,6 +144,40 @@ heard by the receiver (`EveryFailureIsToldOrItsSilenceIsHeard`, temporal). A wit
 must be caught: keys recorded before their report is delivered, keys by name alone, a check-in
 after an undelivered report, and an unreadable read taken as an empty one.
 
+The model's scope and its budget follow the architect seat's rulings 927 and 935. Every
+configuration has two alert instance names and two invocations under each name, the temporal
+property's run and the witness of keys recorded before delivery included. The model keeps what its
+properties read and drops what none reads:
+
+- The episode marker is not a variable, which ruling 935 admits. No property, invariant or witness
+  reads it: it decides only the run's exit status and its one page per episode through the alert
+  sender, which A7 holds.
+- One variable, `known`, is the receiver's knowledge of a failure key, told by a delivered report
+  (`Send`) or by the delivered page of a later instance under the same name (`Replace`).
+- A delivered report adds only its failure keys to `known`. Two properties read `known`, each for
+  failure keys alone: `ACheckInCoversOnlyToldFailures` for the failure keys of the run's read, and
+  `EveryFailureIsToldOrItsSilenceIsHeard` for every failure key. `NoCheckInAfterAnUnreadableRead`
+  does not read it, no action's guard reads it, and no witness's switch reads it: `RecordFirst`
+  acts in `Plan`, `NameAlone` in the stored key, `CheckInAfterUndelivered` in `Send`'s undelivered
+  arm and `UnreadableAsEmpty` in `Read`. A template or unreadable key in `known` moves no verdict.
+- `Send` empties `pend`, the keys the run reports, delivered or not. `Plan` writes `pend` and only
+  `Send` reads it; after `Send` the run goes to `Record`, `CheckIn` or `Finish`, none of which reads
+  it, and `Finish` empties it too. No property, guard or witness reads `pend` between `Send` and the
+  next `Plan`, so two states that differ only there are one.
+
+Each of the four witnesses was re-run on the reduced model at its committed names, and each is
+caught by the property it names. Measured with the pinned checker, by hand: the temporal property's
+run at two names took 675 s before the reductions (1,807,796 distinct states), and after them 232 s
+on a scratch copy and 203 s at the committed model (580,480 distinct states, the floor of both
+configurations); the invariants' run took 13 s, and the witnesses under 1 s to 66 s. The entry's
+whole check through the gate's own path took 311 s. The per-run cap, `budgets.tla_seconds` in
+`config/formal.json`, was 300 s, below one and a half times the temporal run. It rises to 480 s,
+the smallest whole minute at or above one and a half times the worst timed run, and the raise is
+GLOBAL: it is every entry's per-run cap, not this entry's alone, and it supersedes the 300 s that
+SPEC-295 records. The entry gains a budget of its own, `tla/SecondRoute` at 480 s, sized the same
+way, above the 300 s an entry's runs share by default. `scripts/tests/test_formal_config.py`'s
+`EXPECTED` pins both values, and SPEC-396 §4 lists both files.
+
 **Chosen against:**
 
 - NOT APPLICABLE: rejected, because the read-then-act window and the persisted keys are exactly the
@@ -151,6 +185,16 @@ after an undelivered report, and an unreadable read taken as an empty one.
 - A Lean proof of the run as a pure function: rejected, because the defects live in the order of
   the service manager's and the second route's steps, which a pure function of one read does not
   see.
+- One alert name in the temporal property's run: rejected, because a second name is what lets one
+  instance fail while another is replaced, and ruling 927 reads fewer names as a weakening.
+- A state constraint bounding the invocations: rejected, because a narrowing keyword in a committed
+  configuration voids the check, and ruling 935 refuses it.
+- A symmetry set over the names: rejected, because symmetry reduction can miss a liveness
+  violation, and the temporal property is one.
+- Keeping the dropped values and sizing the cap from the unreduced run, at least 1020 s: rejected,
+  because nothing reads those values, so they triple the run and move no verdict.
+- An entry budget alone, the per-run cap unchanged: rejected, because the per-run cap bounds the
+  temporal run itself, and one and a half times that run is above 300 s.
 
 ### D5. Drift and the host
 

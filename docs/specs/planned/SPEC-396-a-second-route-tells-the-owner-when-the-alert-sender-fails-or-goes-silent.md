@@ -189,6 +189,8 @@ green are read in CI.
 | `formal/tla/SecondRoute/witness/a-failure-keyed-by-its-unit-name-alone.cfg` | `formal` | new: R12 |
 | `formal/tla/SecondRoute/witness/a-check-in-after-an-undelivered-report.cfg` | `formal` | new: R12 |
 | `formal/tla/SecondRoute/witness/an-unreadable-read-taken-as-nothing-failed.cfg` | `formal` | new: R12 |
+| `config/formal.json` | `formal` | changed: R12, the per-run cap `budgets.tla_seconds`, raised for every entry, and the entry budget `tla/SecondRoute` (ADR-410 D4) |
+| `scripts/tests/test_formal_config.py` | `formal` | changed: R12, its `EXPECTED` table pins both budgets (ADR-410 D4) |
 | `docs/decisions/ADR-032-deploy-templates-and-the-host-budget.md` | `deploy` | changed: an amendment whose budget row the census parses |
 | `docs/schematics/alert-and-slo-path.md` | `deploy` | changed: R13 |
 | `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | `deploy` | changed: the seven cited lines re-derived, no row added or removed |
@@ -243,6 +245,20 @@ and cites #285. Its properties, each entering in report mode:
 Each witness switches one defect on and must be caught: keys recorded before the report is
 delivered, keys by name alone, a check-in after an undelivered report, and an unreadable read taken
 as an empty one. The fixed design is clean at its state floor.
+
+Every configuration, the temporal property's and each witness's, has two alert instance names and
+two invocations under each name. The model keeps what its properties read and drops what none
+reads, each drop named in ADR-410 D4:
+
+- The episode marker is not a variable of the model, and that is admitted: no property, invariant or
+  witness reads it, and A7 holds its effect, the run's exit status and its one page per episode.
+- A delivered report adds only its failure keys to the receiver's knowledge, and a report request
+  empties the keys it carried, delivered or not, because nothing reads them until the next read.
+
+The temporal property's run, with a margin of one half, needs more than the formal checker's per-run
+cap allowed, so `config/formal.json` raises that cap for every entry and gives `tla/SecondRoute` an
+entry budget of its own, each sized from the measured runs (ADR-410 D4);
+`scripts/tests/test_formal_config.py` pins both.
 
 ## 8. The host's acts and the hand-run verify (W3)
 
