@@ -60,6 +60,7 @@ use crate::inbox_capture_route;
 use crate::insights_routes;
 use crate::law_routes;
 use crate::linking_routes;
+use crate::minimum_client;
 use crate::notifications_routes;
 use crate::progress_routes;
 use crate::session_routes::{self, OwnerAccess};
@@ -213,7 +214,9 @@ pub fn router(state: ApiState) -> Router {
     let inbox = state.inbox.clone();
     let linking = state.linking.clone();
     let seal = state.seal.clone();
-    let routes = health::routes().with_state(state);
+    let routes = health::routes()
+        .merge(minimum_client::routes())
+        .with_state(state);
     let routes = match owner {
         Some(access) => {
             let routes = routes

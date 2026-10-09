@@ -17,6 +17,15 @@
       "evidence": "failed builds BackendError with ..BackendError::default(), and the engine's proto/anki/backend.proto, line 25, reads `INVALID_INPUT = 0;`, so the default kind is that zero. A proto3 scalar at its default is not encoded, so the bytes with the field and without it are equal. The anchor occurs once (1) in dispatch.rs, and the not-UTF-8 test, which asserts the refusal's kind and message byte-exact, passes with the field deleted.",
       "reached_by": "one_way::a_copy_path_that_is_not_utf8_is_the_cores_own_refusal",
       "issue": "#631"
+    },
+    {
+      "file": "crates/engine-core/src/handshake.rs",
+      "mutant": "delete field kind from struct BackendError expression in admits",
+      "anchor": "kind: Kind::InvalidInput.into(),",
+      "reason": "INVALID_INPUT is 0 in backend.proto, the proto3 default, so deleting the field leaves the same value.",
+      "evidence": "admits builds BackendError with ..BackendError::default(), and the engine's proto/anki/backend.proto, line 25, reads `INVALID_INPUT = 0;`, so the default kind is that zero. A proto3 scalar at its default is not encoded, so the bytes with the field and without it are equal. The anchor occurs once (1) in handshake.rs, and the below-minimum test, which asserts the refusal's kind and sentence, passes with the field deleted.",
+      "reached_by": "handshake::a_client_below_the_minimum_is_refused_every_sync_before_the_engine",
+      "issue": "#671"
     }
   ]
 }
