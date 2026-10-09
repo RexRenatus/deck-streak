@@ -2485,6 +2485,54 @@ class TheCardSandboxRunsInBothEngines(unittest.TestCase):
         examined("card-sandbox steps", steps)
 
 
+# --- the card sandbox in Firefox (SPEC-398 A2, A3, R3, R4)
+# Firefox is the planted suite's third engine, installed by a step of its own before the suite, and
+# the job's bound holds three engines run in turn.
+CARD_FIREFOX_INSTALL = "pnpm --dir web/app exec playwright install --with-deps firefox"
+CARD_ENGINES = ["chromium", "webkit", "firefox"]
+CARD_PLAYWRIGHT_CONFIG = "web/app/playwright.card.config.ts"
+CARD_TIMEOUT_MINUTES = range(30, 46)
+
+
+def card_projects():
+    """The project names the card Playwright configuration declares, in order."""
+    text = (REPO / CARD_PLAYWRIGHT_CONFIG).read_text(encoding="utf-8")
+    return re.findall(r"\{\s*name:\s*'(\w+)',\s*use:\s*\{\s*\.\.\.devices\[", text)
+
+
+class TheCardSandboxRunsInFirefox(unittest.TestCase):
+    def test_the_card_sandbox_job_installs_firefox_and_runs_the_suite_in_every_engine(self):
+        steps = load("ci.yml")["jobs"][CARD_JOB]["steps"]
+        runs = [str(step.get("run", "")).strip() for step in steps]
+        self.assertEqual(
+            runs.count(CARD_FIREFOX_INSTALL), 1, "the job does not install Firefox once"
+        )
+        self.assertLess(runs.index(CARD_FIREFOX_INSTALL), runs.index(CARD_SUITE))
+        projects = card_projects()
+        self.assertEqual(projects, CARD_ENGINES)
+        # every project the configuration declares is a word of an install step before the suite
+        installs = " ".join(
+            run
+            for run in runs[: runs.index(CARD_SUITE)]
+            if run.startswith("pnpm --dir web/app exec playwright install ")
+        )
+        for project in projects:
+            self.assertIn(project, installs.split(), f"no install step installs {project}")
+        examined("card-sandbox projects", projects)
+
+
+class TheCardSandboxOutlastsItsThreeEngines(unittest.TestCase):
+    def test_the_card_sandbox_timeout_holds_three_engines(self):
+        job = load("ci.yml")["jobs"][CARD_JOB]
+        examined("card-sandbox keys", list(job))
+        minutes = str(job.get("timeout-minutes") or "")
+        band = f"{CARD_TIMEOUT_MINUTES.start} to {CARD_TIMEOUT_MINUTES.stop - 1}"
+        self.assertTrue(
+            minutes.isdigit() and int(minutes) in CARD_TIMEOUT_MINUTES,
+            f"the card-sandbox job's timeout is {minutes or 'unset'}, not {band} minutes",
+        )
+
+
 def cache_scan(directory):
     """`cache_problems` over every workflow of a directory: the problems, then the saves found."""
     problems, saves = [], []

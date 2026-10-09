@@ -6,7 +6,7 @@
 // the channel that opened.
 
 /** An engine the suite runs in: Playwright's project name. */
-export type Engine = 'chromium' | 'webkit';
+export type Engine = 'chromium' | 'webkit' | 'firefox';
 
 /** A web layer of the card frame (the schematic's section 3). */
 export type Layer = 'W1' | 'W2' | 'W3' | 'W4';

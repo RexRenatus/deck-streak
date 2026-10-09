@@ -468,3 +468,77 @@ The card's own permitted loads are its document, handed as a string with no base
 `data:` URLs, which the rule list does not act on and the policy admits only as images, media
 and fonts. The `permitted` card proves the layer leaves them; every other card proves it leaves
 nothing else.
+
+## 9. The web's browser test matrix (SPEC-398, ADR-412)
+
+Kind: component (each browser configuration, the engines it runs in, the job that runs it, and the
+check-run its verdict is read from). Read at DeckStreak `dev` `164ac206`
+(`web/app/playwright.config.ts`, `web/app/playwright.card.config.ts`,
+`web/app/playwright.engine.config.ts`, `web/app/playwright.study.config.ts`,
+`.github/workflows/ci.yml`). SPEC-398 adds Firefox to the card configuration and to the
+`card-sandbox` job; every other edge is as measured there. The thick edge is SPEC-398's.
+
+```mermaid
+flowchart LR
+  subgraph CFG["browser configurations, web/app"]
+    E2E["e2e: playwright.config.ts<br/>tests/, card-policy.spec.ts among them"]
+    CARD["card: playwright.card.config.ts<br/>tests-card/card.spec.ts, one worker, engines in turn"]
+    ENG["engine: playwright.engine.config.ts<br/>tests-engine/engine.spec.ts and sync.spec.ts"]
+    STUDY["study: playwright.study.config.ts<br/>tests-study/study.spec.ts"]
+  end
+  subgraph BROWSERS["engines"]
+    CR["Chromium"]
+    WK["WebKit"]
+    FF["Firefox, SPEC-398"]
+  end
+  subgraph JOBS["CI jobs, .github/workflows/ci.yml"]
+    JWEB["web: the gate's web stage"]
+    JCARD["card-sandbox: installs Firefox, then Chromium and WebKit, bound 30 minutes"]
+    JENG["web-engine: the engine build, then the engine and study suites"]
+  end
+  AGG["ci: the aggregate check, needs every job"]
+  JWEB -->|runs| E2E
+  JCARD -->|runs the card script| CARD
+  JENG -->|runs the engine script| ENG
+  JENG -->|runs the study script| STUDY
+  E2E --> CR
+  CARD --> CR
+  CARD --> WK
+  CARD ==> FF
+  ENG --> CR
+  ENG --> WK
+  STUDY --> CR
+  STUDY --> WK
+  JWEB -->|check-run web| AGG
+  JCARD -->|check-run card-sandbox| AGG
+  JENG -->|check-run web-engine| AGG
+```
+
+| engine | configuration, projects at | job, at | card-frame tests | engine tests | verdict read as |
+|---|---|---|---|---|---|
+| Chromium | e2e, no `projects` key (`playwright.config.ts:3-10`) | `web` (`ci.yml:201-253`) | `tests/card-policy.spec.ts:11`, which reads the built page's policy text and does not depend on the engine | none | `web`, then `ci` |
+| Chromium, WebKit | card (`playwright.card.config.ts:17-20`) | `card-sandbox` (`ci.yml:268-295`) | `tests-card/card.spec.ts`: the census `:101`, the pairs `:109`, the single-layer variants `:133`, scripts on `:143` and `:158`, the render proof `:185` | none | `card-sandbox`, then `ci` |
+| Firefox (SPEC-398) | card, the third project | `card-sandbox`, from its own install step | `tests-card/card.spec.ts`, every test above | none | `card-sandbox`, then `ci` |
+| Chromium, WebKit | engine (`playwright.engine.config.ts:36-39`) | `web-engine` (`ci.yml:767-832`) | none | `tests-engine/engine.spec.ts:55`, `:104`, `:132`, `:169`, `:189`, `:214`, `:292`; `tests-engine/sync.spec.ts:99`, `:126`, `:153`, `:177` | `web-engine`, then `ci` |
+| Chromium, WebKit | study (`playwright.study.config.ts:19-22`) | `web-engine` (`ci.yml:837-838`) | none | none | `web-engine`, then `ci` |
+
+**Where the card frame's verdict is read.** The check-run `card-sandbox`. Its log prints one census
+line per project, `examined 28 planted cards, 28 pairs, 112 variants in <project>`
+(`card.spec.ts:103`), so a run that skipped Firefox shows two lines, not three. The upload
+`card-sandbox-results` keeps every project's failures whatever the verdict (`ci.yml:289-295`). The
+aggregate `ci` check needs `card-sandbox` (`ci.yml:876`).
+
+**How the three engines share the job.** The card configuration runs one worker with no
+parallelism (`playwright.card.config.ts:12-13`), so the projects run one after another. Each
+project's listeners are that worker's module state, and each pair's settle window comes from the
+same engine's reference latency, so a slow engine widens its own windows and no other's.
+
+**What one engine's readings decide.** Section 3's notes name, per engine, each channel its
+reference frame cannot reach. Firefox's are measured by its first `card-sandbox` run and noted
+there in the form "UNOBSERVABLE in Firefox, measured: ...". A reading in which the card frame
+reaches a listener, a single layer opens a set the table does not give it, or the render proof
+shows a blank frame, is a new design for every engine, never a note.
+
+**Not in the matrix.** The engine and study suites in Firefox (#652; the engine configuration is
+open work in #748), the e2e and accessibility suites in Firefox (#652), and a learner's installed
+browser with its own preferences (#652).

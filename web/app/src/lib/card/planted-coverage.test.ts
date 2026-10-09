@@ -15,7 +15,8 @@ const APP = fileURLToPath(new URL('../../..', import.meta.url));
 const SUITE = join(APP, 'tests-card');
 const SPEC = join(SUITE, 'card.spec.ts');
 const CARD_CONFIG = join(APP, 'vite.card.config.ts');
-const ENGINES: readonly Engine[] = ['chromium', 'webkit'];
+const PLAYWRIGHT_CARD = join(APP, 'playwright.card.config.ts');
+const ENGINES: readonly Engine[] = ['chromium', 'webkit', 'firefox'];
 
 /** The repository root, found by walking up to the workspace file, so a StrykerJS sandbox below
  * `web/app/.stryker-tmp` still finds the schematic. */
@@ -115,7 +116,7 @@ describe('the planted card suite', () => {
     }
     for (const card of PLANTED) expect(card.paths.length, card.id).toBeGreaterThan(0);
 
-    // a channel the schematic calls unobservable is declared so in both engines
+    // a channel the schematic calls unobservable is declared so in every engine
     const blind = examined(
       'channels the schematic calls unobservable',
       channels.filter((channel) => channel.alone.includes('UNOBSERVABLE:')).map((channel) => channel.id)
@@ -220,5 +221,24 @@ describe('the planted card suite', () => {
     expect(text).toMatch(/\.screenshot\(/);
     const proof = text.slice(text.indexOf('render-proof'));
     for (const frame of ["'index.html'", "'open.html'", "'blank'"]) expect(proof).toContain(frame);
+  });
+
+  it('the card config runs the planted suite in Chromium, WebKit and Firefox', () => {
+    // SPEC-398 A1: the card configuration's projects are the suite's engines, in this order
+    const config = readFileSync(PLAYWRIGHT_CARD, 'utf8');
+    const projects = [
+      ...config.matchAll(/\{\s*name:\s*'(\w+)',\s*use:\s*\{\s*\.\.\.devices\['([^']+)'\]/g)
+    ].map((match) => ({ name: match[1], device: match[2] }));
+    expect(projects.map((project) => project.name)).toEqual(['chromium', 'webkit', 'firefox']);
+    expect(projects.map((project) => project.name)).toEqual([...ENGINES]);
+    expect(projects.map((project) => project.device)).toEqual([
+      'Desktop Chrome',
+      'Desktop Safari',
+      'Desktop Firefox'
+    ]);
+    // the engines run one after another: one worker, no parallelism
+    expect(config).toMatch(/workers:\s*1,/);
+    expect(config).toMatch(/fullyParallel:\s*false,/);
+    examined('card projects', projects);
   });
 });
