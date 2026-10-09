@@ -4,8 +4,8 @@
       [
         "S36701-THE-RELEASE-BOUND-HOLDS-ITS-SLOWEST-RUN",
         ".github/workflows/ci.yml",
-        "    timeout-minutes: 100\n",
-        "    timeout-minutes: 60\n",
+        "  release:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 100\n",
+        "  release:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 60\n",
         "the release job's bound is one and a half times its slowest measured run, up to the ten; set back to 60 it cancels a passing run (SPEC-367 R4)",
         "test_ci_workflows.TheReleaseJobOutlastsItsSlowestRun.test_the_release_job_timeout_holds_its_slowest_measured_run"
       ]
