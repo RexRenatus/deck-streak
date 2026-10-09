@@ -125,6 +125,9 @@ fn every_role_logs_json_with_its_priority_from_its_first_line() {
         } else if role == "data" {
             // The data role takes a command; `export` reads the settings every role reads first.
             invocations.push(vec![role, "export".to_owned()]);
+        } else if role == "preset" {
+            // The preset role takes a command; `list` reads the settings every role reads first.
+            invocations.push(vec![role, "list".to_owned()]);
         } else {
             invocations.push(vec![role]);
         }

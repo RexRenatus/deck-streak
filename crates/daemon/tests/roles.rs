@@ -102,7 +102,7 @@ fn the_binary_runs_a_role_by_name_and_refuses_an_unknown_one() {
         let usage = first.1["message"].as_str().unwrap_or_default().to_owned();
         assert!(usage.starts_with("usage: deckstreakd <role>"), "{usage}");
         assert!(
-            usage.contains("the roles are: api, bot, job, data, mcp;"),
+            usage.contains("the roles are: api, bot, job, data, mcp, preset;"),
             "{usage}"
         );
     }
@@ -952,7 +952,7 @@ fn the_mcp_role_is_a_known_role() {
     let first = lines.first().cloned().unwrap_or((None, Value::Null));
     let message = first.1["message"].as_str().unwrap_or_default().to_owned();
     assert!(
-        message.contains("the roles are: api, bot, job, data, mcp;"),
+        message.contains("the roles are: api, bot, job, data, mcp, preset;"),
         "{message}"
     );
 }

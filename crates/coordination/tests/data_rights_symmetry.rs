@@ -33,7 +33,7 @@ use tempfile::TempDir;
 /// Statements that leave every table of the schema holding rows no erase leaves: 101 rows in each
 /// table that takes rows, so an export that pages or limits its read comes up short (the
 /// predecessor's lesson), and every column a reset writes moved off its reset value.
-const SEEDS: [&str; 44] = [
+const SEEDS: [&str; 45] = [
     "UPDATE settings_generation SET generation = 7, courses_digest = '0123456789abcdef' \
      WHERE id = 1",
     "UPDATE ingest_state SET anchor_newest_review_id = 1700000000123, anchor_card_count = 57, \
@@ -63,6 +63,14 @@ const SEEDS: [&str; 44] = [
      left_queue, left_type, left_interval, left_ease_factor, left_mtime, created_at) \
      SELECT i, 1700000000000 + i, i, 2, 2, i, 2500, 0, 0, i + 1, 2, 2, i, 2500, 1000 * i, \
      1000 * i FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO preset_proposals (preset_id, preset_name, prior_vector, prior_field, \
+     proposed_vector, desired_retention, non_new_cards, state, settled_at, retention_kept, \
+     created_at) \
+     SELECT 1000 + i, 'Preset ' || i, '[0.5,1.25]', 'fsrs6', '[0.25,2.5]', 0.85, i, \
+     CASE i % 3 WHEN 0 THEN 'open' WHEN 1 THEN 'moved' ELSE 'diverged' END, \
+     CASE WHEN i % 3 = 0 THEN NULL ELSE 1000 * i + 7 END, \
+     CASE WHEN i % 3 = 1 THEN i % 2 END, 1000 * i FROM n",
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO cron_fires (job_id, fire_date, first_seen_at, updated_at, last_fire_at, \
      ok_count, error_count, catchup_count, missed_count, last_outcome, created_at) \

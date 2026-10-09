@@ -25,6 +25,13 @@ use crate::settings::SyncSettings;
 /// own rollover read answers 4 for an unset hour, so it cannot tell the two apart.
 const ROLLOVER_ROWS: &str = "SELECT count() FROM config WHERE key = 'rollover'";
 
+/// The count of non-new cards whose memory state a parameter change recomputes, for the decks the
+/// JSON array `?1` names: the engine's own recompute set on save, a card homed in one of those
+/// decks or borrowed from one by a filtered deck, that is not new (R1; SPEC-387 section 1c).
+const NON_NEW_CARDS: &str = "SELECT count() FROM cards \
+    WHERE (did IN (SELECT value FROM json_each(?1)) \
+    OR (odid != 0 AND odid IN (SELECT value FROM json_each(?1)))) AND type != 0";
+
 /// The field of a preset a stored vector came from (R2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ParameterField {
@@ -168,18 +175,21 @@ impl PresetRead for RslibEngine {
         if rollover == 0 {
             return Err(PresetError::RolloverUnset);
         }
-        let mut normal = None;
+        // Every normal deck, with the preset it names; a filtered deck names none.
+        let mut decks = Vec::new();
         for (deck, _) in col.get_all_deck_names(false).map_err(bounded)? {
             let preset = col
                 .get_deck(deck)
                 .map_err(bounded)?
                 .and_then(|found| found.config_id());
-            if preset.is_some() {
-                normal = Some(deck);
-                break;
+            if let Some(preset) = preset {
+                decks.push((deck, preset.0));
             }
         }
-        let normal = normal.ok_or(PresetError::NoNormalDeck)?;
+        let normal = decks
+            .first()
+            .map(|(deck, _)| *deck)
+            .ok_or(PresetError::NoNormalDeck)?;
         let options = col.get_deck_configs_for_update(normal).map_err(bounded)?;
         let defaults = options
             .defaults
@@ -189,12 +199,83 @@ impl PresetRead for RslibEngine {
         if defaults.is_empty() {
             return Err(PresetError::NoDefaults);
         }
+        // The deck-options read lists every preset, but pre-fills an empty FSRS-6 field from the
+        // older ones, so each preset's own fields are read from its stored config.
+        let ids: Vec<i64> = options
+            .all_config
+            .into_iter()
+            .filter_map(|listed| listed.config)
+            .map(|config| config.id)
+            .collect();
+        let mut presets = Vec::with_capacity(ids.len());
+        for id in ids {
+            let Some(stored) = col.get_deck_config(id.into(), false).map_err(bounded)? else {
+                continue;
+            };
+            let (vector, field) = stored_vector(
+                &stored.inner.fsrs_params_6,
+                &stored.inner.fsrs_params_5,
+                &stored.inner.fsrs_params_4,
+            );
+            let mut deck_ids: Vec<i64> = decks
+                .iter()
+                .filter(|(_, preset)| *preset == id)
+                .map(|(deck, _)| deck.0)
+                .collect();
+            deck_ids.sort_unstable();
+            let listed = format!(
+                "[{}]",
+                deck_ids
+                    .iter()
+                    .map(i64::to_string)
+                    .collect::<Vec<_>>()
+                    .join(",")
+            );
+            let non_new_cards: i64 = col
+                .storage
+                .db()
+                .query_row(NON_NEW_CARDS, [listed], |row| row.get(0))
+                .map_err(|_| EngineError::EngineFailed)?;
+            presets.push(Preset {
+                id,
+                name: stored.name,
+                vector,
+                field,
+                desired_retention: stored.inner.desired_retention,
+                deck_ids,
+                non_new_cards,
+            });
+        }
+        presets.sort_by_key(|preset| preset.id);
         col.close(None).map_err(bounded)?;
-        Ok(PresetSnapshot {
-            presets: Vec::new(),
-            defaults,
-        })
+        Ok(PresetSnapshot { presets, defaults })
     }
+}
+
+/// The stored vector and the field it came from: the first field that holds values, the FSRS-6
+/// one, then the FSRS-5 one, then the FSRS-4 one, else empty, the precedence the engine schedules
+/// with (R2).
+fn stored_vector(fsrs6: &[f32], fsrs5: &[f32], fsrs4: &[f32]) -> (Vec<f32>, ParameterField) {
+    [
+        (fsrs6, ParameterField::Fsrs6),
+        (fsrs5, ParameterField::Fsrs5),
+        (fsrs4, ParameterField::Fsrs4),
+    ]
+    .into_iter()
+    .find(|(values, _)| !values.is_empty())
+    .map_or((Vec::new(), ParameterField::Empty), |(values, field)| {
+        (values.to_vec(), field)
+    })
+}
+
+/// Whether `vector` holds exactly the values of `other`, compared bit for bit: a value that
+/// parses back to another number is another vector (R4, R7).
+fn same(vector: &[f32], other: &[f32]) -> bool {
+    vector.len() == other.len()
+        && vector
+            .iter()
+            .zip(other)
+            .all(|(value, other)| value.to_bits() == other.to_bits())
 }
 
 /// Reads every preset of the copy `settings` names under the collection's shared lock, on the
@@ -335,21 +416,32 @@ impl PresetStore {
         Self { db }
     }
 
-    /// Proposes the defaults `defaults` for `preset`, at `now` (R4).
+    /// Proposes the defaults `defaults` for `preset`, at `now` (R4). A preset already on the
+    /// defaults records nothing, and neither does one with an open proposal: that proposal is
+    /// answered again. The lookup and the insert share one immediate transaction, and the partial
+    /// unique index refuses a second open row whatever path reaches it.
     ///
     /// # Errors
     ///
-    /// [`PresetError::Database`] when the write fails; nothing is recorded then.
+    /// [`PresetError::Database`] when the read or the write fails; nothing is recorded then.
     pub async fn propose(
         &self,
         preset: &Preset,
         defaults: &[f32],
         now: UtcMillis,
     ) -> Result<ProposeOutcome, PresetError> {
-        let _ = defaults;
+        if let Some(outcome) = same(&preset.vector, defaults).then_some(ProposeOutcome::OnDefaults)
+        {
+            return Ok(outcome);
+        }
         let mut write = self.db.write().await?;
+        if let Some(open) = open_proposal(&mut write, preset.id).await? {
+            return Ok(ProposeOutcome::AlreadyOpen(open));
+        }
+        let proposed = defaults.to_vec();
         let prior = encode(&preset.vector);
         let field = preset.field.as_str();
+        let offered = encode(&proposed);
         let retention = f64::from(preset.desired_retention);
         let created_at = now.epoch_millis();
         let id = sqlx::query_scalar!(
@@ -360,7 +452,7 @@ impl PresetStore {
             preset.name,
             prior,
             field,
-            prior,
+            offered,
             retention,
             preset.non_new_cards,
             created_at
@@ -375,7 +467,7 @@ impl PresetStore {
             preset_name: preset.name.clone(),
             prior_vector: preset.vector.clone(),
             prior_field: preset.field,
-            proposed_vector: preset.vector.clone(),
+            proposed_vector: proposed,
             desired_retention: preset.desired_retention,
             non_new_cards: preset.non_new_cards,
             state: ProposalState::Open,
@@ -386,7 +478,11 @@ impl PresetStore {
     }
 
     /// Settles the proposal `proposal` by what the snapshot `snapshot` holds for its preset, at
-    /// `now` (R7).
+    /// `now` (R7): `moved` when the preset holds the proposed vector, with whether its desired
+    /// retention was kept; still open, recording nothing, while it holds the prior vector; and
+    /// `diverged` when it holds neither, or the copy no longer holds the preset. The settle is
+    /// guarded by the row's open state in the same immediate transaction, so a settled proposal
+    /// is never settled again and is answered as it stands.
     ///
     /// # Errors
     ///
@@ -398,13 +494,47 @@ impl PresetStore {
         proposal: i64,
         now: UtcMillis,
     ) -> Result<VerifyOutcome, PresetError> {
-        let _ = (snapshot, now);
         let mut write = self.db.write().await?;
         let found = proposal_on(&mut write, proposal)
             .await?
             .ok_or(PresetError::UnknownProposal)?;
+        let (state, retention_kept) = match snapshot.preset(found.preset_id) {
+            Some(held) if same(&held.vector, &found.proposed_vector) => (
+                ProposalState::Moved,
+                Some(i64::from(
+                    held.desired_retention.to_bits() == found.desired_retention.to_bits(),
+                )),
+            ),
+            Some(held) if same(&held.vector, &found.prior_vector) => (ProposalState::Open, None),
+            _ => (ProposalState::Diverged, None),
+        };
+        if state == ProposalState::Open {
+            write.commit().await.map_err(KernelError::from)?;
+            return Ok(VerifyOutcome::Unchanged(found));
+        }
+        let settled_at = now.epoch_millis();
+        let name = state.as_str();
+        let settled = sqlx::query!(
+            "UPDATE preset_proposals SET state = ?2, settled_at = ?3, retention_kept = ?4 \
+             WHERE id = ?1 AND state = 'open'",
+            proposal,
+            name,
+            settled_at,
+            retention_kept
+        )
+        .execute(&mut *write)
+        .await
+        .map_err(KernelError::from)?
+        .rows_affected();
+        let read = proposal_on(&mut write, proposal)
+            .await?
+            .ok_or(PresetError::UnknownProposal)?;
         write.commit().await.map_err(KernelError::from)?;
-        Ok(VerifyOutcome::Unchanged(found))
+        Ok(if settled == 1 {
+            VerifyOutcome::Settled(read)
+        } else {
+            VerifyOutcome::Unchanged(read)
+        })
     }
 }
 
@@ -459,6 +589,25 @@ async fn proposal_on(
                   desired_retention, non_new_cards, state, settled_at, retention_kept, created_at
            FROM preset_proposals WHERE id = ?1"#,
         id
+    )
+    .fetch_optional(connection)
+    .await
+    .map_err(KernelError::from)?;
+    row.map(ProposalRow::proposal).transpose()
+}
+
+/// The open proposal for the preset `preset`, when it has one: the partial unique index holds at
+/// most one.
+async fn open_proposal(
+    connection: &mut SqliteConnection,
+    preset: i64,
+) -> Result<Option<Proposal>, PresetError> {
+    let row = sqlx::query_as!(
+        ProposalRow,
+        r#"SELECT id AS "id!", preset_id, preset_name, prior_vector, prior_field, proposed_vector,
+                  desired_retention, non_new_cards, state, settled_at, retention_kept, created_at
+           FROM preset_proposals WHERE preset_id = ?1 AND state = 'open'"#,
+        preset
     )
     .fetch_optional(connection)
     .await
@@ -523,30 +672,138 @@ where
     })
 }
 
-/// The proposal's text for the owner (R6).
+/// The values of `vector` on one line, comma-separated, each printed as the shortest text that
+/// parses back to the same value (R6).
+fn values_line(vector: &[f32]) -> String {
+    vector
+        .iter()
+        .map(|value| format!("{value}"))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// The proposal's text for the owner (R6): the preset, the values, the steps in their own Anki
+/// app, what the change recomputes and what it leaves, a replaced fit, and the undo.
 #[must_use]
 pub fn proposal_text(proposal: &Proposal) -> String {
-    let _ = proposal;
-    String::new()
+    let mut lines = vec![
+        format!(
+            "Preset {} {}: move its FSRS parameters to the scheduler's defaults.",
+            proposal.preset_id, proposal.preset_name
+        ),
+        format!("Values: {}", values_line(&proposal.proposed_vector)),
+        "In your Anki app, open this preset's options and paste the values above into its FSRS \
+         parameters."
+            .to_owned(),
+        "Leave \"Reschedule cards on change\" off.".to_owned(),
+        "Keep the preset's other options, and leave desired retention as it is.".to_owned(),
+        "Save, then sync.".to_owned(),
+        format!(
+            "What changes: the memory state of {} non-new card(s) is recomputed from their own \
+             reviews.",
+            proposal.non_new_cards
+        ),
+        "No review, due date or interval changes.".to_owned(),
+    ];
+    if proposal.prior_field == ParameterField::Fsrs6 && !proposal.prior_vector.is_empty() {
+        lines.push("These defaults replace a fit of the current scheduler generation.".to_owned());
+    }
+    lines.push(if proposal.prior_vector.is_empty() {
+        "Undo: clear the parameters box.".to_owned()
+    } else {
+        format!(
+            "Undo: paste these values back: {}",
+            values_line(&proposal.prior_vector)
+        )
+    });
+    lines.join("\n")
 }
 
 /// What `propose` answered `outcome` for `preset`, for the owner (R4).
 #[must_use]
 pub fn propose_text(preset: &Preset, outcome: &ProposeOutcome) -> String {
-    let _ = (preset, outcome);
-    String::new()
+    match outcome {
+        ProposeOutcome::OnDefaults => format!(
+            "{} is already on the scheduler's defaults; nothing is recorded.",
+            preset.name
+        ),
+        ProposeOutcome::Recorded(proposal) => format!(
+            "Proposal {} recorded.\n{}",
+            proposal.id,
+            proposal_text(proposal)
+        ),
+        ProposeOutcome::AlreadyOpen(proposal) => format!(
+            "Proposal {} is already open for this preset; nothing is recorded.\n{}",
+            proposal.id,
+            proposal_text(proposal)
+        ),
+    }
 }
 
 /// What `verify` answered, for the owner (R7).
 #[must_use]
 pub fn verify_text(outcome: &VerifyOutcome) -> String {
-    let _ = outcome;
-    String::new()
+    let (proposal, settled_now) = match outcome {
+        VerifyOutcome::Settled(proposal) => (proposal, true),
+        VerifyOutcome::Unchanged(proposal) => (proposal, false),
+    };
+    let at = proposal.settled_at.unwrap_or_default();
+    match (proposal.state, settled_now) {
+        (ProposalState::Open, _) => format!(
+            "Proposal {} is still open: as of the last sync the preset still holds the values \
+             it would replace. Nothing is recorded.",
+            proposal.id
+        ),
+        (ProposalState::Moved, true) => format!(
+            "Proposal {} moved at {at}: the preset holds the proposed values, desired retention \
+             {}.",
+            proposal.id,
+            if proposal.retention_kept == Some(true) {
+                "unchanged"
+            } else {
+                "changed"
+            }
+        ),
+        (ProposalState::Diverged, true) => format!(
+            "Proposal {} diverged at {at}: the preset holds neither the values it replaced nor \
+             the proposed ones.",
+            proposal.id
+        ),
+        (state, false) => format!(
+            "Proposal {} is already settled {} at {at}; nothing is recorded.",
+            proposal.id,
+            state.as_str()
+        ),
+    }
 }
 
-/// One line per preset, the one with the most non-new cards first (R5).
+/// One line per preset, the one with the most non-new cards first, then by id (R5).
 #[must_use]
 pub fn listing(snapshot: &PresetSnapshot) -> Vec<String> {
-    let _ = snapshot;
-    Vec::new()
+    let mut presets: Vec<&Preset> = snapshot.presets.iter().collect();
+    presets.sort_by(|a, b| {
+        b.non_new_cards
+            .cmp(&a.non_new_cards)
+            .then_with(|| a.id.cmp(&b.id))
+    });
+    presets
+        .into_iter()
+        .map(|preset| {
+            format!(
+                "{} {}: field {}, {} the defaults, desired retention {}, {} deck(s), {} non-new \
+                 card(s)",
+                preset.id,
+                preset.name,
+                preset.field.as_str(),
+                if same(&preset.vector, &snapshot.defaults) {
+                    "on"
+                } else {
+                    "not on"
+                },
+                preset.desired_retention,
+                preset.deck_ids.len(),
+                preset.non_new_cards
+            )
+        })
+        .collect()
 }

@@ -26,8 +26,12 @@ use deck_streak_kernel::{
 /// id. Any other shape names none, so the binary refuses it with the usage line and code 2 before
 /// it opens the database.
 pub fn command(arguments: &[OsString]) -> Option<PresetCommand> {
-    let _ = arguments;
-    None
+    match arguments {
+        [verb] if verb == "list" => Some(PresetCommand::List),
+        [verb, id] if verb == "propose" => id.to_str()?.parse().ok().map(PresetCommand::Propose),
+        [verb, id] if verb == "verify" => id.to_str()?.parse().ok().map(PresetCommand::Verify),
+        _ => None,
+    }
 }
 
 /// Why the `preset` role stopped before it finished.
@@ -78,4 +82,24 @@ pub async fn run(env: &Environment, command: PresetCommand) -> Result<u8, Preset
         .map_err(PresetRoleError::Offload)?
         .map_err(PresetRoleError::Output)?;
     Ok(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use deck_streak_ingest::preset::PresetCommand;
+    use deck_streak_kernel::Environment;
+
+    use super::{PresetRoleError, run};
+
+    #[tokio::test]
+    async fn the_role_refuses_start_without_its_settings_before_it_reads_anything() {
+        // An empty environment names no settings, so the role stops on them before it opens the
+        // database or the copy: a refusal of start, never a read.
+        let empty = Environment::from_vars(Vec::<(String, String)>::new());
+        let refused = run(&empty, PresetCommand::List).await;
+        assert!(
+            matches!(refused, Err(PresetRoleError::Settings(_))),
+            "{refused:?}"
+        );
+    }
 }

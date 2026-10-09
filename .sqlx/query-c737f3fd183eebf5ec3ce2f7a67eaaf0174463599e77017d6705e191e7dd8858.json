@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE preset_proposals SET state = ?2, settled_at = ?3, retention_kept = ?4 WHERE id = ?1 AND state = 'open'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "c737f3fd183eebf5ec3ce2f7a67eaaf0174463599e77017d6705e191e7dd8858"
+}

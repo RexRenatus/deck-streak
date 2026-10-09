@@ -3,7 +3,10 @@
 //! Telegram bot's long poll), `job` (SPEC-027: `deckstreakd job <id>` runs one job of the table
 //! and exits), and `mcp` (SPEC-119: the MCP adapter's server on a loopback address). `data` is
 //! the owner's, run by hand on the host (SPEC-021 R8): `deckstreakd data export` writes the export
-//! to standard output, and `deckstreakd data erase --confirm ERASE` erases.
+//! to standard output, and `deckstreakd data erase --confirm ERASE` erases. `preset` is the
+//! owner's too (SPEC-387): `deckstreakd preset list` prints every preset, `deckstreakd preset
+//! propose <id>` records a proposal that moves one preset to the scheduler's defaults, and
+//! `deckstreakd preset verify <id>` settles it once the owner's change has synced.
 //!
 //! `main` installs the kernel's logging before anything else, so every line the process writes,
 //! even a refusal to start, is a JSON event with its journal priority (SPEC-031 R1); it is then the
@@ -57,10 +60,10 @@ enum Role {
 
 impl Role {
     /// Every role's name.
-    const NAMES: [&'static str; 5] = ["api", "bot", "job", "data", "mcp"];
+    const NAMES: [&'static str; 6] = ["api", "bot", "job", "data", "mcp", "preset"];
 
     /// The role `arguments` name: `api`, `bot` or `mcp` alone, `job` and the id of a job of the
-    /// table, or `data` and its command.
+    /// table, or `data` or `preset` and its command.
     fn from_arguments(arguments: &[OsString]) -> Option<Self> {
         match arguments {
             [name] if name == "api" => Some(Self::Api),
@@ -98,7 +101,8 @@ fn main() -> ExitCode {
     let Some(role) = Role::from_arguments(&arguments) else {
         tracing::error!(
             "usage: deckstreakd <role>, or deckstreakd job <id>, or deckstreakd data export, or \
-             deckstreakd data erase --confirm {CONFIRMATION}; the roles are: {}; the jobs are: {}",
+             deckstreakd data erase --confirm {CONFIRMATION}, or deckstreakd preset \
+             list|propose <id>|verify <id>; the roles are: {}; the jobs are: {}",
             Role::names(),
             Role::jobs()
         );

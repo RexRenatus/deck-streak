@@ -35,6 +35,17 @@
       "erase": "anonymise"
     },
     {
+      "id": "preset-proposals",
+      "data": "the record of each proposal to move one of the owner's presets to the scheduler's default parameters: the preset's id and name, the parameters it would replace and the field they came from, the proposed parameters, the preset's desired retention, how many non-new cards the change recomputes, whether the proposal is open, moved or diverged, when that was seen, and whether the desired retention was kept",
+      "source": "derived",
+      "stores": ["preset_proposals.*"],
+      "purpose": "proposing the scheduler's defaults for a preset when the owner asks, keeping the values that undo the change, and settling the proposal once the owner's change has synced",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
       "id": "service-counters",
       "data": "the settings generation: one counter of how many times the owner's settings changed, and a digest of the owner's courses file, which says whether the file changed",
       "source": "derived",

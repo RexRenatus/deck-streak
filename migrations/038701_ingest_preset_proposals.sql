@@ -25,3 +25,6 @@ CREATE TABLE preset_proposals (
     CHECK ((state = 'open') = (settled_at IS NULL)),
     CHECK ((state = 'moved') = (retention_kept IS NOT NULL))
 ) STRICT;
+
+-- At most one open proposal per preset (R4): a settled one leaves room for a new one beside it.
+CREATE UNIQUE INDEX preset_proposals_one_open ON preset_proposals (preset_id) WHERE state = 'open';
