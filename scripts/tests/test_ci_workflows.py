@@ -8852,6 +8852,644 @@ class TheCardViewIsProvedOnBothSimulators(unittest.TestCase):
                 self.assertEqual(card_probe_problems(jobs), wanted, name)
 
 
+# SPEC-382: every Apple CI run records its own timing, and uploads it whatever the outcome
+# (ADR-393 to ADR-396). The planted suite's step, timed as the other test steps are, and its
+# command as the base held it: every line of the step but its comments and its timer (R1).
+PLANTED_SUITE = "the card view's planted suite, Debug, on the iPhone and then the iPad"
+PLANTED_SUITE_COMMAND = "\n".join(
+    (
+        "xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -configuration Debug \\",
+        '  -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \\',
+        '  -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" \\',
+        "  -disable-concurrent-destination-testing \\",
+        '  -derivedDataPath "$RUNNER_TEMP/debug" \\',
+        '  -resultBundlePath "$RESULTS/card-probe.xcresult" \\',
+        "  CODE_SIGNING_ALLOWED=NO",
+    )
+)
+# How a timed step starts its clock, and the flag that prints a build's timing summary (R2).
+TIMER_START = "started=$(date +%s)"
+TIMING_SUMMARY = "-showBuildTimingSummary"
+# An `xcodebuild` that builds nothing takes no flag: the framework assembly and a version read.
+NOT_A_BUILD = ("-create-xcframework", "-version")
+BUILD_ACTIONS = ("build", "test", "archive")
+# The word `xcodebuild` as a command, never inside a path or another name.
+XCODEBUILD = re.compile(r"(?<![\w/.-])xcodebuild(?![\w.-])")
+# The static-library step, and the per-target clock inside its loop over the targets (R3).
+STATIC_LIBRARIES = "the two static libraries, clocked from the first compile to the second archive"
+TARGET_START = "target_started=$(date +%s)"
+TARGET_WRITE = 'echo "$(( $(date +%s) - target_started ))" > "$REPORT/build-seconds-$target"'
+CARGO_TIMINGS = "target/cargo-timings/"
+# The step that boots the first simulator of the first test step, and what it runs (R4): the one
+# available device of the pinned iPhone name and OS, booted and waited for.
+BOOT = "the iPhone simulator, booted"
+BOOT_NEEDS = (
+    "xcrun simctl list devices available -j",
+    'os.environ["IPHONE_SIM"]',
+    'os.environ["SIM_OS"]',
+    'xcrun simctl bootstatus "$udid" -b',
+)
+# Each job's timing record, its upload, and the artifact each job uploads it under (R6).
+TIMING_RECORD = "the timing record"
+TIMING_UPLOAD = "upload the timing record"
+TIMING_UPLOADS = (("harness", "timing-harness"), ("xcframework", "timing-xcframework"))
+# A result bundle a step writes into its job's results folder (R1, A7).
+BUNDLE = re.compile(r'-resultBundlePath\s+"\$RESULTS/([\w.-]+)\.xcresult"')
+
+
+def timer_write(name):
+    """The line that writes a timed step's elapsed seconds for the report, as each step spells it."""
+    return f'echo "$(( $(date +%s) - started ))" > "$REPORT/{name}"'
+
+
+def job_steps(workflow, job):
+    return ((workflow.get("jobs") or {}).get(job) or {}).get("steps") or []
+
+
+def step_of(workflow, job, name):
+    """The one step of a name in a job, or None when the job holds none or several."""
+    found = [step for step in job_steps(workflow, job) if step.get("name") == name]
+    return found[0] if len(found) == 1 else None
+
+
+def with_step(workflow, job, name, keys):
+    """A copy of a workflow whose job's step of `name` has `keys` set, a None value removing its
+    key; a name the job does not hold is appended as a new step. The plants are built on it."""
+    copy = json.loads(json.dumps(workflow))
+    steps = copy["jobs"][job]["steps"]
+    step = next((s for s in steps if s.get("name") == name), None)
+    if step is None:
+        step = {"name": name}
+        steps.append(step)
+    for key, value in keys.items():
+        if value is None:
+            step.pop(key, None)
+        else:
+            step[key] = value
+    return copy
+
+
+def planted_suite_problems(workflow):
+    """Each way the planted suite's step could fail to be timed and read, named (SPEC-382 R1, A1):
+    one step of its name in `harness`, its clock started before its command and its seconds written
+    after it; the report reading its bundle's tests and its seconds; and its command, every line
+    but its comments and its timer, equal to the base's text. The timer is judged first."""
+    step = step_of(workflow, "harness", PLANTED_SUITE)
+    if step is None:
+        return [f"harness: no one step named {PLANTED_SUITE!r}"]
+    raw = str(step.get("run", "")).splitlines()
+    lines = [line.strip() for line in raw]
+    write = timer_write("card-probe-seconds")
+    calls = [at for at, line in enumerate(lines) if XCODEBUILD.search(line)]
+    problems = []
+    if TIMER_START not in lines or write not in lines:
+        problems.append("harness: the planted suite's step writes no `card-probe-seconds` timer")
+    elif not calls or not lines.index(TIMER_START) < calls[0] < lines.index(write):
+        problems.append("harness: the planted suite's timer does not wrap its command")
+    report = step_of(workflow, "harness", HARNESS_REPORT)
+    text = str((report or {}).get("run", ""))
+    problems += [
+        f"harness: the report lacks {need}"
+        for need in ('cases_in("card-probe")', 'minutes("card-probe-seconds")')
+        if need not in text
+    ]
+    kept = [
+        line
+        for line in raw
+        if line.strip()
+        and not line.lstrip().startswith("#")
+        and line.strip() not in (TIMER_START, write)
+    ]
+    if textwrap.dedent("\n".join(kept)) != PLANTED_SUITE_COMMAND:
+        problems.append("harness: the planted suite's command is not its base text")
+    return problems
+
+
+def xcodebuild_calls(text):
+    """Each `xcodebuild` a run script calls, continuations joined: the words after the name, for
+    every line not a comment that names it."""
+    joined = re.sub(r"\\\n\s*", " ", text)
+    return [
+        line[match.end() :].split()
+        for line in joined.splitlines()
+        if not line.lstrip().startswith("#")
+        for match in XCODEBUILD.finditer(line)
+    ]
+
+
+def timing_summary_problems(workflow):
+    """Each `xcodebuild` build, test or archive of the Apple job body that does not print its build
+    timing summary, named by its job and step (SPEC-382 R2, A2). The planted suite's step is exempt
+    by its name, because R1 holds its command; a call naming `-create-xcframework` or `-version`
+    builds nothing; and a call whose words name no build, test or archive is refused as unread,
+    never passed. Returns the problems and the calls judged, the exempt ones included."""
+    problems, judged = [], []
+    for job, body in (workflow.get("jobs") or {}).items():
+        for step in (body or {}).get("steps") or []:
+            name = step.get("name")
+            for words in xcodebuild_calls(str(step.get("run", ""))):
+                judged.append((job, name))
+                if (job, name) == ("harness", PLANTED_SUITE) or any(
+                    word in NOT_A_BUILD for word in words
+                ):
+                    continue
+                verbs = [word for word in words if word in BUILD_ACTIONS]
+                if not verbs:
+                    problems.append(
+                        f"{job}: the step {name!r} runs an `xcodebuild` this census cannot read "
+                        "as a build, test or archive"
+                    )
+                elif TIMING_SUMMARY not in words:
+                    problems.append(
+                        f"{job}: the step {name!r} runs `xcodebuild {verbs[0]}` without "
+                        f"{TIMING_SUMMARY}"
+                    )
+    return problems, judged
+
+
+def static_library_timing_problems(workflow):
+    """Each way the static-library step could fail to time each target, named (SPEC-382 R3, A3):
+    one loop over the targets holding one `cargo rustc` that keeps `--locked`, a per-target clock
+    started before it and written to `build-seconds-$target` after it, and the total clock around
+    the loop kept."""
+    step = step_of(workflow, "xcframework", STATIC_LIBRARIES)
+    if step is None:
+        return [f"xcframework: no one step named {STATIC_LIBRARIES!r}"]
+    lines = [line.strip() for line in str(step.get("run", "")).splitlines()]
+    loops = [at for at, line in enumerate(lines) if line.startswith("for target in ")]
+    if len(loops) != 1 or "done" not in lines[loops[0] :]:
+        return ["xcframework: the static-library step compiles its targets in no one loop"]
+    start = loops[0]
+    end = lines.index("done", start)
+    body = lines[start + 1 : end]
+    compiles = [at for at, line in enumerate(body) if line.startswith("cargo rustc ")]
+    problems = []
+    if len(compiles) != 1:
+        problems.append(f"xcframework: the targets' loop runs {len(compiles)} compiles, not one")
+    elif "--locked" not in body[compiles[0]].split():
+        problems.append("xcframework: the targets' compile drops --locked")
+    if TARGET_WRITE not in body:
+        problems.append(
+            "xcframework: the static-library step writes no per-target seconds file, "
+            "`build-seconds-$target`"
+        )
+    elif (
+        TARGET_START not in body
+        or len(compiles) != 1
+        or not body.index(TARGET_START) < compiles[0] < body.index(TARGET_WRITE)
+    ):
+        problems.append("xcframework: the per-target clock does not wrap the target's compile")
+    if TIMER_START not in lines[:start] or timer_write("build-seconds") not in lines[end + 1 :]:
+        problems.append(
+            "xcframework: the static-library step does not keep its total, `build-seconds`"
+        )
+    return problems
+
+
+def boot_problems(workflow):
+    """Each way the first simulator could fail to boot in a timed step of its own, named (SPEC-382
+    R4, A4): exactly one `harness` step boots a simulator, named for it and placed right after
+    "the project, generated"; it picks the one available device of the pinned iPhone name and OS,
+    boots it and waits for it, names no iPad, and writes `boot-seconds`, which the report reads."""
+    steps = job_steps(workflow, "harness")
+    names = [step.get("name") for step in steps]
+    booting = [step.get("name") for step in steps if "simctl boot" in str(step.get("run", ""))]
+    if not booting:
+        return [f"harness: no step boots a simulator after {HARNESS_PROJECT!r}"]
+    if booting != [BOOT]:
+        return [f"harness: the steps {booting} boot a simulator, not {BOOT!r} alone"]
+    problems = []
+    if HARNESS_PROJECT not in names or names.index(BOOT) != names.index(HARNESS_PROJECT) + 1:
+        problems.append(f"harness: {BOOT!r} does not follow {HARNESS_PROJECT!r}")
+    run = str(steps[names.index(BOOT)].get("run", ""))
+    problems += [f"harness: the boot step lacks {need}" for need in BOOT_NEEDS if need not in run]
+    if "IPAD_SIM" in run:
+        problems.append("harness: the boot step boots the iPad, which `xcodebuild` boots")
+    lines = [line.strip() for line in run.splitlines()]
+    write = timer_write("boot-seconds")
+    if write not in lines:
+        problems.append("harness: the boot step writes no `boot-seconds`")
+    elif TIMER_START not in lines:
+        problems.append("harness: the boot step starts no clock")
+    elif BOOT_NEEDS[-1] in lines and not (
+        lines.index(TIMER_START) < lines.index(BOOT_NEEDS[-1]) < lines.index(write)
+    ):
+        problems.append("harness: the boot step's clock does not wrap its wait")
+    report = step_of(workflow, "harness", HARNESS_REPORT)
+    if 'minutes("boot-seconds")' not in str((report or {}).get("run", "")):
+        problems.append('harness: the report lacks minutes("boot-seconds")')
+    return problems
+
+
+def developer_directory_problems(workflow):
+    """Each job of the Apple job body that does not build with the one pinned Xcode, named
+    (SPEC-382 R5, A5): every job's env sets `DEVELOPER_DIR`, the framework job's first, and all of
+    them to one path."""
+    jobs = workflow.get("jobs") or {}
+    if "xcframework" not in jobs:
+        return ["xcframework: no such job"]
+    pinned = {
+        job: str(((body or {}).get("env") or {}).get("DEVELOPER_DIR", ""))
+        for job, body in jobs.items()
+    }
+    order = ["xcframework"] + sorted(set(pinned) - {"xcframework"})
+    problems = [
+        f"{job}: the job's environment does not set the developer directory"
+        for job in order
+        if not pinned[job]
+    ]
+    paths = sorted({path for path in pinned.values() if path})
+    if len(paths) > 1:
+        problems.append(f"the jobs set {len(paths)} developer directories, not one: {paths}")
+    return problems
+
+
+def timing_upload_problems(workflow):
+    """Each way a job could fail to upload its own timing record whatever the outcome, named
+    (SPEC-382 R6, A6): `harness`, then `xcframework`, holds one upload of its timing artifact,
+    under `always()`, with the action its existing upload uses, after that upload and after one
+    step "the timing record", itself under `always()`, that writes `timing.json` in the schema
+    `ci-timing/1`; the upload carries the record, and the framework job's carries cargo's timings
+    report too."""
+    problems = []
+    for job, artifact in TIMING_UPLOADS:
+        steps = job_steps(workflow, job)
+        uploads = [at for at, step in enumerate(steps) if action(step) == "actions/upload-artifact"]
+        timing = [
+            at for at in uploads if str((steps[at].get("with") or {}).get("name")) == artifact
+        ]
+        if len(timing) != 1:
+            problems.append(f"{job}: {len(timing)} uploads named {artifact!r}, not one")
+            continue
+        at = timing[0]
+        upload = steps[at]
+        existing = [n for n in uploads if n != at]
+        if upload.get("if") != "${{ always() }}":
+            problems.append(f"{job}: the {artifact} upload does not run whatever the outcome")
+        if not existing or any(
+            str(steps[n].get("uses")) != str(upload.get("uses")) for n in existing
+        ):
+            problems.append(
+                f"{job}: the {artifact} upload does not use the pinned action of the job's "
+                "existing upload"
+            )
+        elif at < max(existing):
+            problems.append(f"{job}: the {artifact} upload comes before the job's existing upload")
+        carried = lines_of((upload.get("with") or {}).get("path"))
+        if not any(line.endswith("timing.json") for line in carried):
+            problems.append(f"{job}: the {artifact} upload does not carry timing.json")
+        if job == "xcframework" and CARGO_TIMINGS not in carried:
+            problems.append(f"{job}: the {artifact} upload does not carry {CARGO_TIMINGS}")
+        records = [n for n, step in enumerate(steps) if step.get("name") == TIMING_RECORD]
+        if len(records) != 1:
+            problems.append(f"{job}: {len(records)} steps named {TIMING_RECORD!r}, not one")
+            continue
+        record = steps[records[0]]
+        run = str(record.get("run", ""))
+        if record.get("if") != "${{ always() }}":
+            problems.append(f"{job}: the step {TIMING_RECORD!r} does not run whatever the outcome")
+        if "timing.json" not in run or "ci-timing/1" not in run:
+            problems.append(
+                f"{job}: the step {TIMING_RECORD!r} writes no timing.json in ci-timing/1"
+            )
+        if not existing or not max(existing) < records[0] < at:
+            problems.append(
+                f"{job}: the step {TIMING_RECORD!r} does not sit between the job's existing upload "
+                "and its timing upload"
+            )
+    return problems
+
+
+def unread_bundle_problems(workflow):
+    """Each result bundle a job uploads and its report does not read, named (SPEC-382 R1, A7): in
+    every job that uploads its results folder, each bundle a step writes there is read by the job's
+    report with `cases_in`. Returns the problems and the bundles judged."""
+    problems, judged = [], []
+    for job, body in (workflow.get("jobs") or {}).items():
+        results = str(((body or {}).get("env") or {}).get("RESULTS", "")).rstrip("/")
+        steps = (body or {}).get("steps") or []
+        folder = results.rsplit("/", 1)[-1] + "/"
+        if not results or not any(
+            action(step) == "actions/upload-artifact"
+            and folder in lines_of((step.get("with") or {}).get("path"))
+            for step in steps
+        ):
+            continue
+        reports = [step for step in steps if step.get("name") == HARNESS_REPORT]
+        text = str(reports[0].get("run", "")) if len(reports) == 1 else ""
+        if len(reports) != 1:
+            problems.append(f"{job}: {len(reports)} steps named {HARNESS_REPORT!r}, not one")
+        for step in steps:
+            for label in BUNDLE.findall(run_joined(step)):
+                judged.append((job, label))
+                if f'cases_in("{label}")' not in text:
+                    problems.append(
+                        f"{job}: the result bundle {label}.xcresult is uploaded and not read by "
+                        "the report"
+                    )
+    return problems, judged
+
+
+class TheRunRecordsItsOwnTiming(unittest.TestCase):
+    def test_the_planted_suite_is_timed_and_its_command_is_unchanged(self):
+        """SPEC-382 A1: the planted suite's step writes its seconds and the report reads its
+        bundle's tests and its seconds, while its command stays the base's text."""
+        workflow = load("xcframework.yml")
+        self.assertIsNotNone(step_of(workflow, "harness", PLANTED_SUITE))
+        self.assertIsNotNone(step_of(workflow, "harness", HARNESS_REPORT))
+        self.assertEqual(planted_suite_problems(workflow), [])
+        examined("harness steps", job_steps(workflow, "harness"))
+
+        # The controls: each plant is refused by its rule's name, and by no other.
+        run = step_of(workflow, "harness", PLANTED_SUITE)["run"]
+        report = step_of(workflow, "harness", HARNESS_REPORT)["run"]
+        changed = "harness: the planted suite's command is not its base text"
+        plants = [
+            (
+                "the timer's write removed",
+                PLANTED_SUITE,
+                run.replace(timer_write("card-probe-seconds"), ""),
+                ["harness: the planted suite's step writes no `card-probe-seconds` timer"],
+            ),
+            (
+                "one token of the command changed",
+                PLANTED_SUITE,
+                run.replace("-configuration Debug", "-configuration Release"),
+                [changed],
+            ),
+            (
+                "the command given the timing summary",
+                PLANTED_SUITE,
+                run.replace("-configuration Debug", f"-configuration Debug {TIMING_SUMMARY}"),
+                [changed],
+            ),
+            (
+                "the report's read of its seconds removed",
+                HARNESS_REPORT,
+                report.replace('minutes("card-probe-seconds")', '"not measured"'),
+                ['harness: the report lacks minutes("card-probe-seconds")'],
+            ),
+        ]
+        for name, step, text, wanted in examined("planted suite plants", plants):
+            with self.subTest(plant=name):
+                planted = with_step(workflow, "harness", step, {"run": text})
+                self.assertEqual(planted_suite_problems(planted), wanted, name)
+
+    def test_every_other_xcodebuild_prints_its_build_timing_summary(self):
+        """SPEC-382 A2: every `xcodebuild` build, test or archive of the body other than the
+        planted suite's passes the timing summary; the framework assembly and a version read
+        build nothing, and a call this census cannot read is refused."""
+        workflow = load("xcframework.yml")
+        self.assertIsNotNone(step_of(workflow, "harness", PLANTED_SUITE))
+        problems, judged = timing_summary_problems(workflow)
+        self.assertEqual(problems, [])
+        examined("xcodebuild calls", judged)
+
+        # The controls: each plant is refused by its step's name, and an exempt call is not.
+        plants = [
+            (
+                "a test step without the summary",
+                "xcodebuild test -project ios/Harness.xcodeproj -scheme Harness \\\n"
+                '  -derivedDataPath "$RUNNER_TEMP/planted"\n',
+                [
+                    "harness: the step 'a planted build' runs `xcodebuild test` without "
+                    f"{TIMING_SUMMARY}"
+                ],
+            ),
+            (
+                "a call this census cannot read",
+                'python3 -c \'import subprocess; subprocess.run(["xcodebuild", "test"])\'\n',
+                [
+                    "harness: the step 'a planted build' runs an `xcodebuild` this census cannot "
+                    "read as a build, test or archive"
+                ],
+            ),
+            ("a version read", 'xcodebuild -version > "$REPORT/planted"\n', []),
+        ]
+        for name, text, wanted in examined("planted xcodebuild steps", plants):
+            with self.subTest(plant=name):
+                planted = with_step(workflow, "harness", "a planted build", {"run": text})
+                self.assertEqual(timing_summary_problems(planted)[0], wanted, name)
+
+    def test_each_static_library_target_is_timed(self):
+        """SPEC-382 A3: each static-library target writes its own seconds inside the loop, the
+        total is kept around it, and the compile keeps `--locked`."""
+        workflow = load("xcframework.yml")
+        self.assertIsNotNone(step_of(workflow, "xcframework", STATIC_LIBRARIES))
+        self.assertEqual(static_library_timing_problems(workflow), [])
+        run = step_of(workflow, "xcframework", STATIC_LIBRARIES)["run"]
+        examined("lines of the static-library step", run.splitlines())
+
+        # The controls: each plant is refused by its rule's name, and by no other.
+        plants = [
+            (
+                "the per-target write removed",
+                run.replace(TARGET_WRITE, ""),
+                [
+                    "xcframework: the static-library step writes no per-target seconds file, "
+                    "`build-seconds-$target`"
+                ],
+            ),
+            (
+                "the per-target clock started after the compile",
+                run.replace(TARGET_START + "\n", "").replace(
+                    TARGET_WRITE, TARGET_START + "\n" + TARGET_WRITE
+                ),
+                ["xcframework: the per-target clock does not wrap the target's compile"],
+            ),
+            (
+                "the total's write removed",
+                run.replace(timer_write("build-seconds"), ""),
+                ["xcframework: the static-library step does not keep its total, `build-seconds`"],
+            ),
+            (
+                "--locked dropped",
+                run.replace("--locked ", ""),
+                ["xcframework: the targets' compile drops --locked"],
+            ),
+        ]
+        for name, text, wanted in examined("planted static-library steps", plants):
+            with self.subTest(plant=name):
+                planted = with_step(workflow, "xcframework", STATIC_LIBRARIES, {"run": text})
+                self.assertEqual(static_library_timing_problems(planted), wanted, name)
+
+    def test_the_first_simulator_boots_in_its_own_timed_step(self):
+        """SPEC-382 A4: one step right after "the project, generated" boots the pinned iPhone
+        alone, waits for it and writes its seconds, which the report reads."""
+        workflow = load("xcframework.yml")
+        self.assertIsNotNone(step_of(workflow, "harness", HARNESS_PROJECT))
+        self.assertEqual(boot_problems(workflow), [])
+        examined("harness steps", job_steps(workflow, "harness"))
+
+        # The controls: each plant is refused by its rule's name, and by no other.
+        run = step_of(workflow, "harness", BOOT)["run"]
+        report = step_of(workflow, "harness", HARNESS_REPORT)["run"]
+        moved = json.loads(json.dumps(workflow))
+        steps = moved["jobs"]["harness"]["steps"]
+        names = [step.get("name") for step in steps]
+        steps.insert(names.index(HARNESS_PROJECT), steps.pop(names.index(BOOT)))
+        plants = [
+            (
+                "the wait removed",
+                with_step(
+                    workflow,
+                    "harness",
+                    BOOT,
+                    {"run": run.replace(BOOT_NEEDS[-1], 'xcrun simctl boot "$udid"')},
+                ),
+                [f"harness: the boot step lacks {BOOT_NEEDS[-1]}"],
+            ),
+            (
+                "the iPad booted early too",
+                with_step(
+                    workflow,
+                    "harness",
+                    BOOT,
+                    {"run": run.rstrip("\n") + '\nxcrun simctl boot "$IPAD_SIM"\n'},
+                ),
+                ["harness: the boot step boots the iPad, which `xcodebuild` boots"],
+            ),
+            (
+                "the boot step before the project",
+                moved,
+                [f"harness: {BOOT!r} does not follow {HARNESS_PROJECT!r}"],
+            ),
+            (
+                "the report's read of its seconds removed",
+                with_step(
+                    workflow,
+                    "harness",
+                    HARNESS_REPORT,
+                    {"run": report.replace('minutes("boot-seconds")', '"not measured"')},
+                ),
+                ['harness: the report lacks minutes("boot-seconds")'],
+            ),
+        ]
+        for name, planted, wanted in examined("planted boot steps", plants):
+            with self.subTest(plant=name):
+                self.assertEqual(boot_problems(planted), wanted, name)
+
+    def test_the_framework_job_pins_the_developer_directory(self):
+        """SPEC-382 A5: the framework job's env sets the developer directory, to the one path
+        the other jobs of the body set."""
+        workflow = load("xcframework.yml")
+        jobs = workflow["jobs"]
+        self.assertIn("xcframework", jobs)
+        self.assertEqual(developer_directory_problems(workflow), [])
+        examined("jobs", list(jobs))
+
+        # The controls: each plant is refused by its rule's name, and by no other.
+        env = dict(jobs["xcframework"]["env"])
+        other = "/Applications/Xcode.app/Contents/Developer"
+        pinned = env["DEVELOPER_DIR"]
+        plants = [
+            (
+                "the entry removed",
+                {key: value for key, value in env.items() if key != "DEVELOPER_DIR"},
+                ["xcframework: the job's environment does not set the developer directory"],
+            ),
+            (
+                "another Xcode",
+                dict(env, DEVELOPER_DIR=other),
+                [f"the jobs set 2 developer directories, not one: {sorted([pinned, other])}"],
+            ),
+        ]
+        for name, planted_env, wanted in examined("planted framework envs", plants):
+            with self.subTest(plant=name):
+                planted = json.loads(json.dumps(workflow))
+                planted["jobs"]["xcframework"]["env"] = planted_env
+                self.assertEqual(developer_directory_problems(planted), wanted, name)
+
+    def test_each_job_uploads_its_timing_record_whatever_the_outcome(self):
+        """SPEC-382 A6: `harness` and the framework job each write their timing record and upload
+        it under `always()`, after their existing upload, with the pinned upload action."""
+        workflow = load("xcframework.yml")
+        self.assertEqual(timing_upload_problems(workflow), [])
+        examined("jobs with a timing record", [job for job, _ in TIMING_UPLOADS])
+
+        # The controls: each plant is refused by its rule's name, and by no other.
+        harness = step_of(workflow, "harness", TIMING_UPLOAD)
+        framework = step_of(workflow, "xcframework", TIMING_UPLOAD)
+        plants = [
+            (
+                "the harness upload's always() removed",
+                "harness",
+                TIMING_UPLOAD,
+                {"if": None},
+                ["harness: the timing-harness upload does not run whatever the outcome"],
+            ),
+            (
+                "the harness upload renamed",
+                "harness",
+                TIMING_UPLOAD,
+                {"with": dict(harness["with"], name="timing-planted")},
+                ["harness: 0 uploads named 'timing-harness', not one"],
+            ),
+            (
+                "the harness upload on another action",
+                "harness",
+                TIMING_UPLOAD,
+                {"uses": PLANTED_UPLOAD},
+                [
+                    "harness: the timing-harness upload does not use the pinned action of the "
+                    "job's existing upload"
+                ],
+            ),
+            (
+                "the harness record's always() removed",
+                "harness",
+                TIMING_RECORD,
+                {"if": None},
+                ["harness: the step 'the timing record' does not run whatever the outcome"],
+            ),
+            (
+                "the framework upload without cargo's timings report",
+                "xcframework",
+                TIMING_UPLOAD,
+                {"with": dict(framework["with"], path="xcframework-report/timing.json\n")},
+                [f"xcframework: the timing-xcframework upload does not carry {CARGO_TIMINGS}"],
+            ),
+        ]
+        for name, job, step, keys, wanted in examined("planted timing steps", plants):
+            with self.subTest(plant=name):
+                planted = with_step(workflow, job, step, keys)
+                self.assertEqual(timing_upload_problems(planted), wanted, name)
+
+    def test_every_uploaded_bundle_is_read_by_the_report(self):
+        """SPEC-382 A7: every result bundle a job uploads is read by that job's report."""
+        workflow = load("xcframework.yml")
+        problems, judged = unread_bundle_problems(workflow)
+        self.assertEqual(problems, [])
+        examined("uploaded result bundles", judged)
+
+        # The controls: each plant is refused by its bundle's name, and by no other.
+        report = step_of(workflow, "harness", HARNESS_REPORT)["run"]
+        plants = [
+            (
+                "the report's read of the planted suite's bundle removed",
+                HARNESS_REPORT,
+                report.replace('cases_in("card-probe")', "[]"),
+                [
+                    "harness: the result bundle card-probe.xcresult is uploaded and not read by "
+                    "the report"
+                ],
+            ),
+            (
+                "a planted bundle the report does not read",
+                "a planted bundle",
+                'xcodebuild test -resultBundlePath "$RESULTS/planted.xcresult"\n',
+                [
+                    "harness: the result bundle planted.xcresult is uploaded and not read by the "
+                    "report"
+                ],
+            ),
+        ]
+        for name, step, text, wanted in examined("planted bundles", plants):
+            with self.subTest(plant=name):
+                planted = with_step(workflow, "harness", step, {"run": text})
+                self.assertEqual(unread_bundle_problems(planted)[0], wanted, name)
+
+
 class TheReleaseJobOutlastsItsSlowestRun(unittest.TestCase):
     def test_the_release_job_timeout_holds_its_slowest_measured_run(self):
         """SPEC-367 A1: the `release` job's `timeout-minutes` is a digit string inside the band
