@@ -10,9 +10,10 @@
 - **Schematic:** none. No job is added, renamed or re-ordered, so the job graph
   `docs/schematics/apple-build-on-change-and-on-tag.md` draws is unchanged; the delivery adds steps
   inside two jobs and lines inside existing steps.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-382.md` (ADR-016). **Mutation band:**
-  `S38200-S38299` (section 7). **Model:** none (section 9).
+- **Status:** delivered by #752, which moved it from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-382.md` (ADR-016). ~~planned (in `docs/specs/planned/`) until the delivery
+  that builds it moves it to `docs/specs/` with its tests and `docs/red-first/SPEC-382.md`
+  (ADR-016).~~ **Mutation band:** `S38200-S38299` (section 7). **Model:** none (section 9).
 
 ## 1. The problem, measured
 
