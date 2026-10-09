@@ -352,6 +352,6 @@ inside it. No other row at `dev` anchors on a line this part rewrites (23 rows o
 | `S37706-A-TAKEN-NAME-IS-REUSED` | web-engine `src/files.rs` | the new name's check against the listed names reads `false &&` before it | `files::a_choice_file_is_never_a_name_the_pool_holds` |
 | `S37707-A-CHOICE-FILE-IS-THE-COLLECTION` | web-engine `src/files.rs` | the new name's check against the collection's name reads `false &&` before it | `files::a_choice_file_is_never_the_collection` |
 | `S37708-THE-POOL-PORT-IS-NEVER-INSTALLED` | web-engine `src/wasm.rs` | the install becomes `let _ = &port;` | `boundary::the_web_engine_installs_the_pool_as_the_cores_files_port` |
-| `S37709-AN-UPLOAD-FINDS-A-SNAPSHOT-ALWAYS` | web-engine `src/wasm.rs` | the confirm passes `true` to the snapshot check in place of the Worker's answer | `boundary::the_snapshot_answer_reaches_the_core_as_the_worker_read_it` |
+| `S37709-AN-UPLOAD-FINDS-A-SNAPSHOT-ALWAYS` | web-engine `src/wasm.rs` | the confirm passes `found: found \|\| true` to the snapshot check in place of the Worker's answer | `boundary::the_snapshot_answer_reaches_the_core_as_the_worker_read_it` |
 | `S37710-A-CANCEL-KEEPS-THE-STAGE` | web-engine `src/wasm.rs` | the cancel's clearing of the held stage becomes `let _ = &stage;` | `boundary::a_cancel_drops_the_held_stage` |
-| `S37711-A-CHOICE-FILE-IS-NAMED-UNRESERVED` | web-engine `src/wasm.rs` | the pool reserve before a choice file becomes `let _ = &pool;` | `boundary::each_choice_file_is_reserved_before_it_is_named` |
+| `S37711-A-CHOICE-FILE-IS-NAMED-UNRESERVED` | web-engine `src/wasm.rs` | the pool reserve before a choice file becomes `let _ = (&pool, storage("the pool is not reserved"));` | `boundary::each_choice_file_is_reserved_before_it_is_named` |
