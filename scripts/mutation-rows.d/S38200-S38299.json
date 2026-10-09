@@ -1,0 +1,78 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S38200-THE-DEBUG-TESTS-PRINT-THEIR-TIMING-SUMMARY",
+        ".github/workflows/xcframework.yml",
+        "-scheme Harness -configuration Debug \\\n            -showBuildTimingSummary \\\n",
+        "-scheme Harness -configuration Debug \\\n",
+        "the Debug tests' xcodebuild prints its build timing summary; without the flag the run records no build timing for its first test step (SPEC-382 R2)",
+        "test_ci_workflows.TheRunRecordsItsOwnTiming.test_every_other_xcodebuild_prints_its_build_timing_summary"
+      ],
+      [
+        "S38201-THE-ARCHIVE-PRINTS-ITS-TIMING-SUMMARY",
+        ".github/workflows/xcframework.yml",
+        "-scheme DeckStreak \\\n            -showBuildTimingSummary \\\n            -configuration Release \\\n",
+        "-scheme DeckStreak \\\n            -configuration Release \\\n",
+        "the app's archive prints its build timing summary; without the flag the slowest build of the job records no build timing (SPEC-382 R2)",
+        "test_ci_workflows.TheRunRecordsItsOwnTiming.test_every_other_xcodebuild_prints_its_build_timing_summary"
+      ],
+      [
+        "S38202-THE-PLANTED-SUITE-WRITES-ITS-SECONDS",
+        ".github/workflows/xcframework.yml",
+        "          echo \"$(( $(date +%s) - started ))\" > \"$REPORT/card-probe-seconds\"\n",
+        "",
+        "the planted suite's step writes its elapsed seconds for the report; without the write the report reads the step as not measured (SPEC-382 R1)",
+        "test_ci_workflows.TheRunRecordsItsOwnTiming.test_the_planted_suite_is_timed_and_its_command_is_unchanged"
+      ],
+      [
+        "S38203-THE-PLANTED-SUITE-COMMAND-IS-UNCHANGED",
+        ".github/workflows/xcframework.yml",
+        "-scheme CardProbe -configuration Debug \\\n",
+        "-scheme CardProbe -configuration Debug \\\n            -showBuildTimingSummary \\\n",
+        "the planted suite's command stays the base's text, so the timing summary is never added to it; one added token is refused (SPEC-382 R1)",
+        "test_ci_workflows.TheRunRecordsItsOwnTiming.test_the_planted_suite_is_timed_and_its_command_is_unchanged"
+      ],
+      [
+        "S38204-EACH-STATIC-LIBRARY-TARGET-WRITES-ITS-SECONDS",
+        ".github/workflows/xcframework.yml",
+        "            echo \"$(( $(date +%s) - target_started ))\" > \"$REPORT/build-seconds-$target\"\n",
+        "",
+        "each static-library target writes its own seconds file inside the loop; without it only the total is recorded (SPEC-382 R3)",
+        "test_ci_workflows.TheRunRecordsItsOwnTiming.test_each_static_library_target_is_timed"
+      ],
+      [
+        "S38205-THE-BOOT-STEP-WAITS-FOR-THE-BOOT",
+        ".github/workflows/xcframework.yml",
+        "          xcrun simctl bootstatus \"$udid\" -b\n",
+        "          xcrun simctl boot \"$udid\"\n",
+        "the boot step boots the iPhone and waits until it has booted; a boot that returns at once times nothing and leaves the wait to the first test step (SPEC-382 R4)",
+        "test_ci_workflows.TheRunRecordsItsOwnTiming.test_the_first_simulator_boots_in_its_own_timed_step"
+      ],
+      [
+        "S38206-THE-FRAMEWORK-JOB-PINS-ITS-XCODE",
+        ".github/workflows/xcframework.yml",
+        "toolchain rather than the image's default (SPEC-382 R5, ADR-396).\n      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer\n",
+        "toolchain rather than the image's default (SPEC-382 R5, ADR-396).\n",
+        "the framework job sets the developer directory the other jobs set; without it the job builds with the image's default Xcode (SPEC-382 R5)",
+        "test_ci_workflows.TheRunRecordsItsOwnTiming.test_the_framework_job_pins_the_developer_directory"
+      ],
+      [
+        "S38207-THE-HARNESS-TIMING-UPLOAD-RUNS-ALWAYS",
+        ".github/workflows/xcframework.yml",
+        "        if: ${{ always() }}\n        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1\n        with:\n          name: timing-harness\n",
+        "        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1\n        with:\n          name: timing-harness\n",
+        "the harness job uploads its timing record whatever the outcome; without always() a red test step loses the record of the run that most needs it (SPEC-382 R6)",
+        "test_ci_workflows.TheRunRecordsItsOwnTiming.test_each_job_uploads_its_timing_record_whatever_the_outcome"
+      ],
+      [
+        "S38208-THE-REPORT-READS-THE-PLANTED-SUITE-BUNDLE",
+        ".github/workflows/xcframework.yml",
+        "          card_probe_cases = cases_in(\"card-probe\")\n",
+        "          card_probe_cases = []\n",
+        "the report reads the planted suite's result bundle as it reads the others'; without the read the bundle is uploaded and its tests are never listed (SPEC-382 R1)",
+        "test_ci_workflows.TheRunRecordsItsOwnTiming.test_every_uploaded_bundle_is_read_by_the_report"
+      ]
+    ]
+  }
+}
