@@ -1340,6 +1340,46 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
         self.assertEqual(sum(quotas), 100 * budget()["cpus"], quotas)
 
 
+class TheSecondRouteIsInTheCensus(unittest.TestCase):
+    def test_the_census_holds_the_second_route_as_a_timer_started_oneshot(self):
+        # SPEC-396 R10: the second route's unit is shipped, and every table that holds a unit names
+        # it. The first assertion is the artifact itself, so an unshipped unit fails here and not
+        # on a missing key.
+        service = "deck-streak-second-route.service"
+        timer = "deck-streak-second-route.timer"
+        shipped = {unit.name: unit for unit in services()}
+        self.assertIn(service, shipped, "the second route's unit is not shipped")
+        self.assertTrue((SYSTEMD / timer).is_file(), "the second route's timer is not shipped")
+        script = DEPLOY / "scripts" / "second-route.sh"
+        self.assertEqual(SCRIPTS.get(service), f"{RELEASE}/deploy/scripts/second-route.sh")
+        self.assertEqual(
+            OBSERVABILITY_SERVICE.get(service),
+            {
+                "Type": "oneshot",
+                "TimeoutStartSec": "3min",
+                "Nice": "10",
+                "IOSchedulingClass": "idle",
+            },
+        )
+        self.assertIn(timer, OBSERVABILITY_TIMERS)
+        self.assertEqual(
+            ROLE_CREDENTIALS.get(service), ("SECOND_ROUTE_CHECK_IN", "SECOND_ROUTE_REPORT")
+        )
+        for constant in ("SECOND_ROUTE_CHECK_IN", "SECOND_ROUTE_REPORT"):
+            self.assertEqual(CREDENTIAL_SOURCES.get(constant), script, constant)
+        self.assertEqual(
+            PER_SERVICE.get(service), ("deck-streak-second-route", None, ROLES_NETWORK, None)
+        )
+        self.assertIn((timer, "calendar-not-persistent"), WAIVED)
+        self.assertEqual(IDENTITY_ARMS.get(service), "link-local")
+        unit = shipped[service]
+        self.assertIn(ON_FAILURE, unit.values("Unit", "OnFailure"))
+        self.assertEqual(last(unit, "Service", "Type"), "oneshot")
+        self.assertEqual(
+            last(unit, "Service", "ExecStart"), f"{RELEASE}/deploy/scripts/second-route.sh"
+        )
+
+
 class TheCaddyBlock(unittest.TestCase):
     def test_the_caddy_policy_admits_telegram_web_and_sends_the_security_headers(self):
         block = site()
