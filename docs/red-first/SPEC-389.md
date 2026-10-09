@@ -1,14 +1,14 @@
 # Red-first record: SPEC-389
 
-The vectors test, `crates/progression/tests/formal_vectors_xp_reconciliation.rs`, is committed
-after the model it reads and before the proof. `645ec631` (M) commits the Lean entry
+The vectors test, `crates/progression/tests/formal_vectors_xp_reconciliation.rs`, is committed after
+the model it reads and before the proof. `645ec631` (M) commits the Lean entry
 `lean/XpReconciliation` with a port of `settle` whose every case answers the request, the rule
 ADR-072 replaced: it has no closed-day arm, its theorems are not yet stated, and its writer wrote
-`formal/vectors/xp-reconciliation.jsonl` from that port. The commit that adds this record (R) adds
-the test and changes nothing else, so the test ran against M's vectors and the shipping `settle`,
-and it is red by assertion, not by a compile error. The green commit (G) gives the port the arm of
-`settle.rs:117-122`, proves T1 to T4 and writes the vectors again. The test's text is the same at R
-and at G, and no Rust source changes.
+`formal/vectors/xp-reconciliation.jsonl` from that port. `f9f238ed` (R), the commit that adds this
+record, adds the test and changes nothing else, so the test ran against M's vectors and the shipping
+`settle`, and it is red by assertion, not by a compile error. The green commit, `0993ccde` (G),
+gives the port the arm of `settle.rs:117-122`, proves T1 to T4 and writes the vectors again. The
+test's text is the same at R and at G, and no Rust source changes.
 
 - **A1, red.** At M the test fails on the first settle vector the shipping rule answers otherwise:
   a closed held 0 under an open Recompute request of 0. The port answers it open, `[0,false]`, and
@@ -16,6 +16,8 @@ and at G, and no Rust source changes.
 - **A2, red.** At M the test fails at trace `GSRN`'s `score90` close, step 4: the vector holds 0,
   closed, and `settle` holds the 200 that step 3 settled open, now closed: `left: (200, true)`,
   `right: (0, true)`.
+- **A1 and A2, green.** At G both pass: A1 examined 144 settle vectors, and A2 examined 1554 trace
+  vectors and 3352 settle points.
 - **A3, not red.** The shipping `settle` already holds the larger amount, closed, on both witness
   inputs, so the test guards the two cases T1 and T2 state.
 - **A4, not red.** The axes already held every case at M. Its red is a population lacking one
@@ -28,4 +30,6 @@ A1: red at 645ec631: thread 'the_settle_rule_answers_every_lean_vector' (2620416
 A2: red at 645ec631: thread 'every_trace_confirms_at_least_the_xp_shown' (2620666) panicked at crates/progression/tests/formal_vectors_xp_reconciliation.rs:207:9: settle [4,"score90",0,true,0,true] of GSRN, left: (200, true), right: (0, true)
 A3: not red: the shipping settle already answers the witnesses' inputs as T1 and T2 state; it guards them
 A4: not red: the axes already held every case at M; a population lacking one case is the scratch control
+A1: green at 0993ccde
+A2: green at 0993ccde
 ```

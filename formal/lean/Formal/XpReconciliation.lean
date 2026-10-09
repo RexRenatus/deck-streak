@@ -1,7 +1,7 @@
--- @phx covers crates/progression/src/settle.rs anchor=settle digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/coordination/src/recompute/xp.rs anchor=evaluate digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/xp/src/review_xp.rs anchor=review_xp digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/progression/src/review_xp.rs anchor=review_xp digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/progression/src/settle.rs anchor=settle digest=sha256:d5473de04ebe9964bea0c7755b0ac7116ea5d9a45e62a8e342a9a5ff1771eeb7
+-- @phx covers crates/coordination/src/recompute/xp.rs anchor=evaluate digest=sha256:26e6393d7105f674479a3ea0ab753030cafd4cf7782d77c9e604f9036644866d
+-- @phx covers crates/xp/src/review_xp.rs anchor=review_xp digest=sha256:214ab4f51951534726570711fb18b97a362b7726292d8cb0fc5d28a612be138e
+-- @phx covers crates/progression/src/review_xp.rs anchor=review_xp digest=sha256:f579e23014cfd859f1ddebd5129bc0701b2c95fb68312ae81043c19576cbaacd
 -- @phx vectors formal/vectors/xp-reconciliation.jsonl
 -- @phx cites #755, #639
 -- @phx theorem a_closed_row_is_never_lowered_by_a_recompute ramp=report
