@@ -115,6 +115,10 @@ struct Reading: Sendable {
     var granted = 0
     /// The card's own record of what its script saw, when it writes one.
     var record = ""
+    /// The `link` elements the view holds, in its document, every template's content and every
+    /// open shadow root, when `show` was asked to count them (SPEC-392 R5); nil when the count was
+    /// not asked for or its answer was not a number.
+    var links: Int?
 
     /// Whether this reading shows `card`'s channel open.
     func reached(_ card: Planted) -> Bool {
@@ -202,6 +206,9 @@ enum Variant: Hashable, Sendable {
     case scriptedWithout(CardLayer)
     /// The scripts-off card view with one layer removed (SPEC-361 R10).
     case shippedWithout(CardLayer)
+    /// A view the factory does not build whose layers are exactly the set (SPEC-392 R5), so
+    /// `referenceWith([.L14])` is the reference with only the link strip on.
+    case referenceWith(Set<CardLayer>)
 
     var layers: Set<CardLayer> {
         switch self {
@@ -211,6 +218,7 @@ enum Variant: Hashable, Sendable {
         case .scriptedReference(let held): return Set(CardLayer.allCases).subtracting([.L2]).subtracting(held)
         case .scriptedWithout(let control): return Set(CardLayer.allCases).subtracting([.L2, control])
         case .shippedWithout(let layer): return Set(CardLayer.allCases).subtracting([layer])
+        case .referenceWith(let layers): return layers
         }
     }
 
@@ -275,6 +283,32 @@ final class Probe {
                 continuation.resume(returning: result as? String)
             }
         }
+    }
+
+    /// The app's own count of the `link` elements a view holds: in the document, in every
+    /// template's content and in every open shadow root, each walked in turn (SPEC-392 R5).
+    static let linkScript = """
+        (function () {
+          function count(root) {
+            var found = root.querySelectorAll('link').length;
+            var all = root.querySelectorAll('*');
+            for (var i = 0; i < all.length; i++) {
+              if (all[i].localName === 'template' && all[i].content) { found += count(all[i].content); }
+              if (all[i].shadowRoot) { found += count(all[i].shadowRoot); }
+            }
+            return found;
+          }
+          return String(count(document));
+        })()
+        """
+
+    /// How many `link` elements `view` holds, read by `linkScript`; nil when the answer is not a
+    /// number.
+    static func links(_ view: WKWebView) async -> Int? {
+        guard let text = await evaluate(view, linkScript) else {
+            return nil
+        }
+        return Int(text)
     }
 
     /// Polls `check` until it holds or `seconds` pass; returns the seconds it took, or nil.
@@ -419,10 +453,11 @@ final class Probe {
 
     /// Shows `card` in `variant` and reads every probe: polling until it reaches, up to
     /// `deadline` seconds, when `window` is nil (a reference), else once after `window` seconds.
-    /// Returns the reading and, when it reached while polling, how long it took.
+    /// Returns the reading and, when it reached while polling, how long it took. With `countLinks`,
+    /// the reading carries the `link` elements the view held once loaded (SPEC-392 R5).
     func show(
         _ card: Planted, in variant: Variant, window: TimeInterval?, deadline: TimeInterval = 5,
-        witness: Witness? = nil
+        witness: Witness? = nil, countLinks: Bool = false
     ) async throws -> (Reading, TimeInterval?) {
         let listeners = try Listeners()
         try await listeners.start()
@@ -458,20 +493,28 @@ final class Probe {
             view.removeFromSuperview()
             recorder.close()
         }
+        // L14, the link strip, composed by name for a view the factory does not build: the
+        // factory's own build strips the card it loads (SPEC-392 R1, R5).
+        let handed = layers.contains(.L14) ? LinkStrip.stripped(html) : html
         if !variant.built {
             if card.id == "file" && !layers.contains(.L7) {
                 let page = directory.appendingPathComponent("\(UUID().uuidString).html")
-                try Data(html.utf8).write(to: page)
+                try Data(handed.utf8).write(to: page)
                 view.loadFileURL(page, allowingReadAccessTo: directory)
             } else if layers.contains(.L12) {
                 // A view that carries L12 is handed its card the one way the factory hands one.
-                CardWebViewFactory.load(html, into: view)
+                CardWebViewFactory.load(handed, into: view)
             } else {
-                view.loadHTMLString(html, baseURL: nil)
+                view.loadHTMLString(handed, baseURL: nil)
             }
         }
         var reading = Reading()
         reading.loaded = await Probe.loaded(view)
+        // Counted once the view has loaded; `read` rebuilds the reading, so the count is carried.
+        var links: Int?
+        if countLinks {
+            links = await Probe.links(view)
+        }
         if card.click {
             _ = await Probe.evaluate(
                 view,
@@ -488,6 +531,7 @@ final class Probe {
                 return reading.reached(card)
             }
         }
+        reading.links = links
         return (reading, took)
     }
 
@@ -626,6 +670,61 @@ final class PlantedCardTests: XCTestCase {
         XCTAssertEqual(opened, expected, "the channels each layer opened when removed alone")
         let nothing = Set(LAYERS.filter { opened[$0, default: []].isEmpty })
         XCTAssertEqual(nothing, DEPTH, "the layers whose removal alone opened nothing, against DEPTH")
+    }
+
+    /// SPEC-392 A5: every planted card is shown from the reference view and the card view, and
+    /// the `link` elements each view holds once loaded are counted.
+    @MainActor
+    func test_a_linked_card_reaches_the_card_view_with_no_link_element() async throws {
+        let probe = try await Probe.make()
+        var referenceLinks: [String: Int?] = [:]
+        var shippedLinks: [String: Int?] = [:]
+        for card in PLANTED {
+            let (reference, _) = try await probe.show(card, in: .reference, window: nil, countLinks: true)
+            let (shipped, _) = try await probe.show(card, in: .shipped, window: nil, countLinks: true)
+            referenceLinks.updateValue(reference.links, forKey: card.id)
+            shippedLinks.updateValue(shipped.links, forKey: card.id)
+            print("links \(card.id): reference=\(reference.links.map { "\($0)" } ?? "nil") card view=\(shipped.links.map { "\($0)" } ?? "nil")")
+        }
+        // The behaviour first: no card view holds a `link` element, and a count that is not a
+        // number differs from 0.
+        XCTAssertEqual(
+            shippedLinks.filter { $0.value != 0 }, [:], "the cards whose card view holds a link element")
+        // The control: the cards whose reference view holds one are exactly LINKED, so the card
+        // view's zero is not a blind count's.
+        XCTAssertEqual(
+            Set(referenceLinks.filter { ($0.value ?? 0) > 0 }.keys), LINKED,
+            "the cards whose reference view holds a link element, against LINKED")
+        _ = examined("planted cards", PLANTED)
+    }
+
+    /// SPEC-392 A6: each observable linked card is shown from the reference view and from the
+    /// reference with only the link strip on.
+    @MainActor
+    func test_the_link_strip_alone_holds_every_observable_linked_card() async throws {
+        let probe = try await Probe.make()
+        let names = LINKED.subtracting(UNOBSERVABLE.keys).sorted()
+        var passed: [String] = []
+        var silent: [String] = []
+        for name in names {
+            let card = try XCTUnwrap(PLANTED.first { $0.id == name }, "\(name) is not planted")
+            let (reference, took) = try await reference(card, probe)
+            if !reference.reached(card) {
+                silent.append(name)
+            }
+            let (stripped, _) = try await probe.show(card, in: .referenceWith([.L14]), window: window(took))
+            print("only L14 \(name): reached=\(stripped.reached(card)) connections=\(stripped.arrivals.connections) \(stripped.summary)")
+            if stripped.reached(card) || stripped.arrivals.connections > 0 {
+                passed.append(name)
+            }
+        }
+        // The behaviour first: with only L14 on, no observable linked card reaches its probe or
+        // opens a connection.
+        XCTAssertEqual(passed, [], "the linked cards that reached or opened a connection with only L14 on")
+        // The control: each one reaches from the reference view, so the strip's zero is not a
+        // blind view's.
+        XCTAssertEqual(silent, [], "the linked cards whose reference view reached nothing")
+        _ = examined("observable linked cards", names)
     }
 
     @MainActor
