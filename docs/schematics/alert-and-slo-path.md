@@ -78,3 +78,81 @@ The evaluator's own failure (a journal it cannot read, a declaration it cannot p
 of the same machine under its own key, so a broken evaluator pages once rather than every five
 minutes. The memory watch's first sight of a unit is its baseline; a cgroup made since its last run
 (a restart, or a oneshot's next run) counts every event it holds as new.
+
+## The second route (SPEC-396)
+
+Kind: component and data flow, with the state machine of one run. Read at DeckStreak `dev`
+`164ac206`, where the alert template names no `OnFailure=` (SPEC-066 R3) and its own failure is
+recorded where the service manager and the journal show it; the route that tells the owner is
+#285's (the section above). Decided by ADR-410; built by SPEC-396. The alert sender is unchanged;
+this section adds a route with its own unit, its own process, its own two credentials and its own
+far end.
+
+```mermaid
+flowchart LR
+  subgraph first [the first route: the alert sender]
+    units[every service and scheduled job] -->|"OnFailure=deck-streak-alert@%n.service"| atpl[deck-streak-alert@.service]
+    atpl --> ascript[the alert script]
+    acreds[credentials: the bot token and the owner's id] --> ascript
+  end
+  subgraph second [the second route]
+    rtimer[deck-streak-second-route.timer, every ten minutes] --> runit[deck-streak-second-route.service]
+    runit --> rscript[second-route.sh]
+    rcreds[credentials: second-route-check-in and second-route-report] --> rscript
+    rstate[(STATE_DIRECTORY: the reported keys and the episode)] -->|"read at each run"| rscript
+    rscript -->|"written only after a delivered report"| rstate
+  end
+  atpl -.->|"a failed instance stays failed and listed"| mgr[(the service manager)]
+  mgr -->|"list-units: the failed alert instances, show: each one's invocation id, list-unit-files: the template's state"| rscript
+  ascript -->|"a page"| owner((the owner))
+  rscript -->|"a report: each new failed, absent or unreadable key, once"| recv((the receiver, off the host))
+  rscript -->|"a check-in: the read was readable and every new key was told"| recv
+  recv -->|"on a report, and on check-ins missing past the grace"| owner
+  runit -->|"its own failure, once per episode: OnFailure=deck-streak-alert@%n.service"| atpl
+```
+
+| failure | the first route | the second route |
+|---|---|---|
+| a monitored unit fails | pages it | does not repeat it |
+| the alert sender refuses an empty credential (SPEC-066 R3) | its instance stays failed | reports `failed <instance> <invocation id>` once |
+| the alert sender's request is refused or unanswered after its retries | its instance stays failed | reports the same key once |
+| the alert sender runs past its timeout, or is killed at its memory ceiling | its instance stays failed | reports the same key once |
+| the socket does not deliver an alert credential | the start fails, the instance stays failed | reports the same key once |
+| a later failure under a name already reported | its instance fails again | a new invocation id, so a new key, reported once |
+| the alert template absent, masked or in another state | `OnFailure=` starts nothing | reports `template <state>` once |
+| the service manager's state unreadable | not involved | reports `unreadable` once and withholds every check-in while it lasts |
+| the second route's own failure: a credential empty or not https, a request not delivered | pages it once per episode | withholds the check-in |
+| the host, its service manager or its network down, or both routes down | silent | check-ins stop, and the receiver tells the owner after its grace |
+
+| route | process | credential roles it holds | far end |
+|---|---|---|---|
+| the alert sender | `deck-streak-alert@.service`, the alert script | the bot token, the owner's id | the owner's chat |
+| the second route | `deck-streak-second-route.service`, `second-route.sh` | `second-route-check-in`, `second-route-report` | the receiver, off the host |
+
+No credential id is in both rows, and no process: the second route never runs the alert script, and
+asks the service manager only to list units, list unit files and show an invocation id. Each
+credential reaches its own unit from the credential socket at every start (ADR-038), and the service
+manager keeps each unit's credentials invisible to every other unit.
+
+```mermaid
+stateDiagram-v2
+  [*] --> credentials
+  credentials --> episode: a credential empty, or not an https address
+  credentials --> read: both credentials hold an https address
+  read --> report: a key not yet told
+  read --> checkin: no new key, and the read was readable
+  read --> withheld: no new key, and the read was unreadable
+  report --> record: delivered
+  report --> episode: not delivered
+  record --> checkin: the read was readable
+  record --> withheld: the read was unreadable
+  checkin --> [*]: delivered, and the episode ends
+  checkin --> episode: not delivered
+  withheld --> [*]: exit 0, and the receiver's grace runs
+  episode --> [*]: the episode's first run exits 1 and pages, a later run exits 0
+```
+
+A failed alert instance that a later instance of the same name replaces with a delivered page,
+before the second route reads it, is told by that page: it names the same failed unit. The model
+`formal/tla/SecondRoute` holds the order of these steps against a service manager that fails and
+replaces alert instances between them (SPEC-396 §7).
