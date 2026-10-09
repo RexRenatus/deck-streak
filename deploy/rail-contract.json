@@ -184,6 +184,18 @@
       "neutral": ["Sun *-*-* 06:24:00 UTC"]
     },
     {
+      "unit": "deck-streak-second-route.service",
+      "section": "Service",
+      "key": "ExecStart",
+      "neutral": ["/usr/local/lib/deck-streak/current/deploy/scripts/second-route.sh"]
+    },
+    {
+      "unit": "deck-streak-second-route.timer",
+      "section": "Timer",
+      "key": "OnCalendar",
+      "neutral": ["*-*-* *:00/10:00 UTC"]
+    },
+    {
       "unit": "deck-streak-slo.service",
       "section": "Service",
       "key": "ExecStart",

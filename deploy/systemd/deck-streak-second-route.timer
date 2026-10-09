@@ -1,0 +1,14 @@
+# The second route's timer (SPEC-396 R2; ADR-410): every ten minutes, with a short random delay so
+# it never fires in step with the other timers. The calendar is written in UTC. With no Unit=, the
+# timer starts the service of its own name.
+[Unit]
+Description=DeckStreak's second route, every ten minutes
+X-DurableServices-Waive=calendar-not-persistent a run reads the service manager's current state, which a missed run cannot lose, and the next run ten minutes later reads it again
+
+[Timer]
+OnCalendar=*-*-* *:00/10:00 UTC
+RandomizedDelaySec=30s
+AccuracySec=1us
+
+[Install]
+WantedBy=timers.target
