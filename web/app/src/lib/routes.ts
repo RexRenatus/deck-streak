@@ -23,7 +23,8 @@ export const ROUTES = [
   '/remote',
   '/study',
   '/study/review',
-  '/study/mapping'
+  '/study/mapping',
+  '/sync'
 ] as const;
 
 /** A path the route table lists. */

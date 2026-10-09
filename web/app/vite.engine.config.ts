@@ -76,12 +76,21 @@ type Statement = (typeof STATEMENTS)[number];
 const MODES = ['pass', 'forbid', 'redirect', 'drop'] as const;
 type Mode = (typeof MODES)[number];
 
+/** The service's snapshot answer (choice.ts's `SNAPSHOT_ROUTE`, SPEC-377 R12), which this server
+ * stands in for until part c2 serves it, and how it answers: a sealed snapshot found an hour ago,
+ * none found, a refusal with a 401, or its connection dropped with no answer. `POST
+ * snapshot/<answer>` sets it, and `POST mode/<mode>` sets it back to none found. */
+const SNAPSHOT_ROUTE = '/api/sync/snapshot';
+const SNAPSHOTS = ['found', 'missing', 'refused', 'drop'] as const;
+type Snapshot = (typeof SNAPSHOTS)[number];
+
 /** The sync tests' routes, served before Vite's own middlewares and its proxy: the modes of the
  * sync route, the recorder of the sync paths seen, and a stand-in release that answers one random
  * 32-byte key per seal id, drawn when that seal id is first asked for. */
 function syncRoutes(): Plugin {
   let mode: Mode = 'pass';
   let statement: Statement = 'admit';
+  let snapshot: Snapshot = 'missing';
   const seen: string[] = [];
   const statementAsked: string[] = [];
   const released = new Map<string, string>();
@@ -103,6 +112,7 @@ function syncRoutes(): Plugin {
           seen.length = 0;
           statement = 'admit';
           statementAsked.length = 0;
+          snapshot = 'missing';
           response.end(mode);
           return;
         }
@@ -148,6 +158,33 @@ function syncRoutes(): Plugin {
           statement = known;
           statementAsked.length = 0;
           response.end(statement);
+          return;
+        }
+        if (request.method === 'POST' && path.startsWith(`${TEST_ROUTE}snapshot/`)) {
+          const wanted = path.slice(`${TEST_ROUTE}snapshot/`.length);
+          const known = SNAPSHOTS.find((each) => each === wanted);
+          if (known === undefined) {
+            response.statusCode = 400;
+            response.end(`no snapshot answer ${wanted}: one of ${SNAPSHOTS.join(', ')}`);
+            return;
+          }
+          snapshot = known;
+          response.end(snapshot);
+          return;
+        }
+        if (request.method === 'GET' && path === SNAPSHOT_ROUTE) {
+          if (snapshot === 'drop') {
+            request.socket.destroy();
+            return;
+          }
+          response.setHeader('Content-Type', 'application/json');
+          response.setHeader('Cache-Control', 'no-store');
+          if (snapshot === 'refused') {
+            response.statusCode = 401;
+            response.end(JSON.stringify({ error: 'no owner session' }));
+            return;
+          }
+          response.end(JSON.stringify(snapshot === 'found' ? { found: true, age_seconds: 3600 } : { found: false }));
           return;
         }
         if (request.method === 'GET' && path === `${TEST_ROUTE}asked`) {

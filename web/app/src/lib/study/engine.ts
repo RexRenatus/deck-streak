@@ -72,6 +72,11 @@ export class StudyEngine {
     return this.#closed;
   }
 
+  /** Whether the session's open found no collection in the browser's storage (SPEC-377 R10). */
+  lost(): boolean {
+    return false;
+  }
+
   #close(): void {
     const started = this.#started;
     if (started === null) return;

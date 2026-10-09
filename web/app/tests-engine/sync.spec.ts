@@ -215,3 +215,171 @@ declare global {
     harness: Harness;
   }
 }
+
+// SPEC-377 A1 to A3 (ADR-388 D6, D8 to D10): the full sync's choice from the Worker, through the
+// engine's own transport to the engine's own sync server. Each test makes the server's collection
+// it needs from a browser of its own first, so each holds whatever the server held before it.
+
+/** How the snapshot stand-in answers: see vite.engine.config.ts's `SNAPSHOTS`. */
+type SnapshotAnswer = 'found' | 'missing' | 'refused' | 'drop';
+
+/** Sets how the snapshot route answers an upload's question. */
+async function snapshotting(request: APIRequestContext, answer: SnapshotAnswer): Promise<void> {
+  const response = await request.post(`/test-sync/snapshot/${answer}`);
+  expect(response.status(), `the snapshot route's answer ${answer}`).toBe(200);
+}
+
+/** Starts the page's Worker client and opens its collection; seeds `notes` notes and answers the
+ * first card good, when there are notes. Answers the open's answer and the answered card's id. */
+async function reviewed(page: Page, notes: number): Promise<{ opened: unknown; card: string | null }> {
+  return page.evaluate(async (notes) => {
+    const client = window.harness.start();
+    const opened = await client.open();
+    if (notes === 0) return { opened, card: null };
+    await client.seed(notes);
+    await client.next();
+    const shown = (await client.card()).card!.id;
+    await client.rate(shown, 3, 1500);
+    return { opened, card: String(shown) };
+  }, notes);
+}
+
+/** The choice's counts and then the owner's tap on `direction`, each as data. */
+async function chosen(page: Page, direction: 'upload' | 'download'): Promise<{ counted: unknown; confirmed: unknown }> {
+  return page.evaluate(async (direction) => {
+    const client = window.harness.client!;
+    const counted = await client.choiceCount().catch((error: unknown) => window.harness.refusal(error));
+    const confirmed = await client.choiceConfirm(direction).catch((error: unknown) => window.harness.refusal(error));
+    return { counted, confirmed };
+  }, direction);
+}
+
+/** A card's review count in the page's collection, or null when the collection lacks the card. */
+async function reps(page: Page, card: string): Promise<number | null> {
+  return page.evaluate(async (card) => {
+    const fields = await window.harness.client!.snapshot(BigInt(card));
+    return fields === null ? null : fields.reps;
+  }, card);
+}
+
+/** A browser of the test's own that answers one card and uploads its collection over whatever the
+ * server holds, the snapshot found. Answers the answered card's id. */
+async function uploaded(
+  playwright: PlaywrightWorkerArgs['playwright'],
+  browserName: PlaywrightWorkerOptions['browserName'],
+  baseURL: string | undefined,
+  request: APIRequestContext
+): Promise<string> {
+  const { user, password } = account();
+  const context = await profile(playwright, browserName, baseURL);
+  try {
+    const page = await context.newPage();
+    await boot(page);
+    const { card } = await reviewed(page, 3);
+    expect(await login(page, user, password)).toBe('held');
+    const { answer } = (await synced(page)) as { answer: { required: string } };
+    expect(['full-upload', 'full-sync']).toContain(answer.required);
+    await snapshotting(request, 'found');
+    expect((await chosen(page, 'upload')).confirmed).toEqual({ status: 'held', outcome: 'written' });
+    return card!;
+  } finally {
+    await context.close();
+  }
+}
+
+test('an upload waits for its snapshot', async ({ playwright, browserName, baseURL, request }) => {
+  // SPEC-377 A1, SPEC-364 section 17 (i): an upload with no snapshot found, or with an answer the
+  // Worker could not read, is refused before the engine writes; with one found it is written, and
+  // the review made in the browser reaches the server
+  await answering(request, 'pass');
+  const { user, password } = account();
+  const context = await profile(playwright, browserName, baseURL);
+  let card: string;
+  try {
+    const page = await context.newPage();
+    await boot(page);
+    card = (await reviewed(page, 3)).card!;
+    expect(await login(page, user, password)).toBe('held');
+    const { answer } = (await synced(page)) as { answer: { required: string } };
+    expect(['full-upload', 'full-sync']).toContain(answer.required);
+    for (const unread of ['missing', 'refused', 'drop'] as const) {
+      await snapshotting(request, unread);
+      const waiting = await chosen(page, 'upload');
+      expect(waiting.counted, unread).toMatchObject({ status: 'held', snapshot: { found: unread === 'missing' ? false : null } });
+      expect(waiting.confirmed, unread).toEqual({ status: 'held', outcome: 'refused', why: 'no-snapshot' });
+    }
+    await snapshotting(request, 'found');
+    const written = await chosen(page, 'upload');
+    expect(written.counted).toMatchObject({ status: 'held', snapshot: { found: true, age: 3600 } });
+    expect(written.confirmed).toEqual({ status: 'held', outcome: 'written' });
+    // the device and the server now hold one collection
+    expect(await synced(page)).toEqual({ answer: { status: 'held', required: 'no-changes' }, status: 'held' });
+    expect(await page.evaluate(() => window.harness.violations)).toEqual([]);
+  } finally {
+    await context.close();
+  }
+  // a second browser downloads the server's copy, and finds the first browser's review in it
+  const second = await profile(playwright, browserName, baseURL);
+  try {
+    const page = await second.newPage();
+    await boot(page);
+    await reviewed(page, 0);
+    expect(await login(page, user, password)).toBe('held');
+    expect(await synced(page)).toMatchObject({ answer: { required: 'full-download' } });
+    expect((await chosen(page, 'download')).confirmed).toEqual({ status: 'held', outcome: 'written' });
+    expect(await reps(page, card)).toBe(1);
+  } finally {
+    await second.close();
+  }
+});
+
+test('a download is written after its backup', async ({ playwright, browserName, baseURL, request }) => {
+  // SPEC-377 A2: a device with a review of its own downloads the server's copy; the core writes
+  // only after the backup it made reads back with every device review, and the device then holds
+  // the server's collection
+  await answering(request, 'pass');
+  const kept = await uploaded(playwright, browserName, baseURL, request);
+  const { user, password } = account();
+  const context = await profile(playwright, browserName, baseURL);
+  try {
+    const page = await context.newPage();
+    await boot(page);
+    const own = (await reviewed(page, 2)).card!;
+    expect(await login(page, user, password)).toBe('held');
+    expect(await synced(page)).toMatchObject({ answer: { required: 'full-sync' } });
+    // a download needs no snapshot answer, so the route's answer does not hold it
+    await snapshotting(request, 'refused');
+    const written = await chosen(page, 'download');
+    expect(written.counted).toMatchObject({ status: 'held', counts: { download: { reviews: 1, notes: 2 } } });
+    expect(written.confirmed).toEqual({ status: 'held', outcome: 'written' });
+    expect([await reps(page, kept), await reps(page, own)]).toEqual([1, null]);
+    expect(await synced(page)).toEqual({ answer: { status: 'held', required: 'no-changes' }, status: 'held' });
+    expect(await page.evaluate(() => window.harness.violations)).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
+
+test('an evicted collection is restored from the server', async ({ playwright, browserName, baseURL, request }) => {
+  // SPEC-377 A3, R10: a browser whose collection is gone opens an empty one, is offered the download
+  // alone, and the owner's tap restores every server review
+  await answering(request, 'pass');
+  const kept = await uploaded(playwright, browserName, baseURL, request);
+  const { user, password } = account();
+  const context = await profile(playwright, browserName, baseURL);
+  try {
+    const page = await context.newPage();
+    await boot(page);
+    expect((await reviewed(page, 0)).opened).toEqual({ existed: false, notes: 0 });
+    expect(await login(page, user, password)).toBe('held');
+    expect(await synced(page)).toMatchObject({ answer: { required: 'full-download' } });
+    await snapshotting(request, 'missing');
+    const restored = await chosen(page, 'download');
+    expect(restored.counted).toMatchObject({ status: 'held', counts: { upload: null, download: { reviews: 0, cards: 0, notes: 0 } } });
+    expect(restored.confirmed).toEqual({ status: 'held', outcome: 'written' });
+    expect(await reps(page, kept)).toBe(1);
+    expect(await page.evaluate(() => window.harness.violations)).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});

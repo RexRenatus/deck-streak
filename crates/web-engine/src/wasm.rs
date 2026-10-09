@@ -921,3 +921,41 @@ pub fn run_method(service: u32, method: u32, input: &[u8]) -> Result<Vec<u8>, Js
     admit(service, method).map_err(refuse)?;
     call(service, method, input)
 }
+
+// The full sync's choice (SPEC-377 R4, R5; ADR-388 D7 to D9): the four exports the Worker's
+// choice calls. Each answers that no stage is held.
+
+/// The choice's counts, from the normal sync's `required` as the Worker heard it, the host key
+/// `key` and `endpoint`.
+#[wasm_bindgen]
+pub async fn full_sync_count(
+    key: String,
+    endpoint: String,
+    required: u32,
+) -> Result<String, JsValue> {
+    let _ = (key, endpoint, required);
+    Err(refuse("choice-refused: no-stage"))
+}
+
+/// The owner's tap on `direction` (0 the upload, 1 the download), with the snapshot answer the
+/// Worker read, `found`.
+#[wasm_bindgen]
+pub async fn full_sync_confirm(
+    direction: u32,
+    key: String,
+    endpoint: String,
+    found: bool,
+) -> Result<String, JsValue> {
+    let _ = (direction, key, endpoint, found);
+    Err(refuse("choice-refused: no-stage"))
+}
+
+/// Drops the stage held between the owner's taps.
+#[wasm_bindgen]
+pub fn full_sync_cancel() {}
+
+/// The device's unsynced reviews and changes, as JSON.
+#[wasm_bindgen]
+pub fn unsynced() -> Result<String, JsValue> {
+    Err(refuse("choice-refused: no-stage"))
+}

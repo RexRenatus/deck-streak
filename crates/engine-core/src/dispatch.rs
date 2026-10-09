@@ -99,6 +99,9 @@ pub struct Dispatcher {
     /// What the latest statement of the service's minimum client level decided, shared by every
     /// clone of this dispatcher and by each private engine it starts (SPEC-374 R4, R7).
     handshake: Arc<Mutex<Outcome>>,
+    /// Where the collection's files live, as the adapter installed it, shared by every clone of
+    /// this dispatcher (SPEC-377 R4; ADR-388 D7).
+    files: Arc<Mutex<Arc<dyn crate::files::Files>>>,
 }
 
 /// Why the dispatcher did not answer a call with the engine's reply.
@@ -161,6 +164,7 @@ impl Dispatcher {
             start: Arc::from(message),
             open: Arc::default(),
             handshake: Arc::default(),
+            files: Arc::new(Mutex::new(crate::files::target_default())),
         })
     }
 
@@ -366,6 +370,12 @@ impl Dispatcher {
             .run_service_method(service, method, &request.encode_to_vec())
             .map(drop)
             .map_err(|error| Refusal::Engine { error })
+    }
+
+    /// Installs the adapter's `Files` port, which every clone of this dispatcher asks from now on
+    /// (SPEC-377 R4; ADR-388 D7).
+    pub fn install_files(&self, port: Arc<dyn crate::files::Files>) {
+        *self.files.lock().unwrap_or_else(PoisonError::into_inner) = port;
     }
 
     /// Whether `path` names the collection this engine has open: as its open request named it, or
