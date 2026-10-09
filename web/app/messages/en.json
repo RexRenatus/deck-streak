@@ -182,6 +182,7 @@
   "study_review_title": "Review",
   "study_question_frame": "The card's question",
   "study_answer_frame": "The card's answer",
+  "study_late_review": "This card was due on an earlier day, so this review does not count toward the streak for that day.",
   "study_show_answer": "Show answer",
   "study_again": "Again",
   "study_good": "Good",

@@ -82,6 +82,7 @@
   "study_review_title": "复习",
   "study_question_frame": "卡片的问题",
   "study_answer_frame": "卡片的答案",
+  "study_late_review": "这张卡片的到期日是之前的某一天，因此这次复习不计入那一天的连续记录。",
   "study_show_answer": "显示答案",
   "study_again": "重来",
   "study_good": "良好",

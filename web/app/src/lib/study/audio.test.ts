@@ -85,7 +85,8 @@ function view(id: number): CardView {
     answer: `<p>answer ${id}</p>`,
     css: '',
     labels: ['<1m', '<6m', '<10m', '4d'],
-    undo: null
+    undo: null,
+    late: false
   };
 }
 
