@@ -1,0 +1,3 @@
+### Added
+- A Lean entry, `formal/lean/Formal/XpReconciliation.lean`, that proves a study day's confirmed XP is never below the XP the device shows, at every settle point of every trace of grades, undos, syncs, other clients' answers, fold reads and writes and the day's close, with the settle rule's closed-day arm and the per-track sum ported branch for branch (SPEC-389, #755).
+- Its vectors, `formal/vectors/xp-reconciliation.jsonl`, and the progression test that answers them through the shipping `settle` on a scratch ledger, with mutation rows S38900 to S38904 on the settle rule (SPEC-389, #755).
