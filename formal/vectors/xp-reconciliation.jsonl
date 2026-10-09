@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"XpReconciliation","covers":"crates/progression/src/settle.rs","anchor":"settle","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","alphabet":"GHUSRN","max_length":4,"amounts":[0,30,50,4294967295],"vectors":1698}
+{"schema":"phx.formal.vectors.v1","entry":"XpReconciliation","covers":"crates/progression/src/settle.rs","anchor":"settle","digest":"sha256:d5473de04ebe9964bea0c7755b0ac7116ea5d9a45e62a8e342a9a5ff1771eeb7","alphabet":"GHUSRN","max_length":4,"amounts":[0,30,50,4294967295],"vectors":1698}
 {"kind":"settle","held":null,"request":[0,false],"cause":"recompute","after":[0,false]}
 {"kind":"settle","held":null,"request":[0,false],"cause":"owners_correction","after":[0,false]}
 {"kind":"settle","held":null,"request":[0,true],"cause":"recompute","after":[0,true]}
