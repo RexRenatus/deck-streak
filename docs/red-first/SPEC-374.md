@@ -34,6 +34,9 @@ A19: green at 0a9efff1167ec45c98f995f7e5dce8a44bbb683f
 A20: green at 0a9efff1167ec45c98f995f7e5dce8a44bbb683f
 A21: green at 0a9efff1167ec45c98f995f7e5dce8a44bbb683f
 A22: green at 0a9efff1167ec45c98f995f7e5dce8a44bbb683f
+A16: green at 97ebc8844d2e8e7c101a7d601aafaf079c576e54, in both browsers (CI job 113583925251)
+A17: green at 97ebc8844d2e8e7c101a7d601aafaf079c576e54, in both browsers (CI job 113583925251)
+A18: green at 97ebc8844d2e8e7c101a7d601aafaf079c576e54, in both browsers (CI job 113583925251)
 ```
 
 A7's census reads the index, as at C1: its green was read with the green commit's set staged, before
