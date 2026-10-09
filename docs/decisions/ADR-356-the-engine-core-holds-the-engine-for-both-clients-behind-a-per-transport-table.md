@@ -237,3 +237,45 @@ The adapters' test lines that name the gesture:
 - chosen: hold the native adapter's test lines by text; rejected: rename R9's entry, which moves a requirement's name to satisfy a test.
 - The boundary census's `OWED` literals that name the export and the gesture's constructor, held by text as #600's census literals are: chosen because they are data a test compares, not calls, and a held literal copied or extended still fails by name.
 - String literals stripped before the gesture's names are read: rejected because the census reads the engine's names in literals too, and a literal can carry a call into a macro, so one stripping rule serves both.
+
+## Amendment: the answer is held by its own token and its own table set (SPEC-365)
+
+ADR-376 amends D2 and D4. D2's two tables, ordinary and exempt, gain a third set, `ANSWERED`, whose
+one row is AnswerCard (service 13, method 4): `decide` answers `Decision::NeedsAnswer` for it on both
+transports, `Dispatcher::run` refuses it with `Refusal::NeedsAnswer`, and `Dispatcher::run_answer`
+is the one door that records a grade, consuming an `OwnerAnswer` that holds one card and one grade.
+D4's census holds the answer's names, entry calls and held lines as it holds the gesture's, with no
+gesture row, name or assertion removed or narrowed. The rest of D2 and D4 stands.
+
+- A third set, `ANSWERED`: chosen because the table test's arms and `run`'s refusal then tell "only by a press" apart from "never".
+- AnswerCard kept in the ordinary table with both transport marks false: rejected because `run` would refuse it as not allowed, and a reader could not tell a held answer from a forbidden call.
+- AnswerCard in `EXEMPT`: rejected because `EXEMPT` is the never-list's exemption under ADR-301, and joining it would put every grade under the owner-taps ruling's conditions.
+- The same census file, extended: chosen because the population and the walker are the same.
+- A second census file for the answer: rejected because it copies the walker, and two walkers must then be kept equal.
+
+## Amendment: the one-way sync is an exempt write (SPEC-364)
+
+ADR-375 D5 amends D6. (1,6) joins `EXEMPT` as `OneWaySync`, its target the collection, and
+`run_exempt` refuses it: it runs only through the core's full-sync driver, with the owner's
+gesture and the choice's `Write`. The gesture still names one call, (1,6) on the open collection,
+so the one-call shape stands: the server copies are fetched on private engines into empty files,
+which replace nothing the device holds. (11,7) and (13,26) stay refused.
+
+- (1,6) as an exempt write that needs both the gesture and the choice's `Write`: chosen because the restore after eviction and every full-sync conflict need a write, and the choice's counts, backup and re-check then come before it.
+- (1,6) kept refused, as D6 had it: rejected because neither client would then have a one-way write at all; ADR-375 D5 names the other options and why each lost.
+
+## Amendment: Undo reverts only the review's own last answer (SPEC-371)
+
+ADR-382 amends D2, D4 and D6. The rest of each stands.
+
+- **D2 (the table, `:150-152`).** Undo (3,8) leaves the ordinary rows and joins the exempt table
+  as `ExemptWrite::Undo`, `TargetKind::Card`, deciding `NeedsGesture` on both transports.
+  HtmlToTextLine (27,14) joins the ordinary rows, web only, so the review can show the card it
+  would undo as one line of text. ADR-382 D1 and D6 decide both, and name what each was chosen
+  against.
+- **D4 (containment, `:156-160`).** The census's engine names gain `undo`, and its held lines gain
+  four entries outside the core, each with its reason, and the boundary census's owed literals of
+  `undo` that name the gesture (ADR-382 D9).
+- **D6 (the first exempt table, `:164-166`).** The table holds eight rows. The eighth, Undo,
+  reverts only the review's own last answer while it has not synced, and is checked at the write
+  (ADR-382 D2, D3). The undo after a sync this record anticipated (`:192`) is still unbuilt.

@@ -4,13 +4,12 @@ import HarnessWire
 
 /// The engine calls the app makes, by the pairs the adapter's allow-list holds (SPEC-336,
 /// SPEC-347 R1, R7, R8, SPEC-348 R1). The adapter refuses any other pair before the engine sees
-/// it.
+/// it. An answer is not one of them: it goes through the adapter's answer door (SPEC-365 R12).
 enum EngineCall {
     static let openCollection: (service: UInt32, method: UInt32) = (3, 0)
     static let deckNames: (service: UInt32, method: UInt32) = (7, 13)
     static let setCurrentDeck: (service: UInt32, method: UInt32) = (7, 22)
     static let queuedCards: (service: UInt32, method: UInt32) = (13, 3)
-    static let answerCard: (service: UInt32, method: UInt32) = (13, 4)
     static let describeNextStates: (service: UInt32, method: UInt32) = (13, 24)
     static let syncLogin: (service: UInt32, method: UInt32) = (1, 3)
 }
@@ -114,9 +113,18 @@ actor EngineSession {
             call(EngineCall.describeNextStates, Requests.describeNextStates(card)))
     }
 
-    /// Sends an answer (13,4), which the review session builds from its head card (R10).
-    func answer(_ answer: CardAnswer) throws {
-        _ = try call(EngineCall.answerCard, Requests.answerCard(answer))
+    /// Records the press of `rating` on `card` through the adapter's answer door (R10, SPEC-365
+    /// R12): the press names its card and its grade and hands over the states the card was shown
+    /// with, and the adapter picks the grade's state from them, so the app sends no next state of
+    /// its own.
+    func answer(_ card: QueuedCard, rating: Rating, millisecondsTaken: UInt32) throws {
+        let engine = try started()
+        _ = try refused {
+            try engine.answer(
+                card: card.cardID, grade: Self.grades[Int(rating.rawValue) / 2],
+                states: Data(Requests.describeNextStates(card)),
+                millisecondsTaken: millisecondsTaken)
+        }
     }
 
     /// The face of `cardID`: its question, or its answer when `answer` is set, with the clips to
@@ -190,11 +198,12 @@ actor EngineSession {
         }
     }
 
-    /// The engine's own refusal becomes its message, the sentence the app shows (R7, R8).
+    /// The engine's own refusal becomes its message, the sentence the app shows (R7, R8), whether
+    /// it refused a call or a press's answer (SPEC-365 R12).
     private func refused<Value>(_ work: () throws -> Value) throws -> Value {
         do {
             return try work()
-        } catch EngineRefusal.Engine(let error) {
+        } catch EngineRefusal.Engine(let error), PressRefusal.Engine(let error) {
             throw Refusal(sentence: try Responses.engineMessage([UInt8](error)).message)
         }
     }
@@ -213,6 +222,11 @@ actor EngineSession {
             )
         }
     }
+
+    /// The adapter's grades for the app's two ratings, which number 0 and 2 as the engine's Again
+    /// and Good do: half a rating's number indexes this list, so a press picks its grade with no
+    /// branch of the app's own (SPEC-365 R12).
+    private static let grades: [PressedGrade] = [.again, .good]
 
     /// An installed voice in the adapter's terms.
     private static func voice(_ voice: InstalledVoice) -> Voice {

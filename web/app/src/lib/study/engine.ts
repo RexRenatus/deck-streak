@@ -3,6 +3,7 @@
 // app's languages; and when the page is hidden it closes the collection, then ends the Worker, so
 // the next call starts again. A refused open ends its Worker too, so a retry starts afresh.
 import { EngineClient, type EnginePort } from '$lib/engine/client';
+import { requestPersistence } from '$lib/engine/persistence';
 import { engineLanguages } from './locale';
 
 /** The Worker as the study engine sees it: a port it can also end. */
@@ -26,14 +27,23 @@ export class StudyEngine {
   readonly #make: () => WorkerLike;
   readonly #origin: string;
   readonly #languages: () => string[];
+  readonly #persist: () => Promise<unknown>;
   #started: Started | null = null;
   #closed: Promise<void> = Promise.resolve();
 
-  /** `make` starts the Worker; `origin` is the page's own, the only one whose replies are heard. */
-  constructor(make: () => WorkerLike, page: PageLike, origin: string, languages: () => string[]) {
+  /** `make` starts the Worker; `origin` is the page's own, the only one whose replies are heard;
+   * `persist` asks the browser to keep the origin's storage (SPEC-364 R19). */
+  constructor(
+    make: () => WorkerLike,
+    page: PageLike,
+    origin: string,
+    languages: () => string[],
+    persist: () => Promise<unknown> = async () => undefined
+  ) {
     this.#make = make;
     this.#origin = origin;
     this.#languages = languages;
+    this.#persist = persist;
     page.addEventListener('pagehide', () => this.#close());
   }
 
@@ -41,6 +51,9 @@ export class StudyEngine {
   async client(): Promise<EngineClient> {
     if (this.#started === null) {
       const worker = this.#make();
+      // every session start asks, whatever the browser answered before (SPEC-364 R19); an ask
+      // that fails changes nothing the session needs
+      void this.#persist().catch(() => undefined);
       const client = new EngineClient(worker, this.#origin);
       const opened = client.open(this.#languages()).catch((error: unknown) => {
         if (this.#started?.client === client) this.#started = null;
@@ -77,6 +90,6 @@ let shared: StudyEngine | null = null;
 
 /** The app's one engine, made on the first study screen and kept for the page's life. */
 export function studyEngine(): StudyEngine {
-  shared ??= new StudyEngine(browserWorker, window, location.origin, () => engineLanguages());
+  shared ??= new StudyEngine(browserWorker, window, location.origin, () => engineLanguages(), requestPersistence);
   return shared;
 }

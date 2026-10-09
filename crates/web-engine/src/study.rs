@@ -1,5 +1,6 @@
-//! The study rule, the same on every target: a wire rating to Anki's answer and to the next state
-//! that answer selects, and the table of study calls `run_method` admits (SPEC-338 R1, ADR-348).
+//! The study rule, the same on every target: a wire rating to the grade a press records and to the
+//! next state that grade selects (SPEC-338 R1, SPEC-365 R7), and the table of study calls
+//! `run_method` admits (ADR-348).
 //!
 //! It holds no engine type, so the native tests judge exactly the rule the `wasm32` module runs.
 
@@ -7,60 +8,65 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 
-/// Anki's four answers, in the order of its `Rating` enum.
+/// The two grades a press records (SPEC-365 R7): the wire's 1 and 3, as Anki's buttons number
+/// Again and Good. The core records the same two, and no type here names a third.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Answer {
-    /// Rating 0: the card is forgotten.
+pub enum Grade {
+    /// The card was forgotten.
     Again,
-    /// Rating 1: recalled with difficulty.
-    Hard,
-    /// Rating 2: recalled.
+    /// The card was recalled.
     Good,
-    /// Rating 3: recalled easily.
-    Easy,
 }
 
-impl Answer {
-    /// The answer a wire rating names. The page sends 1 to 4, as Anki's buttons number them.
-    ///
-    /// # Errors
-    /// [`StudyError::RatingOutOfRange`] for any other number, before anything reaches the engine.
-    pub fn from_wire(rating: u32) -> Result<Self, StudyError> {
-        match rating {
-            1 => Ok(Self::Again),
-            2 => Ok(Self::Hard),
-            3 => Ok(Self::Good),
-            4 => Ok(Self::Easy),
-            other => Err(StudyError::RatingOutOfRange(other)),
-        }
-    }
-
-    /// Anki's `Rating` value for this answer, 0 to 3.
+impl Grade {
+    /// Anki's `Rating` value for this grade: 0 for Again, 2 for Good.
     #[must_use]
     pub fn rating(self) -> i32 {
         match self {
             Self::Again => 0,
-            Self::Hard => 1,
             Self::Good => 2,
-            Self::Easy => 3,
         }
     }
 
-    /// The next state this answer selects out of the scheduler's four, in their field order.
+    /// The next state this grade selects, out of the states the card was shown with.
     #[must_use]
-    pub fn pick<T>(self, again: T, hard: T, good: T, easy: T) -> T {
+    pub fn pick<T>(self, again: T, good: T) -> T {
         match self {
             Self::Again => again,
-            Self::Hard => hard,
             Self::Good => good,
-            Self::Easy => easy,
         }
+    }
+
+    /// The undo offer's word for this grade (SPEC-371 R7), which the page's dialog names.
+    #[must_use]
+    pub fn word(self) -> &'static str {
+        match self {
+            Self::Again => "again",
+            Self::Good => "good",
+        }
+    }
+}
+
+/// The grade a wire rating names: 1 is Again and 3 is Good (SPEC-365 R7).
+///
+/// # Errors
+/// [`StudyError::NotAGrade`] for 2 and 4, Hard and Easy, which no press records, and
+/// [`StudyError::RatingOutOfRange`] for any number outside 1 to 4, before anything reaches the
+/// engine.
+pub fn grade(rating: u32) -> Result<Grade, StudyError> {
+    match rating {
+        1 => Ok(Grade::Again),
+        3 => Ok(Grade::Good),
+        2 | 4 => Err(StudyError::NotAGrade(rating)),
+        other => Err(StudyError::RatingOutOfRange(other)),
     }
 }
 
 /// The backend's services the study calls use, by index of its generated dispatcher at the
 /// pinned commit (read from the `wasm32` build's `backend.rs`).
 pub mod service {
+    /// The sync service.
+    pub const SYNC: u32 = 1;
     /// The collection service.
     pub const COLLECTION: u32 = 3;
     /// The cards service.
@@ -77,15 +83,23 @@ pub mod service {
     pub const CARD_RENDERING: u32 = 27;
 }
 
+/// The sync calls the web client reaches through its own exports, never through `run_method`:
+/// service, method, and the method's name (SPEC-364 R1; ADR-375 D11). The parity guard reads them
+/// beside [`STUDY_CALLS`] as the web column of the core's table.
+pub const SYNC_CALLS: [(u32, u32, &str); 2] = [
+    (service::SYNC, 3, "sync_login"),
+    (service::SYNC, 5, "sync_collection"),
+];
+
 /// The study calls `run_method` admits: service, method, and the method's name. Every pair
-/// outside it is refused, the exempt writes of ADR-337 included (#623). The last eight are the
-/// review's: the deck list, the card view, its labels and undo label, bury and flag (SPEC-350 R1).
-pub const STUDY_CALLS: [(u32, u32, &str); 16] = [
+/// outside it is refused, the exempt writes of ADR-337 included (#623), Undo among them, which only
+/// the owner's gesture runs (SPEC-371 R7), and so is the answer, which only an owner's press
+/// records (SPEC-365 R7). The last nine are the review's: the deck list, the card view, its one
+/// line of text, its labels and undo label, bury and flag (SPEC-350 R1, SPEC-371 R8).
+pub const STUDY_CALLS: [(u32, u32, &str); 15] = [
     (service::COLLECTION, 0, "open_collection"),
     (service::COLLECTION, 1, "close_collection"),
-    (service::COLLECTION, 8, "undo"),
     (service::SCHEDULER, 3, "get_queued_cards"),
-    (service::SCHEDULER, 4, "answer_card"),
     (service::NOTETYPES, 8, "get_notetype_names"),
     (service::NOTES, 0, "new_note"),
     (service::NOTES, 2, "add_notes"),
@@ -93,6 +107,7 @@ pub const STUDY_CALLS: [(u32, u32, &str); 16] = [
     (service::DECKS, 22, "set_current_deck"),
     (service::CARD_RENDERING, 6, "render_existing_card"),
     (service::CARD_RENDERING, 9, "strip_av_tags"),
+    (service::CARD_RENDERING, 14, "html_to_text_line"),
     (service::SCHEDULER, 24, "describe_next_states"),
     (service::COLLECTION, 7, "get_undo_status"),
     (service::SCHEDULER, 14, "bury_or_suspend_cards"),
@@ -131,6 +146,118 @@ pub fn shown_for<S>(shown: Option<&Shown<S>>, card: i64) -> Result<&Shown<S>, St
     shown
         .filter(|kept| kept.card == card)
         .ok_or(StudyError::NotShown)
+}
+
+/// The kind of state an undone answer returns its card to (SPEC-371 R3, R7): the state the card
+/// was in when it was answered. The core's rule decides it; this mirror keeps the study rule free
+/// of engine types, and the `wasm32` module converts one to the other.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Returns {
+    /// A new card.
+    New,
+    /// A card in learning.
+    Learning,
+    /// A card in review.
+    Review,
+    /// A card relearning after a lapse.
+    Relearning,
+    /// A card in a filtered deck's preview.
+    Preview,
+}
+
+impl Returns {
+    /// The undo offer's word for this kind (SPEC-371 R7), which the page's dialog names.
+    #[must_use]
+    pub fn word(self) -> &'static str {
+        match self {
+            Self::New => "new",
+            Self::Learning => "learning",
+            Self::Review => "review",
+            Self::Relearning => "relearning",
+            Self::Preview => "preview",
+        }
+    }
+}
+
+/// Why an undo of the review's own last answer is refused (SPEC-371 R3, R7): the core's rule
+/// decides it, and this mirror carries its verdict to the page without an engine type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UndoRefusal {
+    /// The answer is gone: its review row is absent, or the engine has nothing to undo.
+    Gone,
+    /// The recorded review is of another card.
+    NotTheCard,
+    /// The recorded review has synced.
+    Synced,
+    /// Something changed after the answer, or the confirmation names another answer than the
+    /// record's.
+    Changed,
+}
+
+impl UndoRefusal {
+    /// The offer's reason for making no offer (SPEC-371 R7): `synced` for a synced answer, so the
+    /// page can say so, and `none` for every other refusal.
+    #[must_use]
+    pub fn why(self) -> &'static str {
+        match self {
+            Self::Synced => "synced",
+            Self::Gone | Self::NotTheCard | Self::Changed => "none",
+        }
+    }
+}
+
+/// What the card view says of an undo (SPEC-371 R7), from the core's verdict on the review's own
+/// last answer: `answer` when it may be undone, `synced` when it has synced, and nothing when there
+/// is no such answer or any other refusal holds.
+#[must_use]
+pub fn undo_view(judged: Option<Result<(), UndoRefusal>>) -> Option<&'static str> {
+    match judged? {
+        Ok(()) => Some("answer"),
+        Err(UndoRefusal::Synced) => Some("synced"),
+        Err(UndoRefusal::Gone | UndoRefusal::NotTheCard | UndoRefusal::Changed) => None,
+    }
+}
+
+/// The engine's state the review's own last answer left, as the review records it (SPEC-371 R6):
+/// the undo status's last step and undo label right after the answer, and the review-log row the
+/// answer wrote, by id.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Recorded {
+    /// The engine's last step right after the answer.
+    pub step: u32,
+    /// The engine's undo label right after the answer.
+    pub label: String,
+    /// The review-log row the answer wrote, by id.
+    pub review: i64,
+}
+
+/// The review's own last answer (SPEC-371 R6; ADR-382 D4): the card it answered, the grade it
+/// recorded, the kind of state it left, and the record the core judges an undo of it by.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LastAnswer {
+    /// The card the answer was of.
+    pub card: i64,
+    /// The grade the press recorded.
+    pub grade: Grade,
+    /// The kind of state the card was in when it was answered, which an undo returns it to.
+    pub returns: Returns,
+    /// The engine's state the answer left.
+    pub recorded: Recorded,
+}
+
+/// The kept answer, when a confirmation names its card and the step its offer showed (SPEC-371
+/// R7): the page confirms only what it was offered.
+///
+/// # Errors
+/// [`StudyError::NotUndoable`] with [`UndoRefusal::Changed`] when no answer is kept, or when
+/// `card` or `step` is not the kept answer's.
+pub fn last_answer_for(
+    last: Option<&LastAnswer>,
+    card: i64,
+    step: u32,
+) -> Result<&LastAnswer, StudyError> {
+    last.filter(|kept| kept.card == card && kept.recorded.step == step)
+        .ok_or(StudyError::NotUndoable(UndoRefusal::Changed))
 }
 
 /// The engine's number for the red flag.
@@ -183,6 +310,8 @@ pub fn engine_languages(languages: Vec<String>) -> Vec<String> {
 pub enum StudyError {
     /// A wire rating outside 1 to 4.
     RatingOutOfRange(u32),
+    /// A wire rating of 2 or 4, Hard or Easy, which no press records (SPEC-365 R7).
+    NotAGrade(u32),
     /// A service and method outside the study calls.
     CallRefused {
         /// The service index asked for.
@@ -192,6 +321,8 @@ pub enum StudyError {
     },
     /// A rating, bury or flag for a card other than the one shown, or with none shown.
     NotShown,
+    /// An undo of the review's own last answer that is not admitted (SPEC-371 R7).
+    NotUndoable(UndoRefusal),
 }
 
 impl fmt::Display for StudyError {
@@ -200,6 +331,9 @@ impl fmt::Display for StudyError {
             Self::RatingOutOfRange(rating) => {
                 write!(f, "rating {rating} is outside 1 to 4")
             }
+            Self::NotAGrade(rating) => {
+                write!(f, "rating {rating} is not a grade: a press records 1 or 3")
+            }
             Self::CallRefused { service, method } => {
                 write!(
                     f,
@@ -207,6 +341,16 @@ impl fmt::Display for StudyError {
                 )
             }
             Self::NotShown => write!(f, "not-shown: the card is not the one on screen"),
+            Self::NotUndoable(UndoRefusal::Synced) => {
+                write!(f, "undo-synced: the answer has synced")
+            }
+            Self::NotUndoable(UndoRefusal::Gone) => write!(f, "not-undoable: the answer is gone"),
+            Self::NotUndoable(UndoRefusal::NotTheCard) => {
+                write!(f, "not-undoable: the answer is of another card")
+            }
+            Self::NotUndoable(UndoRefusal::Changed) => {
+                write!(f, "not-undoable: something changed after the answer")
+            }
         }
     }
 }

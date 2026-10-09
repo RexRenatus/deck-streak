@@ -2,7 +2,8 @@
 //! granted bearer before its inner service is called, with one response for every cause, and lets
 //! a granted bearer through carrying its grant's scopes (R9 to R12; T13). A13 and A14 (section
 //! 14): through the served stack, each grant reaches the tools of its scopes and no other, and a
-//! tool outside the scope answers the tool error `unauthorized` and no data (R12, R17).
+//! tool outside the scope answers the tool error `unauthorized` and no data (R12, R17). SPEC-369
+//! A5: the write grant holds `core` and `write`, and no other grant holds `write` (R3, R6).
 //!
 //! Every token is built from parts at run time.
 
@@ -41,11 +42,21 @@ fn law_token() -> String {
 
 /// A guard over the core and law-track credentials, and the clock its limiter reads.
 fn guard() -> (Arc<Guard>, Arc<ManualClock>) {
-    let directory = tempfile::tempdir().expect("a temporary directory");
-    for (id, value) in [
+    guard_over(&[
         ("mcp-core-token", core_token()),
         ("mcp-law-track-token", law_token()),
-    ] {
+    ])
+}
+
+/// The write credential's token, built from parts.
+fn write_token() -> String {
+    format!("guard-write-{}", "w".repeat(30))
+}
+
+/// A guard over `credentials`, each an id and its token, and the clock its limiter reads.
+fn guard_over(credentials: &[(&str, String)]) -> (Arc<Guard>, Arc<ManualClock>) {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    for (id, value) in credentials {
         fs::write(directory.path().join(id), format!("{value}\n")).expect("a credential");
     }
     let path = CredentialsDirectory::new(directory.path()).expect("an absolute path");
@@ -363,6 +374,70 @@ async fn each_grant_holds_its_scopes_and_no_other() {
             assert_eq!(refusal.bucket().as_str(), bucket_of(token.as_bytes()));
         }
     }
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn the_write_grant_holds_core_and_write_and_no_other() {
+    let (guard, _clock) = guard_over(&[
+        ("mcp-core-token", core_token()),
+        ("mcp-law-track-token", law_token()),
+        ("mcp-write-token", write_token()),
+    ]);
+    let core = core_token();
+    let law = law_token();
+    let write = write_token();
+
+    // Through the layer, the write token reaches the inner service once, carrying its grant.
+    let header = format!("Bearer {write}");
+    let answer = send(&guard, request("tools/list", &[value(header.as_bytes())])).await;
+    assert_eq!(
+        answer.seen,
+        vec![Some(vec!["core", "write"])],
+        "the write token: {answer:?}"
+    );
+    assert_eq!(answer.status, StatusCode::OK, "the write token");
+    assert_eq!(answer.body, b"served", "the write token");
+
+    // Across the three grants and the three scopes, each grant is allowed exactly its own scopes,
+    // and each refusal is denied in the presenting token's own bucket.
+    let mut judged = 0;
+    for (what, token, allowed) in [
+        ("the read grant", &core, [true, false, false]),
+        ("the law-track grant", &law, [true, true, false]),
+        ("the write grant", &write, [true, false, true]),
+    ] {
+        let mut headers = HeaderMap::new();
+        headers.append(AUTHORIZATION, value(format!("Bearer {token}").as_bytes()));
+        let granted = guard.admit(&headers).expect("a granted token is admitted");
+        for (scope, allowed) in [Scope::Core, Scope::LawTrack, Scope::Write]
+            .into_iter()
+            .zip(allowed)
+        {
+            let decided = guard.authorize(&granted, scope);
+            assert_eq!(
+                decided.is_ok(),
+                allowed,
+                "{what}, {}: {decided:?}",
+                scope.name()
+            );
+            if let Err(refusal) = decided {
+                assert_eq!(
+                    refusal.outcome(),
+                    Outcome::Denied,
+                    "{what}, {}",
+                    scope.name()
+                );
+                assert_eq!(
+                    refusal.bucket().as_str(),
+                    bucket_of(token.as_bytes()),
+                    "{what}, {}",
+                    scope.name()
+                );
+            }
+            judged += 1;
+        }
+    }
+    assert_eq!(judged, 9, "every grant met every scope");
 }
 
 /// The answer of a `get_law_track` call over the served stack with `token`, and the reads the law

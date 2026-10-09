@@ -231,4 +231,41 @@ describe("the app's engine", () => {
     await expect(refused).rejects.toMatchObject({ code: 'collection-busy' });
     expect(worker.terminated).toBe(true);
   });
+
+  it('every session start asks for persistent storage', async () => {
+    // SPEC-364 B7 (R19): each start of the engine asks, whatever the browser answered before
+    const asked: string[] = [];
+    const made: FakeWorker[] = [];
+    const page = new EventTarget();
+    const engine = new StudyEngine(
+      () => {
+        const worker = new FakeWorker();
+        made.push(worker);
+        return worker;
+      },
+      page,
+      ORIGIN,
+      () => ['en'],
+      async () => {
+        asked.push(`ask ${made.length}`);
+        return 'persisted';
+      }
+    );
+    await engine.client();
+    await engine.client();
+    // one session, one ask, made when its Worker started
+    expect(asked).toEqual(['ask 1']);
+    page.dispatchEvent(new Event('pagehide'));
+    await engine.closed();
+    await engine.client();
+    // the next session asks again, though the first ask answered persisted
+    expect(asked).toEqual(['ask 1', 'ask 2']);
+    expect(made).toHaveLength(2);
+    // the app's engine asks through the page's persistent-storage request
+    const source = readFileSync(join(SRC, 'lib', 'study', 'engine.ts'), 'utf8');
+    expect(source).toContain("from '$lib/engine/persistence'");
+    expect(source).toMatch(
+      /new StudyEngine\(\s*browserWorker,\s*window,\s*location\.origin,\s*\(\) => engineLanguages\(\),\s*requestPersistence,?\s*\)/
+    );
+  });
 });

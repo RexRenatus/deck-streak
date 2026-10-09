@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { EngineError } from '$lib/engine/client';
-import type { CardView, Head } from '$lib/engine/protocol';
+import type { CardView, Head, UndoOffer } from '$lib/engine/protocol';
 import { Review, step, type Effect, type Phase, type ReviewEvent, type ReviewState, type StudyClient } from './review';
 
 // SPEC-350 R2, R7, R10, A11, A12; ADR-361. The review's machine shows a card's question, reveals
@@ -21,10 +21,13 @@ function view(id: number, extra: Partial<CardView> = {}): CardView {
     answer: `<p>answer ${id}</p>`,
     css: '.card { color: navy; }',
     labels: ['<1m', '<6m', '<10m', '4d'],
-    undo: '',
+    undo: null,
     ...extra
   };
 }
+
+/** The offer of the review's own last answer: card 1, answered Good at step 7, back to new. */
+const OFFER: UndoOffer = { offer: { card: 1n, step: 7, text: 'question 1', grade: 'good', returns: 'new' } };
 
 function examined<T>(what: string, items: T[]): T[] {
   console.log(`examined ${items.length} ${what}`);
@@ -83,9 +86,17 @@ class FakeClient implements StudyClient {
     return this.#answer('flag', () => 1);
   }
 
-  undo(): Promise<null> {
-    this.calls.push('undo');
+  undo(card?: bigint, step?: number): Promise<null> {
+    this.calls.push(card === undefined ? 'undo' : `undo ${card} ${step}`);
     return this.#answer('undo', () => null);
+  }
+
+  /** What the offer answers: the record of the review's own last answer, or why there is none. */
+  offered: UndoOffer = OFFER;
+
+  undoOffer(): Promise<UndoOffer> {
+    this.calls.push('undo-offer');
+    return this.#answer('undo-offer', () => this.offered);
   }
 
   async #answer<T>(op: string, value: () => T): Promise<T> {
@@ -103,7 +114,7 @@ describe('the review', () => {
   it('the review shows, reveals, rates and moves on', async () => {
     const client = new FakeClient([
       head(view(1)),
-      head(view(2, { undo: 'Undo Answer Card' })),
+      head(view(2, { undo: 'answer' })),
       head(view(1, { ordinal: 1 })),
       head(null)
     ]);
@@ -138,7 +149,7 @@ describe('the review', () => {
     expect(client.calls).toEqual(['card', 'rate 1 3 2500', 'card']);
     expect([review.phase, review.side, review.view?.id]).toEqual(['question', 'question', 2n]);
 
-    // the engine names an undoable action: undo shows; the flag acts on the shown card and keeps its side
+    // the review's own last answer can be undone: undo shows; the flag acts on the shown card and keeps its side
     expect(review.controls).toEqual(['show-answer', 'undo', 'bury', 'flag']);
     review.act('flag');
     expect(review.phase).toBe('busy');
@@ -149,7 +160,11 @@ describe('the review', () => {
     await review.settled();
     expect([review.phase, review.side]).toEqual(['answer', 'answer']);
 
-    // undo returns the rated card, and bury moves on from it
+    // undo asks for the offer of the rated answer, its confirmation returns the rated card, and bury
+    // moves on from it
+    review.act('undo');
+    await review.settled();
+    expect(review.phase).toBe('confirming');
     review.act('undo');
     await review.settled();
     expect([review.phase, review.view?.id, review.view?.ordinal]).toEqual(['question', 1n, 1]);
@@ -164,7 +179,8 @@ describe('the review', () => {
       'card',
       'flag 2',
       'flag 2',
-      'undo',
+      'undo-offer',
+      'undo 1 7',
       'card',
       'bury 1',
       'card'
@@ -333,17 +349,28 @@ describe('the review', () => {
       ['loading', 'empty', 'done', 'none'],
       ['loading', 'refusal', 'refused', 'none'],
       ['question', 'show-answer', 'answer', 'none'],
-      ['question', 'undo', 'busy', 'undo'],
+      ['question', 'undo', 'busy', 'offer'],
       ['question', 'bury', 'busy', 'bury'],
       ['question', 'flag', 'busy', 'flag'],
       ['answer', 'again', 'busy', 'rate'],
       ['answer', 'good', 'busy', 'rate'],
-      ['answer', 'undo', 'busy', 'undo'],
+      ['answer', 'undo', 'busy', 'offer'],
       ['answer', 'bury', 'busy', 'bury'],
       ['answer', 'flag', 'busy', 'flag'],
       ['busy', 'settled', 'loading', 'card'],
       ['busy', 'not-shown', 'loading', 'card'],
       ['busy', 'refusal', 'refused', 'none'],
+      ['busy', 'offered', 'confirming', 'none'],
+      ['busy', 'not-offered', 'question', 'none'],
+      ['busy', 'undo-refused', 'loading', 'card'],
+      ['confirming', 'undo', 'busy', 'undo'],
+      ['confirming', 'keep', 'question', 'none'],
+      ['confirming', 'show-answer', 'question', 'none'],
+      ['confirming', 'again', 'question', 'none'],
+      ['confirming', 'good', 'question', 'none'],
+      ['confirming', 'bury', 'question', 'none'],
+      ['confirming', 'flag', 'question', 'none'],
+      ['confirming', 'replay', 'question', 'none'],
       ['refused', 'retry', 'loading', 'card']
     ];
     for (const [phase, event, to, effect] of cells) {
@@ -362,6 +389,11 @@ describe('the review', () => {
     expect(step({ phase: 'loading', side: 'answer' }, 'view').state).toStrictEqual({ phase: 'question', side: 'question' });
     // a flag's reply returns to the side the review was on
     expect(step({ phase: 'busy', side: 'answer' }, 'flagged')).toStrictEqual({
+      state: { phase: 'answer', side: 'answer' },
+      effect: 'none'
+    });
+    // while it asks, an action that is kept moves no side: a grade on the answer stays on the answer
+    expect(step({ phase: 'confirming', side: 'answer' }, 'good')).toStrictEqual({
       state: { phase: 'answer', side: 'answer' },
       effect: 'none'
     });
@@ -465,5 +497,202 @@ describe('the review', () => {
       state: { phase: 'busy', side: 'answer' },
       effect: 'none'
     });
+  });
+
+  // SPEC-371 R9, A23 to A26; ADR-382. The press asks for the offer, the review asks the learner,
+  // and only the confirmation writes, naming the offered card and step.
+  it('an undo press asks first and writes nothing until confirmed', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'answer' })), head(view(1))]);
+    const review = new Review(
+      async () => client,
+      () => 0,
+      () => undefined
+    );
+    review.start();
+    await review.settled();
+    review.act('undo');
+    await review.settled();
+    // the press read the offer and wrote nothing: the review asks
+    expect([review.phase, client.calls]).toEqual(['confirming', ['card', 'undo-offer']]);
+    expect(review.offer).toEqual(OFFER.offer);
+    // the confirmation is the Undo action again; it writes the offered card and step, and only it
+    review.act('undo');
+    await review.settled();
+    expect([review.phase, review.view?.id, review.offer, client.calls]).toEqual([
+      'question',
+      1n,
+      null,
+      ['card', 'undo-offer', 'undo 1 7', 'card']
+    ]);
+  });
+
+  it('while it asks, any other action keeps the answer and is not carried out', async () => {
+    const client = new FakeClient(Array.from({ length: 8 }, () => head(view(2, { undo: 'answer' }))));
+    const review = new Review(
+      async () => client,
+      () => 0,
+      () => undefined
+    );
+    review.start();
+    await review.settled();
+    const others = examined('other actions', ['again', 'good', 'bury', 'flag', 'replay', 'show-answer'] as const);
+    for (const action of others) {
+      review.act('undo');
+      await review.settled();
+      expect(review.phase, action).toBe('confirming');
+      review.act(action);
+      await review.settled();
+      expect([review.phase, review.side, review.offer], action).toEqual(['question', 'question', null]);
+    }
+    // "Keep it" and Escape keep it too
+    review.act('undo');
+    await review.settled();
+    review.keep();
+    await review.settled();
+    expect([review.phase, review.side, review.offer]).toEqual(['question', 'question', null]);
+    // only reads were sent: one offer per press, and no write
+    expect(client.calls).toEqual(['card', ...Array.from({ length: others.length + 1 }, () => 'undo-offer')]);
+  });
+
+  it('a synced answer is not offered and says so', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'synced' })), head(view(2, { undo: 'answer' }))]);
+    const review = new Review(
+      async () => client,
+      () => 0,
+      () => undefined
+    );
+    review.start();
+    await review.settled();
+    review.act('undo');
+    await review.settled();
+    // the view already says the answer synced: the press announces it and sends nothing
+    expect([review.phase, review.status, client.calls]).toEqual(['question', 'undo-synced', ['card']]);
+    // an offer the Worker declines as synced says the same, back on the side, with nothing written
+    const second = new FakeClient([head(view(2, { undo: 'answer' }))]);
+    second.offered = { offer: null, why: 'synced' };
+    const declined = new Review(
+      async () => second,
+      () => 0,
+      () => undefined
+    );
+    declined.start();
+    await declined.settled();
+    declined.act('undo');
+    await declined.settled();
+    expect([declined.phase, declined.status, declined.offer, second.calls]).toEqual([
+      'question',
+      'undo-synced',
+      null,
+      ['card', 'undo-offer']
+    ]);
+  });
+
+  it('a refused confirmation reloads the card and says why', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'answer' })), head(view(3))]);
+    const review = new Review(
+      async () => client,
+      () => 0,
+      () => undefined
+    );
+    review.start();
+    await review.settled();
+    review.act('undo');
+    await review.settled();
+    client.refusals.undo = new EngineError('not-undoable', 'not-undoable: something changed after the answer');
+    review.act('undo');
+    await review.settled();
+    // the write was refused: the next card loads, and the notice says why
+    expect([review.phase, review.view?.id, review.status, client.calls]).toEqual([
+      'question',
+      3n,
+      'not-undoable',
+      ['card', 'undo-offer', 'undo 1 7', 'card']
+    ]);
+  });
+
+  // MUTATION COVERAGE, SPEC-371 R9: a refused confirmation names its code, whichever of the two the
+  // engine gives.
+  it('a confirmation refused as synced reloads the card and says so', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'answer' })), head(view(3))]);
+    const review = new Review(
+      async () => client,
+      () => 0,
+      () => undefined
+    );
+    review.start();
+    await review.settled();
+    review.act('undo');
+    await review.settled();
+    client.refusals.undo = new EngineError('undo-synced', 'undo-synced: the answer has synced');
+    review.act('undo');
+    await review.settled();
+    expect([review.phase, review.view?.id, review.status, client.calls]).toEqual([
+      'question',
+      3n,
+      'undo-synced',
+      ['card', 'undo-offer', 'undo 1 7', 'card']
+    ]);
+  });
+
+  it('an offer the Worker declines for another reason says the answer can no longer be undone', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'answer' }))]);
+    client.offered = { offer: null, why: 'none' };
+    const review = new Review(
+      async () => client,
+      () => 0,
+      () => undefined
+    );
+    review.start();
+    await review.settled();
+    review.act('undo');
+    await review.settled();
+    expect([review.phase, review.status, review.offer, client.calls]).toEqual([
+      'question',
+      'not-undoable',
+      null,
+      ['card', 'undo-offer']
+    ]);
+  });
+
+  it('a synced press on the answer side announces itself and tells the screen', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'synced' }))]);
+    let changes = 0;
+    const review = new Review(
+      async () => client,
+      () => 0,
+      () => changes++
+    );
+    review.start();
+    await review.settled();
+    review.act('show-answer');
+    const before = changes;
+    review.act('undo');
+    expect([review.phase, review.side, review.status, changes - before, client.calls]).toEqual([
+      'answer',
+      'answer',
+      'undo-synced',
+      1,
+      ['card']
+    ]);
+  });
+
+  it('a synced press while a request is in flight announces nothing', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'synced' })), head(view(3))]);
+    let changes = 0;
+    const review = new Review(
+      async () => client,
+      () => 0,
+      () => changes++
+    );
+    review.start();
+    await review.settled();
+    client.hold();
+    review.act('bury');
+    const before = changes;
+    review.act('undo');
+    expect([review.phase, review.status, changes - before]).toEqual(['busy', null, 0]);
+    client.release();
+    await review.settled();
+    expect([review.phase, review.view?.id, review.status]).toEqual(['question', 3n, null]);
   });
 });

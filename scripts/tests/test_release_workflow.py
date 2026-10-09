@@ -7,6 +7,7 @@ sync server from the fork and the commit the engine's patch entry pins, and ship
 tarball (SPEC-337 A1, A2), once a job before it has audited that server's dependency graph (SPEC-340
 A9)."""
 
+import hashlib
 import os
 import re
 import subprocess
@@ -15,7 +16,15 @@ import unittest
 from pathlib import Path
 
 from _support import REPO, examined
-from test_ci_workflows import PINNED, action, entries, read_hardened, workflow_file_text
+from test_ci_workflows import (
+    PINNED,
+    action,
+    entries,
+    push,
+    read_hardened,
+    rendered,
+    workflow_file_text,
+)
 
 RELEASE = REPO / ".github" / "workflows" / "release.yml"
 CI = REPO / ".github" / "workflows" / "ci.yml"
@@ -28,6 +37,24 @@ UPSTREAM = "https://github.com/ankitects/anki.git"
 AUDIT_JOB = "audit-sync-server"
 AUDIT_SCRIPT = "bash scripts/audit-sync-server.sh"
 INSTALL = "taiki-e/install-action"
+# The web engine's module and its bindings, as CI's `web-engine` job builds, gates and stages them
+# (SPEC-350 R17, A29; ADR-361 D17 to D22), the steps that carry them, and the bytes a planted tree
+# holds in their place.
+ENGINE_FILES = {
+    "deck_streak_web_engine.js": b"export default function init() {}\n",
+    "deck_streak_web_engine_bg.wasm": b"\x00asm\x01\x00\x00\x00",
+}
+ENGINE_BUILD = "bash scripts/web-engine-build.sh"
+SIZE_GATE = "python3 scripts/web-engine-size.py"
+STAGE = "bash scripts/web-engine-stage.sh"
+ENGINE_STEPS = (
+    "rustup target add wasm32-unknown-unknown",
+    "/wasm-bindgen/releases/download/",
+    "sudo apt-get install",
+    ENGINE_BUILD,
+    SIZE_GATE,
+    STAGE,
+)
 
 
 def tag_glob(pattern):
@@ -74,7 +101,11 @@ class TheReleaseRunsOnSemverTags(unittest.TestCase):
     def test_the_release_runs_on_semver_tags_and_publishes_last(self):
         workflow = read_release()
         triggers = workflow["on"]
-        self.assertEqual(list(triggers), ["push"], "the release runs on a push, and only on one")
+        self.assertEqual(
+            list(triggers),
+            ["push", "workflow_dispatch"],
+            "the release runs on a push or a dispatch, and on nothing else",
+        )
         self.assertEqual(list(triggers["push"]), ["tags"], "the push filter is tags alone")
         globs = [tag_glob(pattern) for pattern in triggers["push"]["tags"]]
         admitted = ["v1.2.3", "v0.0.1", "v10.20.30"]
@@ -221,7 +252,12 @@ class TheTagGuardRuns(unittest.TestCase):
                 done = subprocess.run(
                     ["bash", "-e", str(script)],
                     cwd=work,
-                    env={**env, "GITHUB_REF_NAME": tag, "GITHUB_SHA": sha},
+                    env={
+                        **env,
+                        "GITHUB_REF_NAME": tag,
+                        "GITHUB_REF": f"refs/tags/{tag}",
+                        "GITHUB_SHA": sha,
+                    },
                     capture_output=True,
                     text=True,
                 )
@@ -230,6 +266,178 @@ class TheTagGuardRuns(unittest.TestCase):
             self.assertEqual(verdicts["v1.0.0"], 0, f"an annotated tag on main: {verdicts}")
             self.assertNotEqual(verdicts["v1.1.0"], 0, f"a lightweight tag: {verdicts}")
             self.assertNotEqual(verdicts["v2.0.0"], 0, f"a tag off main: {verdicts}")
+
+
+def scratch_env():
+    """The environment a scratch guard run starts from: the inherited one with git's identity and
+    configuration pinned and every GITHUB_* name removed, so a run sees only the names its case
+    sets."""
+    env = {
+        **os.environ,
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_SYSTEM": "/dev/null",
+        "GIT_AUTHOR_NAME": "t",
+        "GIT_AUTHOR_EMAIL": "t@example.org",
+        "GIT_COMMITTER_NAME": "t",
+        "GIT_COMMITTER_EMAIL": "t@example.org",
+    }
+    for name in [name for name in env if name.startswith("GITHUB_")]:
+        del env[name]
+    return env
+
+
+def scratch_repository(tmp, env):
+    """A bare origin on `main`, and a clone of it: `v1.0.0` annotated and `v1.1.0` lightweight on
+    `main`, a later commit on `main`, and `v2.0.0` annotated on a `topic` branch off `main`. It
+    returns the clone and the commit of each tag, with the later commit as `later`."""
+    origin, work = tmp / "origin.git", tmp / "work"
+    git("init", "-q", "--bare", "-b", "main", str(origin), cwd=tmp, env=env)
+    git("clone", "-q", str(origin), str(work), cwd=tmp, env=env)
+    git("checkout", "-q", "-b", "main", cwd=work, env=env)
+    git("commit", "-q", "--allow-empty", "-m", "on main", cwd=work, env=env)
+    git("tag", "-a", "-m", "v1.0.0", "v1.0.0", cwd=work, env=env)
+    git("tag", "v1.1.0", cwd=work, env=env)
+    git("commit", "-q", "--allow-empty", "-m", "later on main", cwd=work, env=env)
+    git("push", "-q", "origin", "main", "v1.0.0", "v1.1.0", cwd=work, env=env)
+    later = git("rev-parse", "HEAD", cwd=work, env=env)
+    git("checkout", "-q", "-b", "topic", cwd=work, env=env)
+    git("commit", "-q", "--allow-empty", "-m", "off main", cwd=work, env=env)
+    git("tag", "-a", "-m", "v2.0.0", "v2.0.0", cwd=work, env=env)
+    git("push", "-q", "origin", "topic", "v2.0.0", cwd=work, env=env)
+    shas = {"later": later}
+    for tag in ("v1.0.0", "v1.1.0", "v2.0.0"):
+        shas[tag] = git("rev-parse", f"{tag}^{{commit}}", cwd=work, env=env)
+    return work, shas
+
+
+def run_guard(guard, work, env, **github):
+    """The tag guard, cut from release.yml's text, run under `bash -e` in a scratch clone with the
+    given GITHUB_* names added to the environment."""
+    script = work.parent / "guard.sh"
+    script.write_text(guard, encoding="utf-8")
+    return subprocess.run(
+        ["bash", "-e", str(script)],
+        cwd=work,
+        env={**env, **github},
+        capture_output=True,
+        text=True,
+    )
+
+
+class TheReleaseHasASecondPath(unittest.TestCase):
+    """SPEC-373 R1 to R3, R6 (ADR-384): a tag whose push started no run is released by a manual
+    dispatch at the tag's own ref, which skips nothing the push runs and joins the tag's group."""
+
+    def test_the_release_runs_on_a_tag_push_or_an_input_free_dispatch_and_nothing_skips_either(
+        self,
+    ):
+        workflow = read_release()
+        events = workflow["on"]
+        self.assertEqual(
+            list(events),
+            ["push", "workflow_dispatch"],
+            "the release runs on a tag push or a manual dispatch, and on nothing else",
+        )
+        self.assertIsNone(events["workflow_dispatch"], "the dispatch takes no input")
+        jobs = workflow["jobs"]
+        for name in examined("jobs", sorted(jobs)):
+            self.assertNotIn("if", jobs[name], f"the job {name} runs on every path")
+        steps = steps_of(workflow)
+        guard = steps[index_of(steps, "merge-base --is-ancestor")]
+        self.assertNotIn("if", guard, "the guard step runs on every path")
+
+    def test_a_push_and_a_dispatch_of_one_tag_render_one_group(self):
+        group = read_release()["concurrency"]["group"]
+        contexts = {
+            "push": push("refs/tags/v1.0.0", run_id="201"),
+            "workflow_dispatch": {
+                **push("refs/tags/v1.0.0", run_id="202"),
+                "github.event_name": "workflow_dispatch",
+            },
+        }
+        self.assertEqual(
+            {event: rendered(group, contexts[event]) for event in contexts},
+            {"push": "release-refs/tags/v1.0.0", "workflow_dispatch": "release-refs/tags/v1.0.0"},
+        )
+        declared = list(read_release()["on"])
+        for event in examined("events", contexts):
+            self.assertIn(event, declared, f"release.yml declares no {event} trigger")
+
+
+class TheSecondPathRunsTheTagGuard(unittest.TestCase):
+    """SPEC-373 R4, R5 (ADR-384): both paths run the one guard, which refuses a ref that is not
+    the tag it names, a lightweight tag and a tag off `main`."""
+
+    def test_the_guard_refuses_a_ref_that_is_not_the_tag_it_names(self):
+        steps = steps_of(read_release())
+        guard = steps[index_of(steps, "merge-base --is-ancestor")]["run"]
+        with tempfile.TemporaryDirectory() as tmp:
+            env = scratch_env()
+            work, shas = scratch_repository(Path(tmp), env)
+            cases = {
+                "a branch named as the tag": (
+                    {
+                        "GITHUB_REF": "refs/heads/v1.0.0",
+                        "GITHUB_REF_NAME": "v1.0.0",
+                        "GITHUB_SHA": shas["later"],
+                    },
+                    False,
+                ),
+                "no ref": (
+                    {"GITHUB_REF_NAME": "v1.0.0", "GITHUB_SHA": shas["v1.0.0"]},
+                    False,
+                ),
+                "the dev branch": (
+                    {
+                        "GITHUB_REF": "refs/heads/dev",
+                        "GITHUB_REF_NAME": "dev",
+                        "GITHUB_SHA": shas["later"],
+                    },
+                    False,
+                ),
+                "the tag's own ref": (
+                    {
+                        "GITHUB_REF": "refs/tags/v1.0.0",
+                        "GITHUB_REF_NAME": "v1.0.0",
+                        "GITHUB_SHA": shas["v1.0.0"],
+                    },
+                    True,
+                ),
+            }
+            for label in examined("cases", cases):
+                names, admitted = cases[label]
+                done = run_guard(guard, work, env, GITHUB_EVENT_NAME="workflow_dispatch", **names)
+                if admitted:
+                    self.assertEqual(done.returncode, 0, f"{label}: {done.stderr}")
+                else:
+                    self.assertNotEqual(done.returncode, 0, f"{label} is refused")
+                if label == "a branch named as the tag":
+                    self.assertIn("refs/heads/v1.0.0", done.stderr, f"{label} is named")
+
+    def test_both_paths_refuse_a_lightweight_tag_and_a_tag_off_main(self):
+        declared = list(read_release()["on"])
+        steps = steps_of(read_release())
+        guard = steps[index_of(steps, "merge-base --is-ancestor")]["run"]
+        with tempfile.TemporaryDirectory() as tmp:
+            env = scratch_env()
+            work, shas = scratch_repository(Path(tmp), env)
+            for event in examined("paths", ("push", "workflow_dispatch")):
+                verdicts = {}
+                for tag in ("v1.0.0", "v1.1.0", "v2.0.0"):
+                    done = run_guard(
+                        guard,
+                        work,
+                        env,
+                        GITHUB_EVENT_NAME=event,
+                        GITHUB_REF=f"refs/tags/{tag}",
+                        GITHUB_REF_NAME=tag,
+                        GITHUB_SHA=shas[tag],
+                    )
+                    verdicts[tag] = done.returncode
+                self.assertEqual(verdicts["v1.0.0"], 0, f"{event}: an annotated tag: {verdicts}")
+                self.assertNotEqual(verdicts["v1.1.0"], 0, f"{event}: a lightweight tag")
+                self.assertNotEqual(verdicts["v2.0.0"], 0, f"{event}: a tag off main")
+                self.assertIn(event, declared, f"release.yml declares no {event} trigger")
 
 
 class TheReleaseBuildsTheSyncServer(unittest.TestCase):
@@ -344,6 +552,139 @@ class TheReleaseBuildsTheSyncServer(unittest.TestCase):
         audited = index_of(steps, AUDIT_SCRIPT)
         self.assertLess(steps.index(checkout[0]), audited)
         self.assertLess(steps.index(install[0]), audited)
+
+
+class TheReleaseCarriesTheWebEngine(unittest.TestCase):
+    """SPEC-350 R17 (A29; ADR-361 D17 to D22): the release builds the web engine's module and its
+    bindings with the steps CI's `web-engine` job runs, holds them to the size budget before the
+    draft exists, and stages them in the app's build, so the tarball carries them at `web/engine/`,
+    where the app's Worker loads `/engine/`."""
+
+    def test_the_release_carries_the_module_at_web_engine(self):
+        steps = steps_of(read_release())
+        built = index_of(steps, "pnpm --dir web/app build")
+        create = index_of(steps, "gh release create")
+        between = steps[built + 1 : create]
+        for step in between:
+            self.assertIn("run", step, "a step between the build and the draft runs a command")
+        plans = {
+            "the release": [str(step["run"]) for step in between],
+            "without the stage": [str(step["run"]) for step in between if STAGE not in step["run"]],
+        }
+        tarball = '"$RUNNER_TEMP/release/deck-streak-$GITHUB_REF_NAME.tar.gz"'
+        listing = f"tar -tzf {tarball}\necho ---\ntar -xOzf {tarball} ./MANIFEST.sha256\n"
+        ran = []
+        with tempfile.TemporaryDirectory() as tmp:
+            for number, (plan, runs) in enumerate(examined("plans", plans.items())):
+                base = Path(tmp) / f"plan-{number}"
+                root = base / "root"
+                planted = {
+                    **{f"target/web-engine/{name}": data for name, data in ENGINE_FILES.items()},
+                    "target/release/deckstreakd": b"daemon\n",
+                    "runner/sync-server/bin/anki-sync-server": b"sync\n",
+                    "web/app/build/index.html": b"<html></html>\n",
+                    "deploy/README": b"deploy\n",
+                    "agent/README": b"agent\n",
+                }
+                for name, data in planted.items():
+                    path = root / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(data)
+                (root / "scripts").symlink_to(REPO / "scripts")
+                script = base / "plan.sh"
+                script.write_text("\n".join(runs) + "\n" + listing, encoding="utf-8")
+                env_file = base / "github-env"
+                summary = base / "github-summary"
+                env_file.write_text("", encoding="utf-8")
+                summary.write_text("", encoding="utf-8")
+                env = {k: v for k, v in os.environ.items() if not k.startswith("GITHUB_")}
+                env.update(
+                    GITHUB_REF_NAME="v0.0.1",
+                    RUNNER_TEMP=str(root / "runner"),
+                    GITHUB_ENV=str(env_file),
+                    GITHUB_STEP_SUMMARY=str(summary),
+                )
+                done = subprocess.run(
+                    ["bash", "-e", str(script)],
+                    cwd=root,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(done.returncode, 0, done.stderr)
+                names, _, manifest = done.stdout.partition("\n---\n")
+                names = names.splitlines()
+                manifest = manifest.splitlines()
+                engine = sorted(
+                    name
+                    for name in names
+                    if name.startswith("./web/engine/") and not name.endswith("/")
+                )
+                if plan == "the release":
+                    self.assertEqual(
+                        engine,
+                        [f"./web/engine/{name}" for name in sorted(ENGINE_FILES)],
+                        f"{plan}: the tarball carries the module and its bindings at web/engine/",
+                    )
+                    self.assertEqual(
+                        sorted(line for line in manifest if "./web/engine/" in line),
+                        sorted(
+                            f"{hashlib.sha256(data).hexdigest()}  ./web/engine/{name}"
+                            for name, data in ENGINE_FILES.items()
+                        ),
+                        f"{plan}: the manifest holds each engine file's digest",
+                    )
+                    self.assertIn("./web/index.html", names, f"{plan}: the app is staged")
+                else:
+                    self.assertIn("./web/index.html", names, f"{plan}: the app is staged")
+                    self.assertEqual(engine, [], f"{plan}: no engine file without the stage")
+                ran.append(plan)
+        self.assertEqual(len(ran), len(plans), "every plan ran")
+
+    def test_the_release_builds_and_gates_the_module_as_ci_does(self):
+        release = steps_of(read_release())
+        ci = read_hardened(CI)["jobs"]["web-engine"]
+        indexes = []
+        for needle in examined("engine steps", ENGINE_STEPS):
+            held = [at for at, step in enumerate(release) if needle in step.get("run", "")]
+            self.assertEqual(len(held), 1, f"{len(held)} release steps run `{needle}`")
+            there = [step for step in ci["steps"] if needle in step.get("run", "")]
+            self.assertEqual(len(there), 1, f"{len(there)} CI steps run `{needle}`")
+            self.assertEqual(release[held[0]], there[0], f"the release step for `{needle}`")
+            indexes.append(held[0])
+        self.assertEqual(indexes, sorted(set(indexes)), "the release runs them in CI's order")
+        self.assertEqual(
+            read_release()["jobs"]["release"]["env"]["CARGO_INCREMENTAL"],
+            ci["env"]["CARGO_INCREMENTAL"],
+            "the release builds as CI does",
+        )
+        text = workflow_file_text(RELEASE)
+        self.assertNotIn("RUSTFLAGS", text)
+        self.assertNotIn(".cargo/config", text)
+
+    def test_an_over_budget_module_stops_the_release_before_the_draft(self):
+        workflow = read_release()
+        steps = steps_of(workflow)
+        gate = index_of(steps, SIZE_GATE)
+        order = [
+            index_of(steps, ENGINE_BUILD),
+            gate,
+            index_of(steps, "pnpm --dir web/app build"),
+            index_of(steps, STAGE),
+            index_of(steps, "MANIFEST.sha256"),
+            index_of(steps, "gh release create"),
+        ]
+        self.assertEqual(order, sorted(set(order)), "build, gate, app, stage, tarball, draft")
+        self.assertEqual(set(steps[gate]), {"name", "run"})
+        run = str(steps[gate]["run"])
+        self.assertTrue(run.startswith(SIZE_GATE), "the gate step runs the size script")
+        self.assertEqual(len(run.strip().splitlines()), 1, "the gate is one line")
+        for mark in "|;&":
+            self.assertNotIn(mark, run, "the gate's exit is the step's exit")
+        for step in examined("steps from the gate", steps[gate:]):
+            self.assertNotIn("if", step, "no step from the gate on runs after a failure")
+            self.assertNotIn("continue-on-error", step)
+        self.assertNotIn("continue-on-error", workflow["jobs"]["release"])
 
 
 if __name__ == "__main__":

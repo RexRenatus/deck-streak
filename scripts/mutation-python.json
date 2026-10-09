@@ -67,6 +67,12 @@
       "test_deploy_templates"
     ]
   },
+  "scripts/threat_model.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_threat_model"
+    ]
+  },
   "scripts/web-engine-size.py": {
     "dir": "scripts/tests",
     "modules": [

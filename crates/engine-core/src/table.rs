@@ -23,6 +23,8 @@ pub enum Decision {
     Admit,
     /// An exempt write: never through `run`, only for an owner's gesture.
     NeedsGesture,
+    /// The one answer: never through `run`, only for an owner's press (SPEC-365 R4).
+    NeedsAnswer,
     /// Every other pair.
     NotAllowed,
 }
@@ -42,6 +44,10 @@ pub enum ExemptWrite {
     DeleteCard,
     /// Delete one note.
     DeleteNote,
+    /// The full-sync choice's one-way write, upload or download, of the open collection.
+    OneWaySync,
+    /// Undo the review's own last answer, on the card it answered (SPEC-371 R2).
+    Undo,
 }
 
 /// The kind of the one target an exempt write takes.
@@ -53,6 +59,8 @@ pub enum TargetKind {
     Note,
     /// A preset (a deck options group), by id.
     Preset,
+    /// The open collection as a whole: the one-way sync's target.
+    Collection,
 }
 
 /// One ordinary call, with the transports that may make it.
@@ -107,7 +115,8 @@ impl Exempt {
 /// The ordinary calls, each marked with the transports that may make it.
 ///
 /// The native column is the native adapter's allow-list and the web column is the web engine's
-/// study calls (SPEC-345 M1, M4); a parity test holds each adapter's own table equal to its column.
+/// study calls with its sync calls (SPEC-345 M1, M4; SPEC-364 R1); a parity test holds each
+/// adapter's own table equal to its column.
 /// A pair one transport may make is not thereby admitted on the other: the native client neither
 /// closes the collection nor adds notes through this table (ADR-356 D2).
 pub const ORDINARY: [Ordinary; 18] = [
@@ -116,7 +125,14 @@ pub const ORDINARY: [Ordinary; 18] = [
         method: 3,
         name: "BackendSyncService.SyncLogin",
         native: true,
-        web: false,
+        web: true,
+    },
+    Ordinary {
+        service: 1,
+        method: 5,
+        name: "BackendSyncService.SyncCollection",
+        native: false,
+        web: true,
     },
     Ordinary {
         service: 3,
@@ -137,13 +153,6 @@ pub const ORDINARY: [Ordinary; 18] = [
         method: 7,
         name: "CollectionService.GetUndoStatus",
         native: false,
-        web: true,
-    },
-    Ordinary {
-        service: 3,
-        method: 8,
-        name: "CollectionService.Undo",
-        native: true,
         web: true,
     },
     Ordinary {
@@ -178,13 +187,6 @@ pub const ORDINARY: [Ordinary; 18] = [
         service: 13,
         method: 3,
         name: "SchedulerService.GetQueuedCards",
-        native: true,
-        web: true,
-    },
-    Ordinary {
-        service: 13,
-        method: 4,
-        name: "SchedulerService.AnswerCard",
         native: true,
         web: true,
     },
@@ -237,13 +239,51 @@ pub const ORDINARY: [Ordinary; 18] = [
         native: false,
         web: true,
     },
+    Ordinary {
+        service: 27,
+        method: 14,
+        name: "CardRenderingService.HtmlToTextLine",
+        native: false,
+        web: true,
+    },
 ];
+
+/// The one call that records a grade, held for an owner's press (SPEC-365 R4; ADR-376 D5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Answered {
+    /// The backend service's index, as the engine numbers it.
+    pub service: u32,
+    /// The method's index within that service.
+    pub method: u32,
+    /// The engine's name for the call, `Service.Method`.
+    pub name: &'static str,
+}
+
+impl Answered {
+    /// Whether this row is the call at `service` and `method`.
+    #[must_use]
+    pub fn is(&self, service: u32, method: u32) -> bool {
+        self.service == service && self.method == method
+    }
+}
+
+/// The calls that record a grade: `AnswerCard` alone. Neither transport makes it through `run`; the
+/// dispatcher runs it only for an owner's answer, which names the card and the grade a press
+/// named (SPEC-365 R3, R4).
+pub const ANSWERED: [Answered; 1] = [Answered {
+    service: 13,
+    method: 4,
+    name: "SchedulerService.AnswerCard",
+}];
 
 /// The exempt writes: the never-list's entries 2 (Forget), 6 (set due date), 3 (delete a preset),
 /// 7 (change note type) and 8 (delete a card or a note), each one method with one target (SPEC-345
-/// M8). The one-way sync, the scheduler switch and every other never-list method stay unlisted, so
-/// `run` refuses them as not allowed (ADR-356 D6).
-pub const EXEMPT: [Exempt; 6] = [
+/// M8), the full-sync choice's one-way sync, whose one target is the open collection and which
+/// runs only through the choice's own write, never through `run_exempt` (SPEC-364 R1, R3; ADR-375
+/// D5), and the undo of the review's own last answer, on its card (SPEC-371 R2). The scheduler
+/// switch and every other never-list method stay unlisted, so `run` refuses them as not allowed
+/// (ADR-356 D6).
+pub const EXEMPT: [Exempt; 8] = [
     Exempt {
         write: ExemptWrite::Forget,
         service: 13,
@@ -286,11 +326,25 @@ pub const EXEMPT: [Exempt; 6] = [
         name: "NotesService.RemoveNotes",
         kind: TargetKind::Note,
     },
+    Exempt {
+        write: ExemptWrite::OneWaySync,
+        service: 1,
+        method: 6,
+        name: "BackendSyncService.FullUploadOrDownload",
+        kind: TargetKind::Collection,
+    },
+    Exempt {
+        write: ExemptWrite::Undo,
+        service: 3,
+        method: 8,
+        name: "CollectionService.Undo",
+        kind: TargetKind::Card,
+    },
 ];
 
 /// What the table decides for `service` and `method` on `transport`: admitted when an ordinary
-/// row holds the pair and marks the transport, held for a gesture when an exempt row holds it, and
-/// refused otherwise.
+/// row holds the pair and marks the transport, held for an owner's answer when the answered row
+/// holds it, held for a gesture when an exempt row holds it, and refused otherwise.
 #[must_use]
 pub fn decide(transport: Transport, service: u32, method: u32) -> Decision {
     let ordinary = ORDINARY
@@ -298,6 +352,8 @@ pub fn decide(transport: Transport, service: u32, method: u32) -> Decision {
         .any(|row| (row.service, row.method) == (service, method) && row.admits(transport));
     if ordinary {
         Decision::Admit
+    } else if ANSWERED.iter().any(|row| row.is(service, method)) {
+        Decision::NeedsAnswer
     } else if EXEMPT.iter().any(|row| row.is(service, method)) {
         Decision::NeedsGesture
     } else {

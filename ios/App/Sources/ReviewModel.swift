@@ -17,11 +17,12 @@ final class ReviewModel {
     private(set) var face = ReviewFace.empty
     /// The queue's counts at the shown card.
     private(set) var counts = ReviewCounts(new: 0, learning: 0, review: 0)
-    /// The four ratings' intervals for the shown card, in the bar's order.
+    /// The engine's four intervals for the shown card, in its ratings' order; the bar shows
+    /// Again's and Good's (SPEC-365 R13).
     private(set) var intervals: [String] = []
     /// The clips handed to the player when the shown face appeared.
     private(set) var plan: [ReviewClip] = []
-    /// Whether the shown face is the answer, so the bar offers the four ratings.
+    /// Whether the shown face is the answer, so the bar offers the two grades.
     private(set) var revealed = false
     /// The answers sent, raised by one with each; the impact haptic's trigger (R12).
     private(set) var answered = 0

@@ -24,15 +24,16 @@ use anki_proto::scheduler::card_answer::Rating;
 use anki_proto::scheduler::{
     CardAnswer, GetQueuedCardsRequest, QueuedCards, ScheduleCardsAsNewRequest, SetDueDateRequest,
 };
+use deck_streak_engine_core::answer::{Grade, OwnerAnswer};
 use deck_streak_engine_core::dispatch::{Dispatcher, Read};
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
 use deck_streak_engine_core::table::{EXEMPT, ExemptWrite, Transport};
+use deck_streak_engine_core::undo_answer::Recorded;
 use prost::Message;
 use serde_json::Value;
 
 const OPEN_COLLECTION: (u32, u32) = (3, 0);
 const GET_QUEUED_CARDS: (u32, u32) = (13, 3);
-const ANSWER_CARD: (u32, u32) = (13, 4);
 /// The snapshot's columns: `[id, queue, type, due, ivl, reps, lapses]`.
 const QUEUE: usize = 1;
 const TYPE: usize = 2;
@@ -125,7 +126,8 @@ fn now_millis() -> i64 {
     i64::try_from(millis).expect("the clock's milliseconds fit an i64")
 }
 
-/// Answers the card at the head of the queue Good, through ordinary calls, and returns its id.
+/// Answers the card at the head of the queue Good, through an owner's answer (SPEC-365 R3), and
+/// returns its id.
 fn answer_next(dispatcher: &Dispatcher) -> i64 {
     let request = GetQueuedCardsRequest {
         fetch_limit: 1,
@@ -151,10 +153,12 @@ fn answer_next(dispatcher: &Dispatcher) -> i64 {
         answered_at_millis: now_millis(),
         milliseconds_taken: 1000,
     };
-    let (service, method) = ANSWER_CARD;
     dispatcher
-        .run(service, method, &answer.encode_to_vec())
-        .expect("the answer reaches the engine");
+        .run_answer(
+            OwnerAnswer::from_press(card, Grade::Good),
+            &answer.encode_to_vec(),
+        )
+        .expect("the owner's answer reaches the engine");
     card
 }
 
@@ -201,6 +205,16 @@ fn delete_card(cards: Vec<i64>) -> Vec<u8> {
     RemoveCardsRequest { card_ids: cards }.encode_to_vec()
 }
 
+/// An undo's record naming the review row `review`. The fixture holds no answer, so no record names
+/// a row it holds; `undo_answer.rs` holds the undo of a recorded answer (SPEC-371 A4 to A13).
+fn undo(review: i64) -> Vec<u8> {
+    Recorded {
+        status: None,
+        review,
+    }
+    .encode_to_vec()
+}
+
 fn delete_note(notes: Vec<i64>, cards: Vec<i64>) -> Vec<u8> {
     RemoveNotesRequest {
         note_ids: notes,
@@ -213,11 +227,13 @@ fn delete_note(notes: Vec<i64>, cards: Vec<i64>) -> Vec<u8> {
 /// default preset.
 fn target(write: ExemptWrite, fixture: &Fixture) -> Target {
     match write {
-        ExemptWrite::Forget | ExemptWrite::SetDueDate | ExemptWrite::DeleteCard => {
-            Target::Card(fixture.cards[0])
-        }
+        ExemptWrite::Forget
+        | ExemptWrite::SetDueDate
+        | ExemptWrite::DeleteCard
+        | ExemptWrite::Undo => Target::Card(fixture.cards[0]),
         ExemptWrite::ChangeNoteType | ExemptWrite::DeleteNote => Target::Note(fixture.notes[0]),
         ExemptWrite::DeletePreset => Target::Preset(DEFAULT_PRESET),
+        ExemptWrite::OneWaySync => Target::Collection,
     }
 }
 
@@ -232,6 +248,8 @@ fn only_the_target(write: ExemptWrite, fixture: &Fixture) -> Vec<u8> {
         ExemptWrite::ChangeNoteType => change_note_type(fixture, vec![note]),
         ExemptWrite::DeleteCard => delete_card(vec![card]),
         ExemptWrite::DeleteNote => delete_note(vec![note], Vec::new()),
+        ExemptWrite::OneWaySync => Vec::new(),
+        ExemptWrite::Undo => undo(0),
     }
 }
 
@@ -288,6 +306,8 @@ fn naming_more(write: ExemptWrite, fixture: &Fixture) -> Vec<(&'static str, Vec<
                 delete_note(vec![note], vec![card]),
             ),
         ],
+        ExemptWrite::OneWaySync => Vec::new(),
+        ExemptWrite::Undo => vec![("a review row the collection lacks", undo(1))],
     }
 }
 
@@ -346,13 +366,18 @@ fn a_request_naming_more_than_its_gestures_target_is_refused() {
             let synthetic = support::synthetic(&format!("only-the-target-{write:?}"));
             let fixture = fixture(&synthetic);
             let dispatcher = opened(&synthetic);
+            let target = target(write, &fixture);
             let result = tap(
                 &dispatcher,
                 write,
-                target(write, &fixture),
+                target,
                 &only_the_target(write, &fixture),
             );
-            (write, outcome(result))
+            // each collection numbers its own cards, so the target is named by its role
+            (
+                write,
+                outcome(result).replace(&format!("{target:?}"), "its target"),
+            )
         })
         .collect();
     let engine_refuses_its_default_preset = String::from("the engine refused it");
@@ -365,6 +390,20 @@ fn a_request_naming_more_than_its_gestures_target_is_refused() {
             (ExemptWrite::ChangeNoteType, String::from("ran")),
             (ExemptWrite::DeleteCard, String::from("ran")),
             (ExemptWrite::DeleteNote, String::from("ran")),
+            (
+                ExemptWrite::OneWaySync,
+                String::from(
+                    "refused before the engine: the one-way sync runs only through the full-sync \
+                     choice's write",
+                ),
+            ),
+            // the fixture holds no answer, so an undo's record names no row it holds (SPEC-371 R5)
+            (
+                ExemptWrite::Undo,
+                String::from(
+                    "refused before the engine: the Undo request names other than its target"
+                ),
+            ),
         ],
         "a request naming exactly its gesture's target passes the check and reaches the engine"
     );
@@ -387,7 +426,9 @@ fn a_request_naming_more_than_its_gestures_target_is_refused() {
             expected.push((
                 write,
                 named,
-                Err(if named == "no message" {
+                Err(if write == ExemptWrite::OneWaySync {
+                    GestureRefusal::NeedsTheChoice
+                } else if named == "no message" {
                     GestureRefusal::Undecodable { write }
                 } else {
                     GestureRefusal::NotTheTarget { write, target }
@@ -408,4 +449,65 @@ fn a_request_naming_more_than_its_gestures_target_is_refused() {
         "no refused request changed a card's row or the note count"
     );
     support::examined("refused request(s)", refused);
+}
+
+#[test]
+fn run_exempt_refuses_the_one_way_sync() {
+    let synthetic = support::synthetic("one-way-exempt");
+    let fixture = fixture(&synthetic);
+    let dispatcher = opened(&synthetic);
+    let before = (
+        fixture.cards.map(|card| snapshot(&dispatcher, card)),
+        note_count(&dispatcher),
+    );
+    // Whatever the bytes, the one-way gesture never reaches its request through `run_exempt`: the
+    // last is the engine's own one-way request, which the core alone may build (SPEC-364 R3).
+    let requests = [
+        ("no message", NO_MESSAGE.to_vec()),
+        ("an empty request", Vec::new()),
+        (
+            "an upload request naming a loopback endpoint",
+            anki_proto::sync::FullUploadOrDownloadRequest {
+                auth: Some(anki_proto::sync::SyncAuth {
+                    hkey: String::from("planted-host-key"),
+                    endpoint: Some(String::from("http://127.0.0.1:1/")),
+                    io_timeout_secs: None,
+                }),
+                upload: true,
+                server_usn: None,
+            }
+            .encode_to_vec(),
+        ),
+    ];
+    let refused: Vec<(&str, Result<Vec<u8>, GestureRefusal>)> = requests
+        .iter()
+        .map(|(named, request)| {
+            (
+                *named,
+                tap(
+                    &dispatcher,
+                    ExemptWrite::OneWaySync,
+                    Target::Collection,
+                    request,
+                ),
+            )
+        })
+        .collect();
+    let expected: Vec<(&str, Result<Vec<u8>, GestureRefusal>)> = requests
+        .iter()
+        .map(|(named, _)| (*named, Err(GestureRefusal::NeedsTheChoice)))
+        .collect();
+    assert_eq!(
+        refused, expected,
+        "run_exempt refuses the one-way gesture before it decodes its request"
+    );
+    let after = (
+        fixture.cards.map(|card| snapshot(&dispatcher, card)),
+        note_count(&dispatcher),
+    );
+    assert_eq!(
+        after, before,
+        "no refused request changed a card or the note count"
+    );
+    support::examined("one-way request(s)", refused);
 }
