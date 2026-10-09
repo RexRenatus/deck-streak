@@ -250,6 +250,8 @@ A37: python3 -m unittest discover -s scripts/tests -p test_ios_review_screen.py 
 A40: swift test --package-path ios/HarnessWire --filter HarnessWireTests.ResponseDecodingTests/test_a40_the_queued_card_carries_its_flag
 ```
 
+A3's census drops from its listing, by name and before any file is opened, every Rust path whose name holds `drill` or `readings_tree` in any case (the parked `crates/vault/src/readings_tree.rs` among them), and prints how many it dropped; it is red when that count is 0. The drill surface is parked (#158), so those files are not examined: this narrows A3's population, and the pull request's weakening table records it.
+
 ## 4. File manifest
 
 Part a's files; parts b and c name theirs in their own pull requests (section 7).

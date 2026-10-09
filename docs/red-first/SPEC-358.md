@@ -54,3 +54,7 @@ Test files changed between a criterion's red and its green, each insert-only or 
 `crates/engine-core/tests/review.rs`'s `the_bury_and_flag_requests_are_the_engines_bytes`
 (bae1dfbf) is mutation coverage, written after the request encoders: it has no criterion and no
 fence line, and it is not red-first evidence.
+
+CI read A11, A13, A14 and A40 green by name at 0412f956: A11 in the `apple / harness` job's own step on the iPhone and on the iPad, A13 and A14 in `hygiene`, and A40 in `apple / harness-wire`.
+
+From b5ef7dbe, A3's census drops the parked Rust files by name before any file is opened and prints how many it dropped (the drill surface is parked, #158); its count is read in CI's `hygiene` at this pull request's next push. That commit changes A3's test after A3's green, and it is a narrowing, recorded in the pull request's weakening table.
