@@ -42,6 +42,20 @@ request it sent. The fork's sites are reached once the operations and the export
 
 A1 to A3 and A14 ran in Chromium on this box; WebKit runs in CI.
 
+## Test edits between red and green
+
+The implementation commit fcd6b954 also edits three test files between the reds and the greens.
+Each edit grows a population or a fixture, and none changes what a criterion's test asserts:
+
+- `web/app/tests-engine/sync.spec.ts` (A1 to A3): `account()` takes the browser's name, so each
+  browser project signs in to a server account of its own (`playwright.engine.config.ts` makes the
+  second), and the two browsers no longer share one server collection. No assertion changes.
+- `web/app/src/lib/engine/protocol.test.ts`, "the study operations on the wire": the list of every
+  operation the Worker admits gains the four choice operations the same commit adds. A8's test is
+  unchanged between its red and its green.
+- `web/app/src/lib/startapp.test.ts`: `BY_PATH` gains `/sync`, R8's screen, which is opened by its
+  path alone.
+
 ## The reds and greens
 
 Each line's command is the criterion's line in SPEC-377 section 3's fence, run at the commit named.
