@@ -497,3 +497,65 @@ A28: pnpm exec vitest run web/app/src/lib/manifest.test.ts -t "the manifest meet
 A28: pnpm exec vitest run web/app/src/lib/csp.test.ts -t "the page policy admits WebAssembly compilation and nothing else new"
 A30: pnpm exec vitest run web/app/src/lib/study/mapping-store.test.ts -t "a stored mapping drives the review, and each mode keeps its default"
 ```
+
+## 12. Amendments for #685: the release builds, gates and stages the web engine's module
+
+Issue #685 asks that a release serve the engine's module at `/engine/` beside the app, with A29's
+test red before the change and green after it. This section amends R17's last sentence (section 7)
+and A29; ADR-361 D17 to D22 decide it. M13 (`:43`) and section 5's staging bullet (`:306-307`)
+describe the release before this amendment.
+
+- **R17's last sentence, as #685 amends it: the release builds, gates and stages the module.** The
+  release job builds the module and its bindings with the steps CI's `web-engine` job runs, copied
+  byte for byte: the pinned toolchain and its wasm32 target, the bindings generator and the
+  optimiser with each download's digest checked, the C compiler and archiver SQLite's source needs,
+  and `scripts/web-engine-build.sh` with CI's compiler, archiver and output directory (ADR-361
+  D17). It then runs CI's size gate, `scripts/web-engine-size.py`, over the module and the bindings
+  it built, before the app's dependencies, the stage, the tarball and the draft release; a module
+  over ADR-336's budget, or a gate that cannot measure, fails the job, so no release is made (D19).
+  After the app's build it runs `scripts/web-engine-stage.sh`, which puts both files in the build
+  under `engine/`. The tarball step is unchanged: it copies the build into `web/`, so the release
+  carries both files at `web/engine/` and its manifest holds their digests, and an origin that
+  serves `web/` at its root answers the Worker's `/engine/` (D18). Held by A29 (section 14).
+- **A29, as #685 amends it.** Section 7's row stands as the criterion. Three tests in
+  `scripts/tests/test_release_workflow.py` decide it, each with its own fence line in section 14
+  (ADR-361 D20).
+- **The release job's bound.** Its `timeout-minutes` rises from 90 to 150, so the module's cold
+  wasm32 build fits beside the builds the job already runs (ADR-361 D22).
+- **Risks of the #685 amendment.** The release job holds the release's write token while it
+  downloads and runs the module's tools: each download is checked against its digest, and the C
+  step installs a package only when the image lacks the archiver, as CI's job does on every pull
+  request. A build slower than the job's bound fails the tag's run; D22 sizes the bound, and the
+  run's log shows each step's time.
+- **The #685 amendment touches these paths:** `.github/workflows/release.yml`,
+  `scripts/tests/test_release_workflow.py`, `scripts/tests/test_ci_workflows.py` (one census
+  entry), `scripts/mutation-rows.d/S35000-S35099.json` (rows S35044 to S35055),
+  `scripts/mutation-rows.d/S19000-S19099.json` (S19011 and S19016 re-anchored on the new bound),
+  `docs/specs/SPEC-350-the-web-study-screens-review-a-card-from-the-engine-in-the-browser-in-the-sandboxed-frame-by-touch-keys-or-a-remote.md`,
+  `docs/decisions/ADR-361-the-web-review-answers-only-the-card-it-showed-and-the-frame-stays-sealed.md`,
+  `docs/schematics/release-from-a-tag-push-or-a-dispatch-at-the-tags-ref.md`,
+  `docs/red-first/SPEC-350.md` and `changelog.d/release-stages-web-engine-685.md`.
+
+## 13. What this does NOT do, in the #685 amendment
+
+- It does not run the browser tests over the release's own module: CI's `web-engine` job runs them
+  over a module built by the same steps at the same commit (#685).
+- It changes no CI job: `ci.yml`'s `web-engine` job is the source the release copies, and stays as
+  it is (#685).
+- It does not change how the host serves the release's `web/` folder or answers for the module's
+  file; the deploy files decide that, and the acceptance session reads the published app (#637).
+- It does not check the shipped headers again (#638).
+- It keeps no module between releases: each tag builds its own, and no step restores or saves a
+  cache (#685).
+
+## 14. Acceptance criteria of the #685 amendment
+
+| id | criterion | red it must show first | decided by |
+|---|---|---|---|
+| A29 | A release carries the module and its bindings at `web/engine/`, each in its manifest, built by CI's `web-engine` steps and held to ADR-336's budget before the draft release exists | the release's own steps from the app's build to the draft pack nothing under `web/engine/`; no release step adds the wasm32 target; no release step runs the size gate | `scripts/tests/test_release_workflow.py` `test_the_release_carries_the_module_at_web_engine`, `test_the_release_builds_and_gates_the_module_as_ci_does`, `test_an_over_budget_module_stops_the_release_before_the_draft` (ADR-361 D17 to D20) |
+
+```acceptance
+A29: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k the_release_carries_the_module_at_web_engine
+A29: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k the_release_builds_and_gates_the_module_as_ci_does
+A29: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -k an_over_budget_module_stops_the_release_before_the_draft
+```

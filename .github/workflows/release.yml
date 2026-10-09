@@ -32,7 +32,7 @@ jobs:
   release:
     needs: [audit-sync-server]
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 150
     permissions:
       contents: write
       id-token: write
@@ -92,10 +92,38 @@ jobs:
         with:
           node-version-file: .nvmrc
           package-manager-cache: 'false'
+      - name: the pinned Rust toolchain (rust-toolchain.toml) and its wasm32 target
+        run: |
+          rustup show
+          rustup target add wasm32-unknown-unknown
+      - name: wasm-bindgen 0.2.129 (the crate's exact version) and wasm-opt from binaryen 133, checksums verified
+        env:
+          WASM_BINDGEN_SHA256: 82d12bb940e2d4e72e0d5605387fc1b8ca179044e012b620f0ce4e7440e8320e
+          BINARYEN_SHA256: 2dc9c7813f5375db93d96ead4b78222fcc3e2677bbb832297af4797782a37489
+        run: |
+          curl -fsSL -o /tmp/wasm-bindgen.tgz https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.129/wasm-bindgen-0.2.129-x86_64-unknown-linux-musl.tar.gz
+          echo "$WASM_BINDGEN_SHA256  /tmp/wasm-bindgen.tgz" | sha256sum -c -
+          curl -fsSL -o /tmp/binaryen.tgz https://github.com/WebAssembly/binaryen/releases/download/version_133/binaryen-version_133-x86_64-linux.tar.gz
+          echo "$BINARYEN_SHA256  /tmp/binaryen.tgz" | sha256sum -c -
+          mkdir -p "$HOME/.local/wasm"
+          tar -xzf /tmp/wasm-bindgen.tgz -C "$HOME/.local/wasm" --strip-components=1 wasm-bindgen-0.2.129-x86_64-unknown-linux-musl/wasm-bindgen
+          tar -xzf /tmp/binaryen.tgz -C "$HOME/.local/wasm"
+          echo "$HOME/.local/wasm" >> "$GITHUB_PATH"
+          echo "$HOME/.local/wasm/binaryen-version_133/bin" >> "$GITHUB_PATH"
+      - name: a C compiler and archiver for wasm32 (SQLite's source)
+        run: |
+          command -v llvm-ar-18 || sudo apt-get install -y --no-install-recommends llvm-18
+          clang-18 --version
+      - name: build the module and its bindings
+        run: bash scripts/web-engine-build.sh --cc clang-18 --ar llvm-ar-18 --out target/web-engine
+      - name: the size gate (8000000 bytes gzip -9, brotli beside it)
+        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js
       - name: the Mini App's dependencies
         run: pnpm install --frozen-lockfile
       - name: the Mini App, built once
         run: pnpm --dir web/app build
+      - name: the module and its bindings staged beside the build, under /engine/
+        run: bash scripts/web-engine-stage.sh
       - name: the tarball and its digests
         run: |
           set -euo pipefail

@@ -51,3 +51,47 @@ started the run, and no `if:` lets either path step around it.
   run all of them in the order `release.yml` gives.
 - The queue's behaviour with two runs of one tag in the group is SPEC-190's and ADR-292's, and its
   model is #467's; the diagram shows only that both paths enter the same group.
+
+## The web engine's module, from its build to `/engine/` (SPEC-350 A29, #685)
+
+Kind: data flow. Every `path:line` citation in this section was read at dev `794fd9ee`, before
+#685's change. A node marked "new" is a step the change adds to the release job; it cites the
+`ci.yml` lines it is copied from, byte for byte, because its own lines exist only after the change.
+
+```mermaid
+flowchart TD
+  G["the guard: SemVer, the tag's ref, annotated, on main<br/>release.yml:47-67"] --> NB
+  NB["the toolchain, the protobuf compiler, the daemon, the sync server, pnpm and Node<br/>release.yml:68-94"] --> W1
+  W1["new: the pinned toolchain and its wasm32 target<br/>ci.yml:776-779"] --> W2
+  W2["new: the bindings generator and the optimiser, each digest checked<br/>ci.yml:788-801"] --> W3
+  W3["new: the C compiler and archiver<br/>ci.yml:802-805"] --> W4
+  W4["new: the module and its bindings built into target/web-engine<br/>ci.yml:818-819"] --> W5
+  W5{"new: the size gate, 8000000 bytes gzip -9<br/>ci.yml:825-826"}
+  W5 -- exit 1 or 2 --> XR["the job fails: no draft, no release"]
+  W5 -- exit 0 --> AP
+  AP["the app's dependencies, and the app built into web/app/build<br/>release.yml:95-98"] --> ST
+  ST["new: the stage puts both files in web/app/build/engine<br/>ci.yml:835-836"] --> TB
+  TB["the tarball: web/app/build copied to web/, the manifest over every file<br/>release.yml:99-121"] --> DR
+  DR["draft, attest, upload, publish last<br/>release.yml:122-136"] --> SV
+  SV["an origin serving web/ at its root answers /engine/<br/>worker.ts ENGINE_BASE"]
+```
+
+The gate sits before the app's install and build, so a refused module stops the job early, and
+no step after it carries an `if`, so nothing after a refusal runs. The stage sits after the app's
+build and before the tarball, the order CI's `web-engine` job runs them in, so both files are in
+the build when the tarball step copies it to `web/`.
+
+| property | where it is held | test (SPEC-350 A29) | rows |
+|---|---|---|---|
+| the tarball carries the module and its bindings at `web/engine/`, each in the manifest | the stage step, between the app's build and the tarball | `test_the_release_carries_the_module_at_web_engine` | S35044, S35045, S35046 |
+| the release's web engine steps are CI's, in CI's order | the five steps W1 to W5 and the stage | `test_the_release_builds_and_gates_the_module_as_ci_does` | S35051 to S35055 |
+| a module over the budget stops the job before the draft | the size gate: no `continue-on-error`, no `||`, no `if` after it | `test_an_over_budget_module_stops_the_release_before_the_draft` | S35047 to S35050 |
+| the job's bound holds the module's cold build | `timeout-minutes`, 150 | none new: ADR-361 D22 | S19011, S19016 (re-anchored) |
+
+What this section draws and what it does not:
+
+- It draws the module's path only. The release's other steps keep the nodes the diagram above
+  gives them, and both paths through the guard run every new step, in the order `release.yml`
+  gives.
+- How the host serves the tarball's `web/` folder is the deploy's, not the release's; the last
+  node states the one condition the Worker's URL needs.
