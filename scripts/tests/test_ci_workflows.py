@@ -7850,8 +7850,17 @@ APP_ARCHIVE_NEEDS = (
     "ios/App/PrivacyInfo.xcprivacy",
     '"app-symbols"',
 )
-# The report's rows for the app: its test cases, its test time, and its imports reading.
-APP_REPORT_NEEDS = ('cases_in("app")', 'minutes("app-seconds")', 'read("app-symbols")')
+# The report's rows for the app: its test cases, its test time, and its imports reading; and the
+# rows the report gained beside them, the planted suite's cases and time and the first simulator's
+# boot (SPEC-382 R1, R4), a superset that keeps every row the report had.
+APP_REPORT_NEEDS = (
+    'cases_in("app")',
+    'minutes("app-seconds")',
+    'read("app-symbols")',
+    'cases_in("card-probe")',
+    'minutes("card-probe-seconds")',
+    'minutes("boot-seconds")',
+)
 # The signing settings only a command line may carry in this job, never its env or a step's.
 SIGNING_NAMES = ("CODE_SIGNING_ALLOWED", "CODE_SIGN_IDENTITY", "DEVELOPMENT" + "_TEAM")
 
