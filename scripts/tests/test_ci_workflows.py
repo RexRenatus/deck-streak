@@ -3517,6 +3517,17 @@ ADMITTED_SECRETS = {
         ),
     )
 }
+# The re-release check's reads (SPEC-374 R14): the four parts of its own credential, the presence
+# test in the one step that tests them, the values in the one step that uses them.
+RERELEASE_CHECK = "testflight-rerelease-check.yml"
+RERELEASE_PARTS = (
+    "secrets.TESTFLIGHT_CHECK_KEY",
+    "secrets.TESTFLIGHT_CHECK_KEY_ID",
+    "secrets.TESTFLIGHT_CHECK_ISSUER_ID",
+    "secrets.TESTFLIGHT_CHECK_APP_ID",
+)
+ADMITTED_SECRETS[(RERELEASE_CHECK, "rerelease", "preflight")] = frozenset(RERELEASE_PARTS)
+ADMITTED_SECRETS[(RERELEASE_CHECK, "rerelease", "read")] = frozenset(RERELEASE_PARTS)
 # The triggers under which no read is admitted: a pull request's code, or another run's.
 UNADMITTED_TRIGGERS = ("pull_request", "pull_request_target", "workflow_run")
 # A command that clones a repository, and a git command given a URL: one with a scheme, or git's
@@ -6391,6 +6402,15 @@ NOT_WORKFLOW_READS = {
             1,
         ),
     ),
+    **allowed(
+        "the re-release script's own source, which the lead test parses as a syntax tree to read a constant; a production script, never handed to the reader",
+        (
+            "test_ci_workflows",
+            "TheRereleaseCheck.test_a15_the_rerelease_lead_covers_the_schedule_interval",
+            "script.read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
 }
 
 # Every site in the test directory that imports, runs code or reaches a namespace by a name held
@@ -6950,6 +6970,32 @@ DYNAMIC_IMPORTS = {
     **allowed(
         "splits a settings value the test already holds as text into its scheme and host, to judge the sync endpoint (SPEC-347 A13); text in and parts out, and it imports, runs and reads nothing",
         ("test_ios_app_tree", "settings_problems", "urlsplit(value.replace('$()', ''))", 1),
+    ),
+    **allowed(
+        "loads the re-release production script by the path the call names; never a module of the test directory",
+        ("test_testflight_age", "load_script", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_testflight_age",
+            "load_script",
+            "importlib.util.spec_from_file_location('testflight_age_under_test', SCRIPT)",
+            1,
+        ),
+        ("test_testflight_age", "load_script", "spec.loader.exec_module(module)", 1),
+    ),
+    **allowed(
+        "decodes a base64 segment of a token the test already holds as text, to check no credential part reaches a child or the log; text in and bytes out, and it imports, runs and reads nothing",
+        (
+            "test_testflight_age",
+            "TheCheckDecides.test_a14_no_credential_part_reaches_a_child_or_the_log.<locals>.decode",
+            "base64.urlsafe_b64decode(segment + '=' * (-len(segment) % 4))",
+            1,
+        ),
+        (
+            "test_testflight_age",
+            "TheCheckHoldsItsEdges.test_the_read_is_made_as_specified",
+            "base64.urlsafe_b64decode(head + '=' * (-len(head) % 4))",
+            1,
+        ),
     ),
 }
 
@@ -8812,6 +8858,92 @@ class TheReleaseJobOutlastsItsSlowestRun(unittest.TestCase):
             minutes.isdigit() and int(minutes) in RELEASE_TIMEOUT_MINUTES,
             f"the release job's timeout is {minutes or 'unset'}, not {band} minutes",
         )
+
+
+class TheRereleaseCheck(unittest.TestCase):
+    def test_a8_the_rerelease_check_runs_scheduled_with_admitted_reads_only(self):
+        path = WORKFLOWS / RERELEASE_CHECK
+        self.assertTrue(path.is_file(), f"{RERELEASE_CHECK} does not exist")
+        workflow = load(RERELEASE_CHECK)
+        self.assertEqual(sorted(workflow["on"]), ["schedule", "workflow_dispatch"])
+        self.assertEqual(len(workflow["on"]["schedule"]), 1)
+        self.assertEqual(workflow["permissions"], {"contents": "read"})
+        self.assertEqual(list(workflow["jobs"]), ["rerelease"])
+        job = workflow["jobs"]["rerelease"]
+        self.assertRegex(job["runs-on"], r"^ubuntu-\d\d\.\d\d$")
+        self.assertNotIn("latest", job["runs-on"])
+        self.assertEqual(job["environment"], "rerelease-read")
+        self.assertEqual(job["permissions"], {"contents": "read", "actions": "write"})
+        self.assertEqual(workflow["concurrency"]["group"], "testflight-rerelease-check")
+        self.assertEqual(str(workflow["concurrency"]["cancel-in-progress"]).lower(), "false")
+        self.assertNotIn("env", job)
+        self.assertNotIn("env", workflow)
+        pin = None
+        for lane_job in load("testflight-internal.yml")["jobs"].values():
+            for step in lane_job.get("steps") or []:
+                if str(step.get("uses", "")).startswith("actions/checkout@"):
+                    pin = step["uses"]
+        self.assertIsNotNone(pin, "the internal lane's checkout pin was not found")
+        steps = job["steps"]
+        self.assertEqual(len(steps), 3)
+        checkout, presence, read = steps
+        self.assertEqual(checkout["uses"], pin)
+        self.assertEqual(str(checkout["with"]["ref"]), "dev")
+        self.assertEqual(str(checkout["with"]["fetch-depth"]), "0")
+        self.assertEqual(str(checkout["with"]["persist-credentials"]).lower(), "false")
+        self.assertEqual(presence["id"], "preflight")
+        self.assertEqual(
+            presence["env"],
+            {
+                "KEY": "${{ secrets.TESTFLIGHT_CHECK_KEY != '' }}",
+                "KEYID": "${{ secrets.TESTFLIGHT_CHECK_KEY_ID != '' }}",
+                "ISSUER": "${{ secrets.TESTFLIGHT_CHECK_ISSUER_ID != '' }}",
+                "APPID": "${{ secrets.TESTFLIGHT_CHECK_APP_ID != '' }}",
+            },
+        )
+        self.assertEqual(read["id"], "read")
+        self.assertEqual(
+            read["env"],
+            {
+                "KEY": "${{ secrets.TESTFLIGHT_CHECK_KEY }}",
+                "KEYID": "${{ secrets.TESTFLIGHT_CHECK_KEY_ID }}",
+                "ISSUER": "${{ secrets.TESTFLIGHT_CHECK_ISSUER_ID }}",
+                "APPID": "${{ secrets.TESTFLIGHT_CHECK_APP_ID }}",
+                "GH_TOKEN": "${{ github.token }}",
+                "GH_REPO": "${{ github.repository }}",
+            },
+        )
+        text = workflow_file_text(path)
+        names = set(re.findall(r"secrets\.(\w+)", text))
+        self.assertEqual(names, {part.removeprefix("secrets.") for part in RERELEASE_PARTS})
+        for step in steps:
+            run = step.get("run", "")
+            self.assertNotIn("${{", run)
+            self.assertNotIn("secrets.", run)
+            self.assertNotIn("--now", run)
+        self.assertEqual(presence["run"].strip(), "python3 scripts/testflight_age.py preflight")
+        self.assertEqual(read["run"].strip(), "python3 scripts/testflight_age.py check")
+
+    def test_a15_the_rerelease_lead_covers_the_schedule_interval(self):
+        script = REPO / "scripts" / "testflight_age.py"
+        lead = None
+        for node in ast.parse(script.read_text(encoding="utf-8")).body:
+            if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == "LEAD_DAYS" for target in node.targets
+            ):
+                lead = ast.literal_eval(node.value)
+        self.assertIsNotNone(lead, "LEAD_DAYS is not a module-level literal of testflight_age.py")
+        crons = load(RERELEASE_CHECK)["on"]["schedule"]
+        self.assertEqual(len(crons), 1, "the check has not exactly one cron")
+        fields = str(crons[0]["cron"]).split()
+        self.assertEqual(len(fields), 5, f"cron {fields} has not five fields")
+        if fields[2:] == ["*", "*", "*"]:
+            interval = 1
+        elif fields[2:4] == ["*", "*"] and fields[4].isdigit():
+            interval = 7
+        else:
+            self.fail(f"the cron {fields} is neither daily nor weekly")
+        self.assertGreaterEqual(lead, interval)
 
 
 if __name__ == "__main__":
