@@ -49,20 +49,22 @@ prints nothing, with no workflow file yet. A9 to A14 are quoted from the run of 
 that commit; A8 and A15 are quoted from CI's run of theirs.
 
 ```red-first
-A8: red at C1: <the failure line, quoted from CI after push 1>
-A9: red at C1: AssertionError: 'due: internal build 2 expires 2030-01-13T12:00:00Z, within 7 days; dispatched testflight-internal.yml on dev' not found in ''
-A10: red at C1: AssertionError: 'healthy: internal build 2 expires 2030-03-11T12:00:00Z, more than 7 days away' not found in ''
-A11: red at C1: AssertionError: 0 == 0
-A12: red at C1: AssertionError: 0 == 0
-A13: red at C1: AssertionError: 0 == 0
-A14: red at C1: AssertionError: 0 != 1 : one signature was asked for
-A15: red at C1: <the failure line, quoted from CI after push 1>
+A8: red at b1d5ddf61fdba34bdcd8260ca507e9b9475e45ab: AssertionError: False is not true : testflight-rerelease-check.yml does not exist at test_ci_workflows.py test_a8_the_rerelease_check_runs_scheduled_with_admitted_reads_only (CI job 113655743089)
+A9: red at b1d5ddf61fdba34bdcd8260ca507e9b9475e45ab: AssertionError: 'due: internal build 2 expires 2030-01-13T12:00:00Z, within 7 days; dispatched testflight-internal.yml on dev' not found in ''
+A10: red at b1d5ddf61fdba34bdcd8260ca507e9b9475e45ab: AssertionError: 'healthy: internal build 2 expires 2030-03-11T12:00:00Z, more than 7 days away' not found in ''
+A11: red at b1d5ddf61fdba34bdcd8260ca507e9b9475e45ab: AssertionError: 0 == 0
+A12: red at b1d5ddf61fdba34bdcd8260ca507e9b9475e45ab: AssertionError: 0 == 0
+A13: red at b1d5ddf61fdba34bdcd8260ca507e9b9475e45ab: AssertionError: 0 == 0
+A14: red at b1d5ddf61fdba34bdcd8260ca507e9b9475e45ab: AssertionError: 0 != 1 : one signature was asked for
+A15: red at b1d5ddf61fdba34bdcd8260ca507e9b9475e45ab: AssertionError: unexpectedly None : LEAD_DAYS is not a module-level literal of testflight_age.py at test_ci_workflows.py test_a15_the_rerelease_lead_covers_the_schedule_interval (CI job 113655743089)
 ```
-A8: green at C2
-A9: green at C2
-A10: green at C2
-A11: green at C2
-A12: green at C2
-A13: green at C2
-A14: green at C2
-A15: green at C2
+```red-first
+A9: green at f45d729d58665cc9ee2140c2e63492f817c5f6aa
+A10: green at f45d729d58665cc9ee2140c2e63492f817c5f6aa
+A11: green at f45d729d58665cc9ee2140c2e63492f817c5f6aa
+A12: green at f45d729d58665cc9ee2140c2e63492f817c5f6aa
+A13: green at f45d729d58665cc9ee2140c2e63492f817c5f6aa
+A14: green at f45d729d58665cc9ee2140c2e63492f817c5f6aa
+```
+
+A8 and A15 are CI-only: their green is read from CI's run of the push-2 head, at the seat's CIWATCH.

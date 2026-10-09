@@ -148,7 +148,7 @@ class Fixture:
         real = [str(Path(shutil.which(tool)).parent) for tool in ("git", "python3")]
         return os.pathsep.join([str(self.shims), *real])
 
-    def run(self, command, placed=None, booleans=False):
+    def run(self, command, placed=None, booleans=False, now=NOW):
         placed = list(PARTS) if placed is None else placed
         env = {
             "PATH": self.path(),
@@ -172,7 +172,7 @@ class Fixture:
             os.umask(0o022)
 
         done = subprocess.run(
-            [sys.executable, str(SCRIPT), command, "--now", NOW],
+            [sys.executable, str(SCRIPT), command, *(["--now", now] if now else [])],
             cwd=self.repo,
             env=env,
             capture_output=True,
@@ -368,6 +368,302 @@ class TheCheckDecides(CheckCase):
             for part in parts:
                 self.assertNotIn(part, text)
         self.assertEqual(fixture.leftovers(), [])
+
+
+def load_script():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("testflight_age_under_test", SCRIPT)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def der_of(*integers):
+    body = b"".join(b"\x02" + bytes([len(each)]) + each for each in integers)
+    return b"\x30" + bytes([len(body)]) + body
+
+
+class TheCheckHoldsItsEdges(CheckCase):
+    """The hand sweep's survivors: each pins one property the first six cases left free."""
+
+    def test_the_exit_codes_are_one_for_an_absent_credential_and_for_a_refusal(self):
+        fixture = self.fixture()
+        done = fixture.run("preflight", placed=[], booleans=True)
+        self.assertEqual(done.returncode, 1)
+        fixture = self.fixture(curl_exit=7)
+        done = fixture.run("check")
+        self.assertEqual(done.returncode, 1)
+
+    def test_each_absent_part_is_named_by_its_role(self):
+        fixture = self.fixture()
+        done = fixture.run("check", placed=["KEYID", "ISSUER", "APPID"])
+        self.assertEqual(done.stdout.splitlines(), ["absent: the API key"])
+        fixture = self.fixture()
+        done = fixture.run("check", placed=["KEY"])
+        self.assertEqual(
+            done.stdout.splitlines(),
+            ["absent: the API key's id", "absent: the API key's issuer", "absent: the app's id"],
+        )
+
+    def test_a_placed_credential_and_an_unknown_command(self):
+        fixture = self.fixture()
+        done = fixture.run("preflight", booleans=True)
+        self.assertEqual(done.returncode, 0)
+        self.assertEqual(done.stdout, "the credential is placed\n")
+        done = self.fixture().run("unknown")
+        self.assertEqual(done.returncode, 2)
+
+    def test_the_summary_is_appended_and_ends_each_line(self):
+        fixture = self.fixture()
+        first = fixture.run("preflight", placed=[], booleans=True)
+        self.assertEqual(fixture.summary_text(), first.stdout)
+        second = fixture.run("preflight", placed=["KEY"], booleans=True)
+        self.assertEqual(fixture.summary_text(), first.stdout + second.stdout)
+
+    def test_the_real_clock_is_zoned(self):
+        body = listing(build(2, "2029-12-01T00:00:00Z", "2099-03-11T12:00:00Z"))
+        fixture = self.fixture(body=body)
+        done = fixture.run("check", now=None)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("healthy: internal build 2", done.stdout)
+
+    def test_a_build_just_beyond_the_lead_is_healthy(self):
+        body = listing(build(2, "2029-12-01T00:00:00Z", "2030-01-17T12:00:01Z"))
+        fixture = self.fixture(body=body)
+        done = fixture.run("check")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("healthy: internal build 2", done.stdout)
+        self.assertEqual(self.dispatched(fixture), [])
+
+    def test_the_live_build_is_named_with_its_dates(self):
+        body = listing(build(2, "2029-12-01T00:00:00Z", "2030-03-11T12:00:00Z"))
+        done = self.fixture(body=body).run("check")
+        self.assertIn(
+            "newest live build 2: uploaded 2029-12-01T00:00:00Z, expires 2030-03-11T12:00:00Z",
+            done.stdout.splitlines(),
+        )
+
+    def test_what_makes_a_build_live(self):
+        due = build(2, "2029-12-01T00:00:00Z", "2030-01-13T12:00:00Z")
+        cases = {
+            "an invalid build is not live": build(
+                1, "2029-12-25T00:00:00Z", "2030-03-01T00:00:00Z", state="INVALID"
+            ),
+            "an expired build is not live": build(
+                1, "2029-12-25T00:00:00Z", "2030-03-01T00:00:00Z", expired=True
+            ),
+        }
+        for label, other in cases.items():
+            with self.subTest(label):
+                fixture = self.fixture(body=listing(other, due))
+                done = fixture.run("check")
+                self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+                self.assertIn("due: internal build 2 expires 2030-01-13T12:00:00Z", done.stdout)
+        with self.subTest("expired must be exactly true"):
+            truthy = build(1, "2029-12-25T00:00:00Z", "2030-03-01T00:00:00Z", expired="yes")
+            done = self.fixture(body=listing(truthy)).run("check")
+            self.assertIn("healthy: internal build 1", done.stdout)
+
+    def test_the_newest_upload_is_the_live_build(self):
+        older = build(1, "2029-12-01T00:00:00Z", "2030-03-01T00:00:00Z")
+        newer = build(2, "2029-12-20T00:00:00Z", "2030-01-13T12:00:00Z")
+        for label, body in {
+            "older first": listing(older, newer),
+            "newer first": listing(newer, older),
+        }.items():
+            with self.subTest(label):
+                fixture = self.fixture(body=body)
+                done = fixture.run("check")
+                self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+                self.assertIn("newest live build 2:", done.stdout)
+                self.assertEqual(len(self.dispatched(fixture)), 1)
+
+    def test_only_a_newer_build_that_is_processing_holds_the_dispatch(self):
+        due = build(2, "2029-12-01T00:00:00Z", "2030-01-13T12:00:00Z")
+        cases = {
+            "a newer build that failed": (
+                build(1, "2029-12-20T00:00:00Z", "2030-03-01T00:00:00Z", state="FAILED"),
+                1,
+            ),
+            "a processing build uploaded at the same instant": (
+                build(1, "2029-12-01T00:00:00Z", "2030-03-01T00:00:00Z", state="PROCESSING"),
+                1,
+            ),
+        }
+        for label, (other, count) in cases.items():
+            with self.subTest(label):
+                fixture = self.fixture(body=listing(other, due))
+                done = fixture.run("check")
+                self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+                self.assertEqual(len(self.dispatched(fixture)), count)
+                self.assertNotIn("still processing", done.stdout)
+
+    def test_with_no_live_build_the_newest_is_compared(self):
+        prefix = "no internal build is live; "
+        dispatched = prefix + "dispatched testflight-internal.yml on dev"
+        with self.subTest("an expired build and a moved dev"):
+            body = listing(build(1, "2029-12-01T00:00:00Z", "2029-12-30T12:00:00Z", expired=True))
+            fixture = self.fixture(body=body)
+            done = fixture.run("check")
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            self.assertIn(dispatched, done.stdout.splitlines())
+        with self.subTest("a build still processing"):
+            body = listing(
+                build(3, "2029-12-01T00:00:00Z", "2030-03-01T00:00:00Z", state="PROCESSING")
+            )
+            fixture = self.fixture(body=body)
+            done = fixture.run("check")
+            self.assertIn("build 3 is still processing; nothing was dispatched", done.stdout)
+            self.assertEqual(self.dispatched(fixture), [])
+        with self.subTest("no builds at all"):
+            fixture = self.fixture(body=listing())
+            done = fixture.run("check")
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            self.assertIn(dispatched, done.stdout.splitlines())
+            self.assertEqual(len(self.dispatched(fixture)), 1)
+
+    def test_a_refused_dispatch_fails_the_run(self):
+        body = listing(build(2, "2029-12-01T00:00:00Z", "2030-01-13T12:00:00Z"))
+        done = self.fixture(body=body, gh_exit=1).run("check")
+        self.assertEqual(done.returncode, 1)
+        self.assertIn("gh exited 1", done.stdout)
+
+    def test_the_read_is_made_as_specified(self):
+        body = listing(build(2, "2029-12-01T00:00:00Z", "2030-03-11T12:00:00Z"))
+        fixture = self.fixture(body=body)
+        done = fixture.run("check")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        (curl,) = fixture.records("curl")
+        argv = curl["argv"]
+        self.assertEqual(argv[:5], ["--silent", "--show-error", "--max-time", "30", "--config"])
+        self.assertEqual(argv[6], "-H")
+        self.assertTrue(argv[7].startswith("@"))
+        self.assertEqual(argv[8], "--output")
+        self.assertEqual(argv[10:], ["--write-out", "%{http_code}"])
+        self.assertEqual(len(argv), 12)
+        config = curl["files"][argv[5]]["content"]
+        fields = "version,uploadedDate,expirationDate,expired,processingState,buildAudienceType"
+        self.assertEqual(
+            config,
+            f'url = "https://api.appstoreconnect.apple.com/v1/apps/{fixture.trap}/builds'
+            f'?limit=50&sort=-uploadedDate&fields%5Bbuilds%5D={fields}"\n',
+        )
+        (openssl,) = fixture.records("openssl")
+        self.assertEqual(openssl["argv"][:3], ["dgst", "-sha256", "-sign"])
+        self.assertEqual(len(openssl["argv"]), 4)
+        header = curl["files"][argv[7][1:]]["content"]
+        head = header.strip().removeprefix("Authorization: Bearer ").split(".")[0]
+        raw = base64.urlsafe_b64decode(head + "=" * (-len(head) % 4))
+        self.assertEqual(
+            raw, ('{"alg":"ES256","kid":"%s","typ":"JWT"}' % fixture.parts["KEYID"]).encode()
+        )
+
+    def test_an_answer_of_any_other_shape_is_refused(self):
+        good = {
+            "type": "builds",
+            "attributes": {
+                "version": "2",
+                "uploadedDate": "2029-12-01T00:00:00Z",
+                "expirationDate": "2030-03-11T12:00:00Z",
+                "expired": False,
+                "processingState": "VALID",
+                "buildAudienceType": "INTERNAL_ONLY",
+            },
+        }
+
+        def with_attrs(**changes):
+            return json.dumps({"data": [{"attributes": {**good["attributes"], **changes}}]})
+
+        bodies = {
+            "a list for the answer": "[]",
+            "an attribute missing": '{"data": [{"attributes": {}}]}',
+            "a date that is a number": with_attrs(uploadedDate=5),
+            "a version with a space": with_attrs(version=" 2"),
+            "a version that is a number": with_attrs(version=2),
+            "a date with no zone": with_attrs(uploadedDate="2029-12-01T00:00:00"),
+        }
+        for label, body in bodies.items():
+            with self.subTest(label):
+                fixture = self.fixture(body=body)
+                done = fixture.run("check")
+                self.assertEqual(done.returncode, 1)
+                self.assertEqual(
+                    done.stdout.splitlines(), ["failed: the answer is not the expected JSON"]
+                )
+                self.assertEqual(self.dispatched(fixture), [])
+
+    def test_the_signature_conversion_refuses_what_is_not_der(self):
+        module = load_script()
+        sentence = "failed: the signature is not DER"
+        bad = {
+            "empty": b"",
+            "truncated": b"\x30",
+            "not a sequence": b"\x31" + DER[1:],
+            "no integer": b"\x30\x04\x03\x01\x00\x00",
+            "an integer over 32 bytes": der_of(b"\x01" * 33, b"\x05"),
+            "a missing second integer": b"\x30\x03\x02\x01\x05",
+        }
+        for label, der in bad.items():
+            with self.subTest(label):
+                with self.assertRaises(module.Failed) as caught:
+                    module.raw_signature(der)
+                self.assertEqual(str(caught.exception), sentence)
+        self.assertEqual(
+            module.raw_signature(der_of(b"\x00" + b"\xff" * 32, b"\x05")),
+            b"\xff" * 32 + b"\x00" * 31 + b"\x05",
+        )
+        self.assertEqual(len(module.raw_signature(der_of(b"\x01" * 32, b"\x05"))), 64)
+        self.assertEqual(module.raw_signature(DER), RAW)
+
+    def test_a_segment_is_url_safe_and_unpadded(self):
+        module = load_script()
+        self.assertEqual(module.segment(b"a"), "YQ")
+        self.assertEqual(module.segment(b"\xfb\xff"), "-_8")
+
+    def test_an_instant_without_a_zone_is_refused(self):
+        module = load_script()
+        with self.assertRaises(ValueError):
+            module.instant("2030-01-10T12:00:00")
+        self.assertEqual(module.instant("2030-01-10T12:00:00Z").utcoffset().total_seconds(), 0)
+
+    def test_a_private_file_is_never_overwritten(self):
+        module = load_script()
+        with tempfile.TemporaryDirectory() as scratch:
+            target = Path(scratch) / "private"
+            module.private_file(target, "one")
+            with self.assertRaises(FileExistsError):
+                module.private_file(target, "two")
+            self.assertEqual(target.read_text(), "one")
+
+    def test_the_git_and_gh_children_get_no_credential_and_a_git_failure_is_named(self):
+        from types import SimpleNamespace
+        from unittest import mock
+
+        module = load_script()
+        placed = {part: "value-" + part for part in PARTS}
+        seen = []
+
+        def record(argv, **kwargs):
+            seen.append(kwargs.get("env"))
+            return SimpleNamespace(returncode=0, stdout="7\n", stderr="")
+
+        with (
+            mock.patch.dict(os.environ, placed),
+            mock.patch.object(module.subprocess, "run", side_effect=record),
+        ):
+            self.assertEqual(module.first_parent_count(), 7)
+            module.dispatch()
+        self.assertEqual(len(seen), 2)
+        for env in seen:
+            self.assertIsNotNone(env)
+            for part in PARTS:
+                self.assertNotIn(part, env)
+        failure = SimpleNamespace(returncode=128, stdout="", stderr="")
+        with mock.patch.object(module.subprocess, "run", return_value=failure):
+            with self.assertRaises(module.Failed) as caught:
+                module.first_parent_count()
+        self.assertEqual(str(caught.exception), "failed: git exited 128")
 
 
 if __name__ == "__main__":

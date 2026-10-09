@@ -172,6 +172,80 @@
         "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
         "a refused statement answers the core's sentence, so the Worker stops before the login; answering nothing would let a client below the minimum go on to a sync the core then refuses unexplained (SPEC-374 R23, R24, A22)"
       ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S37420-THE-LEAD-IS-SEVEN-DAYS",
+        "scripts/testflight_age.py",
+        "LEAD_DAYS = 7",
+        "LEAD_DAYS = 0",
+        "a build expiring in three days is due: a lead of zero reads it as healthy and lets the build expire unreleased (SPEC-374 R16, A9)",
+        "test_testflight_age.TheCheckDecides.test_a9_a_build_due_within_the_lead_dispatches_the_lane_on_dev"
+      ],
+      [
+        "S37421-A-BUILD-EXPIRING-AT-THE-LEAD-IS-DUE",
+        "scripts/testflight_age.py",
+        "if live[\"expires\"] > now + timedelta(days=LEAD_DAYS):",
+        "if live[\"expires\"] >= now + timedelta(days=LEAD_DAYS):",
+        "a build expiring exactly at the lead is due; the comparison moved one instant reads it as healthy (SPEC-374 R16, A9)",
+        "test_testflight_age.TheCheckDecides.test_a9_a_build_due_within_the_lead_dispatches_the_lane_on_dev"
+      ],
+      [
+        "S37422-ONLY-AN-INTERNAL-BUILD-IS-LIVE",
+        "scripts/testflight_age.py",
+        "and not build[\"expired\"]\n            and build[\"audience\"] == \"INTERNAL_ONLY\"",
+        "and not build[\"expired\"]",
+        "a newer build that is not internal-only is not the build the check watches; dropping the filter reads it as the live one (SPEC-374 R16, A10)",
+        "test_testflight_age.TheCheckDecides.test_a10_a_build_beyond_the_lead_is_healthy_and_dispatches_nothing"
+      ],
+      [
+        "S37423-AN-UNMOVED-DEV-IS-NOT-DISPATCHED",
+        "scripts/testflight_age.py",
+        "not first_parent_count() > number",
+        "not first_parent_count() >= number",
+        "a dev whose count equals the due build's number has not moved; the comparison moved dispatches a build identical to the one expiring (SPEC-374 R18, A13)",
+        "test_testflight_age.TheCheckDecides.test_a13_a_due_build_on_an_unmoved_dev_is_not_dispatched"
+      ],
+      [
+        "S37424-THE-LANE-IS-DISPATCHED-ON-DEV",
+        "scripts/testflight_age.py",
+        "DISPATCH_REF = \"dev\"",
+        "DISPATCH_REF = \"main\"",
+        "the re-release starts the internal lane on dev; any other ref ships a different tree (SPEC-374 R18, A9)",
+        "test_testflight_age.TheCheckDecides.test_a9_a_build_due_within_the_lead_dispatches_the_lane_on_dev"
+      ],
+      [
+        "S37425-AN-ABSENT-CREDENTIAL-FAILS-THE-RUN",
+        "scripts/testflight_age.py",
+        "ABSENT_EXIT = 1",
+        "ABSENT_EXIT = 0",
+        "an absent credential part exits non-zero; a zero exit reports a check that read nothing as passing (SPEC-374 R14, A11)",
+        "test_testflight_age.TheCheckDecides.test_a11_an_absent_or_half_placed_credential_fails_closed"
+      ],
+      [
+        "S37426-ONLY-A-200-ANSWER-IS-READ",
+        "scripts/testflight_age.py",
+        "    if status != \"200\":\n        raise Failed(f\"failed: the store answered status {status}\")\n",
+        "",
+        "an answer whose status is not 200 is refused whatever its body says; without the check a 401 carrying a healthy-looking build reads as healthy (SPEC-374 R20, A12)",
+        "test_testflight_age.TheCheckDecides.test_a12_an_unreadable_answer_fails_closed"
+      ],
+      [
+        "S37427-PRIVATE-FILES-ARE-OWNER-ONLY",
+        "scripts/testflight_age.py",
+        "0o600",
+        "0o644",
+        "the key, header and url files are made owner-only; a group-readable mode leaves the credential readable to other users of the runner (SPEC-374 R15, A14)",
+        "test_testflight_age.TheCheckDecides.test_a14_no_credential_part_reaches_a_child_or_the_log"
+      ],
+      [
+        "S37428-THE-JOB-MAY-DISPATCH-THE-LANE",
+        ".github/workflows/testflight-rerelease-check.yml",
+        "      actions: write",
+        "      actions: read",
+        "the job's token needs write on actions to start the internal lane; read lets the check run and fail at the dispatch (SPEC-374 R13, A8)",
+        "test_ci_workflows.TheRereleaseCheck.test_a8_the_rerelease_check_runs_scheduled_with_admitted_reads_only"
+      ]
     ]
   }
 }
