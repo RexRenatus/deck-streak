@@ -35,11 +35,13 @@
 \* - The episode marker (first undelivered run exits 1 at priority 3, later ones exit 0 at priority 4)
 \*   changes a run's exit status and the priority of its own failure line and no request, key or
 \*   state the receiver acts on, so it is not a variable here; the tests hold it (A7).
-\* - \`known\` is the receiver's knowledge of a failure key: heard in a delivered report, or told by the
-\*   delivered page of a later instance of the same name (Replace).
-\* - The liveness run (MCLiveness.cfg) has one alert instance name with two invocations and the
-\*   invariant runs (MCSecondRoute.cfg and the witnesses that kill an invariant) have two names;
-\*   the names are symmetric and a temporal pass over the two-name graph passes its 300 s budget.
+\* - `known` is the receiver's knowledge of a failure key: heard in a delivered report, or told by the
+\*   delivered page of a later instance of the same name (Replace). A delivered report adds only its
+\*   failure keys to it, because no property, guard or witness reads a template or unreadable key
+\*   in `known`.
+\* - Send empties `pend`, delivered or not, because nothing reads `pend` after Send until the next
+\*   Plan writes it again (Finish empties it too), so two states that differ only there are one.
+\* - Every configuration has two alert instance names and two invocations under each name.
 \* - The timer starts one run at a time: the unit is a oneshot that ends before the timer is due.
 \*
 \* Mapping to the script:
@@ -171,13 +173,14 @@ Send ==
     /\ pc = "send"
     /\ \E ok \in BOOLEAN :
         IF ok
-        THEN /\ known' = known \cup pend
+        THEN /\ known' = known \cup (pend \cap FailKeys)
              /\ pc' = "record"
              /\ UNCHANGED miss
         ELSE /\ pc' = IF CheckInAfterUndelivered THEN "checkin" ELSE "done"
              /\ miss' = Min2(miss + 1)
              /\ UNCHANGED known
-    /\ UNCHANGED <<ManagerVars, snap, pend, readBroken, snapUnread, reported, heardSilence>>
+    /\ pend' = {}
+    /\ UNCHANGED <<ManagerVars, snap, readBroken, snapUnread, reported, heardSilence>>
 
 \* tell_owner: only after the report is delivered are the keys of this read recorded, which drops a
 \* key whose instance is gone.
