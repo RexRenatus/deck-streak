@@ -74,7 +74,7 @@ const DEFAULT_DECK: i64 = 1;
 
 thread_local! {
     static DISPATCHER: RefCell<Option<Dispatcher>> = const { RefCell::new(None) };
-    static POOL: RefCell<Option<OpfsSAHPoolUtil>> = const { RefCell::new(None) };
+    static POOL: RefCell<Option<std::rc::Rc<OpfsSAHPoolUtil>>> = const { RefCell::new(None) };
     static LAST_PANIC: RefCell<Option<String>> = const { RefCell::new(None) };
     /// The card the review last showed, with its states and its flag (SPEC-350 R2).
     static SHOWN: RefCell<Option<Shown<SchedulingStates>>> = const { RefCell::new(None) };
@@ -129,7 +129,7 @@ pub async fn install_storage() -> Result<u32, JsValue> {
         .await
         .map_err(|e| refuse(format!("storage-refused: {e}")))?;
     let count = pool.count();
-    POOL.with(|p| *p.borrow_mut() = Some(pool));
+    POOL.with(|p| *p.borrow_mut() = Some(std::rc::Rc::new(pool)));
     Ok(count)
 }
 
@@ -158,6 +158,9 @@ pub fn create_backend(languages: Vec<String>) -> Result<(), JsValue> {
         server: false,
     };
     let dispatcher = Dispatcher::start(Transport::Web, &msg.encode_to_vec()).map_err(refuse)?;
+    // the pool is the core's files port on this target (SPEC-377 R4; ADR-388 D7, D8)
+    let port: Arc<dyn CoreFiles> = Arc::new(PoolPort);
+    dispatcher.install_files(port);
     DISPATCHER.with(|d| *d.borrow_mut() = Some(dispatcher));
     Ok(())
 }
@@ -922,40 +925,243 @@ pub fn run_method(service: u32, method: u32, input: &[u8]) -> Result<Vec<u8>, Js
     call(service, method, input)
 }
 
-// The full sync's choice (SPEC-377 R4, R5; ADR-388 D7 to D9): the four exports the Worker's
-// choice calls. Each answers that no stage is held.
+// The full sync's choice (SPEC-377 R4, R5; ADR-388 D7 to D9): the pool as the core's files port,
+// one choice's stage between the owner's taps, and the four exports the Worker's choice calls. They
+// reach the engine only through `one_way` and the dispatcher's unsynced read; every file a choice
+// makes is a new pool name the web engine mints after it reserves the pool for it.
 
-/// The choice's counts, from the normal sync's `required` as the Worker heard it, the host key
-/// `key` and `endpoint`.
+/// The pool as the core's `Files` port (SPEC-377 R4; ADR-388 D8): a path holds a file only when
+/// the pool lists its one name, and two paths name one file only when they are one pool name.
+struct PoolPort;
+
+impl CoreFiles for PoolPort {
+    fn holds(&self, path: &Path) -> bool {
+        let name = path.to_string_lossy();
+        POOL.with(|p| {
+            p.borrow()
+                .as_ref()
+                .is_some_and(|pool| files::holds(&pool.list(), &name))
+        })
+    }
+
+    fn same(&self, open: &Path, path: &Path) -> bool {
+        files::same(&open.to_string_lossy(), &path.to_string_lossy())
+    }
+}
+
+/// The pool's refusal to grow, as the Worker reads a storage refusal.
+fn storage(error: impl std::fmt::Display) -> JsValue {
+    refuse(format!("storage-refused: {error}"))
+}
+
+/// A new pool name for a choice file of `kind`: the pool is reserved for it first, three files
+/// beyond those it holds (the file, and room for the engine's journal beside it), so the engine
+/// can open the file the name names (SPEC-377 R5; ADR-388 D8). The pool is held by a counted
+/// handle, so no borrow of its cell is held across the reserve's wait. The reserve stays on one
+/// line, where the boundary census plants over it, so rustfmt leaves this function as written.
+#[rustfmt::skip]
+async fn choice_file(kind: Kind) -> Result<String, JsValue> {
+    let pool = POOL
+        .with(|p| p.borrow().clone())
+        .ok_or_else(|| refuse("storage-refused: the pool is not installed"))?;
+    pool.reserve_minimum_capacity(pool.count() + 3).await.map_err(storage)?;
+    files::choice_name(&pool.list(), COLLECTION_PATH, kind)
+        .ok_or_else(|| refuse("storage-refused: no choice file name is free"))
+}
+
+/// One choice's stage between the owner's taps (SPEC-377 R5; ADR-388 D9): the counts the owner
+/// saw, and the server copy they were taken from. A Worker that ends drops it, which is the model's
+/// `Cancel`.
+#[derive(Clone)]
+struct Stage {
+    counted: Counted,
+    copy: String,
+}
+
+thread_local! {
+    /// The choice's stage, held between the count and the owner's tap.
+    static STAGE: RefCell<Option<Stage>> = const { RefCell::new(None) };
+}
+
+/// What a choice export answers: its JSON, or the refusal it throws to the Worker. Named short so
+/// each export's parameters stay on one line, where the boundary census reads them.
+type Json = Result<String, JsValue>;
+
+/// The host key `key` and `endpoint` as the engine's sync auth, with the engine's own timeout.
+fn sync_auth(key: String, endpoint: String) -> SyncAuth {
+    SyncAuth {
+        hkey: key,
+        endpoint: Some(endpoint),
+        io_timeout_secs: None,
+    }
+}
+
+/// What one direction loses, as JSON; a direction the engine did not offer is null.
+fn losses_json(losses: Option<Losses>) -> serde_json::Value {
+    losses.map_or(serde_json::Value::Null, |losses| {
+        serde_json::json!({
+            "reviews": losses.reviews,
+            "cards": losses.cards,
+            "notes": losses.notes,
+        })
+    })
+}
+
+/// A confirm that wrote nothing, and why, as JSON.
+fn refused(why: &str) -> String {
+    serde_json::json!({ "outcome": "refused", "why": why }).to_string()
+}
+
+/// A confirm that found `side` changed since the counts, with the new counts, as JSON.
+fn changed(side: &str, counts: Counts) -> String {
+    serde_json::json!({
+        "outcome": "changed",
+        "why": side,
+        "upload": losses_json(counts.upload),
+        "download": losses_json(counts.download),
+    })
+    .to_string()
+}
+
+/// Why a step of the choice refused, as the Worker reads it: a word for the core's own reasons, and
+/// the engine's error bytes thrown, so the Worker settles the send with them (ADR-375 D17).
+fn why(reason: Reason) -> Result<&'static str, JsValue> {
+    match reason {
+        Reason::Engine(refusal) => Err(sync_refusal(refusal)),
+        Reason::Gesture(GestureRefusal::Engine { error }) => {
+            Err(Uint8Array::from(error.as_slice()).into())
+        }
+        Reason::Gesture(_) => Ok("gesture"),
+        Reason::OpenCollection => Ok("open-collection"),
+        Reason::HoldsRows => Ok("holds-rows"),
+        Reason::Unheld => Ok("unheld"),
+    }
+}
+
+/// The count's refusal: the engine's error bytes, or the web engine's sentence naming why.
+fn uncounted(reason: Reason) -> JsValue {
+    match why(reason) {
+        Ok(word) => refuse(format!("choice-refused: {word}")),
+        Err(bytes) => bytes,
+    }
+}
+
+/// The choice's counts, from the normal sync's `required` as the Worker heard it, with the host key
+/// `key` against `endpoint` (SPEC-377 R5): the server's collection is fetched by the core into a
+/// new pool file, and the counts and that file are held as the stage. Answers JSON, what each
+/// offered direction loses. An engine refusal is thrown as its bytes.
 #[wasm_bindgen]
-pub async fn full_sync_count(
-    key: String,
-    endpoint: String,
-    required: u32,
-) -> Result<String, JsValue> {
-    let _ = (key, endpoint, required);
-    Err(refuse("choice-refused: no-stage"))
+pub async fn full_sync_count(key: String, endpoint: String, required: u32) -> Json {
+    let answer = SyncCollectionResponse {
+        required: i32::try_from(required).map_err(refuse)?,
+        ..SyncCollectionResponse::default()
+    };
+    let auth = sync_auth(key, endpoint);
+    let copy = choice_file(Kind::Server).await?;
+    let counted =
+        one_way::count(&dispatcher()?, &answer, &auth, Path::new(&copy)).map_err(uncounted)?;
+    let counts = counted.counts();
+    STAGE.with(|stage| *stage.borrow_mut() = Some(Stage { counted, copy }));
+    Ok(serde_json::json!({
+        "upload": losses_json(counts.upload),
+        "download": losses_json(counts.download),
+    })
+    .to_string())
 }
 
 /// The owner's tap on `direction` (0 the upload, 1 the download), with the snapshot answer the
-/// Worker read, `found`.
+/// Worker read, `found` (SPEC-377 R5, R6; ADR-388 D9, D10). The tap builds the one-way gesture;
+/// the core backs up the side the write replaces and, for an upload, judges the Worker's answer
+/// and checks a fresh server copy, before the write. Answers JSON: written; changed, with the new
+/// counts and which side changed; or refused, and why. The stage is kept on every refusal,
+/// replaced on a change and dropped on the write. An engine refusal is thrown as its bytes.
 #[wasm_bindgen]
-pub async fn full_sync_confirm(
-    direction: u32,
-    key: String,
-    endpoint: String,
-    found: bool,
-) -> Result<String, JsValue> {
-    let _ = (direction, key, endpoint, found);
-    Err(refuse("choice-refused: no-stage"))
+pub async fn full_sync_confirm(direction: u32, key: String, endpoint: String, found: bool) -> Json {
+    let Some(Stage { counted, copy }) = STAGE.with_borrow(Clone::clone) else {
+        return Ok(refused("no-stage"));
+    };
+    let direction = match direction {
+        0 => Direction::Upload,
+        1 => Direction::Download,
+        _ => return Ok(refused("not-offered")),
+    };
+    let Ok(gesture) = OwnerGesture::from_tap(ExemptWrite::OneWaySync, Target::Collection) else {
+        return Ok(refused("gesture"));
+    };
+    let Ok(confirmed) = counted.confirm(direction) else {
+        return Ok(refused("not-offered"));
+    };
+    let auth = sync_auth(key, endpoint);
+    let dispatcher = dispatcher()?;
+    let backup = choice_file(Kind::Backup).await?;
+    let made = one_way::back_up(&dispatcher, confirmed, Path::new(&backup), Path::new(&copy));
+    let backed_up = match made {
+        Ok(backed_up) => backed_up,
+        Err(refusal) => return why(refusal.reason).map(refused),
+    };
+    let ready = match backed_up.download_ready() {
+        Ok(ready) => ready,
+        Err(backed_up) => {
+            let Ok(checked) = backed_up.snapshot_found(&SnapshotAnswer { found }) else {
+                return Ok(refused("no-snapshot"));
+            };
+            let fresh = choice_file(Kind::Server).await?;
+            match one_way::recheck(&dispatcher, checked, &auth, Path::new(&fresh)) {
+                Ok(Ok(ready)) => ready,
+                Ok(Err(counted)) => {
+                    let counts = counted.counts();
+                    STAGE.set(Some(Stage {
+                        counted,
+                        copy: fresh,
+                    }));
+                    return Ok(changed("server", counts));
+                }
+                Err(refusal) => return why(refusal.reason).map(refused),
+            }
+        }
+    };
+    match one_way::write(&dispatcher, ready, gesture, &auth) {
+        Ok(()) => {
+            STAGE.set(None);
+            Ok(serde_json::json!({ "outcome": "written" }).to_string())
+        }
+        Err(Unwritten::Recount(counted)) => {
+            let counts = counted.counts();
+            STAGE.set(Some(Stage { counted, copy }));
+            Ok(changed("device", counts))
+        }
+        Err(Unwritten::Refused(reason)) => why(reason).map(refused),
+    }
 }
 
-/// Drops the stage held between the owner's taps.
+/// Drops the stage held between the owner's taps: the model's `Cancel` (ADR-388 D9).
 #[wasm_bindgen]
-pub fn full_sync_cancel() {}
+pub fn full_sync_cancel() {
+    STAGE.with(|stage| {
+        *stage.borrow_mut() = None;
+    });
+}
 
-/// The device's unsynced reviews and changes, as JSON.
+/// The device's reviews not yet synced, and whether anything else or its schema changed, read
+/// offline by the dispatcher's one fixed statement (SPEC-377 R8). Answers JSON.
 #[wasm_bindgen]
 pub fn unsynced() -> Result<String, JsValue> {
-    Err(refuse("choice-refused: no-stage"))
+    let read = dispatcher()?
+        .unsynced()
+        .map_err(|_| refuse("the unsynced read failed"))?;
+    Ok(serde_json::json!({
+        "reviews": read.reviews,
+        "changed": read.changed,
+        "schema": read.schema,
+    })
+    .to_string())
 }
+
+use std::path::Path;
+use std::sync::Arc;
+
+use deck_streak_engine_core::files::Files as CoreFiles;
+use deck_streak_engine_core::full_sync::{Counted, Counts, Direction, Losses, SnapshotAnswer};
+use deck_streak_engine_core::one_way::{self, Reason, Unwritten};
+
+use crate::files::{self, Kind};

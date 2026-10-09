@@ -378,21 +378,26 @@ impl Dispatcher {
         *self.files.lock().unwrap_or_else(PoisonError::into_inner) = port;
     }
 
-    /// Whether `path` names the collection this engine has open: as its open request named it, or
-    /// as the same file reached by another spelling.
+    /// Whether `path` names the collection this engine has open, however it is spelled, as the
+    /// installed `Files` port answers (SPEC-377 R4; ADR-388 D7).
     pub(crate) fn opens(&self, path: &Path) -> bool {
         let open = self
             .open
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .clone();
-        open.is_some_and(|open| {
-            open == path
-                || matches!(
-                    (open.canonicalize(), path.canonicalize()),
-                    (Ok(open), Ok(path)) if open == path
-                )
-        })
+        let port = self.port();
+        open.is_some_and(|open| port.same(&open, path))
+    }
+
+    /// Whether `path` holds a file, as the installed `Files` port answers (SPEC-377 R4).
+    pub(crate) fn holds(&self, path: &Path) -> bool {
+        self.port().holds(path)
+    }
+
+    /// The installed `Files` port, taken out of its lock so no answer is given while it is held.
+    fn port(&self) -> Arc<dyn crate::files::Files> {
+        Arc::clone(&self.files.lock().unwrap_or_else(PoisonError::into_inner))
     }
 
     /// Runs one of the core's fixed statements over the open collection, with `path` bound as its

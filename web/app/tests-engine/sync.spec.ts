@@ -3,7 +3,8 @@
 // playwright.engine.config.ts starts and vite.engine.config.ts forwards `/anki-sync/` to. The
 // tests set how that route answers through the server's test routes (pass, forbid, redirect, drop)
 // and read the sync paths it saw. Each test runs in a persistent profile of its own, so each opens a
-// collection of its own; the sync server keeps one account for the run, its base empty at the start.
+// collection of its own; the sync server keeps one account per browser for the run, its base empty
+// at the start.
 import {
   expect,
   test,
@@ -58,12 +59,13 @@ async function seen(request: APIRequestContext): Promise<string[]> {
   return (await (await request.get('/test-sync/seen')).json()) as string[];
 }
 
-/** The sync server's one account, which playwright.engine.config.ts made for the run. */
-function account(): { user: string; password: string } {
+/** The sync server's account for `browserName`'s project, which playwright.engine.config.ts made
+ * for the run: Chromium's the first, WebKit's the second, named as the config names it. */
+function account(browserName: PlaywrightWorkerOptions['browserName']): { user: string; password: string } {
   const user = process.env.ENGINE_SYNC_USER;
   const password = process.env.ENGINE_SYNC_PASSWORD;
   if (!user || !password) throw new Error('playwright.engine.config.ts makes the sync account');
-  return { user, password };
+  return { user: browserName === 'webkit' ? `${user}-webkit` : user, password };
 }
 
 /** Starts the page's Worker client and opens its collection. */
@@ -103,7 +105,7 @@ test('a login and a normal sync from the worker reach the server', async ({
   request
 }) => {
   await answering(request, 'pass');
-  const { user, password } = account();
+  const { user, password } = account(browserName);
   const context = await profile(playwright, browserName, baseURL);
   try {
     const page = await context.newPage();
@@ -130,7 +132,7 @@ test('a refused key is dropped and a lost network keeps it', async ({
   request
 }) => {
   await answering(request, 'pass');
-  const { user, password } = account();
+  const { user, password } = account(browserName);
   const context = await profile(playwright, browserName, baseURL);
   try {
     const page = await context.newPage();
@@ -152,7 +154,7 @@ test('a refused key is dropped and a lost network keeps it', async ({
 
 test('a redirected sync answer is refused', async ({ playwright, browserName, baseURL, request }) => {
   await answering(request, 'pass');
-  const { user, password } = account();
+  const { user, password } = account(browserName);
   const context = await profile(playwright, browserName, baseURL);
   try {
     const page = await context.newPage();
@@ -181,7 +183,7 @@ test('a statement that does not admit the client stops the sync before any sync 
   request
 }) => {
   await answering(request, 'pass');
-  const { user, password } = account();
+  const { user, password } = account(browserName);
   const below =
     'This version of DeckStreak is older than the oldest the sync service accepts. Update DeckStreak to sync.';
   const undecodable =
@@ -270,7 +272,7 @@ async function uploaded(
   baseURL: string | undefined,
   request: APIRequestContext
 ): Promise<string> {
-  const { user, password } = account();
+  const { user, password } = account(browserName);
   const context = await profile(playwright, browserName, baseURL);
   try {
     const page = await context.newPage();
@@ -292,7 +294,7 @@ test('an upload waits for its snapshot', async ({ playwright, browserName, baseU
   // Worker could not read, is refused before the engine writes; with one found it is written, and
   // the review made in the browser reaches the server
   await answering(request, 'pass');
-  const { user, password } = account();
+  const { user, password } = account(browserName);
   const context = await profile(playwright, browserName, baseURL);
   let card: string;
   try {
@@ -339,7 +341,7 @@ test('a download is written after its backup', async ({ playwright, browserName,
   // the server's collection
   await answering(request, 'pass');
   const kept = await uploaded(playwright, browserName, baseURL, request);
-  const { user, password } = account();
+  const { user, password } = account(browserName);
   const context = await profile(playwright, browserName, baseURL);
   try {
     const page = await context.newPage();
@@ -365,7 +367,7 @@ test('an evicted collection is restored from the server', async ({ playwright, b
   // alone, and the owner's tap restores every server review
   await answering(request, 'pass');
   const kept = await uploaded(playwright, browserName, baseURL, request);
-  const { user, password } = account();
+  const { user, password } = account(browserName);
   const context = await profile(playwright, browserName, baseURL);
   try {
     const page = await context.newPage();

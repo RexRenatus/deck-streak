@@ -219,9 +219,11 @@ add an entry call), `crates/web-engine/tests/boundary.rs`, `web/app/src/lib/engi
 | `web/app/src/lib/sync/sync-screen.test.ts`, `web/app/src/lib/sync/choice-screen.test.ts`, `web/app/src/lib/sync/sync-locales.test.ts` | A10 to A13, A15 (new) |
 | `web/app/src/routes/sync/+page.svelte` | the route (new) |
 | `web/app/src/lib/routes.ts` | `/sync` in `ROUTES` |
+| `web/app/src/lib/startapp.test.ts` | `/sync` joins the screens opened by their path alone (`BY_PATH`); no startapp token opens it |
 | `web/app/messages/en.json`, `web/app/messages/es.json`, `web/app/messages/fr.json`, `web/app/messages/ja.json`, `web/app/messages/ko.json`, `web/app/messages/zh-Hans.json`, `web/app/messages/zh-Hant.json` | the screens' keys |
 | `web/app/tests-engine/sync.spec.ts`, `web/app/engine-harness/main.ts` | A1 to A3 and the harness's choice calls |
 | `web/app/vite.engine.config.ts` | the snapshot route's stand-in beside the release's, with a test mode that sets its answer |
+| `web/app/playwright.engine.config.ts` | the engine's sync server keeps a second synthetic account, so each browser project syncs against a server collection of its own |
 | `scripts/mutation-rows.d/S37700-S37799.json` | rows S37700 to S37711 (new) |
 | `scripts/mutation-rows.d/S36400-S36499.json` | `S36413` re-anchored under its own id on the holds arm's new line, its killer unchanged (section 10) |
 | `changelog.d/web-sync-page-377.md` | the fragment (new) |

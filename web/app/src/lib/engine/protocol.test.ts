@@ -105,7 +105,12 @@ describe('the study operations on the wire', () => {
       'sync-login',
       'sync',
       'credential-status',
-      'credential-forget'
+      'credential-forget',
+      // the full sync's choice joins after the credential's two (SPEC-377 R6)
+      'choice-count',
+      'choice-confirm',
+      'choice-cancel',
+      'unsynced'
     ]);
   });
 
