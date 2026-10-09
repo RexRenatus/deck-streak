@@ -1,0 +1,62 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S39400-CRATE-NODE-DROPPED",
+        "docs/schematics/context-map.md",
+        "    fsrs7\n",
+        "    %% fsrs7\n",
+        "a crate directory with no node is refused by name (SPEC-394 R1, A1)",
+        "test_context_map_schematic.TheSchematicDrawsTheCrateGraph.test_every_crate_directory_is_one_node_named_by_it"
+      ],
+      [
+        "S39401-NODE-LABEL-RENAMED",
+        "docs/schematics/context-map.md",
+        "    web_engine[\"web-engine\"]\n",
+        "    web_engine[\"web engine\"]\n",
+        "a node whose label is not its directory's name is refused (SPEC-394 R1, A1)",
+        "test_context_map_schematic.TheSchematicDrawsTheCrateGraph.test_every_crate_directory_is_one_node_named_by_it"
+      ],
+      [
+        "S39402-MANIFEST-EDGE-UNDRAWN",
+        "docs/schematics/context-map.md",
+        "  progression --> xp\n",
+        "  %% progression --> xp\n",
+        "a manifest edge that no arrow draws is refused by name (SPEC-394 R2, A2)",
+        "test_context_map_schematic.TheSchematicDrawsTheCrateGraph.test_every_arrow_is_a_manifest_edge_the_fence_names"
+      ],
+      [
+        "S39403-ARROW-AHEAD-OF-MANIFEST",
+        "docs/schematics/context-map.md",
+        "  push --> kernel\n",
+        "  push --> kernel\n  push --> notifications\n",
+        "an arrow that no manifest names is refused (SPEC-394 R2, A2)",
+        "test_context_map_schematic.TheSchematicDrawsTheCrateGraph.test_every_arrow_is_a_manifest_edge_the_fence_names"
+      ],
+      [
+        "S39404-NODE-OUTSIDE-LAYERS",
+        "docs/schematics/context-map.md",
+        "  subgraph foundations[no workspace dependency]\n    kernel\n",
+        "  kernel\n  subgraph foundations[no workspace dependency]\n",
+        "a crate outside every layer is refused (SPEC-394 R3, A3)",
+        "test_context_map_schematic.TheSchematicDrawsTheCrateGraph.test_every_arrow_points_down_through_declared_layers"
+      ],
+      [
+        "S39405-ARROW-WITHIN-A-LAYER",
+        "docs/schematics/context-map.md",
+        "  subgraph app[application]\n    coordination\n  end\n  subgraph domain[domain contexts]\n",
+        "  subgraph app[application]\n  end\n  subgraph domain[domain contexts]\n    coordination\n",
+        "an arrow that stays in its layer is refused, so none points sideways or up (SPEC-394 R3, A3)",
+        "test_context_map_schematic.TheSchematicDrawsTheCrateGraph.test_every_arrow_points_down_through_declared_layers"
+      ],
+      [
+        "S39406-HEADER-SHORT-COMMIT",
+        "docs/schematics/context-map.md",
+        "`dev` 164ac20690e0d6d0385474d04663d14df5781e19.",
+        "`dev` 164ac20.",
+        "a header that names its commit by a short prefix is refused (SPEC-394 R4, A4)",
+        "test_context_map_schematic.TheSchematicDrawsTheCrateGraph.test_the_header_names_the_full_commit_it_was_read_at"
+      ]
+    ]
+  }
+}
