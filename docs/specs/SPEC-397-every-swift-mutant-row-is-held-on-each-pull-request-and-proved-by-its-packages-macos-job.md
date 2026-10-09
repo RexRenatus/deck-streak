@@ -8,7 +8,7 @@
   and its verdict line, the check that holds the rows, FORMAL by surface, and the two pushes),
   resting on ADR-350 D8 (hand-written codec mutants, proved by each run of the codec's job) and
   ADR-358 D6 (no logic in Swift, measured by a lexical census).
-- **Status:** planned, delivered by the draft pull request that adds this file with its tests and
+- **Status:** delivered by the draft pull request that adds this file with its tests and
   `docs/red-first/SPEC-397.md`. **Mutation band:** `S39700-S39799`. **Swift id band:**
   `SW39700-SW39799`, claimed and unused: this SPEC adds no Swift row.
 
