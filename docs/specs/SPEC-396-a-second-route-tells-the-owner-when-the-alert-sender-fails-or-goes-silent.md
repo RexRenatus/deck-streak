@@ -8,8 +8,8 @@
   socket at every start), ADR-067 (an empty credential is refused by its id), ADR-032 (the host
   budget; its table gains the second route's row), ADR-010 and SPEC-031 (the one alert path),
   SPEC-066 R3 (the alert template names no `OnFailure=`).
-- **Status:** planned. It waits in `docs/specs/planned/` until its tests are green, and its delivery
-  moves it to `docs/specs/` (ADR-016).
+- **Status:** delivered by #768, which moved it from `docs/specs/planned/` with its tests and
+  `docs/red-first/SPEC-396.md` (ADR-016).
 
 ## 1. The problem, measured
 

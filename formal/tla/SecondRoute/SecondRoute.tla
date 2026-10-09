@@ -1,8 +1,8 @@
 ------------------------------ MODULE SecondRoute ------------------------------
-\* @phx covers deploy/scripts/second-route.sh anchor=read_alert_path digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers deploy/scripts/second-route.sh anchor=tell_owner digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers deploy/scripts/second-route.sh anchor=check_in digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers deploy/scripts/second-route.sh anchor=main digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers deploy/scripts/second-route.sh anchor=read_alert_path digest=sha256:b48cba1500425ce276cbdf47713d7d8bb9a5fb52f432d79e743da264c64df8df
+\* @phx covers deploy/scripts/second-route.sh anchor=tell_owner digest=sha256:2907adb16c431a31a3662de735e7cbe91201f7c23d30533fc46647a69fcf9d02
+\* @phx covers deploy/scripts/second-route.sh anchor=check_in digest=sha256:305b0ad0dc473d1a340fce5766077a4782f269f2455ad51a8ead0e747292b409
+\* @phx covers deploy/scripts/second-route.sh anchor=main digest=sha256:7b91982caf793d56bb55f3a21bc138a6935a4bfcd6560b689c7f57c55742e2e7
 \* @phx cites #285
 \* @phx property ACheckInCoversOnlyToldFailures ramp=report
 \* @phx property NoCheckInAfterAnUnreadableRead ramp=report
