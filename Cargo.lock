@@ -94,7 +94,7 @@ dependencies = [
 [[package]]
 name = "anki"
 version = "0.0.0"
-source = "git+https://github.com/RexRenatus/anki.git?rev=2cfa70478a1174f49cf98fc71a8b8c47fc54b3fb#2cfa70478a1174f49cf98fc71a8b8c47fc54b3fb"
+source = "git+https://github.com/RexRenatus/anki.git?rev=bd4fe2f4e9aa6e37434678e7770e6934b6071fcb#bd4fe2f4e9aa6e37434678e7770e6934b6071fcb"
 dependencies = [
  "ammonia",
  "anki_i18n",
@@ -183,7 +183,7 @@ dependencies = [
 [[package]]
 name = "anki_i18n"
 version = "0.0.0"
-source = "git+https://github.com/RexRenatus/anki.git?rev=2cfa70478a1174f49cf98fc71a8b8c47fc54b3fb#2cfa70478a1174f49cf98fc71a8b8c47fc54b3fb"
+source = "git+https://github.com/RexRenatus/anki.git?rev=bd4fe2f4e9aa6e37434678e7770e6934b6071fcb#bd4fe2f4e9aa6e37434678e7770e6934b6071fcb"
 dependencies = [
  "anki_io",
  "anyhow",
@@ -204,7 +204,7 @@ dependencies = [
 [[package]]
 name = "anki_io"
 version = "0.0.0"
-source = "git+https://github.com/RexRenatus/anki.git?rev=2cfa70478a1174f49cf98fc71a8b8c47fc54b3fb#2cfa70478a1174f49cf98fc71a8b8c47fc54b3fb"
+source = "git+https://github.com/RexRenatus/anki.git?rev=bd4fe2f4e9aa6e37434678e7770e6934b6071fcb#bd4fe2f4e9aa6e37434678e7770e6934b6071fcb"
 dependencies = [
  "camino",
  "rand 0.9.5",
@@ -215,7 +215,7 @@ dependencies = [
 [[package]]
 name = "anki_proto"
 version = "0.0.0"
-source = "git+https://github.com/RexRenatus/anki.git?rev=2cfa70478a1174f49cf98fc71a8b8c47fc54b3fb#2cfa70478a1174f49cf98fc71a8b8c47fc54b3fb"
+source = "git+https://github.com/RexRenatus/anki.git?rev=bd4fe2f4e9aa6e37434678e7770e6934b6071fcb#bd4fe2f4e9aa6e37434678e7770e6934b6071fcb"
 dependencies = [
  "anki_io",
  "anki_proto_gen",
@@ -234,7 +234,7 @@ dependencies = [
 [[package]]
 name = "anki_proto_gen"
 version = "0.0.0"
-source = "git+https://github.com/RexRenatus/anki.git?rev=2cfa70478a1174f49cf98fc71a8b8c47fc54b3fb#2cfa70478a1174f49cf98fc71a8b8c47fc54b3fb"
+source = "git+https://github.com/RexRenatus/anki.git?rev=bd4fe2f4e9aa6e37434678e7770e6934b6071fcb#bd4fe2f4e9aa6e37434678e7770e6934b6071fcb"
 dependencies = [
  "anki_io",
  "anyhow",
