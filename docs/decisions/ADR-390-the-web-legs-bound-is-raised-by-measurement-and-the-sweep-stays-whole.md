@@ -118,10 +118,39 @@ bound; the band test kills each.
 
 SPEC-379's A1 reads both legs' `timeout-minutes` as digit strings inside 100 to 120, red at the
 base where both are 60; A2 plants each defect. The settings that decide a verdict are unchanged,
-read by `git diff --stat <base>..HEAD -- web/app/stryker.config.json scripts/mutation-verdict.py`
-(empty) and `git diff -U0 <base>..HEAD -- .github/workflows/mutation-weekly.yml
-.github/workflows/ci.yml` (one one-line hunk in each, the bound, and no line of the `survivors`
-job). The readings at this delivery's head are recorded in `docs/red-first/SPEC-379.md`.
+read at the fix commit `35a058db` against the base `e7ecf10d`. The first command prints nothing:
+
+```
+$ git diff --stat e7ecf10d..35a058db -- \
+    web/app/stryker.config.json scripts/mutation-verdict.py
+$
+```
+
+So StrykerJS's `concurrency`, `timeoutMS`, `mutate` and `thresholds`, its absent `timeoutFactor`
+and `ignoreStatic`, and the verdict's script are byte-identical. The second prints one one-line
+hunk in each workflow, the `mutation-web` job's line 704 and the `web` job's line 190, so no line
+of the `survivors` job, or of any other job, moved:
+
+```
+$ git diff -U0 e7ecf10d..35a058db -- \
+    .github/workflows/mutation-weekly.yml .github/workflows/ci.yml
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index a7a6633f..5280e53d 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -704 +704 @@ jobs:
+-    timeout-minutes: 60
++    timeout-minutes: 100
+diff --git a/.github/workflows/mutation-weekly.yml b/.github/workflows/mutation-weekly.yml
+index 8fd478a4..bb848def 100644
+--- a/.github/workflows/mutation-weekly.yml
++++ b/.github/workflows/mutation-weekly.yml
+@@ -190 +190 @@ jobs:
+-    timeout-minutes: 60
++    timeout-minutes: 100
+```
+
+A1's red and green readings are recorded in `docs/red-first/SPEC-379.md`.
 
 ## What would make this wrong
 
