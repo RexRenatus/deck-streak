@@ -563,6 +563,23 @@ pub fn sync_collection(key: String, endpoint: String) -> Result<u32, JsValue> {
     u32::try_from(response.required).map_err(refuse)
 }
 
+/// Hands the core the sync service's statement of its minimum client level: the body the Worker
+/// read at its own origin, or nothing when no answer was read (SPEC-374 R23). Answers nothing when
+/// the statement admits this client, and otherwise the sentence the core now refuses every sync
+/// with. The core decides; this export keeps no rule of its own.
+#[wasm_bindgen]
+pub fn handshake(statement: Option<Vec<u8>>) -> Result<Option<String>, JsValue> {
+    dispatcher()?.handshake(statement.as_deref());
+    let outcome = deck_streak_engine_core::handshake::decide(statement.as_deref());
+    match deck_streak_engine_core::handshake::admits(outcome) {
+        Ok(()) => Ok(None),
+        Err(refusal) => {
+            let error: BackendError = decode(&refusal)?;
+            Ok(Some(error.message))
+        }
+    }
+}
+
 /// One deck of the tree as JSON: its id as a decimal string, its name, level, new, learning and
 /// review counts, and its children.
 fn deck_json(node: &DeckTreeNode) -> serde_json::Value {

@@ -28,6 +28,10 @@ use std::path::{Path, PathBuf};
 /// The transport, the one file that makes the bot's HTTP client.
 const TRANSPORT: &str = "crates/bot/src/transport.rs";
 
+/// The static library's engine, whose read of the sync service's statement of its minimum client
+/// level makes the one HTTP client outside the bot (SPEC-374 R9; ADR-385 D6).
+const STATEMENT_READ: &str = "crates/ffi/src/engine.rs";
+
 /// The four paths `clippy.toml` names, each under the key that holds it.
 const CLIPPY_RULES: [(&str, &str); 4] = [
     ("disallowed-types", "reqwest::Client"),
@@ -50,8 +54,9 @@ const SILENCING: [&str; 5] = [
 ];
 
 /// The named sites: the file, the lint, and the statement the attribute sits on. The transport
-/// builds reqwest's client once, in its constructor, and hands it to the pinned client.
-const SITES: [(&str, &str, &str); 2] = [
+/// builds reqwest's client once, in its constructor, and hands it to the pinned client; the static
+/// library builds one for each read of the statement that precedes a sync login.
+const SITES: [(&str, &str, &str); 4] = [
     (
         TRANSPORT,
         "clippy::disallowed_types",
@@ -59,6 +64,16 @@ const SITES: [(&str, &str, &str); 2] = [
     ),
     (
         TRANSPORT,
+        "clippy::disallowed_methods",
+        "let client = reqwest::Client::builder()",
+    ),
+    (
+        STATEMENT_READ,
+        "clippy::disallowed_types",
+        "let client = reqwest::Client::builder()",
+    ),
+    (
+        STATEMENT_READ,
         "clippy::disallowed_methods",
         "let client = reqwest::Client::builder()",
     ),
@@ -732,6 +747,11 @@ fn the_only_suppression_of_the_rule_is_an_expect_at_a_named_transport_site() {
     assert!(
         files.iter().any(|(path, _)| path == TRANSPORT),
         "the transport is among the {} files examined",
+        files.len()
+    );
+    assert!(
+        files.iter().any(|(path, _)| path == STATEMENT_READ),
+        "the static library's statement read is among the {} files examined",
         files.len()
     );
     assert!(
