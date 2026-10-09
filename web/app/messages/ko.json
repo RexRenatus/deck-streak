@@ -82,6 +82,7 @@
   "study_review_title": "복습",
   "study_question_frame": "카드의 질문",
   "study_answer_frame": "카드의 정답",
+  "study_late_review": "이 카드는 이전 날짜가 기한이었으므로, 이번 복습은 그날의 연속 기록에 포함되지 않습니다.",
   "study_show_answer": "정답 보기",
   "study_again": "다시",
   "study_good": "알맞음",

@@ -82,6 +82,7 @@
   "study_review_title": "Repaso",
   "study_question_frame": "La pregunta de la tarjeta",
   "study_answer_frame": "La respuesta de la tarjeta",
+  "study_late_review": "Esta tarjeta vencía un día anterior, así que este repaso no cuenta para la racha de ese día.",
   "study_show_answer": "Mostrar respuesta",
   "study_again": "Otra vez",
   "study_good": "Bien",
