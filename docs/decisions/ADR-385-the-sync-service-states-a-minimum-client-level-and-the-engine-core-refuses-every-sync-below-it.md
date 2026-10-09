@@ -157,3 +157,14 @@ named.
 
 SPEC-374, its schematic `docs/schematics/minimum-client-handshake-and-re-release-check.md`,
 SPEC-352 (the internal lane), SPEC-364 (the web client's sync), SPEC-041 (the request allow-list).
+
+## Amendment: part two lands the re-release check
+
+Part two delivers D3 as it is decided, with the tests D4 names, as the second of the two deliveries D5 chose; D7 holds for a due build on an unmoved `dev`, and it owes no formal model (D8). It adds one decision.
+
+### D10. The check's own credential
+
+- **Chosen: the check reads with a credential of its own, held only in an environment of its own that only the default branch may enter, because a job that runs on a schedule should hold the narrowest credential that does its one read.**
+- Reusing the internal lane's upload credential: lost because it is a wider credential than a read needs, held every day by a job that runs on a schedule.
+
+Placing the credential is an owner act outside this delivery. Until it is placed, every run fails closed with a named reason and dispatches nothing (SPEC-374 R14, A11).

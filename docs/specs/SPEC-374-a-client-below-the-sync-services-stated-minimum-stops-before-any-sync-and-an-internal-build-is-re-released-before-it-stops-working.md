@@ -363,3 +363,35 @@ The diff's own mutants add one file to section 4's list:
 - `scripts/mutation-equivalent.d/deck-streak-engine-core.json` gains one record: deleting the
   `kind` field of the refusal `admits` builds leaves the same bytes, because that kind is the
   proto3 default, so no test can tell the two apart.
+
+## 10. Amendments, part two: the re-release check lands
+
+Part two delivers section 7 as it is written: R13 to R21, decided by A8 to A15. Section 7 and its table stay as they are; section 11 restates the criteria with the commands that decide them.
+
+- The check reads with a credential of its own, held in an environment of its own that only the default branch may enter. ADR-385's amendment records the decision and the alternative it was chosen against.
+- Placing that credential is an owner act outside this delivery. Until it is placed, every run fails closed, says the credential is not placed, reads nothing and dispatches nothing (R14, A11).
+- Files: `.github/workflows/testflight-rerelease-check.yml` (new), `scripts/testflight_age.py` (new), `scripts/tests/test_testflight_age.py` (new), `scripts/tests/test_ci_workflows.py`, `docs/red-first/SPEC-374.md`, `scripts/mutation-rows.d/S37400-S37499.json`, `changelog.d/min-client-rerelease-374-b.md`.
+
+## 11. Acceptance criteria of the part-two amendment
+
+| # | criterion | decided by |
+|---|---|---|
+| A8 | The check runs on a schedule and a manual dispatch only, its token read-only by default, its job writing only actions, and its credential reads admitted and no other | `scripts/tests/test_ci_workflows.py`, in CI |
+| A9 | A build that would stop working before the next scheduled run is reported and the internal lane dispatched on `dev` | `scripts/tests/test_testflight_age.py` |
+| A10 | A build beyond the lead is reported healthy, only after it was read, and nothing is dispatched | `scripts/tests/test_testflight_age.py` |
+| A11 | An absent or half-placed credential fails closed, reads nothing and dispatches nothing | `scripts/tests/test_testflight_age.py` |
+| A12 | An unreadable answer fails closed and dispatches nothing | `scripts/tests/test_testflight_age.py` |
+| A13 | A due build on an unmoved `dev` is reported and not dispatched | `scripts/tests/test_testflight_age.py` |
+| A14 | No credential part reaches a child's argv or environment, or the log | `scripts/tests/test_testflight_age.py` |
+| A15 | The lead covers the schedule's interval | `scripts/tests/test_ci_workflows.py`, in CI |
+
+```acceptance
+A8: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_a8_the_rerelease_check_runs_scheduled_with_admitted_reads_only
+A9: python3 -m unittest discover -s scripts/tests -p test_testflight_age.py -k test_a9_a_build_due_within_the_lead_dispatches_the_lane_on_dev
+A10: python3 -m unittest discover -s scripts/tests -p test_testflight_age.py -k test_a10_a_build_beyond_the_lead_is_healthy_and_dispatches_nothing
+A11: python3 -m unittest discover -s scripts/tests -p test_testflight_age.py -k test_a11_an_absent_or_half_placed_credential_fails_closed
+A12: python3 -m unittest discover -s scripts/tests -p test_testflight_age.py -k test_a12_an_unreadable_answer_fails_closed
+A13: python3 -m unittest discover -s scripts/tests -p test_testflight_age.py -k test_a13_a_due_build_on_an_unmoved_dev_is_not_dispatched
+A14: python3 -m unittest discover -s scripts/tests -p test_testflight_age.py -k test_a14_no_credential_part_reaches_a_child_or_the_log
+A15: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_a15_the_rerelease_lead_covers_the_schedule_interval
+```
