@@ -63,4 +63,19 @@ A13: red at e8fff72d: TestingLibraryElementError: Unable to find an element with
 A14: red at e8fff72d: in the light and the dark theme, axe's `label` rule, impact critical: "Form elements must have labels"
 A15: red at 2a90ef07: AssertionError: expected { en: [ …(30) ], es: [ …(30) ], …(5) } to deeply equal { Object (en, es, ...) }
 A16: not red: an absence census over the new operations, held by its planted controls
+A1: green at 82c0f0a3
+A2: green at 82c0f0a3
+A3: green at 82c0f0a3
+A4: green at fcd6b954
+A5: green at fcd6b954
+A6: green at fcd6b954
+A7: green at fcd6b954
+A8: green at fcd6b954
+A9: green at fcd6b954
+A10: green at fcd6b954
+A11: green at fcd6b954
+A12: green at fcd6b954
+A13: green at fcd6b954
+A14: green at fcd6b954
+A15: green at fcd6b954
 ```
