@@ -18,6 +18,9 @@
 //!   states from the counts to the write, with the reads they compare (SPEC-357 R3-R9).
 //! - [`gesture`]: the owner's gesture, one exempt write and its one target, and its refusal
 //!   (SPEC-345 R7, R8).
+//! - [`handshake`]: the minimum-client handshake: this client's level, the outcome of the
+//!   latest statement of the service's minimum, its sentences and the statement's URL
+//!   (SPEC-374 R1, R4 to R8).
 //! - [`login_guard`]: the endpoint guard on the engine's sync login (SPEC-347 R2).
 //! - [`media`]: the rules a face's media references pass: the name rule, the closed type table,
 //!   the two caps and the `data:` rewrite (SPEC-348 R3).
@@ -32,6 +35,8 @@
 //!   requests the native adapter sends for them, encoded (R3).
 //! - [`undo_answer`]: the rule an undo of the review's own last answer passes: its record, the
 //!   review row it names, the refusals and the state the card returns to (SPEC-371 R3).
+//! - [`late`]: whether a review cannot count toward the streak for its card's due day: the
+//!   engine's day, and the rule that judges a card past its due day in it (SPEC-376 R1, R2).
 //!
 //! The core depends on the engine and on no crate of this workspace; only the two client
 //! adapters depend on it (ADR-356 D4, held by the graph census).
@@ -44,6 +49,8 @@ pub mod dispatch;
 pub mod face;
 pub mod full_sync;
 pub mod gesture;
+pub mod handshake;
+pub mod late;
 pub mod login_guard;
 pub mod media;
 pub mod one_way;

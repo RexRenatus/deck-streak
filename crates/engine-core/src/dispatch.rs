@@ -8,6 +8,7 @@ use anki::backend::{Backend, init_backend};
 use anki_proto::backend::BackendError;
 use anki_proto::backend::backend_error::Kind;
 use anki_proto::collection::{CloseCollectionRequest, OpenCollectionRequest, UndoStatus};
+use anki_proto::scheduler::SchedTimingTodayResponse;
 use anki_proto::sync::{FullUploadOrDownloadRequest, SyncAuth};
 use prost::Message;
 
@@ -15,6 +16,8 @@ use crate::answer::{AnswerRefusal, OwnerAnswer};
 use crate::face::{self, Face, Side};
 use crate::full_sync::{IdSets, Unsynced, Write};
 use crate::gesture::{Checked, GestureRefusal, OwnerGesture, Target};
+use crate::handshake::{self, Outcome};
+use crate::late::EngineDay;
 use crate::login_guard;
 use crate::media::Reader;
 use crate::one_way;
@@ -33,6 +36,10 @@ const REVIEW_SQL: &str = "select cid, usn from revlog where id = ?";
 /// The engine's undo status, `CollectionService.GetUndoStatus`: its label and its last step, which
 /// an undo of the review's own last answer compares with its record (SPEC-371 R5).
 const GET_UNDO_STATUS: (u32, u32) = (3, 7);
+/// The engine's timing of today, `SchedulerService.SchedTimingToday`: the day count and the next
+/// rollover a card's due is judged in (SPEC-376 R3). The core makes it itself; no adapter pair
+/// names it.
+const SCHED_TIMING_TODAY: (u32, u32) = (13, 5);
 /// The engine's sync login, `BackendSyncService.SyncLogin`: the one admitted call whose request
 /// the core reads, to guard its endpoint (SPEC-347 R2).
 const SYNC_LOGIN: (u32, u32) = (1, 3);
@@ -89,6 +96,9 @@ pub struct Dispatcher {
     /// The collection path the last successful open named, shared by every clone of this
     /// dispatcher: the file no server copy and no backup may be written into (SPEC-364 R4, R5).
     open: Arc<Mutex<Option<PathBuf>>>,
+    /// What the latest statement of the service's minimum client level decided, shared by every
+    /// clone of this dispatcher and by each private engine it starts (SPEC-374 R4, R7).
+    handshake: Arc<Mutex<Outcome>>,
 }
 
 /// Why the dispatcher did not answer a call with the engine's reply.
@@ -150,7 +160,29 @@ impl Dispatcher {
             media_folder: Arc::default(),
             start: Arc::from(message),
             open: Arc::default(),
+            handshake: Arc::default(),
         })
+    }
+
+    /// Hands the dispatcher the latest statement of the service's minimum client level: its body,
+    /// or `None` when no answer was read (SPEC-374 R4). Its outcome replaces the last one, so a
+    /// later below or unread statement refuses again.
+    pub fn handshake(&self, statement: Option<&[u8]>) {
+        *self
+            .handshake
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner) = handshake::decide(statement);
+    }
+
+    /// Whether the latest statement lets a sync call reach the engine (SPEC-374 R5): the core's
+    /// refusal, in the login guard's shape, unless it was admitted.
+    fn admitted(&self) -> Result<(), Vec<u8>> {
+        handshake::admits(
+            *self
+                .handshake
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner),
+        )
     }
 
     /// Runs one ordinary call: the request's protobuf bytes in, the response's out. The table
@@ -163,9 +195,11 @@ impl Dispatcher {
     /// records a grade, [`Refusal::NotAllowed`] for every other pair this transport may not make,
     /// and [`Refusal::Engine`] when the engine answers an admitted call with an error, or when the
     /// login guard refuses a sync login's or a normal sync's endpoint, or a normal sync's media, in
-    /// the engine's own error shape before the engine sees it (SPEC-347 R2, SPEC-364 R2). When the
-    /// engine opens a collection, the core keeps the media folder and the collection path its
-    /// request named (SPEC-348 R5, SPEC-364 R4).
+    /// the engine's own error shape before the engine sees it (SPEC-347 R2, SPEC-364 R2), or when
+    /// the latest statement of the service's minimum client level has not admitted this client,
+    /// in the same shape, after the guard (SPEC-374 R5). When the engine opens a collection, the
+    /// core keeps the media folder and the collection path its request named (SPEC-348 R5,
+    /// SPEC-364 R4).
     pub fn run(&self, service: u32, method: u32, input: &[u8]) -> Result<Vec<u8>, Refusal> {
         match decide(self.transport, service, method) {
             Decision::Admit => {
@@ -174,6 +208,9 @@ impl Dispatcher {
                 }
                 if (service, method) == SYNC_COLLECTION {
                     login_guard::check_sync(input).map_err(|error| Refusal::Engine { error })?;
+                }
+                if matches!((service, method), SYNC_LOGIN | SYNC_COLLECTION) {
+                    self.admitted().map_err(|error| Refusal::Engine { error })?;
                 }
                 let reply = self
                     .backend
@@ -295,8 +332,9 @@ impl Dispatcher {
     /// [`Self::close`].
     pub(crate) fn private(&self, collection: &Path) -> Result<Self, Refusal> {
         let path = utf8(collection)?;
-        let engine = Self::start(Transport::Native, &self.start)
+        let mut engine = Self::start(Transport::Native, &self.start)
             .map_err(|message| failed(&format!("the private engine does not start: {message}")))?;
+        engine.handshake = Arc::clone(&self.handshake);
         let request = OpenCollectionRequest {
             collection_path: path.to_owned(),
             ..OpenCollectionRequest::default()
@@ -308,10 +346,12 @@ impl Dispatcher {
 
     /// Runs the engine's one-way sync with a request the core built: the choice's write on the
     /// open collection, or the fetch of a server copy into a private engine's empty file. Its
-    /// auth meets the login's endpoint rule first (SPEC-364 R2). Its error is the engine's
-    /// encoded `BackendError`, or the guard's in the same shape.
+    /// auth meets the login's endpoint rule first (SPEC-364 R2), and then the latest statement of
+    /// the service's minimum client level must have admitted this client (SPEC-374 R5). Its error
+    /// is the engine's encoded `BackendError`, or the guard's or the handshake's in the same shape.
     pub(crate) fn full_sync(&self, request: &FullUploadOrDownloadRequest) -> Result<(), Vec<u8>> {
         login_guard::check_auth(&request.auth.clone().unwrap_or_default())?;
+        self.admitted()?;
         let (service, method) = FULL_SYNC;
         self.backend
             .run_service_method(service, method, &request.encode_to_vec())
@@ -446,6 +486,27 @@ impl Dispatcher {
             reviews: u32::try_from(reviews).map_err(|_| unreadable(UNSYNCED_SQL))?,
             changed: changed != 0,
             schema: schema != 0,
+        })
+    }
+
+    /// The engine's day, read from the engine's own timing of today through one call the core
+    /// holds and no adapter makes: the day count and the next rollover a card's due is judged in
+    /// (SPEC-376 R3, ADR-387 D1).
+    ///
+    /// # Errors
+    ///
+    /// [`Refusal::Engine`] when the engine cannot run the read, a closed collection among them, or
+    /// answers it with a reply that is not the timing's message.
+    pub fn engine_day(&self) -> Result<EngineDay, Refusal> {
+        let reply = self
+            .backend
+            .run_service_method(SCHED_TIMING_TODAY.0, SCHED_TIMING_TODAY.1, &[])
+            .map_err(|error| Refusal::Engine { error })?;
+        let timing = SchedTimingTodayResponse::decode(reply.as_slice())
+            .map_err(|_| failed("the engine's timing of today is not its message"))?;
+        Ok(EngineDay {
+            days_elapsed: timing.days_elapsed,
+            next_day_at: timing.next_day_at,
         })
     }
 

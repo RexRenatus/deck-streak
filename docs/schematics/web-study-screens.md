@@ -229,3 +229,69 @@ flowchart TD
   input -->|"one handler"| review
   install["manifest.webmanifest and icons, linked from app.html"] --> app["The app, installable, no service worker"]
 ```
+
+## 6. The late line: the due day from the engine to the review (SPEC-376)
+
+Read at the base `5fe4a48a09bc72700f434e7747ad64916af76902` (`dev`). Decided by ADR-387. This
+section is appended to `docs/schematics/web-study-screens.md`; no line above it changes.
+
+The due day has one source, the shown card's own fields in the engine's day, and one rule, the
+engine core's `past_due_day`. The web engine carries the rule's answer to the page as the card
+view's `late`; the page draws one line from it. The native review reads nothing yet (`#738`).
+
+### 6a. Data flow, per client
+
+```mermaid
+flowchart LR
+  subgraph engine["the engine (Worker, or the native process)"]
+    queued["GetQueuedCards (13,3): the head card, with its queue, due, home deck due and home deck"]
+    timing["the scheduler's timing of today: the day count and the next rollover"]
+  end
+  subgraph core["the engine core"]
+    dayread["Dispatcher: the core's own read of the engine's day, behind no adapter pair"]
+    rule["late::past_due_day(card, day)"]
+  end
+  subgraph web["web engine (wasm32)"]
+    view["current_card: the view, with late"]
+  end
+  subgraph page["page"]
+    proto["CardView.late"]
+    screen["ReviewScreen: one line above the card when late"]
+    msgs["study_late_review, in each of the 7 locales"]
+  end
+  subgraph native["native review"]
+    none["no line: its own issue"]
+  end
+  timing --> dayread
+  dayread --> rule
+  queued --> rule
+  rule --> view
+  view --> proto
+  proto --> screen
+  msgs --> screen
+  rule -. "the same rule, when its issue lands" .-> none
+```
+
+### 6b. The rule
+
+| the card's queue | its due day | past its due day when |
+|---|---|---|
+| review, or day learning | its home deck due when it sits in a filtered deck and that due is set, else its own due | that day is earlier than the engine's day count |
+| intraday learning | its due instant | that instant is earlier than the engine's next rollover less one day |
+| new, preview, or any other | none | never |
+
+### 6c. What crosses each new edge
+
+| edge | carries | never carries |
+|---|---|---|
+| the engine to the core's day read | the day count and the next rollover, decoded from the engine's own reply | a clock read by the core itself; an adapter's request |
+| the core's rule to the web engine | one boolean for the card the view shows | the due day, the day count or a date |
+| the web engine to the page | `late` on the card view, built when the card is shown | a number, a date or a count of days |
+| the page to the learner | one line in the app's locale, on both sides of the card | the due date, the days overdue, a word of blame |
+
+### 6d. When the day turns
+
+The view is built when the card is shown. A card shown before the rollover and answered after it
+keeps the view it was shown with: a card due today shows no line and is then answered past its due
+day (the line is absent, never false); a card past its due day when shown is still past it when
+answered (the line stays true).

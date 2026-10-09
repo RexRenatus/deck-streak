@@ -22,7 +22,7 @@ fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
 /// Each boundary function the census reads: its name, why it owes what it owes, and the
 /// statements its body holds for it. A statement is compared with every blank removed, so a
 /// reflow by rustfmt changes nothing.
-const OWED: [(&str, &str, &[&str]); 34] = [
+const OWED: [(&str, &str, &[&str]); 35] = [
     (
         "create_backend",
         "starts the core's dispatcher on the web transport and keeps it",
@@ -315,6 +315,18 @@ const OWED: [(&str, &str, &[&str]); 34] = [
             "sync_media: false",
             "dispatcher()?.run(service::SYNC, 5, &request.encode_to_vec())",
             ".map_err(sync_refusal)?",
+        ],
+    ),
+    (
+        "handshake",
+        "hands the Worker's statement to the core's dispatcher and answers the core's own decision and sentence, keeping no rule of its own (SPEC-374 R23)",
+        &[
+            "dispatcher()?.handshake(statement.as_deref());",
+            "let outcome = deck_streak_engine_core::handshake::decide(statement.as_deref());",
+            "match deck_streak_engine_core::handshake::admits(outcome) {",
+            "Ok(()) => Ok(None),",
+            "let error: BackendError = decode(&refusal)?;",
+            "Ok(Some(error.message))",
         ],
     ),
     (
