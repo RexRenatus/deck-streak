@@ -784,6 +784,7 @@ APPLE_PATHS = [
     "rust-toolchain.toml",
     ".github/workflows/xcframework.yml",
     ".github/workflows/apple-on-change.yml",
+    "scripts/swift_mutants.py",
 ]
 PULL_REQUEST_ONLY = (
     "github.event.pull_request",
@@ -6418,6 +6419,24 @@ NOT_WORKFLOW_READS = {
             1,
         ),
     ),
+    **allowed(
+        "a Swift package's row file, read for its live row and killer counts (SPEC-397 A8); never handed to the reader",
+        (
+            "test_ci_workflows",
+            "EachSwiftRowFileIsSweptByItsPackagesJob.test_each_sweep_is_bounded_from_its_measured_cost",
+            "path.read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs the retired step's one run line under bash with a planted python3 first on PATH, which prints its arguments and exits as planted (SPEC-397 A10); its output is that fake's, never a workflow's text",
+        (
+            "test_mutation_workflows",
+            "TheRowsJobHoldsTheSwiftRows.test_the_rows_job_runs_the_swift_retired_check_on_a_diff",
+            "subprocess.run(['bash', '--noprofile', '--norc', '-eo', 'pipefail', '-c', lines[0]], capture_output=True, text=True, env=dict(os.environ, PATH=path, ROWS_EXIT=str(rows), SWIFT_EXIT=str(swift)), timeout=60, check=False)",
+            1,
+        ),
+    ),
 }
 
 # Every site in the test directory that imports, runs code or reaches a namespace by a name held
@@ -7003,6 +7022,10 @@ DYNAMIC_IMPORTS = {
             "base64.urlsafe_b64decode(head + '=' * (-len(head) % 4))",
             1,
         ),
+    ),
+    **allowed(
+        "an import of this repository's own script module by its constant name, `import swift_mutants`, after a sys.path insert of the constant scripts directory, for A6's calls of the verdict function (SPEC-397); it reads no workflow file",
+        ("test_swift_mutants", "runner_module", "import swift_mutants", 1),
     ),
 }
 
@@ -8738,7 +8761,7 @@ def card_probe_problems(jobs):
     if not any("swift test --package-path ios/CardIsolation" in r for r in runs):
         problems.append("card-isolation: it runs no swift test of ios/CardIsolation")
     if not any(
-        'pathlib.Path("ios/CardIsolation")' in r and "swift-mutants.json" in r for r in runs
+        "python3 scripts/swift_mutants.py sweep --package ios/CardIsolation " in r for r in runs
     ):
         problems.append("card-isolation: it sweeps no mutant of ios/CardIsolation")
     if not any(
@@ -8768,7 +8791,8 @@ class TheCardViewIsProvedOnBothSimulators(unittest.TestCase):
             "with": {"path": "harness-report/\nharness-results/"},
         }
         sweep = {
-            "run": 'package = pathlib.Path("ios/CardIsolation")\n(package / "swift-mutants.json")'
+            "run": "python3 --version\npython3 scripts/swift_mutants.py sweep --package "
+            'ios/CardIsolation --report "$REPORT" --run-seconds 60\n'
         }
         host = {
             "runs-on": ADMITTED_RUNNERS["xcframework.yml"],
@@ -8850,6 +8874,105 @@ class TheCardViewIsProvedOnBothSimulators(unittest.TestCase):
         for name, (jobs, wanted) in examined("planted card-view jobs", list(plants.items())):
             with self.subTest(plant=name):
                 self.assertEqual(card_probe_problems(jobs), wanted, name)
+
+
+# The Swift row files' sweeps (SPEC-397 R7, R8): each package's own macOS job runs the module's
+# `sweep` over its row file after the package's tests, bounded from the cost one successful run of
+# the change caller measured. Seconds, durations only, each beside the run and job it was read from.
+SWIFT_SWEEP = "python3 scripts/swift_mutants.py sweep --package "
+#: The one `xcframework.yml` job that sweeps each package's row file.
+SWIFT_SWEEP_JOBS = {"ios/CardIsolation": "card-isolation", "ios/HarnessWire": "harness-wire"}
+#: Each sweeping job's seconds outside its sweep step.
+SWIFT_SWEEP_OTHER_SECONDS = {
+    "harness-wire": 61,  # run 37967458391, job 113946410023
+    "card-isolation": 45,  # run 37967458391, job 113946410059
+}
+#: The worse of the two jobs' seconds per killer run, one figure for both: card-isolation's sweep
+#: step, 116 s over its 38 rows and 8 distinct killers; harness-wire's read 76 s over 35 runs.
+SWIFT_SECONDS_PER_RUN = 116 / 46  # run 37967458391, job 113946410059
+
+
+def ceil5(minutes):
+    """`minutes` rounded up to the five."""
+    return 5 * math.ceil(minutes / 5)
+
+
+class EachSwiftRowFileIsSweptByItsPackagesJob(unittest.TestCase):
+    """SPEC-397 R7, R8: each package's row file is swept by its own macOS job, through the module,
+    bounded from that job's measured cost."""
+
+    def test_each_swift_row_file_is_swept_by_one_job_through_the_module(self):
+        """SPEC-397 A7 (R7): each row file is swept by exactly one xcframework.yml job, through the
+        module's sweep step after the package's tests, on the admitted runner; that job runs no
+        inline Python program, and its report upload runs whatever the outcome."""
+        jobs = load("xcframework.yml")["jobs"]
+        files = examined("Swift row files", sorted(REPO.glob("ios/*/swift-mutants.json")))
+        packages = [path.parent.relative_to(REPO).as_posix() for path in files]
+        self.assertEqual(packages, sorted(SWIFT_SWEEP_JOBS))
+        for package in packages:
+            with self.subTest(package=package):
+                invocation = f"{SWIFT_SWEEP}{package} "
+                sweeping = [
+                    name
+                    for name, job in sorted(jobs.items())
+                    if any(invocation in str(s.get("run", "")) for s in job.get("steps") or [])
+                ]
+                self.assertEqual(sweeping, [SWIFT_SWEEP_JOBS[package]], package)
+                job = jobs[SWIFT_SWEEP_JOBS[package]]
+                self.assertEqual(job.get("runs-on"), ADMITTED_RUNNERS["xcframework.yml"])
+                steps = job.get("steps") or []
+                runs = [str(s.get("run", "")) for s in steps]
+                (sweep,) = [at for at, run in enumerate(runs) if invocation in run]
+                self.assertEqual(runs[sweep].splitlines()[0], "python3 --version", package)
+                self.assertRegex(
+                    runs[sweep],
+                    rf'(?m)^{re.escape(invocation)}--report "\$REPORT" --run-seconds \d+$',
+                )
+                tests = [
+                    at
+                    for at, run in enumerate(runs)
+                    if f"swift test --package-path {package}" in run
+                ]
+                self.assertTrue(tests and tests[0] < sweep, f"{package}: no tests before its sweep")
+                inline = [
+                    run
+                    for run in runs
+                    if "<<" in run or re.search(r"(?m)\bpython3? -(c\b|\s|$)", run)
+                ]
+                self.assertEqual(inline, [], f"{package}: its job runs an inline Python program")
+                self.assertTrue(
+                    any(
+                        action(s) == "actions/upload-artifact" and s.get("if") == "${{ always() }}"
+                        for s in steps[sweep + 1 :]
+                    ),
+                    f"{package}: its report is not uploaded whatever the outcome",
+                )
+
+    def test_each_sweep_is_bounded_from_its_measured_cost(self):
+        """SPEC-397 A8 (R8): each sweeping job's timeout lies between one and a half times and twice
+        its projection, each rounded up to the five, and its run bound is three times the measured
+        seconds per run, rounded up to the minute, from the live row and killer counts."""
+        jobs = load("xcframework.yml")["jobs"]
+        run_seconds = 60 * math.ceil(3 * SWIFT_SECONDS_PER_RUN / 60)
+        for package, name in examined("sweeping jobs", sorted(SWIFT_SWEEP_JOBS.items())):
+            with self.subTest(job=name):
+                path = REPO / package / "swift-mutants.json"
+                rows = json.loads(path.read_text(encoding="utf-8"))["mutants"]
+                live = len(rows) + len({row["killer"] for row in rows})
+                projected = (SWIFT_SWEEP_OTHER_SECONDS[name] + live * SWIFT_SECONDS_PER_RUN) / 60
+                band = range(ceil5(1.5 * projected), ceil5(2 * projected) + 1)
+                minutes = str(jobs[name].get("timeout-minutes"))
+                self.assertTrue(
+                    minutes.isdigit() and int(minutes) in band,
+                    f"{name}: timeout-minutes {minutes}, not {band.start} to {band.stop - 1}",
+                )
+                swept = re.compile(rf"{re.escape(SWIFT_SWEEP + package)} .*--run-seconds (\d+)")
+                bounds = [
+                    found.group(1)
+                    for step in jobs[name].get("steps") or []
+                    if (found := swept.search(str(step.get("run", ""))))
+                ]
+                self.assertEqual(bounds, [str(run_seconds)], name)
 
 
 class TheReleaseJobOutlastsItsSlowestRun(unittest.TestCase):

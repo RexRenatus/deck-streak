@@ -410,3 +410,77 @@ cited. A line moves with any edit above it, so search by the item named beside i
 | the battery's verdict | `.github/workflows/mutation-weekly.yml:395`; `scripts/mutation-verdict.py:2109` |
 | the model of the legs and the verdict | `formal/tla/EveryLegCounted/EveryLegCounted.tla` |
 | the rows that pin each new constant and check | `scripts/mutation-rows.d/S36200-S36299.json` |
+
+## 9. Swift mutant rows, from a package's row file to the verdict (SPEC-397, ADR-411)
+
+Kind: data flow. Read at DeckStreak `dev` `164ac206` (`.github/workflows/xcframework.yml`,
+`.github/workflows/apple-on-change.yml`, `.github/workflows/ci.yml`, `scripts/mutation_rows.py`
+and the two `ios/*/swift-mutants.json`), and drawn as SPEC-397 builds it. A Swift row is no band
+row: it has its own reader, `scripts/swift_mutants.py`, its own jobs and its own verdict line, and
+joins neither the `mutation-verdict` job nor the weekly battery. Two paths read it: the Linux
+checks on every pull request, and the package's macOS job when the change caller's paths match.
+
+```mermaid
+flowchart TD
+  subgraph rowfiles["the rows"]
+    hwrows[("ios/HarnessWire/swift-mutants.json")]
+    cirows[("ios/CardIsolation/swift-mutants.json")]
+    approvals[("scripts/mutation-rows.retired.json")]
+  end
+
+  subgraph linux["every pull request, on Linux"]
+    hygiene["hygiene: the python stage"] --> tsm["scripts/tests/test_swift_mutants.py"]
+    tsm --> census["swift_mutants.py census: keys, the SW id form and its uniqueness, the file under Sources, the find once, the killer resolving to one test method"]
+    hwrows --> census
+    cirows --> census
+    census -->|a problem| censusrefused(["refused by name, exit 2"])
+    census -->|no row| censusvoid(["examined 0, exit 3"])
+    census -->|every row in form| censusok(["examined N rows in M files, exit 0"])
+    rowsjob["mutation-rows: the retired step, on a diff"] --> retired["swift_mutants.py retired --base HEAD^1, on the same line as mutation_rows.py retired"]
+    hwrows --> retired
+    cirows --> retired
+    approvals --> retired
+    retired -->|an id left, its file stays, no approval| retiredrefused(["refused by id, exit 1"])
+    retired -->|every departure explained| retiredok(["examined N, exit 0"])
+  end
+
+  subgraph mac["a change to a path of apple-on-change.yml, the module's path included"]
+    caller["apple-on-change.yml calls xcframework.yml"] --> pkgjobs["harness-wire and card-isolation, each on the admitted hosted macOS label"]
+    pkgjobs --> pkgtests["swift test --package-path ios/package"]
+    pkgtests --> sweep["swift_mutants.py sweep --package ios/package --report REPORT --run-seconds n"]
+    hwrows --> sweep
+    cirows --> sweep
+    sweep --> unmutated["each distinct killer once, unmutated: one case started, none failed, Executed 1, exit 0"]
+    unmutated --> install["each row: the find once, replaced once"]
+    install --> killerrun["its killer alone: swift test --filter on the escaped killer, in its own session, bounded by run-seconds"]
+    killerrun --> restore["the file restored byte for byte, its sha256 checked"]
+    restore --> verdict{"the verdict, first match"}
+    verdict --> killed["KILLED"]
+    verdict --> survived["SURVIVED"]
+    verdict --> voidrow["VOID, with its reason"]
+    killed --> sweepmd[("REPORT/sweep.md and the step summary")]
+    survived --> sweepmd
+    voidrow --> sweepmd
+    sweepmd --> upload[("the job's report artifact, uploaded if always")]
+    sweep --> lastline["swift-mutants ios/package: examined N rows: K killed, S survived, V void"]
+  end
+
+  lastline --> record[("docs/red-first/SPEC-n.md of the delivery that changed the rows")]
+```
+
+| step | where |
+|---|---|
+| the two row files, `{population, mutants}`, each row `id`, `file`, `find`, `replace`, `killer`, `why` | `ios/HarnessWire/swift-mutants.json`, `ios/CardIsolation/swift-mutants.json` |
+| the reader and its verbs `census`, `retired`, `sweep` | `scripts/swift_mutants.py` (added by SPEC-397) |
+| the census on every pull request, and its planted refusals | `scripts/tests/test_swift_mutants.py` (added by SPEC-397) |
+| the approvals record, keyed by id, read by both retired checks | `scripts/mutation-rows.retired.json`; its reader `scripts/mutation_rows.py:1236-1240` |
+| the retired step, one `run:` line, on a diff | `.github/workflows/ci.yml:630-632` |
+| the change caller's paths | `.github/workflows/apple-on-change.yml:11-19`, joined by `scripts/swift_mutants.py` |
+| the jobs that sweep, their test steps and their report uploads under `always()` | `.github/workflows/xcframework.yml`, jobs `harness-wire` and `card-isolation` |
+| the admitted macOS label | `scripts/tests/test_ci_workflows.py:44` |
+| the bound: each job's `timeout-minutes` and each sweep's `--run-seconds`, from the measured constants | the A8 test in `scripts/tests/test_ci_workflows.py` |
+| the verdict line, read by name, and where a delivery records it | the job's log; `docs/red-first/SPEC-<n>.md` |
+
+The `ci.yml`, `apple-on-change.yml`, `mutation_rows.py` and `test_ci_workflows.py:44` lines are
+`164ac206`'s. SPEC-397 rewrites the sweep steps of `xcframework.yml`, which moves its later lines,
+so that file and the new module are cited by job and by name.
