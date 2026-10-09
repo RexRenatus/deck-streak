@@ -43,3 +43,28 @@ A7's census reads the index, as at C1: its green was read with the green commit'
 that commit, and the commit holds exactly that set.
 
 Part one's fix round. A16 to A18 are the web Worker's three sync specs, red at part one's tip as CI's web-engine job read them, on a merge ref whose tree is that commit's: the core refused every web sync pair because the Worker handed it no statement. A19 to A22 were committed next, red, with stubs that keep every input but the behaviour: a statement read that reads nothing, a sync that hands the engine what it read and ignores the answer, and no export. The commit that turns them green follows, and each green line names it. A16 to A18 turn green only in CI's browsers, and their green lines are written when CI has read them.
+
+Part two of #671. The check's tests were committed first, against a stub script that exits 0 and
+prints nothing, with no workflow file yet. A9 to A14 are quoted from the run of each fenced command at
+that commit; A8 and A15 are quoted from CI's run of theirs.
+
+```red-first
+A8: red at b1d5ddf61fdba34bdcd8260ca507e9b9475e45ab: AssertionError: False is not true : testflight-rerelease-check.yml does not exist at test_ci_workflows.py test_a8_the_rerelease_check_runs_scheduled_with_admitted_reads_only (CI job 113655743089)
+A9: red at b1d5ddf61fdba34bdcd8260ca507e9b9475e45ab: AssertionError: 'due: internal build 2 expires 2030-01-13T12:00:00Z, within 7 days; dispatched testflight-internal.yml on dev' not found in ''
+A10: red at b1d5ddf61fdba34bdcd8260ca507e9b9475e45ab: AssertionError: 'healthy: internal build 2 expires 2030-03-11T12:00:00Z, more than 7 days away' not found in ''
+A11: red at b1d5ddf61fdba34bdcd8260ca507e9b9475e45ab: AssertionError: 0 == 0
+A12: red at b1d5ddf61fdba34bdcd8260ca507e9b9475e45ab: AssertionError: 0 == 0
+A13: red at b1d5ddf61fdba34bdcd8260ca507e9b9475e45ab: AssertionError: 0 == 0
+A14: red at b1d5ddf61fdba34bdcd8260ca507e9b9475e45ab: AssertionError: 0 != 1 : one signature was asked for
+A15: red at b1d5ddf61fdba34bdcd8260ca507e9b9475e45ab: AssertionError: unexpectedly None : LEAD_DAYS is not a module-level literal of testflight_age.py at test_ci_workflows.py test_a15_the_rerelease_lead_covers_the_schedule_interval (CI job 113655743089)
+```
+```red-first
+A9: green at f45d729d58665cc9ee2140c2e63492f817c5f6aa
+A10: green at f45d729d58665cc9ee2140c2e63492f817c5f6aa
+A11: green at f45d729d58665cc9ee2140c2e63492f817c5f6aa
+A12: green at f45d729d58665cc9ee2140c2e63492f817c5f6aa
+A13: green at f45d729d58665cc9ee2140c2e63492f817c5f6aa
+A14: green at f45d729d58665cc9ee2140c2e63492f817c5f6aa
+```
+
+A8 and A15 are CI-only: their green is read from CI's run of the push-2 head, at the seat's CIWATCH.

@@ -67,6 +67,12 @@
       "test_deploy_templates"
     ]
   },
+  "scripts/testflight_age.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_testflight_age"
+    ]
+  },
   "scripts/threat_model.py": {
     "dir": "scripts/tests",
     "modules": [
