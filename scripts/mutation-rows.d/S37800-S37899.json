@@ -1,0 +1,33 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S37800-THE-ANSWER-JOINS-THE-EXEMPTIONS",
+        "engine-core",
+        "src/table.rs",
+        "pub const EXEMPT: [Exempt; 8] = [",
+        "pub const EXEMPT: [Exempt; 9] = [\n    Exempt {\n        write: ExemptWrite::Undo,\n        service: 13,\n        method: 4,\n        name: \"SchedulerService.AnswerCard\",\n        kind: TargetKind::Card,\n    },",
+        "answer::no_exempt_row_holds_the_answer_and_a_planted_one_is_refused_by_name",
+        "a ninth exempt row names the call that records a grade, (13,4) AnswerCard; joined, a grade would sit under the owner-taps exemption, and the table's decision census cannot see it because the answered row is decided first, so the row is planted by hand (SPEC-378 A2)"
+      ],
+      [
+        "S37801-THE-ANSWER-IS-DECIDED-EXEMPT",
+        "engine-core",
+        "src/table.rs",
+        "        Decision::NeedsAnswer\n    } else if EXEMPT",
+        "        Decision::NeedsGesture\n    } else if EXEMPT",
+        "answer::the_answer_is_decided_for_a_press_on_both_transports_never_for_a_gesture",
+        "the answered row is decided NeedsAnswer; as NeedsGesture the call that records a grade would be classed an exempt write held for a gesture, not an ordinary answer held for a press (SPEC-378 A1)"
+      ],
+      [
+        "S37802-RUN-HOLDS-THE-ANSWER-FOR-A-GESTURE",
+        "engine-core",
+        "src/dispatch.rs",
+        "Decision::NeedsAnswer => Err(Refusal::NeedsAnswer { service, method }),",
+        "Decision::NeedsAnswer => Err(Refusal::NeedsGesture { service, method }),",
+        "answer::run_holds_an_answer_for_a_press_on_both_transports_never_for_a_gesture",
+        "run refuses the call that records a grade as held for a press; refused as held for a gesture, an adapter would read a grade as an exempt write and send it to the gesture's door (SPEC-378 A3)"
+      ]
+    ]
+  }
+}

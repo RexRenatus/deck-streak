@@ -6,6 +6,12 @@
 //! states the queue gives its new cards, and records an answer through `run_answer` as an adapter
 //! does. The expected next state is the engine's own state for the grade, named here grade by
 //! grade, never the grade's own pick, and what the engine wrote is read from the collection's rows.
+//!
+//! SPEC-378 A1 to A3 (#716; ADR-389): a grade recorded through the answer is an ordinary answer,
+//! and no exemption holds it. These three open no collection. They name the call that records a
+//! grade by its literal pair and name, never read from the core, and each holds one side of it:
+//! the table answers it for a press on both transports, no exempt row names it, and `run` holds it
+//! for a press and never for a gesture.
 
 #![allow(
     clippy::expect_used,
@@ -26,8 +32,10 @@ use anki_proto::scheduler::{
 use deck_streak_engine_core::answer::{
     AnswerRefusal, Grade, OwnerAnswer, answer_request, shown_states,
 };
-use deck_streak_engine_core::dispatch::{Dispatcher, Read};
-use deck_streak_engine_core::table::Transport;
+use deck_streak_engine_core::dispatch::{Dispatcher, Read, Refusal};
+use deck_streak_engine_core::table::{
+    ANSWERED, Decision, EXEMPT, Exempt, ExemptWrite, TargetKind, Transport, decide,
+};
 use prost::Message;
 use serde_json::Value;
 
@@ -355,4 +363,153 @@ fn each_answer_refusal_reads_as_its_own_sentence() {
         "each refusal reads as its own sentence, with the values it carries"
     );
     println!("examined {} of 4 refusal(s)", sentences.len());
+}
+
+/// The call that records a grade, as the engine numbers it (SPEC-365 R4): written here, never read
+/// from the core, so a table that moves the call is judged against this literal (SPEC-378 R1).
+const ANSWER_CARD: (u32, u32) = (13, 4);
+/// The engine's name for [`ANSWER_CARD`].
+const ANSWER_CARD_NAME: &str = "SchedulerService.AnswerCard";
+/// Both transports: the native adapter's and the web engine's.
+const TRANSPORTS: [Transport; 2] = [Transport::Native, Transport::Web];
+
+/// The names of the rows of `exempt` that hold the call recording a grade, by its pair or by its
+/// name (SPEC-378 R2).
+fn answers_among(exempt: &[Exempt]) -> Vec<&'static str> {
+    let (service, method) = ANSWER_CARD;
+    exempt
+        .iter()
+        .filter(|row| row.is(service, method) || row.name == ANSWER_CARD_NAME)
+        .map(|row| row.name)
+        .collect()
+}
+
+/// `rows`, with its first row replaced by `with`.
+fn first_replaced(rows: &[Exempt], with: Exempt) -> Vec<Exempt> {
+    let mut planted = rows.to_vec();
+    if let Some(first) = planted.first_mut() {
+        *first = with;
+    }
+    planted
+}
+
+/// MUTATION COVERAGE, not red first (SPEC-378 A1, R1): it pins the classing the base already has.
+/// The call that records a grade is the one answered row, and the table holds it for an owner's
+/// press on both transports, where an exempt write would read `NeedsGesture`.
+#[test]
+fn the_answer_is_decided_for_a_press_on_both_transports_never_for_a_gesture() {
+    let (service, method) = ANSWER_CARD;
+    let decided: Vec<(Transport, Decision)> = TRANSPORTS
+        .into_iter()
+        .map(|transport| (transport, decide(transport, service, method)))
+        .collect();
+    let answered: Vec<(u32, u32, &str)> = ANSWERED
+        .iter()
+        .map(|row| (row.service, row.method, row.name))
+        .collect();
+    assert_eq!(
+        (decided, answered),
+        (
+            vec![
+                (Transport::Native, Decision::NeedsAnswer),
+                (Transport::Web, Decision::NeedsAnswer),
+            ],
+            vec![(13, 4, ANSWER_CARD_NAME)],
+        ),
+        "the call that records a grade is the one answered row, held for an owner's press on both transports"
+    );
+    println!("examined {} of 2 transport(s)", TRANSPORTS.len());
+}
+
+/// MUTATION COVERAGE, not red first (SPEC-378 A2, R2): it pins the table the base already has. No
+/// exempt row names the call that records a grade, whatever else the exempt table holds, and a row
+/// planted to name it is refused by the row's own name, whether it joins the table, takes the
+/// answer's pair or takes the answer's name.
+#[test]
+fn no_exempt_row_holds_the_answer_and_a_planted_one_is_refused_by_name() {
+    let rows = EXEMPT.to_vec();
+    let first = *rows
+        .first()
+        .expect("the exempt table holds a row to plant over");
+    let (service, method) = ANSWER_CARD;
+    let joined: Vec<Exempt> = rows
+        .iter()
+        .copied()
+        .chain([Exempt {
+            write: ExemptWrite::Undo,
+            service,
+            method,
+            name: ANSWER_CARD_NAME,
+            kind: TargetKind::Card,
+        }])
+        .collect();
+    let renumbered = first_replaced(
+        &rows,
+        Exempt {
+            service,
+            method,
+            ..first
+        },
+    );
+    let renamed = first_replaced(
+        &rows,
+        Exempt {
+            name: ANSWER_CARD_NAME,
+            ..first
+        },
+    );
+    assert_eq!(
+        [
+            rows.as_slice(),
+            joined.as_slice(),
+            renumbered.as_slice(),
+            renamed.as_slice(),
+        ]
+        .map(answers_among),
+        [
+            vec![],
+            vec![ANSWER_CARD_NAME],
+            vec![first.name],
+            vec![ANSWER_CARD_NAME],
+        ],
+        "no exempt row names the call that records a grade; a planted row that joins, takes its pair or takes its name is refused by name"
+    );
+    support::examined("exempt row(s)", rows);
+}
+
+/// MUTATION COVERAGE, not red first (SPEC-378 A3, R3): it pins the refusal the base already has.
+/// `run` refuses the call that records a grade as held for an owner's press on both transports,
+/// before the engine sees it, and never as held for a gesture.
+#[test]
+fn run_holds_an_answer_for_a_press_on_both_transports_never_for_a_gesture() {
+    let (service, method) = ANSWER_CARD;
+    let refused: Vec<(Transport, Result<Vec<u8>, Refusal>)> = TRANSPORTS
+        .into_iter()
+        .map(|transport| {
+            let dispatcher =
+                Dispatcher::start(transport, &[]).expect("the engine starts from the default init");
+            (transport, dispatcher.run(service, method, &NO_MESSAGE))
+        })
+        .collect();
+    assert_eq!(
+        refused,
+        vec![
+            (
+                Transport::Native,
+                Err(Refusal::NeedsAnswer {
+                    service: 13,
+                    method: 4
+                })
+            ),
+            (
+                Transport::Web,
+                Err(Refusal::NeedsAnswer {
+                    service: 13,
+                    method: 4
+                })
+            ),
+        ],
+        "run holds the call that records a grade for an owner's press on both transports, never for a gesture"
+    );
+    println!("examined {} of 2 transport(s)", TRANSPORTS.len());
 }
