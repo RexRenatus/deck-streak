@@ -20,6 +20,7 @@ pub mod engine;
 pub mod gate;
 pub mod lock;
 pub mod memory_state;
+pub mod preset;
 pub mod reader;
 pub mod settings;
 pub mod skip;

@@ -176,20 +176,28 @@ class ThePolicyDisclosesWhatAnEraseLeaves(unittest.TestCase):
         self.assertIn("PRIVACY.md", ABOUT.read_text(encoding="utf-8"))
 
 
-# SPEC-368: the section that says what DeckStreak trains or fits on a learner's data.
+# SPEC-368: the section that says what DeckStreak trains or fits on a learner's data; its
+# paragraph as SPEC-387 R10 replaced it.
 MODELS = "## Models and your data"
 PARAGRAPH = (
-    "DeckStreak does not train, fine-tune or fit a model on your data, and does not build a "
-    "dataset from it. The scheduling parameters in your collection come from your Anki app: "
-    "DeckStreak reads them, and the memory state Anki stores for each card, to schedule the cards "
-    "you study, and does not fit them to your reviews. An AI duty runs only when the host's AI "
-    "route is configured, which it is not by default. Each run sends the cards that duty covers "
-    "and a summary of your leeches, lapses and graded practice, not your journal, as the context "
-    "of that one run, and DeckStreak's database keeps neither the prompt nor the reply. A reply "
-    "that passes its checks is written to your own vault. What the model's provider keeps is set "
-    "by that provider's terms."
+    "DeckStreak does not train or fine-tune a neural network or a language model on your data, "
+    "and does not build a dataset from it. The scheduling parameters in your collection are your "
+    "own scheduler's: either a fit of that scheduler to your own reviews, made by your Anki app, "
+    "or the scheduler's defaults. DeckStreak reads them, and the memory state Anki stores for "
+    "each card, to schedule the cards you study, and does not fit them itself. When you ask, "
+    "DeckStreak proposes the scheduler's defaults for one preset and keeps a record of the "
+    "proposal and of the parameters it would replace, so the change can be undone; your Anki app "
+    "applies it, not DeckStreak. An AI duty runs only when the host's AI route is configured, "
+    "which it is not by default. Each run sends the cards that duty covers and a summary of your "
+    "leeches, lapses and graded practice, not your journal, as the context of that one run, and "
+    "DeckStreak's database keeps neither the prompt nor the reply. A reply that passes its checks "
+    "is written to your own vault. What the model's provider keeps is set by that provider's "
+    "terms."
 )
 OLD_SENTENCE = "DeckStreak never uses your data to train a model."
+# SPEC-387 R9: the proposal record's category, and the fields of its declaration the test pins.
+PRESET_CATEGORY = "preset-proposals"
+PRESET_DECLARED = ("source", "stores", "lawful_basis", "retention", "export", "erase")
 # What a delivery that trips a guard below owes: the page, and its changelog entry (SPEC-368 R7).
 OWED = (
     f"the section `{MODELS}` of PRIVACY.md says what DeckStreak does with a learner's data, so "
@@ -339,6 +347,26 @@ class ThePolicyStatesWhatDeckStreakFitsOnYourData(unittest.TestCase):
         policy = POLICY.read_text(encoding="utf-8")
         self.assertIn(flat(PARAGRAPH), flat(models_section(policy)))
         self.assertNotIn(flat(OLD_SENTENCE), flat(policy))
+
+    def test_the_preset_proposals_record_is_declared_and_named(self):
+        """SPEC-387 R9: the proposal record is a declared category, and the page's table names it."""
+        categories = {category["id"]: category for category in inventory()["categories"]}
+        self.assertIn(PRESET_CATEGORY, categories)
+        category = categories[PRESET_CATEGORY]
+        self.assertEqual(
+            {key: category[key] for key in PRESET_DECLARED},
+            {
+                "source": "derived",
+                "stores": ["preset_proposals.*"],
+                "lawful_basis": "contract",
+                "retention": {"until": "account-deletion"},
+                "export": True,
+                "erase": "delete",
+            },
+        )
+        self.assertTrue(category["purpose"].strip(), "the category states a purpose")
+        policy = POLICY.read_text(encoding="utf-8")
+        self.assertEqual(undisclosed_categories(policy, [category]), [])
 
     def test_the_engine_allow_list_holds_no_fitting_method(self):
         methods = examined("engine methods", table_methods(TABLE.read_text(encoding="utf-8")))

@@ -529,7 +529,7 @@ fn engine_client<Client: Default>() -> Client {
 }
 
 /// Opens (or, when it does not exist yet, creates) the collection at `collection`.
-fn open(collection: &Path) -> Result<Collection, EngineError> {
+pub(crate) fn open(collection: &Path) -> Result<Collection, EngineError> {
     CollectionBuilder::new(collection)
         .build()
         .map_err(|error| match bounded(error) {
@@ -588,7 +588,7 @@ async fn log_in(login: &SyncLogin) -> Result<SyncAuth, EngineError> {
 }
 
 /// The engine's error as one bounded kind; its text, which can hold a path, is dropped here.
-fn bounded(error: AnkiError) -> EngineError {
+pub(crate) fn bounded(error: AnkiError) -> EngineError {
     match error {
         AnkiError::DbError { source } if source.kind == DbErrorKind::Locked => {
             EngineError::CollectionLocked
