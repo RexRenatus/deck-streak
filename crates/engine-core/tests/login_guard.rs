@@ -309,6 +309,7 @@ fn every_sync_call_reaches_only_a_guarded_endpoint_and_never_media() {
     // through would reach the engine and answer the engine's own error, never a network.
     let web =
         Dispatcher::start(Transport::Web, &[]).expect("the engine starts from the default init");
+    web.handshake(Some(br#"{"minimum_client_level":1}"#));
     let normal_cases = [
         ("an absent endpoint", normal_sync(None, false), ABSENT),
         ("an empty endpoint", normal_sync(Some(""), false), ABSENT),

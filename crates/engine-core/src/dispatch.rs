@@ -15,6 +15,7 @@ use crate::answer::{AnswerRefusal, OwnerAnswer};
 use crate::face::{self, Face, Side};
 use crate::full_sync::{IdSets, Unsynced, Write};
 use crate::gesture::{Checked, GestureRefusal, OwnerGesture, Target};
+use crate::handshake::{self, Outcome};
 use crate::login_guard;
 use crate::media::Reader;
 use crate::one_way;
@@ -89,6 +90,9 @@ pub struct Dispatcher {
     /// The collection path the last successful open named, shared by every clone of this
     /// dispatcher: the file no server copy and no backup may be written into (SPEC-364 R4, R5).
     open: Arc<Mutex<Option<PathBuf>>>,
+    /// What the latest statement of the service's minimum client level decided, shared by every
+    /// clone of this dispatcher and by each private engine it starts (SPEC-374 R4, R7).
+    handshake: Arc<Mutex<Outcome>>,
 }
 
 /// Why the dispatcher did not answer a call with the engine's reply.
@@ -150,7 +154,29 @@ impl Dispatcher {
             media_folder: Arc::default(),
             start: Arc::from(message),
             open: Arc::default(),
+            handshake: Arc::default(),
         })
+    }
+
+    /// Hands the dispatcher the latest statement of the service's minimum client level: its body,
+    /// or `None` when no answer was read (SPEC-374 R4). Its outcome replaces the last one, so a
+    /// later below or unread statement refuses again.
+    pub fn handshake(&self, statement: Option<&[u8]>) {
+        *self
+            .handshake
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner) = handshake::decide(statement);
+    }
+
+    /// Whether the latest statement lets a sync call reach the engine (SPEC-374 R5): the core's
+    /// refusal, in the login guard's shape, unless it was admitted.
+    fn admitted(&self) -> Result<(), Vec<u8>> {
+        handshake::admits(
+            *self
+                .handshake
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner),
+        )
     }
 
     /// Runs one ordinary call: the request's protobuf bytes in, the response's out. The table
@@ -163,9 +189,11 @@ impl Dispatcher {
     /// records a grade, [`Refusal::NotAllowed`] for every other pair this transport may not make,
     /// and [`Refusal::Engine`] when the engine answers an admitted call with an error, or when the
     /// login guard refuses a sync login's or a normal sync's endpoint, or a normal sync's media, in
-    /// the engine's own error shape before the engine sees it (SPEC-347 R2, SPEC-364 R2). When the
-    /// engine opens a collection, the core keeps the media folder and the collection path its
-    /// request named (SPEC-348 R5, SPEC-364 R4).
+    /// the engine's own error shape before the engine sees it (SPEC-347 R2, SPEC-364 R2), or when
+    /// the latest statement of the service's minimum client level has not admitted this client,
+    /// in the same shape, after the guard (SPEC-374 R5). When the engine opens a collection, the
+    /// core keeps the media folder and the collection path its request named (SPEC-348 R5,
+    /// SPEC-364 R4).
     pub fn run(&self, service: u32, method: u32, input: &[u8]) -> Result<Vec<u8>, Refusal> {
         match decide(self.transport, service, method) {
             Decision::Admit => {
@@ -174,6 +202,9 @@ impl Dispatcher {
                 }
                 if (service, method) == SYNC_COLLECTION {
                     login_guard::check_sync(input).map_err(|error| Refusal::Engine { error })?;
+                }
+                if matches!((service, method), SYNC_LOGIN | SYNC_COLLECTION) {
+                    self.admitted().map_err(|error| Refusal::Engine { error })?;
                 }
                 let reply = self
                     .backend
@@ -295,8 +326,9 @@ impl Dispatcher {
     /// [`Self::close`].
     pub(crate) fn private(&self, collection: &Path) -> Result<Self, Refusal> {
         let path = utf8(collection)?;
-        let engine = Self::start(Transport::Native, &self.start)
+        let mut engine = Self::start(Transport::Native, &self.start)
             .map_err(|message| failed(&format!("the private engine does not start: {message}")))?;
+        engine.handshake = Arc::clone(&self.handshake);
         let request = OpenCollectionRequest {
             collection_path: path.to_owned(),
             ..OpenCollectionRequest::default()
@@ -308,10 +340,12 @@ impl Dispatcher {
 
     /// Runs the engine's one-way sync with a request the core built: the choice's write on the
     /// open collection, or the fetch of a server copy into a private engine's empty file. Its
-    /// auth meets the login's endpoint rule first (SPEC-364 R2). Its error is the engine's
-    /// encoded `BackendError`, or the guard's in the same shape.
+    /// auth meets the login's endpoint rule first (SPEC-364 R2), and then the latest statement of
+    /// the service's minimum client level must have admitted this client (SPEC-374 R5). Its error
+    /// is the engine's encoded `BackendError`, or the guard's or the handshake's in the same shape.
     pub(crate) fn full_sync(&self, request: &FullUploadOrDownloadRequest) -> Result<(), Vec<u8>> {
         login_guard::check_auth(&request.auth.clone().unwrap_or_default())?;
+        self.admitted()?;
         let (service, method) = FULL_SYNC;
         self.backend
             .run_service_method(service, method, &request.encode_to_vec())
