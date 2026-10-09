@@ -665,6 +665,64 @@ class TheCheckHoldsItsEdges(CheckCase):
                 module.first_parent_count()
         self.assertEqual(str(caught.exception), "failed: git exited 128")
 
+    def test_the_last_integer_is_read_by_its_own_length_byte(self):
+        module = load_script()
+        self.assertEqual(module.raw_signature(DER + b"\x99"), RAW)
+
+    def test_a_full_width_second_integer_is_read_whole(self):
+        module = load_script()
+        each = bytes(range(1, 33))
+        self.assertEqual(module.raw_signature(der_of(each, each)), each + each)
+
+    def test_only_the_absent_part_is_named_missing(self):
+        from unittest import mock
+
+        module = load_script()
+        placed = {part: "value-" + part for part in PARTS[:3]}
+        with mock.patch.dict(os.environ, placed):
+            os.environ.pop(PARTS[3], None)
+            self.assertEqual(module.missing_parts(False), [PARTS[3]])
+
+    def test_the_git_and_gh_children_capture_their_output_as_text(self):
+        from types import SimpleNamespace
+        from unittest import mock
+
+        module = load_script()
+        seen = []
+
+        def record(argv, **kwargs):
+            seen.append((kwargs.get("capture_output"), kwargs.get("text")))
+            return SimpleNamespace(returncode=0, stdout="7\n", stderr="")
+
+        with mock.patch.object(module.subprocess, "run", side_effect=record):
+            self.assertEqual(module.first_parent_count(), 7)
+            module.dispatch()
+        self.assertEqual(seen, [(True, True), (True, True)])
+
+    def test_the_refusal_of_a_clock_without_a_zone_says_so(self):
+        module = load_script()
+        with self.assertRaisesRegex(ValueError, "no zone"):
+            module.instant("2030-01-10T12:00:00")
+
+    def test_the_help_describes_the_clock_option(self):
+        import contextlib
+
+        module = load_script()
+
+        class Sink:
+            def __init__(self):
+                self.parts = []
+
+            def write(self, text):
+                self.parts.append(text)
+
+        sink = Sink()
+        with contextlib.redirect_stdout(sink):
+            with self.assertRaises(SystemExit) as caught:
+                module.main(["--help"])
+        self.assertEqual(caught.exception.code, 0)
+        self.assertIn("the clock, for the tests only", " ".join("".join(sink.parts).split()))
+
 
 if __name__ == "__main__":
     unittest.main()
