@@ -179,3 +179,26 @@ B6: green at 4edd078f
 B7: green at 4edd078f
 B9: green at 4edd078f
 ```
+
+### After the greens
+
+The record above names 4edd078f. Its sentence that the tests and the code they exercise are
+byte-identical to the pushed tip holds for B1, B2, B3 and B4 only, and this section says what
+changed after it, without editing that sentence.
+
+- 3fa2cc8d changed the order in which the daemon reads the archive lister after a start refusal.
+  The daemon whole suite was red before it and passed with 104 tests at it. No test changed.
+- cb0eb1de added a census of the backup helpers that only the wasm32 build compiles. It exists
+  for mutation coverage, and no criterion's red or green moves with it.
+- 817417c1 added four tests, again for mutation coverage: the listing command past its time bound
+  is stopped and not left running (B9), the alert clears and no removal list is shown (B5), and the
+  storage status waits for the browser's answer (B7).
+- c63b0a27 dropped two guards no answer reaches, one in the backups helper and one in the sync
+  screen's text choice. Behaviour is unchanged.
+
+B5, B6, B7 and B9 were re-run green at c63b0a27: the files test 8 passed with the listed-backup
+export test among them, the boundary test 12 passed, the backups vitest file 8 passed, the browser
+test for B6 1 passed, the storage status test for B7 1 passed, and the lister test file for B9 7
+passed. The pull request proves by `git diff --quiet` that the tests and code of B1 to B4 are
+byte-identical between 4edd078f and the pushed head, and that the seven paths changed since are
+byte-identical between c63b0a27 and the pushed head.
