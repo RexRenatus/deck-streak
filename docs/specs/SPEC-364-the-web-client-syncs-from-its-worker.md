@@ -614,6 +614,7 @@ A send that does not settle is a step the model lacks, so the model would change
 - (vi) The status source's arm exists (D14).
 - (vii) The boundary census is shared: C4 grows its owed statements.
 - (viii) The #730 overlap is shared: the paths part b2 shares with #730 are part b3's to re-measure too.
+- Part b3 is delivered by SPEC-377 part c1.
 
 ## 18. Mutation rows (part b2)
 

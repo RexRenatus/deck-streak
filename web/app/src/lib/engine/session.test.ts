@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Reply } from './protocol';
+import type { ChoiceConfirmed, ChoiceCounted, Reply, Unsynced } from './protocol';
 import { Session, type EngineModule, type LockAnswer, type SessionDeps } from './session';
 
 // SPEC-338 A8 to A11: the Worker's session over a fake engine and a fake browser. The fake engine
@@ -875,5 +875,112 @@ describe("the Worker session's sync operations", () => {
     expect(await session.handle({ id: 3, op: 'sync-login', user: 'u', password: 'p' })).toEqual(trapped);
     expect(await session.handle({ id: 4, op: 'next' })).toEqual({ ...trapped, id: 4 });
     expect(await session.handle({ id: 5, op: 'sync' })).toEqual({ ...trapped, id: 5 });
+  });
+});
+
+describe("the Worker session's choice operations", () => {
+  // SPEC-377 R6: the four choice operations need an open session and answer the Worker's choice's
+  // own value; a Worker with no choice refuses each by name, a trap ends the session, and any other
+  // throw answers engine-failed
+  const OPS = ['choice-count', 'choice-confirm', 'choice-cancel', 'unsynced'] as const;
+  const COUNTED: ChoiceCounted = {
+    status: 'held',
+    counts: { upload: { reviews: 1, cards: 2, notes: 3 }, download: null },
+    snapshot: { found: true, age: 60 }
+  };
+  const CONFIRMED: ChoiceConfirmed = { status: 'held', outcome: 'written' };
+  const UNSYNCED: Unsynced = { reviews: 4, changed: true, schema: false };
+  const ask = (id: number, op: (typeof OPS)[number]) =>
+    op === 'choice-confirm' ? { id, op, direction: 'upload' } : { id, op };
+  const recording = (calls: string[], thrown?: () => unknown): NonNullable<SessionDeps['choice']> => {
+    const answer = async <T>(call: string, value: T): Promise<T> => {
+      calls.push(call);
+      if (thrown !== undefined) throw thrown();
+      return value;
+    };
+    return {
+      heard: (required) => {
+        calls.push(`heard ${required}`);
+      },
+      count: () => answer('count', COUNTED),
+      confirm: (direction) => answer(`confirm ${direction}`, CONFIRMED),
+      cancel: () => answer('cancel', undefined),
+      unsynced: () => answer('unsynced', UNSYNCED)
+    };
+  };
+  const opened = async (choice: SessionDeps['choice'], engine = new FakeEngine()) => {
+    const session = new Session({
+      lock: async () => 'held',
+      storage: async () => null,
+      load: async () => engine,
+      choice
+    });
+    expect(await session.handle({ id: 0, op: 'open' })).toMatchObject({ id: 0, ok: true });
+    return session;
+  };
+
+  it('each choice operation needs an open session, and a Worker with no choice refuses each by name', async () => {
+    const asked: string[] = [];
+    const closed = new Session({
+      lock: async () => 'held',
+      storage: async () => null,
+      load: async () => new FakeEngine(),
+      choice: recording(asked)
+    });
+    for (const [index, op] of OPS.entries()) {
+      expect(await closed.handle(ask(index + 1, op)), op).toEqual(refusal(index + 1, 'not-open', `${op} before open`));
+    }
+    expect(asked).toEqual([]);
+    const none = await opened(undefined);
+    for (const [index, op] of OPS.entries()) {
+      expect(await none.handle(ask(index + 1, op)), op).toEqual(
+        refusal(index + 1, 'engine-failed', `this Worker has no full-sync choice for ${op}`)
+      );
+    }
+    // the refusal leaves the session open
+    expect(await none.handle({ id: 5, op: 'next' })).toEqual({ id: 5, ok: true, value: null });
+    console.log(`examined ${OPS.length} choice operations`);
+  });
+
+  it("each choice operation answers its choice's own value, the confirm with the request's direction", async () => {
+    const calls: string[] = [];
+    const session = await opened(recording(calls));
+    expect(await session.handle({ id: 1, op: 'choice-count' })).toEqual({ id: 1, ok: true, value: COUNTED });
+    expect(await session.handle({ id: 2, op: 'choice-confirm', direction: 'upload' })).toEqual({
+      id: 2,
+      ok: true,
+      value: CONFIRMED
+    });
+    expect(await session.handle({ id: 3, op: 'choice-confirm', direction: 'download' })).toEqual({
+      id: 3,
+      ok: true,
+      value: CONFIRMED
+    });
+    expect(await session.handle({ id: 4, op: 'choice-cancel' })).toEqual({ id: 4, ok: true, value: null });
+    expect(await session.handle({ id: 5, op: 'unsynced' })).toEqual({ id: 5, ok: true, value: UNSYNCED });
+    expect(calls).toEqual(['count', 'confirm upload', 'confirm download', 'cancel', 'unsynced']);
+  });
+
+  it('a trap in a choice ends the session, and any other throw answers engine-failed', async () => {
+    const engine = new FakeEngine();
+    let thrown: unknown = new TypeError('a synthetic failure');
+    const calls: string[] = [];
+    const session = await opened(
+      recording(calls, () => thrown),
+      engine
+    );
+    // a throw that is not a trap leaves the session open
+    for (const [index, op] of OPS.entries()) {
+      expect(await session.handle(ask(index + 1, op)), op).toEqual(refusal(index + 1, 'engine-failed', 'a synthetic failure'));
+    }
+    expect(calls).toEqual(['count', 'confirm upload', 'cancel', 'unsynced']);
+    expect(await session.handle({ id: 5, op: 'next' })).toEqual({ id: 5, ok: true, value: null });
+    // a trap spends the module: its panic is the message from then on
+    engine.panic = 'panicked at rslib/src/sync/collection/upload.rs: the choice trapped';
+    thrown = new WebAssembly.RuntimeError('unreachable');
+    const trapped = refusal(6, 'engine-failed', 'panicked at rslib/src/sync/collection/upload.rs: the choice trapped');
+    expect(await session.handle({ id: 6, op: 'choice-confirm', direction: 'download' })).toEqual(trapped);
+    expect(await session.handle({ id: 7, op: 'next' })).toEqual({ ...trapped, id: 7 });
+    expect(await session.handle({ id: 8, op: 'choice-count' })).toEqual({ ...trapped, id: 8 });
   });
 });

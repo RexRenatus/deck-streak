@@ -8,6 +8,7 @@ import Formal.SkipTariffVectors
 import Formal.TableCensusReachVectors
 import Formal.TokenBonusVectors
 import Formal.WalletVectors
+import Formal.XpReconciliationVectors
 
 /-!
 # Formal.Vectors
@@ -35,6 +36,7 @@ def main (args : List String) : IO UInt32 := do
   | ["TableCensusReach"] => Formal.TableCensusReachVectors.run
   | ["TokenBonus"] => Formal.TokenBonusVectors.run
   | ["Wallet"] => Formal.WalletVectors.run
+  | ["XpReconciliation"] => Formal.XpReconciliationVectors.run
   | _ =>
     IO.eprintln s!"usage: lean --run Formal/Vectors.lean <Entry>; no vectors for {args}"
     return 2
