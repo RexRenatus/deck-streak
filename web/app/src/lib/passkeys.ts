@@ -175,11 +175,11 @@ export function parseMethods(body: unknown): Method[] | null {
   if (!Array.isArray(body)) return null;
   const methods: Method[] = [];
   for (const item of body as (Json | null)[]) {
-    const id = item?.id;
-    const created = item?.created_at;
+    if (item === null) return null;
+    const { id, kind, created_at: created } = item;
     if (typeof id !== 'number') return null;
-    if (item?.kind === 'telegram') methods.push({ id, kind: 'telegram' });
-    else if (item?.kind === 'passkey' && typeof created === 'number') {
+    if (kind === 'telegram') methods.push({ id, kind: 'telegram' });
+    else if (kind === 'passkey' && typeof created === 'number') {
       methods.push({ id, kind: 'passkey', createdAt: created });
     } else return null;
   }
@@ -274,18 +274,17 @@ export async function signIn(): Promise<Outcome<true>> {
   }
   const finished = await ended(await send('/api/passkeys/sign-in/finish', response), (body) => body);
   if (finished.kind !== 'ok') return finished;
-  const signals = PublicKeyCredential as unknown as Signals;
-  if (typeof signals.signalAllAcceptedCredentials === 'function') {
+  const signal = (PublicKeyCredential as unknown as Signals).signalAllAcceptedCredentials;
+  if (typeof signal === 'function') {
     const accepted = finished.value as Json;
-    try {
-      await signals.signalAllAcceptedCredentials({
+    // a signal the browser refuses changes nothing: the owner is signed in
+    await signal
+      .call(PublicKeyCredential, {
         rpId: String(started.value.rpId),
         userId: accepted.user_handle,
         allAcceptedCredentialIds: accepted.credential_ids
-      });
-    } catch {
-      // a signal the browser refuses changes nothing: the owner is signed in
-    }
+      })
+      .catch(() => undefined);
   }
   return { kind: 'ok', value: true };
 }
