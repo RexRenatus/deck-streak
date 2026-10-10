@@ -367,3 +367,16 @@ push starts it" clause.
 
 The amendment changes no trigger, filter or queue of the release lane or of `xcframework.yml`, and
 no repository or environment setting (#634).
+
+### SPEC-405: the release lane also takes a dispatch at the tag's own ref
+
+#733 gives the release lane an input-free manual dispatch at the tag's own ref, through the same
+guard step, plan and group (SPEC-405, ADR-419). R1's "and on nothing else" for
+`testflight-release.yml` now reads: on a push of a tag matching its filter, and on a manual
+dispatch with no input. The plan refuses a run that a workflow's own token started.
+
+- A14 (R1) now holds the release lane's `on` to exactly the tag push and the input-free dispatch;
+  the internal lane's assertion is unchanged.
+- A5's refused dispatch moves from the tag's own ref to a branch named like it, `refs/heads/v0.2.0`,
+  with the new message (ADR-419 D6); no assertion is removed.
+- The second path's criteria are SPEC-405 A1 to A7, and its rows are S40500 to S40515.

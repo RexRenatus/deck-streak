@@ -23,7 +23,9 @@ from test_ci_workflows import (
     expressions_in,
     load,
     marked_uses,
+    push,
     read_hardened,
+    rendered,
     strings,
     workflow_file_text,
 )
@@ -178,15 +180,16 @@ def push_paths(workflow):
 
 class TheTestflightLanes(unittest.TestCase):
     def test_each_lane_runs_on_its_one_trigger_and_nothing_a_pull_request_starts(self):
-        # SPEC-352 A14 (R1, as R22 amends it): a dispatch on dev and a push to dev that changes an
-        # app input start the internal lane, and a SemVer tag the release lane, each on nothing
-        # else, so no pull request, schedule, tag or other branch's push starts the internal lane.
+        # SPEC-352 A14 (R1, as R22 and SPEC-405 R1 amend it): a dispatch on dev and a push to dev
+        # that changes an app input start the internal lane, and a SemVer tag's push or an
+        # input-free dispatch at it the release lane, each on nothing else, so no pull request,
+        # schedule, tag or other branch's push starts the internal lane.
         triggers = {
             INTERNAL: {
                 "workflow_dispatch": None,
                 "push": {"branches": ["dev"], "paths": INTERNAL_PATHS},
             },
-            RELEASE: {"push": {"tags": TAGS}},
+            RELEASE: {"push": {"tags": TAGS}, "workflow_dispatch": None},
         }
         for name, on in examined("lane triggers", list(triggers.items())):
             self.assertEqual(read_hardened(WORKFLOWS / name).get("on"), on, name)
@@ -414,6 +417,52 @@ class TheTestflightLanes(unittest.TestCase):
                 [f"python3 scripts/ios_lane.py plan --lane {LANES[name]}"],
                 name,
             )
+
+
+class TheReleaseLaneHasASecondPath(unittest.TestCase):
+    """SPEC-405 R1, R2 and R5 (ADR-419 D2a): a release tag whose push started no lane run is built
+    by a manual dispatch at the tag's own ref, which takes no input, skips nothing the push runs
+    and joins the tag's group."""
+
+    def test_the_release_lane_runs_on_a_tag_push_or_an_input_free_dispatch_and_nothing_skips_either(
+        self,
+    ):
+        workflow = read_hardened(WORKFLOWS / RELEASE)
+        events = workflow.get("on")
+        self.assertEqual(
+            list(events),
+            ["push", "workflow_dispatch"],
+            "the lane runs on a tag push or a manual dispatch, and on nothing else",
+        )
+        self.assertEqual(events["push"], {"tags": TAGS})
+        self.assertIsNone(events["workflow_dispatch"], "the dispatch takes no input")
+        jobs = lane_jobs(RELEASE)
+        self.assertEqual(sorted(jobs), ["app", "framework", "plan"])
+        for name in examined("lane jobs", sorted(jobs)):
+            self.assertNotIn("if", jobs[name], f"the job {name} runs on every path")
+        guard = [step for step in steps_of(jobs["plan"]) if step.get("name") == ANCESTRY]
+        self.assertEqual(len(guard), 1)
+        self.assertNotIn("if", guard[0], "the guard step runs on every path")
+
+    def test_a_push_and_a_dispatch_of_one_tag_render_one_lane_group(self):
+        group = read_hardened(WORKFLOWS / RELEASE)["concurrency"]["group"]
+        contexts = {
+            "push": push("refs/tags/v1.0.0", run_id="301"),
+            "workflow_dispatch": {
+                **push("refs/tags/v1.0.0", run_id="302"),
+                "github.event_name": "workflow_dispatch",
+            },
+        }
+        self.assertEqual(
+            {event: rendered(group, contexts[event]) for event in contexts},
+            {
+                "push": "testflight-release-refs/tags/v1.0.0",
+                "workflow_dispatch": "testflight-release-refs/tags/v1.0.0",
+            },
+        )
+        declared = list(read_hardened(WORKFLOWS / RELEASE)["on"])
+        for event in examined("events", contexts):
+            self.assertIn(event, declared, f"the lane declares no {event} trigger")
 
 
 if __name__ == "__main__":

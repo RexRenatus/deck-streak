@@ -230,7 +230,7 @@ class LanePlan(unittest.TestCase):
         git(root, self.env, "commit", "-q", "-m", "the workspace")
         return root, git(root, self.env, "rev-parse", "HEAD")
 
-    def plan(self, checkout, lane, event, ref, sha):
+    def plan(self, checkout, lane, event, ref, sha, **extra):
         """Run the plan step as the runner would, and return the run and the outputs it wrote."""
         output = self.scratch / f"output-{uuid.uuid4().hex}"
         output.touch()
@@ -242,6 +242,7 @@ class LanePlan(unittest.TestCase):
             GITHUB_REF_NAME=ref.split("/", 2)[2],
             GITHUB_SHA=sha,
             GITHUB_OUTPUT=str(output),
+            **extra,
         )
         run = subprocess.run(
             [sys.executable, str(LANE), "plan", "--lane", lane],
@@ -347,17 +348,87 @@ class LanePlan(unittest.TestCase):
                 sha = self.sha[tagged.get(tag, "M2")]
                 run, outputs = self.plan(checkout, "release", "push", f"refs/tags/{tag}", sha)
                 self.assertRefused(run, outputs, message)
-        tag_push_only = "the release lane runs on a tag push only, not on {} of {}"
-        starts = [("push", "refs/heads/main"), ("workflow_dispatch", "refs/tags/v0.2.0")]
+        tag_runs_only = "the release lane runs on a tag's push or dispatch only, not on {} of {}"
+        starts = [("push", "refs/heads/main"), ("workflow_dispatch", "refs/heads/v0.2.0")]
         for event, ref in examined("refused release starts", starts):
             with self.subTest(event=event, ref=ref):
                 checkout = self.clone(at="v0.2.0")
                 run, outputs = self.plan(checkout, "release", event, ref, self.sha["M2"])
-                self.assertRefused(run, outputs, tag_push_only.format(event, ref))
+                self.assertRefused(run, outputs, tag_runs_only.format(event, ref))
         checkout = self.clone(at="v0.2.0")
         run, outputs = self.plan(checkout, "release", "push", "refs/tags/v0.2.0", self.sha["M2"])
         self.assertEqual(outputs, {"lane": "release", "number": "3", "version": "0.2.0"})
         self.assertEqual(run.returncode, 0)
+
+    def test_the_release_plan_admits_a_dispatch_at_the_tags_ref_as_its_push_and_refuses_a_branch(
+        self,
+    ):
+        # SPEC-405 A2 (R3, ADR-419 D2a): a dispatch at a tag's own ref is planned exactly as the
+        # tag's push is, and a dispatch at a branch, or any other event, is refused by its event
+        # and its ref.
+        for event in examined("admitted release events", ["push", "workflow_dispatch"]):
+            with self.subTest(event=event):
+                checkout = self.clone(at="v0.2.0")
+                run, outputs = self.plan(
+                    checkout,
+                    "release",
+                    event,
+                    "refs/tags/v0.2.0",
+                    self.sha["M2"],
+                    GITHUB_ACTOR="a-maintainer",
+                )
+                self.assertEqual(outputs, {"lane": "release", "number": "3", "version": "0.2.0"})
+                self.assertEqual(run.returncode, 0)
+        tagged = {"v0.0.1": "R", "v0.1.5": "B", "v0.4.0": "T", "v0.3.0": "M2"}
+        refused = [
+            ("v0.0.1", "the tag v0.0.1 is a lightweight tag; a release is an annotated tag"),
+            ("v0.4.0", "the commit of v0.4.0 is not on main"),
+            ("v0.1.5", "the commit of v0.1.5 is not on main's first-parent chain"),
+            ("v0.3.0", "the tag v0.3.0 names 0.3.0, but the workspace version is 0.2.0"),
+        ]
+        for tag, message in examined("tags a dispatch is refused at", refused):
+            with self.subTest(tag=tag):
+                checkout = self.clone(at=tag)
+                run, outputs = self.plan(
+                    checkout,
+                    "release",
+                    "workflow_dispatch",
+                    f"refs/tags/{tag}",
+                    self.sha[tagged[tag]],
+                    GITHUB_ACTOR="a-maintainer",
+                )
+                self.assertRefused(run, outputs, message)
+        tag_runs_only = "the release lane runs on a tag's push or dispatch only, not on {} of {}"
+        starts = [
+            ("workflow_dispatch", "refs/heads/main"),
+            ("workflow_dispatch", "refs/heads/dev"),
+            ("workflow_dispatch", "refs/heads/v0.2.0"),
+            ("schedule", "refs/tags/v0.2.0"),
+        ]
+        for event, ref in examined("starts the release plan refuses", starts):
+            with self.subTest(event=event, ref=ref):
+                checkout = self.clone(at="v0.2.0")
+                run, outputs = self.plan(checkout, "release", event, ref, self.sha["M2"])
+                self.assertRefused(run, outputs, tag_runs_only.format(event, ref))
+
+    def test_the_release_plan_refuses_a_run_the_workflow_token_started(self):
+        # SPEC-405 A5 (R4, ADR-419 D3): a run that a workflow's own token started is refused on
+        # either event, and writes no output. The actor is spelt here, never read from the lane.
+        token = "github-actions[bot]"
+        for event in examined("events a token run is refused on", ["push", "workflow_dispatch"]):
+            with self.subTest(event=event):
+                checkout = self.clone(at="v0.2.0")
+                run, outputs = self.plan(
+                    checkout,
+                    "release",
+                    event,
+                    "refs/tags/v0.2.0",
+                    self.sha["M2"],
+                    GITHUB_ACTOR=token,
+                )
+                self.assertRefused(
+                    run, outputs, f"the release lane takes no run that {token} started"
+                )
 
     def test_the_release_build_number_is_mains_first_parent_count_at_the_tag(self):
         # main's first-parent chain is R, M1, M2: two commits at v0.1.0 and three at v0.2.0, where
