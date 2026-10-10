@@ -4,7 +4,7 @@
       [
         "S35401-THE-API-IS-DENIED-THE-IDENTITY-ENDPOINT",
         "deploy/systemd/deck-streak-api.service",
-        "IPAddressDeny=link-local",
+        "IPAddressDeny=any",
         "IPAddressDeny=",
         "the API is denied the host's identity endpoint (SPEC-354 R1)",
         "test_deploy_templates.TheServicesRunTheirRoles.test_no_unit_but_the_exempt_reaches_the_host_identity_endpoint"
@@ -20,7 +20,7 @@
       [
         "S35403-THE-MCP-SERVER-IS-DENIED-THE-IDENTITY-ENDPOINT",
         "deploy/systemd/deck-streak-mcp.service",
-        "IPAddressDeny=link-local",
+        "IPAddressDeny=any",
         "IPAddressDeny=",
         "the MCP server is denied the host's identity endpoint (SPEC-354 R1)",
         "test_deploy_templates.TheServicesRunTheirRoles.test_no_unit_but_the_exempt_reaches_the_host_identity_endpoint"
