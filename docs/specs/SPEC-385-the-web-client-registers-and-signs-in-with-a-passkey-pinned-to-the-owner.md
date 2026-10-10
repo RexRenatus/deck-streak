@@ -199,41 +199,38 @@ reopen wording, the posted finish) second, so a page that did nothing cannot pas
 
 ## 4. File manifest
 
-Documents:
-
-- `docs/specs/SPEC-385-the-web-client-registers-and-signs-in-with-a-passkey-pinned-to-the-owner.md` (new)
-- `docs/decisions/ADR-399-the-web-client-registers-and-signs-in-with-a-passkey-pinned-to-the-owner.md` (new)
-- `docs/decisions/ADR-132-passkeys-through-webauthn-rs-with-the-mini-apps-host-as-the-relying-party.md` (its status line only)
-- `docs/schematics/passkey-sign-in-on-the-web.md` (sections appended; nothing above them changes)
-- `docs/red-first/SPEC-385.md` (new)
-- `changelog.d/web-passkey-385.md` (new)
-
-The web client (the ceremony client, the session gate, the screens):
-
-- `web/app/src/lib/passkeys.ts` (new)
-- `web/app/src/lib/passkeys.test.ts` (new)
-- `web/app/src/lib/passkey-messages.test.ts` (new)
-- `web/app/src/lib/api.ts`
-- `web/app/src/lib/api.test.ts`
-- `web/app/src/lib/routes.ts`
-- `web/app/src/lib/startapp.test.ts` (`BY_PATH` gains the three paths, plus one comment line citing R6, R8 and R12)
-- `web/app/src/lib/settings/SignInMethods.svelte` (new)
-- `web/app/src/routes/+layout.svelte`
-- `web/app/src/routes/layout.test.ts` (A15's test added beside its two existing tests, which do not change)
-- `web/app/src/routes/+page.svelte` (Today's link to the methods screen)
-- `web/app/src/routes/link/+page.svelte` (new)
-- `web/app/src/routes/link.test.ts` (new)
-- `web/app/src/routes/signin/+page.svelte` (new)
-- `web/app/src/routes/signin.test.ts` (new)
-- `web/app/src/routes/sign-in-methods/+page.svelte` (new)
-- `web/app/src/routes/sign-in-methods.test.ts` (new)
-- `web/app/messages/en.json`
-- `web/app/messages/es.json`
-- `web/app/messages/fr.json`
-- `web/app/messages/ja.json`
-- `web/app/messages/ko.json`
-- `web/app/messages/zh-Hans.json`
-- `web/app/messages/zh-Hant.json`
+| path | part | change |
+|---|---|---|
+| `docs/specs/SPEC-385-the-web-client-registers-and-signs-in-with-a-passkey-pinned-to-the-owner.md` | document | new |
+| `docs/decisions/ADR-399-the-web-client-registers-and-signs-in-with-a-passkey-pinned-to-the-owner.md` | document | new |
+| `docs/decisions/ADR-132-passkeys-through-webauthn-rs-with-the-mini-apps-host-as-the-relying-party.md` | document | its status line only |
+| `docs/schematics/passkey-sign-in-on-the-web.md` | document | sections appended; nothing above them changes |
+| `docs/red-first/SPEC-385.md` | document | new |
+| `changelog.d/web-passkey-385.md` | document | new |
+| `web/app/src/lib/passkeys.ts` | web client | new |
+| `web/app/src/lib/passkeys.test.ts` | web client | new |
+| `web/app/src/lib/passkey-messages.test.ts` | web client | new |
+| `web/app/src/lib/api.ts` | web client | changed |
+| `web/app/src/lib/api.test.ts` | web client | changed |
+| `web/app/src/lib/routes.ts` | web client | changed |
+| `web/app/src/lib/startapp.test.ts` | web client | `BY_PATH` gains the three paths, plus one comment line citing R6, R8 and R12 |
+| `web/app/src/lib/settings/SignInMethods.svelte` | web client | new |
+| `web/app/src/routes/+layout.svelte` | web client | changed |
+| `web/app/src/routes/layout.test.ts` | web client | A15's test added beside its two existing tests, which do not change |
+| `web/app/src/routes/+page.svelte` | web client | Today's link to the methods screen |
+| `web/app/src/routes/link/+page.svelte` | web client | new |
+| `web/app/src/routes/link.test.ts` | web client | new |
+| `web/app/src/routes/signin/+page.svelte` | web client | new |
+| `web/app/src/routes/signin.test.ts` | web client | new |
+| `web/app/src/routes/sign-in-methods/+page.svelte` | web client | new |
+| `web/app/src/routes/sign-in-methods.test.ts` | web client | new |
+| `web/app/messages/en.json` | web client | changed |
+| `web/app/messages/es.json` | web client | changed |
+| `web/app/messages/fr.json` | web client | changed |
+| `web/app/messages/ja.json` | web client | changed |
+| `web/app/messages/ko.json` | web client | changed |
+| `web/app/messages/zh-Hans.json` | web client | changed |
+| `web/app/messages/zh-Hant.json` | web client | changed |
 
 No `.rs`, `.swift`, edge, content-security or workflow file changes.
 
