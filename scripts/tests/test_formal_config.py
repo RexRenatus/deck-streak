@@ -200,9 +200,20 @@ SLOT_KEYS = {
 
 def slot_reading(doc):
     """The slot setting as the formal checker reads it from the file alone (SPEC-404): both keys
-    named, each within its reader's range. This stub keeps every input and refuses nothing, so the
-    two tests that hold the file to the checker's reading are red before the rule exists."""
-    return tuple((doc.get("tlc_slot") or {}).get(key) for key in SLOT_KEYS)
+    named, each within its reader's range. A document that omits `tlc_slot` or a key, or holds a
+    value past the range, is refused, because the checker would read a compiled default or refuse
+    it, and not the setting the file states."""
+    lever = doc.get("tlc_slot")
+    if lever is None:
+        raise Refused("slot-unnamed", "tlc_slot is not stated")
+    reading = []
+    for key, bound in SLOT_KEYS.items():
+        if key not in lever:
+            raise Refused("slot-unnamed", "tlc_slot." + key + " is not stated")
+        if lever[key] > bound:
+            raise Refused("slot-range", "tlc_slot." + key + " is past its range")
+        reading.append(lever[key])
+    return tuple(reading)
 
 
 def toolchain_sources(doc, root):
