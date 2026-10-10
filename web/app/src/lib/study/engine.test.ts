@@ -269,3 +269,97 @@ describe("the app's engine", () => {
     );
   });
 });
+
+/** A Worker that answers the open with `opened` and every other request but a sync, and holds every
+ * sync's answer, so a caller that awaited a sync would never be answered. */
+class HoldingWorker implements WorkerLike {
+  sent: { id: number; op: string }[] = [];
+  terminated = false;
+  readonly #opened: unknown;
+  #listeners: ((event: MessageEvent) => void)[] = [];
+
+  constructor(opened: unknown) {
+    this.#opened = opened;
+  }
+
+  postMessage(message: unknown) {
+    const { id, op } = message as { id: number; op: string };
+    this.sent.push({ id, op });
+    if (op === 'sync') return;
+    const value = op === 'open' ? this.#opened : op === 'decks' ? [] : null;
+    queueMicrotask(() => {
+      for (const listener of this.#listeners) listener(new MessageEvent('message', { data: { id, ok: true, value } }));
+    });
+  }
+
+  addEventListener(_type: 'message', listener: (event: MessageEvent) => void) {
+    this.#listeners.push(listener);
+  }
+
+  terminate() {
+    this.terminated = true;
+  }
+
+  ops(): string[] {
+    return this.sent.map(({ op }) => op);
+  }
+}
+
+describe("the session's sync", () => {
+  it('a session syncs at its start and end', async () => {
+    // SPEC-377 R7, A9; ADR-388 D12: one sync after the open and one before the close, neither
+    // awaited before a study request, and none between them
+    const made: HoldingWorker[] = [];
+    const page = new EventTarget();
+    const engine = new StudyEngine(
+      () => {
+        const worker = new HoldingWorker({ existed: true, notes: 1 });
+        made.push(worker);
+        return worker;
+      },
+      page,
+      ORIGIN,
+      () => ['en']
+    );
+    const client = await engine.client();
+    expect(made[0].ops()).toEqual(['open', 'sync']);
+    // the start sync's answer is held, and a study request is answered all the same
+    expect(await client.decks()).toEqual([]);
+    expect(await (await engine.client()).decks()).toEqual([]);
+    expect(made[0].ops()).toEqual(['open', 'sync', 'decks', 'decks']);
+    expect(engine.lost()).toBe(false);
+    page.dispatchEvent(new Event('pagehide'));
+    expect(made[0].ops()).toEqual(['open', 'sync', 'decks', 'decks', 'sync', 'close']);
+    // the close is not held behind the end sync's answer
+    await engine.closed();
+    expect(made[0].terminated).toBe(true);
+    // the next session syncs at its own start
+    await engine.client();
+    expect(made[1].ops()).toEqual(['open', 'sync']);
+
+    // a collection the browser does not hold: the open answered that it did not exist
+    const lost = new StudyEngine(() => new HoldingWorker({ existed: false, notes: 0 }), new EventTarget(), ORIGIN, () => ['en']);
+    await lost.client();
+    expect(lost.lost()).toBe(true);
+
+    // an open that answered no collection starts no session sync, at its start or its end
+    const blank = new HoldingWorker(null);
+    const quiet = new EventTarget();
+    const unopened = new StudyEngine(() => blank, quiet, ORIGIN, () => ['en']);
+    await unopened.client();
+    quiet.dispatchEvent(new Event('pagehide'));
+    expect(blank.ops()).toEqual(['open', 'close']);
+    expect(unopened.lost()).toBe(false);
+
+    // a page hidden before the open was answered posts no sync after it
+    const early = new HoldingWorker({ existed: true, notes: 1 });
+    const hidden = new EventTarget();
+    const hurried = new StudyEngine(() => early, hidden, ORIGIN, () => ['en']);
+    const opening = hurried.client();
+    hidden.dispatchEvent(new Event('pagehide'));
+    await opening;
+    await hurried.closed();
+    expect(early.ops()).toEqual(['open', 'close']);
+    console.log(`examined ${made.length + 3} sessions`);
+  });
+});

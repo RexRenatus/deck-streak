@@ -5,8 +5,10 @@
 /** The operations the Worker serves, and nothing else. Six are the review's (SPEC-350 R4): the deck
  * list, the current deck, the card view, and a rating, bury or flag of the shown card. `faces`, after
  * them, completes both faces of the shown card with its media (SPEC-350 R14). The next two log in to
- * the sync server and run a normal sync (SPEC-364 R17, R18). The last two read and forget the sync
- * credential, each answering a status word (SPEC-363 R15). A grade is recorded only by `rate`, on
+ * the sync server and run a normal sync (SPEC-364 R17, R18). The two after them read and forget the
+ * sync credential, each answering a status word (SPEC-363 R15). The last four are the full sync's
+ * choice: its counts, the owner's tap on one direction, its cancel, and the device's unsynced read;
+ * the page names a direction and nothing else (SPEC-377 R6). A grade is recorded only by `rate`, on
  * the card shown: no operation answers the queue's head (SPEC-365 R9). `undo-offer` reads the
  * review's own last answer and writes nothing, and `undo` reverts only the answer an offer named, by
  * its card and its step (SPEC-371 R12). */
@@ -29,7 +31,11 @@ export const OPS = [
   'sync-login',
   'sync',
   'credential-status',
-  'credential-forget'
+  'credential-forget',
+  'choice-count',
+  'choice-confirm',
+  'choice-cancel',
+  'unsynced'
 ] as const;
 export type Op = (typeof OPS)[number];
 
@@ -57,7 +63,9 @@ export type Request =
   | { id: number; op: 'rate'; card: bigint; rating: Rating; ms: number }
   | { id: number; op: 'credential-status' | 'credential-forget' }
   | { id: number; op: 'sync-login'; user: string; password: string }
-  | { id: number; op: 'sync' };
+  | { id: number; op: 'sync' }
+  | { id: number; op: 'choice-count' | 'choice-cancel' | 'unsynced' }
+  | { id: number; op: 'choice-confirm'; direction: Direction };
 
 /** What a normal sync found the collections need, in the engine's order: the engine answers the
  * index, and this list names it (SPEC-364 R18). */
@@ -231,7 +239,11 @@ const ARGS: Record<Op, Record<string, (value: unknown) => boolean>> = {
   'sync-login': { user: loginText, password: loginText },
   sync: {},
   'credential-status': {},
-  'credential-forget': {}
+  'credential-forget': {},
+  'choice-count': {},
+  'choice-confirm': { direction: (value) => (DIRECTIONS as readonly unknown[]).includes(value) },
+  'choice-cancel': {},
+  unsynced: {}
 };
 
 /** Reads a request off the wire. Anything but an operation of `OPS` with exactly its arguments,
@@ -260,4 +272,63 @@ export function parseRequest(data: unknown): Parsed {
  * names an origin other than the listener's own came from somewhere else, and is not heard. */
 export function admitsOrigin(sender: string, own: string): boolean {
   return sender === '' || sender === own;
+}
+
+/** The directions a full sync's owner can choose, in the engine's order: which side's collection the
+ * write replaces (SPEC-377 R6). */
+export const DIRECTIONS = ['upload', 'download'] as const;
+export type Direction = (typeof DIRECTIONS)[number];
+
+/** What one direction loses, as the core counts it by id (SPEC-377 R9). */
+export interface Losses {
+  reviews: number;
+  cards: number;
+  notes: number;
+}
+
+/** What each offered direction loses; a direction the engine did not offer is `null`. */
+export interface ChoiceCounts {
+  upload: Losses | null;
+  download: Losses | null;
+}
+
+/** The snapshot answer as the Worker read it from the service (ADR-388 D10): found, with its age
+ * in seconds; not found; or unknown, when the route was absent, refused or unreachable. */
+export type SnapshotRead = { found: true; age: number } | { found: false } | { found: null };
+
+/** What `choice-count` answers: the store's status word after the send, and the counts with the
+ * snapshot answer, or `null` for both when nothing was counted. */
+export interface ChoiceCounted {
+  status: StatusWord;
+  counts: ChoiceCounts | null;
+  snapshot: SnapshotRead | null;
+}
+
+/** Why a confirm wrote nothing: no snapshot found, a direction not offered, no counts held, a
+ * refusal of the core's, or the engine's own refusal of a read or the write. */
+export type ChoiceWhy =
+  | 'no-snapshot'
+  | 'not-offered'
+  | 'no-stage'
+  | 'open-collection'
+  | 'holds-rows'
+  | 'unheld'
+  | 'gesture'
+  | 'engine';
+
+/** What `choice-confirm` answers, beside the store's status word: written; changed since the
+ * counts, with the new counts and which side changed; refused, and why; or unsent, when the store
+ * gave no key. */
+export type ChoiceConfirmed =
+  | { status: StatusWord; outcome: 'written' }
+  | { status: StatusWord; outcome: 'changed'; why: 'server' | 'device'; counts: ChoiceCounts }
+  | { status: StatusWord; outcome: 'refused'; why: ChoiceWhy }
+  | { status: StatusWord; outcome: 'unsent' };
+
+/** What `unsynced` answers: the device's reviews not yet synced, and whether anything else or its
+ * schema changed (ADR-368 D6). */
+export interface Unsynced {
+  reviews: number;
+  changed: boolean;
+  schema: boolean;
 }

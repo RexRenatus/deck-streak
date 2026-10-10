@@ -2,7 +2,10 @@
 // the reply that carries its id (SPEC-338 R3, ADR-348).
 import type {
   Body,
+  ChoiceConfirmed,
+  ChoiceCounted,
   Deck,
+  Direction,
   ErrorCode,
   Faces,
   Head,
@@ -12,7 +15,8 @@ import type {
   Snapshot,
   StatusWord,
   Synced,
-  UndoOffer
+  UndoOffer,
+  Unsynced
 } from './protocol';
 import { admitsOrigin } from './protocol';
 
@@ -165,5 +169,26 @@ export class EngineClient {
    * (SPEC-364 R18). */
   sync(): Promise<Synced> {
     return this.#send({ op: 'sync' }) as Promise<Synced>;
+  }
+
+  /** Counts what each direction the engine offers would lose, with the snapshot answer the Worker
+   * read; the Worker holds the counts until a confirm or a cancel (SPEC-377 R6). */
+  choiceCount(): Promise<ChoiceCounted> {
+    return this.#send({ op: 'choice-count' }) as Promise<ChoiceCounted>;
+  }
+
+  /** The owner's tap on `direction`: the page names the direction and nothing else (SPEC-377 R6). */
+  choiceConfirm(direction: Direction): Promise<ChoiceConfirmed> {
+    return this.#send({ op: 'choice-confirm', direction }) as Promise<ChoiceConfirmed>;
+  }
+
+  /** Drops the counts the Worker holds, writing nothing. */
+  choiceCancel(): Promise<null> {
+    return this.#send({ op: 'choice-cancel' }) as Promise<null>;
+  }
+
+  /** The device's reviews not yet synced, as the engine reads them, offline too (SPEC-377 R8). */
+  unsynced(): Promise<Unsynced> {
+    return this.#send({ op: 'unsynced' }) as Promise<Unsynced>;
   }
 }

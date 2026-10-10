@@ -207,4 +207,30 @@ describe('EngineClient', () => {
     expect(await login).toBe('held');
     expect(await synced).toEqual({ status: 'held', required: 'full-upload' });
   });
+
+  it('the choice operations send the direction alone, and resolve to their answers', async () => {
+    // SPEC-377 R6, R8: the page names a direction and nothing else, and hears back the counts, the
+    // outcome, nothing for a cancel, and the unsynced count
+    const port = new FakePort();
+    const client = new EngineClient(port, ORIGIN);
+    const counted = client.choiceCount();
+    const confirmed = client.choiceConfirm('download');
+    const cancelled = client.choiceCancel();
+    const unsynced = client.unsynced();
+    expect(port.sent).toEqual([
+      { id: 1, op: 'choice-count' },
+      { id: 2, op: 'choice-confirm', direction: 'download' },
+      { id: 3, op: 'choice-cancel' },
+      { id: 4, op: 'unsynced' }
+    ]);
+    const counts = { upload: null, download: { reviews: 0, cards: 1, notes: 1 } };
+    port.reply({ id: 4, ok: true, value: { reviews: 2, changed: true, schema: false } }, ORIGIN);
+    port.reply({ id: 3, ok: true, value: null }, ORIGIN);
+    port.reply({ id: 2, ok: true, value: { status: 'held', outcome: 'written' } }, ORIGIN);
+    port.reply({ id: 1, ok: true, value: { status: 'held', counts, snapshot: { found: false } } }, ORIGIN);
+    expect(await counted).toEqual({ status: 'held', counts, snapshot: { found: false } });
+    expect(await confirmed).toEqual({ status: 'held', outcome: 'written' });
+    expect(await cancelled).toBeNull();
+    expect(await unsynced).toEqual({ reviews: 2, changed: true, schema: false });
+  });
 });
