@@ -485,7 +485,7 @@ impl Dispatcher {
             "kind": "query",
             "sql": HISTORY_SQL,
             "args": [serde_json::Value::from(decks.to_vec()).to_string()],
-            "first_row_only": false,
+            "first_row_only": false
         });
         let reply = self
             .backend
