@@ -19,6 +19,21 @@ const SCRIPT = 'https://telegram.org/js/telegram-web-app.js';
 /** `svelte.config.js`'s `script-src` without Telegram's origin (SPEC-400 R4; its unit test holds them equal). */
 const NARROWED = "script-src 'self' 'wasm-unsafe-eval'";
 
+/** How the gate asks the server about a launch: the page's own `fetch`, or a stand-in for it. */
+export type Send = (input: string, init: RequestInit) => Promise<Response>;
+
+/** The launch data in `hash`. */
+export function launchData(hash: string): string | null {
+  void hash;
+  return null;
+}
+
+/** Whether the tab carries the accepted mark. */
+export function wasAccepted(storage: Pick<Storage, 'getItem'> | undefined): boolean {
+  void storage;
+  return false;
+}
+
 /** Whether Telegram launched the page: a launch parameter in `hash`, or the tab's mark in `storage`. */
 export function isLaunch(hash: string, storage: Pick<Storage, 'getItem'> | undefined): boolean {
   const fragment = new URLSearchParams(hash.slice(1));
@@ -36,7 +51,8 @@ export function isLaunch(hash: string, storage: Pick<Storage, 'getItem'> | undef
  * in the head, sending no referrer to its origin, and a promise that settles once it has loaded or
  * failed; outside one, the narrowed policy and a promise already settled.
  */
-export function admitLaunch(host: Window): Promise<void> {
+export function admitLaunch(host: Window, send: Send = (input, init) => fetch(input, init)): Promise<void> {
+  void send;
   const { document } = host;
   // the storage is reached inside the read, so a page that may not use it is judged by its fragment
   if (!isLaunch(host.location.hash, { getItem: (key) => host.sessionStorage.getItem(key) })) {
