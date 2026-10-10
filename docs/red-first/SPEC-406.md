@@ -38,3 +38,5 @@ A7: green at 95f0a305
 A8: red at 027ce1b9: AssertionError: 'scripts/tests/test_ci_workflows.py' not found in '\n\n| file | context | change |
 A8: green at 95f0a305
 ```
+
+The green lines above name C2 `95f0a305`, which CI never ran. The module and the script changed after it (`73f34e58`, `86d03e0d`). CI ran the criteria green at the verified head `84b3c0af` (hygiene job 114249800504).
