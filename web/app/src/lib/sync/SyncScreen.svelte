@@ -4,10 +4,14 @@
   // the sign-out, the device's unsynced reviews as the Worker counts them (offline too), and the
   // choice when a sync answers that only a full sync can go on. A browser that lost its copy of the
   // collection is told so, and its choice names the download as the restore. Every value shown is
-  // a reply of the Worker's (D5).
+  // a reply of the Worker's (D5). The browser's backups are listed at the start and once each choice has
+  // ended, never while one is held (SPEC-377 R15 to R17), and the storage status is the page's own
+  // `persisted()` answer, since a Worker cannot ask (R18).
   import { onMount } from 'svelte';
-  import type { Required, StatusWord } from '$lib/engine/protocol';
+  import type { BackupsClient } from '$lib/engine/backups';
+  import type { BackupsListed, Required, StatusWord } from '$lib/engine/protocol';
   import { m } from '$lib/paraglide/messages.js';
+  import BackupList from './BackupList.svelte';
   import ChoiceScreen from './ChoiceScreen.svelte';
   import { signOut } from './sign-out';
   import { choosing, signsIn, statusText, type ChoiceClient, type SyncClient } from './status';
@@ -15,8 +19,19 @@
   let {
     client,
     lost,
-    fetch = globalThis.fetch
-  }: { client: () => Promise<SyncClient>; lost: () => boolean; fetch?: typeof globalThis.fetch } = $props();
+    fetch = globalThis.fetch,
+    storage = globalThis.navigator?.storage
+  }: {
+    client: () => Promise<SyncClient & BackupsClient>;
+    lost: () => boolean;
+    fetch?: typeof globalThis.fetch;
+    storage?: Pick<StorageManager, 'persisted'>;
+  } = $props();
+
+  /** The engine the screen asks: the sync and the backups. */
+  type Engine = SyncClient & BackupsClient;
+  /** What the browser answered about keeping this site's storage. */
+  type Kept = 'persisted' | 'not_persisted' | 'unknown';
 
   /** The store's word as the Worker last answered it; null until it has. */
   let word = $state<StatusWord | null>(null);
@@ -31,10 +46,14 @@
   let written = $state(false);
   let working = $state(false);
   let failed = $state(false);
+  /** The browser's backups as the Worker last listed them; null until it has. */
+  let listed = $state.raw<BackupsListed | null>(null);
+  /** The browser's answer on keeping this site's storage; null until it has answered. */
+  let kept = $state<Kept | null>(null);
 
   /** Runs one of the owner's acts against the engine, one at a time; a failure says the engine
    * stopped. */
-  async function act(task: (sync: SyncClient) => Promise<void>): Promise<void> {
+  async function act(task: (sync: Engine) => Promise<void>): Promise<void> {
     working = true;
     failed = false;
     try {
@@ -49,6 +68,33 @@
   /** Reads the device's unsynced reviews from the Worker. */
   async function count(sync: SyncClient): Promise<void> {
     pending = (await sync.unsynced()).reviews;
+  }
+
+  /** Reads the browser's backups from the Worker, which runs its retention first. */
+  async function list(sync: Engine): Promise<void> {
+    listed = await sync.backups();
+  }
+
+  /** Asks the browser whether it keeps this site's storage. A browser that cannot answer cannot
+   * tell, and neither can a page with no storage to ask: asking it throws, and reads as unknown. */
+  async function keeps(): Promise<void> {
+    try {
+      kept = (await storage!.persisted()) ? 'persisted' : 'not_persisted';
+    } catch {
+      kept = 'unknown';
+    }
+  }
+
+  /** The storage status in the owner's words, one for each answer. */
+  function keptText(answer: Kept): string {
+    switch (answer) {
+      case 'persisted':
+        return m.sync_storage_persisted();
+      case 'not_persisted':
+        return m.sync_storage_not_persisted();
+      case 'unknown':
+        return m.sync_storage_unknown();
+    }
   }
 
   /** Posts the sync user and password once. The fields are emptied before the post, and the
@@ -82,24 +128,32 @@
   }
 
   /** The choice ended: a write leaves the browser holding the server's copy or the server holding
-   * this device's, and the unsynced count is read again; a cancel closes the choice alone. */
+   * this device's, and the unsynced count is read again; a cancel closes the choice. Either way the
+   * backups are listed again, now that no choice is held. */
   function chosen(outcome: 'written' | 'cancelled'): void {
     chooser = null;
-    if (outcome === 'cancelled') return;
+    if (outcome === 'cancelled') {
+      void act(list);
+      return;
+    }
     written = true;
     gone = false;
     required = null;
-    void act(count);
+    void act(async (sync) => {
+      await count(sync);
+      await list(sync);
+    });
   }
 
-  onMount(
-    () =>
-      void act(async (sync) => {
-        gone = lost();
-        word = await sync.credentialStatus();
-        await count(sync);
-      })
-  );
+  onMount(() => {
+    void keeps();
+    void act(async (sync) => {
+      gone = lost();
+      word = await sync.credentialStatus();
+      await count(sync);
+      await list(sync);
+    });
+  });
 </script>
 
 <main class="mx-auto flex max-w-prose flex-col gap-4 px-6 py-12">
@@ -176,5 +230,14 @@
   {/if}
   {#if written}
     <p>{m.sync_choice_written()}</p>
+  {/if}
+  {#if listed !== null}
+    <BackupList {listed} {client} />
+  {/if}
+  {#if kept !== null}
+    <div data-storage class="flex flex-col gap-1 text-sm">
+      <span>{keptText(kept)}</span>
+      <span>{m.sync_storage_evicted()}</span>
+    </div>
   {/if}
 </main>

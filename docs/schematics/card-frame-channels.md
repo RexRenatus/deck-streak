@@ -35,7 +35,7 @@ suite that plants a different set.
 flowchart LR
   subgraph page["the Mini App page (origin: the app), page policy from svelte.config.js"]
     app["app code: study screen (row 1.4)"]
-    fd["frameDocument(html, css)<br/>parse inert, strip link meta base template,<br/>prepend frame policy, re-parse check"]
+    fd["frameDocument(html, css)<br/>parse inert, strip link meta base template<br/>and every srcset attribute,<br/>prepend frame policy, re-parse check"]
     cf["CardFrame.svelte<br/>iframe sandbox empty, srcdoc"]
     bridge["app channels: engine Worker port,<br/>Telegram object, storage, API session"]
   end
@@ -49,7 +49,7 @@ flowchart LR
   card -. "fetch: closed by the frame policy (W2)" .-> net
   card -. "navigate itself: closed by the page's frame-src none (W4)" .-> net
   card -. "navigate the page, open a window: closed by the sandbox (W1)" .-> page
-  card -. "preconnect, dns-prefetch, refresh, base: removed by the strip (W3)" .-> net
+  card -. "preconnect, dns-prefetch, refresh, base, image-set candidates: removed by the strip (W3)" .-> net
   card -. "script: none runs (W1, W2, the inherited page policy)" .-> bridge
 ```
 
@@ -81,7 +81,7 @@ The card frame is `<iframe sandbox="" srcdoc="...">`. The layers:
 |---|---|---|
 | W1 | the sandbox with no token: an opaque origin, no script, no forms, no popups, no top navigation, no downloads, no plugins | `CardFrame.svelte` |
 | W2 | the frame policy, a `Content-Security-Policy` meta element placed first in the frame's head: `default-src 'none'; img-src data:; media-src data:; font-src data:; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'` | `policy.js` `FRAME_POLICY`, written by `frameDocument` |
-| W3 | the strip: the card's `link`, `meta`, `base` and `template` elements removed (a `template` can declare a shadow root whose `link` the inert parse never sees, and with no script a card has no use for one), `x-dns-prefetch-control` off, and a re-parse of the composed document that refuses the card if any of them came back | `frame-document.ts` |
+| W3 | the strip: the card's `link`, `meta`, `base` and `template` elements removed (a `template` can declare a shadow root whose `link` the inert parse never sees, and with no script a card has no use for one), the `srcset` attribute removed from every element that carries one (an image-set candidate is fetched from what that attribute lists, and the element's `src` still shows its image), `x-dns-prefetch-control` off, and a re-parse of the composed document that refuses the card if any of those elements came back or any element, the root included, carries a `srcset` | `frame-document.ts` |
 | W4 | the page's `frame-src 'none'`: a frame's own navigation, including one the frame starts itself, is checked against the embedding page's `frame-src`. A `srcdoc` document is not fetched, so the card frame itself still renders | `svelte.config.js`, from `policy.js` `PAGE_FRAME_SRC` |
 | P | the page policy the srcdoc document inherits: hash-mode `script-src`, `object-src 'none'`, `base-uri 'self'`, `connect-src 'self'` | `svelte.config.js` (not this work's layer; listed because it closes channels too) |
 
@@ -90,7 +90,8 @@ dash means at least two layers hold it, so no single-layer variant opens it.
 
 | channel | the planted card | blocked in the card frame by | layer alone |
 |---|---|---|---|
-| `img` | `img src`, `img srcset`, `picture source`, `input type=image`, SVG `image` and `use`, `video poster` at the listener | W2 | W2 |
+| `img` | `img src`, `input type=image`, SVG `image` and `use`, `video poster` at the listener | W2 | W2 |
+| `srcset` | `img srcset` and `picture source` at the listener, each form at its own path | W3, W2 | - |
 | `css-url` | `url()` and `image-set()` in a style attribute and in the card CSS (background, cursor, list-style, border-image) | W2 | W2 |
 | `css-import` | `@import url()` in the card CSS | W2 | W2 |
 | `font` | an `@font-face` whose `src` is the listener | W2 | W2 |
@@ -130,13 +131,74 @@ added, must check `event.source` against the card frame's `contentWindow`, never
 **What W1 does NOT stop:** a fetch, a frame's own navigation (a `download` link to another origin
 included, which Chromium follows as one), or preconnect. **W2 does NOT stop:**
 a navigation of the frame, preconnect or dns-prefetch, or a peer connection from script.
-**W3 does NOT stop:** any fetch from an element it keeps. **W4 does NOT stop:** a fetch, a top
+**W3 does NOT stop:** any fetch from an element it keeps, through any attribute other than `srcset`. **W4 does NOT stop:** a fetch, a top
 navigation, a popup or a nested `srcdoc` frame, which is not fetched. **Scripts off does NOT stop:** markup's own fetches and navigations, which is
 why W2, W3 and W4 exist.
 
 **Settled by evidence:** `frame-src 'none'` does not stop a `srcdoc` frame from rendering (the
 render-proof card shows it per engine); the srcdoc document inherits the page policy, so a hash-mode
 page could not run a card's inline script even with `allow-scripts`.
+
+### The image forms, from the author's HTML to the frame document (SPEC-402, ADR-416)
+
+A card's markup is the author's HTML from a shared deck. `frameDocument` parses it inert, as a
+body (`frame-document.ts:38`), and the strip (W3) removes the stripped elements whole (`:39`) and
+then the `srcset` attribute from every element that still carries one, keeping the element and its
+`src`. The composed document puts the frame policy (W2) first in its head (`:45`), and the re-parse
+check parses it again (`:46`) and keeps it only when nothing the strip removed came back (`:47-50`
+and its new `srcset` conjunct); otherwise the card is refused as `escaped` (`:51`), and
+`CardFrame.svelte:15` renders a frame with no document. A kept document is the frame's `srcdoc`,
+under the sandbox (W1) and the page's `frame-src 'none'` (W4).
+
+```mermaid
+flowchart TD
+  author["the card's author HTML, from a shared deck"]
+  inert["inert parse of the card as a body<br/>frame-document.ts:38"]
+  strip["the strip (W3): remove link, meta, base, template,<br/>then remove the srcset attribute of every element,<br/>keep each element and its src"]
+  compose["composed document: frame policy meta first (W2),<br/>dns-prefetch off, card CSS, the stripped body"]
+  recheck{"re-parse check: head as written,<br/>no stripped element, body attributes as written,<br/>no srcset on any element, the root included"}
+  refused["refused as escaped:<br/>CardFrame renders a frame with no document"]
+  framedoc["the frame document as srcdoc,<br/>sandbox with no token (W1), page frame-src none (W4)"]
+  imgforms["img card, five forms: img src, input type=image,<br/>SVG image and use, video poster"]
+  setforms["srcset card, two forms: img srcset and picture source,<br/>paths /srcset/1 and /srcset/2"]
+  net["the network: the suite's listener"]
+  author -->|card html and css as strings| inert
+  inert --> strip
+  strip --> compose
+  compose --> recheck
+  recheck -->|a stripped element or a srcset came back| refused
+  recheck -->|kept| framedoc
+  framedoc --> imgforms
+  framedoc --> setforms
+  imgforms -. "fetch refused by the frame policy (W2), in every engine" .-> net
+  setforms -. "no candidate left to fetch (W3); with W3 off, the frame policy refuses it (W2)" .-> net
+```
+
+Each image-set form, its path and the layer that holds it, per engine. The suite reads a card's
+arrival by path prefix (`web/app/tests-card/listeners.ts:111-115`), so each form has a path of its
+own.
+
+| the form | its path | Chromium | WebKit | Firefox, read by #766 over this strip | layer alone |
+|---|---|---|---|---|---|
+| the `img srcset` form, on the `srcset` card | `/srcset/1` | W3 removes the candidate; with W3 off, W2 refuses the fetch | W3 removes the candidate; with W3 off, W2 refuses the fetch | W3 removes the candidate; with W3 off, the form stayed closed in #766's first reading with W1, W2 and W4 on | - |
+| the `picture source` form, on the `srcset` card | `/srcset/2` | W3 removes the candidate; with W3 off, W2 refuses the fetch | W3 removes the candidate; with W3 off, W2 refuses the fetch | W3 removes the candidate; with W3 off, the form stayed closed in #766's first reading with W1, W2 and W4 on | - |
+| both forms at `dev`, before this change | `/img/2` and `/img/3`, read only inside the `img` card's prefix `/img/` | W2 | W2 | W2 only beside W1 and W4: with W1 off or W4 off each form arrived | W2, read through the prefix |
+
+What the `srcset` card's five tests read in Chromium and WebKit. The pair runs the card in the
+reference frame and the card frame; each variant turns one layer off with every other layer on
+(`web/app/tests-card/harness/main.ts:62-73`).
+
+| the test | the frame it builds | at `dev` with the re-plant | after the strip |
+|---|---|---|---|
+| the pair, reference frame | the raw card, no layer (`main.ts:70`) | reaches `/srcset/1` and `/srcset/2` | reaches `/srcset/1` and `/srcset/2` |
+| the pair, card frame | the shipped `CardFrame` | nothing arrives: W2 refuses each fetch | nothing arrives: no candidate is left |
+| the variant with W1 off | the shipped frame with no sandbox (`main.ts:71`) | nothing arrives: W2 refuses each fetch | nothing arrives: no candidate is left |
+| the variant with W2 off | the shipped frame with no policy meta (`main.ts:72`) | each form is expected to arrive, so `W2 off: srcset stays closed` fails (the red push 1 reads in CI) | nothing arrives: no candidate is left |
+| the variant with W3 off | the raw card under the frame policy (`main.ts:73`) | nothing arrives: W2 refuses each fetch | nothing arrives: W2 refuses each fetch |
+| the variant with W4 off | the shipped frame under no page `frame-src` (`main.ts:62-64`) | nothing arrives: W2 refuses each fetch | nothing arrives: no candidate is left |
+
+The `img` card keeps its five other forms at `/img/1` and `/img/4` to `/img/7`, and its variant
+with W2 off still opens: `img src` arrives at `/img/1` in every engine.
 
 ## 4. iPhone and iPad channels
 

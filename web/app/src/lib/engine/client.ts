@@ -1,6 +1,7 @@
 // The page's side of the web engine: EngineClient, which numbers each request and settles it by
 // the reply that carries its id (SPEC-338 R3, ADR-348).
 import type {
+  BackupsListed,
   Body,
   ChoiceConfirmed,
   ChoiceCounted,
@@ -190,5 +191,17 @@ export class EngineClient {
   /** The device's reviews not yet synced, as the engine reads them, offline too (SPEC-377 R8). */
   unsynced(): Promise<Unsynced> {
     return this.#send({ op: 'unsynced' }) as Promise<Unsynced>;
+  }
+
+  /** The browser's backups after the Worker's retention, newest first, with each one retention
+   * removed (SPEC-377 R15, R17). */
+  backups(): Promise<BackupsListed> {
+    return this.#send({ op: 'backups' }) as Promise<BackupsListed>;
+  }
+
+  /** One backup's bytes, by an id `backups` answered; the Worker moves them to the page by
+   * transfer (SPEC-377 R16). */
+  backupExport(backup: string): Promise<Uint8Array<ArrayBuffer>> {
+    return this.#send({ op: 'backup-export', backup }) as Promise<Uint8Array<ArrayBuffer>>;
   }
 }

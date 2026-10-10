@@ -5,6 +5,8 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 import type { ChoiceCounted, ChoiceConfirmed, Direction, StatusWord, Synced, Unsynced } from '$lib/engine/protocol';
+import type { BackupsListed } from '$lib/engine/protocol';
+import type { BackupsClient } from '$lib/engine/backups';
 import { REQUIRED, STATUS_WORDS } from '$lib/engine/protocol';
 import { m } from '$lib/paraglide/messages.js';
 import SyncRoute from '../../routes/sync/+page.svelte';
@@ -28,6 +30,11 @@ class FakeSync implements SyncClient {
   synced: Synced;
   pending: number[];
   counted: ChoiceCounted = { status: 'held', counts: null, snapshot: null };
+  // the backup list's reads and exports, recorded apart from `calls`, which the route's test reads
+  // whole (SPEC-377 R15, R16)
+  listings = 0;
+  exported: string[] = [];
+  listed: BackupsListed = { backups: [{ id: 'backup-1', kind: 'backup', age: 60 }], removed: [] };
 
   constructor(word: StatusWord, synced: Synced = { status: word, required: 'no-changes' }, pending = [7]) {
     this.word = word;
@@ -78,6 +85,16 @@ class FakeSync implements SyncClient {
     this.calls.push('choiceCancel');
     return null;
   }
+
+  async backups() {
+    this.listings += 1;
+    return this.listed;
+  }
+
+  async backupExport(backup: string) {
+    this.exported.push(backup);
+    return new Uint8Array([1]);
+  }
 }
 
 async function settle(): Promise<void> {
@@ -94,6 +111,22 @@ function status(): string {
 /** The text of each paragraph the screen shows, in order. */
 function texts(container: HTMLElement): string[] {
   return [...container.querySelectorAll('p')].map((each) => each.textContent?.trim() ?? '');
+}
+
+/** A message by its key, or a marker naming the key while the locale files lack it. */
+function said(key: string, inputs: Record<string, unknown> = {}): string {
+  const message = (m as unknown as Record<string, ((inputs: Record<string, unknown>) => string) | undefined>)[key];
+  return message === undefined ? `no message ${key}` : message(inputs);
+}
+
+/** The storage status's texts, in order: the browser's answer, then the eviction sentence. */
+function storageText(container: HTMLElement): string[] {
+  return [...container.querySelectorAll('[data-storage] > *')].map((each) => each.textContent?.trim() ?? '');
+}
+
+/** The backups the screen lists, by their row's text. */
+function listedRows(container: HTMLElement): string[] {
+  return [...container.querySelectorAll('tbody tr th')].map((each) => each.textContent?.trim() ?? '');
 }
 
 /** Whether the sync and the sign-out buttons are disabled, in that order. */
@@ -272,7 +305,7 @@ describe('the sync screen', () => {
 
   it('before the worker answers, the screen says it is working and offers nothing', async () => {
     const view = render(SyncScreen, {
-      client: () => new Promise<SyncClient>(() => {}),
+      client: () => new Promise<SyncClient & BackupsClient>(() => {}),
       lost: () => true,
       fetch: (async () => new Response(null, { status: 204 })) as typeof globalThis.fetch
     });
@@ -367,6 +400,90 @@ describe('the sync screen', () => {
     await settle();
     const form = view.container.querySelector('form') as HTMLFormElement;
     expect(await fireEvent.submit(form)).toBe(false);
+    view.unmount();
+  });
+
+  it("the storage status is the browser's answer", async () => {
+    // SPEC-377 R18, B7: the page asks `persisted()` itself, since a Worker cannot ask `persist()`
+    const answers: [string, Pick<StorageManager, 'persisted'>, string][] = [
+      ['kept', { persisted: async () => true }, 'sync_storage_persisted'],
+      ['not kept', { persisted: async () => false }, 'sync_storage_not_persisted'],
+      ['refused', { persisted: () => Promise.reject(new TypeError('no storage shelf')) }, 'sync_storage_unknown']
+    ];
+    for (const [answer, storage, key] of answers) {
+      const view = render(SyncScreen, { client: async () => new FakeSync('held'), lost: () => false, storage });
+      await settle();
+      expect(storageText(view.container), answer).toEqual([said(key), said('sync_storage_evicted')]);
+      // the store's status word stays the screen's one status, and no paragraph the screen reads moved
+      expect(status(), answer).toBe(m.sync_status_held());
+      expect(texts(view.container), answer).toEqual([m.sync_status_held(), m.sync_unsynced({ count: 7 })]);
+      view.unmount();
+    }
+    // with no storage given, the screen asks the page's own navigator, and a page without one
+    // cannot tell
+    try {
+      vi.stubGlobal('navigator', { storage: { persisted: async () => true } });
+      const kept = shown(new FakeSync('held'));
+      await settle();
+      expect(storageText(kept.container), 'navigator').toEqual([said('sync_storage_persisted'), said('sync_storage_evicted')]);
+      kept.unmount();
+      vi.stubGlobal('navigator', undefined);
+      const none = shown(new FakeSync('held'));
+      await settle();
+      expect(storageText(none.container), 'no navigator').toEqual([said('sync_storage_unknown'), said('sync_storage_evicted')]);
+      none.unmount();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('before the browser answers, the screen says nothing of its storage', async () => {
+    let answer: (kept: boolean) => void = () => undefined;
+    const storage = { persisted: () => new Promise<boolean>((resolve) => (answer = resolve)) };
+    const view = render(SyncScreen, { client: async () => new FakeSync('held'), lost: () => false, storage });
+    await settle();
+    expect(status(), 'the screen is drawn').toBe(m.sync_status_held());
+    expect(storageText(view.container), 'unanswered').toEqual([]);
+    answer(true);
+    await settle();
+    expect(storageText(view.container), 'answered').toEqual([said('sync_storage_persisted'), said('sync_storage_evicted')]);
+    view.unmount();
+  });
+
+  it('the backup list is read at the start and after every write or cancel', async () => {
+    // SPEC-377 R15, R17; ADR-388 D18: the Worker runs retention before each list, and never while a
+    // choice is held, so the screen lists at its start and once each choice has ended
+    const fake = new FakeSync('held', { status: 'held', required: 'full-download' }, [4, 4, 0]);
+    fake.counted = {
+      status: 'held',
+      counts: { upload: null, download: { reviews: 0, cards: 1, notes: 1 } },
+      snapshot: { found: false }
+    };
+    const view = shown(fake, true);
+    await settle();
+    expect(fake.listings).toBe(1);
+    expect(listedRows(view.container)).toHaveLength(1);
+    await fireEvent.click(screen.getByRole('button', { name: m.sync_now() }));
+    await settle();
+    // the choice is held: the list is not read while it is open
+    expect(fake.listings).toBe(1);
+    await fireEvent.click(screen.getByRole('button', { name: m.sync_choice_cancel() }));
+    await settle();
+    expect(fake.listings).toBe(2);
+    fake.listed = {
+      backups: [
+        { id: 'backup-2', kind: 'backup', age: 1 },
+        { id: 'backup-1', kind: 'backup', age: 61 }
+      ],
+      removed: []
+    };
+    await fireEvent.click(screen.getByRole('button', { name: m.sync_now() }));
+    await settle();
+    await fireEvent.click(screen.getByRole('button', { name: m.sync_choice_restore() }));
+    await settle();
+    expect(fake.listings).toBe(3);
+    expect(listedRows(view.container)).toHaveLength(2);
+    expect(fake.calls.filter((call) => call === 'unsynced')).toHaveLength(4);
     view.unmount();
   });
 

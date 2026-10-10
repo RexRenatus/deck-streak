@@ -1,0 +1,62 @@
+# DeckStreak's second route (SPEC-396; ADR-410): the route that tells the owner when the alert
+# sender fails or goes silent. deck-streak-second-route.timer starts it every ten minutes; it reads
+# the alert path from the service manager, reports a failed alert instance or an absent alert
+# template to a receiver off the host, and checks in. Its two credentials and its process are its
+# own, and it names OnFailure= like every unit, so each route watches the other. A template with
+# neutral values that the private rail fills (deploy/README.md).
+[Unit]
+Description=DeckStreak second route, a report when the alert sender fails or goes silent
+Documentation=https://github.com/RexRenatus/deck-streak/blob/main/deploy/README.md
+OnFailure=deck-streak-alert@%n.service
+# Its requests reach the receiver, off the host.
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/deck-streak/current/deploy/scripts/second-route.sh
+User=deck-streak
+Group=deck-streak
+# The keys it has reported and the episode of its own failure, in a directory of its own.
+StateDirectory=deck-streak-second-route
+# The check-in address and the report address, each read from the private rail's socket at every
+# start and never stored (ADR-038); neither is the alert sender's.
+LoadCredential=second-route-check-in:/run/deck-streak-credentials/socket
+LoadCredential=second-route-report:/run/deck-streak-credentials/socket
+# It yields the processor and the disk to the long-running services.
+Nice=10
+IOSchedulingClass=idle
+# curl's three retries fit inside it, and a run ends before the timer is due again.
+TimeoutStartSec=3min
+SyslogIdentifier=deck-streak-second-route
+# The budget is deploy/host-budget.json's entry for this unit (ADR-032).
+MemoryHigh=32M
+MemoryMax=48M
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+# AF_UNIX, which the service manager's socket and a name lookup use, and AF_INET and AF_INET6 for
+# the requests.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+# It never uses the host's identity, so the kernel refuses it every route to the host's identity
+# endpoint (SPEC-354 R1; ADR-365 D1).
+IPAddressDeny=link-local
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+CapabilityBoundingSet=

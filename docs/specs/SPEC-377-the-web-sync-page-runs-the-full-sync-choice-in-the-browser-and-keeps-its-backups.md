@@ -355,3 +355,165 @@ inside it. No other row at `dev` anchors on a line this part rewrites (23 rows o
 | `S37709-AN-UPLOAD-FINDS-A-SNAPSHOT-ALWAYS` | web-engine `src/wasm.rs` | the confirm passes `found: found \|\| true` to the snapshot check in place of the Worker's answer | `boundary::the_snapshot_answer_reaches_the_core_as_the_worker_read_it` |
 | `S37710-A-CANCEL-KEEPS-THE-STAGE` | web-engine `src/wasm.rs` | the cancel's clearing of the held stage becomes `let _ = &stage;` | `boundary::a_cancel_drops_the_held_stage` |
 | `S37711-A-CHOICE-FILE-IS-NAMED-UNRESERVED` | web-engine `src/wasm.rs` | the pool reserve before a choice file becomes `let _ = (&pool, storage("the pool is not reserved"));` | `boundary::each_choice_file_is_reserved_before_it_is_named` |
+
+## 11. Requirements (part c2), as built
+
+Section 7's R12 to R19 stand; this section says how part c2 builds each, and adds nothing to them.
+
+R12. `GET /api/sync/snapshot` is merged beside the seal route and keeps its order: an off arm while
+    no lister is wired, answering 200 `{"found": null}` (never 404, so an upload stays refused and
+    the page can say why); then `OwnerSession` (401 `no_session`); then a rate window of its own
+    (429 with `Retry-After`). Every answer carries `Cache-Control: no-store`. A GET changes no
+    state, so the route takes no state-change guard. No answer and no log line names an object, a
+    path or a prefix: the only log lines are the refusal's reason word and the found word.
+R13. The route reads a listing's names by their last path segment. A stamp is found only when the
+    listing holds both `sync-<stamp>.tar.age` and `sync-<stamp>.sha256.age`, the stamp spelt
+    `YYYYMMDDTHHMMSSZ` with a real date and time; any other name is ignored. `age_seconds` is now
+    less the newest found stamp, never below 0.
+R14. The service's crate holds a `SnapshotLister` port and answers `unknown` when none is wired, or
+    when the port answers nothing. The last answer is kept for a window of 60 seconds and listed
+    again after it. The daemon wires a lister only when both the list command's setting and the
+    archive's list-only credential are present: the setting's words are the program and its
+    arguments, split on whitespace and run with no shell; the credential is passed as the path of
+    its file in the service's credential directory, as the last argument, never as an environment
+    line. The command is killed at 8 seconds, its output is read to 65536 bytes, and a refusal, a
+    non-zero exit, a kill or an excess answers `unknown`. Nothing is configured in the tree.
+R15. The web engine's `backups` export lists the pool's backups and server copies newest first, each
+    by an id that is its pool name's stem (`backup-2`), its kind and its age in seconds. The pool
+    keeps no file times, so the web engine records when it first lists each file, as an empty pool
+    entry beside it (ADR-388 D17); the order is that record, then the minted number.
+R16. `export_backup` answers the bytes of the listed backup an id names, and refuses any id the pool
+    does not list as a backup. The Worker posts the bytes to the page in the reply's transfer list;
+    the page makes a Blob and an anchor whose `download` is `deck-streak-<kind>-<age>s.anki2`.
+R17. `deck_streak_engine_core::retention` is the one rule: `KEEP` is 3, a file is removed once
+    `KEEP` newer files of its kind exist, the newest of a kind is never removed, and the kinds are
+    counted apart. The web engine's `retain` export applies it and refuses to while a choice's stage
+    is held. The Worker runs it before each backup list, which the sync screen reads at its start
+    and after every write or cancel (ADR-388 D18), and the list's reply names each removal, which
+    the screen shows.
+R18. The sync screen reads `navigator.storage.persisted()` itself (a Worker cannot ask `persist()`)
+    and says whether the browser keeps this site's storage, that it does not, or that it cannot
+    tell, beside one sentence: an evicted collection is restored from the server by a download the
+    owner taps.
+R19. `PRIVACY.md` names the backups and the server copies the browser keeps, at most three of each
+    kind, on the device alone, leaving it only by the owner's export. The seven locales carry every
+    new message.
+
+## 12. Acceptance criteria of part c2
+
+| id | criterion | red at its tests commit | decided by |
+|---|---|---|---|
+| B1 | The route answers found and an age from a listing, refuses without an owner session, names no object, and lists again after its window | red: a stub that answers found always | `snapshot_route` tests the fence names |
+| B2 | With no lister wired, the route answers unknown with 200 | red: the stub answers found | `snapshot_route`, `an_absent_list_credential_answers_unknown` |
+| B3 | An archive without its manifest is not found, a name outside the archive's form is ignored, and the age is the newest sealed stamp's | red: the stub | `snapshot_route` tests the fence names |
+| B4 | Retention keeps three of each kind, never removes the newest of a kind, and keeps the kinds apart | red: a stub that removes the oldest, the newest included | `crates/engine-core/tests/retention.rs` |
+| B5 | The backups are listed newest first by kind and age, only a listed backup is exported, the backup operations carry no path, and the Worker posts the export's bytes by transfer | red: the stub exports any name | `files`, `protocol.test.ts`, the two `backups.test.ts` |
+| B6 | In Chromium and WebKit, a download leaves its backup listed, and its export is a file the engine opens with every device review | red: the list is absent | `sync.spec.ts`, "a backup is listed and exported" |
+| B7 | The storage status reads the page's own persistence answer, and every new message is in the seven locales | red: no status; the locales lack the keys | `sync-screen.test.ts`, `sync-locales.test.ts` |
+| B9 | The list command runs with no shell, is killed at its time bound, is read to its byte bound, and answers unknown on any refusal | red: a lister wired to nothing | `crates/daemon/tests/snapshot_lister.rs` |
+
+```acceptance
+B1: cargo test -p deck-streak-api --test snapshot_route -- --exact a_listed_sealed_snapshot_answers_found_and_its_age
+B1: cargo test -p deck-streak-api --test snapshot_route -- --exact the_route_refuses_without_an_owner_session
+B1: cargo test -p deck-streak-api --test snapshot_route -- --exact no_answer_names_an_object
+B1: cargo test -p deck-streak-api --test snapshot_route -- --exact a_stale_answer_is_listed_again
+B2: cargo test -p deck-streak-api --test snapshot_route -- --exact an_absent_list_credential_answers_unknown
+B3: cargo test -p deck-streak-api --test snapshot_route -- --exact an_archive_without_its_manifest_is_not_found
+B3: cargo test -p deck-streak-api --test snapshot_route -- --exact a_name_outside_the_archive_form_is_ignored
+B3: cargo test -p deck-streak-api --test snapshot_route -- --exact the_age_is_the_newest_sealed_stamps
+B4: cargo test -p deck-streak-engine-core --test retention
+B5: cargo test -p deck-streak-web-engine --test files -- --exact only_a_listed_backup_is_exported
+B5: cargo test -p deck-streak-web-engine --test files -- --exact the_backups_are_listed_newest_first_by_kind
+B5: cargo test -p deck-streak-web-engine --test boundary -- --exact the_backup_exports_reach_the_pool_only_through_files_and_the_core
+B5: pnpm --dir web/app exec vitest run src/lib/sync/backups.test.ts
+B5: pnpm --dir web/app exec vitest run src/lib/engine/backups.test.ts
+B5: pnpm --dir web/app exec vitest run src/lib/engine/protocol.test.ts -t "the backup operations carry no path"
+B6: pnpm --dir web/app exec playwright test --config playwright.engine.config.ts sync.spec.ts -g "a backup is listed and exported"
+B7: pnpm --dir web/app exec vitest run src/lib/sync/sync-screen.test.ts -t "the storage status is the browser's answer"
+B7: pnpm --dir web/app exec vitest run src/lib/sync/sync-locales.test.ts
+B9: cargo test -p deck-streak-daemon --test snapshot_lister
+```
+
+## 12a. The policy line, decided outside this fence
+
+| id | criterion | decided by |
+|---|---|---|
+| B8 | `PRIVACY.md` names the browser's backups and server copies, their bound of three of each kind, and the owner's export as their only way out | the privacy pack's `policy-published` row on CI; no repository test in this part's manifest reads the line, so the fence names none |
+
+## 13. File manifest (part c2)
+
+| path | change |
+|---|---|
+| `docs/specs/SPEC-377-the-web-sync-page-runs-the-full-sync-choice-in-the-browser-and-keeps-its-backups.md` | sections 11 to 16, insert-only |
+| `docs/decisions/ADR-388-the-web-sync-page-drives-the-choice-from-the-worker-and-the-service-answers-the-snapshot.md` | D17 and D18, insert-only |
+| `docs/red-first/SPEC-377.md` | part c2's red and green lines, appended |
+| `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | a citation's line number, where an edit shifts the cited line |
+| `crates/api/src/snapshot_routes.rs` | new: the route, the lister port, the answer and its cache |
+| `crates/api/src/router.rs` | `with_snapshot`, and the route merged beside the seal route |
+| `crates/api/src/lib.rs` | the module |
+| `crates/api/tests/snapshot_route.rs` | new: B1 to B3 |
+| `crates/daemon/src/snapshot_lister.rs` | new: the list command, bounded |
+| `crates/daemon/src/role_api.rs` | the lister wired when configured |
+| `crates/daemon/src/lib.rs` | the module |
+| `crates/daemon/tests/snapshot_lister.rs` | new: B9 |
+| `crates/engine-core/src/retention.rs` | new: the rule |
+| `crates/engine-core/src/lib.rs` | the module |
+| `crates/engine-core/tests/retention.rs` | new: B4 |
+| `crates/web-engine/src/files.rs` | the backups by kind and age, and the listed export |
+| `crates/web-engine/src/wasm.rs` | the `backups`, `export_backup` and `retain` exports |
+| `crates/web-engine/tests/files.rs` | B5 |
+| `crates/web-engine/tests/boundary.rs` | the census of the three exports, insert-only |
+| `web/app/src/lib/engine/protocol.ts`, `web/app/src/lib/engine/protocol.test.ts` | the `backups` and `backup-export` operations |
+| `web/app/src/lib/engine/backups.ts`, `web/app/src/lib/engine/backups.test.ts` | new: the Worker's backups |
+| `web/app/src/lib/engine/session.ts`, `web/app/src/lib/engine/client.ts`, `web/app/src/lib/engine/worker.ts` | the operations, the client's calls, the transfer |
+| `web/app/src/lib/sync/BackupList.svelte`, `web/app/src/lib/sync/backups.test.ts` | new: the list and the export |
+| `web/app/src/lib/sync/SyncScreen.svelte`, `web/app/src/lib/sync/sync-screen.test.ts`, `web/app/src/lib/sync/sync-locales.test.ts` | the list, the storage status, the locales |
+| `web/app/messages/en.json`, `web/app/messages/es.json`, `web/app/messages/fr.json`, `web/app/messages/ja.json`, `web/app/messages/ko.json`, `web/app/messages/zh-Hans.json`, `web/app/messages/zh-Hant.json` | the new messages |
+| `web/app/tests-engine/sync.spec.ts`, `web/app/engine-harness/main.ts` | B6 |
+| `PRIVACY.md` | the policy line (R19) |
+| `scripts/mutation-rows.d/S37700-S37799.json` | rows `S37712` to `S37722`, appended |
+| `changelog.d/web-sync-page-377-b.md` | the fragment |
+
+## 14. What this does NOT cover (part c2)
+
+- It syncs no media and fills no media directory (part d, #631).
+- It builds no iOS backup list, export or storage status (#633).
+- It provisions nothing and names no store: the archive's list-only grant and the list command's
+  setting are filled at deployment (#161).
+- It does not close the window between the snapshot answer and an upload at the server (#617).
+- It proves nothing on a device; the owner's acceptance session does (#637).
+
+## 15. Risks (part c2)
+
+- **A slow listing.** The list command runs inside a request bounded by the stack's timeout. Its own
+  bound is shorter, and B9's `a_command_past_its_time_bound_answers_unknown` kills a command that
+  outlives it.
+- **A stray name read as a snapshot.** Only the exact sealed forms count, and a stamp needs both
+  files; B3's tests feed a near-miss name with its manifest.
+- **A removed backup's number reused.** Part c1 mints the first free number, so after a removal the
+  newest file can carry the lowest number. The order reads the first-listed record first, and B5's
+  order test lists a reused number as the newest.
+- **The pool's room.** Each first-listed record is an empty pool entry; the list reserves the pool
+  before it records one, and retention removes a record with its file.
+
+## 16. Mutation rows (part c2)
+
+Rows `S37712` to `S37722`, appended after `S37711` in `scripts/mutation-rows.d/S37700-S37799.json`.
+Each find is spelt from the committed text after `cargo fmt`, keeps every item used, and occurs once
+in its file. The killers of `S37716`, `S37721` and `S37722` spell their inputs as literals, never
+from the constant. The TypeScript and Svelte are held by StrykerJS with `break` 100; the
+`wasm32`-only exports by the `boundary` census.
+
+| row | crate, file | mutant | killer |
+|---|---|---|---|
+| `S37712-AN-ARCHIVE-WITHOUT-ITS-MANIFEST-IS-FOUND` | api `src/snapshot_routes.rs` | the manifest check reads `true` | `snapshot_route::an_archive_without_its_manifest_is_not_found` |
+| `S37713-THE-AGE-IS-THE-OLDEST-STAMP` | api `src/snapshot_routes.rs` | the newest stamp's `max` becomes `min` | `snapshot_route::the_age_is_the_newest_sealed_stamps` |
+| `S37714-AN-ABSENT-LISTER-FINDS` | api `src/snapshot_routes.rs` | the off arm answers `found` | `snapshot_route::an_absent_list_credential_answers_unknown` |
+| `S37715-A-STRAY-NAME-COUNTS` | api `src/snapshot_routes.rs` | the archive name check ends `\|\| true` | `snapshot_route::a_name_outside_the_archive_form_is_ignored` |
+| `S37716-THE-CACHE-NEVER-EXPIRES` | api `src/snapshot_routes.rs` | the cache's window comparison reads `false` | `snapshot_route::a_stale_answer_is_listed_again` |
+| `S37717-RETENTION-KEEPS-ONE-LESS` | engine-core `src/retention.rs` | `KEEP` minus one | `retention::three_of_each_kind_are_kept` |
+| `S37718-RETENTION-REMOVES-THE-NEWEST` | engine-core `src/retention.rs` | the newest's exemption reads `false &&` before it | `retention::the_newest_of_a_kind_is_never_removed` |
+| `S37719-RETENTION-MIXES-KINDS` | engine-core `src/retention.rs` | the kind's grouping key becomes one constant | `retention::each_kind_is_kept_apart` |
+| `S37720-AN-EXPORT-TAKES-ANY-NAME` | web-engine `src/files.rs` | the listed check ends `\|\| true` | `files::only_a_listed_backup_is_exported` |
+| `S37721-THE-LISTER-WAITS-UNBOUNDED` | daemon `src/snapshot_lister.rs` | the time bound's comparison reads `false` | `snapshot_lister::a_command_past_its_time_bound_answers_unknown` |
+| `S37722-THE-LISTER-READS-PAST-ITS-BOUND` | daemon `src/snapshot_lister.rs` | the output bound's comparison reads `false` | `snapshot_lister::output_past_its_bound_answers_unknown` |

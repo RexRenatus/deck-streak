@@ -183,3 +183,16 @@ the ceilings of the unit it was split from, in this record's form:
 
 Both are jobs, so the share is unchanged: the largest job's ceiling is still the job template's, and
 the daemons' caps do not move. The rest of this record stands.
+
+## Amendment (SPEC-396): the second route's ceilings
+
+ADR-410 adds `deck-streak-second-route.service`, a oneshot a timer starts every ten minutes, a shell
+script and two HTTPS requests as small as the alert template's. It takes that template's ceilings
+in this record's form:
+
+| unit | memory_high | memory_max | why |
+|---|---|---|---|
+| `deck-streak-second-route.service` (SPEC-396) | 32M | 48M | a shell script over the service manager's unit list and two HTTPS requests, the alert template's work |
+
+It is a job, so the share is unchanged: the largest job's ceiling is still the job template's, and
+the daemons' caps do not move. The rest of this record stands.

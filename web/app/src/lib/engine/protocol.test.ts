@@ -110,7 +110,10 @@ describe('the study operations on the wire', () => {
       'choice-count',
       'choice-confirm',
       'choice-cancel',
-      'unsynced'
+      'unsynced',
+      // the backups' list and export join after the choice's four (SPEC-377 R15, R16)
+      'backups',
+      'backup-export'
     ]);
   });
 
@@ -217,5 +220,44 @@ describe('the choice operations on the wire', () => {
       'choice-cancel',
       'unsynced'
     ]);
+  });
+});
+
+describe('the backup operations on the wire', () => {
+  it('the backup operations carry no path', () => {
+    // SPEC-377 R15, R16, B5: the page names a backup by its id alone, the kind and a number from 1;
+    // the web engine names every file, so a path or any other spelling is refused before any engine
+    // call
+    const admitted: Record<string, unknown>[] = [
+      { id: 1, op: 'backups' },
+      { id: 2, op: 'backup-export', backup: 'backup-1' },
+      { id: 3, op: 'backup-export', backup: 'server-2' },
+      { id: 4, op: 'backup-export', backup: 'backup-123456789' }
+    ];
+    for (const request of admitted) {
+      expect(parseRequest(request), String(request.id)).toEqual({ request });
+    }
+    const refused: [Record<string, unknown>, string][] = [
+      [{ id: 1, op: 'backups', path: '/deck-streak' }, 'backups takes no path'],
+      [{ id: 1, op: 'backups', kind: 'backup' }, 'backups takes no kind'],
+      [{ id: 1, op: 'backup-export' }, "backup-export's backup is malformed"],
+      [{ id: 1, op: 'backup-export', backup: '/deck-streak/backup-1.anki2' }, "backup-export's backup is malformed"],
+      [{ id: 1, op: 'backup-export', backup: 'backup-1.anki2' }, "backup-export's backup is malformed"],
+      [{ id: 1, op: 'backup-export', backup: '../backup-1' }, "backup-export's backup is malformed"],
+      [{ id: 1, op: 'backup-export', backup: 'collection' }, "backup-export's backup is malformed"],
+      [{ id: 1, op: 'backup-export', backup: 'backup-0' }, "backup-export's backup is malformed"],
+      [{ id: 1, op: 'backup-export', backup: 'backup-01' }, "backup-export's backup is malformed"],
+      [{ id: 1, op: 'backup-export', backup: 'backup-1234567890' }, "backup-export's backup is malformed"],
+      [{ id: 1, op: 'backup-export', backup: 'copy-1' }, "backup-export's backup is malformed"],
+      [{ id: 1, op: 'backup-export', backup: 'xbackup-1' }, "backup-export's backup is malformed"],
+      [{ id: 1, op: 'backup-export', backup: 'backup-1x' }, "backup-export's backup is malformed"],
+      [{ id: 1, op: 'backup-export', backup: 1 }, "backup-export's backup is malformed"],
+      [{ id: 1, op: 'backup-export', backup: ['backup-1'] }, "backup-export's backup is malformed"],
+      [{ id: 1, op: 'backup-export', backup: 'backup-1', path: '/deck-streak/backup-1.anki2' }, 'backup-export takes no path']
+    ];
+    for (const [request, message] of refused) {
+      expect(parseRequest(request), message).toEqual({ id: 1, message });
+    }
+    console.log(`examined ${admitted.length} admitted and ${refused.length} refused backup requests`);
   });
 });
