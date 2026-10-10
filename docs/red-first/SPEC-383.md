@@ -39,3 +39,12 @@ its `-t` filter.
 | 26 | A26 | `web/app/src/lib/study/review-screen.test.ts` "the confirmation of a flag says what the undo puts back" | added |
 | 27 | A27 | `web/app/src/lib/engine/session.test.ts` "an offer of a bury or a flag reads its kind" | added |
 | 28 | A28 | `web/app/src/lib/study/undo-reach.test.ts` "every locale holds the bury and flag undo messages" | added |
+
+## The reds and greens
+
+Each line's command is the criterion's line in SPEC-383 section 3's fence, run at the commit named.
+
+```red-first
+A20: red at 46bcfc23: assertion `left == right` failed: left holds 10 problems, the first "bury records the bury it made as the slot's one change, after reading the card's mark (SPEC-383 R1, R2), and its body lacks `Read::CardMark(`", right: []
+A28: red at 46bcfc23: messages/en.json lacks a bury or flag undo message: expected [ 'study_undo_bury', …(9) ] to deeply equal []
+```
