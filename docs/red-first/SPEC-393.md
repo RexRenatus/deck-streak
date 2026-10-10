@@ -89,3 +89,11 @@ run over the branch's own changes then read every mutant in the module caught or
 criterion's assertion changed and no test was removed: the native adapter's whole suite and the
 review fixture's Rust side read green before and after it, and at that commit the whole suites
 pass with every binary run, the core's 117 tests, the native adapter's 45 and the web engine's 37.
+
+Correction. The green lines above for A2, A3, A8, A13, A15 and A16 name `530f6478`, a commit
+the pull request's checks never ran, and the files behind each changed after it: the native
+adapter's face module and its tests at `cf1acd50` and `33757f58`, and A16's census and
+the card view factory with the merge of the base at `f4125e1a`. Each of the six reads green
+at `9beea8be`, the head the checks ran: A2, A3, A8, A13 and A15 in run 38081728943's rust job
+(114313108956), and A16 in its hygiene job (114313085960). The other eight green lines
+above hold as written: the files behind them are byte-identical at `530f6478` and `9beea8be`.
