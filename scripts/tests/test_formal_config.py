@@ -580,7 +580,7 @@ class FormalConfig(unittest.TestCase):
         try:
             read(doc)
         except Refused as refusal:
-            self.fail(f"presence control: the file is refused: {refusal}")
+            self.fail(f"presence control: the committed file is refused for its slot: {refusal}")
         lever = doc["tlc_slot"]
         try:
             reading = slot_reading(doc)

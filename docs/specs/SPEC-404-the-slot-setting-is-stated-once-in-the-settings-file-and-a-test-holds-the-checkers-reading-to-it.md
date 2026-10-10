@@ -129,6 +129,17 @@ judged; the capacity's bound widened to the wait's width; the wait's bound widen
 refused; the first integer past the bound admitted; the reading taken from the bound instead of the
 file. The record commit lists each row's id, its find, its replacement and its killer here.
 
+| id | find | replacement | killer |
+|---|---|---|---|
+| `S40400-AN-OMITTED-SLOT-OBJECT-IS-REFUSED-AS-ITSELF` | `raise Refused("slot-unnamed", "tlc_slot is not stated")` | `return tuple(SLOT_KEYS.values())` | `test_formal_config.FormalConfig.test_the_checker_reads_the_slot_from_the_file_alone` |
+| `S40401-AN-OMITTED-SLOT-KEY-IS-REFUSED` | `raise Refused("slot-unnamed", "tlc_slot." + key + " is not stated")` | `continue` | `test_formal_config.FormalConfig.test_the_checker_reads_the_slot_from_the_file_alone` |
+| `S40402-BOTH-SLOT-KEYS-ARE-JUDGED` | `for key, bound in SLOT_KEYS.items():` | `for key, bound in list(SLOT_KEYS.items())[:1]:` | `test_formal_config.FormalConfig.test_the_checker_reads_the_slot_from_the_file_alone` |
+| `S40403-THE-CAPACITY-BOUND-IS-THE-READERS-32-BIT-WIDTH` | `"capacity": 2**32 - 1,` | `"capacity": 2**64 - 1,` | `test_formal_config.FormalConfig.test_each_slot_value_is_one_the_checkers_reader_takes` |
+| `S40404-THE-WAIT-BOUND-IS-THE-READERS-64-BIT-WIDTH` | `"wait_seconds": 2**64 - 1,` | `"wait_seconds": 2**65,` | `test_formal_config.FormalConfig.test_each_slot_value_is_one_the_checkers_reader_takes` |
+| `S40405-A-SLOT-VALUE-AT-ITS-BOUND-IS-ADMITTED` | `if lever[key] > bound:` | `if lever[key] >= bound:` | `test_formal_config.FormalConfig.test_each_slot_value_is_one_the_checkers_reader_takes` |
+| `S40406-THE-FIRST-SLOT-VALUE-PAST-ITS-BOUND-IS-REFUSED` | `if lever[key] > bound:` | `if lever[key] > bound + 1:` | `test_formal_config.FormalConfig.test_each_slot_value_is_one_the_checkers_reader_takes` |
+| `S40407-THE-SLOT-READING-IS-THE-FILES-OWN-VALUE` | `reading.append(lever[key])` | `reading.append(bound)` | `test_formal_config.FormalConfig.test_the_checker_reads_the_slot_from_the_file_alone` |
+
 ## 9. References
 
 Issue #703; issue #516; SPEC-295 R1, R7, A9 and A10; ADR-295's slot addendum; ADR-418; the
