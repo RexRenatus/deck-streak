@@ -14,7 +14,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { ROUTES } from '../src/lib/routes';
-import { TELEGRAM_SDK, launchFragment } from './launch-fragment';
+import { TELEGRAM_SDK, answerLaunches, launchFragment } from './launch-fragment';
 import { THEMES } from './telegram-palettes';
 
 // axe-core's tags for WCAG 2.0, 2.1 and 2.2 at levels A and AA. wcag22aa carries target-size (2.5.8).
@@ -76,6 +76,7 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
         if (window === window.top && location.hash === '') history.replaceState(history.state, '', fragment);
       }, launchFragment('auth_date=1&hash=synthetic'));
       // The API, answered in place: a session, then the owner's study day.
+      await answerLaunches(page, 204);
       await page.route('**/api/session', (intercepted) => intercepted.fulfill({ status: 200 }));
       await page.route('**/api/me', (intercepted) =>
         intercepted.fulfill({ json: { study_day: '2001-02-03' } })
