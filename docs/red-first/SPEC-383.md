@@ -47,4 +47,18 @@ Each line's command is the criterion's line in SPEC-383 section 3's fence, run a
 ```red-first
 A20: red at 46bcfc23: assertion `left == right` failed: left holds 10 problems, the first "bury records the bury it made as the slot's one change, after reading the card's mark (SPEC-383 R1, R2), and its body lacks `Read::CardMark(`", right: []
 A28: red at 46bcfc23: messages/en.json lacks a bury or flag undo message: expected [ 'study_undo_bury', …(9) ] to deeply equal []
+A1: red at 403af6a9: assertion `left == right` failed: left (Err(NotTheTarget { write: Undo, target: Card(B) }), CardMark [-3, 0, -1]), right (Ok(()), the rows before the bury): the answer path refuses and the card stays buried
+A2: red at 403af6a9: assertion `left == right` failed: left (Err(NotTheTarget { write: Undo, target: Card(B) }), CardMark [0, 1, -1]), right (Ok(()), CardMark [0, 4, -1]): refused, and the flag stays red
+A3: red at 403af6a9: assertion `left == right` failed: left (Err(NotTheTarget { write: Undo, target: Card(B) }), B's CardMark [-3, 0, -1], A's rows, A's review row), right (Ok(()), B's rows before the bury, A's rows, A's review row): refused, and B stays buried
+A6: red at 403af6a9: assertion `left == right` failed: left (Ok(()), Ok(())), right (Err(Gone), Ok(())): the stub admits
+A7: red at 403af6a9: assertion `left == right` failed: left (Ok(()), Ok(())), right (Err(NotTheCard), Ok(())): the stub admits
+A8: red at 403af6a9: assertion `left == right` failed: left (Ok(()), Ok(())), right (Err(Changed), Ok(())): the stub admits
+A9: red at 403af6a9: assertion `left == right` failed: left (Ok(()), Ok(())), right (Err(Changed), Ok(())): the stub admits
+A10: red at 403af6a9: assertion `left == right` failed: left (Ok(()), Ok(()), Ok(())), right (Ok(()), Ok(()), Err(Changed)): the stub admits flags 12 against a recorded none
+A11: red at 403af6a9: assertion `left == right` failed: left (Ok(()), Ok(())), right (Err(Synced), Ok(())): the stub admits
+A12: red at 403af6a9: assertion `left == right` failed: left (Ok(()), Ok(())), right (Err(Gone), Ok(())): the stub admits
+A13: red at 403af6a9: assertion `left == right` failed: left (Ok(()), Ok(())), right (Err(Changed), Ok(())): the stub admits
+A14: red at 403af6a9: assertion `left == right` failed: left (Ok(()), Ok(())), right (Err(Changed), Ok(())): the stub admits
+A15: not red: it pins the meaning of the shipped two-field bytes, which the new fields already keep (a record without tags 3 to 5 decodes as kind 0, an answer, with flag 0 and card 0); row S38312 holds it
+A16: red at 403af6a9: assertion `left == right` failed: left (Ok(()), Some(0), true), right (Err(NotTheTarget { write: Undo, target: Card(A) }), Some(1), false): the kind is not read, the answer path admits and the answer is undone
 ```
