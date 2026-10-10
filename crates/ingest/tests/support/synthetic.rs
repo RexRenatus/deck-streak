@@ -1276,24 +1276,6 @@ pub struct PresetSetup {
     pub rollover: Option<u8>,
 }
 
-impl PresetSetup {
-    /// The process's own zone at the engine's default rollover hour: a copy the preset read
-    /// accepts.
-    #[must_use]
-    pub fn process_zone() -> Self {
-        Self {
-            utc_offset_west: Some(process_offset_west()),
-            rollover: Some(4),
-        }
-    }
-}
-
-/// The process's zone offset now, in minutes WEST of UTC as the engine stores it.
-#[must_use]
-pub fn process_offset_west() -> i32 {
-    -(chrono::Local::now().offset().local_minus_utc() / 60)
-}
-
 /// What a preset collection was built with: its decks by name, its filtered deck, and the engine's
 /// own defaults, read through the engine's deck-options read and never through the preset module.
 pub struct PresetPlan {

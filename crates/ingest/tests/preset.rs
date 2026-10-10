@@ -81,10 +81,24 @@ fn now() -> UtcMillis {
     UtcMillis::from_system_time(SystemTime::now())
 }
 
+/// The process's own zone at the engine's default rollover hour: a copy the preset read
+/// accepts.
+fn process_zone() -> PresetSetup {
+    PresetSetup {
+        utc_offset_west: Some(process_offset_west()),
+        rollover: Some(4),
+    }
+}
+
+/// The process's zone offset now, in minutes WEST of UTC as the engine stores it.
+fn process_offset_west() -> i32 {
+    -(chrono::Local::now().offset().local_minus_utc() / 60)
+}
+
 /// A deployment whose private copy is a preset collection in the process's own zone.
 fn copy() -> (Fixture, PresetPlan) {
     let fixture = Fixture::new("http://127.0.0.1:9/");
-    let plan = synthetic::build_presets(&fixture.copy(), PresetSetup::process_zone());
+    let plan = synthetic::build_presets(&fixture.copy(), process_zone());
     (fixture, plan)
 }
 
@@ -693,7 +707,7 @@ async fn a_missing_copy_is_refused_and_never_created() {
 async fn a_copy_whose_offset_differs_from_the_process_zone_is_refused() {
     let fixture = Fixture::new("http://127.0.0.1:9/");
     let setup = PresetSetup {
-        utc_offset_west: Some(synthetic::process_offset_west() + 60),
+        utc_offset_west: Some(process_offset_west() + 60),
         rollover: Some(4),
     };
     synthetic::build_presets(&fixture.copy(), setup);
