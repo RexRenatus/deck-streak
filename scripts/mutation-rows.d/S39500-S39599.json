@@ -1,0 +1,54 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S39500-THE-API-ALLOWS-ITS-LOOPBACK-PEERS",
+        "deploy/systemd/deck-streak-api.service",
+        "IPAddressAllow=localhost",
+        "IPAddressAllow=",
+        "the API allows its loopback peers, and an empty allow list is refused (SPEC-395 R1)",
+        "test_loopback_peers.EachLoopbackListenerReachesItsPeersAlone.test_each_loopback_listener_allows_loopback_alone_and_denies_every_other_address"
+      ],
+      [
+        "S39501-THE-API-DENIES-EVERY-OTHER-ADDRESS",
+        "deploy/systemd/deck-streak-api.service",
+        "IPAddressDeny=any",
+        "IPAddressDeny=link-local",
+        "the API denies every address but loopback, not one range (SPEC-395 R1)",
+        "test_loopback_peers.EachLoopbackListenerReachesItsPeersAlone.test_each_loopback_listener_allows_loopback_alone_and_denies_every_other_address"
+      ],
+      [
+        "S39502-THE-API-ADMITS-NO-PEER-OFF-LOOPBACK",
+        "deploy/systemd/deck-streak-api.service",
+        "IPAddressAllow=localhost",
+        "IPAddressAllow=any",
+        "the API's allow list admits loopback alone, since an allow wins over a deny (SPEC-395 R1)",
+        "test_loopback_peers.EachLoopbackListenerReachesItsPeersAlone.test_each_loopback_listener_allows_loopback_alone_and_denies_every_other_address"
+      ],
+      [
+        "S39503-THE-MCP-SERVER-ALLOWS-ITS-LOOPBACK-PEERS",
+        "deploy/systemd/deck-streak-mcp.service",
+        "IPAddressAllow=localhost",
+        "IPAddressAllow=",
+        "the MCP server allows its loopback peers, and an empty allow list is refused (SPEC-395 R1)",
+        "test_loopback_peers.EachLoopbackListenerReachesItsPeersAlone.test_each_loopback_listener_allows_loopback_alone_and_denies_every_other_address"
+      ],
+      [
+        "S39504-THE-MCP-SERVER-DENIES-EVERY-OTHER-ADDRESS",
+        "deploy/systemd/deck-streak-mcp.service",
+        "IPAddressDeny=any",
+        "IPAddressDeny=link-local",
+        "the MCP server denies every address but loopback, not one range (SPEC-395 R1)",
+        "test_loopback_peers.EachLoopbackListenerReachesItsPeersAlone.test_each_loopback_listener_allows_loopback_alone_and_denies_every_other_address"
+      ],
+      [
+        "S39505-THE-MCP-SERVER-ADMITS-NO-PEER-OFF-LOOPBACK",
+        "deploy/systemd/deck-streak-mcp.service",
+        "IPAddressAllow=localhost",
+        "IPAddressAllow=any",
+        "the MCP server's allow list admits loopback alone, since an allow wins over a deny (SPEC-395 R1)",
+        "test_loopback_peers.EachLoopbackListenerReachesItsPeersAlone.test_each_loopback_listener_allows_loopback_alone_and_denies_every_other_address"
+      ]
+    ]
+  }
+}
