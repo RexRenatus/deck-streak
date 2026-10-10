@@ -73,8 +73,9 @@ every file a delivery adds or changes and names no register.
 
 ### D1. The population is each `scripts/tests` module the push adds or changes, read at `HEAD`, beside the register as `HEAD` holds it
 
-The check reads the `.py` paths that `git diff --name-only --no-renames --diff-filter=AM
-<base>...HEAD -- scripts/tests` names, each by `git show HEAD:<path>`, and the register by `git show
+The check reads the `.py` paths that
+`git diff --name-only --no-renames --diff-filter=AM <base>...HEAD -- scripts/tests` names, each
+by `git show HEAD:<path>`, and the register by `git show
 HEAD:scripts/tests/test_ci_workflows.py`. A module is named as `module_sources()` names it. A
 renamed module is judged under its new name, and a deleted one is not read. The check lives in
 `scripts/`, beside the repository's other guard scripts, so the python mutation runner judges it.
