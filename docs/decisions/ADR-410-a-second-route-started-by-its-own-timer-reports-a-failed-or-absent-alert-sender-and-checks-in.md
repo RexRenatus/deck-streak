@@ -166,19 +166,17 @@ properties read and drops what none reads:
   next `Plan`, so two states that differ only there are one.
 
 Each of the four witnesses was re-run on the reduced model at its committed names, and each is
-caught by the property it names. Measured with the pinned checker, by hand: the temporal property's
-run at two names took 675 s before the reductions (1,807,796 distinct states), and after them 232 s
-on a scratch copy and 203 s at the committed model (580,480 distinct states, the floor of both
-configurations); the invariants' run took 13 s, and the witnesses under 1 s to 66 s. The entry's
-whole check through the gate's own path took 311 s, and 314 s again under the budgets below,
-every property run and every witness caught. The per-run cap, `budgets.tla_seconds` in
-`config/formal.json`, was 300 s, below one and a half times the temporal run. It rises to 480 s,
-the smallest whole minute at or above one and a half times the worst timed run, 314 s, and the
-raise is GLOBAL: it is every entry's per-run cap, not this entry's alone, and it supersedes the
-300 s that SPEC-295 records. The entry gains a budget of its own, `tla/SecondRoute` at 480 s, sized
-the same way, above the 300 s an entry's runs share by default.
-`scripts/tests/test_formal_config.py`'s `EXPECTED` pins both values, and SPEC-396 §4 lists both
-files.
+caught by the property it names. Measured with the pinned checker: the temporal property's run at
+two names explored 1,807,796 distinct states before the reductions and 580,480 after them, the
+floor of both configurations. The entry's whole check through the gate's own path found every
+property clean and caught every witness. The per-run cap, `budgets.tla_seconds` in
+`config/formal.json`, was 300 s, below one and a half times the temporal run. It rises to 480 s by
+one rule: the smallest whole minute at or above one and a half times the worst whole-entry check
+on the gate's own path, and no lower than 360 s. The raise is GLOBAL: it is every entry's per-run
+cap, not this entry's alone, and it supersedes the 300 s that SPEC-295 records. The entry gains a
+budget of its own, `tla/SecondRoute` at 480 s, sized by the same rule, above the 300 s an entry's
+runs share by default. `scripts/tests/test_formal_config.py`'s `EXPECTED` pins both values, and
+SPEC-396 §4 lists both files.
 
 **Chosen against:**
 
