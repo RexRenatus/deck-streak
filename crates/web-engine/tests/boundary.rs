@@ -1149,6 +1149,11 @@ const CLEARS_THE_MARK: &str = "LAST_MARK.with(|kept| *kept.borrow_mut() = None)"
 const CLEARS_THE_ANSWER: &str = "LAST_ANSWER.with(|kept| *kept.borrow_mut() = None)";
 /// The card's mark read, which a bury or a flag records after (SPEC-383 R2, R4).
 const READS_THE_MARK: &str = "Read::CardMark(";
+/// The statement that forgets the kept card, which a rate runs only once its answer is recorded.
+/// The anchor names no gesture: outside the core only the entry files and the held lines may.
+const FORGETS_THE_CARD: &str = "SHOWN.with(|kept| *kept.borrow_mut() = None)";
+/// The arm that reads the core's refusal of the gesture's write, which an undo's clearing follows.
+const READS_THE_WRITE: &str = "GestureRefusal::NotTheTarget { .. }";
 
 /// Each function that keeps the review's one undo slot (SPEC-383 R1, R2, A20): its name, why it
 /// owes what it owes, the text its statements must follow when one is named, and the statements.
@@ -1168,7 +1173,7 @@ const SLOT: [(&str, &str, Option<&str>, &[&str]); 6] = [
     (
         "rate",
         "empties the slot's change once it answers (SPEC-383 R1)",
-        Some(".run_answer("),
+        Some(FORGETS_THE_CARD),
         &[CLEARS_THE_MARK],
     ),
     (
@@ -1186,7 +1191,7 @@ const SLOT: [(&str, &str, Option<&str>, &[&str]); 6] = [
     (
         "undo",
         "empties the slot once an undo succeeds (SPEC-383 R1)",
-        Some(".run_exempt("),
+        Some(READS_THE_WRITE),
         &[CLEARS_THE_ANSWER, CLEARS_THE_MARK],
     ),
 ];
