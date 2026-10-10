@@ -9,6 +9,8 @@ use deck_streak_fsrs7::measure::{MEANS, REVIEWS};
 const HOUR: i64 = 3_600_000;
 /// A review-log row's kind for a review.
 const REVIEW: u8 = 1;
+/// The ease factor every generated row logs, in thousandths: never 0, so no row is a reset.
+const FACTOR: u32 = 2500;
 
 #[test]
 fn a_cell_holds_exactly_its_review_rows_at_its_mean_length() {
@@ -36,7 +38,7 @@ fn a_cell_holds_exactly_its_review_rows_at_its_mean_length() {
         id: hours * HOUR,
         ease,
         kind: REVIEW,
-        factor: 0,
+        factor: FACTOR,
     })
     .collect();
     assert_eq!(rows(10, 2), golden);

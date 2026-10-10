@@ -60,8 +60,8 @@ fn a_cards_reviews_become_fractional_day_intervals_from_zero() {
     assert_eq!(
         convert::histories(&rows),
         vec![
-            card(3, &[(4, 0.0), (1, 2.0)]),
-            card(7, &[(3, 0.0), (2, 1.5), (3, 0.5)]),
+            ended(3, T + 60 * HOUR, &[(4, 0.0), (1, 2.0)]),
+            ended(7, T + 48 * HOUR, &[(3, 0.0), (2, 1.5), (3, 0.5)]),
         ]
     );
 }
@@ -79,7 +79,7 @@ fn manual_rescheduled_and_unrated_entries_are_dropped() {
 
     assert_eq!(
         convert::histories(&rows),
-        vec![card(5, &[(3, 0.0), (2, 1.0)])],
+        vec![ended(5, T + 24 * HOUR, &[(3, 0.0), (2, 1.0)])],
         "card 5 keeps its two rated reviews a day apart, and card 9, with no kept row, is no item"
     );
 }

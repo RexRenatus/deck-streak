@@ -7,6 +7,16 @@
 
 pub use fsrs7::{FSRS, MemoryState};
 
+/// The retrievability at which a stock client reads a card's stability: its `s` is the interval
+/// at which the forgetting curve reads this.
+pub const STOCK_RETENTION: f32 = 0.9;
+
+/// The least difficulty a stock client holds.
+pub const DIFFICULTY_MIN: f32 = 1.0;
+
+/// The greatest difficulty a stock client holds.
+pub const DIFFICULTY_MAX: f32 = 10.0;
+
 /// A memory state's stock values.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Stock {
@@ -18,13 +28,13 @@ pub struct Stock {
     pub interval: f32,
 }
 
-/// The stock values of `state` under `model`, with the interval at `retention`.
+/// The stock values of `state` under `model`, with the interval at `retention`. Both intervals
+/// are the pinned revision's own, by its interval function at a retrievability.
 #[must_use]
 pub fn project(model: &FSRS, state: MemoryState, retention: f32) -> Stock {
-    let _ = (model, retention);
     Stock {
-        stability: state.stability,
-        difficulty: state.difficulty,
-        interval: state.stability,
+        stability: model.interval_at_retrievability(state, STOCK_RETENTION),
+        difficulty: state.difficulty.clamp(DIFFICULTY_MIN, DIFFICULTY_MAX),
+        interval: model.interval_at_retrievability(state, retention),
     }
 }
