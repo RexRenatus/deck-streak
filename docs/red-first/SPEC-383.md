@@ -61,4 +61,10 @@ A13: red at 403af6a9: assertion `left == right` failed: left (Ok(()), Ok(())), r
 A14: red at 403af6a9: assertion `left == right` failed: left (Ok(()), Ok(())), right (Err(Changed), Ok(())): the stub admits
 A15: not red: it pins the meaning of the shipped two-field bytes, which the new fields already keep (a record without tags 3 to 5 decodes as kind 0, an answer, with flag 0 and card 0); row S38312 holds it
 A16: red at 403af6a9: assertion `left == right` failed: left (Ok(()), Some(0), true), right (Err(NotTheTarget { write: Undo, target: Card(A) }), Some(1), false): the kind is not read, the answer path admits and the answer is undone
+A1: green at 676a3189
+A2: green at 676a3189
+A3: green at 676a3189
+A16: green at 676a3189
+A4: red at 676a3189: assertion `left == right` failed: left (Ok(()), B's CardMark [-3, 0, -1], C's CardSnapshot reps 0, C's review row Null), right (Err(NotTheTarget { write: Undo, target: Card(B) }), B's rows, C's answered rows, C's review row): the unchecked restore reverts the front, and C's answer is gone
+A5: red at 676a3189: assertion `left == right` failed: left (Ok(()), B's CardMark [0, 0, -1], C's rows), right (Err(NotTheTarget { write: Undo, target: Card(C) }), B's buried rows, C's rows): the unchecked restore runs, and B is no longer buried
 ```
