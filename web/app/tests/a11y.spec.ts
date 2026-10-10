@@ -14,18 +14,18 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { ROUTES } from '../src/lib/routes';
+import { TELEGRAM_SDK, launchFragment } from './launch-fragment';
 import { THEMES } from './telegram-palettes';
 
 // axe-core's tags for WCAG 2.0, 2.1 and 2.2 at levels A and AA. wcag22aa carries target-size (2.5.8).
 const WCAG_22_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
-const TELEGRAM_SDK = 'https://telegram.org/js/telegram-web-app.js';
-
 /**
- * A stand-in for Telegram's script, served at the script's own URL, first in the head. It does what
- * the real script does when a chat opens the Mini App in `scheme`: it sets the --tg-theme-*
- * variables from the palette, which the design tokens read, and the Mini App object the wrapper
- * reads. The audit so measures the colours Telegram would paint, and nothing reaches the network.
+ * A stand-in for Telegram's script, served at the script's own URL when a launch asks for it: each
+ * screen is opened as a launch (SPEC-400), so the app's start loads the script. It does what the
+ * real script does when a chat opens the Mini App in `scheme`: it sets the --tg-theme-* variables
+ * from the palette, which the design tokens read, and the Mini App object the wrapper reads. The
+ * audit so measures the colours Telegram would paint, and nothing reaches the network.
  */
 function standIn(scheme: string, themeParams: Readonly<Record<string, string>>): string {
   return `(() => {
@@ -68,6 +68,13 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
       await page.route(`${TELEGRAM_SDK}*`, (intercepted) =>
         intercepted.fulfill({ contentType: 'text/javascript', body: standIn(scheme, themeParams) })
       );
+      // Each screen opens as a launch (SPEC-400): the fragment a Telegram client opens the Mini App
+      // with is in the page's URL before any of its scripts runs, so the app's start loads the
+      // script. The fragment is written here because the audit keeps its one navigation to the
+      // route itself (a11y-coverage.test.ts reads it).
+      await page.addInitScript((fragment) => {
+        if (window === window.top && location.hash === '') history.replaceState(history.state, '', fragment);
+      }, launchFragment('auth_date=1&hash=synthetic'));
       // The API, answered in place: a session, then the owner's study day.
       await page.route('**/api/session', (intercepted) => intercepted.fulfill({ status: 200 }));
       await page.route('**/api/me', (intercepted) =>
@@ -295,6 +302,10 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
     for (const route of ROUTES) {
       test(`${route} has no WCAG 2.2 AA violation axe can find`, async ({ page }) => {
         await page.goto(route);
+        // the stand-in ran: the root carries the palette's scheme it sets
+        await expect
+          .poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue('--tg-color-scheme')))
+          .toBe(scheme);
         // the screen has settled: Today's study day has arrived, or the screen made no call
         await page.waitForLoadState('networkidle');
         const results = await new AxeBuilder({ page }).withTags(WCAG_22_AA).analyze();

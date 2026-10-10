@@ -29,8 +29,8 @@ const ANSWER = "The card's answer";
 /** axe-core's tags for WCAG 2.0, 2.1 and 2.2 at levels A and AA, as the app's audit runs them. */
 const WCAG_22_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
-/** Telegram's script, which the app loads first; outside Telegram it is answered empty, so nothing
- * reaches the network and the app runs as a browser outside Telegram runs it. */
+/** Telegram's script, which the app loads only on a launch (SPEC-400); this suite opens it outside
+ * one, and the route answers the script empty should it be asked for, so nothing reaches the network. */
 const TELEGRAM_SDK = 'https://telegram.org/js/telegram-web-app.js';
 
 /** A persistent profile of the test's own browser, its collection seeded, on the deck list. */

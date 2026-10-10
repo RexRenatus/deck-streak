@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-
-const TELEGRAM_SDK = 'https://telegram.org/js/telegram-web-app.js';
+import { TELEGRAM_SDK, launchFragment } from './launch-fragment';
 
 function tagline(locale: string): string {
   const file = new URL(`../messages/${locale}.json`, import.meta.url);
@@ -9,8 +8,8 @@ function tagline(locale: string): string {
 }
 
 test.beforeEach(async ({ page }) => {
-  // The shell loads Telegram's script from telegram.org. Answering it with an empty script keeps
-  // the smoke test off the network; the script's presence and position are asserted below.
+  // A launch loads Telegram's script from telegram.org (SPEC-400). Answering it with an empty script
+  // on a launch keeps the smoke test off the network; where the script is, is asserted below.
   await page.route(`${TELEGRAM_SDK}*`, (route) =>
     route.fulfill({ contentType: 'text/javascript', body: '' })
   );
@@ -24,10 +23,16 @@ test('the built app renders the DeckStreak heading', async ({ page }) => {
   await expect(page.getByRole('paragraph')).toHaveText(tagline('en'));
 });
 
-test('telegram-web-app.js is the first script in the head', async ({ page }) => {
-  await page.goto('/');
+test('telegram-web-app.js is in the head only when Telegram launched the page', async ({ page }) => {
+  // outside a launch the head holds no element naming the script
+  await page.goto('/', { waitUntil: 'networkidle' });
+  await expect(page.locator(`head script[src="${TELEGRAM_SDK}"]`)).toHaveCount(0);
 
-  await expect(page.locator('head script').first()).toHaveAttribute('src', TELEGRAM_SDK);
+  // a launch, on another path: a navigation that changes only the fragment re-runs nothing
+  await page.goto('/about' + launchFragment('auth_date=1&hash=synthetic'));
+  const script = page.locator(`head script[src="${TELEGRAM_SDK}"]`);
+  await expect(script).toHaveCount(1);
+  await expect(script).toHaveAttribute('referrerpolicy', 'same-origin');
 });
 
 test('the document language follows the locale', async ({ page }) => {
