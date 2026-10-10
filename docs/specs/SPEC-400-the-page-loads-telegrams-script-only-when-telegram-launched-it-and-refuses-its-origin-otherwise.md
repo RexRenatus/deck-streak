@@ -267,3 +267,13 @@ There are no hand mutation rows. StrykerJS mutates each changed production file 
 
 NOT APPLICABLE (ADR-414 D4). The launch data's handoff is unchanged, and the gate adds no actor
 over shared state. A formal cover can name no TypeScript file.
+
+## 10. Amendments by SPEC-403: the launch is validated first
+
+SPEC-403 (ADR-417, #775) closes the residual of section 5. These lines read as SPEC-403 restates them:
+
+- R2's first arm (lines 89-90): the fragment makes a launch only through its `tgWebAppData` value, and the start hook adds Telegram's script only after `POST /api/launch` accepts it with a 204. The tab's mark is written only after that 204.
+- A5's row (line 132): its test keeps its name and every case it plants, and asserts the launch data and the accepted mark (SPEC-403 R11).
+- The crafted-link bullet of section 5 (lines 211-213) is closed: a crafted link's launch is refused by the server and loads no script.
+
+The tests this SPEC's fence names keep their names. Each launch that `web/app/src/lib/telegram-launch.test.ts`, `web/app/src/lib/telegram-launch-hook.test.ts`, `web/app/tests/telegram-launch.spec.ts`, `web/app/tests/smoke.spec.ts`, `web/app/tests/a11y.spec.ts` and `web/app/tests/streak-calendar.spec.ts` open is answered with a 204.
