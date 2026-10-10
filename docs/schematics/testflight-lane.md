@@ -10,6 +10,7 @@ by role, never by secret name, and no value, identifier or host appears.
 | internal trigger | `.github/workflows/testflight-internal.yml` | `workflow_dispatch` only; jobs `plan`, `framework`, `app`; the internal environment on `app` |
 | internal trigger, amended (SPEC-352 R22) | `.github/workflows/testflight-internal.yml` | also a push to `dev` whose `paths` name every crate the XCFramework links, `ios/**`, `Cargo.lock`, `Cargo.toml`, `rust-toolchain.toml`, the two workflow files the lane runs and the two scripts its steps call; no other trigger |
 | release trigger | `.github/workflows/testflight-release.yml` | a push of a SemVer tag only; the same jobs; the release environment on `app` |
+| release trigger, amended (SPEC-405) | `.github/workflows/testflight-release.yml` | also a manual dispatch at the tag's own ref, with no input, through the same guard step, plan and group; the plan refuses a run a workflow's own token started (ADR-419) |
 | framework call | `.github/workflows/xcframework.yml` | already takes `workflow_call` (SPEC-344); its jobs (the XCFramework, the harness, the wire sweep) run inside the caller's run; its `harness` job gains the icon step |
 | lane script | `scripts/ios_lane.py` | `plan`, `preflight`, `build-unsigned`, `sign`, `upload-to-testflight`, `clean`, `summary`; standard library only |
 | icon generator | `scripts/ios_icon.py` | `write <path>`: the 1024-pixel opaque icon the asset catalog lists, written in CI before the project is generated, into a path git ignores; never committed |

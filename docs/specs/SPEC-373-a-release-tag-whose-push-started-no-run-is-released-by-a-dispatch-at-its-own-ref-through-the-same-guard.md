@@ -152,3 +152,9 @@ branch, the tag, in `gh run list --workflow release.yml --json event,headBranch,
   push has; both stay as strong as before and are disclosed as such.
 - **A test that passes because both paths share a step.** A3 and A4 would pass a path-specific
   break they never ran; rows S37307 and S37308 plant one in each and must be killed.
+
+## 8. Amendments
+
+- SPEC-405 (#733): the release lane `testflight-release.yml` now takes a dispatch at the tag's own
+  ref too, so section 6's bullet on the app's workflows keeping their tag-push triggers no longer
+  holds for that lane; `apple-on-tag.yml` keeps its tag push only, by ADR-419 D2b.

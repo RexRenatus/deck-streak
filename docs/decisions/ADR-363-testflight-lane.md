@@ -309,3 +309,11 @@ the number ADR-344 names.
 - SPEC-347 R14 (what the app reads) and #625 (the move to the app's scheme).
 - `RELEASING.md` (the release path), `.github/workflows/release.yml` (the ancestry step this lane
   repeats).
+
+## Amendments
+
+- #733 (SPEC-405, ADR-419): the release lane also takes an input-free manual dispatch at the tag's
+  own ref, through the same guard step, plan and group. D2's "(tag push)" for
+  `testflight-release.yml` and its sentence "the release lane keeps its one trigger" are superseded
+  by ADR-419, the plan refuses a run that a workflow's own token started (ADR-419 D3), and D7's
+  review is unchanged.
