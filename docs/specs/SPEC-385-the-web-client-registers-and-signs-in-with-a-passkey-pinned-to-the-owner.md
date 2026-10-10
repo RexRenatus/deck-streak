@@ -216,6 +216,7 @@ The web client (the ceremony client, the session gate, the screens):
 - `web/app/src/lib/api.ts`
 - `web/app/src/lib/api.test.ts`
 - `web/app/src/lib/routes.ts`
+- `web/app/src/lib/startapp.test.ts` (`BY_PATH` gains the three paths, plus one comment line citing R6, R8 and R12)
 - `web/app/src/lib/settings/SignInMethods.svelte` (new)
 - `web/app/src/routes/+layout.svelte`
 - `web/app/src/routes/layout.test.ts` (A15's test added beside its two existing tests, which do not change)
