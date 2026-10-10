@@ -13,10 +13,14 @@ use std::path::PathBuf;
 use deck_streak_engine_core::face::{self, Face};
 use deck_streak_engine_core::media::Reader;
 
-/// The body's classes on a day face: the class every Anki card template styles.
-const DAY: &str = "card";
-/// The body's classes on a night face: Anki's two spellings of night mode beside the card's.
-const NIGHT: &str = "card nightMode night_mode";
+/// The body's classes after the template's on a day face: none.
+const DAY: &str = "";
+/// The body's classes after the template's on a night face: Anki's two spellings of night mode.
+const NIGHT: &str = " nightMode night_mode";
+/// The attribute each video start tag gains, so an iPhone plays the video inline (SPEC-393 R11).
+const PLAYS_INLINE: &str = " playsinline";
+/// The opening of a video start tag, its name matched ASCII-case-insensitively.
+const VIDEO_OPEN: &str = "<video";
 
 /// One thing a face plays, as a native client receives it.
 #[derive(Debug, Clone, PartialEq, uniffi::Enum)]
@@ -36,6 +40,9 @@ pub enum Clip {
         language: String,
         /// The platform's rate, between its minimum and maximum.
         rate: f32,
+        /// The voices the tag asks for, in its order: a voice's identifier, or its name with each
+        /// space written `_`, either after one prefix and `_`.
+        voices: Vec<String>,
     },
 }
 
@@ -63,21 +70,54 @@ impl Reader for MediaFolder {
         file.take(limit).read_to_end(&mut bytes).ok()?;
         Some(bytes)
     }
+
+    fn inlines_fonts(&self) -> bool {
+        true
+    }
 }
 
-/// The page that holds `face`'s text, with the night classes only when `night` asks for them.
+/// The page that holds `face`'s text. Its body's classes are `card card<n>`, `<n>` the card's
+/// template counted from one, then the night classes only when `night` asks for them (SPEC-393
+/// R2), and every video in the text plays inline.
 fn document(face: &Face, night: bool) -> String {
     let classes = if night { NIGHT } else { DAY };
+    let template = u64::from(face.ordinal) + 1;
     format!(
         concat!(
             "<!DOCTYPE html><html><head><meta charset=\"utf-8\">",
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
-            "<style>{css}</style></head><body class=\"{classes}\">{text}</body></html>",
+            "<style>{css}</style></head>",
+            "<body class=\"card card{template}{classes}\">{text}</body></html>",
         ),
         css = face.css,
+        template = template,
         classes = classes,
-        text = face.text,
+        text = plays_inline(&face.text),
     )
+}
+
+/// `text` with ` playsinline` written after the element name of each `<video` start tag, the name
+/// matched in any ASCII case and ending at whitespace, `/` or `>`; every other element, a
+/// `<video-note>` included, stays as written (SPEC-393 R11).
+fn plays_inline(text: &str) -> String {
+    let mut written = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(start) = rest
+        .as_bytes()
+        .windows(VIDEO_OPEN.len())
+        .position(|window| window.eq_ignore_ascii_case(VIDEO_OPEN.as_bytes()))
+    {
+        let (before, tag) = rest.split_at(start);
+        written.push_str(before);
+        let (name, after) = tag.split_at(VIDEO_OPEN.len());
+        written.push_str(name);
+        rest = after;
+        if rest.starts_with(|next: char| next.is_ascii_whitespace() || next == '/' || next == '>') {
+            written.push_str(PLAYS_INLINE);
+        }
+    }
+    written.push_str(rest);
+    written
 }
 
 fn clip(clip: face::Clip) -> Clip {
@@ -87,10 +127,12 @@ fn clip(clip: face::Clip) -> Clip {
             text,
             language,
             rate,
+            voices,
         } => Clip::Speech {
             text,
             language,
             rate,
+            voices,
         },
     }
 }
@@ -105,5 +147,31 @@ impl CardFace {
             replay: face.replay.into_iter().map(clip).collect(),
             omitted: face.omitted,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::plays_inline;
+
+    /// A video's name that ends at its start tag's `>` gains `playsinline` (SPEC-393 R11). The
+    /// parity fixture's two video tags both end their names at whitespace, and `plays_inline` is
+    /// crate-private, so only a test inside the crate reaches this ending.
+    #[test]
+    fn a_video_name_ending_at_its_tag_plays_inline() {
+        assert_eq!(
+            plays_inline("<p>a</p><video>a clip</video>"),
+            "<p>a</p><video playsinline>a clip</video>"
+        );
+    }
+
+    /// A video's name that ends at a `/` gains `playsinline` too, in any ASCII case (SPEC-393
+    /// R11).
+    #[test]
+    fn a_video_name_ending_at_a_slash_plays_inline() {
+        assert_eq!(
+            plays_inline("<p>a</p><VIDEO/>"),
+            "<p>a</p><VIDEO playsinline/>"
+        );
     }
 }

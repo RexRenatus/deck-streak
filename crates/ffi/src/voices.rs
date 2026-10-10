@@ -91,6 +91,17 @@ fn primary_subtag(language: &str) -> &str {
     language.split('-').next().unwrap_or(language)
 }
 
+/// Whether the requested `entry` names `voice`: by its identifier, or by its name with each space
+/// written `_`, the entry compared whole or after its first `_` (SPEC-393 R8; ADR-407 D3).
+fn names(entry: &str, voice: &Voice) -> bool {
+    let name = voice.name.replace(' ', "_");
+    let unprefixed = entry.split_once('_').map(|(_, rest)| rest);
+    [Some(entry), unprefixed]
+        .into_iter()
+        .flatten()
+        .any(|candidate| candidate == voice.identifier || candidate == name)
+}
+
 #[uniffi::export]
 impl VoiceChoices {
     /// Opens the choices kept in the file at `path`. An absent file holds none, and a line that
@@ -118,6 +129,29 @@ impl VoiceChoices {
             .cloned()?;
         let present = installed.iter().any(|voice| voice.identifier == identifier);
         present.then_some(identifier)
+    }
+
+    /// The identifier that speaks a TTS tag in `language` asking for the `requested` voices: the
+    /// kept choice when it is installed; else the first requested entry naming a voice the picker
+    /// offers, by its identifier or by its name with each space written `_`, the entry compared
+    /// whole or after its first `_`; else nothing, so the language's own voice speaks.
+    pub fn voice_for(
+        &self,
+        language: String,
+        requested: Vec<String>,
+        installed: Vec<Voice>,
+    ) -> Option<String> {
+        let kept = self.chosen(language.clone(), installed.clone());
+        if kept.is_some() {
+            return kept;
+        }
+        let offered = self.options(language, installed);
+        requested.into_iter().find_map(|entry| {
+            offered
+                .iter()
+                .find(|voice| names(&entry, voice))
+                .map(|voice| voice.identifier.clone())
+        })
     }
 
     /// The installed voices a picker offers for `language`: those whose language equals it, or,

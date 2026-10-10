@@ -649,5 +649,108 @@ class TheFactoryStripsEveryCard(unittest.TestCase):
                 self.assertEqual(self.problems(Path(scratch)), wanted, name)
 
 
+# The iPhone's inline playback (SPEC-393 R10 and R12, ADR-407 D4): the configuration the factory
+# builds plays media inline, set inside the iPhone-and-iPad compile guard, because the property
+# exists only there and the package also builds for its tests' host.
+CONFIGURATION_DEFINITION = re.compile(r"\bfunc\s+configuration\(\s*layers:")
+INLINE_LINE = re.compile(r"\bconfiguration\.allowsInlineMediaPlayback\s*=\s*(\w+)")
+IOS_GUARD = "#if os(iOS)"
+INLINE_RULE = f"{FACTORY}: configuration(layers:)"
+NO_INLINE = f"{INLINE_RULE} does not set allowsInlineMediaPlayback"
+INLINE_OFF = f"{INLINE_RULE} sets allowsInlineMediaPlayback to false"
+INLINE_UNGUARDED = f"{INLINE_RULE} sets allowsInlineMediaPlayback outside {IOS_GUARD}"
+
+
+def configuration_body(code):
+    """The lines of the factory's `configuration(layers:...)` body, between its opening brace and
+    the one that closes it; none when the function is absent."""
+    found = CONFIGURATION_DEFINITION.search(code)
+    start = code.find("{", found.end()) if found else -1
+    if start < 0:
+        return []
+    depth = 0
+    for index in range(start, len(code)):
+        depth += {"{": 1, "}": -1}.get(code[index], 0)
+        if depth == 0:
+            return code[start + 1 : index].splitlines()
+    return code[start + 1 :].splitlines()
+
+
+def inline_playback_problems(root):
+    """Every rule of the factory's inline playback the tree at `root` breaks, each named, and the
+    factories judged: the one whose `configuration(layers:...)` was read."""
+    path = Path(root) / FACTORY
+    if not path.is_file():
+        return [f"{FACTORY}: missing"], []
+    body = configuration_body(code_of(path.read_bytes().decode("utf-8", errors="replace")))
+    if not body:
+        return [f"{FACTORY}: defines no configuration(layers:)"], []
+    guards, settings = [], []
+    for line in body:
+        stripped = line.strip()
+        if stripped.startswith("#if"):
+            guards.append(stripped == IOS_GUARD)
+        elif stripped.startswith(("#else", "#elseif")) and guards:
+            guards[-1] = False
+        elif stripped.startswith("#endif") and guards:
+            guards.pop()
+        elif found := INLINE_LINE.search(line):
+            settings.append((found.group(1), any(guards)))
+    problems = [] if settings else [NO_INLINE]
+    for value, guarded in settings:
+        if value != "true":
+            problems.append(INLINE_OFF)
+        if not guarded:
+            problems.append(INLINE_UNGUARDED)
+    return problems, [FACTORY]
+
+
+GOOD_INLINE_FACTORY = """import WebKit
+public enum CardWebViewFactory {
+    private static func configuration(
+        layers: Set<CardLayer>, ruleList: WKContentRuleList?, built: Built
+    ) -> WKWebViewConfiguration {
+        let configuration = WKWebViewConfiguration()
+        #if os(iOS)
+            configuration.allowsInlineMediaPlayback = true
+        #endif
+        return configuration
+    }
+}
+"""
+INLINE_SETTING = "            configuration.allowsInlineMediaPlayback = true\n"
+
+
+class TheFactoryPlaysMediaInline(unittest.TestCase):
+    def test_the_factory_plays_media_inline_and_every_plant_is_refused(self):
+        # The behaviour first: the real factory's configuration sets inline playback on, inside
+        # the iPhone-and-iPad guard (SPEC-393 R10).
+        problems, judged = inline_playback_problems(REPO)
+        self.assertEqual(problems, [], f"{FACTORY}: the factory's inline playback")
+        examined("factories", judged)
+
+        # The controls: the planted good factory passes, and each plant breaks one rule and is
+        # refused by that rule's name (SPEC-393 R12).
+        unguarded = GOOD_INLINE_FACTORY.replace("        #if os(iOS)\n", "")
+        plants = {
+            "the good factory": (GOOD_INLINE_FACTORY, []),
+            "no line": (GOOD_INLINE_FACTORY.replace(INLINE_SETTING, ""), [NO_INLINE]),
+            "the line set false": (
+                GOOD_INLINE_FACTORY.replace("Playback = true", "Playback = false"),
+                [INLINE_OFF],
+            ),
+            "the line outside the guard": (
+                unguarded.replace("        #endif\n", ""),
+                [INLINE_UNGUARDED],
+            ),
+        }
+        for name, (source, wanted) in examined("planted factories", list(plants.items())):
+            with self.subTest(plant=name), tempfile.TemporaryDirectory() as scratch:
+                path = Path(scratch) / FACTORY
+                path.parent.mkdir(parents=True)
+                path.write_text(source, encoding="utf-8")
+                self.assertEqual(inline_playback_problems(Path(scratch))[0], wanted, name)
+
+
 if __name__ == "__main__":
     unittest.main()

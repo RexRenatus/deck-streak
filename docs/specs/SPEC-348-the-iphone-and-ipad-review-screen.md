@@ -493,3 +493,18 @@ Part 1's rows, which this part leaves as they are:
 - `crates/ffi/tests/refusal_text.rs`: unchanged in this part; delivered by part 1
 - `crates/ffi/tests/support/review.rs`: unchanged in this part; delivered by part 1
 - `changelog.d/ios-review-348.md`: unchanged in this part; delivered by part 1 and folded into the changelog by the release
+
+## 11. Amendments: four of #666's gaps are built (SPEC-393, ADR-407)
+
+SPEC-393 builds four of the behaviours section 5 left to #666. This section is the pointer, so no rule
+above is read without it:
+
+- R5's body classes become `card card<n>`, `<n>` the card's template index plus one, then the night
+  classes when asked; A8's test reads `card card1` by day (SPEC-393 A3).
+- The face's CSS carries each font it names by `url()` as a `data:` URL, for the native reader (SPEC-393
+  R3 to R6). The HTML rewrite and its type table are unchanged.
+- `Clip::Speech` carries the tag's `voices`. The voice that speaks is the kept choice, else the first
+  requested voice the picker offers, else the language's own (SPEC-393 R7 to R9; ADR-407 D3).
+- The card view plays an HTML video inline on an iPhone (SPEC-393 R10, R11).
+
+A sound tag that names a video still plays as a sound (SPEC-393 section 9, #666).
