@@ -1,8 +1,8 @@
 // A Mini App launch, as the browser suites make one (SPEC-400; ADR-414). Telegram opens the Mini
 // App with its launch parameters in the URL fragment, and the page loads Telegram's script only
 // then. This module is not a spec: the suites import the launch fragment, the stand-in served at
-// the script's URL, and the request counts from it.
-import type { Page } from '@playwright/test';
+// the script's URL, and the request counts and the request list from it.
+import type { Page, Request } from '@playwright/test';
 
 /** Telegram's Mini App script, at the URL the page loads it from on a launch. */
 export const TELEGRAM_SDK = 'https://telegram.org/js/telegram-web-app.js';
@@ -29,6 +29,37 @@ function issued(page: Page): string[] {
 export function telegramRequests(page: Page): () => number {
   const urls = issued(page);
   return () => urls.filter((url) => new URL(url).origin === TELEGRAM_ORIGIN).length;
+}
+
+/** A request to Telegram's origin as the browser reported it. */
+export interface TelegramRequest {
+  /** The URL the page asked for. */
+  readonly url: string;
+  /** The browser's failure text (`csp` for a fetch the page's policy refused), or `null` if it did not fail. */
+  readonly failure: string | null;
+  /** The response's status, or `null` if no response came back. */
+  readonly response: number | null;
+}
+
+/**
+ * Every request `page` issues to Telegram's origin from now on, kept whole and read when asked for:
+ * its URL, its failure and its response. The browser reports a fetch the page's policy refuses as
+ * a request that failed with no response, so a count alone cannot tell a refused attempt from an
+ * answered one, and this list can.
+ */
+export function telegramRequestList(page: Page): () => Promise<TelegramRequest[]> {
+  const requests: Request[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).origin === TELEGRAM_ORIGIN) requests.push(request);
+  });
+  return () =>
+    Promise.all(
+      requests.map(async (request) => {
+        // a request settles with a response or a failure, so its failure is read after that
+        const response = await request.response();
+        return { url: request.url(), failure: request.failure()?.errorText ?? null, response: response?.status() ?? null };
+      })
+    );
 }
 
 /** How many requests `page` has issued to its own origin since this call, read on each call. */

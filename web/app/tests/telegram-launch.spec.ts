@@ -6,7 +6,7 @@
 // Run: pnpm exec playwright test tests/telegram-launch.spec.ts   (CI runs every spec in tests/)
 import { expect, test, type Page } from '@playwright/test';
 import { ROUTES } from '../src/lib/routes';
-import { STAND_IN, TELEGRAM_SDK, launchFragment, ownRequests, telegramRequests } from './launch-fragment';
+import { STAND_IN, TELEGRAM_SDK, launchFragment, ownRequests, telegramRequestList, telegramRequests } from './launch-fragment';
 
 /** What the stand-in left in the page: its run count and the fragment it saw. */
 interface StandIn {
@@ -55,8 +55,17 @@ test('outside Telegram no route asks for Telegram\'s script or runs it', async (
 
 test('outside Telegram the page\'s policy refuses a script from Telegram\'s origin', async ({ page }) => {
   await standIn(page);
+  // registered after the stand-in, so it runs first: it counts each request the stand-in's route
+  // receives, then falls back to the stand-in
+  let routed = 0;
+  await page.route(`${TELEGRAM_SDK}*`, (route) => {
+    routed += 1;
+    return route.fallback();
+  });
   const telegram = telegramRequests(page);
+  const requests = telegramRequestList(page);
   await page.goto('/', { waitUntil: 'networkidle' });
+  const duringLoad = telegram();
 
   const outcome = await page.evaluate(
     (src) =>
@@ -76,7 +85,11 @@ test('outside Telegram the page\'s policy refuses a script from Telegram\'s orig
   expect(outcome.violated, 'the policy refused the script').toBe(true);
   expect(outcome.effectiveDirective).toBe('script-src-elem');
   expect(outcome.blockedURI.startsWith('https://telegram.org'), `blocked ${outcome.blockedURI}`).toBe(true);
-  expect(telegram()).toBe(0);
+  // the browser reports the refused fetch as one request that failed with no response: nothing
+  // else asked Telegram's origin, and the stand-in was never served
+  expect(await requests(), 'requests to Telegram\'s origin').toEqual([{ url: TELEGRAM_SDK, failure: 'csp', response: null }]);
+  expect(routed, 'requests the stand-in\'s route received').toBe(0);
+  expect(duringLoad, 'requests to Telegram\'s origin during the page load').toBe(0);
 });
 
 test('a launch loads Telegram\'s script before the first navigation and its launch data reaches the session unchanged', async ({
