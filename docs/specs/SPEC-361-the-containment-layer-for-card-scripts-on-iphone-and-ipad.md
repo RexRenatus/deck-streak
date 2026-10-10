@@ -318,3 +318,22 @@ shows another is needed after all, it is a STOP for the seat, never a silent add
   against the reference; a difference is a STOP.
 - **The scripts-off view regresses.** SPEC-349's single-layer variants keep running on its seven-
   layer base, so a change to a layer reads red there first.
+
+## 7. Amendment: SPEC-382 admits its timing lines to the workflow
+
+Made by SPEC-382's delivery, insert-only: every earlier byte is kept in order. It inserts this
+section.
+
+SPEC-382 R9 amends the freeze words of two requirements of section 2, and keeps every other word:
+
+- R14's "no workflow change but R15's" admits SPEC-382 R1 to R6's lines too: the timer lines
+  around the planted suite's unchanged command, the build timing summary on every other
+  `xcodebuild` build, test or archive, the per-target static-library seconds, the framework job's
+  developer directory, the `harness` step that boots the iPhone simulator, and each job's timing
+  record and its upload.
+- R15's "No other job, step or line of any workflow changes" admits exactly those lines, and no
+  other.
+- R15's bound is kept: `harness` keeps its `timeout-minutes`, inside the band
+  `HARNESS_TIMEOUT_MINUTES` holds.
+- R16's load wait is kept as written: no wait, tolerance, skip or retry changes, and the planted
+  suite's command stays byte-identical, held by SPEC-382 A1.
