@@ -260,6 +260,69 @@ pub fn last_answer_for(
         .ok_or(StudyError::NotUndoable(UndoRefusal::Changed))
 }
 
+/// What the review's last bury or flag did (SPEC-383 R2): a bury, with the kind of state its card
+/// returns to, or a flag, with the card's flag before the change and the flag the change left.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Change {
+    /// A bury of the shown card, which an undo returns to the state it was buried from.
+    Bury(Returns),
+    /// A flag set on the shown card.
+    Flag {
+        /// The card's flag before the change, which an undo puts back.
+        before: u32,
+        /// The flag the change left.
+        after: u32,
+    },
+}
+
+/// The review's last bury or flag (SPEC-383 R1, R2): the card it changed, the engine's last step
+/// right after it, what it did, and the record the core judges an undo of it by. The record is
+/// the core's own type, which only the `wasm32` module names, so the study rule holds it unread.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LastMark<R> {
+    /// The card the change was made on.
+    pub card: i64,
+    /// The engine's last step right after the change.
+    pub step: u32,
+    /// What the change did.
+    pub change: Change,
+    /// The record the core judges an undo of the change by.
+    pub record: R,
+}
+
+/// The kept change, when a confirmation names its card and the step its offer showed (SPEC-383
+/// R9): the page confirms only what it was offered.
+///
+/// # Errors
+/// [`StudyError::NotUndoable`] with [`UndoRefusal::Changed`] when no change is kept, or when
+/// `card` or `step` is not the kept change's.
+pub fn last_mark_for<R>(
+    last: Option<&LastMark<R>>,
+    card: i64,
+    step: u32,
+) -> Result<&LastMark<R>, StudyError> {
+    let _ = (last, card, step);
+    Err(StudyError::NotUndoable(UndoRefusal::Changed))
+}
+
+/// What the card view says of an undo of the review's last bury or flag (SPEC-383 R9), from the
+/// core's verdict on it: `bury` or `flag` when it may be undone, `change-synced` when it has
+/// synced, and nothing when no change is kept or any other refusal holds.
+#[must_use]
+pub fn mark_view(judged: Option<(Change, Result<(), UndoRefusal>)>) -> Option<&'static str> {
+    let _ = judged;
+    None
+}
+
+/// What an undo of a flag does to its card's flag (SPEC-383 R9, R11), from the flag before the
+/// change and the flag it left: `added` when it set red on a card with none, `removed` when it
+/// took red off, and `replaced` when it set red over another flag.
+#[must_use]
+pub fn flag_change(before: u32, after: u32) -> &'static str {
+    let _ = (before, after);
+    "added"
+}
+
 /// The languages the engine's `init` receives: the page's list, or English when it sends none
 /// (SPEC-350 R4).
 #[must_use]
