@@ -83,7 +83,9 @@ R7. **One seam.** The engine core gains one dependency, `deck-streak-fsrs7`, nam
 "no crate of this workspace" sentence is amended, insert-only.
 
 R8. **The replay reads one statement.** `Dispatcher::replay` takes a deck set, a parameter vector (empty for the
-pinned defaults, or 34 values), the desired retention and the maximum interval. It reads the review rows of the cards
+pinned defaults, or 34 values), the desired retention, the maximum interval and the engine day its caller read. The
+replay itself makes no engine call: the engine's own day read unburies cards on a new day, which R10 forbids. It reads
+the review rows of the cards
 whose home deck (the original deck when the card sits in a filtered deck) is in the set, with each card's type, by ONE
 fixed statement through the database door, ordered by card and id. A review row whose card no longer exists is not
 read. A card with no kept review gets no entry, and an empty deck set gives an empty result.
@@ -171,39 +173,37 @@ line, never computed by the code under test.
 
 ## 4. File manifest
 
-Added:
-- `docs/specs/SPEC-386-fsrs-7-replays-a-presets-review-history-into-stock-field-values-in-the-engine-core.md` (this SPEC)
-- `docs/decisions/ADR-400-the-fsrs-7-replay-reads-one-statement-through-one-engine-core-seam-and-writes-nothing.md`
-- `docs/red-first/SPEC-386.md` (red-first record)
-- `changelog.d/fsrs-replay-386.md` (fragment)
-- `scripts/mutation-rows.d/S38600-S38699.json` (rows band)
-- `crates/fsrs7/src/stock.rs` (fsrs7: the stock projection)
-- `crates/fsrs7/tests/stock.rs` (fsrs7: A7, A8)
-- `crates/fsrs7/tests/formal_vectors_replay_history.rs` (fsrs7: A23)
-- `crates/engine-core/src/replay.rs` (engine-core: the one seam)
-- `crates/engine-core/tests/replay.rs` (engine-core: A11 to A21)
-- `formal/lean/Formal/ReplayHistory.lean` (formal: the selection's port, theorems and witness)
-- `formal/lean/Formal/ReplayHistoryVectors.lean` (formal: its vectors writer)
-- `formal/vectors/replay-history.jsonl` (formal: written by the writer, never by hand)
-
-Changed:
-- `crates/fsrs7/src/convert.rs` (fsrs7: `factor`, the reset cut, `last_id`)
-- `crates/fsrs7/src/lib.rs` (fsrs7: `pub mod stock`)
-- `crates/fsrs7/src/measure/history.rs` (fsrs7: the generator sets a non-zero factor)
-- `crates/fsrs7/tests/convert.rs` (fsrs7: A2 to A4; the row helper's factor)
-- `crates/fsrs7/tests/replay.rs` (fsrs7: A5, A6)
-- `crates/fsrs7/tests/history.rs` (fsrs7: the generator golden's row literal gains `factor`)
-- `crates/engine-core/Cargo.toml` (engine-core: the one edge)
-- `crates/engine-core/src/lib.rs` (engine-core: `pub mod replay`, and the doc sentence of `:41-42`)
-- `crates/engine-core/src/dispatch.rs` (engine-core: the fixed history statement and the many-row read)
-- `crates/engine-core/tests/graph.rs` (engine-core: A9, A10, A22)
-- `Cargo.lock` (the new edge)
-- `docs/CONTEXT-MAP.md` (the engine-core line and its prose)
-- `docs/decisions/ADR-356-the-engine-core-holds-the-engine-for-both-clients-behind-a-per-transport-table.md` (an insert-only
-  amendment of D4)
-- `docs/schematics/fsrs-7-replay-undo-probe-and-full-sync-choice.md` (sections 6 to 8, insert-only)
-- `formal/lean/Formal/Vectors.lean` (one writer arm)
-- `formal/lean/Formal.lean` (one import)
+| path | part | change |
+|---|---|---|
+| `docs/specs/SPEC-386-fsrs-7-replays-a-presets-review-history-into-stock-field-values-in-the-engine-core.md` | document | new: this SPEC |
+| `docs/decisions/ADR-400-the-fsrs-7-replay-reads-one-statement-through-one-engine-core-seam-and-writes-nothing.md` | document | new |
+| `docs/red-first/SPEC-386.md` | document | new: red-first record |
+| `changelog.d/fsrs-replay-386.md` | document | new: fragment |
+| `scripts/mutation-rows.d/S38600-S38699.json` | rows | new: rows band |
+| `crates/fsrs7/src/stock.rs` | fsrs7 | new: the stock projection |
+| `crates/fsrs7/tests/stock.rs` | fsrs7 | new: A7, A8 |
+| `crates/fsrs7/tests/formal_vectors_replay_history.rs` | fsrs7 | new: A23 |
+| `crates/engine-core/src/replay.rs` | engine-core | new: the one seam |
+| `crates/engine-core/tests/replay.rs` | engine-core | new: A11 to A21 |
+| `formal/lean/Formal/ReplayHistory.lean` | formal | new: the selection's port, theorems and witness |
+| `formal/lean/Formal/ReplayHistoryVectors.lean` | formal | new: its vectors writer |
+| `formal/vectors/replay-history.jsonl` | formal | new: written by the writer, never by hand |
+| `crates/fsrs7/src/convert.rs` | fsrs7 | `factor`, the reset cut, `last_id` |
+| `crates/fsrs7/src/lib.rs` | fsrs7 | `pub mod stock` |
+| `crates/fsrs7/src/measure/history.rs` | fsrs7 | the generator sets a non-zero factor |
+| `crates/fsrs7/tests/convert.rs` | fsrs7 | A2 to A4; the row helper's factor |
+| `crates/fsrs7/tests/replay.rs` | fsrs7 | A5, A6 |
+| `crates/fsrs7/tests/history.rs` | fsrs7 | the generator golden's row literal gains `factor` |
+| `crates/engine-core/Cargo.toml` | engine-core | the one edge |
+| `crates/engine-core/src/lib.rs` | engine-core | `pub mod replay`, and the doc sentence of `:41-42` |
+| `crates/engine-core/src/dispatch.rs` | engine-core | the fixed history statement and its many-row call |
+| `crates/engine-core/tests/graph.rs` | engine-core | A9, A10, A22 |
+| `Cargo.lock` | workspace | the new edge |
+| `docs/CONTEXT-MAP.md` | document | the engine-core line and its prose |
+| `docs/decisions/ADR-356-the-engine-core-holds-the-engine-for-both-clients-behind-a-per-transport-table.md` | document | an insert-only amendment of D4 |
+| `docs/schematics/fsrs-7-replay-undo-probe-and-full-sync-choice.md` | document | sections 6 to 8, insert-only |
+| `formal/lean/Formal/Vectors.lean` | formal | one writer arm |
+| `formal/lean/Formal.lean` | formal | one import |
 
 No migration. No file under `web/`, `ios/`, `crates/ffi/` or `crates/web-engine/` changes.
 
@@ -275,7 +275,7 @@ Band `scripts/mutation-rows.d/S38600-S38699.json`, from S38600, in the `MUTATION
 | S38609-IVL-FLOOR | `crates/engine-core/src/replay.rs` | the interval's floor of 1 dropped | `replay::a_review_cards_due_is_its_last_review_day_plus_its_interval` |
 | S38610-DUE-SUM | `crates/engine-core/src/replay.rs` | the due drops the interval | `replay::a_review_cards_due_is_its_last_review_day_plus_its_interval` |
 | S38611-REVIEW-TYPE | `crates/engine-core/src/replay.rs` | every card type gets a schedule | `replay::a_learning_card_keeps_its_due_and_interval` |
-| S38612-EMPTY-ENTRY | `crates/engine-core/src/replay.rs` | a card with no kept review gets an entry | `replay::a_card_with_no_kept_review_has_no_entry` |
+| S38612-EMPTY-ENTRY | `crates/fsrs7/src/convert.rs` | a card with no kept review gets an entry | `convert::manual_rescheduled_and_unrated_entries_are_dropped` |
 | S38613-ONE-SEAM | `crates/engine-core/tests/graph.rs` | the seam census admits a second file | `graph::only_the_replay_module_names_the_fsrs7_crate` |
 
 The builder may add rows for any further constant or branch it writes; a new literal constant owes a row pinning its

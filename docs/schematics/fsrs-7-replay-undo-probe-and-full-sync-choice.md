@@ -173,15 +173,15 @@ probes enter the `test` stage, and the crate enters every stage that runs over t
 
 ## 6. The replay into stock-field values (SPEC-386, ADR-400)
 
-Read at dev `e7ecf10d`. Kind: data flow. The caller passes a deck set and the preset's terms; the engine core reads the
+Read at dev `e7ecf10d`. Kind: data flow. The caller passes a deck set, the preset's terms and the engine day it read; the engine core reads the
 review rows of those decks' cards by one fixed statement, the isolated crate selects and replays them at its pinned
 revision, and the result is stock-field values. Nothing is written: the write is the owner's tap on one preset, made by
 the preset screen (#611).
 
 ```mermaid
 flowchart TD
-  caller["caller: deck set, parameters, desired retention, maximum interval"] --> rp["engine core: Dispatcher::replay, replay.rs"]
-  rp --> dayread["engine day: one engine call, late.rs EngineDay"]
+  caller["caller: deck set, parameters, desired retention, maximum interval, engine day"] --> rp["engine core: Dispatcher::replay, replay.rs"]
+  caller --> dayread["engine day: the caller's late.rs EngineDay, read before the replay, which makes no engine call"]
   rp --> sqlread["one fixed statement through the database door, dispatch.rs"]
   sqlread --> rows["review rows of cards whose home deck is in the set, with each card type, by card and id"]
   rows --> sel["fsrs7 convert: cut at the last reset, drop kinds 4 and 5 and ease 0, first delta 0"]
