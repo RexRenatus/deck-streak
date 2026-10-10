@@ -56,6 +56,10 @@ A10: green at 7e8df3d8
 A11: not red: the base buries a shown question the same way; it guards the way on
 A12: red at 35e22a6f: AssertionError: expected { …(7) } to deeply equal { Object (en, es, ...) }: en, es, fr, ja, ko, zh-Hans and zh-Hant each read "<locale> lacks study_card_withheld" (occlusion-guard.test.ts:61)
 A12: green at 7e8df3d8
+A13: red at df0b38c2: run 38023331286, job 114151080528, step "the review screen's tests, Debug, on the iPhone and then the iPad": XCTAssertEqual failed: ("question") is not equal to ("withheld") - A13: the session answers the occlusion card in the withheld phase (ReviewSessionTests.swift:97; failed on the iPhone and on the iPad)
+A13: green at 7e8df3d8
+A14: red at df0b38c2: run 38023331286, job 114151080528, step "the review screen's tests, Debug, on the iPhone and then the iPad": XCTAssertEqual failed: ("answer revealed true face kept false") is not equal to ("withheld revealed false face kept true") - A14: Show Answer on a withheld card reveals nothing (ReviewModelTests.swift:119; failed on the iPhone and on the iPad)
+A14: green at 7e8df3d8
 A15: not red: the base keeps every Swift budget; it guards R9
 ```
 
@@ -92,3 +96,13 @@ A15: not red: the base keeps every Swift budget; it guards R9
 - **Each local green names 7e8df3d8,** the head the continuous integration ran on the second push.
   The tree each local fence line was run on holds the same code as 7e8df3d8 and differs from it
   only in documents.
+- **A13 and A14 were read on the continuous integration, on each simulator by name.** The first
+  push's simulator job was cancelled by the second push before its review step ran, so their reds
+  come from one rerun of that job on the first push's own merge of df0b38c2 (run 38023331286,
+  attempt 2, job 114151080528), in the step the fence lines name; the run's report reads each test
+  failed on the iPhone and on the iPad, and every other test of the step passed. A13 also failed
+  its face assertion (ReviewSessionTests.swift:100), and A14 its rating assertion
+  (ReviewModelTests.swift:130) and its flag assertion (ReviewModelTests.swift:140). Their greens
+  are the second push's run 38024311958, job 114134348744, in the same step, whose report reads
+  each test passed on the iPhone and on the iPad. Both reds are written after both readings, in the
+  third push, as A9's and A10's are written late.
