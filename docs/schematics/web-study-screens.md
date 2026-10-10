@@ -295,3 +295,100 @@ The view is built when the card is shown. A card shown before the rollover and a
 keeps the view it was shown with: a card due today shows no line and is then answered past its due
 day (the line is absent, never false); a card past its due day when shown is still past it when
 answered (the line stays true).
+
+## 7. The withheld occlusion question: from the engine to both reviews (SPEC-380)
+
+Read at the base `e7ecf10d6b796eb1f86fe6544e04a96a0583c791` (`dev`). Decided by ADR-391. This
+section is appended to `docs/schematics/web-study-screens.md`; no line above it changes. The native
+review's withheld phase is drawn in `docs/schematics/ios-review-screen.md` section 6.
+
+An image occlusion question has its masks drawn by a script, and no review runs card scripts
+(ADR-352 D1). The question has one rule, the engine core's `occlusion::masks_not_drawn`, read over
+the rendered question. A marked question is withheld on both sides, on both reviews: the web
+review shows one line in every locale, and the native review shows the ffi's English line in the
+card's place. Neither records a rating, and the card stays due.
+
+### 7a. Data flow, per client
+
+```mermaid
+flowchart LR
+  subgraph engine["the engine (Worker, or the native process)"]
+    render["RenderExistingCard (27,6): the question and the answer"]
+  end
+  subgraph core["the engine core"]
+    rule["occlusion::masks_not_drawn(question)"]
+    coreface["face::complete: a Face, withheld on both sides when marked"]
+  end
+  subgraph web["web engine (wasm32)"]
+    view["current_card: the view, with withheld"]
+    faces["faces: the core's faces"]
+  end
+  subgraph page["page"]
+    proto["CardView.withheld"]
+    phases["review.ts: the withheld phase, with undo, bury and flag"]
+    screen["ReviewScreen: no frame, no late line, the status line"]
+    msgs["study_card_withheld, in each of the 7 locales"]
+  end
+  subgraph ffi["ffi"]
+    cardface["CardFace.withheld, and a document holding the English line"]
+  end
+  subgraph native["native review"]
+    session["ReviewSession.next: the withheld phase"]
+    model["ReviewModel.perform: bury and flag only"]
+    shown["CardFaceView: the ffi's document in the card's place"]
+  end
+  render --> rule
+  render --> coreface
+  rule --> coreface
+  render --> view
+  rule --> view
+  coreface --> faces
+  view --> proto
+  proto --> phases
+  phases --> screen
+  msgs --> screen
+  coreface --> cardface
+  cardface --> session
+  session --> model
+  cardface --> shown
+```
+
+### 7b. The rule
+
+| the rendered question holds | marked | the notes it meets |
+|---|---|---|
+| the engine's mask layer | yes | a stock occlusion note, with shapes, with no shape, or with a malformed shape field |
+| an occlusion shape, without the mask layer | yes | a cloned or custom type whose template dropped the layer |
+| neither | no | a plain card, a text cloze, an image; and, unseen, an older note whose masks are separate images (SPEC-380 section 5) |
+
+The marker names are measured by the build on a note the engine builds, and named in the rule's
+doc comment.
+
+### 7c. The web review's withheld state
+
+```mermaid
+stateDiagram-v2
+  [*] --> Loading
+  Loading --> Question: a card, not withheld
+  Loading --> Withheld: a card, withheld
+  Withheld --> Busy: bury, or undo of the previous answer
+  Withheld --> Withheld: flag
+  Busy --> Loading: the next card
+```
+
+- In `Withheld`, show-answer, replay and every rating have no row in the review's table: a key,
+  button, remote or stick press there is not a transition, and no rating is sent.
+- The status region shows `study_card_withheld` where the escaped card's line is shown; the card
+  frame and the late line are not drawn.
+- The card stays due; only the learner's own bury moves it.
+
+### 7d. What crosses each new edge
+
+| edge | carries | never carries |
+|---|---|---|
+| the engine's render to the core's rule | the rendered question | the note's fields, its type's kind |
+| the core's rule to the core's face and the web engine's view | one boolean for the card | the question's text, the markers |
+| the core's face to the web engine's faces and the ffi | a withheld face: no text, no note CSS, no clip | the image, the shapes |
+| the web engine to the page | `withheld` on the card view, with an empty question, answer and CSS | the image, the shapes, a reason code |
+| the ffi to the native review | `withheld` on the card face, and a document holding the English line | the image, the shapes, a script |
+| either review to the learner | one line, and the learner's own bury and flag | a rating, an automatic bury |
