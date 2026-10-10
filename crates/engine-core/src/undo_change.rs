@@ -59,6 +59,19 @@ impl Mark {
     }
 }
 
+/// Whether `mark` still shows the recorded change (SPEC-383 R2, R5): a bury's card still
+/// user-buried, or a flag's user flag still the flag the change left. A record of an answer, or of
+/// a kind no variant names, shows nothing. The web engine records a bury or a flag only when its
+/// write shows, and the restore admits one only while it still does, so both read it here.
+#[must_use]
+pub fn shows(recorded: &Recorded, mark: &Mark) -> bool {
+    match Kind::try_from(recorded.kind) {
+        Ok(Kind::Bury) => mark.queue == USER_BURIED,
+        Ok(Kind::Flag) => (mark.flags & USER_FLAG) == recorded.flag,
+        Ok(Kind::Answer) | Err(_) => false,
+    }
+}
+
 /// Whether the recorded bury or flag may be undone now, on `card`: `now` is the engine's undo
 /// status and `mark` the card's mark, both read at the moment of the undo.
 ///
@@ -82,12 +95,7 @@ pub fn judge_change(
     if recorded.card != card {
         return Err(UndoRefusal::NotTheCard);
     }
-    let kept = match Kind::try_from(recorded.kind) {
-        Ok(Kind::Bury) => mark.queue == USER_BURIED,
-        Ok(Kind::Flag) => (mark.flags & USER_FLAG) == recorded.flag,
-        Ok(Kind::Answer) | Err(_) => false,
-    };
-    if !kept {
+    if !shows(recorded, &mark) {
         return Err(UndoRefusal::Changed);
     }
     if mark.usn != -1 {

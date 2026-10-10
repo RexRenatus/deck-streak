@@ -260,6 +260,11 @@ pub fn last_answer_for(
         .ok_or(StudyError::NotUndoable(UndoRefusal::Changed))
 }
 
+/// The engine's number for a card with no user flag.
+const NO_FLAG: u32 = 0;
+/// The engine's number for the red flag, the one the review's flag action sets (SPEC-350 R7).
+const RED: u32 = 1;
+
 /// What the review's last bury or flag did (SPEC-383 R2): a bury, with the kind of state its card
 /// returns to, or a flag, with the card's flag before the change and the flag the change left.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -301,8 +306,8 @@ pub fn last_mark_for<R>(
     card: i64,
     step: u32,
 ) -> Result<&LastMark<R>, StudyError> {
-    let _ = (last, card, step);
-    Err(StudyError::NotUndoable(UndoRefusal::Changed))
+    last.filter(|kept| kept.card == card && kept.step == step)
+        .ok_or(StudyError::NotUndoable(UndoRefusal::Changed))
 }
 
 /// What the card view says of an undo of the review's last bury or flag (SPEC-383 R9), from the
@@ -310,8 +315,12 @@ pub fn last_mark_for<R>(
 /// synced, and nothing when no change is kept or any other refusal holds.
 #[must_use]
 pub fn mark_view(judged: Option<(Change, Result<(), UndoRefusal>)>) -> Option<&'static str> {
-    let _ = judged;
-    None
+    match judged? {
+        (Change::Bury(_), Ok(())) => Some("bury"),
+        (Change::Flag { .. }, Ok(())) => Some("flag"),
+        (_, Err(UndoRefusal::Synced)) => Some("change-synced"),
+        (_, Err(UndoRefusal::Gone | UndoRefusal::NotTheCard | UndoRefusal::Changed)) => None,
+    }
 }
 
 /// What an undo of a flag does to its card's flag (SPEC-383 R9, R11), from the flag before the
@@ -319,8 +328,11 @@ pub fn mark_view(judged: Option<(Change, Result<(), UndoRefusal>)>) -> Option<&'
 /// took red off, and `replaced` when it set red over another flag.
 #[must_use]
 pub fn flag_change(before: u32, after: u32) -> &'static str {
-    let _ = (before, after);
-    "added"
+    match (before, after) {
+        (NO_FLAG, RED) => "added",
+        (RED, NO_FLAG) => "removed",
+        _ => "replaced",
+    }
 }
 
 /// The languages the engine's `init` receives: the page's list, or English when it sends none
