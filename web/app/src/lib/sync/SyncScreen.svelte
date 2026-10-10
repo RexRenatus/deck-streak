@@ -6,6 +6,7 @@
   // collection is told so, and its choice names the download as the restore. Every value shown is
   // a reply of the Worker's (D5).
   import { onMount } from 'svelte';
+  import type { BackupsClient } from '$lib/engine/backups';
   import type { Required, StatusWord } from '$lib/engine/protocol';
   import { m } from '$lib/paraglide/messages.js';
   import ChoiceScreen from './ChoiceScreen.svelte';
@@ -15,8 +16,16 @@
   let {
     client,
     lost,
-    fetch = globalThis.fetch
-  }: { client: () => Promise<SyncClient>; lost: () => boolean; fetch?: typeof globalThis.fetch } = $props();
+    fetch = globalThis.fetch,
+    storage = globalThis.navigator?.storage
+  }: {
+    client: () => Promise<SyncClient & BackupsClient>;
+    lost: () => boolean;
+    fetch?: typeof globalThis.fetch;
+    storage?: Pick<StorageManager, 'persisted'>;
+  } = $props();
+
+  // red stub: the storage status and the backup list are absent from the screen
 
   /** The store's word as the Worker last answered it; null until it has. */
   let word = $state<StatusWord | null>(null);
