@@ -105,7 +105,12 @@ describe('the study operations on the wire', () => {
       'sync-login',
       'sync',
       'credential-status',
-      'credential-forget'
+      'credential-forget',
+      // the full sync's choice joins after the credential's two (SPEC-377 R6)
+      'choice-count',
+      'choice-confirm',
+      'choice-cancel',
+      'unsynced'
     ]);
   });
 
@@ -166,5 +171,51 @@ describe('the study operations on the wire', () => {
     for (const [request, message] of refused) {
       expect(parseRequest(request), message).toEqual({ id: 1, message });
     }
+  });
+});
+
+describe('the choice operations on the wire', () => {
+  it('the choice operations carry no path, no id set and no snapshot answer', () => {
+    // SPEC-377 R6, A8: the page names a direction and nothing else; the Worker reads the snapshot
+    // answer itself and the web engine names every file, so anything else is refused before any
+    // engine call
+    const admitted: Record<string, unknown>[] = [
+      { id: 1, op: 'choice-count' },
+      { id: 2, op: 'choice-confirm', direction: 'upload' },
+      { id: 3, op: 'choice-confirm', direction: 'download' },
+      { id: 4, op: 'choice-cancel' },
+      { id: 5, op: 'unsynced' }
+    ];
+    for (const request of admitted) {
+      expect(parseRequest(request), String(request.id)).toEqual({ request });
+    }
+    const refused: [Record<string, unknown>, string][] = [
+      [{ id: 1, op: 'choice-count', path: '/deck-streak/server-1.anki2' }, 'choice-count takes no path'],
+      [{ id: 1, op: 'choice-count', required: 2 }, 'choice-count takes no required'],
+      [{ id: 1, op: 'choice-count', key: 'k' }, 'choice-count takes no key'],
+      [{ id: 1, op: 'choice-confirm' }, "choice-confirm's direction is malformed"],
+      [{ id: 1, op: 'choice-confirm', direction: 'both' }, "choice-confirm's direction is malformed"],
+      [{ id: 1, op: 'choice-confirm', direction: 0 }, "choice-confirm's direction is malformed"],
+      [{ id: 1, op: 'choice-confirm', direction: ['upload'] }, "choice-confirm's direction is malformed"],
+      [{ id: 1, op: 'choice-confirm', direction: 'Upload' }, "choice-confirm's direction is malformed"],
+      [{ id: 1, op: 'choice-confirm', direction: 'upload', found: true }, 'choice-confirm takes no found'],
+      [{ id: 1, op: 'choice-confirm', direction: 'upload', snapshot: { found: true } }, 'choice-confirm takes no snapshot'],
+      [{ id: 1, op: 'choice-confirm', direction: 'download', path: '/deck-streak/backup-1.anki2' }, 'choice-confirm takes no path'],
+      [{ id: 1, op: 'choice-confirm', direction: 'download', ids: [1] }, 'choice-confirm takes no ids'],
+      [{ id: 1, op: 'choice-confirm', direction: 'download', key: 'k' }, 'choice-confirm takes no key'],
+      [{ id: 1, op: 'choice-cancel', path: '/deck-streak/collection.anki2' }, 'choice-cancel takes no path'],
+      [{ id: 1, op: 'unsynced', reviews: 3 }, 'unsynced takes no reviews'],
+      [{ id: 1, op: 'choice-write' }, 'unknown operation choice-write']
+    ];
+    for (const [request, message] of refused) {
+      expect(parseRequest(request), message).toEqual({ id: 1, message });
+    }
+    console.log(`examined ${admitted.length} admitted and ${refused.length} refused choice requests`);
+    expect((OPS as readonly string[]).filter((op) => op.startsWith('choice-') || op === 'unsynced')).toEqual([
+      'choice-count',
+      'choice-confirm',
+      'choice-cancel',
+      'unsynced'
+    ]);
   });
 });

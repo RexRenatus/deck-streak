@@ -3,7 +3,10 @@
 import { parseRequest } from './protocol';
 import type {
   CardView,
+  ChoiceConfirmed,
+  ChoiceCounted,
   Deck,
+  Direction,
   ErrorCode,
   Faces,
   Head,
@@ -12,9 +15,11 @@ import type {
   Reply,
   Request,
   Snapshot,
+  Required,
   StatusWord,
   Synced,
-  UndoOffer
+  UndoOffer,
+  Unsynced
 } from './protocol';
 
 /** The Web Lock that holds one collection per origin. */
@@ -71,6 +76,16 @@ export interface SessionDeps {
   /** The Worker's sync, which the two sync operations reach; typed by its shape, so this module
    * never imports it (SPEC-364 R17, R18). A Worker without one answers as a store with no key. */
   sync?: { login(user: string, password: string): Promise<StatusWord>; sync(): Promise<Synced> };
+  /** The Worker's full-sync choice, which the four choice operations reach; typed by its shape, so
+   * this module never imports it. It hears what each normal sync answered (SPEC-377 R6). A Worker
+   * without one answers as a store with no key, and reads no unsynced count. */
+  choice?: {
+    heard(required: Required | null): void;
+    count(): Promise<ChoiceCounted>;
+    confirm(direction: Direction): Promise<ChoiceConfirmed>;
+    cancel(): Promise<void>;
+    unsynced(): Promise<Unsynced>;
+  };
 }
 
 /** A media file the Worker read for the core: its name and its first bytes. */
@@ -168,6 +183,14 @@ export class Session {
     if (request.op === 'open') return this.#open(request.id, request.languages ?? []);
     if (!this.#opened) return refuse(request.id, 'not-open', `${request.op} before open`);
     if (request.op === 'sync-login' || request.op === 'sync') return this.#sync(request);
+    if (
+      request.op === 'choice-count' ||
+      request.op === 'choice-confirm' ||
+      request.op === 'choice-cancel' ||
+      request.op === 'unsynced'
+    ) {
+      return this.#choice(request);
+    }
     if (request.op === 'faces') return this.#faces(request.id, request.card);
     return this.#run(request.id, (engine) => this.#call(engine, request));
   }
@@ -249,13 +272,44 @@ export class Session {
       return { id: request.id, ok: true, value: request.op === 'sync' ? absent : absent.status };
     }
     try {
-      const value = request.op === 'sync' ? await sync.sync() : await sync.login(request.user, request.password);
+      if (request.op === 'sync-login') return { id: request.id, ok: true, value: await sync.login(request.user, request.password) };
+      const value = await sync.sync();
+      this.#deps.choice?.heard(value.required);
       return { id: request.id, ok: true, value };
     } catch (error) {
-      const why = this.#explain(this.#engine as EngineModule, error);
-      if (error instanceof WebAssembly.RuntimeError) return this.#end(request.id, 'engine-failed', why);
-      return refuse(request.id, 'engine-failed', why);
+      return this.#failed(request.id, error);
     }
+  }
+
+  /** A choice operation's answer (SPEC-377 R6), on the session's queue like a sync. A Worker with no
+   * choice refuses each by name; a trap ends the session, and any other throw answers
+   * `engine-failed`. */
+  async #choice(request: Extract<Request, { op: 'choice-count' | 'choice-confirm' | 'choice-cancel' | 'unsynced' }>): Promise<Reply> {
+    const choice = this.#deps.choice;
+    if (choice === undefined) return refuse(request.id, 'engine-failed', `this Worker has no full-sync choice for ${request.op}`);
+    try {
+      switch (request.op) {
+        case 'choice-count':
+          return { id: request.id, ok: true, value: await choice.count() };
+        case 'choice-confirm':
+          return { id: request.id, ok: true, value: await choice.confirm(request.direction) };
+        case 'choice-cancel':
+          await choice.cancel();
+          return { id: request.id, ok: true, value: null };
+        default:
+          return { id: request.id, ok: true, value: await choice.unsynced() };
+      }
+    } catch (error) {
+      return this.#failed(request.id, error);
+    }
+  }
+
+  /** A sync or choice operation that threw: a trap ends the session, and any other throw answers
+   * `engine-failed`. */
+  #failed(id: number, error: unknown): Reply {
+    const why = this.#explain(this.#engine as EngineModule, error);
+    if (error instanceof WebAssembly.RuntimeError) return this.#end(id, 'engine-failed', why);
+    return refuse(id, 'engine-failed', why);
   }
 
   /** Both faces of `card`. The core reads media synchronously and the media directory does not, so

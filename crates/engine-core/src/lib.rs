@@ -47,6 +47,7 @@ pub mod answer;
 pub mod credential;
 pub mod dispatch;
 pub mod face;
+pub mod files;
 pub mod full_sync;
 pub mod gesture;
 pub mod handshake;
