@@ -108,6 +108,105 @@
         "let _ = (&pool, storage(\"the pool is not reserved\"));",
         "boundary::each_choice_file_is_reserved_before_it_is_named",
         "the pool is reserved before each choice file is named; unreserved, a backup or a server copy could find no free file in the pool (SPEC-377 R5, A6)"
+      ],
+      [
+        "S37712-AN-ARCHIVE-WITHOUT-ITS-MANIFEST-IS-FOUND",
+        "api",
+        "src/snapshot_routes.rs",
+        "manifest.then(|| stamp_millis(stamp))",
+        "(manifest || true).then(|| stamp_millis(stamp))",
+        "snapshot_route::an_archive_without_its_manifest_is_not_found",
+        "a stamp is found only when its sealed manifest sits beside its sealed archive; read as true, an archive alone would admit an upload over the server's copy with no manifest to restore it by (SPEC-377 R13, B3)"
+      ],
+      [
+        "S37713-THE-AGE-IS-THE-OLDEST-STAMP",
+        "api",
+        "src/snapshot_routes.rs",
+        ".max()",
+        ".min()",
+        "snapshot_route::the_age_is_the_newest_sealed_stamps",
+        "the age is counted from the newest sealed stamp; counted from the oldest, a fresh snapshot would read as old (SPEC-377 R13, B3)"
+      ],
+      [
+        "S37714-AN-ABSENT-LISTER-FINDS",
+        "api",
+        "src/snapshot_routes.rs",
+        "None => Err(unknown()),",
+        "None => Err(answered(&serde_json::json!({ \"found\": true, \"age_seconds\": 0 }))),",
+        "snapshot_route::an_absent_list_credential_answers_unknown",
+        "with no lister wired the route answers unknown; answering found, an upload would go ahead with no snapshot the service could name (SPEC-377 R14, B2)"
+      ],
+      [
+        "S37715-A-STRAY-NAME-COUNTS",
+        "api",
+        "src/snapshot_routes.rs",
+        "formed(stamp).then_some(stamp)",
+        "(formed(stamp) || true).then_some(stamp)",
+        "snapshot_route::a_name_outside_the_archive_form_is_ignored",
+        "only a name in the archive's stamp form counts; with any name counted, a stray object would read as a sealed snapshot (SPEC-377 R13, B3)"
+      ],
+      [
+        "S37716-THE-CACHE-NEVER-EXPIRES",
+        "api",
+        "src/snapshot_routes.rs",
+        "let stale = now - at >= CACHE_WINDOW_MS;",
+        "let stale = now - at >= CACHE_WINDOW_MS && false;",
+        "snapshot_route::a_stale_answer_is_listed_again",
+        "a kept listing answers only for its window; never stale, a snapshot sealed later would never be seen (SPEC-377 R14, B1)"
+      ],
+      [
+        "S37717-RETENTION-KEEPS-ONE-LESS",
+        "engine-core",
+        "src/retention.rs",
+        "removed(held, KEEP)",
+        "removed(held, KEEP - 1)",
+        "retention::three_of_each_kind_are_kept",
+        "three of each kind are kept; one fewer would remove a backup the screen promised to keep (SPEC-377 R17, B4)"
+      ],
+      [
+        "S37718-RETENTION-REMOVES-THE-NEWEST",
+        "engine-core",
+        "src/retention.rs",
+        "!(newer == 0 || newer < keep)",
+        "!(false && newer == 0 || newer < keep)",
+        "retention::the_newest_of_a_kind_is_never_removed",
+        "the newest of a kind is never removed, whatever the bound; without the exemption a bound of zero would leave a kind with no backup (SPEC-377 R17, B4)"
+      ],
+      [
+        "S37719-RETENTION-MIXES-KINDS",
+        "engine-core",
+        "src/retention.rs",
+        "let kind = |file: &Held<K, T>| file.kind;",
+        "let kind = |_: &Held<K, T>| held[0].kind;",
+        "retention::each_kind_is_kept_apart",
+        "the kinds are counted apart; with one key for every file, new server copies would push the owner's own backups out (SPEC-377 R17, B4)"
+      ],
+      [
+        "S37720-AN-EXPORT-TAKES-ANY-NAME",
+        "web-engine",
+        "src/files.rs",
+        "(backup && holds(listed, &name)).then_some(name)",
+        "(backup && holds(listed, &name) || true).then_some(name)",
+        "files::only_a_listed_backup_is_exported",
+        "only a backup the pool lists is exported; with any id taken, the collection or an unlisted name could leave the browser (SPEC-377 R16, B5)"
+      ],
+      [
+        "S37721-THE-LISTER-WAITS-UNBOUNDED",
+        "daemon",
+        "src/snapshot_lister.rs",
+        "if started.elapsed() >= self.time {",
+        "if started.elapsed() >= self.time && false {",
+        "snapshot_lister::a_command_past_its_time_bound_answers_unknown",
+        "the list command is stopped at its time bound; unbounded, a stalled command would hold the route's answer; the killer bounds its own wait (SPEC-377 R14, B9)"
+      ],
+      [
+        "S37722-THE-LISTER-READS-PAST-ITS-BOUND",
+        "daemon",
+        "src/snapshot_lister.rs",
+        "if read.len() > self.output {",
+        "if read.len() > self.output && false {",
+        "snapshot_lister::output_past_its_bound_answers_unknown",
+        "output past its byte bound answers unknown; unbounded, the route would trust a listing read only in part (SPEC-377 R14, B9)"
       ]
     ]
   }

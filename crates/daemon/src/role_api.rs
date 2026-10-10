@@ -29,6 +29,7 @@ use deck_streak_kernel::{
 use tokio::sync::oneshot;
 
 use crate::lifecycle::{self, Notifier, NotifyState, ShutdownSignal};
+use crate::snapshot_lister::CommandLister;
 use crate::wiring::{self, StateDirectory, WiringError};
 
 /// Why the `api` role stopped with an error.
@@ -147,6 +148,16 @@ pub fn with_seal_secret(state: ApiState, secret: Option<SealSecret>) -> ApiState
     }
 }
 
+/// `state`, answering the snapshot route from `lister` when the role's settings and credentials
+/// configure one (SPEC-377 R14). With none the route answers unknown and the role still starts.
+#[must_use]
+pub fn with_snapshot_lister(state: ApiState, lister: Option<CommandLister>) -> ApiState {
+    match lister {
+        Some(lister) => state.with_snapshot(Arc::new(lister)),
+        None => state,
+    }
+}
+
 /// Runs the `api` role until SIGTERM (or SIGINT), and returns once every request in flight has
 /// finished. `redactor` is the one the process's log writer reads: every credential the role
 /// loads is registered with it.
@@ -162,7 +173,7 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     let state = StateDirectory::from_env(env)?;
     let freshness = Freshness::from_env(env)?;
     let credentials = CredentialsDirectory::from_env(env)?;
-    let loader = CredentialLoader::new(credentials, redactor.clone());
+    let loader = CredentialLoader::new(credentials.clone(), redactor.clone());
     let gate = OwnerGate::load(&loader, freshness)?;
     // The seal secret is read beside the other credentials, before anything is bound: an absent one
     // turns the release off, and one that is held and malformed refuses start (SPEC-363 R5).
@@ -171,6 +182,11 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     let _conventions = Conventions::load(env)?;
     // So does a public origin that is set and is not an https origin (SPEC-359 R1).
     let linking = LinkingConfig::from_env(env)?;
+    // The archive's lister is read last of the settings and credentials, still before anything is
+    // bound: a list command that is set and malformed refuses start, and an absent command or
+    // credential turns it off with an INFO line, which comes after every other refusal so that a
+    // refusal is the role's first line (SPEC-377 R14).
+    let archive_lister = CommandLister::configured(env, &credentials)?;
     let notifier = Notifier::from_env(env);
     let shutdown = ShutdownSignal::install().map_err(ApiRoleError::Signals)?;
 
@@ -185,11 +201,14 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     let access = OwnerAccess::new(gate, Arc::clone(&clock), kernel.study_day_rule);
     let late = wiring::LateInstruments::new();
     let offload = Offload::new(kernel.offload_workers, clock);
-    let router = deck_streak_api::router(with_seal_secret(
-        api_state(env, &offload, readiness.clone(), access)
-            .with_linking(linking, owner)
-            .with_instruments(Arc::new(late.clone())),
-        seal,
+    let router = deck_streak_api::router(with_snapshot_lister(
+        with_seal_secret(
+            api_state(env, &offload, readiness.clone(), access)
+                .with_linking(linking, owner)
+                .with_instruments(Arc::new(late.clone())),
+            seal,
+        ),
+        archive_lister,
     ));
     tracing::info!(listen = %bound, "the api role serves");
     notifier.notify(NotifyState::Ready);
