@@ -1,0 +1,30 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S39800-THE-CARD-JOB-INSTALLS-FIREFOX",
+        ".github/workflows/ci.yml",
+        "        run: pnpm --dir web/app exec playwright install --with-deps firefox\n",
+        "        run: 'true'\n",
+        "the card-sandbox job stops installing Firefox, so the suite's third engine has no browser (SPEC-398 A2, R3)",
+        "test_ci_workflows.TheCardSandboxRunsInFirefox.test_the_card_sandbox_job_installs_firefox_and_runs_the_suite_in_every_engine"
+      ],
+      [
+        "S39801-THE-CARD-CONFIG-RUNS-FIREFOX",
+        "web/app/playwright.card.config.ts",
+        ",\n    { name: 'firefox', use: { ...devices['Desktop Firefox'] } }\n",
+        "\n",
+        "the card configuration stops declaring the firefox project, so the suite runs in two engines (SPEC-398 A2, R1)",
+        "test_ci_workflows.TheCardSandboxRunsInFirefox.test_the_card_sandbox_job_installs_firefox_and_runs_the_suite_in_every_engine"
+      ],
+      [
+        "S39802-THE-CARD-JOB-IS-BOUNDED-FOR-THREE-ENGINES",
+        ".github/workflows/ci.yml",
+        "    # frame, and each layer removed alone opens exactly the channels the schematic gives it.\n    runs-on: ubuntu-24.04\n    timeout-minutes: 30\n",
+        "    # frame, and each layer removed alone opens exactly the channels the schematic gives it.\n    runs-on: ubuntu-24.04\n    timeout-minutes: 20\n",
+        "the card-sandbox job's bound falls back to the two-engine figure (SPEC-398 A3, R4)",
+        "test_ci_workflows.TheCardSandboxOutlastsItsThreeEngines.test_the_card_sandbox_timeout_holds_three_engines"
+      ]
+    ]
+  }
+}
