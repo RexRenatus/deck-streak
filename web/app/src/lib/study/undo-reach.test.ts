@@ -35,6 +35,20 @@ const UNDO_KEYS = [
   'undo_no_text'
 ];
 
+/** The ten messages of the undo of a bury or a flag (SPEC-383 R12). */
+const CHANGE_KEYS = [
+  'study_undo_bury',
+  'study_undo_flag',
+  'undo_bury_title',
+  'undo_flag_title',
+  'undo_bury_unsynced',
+  'undo_flag_added',
+  'undo_flag_removed',
+  'undo_flag_replaced',
+  'undo_change_synced',
+  'undo_change_gone'
+];
+
 /** Every phase the review may be in, the confirmation's included. */
 const PHASES = ['loading', 'question', 'answer', 'busy', 'confirming', 'refused', 'done'];
 
@@ -129,6 +143,12 @@ function missingKeys(text: string): string[] {
   return UNDO_KEYS.filter((key) => typeof messages[key] !== 'string' || messages[key] === '');
 }
 
+/** The keys of `keys` a locale text lacks, or holds empty. */
+function lackedKeys(text: string, keys: readonly string[]): string[] {
+  const messages = JSON.parse(text) as Record<string, unknown>;
+  return keys.filter((key) => typeof messages[key] !== 'string' || messages[key] === '');
+}
+
 describe('an undo reaches the engine only from the review and the session', () => {
   it('an undo reaches the engine only from the review and the session', () => {
     const files = sources();
@@ -180,5 +200,31 @@ describe("every locale holds the undo dialog's fifteen messages", () => {
     expect(missingKeys(JSON.stringify({ ...full, undo_title: '' }))).toEqual(['undo_title']);
     const lacking = Object.fromEntries(UNDO_KEYS.filter((key) => key !== 'undo_keep').map((key) => [key, 'x']));
     expect(missingKeys(JSON.stringify(lacking))).toEqual(['undo_keep']);
+  });
+});
+
+describe('every locale holds the bury and flag undo messages', () => {
+  it('every locale holds the bury and flag undo messages', () => {
+    // SPEC-383 R12, A28: the ten keys of the undo of a bury or a flag, in every locale
+    const files = locales();
+    for (const file of files) {
+      const lacked = lackedKeys(readFileSync(join(APP, file), 'utf8'), CHANGE_KEYS);
+      expect(lacked, `${file} lacks a bury or flag undo message`).toEqual([]);
+    }
+    examined('locale files under messages', files);
+    expect(files).toHaveLength(7);
+    examined('bury and flag undo keys', CHANGE_KEYS);
+    expect(CHANGE_KEYS).toHaveLength(10);
+
+    // a locale without one message, or with one empty, is refused by the key's name
+    const full = Object.fromEntries(CHANGE_KEYS.map((key) => [key, 'x']));
+    expect(lackedKeys(JSON.stringify(full), CHANGE_KEYS)).toEqual([]);
+    const lacking = Object.fromEntries(
+      CHANGE_KEYS.filter((key) => key !== 'undo_flag_replaced').map((key) => [key, 'x'])
+    );
+    expect(lackedKeys(JSON.stringify(lacking), CHANGE_KEYS)).toEqual(['undo_flag_replaced']);
+    expect(lackedKeys(JSON.stringify({ ...full, undo_change_gone: '' }), CHANGE_KEYS)).toEqual([
+      'undo_change_gone'
+    ]);
   });
 });

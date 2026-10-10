@@ -1140,3 +1140,220 @@ fn the_backup_helpers_keep_the_pool_the_record_the_age_and_the_refusal() {
     let owed: usize = helpers.iter().map(|(_, owed)| owed.len()).sum();
     println!("examined {owed} owed statement(s)");
 }
+
+/// The statement that records the review's last bury or flag in the one slot (SPEC-383 R1).
+const RECORDS_THE_MARK: &str = "LAST_MARK.with(|kept| *kept.borrow_mut() = Some(";
+/// The statement that empties the slot's change.
+const CLEARS_THE_MARK: &str = "LAST_MARK.with(|kept| *kept.borrow_mut() = None)";
+/// The statement that empties the slot's answer.
+const CLEARS_THE_ANSWER: &str = "LAST_ANSWER.with(|kept| *kept.borrow_mut() = None)";
+/// The card's mark read, which a bury or a flag records after (SPEC-383 R2, R4).
+const READS_THE_MARK: &str = "Read::CardMark(";
+
+/// Each function that keeps the review's one undo slot (SPEC-383 R1, R2, A20): its name, why it
+/// owes what it owes, the text its statements must follow when one is named, and the statements.
+const SLOT: [(&str, &str, Option<&str>, &[&str]); 6] = [
+    (
+        "bury",
+        "records the bury it made as the slot's one change, after reading the card's mark (SPEC-383 R1, R2)",
+        Some(READS_THE_MARK),
+        &[RECORDS_THE_MARK, CLEARS_THE_ANSWER],
+    ),
+    (
+        "flag",
+        "records the flag it set as the slot's one change, after reading the card's mark (SPEC-383 R1, R2)",
+        Some(READS_THE_MARK),
+        &[RECORDS_THE_MARK, CLEARS_THE_ANSWER],
+    ),
+    (
+        "rate",
+        "empties the slot's change once it answers (SPEC-383 R1)",
+        Some(".run_answer("),
+        &[CLEARS_THE_MARK],
+    ),
+    (
+        "open",
+        "starts the review with an empty slot (SPEC-383 R1)",
+        None,
+        &[CLEARS_THE_ANSWER, CLEARS_THE_MARK],
+    ),
+    (
+        "close",
+        "ends the review with an empty slot (SPEC-383 R1)",
+        None,
+        &[CLEARS_THE_ANSWER, CLEARS_THE_MARK],
+    ),
+    (
+        "undo",
+        "empties the slot once an undo succeeds (SPEC-383 R1)",
+        Some(".run_exempt("),
+        &[CLEARS_THE_ANSWER, CLEARS_THE_MARK],
+    ),
+];
+
+/// `source` with every line and block comment removed and every newline kept. A string literal is
+/// kept whole, so a `//` inside one is not read as a comment, and a comment that names a slot
+/// statement counts for nothing (SPEC-383 section 6).
+fn code(source: &str) -> String {
+    let mut out = String::with_capacity(source.len());
+    let mut chars = source.chars().peekable();
+    while let Some(c) = chars.next() {
+        match (c, chars.peek().copied()) {
+            ('/', Some('/')) => {
+                for c in chars.by_ref() {
+                    if c == '\n' {
+                        out.push('\n');
+                        break;
+                    }
+                }
+            }
+            ('/', Some('*')) => {
+                chars.next();
+                let mut depth = 1_usize;
+                while depth > 0 {
+                    match (chars.next(), chars.peek().copied()) {
+                        (None, _) => break,
+                        (Some('/'), Some('*')) => {
+                            chars.next();
+                            depth += 1;
+                        }
+                        (Some('*'), Some('/')) => {
+                            chars.next();
+                            depth -= 1;
+                        }
+                        (Some('\n'), _) => out.push('\n'),
+                        _ => {}
+                    }
+                }
+            }
+            ('"', _) => {
+                out.push('"');
+                while let Some(c) = chars.next() {
+                    out.push(c);
+                    match c {
+                        '\\' => out.extend(chars.next()),
+                        '"' => break,
+                        _ => {}
+                    }
+                }
+            }
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+/// What the slot's functions owe and do not hold, read with comments removed: a function the
+/// module does not define once, a statement its body lacks, or a statement it holds only before
+/// the text it must follow.
+fn slot_problems(source: &str) -> Vec<String> {
+    let source = code(source);
+    let mut found = Vec::new();
+    for (name, why, after, statements) in SLOT {
+        let text = match body(&source, name) {
+            Err(problem) => {
+                found.push(format!("{name}: {problem}"));
+                continue;
+            }
+            Ok(text) => squeezed(text),
+        };
+        let from = after.map(|after| text.find(&squeezed(after)));
+        if let (Some(after), Some(None)) = (after, from) {
+            found.push(format!("{name} {why}, and its body lacks `{after}`"));
+        }
+        for statement in statements {
+            let held = squeezed(statement);
+            if !text.contains(&held) {
+                found.push(format!("{name} {why}, and its body lacks `{statement}`"));
+            } else if let (Some(after), Some(Some(from))) = (after, from)
+                && !text[from..].contains(&held)
+            {
+                found.push(format!(
+                    "{name} {why}, and its body holds `{statement}` only before `{after}`"
+                ));
+            }
+        }
+    }
+    found
+}
+
+/// `source` with the first `text` inside `name`'s body written as `with`.
+fn replaced_in(source: &str, name: &str, text: &str, with: &str) -> String {
+    let held = body(source, name).unwrap_or_else(|problem| panic!("{name}: {problem}"));
+    source.replacen(held, &held.replacen(text, with, 1), 1)
+}
+
+/// `source` with `planted` written as the last statement of `name`'s body.
+fn planted_last_in(source: &str, name: &str, planted: &str) -> String {
+    let held = body(source, name).unwrap_or_else(|problem| panic!("{name}: {problem}"));
+    let open = &held[..held.len() - 1];
+    source.replacen(held, &format!("{open}    {planted}\n}}"), 1)
+}
+
+/// SPEC-383 A20: the review keeps one undo slot. A bury or a flag records its change only after
+/// it reads the card's mark and empties the answer; an answer empties the change; opening,
+/// closing and a successful undo empty both. Each plant below is refused by its function's name.
+#[test]
+fn the_review_records_one_change_at_a_time() {
+    let source = boundary();
+    assert_eq!(slot_problems(&source), Vec::<String>::new());
+
+    // a bury that leaves the answer, and the same bury holding the answer's clearing only in a
+    // comment, are refused by name
+    let leaves_answer = replaced_in(&source, "bury", CLEARS_THE_ANSWER, "let _ = &LAST_ANSWER");
+    assert_ne!(
+        leaves_answer, source,
+        "the bury's clearing was not planted out"
+    );
+    let commented = planted_last_in(
+        &leaves_answer,
+        "bury",
+        &format!("// {CLEARS_THE_ANSWER};\n    /* {CLEARS_THE_ANSWER}; */"),
+    );
+    let lacks_answer = format!("lacks `{CLEARS_THE_ANSWER}`");
+    for planted in [&leaves_answer, &commented] {
+        let refused = slot_problems(planted);
+        assert!(
+            refused_by_name(&refused, "bury", &lacks_answer),
+            "a bury that leaves the answer is not refused by name: {refused:?}"
+        );
+    }
+    // a rate that leaves the change is refused by name
+    let leaves_mark = replaced_in(&source, "rate", CLEARS_THE_MARK, "let _ = &LAST_MARK");
+    assert_ne!(
+        leaves_mark, source,
+        "the rate's clearing was not planted out"
+    );
+    let refused = slot_problems(&leaves_mark);
+    assert!(
+        refused_by_name(&refused, "rate", &format!("lacks `{CLEARS_THE_MARK}`")),
+        "a rate that leaves the change is not refused by name: {refused:?}"
+    );
+    // a flag that records no change is refused by name
+    let unrecorded = replaced_in(&source, "flag", RECORDS_THE_MARK, "let _ = Some((");
+    assert_ne!(unrecorded, source, "the flag's record was not planted out");
+    let refused = slot_problems(&unrecorded);
+    assert!(
+        refused_by_name(&refused, "flag", &format!("lacks `{RECORDS_THE_MARK}`")),
+        "a flag that records no change is not refused by name: {refused:?}"
+    );
+    // a bury that records its change before it reads the card's mark is refused by name
+    let unread = planted_in(
+        &replaced_in(&source, "bury", RECORDS_THE_MARK, "let _ = Some(("),
+        "bury",
+        &format!("{RECORDS_THE_MARK}early));"),
+    );
+    let refused = slot_problems(&unread);
+    assert!(
+        refused_by_name(&refused, "bury", &format!("only before `{READS_THE_MARK}`")),
+        "a bury that records before its read is not refused by name: {refused:?}"
+    );
+    // the comment reader keeps a string whole and drops both kinds of comment
+    assert_eq!(
+        code("a(\"//\"); // b\nc /* d /* e */ f */ g"),
+        "a(\"//\"); \nc  g"
+    );
+    let functions = examined("slot function(s) of src/wasm.rs", SLOT.to_vec());
+    let owed: usize = functions.iter().map(|(_, _, _, owed)| owed.len()).sum();
+    println!("examined {owed} slot statement(s)");
+}
