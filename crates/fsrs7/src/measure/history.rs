@@ -49,6 +49,7 @@ pub fn rows(reviews: usize, mean: usize) -> Vec<RevlogRow> {
                 id: at,
                 ease: EASES[rows.len() % EASES.len()],
                 kind: REVIEW,
+                factor: 0,
             });
             at += GAP_HOURS[review % GAP_HOURS.len()] * HOUR_MS;
         }

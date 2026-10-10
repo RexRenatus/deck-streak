@@ -24,6 +24,8 @@ pub struct RevlogRow {
     pub ease: u8,
     /// The entry's kind; 4 is a manual entry and 5 a reschedule.
     pub kind: u8,
+    /// The ease factor the engine logged, in thousandths.
+    pub factor: u32,
 }
 
 /// One card's kept reviews, as one FSRS-7 item.
@@ -31,6 +33,8 @@ pub struct RevlogRow {
 pub struct CardHistory {
     /// The card.
     pub cid: i64,
+    /// The id of the card's last kept review.
+    pub last_id: i64,
     /// Its reviews in id order: the first at an interval of 0, each later one at its distance
     /// from the one before, in days.
     pub item: FSRSItem,
@@ -63,6 +67,7 @@ pub fn histories(rows: &[RevlogRow]) -> Vec<CardHistory> {
                 .collect();
             CardHistory {
                 cid,
+                last_id: 0,
                 item: FSRSItem { reviews },
             }
         })

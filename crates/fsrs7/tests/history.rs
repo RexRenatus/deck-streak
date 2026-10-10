@@ -36,6 +36,7 @@ fn a_cell_holds_exactly_its_review_rows_at_its_mean_length() {
         id: hours * HOUR,
         ease,
         kind: REVIEW,
+        factor: 0,
     })
     .collect();
     assert_eq!(rows(10, 2), golden);
