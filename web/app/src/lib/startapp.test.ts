@@ -78,7 +78,8 @@ describe('the startapp token map', () => {
   // the deck list and the review are opened by their paths, and no token opens either.
   // SPEC-350 R18: the mapping screen is opened by its path, from the review.
   // SPEC-377 R8: the sync screen is opened by its path, and no token opens it.
-  const BY_PATH = ['/progress', '/law', '/remote', '/study', '/study/review', '/study/mapping', '/sync'];
+  // SPEC-385 R6, R8, R12: the link page, the sign-in page and the sign-in methods screen are opened by their paths, and no token opens any of them.
+  const BY_PATH = ['/progress', '/law', '/remote', '/study', '/study/review', '/study/mapping', '/sync', '/link', '/signin', '/sign-in-methods'];
 
   it('every destination is a screen of the route table', () => {
     const tokens = ['today', 'about', 'insights', 'score', 'level', 'streak', 'wallet', 'badges', 'records', 'capture'];

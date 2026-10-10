@@ -1,6 +1,7 @@
 <script lang="ts">
   import './layout.css';
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
+  import { page } from '$app/state';
   import { api, type Answer } from '$lib/api';
   import WalletHeader from '$lib/economy/WalletHeader.svelte';
   import type { WalletView } from '$lib/economy/wallet';
@@ -20,15 +21,27 @@
   // the wallet once the layout is on the page.
   let wallet = $state<Answer<WalletView>>();
 
+  // The link page and the sign-in page are open routes: the owner may hold no session on them, so
+  // the shell makes no owner call there (SPEC-385 R9). Leaving one for any other screen reads then.
+  const OPEN: readonly string[] = ['/link', '/signin'];
+  const open = $derived(OPEN.includes(page.url.pathname));
+
   // Telegram shows its own placeholder until the Mini App says it is ready. The root layout mounts
-  // after the first screen has rendered, so this is the moment (SPEC-028 R2); the feed is read then.
+  // after the first screen has rendered, so this is the moment (SPEC-028 R2).
   onMount(() => {
     telegram.ready();
-    void celebrations(api).then((items) => {
-      served = items;
-    });
-    void api.wallet().then((answer) => {
-      wallet = answer;
+  });
+
+  // The feed and the wallet are read once the layout is on the page, on any route but an open one.
+  $effect(() => {
+    if (open) return;
+    untrack(() => {
+      void celebrations(api).then((items) => {
+        served = items;
+      });
+      void api.wallet().then((answer) => {
+        wallet = answer;
+      });
     });
   });
 </script>
