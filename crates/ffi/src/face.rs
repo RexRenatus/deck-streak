@@ -147,3 +147,29 @@ impl CardFace {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::plays_inline;
+
+    /// A video's name that ends at its start tag's `>` gains `playsinline` (SPEC-393 R11). The
+    /// parity fixture's two video tags both end their names at whitespace, and `plays_inline` is
+    /// crate-private, so only a test inside the crate reaches this ending.
+    #[test]
+    fn a_video_name_ending_at_its_tag_plays_inline() {
+        assert_eq!(
+            plays_inline("<p>a</p><video>a clip</video>"),
+            "<p>a</p><video playsinline>a clip</video>"
+        );
+    }
+
+    /// A video's name that ends at a `/` gains `playsinline` too, in any ASCII case (SPEC-393
+    /// R11).
+    #[test]
+    fn a_video_name_ending_at_a_slash_plays_inline() {
+        assert_eq!(
+            plays_inline("<p>a</p><VIDEO/>"),
+            "<p>a</p><VIDEO playsinline/>"
+        );
+    }
+}
