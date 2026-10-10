@@ -37,6 +37,8 @@
 //!   review row it names, the refusals and the state the card returns to (SPEC-371 R3).
 //! - [`late`]: whether a review cannot count toward the streak for its card's due day: the
 //!   engine's day, and the rule that judges a card past its due day in it (SPEC-376 R1, R2).
+//! - [`occlusion`]: whether a card's question is an image occlusion question whose masks this
+//!   app does not draw, which both reviews withhold (SPEC-380 R1).
 //!
 //! The core depends on the engine and on no crate of this workspace; only the two client
 //! adapters depend on it (ADR-356 D4, held by the graph census).
@@ -54,6 +56,7 @@ pub mod handshake;
 pub mod late;
 pub mod login_guard;
 pub mod media;
+pub mod occlusion;
 pub mod one_way;
 pub mod review;
 pub mod table;

@@ -74,6 +74,7 @@ function view(index: number, extra: Partial<CardView> = {}): CardView {
     labels: LABELS,
     undo: null,
     late: false,
+    withheld: false,
     ...extra
   };
 }

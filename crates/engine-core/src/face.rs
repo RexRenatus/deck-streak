@@ -87,6 +87,9 @@ pub struct Face {
     pub replay: Vec<Clip>,
     /// The media names left out, each once.
     pub omitted: Vec<String>,
+    /// Whether the card's question is an image occlusion question whose masks this app does not
+    /// draw, so neither side is shown (SPEC-380 R2).
+    pub withheld: bool,
 }
 
 fn engine_error(error: Vec<u8>) -> Refusal {
@@ -220,5 +223,6 @@ pub(crate) fn complete(
         autoplay,
         replay,
         omitted: budget.into_omitted(),
+        withheld: false,
     })
 }

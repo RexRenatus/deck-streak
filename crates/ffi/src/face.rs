@@ -50,6 +50,9 @@ pub struct CardFace {
     pub replay: Vec<Clip>,
     /// The media names the face left out, each once.
     pub omitted: Vec<String>,
+    /// Whether the card's question is an image occlusion question whose masks this app does not
+    /// draw, so the page shows a line in the card's place (SPEC-380 R4).
+    pub withheld: bool,
 }
 
 /// The media folder of the collection the engine opened, read at most a cap and a byte at a time;
@@ -104,6 +107,7 @@ impl CardFace {
             autoplay: face.autoplay.into_iter().map(clip).collect(),
             replay: face.replay.into_iter().map(clip).collect(),
             omitted: face.omitted,
+            withheld: false,
         }
     }
 }
