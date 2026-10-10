@@ -3,10 +3,10 @@ import WebKit
 
 /// The card view's layers: the seven of SPEC-349 R2 (the schematic's section 4), then L8, the
 /// peer-connection removal (SPEC-355 R3, section 7), then L10 to L13, the containment layer for
-/// card scripts (SPEC-361 R3 to R6, section 8). L9 is retired (SPEC-361 R2), and its number is
-/// not reused.
+/// card scripts (SPEC-361 R3 to R6, section 8), then L14, the link strip (SPEC-392, section 10).
+/// L9 is retired (SPEC-361 R2), and its number is not reused.
 public enum CardLayer: String, CaseIterable, Sendable {
-    case L1, L2, L3, L4, L5, L6, L7, L8, L10, L11, L12, L13
+    case L1, L2, L3, L4, L5, L6, L7, L8, L10, L11, L12, L13, L14
 }
 
 /// Why the factory built no view.
@@ -35,8 +35,8 @@ public enum CardWebViewFactory {
             built: Built(switchedOn: false, scriptsFollowVerdict: true))
     }
 
-    /// The card view around a compiled list, or a refusal when there is none. `switchedOn` is the
-    /// switch the verdict reads (SPEC-355 R1, R2).
+    /// The card view around a compiled list, or a refusal when there is none; L14 strips the card
+    /// first (SPEC-392 R1). `switchedOn` is the switch the verdict reads (SPEC-355 R1, R2).
     static func build(
         html: String, ruleList: WKContentRuleList?, switchedOn: Bool = CardScripts.switchedOn
     ) throws -> WKWebView {
@@ -44,7 +44,7 @@ public enum CardWebViewFactory {
             throw CardViewRefusal.ruleListDidNotCompile
         }
         let view = make(layers: Set(CardLayer.allCases), ruleList: ruleList, switchedOn: switchedOn)
-        load(html, into: view)
+        load(LinkStrip.stripped(html), into: view)
         return view
     }
 

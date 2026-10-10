@@ -613,3 +613,78 @@ engine. This section reads Firefox over it, and the `img` row is that delivery's
 **Not in the matrix.** The engine and study suites in Firefox (#652; the engine configuration is
 open work in #748), the e2e and accessibility suites in Firefox (#652), and a learner's installed
 browser with its own preferences (#652).
+
+## 10. iPhone and iPad: the link strip, and the followed link closed (SPEC-392, ADR-406)
+
+Kind: data flow (the card's path from the note to the view on each client, and where the link
+strip sits on it) and component (L14, the layer it adds, beside what it does not stop). Read at
+`ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift`,
+`ios/App/Sources/EngineSession.swift`, `ios/App/Sources/ReviewView.swift`,
+`ios/App/Sources/CardFaceView.swift`, `ios/Harness/Sources/CardWebView.swift`,
+`ios/CardProbeTests/Planted.swift` and `web/app/src/lib/card/frame-document.ts` at 164ac206, and at
+the cut's base before the build writes.
+
+L1 to L13 are sections 4, 7 and 8's; L9 stays retired and its number is not reused. One layer
+joins, on iPhone and iPad only:
+
+| layer | what it is | where it lives | what it does NOT stop |
+|---|---|---|---|
+| L14 | the link strip: every `<link` in the card's text, its four letters in any ASCII case, renamed to `<wbr` before L12's prefix and the load; every other byte kept | `LinkStrip.swift`, called by the factory's `build` (`CardWebViewFactory.swift:47`) | a link a script adds (L3 holds its hint); a link in a document a frame loads (L5); any other element's load (L3, L12); the five characters shown as text, which it renames too |
+
+L14 is no control: it is not in `required`, `CONTROLS`, the read-back (`present`) or `LAYERS`, and
+the planted probe composes it only through the variant `referenceWith`, a view the factory does
+not build whose layers are the set it names. A renamed tag is a `wbr`, which is void, so it wraps
+nothing after it, and which has no attribute of its own, so the renamed tag's attributes grant
+nothing.
+
+On iPhone and iPad, from the note to the view. The strip runs inside `build`, before L12's prefix
+and L7's string load, so the shipped view is the only view the factory strips:
+
+```mermaid
+flowchart TD
+    face["the engine's card face"] --> session["EngineSession.face, EngineSession.swift:150-166, ReviewFace.document at :35-36"]
+    session --> review["ReviewView, ReviewView.swift:33"]
+    review --> faceview["CardFaceView, CardFaceView.swift:24"]
+    faceview --> make["makeCardWebView, CardWebViewFactory.swift:25-28: the rule list L3 compiles, or no view"]
+    harness["the harness's own call, CardWebView.swift:44"] --> make
+    make --> build["build and make: L1 to L8, L10 to L13"]
+    build --> l14["L14 at :47: every link opener renamed to a wbr opener"]
+    l14 --> loadstep["load: L12's policy prefixed at :59, L7's string load at :64"]
+    loadstep --> view["the card view"]
+    view --> act["a link activated, by a person or by the card"]
+    act --> l10["L10 cancels the default: no early connection, no navigation asked"]
+```
+
+On the web, unchanged: W3 already removes every `link`, `meta`, `base` and `template` before the
+frame, and the review refuses a card whose document re-parses with one:
+
+```mermaid
+flowchart TD
+    page["the engine's card face in the page"] --> frame["CardFrame.svelte:12, frameDocument"]
+    frame --> w3["W3, frame-document.ts:17 and :38-51: link, meta, base and template removed"]
+    w3 --> srcdoc["the sandboxed frame's srcdoc, CardFrame.svelte:15"]
+    w3 --> again["review.ts:212 reads the same composition"]
+    again --> refused["a card that escapes it is refused"]
+```
+
+**#677 is closed by this record.** A followed link opens no connection from the card view: L10
+cancels a link activation's default before the engine's click handler can start an early
+connection, and L11 refuses a detached node's activation, as section 8 built them. SPEC-392's A7
+reads zero connections for every planted card from the card view on both simulators, and its
+control, `nav-self` and `nav-blank` each opening a connection from `shippedWithout(.L10)`, proves
+the suite sees the channel. Section 6's residual paragraph (`:232-234`) and ADR-360 D8's tolerance
+of one connection are superseded by this record and stand as history.
+
+The readings SPEC-392 predicts. Each is a prediction until its run; a measurement that contradicts
+one is a STOP, reported before the second push:
+
+| criterion | view | cards | predicted reading |
+|---|---|---|---|
+| A5 | the reference | every card of `PLANTED` | a `link` count above 0 for exactly the cards of `LINKED` (`stylesheet`, `preload`, `prefetch`, `preconnect`, `dns-prefetch`, `shadow-link`) |
+| A5 | the card view | every card of `PLANTED` | a `link` count of 0 for every card |
+| A6 | the reference | `preconnect`, `preload`, `shadow-link`, `stylesheet` | each reached |
+| A6 | `referenceWith([.L14])`, only L14 on | the same four | none reached, and no connection opened |
+| A7 | the card view | every planted card | zero connections on both simulators; `nav-self` and `nav-blank` each open one from `shippedWithout(.L10)` |
+
+`LINKED` less `UNOBSERVABLE` is A6's population: `dns-prefetch` and `prefetch` reach no listener
+a test owns, so a reading of them proves nothing alone, and L3 still holds their hints.
