@@ -144,6 +144,32 @@ describe("the sync screen's backup list", () => {
     view.unmount();
   });
 
+  it("a refused export's alert clears when the next export saves", async () => {
+    const fake = new FakeBackups();
+    fake.refuse = true;
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: () => 'blob:https://app.example/backup' });
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: () => undefined });
+    const clicked = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    const view = shown(LISTED, fake);
+    await fireEvent.click(exports()[0]);
+    await settle();
+    expect(screen.queryByText(m.study_refused_engine()), 'refused').not.toBeNull();
+    fake.refuse = false;
+    await fireEvent.click(exports()[0]);
+    await settle();
+    expect(fake.calls).toEqual(['backupExport backup-2', 'backupExport backup-2']);
+    expect(clicked, 'the second export saved').toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(m.study_refused_engine()), 'saved').toBeNull();
+    view.unmount();
+  });
+
+  it('a list retention removed nothing from names no removal', () => {
+    const view = shown(LISTED);
+    expect(rows(view.container), 'the backups are drawn').toHaveLength(3);
+    expect(view.container.querySelectorAll('ul, li')).toHaveLength(0);
+    view.unmount();
+  });
+
   it('each backup retention removed is named once', () => {
     const view = shown({
       backups: LISTED.backups,

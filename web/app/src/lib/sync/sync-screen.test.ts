@@ -437,6 +437,19 @@ describe('the sync screen', () => {
     }
   });
 
+  it('before the browser answers, the screen says nothing of its storage', async () => {
+    let answer: (kept: boolean) => void = () => undefined;
+    const storage = { persisted: () => new Promise<boolean>((resolve) => (answer = resolve)) };
+    const view = render(SyncScreen, { client: async () => new FakeSync('held'), lost: () => false, storage });
+    await settle();
+    expect(status(), 'the screen is drawn').toBe(m.sync_status_held());
+    expect(storageText(view.container), 'unanswered').toEqual([]);
+    answer(true);
+    await settle();
+    expect(storageText(view.container), 'answered').toEqual([said('sync_storage_persisted'), said('sync_storage_evicted')]);
+    view.unmount();
+  });
+
   it('the backup list is read at the start and after every write or cancel', async () => {
     // SPEC-377 R15, R17; ADR-388 D18: the Worker runs retention before each list, and never while a
     // choice is held, so the screen lists at its start and once each choice has ended

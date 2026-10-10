@@ -151,6 +151,49 @@ async fn a_command_past_its_time_bound_answers_unknown() {
 }
 
 #[tokio::test]
+async fn a_command_past_its_time_bound_is_stopped_not_left_running() {
+    let _serial = SERIAL.lock().await;
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let credential = dir.path().join("credential");
+    // The control: a command inside its bound runs to its end and writes its mark.
+    let shown = dir.path().join("shown");
+    let quick = standin(
+        dir.path(),
+        "quick",
+        &format!(
+            "printf 'sync-a.tar.age\\n'\nprintf 'late' > '{}'",
+            shown.display()
+        ),
+    );
+    assert_eq!(
+        small(&quick.display().to_string(), &credential)
+            .list()
+            .await,
+        Some(owned(&["sync-a.tar.age"])),
+        "a command inside its bound is listed"
+    );
+    assert!(shown.exists(), "the control's mark was not written");
+    // A command still running at its one second is stopped there, so its shell never wakes to
+    // write the mark it would write at two.
+    let late = dir.path().join("late");
+    let slow = standin(
+        dir.path(),
+        "slow",
+        &format!("/bin/sleep 2\nprintf 'late' > '{}'", late.display()),
+    );
+    assert_eq!(
+        small(&slow.display().to_string(), &credential).list().await,
+        None,
+        "a command past its bound answers nothing"
+    );
+    tokio::time::sleep(Duration::from_secs(3)).await;
+    assert!(
+        !late.exists(),
+        "the command outlived its listing and wrote its mark"
+    );
+}
+
+#[tokio::test]
 async fn output_past_its_bound_answers_unknown() {
     let _serial = SERIAL.lock().await;
     let dir = tempfile::tempdir().expect("a temporary directory");
