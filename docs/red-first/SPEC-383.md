@@ -67,4 +67,15 @@ A3: green at 676a3189
 A16: green at 676a3189
 A4: red at 676a3189: assertion `left == right` failed: left (Ok(()), B's CardMark [-3, 0, -1], C's CardSnapshot reps 0, C's review row Null), right (Err(NotTheTarget { write: Undo, target: Card(B) }), B's rows, C's answered rows, C's review row): the unchecked restore reverts the front, and C's answer is gone
 A5: red at 676a3189: assertion `left == right` failed: left (Ok(()), B's CardMark [0, 0, -1], C's rows), right (Err(NotTheTarget { write: Undo, target: Card(C) }), B's buried rows, C's rows): the unchecked restore runs, and B is no longer buried
+A4: green at 9ac5d4af
+A5: green at 9ac5d4af
+A6: green at 9ac5d4af
+A7: green at 9ac5d4af
+A8: green at 9ac5d4af
+A9: green at 9ac5d4af
+A10: green at 9ac5d4af
+A11: green at 9ac5d4af
+A12: green at 9ac5d4af
+A13: green at 9ac5d4af
+A14: green at 9ac5d4af
 ```
