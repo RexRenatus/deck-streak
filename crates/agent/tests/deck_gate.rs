@@ -125,9 +125,11 @@ fn assert_withheld(ended: &Ended, class: &str, finding: &str) {
         }],
         "the one alert withhold raises"
     );
+    // A refusal before the runner records zero turns, as the input gate's does: the record's CHECK
+    // holds telemetry null for an absent route alone (`migrations/004301_agent_runs.sql`).
     assert_eq!(
         ended.rows,
-        [("withheld".to_owned(), None, Some(class.to_owned()), None)],
+        [("withheld".to_owned(), None, Some(class.to_owned()), Some(0))],
         "the refusal is recorded, never skipped"
     );
 }
