@@ -262,8 +262,6 @@ pub fn last_answer_for(
 
 /// The engine's number for a card with no user flag.
 const NO_FLAG: u32 = 0;
-/// The engine's number for the red flag, the one the review's flag action sets (SPEC-350 R7).
-const RED: u32 = 1;
 
 /// What the review's last bury or flag did (SPEC-383 R2): a bury, with the kind of state its card
 /// returns to, or a flag, with the card's flag before the change and the flag the change left.
@@ -324,13 +322,14 @@ pub fn mark_view(judged: Option<(Change, Result<(), UndoRefusal>)>) -> Option<&'
 }
 
 /// What an undo of a flag does to its card's flag (SPEC-383 R9, R11), from the flag before the
-/// change and the flag it left: `added` when it set red on a card with none, `removed` when it
-/// took red off, and `replaced` when it set red over another flag.
+/// change and the flag it left. The review's flag action only sets red or takes it off, so a
+/// change from no flag `added` red, a change to no flag `removed` red, and any other change
+/// `replaced` another flag by setting red over it.
 #[must_use]
 pub fn flag_change(before: u32, after: u32) -> &'static str {
     match (before, after) {
-        (NO_FLAG, RED) => "added",
-        (RED, NO_FLAG) => "removed",
+        (NO_FLAG, _) => "added",
+        (_, NO_FLAG) => "removed",
         _ => "replaced",
     }
 }
