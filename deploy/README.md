@@ -22,6 +22,7 @@ maintainer's machine, only when run there (SPEC-062, below).
 | `systemd/deck-streak-alert@.service` | the one alert path, a `oneshot` every other service names with `OnFailure=`: it pages the owner on Telegram that its instance failed (SPEC-031) |
 | `systemd/deck-streak-slo.service`, `.timer` | the SLO evaluator, every five minutes: it pages once per burn episode of the API's SLO (SPEC-031) |
 | `systemd/deck-streak-memory-watch.service`, `.timer` | the memory watch, every minute: it pages once per new OOM kill or `MemoryMax` event of any DeckStreak unit (SPEC-031) |
+| `systemd/deck-streak-second-route.service`, `.timer`, `scripts/second-route.sh` | the second route, every ten minutes: it reads the alert path from the service manager, reports a failed alert instance or an absent alert template to a receiver off the host, and checks in; it shares no credential and no process with the alert sender (SPEC-396, ADR-410) |
 | `scripts/alert-telegram.sh`, `scripts/slo-evaluate.py`, `scripts/memory-watch.sh` | the three units' programs, run from the release |
 | `slo.json` | the API's SLO, its error budget policy and its burn-rate alerts, which the evaluator reads (ADR-031) |
 | `caddy/deck-streak.caddy` | the one site block: the Mini App, `/api/*`, the closed health routes, `robots.txt`, the security headers, and one access log of the sync route alone, with no request header and no `k` parameter (SPEC-340 R6) |
@@ -42,7 +43,7 @@ that unit (ADR-061).
 |---|---|---|
 | `/usr/local/lib/deck-streak/current/bin/deckstreakd` | every service's `ExecStart=` | the release root, whose `current` link switches by an atomic rename (ADR-010) |
 | `/etc/deck-streak/deck-streak.env` | every service's `EnvironmentFile=`, required | the settings file, from `deck-streak.env.example` |
-| `/usr/local/lib/deck-streak/current/deploy/` | the alert's, the evaluator's and the watch's `ExecStart=` | the release's copy of this directory's `scripts/` and `slo.json`, under the same root |
+| `/usr/local/lib/deck-streak/current/deploy/` | the alert's, the evaluator's, the watch's and the second route's `ExecStart=` | the release's copy of this directory's `scripts/` and `slo.json`, under the same root |
 | UTC, at the default rollover hour 4 | every timer's `OnCalendar=` | the deployment's zone, and each job timer's rollover hour, rendered with the two settings that name them (ADR-027); the evaluator's and the watch's timers fire every few minutes in any zone, and take the deployment's zone all the same, so no calendar is left in UTC |
 | `{$DECKSTREAK_HOST}`, `{$DECKSTREAK_WEB_ROOT}`, `{$DECKSTREAK_API_UPSTREAM}`, `{$DECKSTREAK_SYNC_UPSTREAM}` | the Caddy block | the Mini App's host name, the release's web build, the API's listen address and the sync server's |
 | the system user and group `deck-streak` | every service's `User=` and `Group=` but the sync family's | the user itself |
@@ -72,6 +73,7 @@ file, and no template carries a secret's value.
 | `deck-streak-job@.service` | none | the sync login is loaded by the sync job alone: its instance's drop-in in `systemd/` carries `anki-sync-username` and `anki-sync-password` (SPEC-022, SPEC-062 R14), and the rail's map answers them to that instance alone |
 | `deck-streak-job@.service`, `held_flush` instance | `owner-user-id`, `telegram-bot-token` | the held flush alone sends to the owner's chat (#291): its instance's drop-in in `systemd/` carries the two, and no other job requests them |
 | `deck-streak-alert@.service` | `owner-user-id`, `telegram-bot-token` | the page: the bot's token, and the owner's id, which is the owner's private chat (SPEC-031) |
+| `deck-streak-second-route.service` | `second-route-check-in`, `second-route-report` | the second route's two addresses, https, each the receiver's, off the host: the check-in address takes a request with no body, the report address a plain-text body; neither is the alert sender's, and the rail's map names both for this unit alone (SPEC-396) |
 | `deck-streak-sync-server.service` | `sync-server-owner`, `sync-server-staging` | the sync server's two users, the owner's and the staging user (ADR-344), each a user name and a pbkdf2-sha256 hash, never a password; its launcher, `scripts/sync-server.sh`, refuses any other shape and hands them to the server (SPEC-337 R2, ADR-347) |
 
 systemd names the unit in the address it binds for each credential, so a job's credentials reach
@@ -134,6 +136,8 @@ its scheduled run, which stays claimed once per study day (SPEC-059, ADR-037).
 
 No job timer carries a random delay: the table already places each job on its own minute, clear of
 the others, and a delay would move a fire off it. Each timer says so in its `X-DurableServices-Waive=`.
+
+The second route's timer is not a job of the table either: it runs every ten minutes with a short random delay, reads the service manager's current state and catches up nothing, and its timer says why.
 
 The SLO evaluator's and the memory watch's timers are not jobs of the table. The evaluator runs every
 five minutes and the watch every minute, each with a short random delay, since neither keeps a minute

@@ -120,12 +120,16 @@ JOB_TEMPLATE = "deck-streak-job"
 ALERT_TEMPLATE = "deck-streak-alert"
 SLO_SERVICE = "deck-streak-slo.service"
 WATCH_SERVICE = "deck-streak-memory-watch.service"
+# SPEC-396: the second route, a oneshot a timer starts that tells the owner of the alert sender.
+SECOND_ROUTE_SERVICE = "deck-streak-second-route.service"
+SECOND_ROUTE_SCRIPT = DEPLOY / "scripts" / "second-route.sh"
 SCRIPTS = {
     f"{ALERT_TEMPLATE}@.service": f"{RELEASE}/deploy/scripts/alert-telegram.sh %i",
     SLO_SERVICE: (
         f"/usr/bin/python3 {RELEASE}/deploy/scripts/slo-evaluate.py {RELEASE}/deploy/slo.json"
     ),
     WATCH_SERVICE: f"{RELEASE}/deploy/scripts/memory-watch.sh",
+    SECOND_ROUTE_SERVICE: f"{RELEASE}/deploy/scripts/second-route.sh",
     # SPEC-064: the daily backup and the weekly drill run scripts of the release as well.
     BACKUP_SERVICE_NAME: f"/usr/bin/python3 {RELEASE}/deploy/scripts/backup.py",
     DRILL_SERVICE_NAME: f"{RELEASE}/deploy/scripts/restore-drill.sh",
@@ -148,6 +152,12 @@ OBSERVABILITY_SERVICE = {
     WATCH_SERVICE: {
         "Type": "oneshot",
         "TimeoutStartSec": "50s",
+        "Nice": "10",
+        "IOSchedulingClass": "idle",
+    },
+    SECOND_ROUTE_SERVICE: {
+        "Type": "oneshot",
+        "TimeoutStartSec": "3min",
         "Nice": "10",
         "IOSchedulingClass": "idle",
     },
@@ -207,6 +217,7 @@ SYNC_SERVER_SERVICE = {
 OBSERVABILITY_TIMERS = {
     "deck-streak-slo.timer",
     "deck-streak-memory-watch.timer",
+    "deck-streak-second-route.timer",
     # SPEC-064's daily backup and weekly restore drill.
     "deck-streak-backup.timer",
     "deck-streak-restore-drill.timer",
@@ -224,6 +235,9 @@ CREDENTIAL_SOURCES = {
     # each id is a shell constant (SPEC-337 R2; ADR-347 D2).
     "SYNC_SERVER_OWNER": SYNC_LAUNCHER,
     "SYNC_SERVER_STAGING": SYNC_LAUNCHER,
+    # The second route's two addresses are shell constants of its script (SPEC-396 R3).
+    "SECOND_ROUTE_CHECK_IN": SECOND_ROUTE_SCRIPT,
+    "SECOND_ROUTE_REPORT": SECOND_ROUTE_SCRIPT,
 }
 # Which credentials each service's role reads: the api's owner gate (SPEC-024, SPEC-025), the bot's
 # transport, owner gate and `/sync` (SPEC-026 R1, R11), and the `sync` job's syncer (SPEC-022,
@@ -248,6 +262,7 @@ ROLE_CREDENTIALS = {
     f"{ALERT_TEMPLATE}@.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
     SLO_SERVICE: (),
     WATCH_SERVICE: (),
+    SECOND_ROUTE_SERVICE: ("SECOND_ROUTE_CHECK_IN", "SECOND_ROUTE_REPORT"),
     LITESTREAM_SERVICE_NAME: (),
     BACKUP_SERVICE_NAME: (),
     DRILL_SERVICE_NAME: (),
@@ -345,6 +360,7 @@ PER_SERVICE = {
     f"{ALERT_TEMPLATE}@.service": (None, None, ROLES_NETWORK, "systemd-journal"),
     SLO_SERVICE: ("deck-streak-slo", None, "AF_UNIX", "systemd-journal"),
     WATCH_SERVICE: ("deck-streak-memory-watch", None, "AF_UNIX", None),
+    SECOND_ROUTE_SERVICE: ("deck-streak-second-route", None, ROLES_NETWORK, None),
     # SPEC-064: the replicator and the drill reach the bucket; the backup copies the database
     # alone, reads no settings and opens no network socket (SPEC-340 R3).
     LITESTREAM_SERVICE_NAME: ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
@@ -420,6 +436,7 @@ WAIVED = {
     (f"{JOB_TEMPLATE}@liveness.timer", "calendar-not-persistent"),
     ("deck-streak-slo.timer", "calendar-not-persistent"),
     ("deck-streak-memory-watch.timer", "calendar-not-persistent"),
+    ("deck-streak-second-route.timer", "calendar-not-persistent"),
     ("deck-streak-litestream.service", "watchdog-missing"),
     (SYNC_SERVER_SERVICE_NAME, "watchdog-missing"),
 }
@@ -453,9 +470,9 @@ IP_FAMILIES = {"AF_INET", "AF_INET6"}
 NO_IP_SOCKET = "opens no IP socket"
 EXEMPT = "exempt"
 IDENTITY_ARMS = {
-    "deck-streak-api.service": "link-local",
+    "deck-streak-api.service": "any",
     "deck-streak-bot.service": "link-local",
-    "deck-streak-mcp.service": "link-local",
+    "deck-streak-mcp.service": "any",
     f"{JOB_TEMPLATE}@.service": "link-local",
     f"{ALERT_TEMPLATE}@.service": "link-local",
     SYNC_SERVER_SERVICE_NAME: "any",
@@ -464,6 +481,7 @@ IDENTITY_ARMS = {
     SYNC_DRILL_SERVICE_NAME: NO_IP_SOCKET,
     SLO_SERVICE: NO_IP_SOCKET,
     WATCH_SERVICE: NO_IP_SOCKET,
+    SECOND_ROUTE_SERVICE: "link-local",
     LITESTREAM_SERVICE_NAME: EXEMPT,
     SYNC_ARCHIVE_SERVICE_NAME: EXEMPT,
     DRILL_SERVICE_NAME: EXEMPT,
@@ -1313,6 +1331,7 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
                     f"{ALERT_TEMPLATE}@.service",
                     f"{JOB_TEMPLATE}@.service",
                     WATCH_SERVICE,
+                    SECOND_ROUTE_SERVICE,
                     SLO_SERVICE,
                     BACKUP_SERVICE_NAME,
                     DRILL_SERVICE_NAME,
@@ -1338,6 +1357,46 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
                 quotas.append(int(quota.rstrip("%")))
         # The five quotas divide the share's processors exactly (ADR-347): 75, 75, 20, 15 and 15.
         self.assertEqual(sum(quotas), 100 * budget()["cpus"], quotas)
+
+
+class TheSecondRouteIsInTheCensus(unittest.TestCase):
+    def test_the_census_holds_the_second_route_as_a_timer_started_oneshot(self):
+        # SPEC-396 R10: the second route's unit is shipped, and every table that holds a unit names
+        # it. The first assertion is the artifact itself, so an unshipped unit fails here and not
+        # on a missing key.
+        service = "deck-streak-second-route.service"
+        timer = "deck-streak-second-route.timer"
+        shipped = {unit.name: unit for unit in services()}
+        self.assertIn(service, shipped, "the second route's unit is not shipped")
+        self.assertTrue((SYSTEMD / timer).is_file(), "the second route's timer is not shipped")
+        script = DEPLOY / "scripts" / "second-route.sh"
+        self.assertEqual(SCRIPTS.get(service), f"{RELEASE}/deploy/scripts/second-route.sh")
+        self.assertEqual(
+            OBSERVABILITY_SERVICE.get(service),
+            {
+                "Type": "oneshot",
+                "TimeoutStartSec": "3min",
+                "Nice": "10",
+                "IOSchedulingClass": "idle",
+            },
+        )
+        self.assertIn(timer, OBSERVABILITY_TIMERS)
+        self.assertEqual(
+            ROLE_CREDENTIALS.get(service), ("SECOND_ROUTE_CHECK_IN", "SECOND_ROUTE_REPORT")
+        )
+        for constant in ("SECOND_ROUTE_CHECK_IN", "SECOND_ROUTE_REPORT"):
+            self.assertEqual(CREDENTIAL_SOURCES.get(constant), script, constant)
+        self.assertEqual(
+            PER_SERVICE.get(service), ("deck-streak-second-route", None, ROLES_NETWORK, None)
+        )
+        self.assertIn((timer, "calendar-not-persistent"), WAIVED)
+        self.assertEqual(IDENTITY_ARMS.get(service), "link-local")
+        unit = shipped[service]
+        self.assertIn(ON_FAILURE, unit.values("Unit", "OnFailure"))
+        self.assertEqual(last(unit, "Service", "Type"), "oneshot")
+        self.assertEqual(
+            last(unit, "Service", "ExecStart"), f"{RELEASE}/deploy/scripts/second-route.sh"
+        )
 
 
 class TheCaddyBlock(unittest.TestCase):
@@ -2094,8 +2153,8 @@ class TheServicesRunTheirRoles(unittest.TestCase):
             ),
             "the API admits the link-local range": (
                 "deck-streak-api.service",
-                "IPAddressDeny=link-local\n",
-                "IPAddressDeny=link-local\nIPAddressAllow=link-local\n",
+                "IPAddressDeny=any\n",
+                "IPAddressDeny=any\nIPAddressAllow=link-local\n",
                 [
                     "deploy/systemd/deck-streak-api.service: IPAddressAllow=link-local can admit "
                     "the host's identity endpoint, and is refused"

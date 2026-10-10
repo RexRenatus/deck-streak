@@ -113,8 +113,8 @@
         "S36413-A-COPY-GOES-ONLY-INTO-AN-EMPTY-FILE",
         "engine-core",
         "src/one_way.rs",
-        "if path.exists() && holds_a_row(&read(dispatcher, path)?) {",
-        "if path.exists() && holds_a_row(&read(dispatcher, path)?) && false {",
+        "if dispatcher.holds(path) && holds_a_row(&read(dispatcher, path)?) {",
+        "if dispatcher.holds(path) && holds_a_row(&read(dispatcher, path)?) && false {",
         "one_way::a_server_copy_is_fetched_only_into_an_empty_file",
         "a server copy or backup goes only into an empty file; without the refusal, a fetch would overwrite a backup that holds rows (SPEC-364 A5)"
       ],

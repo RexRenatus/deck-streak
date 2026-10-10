@@ -82,3 +82,12 @@ leave the advisory unfixed.
 
 Amendment (2026-09-28): passages describing another service's operations were replaced with the
 API's own memory budget under the public-text rule (ADR-059).
+
+## Amendment: ADR-414, Telegram's script loads only on a launch
+
+Line 34 says `telegram-web-app.js` is loaded first in `<head>`. ADR-414 (SPEC-400) replaces that:
+the app's start hook adds the script only when Telegram launched the page, and awaits it before the
+router's first navigation, so it still runs before any app code reads the launch. Outside a launch
+the page loads no script from Telegram and adds a policy that refuses that origin.
+`src/lib/telegram.svelte.ts` stays the script's one typed wrapper, and the rest of this decision is
+unchanged.

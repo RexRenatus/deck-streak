@@ -99,6 +99,9 @@ pub struct Dispatcher {
     /// What the latest statement of the service's minimum client level decided, shared by every
     /// clone of this dispatcher and by each private engine it starts (SPEC-374 R4, R7).
     handshake: Arc<Mutex<Outcome>>,
+    /// Where the collection's files live, as the adapter installed it, shared by every clone of
+    /// this dispatcher (SPEC-377 R4; ADR-388 D7).
+    files: Arc<Mutex<Arc<dyn crate::files::Files>>>,
 }
 
 /// Why the dispatcher did not answer a call with the engine's reply.
@@ -161,6 +164,7 @@ impl Dispatcher {
             start: Arc::from(message),
             open: Arc::default(),
             handshake: Arc::default(),
+            files: Arc::new(Mutex::new(crate::files::target_default())),
         })
     }
 
@@ -368,21 +372,32 @@ impl Dispatcher {
             .map_err(|error| Refusal::Engine { error })
     }
 
-    /// Whether `path` names the collection this engine has open: as its open request named it, or
-    /// as the same file reached by another spelling.
+    /// Installs the adapter's `Files` port, which every clone of this dispatcher asks from now on
+    /// (SPEC-377 R4; ADR-388 D7).
+    pub fn install_files(&self, port: Arc<dyn crate::files::Files>) {
+        *self.files.lock().unwrap_or_else(PoisonError::into_inner) = port;
+    }
+
+    /// Whether `path` names the collection this engine has open, however it is spelled, as the
+    /// installed `Files` port answers (SPEC-377 R4; ADR-388 D7).
     pub(crate) fn opens(&self, path: &Path) -> bool {
         let open = self
             .open
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .clone();
-        open.is_some_and(|open| {
-            open == path
-                || matches!(
-                    (open.canonicalize(), path.canonicalize()),
-                    (Ok(open), Ok(path)) if open == path
-                )
-        })
+        let port = self.port();
+        open.is_some_and(|open| port.same(&open, path))
+    }
+
+    /// Whether `path` holds a file, as the installed `Files` port answers (SPEC-377 R4).
+    pub(crate) fn holds(&self, path: &Path) -> bool {
+        self.port().holds(path)
+    }
+
+    /// The installed `Files` port, taken out of its lock so no answer is given while it is held.
+    fn port(&self) -> Arc<dyn crate::files::Files> {
+        Arc::clone(&self.files.lock().unwrap_or_else(PoisonError::into_inner))
     }
 
     /// Runs one of the core's fixed statements over the open collection, with `path` bound as its
