@@ -81,4 +81,8 @@ A14: green at 9ac5d4af
 A17: red at 6aca7cf4: assertion `left == right` failed: Some((Bury(Review), Ok(()))) left: None right: Some("bury"): the stub answers nothing
 A18: red at 6aca7cf4: assertion `left == right` failed: left: Err(NotUndoable(Changed)) right: Ok(LastMark { card: 42, step: 7, change: Bury(New), .. }): the stub answers nothing
 A19: red at 6aca7cf4: assertion `left == right` failed: from flag 1 to flag 0 left: "added" right: "removed": the stub answers added
+A17: green at 36d9b835
+A18: green at 36d9b835
+A19: green at 36d9b835
+A20: green at 36d9b835
 ```
