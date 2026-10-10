@@ -19,7 +19,6 @@
   let tree = $state.raw<Deck[] | null>(null);
   let marked = $state.raw<ReadonlySet<string>>(new Set());
   let failure = $state<'load' | 'save' | null>(null);
-  const shown = $derived(tree === null ? [] : switches(tree, marked));
 
   async function load(): Promise<void> {
     failure = null;
@@ -99,7 +98,7 @@
   {:else if tree === null}
     <p>{m.loading()}</p>
   {:else}
-    {@render branch(shown)}
+    {@render branch(switches(tree, marked))}
   {/if}
   <nav>
     <a href="/study" class="inline-flex min-h-11 items-center rounded-md border px-4">{m.ai_decks_back()}</a>

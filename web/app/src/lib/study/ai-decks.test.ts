@@ -8,7 +8,7 @@ import type { Answer } from '$lib/api';
 import type { Deck } from '$lib/engine/protocol';
 import AiDecksRoute from '../../routes/study/ai-decks/+page.svelte';
 import AiDecks from './AiDecks.svelte';
-import type { MarksClient } from './ai-decks';
+import { parseMarked, type MarksClient } from './ai-decks';
 import DeckList from './DeckList.svelte';
 
 // SPEC-381 R8, R9, A12-A14; ADR-392 D3. The AI-and-your-decks screen shows the engine's deck tree
@@ -304,5 +304,58 @@ describe('the AI-and-your-decks screen', () => {
     render(DeckList, { client: async () => ({ decks: async () => [], study: async () => null }), onopen: () => undefined });
     await settle();
     expect(screen.getByRole('link', { name: 'AI and your decks' }).getAttribute('href')).toBe('/study/ai-decks');
+  });
+
+  // Mutation coverage: after a save the switches show the marks the server answered, a deck another
+  // device marked in the meantime included, never only the change this screen asked for.
+  it('after a save the switches show the marks the server answered', async () => {
+    const tree = [deck(1, 'Default'), deck(2, 'Spanish')];
+    const marks = new FakeMarks([]);
+    render(AiDecks, { client: engine(tree), marks });
+    await settle();
+
+    marks.marked.add('1');
+    await fireEvent.click(switchFor('Spanish'));
+    await settle();
+    expect([marks.calls, shown()]).toEqual([
+      [['2', true]],
+      [
+        ['Keep Default away from AI', true, false, ''],
+        ['Keep Spanish away from AI', true, false, '']
+      ]
+    ]);
+  });
+
+  // Mutation coverage: only a deck that another deck keeps away carries a note and points its switch
+  // at it, and only a deck with decks under it holds a list of them.
+  it('only a kept deck is described, and only a deck with decks under it holds a list', async () => {
+    const tree = [deck(1, 'Default', [deck(3, 'Kana')]), deck(2, 'Spanish')];
+    render(AiDecks, { client: engine(tree), marks: new FakeMarks(['1']) });
+    await settle();
+
+    expect(screen.getAllByRole('switch').map((box) => box.getAttribute('aria-describedby'))).toEqual([
+      null,
+      'kept-by-3',
+      null
+    ]);
+    expect([...document.querySelectorAll('[id^="kept-by-"]')].map((note) => [note.id, note.textContent?.trim()])).toEqual(
+      [['kept-by-3', 'Kept away because Default is.']]
+    );
+    expect(screen.getAllByRole('list').map((list) => list.children.length)).toEqual([2, 1]);
+  });
+});
+
+describe("the server's answer of marked decks", () => {
+  // Mutation coverage: anything that is not an object names no marked decks, so a body that is not
+  // JSON reads alike whichever empty value stands for it.
+  it('an answer that is not an object names no marked decks', () => {
+    expect([undefined, null, 'decks', 7, true, { decks: ['4'] }].map((body) => parseMarked(body))).toEqual([
+      null,
+      null,
+      null,
+      null,
+      null,
+      ['4']
+    ]);
   });
 });
