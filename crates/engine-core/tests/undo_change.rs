@@ -269,6 +269,15 @@ struct Shipped {
     review: i64,
 }
 
+/// A record's kind written out on the wire, as an encoder that writes a field at its zero value
+/// does. The record's own encoder leaves the default kind out, so only these bytes show which
+/// number the kind 0 names (SPEC-383 R3: 0 an answer).
+#[derive(Clone, PartialEq, prost::Message)]
+struct WrittenKind {
+    #[prost(int32, optional, tag = "3")]
+    kind: Option<i32>,
+}
+
 #[test]
 fn a_confirmed_undo_of_a_bury_restores_the_card_whole() {
     let (synthetic, dispatcher) = opened("undo-bury-whole");
@@ -563,6 +572,18 @@ fn an_old_record_decodes_as_an_answer() {
             1_700_000_000_000
         ),
         "the bytes of a two-field record read as an answer, with no flag and no card"
+    );
+    let mut written = shipped.encode_to_vec();
+    written.extend(WrittenKind { kind: Some(0) }.encode_to_vec());
+    let zero = Recorded::decode(written.as_slice()).expect("a record that writes kind 0 decodes");
+    assert_eq!(
+        (Kind::try_from(zero.kind), zero.status, zero.review),
+        (
+            Ok(Kind::Answer),
+            Some(status("Answer Card", 4)),
+            1_700_000_000_000
+        ),
+        "a record that writes its kind out as 0 reads as an answer: 0 is the answer's number"
     );
 }
 
