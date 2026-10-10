@@ -1250,6 +1250,7 @@ dependencies = [
  "anki",
  "anki_proto",
  "base64 0.22.1",
+ "deck-streak-fsrs7",
  "prost",
  "serde_json",
  "tokio",

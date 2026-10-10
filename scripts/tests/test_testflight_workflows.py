@@ -38,6 +38,7 @@ INTERNAL, RELEASE = LANES
 INTERNAL_PATHS = [
     "crates/ffi/**",
     "crates/engine-core/**",
+    "crates/fsrs7/**",
     "ios/**",
     "Cargo.lock",
     "Cargo.toml",
