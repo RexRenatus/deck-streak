@@ -1171,3 +1171,102 @@ use deck_streak_engine_core::full_sync::{Counted, Counts, Direction, Losses, Sna
 use deck_streak_engine_core::one_way::{self, Reason, Unwritten};
 
 use crate::files::{self, Kind};
+
+use deck_streak_engine_core::retention::{self, Held};
+use sqlite_wasm_vfs::sahpool::OpfsSAHPoolUtil as Pool;
+
+/// The installed pool, by a counted handle, so no borrow of its cell is held across a wait.
+fn installed() -> Result<std::rc::Rc<Pool>, JsValue> {
+    POOL.with(|p| p.borrow().clone())
+        .ok_or_else(|| refuse("storage-refused: the pool is not installed"))
+}
+
+/// The pool's names once each backup and server copy it lists has a record of when it was first
+/// listed (ADR-388 D17): an empty pool entry per name, room reserved for the entries first.
+async fn recorded(pool: &Pool) -> Result<Vec<String>, JsValue> {
+    let unrecorded = files::unrecorded(&pool.list());
+    if !unrecorded.is_empty() {
+        let records = u32::try_from(unrecorded.len()).map_err(storage)?;
+        let room = pool.count().saturating_add(records);
+        pool.reserve_minimum_capacity(room).await.map_err(storage)?;
+        let made = now_millis();
+        for name in &unrecorded {
+            pool.import_db_unchecked(&files::record(name, made), &[])
+                .map_err(storage)?;
+        }
+    }
+    Ok(pool.list())
+}
+
+/// How long ago, in whole seconds, a file first listed at `made` was listed; never negative.
+fn age(made: i64, now: i64) -> u64 {
+    u64::try_from((now - made) / 1000).unwrap_or(0)
+}
+
+/// The refusal of an export whose id names no backup the pool lists.
+fn unlisted(id: &str) -> JsValue {
+    refuse(format!("no listed backup is named {id}"))
+}
+
+/// The backups and server copies the pool holds, newest first, each by its id, its kind and its
+/// age in seconds, as JSON (SPEC-377 R15; ADR-388 D14, D17). No path leaves the engine.
+#[wasm_bindgen]
+pub async fn backups() -> Json {
+    let pool = installed()?;
+    let listed = recorded(&pool).await?;
+    let now = now_millis();
+    let listing: Vec<serde_json::Value> = files::backups(&listed)
+        .iter()
+        .map(|backup| {
+            serde_json::json!({
+                "id": backup.id,
+                "kind": backup.kind.word(),
+                "age_seconds": age(backup.made, now),
+            })
+        })
+        .collect();
+    Ok(serde_json::Value::from(listing).to_string())
+}
+
+/// The bytes of the backup or server copy `id` names, when the pool lists it as one (SPEC-377
+/// R16): the Worker moves them to the page by transfer. Async like the list and the retention, so
+/// the Worker awaits the three alike.
+#[allow(clippy::unused_async)]
+#[wasm_bindgen]
+pub async fn export_backup(id: String) -> Result<Vec<u8>, JsValue> {
+    let pool = installed()?;
+    let name = files::exported(&pool.list(), COLLECTION_PATH, &id).ok_or_else(|| unlisted(&id))?;
+    pool.export_db(&name).map_err(storage)
+}
+
+/// Keeps the core's number of each kind (SPEC-377 R17; ADR-388 D15, D18): each backup or server
+/// copy the core's retention removes goes with its record, and the removed are answered by kind
+/// and age as JSON. It refuses while a choice's stage is held, so it never runs inside a choice.
+#[wasm_bindgen]
+pub async fn retain() -> Json {
+    if STAGE.with(|stage| stage.borrow().is_some()) {
+        return Err(refuse("retention waits while a choice is held"));
+    }
+    let pool = installed()?;
+    let listed = recorded(&pool).await?;
+    let held = files::backups(&listed);
+    let kept: Vec<Held<Kind, i64>> = held
+        .iter()
+        .map(|backup| Held {
+            kind: backup.kind,
+            made: backup.made,
+        })
+        .collect();
+    let now = now_millis();
+    let mut removed = Vec::new();
+    for index in retention::removals(&kept) {
+        let backup = &held[index];
+        pool.delete_db(&backup.name).map_err(storage)?;
+        pool.delete_db(&backup.record).map_err(storage)?;
+        removed.push(serde_json::json!({
+            "kind": backup.kind.word(),
+            "age_seconds": age(backup.made, now),
+        }));
+    }
+    Ok(serde_json::Value::from(removed).to_string())
+}

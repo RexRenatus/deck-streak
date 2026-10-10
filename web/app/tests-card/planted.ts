@@ -95,11 +95,20 @@ export const PLANTED: readonly PlantedCard[] = [
     'img',
     'W2',
     (h) =>
-      `<img alt="" src="${h}/1"><img alt="" srcset="${h}/2 1x">` +
-      `<picture><source srcset="${h}/3"><img alt=""></picture><input type="image" alt="go" src="${h}/4">` +
+      `<img alt="" src="${h}/1"><input type="image" alt="go" src="${h}/4">` +
       `<svg width="10" height="10"><image href="${h}/5" width="10" height="10"/><use href="${h}/6#a"/></svg>` +
       `<video poster="${h}/7"></video>`
   ),
+  {
+    // SPEC-402 R4; ADR-416 D5: the two image-set forms, each read at its own path, so the reference
+    // frame must reach both, and the strip (W3) and the frame policy (W2) each hold them
+    ...loads(
+      'srcset',
+      null,
+      (h) => `<img alt="" srcset="${h}/1 1x"><picture><source srcset="${h}/2"><img alt=""></picture>`
+    ),
+    paths: ['/srcset/1', '/srcset/2']
+  },
   loads(
     'css-url',
     'W2',

@@ -156,5 +156,15 @@
   "sync_choice_changed_server": "La copie du serveur a changé depuis le décompte. Voici les nouveaux chiffres.",
   "sync_choice_changed_device": "Cet appareil a enregistré une révision depuis le décompte. Voici les nouveaux chiffres.",
   "sync_choice_written": "Terminé. Votre collection est synchronisée.",
-  "sync_choice_refused": "Rien n’a été remplacé. Vous pouvez réessayer."
+  "sync_choice_refused": "Rien n’a été remplacé. Vous pouvez réessayer.",
+  "sync_backups_title": "Sauvegardes sur cet appareil",
+  "sync_backups_none": "Ce navigateur ne conserve encore aucune sauvegarde.",
+  "sync_backup_device": "Collection de cet appareil, enregistrée {age}",
+  "sync_backup_server": "Collection du serveur, enregistrée {age}",
+  "sync_backup_export": "Exporter",
+  "sync_backup_removed": "Supprimée pour garder les trois plus récentes de chaque type : {backup}",
+  "sync_storage_persisted": "Ce navigateur conserve le stockage de ce site.",
+  "sync_storage_not_persisted": "Ce navigateur peut effacer le stockage de ce site s'il manque de place.",
+  "sync_storage_unknown": "Ce navigateur ne peut pas dire s'il conserve le stockage de ce site.",
+  "sync_storage_evicted": "S'il efface votre collection, téléchargez la copie du serveur pour la restaurer."
 }
