@@ -42,6 +42,7 @@ pub mod minimum_client;
 pub mod notifications_routes;
 pub mod progress_routes;
 pub mod router;
+pub mod sensitive_decks_routes;
 pub mod serve;
 pub mod session_routes;
 pub mod settings;

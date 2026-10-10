@@ -63,6 +63,7 @@ impl DutySpec {
 use deck_streak_kernel::{Clock, KernelError};
 
 use crate::compose::{Parts, compose};
+use crate::deck_gate::{DeckGate, DeckScope};
 use crate::gate::{GateOutcome, OutputGate};
 use crate::route::AiRoute;
 use crate::runner::Runner;
@@ -117,6 +118,8 @@ pub struct DutyInput<'a> {
     pub subject: &'a str,
     /// The composed pieces: the engine fills nothing in.
     pub parts: Parts<'a>,
+    /// The deck scope of the cards in `parts`: each card's home and current deck (SPEC-381 R4).
+    pub scope: DeckScope<'a>,
 }
 
 /// The engine: one duty run, from route check to record (R6, R9 to R12, R16).
@@ -125,6 +128,8 @@ pub struct DutyEngine<'a> {
     pub route: AiRoute,
     /// The runner.
     pub runner: &'a dyn Runner,
+    /// The deck gate, asked before the input gate, `compose` and the runner (SPEC-381 R4).
+    pub deck_gate: &'a dyn DeckGate,
     /// The output gate.
     pub gate: &'a dyn OutputGate,
     /// The alert router.
@@ -166,6 +171,7 @@ impl DutyEngine<'_> {
         if !self.route.is_configured() {
             return (Verdict::AiRouteAbsent, None);
         }
+        let _ = self.deck_gate.judge(input.scope).await;
         for untrusted in [input.parts.memory, input.parts.cards] {
             if let GateOutcome::Failed { class, findings } = self.gate.check_input(untrusted).await
             {

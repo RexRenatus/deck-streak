@@ -21,6 +21,7 @@
 
 pub mod compose;
 pub mod data_rights;
+pub mod deck_gate;
 pub mod duty;
 pub mod fence;
 pub mod gate;
@@ -33,6 +34,9 @@ pub mod runner;
 pub mod runs;
 pub mod verdict;
 
+pub use deck_gate::{
+    CardDecks, DECK_SENSITIVE, DECK_UNREADABLE, DeckFuture, DeckGate, DeckScope, DeckVerdict,
+};
 pub use memory::{
     LiveBand, MemoryError, MemoryPort, MemoryPorts, MemoryRead, MemoryReader, MemorySource, Recall,
     resolve_band,

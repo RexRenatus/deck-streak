@@ -4,6 +4,8 @@
 //! as never recomputed, so the next cycle runs the recompute and recounts the window.
 //! The declared write class's stop, `write_class_stop`, is exempt (SPEC-083 R36): only the
 //! owner's command clears it, and an erase that cleared it would be a second path.
+//! The decks the learner keeps away from AI, `sensitive_decks`, are exported and erased by delete
+//! (SPEC-381 R10), so after an erase every deck is readable again until the learner keeps one away.
 
 use deck_streak_kernel::{
     DataRights, DataRightsError, Declaration, Disposition, ExportedTable, PortFuture, TableRights,
@@ -22,6 +24,8 @@ pub const SKIP_CARD_SNAPSHOT_TABLE: &str = "skip_card_snapshot";
 /// The table the change gate's anchor, the rescore flag and the window's base live in
 /// (`migrations/002301_ingest_state.sql`).
 pub const INGEST_STATE_TABLE: &str = "ingest_state";
+/// The table the marked decks live in (`migrations/038101_ingest_sensitive_decks.sql`, SPEC-381 R10).
+pub const SENSITIVE_DECKS_TABLE: &str = "sensitive_decks";
 /// The table the declared write class's stop lives in
 /// (`migrations/008303_ingest_write_class_stop.sql`).
 pub const WRITE_CLASS_STOP_TABLE: &str = "write_class_stop";
@@ -148,6 +152,10 @@ impl DataRights for IngestDataRights {
                 },
                 TableRights {
                     table: SKIP_CARD_SNAPSHOT_TABLE,
+                    disposition: Disposition::ExportAndErase,
+                },
+                TableRights {
+                    table: SENSITIVE_DECKS_TABLE,
                     disposition: Disposition::ExportAndErase,
                 },
                 TableRights {

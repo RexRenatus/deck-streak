@@ -4,13 +4,14 @@
 mod support;
 
 use deck_streak_agent::compose::Parts;
+use deck_streak_agent::deck_gate::{CardDecks, DeckScope};
 use deck_streak_agent::duty::{AlertKind, DutyEngine, DutyInput, DutySpec};
 use deck_streak_agent::gate::GateOutcome;
 use deck_streak_agent::route::{AI_ROUTE, AiRoute};
 use deck_streak_agent::runs::AgentRuns;
 use deck_streak_agent::verdict::{Cause, Verdict};
 use deck_streak_kernel::{Db, Environment, ManualClock, UtcMillis};
-use support::{FixedGate, FixedRunner, RecordedAlerts, RecordedVault};
+use support::{FixedDeckGate, FixedGate, FixedRunner, RecordedAlerts, RecordedVault};
 
 const TEMPLATE: &str = "{{persona}} {{duty_rules}} {{memory|json}} {{cards|json}}";
 
@@ -26,6 +27,12 @@ fn input() -> DutyInput<'static> {
             duty: "d",
             memory: "m",
             cards: "c",
+        },
+        scope: DeckScope {
+            cards: &[CardDecks {
+                home: 1,
+                current: 1,
+            }],
         },
     }
 }
@@ -53,9 +60,11 @@ async fn rig() -> Rig {
 async fn run(rig: &Rig, route: AiRoute, runner: &FixedRunner, gate: &FixedGate) -> Verdict {
     let runs = AgentRuns::new(rig.db.clone());
     let clock = ManualClock::new(UtcMillis::from_epoch_millis(5_000));
+    let deck_gate = FixedDeckGate::admitting();
     let engine = DutyEngine {
         route,
         runner,
+        deck_gate: &deck_gate,
         gate,
         alerts: &rig.alerts,
         vault: &rig.vault,

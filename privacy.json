@@ -429,6 +429,17 @@
       "retention": {"until": "account-deletion"},
       "export": true,
       "erase": "delete"
+    },
+    {
+      "id": "sensitive-decks",
+      "data": "the ids of the decks the owner keeps away from AI, and when each was marked; never a deck's name or its cards",
+      "source": "learner-input",
+      "stores": ["sensitive_decks.*"],
+      "purpose": "keeping every card of a marked deck, and of the decks under it, away from every AI duty; after an erase every deck is readable again until the owner keeps one away",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
     }
   ],
   "sql": ["migrations/*.sql"],

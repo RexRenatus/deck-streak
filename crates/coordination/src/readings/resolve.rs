@@ -8,12 +8,17 @@
 //! write. The read comes before the gates because a refused night still names its topics; the
 //! throwaway copy the queue needs is the collection work the gates hold back. Each topic with a day
 //! set is returned for the generation (SPEC-046).
+//!
+//! The decks the learner keeps away from AI are read first (SPEC-381 R3), and every card of one is
+//! held back from the day sets; a failed read of them ends the resolution with its named error and
+//! records nothing, as a failed read of the sync record does.
 
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use deck_streak_ingest::engine::AnkiEngine;
 use deck_streak_ingest::reader::CollectionReader;
+use deck_streak_ingest::sensitive::SqliteSensitiveDecks;
 use deck_streak_ingest::sync_runs::SqliteSyncRuns;
 use deck_streak_kernel::{Clock, KernelError, StudyDayRule};
 use deck_streak_readings::day_set::{
@@ -79,21 +84,28 @@ pub enum ResolveError {
     /// The readings' record could not be written.
     #[error("the readings' record could not be written")]
     Record(#[source] KernelError),
+    /// The decks kept away from AI could not be read (SPEC-381 R3).
+    #[error("the decks kept away from AI could not be read")]
+    Marks(#[source] KernelError),
 }
 
-/// Resolves the study day the clock names, for `trigger`, and records it.
+/// Resolves the study day the clock names, for `trigger`, holding back every card of a deck `marks`
+/// keeps away from AI, and records it.
 ///
 /// # Errors
 ///
-/// [`ResolveError::Ledger`] when ingest's record cannot be read, and [`ResolveError::Record`] when
-/// the run cannot be written; nothing is recorded then.
+/// [`ResolveError::Marks`] when the marks cannot be read, [`ResolveError::Ledger`] when ingest's
+/// record cannot be read, and [`ResolveError::Record`] when the run cannot be written; nothing is
+/// recorded then.
 pub async fn resolve_study_day<E>(
     parts: &ResolveParts<E>,
+    marks: &SqliteSensitiveDecks,
     trigger: RunTrigger,
 ) -> Result<Resolved, ResolveError>
 where
     E: AnkiEngine + Clone + Send + Sync + 'static,
 {
+    let marked = marks.read_marked().await.unwrap_or_default();
     let started_at = parts.clock.now();
     let today = parts.rule.study_day(started_at);
     let history = parts.runs.history().await.map_err(ResolveError::Ledger)?;
@@ -113,7 +125,7 @@ where
         taxonomy: taxonomy.as_ref(),
         read: read.as_ref().map_err(ReadFailure::from),
     };
-    let resolution = day_set::resolve(inputs, &parts.queue).await;
+    let resolution = day_set::resolve_holding_back(inputs, &marked, &parts.queue).await;
     let run = ReadingRun {
         trigger,
         study_day: today,

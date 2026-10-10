@@ -260,6 +260,7 @@ context each migration names equal to the owner this register gives each table i
 | `minutes_log` | `habits` | `migrations/007801_habits_minutes_log.sql` (SPEC-078) | exported and erased |
 | `writing_log` | `habits` | `migrations/007802_habits_writing_log.sql` (SPEC-078) | exported and erased |
 | `passkeys` | `identity` | `migrations/035901_identity_passkeys.sql` (SPEC-359) | exported and erased |
+| `sensitive_decks` | `ingest` | `migrations/038101_ingest_sensitive_decks.sql` (SPEC-381) | exported and erased; after an erase every deck is readable again |
 
 The quests context reaches outside the workspace for three things and no further inside it: its
 chests are rolled from the operating system's generator (`getrandom`), its stores run on the
