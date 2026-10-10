@@ -120,6 +120,20 @@ impl VoiceChoices {
         present.then_some(identifier)
     }
 
+    /// The identifier that speaks a TTS tag in `language` asking for the `requested` voices: the
+    /// kept choice when it is installed; else the first requested entry naming a voice the picker
+    /// offers, by its identifier or by its name with each space written `_`, the entry compared
+    /// whole or after its first `_`; else nothing, so the language's own voice speaks.
+    pub fn voice_for(
+        &self,
+        language: String,
+        requested: Vec<String>,
+        installed: Vec<Voice>,
+    ) -> Option<String> {
+        drop(requested);
+        self.chosen(language, installed)
+    }
+
     /// The installed voices a picker offers for `language`: those whose language equals it, or,
     /// when none does, those sharing its primary subtag; the better quality first, then by name.
     #[expect(

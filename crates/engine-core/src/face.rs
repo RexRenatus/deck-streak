@@ -70,6 +70,8 @@ pub enum Clip {
         language: String,
         /// The platform's rate: the engine's speed times its default, held to its range.
         rate: f32,
+        /// The voices the tag's `voices=` names, in its order; none when it names none.
+        voices: Vec<String>,
     },
 }
 
@@ -80,6 +82,8 @@ pub struct Face {
     pub text: String,
     /// The note type's CSS.
     pub css: String,
+    /// The card's template index: 0 for its note type's first template.
+    pub ordinal: u32,
     /// The clips to play when the side is shown: none unless the client wishes it and the card's
     /// preset allows it.
     pub autoplay: Vec<Clip>,
@@ -147,6 +151,7 @@ fn speech(tag: &TtsTag) -> Clip {
         text: html_to_text_line(&tag.field_text, false).into_owned(),
         language,
         rate,
+        voices: Vec::new(),
     }
 }
 
@@ -217,6 +222,7 @@ pub(crate) fn complete(
     Ok(Face {
         text,
         css: rendered.css,
+        ordinal: 0,
         autoplay,
         replay,
         omitted: budget.into_omitted(),

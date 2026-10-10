@@ -2,9 +2,11 @@
 //!
 //! Writes the review fixture, with this commit's engine, into the one directory it is given:
 //! `collection.anki2`, whose deck `Review` holds a text card, an image card, a sound card and a
-//! speech card, and `collection.media/` with the image and the sound. The `xcframework` job runs it
-//! and uploads what it wrote beside the harness's fixture. It includes the tests' builder alone, so
-//! the collection the Swift tests read is the one the Rust tests read.
+//! speech card, and `collection.media/` with the image and the sound; and beside them `parity/`, the
+//! parity collection (SPEC-393 R15), whose deck `Parity` holds one note's two cards over a font and
+//! a video. The `xcframework` job runs it and uploads what it wrote beside the harness's fixture. It
+//! includes the tests' two builders alone, so the collections the Swift tests read are the ones the
+//! Rust tests read.
 //!
 //! ```text
 //! review-fixture <output directory>
@@ -20,6 +22,9 @@ use std::process::ExitCode;
 #[path = "../tests/support/review.rs"]
 mod review;
 
+#[path = "../tests/support/parity.rs"]
+mod parity;
+
 const USAGE: &str = "usage: review-fixture <output directory>";
 
 fn main() -> ExitCode {
@@ -28,10 +33,15 @@ fn main() -> ExitCode {
         eprintln!("review-fixture: {USAGE}");
         return ExitCode::from(2);
     };
-    match review::build(Path::new(&output)) {
+    let output = Path::new(&output);
+    if let Err(error) = review::build(output) {
+        eprintln!("review-fixture: the review fixture was not written: {error}");
+        return ExitCode::from(2);
+    }
+    match parity::build(&output.join("parity")) {
         Ok(_) => ExitCode::SUCCESS,
         Err(error) => {
-            eprintln!("review-fixture: the review fixture was not written: {error}");
+            eprintln!("review-fixture: the parity collection was not written: {error}");
             ExitCode::from(2)
         }
     }

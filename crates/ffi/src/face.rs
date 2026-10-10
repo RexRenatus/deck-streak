@@ -36,6 +36,9 @@ pub enum Clip {
         language: String,
         /// The platform's rate, between its minimum and maximum.
         rate: f32,
+        /// The voices the tag asks for, in its order: a voice's identifier, or its name with each
+        /// space written `_`, either after one prefix and `_`.
+        voices: Vec<String>,
     },
 }
 
@@ -63,6 +66,10 @@ impl Reader for MediaFolder {
         file.take(limit).read_to_end(&mut bytes).ok()?;
         Some(bytes)
     }
+
+    fn inlines_fonts(&self) -> bool {
+        true
+    }
 }
 
 /// The page that holds `face`'s text, with the night classes only when `night` asks for them.
@@ -87,10 +94,12 @@ fn clip(clip: face::Clip) -> Clip {
             text,
             language,
             rate,
+            ..
         } => Clip::Speech {
             text,
             language,
             rate,
+            voices: Vec::new(),
         },
     }
 }

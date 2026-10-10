@@ -41,6 +41,12 @@ pub trait Reader {
     /// The first `limit` bytes of the media file `name` at most, or `None` when there is no such
     /// file. The core asks for one byte past its cap and decides by the length it gets back.
     fn read(&self, name: &str, limit: u64) -> Option<Vec<u8>>;
+
+    /// Whether the face's CSS has its fonts inlined as `data:` URLs read through this reader. A
+    /// reader that does not ask gets the note type's CSS byte for byte, and is asked for no font.
+    fn inlines_fonts(&self) -> bool {
+        false
+    }
 }
 
 /// Whether `name` is a plain file name: not empty, no separator or NUL, and not `.` or `..`.
