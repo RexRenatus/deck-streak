@@ -58,8 +58,49 @@ function webChannels(): { id: string; alone: string }[] {
 
 /** The engines the card configuration runs: the literal `name` of each project object in its
  * `projects` array, in order, read from the file's text (SPEC-399 R2). */
-function configuredEngines(_config: string): { engines: string[]; refused: string[] } {
-  return { engines: ['chromium', 'webkit', 'firefox'], refused: [] };
+function configuredEngines(config: string): { engines: string[]; refused: string[] } {
+  const engines: string[] = [];
+  const start = /\bprojects:\s*\[/.exec(config);
+  if (start === null) return { engines, refused: ['no projects array'] };
+  const open = start.index + start[0].length - 1;
+  let depth = 0;
+  let close = -1;
+  for (let at = open; at < config.length; at += 1) {
+    if (config[at] === '[') depth += 1;
+    if (config[at] === ']') depth -= 1;
+    if (depth === 0) {
+      close = at;
+      break;
+    }
+  }
+  if (close < 0) return { engines, refused: ['no projects array'] };
+
+  // each top-level object of the array, kept without the objects nested in it
+  const projects: string[] = [];
+  let braces = 0;
+  let own = '';
+  for (const char of config.slice(open + 1, close)) {
+    if (char === '{') {
+      braces += 1;
+      if (braces === 1) own = '';
+      continue;
+    }
+    if (char === '}') {
+      braces -= 1;
+      if (braces === 0) projects.push(own);
+      continue;
+    }
+    if (braces === 1) own += char;
+  }
+
+  const refused: string[] = [];
+  projects.forEach((project, index) => {
+    const name = /(?:^|[\s,])name:\s*(['"])([^'"]*)\1/.exec(project)?.[2];
+    if (name === undefined) refused.push(`project ${index + 1} has no literal name`);
+    else if (engines.includes(name)) refused.push(`${name} is named twice`);
+    else engines.push(name);
+  });
+  return { engines, refused };
 }
 
 /** Section 3's unobservable cells and the `<engine> <id>` pairs they name, over `engines`
@@ -70,16 +111,32 @@ function unobservableCells(
 ): { cells: string[]; pairs: string[]; refused: string[] } {
   const cells: string[] = [];
   const pairs: string[] = [];
+  const refused: string[] = [];
   for (const line of section.split('\n')) {
     const row = /^\|\s*`([a-z0-9-]+)`\s*\|(.*)\|\s*$/.exec(line);
     if (row === null) continue;
+    const id = row[1];
     for (const cell of row[2].split('|')) {
-      if (!cell.includes('UNOBSERVABLE:')) continue;
-      cells.push(row[1]);
-      for (const engine of engines) pairs.push(`${engine} ${row[1]}`);
+      const seen = cell.match(/unobservable/gi)?.length ?? 0;
+      if (seen === 0) continue;
+      const tokens = [...cell.matchAll(/UNOBSERVABLE(?::| in ([A-Za-z]+)(?=[,)]))/g)];
+      if (tokens.length !== seen) {
+        refused.push(`${id}: ${seen} UNOBSERVABLE tokens in a cell, ${tokens.length} in a form the check reads`);
+        continue;
+      }
+      cells.push(id);
+      for (const token of tokens) {
+        if (token[1] === undefined) {
+          for (const engine of engines) pairs.push(`${engine} ${id}`);
+        } else if (engines.includes(token[1].toLowerCase())) {
+          pairs.push(`${token[1].toLowerCase()} ${id}`);
+        } else {
+          refused.push(`${id}: no configured engine is named ${token[1]}`);
+        }
+      }
     }
   }
-  return { cells, pairs, refused: [] };
+  return { cells, pairs, refused };
 }
 
 /** The named pairs no declaration holds, and the declared pairs no cell names, each sorted. */
@@ -88,7 +145,11 @@ function pairDifference(
   declared: readonly string[]
 ): { missing: string[]; extra: string[] } {
   const have = new Set(declared);
-  return { missing: [...new Set(named)].filter((pair) => !have.has(pair)).sort(), extra: [] };
+  const want = new Set(named);
+  return {
+    missing: [...want].filter((pair) => !have.has(pair)).sort(),
+    extra: [...have].filter((pair) => !want.has(pair)).sort()
+  };
 }
 
 /** Section 3's layer rows: W1 to W4, in the table's order (the page policy P is no layer). */
