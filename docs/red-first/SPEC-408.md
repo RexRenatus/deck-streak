@@ -18,8 +18,13 @@ A5: cargo test -p deck-streak-curriculum --test mastery_about -- --exact the_law
 
 ```red-first
 A1: red at 26e165437cf67cfbfe15e03528457c1de04513a8: AssertionError: expected '' to be 'Law mastery starts at 100% and drops ...' (the mastery line holds no description span)
+A1: green at ce1edda232f8f29ad90cdbe81591748bce465338
 A2: red at 26e165437cf67cfbfe15e03528457c1de04513a8: AssertionError: expected null to be 'course' (the summary's next sibling is the band list)
+A2: green at ce1edda232f8f29ad90cdbe81591748bce465338
 A3: red at 26e165437cf67cfbfe15e03528457c1de04513a8: AssertionError: expected { en: [ ...(3) ], ...(6) } to deeply equal { en: [], 'zh-Hans': [], ...(5) } (no locale holds the two keys)
+A3: green at ce1edda232f8f29ad90cdbe81591748bce465338
 A4: red at 26e165437cf67cfbfe15e03528457c1de04513a8: assertion left == right failed: left: Some("<flag> <b>Beta</b>: A2, 43% mastery, no unit yet"), right: Some("<i>Mastery is an estimate from your reviews: ...</i>") (the last line is the Beta course's)
+A4: green at ce1edda232f8f29ad90cdbe81591748bce465338
 A5: red at 26e165437cf67cfbfe15e03528457c1de04513a8: assertion left == right failed: left: [], right: ["100", "3", "70"] (the sentence is absent)
+A5: green at ce1edda232f8f29ad90cdbe81591748bce465338
 ```
