@@ -127,3 +127,7 @@ a settings file whose `tlc_slot.capacity` differs from its own compiled setting.
 Cost: a checker rebuilt with another compiled capacity refuses this file until the value is changed
 here, and that change is reviewed here. Confirmation: SPEC-295's A9 pins the value and A10's row
 `S29530` is killed by the same test.
+
+## Addendum: the slot capacity's reason is superseded by ADR-418 (#703)
+
+The slot capacity's value stands. Its reason, "equal to the checker's own setting", is superseded: the reason is now ADR-418 D2, which makes the settings file the one place the slot setting is stated and holds the file to the reading the checker's reader takes. This addendum records no new decision; the decision and what it was chosen against are ADR-418's.
