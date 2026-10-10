@@ -91,7 +91,8 @@
     <h2 class="text-lg font-medium">{m.study_decks()}</h2>
     {@render tree(decks)}
   {/if}
-  <nav>
+  <nav class="flex flex-wrap gap-2">
+    <a href="/study/ai-decks" class="inline-flex min-h-11 items-center rounded-md border px-4">AI and your decks</a>
     <a href="/" class="inline-flex min-h-11 items-center rounded-md border px-4">{m.back_to_today()}</a>
   </nav>
 </main>

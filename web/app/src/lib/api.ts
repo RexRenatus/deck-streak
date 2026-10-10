@@ -96,6 +96,10 @@ export interface Api {
   wallet(before?: number): Promise<Answer<WalletView>>;
   /** Saves a quick capture into the vault's inbox, once per capture id (SPEC-118 R10). */
   capture(request: CaptureRequest): Promise<Answer<Saved>>;
+  /** The decks the learner keeps away from AI, by id as a decimal string (SPEC-381 R7). */
+  sensitiveDecks(): Promise<Answer<string[]>>;
+  /** Keeps the deck `id` away from AI, or lets AI read it again, and answers the marked decks (SPEC-381 R7). */
+  setSensitive(id: string, sensitive: boolean): Promise<Answer<string[]>>;
 }
 
 /** How opening a session ended: a session, a refusal only reopening the app can answer, or no answer. */
@@ -221,7 +225,9 @@ export function createApi(options: ApiOptions): Api {
       if (response === null) return { kind: 'unavailable' };
       const saved = parseSaved(response.status, await response.json().catch(() => null));
       return saved === null ? { kind: 'unavailable' } : { kind: 'ok', value: saved };
-    }
+    },
+    sensitiveDecks: async () => ({ kind: 'unavailable' }),
+    setSensitive: async () => ({ kind: 'unavailable' })
   };
 }
 
