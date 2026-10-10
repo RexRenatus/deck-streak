@@ -92,4 +92,10 @@ A24: red at ba488bd2: AssertionError: bury synced: expected the line "Your last 
 A25: red at ba488bd2: AssertionError: expected { title: 'Undo this answer?', …(2) } to deeply equal { title: 'Undo this bury?', …(2) }: a bury offer renders the answer's dialog
 A26: red at ba488bd2: TestingLibraryElementError: Unable to find an accessible element with the role "alertdialog" (TypeError: RETURNS[get(...).returns] is not a function): no dialog renders for a flag offer
 A27: not red: the shipped toOffer spreads every field the engine sends, so a bury's returns, a flag's flag and the kind already reach the page; it guards the mapping, it proves no new behaviour
+A21: green at 3e483a8c
+A22: green at 3e483a8c
+A24: green at 3e483a8c
+A25: green at 3e483a8c
+A26: green at 3e483a8c
+A28: green at 3e483a8c
 ```
