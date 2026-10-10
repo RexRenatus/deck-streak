@@ -845,4 +845,26 @@ describe('the confirmation of a bury or a flag', () => {
     ]);
     expect(lines).toHaveLength(3);
   });
+
+  it('the confirmation of a bury says so for a card with no text', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'bury' })), head(view(1))]);
+    client.offered = { offer: { kind: 'bury', card: 1n, step: 9, text: '', returns: 'review' } };
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+    await fireEvent.click(button('Show answer'));
+    await fireEvent.keyDown(window, { key: 'u' });
+    await settle();
+    expect(asked().text).toContain('Card: This card has no text to show.');
+  });
+
+  it('the confirmation of a flag says so for a card with no text', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'flag' })), head(view(2))]);
+    client.offered = { offer: { kind: 'flag', card: 2n, step: 5, text: '', flag: 'added' } };
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+    await fireEvent.click(button('Show answer'));
+    await fireEvent.keyDown(window, { key: 'u' });
+    await settle();
+    expect(asked().text).toContain('Card: This card has no text to show.');
+  });
 });
