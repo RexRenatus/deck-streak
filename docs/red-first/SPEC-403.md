@@ -63,3 +63,9 @@ named in the notes above, one `expect` on the deadline's timer in A8's test, and
 `accepts`. No assertion of A1 to A3, which live in `web/app/tests/launch-validation.spec.ts`,
 changes, and no existing assertion of A6 to A12 is loosened or removed. Commit b947d7b (the unit
 and route tests) is the red sha of A6 to A18 and edits no file after it but through commit 77e7af4.
+
+Corrections to the lines above (appended; no earlier line is changed):
+
+- The fix commit 77e7af4 adds two `expect` lines to A8's test, not one: `expect(vi.getTimerCount()).toBe(0);` and `expect(send.mock.calls[0]![1].signal?.aborted).toBe(false);`. Derived with `git diff b947d7b3 77e7af4e -- web/app/src/lib/telegram-launch.test.ts`.
+- A2's red quote `+ "telegram" only` paraphrases the log. In the job's web log `"telegram"` is a diff context line: the received list was `['telegram']` and the expected list was `['launch','telegram']`.
+- A12's parenthetical "the stub reads the earlier mark as a launch" names the wrong cause. The quoted `expected true to be false` is the first assertion of that test (b947d7b3, telegram-launch.test.ts:266), red because the stub's `isLaunch` never reads the NEW accepted mark. The earlier-mark half is never reached. The red is still for A12's reason.
