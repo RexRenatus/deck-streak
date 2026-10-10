@@ -205,6 +205,7 @@ class DynamicImportsCheck(unittest.TestCase):
             ("exec bound by import as", "import json as exec\nexec('a')\n", []),
             ("exec bound by from import as", "from json import dumps as exec\nexec('a')\n", []),
             ("a star import", "from runpy import *\nrun_path('p')\n", []),
+            ("a sibling named runpy", "from .runpy import run_path\nrun_path('p')\n", []),
             ("a relative import", "from . import importlib\nimportlib.x()\n", []),
             ("an unrelated module", "import json\njson.dumps(1)\n", []),
         ]
