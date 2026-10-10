@@ -11,6 +11,7 @@
     "deck-streak-alert@.service": { "memory_high": "32M", "memory_max": "48M" },
     "deck-streak-slo.service": { "memory_high": "48M", "memory_max": "64M" },
     "deck-streak-memory-watch.service": { "memory_high": "32M", "memory_max": "48M" },
+    "deck-streak-second-route.service": { "memory_high": "32M", "memory_max": "48M" },
     "deck-streak-litestream.service": { "memory_high": "48M", "memory_max": "64M" },
     "deck-streak-backup.service": { "memory_high": "48M", "memory_max": "64M" },
     "deck-streak-sync-snapshot.service": { "memory_high": "48M", "memory_max": "64M" },

@@ -22,7 +22,7 @@ export const MEDIA_DIRECTORY = 'deck-streak-media';
 
 /** The Worker's scope as the session needs it. */
 export interface WorkerScope {
-  postMessage(message: unknown): void;
+  postMessage(message: unknown, transfer?: Transferable[]): void;
   addEventListener(type: 'message', listener: (event: MessageEvent) => void): void;
 }
 
@@ -77,10 +77,14 @@ export function serve(scope: WorkerScope, deps: SessionDeps, origin: string): Se
   const session = new Session(deps);
   scope.addEventListener('message', (event) => {
     if (!admitsOrigin(event.origin, origin)) return;
-    void session.handle(event.data).then((reply) => scope.postMessage(reply));
+    void session.handle(event.data).then((reply) => scope.postMessage(reply, transferred(reply)));
   });
   return session;
 }
+
+// below `serve`, so the lines the threat model cites above keep their numbers
+import { Backups, transferred } from './backups';
+import type { BackupsEngine } from './backups';
 
 /** Takes the collection's Web Lock if no tab holds it, and holds it for the Worker's life. */
 export function takeLock(name: string, locks: LockManager | undefined): Promise<LockAnswer> {
@@ -151,6 +155,9 @@ export function start(scope: object = globalThis, load: ImportModule = importMod
   // the full sync's choice takes each send's key from the same store, reads the snapshot answer at
   // the Worker's own origin itself, and hears what each normal sync answered (SPEC-377 R6)
   const choice = new Choice(credential, engine, worker.location.origin + SYNC_ROUTE, (input, init) => worker.fetch(input, init));
+  // the browser's backups list after the core's retention and export one backup's bytes, through
+  // the same module (SPEC-377 R15 to R17); part c1's lines above and below stay as they are
+  deps.backups = new Backups(engine as unknown as () => Promise<BackupsEngine>);
   serve(worker, { ...deps, load: engine, credential, sync, choice }, worker.location.origin);
   return true;
 }
