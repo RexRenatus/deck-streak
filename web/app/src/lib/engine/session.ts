@@ -2,6 +2,7 @@
 // first, then the storage, then the engine.
 import { parseRequest } from './protocol';
 import type {
+  BackupsListed,
   CardView,
   ChoiceConfirmed,
   ChoiceCounted,
@@ -86,6 +87,9 @@ export interface SessionDeps {
     cancel(): Promise<void>;
     unsynced(): Promise<Unsynced>;
   };
+  /** The Worker's backups, which the two backup operations reach; typed by its shape, so this
+   * module never imports it (SPEC-377 R15, R16). A Worker without one refuses each by name. */
+  backups?: { list(): Promise<BackupsListed>; export(backup: string): Promise<Uint8Array> };
 }
 
 /** A media file the Worker read for the core: its name and its first bytes. */
@@ -191,6 +195,7 @@ export class Session {
     ) {
       return this.#choice(request);
     }
+    if (request.op === 'backups' || request.op === 'backup-export') return this.#backups(request);
     if (request.op === 'faces') return this.#faces(request.id, request.card);
     return this.#run(request.id, (engine) => this.#call(engine, request));
   }
@@ -299,6 +304,20 @@ export class Session {
         default:
           return { id: request.id, ok: true, value: await choice.unsynced() };
       }
+    } catch (error) {
+      return this.#failed(request.id, error);
+    }
+  }
+
+  /** A backup operation's answer (SPEC-377 R15, R16), on the session's queue like a choice: the
+   * list after retention, or one listed backup's bytes. A Worker with no backups refuses each by
+   * name; a trap ends the session, and any other throw answers `engine-failed`. */
+  async #backups(request: Extract<Request, { op: 'backups' | 'backup-export' }>): Promise<Reply> {
+    const backups = this.#deps.backups;
+    if (backups === undefined) return refuse(request.id, 'engine-failed', `this Worker keeps no backups for ${request.op}`);
+    try {
+      if (request.op === 'backups') return { id: request.id, ok: true, value: await backups.list() };
+      return { id: request.id, ok: true, value: await backups.export(request.backup) };
     } catch (error) {
       return this.#failed(request.id, error);
     }

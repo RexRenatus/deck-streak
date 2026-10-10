@@ -930,3 +930,213 @@ fn the_choice_exports_reach_the_engine_only_through_one_way_and_the_dispatcher()
         refused_texts.len()
     );
 }
+
+/// The backups' three exports (SPEC-377 R15 to R17; ADR-388 D14, D15, D17, D18), each with the
+/// parameters it takes and the statements it owes: every pool name comes from `files.rs`, and every
+/// removal from the core's retention rule. The export answers bytes, which the Worker transfers.
+const BACKUP_EXPORTS: [(&str, &str, &[&str]); 3] = [
+    (
+        "backups",
+        "",
+        &[
+            "let listed = recorded(&pool).await?;",
+            "files::backups(&listed)",
+        ],
+    ),
+    (
+        "export_backup",
+        "id: String",
+        &[
+            "files::exported(&pool.list(), COLLECTION_PATH, &id)",
+            "pool.export_db(&name)",
+        ],
+    ),
+    (
+        "retain",
+        "",
+        &[
+            "STAGE.with(|stage| stage.borrow().is_some())",
+            "let listed = recorded(&pool).await?;",
+            "let held = files::backups(&listed);",
+            "retention::removals(&kept)",
+        ],
+    ),
+];
+
+/// What no backup export may hold: an engine call, a path it was handed, or a name it made itself.
+const BACKUP_REFUSED: [&str; 9] = [
+    "call(",
+    "query(",
+    ".run(",
+    "run_method(",
+    "dispatcher(",
+    "Path::new(",
+    "choice_name(",
+    "choice_file(",
+    "format!(",
+];
+
+/// What the backup exports owe and hold that they must not, each named with its export: an export
+/// the module does not make, a parameter beyond its list, a statement it lacks, a refused text, or
+/// an export that answers its bytes as anything but bytes.
+fn backup_problems(source: &str) -> Vec<String> {
+    let mut found = lacks(
+        source,
+        &BACKUP_EXPORTS.map(|(name, _, owed)| {
+            (
+                name,
+                "reaches the pool through `files.rs` and the core's retention",
+                owed,
+            )
+        }),
+    );
+    let whole = squeezed(source);
+    for (name, wanted, _) in BACKUP_EXPORTS {
+        let exported = ["pubasyncfn", "pubfn"]
+            .iter()
+            .any(|head| whole.contains(&format!("#[wasm_bindgen]{head}{name}(")));
+        if !exported {
+            found.push(format!("{name} is not an export of the module"));
+        }
+        let taken = parameters(source, name);
+        if taken.as_deref() != Some(squeezed(wanted).as_str()) {
+            found.push(format!("{name} takes `{taken:?}`, not `{wanted}` alone"));
+        }
+        if let Ok(text) = body(source, name) {
+            let text = squeezed(text);
+            for refused in BACKUP_REFUSED {
+                if text.contains(&squeezed(refused)) {
+                    found.push(format!(
+                        "{name} reaches past `files.rs`, and holds `{refused}`"
+                    ));
+                }
+            }
+        }
+    }
+    if !whole.contains("pubasyncfnexport_backup(id:String)->Result<Vec<u8>,JsValue>{") {
+        found.push("export_backup answers its bytes as something other than bytes".to_owned());
+    }
+    found
+}
+
+#[test]
+fn the_backup_exports_reach_the_pool_only_through_files_and_the_core() {
+    let source = boundary();
+    assert_eq!(backup_problems(&source), Vec::<String>::new());
+
+    // an engine call, a path parameter and a name made in the export are each refused by the
+    // export's name, and so is an export that answers its bytes as text
+    for (name, _, _) in BACKUP_EXPORTS {
+        let past = planted_in(&source, name, "call(service::SYNC, 5, &[])?;");
+        let refused = backup_problems(&past);
+        assert!(
+            refused_by_name(&refused, name, "`call(`"),
+            "an engine call planted in {name} is not refused by name: {refused:?}"
+        );
+        let head = format!("fn {name}(");
+        let widened = source.replacen(&head, &format!("{head}path: String, "), 1);
+        let refused = backup_problems(&widened);
+        assert!(
+            refused_by_name(&refused, name, "takes"),
+            "a path parameter planted in {name} is not refused by name: {refused:?}"
+        );
+        let minted = planted_in(&source, name, "let name = format!(\"/deck-streak/{id}\");");
+        let refused = backup_problems(&minted);
+        assert!(
+            refused_by_name(&refused, name, "`format!(`"),
+            "a name made in {name} is not refused by name: {refused:?}"
+        );
+    }
+    let text = source.replacen(
+        "pub async fn export_backup(id: String) -> Result<Vec<u8>, JsValue> {",
+        "pub async fn export_backup(id: String) -> Result<String, JsValue> {",
+        1,
+    );
+    assert_ne!(text, source, "the export's answer was not planted as text");
+    let refused = backup_problems(&text);
+    assert!(
+        refused_by_name(&refused, "export_backup", "other than bytes"),
+        "an export that answers text is not refused by name: {refused:?}"
+    );
+    let exports = examined("backup export(s) of src/wasm.rs", BACKUP_EXPORTS.to_vec());
+    let refused_texts = examined("refused text(s)", BACKUP_REFUSED.to_vec());
+    println!(
+        "examined {} x {} refusal(s)",
+        exports.len(),
+        refused_texts.len()
+    );
+}
+
+/// The helpers the backup exports call, each with what its body owes: the installed pool or a
+/// refusal, a record of each newly listed file before the list is answered, the age in whole
+/// seconds and never negative, and the export's refusal naming the id. Like the exports they are
+/// compiled for `wasm32` alone, so this census is their one native reader (SPEC-377 section 16).
+const BACKUP_HELPERS: [(&str, &[&str]); 4] = [
+    (
+        "installed",
+        &[
+            "POOL.with(|p| p.borrow().clone())",
+            ".ok_or_else(|| refuse(\"storage-refused: the pool is not installed\"))",
+        ],
+    ),
+    (
+        "recorded",
+        &[
+            "let unrecorded = files::unrecorded(&pool.list());",
+            "if !unrecorded.is_empty() {",
+            "pool.import_db_unchecked(&files::record(name, made), &[])",
+            "Ok(pool.list())",
+        ],
+    ),
+    ("age", &["u64::try_from((now - made) / 1000).unwrap_or(0)"]),
+    (
+        "unlisted",
+        &["refuse(format!(\"no listed backup is named {id}\"))"],
+    ),
+];
+
+/// Each statement of [`BACKUP_HELPERS`] that `source` does not hold, named with its helper.
+fn helper_problems(source: &str) -> Vec<String> {
+    lacks(
+        source,
+        &BACKUP_HELPERS.map(|(name, owed)| (name, "serves the backup exports", owed)),
+    )
+}
+
+#[test]
+fn the_backup_helpers_keep_the_pool_the_record_the_age_and_the_refusal() {
+    let source = boundary();
+    assert_eq!(helper_problems(&source), Vec::<String>::new());
+
+    // each helper answering a constant, its body replaced whole, is refused by its name
+    for (name, _) in BACKUP_HELPERS {
+        let held = body(&source, name).unwrap_or_else(|problem| panic!("{name}: {problem}"));
+        let constant = source.replacen(held, "{\n    Default::default()\n}", 1);
+        assert_ne!(constant, source, "{name}'s body was not replaced");
+        let refused = helper_problems(&constant);
+        assert!(
+            refused_by_name(&refused, name, "lacks"),
+            "{name} answering a constant is not refused by name: {refused:?}"
+        );
+    }
+    // the record's guard turned round, and the age's division turned to a remainder, are refused
+    for (name, from, to) in [
+        (
+            "recorded",
+            "if !unrecorded.is_empty() {",
+            "if unrecorded.is_empty() {",
+        ),
+        ("age", "(now - made) / 1000", "(now - made) % 1000"),
+    ] {
+        let planted = source.replacen(from, to, 1);
+        assert_ne!(planted, source, "{name}: `{from}` was not planted");
+        let refused = helper_problems(&planted);
+        assert!(
+            refused_by_name(&refused, name, "lacks"),
+            "`{to}` planted in {name} is not refused by name: {refused:?}"
+        );
+    }
+    let helpers = examined("backup helper(s) of src/wasm.rs", BACKUP_HELPERS.to_vec());
+    let owed: usize = helpers.iter().map(|(_, owed)| owed.len()).sum();
+    println!("examined {owed} owed statement(s)");
+}
