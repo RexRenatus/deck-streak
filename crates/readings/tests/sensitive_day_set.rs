@@ -15,6 +15,9 @@ use deck_streak_readings::day_set::{
 };
 use deck_streak_readings::taxonomy::Taxonomy;
 
+#[path = "../../../tools/log-capture/capture.rs"]
+mod log_capture;
+
 /// A language root the learner keeps away from AI.
 const ALPHA: i64 = 1;
 /// A deck under it.
@@ -151,7 +154,7 @@ fn logging_tree() -> BTreeMap<i64, String> {
 #[allow(clippy::let_and_return)]
 fn events_of(queries: Vec<DaySetQuery>, marked: &BTreeSet<i64>) -> Vec<Option<u64>> {
     let events = Events::default();
-    let kept = tracing::subscriber::with_default(events.clone(), || {
+    let kept = log_capture::with_capture(events.clone(), || {
         hold_back_sensitive(queries, &logging_tree(), marked)
     });
     drop(kept);
