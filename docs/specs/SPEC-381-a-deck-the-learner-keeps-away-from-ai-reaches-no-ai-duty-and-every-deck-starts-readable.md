@@ -219,6 +219,7 @@ stubs. `docs/red-first/SPEC-381.md` quotes each red and each green.
 | `web/app/src/lib/api.ts` | `miniapp` | changed: `sensitiveDecks` and `setSensitive` |
 | `web/app/src/lib/api.test.ts` | `miniapp` | changed: the two calls' paths, methods and bodies |
 | `web/app/src/lib/routes.ts` | `miniapp` | changed: `/study/ai-decks` |
+| `web/app/src/lib/startapp.test.ts` | `miniapp` | changed: `BY_PATH` lists `/study/ai-decks`, one entry and one comment line; no assertion removed |
 | `web/app/messages/en.json` | `miniapp` | changed: the screen's keys |
 | `web/app/messages/zh-Hans.json` | `miniapp` | changed: the screen's keys |
 | `web/app/messages/zh-Hant.json` | `miniapp` | changed: the screen's keys |
