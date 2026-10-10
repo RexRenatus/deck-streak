@@ -1,7 +1,8 @@
 // A Mini App launch, as the browser suites make one (SPEC-400; ADR-414). Telegram opens the Mini
 // App with its launch parameters in the URL fragment, and the page loads Telegram's script only
 // then. This module is not a spec: the suites import the launch fragment, the stand-in served at
-// the script's URL, and the request counts and the request list from it.
+// the script's URL, the request counts and the request list, and the answer to the launch's
+// validation (SPEC-403; ADR-417) from it.
 import type { Page, Request } from '@playwright/test';
 
 /** Telegram's Mini App script, at the URL the page loads it from on a launch. */
@@ -110,3 +111,23 @@ export const STAND_IN = `(() => {
     }
   };
 })();`;
+
+/**
+ * Answers the page's launch validation, `POST /api/launch` (SPEC-403; ADR-417), and keeps each body
+ * it was sent, read when asked for. `answer` is the status to give, or `'abort'` for a request
+ * that fails with no response. A 401 and a 403 carry the server's reason alone, a 200 is the
+ * fallback document's status (an HTML page, as the static host answers an unknown path), and any
+ * other status has no body.
+ */
+export async function answerLaunches(page: Page, answer: number | 'abort'): Promise<string[]> {
+  const bodies: string[] = [];
+  await page.route('**/api/launch', (route) => {
+    bodies.push(route.request().postData() ?? '');
+    if (answer === 'abort') return route.abort();
+    if (answer === 401) return route.fulfill({ status: 401, json: { reason: 'init_data_invalid' } });
+    if (answer === 403) return route.fulfill({ status: 403, json: { reason: 'not_owner' } });
+    if (answer === 200) return route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>DeckStreak</title>' });
+    return route.fulfill({ status: answer });
+  });
+  return bodies;
+}

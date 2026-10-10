@@ -20,6 +20,11 @@ can lose the launch.
 > the shell's `<head>`. "The launch, gated", at the end of this file, draws the start inside and
 > outside a launch.
 
+> **Amended by SPEC-403 (ADR-417).** The start hook no longer loads Telegram's script because a
+> launch parameter is present. It first sends the fragment's launch data to `POST /api/launch`,
+> and it loads the script only when that answers 204. "The launch, validated first", at the end
+> of this file, draws the start on the accepted, refused and unanswered paths.
+
 ```mermaid
 sequenceDiagram
   participant T as Telegram client
@@ -180,3 +185,114 @@ sequenceDiagram
 | every path of `web/app/src/lib/routes.ts`, inside a launch | the fallback document | the shell's policy alone | loaded once by the hook, before the first navigation |
 | every path of `web/app/src/lib/routes.ts`, outside a launch | the fallback document | the shell's policy and the hook's narrower one, together | never requested; an element naming it is refused |
 | a reload after the launch's redirect | the fallback document | the shell's policy alone (the tab's mark) | loaded again; it reads the launch from its own session storage |
+
+## The launch, validated first (SPEC-403, ADR-417)
+
+Kind: sequence and data flow. Read at dev `32f62172`.
+
+This section supersedes the detection step of "The launch, gated" above. A fragment's launch
+parameters no longer make a launch by their presence. The start hook reads the fragment's
+`tgWebAppData` value, decoded once by `URLSearchParams` (the decoding Telegram's script applies),
+and asks the server whether it is a launch before any script from Telegram's origin is added.
+Everything else in that section still holds: the fallback document, the shell's policy, the
+narrowed policy outside a launch, and the wrapper reading the script's object once.
+
+- **Accepted** is a 204 and nothing else. A 200 is the fallback document's status, so it never
+  counts.
+- **Refused** is a 401 or a 403, carrying the gate's reason code alone.
+- **Unanswered** is any other status, a failed request, or no answer within 10 000 ms, the server's
+  own request timeout (`crates/api/src/router.rs:78`). The page treats it as it treats a refusal.
+
+The answer and the deadline race in one `Promise.race`, so exactly one outcome settles and a later
+answer changes nothing. The tab's mark `deck-streak:launch-accepted` is written only after a 204,
+holds no launch data, and lets a reload whose fragment the router has dropped load the script with
+no second request. The mark the gated start wrote on presence alone (`deck-streak:launched`) is
+never read.
+
+The server side is `POST /api/launch`, which follows `crates/api/src/session_routes.rs`'s last line.
+It takes the session handshake's state-change guard, a slot from the handshake's own bound (30 a
+minute, shared with `POST /api/session`), and the handshake's 16 KiB body bound. It validates with
+the same `OwnerGate::admit` (`crates/identity/src/owner.rs:148-161`, then `init_data.rs` validate).
+It opens no session and sets no cookie. `crates/api/src/router.rs` merges it directly after the
+session routes (line 258), so it is served exactly when they are.
+
+```mermaid
+sequenceDiagram
+  participant T as Telegram client or a plain browser tab
+  participant H as the web server (deck-streak.caddy)
+  participant K as SvelteKit's start (the shell)
+  participant I as hooks.client.ts init
+  participant L as telegram-launch.ts
+  participant V as POST /api/launch (session_routes.rs)
+  participant G as OwnerGate admit (owner.rs and init_data.rs)
+  participant S as telegram-web-app.js
+  participant W as telegram.svelte.ts (the one wrapper)
+  participant R as +layout.ts (the first navigation)
+  participant A as api.ts
+  participant API as POST /api/session (session_routes.rs)
+  T->>H: GET any route, the fragment kept in the tab
+  H-->>T: the one fallback document for every route
+  Note over T,H: an /api/ path is proxied to the service, never answered by the fallback
+  T->>K: run the shell's start script
+  K->>I: await init()
+  I->>I: set the page language and direction
+  I->>L: await admitLaunch(window)
+  L->>L: read the fragment's tgWebAppData value, decoded once, empty means none
+  alt the fragment carries launch data
+    L->>V: POST /api/launch, body init_data, same-origin, JSON, with an abort signal
+    V->>V: the state-change guard, a handshake slot, the 16 KiB body bound
+    V->>G: admit(init_data, now)
+    G-->>V: the owner, or a refusal with its reason
+    V-->>L: 204 with no body and no cookie, or 401 or 403 with the reason alone
+    Note over L,V: the answer races a 10 000 ms deadline, which aborts the request, and the first to settle decides
+    alt 204, accepted
+      L->>L: mark the tab deck-streak:launch-accepted, which holds no launch data
+      L->>S: append the script from Telegram's origin with referrerpolicy same-origin
+      S->>S: parse the fragment, keep it for the session, set the --tg-* variables
+      S-->>L: load, or error
+    else 401 or 403, refused
+      L->>L: remove the tab's accepted mark, append the narrowed meta policy
+      Note over L: from here a script element naming Telegram's origin is refused
+    else any other answer, a failed request, or the deadline, unanswered
+      L->>L: remove the tab's accepted mark, append the narrowed meta policy
+      Note over L: a later answer, a 204 included, changes nothing
+    end
+  else no launch data, and the tab carries the accepted mark, a reload
+    L->>S: append the script with referrerpolicy same-origin, and send no request
+    S-->>L: load, or error
+  else no launch data and no accepted mark
+    L->>L: append the narrowed meta policy, and send nothing
+  end
+  L-->>I: resolved
+  I-->>K: resolved
+  K->>R: the router's first navigation
+  R->>W: load the wrapper, which reads the script's object once or finds none
+  opt the launch carried a start token
+    R->>R: redirect once, which drops the fragment
+  end
+  R->>A: the page's first call
+  alt the wrapper read launch data, because the script loaded
+    A->>API: POST /api/session with the same launch data
+    API->>G: admit again, so data grown stale since the launch is refused here
+    API-->>A: 200 and the session cookie, or 401 or 403
+  else no launch data
+    A-->>R: reopen DeckStreak from Telegram, and nothing is sent
+  end
+```
+
+| the start | the request it sends | policy in force after the start hook | Telegram's script |
+|---|---|---|---|
+| a fragment with launch data, answered 204 | one `POST /api/launch` | the shell's policy alone | loaded once, after the 204, before the first navigation |
+| a fragment with launch data, answered 401 or 403 | one `POST /api/launch` | the shell's policy and the hook's narrower one, together | never requested; an element naming it is refused |
+| a fragment with launch data, answered otherwise, failed, or past the deadline | one `POST /api/launch`, aborted at the deadline | the shell's policy and the hook's narrower one, together | never requested; an element naming it is refused |
+| a reload after an accepted launch, the fragment dropped | none | the shell's policy alone (the tab's accepted mark) | loaded again; it reads the launch from its own session storage |
+| no launch data and no accepted mark | none | the shell's policy and the hook's narrower one, together | never requested; an element naming it is refused |
+
+The wire contract gains one call, beside the two that SPEC-024 serves:
+
+| call | request | answer the client reads |
+|---|---|---|
+| validate a launch | `POST /api/launch`, `Content-Type: application/json`, body `{"init_data": "<the raw launch data>"}`, `credentials: same-origin` | 204 accepts; 401 or 403 with `{"reason": ...}` refuses; anything else, a failed request or no answer within 10 s is unanswered |
+
+The launch data travels only in that request body and in the session handshake's, never in a URL,
+a header, the device's storage or a log line.

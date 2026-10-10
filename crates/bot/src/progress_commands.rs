@@ -4,13 +4,18 @@
 //! course, ordered by name, naming its current band, its mastery and its current unit. The reply
 //! carries one button, which opens Road to C2 in the Mini App; when no course is stored yet it says
 //! the courses appear after the next sync, and the button stays, since it is the reply's one way
-//! into the Mini App, whose page says the same.
+//! into the Mini App, whose page says the same. When courses are listed, the reply closes with one
+//! italic line saying what the mastery figure measures (SPEC-408).
 
 use deck_streak_coordination::progress_view::StoredProgress;
 use frankenstein::types::{InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo};
 
 use crate::commands::{MiniAppUrl, Reply};
 use crate::transport::escape_html;
+
+/// What the mastery figure measures, as the reply's closing line. It repeats the English message
+/// file's `progress_mastery_about` for a test to compare, because the bot carries no message files.
+const MASTERY_ABOUT: &str = "Mastery is an estimate from your reviews: the average, over the cards it counts, of how likely you are to recall each card now, with cards not yet firmly learned counted for less and new or suspended cards counted as 0.";
 
 /// The path segment of the Mini App's Road to C2 page.
 const PROGRESS_PAGE: &str = "progress";
@@ -24,6 +29,7 @@ pub fn progress_reply(progress: &[StoredProgress], app: &MiniAppUrl) -> Reply {
     } else {
         let mut lines = vec!["<b>Road to C2</b>".to_owned()];
         lines.extend(progress.iter().map(course_line));
+        lines.push(format!("<i>{}</i>", escape_html(MASTERY_ABOUT)));
         lines.join("\n")
     };
     let open = InlineKeyboardButton::builder()
