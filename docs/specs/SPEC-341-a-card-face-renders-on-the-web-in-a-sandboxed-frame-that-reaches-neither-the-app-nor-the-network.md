@@ -211,3 +211,9 @@ SPEC-398 (ADR-412) adds Firefox as the planted suite's third engine, run by the 
 engines, read Chromium, WebKit and Firefox: R8, R12, A9, A13, and section 5's bullet on
 Firefox, which SPEC-398 supersedes for the card frame (#652). A13's test still holds the
 Chromium and WebKit install step; SPEC-398's A2 holds the Firefox step beside it.
+
+Two more sentences say two engines, and SPEC-398 reads each as history: section 4's row for
+`web/app/playwright.card.config.ts`, which records the two projects this SPEC added and to which
+SPEC-398 adds `firefox`; and section 6's risk on the loopback interface, where A11's test now
+refuses an UNOBSERVABLE `webrtc` in every engine, so the peer connection is measured in at least
+one of the three (#652).

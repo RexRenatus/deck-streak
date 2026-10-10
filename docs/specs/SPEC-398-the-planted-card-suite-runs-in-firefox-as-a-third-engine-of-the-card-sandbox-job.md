@@ -30,6 +30,11 @@ range named.
   Chromium each cannot observe a different resource hint
   (`docs/schematics/card-frame-channels.md:100-104`, `:109`, `:112`). A verdict in two engines does
   not say what a third does.
+- The second push's `card-sandbox` run (job 114037978095) read the suite in Firefox for the first
+  time. Chromium and WebKit passed every planted test, and Firefox all but nine. In Firefox the
+  references of `preconnect`, `shadow-link`, `ping` and `webrtc` reached no listener, and the `img`
+  card's `W1 off` and `W4 off` variants each read its two image-set forms, `/img/2` and `/img/3`, at
+  the listener; the shipped frame reached nothing (ADR-412 D6).
 
 ## 2. Requirements
 
@@ -56,6 +61,9 @@ range named.
   cannot observe gets a section 3 note in the form "UNOBSERVABLE in Firefox, measured: ...".
 - R8. SPEC-341 and ADR-352 gain insert-only amendments that point here and name each of their
   sentences that says the web suite runs in two engines.
+- R9. The planted suite's single-layer assertion reads the same in every engine: no engine, card or
+  layer is excepted from it, and the suite's only per-engine entries are the UNOBSERVABLE table's
+  (ADR-412 D7).
 
 ## 3. Acceptance criteria of SPEC-398
 
@@ -96,6 +104,11 @@ A5: pnpm exec vitest run web/app/src/lib/card/planted-coverage.test.ts -t "the c
 | `docs/red-first/SPEC-398.md` | docs | added |
 | `changelog.d/firefox-matrix-398.md` | docs | added |
 
+The `scripts/tests/test_ci_workflows.py` row also covers a `NOT_WORKFLOW_READS` entry naming
+`card_projects`, the read A2's test makes of the card configuration (ADR-412 D8). The SPEC-341 row
+also covers a second paragraph in its section 7, naming its section 4 row for the card configuration
+and its section 6 risk on the loopback interface (ADR-412 D8).
+
 ## 5. What this does NOT cover
 
 - It does not run the engine tests (`tests-engine/engine.spec.ts`, `tests-engine/sync.spec.ts`) in
@@ -112,6 +125,9 @@ A5: pnpm exec vitest run web/app/src/lib/card/planted-coverage.test.ts -t "the c
 - It does not touch the iPhone and iPad card view or its planted suite (#616).
 - It does not write the campaign's threat model, whose card-frame citations this delivery leaves
   in place (#653).
+- It does not change the strip or any other layer to close the `img` card's image-set forms in
+  Firefox: the strip of every `srcset` is #771, and this delivery's last push is read over
+  it (#652).
 
 ## 6. Risks
 
@@ -134,6 +150,16 @@ A5: pnpm exec vitest run web/app/src/lib/card/planted-coverage.test.ts -t "the c
 - **Another delivery edits `scripts/tests/test_ci_workflows.py` or `.github/workflows/ci.yml`.**
   Detected by the builder's re-measure at the cut, and by the anchor census over every row on each
   touched file before each commit.
+- **A Firefox single-layer variant of an image form opens with the strip on `dev`.** Detected by
+  the third push's `card-sandbox` run, read over the strip (#771): the `img` card's
+  `W1 off` and `W4 off` variants must read nothing. An opening is a stop for a new design, never a
+  declaration (ADR-412 D6, D7).
+- **#765 appends its own section 9 to the schematic.** Whichever lands second renumbers its own
+  section to the next free number, insert-only after the first lander's last line (ADR-412 D10).
+  Detected by the pull request's merge state against `dev` before the last push.
+- **The strip edits a line this delivery's last commit edits.** Detected before the third commit:
+  each path `dev` changed since the cut is compared with the lines that commit edits, and an
+  overlap stops the build for a merge amendment (ADR-412 D12).
 
 ## 7. Mutation rows
 

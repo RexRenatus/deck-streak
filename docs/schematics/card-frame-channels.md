@@ -99,16 +99,16 @@ dash means at least two layers hold it, so no single-layer variant opens it.
 | `stylesheet` | `link rel=stylesheet` | W3, W2 | - |
 | `preload` | `link rel=preload` and `rel=modulepreload` | W3, W2 | - |
 | `prefetch` | `link rel=prefetch` | W3, W2 | - (UNOBSERVABLE in WebKit, measured: it sends no prefetch request under the suite) |
-| `preconnect` | `link rel=preconnect` (a TCP connection, no request) | W3 | W3 (UNOBSERVABLE in Chromium, measured: it opens no preconnect connection under the suite) |
+| `preconnect` | `link rel=preconnect` (a TCP connection, no request) | W3 | W3 (UNOBSERVABLE in Chromium, measured: it opens no preconnect connection under the suite; UNOBSERVABLE in Firefox, measured: it opens no preconnect connection under the suite) |
 | `dns-prefetch` | `link rel=dns-prefetch` | W3 | W3 (UNOBSERVABLE: no lookup reaches a listener) |
-| `shadow-link` | a `template shadowrootmode=open` holding `link rel=preconnect` | W3 | W3 (UNOBSERVABLE in Chromium, measured: it opens no preconnect connection under the suite, in a shadow tree or out of one) |
+| `shadow-link` | a `template shadowrootmode=open` holding `link rel=preconnect` | W3 | W3 (UNOBSERVABLE in Chromium, measured: it opens no preconnect connection under the suite, in a shadow tree or out of one; UNOBSERVABLE in Firefox, measured: it opens no preconnect connection under the suite, in a shadow tree or out of one) |
 | `meta-refresh` | `meta http-equiv=refresh` to the listener | W3, W4, W1 in some engines | - |
 | `base` | `base href` at the listener, then a relative `img` | W3, W2, P | - |
 | `nav-self` | a full-frame link at the listener, clicked | W4 | W4 (SEC01-F13) |
 | `nav-top` | a full-frame link with `target=_top`, clicked | W1 | W1 |
 | `nav-blank` | a full-frame link with `target=_blank`, clicked | W1 | W1 |
 | `download` | a full-frame link with `download`, clicked | W4 (measured in Chromium: a `download` link to another origin is followed as a navigation of the frame, which the sandbox allows); W1 stops a download itself | W4 |
-| `ping` | a same-document link with `ping` at the listener, clicked | W2, P | - |
+| `ping` | a same-document link with `ping` at the listener, clicked | W2, P | - (UNOBSERVABLE in Firefox, measured: it sends no hyperlink audit under the suite) |
 | `form` | a full-frame submit button in a form whose action is the listener, clicked | W1, W2, W4 | - |
 | `nested-frame` | `iframe src` at the listener, and an `iframe srcdoc` holding an `img` at the listener | the `iframe src`: W2, P (the inherited `frame-src 'none'`); the srcdoc child: W2 (measured in Chromium: a `srcdoc` document is not fetched, so `frame-src` does not apply to it, and the inherited page policy admits its `img`) | W2 |
 | `external-scheme` | a full-frame `mailto:` link, clicked | W1, W4 | - (UNOBSERVABLE: no listener sees a handler launch) |
@@ -117,7 +117,7 @@ dash means at least two layers hold it, so no single-layer variant opens it.
 | `script-src` | `script src` at the listener | W1, W2, P | - |
 | `event-handler` | a data-image `onload` that fetches the listener | W1, W2, P | - |
 | `javascript-url` | a full-frame `javascript:` link that fetches the listener, clicked | W1, W2, P | - |
-| `webrtc` | an inline script that opens a peer connection to the UDP listener as its STUN server | W1, W2, P (none of them by policy: they stop the script, not the peer connection) | - |
+| `webrtc` | an inline script that opens a peer connection to the UDP listener as its STUN server | W1, W2, P (none of them by policy: they stop the script, not the peer connection) | - (UNOBSERVABLE in Firefox, measured: its peer connection sends no datagram to the UDP listener under the suite) |
 | `bridge` | an inline script that calls the page's bridge stand-in, posts to the parent and the top, posts on a BroadcastChannel, and reads the page's storage markers | W1, W2, P | - |
 
 **The scripts-on measurement (SEC01-F14).** One variant gives the frame `allow-scripts` and admits
@@ -600,6 +600,15 @@ reference frame cannot reach. Firefox's are measured by its first `card-sandbox`
 there in the form "UNOBSERVABLE in Firefox, measured: ...". A reading in which the card frame
 reaches a listener, a single layer opens a set the table does not give it, or the render proof
 shows a blank frame, is a new design for every engine, never a note.
+
+**Firefox's first run.** Firefox's reference frame reaches no listener for `preconnect`,
+`shadow-link`, `ping` and `webrtc`, so section 3 notes each as unobservable in Firefox; WebKit
+observes the first two, and Chromium and WebKit the last two. In Firefox, W2 holds five of the
+`img` card's seven forms alone, and its two image-set forms, `img srcset` and `picture source`,
+only beside W1 and W4: the engine fetches an image-set candidate ahead of its tree builder as an
+image set, for which it does not consult its speculative copy of the frame policy (ADR-412 D6). The
+strip of every `srcset` (#771) gives those two forms a layer built for them in every
+engine. This section reads Firefox over it, and the `img` row is that delivery's to change.
 
 **Not in the matrix.** The engine and study suites in Firefox (#652; the engine configuration is
 open work in #748), the e2e and accessibility suites in Firefox (#652), and a learner's installed

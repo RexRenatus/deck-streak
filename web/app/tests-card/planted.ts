@@ -212,6 +212,10 @@ export const UNOBSERVABLE: readonly Unobservable[] = [
   { engine: 'chromium', id: 'shadow-link', why: 'measured: Chromium under the suite opens no preconnect connection, in a shadow tree or out of one' },
   { engine: 'chromium', id: 'external-scheme', why: 'no listener sees a mail handler launch' },
   { engine: 'firefox', id: 'external-scheme', why: 'no listener sees a mail handler launch' },
+  { engine: 'firefox', id: 'preconnect', why: 'measured: Firefox under the suite opens no preconnect connection' },
+  { engine: 'firefox', id: 'shadow-link', why: 'measured: Firefox under the suite opens no preconnect connection, in a shadow tree or out of one' },
+  { engine: 'firefox', id: 'ping', why: 'measured: Firefox under the suite sends no hyperlink audit' },
+  { engine: 'firefox', id: 'webrtc', why: 'measured: Firefox under the suite sends no datagram from a peer connection to the UDP listener' },
   { engine: 'webkit', id: 'external-scheme', why: 'no listener sees a mail handler launch' }
 ];
 

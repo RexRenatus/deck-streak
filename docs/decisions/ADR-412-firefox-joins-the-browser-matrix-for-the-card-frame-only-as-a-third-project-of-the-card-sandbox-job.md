@@ -217,3 +217,209 @@ SPEC-398's A1 to A5, and the `card-sandbox` check-run on every pull request.
 - SPEC-398 (this ADR's SPEC); SPEC-341 R8, R12, A9 to A13; ADR-352 D3, D5 and D7.
 - The schematic `docs/schematics/card-frame-channels.md`: section 3 (the web channels), section 5
   (the planted suite) and section 9 (the browser test matrix, which SPEC-398 adds).
+
+## Amendments after the first Firefox run, and what each was chosen against
+
+The second push's `card-sandbox` run (job 114037978095) was the planted suite's first reading in
+Firefox. Chromium and WebKit passed every planted test; Firefox passed all but nine. Seven of the
+nine follow from four references that reached no listener in Firefox: the `preconnect`,
+`shadow-link`, `ping` and `webrtc` pairs, the `W3 off` variants of the first two, and the
+scripts-on peer connection. The other two are the `img` card's `W1 off` and `W4 off` variants, each
+of which read `/img/2` and `/img/3` at the listener. D2 makes that a stop for a new design, never a
+declaration. D6 to D12 are that design. They amend D2, D3 and D5 where they say so, and every
+`file:line` in them was read at the second push's head, `04a5ab17`.
+
+### D6. In Firefox, W2 holds five of the `img` card's seven forms alone, and its two image-set forms only beside W1 and W4
+
+Each of the `W1 off` and `W4 off` variants read exactly `/img/2` and `/img/3`, the card's
+`img srcset` and `picture source` forms (`web/app/tests-card/planted.ts:94-102`), and nothing else.
+The `W2 off` variant opened the card, and the pair, its shipped frame included, and the `W3 off`
+variant read as section 3's table says. With W1 off, the frame is the shipped document with no
+sandbox (`web/app/tests-card/harness/main.ts:71`); with W4 off, the page is the shipped page with
+no `frame-src` (`web/app/vite.card.config.ts:23-28`, `harness/main.ts:62-64`). In both, the one
+layer that governs an image fetch is W2, the frame policy placed first in the frame's head
+(`web/app/src/lib/card/policy.js:25-26`, `web/app/src/lib/card/frame-document.ts:20`): W1 and W4
+stop no fetch (`docs/schematics/card-frame-channels.md:130-135`), W3 keeps every `img` and
+`source` element (`frame-document.ts:17`), and the inherited page policy names no image source
+(`web/app/svelte.config.js:24-31`). So W2 holds `/img/1` and `/img/4` to `/img/7` alone in
+Firefox, as it does in Chromium and WebKit, and does not hold `/img/2` and `/img/3` alone.
+
+The cause is the engine's speculative parse, read in its public source. Firefox's HTML parser
+fetches images ahead of the tree builder. A meta policy it meets ahead of the tree builder is kept
+only as the document's preload policy (`nsHtml5TreeOpExecutor::AddSpeculationCSP`), and the policy
+check consults that preload policy only for the preload content types (`CSPService::ConsultCSP`,
+`nsContentUtils::IsPreloadType`). A plain image is fetched ahead as an image preload, which W2's
+policy covers. An image-set candidate, from `srcset` or a `picture` `source`, is fetched ahead
+typed as an image set (`Document::PreLoadImage`), which is not a preload type, so only the
+document's own policy is consulted, and the meta element is not yet part of it.
+
+With every layer on, and with W3 off, the two forms stayed closed in the measured run. That closure
+needs W1, W2 and W4 together, a conjunction no layer's design names, so the table cannot give it to
+one layer. In Firefox, W2 holds the image-set forms only beside W1 and W4, never alone, and D7
+gives them a layer built for them.
+
+Chosen against:
+
+- W2 holds no `img` form in Firefox: rejected because the five other forms never reached the
+  listener with W1 off or with W4 off, and W2 is then the only layer on that governs an image fetch.
+- A stray arrival from another test: rejected because every visit opens a fresh browser context
+  (`web/app/tests-card/card.spec.ts:58-74`), both variants read the same two paths and no other,
+  and those are exactly the two forms the engine fetches ahead as image sets.
+- W1 or W4 holds image fetches by design: rejected because neither is built to stop a fetch
+  (`card-frame-channels.md:130-135`), so a table giving them the image-set forms would claim a
+  guarantee no layer is built to give.
+
+### D7. A product change closes the image-set forms: the strip removes every `srcset`, in its own issue, and the last push here is read over it
+
+The image-set forms are closed by a layer built for them: W3 removes the `srcset` attribute from
+every element that carries one, `img` and `source`, and its re-parse check refuses the card if one
+came back (`frame-document.ts:46-51`). Then no image-set candidate reaches the frame document in
+any engine, and W2 holds every image form left, alone. That is a change to a layer, which SPEC-398
+excludes, so it is its own delivery, #771, with its own SPEC and its own ADR amending
+ADR-352's layer table, and this delivery does not make it. This delivery waits for it: its third
+push is made after the strip is on `dev`, and that push's `card-sandbox` run, which checks out the
+pull request merged with `dev`, is the reading.
+
+No assertion of the planted suite changes here, in any engine. By measurement against `dev`, the
+single-layer assertion (`card.spec.ts:137`) is one line for every engine, and this delivery leaves
+that file as it is. The `img` card's single-layer expectations stay `{}` in Firefox as in Chromium
+and WebKit, whose expectations are byte-identical. Nothing is weakened.
+
+Chosen against:
+
+- Firefox's `img` cells declared per engine, its expectation equal to the measured set: rejected
+  because it narrows the single-layer assertion at `card.spec.ts:137` with an engine exception, a
+  weakening; Chromium's and WebKit's expectations would stay byte-identical, but Firefox's two
+  variants would assert less than theirs, and D2 makes such a reading a stop, never a declaration.
+- Firefox joins without the `img` card's two variants, each excluded citing an issue: rejected
+  because it removes two checks the second push already runs, a weakening, and it leaves the
+  image-set forms with no single-layer reading in Firefox until a later delivery restores them.
+- The strip made in this delivery: rejected because SPEC-398 changes no layer, and a layer change
+  owes its own design against ADR-352, its own red-first record and its own review.
+- An image source list in the page policy: rejected because it constrains every image the app
+  shows, and it would make the inherited page policy, which this work does not own, hold what the
+  frame's own layers should.
+- The frame's `csp` attribute: rejected because ADR-352 D3 already rejected it, since one target
+  engine does not enforce it.
+- A rewrite of each `srcset` that keeps only `data:` candidates: rejected because it must parse
+  candidate lists as each engine does, commas inside `data:` URLs included, where removing the
+  attribute leaves nothing to parse and the element's `src` still shows the image.
+
+### D8. Firefox's four unobservable channels, the card configuration's named read, and SPEC-341's two other sentences
+
+The third commit declares `preconnect`, `shadow-link`, `ping` and `webrtc` unobservable in Firefox,
+each a new line of the UNOBSERVABLE table (`planted.ts:197-207`) with its measured reason, and
+section 3 of the schematic notes each in its layer-alone cell. In the second push's run each card's
+reference frame, every layer off, reached no listener in Firefox, and the `W3 off` variants of the
+first two and the scripts-on peer connection followed. Each channel stays observed elsewhere:
+`preconnect` and `shadow-link` in WebKit, and `ping` and `webrtc` in Chromium and WebKit. So the
+suite still proves each one closed, and the coverage test still finds every layer holding a channel
+some engine observes (`web/app/src/lib/card/planted-coverage.test.ts:179-183`) and `webrtc`
+measured in at least one engine (`:201-204`). A declaration is checked both ways: in an engine that
+declares a channel, the reference must reach nothing (`card.spec.ts:114-116`).
+
+A2's test reads the card configuration for its project names (`card_projects`,
+`scripts/tests/test_ci_workflows.py:2497`). The module's census refuses any file read that is not
+the workflow loader or a named read, so the configuration is named in `NOT_WORKFLOW_READS`
+(`:4788-4811`) with its reason. That is a named read, not a filter: one entry is added, no
+assertion is removed, and the census still refuses every read it does not name.
+
+SPEC-341's section 7 gains one paragraph naming its two other two-engine sentences, section 4's row
+for the card configuration and section 6's risk on the loopback interface. The changelog fragment
+`changelog.d/firefox-matrix-398.md` was carried by the first push. The third commit adds the band
+`scripts/mutation-rows.d/S39800-S39899.json`, whose three rows' finds each occur once at
+`04a5ab17`.
+
+Chosen against:
+
+- A longer settle window for Firefox: rejected because the four references reached nothing at all,
+  not late, and a wider window cannot make an engine send what it does not.
+- The engine's own preferences switched on in the `firefox` project: rejected because the suite
+  would then measure a configured engine rather than the engine as installed, which SPEC-398
+  excludes (#764).
+- The card configuration read through the workflow loader: rejected because the loader is the
+  module's reader of workflow files, and the card configuration is not one.
+- SPEC-341's two sentences left unnamed: rejected because SPEC-341's amendment says where to read
+  three engines for two, and a sentence it does not name reads as current where it is history.
+
+### D9. The card-sandbox bound stays 30 minutes, now by measurement
+
+D3 sized the bound by scaling the two-engine bound; the second push measured it. The bound is the
+per-engine cost at three engines, times 1.5, plus the job's setup and tail:
+
+job 114037978095: Chromium 4m36s, WebKit 4m54s, Firefox 8m13s and the suite's start 3s, 17m46s; times 1.5, 26m39s; with setup 1m15s and tail 2s, 27m56s, inside the bound of 30 minutes.
+
+Firefox's share includes seven references that waited out their poll before failing; the third
+commit's declarations end those waits. A run over two-thirds of the bound still stops a build for a
+re-size from its own measurement, as D3 says.
+
+Chosen against:
+
+- 45 minutes, the band's top: rejected because the measured need with its margin is inside 30, and
+  a larger bound only lets a stuck run hold the runner longer.
+- A bound sized from the job's total alone: rejected because a total hides which engine grew, and a
+  slower Firefox is read from its own share.
+- A bound under 30 minutes: rejected because A3's band starts at 30, and the measured need with its
+  margin sits close below it, so a lower bound leaves no room for a slower runner.
+
+### D10. Whichever of this delivery and #765 lands second renumbers its own schematic section
+
+#765 also appends a `## 9.` to `docs/schematics/card-frame-channels.md`, after the same last line.
+The pull request that lands second takes the next free number, `## 10.`, and appends its section
+after the first lander's last line, insert-only: the file on `dev` is a byte prefix of the second
+lander's file. The second lander renumbers only its own section and each reference to it in its own
+SPEC, ADR and red-first record, and never edits the first lander's section. If #765 lands first,
+this delivery's renumbering is its own amendment, made before its last push.
+
+Chosen against:
+
+- One section merging the two: rejected because each section is decided by its own SPEC and ADR,
+  and a section with two owners has no single record to amend.
+- Numbers fixed now, #765 as 9 and this delivery as 10: rejected because the order of landing is
+  not known, and a section numbered past a missing one leaves a number no section holds.
+- The second lander inserting its section before the first's: rejected because it moves the first
+  lander's section, which an insert-only check against `dev` refuses.
+
+### D11. FORMAL stays not applicable, by surface
+
+D7 adds no product actor, state or step to this delivery. The third commit adds test data, notes
+and a record; the strip is another delivery's. That delivery decides its own FORMAL by its own
+surface: removing an attribute from a parsed card is a total function of the card's text, ground
+for a proof or a property test there, not a model here.
+
+Chosen against:
+
+- A model of the engine's speculative fetch beside its tree builder: rejected because that
+  interleaving is the engine's, not this delivery's code, and the planted suite reads its outcome
+  in the engine itself.
+- A proof here that the composed document holds no `srcset`: rejected because the strip is not in
+  this delivery, so the proof would cover code this delivery does not change.
+
+### D12. The third push is the last, and it is read over the strip
+
+The delivery keeps D5's three pushes. The third carries the third commit alone, and it is made only
+after the strip (#771) is on `dev`. No criterion the third commit touches reads red only in
+CI: the second push read Firefox's `img` variants and the four references, and the third push's
+`card-sandbox` run reads them over the strip, through the pull request's merge with `dev`. A5 stays
+"not red", with the reason its record gives.
+
+Chosen against:
+
+- A fourth push carrying a red commit alone: rejected because the third commit adds no test whose
+  red is unread; its declarations' red was the second push's reading.
+- The third push now, before the strip: rejected because its run would read the same two variants
+  open again and decide nothing new.
+- A merge of `dev` into the branch before the third push: rejected because the run already checks
+  out the pull request merged with `dev`, so a merge commit adds history without changing what CI
+  reads; a conflict with `dev` is the one reason to make one, and that is its own amendment.
+
+## What would make the amendments wrong
+
+- With the strip on `dev`, a Firefox single-layer variant of an image form still opens: D6's cause
+  is incomplete, and the strip's design is reopened before this delivery's last push.
+- The strip changes which forms the `img` card plants or which layer the table gives them: this
+  delivery's notes and declarations are re-read against the new table before its last push.
+- Firefox later observes one of the four channels: its declaration then fails its own check, and
+  the delivery that reads it removes the declaration and the note.
+- The third push's run takes more than two-thirds of the bound: D9 is re-sized from that
+  measurement.
