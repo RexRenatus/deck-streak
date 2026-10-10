@@ -28,3 +28,7 @@ A11: green at 6700208a978d617d844a58fb583531545f21a965
 A12: not red: it pins checks the base already passed, unchanged
 A13: not red: the audits open a launch and pass at the base; they guard the restatement
 ```
+
+Between A1's red and green, commit 6700208 edits `web/app/tests-study/study.spec.ts`: its comment at
+lines 32 to 34 only, which the file manifest names; no assertion, title or line of code in that file
+changes.
