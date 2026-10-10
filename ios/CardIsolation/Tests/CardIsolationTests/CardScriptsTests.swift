@@ -14,7 +14,7 @@ final class CardScriptsTests: XCTestCase {
     }
 
     /// The controls a scripted card view must carry (SPEC-361 R2), named here rather than read
-    /// from the code under test: every layer but L2, which is the verdict itself. L9 is retired.
+    /// from the code under test: every layer but L2, the verdict itself, and L14, no control. L9 is retired.
     static let controls: [CardLayer] = [.L1, .L3, .L4, .L5, .L6, .L7, .L8, .L10, .L11, .L12, .L13]
 
     func test_scripts_run_only_when_switched_on_with_every_control_present() {
