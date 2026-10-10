@@ -63,7 +63,9 @@ A5: green at 68ce4bfae087d8db2e8b2f4fa046b8e6251d90ce
 A6: red at 003d865917abf764aef500aca8aacb261a578af9: crates/agent/tests/deck_gate.rs:111:5: same left; right: Withheld(Withheld { class: "deck-unreadable", findings: ["cards carry no deck scope"] })
 A6: green at 68ce4bfae087d8db2e8b2f4fa046b8e6251d90ce
 A7: red at 003d865917abf764aef500aca8aacb261a578af9: crates/readings/tests/sensitive_day_set.rs:80:5: assertion `left == right` failed: every card of the kept-away root, of its child and borrowed from it is held back; left: [("Alpha", [101, 102, 103]), ("Beta", [301, 302])]; right: [("Alpha", []), ("Beta", [301, 302])]
+A7: green at 77792e625b3cdc5058765cbb1df0b64a002668f9
 A8: red at 003d865917abf764aef500aca8aacb261a578af9: crates/coordination/tests/readings_resolve.rs:287:5: a failed read of the marks ends the resolution with its named error: Ok(Resolved { run: RunId(1), .. })
+A8: green at 77792e625b3cdc5058765cbb1df0b64a002668f9
 A9: red at 5a0590a7c3233102f9ff7ba87b3e1cff1dfd190a: crates/agent/tests/deck_gate_census.rs:718:5: assertion `left == right` failed: the census refused; left: ["crates/agent/src/duty.rs: decide calls no deck gate (`self.deck_gate.judge(`)"]; right: []
 A9: green at 003d865917abf764aef500aca8aacb261a578af9
 A10: red at 003d865917abf764aef500aca8aacb261a578af9: crates/api/tests/sensitive_decks.rs:211:5: assertion `left == right` failed: neither change marked the deck; left: (501, Null); right: (200, Object {"decks": Array []})
