@@ -277,6 +277,13 @@ Band `scripts/mutation-rows.d/S38600-S38699.json`, from S38600, in the `MUTATION
 | S38611-REVIEW-TYPE | `crates/engine-core/src/replay.rs` | every card type gets a schedule | `replay::a_learning_card_keeps_its_due_and_interval` |
 | S38612-EMPTY-ENTRY | `crates/fsrs7/src/convert.rs` | a card with no kept review gets an entry | `convert::manual_rescheduled_and_unrated_entries_are_dropped` |
 | S38613-ONE-SEAM | `crates/engine-core/tests/graph.rs` | the seam census admits a second file | `graph::only_the_replay_module_names_the_fsrs7_crate` |
+| S38614-IVL-CEILING | `crates/engine-core/src/replay.rs` | the interval's ceiling at the preset's maximum dropped | `replay::a_review_cards_due_is_its_last_review_day_plus_its_interval` |
+| S38615-PARAMS-LENGTH | `crates/engine-core/src/replay.rs` | the parameter count constant moved off 34 | `replay::a_parameter_vector_of_another_length_is_refused_whole` |
+| S38616-RESET-SINCE | `crates/fsrs7/src/convert.rs` | a card with no reset keeps its history from its second row | `convert::a_cards_reviews_become_fractional_day_intervals_from_zero` |
+| S38617-REVIEW-TYPE-VALUE | `crates/engine-core/src/replay.rs` | the review card type constant moved off 2 | `replay::a_review_cards_due_is_its_last_review_day_plus_its_interval` |
+| S38618-MS-PER-SECOND | `crates/engine-core/src/replay.rs` | the milliseconds-per-second constant moved off 1000 | `replay::a_review_cards_due_is_its_last_review_day_plus_its_interval` |
+| S38619-SECONDS-PER-DAY | `crates/engine-core/src/replay.rs` | the seconds-per-day constant moved off 86400 | `replay::a_review_cards_due_is_its_last_review_day_plus_its_interval` |
+| S38620-STOCK-SCHEDULE | `crates/engine-core/src/replay.rs` | the mapping writes no interval and no due | `replay::the_stock_fields_survive_a_sync_round_trip_alone` |
 
 The builder may add rows for any further constant or branch it writes; a new literal constant owes a row pinning its
 value. Every row's killer lives in its row's own crate.
