@@ -20,6 +20,7 @@
       {course.currentUnit === null ? m.progress_no_unit() : m.progress_unit({ unit: course.currentUnit })}
     </span>
   </p>
+  <p class="text-sm" data-mastery-about="course">{m.progress_mastery_about()}</p>
   <ol class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label={m.progress_bands({ name: course.name })}>
     {#each course.bands as cell (cell.band)}
       <li
