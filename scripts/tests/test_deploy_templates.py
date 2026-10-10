@@ -453,9 +453,9 @@ IP_FAMILIES = {"AF_INET", "AF_INET6"}
 NO_IP_SOCKET = "opens no IP socket"
 EXEMPT = "exempt"
 IDENTITY_ARMS = {
-    "deck-streak-api.service": "link-local",
+    "deck-streak-api.service": "any",
     "deck-streak-bot.service": "link-local",
-    "deck-streak-mcp.service": "link-local",
+    "deck-streak-mcp.service": "any",
     f"{JOB_TEMPLATE}@.service": "link-local",
     f"{ALERT_TEMPLATE}@.service": "link-local",
     SYNC_SERVER_SERVICE_NAME: "any",
@@ -2094,8 +2094,8 @@ class TheServicesRunTheirRoles(unittest.TestCase):
             ),
             "the API admits the link-local range": (
                 "deck-streak-api.service",
-                "IPAddressDeny=link-local\n",
-                "IPAddressDeny=link-local\nIPAddressAllow=link-local\n",
+                "IPAddressDeny=any\n",
+                "IPAddressDeny=any\nIPAddressAllow=link-local\n",
                 [
                     "deploy/systemd/deck-streak-api.service: IPAddressAllow=link-local can admit "
                     "the host's identity endpoint, and is refused"
