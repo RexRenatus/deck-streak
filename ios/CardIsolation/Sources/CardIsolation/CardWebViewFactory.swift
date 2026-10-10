@@ -195,6 +195,13 @@ public enum CardWebViewFactory {
         layers: Set<CardLayer>, ruleList: WKContentRuleList?, built: Built
     ) -> WKWebViewConfiguration {
         let configuration = WKWebViewConfiguration()
+        #if os(iOS)
+            // A card's HTML video plays inline, as on the desktop, rather than taking the screen
+            // on an iPhone, whose default is off; the document writes `playsinline` on each video
+            // too (SPEC-393 R10, R11). It loads nothing: a video still reaches the view only as a
+            // `data:` URL inside the document, and a tap still starts it.
+            configuration.allowsInlineMediaPlayback = true
+        #endif
         // The controller records the rule lists and named handlers added to it, which WebKit
         // does not list, so the verdict can read L3 and L4 back.
         configuration.userContentController = CardContentController()

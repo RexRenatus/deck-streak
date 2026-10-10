@@ -126,9 +126,11 @@ fn call<T: Message + Default>(
     T::decode(reply.as_slice()).map_err(|_| engine_error(Vec::new()))
 }
 
-/// The preset of `card`'s deck: its home deck's when it sits in a filtered deck.
-fn preset(backend: &Backend, card: i64) -> Result<Config, Refusal> {
+/// The preset of `card`'s deck (its home deck's when it sits in a filtered deck) and the card's
+/// template index, both from the one read of the card (SPEC-393 R1).
+fn preset(backend: &Backend, card: i64) -> Result<(Config, u32), Refusal> {
     let card: Card = call(backend, GET_CARD, &CardId { cid: card })?;
+    let ordinal = card.template_idx;
     let deck_id = match card.original_deck_id {
         0 => card.deck_id,
         home => home,
@@ -139,11 +141,11 @@ fn preset(backend: &Backend, card: i64) -> Result<Config, Refusal> {
         _ => DEFAULT_PRESET,
     };
     let preset: DeckConfig = call(backend, GET_DECK_CONFIG, &DeckConfigId { dcid: preset_id })?;
-    Ok(preset.config.unwrap_or_default())
+    Ok((preset.config.unwrap_or_default(), ordinal))
 }
 
-/// A TTS tag in the platform's terms: one plain line, the language with a hyphen, and the
-/// engine's speed scaled to the platform's rate and held to its range.
+/// A TTS tag in the platform's terms: one plain line, the language with a hyphen, the engine's
+/// speed scaled to the platform's rate and held to its range, and the voices the tag asks for.
 fn speech(tag: &TtsTag) -> Clip {
     let language = tag.lang.replace('_', "-");
     let rate = (tag.speed * DEFAULT_RATE).clamp(MINIMUM_RATE, MAXIMUM_RATE);
@@ -151,7 +153,7 @@ fn speech(tag: &TtsTag) -> Clip {
         text: html_to_text_line(&tag.field_text, false).into_owned(),
         language,
         rate,
-        voices: Vec::new(),
+        voices: tag.voices.clone(),
     }
 }
 
@@ -177,13 +179,13 @@ pub(crate) fn complete(
     autoplay: bool,
     media: &dyn Reader,
 ) -> Result<Face, Refusal> {
-    let preset = preset(backend, card)?;
+    let (preset, ordinal) = preset(backend, card)?;
     let request = RenderExistingCardRequest {
         card_id: card,
         browser: false,
         partial_render: true,
     };
-    let rendered: RenderCardResponse = call(backend, RENDER_EXISTING_CARD, &request)?;
+    let mut rendered: RenderCardResponse = call(backend, RENDER_EXISTING_CARD, &request)?;
     let tr = backend.i18n();
     let question_raw = join(&rendered.question_nodes, None);
     let (question_extracted, question_tags) = extract_av_tags(question_raw.as_str(), true, tr);
@@ -212,6 +214,11 @@ pub(crate) fn complete(
             (answer, replay)
         }
     };
+    // The fonts take from the budget after the text's media and the clips, so a font never
+    // crowds out the card's own media (SPEC-393 R5, R6).
+    if media.inlines_fonts() {
+        rendered.css = budget.fonts(&rendered.css);
+    }
     let wished = autoplay;
     let allowed = !preset.disable_autoplay;
     let autoplay = if wished && allowed {
@@ -222,7 +229,7 @@ pub(crate) fn complete(
     Ok(Face {
         text,
         css: rendered.css,
-        ordinal: 0,
+        ordinal,
         autoplay,
         replay,
         omitted: budget.into_omitted(),
