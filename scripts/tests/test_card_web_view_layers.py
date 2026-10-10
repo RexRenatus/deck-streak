@@ -531,6 +531,124 @@ class TheScriptSwitchDefaultsOff(unittest.TestCase):
                 self.assertEqual(script_switch_values(Path(scratch)), wanted, name)
 
 
+# L14, the link strip (SPEC-392 R1 to R3, ADR-406 D1): its file, the one function the factory
+# calls, the factory's one card load handed through it, and the case `CardLayer` names it by.
+LINK_STRIP = "ios/CardIsolation/Sources/CardIsolation/LinkStrip.swift"
+STRIP_FUNCTION = "public static func stripped(_ html: String) -> String"
+STRIPPED_LOAD = "load(LinkStrip.stripped(html), into: view)"
+# Every call of the factory's card load; the definition, `func load(`, is not a call.
+CARD_LOAD = re.compile(r"(?<!func )\bload\(")
+CARD_LAYER = re.compile(r"\benum\s+CardLayer\b[^{]*\{([^}]*)\}")
+
+
+class TheFactoryStripsEveryCard(unittest.TestCase):
+    @staticmethod
+    def problems(root):
+        """Every rule of the link strip's place the tree at `root` breaks, each by its name: every
+        card load in the factory goes through `LinkStrip.stripped(_:)` (R1), the strip's file
+        defines that function (R2), and `CardLayer` names L14 (R3). Whole-line comments are set
+        aside, so a call or a function only a comment holds is not read as code."""
+        root = Path(root)
+        found = []
+        factory = root / FACTORY
+        if factory.is_file():
+            code = code_of(factory.read_bytes().decode("utf-8", errors="replace"))
+            loads = [match.start() for match in CARD_LOAD.finditer(code)]
+            if not loads or any(not code.startswith(STRIPPED_LOAD, at) for at in loads):
+                found.append(f"{FACTORY}: the factory hands a card past the link strip")
+            layers = CARD_LAYER.search(code)
+            if layers is None or not re.search(r"\bL14\b", layers.group(1)):
+                found.append(f"{FACTORY}: CardLayer does not name L14")
+        else:
+            found.append(f"{FACTORY}: missing")
+        strip = root / LINK_STRIP
+        code = ""
+        if strip.is_file():
+            code = code_of(strip.read_bytes().decode("utf-8", errors="replace"))
+        else:
+            found.append(f"{LINK_STRIP}: the link strip's file is missing")
+        if STRIP_FUNCTION not in code:
+            found.append(f"{LINK_STRIP}: the link strip defines no stripped(_:)")
+        return found
+
+    def test_the_factory_hands_every_card_through_the_link_strip(self):
+        # The behaviour first: the factory hands every card through the link strip, the strip's
+        # file defines `stripped(_:)`, and `CardLayer` names L14.
+        self.assertEqual(self.problems(REPO), [], "the factory's link strip (SPEC-392 R1 to R3)")
+
+        # The controls: planted trees built from literal text, each refused by its rule's name,
+        # and the good tree read clean.
+        factory = "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift"
+        strip = "ios/CardIsolation/Sources/CardIsolation/LinkStrip.swift"
+        good_factory = (
+            "public enum CardLayer: String, CaseIterable, Sendable {\n"
+            "    case L1, L2, L3, L4, L5, L6, L7, L8, L10, L11, L12, L13, L14\n"
+            "}\n"
+            "public enum CardWebViewFactory {\n"
+            "    static func build(html: String) -> WKWebView {\n"
+            "        let view = WKWebView()\n"
+            "        load(LinkStrip.stripped(html), into: view)\n"
+            "        return view\n"
+            "    }\n"
+            "    static func load(_ html: String, into view: WKWebView) {\n"
+            "        view.loadHTMLString(html, baseURL: nil)\n"
+            "    }\n"
+            "}\n"
+        )
+        good_strip = (
+            "public enum LinkStrip {\n"
+            "    public static func stripped(_ html: String) -> String {\n"
+            "        html\n"
+            "    }\n"
+            "}\n"
+        )
+        past = f"{factory}: the factory hands a card past the link strip"
+        plants = {
+            "the good tree": ({factory: good_factory, strip: good_strip}, []),
+            "a factory that loads load(html, into: view)": (
+                {
+                    factory: good_factory.replace(
+                        "load(LinkStrip.stripped(html), into: view)", "load(html, into: view)"
+                    ),
+                    strip: good_strip,
+                },
+                [past],
+            ),
+            "the strip call only in a comment": (
+                {
+                    factory: good_factory.replace(
+                        "        load(LinkStrip.stripped(html), into: view)\n",
+                        "        // load(LinkStrip.stripped(html), into: view)\n",
+                    ),
+                    strip: good_strip,
+                },
+                [past],
+            ),
+            "no LinkStrip.swift": (
+                {factory: good_factory},
+                [
+                    f"{strip}: the link strip's file is missing",
+                    f"{strip}: the link strip defines no stripped(_:)",
+                ],
+            ),
+            "a LinkStrip.swift with no stripped(_:)": (
+                {factory: good_factory, strip: "public enum LinkStrip {}\n"},
+                [f"{strip}: the link strip defines no stripped(_:)"],
+            ),
+            "a CardLayer without L14": (
+                {factory: good_factory.replace(", L13, L14\n", ", L13\n"), strip: good_strip},
+                [f"{factory}: CardLayer does not name L14"],
+            ),
+        }
+        for name, (files, wanted) in examined("planted trees", list(plants.items())):
+            with self.subTest(plant=name), tempfile.TemporaryDirectory() as scratch:
+                for relative, text in files.items():
+                    path = Path(scratch) / relative
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text(text, encoding="utf-8")
+                self.assertEqual(self.problems(Path(scratch)), wanted, name)
+
+
 # The iPhone's inline playback (SPEC-393 R10 and R12, ADR-407 D4): the configuration the factory
 # builds plays media inline, set inside the iPhone-and-iPad compile guard, because the property
 # exists only there and the package also builds for its tests' host.
