@@ -35,6 +35,8 @@
 //!   requests the native adapter sends for them, encoded (R3).
 //! - [`undo_answer`]: the rule an undo of the review's own last answer passes: its record, the
 //!   review row it names, the refusals and the state the card returns to (SPEC-371 R3).
+//! - [`undo_change`]: the rule an undo of the review's last bury or flag passes: the card's mark
+//!   it reads and the order of its refusals (SPEC-383 R5).
 //! - [`late`]: whether a review cannot count toward the streak for its card's due day: the
 //!   engine's day, and the rule that judges a card past its due day in it (SPEC-376 R1, R2).
 //!
@@ -59,3 +61,4 @@ pub mod retention;
 pub mod review;
 pub mod table;
 pub mod undo_answer;
+pub mod undo_change;

@@ -20,6 +20,30 @@ pub struct Recorded {
     /// The review-log row the answer wrote, by id.
     #[prost(int64, tag = "2")]
     pub review: i64,
+    /// What the record is of, as [`Kind`] numbers it (SPEC-383 R3). A record that carries no kind
+    /// decodes as an answer, so every record of an answer reads as it did before kinds.
+    #[prost(enumeration = "Kind", tag = "3")]
+    pub kind: i32,
+    /// The user flag a flag's change left on its card (SPEC-383 R3); 0 for an answer or a bury.
+    #[prost(uint32, tag = "4")]
+    pub flag: u32,
+    /// The card a bury's or a flag's change was made on (SPEC-383 R3); 0 for an answer, whose
+    /// review row names its card.
+    #[prost(int64, tag = "5")]
+    pub card: i64,
+}
+
+/// What a [`Recorded`] is of (SPEC-383 R3): the review's own last answer, or its last bury or
+/// flag. A number no variant names is refused at the door, never read as one of them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, prost::Enumeration)]
+#[repr(i32)]
+pub enum Kind {
+    /// An answer, judged by [`judge`] against its review row.
+    Answer = 0,
+    /// A bury of one card, judged by `undo_change::judge_change` against the card's mark.
+    Bury = 1,
+    /// A flag of one card, judged by `undo_change::judge_change` against the card's mark.
+    Flag = 2,
 }
 
 /// A review-log row, as the core's fixed read answers it: the card it reviewed and its sync mark.

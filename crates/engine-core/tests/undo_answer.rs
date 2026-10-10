@@ -138,6 +138,7 @@ fn answer_head(dispatcher: &Dispatcher) -> (i64, Recorded) {
         Recorded {
             status: Some(undo_status),
             review,
+            ..Recorded::default()
         },
     )
 }
@@ -170,6 +171,7 @@ fn admitted() -> (Recorded, UndoStatus, Review, i64) {
     let recorded = Recorded {
         status: Some(status("Answer Card", 4)),
         review: 1_700_000_000_000,
+        ..Recorded::default()
     };
     (
         recorded,

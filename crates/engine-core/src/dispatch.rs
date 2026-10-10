@@ -33,6 +33,9 @@ const NOTE_COUNT_SQL: &str = "select count() from notes";
 const NEWEST_REVIEW_SQL: &str = "select id, cid from revlog order by id desc limit 1";
 /// One review-log row's card and sync mark, by its id (SPEC-371 R4).
 const REVIEW_SQL: &str = "select cid, usn from revlog where id = ?";
+/// One card's queue, flags and sync mark, by its id: what an undo of a bury or a flag is judged
+/// against (SPEC-383 R4).
+const CARD_MARK_SQL: &str = "select queue, flags, usn from cards where id = ?";
 /// The engine's undo status, `CollectionService.GetUndoStatus`: its label and its last step, which
 /// an undo of the review's own last answer compares with its record (SPEC-371 R5).
 const GET_UNDO_STATUS: (u32, u32) = (3, 7);
@@ -148,6 +151,8 @@ pub enum Read {
     NewestReview,
     /// One review-log row's card and sync mark, by its id (SPEC-371 R4).
     Review(i64),
+    /// One card's queue, flags and sync mark, by its id (SPEC-383 R4).
+    CardMark(i64),
 }
 
 impl Dispatcher {
@@ -454,6 +459,7 @@ impl Dispatcher {
             Read::CardSnapshot(card) => (SNAPSHOT_SQL, vec![serde_json::Value::from(card)]),
             Read::NewestReview => (NEWEST_REVIEW_SQL, Vec::new()),
             Read::Review(review) => (REVIEW_SQL, vec![serde_json::Value::from(review)]),
+            Read::CardMark(card) => (CARD_MARK_SQL, vec![serde_json::Value::from(card)]),
         };
         let request = serde_json::json!({
             "kind": "query",
