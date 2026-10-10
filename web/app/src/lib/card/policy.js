@@ -24,3 +24,10 @@ export const FRAME_SANDBOX = '';
  */
 export const FRAME_POLICY =
   "default-src 'none'; img-src data:; media-src data:; font-src data:; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'";
+
+/**
+ * The host policy, the meta element `frameHost` writes in the host's head. The card document
+ * inherits it from its creation, before its first byte is parsed, so it holds an image-set
+ * candidate an engine fetches ahead of the card document's own policy meta.
+ */
+export const HOST_POLICY = '';

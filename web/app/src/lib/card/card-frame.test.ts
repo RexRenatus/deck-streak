@@ -49,4 +49,29 @@ describe('the card frame', () => {
     expect(frame.getAttributeNames().sort()).toEqual(['sandbox', 'srcdoc', 'title']);
     expect(frame.getAttribute('sandbox')).toBe('');
   });
+
+  // SPEC-407 R1; ADR-421 D2. The frame's document is a host: its one frame, with no sandbox of its
+  // own, holds the frame document, so the frame document inherits the host's policy at creation.
+  it("the card frame's document is the host, whose one frame holds the frame document", () => {
+    const shown = render(CardFrame, { html: CARD, css: CSS, title: 'The card' });
+    const [frame] = [...shown.container.querySelectorAll('iframe')];
+    const host = new DOMParser().parseFromString(frame.getAttribute('srcdoc') ?? '', 'text/html');
+    const inner = host.body.children;
+
+    expect(host.head.querySelector('meta[http-equiv="Content-Security-Policy"]')?.getAttribute('content')).toBe(
+      "img-src data:; script-src 'none'; object-src 'none'; base-uri 'none'"
+    );
+    expect(inner).toHaveLength(1);
+    expect(inner[0].tagName).toBe('IFRAME');
+    expect(inner[0].getAttributeNames().sort()).toEqual(['srcdoc', 'title']);
+    expect(inner[0].getAttribute('title')).toBe('The card');
+    expect(inner[0].getAttribute('srcdoc')?.startsWith(OPENING)).toBe(true);
+    expect(cardDocument(frame)).toBe(inner[0].getAttribute('srcdoc'));
+  });
 });
+
+/** The card document a card frame carries: the host's one frame's `srcdoc`, or null. */
+function cardDocument(frame: Element): string | null {
+  const host = new DOMParser().parseFromString(frame.getAttribute('srcdoc') ?? '', 'text/html');
+  return host.body.querySelector('iframe')?.getAttribute('srcdoc') ?? null;
+}
