@@ -115,6 +115,96 @@
       "reason": "parseSaved reads an undefined body as it reads null.",
       "evidence": "parseSaved answers null for a body that is null or whose typeof is not 'object', and typeof undefined is 'undefined', so a capture answer whose body is not JSON reads as naming no capture under either value, and capture answers unavailable.",
       "issue": "#56"
+    },
+    {
+      "file": "web/app/src/lib/engine/choice.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (typeof body !== 'object' || body === null) return UNKNOWN;",
+      "span": "typeof body !== 'object' || body === null",
+      "reason": "With the guard never taken, a null body throws at the destructure and a primitive body reads an undefined found, so each is still unknown.",
+      "evidence": "`snapshotOf` is module-private and its one caller is `readSnapshot`'s `return snapshotOf(JSON.parse(...))`, inside a `try` whose `catch` answers unknown. So a null body's TypeError becomes the unknown answer, and a number, string or boolean destructures to an undefined `found` and falls to it. Measured: `readSnapshot` of the original and of each of the four line-54 survivors read a fixed corpus of 310 bodies at status 200, the one status that reaches `snapshotOf` (JSON primitives, arrays, 286 objects over 11 `found` values, 13 `age_seconds` values and a pad field, unparsable text, `__proto__` keys and a body over the cap), and every answer was identical, while the control mutant `age >= 0` -> `age > 0` changed 2 of them.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/engine/choice.ts",
+      "mutant": "LogicalOperator: typeof body !== 'object' && body === null",
+      "anchor": "if (typeof body !== 'object' || body === null) return UNKNOWN;",
+      "reason": "Turned to a conjunction the guard is never true, so a null or primitive body reaches the destructure, and each is still read as unknown.",
+      "evidence": "`snapshotOf` is module-private and its one caller is `readSnapshot`'s `return snapshotOf(JSON.parse(...))`, inside a `try` whose `catch` answers unknown. No value is both not an object and null, so every body reaches the destructure, where a null one throws into that `catch` and a primitive one reads an undefined `found`. Measured: `readSnapshot` of the original and of each of the four line-54 survivors read a fixed corpus of 310 bodies at status 200, the one status that reaches `snapshotOf` (JSON primitives, arrays, 286 objects over 11 `found` values, 13 `age_seconds` values and a pad field, unparsable text, `__proto__` keys and a body over the cap), and every answer was identical, while the control mutant `age >= 0` -> `age > 0` changed 2 of them.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/engine/choice.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (typeof body !== 'object' || body === null) return UNKNOWN;",
+      "span": "typeof body !== 'object'",
+      "reason": "With the type test dropped, a number, string or boolean body reaches the destructure, which reads an undefined found from it, so it is still unknown.",
+      "evidence": "Destructuring a primitive boxes it, and no primitive's prototype carries `found` or `age_seconds`, so `found` is undefined and neither `found === false` nor `found === true` holds; null is still caught by the half that remains. Measured: `readSnapshot` of the original and of each of the four line-54 survivors read a fixed corpus of 310 bodies at status 200, the one status that reaches `snapshotOf` (JSON primitives, arrays, 286 objects over 11 `found` values, 13 `age_seconds` values and a pad field, unparsable text, `__proto__` keys and a body over the cap), and every answer was identical, while the control mutant `age >= 0` -> `age > 0` changed 2 of them.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/engine/choice.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "body === null) return UNKNOWN;",
+      "reason": "With the null test dropped, a null body throws at the destructure, and the reader's catch answers unknown for it as the guard did.",
+      "evidence": "`snapshotOf` is module-private and its one caller is `readSnapshot`'s `return snapshotOf(JSON.parse(...))`, inside a `try` whose `catch` answers unknown. `typeof null` is 'object', so null passes the type test and meets the destructure, whose TypeError that `catch` turns into the unknown answer. Measured: `readSnapshot` of the original and of each of the four line-54 survivors read a fixed corpus of 310 bodies at status 200, the one status that reaches `snapshotOf` (JSON primitives, arrays, 286 objects over 11 `found` values, 13 `age_seconds` values and a pad field, unparsable text, `__proto__` keys and a body over the cap), and every answer was identical, while the control mutant `age >= 0` -> `age > 0` changed 2 of them.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/sync/SyncScreen.svelte",
+      "mutant": "BooleanLiteral: true",
+      "anchor": "let working = $state(false);",
+      "reason": "The screen starts working either way: the open's act sets working to true as the screen mounts, before anything is drawn for the owner.",
+      "evidence": "`onMount` calls `act` as the screen mounts, and `act`'s first two statements set `working` to true and `failed` to false before its first `await`, so no read of the screen ever sees the initial value. Measured: 'before the worker answers, the screen says it is working and offers nothing' of `sync-screen.test.ts` reads the paragraphs straight after `render` returns, before any turn of the event loop, and finds the act's state already drawn.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/sync/SyncScreen.svelte",
+      "mutant": "BooleanLiteral: true",
+      "anchor": "let failed = $state(false);",
+      "reason": "The open's act sets failed back to false as the screen mounts, before anything is drawn, so a screen that starts failed never shows it.",
+      "evidence": "`onMount` calls `act` as the screen mounts, and `act`'s first two statements set `working` to true and `failed` to false before its first `await`, so no read of the screen ever sees the initial value. Measured: 'before the worker answers, the screen says it is working and offers nothing' of `sync-screen.test.ts` reads the paragraphs straight after `render` returns, before any turn of the event loop, and finds the act's state already drawn.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/sync/SyncScreen.svelte",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "{#if word !== null}{statusText(word)}{/if}",
+      "reason": "Before the Worker answers a word, the status line reads empty either way: the status text of no word is undefined, which draws as nothing.",
+      "evidence": "`statusText` in `status.ts` is a switch over the five status words with no default, so for null it returns undefined, and a Svelte text expression draws undefined as the empty string. 'before the worker answers, the screen says it is working and offers nothing' of `sync-screen.test.ts` asserts the status paragraph's text is empty while the word is null.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/sync/ChoiceScreen.svelte",
+      "mutant": "ArrowFunction: () => undefined",
+      "anchor": "const answer = await client.choiceCount().catch(() => null);",
+      "reason": "A failed count's answer becomes undefined in place of null, and the count reads both as no counts and no snapshot.",
+      "evidence": "Each answer is read only through optional chaining (`answer?.counts ?? null`, `answer?.snapshot ?? null`, `answer?.outcome`), which reads undefined and null alike, or is discarded unread; `choice-screen.test.ts` drives a failed count and a failed tap and asserts what each screen then shows.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/sync/ChoiceScreen.svelte",
+      "mutant": "ArrowFunction: () => undefined",
+      "anchor": "const answer = await client.choiceConfirm(direction).catch(() => null);",
+      "reason": "A failed tap's answer becomes undefined in place of null, and the tap reads both as neither written nor changed, so it says the choice replaced nothing.",
+      "evidence": "Each answer is read only through optional chaining (`answer?.counts ?? null`, `answer?.snapshot ?? null`, `answer?.outcome`), which reads undefined and null alike, or is discarded unread; `choice-screen.test.ts` drives a failed count and a failed tap and asserts what each screen then shows.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/sync/ChoiceScreen.svelte",
+      "mutant": "StringLiteral: \"\"",
+      "anchor": "phase = 'cancelled';",
+      "reason": "A cancelled choice's phase becomes the empty string, and nothing on the screen tells a cancelled phase from an unnamed one.",
+      "evidence": "The screen compares its phase only with 'counting', 'shown' and 'written' (the late count's `phase !== 'counting'` and the template's four tests), never with 'cancelled', so any other value draws nothing and refuses a late count alike; 'a cancel leaves nothing to tap, and a count answered after it changes nothing' of `choice-screen.test.ts` asserts both.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/sync/ChoiceScreen.svelte",
+      "mutant": "ArrowFunction: () => undefined",
+      "anchor": "await client.choiceCancel().catch(() => null);",
+      "reason": "A failed cancel's answer becomes undefined in place of null, and the cancel never reads it.",
+      "evidence": "The awaited value is discarded: `cancel` goes on to `ondone('cancelled')` whatever the Worker answered, so only the wait is kept, and it is the same wait either way.",
+      "issue": "#631"
     }
   ]
 }

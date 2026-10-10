@@ -1174,3 +1174,227 @@ fn a_copy_path_that_is_not_utf8_is_the_cores_own_refusal() {
         "nothing is written at a path the core refused"
     );
 }
+
+// SPEC-377 R4, A4 (ADR-388 D7): the core judges a choice path through the dispatcher's `Files`
+// port, the one an adapter installed, and never through the standard library directly.
+
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+
+use deck_streak_engine_core::files::{FailClosed, Files, Standard};
+
+/// A port that answers as `port` does and records each ask, in order, by its question and path.
+struct Recording<P> {
+    port: P,
+    asks: Mutex<Vec<String>>,
+}
+
+impl<P: Files> Recording<P> {
+    fn over(port: P) -> Arc<Self> {
+        Arc::new(Self {
+            port,
+            asks: Mutex::new(Vec::new()),
+        })
+    }
+
+    fn asks(&self) -> Vec<String> {
+        self.asks
+            .lock()
+            .expect("the record is not poisoned")
+            .clone()
+    }
+
+    fn record(&self, question: &str, path: &Path) {
+        self.asks
+            .lock()
+            .expect("the record is not poisoned")
+            .push(format!("{question} {}", path.display()));
+    }
+}
+
+impl<P: Files> Files for Recording<P> {
+    fn holds(&self, path: &Path) -> bool {
+        self.record("holds", path);
+        self.port.holds(path)
+    }
+
+    fn same(&self, open: &Path, path: &Path) -> bool {
+        self.record("same", path);
+        self.port.same(open, path)
+    }
+}
+
+/// A port that names one path the open collection and answers one word for every holds.
+struct Told {
+    open_as: PathBuf,
+    holds: bool,
+}
+
+impl Files for Told {
+    fn holds(&self, _path: &Path) -> bool {
+        self.holds
+    }
+
+    fn same(&self, _open: &Path, path: &Path) -> bool {
+        path == self.open_as
+    }
+}
+
+/// A download the owner confirmed over two empty sides, which needs no server to back up.
+fn confirmed_download() -> deck_streak_engine_core::full_sync::Confirmed {
+    Counted::show(Offer::of(false, true), IdSets::default(), IdSets::default())
+        .confirm(Direction::Download)
+        .expect("a download is offered")
+}
+
+/// An upload past its backup and snapshot check, which needs no server until its re-check.
+fn checked_upload(dispatcher: &Dispatcher, copy: &Path) -> Checked {
+    let confirmed = Counted::show(Offer::of(true, false), IdSets::default(), IdSets::default())
+        .confirm(Direction::Upload)
+        .expect("an upload is offered");
+    one_way::back_up(dispatcher, confirmed, copy, copy)
+        .expect("an upload's backup reads its copy")
+        .snapshot_found(&SnapshotAnswer { found: true })
+        .expect("the snapshot is found")
+}
+
+/// A key for an endpoint no server answers: a step that reached the network would fail there.
+fn unanswered() -> SyncAuth {
+    SyncAuth {
+        hkey: "unanswered".to_owned(),
+        endpoint: Some("http://127.0.0.1:9/".to_owned()),
+        io_timeout_secs: Some(1),
+    }
+}
+
+#[test]
+fn the_choice_paths_are_judged_by_the_installed_files_port() {
+    let device = support::synthetic("files-port-judged");
+    let dispatcher = open(&device);
+    let elsewhere = device.dir.join("elsewhere.anki2");
+    let port = Recording::over(Told {
+        open_as: elsewhere.clone(),
+        holds: false,
+    });
+    dispatcher.install_files(port.clone());
+
+    let backed_up = one_way::back_up(&dispatcher, confirmed_download(), &elsewhere, &elsewhere)
+        .map(drop)
+        .map_err(|refused| refused.reason);
+    let counted = one_way::count(
+        &dispatcher,
+        &full_sync_required(),
+        &unanswered(),
+        &elsewhere,
+    )
+    .map(drop);
+    let asked = format!("same {}", elsewhere.display());
+    assert_eq!(
+        (backed_up, counted, port.asks(), elsewhere.exists()),
+        (
+            Err(Reason::OpenCollection),
+            Err(Reason::OpenCollection),
+            vec![asked.clone(), asked],
+            false
+        ),
+        "a path the port names as the open collection is refused, and nothing is written there"
+    );
+}
+
+#[test]
+fn a_path_the_files_port_holds_is_read_for_rows() {
+    let full = support::synthetic("files-port-holds-full");
+    let full_before = held(&full.collection);
+    let device = support::synthetic("files-port-holds-device");
+    let dispatcher = open(&device);
+    let mut judged = Vec::new();
+    for holds in [true, false] {
+        let port = Recording::over(Told {
+            open_as: device.dir.join("never.anki2"),
+            holds,
+        });
+        dispatcher.install_files(port.clone());
+        let reason = one_way::back_up(
+            &dispatcher,
+            confirmed_download(),
+            &full.collection,
+            &full.collection,
+        )
+        .map(drop)
+        .map_err(|refused| match refused.reason {
+            Reason::Engine(_) => "the engine refused the write".to_owned(),
+            reason => format!("{reason:?}"),
+        });
+        judged.push((holds, reason, port.asks()));
+    }
+    let asks = vec![
+        format!("same {}", full.collection.display()),
+        format!("holds {}", full.collection.display()),
+    ];
+    assert_eq!(
+        judged,
+        [
+            (true, Err("HoldsRows".to_owned()), asks.clone()),
+            (false, Err("the engine refused the write".to_owned()), asks)
+        ],
+        "the port's holds decides whether the file is read for rows"
+    );
+    assert_eq!(rows(held(&full.collection)), rows(full_before));
+}
+
+#[test]
+fn the_open_collection_by_another_spelling_is_refused() {
+    let device = support::synthetic("files-port-spelling");
+    let dispatcher = open(&device);
+    let spelled = device
+        .dir
+        .join("collection.media")
+        .join("..")
+        .join("collection.anki2");
+    assert!(
+        Standard.same(&device.collection, &spelled) && Standard.holds(&spelled),
+        "the standard port finds the open collection by another spelling"
+    );
+    let port = Recording::over(Standard);
+    dispatcher.install_files(port.clone());
+    let refused = one_way::back_up(&dispatcher, confirmed_download(), &spelled, &spelled)
+        .map(drop)
+        .map_err(|refused| refused.reason);
+    assert_eq!(
+        (refused, port.asks()),
+        (
+            Err(Reason::OpenCollection),
+            vec![format!("same {}", spelled.display())]
+        )
+    );
+}
+
+#[test]
+fn an_uninstalled_browser_port_refuses_every_choice_path() {
+    assert!(
+        FailClosed.holds(Path::new("/any.anki2"))
+            && FailClosed.same(Path::new("/open.anki2"), Path::new("/any.anki2")),
+        "the fail-closed port holds every path and names each the open collection"
+    );
+    let device = support::synthetic("files-port-fail-closed");
+    let dispatcher = open(&device);
+    let copy = device.dir.join("copy.anki2");
+    let checked = checked_upload(&dispatcher, &copy);
+    dispatcher.install_files(Arc::new(FailClosed));
+    let fresh = device.dir.join("fresh.anki2");
+
+    let counted =
+        one_way::count(&dispatcher, &full_sync_required(), &unanswered(), &fresh).map(drop);
+    let backed_up = one_way::back_up(&dispatcher, confirmed_download(), &fresh, &fresh)
+        .map(drop)
+        .map_err(|refused| refused.reason);
+    let rechecked = one_way::recheck(&dispatcher, checked, &unanswered(), &fresh)
+        .map(drop)
+        .map_err(|refused| refused.reason);
+    let refusals = support::examined("choice path(s) judged", vec![counted, backed_up, rechecked]);
+    assert_eq!(
+        (refusals, fresh.exists()),
+        (vec![Err(Reason::OpenCollection); 3], false),
+        "every choice path is refused before anything is written"
+    );
+}

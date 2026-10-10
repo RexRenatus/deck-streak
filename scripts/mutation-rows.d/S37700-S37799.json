@@ -1,0 +1,114 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S37700-THE-STANDARD-PORT-HOLDS-NOTHING",
+        "engine-core",
+        "src/files.rs",
+        "path.exists()",
+        "path.exists() && false",
+        "one_way::a_server_copy_is_fetched_only_into_an_empty_file",
+        "the standard files port says a path holds a file when it exists; answering that nothing is held, a fetch would overwrite a backup that holds rows (SPEC-377 R4, A4)"
+      ],
+      [
+        "S37701-THE-STANDARD-PORT-KNOWS-ONE-SPELLING",
+        "engine-core",
+        "src/files.rs",
+        "|| matches!(",
+        "|| false && matches!(",
+        "one_way::the_open_collection_by_another_spelling_is_refused",
+        "the standard files port compares two paths by their canonical form too; comparing the spelling alone, the open collection named another way would be taken as a choice file (SPEC-377 R4, A4)"
+      ],
+      [
+        "S37702-THE-BROWSER-DEFAULT-ADMITS-A-PATH",
+        "engine-core",
+        "src/files.rs",
+        "fn same(&self, _open: &Path, _path: &Path) -> bool {\n        true",
+        "fn same(&self, _open: &Path, _path: &Path) -> bool {\n        false",
+        "one_way::an_uninstalled_browser_port_refuses_every_choice_path",
+        "the browser's default port refuses every choice path as the open collection until the web engine installs its own; admitting one, a choice could write over a file it cannot see (SPEC-377 R4, A4)"
+      ],
+      [
+        "S37703-THE-POOL-HOLDS-AN-UNLISTED-NAME",
+        "web-engine",
+        "src/files.rs",
+        "listed.iter().any(|file| file == name)",
+        "listed.iter().any(|file| file == name) || true",
+        "files::the_pool_holds_only_the_names_it_lists",
+        "the pool holds a name only when it lists it; holding every name, an empty choice file would be read as one that holds rows (SPEC-377 R4, A5)"
+      ],
+      [
+        "S37704-THE-POOL-HOLDS-NOTHING",
+        "web-engine",
+        "src/files.rs",
+        "listed.iter().any(|file| file == name)",
+        "listed.iter().any(|file| file == name) && false",
+        "files::the_pool_holds_only_the_names_it_lists",
+        "the pool holds every name it lists; holding none, a fetch would overwrite a backup that holds rows (SPEC-377 R4, A5)"
+      ],
+      [
+        "S37705-THE-POOL-NEVER-FINDS-THE-COLLECTION",
+        "web-engine",
+        "src/files.rs",
+        "open == name",
+        "open == name && false",
+        "files::the_pool_finds_the_collection_by_its_one_name",
+        "the pool names the open collection by its one name; never finding it, a choice could take the collection as its file (SPEC-377 R4, A5)"
+      ],
+      [
+        "S37706-A-TAKEN-NAME-IS-REUSED",
+        "web-engine",
+        "src/files.rs",
+        ".find(|name| !(name == collection || holds(listed, name)))",
+        ".find(|name| !(name == collection || false && holds(listed, name)))",
+        "files::a_choice_file_is_never_a_name_the_pool_holds",
+        "a new choice file's name is never one the pool already lists; reusing one, a backup would be written over (SPEC-377 R5, A5)"
+      ],
+      [
+        "S37707-A-CHOICE-FILE-IS-THE-COLLECTION",
+        "web-engine",
+        "src/files.rs",
+        ".find(|name| !(name == collection || holds(listed, name)))",
+        ".find(|name| !(false && name == collection || holds(listed, name)))",
+        "files::a_choice_file_is_never_the_collection",
+        "a new choice file's name is never the collection's; naming it so, a choice would write over the open collection (SPEC-377 R5, A5)"
+      ],
+      [
+        "S37708-THE-POOL-PORT-IS-NEVER-INSTALLED",
+        "web-engine",
+        "src/wasm.rs",
+        "dispatcher.install_files(port);",
+        "let _ = &port;",
+        "boundary::the_web_engine_installs_the_pool_as_the_cores_files_port",
+        "the web engine installs the pool as the core's files port at start; never installed, the browser's default refuses every choice (SPEC-377 R4, A6)"
+      ],
+      [
+        "S37709-AN-UPLOAD-FINDS-A-SNAPSHOT-ALWAYS",
+        "web-engine",
+        "src/wasm.rs",
+        "snapshot_found(&SnapshotAnswer { found })",
+        "snapshot_found(&SnapshotAnswer { found: found || true })",
+        "boundary::the_snapshot_answer_reaches_the_core_as_the_worker_read_it",
+        "an upload's snapshot answer is the one the Worker read; answering found always, an upload would replace the server's copy with no snapshot of it (SPEC-377 R5, R6, A6)"
+      ],
+      [
+        "S37710-A-CANCEL-KEEPS-THE-STAGE",
+        "web-engine",
+        "src/wasm.rs",
+        "*stage.borrow_mut() = None;",
+        "let _ = &stage;",
+        "boundary::a_cancel_drops_the_held_stage",
+        "a cancel drops the stage held between the owner's taps; kept, a later confirm would write counts the owner cancelled (SPEC-377 R5, A6)"
+      ],
+      [
+        "S37711-A-CHOICE-FILE-IS-NAMED-UNRESERVED",
+        "web-engine",
+        "src/wasm.rs",
+        "pool.reserve_minimum_capacity(pool.count() + 3).await.map_err(storage)?;",
+        "let _ = (&pool, storage(\"the pool is not reserved\"));",
+        "boundary::each_choice_file_is_reserved_before_it_is_named",
+        "the pool is reserved before each choice file is named; unreserved, a backup or a server copy could find no free file in the pool (SPEC-377 R5, A6)"
+      ]
+    ]
+  }
+}

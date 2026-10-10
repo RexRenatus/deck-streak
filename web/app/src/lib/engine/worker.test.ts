@@ -517,4 +517,86 @@ describe('the Worker entry', () => {
       [`${ORIGIN}/api/sync/minimum-client`, 'omit', 'manual']
     ]);
   });
+
+  it("the choice reads the snapshot through the worker's own fetch and sends only to the origin's sync route", async () => {
+    // SPEC-377 R5, R6: the choice takes its key from the credential operations' store, reads the
+    // snapshot answer at the Worker's own origin, and hands the engine the origin's sync route
+    const { start } = await worker();
+    const answered: unknown[] = [];
+    const snapshots: unknown[] = [];
+    let heard = () => {};
+    const replies = (count: number) =>
+      new Promise<void>((resolve) => {
+        heard = () => answered.length >= count && resolve();
+        heard();
+      });
+    const scope = Object.assign(new FakeScope(), {
+      postMessage: (reply: unknown) => {
+        answered.push(reply);
+        heard();
+      },
+      DedicatedWorkerGlobalScope: class {},
+      location: { href: `${ORIGIN}/assets/worker-abc.js`, origin: ORIGIN },
+      navigator: {
+        locks: { request: async (_name: string, _options: object, grant: (lock: object) => unknown) => grant({}) },
+        storage: { getDirectory: async () => ({}) }
+      },
+      FileSystemFileHandle: class {
+        createSyncAccessHandle() {}
+      },
+      indexedDB: new IDBFactory(),
+      crypto: fixedCrypto,
+      fetch: async (input: string, init: RequestInit) => {
+        if (input !== `${ORIGIN}/api/sync/snapshot`) return new ReleaseService().fetch(input, init);
+        snapshots.push([input, init.credentials, init.redirect]);
+        return new Response('{"found":true,"age_seconds":30}', { status: 200 });
+      },
+      BroadcastChannel: function (name: string) {
+        return new Bus().join(name);
+      }
+    });
+    const hostKey = sentinel('host', 'key', 'worker');
+    const sent: unknown[][] = [];
+    const counts = { upload: { reviews: 1, cards: 1, notes: 1 }, download: null };
+    const { module } = bindings();
+    const engine = Object.assign(module, standIn(), {
+      install_storage: async () => 0,
+      init: () => undefined,
+      open: () => JSON.stringify({ existed: false, notes: 0 }),
+      sync_login: (endpoint: string, user: string, password: string) => {
+        sent.push(['login', endpoint, user, password]);
+        return hostKey;
+      },
+      full_sync_count: async (key: string, endpoint: string, required: number) => {
+        sent.push(['count', key, endpoint, required]);
+        return JSON.stringify(counts);
+      },
+      full_sync_confirm: async (direction: number, key: string, endpoint: string, found: boolean) => {
+        sent.push(['confirm', direction, key, endpoint, found]);
+        return JSON.stringify({ outcome: 'written' });
+      },
+      handshake: () => undefined
+    });
+    expect(start(scope, async () => engine)).toBe(true);
+    await scope.send({ id: 1, op: 'open' });
+    await scope.send({ id: 2, op: 'sync-login', user: 'a user', password: 'a password' });
+    await scope.send({ id: 3, op: 'choice-count' });
+    await scope.send({ id: 4, op: 'choice-confirm', direction: 'upload' });
+    await replies(4);
+    expect(answered).toEqual([
+      { id: 1, ok: true, value: { existed: false, notes: 0 } },
+      { id: 2, ok: true, value: 'held' },
+      { id: 3, ok: true, value: { status: 'held', counts, snapshot: { found: true, age: 30 } } },
+      { id: 4, ok: true, value: { status: 'held', outcome: 'written' } }
+    ]);
+    expect(sent).toEqual([
+      ['login', `${ORIGIN}/anki-sync/`, 'a user', 'a password'],
+      ['count', hostKey, `${ORIGIN}/anki-sync/`, 0],
+      ['confirm', 0, hostKey, `${ORIGIN}/anki-sync/`, true]
+    ]);
+    expect(snapshots).toEqual([
+      [`${ORIGIN}/api/sync/snapshot`, 'same-origin', 'manual'],
+      [`${ORIGIN}/api/sync/snapshot`, 'same-origin', 'manual']
+    ]);
+  });
 });

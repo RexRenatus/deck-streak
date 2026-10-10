@@ -77,7 +77,8 @@ describe('the startapp token map', () => {
   // remote harness is opened by its path in a browser tab, and no token opens it. SPEC-350 R6, R7:
   // the deck list and the review are opened by their paths, and no token opens either.
   // SPEC-350 R18: the mapping screen is opened by its path, from the review.
-  const BY_PATH = ['/progress', '/law', '/remote', '/study', '/study/review', '/study/mapping'];
+  // SPEC-377 R8: the sync screen is opened by its path, and no token opens it.
+  const BY_PATH = ['/progress', '/law', '/remote', '/study', '/study/review', '/study/mapping', '/sync'];
 
   it('every destination is a screen of the route table', () => {
     const tokens = ['today', 'about', 'insights', 'score', 'level', 'streak', 'wallet', 'badges', 'records', 'capture'];
