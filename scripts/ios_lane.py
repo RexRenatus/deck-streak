@@ -58,6 +58,8 @@ SEMVER_TAG = re.compile(r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
 # The form `CFBundleShortVersionString` takes: three dot-separated integers.
 MARKETING_VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+")
 SHALLOW = "the checkout is shallow; the build number needs the full history"
+# The actor a workflow's own token runs as: a release run it started is refused (SPEC-405 R4).
+WORKFLOW_TOKEN = "github-actions[bot]"
 # The six credential parts, each by the variable its step reads it from and the role a refusal
 # names it by, in the order the preflight lists them.
 ROLES = (
@@ -109,8 +111,12 @@ def plan(lane):
             )
         if ref != "refs/heads/dev":
             raise Refused(f"the internal lane builds refs/heads/dev only, not {ref}")
-    elif event != "push" or os.environ.get("GITHUB_REF_TYPE") != "tag":
-        raise Refused(f"the release lane runs on a tag push only, not on {event} of {ref}")
+    elif event not in ("push", "workflow_dispatch") or os.environ.get("GITHUB_REF_TYPE") != "tag":
+        raise Refused(
+            f"the release lane runs on a tag's push or dispatch only, not on {event} of {ref}"
+        )
+    elif os.environ.get("GITHUB_ACTOR") == WORKFLOW_TOKEN:
+        raise Refused(f"the release lane takes no run that {WORKFLOW_TOKEN} started")
     if git("rev-parse", "--is-shallow-repository").stdout.strip() != "false":
         raise Refused(SHALLOW)
     with open("Cargo.toml", "rb") as manifest:
