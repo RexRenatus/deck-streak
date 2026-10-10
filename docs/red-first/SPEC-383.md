@@ -99,3 +99,19 @@ A25: green at 3e483a8c
 A26: green at 3e483a8c
 A28: green at 3e483a8c
 ```
+
+## Test-file edits between a red and its green
+
+Two commits of the pull request change a test file between a criterion's red and its green. Neither
+removes, skips, filters or narrows an assertion.
+
+- `0367758` (`test(undo): anchor the slot census off the gesture names`) edits A20's census in
+  `crates/web-engine/tests/boundary.rs`, after A20's red and before its green. It replaces two
+  anchor texts that named a gesture, `.run_answer(` for `rate` and `.run_exempt(` for `undo`, with
+  two statements that name none (the statement that forgets the kept card, and the arm that reads
+  the core's refusal), as two new constants. The census population, its examined count, its
+  behaviours and its planted cases are unchanged.
+- `3e483a8` (`feat(study): undo the review's last bury or flag`) is A21's green commit, and it also
+  adds 60 lines and removes none in `web/app/tests-engine/engine.spec.ts`: the browser suite's
+  bury and flag undo cases that SPEC-383 C1 names. They are added tests, and no test the red or the
+  green runs is changed by them.
