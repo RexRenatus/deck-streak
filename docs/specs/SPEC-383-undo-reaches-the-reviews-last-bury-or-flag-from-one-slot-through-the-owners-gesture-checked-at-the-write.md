@@ -360,7 +360,7 @@ ones this delivery changes.
 - **New actions:** `Bury(c)` and `Flag(c)` begin a step, set `mark` and clear `record`; `Answer(c)`
   also clears `mark`; `Forget` (`open`, `close`) clears both; `MarkOffer`, `MarkConfirm(o)` and
   `MarkStaleConfirm(o)` mirror the answer's offer and confirmation; a restore at the write judges
-  by the existing `Checked` switch. Every existing action leaves the new variables unchanged.
+  by the existing `Checked` switch. Every other existing action leaves the new variables unchanged.
 - **New properties,** each `ramp=report`: `AnUndoRestoresOnlyTheOfferedChange` (whatever is
   restored is the bury or flag a confirmed offer named, on its own card, unsynced, with no step
   begun after it) and `ARestoreRunsOnlyOnAConfirm` (nothing is restored that no confirmation of a
