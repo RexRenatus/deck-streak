@@ -78,3 +78,14 @@ Between the greens at 530f6478 and cf1acd50, the branch took the base branch's c
 one merge (f4125e1a), re-derived the three factory lines a schematic cites (7cdcaa50), and added two
 unit tests to the native adapter's face module for a mutant the in-diff run missed (cf1acd50). None
 of the three changes an assertion of any criterion's test.
+
+The pull request's checks at cf1acd50 scored one in-diff mutant MEMORY-CAP:
+`crates/ffi/src/face.rs:110:30`, `+` replaced by `-` in plays_inline, where each pass of the scan
+found the next start as the match's index plus the length of the tag's name. Commit
+33757f5821d2a668ed6691b7369ce39136b38035, "fix(ffi): advance the inline video scan by slicing at
+each match", rewrites that loop so every pass splits the rest of the text at the match and then at
+the end of the tag's name, with no index arithmetic, so that mutant no longer exists; the in-diff
+run over the branch's own changes then read every mutant in the module caught or unviable. No
+criterion's assertion changed and no test was removed: the native adapter's whole suite and the
+review fixture's Rust side read green before and after it, and at that commit the whole suites
+pass with every binary run, the core's 117 tests, the native adapter's 45 and the web engine's 37.
