@@ -37,17 +37,25 @@ Each line's command is the criterion's line in SPEC-380 section 3's fence, run a
 
 ```red-first
 A1: red at 5011b283: panicked at crates/engine-core/tests/occlusion.rs:228:5: a question holding the engine's mask layer and no shape is not marked: <div id="image-occlusion-container"> <img src="data:image/png;base64,iVBORw0KGgo="> <canvas id="image-occlusion-canvas"></canvas> </div>
+A1: green at 7e8df3d8
 A2: red at 5011b283: panicked at crates/engine-core/tests/occlusion.rs:236:5: a question holding an occlusion shape and no mask layer is not marked: <div style="display: none"><div class="cloze" data-ordinal="1" data-shape="rect" data-left=".2" data-top=".3" data-width=".4" data-height=".1" ></div></div>
+A2: green at 7e8df3d8
 A3: not red: the stub answers false; it guards the arms against a plain question, a text cloze, an image and the word occlusion in text
 A4: red at 5011b283: panicked at crates/engine-core/tests/occlusion.rs:269:9: assertion `left == right` failed: the engine's image occlusion card is not withheld on its Question side; left: Face { text: "<div></div> ... <canvas id=\"image-occlusion-canvas\"></canvas> ...", css: "#image-occlusion-canvas { ... }", autoplay: [Speech { text: "the parts of a cell", language: "en-US", rate: 0.5 }], replay: [Speech { text: "the parts of a cell", language: "en-US", rate: 0.5 }], omitted: [], withheld: false }, right: Face { text: "", css: "", autoplay: [], replay: [], omitted: [], withheld: true }
+A4: green at 7e8df3d8
 A5: not red: the base shows a basic and a cloze card; it guards the unchanged faces
 A6: red at 35e22a6f: panicked at crates/web-engine/tests/occlusion_view.rs:174:5: assertion `left == right` failed: the shown card's view does not carry the core's withheld answer, or keeps a withheld text; left: ["current_card's view holds 0 `withheld` key(s), not one", ... seven problems in all], right: []
+A6: green at 7e8df3d8
 A7: red at 5011b283: panicked at crates/ffi/tests/occlusion.rs:116:9: assertion `left == right` failed: the occlusion card's face (answer: false) is not withheld with the line; left: CardFace { document: "<!DOCTYPE html>... <img src=\"data:image/png;base64,iVBORw0KGgo=\"> <canvas id=\"image-occlusion-canvas\"></canvas> ...", autoplay: [Speech { text: "the parts of a cell", ... }], ..., withheld: false }, right: CardFace { document: "<!DOCTYPE html>...<body class=\"card\">This image occlusion card cannot be shown here, because this app does not draw its masks. You can still bury or flag it.</body></html>", autoplay: [], replay: [], omitted: [], withheld: true }
+A7: green at 7e8df3d8
 A8: not red: the base shows the review fixture's text card; it guards the unchanged face
 A9: red at df0b38c2: AssertionError: expected { status: '', frame: { …(2) }, …(1) } to deeply equal { …(3) } (occlusion-guard.test.ts:160:82)
+A9: green at 7e8df3d8
 A10: red at df0b38c2: AssertionError: a withheld card offers a reveal or a grade: expected [ 'show-answer', 'undo', 'bury', …(1) ] to deeply equal [ 'undo', 'bury', 'flag' ] (occlusion-guard.test.ts:178:75)
+A10: green at 7e8df3d8
 A11: not red: the base buries a shown question the same way; it guards the way on
 A12: red at 35e22a6f: AssertionError: expected { …(7) } to deeply equal { Object (en, es, ...) }: en, es, fr, ja, ko, zh-Hans and zh-Hant each read "<locale> lacks study_card_withheld" (occlusion-guard.test.ts:61)
+A12: green at 7e8df3d8
 A15: not red: the base keeps every Swift budget; it guards R9
 ```
 
@@ -73,3 +81,14 @@ A15: not red: the base keeps every Swift budget; it guards R9
   `ios/AppTests/ReviewSessionTests.swift` takes the deck's name, `Review` unless a test names
   another, so every existing caller opens the deck it opened before; A13 and A14 open the second
   collection's deck `Occlusion`.
+- **A9's and A10's reds were written two commits late.** The green commit, 7e8df3d8, came right
+  after their test commit, df0b38c2, and did not write them; the commit after the green, 7aca2a59,
+  does. Each quotes the run at df0b38c2, and the continuous integration's web job on the first push
+  read the same two failing lines at the same test lines.
+- **One test file changed between red and green.** `web/app/src/lib/study/refusal.test.ts` gained
+  one line in the green commit, `withheld: 'study_card_withheld'`, in its written-out register of
+  the status keys, because the green adds that status; none of its assertions was removed or
+  narrowed.
+- **Each local green names 7e8df3d8,** the head the continuous integration ran on the second push.
+  The tree each local fence line was run on holds the same code as 7e8df3d8 and differs from it
+  only in documents.
