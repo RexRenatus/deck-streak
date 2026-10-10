@@ -170,3 +170,87 @@ flowchart LR
 
 It compiles neither the engine nor protoc, so it needs neither. `ci.yml` changes no job: the
 probes enter the `test` stage, and the crate enters every stage that runs over the workspace.
+
+## 6. The replay into stock-field values (SPEC-386, ADR-400)
+
+Read at dev `e7ecf10d`. Kind: data flow. The caller passes a deck set and the preset's terms; the engine core reads the
+review rows of those decks' cards by one fixed statement, the isolated crate selects and replays them at its pinned
+revision, and the result is stock-field values. Nothing is written: the write is the owner's tap on one preset, made by
+the preset screen (#611).
+
+```mermaid
+flowchart TD
+  caller["caller: deck set, parameters, desired retention, maximum interval"] --> rp["engine core: Dispatcher::replay, replay.rs"]
+  rp --> dayread["engine day: one engine call, late.rs EngineDay"]
+  rp --> sqlread["one fixed statement through the database door, dispatch.rs"]
+  sqlread --> rows["review rows of cards whose home deck is in the set, with each card type, by card and id"]
+  rows --> sel["fsrs7 convert: cut at the last reset, drop kinds 4 and 5 and ease 0, first delta 0"]
+  sel --> hist["one history per card, with its last kept id"]
+  hist --> model["fsrs7 replay: the pinned revision's model, defaults or a 34-value vector"]
+  model --> st["fsrs7 stock: stability at 0.9, difficulty clamped 1 to 10, interval at the retention"]
+  st --> sched["engine core: review type gets ivl and due, other types stability and difficulty only"]
+  dayread --> sched
+  sched --> out["result per card, returned and never written"]
+  out -.-> later["the switch writes it, the owner's tap on one preset, issue 611"]
+  out -.-> testonly["tests only: the engine's own card update, then a sync round trip, A17"]
+```
+
+The pin: the crate's one dependency is the upstream scheduler at the revision the workspace manifest pins
+(`Cargo.toml:141`), held by `scripts/tests/test_fsrs7_pin.py:121`. The stock stability and every interval come from that
+revision's own interval function, cited by the build at the pin by file and line.
+
+## 7. The refusal paths
+
+Kind: state machine, per card and per call.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Called
+  Called --> RefusedParams: parameter count is neither 0 nor 34
+  Called --> RefusedRead: the database door refuses the statement
+  Called --> EmptyResult: the deck set is empty
+  Called --> Rows: one statement read
+  Rows --> NotRead: the card was deleted, so its rows join no card
+  Rows --> Cut: rows of a card in the set
+  Cut --> NoEntry: no kept review, a new card or all rows dropped or reset
+  Cut --> Replayed: at least one kept review
+  Replayed --> WithSchedule: card of the review type
+  Replayed --> StabilityOnly: card of another type
+  RefusedParams --> [*]
+  RefusedRead --> [*]
+  EmptyResult --> [*]
+  NotRead --> [*]
+  NoEntry --> [*]
+  WithSchedule --> [*]
+  StabilityOnly --> [*]
+```
+
+- **No history.** A card with no kept review, a new card or one whose rows were all dropped or cut by a reset, gets no
+  entry; its stock fields are not touched by anyone (A13).
+- **An undone review.** The engine's undo of an answer removes the answer's review row (SPEC-342's undo measurement),
+  so the statement never reads it and the replay equals the replay before the answer (A20).
+- **A deleted card.** Its review rows stay in the log, join no card and are never read (A12).
+- **A refusal.** A parameter vector of the wrong length is refused by the pinned revision's model; a refused statement
+  returns the core's refusal; neither returns a partial result.
+
+## 8. The one seam
+
+Kind: component. Edges are `[dependencies]` only.
+
+```mermaid
+flowchart LR
+  ffi["deck-streak-ffi, native adapter"] --> core["deck-streak-engine-core"]
+  web["deck-streak-web-engine, browser only"] --> core
+  core --> engine["the engine"]
+  core --> seam["engine-core src replay.rs, the one file naming the crate"]
+  seam --> fsrs7["deck-streak-fsrs7"]
+  fsrs7 --> pinned["upstream scheduler at the pinned revision"]
+```
+
+- The census `only_the_replay_module_names_the_fsrs7_crate` (A9) refuses a second engine-core file naming the crate,
+  with a planted control; `no_client_adapter_names_the_replay` (A22) refuses a native-adapter or web-engine source that
+  names the replay.
+- `docs/CONTEXT-MAP.md`'s engine-core line reads `depends on: fsrs7`, held by
+  `the_context_map_declares_the_core_and_its_two_edges` (A10).
+- The read is one statement, so it adds no interleaving: the native engine object is shared without a lock of its own
+  (`crates/ffi/src/engine.rs:69-70`), and the engine runs each statement under its own collection lock.

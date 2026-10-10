@@ -279,3 +279,12 @@ ADR-382 amends D2, D4 and D6. The rest of each stands.
 - **D6 (the first exempt table, `:164-166`).** The table holds eight rows. The eighth, Undo,
   reverts only the review's own last answer while it has not synced, and is checked at the write
   (ADR-382 D2, D3). The undo after a sync this record anticipated (`:192`) is still unbuilt.
+
+## Amendment (SPEC-386, ADR-400): the core's one workspace edge
+
+D4's sentence that the core depends on no crate of this workspace now has one exception, `deck-streak-fsrs7`, reached
+through `crates/engine-core/src/replay.rs` alone and held by the graph census
+(`only_the_replay_module_names_the_fsrs7_crate`). The two client adapters remain the core's only dependents.
+
+Chosen against:
+- Each client adapter depending on the FSRS-7 crate: two joins of one rule, and the web join cannot be tested natively against the engine.
