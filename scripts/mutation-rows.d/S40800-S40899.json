@@ -1,0 +1,33 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S40801-PROGRESS-MASTERY-ABOUT-LINE",
+        "bot",
+        "src/progress_commands.rs",
+        "        lines.push(format!(\"<i>{}</i>\", escape_html(MASTERY_ABOUT)));",
+        "        let _ = MASTERY_ABOUT;",
+        "progress_commands::the_progress_reply_ends_with_the_course_mastery_description",
+        "the progress reply lists its courses and stops, so the figure is shown with no word of what it measures; the reply must end with the course sentence (SPEC-408 R3, A4)"
+      ],
+      [
+        "S40802-PROGRESS-MASTERY-ABOUT-TEXT",
+        "bot",
+        "src/progress_commands.rs",
+        "\"Mastery is an estimate from your reviews",
+        "\"Mastery is a measure from your reviews",
+        "progress_commands::the_progress_reply_ends_with_the_course_mastery_description",
+        "the bot's sentence stops equalling the English message file's progress_mastery_about, so the two surfaces say different things about one figure (SPEC-408 R8, A4)"
+      ],
+      [
+        "S40803-PROGRESS-MASTERY-ABOUT-ITALIC",
+        "bot",
+        "src/progress_commands.rs",
+        "format!(\"<i>{}</i>\", escape_html(MASTERY_ABOUT))",
+        "format!(\"<b>{}</b>\", escape_html(MASTERY_ABOUT))",
+        "progress_commands::the_progress_reply_ends_with_the_course_mastery_description",
+        "the closing line is set in bold, not italics, so it reads as part of a course line and not as a note on the figure (SPEC-408 R3, A4)"
+      ]
+    ]
+  }
+}
