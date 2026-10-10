@@ -246,6 +246,7 @@ stubs. `docs/red-first/SPEC-381.md` quotes each red and each green.
 | `docs/decisions/ADR-392-the-mark-lives-on-the-server-and-one-deck-gate-stands-before-every-ai-runner.md` | docs | added |
 | `docs/red-first/SPEC-381.md` | docs | added |
 | `scripts/mutation-rows.d/S38100-S38199.json` | scripts | added |
+| `scripts/mutation-equivalent.d/miniapp.json` | scripts | changed: one equivalence record for the new `api.ts` survivor |
 | `changelog.d/sensitive-deck-381.md` | docs | added |
 
 ## 5. What this does NOT cover
