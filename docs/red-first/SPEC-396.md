@@ -54,8 +54,11 @@ instances on its standard input, which each command it ran inherited, so a comma
 input, as the test's stand-in for the service manager does, took the rest of the list with the
 first invocation id it was asked for. 2b737847c9802fad0a35533c20cbeb5c09b236c8 reads the list on
 descriptor 3 and changes no test; A6's one green line names it, and neither the test nor the script
-changes after it in this delivery. The replay is quoted here, below the criteria, so that no
-criterion is recorded twice.
+changes after it in this delivery. Between A6's red and that green, one more commit changes a test
+module: 220e93be5b4f9258ff161067ec8107716c175e22 moves `scripts/tests/test_formal_config.py`'s
+`EXPECTED` with `config/formal.json`, the per-run cap from 300 to 480 and a `tla/SecondRoute` budget
+of 480 added, and removes no assertion; A6's module is not among the files it changes. The replay is
+quoted here, below the criteria, so that no criterion is recorded twice.
 
 ```text
 test_alert_unit.ASecondRouteTellsTheOwner.test_each_failed_invocation_is_reported_once: red at cf4833e5e8e533b230bea20defccd2852e9c0574: AssertionError: Lists differ: [] != ['failed deck-streak-alert@deck-streak-uni[51 chars]f90']
