@@ -8,8 +8,9 @@ commit, the `hygiene` job's `python` stage log (run 37993302270, job 11403277774
 `check-stage-logs-hygiene`, `python.log`, which reads `FAILED (failures=10)` over 1105 tests). Each
 of the nine failed by its own assertion, never by an error. The second route's script, unit, timer,
 census rows, host budget, rail contract, README, schematic citations and model were committed next
-(50d4d1912814d6c92046956db720c408e36c84ee), and the nine are green from that commit on, read in
-CI on the delivery's second push.
+(50d4d1912814d6c92046956db720c408e36c84ee), and eight of the nine are green from that commit on,
+read in CI on the delivery's second push. A6 is green from the commit its line names, which reads
+the service manager's list on a descriptor of its own (the note below the criteria).
 
 ```red-first
 A1: red at f63c60dbcd2f5ed50c5272403c95b63fef2c22d5: AssertionError: 0 != 2 : one report, then one check-in
@@ -26,7 +27,7 @@ A2: green at 50d4d1912814d6c92046956db720c408e36c84ee
 A3: green at 50d4d1912814d6c92046956db720c408e36c84ee
 A4: green at 50d4d1912814d6c92046956db720c408e36c84ee
 A5: green at 50d4d1912814d6c92046956db720c408e36c84ee
-A6: green at 50d4d1912814d6c92046956db720c408e36c84ee
+A6: green at 2b737847c9802fad0a35533c20cbeb5c09b236c8
 A7: green at 50d4d1912814d6c92046956db720c408e36c84ee
 A8: green at 50d4d1912814d6c92046956db720c408e36c84ee
 A9: green at 50d4d1912814d6c92046956db720c408e36c84ee
@@ -41,4 +42,21 @@ criterion is recorded twice.
 ```text
 test_threat_model.TheModelHolds.test_every_control_cites_a_line_that_holds: red at f63c60dbcd2f5ed50c5272403c95b63fef2c22d5: AssertionError: Lists differ: 7 findings, the first 'docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md:90: T3: quote not on a cited line: scripts/tests/test_deploy_templates.py:2049:def test_every_service_carries_the_hardening_r2_names'
 test_threat_model.TheModelHolds.test_every_control_cites_a_line_that_holds: green at 50d4d1912814d6c92046956db720c408e36c84ee
+```
+
+A6 read red once more on the second push (cf4833e5e8e533b230bea20defccd2852e9c0574), in the
+`hygiene` job's `python` stage log (run 38003582876, job 114067126393, artifact
+`check-stage-logs-hygiene`, `python.log`, which reads `FAILED (failures=1)` over 1105 tests), by its
+own assertion on the read too long for one report: the report named one key and no count line. The
+test and the script at 50d4d1912814d6c92046956db720c408e36c84ee are byte for byte those of that
+push, so A6 was not green there. The script read the service manager's list of failed alert
+instances on its standard input, which each command it ran inherited, so a command that reads its
+input, as the test's stand-in for the service manager does, took the rest of the list with the
+first invocation id it was asked for. 2b737847c9802fad0a35533c20cbeb5c09b236c8 reads the list on
+descriptor 3 and changes no test; A6's one green line names it, and neither the test nor the script
+changes after it in this delivery. The replay is quoted here, below the criteria, so that no
+criterion is recorded twice.
+
+```text
+test_alert_unit.ASecondRouteTellsTheOwner.test_each_failed_invocation_is_reported_once: red at cf4833e5e8e533b230bea20defccd2852e9c0574: AssertionError: Lists differ: [] != ['failed deck-streak-alert@deck-streak-uni[51 chars]f90']
 ```
