@@ -229,8 +229,11 @@ fence lines still resolve:
   flagged effect also sets the view's undo to the flag's.
 - `undo-reach.test.ts` keeps "every locale holds the undo dialog's fifteen messages" unchanged; the
   ten keys get their own test (A28).
-- Every test in `crates/engine-core/tests/undo_answer.rs` is kept, name and body: an answer's record
-  decodes and is judged as shipped.
+- Every test in `crates/engine-core/tests/undo_answer.rs` and `crates/engine-core/tests/exempt.rs` is
+  kept by name, input and assertion: an answer's record decodes and is judged as shipped. The only
+  body change is that each helper literal of `Recorded` (`undo_answer.rs`'s `answer_head` and
+  `admitted`, `exempt.rs`'s `undo`) gains `..Recorded::default()`, so the record it builds still
+  carries kind 0, an answer.
 
 Shipped requirements this delivery changes, by their own SPECs (their text is not edited; this
 SPEC and ADR-397 record the change):
@@ -261,6 +264,8 @@ SPEC and ADR-397 record the change):
 | `crates/engine-core/src/lib.rs` | engine-core | declares `undo_change` |
 | `crates/engine-core/src/dispatch.rs` | engine-core | `CARD_MARK_SQL`, `Read::CardMark` and its arm in `query` (R4); `run_undo` reads the kind and the private `run_restore` (R6) |
 | `crates/engine-core/tests/undo_change.rs` | engine-core | added (A1 to A16) |
+| `crates/engine-core/tests/undo_answer.rs` | engine-core | the helper literals of `Recorded` in `answer_head` and `admitted` gain `..Recorded::default()`; every test keeps its name, input and assertion |
+| `crates/engine-core/tests/exempt.rs` | engine-core | the helper literal of `Recorded` in `undo` gains `..Recorded::default()`; every test keeps its name, input and assertion |
 | `crates/web-engine/src/study.rs` | web-engine | `LastMark`, `last_mark_for`, `mark_view`, `flag_change` (R2, R9) |
 | `crates/web-engine/src/wasm.rs` | web-engine | `LAST_MARK`; `bury`, `flag` and `rate` keep the slot (R1, R2); `undo_offer`, `undo`, `current_card`, `open` and `close` read or clear it (R9) |
 | `crates/web-engine/tests/study.rs` | web-engine | A17 to A19 |
@@ -286,7 +291,7 @@ SPEC and ADR-397 record the change):
 | `formal/tla/UndoOwnAnswer/witness/an-undo-restores-only-the-offered-change.cfg` | formal | added |
 | `formal/tla/UndoOwnAnswer/witness/a-restore-runs-only-on-a-confirm.cfg` | formal | added |
 | `scripts/mutation-rows.d/S38300-S38399.json` | scripts | added (section 9) |
-| `scripts/mutation-equivalent.d/deck-streak-web-engine.json` | scripts | changed only if the browser target's mutation verdict shows a `wasm.rs` row of section 9 equivalent, each record with its reason |
+| `scripts/mutation-equivalent.d/deck-streak-web-engine.json` | scripts | changed only if the browser target's mutation verdict shows a `wasm.rs` row of section 9 equivalent, each record with its reason; and the shipped `engine_record` record's `anchor` follows that function's new text, its mutant, reason and evidence kept as they stand |
 | `scripts/mutation-equivalent.d/miniapp.json` | scripts | changed only if StrykerJS shows a mutant equivalent, each record with its reason |
 
 ## 5. What this does NOT cover
