@@ -1,14 +1,15 @@
-//! SPEC-338 A1, A2 and A17, and SPEC-371 A16: the study rule the web engine's `wasm32` module runs,
-//! judged natively, with the undo's mirrors of the core's verdicts (SPEC-371 R6, R7).
+//! SPEC-338 A1, A2 and A17, SPEC-371 A16 and SPEC-383 A17 to A19: the study rule the web
+//! engine's `wasm32` module runs, judged natively, with the undo's mirrors of the core's verdicts
+//! (SPEC-371 R6, R7; SPEC-383 R9).
 
 // The examined helper prints its count on purpose; clippy.toml's in-test allowances cover only
 // `#[test]` bodies.
 #![allow(clippy::print_stdout)]
 
 use deck_streak_web_engine::study::{
-    Files, Grade, LastAnswer, Recorded, Returns, STUDY_CALLS, Shown, StudyError, UndoRefusal,
-    Wanted, admit, engine_languages, grade, last_answer_for, media_type, service, shown_for,
-    undo_view,
+    Change, Files, Grade, LastAnswer, LastMark, Recorded, Returns, STUDY_CALLS, Shown, StudyError,
+    UndoRefusal, Wanted, admit, engine_languages, flag_change, grade, last_answer_for,
+    last_mark_for, mark_view, media_type, service, shown_for, undo_view,
 };
 
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
@@ -394,5 +395,80 @@ fn the_card_view_offers_an_undo_only_for_the_reviews_own_unsynced_answer() {
     ];
     for (judged, view) in examined("judged record(s)", views) {
         assert_eq!(undo_view(judged), view, "{judged:?}");
+    }
+}
+
+#[test]
+fn a_mark_view_names_its_kind() {
+    // SPEC-383 R9: the card view names the kept change's kind when the core admits its undo,
+    // `change-synced` when it has synced, and nothing for every other refusal or no change kept.
+    let bury = Change::Bury(Returns::Review);
+    let flag = Change::Flag {
+        before: 0,
+        after: 1,
+    };
+    let named = vec![
+        (Some((bury, Ok(()))), Some("bury")),
+        (Some((flag, Ok(()))), Some("flag")),
+        (
+            Some((bury, Err(UndoRefusal::Synced))),
+            Some("change-synced"),
+        ),
+        (
+            Some((flag, Err(UndoRefusal::Synced))),
+            Some("change-synced"),
+        ),
+        (Some((bury, Err(UndoRefusal::Gone))), None),
+        (Some((flag, Err(UndoRefusal::NotTheCard))), None),
+        (Some((bury, Err(UndoRefusal::Changed))), None),
+        (None, None),
+    ];
+    for (judged, view) in examined("judged change(s)", named) {
+        assert_eq!(mark_view(judged), view, "{judged:?}");
+    }
+}
+
+#[test]
+fn a_mark_record_matches_only_its_card_and_step() {
+    // SPEC-383 R9: the page confirms only the change it was offered, so a confirmation that names
+    // another card, another step, or a change when none is kept is refused as changed.
+    let kept = LastMark {
+        card: 42,
+        step: 7,
+        change: Change::Bury(Returns::New),
+        record: "the core's record",
+    };
+    assert_eq!(last_mark_for(Some(&kept), 42, 7), Ok(&kept));
+    let stale = vec![(41, 7), (42, 8), (41, 8), (42, 6)];
+    for (card, step) in examined("stale confirmation(s)", stale) {
+        assert_eq!(
+            last_mark_for(Some(&kept), card, step),
+            Err(StudyError::NotUndoable(UndoRefusal::Changed)),
+            "card {card} at step {step}"
+        );
+    }
+    assert_eq!(
+        last_mark_for::<&str>(None, 42, 7),
+        Err(StudyError::NotUndoable(UndoRefusal::Changed))
+    );
+}
+
+#[test]
+fn a_flag_offer_says_what_the_undo_puts_back() {
+    // SPEC-383 R9, R11: red on a card with no flag was added, red taken off was removed, and red
+    // over any other flag replaced it. The engine numbers red 1 and no flag 0.
+    let changes = vec![
+        ((0, 1), "added"),
+        ((1, 0), "removed"),
+        ((2, 1), "replaced"),
+        ((4, 1), "replaced"),
+        ((7, 1), "replaced"),
+    ];
+    for ((before, after), said) in examined("flag change(s)", changes) {
+        assert_eq!(
+            flag_change(before, after),
+            said,
+            "from flag {before} to flag {after}"
+        );
     }
 }

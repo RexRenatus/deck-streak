@@ -211,6 +211,7 @@ fn undo(review: i64) -> Vec<u8> {
     Recorded {
         status: None,
         review,
+        ..Recorded::default()
     }
     .encode_to_vec()
 }

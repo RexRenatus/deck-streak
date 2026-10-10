@@ -1,0 +1,195 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S38301-THE-MARK-READ-IS-BY-CARD",
+        "engine-core",
+        "src/dispatch.rs",
+        "const CARD_MARK_SQL: &str = \"select queue, flags, usn from cards where id = ?\";",
+        "const CARD_MARK_SQL: &str = \"select queue, flags, usn from cards where nid = ?\";",
+        "undo_change::a_confirmed_undo_of_a_bury_restores_the_card_whole",
+        "the mark read finds the card by its own id; read by the note's id it finds no card, so a confirmed undo of a bury is refused as gone and the card stays buried, and the tool never mutates this literal in a const, so the row is planted by hand (SPEC-383 A1)"
+      ],
+      [
+        "S38302-A-GONE-CARD-IS-REFUSED",
+        "engine-core",
+        "src/undo_change.rs",
+        "    let Some(mark) = mark else {\n        return Err(UndoRefusal::Gone);\n    };",
+        "    let Some(mark) = mark else {\n        return Ok(());\n    };",
+        "undo_change::a_change_whose_card_is_gone_is_refused",
+        "a change whose card has no row is refused as gone; admitted, the engine would undo a step on a card the collection no longer holds (SPEC-383 A6)"
+      ],
+      [
+        "S38303-A-CHANGE-NAMES-ITS-CARD",
+        "engine-core",
+        "src/undo_change.rs",
+        "recorded.card != card",
+        "card != card",
+        "undo_change::a_change_recorded_for_another_card_is_refused",
+        "a change recorded for one card is refused for any other; compared with itself, a confirmation aimed at another card would undo the recorded change (SPEC-383 A7)"
+      ],
+      [
+        "S38304-A-BURY-IS-STILL-BURIED",
+        "engine-core",
+        "src/undo_change.rs",
+        "mark.queue == USER_BURIED",
+        "mark.queue == mark.queue",
+        "undo_change::a_bury_no_longer_buried_is_refused",
+        "a bury is undone only while its card is still user-buried; compared with itself, a card unburied since would have another change undone in the bury's name (SPEC-383 A8)"
+      ],
+      [
+        "S38305-A-FLAG-IS-STILL-SET",
+        "engine-core",
+        "src/undo_change.rs",
+        "(mark.flags & USER_FLAG) == recorded.flag",
+        "recorded.flag == recorded.flag",
+        "undo_change::a_flag_since_changed_is_refused",
+        "a flag is undone only while the card's user flag is still the one the change left; compared with itself, a flag changed since would be undone in the old flag's name (SPEC-383 A9)"
+      ],
+      [
+        "S38306-THE-USER-FLAG-IS-THREE-BITS",
+        "engine-core",
+        "src/undo_change.rs",
+        "const USER_FLAG: u32 = 7;",
+        "const USER_FLAG: u32 = 3;",
+        "undo_change::a_flag_is_judged_by_the_users_three_bits",
+        "the user flag is the low three bits of the flags column; masked by two bits, flags 12 reads as no flag and a changed flag is admitted, and the tool never mutates this literal in a const, so the row is planted by hand (SPEC-383 A10)"
+      ],
+      [
+        "S38307-A-SYNCED-CHANGE-IS-REFUSED",
+        "engine-core",
+        "src/undo_change.rs",
+        "mark.usn != -1",
+        "mark.usn != mark.usn",
+        "undo_change::a_synced_change_is_refused",
+        "a change on a card that has synced is refused; compared with itself, an undo would rewrite a card the server already holds (SPEC-383 A11)"
+      ],
+      [
+        "S38308-A-LATER-STEP-REFUSES-A-CHANGE",
+        "engine-core",
+        "src/undo_change.rs",
+        "now.last_step != last_step",
+        "now.last_step != now.last_step",
+        "undo_change::a_later_step_refuses_a_change",
+        "a change is undone only while the engine's last step is the record's; compared with itself, a later step would be the one undone (SPEC-383 A13)"
+      ],
+      [
+        "S38309-ANOTHER-LABEL-REFUSES-A-CHANGE",
+        "engine-core",
+        "src/undo_change.rs",
+        "now.undo != label",
+        "now.undo != now.undo",
+        "undo_change::another_undo_label_refuses_a_change",
+        "a change is undone only while the engine's undo label is the record's; compared with itself, another action at the front of the queue would be undone (SPEC-383 A14)"
+      ],
+      [
+        "S38310-AN-EMPTY-QUEUE-REFUSES-A-CHANGE",
+        "engine-core",
+        "src/undo_change.rs",
+        "now.undo.is_empty()",
+        "false",
+        "undo_change::an_empty_undo_queue_refuses_a_change",
+        "an empty undo queue refuses a change as gone; admitted, the engine is asked to undo nothing in the change's name (SPEC-383 A12)"
+      ],
+      [
+        "S38311-THE-RESTORE-WAITS-FOR-THE-CHECK",
+        "engine-core",
+        "src/dispatch.rs",
+        "undo_change::judge_change(recorded, &now, mark, card).map_err(refused)?;",
+        "let _ = undo_change::judge_change(recorded, &now, mark, card).map_err(refused);",
+        "undo_change::an_undo_of_a_bury_after_a_later_change_is_refused_and_changes_nothing",
+        "the restore runs only when the check admits; with its refusal discarded, an undo of a bury after a later answer reverts that answer instead (SPEC-383 A4)"
+      ],
+      [
+        "S38312-AN-ANSWER-IS-KIND-ZERO",
+        "engine-core",
+        "src/undo_answer.rs",
+        "    Answer = 0,",
+        "    Answer = 3,",
+        "undo_change::an_old_record_decodes_as_an_answer",
+        "an answer is kind 0 on the wire; the derive makes the first variant the default and the encoder leaves the default out, so a record with no kind reads as an answer either way, while a record that writes its kind out as 0 reads as no kind the engine names when the answer is numbered 3, and the tool never mutates this literal, so the row is planted by hand (SPEC-383 R3, A15)"
+      ],
+      [
+        "S38313-AN-UNKNOWN-KIND-IS-REFUSED",
+        "engine-core",
+        "src/dispatch.rs",
+        "Err(_) => return Err(unknown),",
+        "Err(_) => {}",
+        "undo_change::a_record_of_an_unknown_kind_is_refused_and_leaves_the_answer",
+        "a record whose kind no variant names is refused before the engine is asked; let through, it takes the answer's path and the answer is undone (SPEC-383 A16)"
+      ],
+      [
+        "S38314-A-MARK-TAKES-THE-RESTORE",
+        "engine-core",
+        "src/dispatch.rs",
+        "            Ok(undo_answer::Kind::Bury | undo_answer::Kind::Flag) => {\n                return self.run_restore(card, recorded, row);\n            }",
+        "            Ok(undo_answer::Kind::Bury | undo_answer::Kind::Flag) => {}",
+        "undo_change::a_confirmed_undo_of_a_bury_restores_the_card_whole",
+        "a bury's or a flag's record takes the restore; sent down the answer's path, it is judged against a review row it has none of, refused, and the card stays buried (SPEC-383 A1)"
+      ],
+      [
+        "S38315-A-BURY-RECORDS-ITS-CHANGE",
+        "web-engine",
+        "src/wasm.rs",
+        "    if mark.is_some_and(|mark| undo_change::shows(&recorded.record, &mark)) {\n        LAST_MARK.with(|kept| *kept.borrow_mut() = Some(recorded));",
+        "    if mark.is_some_and(|mark| undo_change::shows(&recorded.record, &mark)) {",
+        "boundary::the_review_records_one_change_at_a_time",
+        "bury records its change in the one slot; left unset, the review offers no undo of the bury, and the census refuses bury's body by name (SPEC-383 A20)"
+      ],
+      [
+        "S38316-A-FLAG-RECORDS-ITS-CHANGE",
+        "web-engine",
+        "src/wasm.rs",
+        "        .ok_or_else(|| refuse(\"the card's mark does not show the flag the toggle set\"))?;\n    LAST_MARK.with(|kept| *kept.borrow_mut() = Some(recorded));",
+        "        .ok_or_else(|| refuse(\"the card's mark does not show the flag the toggle set\"))?;",
+        "boundary::the_review_records_one_change_at_a_time",
+        "flag records its change in the one slot; left unset, the review offers no undo of the flag, and the census refuses flag's body by name (SPEC-383 A20)"
+      ],
+      [
+        "S38317-A-CHANGE-CLEARS-THE-ANSWER",
+        "web-engine",
+        "src/wasm.rs",
+        "        LAST_MARK.with(|kept| *kept.borrow_mut() = Some(recorded));\n        LAST_ANSWER.with(|kept| *kept.borrow_mut() = None);",
+        "        LAST_MARK.with(|kept| *kept.borrow_mut() = Some(recorded));",
+        "boundary::the_review_records_one_change_at_a_time",
+        "bury forgets the answer before it; left set, the slot would hold both, and the census refuses bury's body by name (SPEC-383 A20)"
+      ],
+      [
+        "S38318-AN-ANSWER-CLEARS-THE-CHANGE",
+        "web-engine",
+        "src/wasm.rs",
+        "    LAST_MARK.with(|kept| *kept.borrow_mut() = None);\n    let queue: UndoStatus",
+        "    let queue: UndoStatus",
+        "boundary::the_review_records_one_change_at_a_time",
+        "rate forgets the change before it; left set, the slot would hold both, and the census refuses rate's body by name (SPEC-383 A20)"
+      ],
+      [
+        "S38319-AN-UNDO-CLEARS-THE-CHANGE",
+        "web-engine",
+        "src/wasm.rs",
+        "    LAST_MARK.with(|kept| *kept.borrow_mut() = None);\n    LAST_ANSWER.with(|kept| *kept.borrow_mut() = None);\n    SHOWN.with(|kept| *kept.borrow_mut() = None);",
+        "    LAST_ANSWER.with(|kept| *kept.borrow_mut() = None);\n    SHOWN.with(|kept| *kept.borrow_mut() = None);",
+        "boundary::the_review_records_one_change_at_a_time",
+        "undo forgets the change it undid; left set, the review would offer the same change again after it was undone, and the census refuses undo's body by name (SPEC-383 A20)"
+      ],
+      [
+        "S38320-A-MARK-VIEW-NAMES-ITS-KIND",
+        "web-engine",
+        "src/study.rs",
+        "(Change::Bury(_), Ok(())) => Some(\"bury\"),",
+        "(Change::Bury(_), Ok(())) => Some(\"flag\"),",
+        "study::a_mark_view_names_its_kind",
+        "an admitted bury's view names the bury; named a flag, the bar would read Undo flag over a bury (SPEC-383 A17)"
+      ],
+      [
+        "S38321-A-REPLACED-FLAG-IS-NAMED",
+        "web-engine",
+        "src/study.rs",
+        "_ => \"replaced\",",
+        "_ => \"added\",",
+        "study::a_flag_offer_says_what_the_undo_puts_back",
+        "a flag that replaced another reads replaced; read as added, the dialog would promise to remove the flag when the undo puts the earlier one back (SPEC-383 A19)"
+      ]
+    ]
+  }
+}

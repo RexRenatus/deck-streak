@@ -486,3 +486,13 @@ What would make these wrong: a tag whose module differs from CI's in behaviour, 
 built by the same steps at one commit, would call for the browser tests in the release (SPEC-350
 section 13); and a release run that ends near its new bound would call for D22's bound to be
 measured again.
+
+## Amendment: the token for undo also reaches the review's last bury or flag (SPEC-383)
+
+ADR-397 amends D1, for undo only, after SPEC-371's amendment. The rest of D1 stands.
+
+- **D1 (`:37-55`).** SPEC-371's amendment let the undo of the review's own last answer through the
+  owner's gesture, and said that Undo no longer reverts a bury or a flag. ADR-397 widens that reach
+  to the review's last bury or flag, through the same gesture, checked at the write by the record's
+  kind (ADR-397 D3). Bury and flag themselves stay ordinary calls, as D1 decided.
+- **D2 (`:57-72`)** is unchanged in effect: a confirmed undo still clears the kept card.

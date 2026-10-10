@@ -743,3 +743,128 @@ describe('the review screen', () => {
     expect(status()).toBe('Your last answer has synced, so it can no longer be undone.');
   });
 });
+
+// SPEC-383 R10, R11, A25, A26; ADR-397. The confirmation of the review's last bury or flag shows
+// what the undo changes before it is made: the card as text, and the state a buried card goes back
+// to or what the undo does to the flag; keeping is the default, and its button names the change.
+describe('the confirmation of a bury or a flag', () => {
+  /** What the dialog names: its title, its description and its text on one line. */
+  function asked(): { title: string | null; line: string | null; text: string } {
+    const dialog = screen.getByRole('alertdialog');
+    const named = (attribute: string) =>
+      document.getElementById(dialog.getAttribute(attribute) ?? '')?.textContent?.trim() ?? null;
+    return {
+      title: named('aria-labelledby'),
+      line: named('aria-describedby'),
+      text: dialog.textContent?.replace(/\s+/g, ' ').trim() ?? ''
+    };
+  }
+
+  it('the confirmation of a bury names the card and the state it returns to', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'bury' })), head(view(1))]);
+    client.offered = {
+      offer: { kind: 'bury', card: 1n, step: 9, text: '<b>question</b> 1 cat.jpg', returns: 'review' }
+    };
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+    // the key reaches the review's undo on the answer side, and the review asks
+    await fireEvent.click(button('Show answer'));
+    await fireEvent.keyDown(window, { key: 'u' });
+    await settle();
+    expect(asked()).toEqual({
+      title: 'Undo this bury?',
+      line: "This bury has not synced yet. Undoing it puts the card back in today's queue; nothing else changes.",
+      text:
+        "Undo this bury? Card: <b>question</b> 1 cat.jpg Goes back to: Review, in today's queue " +
+        "This bury has not synced yet. Undoing it puts the card back in today's queue; nothing else changes. " +
+        'Undo bury Keep it'
+    });
+    // the card as text, never as markup; the focus on keeping it
+    const dialog = screen.getByRole('alertdialog');
+    expect([dialog.querySelector('b'), document.activeElement]).toEqual([
+      null,
+      within(dialog).getByRole('button', { name: 'Keep it' })
+    ]);
+    // kept: nothing is written, and the bar's own control names the bury
+    await fireEvent.keyDown(window, { key: 'Escape' });
+    await settle();
+    expect([screen.queryByRole('alertdialog'), client.calls, button('Undo bury').disabled]).toEqual([
+      null,
+      ['card', 'undo-offer'],
+      false
+    ]);
+    // asked again from the bar, its "Undo bury" writes the offered card and step
+    await fireEvent.click(button('Undo bury'));
+    await settle();
+    await fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Undo bury' }));
+    await settle();
+    expect([screen.queryByRole('alertdialog'), client.calls, body().text]).toEqual([
+      null,
+      ['card', 'undo-offer', 'undo-offer', 'undo 1 9', 'card'],
+      'question 1'
+    ]);
+  });
+
+  it('the confirmation of a flag says what the undo puts back', async () => {
+    const lines: [flag: 'added' | 'removed' | 'replaced', line: string][] = [
+      ['added', 'You added a red flag. Undoing removes it; nothing else changes.'],
+      ['removed', 'You removed the red flag. Undoing puts it back; nothing else changes.'],
+      [
+        'replaced',
+        "You replaced this card's flag with a red flag. Undoing puts its earlier flag back; nothing else changes."
+      ]
+    ];
+    const client = new FakeClient([head(view(2, { undo: 'flag' })), head(view(2))]);
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+    // the key reaches the review's undo on the answer side, and the review asks
+    await fireEvent.click(button('Show answer'));
+    for (const [flag, line] of lines) {
+      client.offered = { offer: { kind: 'flag', card: 2n, step: 5, text: 'question 2', flag } };
+      await fireEvent.keyDown(window, { key: 'u' });
+      await settle();
+      expect(asked(), flag).toEqual({
+        title: 'Undo this flag?',
+        line,
+        text: `Undo this flag? Card: question 2 ${line} Undo flag Keep it`
+      });
+      const dialog = screen.getByRole('alertdialog');
+      expect(document.activeElement, flag).toBe(within(dialog).getByRole('button', { name: 'Keep it' }));
+      await fireEvent.click(within(dialog).getByRole('button', { name: 'Keep it' }));
+      await settle();
+    }
+    // the bar's own control names the flag, and the last offer's "Undo flag" writes its card and step
+    expect(button('Undo flag').disabled).toBe(false);
+    await fireEvent.click(button('Undo flag'));
+    await settle();
+    await fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Undo flag' }));
+    await settle();
+    expect([screen.queryByRole('alertdialog'), client.calls]).toEqual([
+      null,
+      ['card', 'undo-offer', 'undo-offer', 'undo-offer', 'undo-offer', 'undo 2 5', 'card']
+    ]);
+    expect(lines).toHaveLength(3);
+  });
+
+  it('the confirmation of a bury says so for a card with no text', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'bury' })), head(view(1))]);
+    client.offered = { offer: { kind: 'bury', card: 1n, step: 9, text: '', returns: 'review' } };
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+    await fireEvent.click(button('Show answer'));
+    await fireEvent.keyDown(window, { key: 'u' });
+    await settle();
+    expect(asked().text).toContain('Card: This card has no text to show.');
+  });
+
+  it('the confirmation of a flag says so for a card with no text', async () => {
+    const client = new FakeClient([head(view(2, { undo: 'flag' })), head(view(2))]);
+    client.offered = { offer: { kind: 'flag', card: 2n, step: 5, text: '', flag: 'added' } };
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+    await fireEvent.click(button('Show answer'));
+    await fireEvent.keyDown(window, { key: 'u' });
+    await settle();
+    expect(asked().text).toContain('Card: This card has no text to show.');
+  });
+});

@@ -37,6 +37,7 @@ EXPECTED = {
             "tla/StagedNoJournal": 120,
             "tla/SyncCredential": 60,
             "tla/SyncSnapshotWindow": 60,
+            "tla/UndoOwnAnswer": 420,
             "tla/WalletFloor": 240,
         },
     },

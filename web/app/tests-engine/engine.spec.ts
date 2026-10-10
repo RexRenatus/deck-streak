@@ -101,6 +101,66 @@ test('opens, answers and undoes over OPFS', async ({ playwright, browserName, ba
   }
 });
 
+test('buries, flags and undoes each over OPFS', async ({ playwright, browserName, baseURL }) => {
+  // SPEC-383 C1: the review's last bury, then its last flag, each offered and undone in the browser
+  const context = await profile(playwright, browserName, baseURL);
+  try {
+    const page = await context.newPage();
+    await boot(page);
+    const run = await page.evaluate(async () => {
+      const read = (fields: unknown) => ({ ...(fields as object), id: String((fields as { id: bigint }).id) });
+      const client = window.harness.start();
+      await client.open();
+      await client.seed(3);
+      // a bury: the next card's view offers its undo, and the confirmed undo puts the card back
+      const buried = (await client.card()).card!.id;
+      const before = read(await client.snapshot(buried));
+      await client.bury(buried);
+      const away = read(await client.snapshot(buried));
+      const afterBury = (await client.card()).card!;
+      const buryOffer = await client.undoOffer();
+      if (buryOffer.offer === null) throw new Error(`no bury offer: ${buryOffer.why}`);
+      await client.undo(buryOffer.offer.card, buryOffer.offer.step);
+      const unburied = read(await client.snapshot(buried));
+      // a flag: the card's own view offers its undo, and the confirmed undo takes the red flag off
+      const shown = (await client.card()).card!;
+      const flag = await client.flag(shown.id);
+      const flagged = (await client.card()).card!;
+      const flagOffer = await client.undoOffer();
+      if (flagOffer.offer === null) throw new Error(`no flag offer: ${flagOffer.why}`);
+      await client.undo(flagOffer.offer.card, flagOffer.offer.step);
+      const unflagged = (await client.card()).card!;
+      return {
+        buried: String(buried),
+        before,
+        away,
+        unburied,
+        buryView: afterBury.undo,
+        buryOffer: { ...buryOffer.offer, card: String(buryOffer.offer.card) },
+        shown: String(shown.id),
+        shownFlag: shown.flag,
+        flag,
+        flagView: [String(flagged.id), flagged.flag, flagged.undo],
+        flagOffer: { ...flagOffer.offer, card: String(flagOffer.offer.card) },
+        unflagged: [String(unflagged.id), unflagged.flag],
+        violations: window.harness.violations
+      };
+    });
+    const before = run.before as Fields;
+    expect((run.away as Fields).queue).not.toBe(before.queue);
+    expect(run.buryView).toBe('bury');
+    expect(run.buryOffer).toMatchObject({ kind: 'bury', card: run.buried, returns: 'new' });
+    expect(run.unburied).toEqual(run.before);
+    expect([run.shownFlag, run.flag]).toEqual([0, 1]);
+    expect(run.flagView).toEqual([run.shown, 1, 'flag']);
+    expect(run.flagOffer).toMatchObject({ kind: 'flag', card: run.shown, flag: 'added' });
+    expect(run.unflagged).toEqual([run.shown, 0]);
+    expect(run.violations).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
+
 test('the collection survives a page reload', async ({ playwright, browserName, baseURL }) => {
   const context = await profile(playwright, browserName, baseURL);
   try {

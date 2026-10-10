@@ -65,15 +65,6 @@
     },
     {
       "file": "crates/web-engine/src/wasm.rs",
-      "mutant": "replace close -> Result<(), JsValue> with Ok(())",
-      "anchor": "pub fn close() -> Result<(), JsValue> {\n    LAST_ANSWER.with(|kept| *kept.borrow_mut() = None);\n    let request = CloseCollectionRequest {\n        downgrade_to_schema11: false,\n    };\n    call(service::COLLECTION, 1, &request.encode_to_vec()).map(|_| ())\n}",
-      "reason": "The mutated function `close` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
-      "reached_by": "study::run_method_admits_only_the_study_calls",
-      "issue": "#303"
-    },
-    {
-      "file": "crates/web-engine/src/wasm.rs",
       "mutant": "replace now_millis -> i64 with 0",
       "anchor": "fn now_millis() -> i64 {\n    js_sys::Date::now() as i64\n}",
       "reason": "The mutated function `now_millis` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
@@ -237,7 +228,7 @@
     {
       "file": "crates/web-engine/src/wasm.rs",
       "mutant": "replace engine_record -> undo_answer::Recorded with Default::default()",
-      "anchor": "fn engine_record(last: &LastAnswer) -> undo_answer::Recorded {\n    undo_answer::Recorded {\n        status: Some(UndoStatus {\n            undo: last.recorded.label.clone(),\n            redo: String::new(),\n            last_step: last.recorded.step,\n        }),\n        review: last.recorded.review,\n    }\n}",
+      "anchor": "fn engine_record(last: &LastAnswer) -> undo_answer::Recorded {\n    undo_answer::Recorded {\n        status: Some(UndoStatus {\n            undo: last.recorded.label.clone(),\n            redo: String::new(),\n            last_step: last.recorded.step,\n        }),\n        review: last.recorded.review,\n        kind: undo_answer::Kind::Answer.into(),\n        flag: 0,\n        card: 0,\n    }\n}",
       "reason": "The mutated function `engine_record` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
       "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `engine_record` is a private helper the census does not read whole; the census holds the `undo_answer::judge(&recorded, ...)` statements of `undo_offer` and `undo` that judge its record, and an empty record names no review row, which engine-core's `undo_answer::a_record_whose_review_is_gone_is_refused` holds is refused (SPEC-371 A7); the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation.",
       "reached_by": "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",

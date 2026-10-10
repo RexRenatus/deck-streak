@@ -21,8 +21,9 @@ use crate::late::EngineDay;
 use crate::login_guard;
 use crate::media::Reader;
 use crate::one_way;
-use crate::table::{ANSWERED, Decision, EXEMPT, ExemptWrite, Transport, decide};
+use crate::table::{ANSWERED, Decision, EXEMPT, Exempt, ExemptWrite, Transport, decide};
 use crate::undo_answer::{self, Recorded, Review};
+use crate::undo_change::{self, Mark};
 
 /// The one read of a card the page may make: its scheduling fields, by id (moved from the web
 /// engine, which passed it to the engine's database door itself).
@@ -33,6 +34,9 @@ const NOTE_COUNT_SQL: &str = "select count() from notes";
 const NEWEST_REVIEW_SQL: &str = "select id, cid from revlog order by id desc limit 1";
 /// One review-log row's card and sync mark, by its id (SPEC-371 R4).
 const REVIEW_SQL: &str = "select cid, usn from revlog where id = ?";
+/// One card's queue, flags and sync mark, by its id: what an undo of a bury or a flag is judged
+/// against (SPEC-383 R4).
+const CARD_MARK_SQL: &str = "select queue, flags, usn from cards where id = ?";
 /// The engine's undo status, `CollectionService.GetUndoStatus`: its label and its last step, which
 /// an undo of the review's own last answer compares with its record (SPEC-371 R5).
 const GET_UNDO_STATUS: (u32, u32) = (3, 7);
@@ -148,6 +152,8 @@ pub enum Read {
     NewestReview,
     /// One review-log row's card and sync mark, by its id (SPEC-371 R4).
     Review(i64),
+    /// One card's queue, flags and sync mark, by its id (SPEC-383 R4).
+    CardMark(i64),
 }
 
 impl Dispatcher {
@@ -261,6 +267,10 @@ impl Dispatcher {
     /// the recorded review row are read at the write, the rule judges them against the record, and
     /// only then does the engine undo, with an empty request. A refusal is the gesture's
     /// `NotTheTarget`: the record names other than an undo of the card's own last answer.
+    ///
+    /// The record's kind is read first, by its number (SPEC-383 R6): a bury or a flag takes
+    /// [`Self::run_restore`], and a number no kind names is refused before the engine is asked
+    /// anything, so a record of an unknown change never reaches the answer's path.
     fn run_undo(&self, card: i64, recorded: &Recorded) -> Result<Vec<u8>, GestureRefusal> {
         let target = Target::Card(card);
         let Some(row) = EXEMPT.iter().find(|row| row.write == ExemptWrite::Undo) else {
@@ -269,6 +279,17 @@ impl Dispatcher {
                 target,
             });
         };
+        let unknown = GestureRefusal::NotTheTarget {
+            write: ExemptWrite::Undo,
+            target,
+        };
+        match undo_answer::Kind::try_from(recorded.kind) {
+            Ok(undo_answer::Kind::Answer) => {}
+            Ok(undo_answer::Kind::Bury | undo_answer::Kind::Flag) => {
+                return self.run_restore(card, recorded, row);
+            }
+            Err(_) => return Err(unknown),
+        }
         let engine = |error| GestureRefusal::Engine { error };
         let refused = |_| GestureRefusal::NotTheTarget {
             write: ExemptWrite::Undo,
@@ -284,6 +305,42 @@ impl Dispatcher {
         self.backend
             .run_service_method(row.service, row.method, &[])
             .map_err(engine)
+    }
+
+    /// Runs the undo of the recorded bury or flag on `card` (SPEC-383 R6): the engine's undo status
+    /// and the card's mark are read at the write, [`undo_change::judge_change`] judges them against
+    /// the record, and only then does the engine undo, with the undo row's empty request. A refusal
+    /// is the gesture's `NotTheTarget`, as an answer's is.
+    fn run_restore(
+        &self,
+        card: i64,
+        recorded: &Recorded,
+        row: &Exempt,
+    ) -> Result<Vec<u8>, GestureRefusal> {
+        let engine = |error| GestureRefusal::Engine { error };
+        let refused = |_| GestureRefusal::NotTheTarget {
+            write: ExemptWrite::Undo,
+            target: Target::Card(card),
+        };
+        let status = self
+            .backend
+            .run_service_method(GET_UNDO_STATUS.0, GET_UNDO_STATUS.1, &[])
+            .map_err(engine)?;
+        let now = UndoStatus::decode(status.as_slice()).map_err(|_| engine(status.clone()))?;
+        let mark = self.card_mark(card).map_err(engine)?;
+        undo_change::judge_change(recorded, &now, mark, card).map_err(refused)?;
+        self.backend
+            .run_service_method(row.service, row.method, &[])
+            .map_err(engine)
+    }
+
+    /// The card's mark, by the core's fixed read, or `None` when the collection lacks the card. An
+    /// error is the engine's, encoded.
+    fn card_mark(&self, card: i64) -> Result<Option<Mark>, Vec<u8>> {
+        let reply = self.query(Read::CardMark(card))?;
+        let rows: serde_json::Value =
+            serde_json::from_slice(&reply).map_err(|_| unreadable_error(CARD_MARK_SQL))?;
+        Mark::from_rows(&rows).map_err(|_| unreadable_error(CARD_MARK_SQL))
     }
 
     /// The review-log row `id`, by the core's fixed read, or `None` when the collection lacks it.
@@ -454,6 +511,7 @@ impl Dispatcher {
             Read::CardSnapshot(card) => (SNAPSHOT_SQL, vec![serde_json::Value::from(card)]),
             Read::NewestReview => (NEWEST_REVIEW_SQL, Vec::new()),
             Read::Review(review) => (REVIEW_SQL, vec![serde_json::Value::from(review)]),
+            Read::CardMark(card) => (CARD_MARK_SQL, vec![serde_json::Value::from(card)]),
         };
         let request = serde_json::json!({
             "kind": "query",

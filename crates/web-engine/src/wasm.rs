@@ -57,11 +57,13 @@ use deck_streak_engine_core::media::{Reader, TYPES};
 use deck_streak_engine_core::review::{bury_of, toggled_red};
 use deck_streak_engine_core::table::{ExemptWrite, Transport};
 use deck_streak_engine_core::undo_answer::{self, Review};
+use deck_streak_engine_core::undo_change::{self, Mark};
 use js_sys::{Array, Object, Reflect, Uint8Array};
 
 use crate::study::{
-    Files, Grade, LastAnswer, Recorded, Returns, Shown, StudyError, UndoRefusal, Wanted, admit,
-    engine_languages, grade, last_answer_for, media_type, service, shown_for, undo_view,
+    Change, Files, Grade, LastAnswer, LastMark, Recorded, Returns, Shown, StudyError, UndoRefusal,
+    Wanted, admit, engine_languages, flag_change, grade, last_answer_for, last_mark_for, mark_view,
+    media_type, service, shown_for, undo_view,
 };
 use crate::synthetic::fields;
 
@@ -71,6 +73,8 @@ const DIRECTORY: &str = "deck-streak";
 const COLLECTION_PATH: &str = "/deck-streak/collection.anki2";
 /// The default deck of a new collection, where the synthetic notes go.
 const DEFAULT_DECK: i64 = 1;
+/// Why a card's mark read is refused: its row is not a queue, a flags column and a sync mark.
+const UNREADABLE_MARK: &str = "the mark read answered other than a queue, flags and a sync mark";
 
 thread_local! {
     static DISPATCHER: RefCell<Option<Dispatcher>> = const { RefCell::new(None) };
@@ -80,6 +84,10 @@ thread_local! {
     static SHOWN: RefCell<Option<Shown<SchedulingStates>>> = const { RefCell::new(None) };
     /// The review's own last answer, the one answer its undo may revert (SPEC-371 R6; ADR-382 D4).
     static LAST_ANSWER: RefCell<Option<LastAnswer>> = const { RefCell::new(None) };
+    /// The review's last bury or flag, the one change its undo may revert; the slot holds it or
+    /// the last answer, never both (SPEC-383 R1).
+    static LAST_MARK: RefCell<Option<LastMark<undo_answer::Recorded>>> =
+        const { RefCell::new(None) };
 }
 
 fn refuse(message: impl std::fmt::Display) -> JsValue {
@@ -167,10 +175,11 @@ pub fn create_backend(languages: Vec<String>) -> Result<(), JsValue> {
 
 /// Opens the collection, creating it when the pool holds none. Returns JSON:
 /// `{"existed": bool, "notes": number}`, so a collection lost to eviction says so. No answer of
-/// another opening is kept for an undo (SPEC-371 R6).
+/// another opening, and no bury or flag of one, is kept for an undo (SPEC-371 R6, SPEC-383 R1).
 #[wasm_bindgen]
 pub fn open() -> Result<String, JsValue> {
     LAST_ANSWER.with(|kept| *kept.borrow_mut() = None);
+    LAST_MARK.with(|kept| *kept.borrow_mut() = None);
     let existed = POOL.with(|p| {
         p.borrow()
             .as_ref()
@@ -190,11 +199,12 @@ pub fn open() -> Result<String, JsValue> {
     Ok(serde_json::json!({ "existed": existed, "notes": notes }).to_string())
 }
 
-/// Closes the collection, and forgets the review's own last answer, which no later opening may
-/// undo (SPEC-371 R6).
+/// Closes the collection, and forgets the review's own last answer and its last bury or flag,
+/// which no later opening may undo (SPEC-371 R6, SPEC-383 R1).
 #[wasm_bindgen]
 pub fn close() -> Result<(), JsValue> {
     LAST_ANSWER.with(|kept| *kept.borrow_mut() = None);
+    LAST_MARK.with(|kept| *kept.borrow_mut() = None);
     let request = CloseCollectionRequest {
         downgrade_to_schema11: false,
     };
@@ -272,8 +282,58 @@ pub fn next_card() -> Result<Option<i64>, JsValue> {
 /// the record holds, the card's question as one line of text, the grade the answer recorded and the
 /// kind of state the undo returns the card to; or `{"offer": null, "why": "synced" | "none"}`. The
 /// core's rule judges the record against the engine now. It reads, and writes nothing.
+///
+/// When the slot holds the review's last bury or flag instead (SPEC-383 R9), the offer names its
+/// `kind`: a bury's `{kind: "bury", card, step, text, returns}`, and a flag's
+/// `{kind: "flag", card, step, text, flag}` with what the undo does to the flag, `added`,
+/// `removed` or `replaced`. The core's rule judges the change against the card's mark now.
 #[wasm_bindgen]
 pub fn undo_offer() -> Result<String, JsValue> {
+    if let Some(last) = LAST_MARK.with(|kept| kept.borrow().clone()) {
+        let now: UndoStatus = decode(&call(service::COLLECTION, 7, &[])?)?;
+        let mark = Mark::from_rows(&query(Read::CardMark(last.card))?)
+            .map_err(|_| refuse(UNREADABLE_MARK))?;
+        if let Err(refusal) = undo_change::judge_change(&last.record, &now, mark, last.card) {
+            return Ok(no_offer(mirrored(refusal)));
+        }
+        let render = RenderExistingCardRequest {
+            card_id: last.card,
+            browser: false,
+            partial_render: false,
+        };
+        let rendered: RenderCardResponse =
+            decode(&call(service::CARD_RENDERING, 6, &render.encode_to_vec())?)?;
+        let question = Text {
+            val: joined(&rendered.question_nodes),
+        };
+        let question: Text = decode(&call(
+            service::CARD_RENDERING,
+            9,
+            &question.encode_to_vec(),
+        )?)?;
+        let line = HtmlToTextLineRequest {
+            text: question.val,
+            preserve_media_filenames: true,
+        };
+        let text: Text = decode(&call(service::CARD_RENDERING, 14, &line.encode_to_vec())?)?;
+        let offer = match last.change {
+            Change::Bury(returns) => serde_json::json!({
+                "kind": "bury",
+                "card": last.card.to_string(),
+                "step": last.step,
+                "text": text.val,
+                "returns": returns.word(),
+            }),
+            Change::Flag { before, after } => serde_json::json!({
+                "kind": "flag",
+                "card": last.card.to_string(),
+                "step": last.step,
+                "text": text.val,
+                "flag": flag_change(before, after),
+            }),
+        };
+        return Ok(serde_json::json!({ "offer": offer }).to_string());
+    }
     let Some(last) = LAST_ANSWER.with(|kept| kept.borrow().clone()) else {
         return Ok(no_offer(UndoRefusal::Gone));
     };
@@ -327,15 +387,34 @@ fn no_offer(refusal: UndoRefusal) -> String {
 /// the core judges once more at the write. Then the record and the kept card are forgotten, and the
 /// next card view shows the undone card again. A refusal reads as its own sentence, `undo-synced`
 /// for a synced answer and `not-undoable` for every other.
+///
+/// When the slot holds the review's last bury or flag at that card and step instead (SPEC-383 R9),
+/// the core's rule judges the change against the card's mark, and the same gesture undoes it; the
+/// core judges it once more at the write. A successful undo empties the slot (SPEC-383 R1).
 #[wasm_bindgen]
 pub fn undo(card: i64, step: u32) -> Result<(), JsValue> {
-    let last = LAST_ANSWER
-        .with(|kept| last_answer_for(kept.borrow().as_ref(), card, step).cloned())
-        .map_err(refuse)?;
-    let recorded = engine_record(&last);
-    let now: UndoStatus = decode(&call(service::COLLECTION, 7, &[])?)?;
-    undo_answer::judge(&recorded, &now, review_of(recorded.review)?, card)
-        .map_err(|refusal| refuse(StudyError::NotUndoable(mirrored(refusal))))?;
+    let marked = LAST_MARK.with(|kept| {
+        last_mark_for(kept.borrow().as_ref(), card, step)
+            .map(|last| last.record.clone())
+            .ok()
+    });
+    let recorded = if let Some(recorded) = marked {
+        let now: UndoStatus = decode(&call(service::COLLECTION, 7, &[])?)?;
+        let mark =
+            Mark::from_rows(&query(Read::CardMark(card))?).map_err(|_| refuse(UNREADABLE_MARK))?;
+        undo_change::judge_change(&recorded, &now, mark, card)
+            .map_err(|refusal| refuse(StudyError::NotUndoable(mirrored(refusal))))?;
+        recorded
+    } else {
+        let last = LAST_ANSWER
+            .with(|kept| last_answer_for(kept.borrow().as_ref(), card, step).cloned())
+            .map_err(refuse)?;
+        let recorded = engine_record(&last);
+        let now: UndoStatus = decode(&call(service::COLLECTION, 7, &[])?)?;
+        undo_answer::judge(&recorded, &now, review_of(recorded.review)?, card)
+            .map_err(|refusal| refuse(StudyError::NotUndoable(mirrored(refusal))))?;
+        recorded
+    };
     let gesture = OwnerGesture::from_tap(ExemptWrite::Undo, Target::Card(card)).map_err(refuse)?;
     dispatcher()?
         .run_exempt(gesture, &recorded.encode_to_vec())
@@ -345,6 +424,7 @@ pub fn undo(card: i64, step: u32) -> Result<(), JsValue> {
             }
             other => refuse(other),
         })?;
+    LAST_MARK.with(|kept| *kept.borrow_mut() = None);
     LAST_ANSWER.with(|kept| *kept.borrow_mut() = None);
     SHOWN.with(|kept| *kept.borrow_mut() = None);
     Ok(())
@@ -360,6 +440,9 @@ fn engine_record(last: &LastAnswer) -> undo_answer::Recorded {
             last_step: last.recorded.step,
         }),
         review: last.recorded.review,
+        kind: undo_answer::Kind::Answer.into(),
+        flag: 0,
+        card: 0,
     }
 }
 
@@ -633,7 +716,9 @@ fn joined(nodes: &[RenderedTemplateNode]) -> String {
 /// type's CSS, the four interval labels for the states read with it, and the engine's undo label.
 /// The card is kept with those states and its flag for `rate`, `bury` and `flag` (SPEC-350 R2, R3).
 /// It carries `late`, the core's answer whether the card is past its due day in the engine's day,
-/// so its review cannot count toward the streak for that day (SPEC-376 R4).
+/// so its review cannot count toward the streak for that day (SPEC-376 R4). Its `undo` names what
+/// the slot offers: `answer` or `synced` for the review's own last answer, and `bury`, `flag` or
+/// `change-synced` for its last bury or flag (SPEC-371 R7, SPEC-383 R9).
 #[wasm_bindgen]
 pub fn current_card() -> Result<String, JsValue> {
     SHOWN.with(|kept| *kept.borrow_mut() = None);
@@ -685,10 +770,19 @@ pub fn current_card() -> Result<String, JsValue> {
         }
         None => None,
     };
+    let marked = match LAST_MARK.with(|kept| kept.borrow().clone()) {
+        Some(last) => {
+            let mark = Mark::from_rows(&query(Read::CardMark(last.card))?)
+                .map_err(|_| refuse(UNREADABLE_MARK))?;
+            let judged = undo_change::judge_change(&last.record, &undo, mark, last.card);
+            Some((last.change, judged.map_err(mirrored)))
+        }
+        None => None,
+    };
     let day = dispatcher()?
         .engine_day()
         .map_err(|_| refuse("the engine's day was not read"))?;
-    let view = serde_json::json!({
+    let mut view = serde_json::json!({
         "counts": counts,
         "card": {
             "id": card.id.to_string(),
@@ -702,6 +796,9 @@ pub fn current_card() -> Result<String, JsValue> {
             "late": late::past_due_day(&card, day),
         },
     });
+    if let (Some(marked), Some(undo)) = (mark_view(marked), view.pointer_mut("/card/undo")) {
+        *undo = marked.into();
+    }
     SHOWN.with(|kept| {
         *kept.borrow_mut() = Some(Shown {
             card: card.id,
@@ -740,6 +837,7 @@ pub fn rate(card: i64, rating: u32, milliseconds: u32) -> Result<(), JsValue> {
         .map_err(refuse)?;
     SHOWN.with(|kept| *kept.borrow_mut() = None);
     LAST_ANSWER.with(|kept| *kept.borrow_mut() = None);
+    LAST_MARK.with(|kept| *kept.borrow_mut() = None);
     let queue: UndoStatus = decode(&call(service::COLLECTION, 7, &[])?)?;
     let newest = newest_review(&query(Read::NewestReview)?)?;
     let recorded = newest
@@ -769,11 +867,16 @@ fn pressed(grade: Grade) -> answer::Grade {
 }
 
 /// Buries the kept card, and no other, as the user's bury of that card alone, then forgets it
-/// (SPEC-350 R2).
+/// (SPEC-350 R2). Once the card's mark shows it user-buried, the bury is kept as the slot's one
+/// change, with the engine's undo status right after it and the kind of state the card returns to,
+/// and the last answer is forgotten (SPEC-383 R1, R2).
 #[wasm_bindgen]
 pub fn bury(card: i64) -> Result<(), JsValue> {
-    SHOWN
-        .with(|kept| shown_for(kept.borrow().as_ref(), card).map(|_| ()))
+    let returns = SHOWN
+        .with(|kept| {
+            shown_for(kept.borrow().as_ref(), card)
+                .map(|kept| returned(kept.states.current.as_ref()))
+        })
         .map_err(refuse)?;
     let bury = bury_of(card);
     let request = BuryOrSuspendCardsRequest {
@@ -783,15 +886,39 @@ pub fn bury(card: i64) -> Result<(), JsValue> {
     };
     call(service::SCHEDULER, 14, &request.encode_to_vec())?;
     SHOWN.with(|kept| *kept.borrow_mut() = None);
+    let now: UndoStatus = decode(&call(service::COLLECTION, 7, &[])?)?;
+    let mark =
+        Mark::from_rows(&query(Read::CardMark(card))?).map_err(|_| refuse(UNREADABLE_MARK))?;
+    let recorded = LastMark {
+        card,
+        step: now.last_step,
+        change: Change::Bury(returns),
+        record: undo_answer::Recorded {
+            status: Some(now),
+            review: 0,
+            kind: undo_answer::Kind::Bury.into(),
+            flag: 0,
+            card,
+        },
+    };
+    if mark.is_some_and(|mark| undo_change::shows(&recorded.record, &mark)) {
+        LAST_MARK.with(|kept| *kept.borrow_mut() = Some(recorded));
+        LAST_ANSWER.with(|kept| *kept.borrow_mut() = None);
+    }
     Ok(())
 }
 
 /// Toggles red on the kept card, and no other, and answers the flag it now carries, which the kept
-/// card keeps for the next toggle (SPEC-350 R7).
+/// card keeps for the next toggle (SPEC-350 R7). The flag is kept as the slot's one change, with
+/// the engine's undo status right after it, the flag before and the flag it left, and the last
+/// answer is forgotten; a card whose mark does not show the flag the toggle set is refused, and
+/// nothing is kept (SPEC-383 R1, R2).
 #[wasm_bindgen]
 pub fn flag(card: i64) -> Result<u32, JsValue> {
-    let flag = SHOWN
-        .with(|kept| shown_for(kept.borrow().as_ref(), card).map(|kept| toggled_red(kept.flag)))
+    let (before, flag) = SHOWN
+        .with(|kept| {
+            shown_for(kept.borrow().as_ref(), card).map(|kept| (kept.flag, toggled_red(kept.flag)))
+        })
         .map_err(refuse)?;
     let request = SetFlagRequest {
         card_ids: vec![card],
@@ -803,6 +930,28 @@ pub fn flag(card: i64) -> Result<u32, JsValue> {
             kept.flag = flag;
         }
     });
+    let now: UndoStatus = decode(&call(service::COLLECTION, 7, &[])?)?;
+    let mark =
+        Mark::from_rows(&query(Read::CardMark(card))?).map_err(|_| refuse(UNREADABLE_MARK))?;
+    let recorded = LastMark {
+        card,
+        step: now.last_step,
+        change: Change::Flag {
+            before,
+            after: flag,
+        },
+        record: undo_answer::Recorded {
+            status: Some(now),
+            review: 0,
+            kind: undo_answer::Kind::Flag.into(),
+            flag,
+            card,
+        },
+    };
+    mark.filter(|mark| undo_change::shows(&recorded.record, mark))
+        .ok_or_else(|| refuse("the card's mark does not show the flag the toggle set"))?;
+    LAST_MARK.with(|kept| *kept.borrow_mut() = Some(recorded));
+    LAST_ANSWER.with(|kept| *kept.borrow_mut() = None);
     Ok(flag)
 }
 

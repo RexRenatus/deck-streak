@@ -141,3 +141,152 @@ offer to one call each, and the `undo` effect to `confirming`.
   the Worker to compare with its record.
 - `OwnerGesture`: minted in `undo` and consumed by `run_exempt` in the same call. It is never
   stored.
+
+## 7. The review's last bury or flag, from the press to the restored card (SPEC-383)
+
+Kind: a **state machine** for the one undo slot, **data flow** for a bury and for a flag from the
+learner's gesture to the restored card, and a **sequence** for the sync. Every `path:line` in this
+section was read at DeckStreak `dev` `e7ecf10d`. Names after this delivery are those SPEC-383 R1 to
+R16 give. Sections 1 to 6 above are unchanged and still describe the undo of an answer.
+
+### 7a. The one slot
+
+The slot is two `thread_local!` cells in `crates/web-engine/src/wasm.rs`, the shipped `LAST_ANSWER`
+(`:82`) and the new `LAST_MARK`, and at most one of them is set.
+
+```mermaid
+stateDiagram-v2
+  state "nothing recorded" as idle
+  state "LAST_ANSWER holds the answer" as answered
+  state "LAST_MARK holds the bury or the flag" as marked
+  [*] --> idle
+  idle --> answered: rate records, when the newest review is of the rated card
+  idle --> marked: bury or flag records, when the CardMark read shows the change
+  answered --> answered: another answer replaces it
+  answered --> marked: bury or flag records and clears LAST_ANSWER
+  marked --> marked: another bury or flag replaces it
+  marked --> answered: rate records and clears LAST_MARK
+  answered --> idle: open, close, or a successful undo
+  marked --> idle: open, close, or a successful undo
+```
+
+### 7b. A bury
+
+```mermaid
+flowchart TD
+  bury["learner's bury: the bar's Bury button"] --> callB["wasm.rs bury: BuryOrSuspendCards 13,14 with one card in the user's mode"]
+  callB --> readB{"CardMark read: is the card user-buried?"}
+  readB -- no --> noneB["nothing recorded - the slot is as it was"]
+  readB -- yes --> keepB["LAST_MARK: bury, the card, the state it returns to, and the undo status read through 3,7 - LAST_ANSWER cleared"]
+  keepB --> viewB["the next card's view: undo is bury"]
+  viewB --> pressB["press: the Undo bury button, key u, or the remote's button 4"]
+  pressB --> offerB["undo_offer: judge_change on 3,7 and the CardMark read"]
+  offerB -- refused --> noticeB["the change's notice - nothing is written"]
+  offerB -- admitted --> dialogB["alertdialog: Undo this bury?, the card's text, Goes back to, focus on Keep it"]
+  dialogB -- "Keep it, Escape, or any other action" --> keptB["nothing is written"]
+  dialogB -- "Undo bury, or the undo action again" --> undoB["wasm.rs undo with the offer's card and step: last_mark_for matches both"]
+  undoB --> gestureB["the owner's gesture for Undo on Target Card, checked"]
+  gestureB --> kindB["run_undo reads the kind: a bury goes to run_restore"]
+  kindB --> checkB{"judge_change at the write"}
+  checkB -- refused --> refusedB["NotTheTarget - nothing is written - the page shows the change's notice"]
+  checkB -- admitted --> writeB["Undo 3,8: the card's row before the bury returns, its queue included"]
+  writeB --> clearB["LAST_MARK and the kept card cleared - the next card request can show the card again"]
+```
+
+### 7c. A flag
+
+```mermaid
+flowchart TD
+  flag["learner's flag: the bar's Flag button"] --> callF["wasm.rs flag: SetFlag 5,4 with toggled_red of the kept flag"]
+  callF --> readF{"CardMark read: is the card's user flag the toggled flag?"}
+  readF -- no --> failF["flag answers an error - nothing recorded"]
+  readF -- yes --> keepF["LAST_MARK: flag, the card, the flag before, the flag after, and the undo status read through 3,7 - LAST_ANSWER cleared"]
+  keepF --> viewF["flag answers the new flag - the page sets the view's undo to flag"]
+  viewF --> pressF["press: the Undo flag button, key u, or the remote's button 4"]
+  pressF --> offerF["undo_offer: judge_change on 3,7 and the CardMark read - the offer says added, removed or replaced"]
+  offerF -- refused --> noticeF["the change's notice - nothing is written"]
+  offerF -- admitted --> dialogF["alertdialog: Undo this flag?, the card's text, the added, removed or replaced line, focus on Keep it"]
+  dialogF -- "Keep it, Escape, or any other action" --> keptF["nothing is written"]
+  dialogF -- "Undo flag, or the undo action again" --> undoF["wasm.rs undo with the offer's card and step: last_mark_for matches both"]
+  undoF --> gestureF["the owner's gesture for Undo on Target Card, checked"]
+  gestureF --> kindF["run_undo reads the kind: a flag goes to run_restore"]
+  kindF --> checkF{"judge_change at the write"}
+  checkF -- refused --> refusedF["NotTheTarget - nothing is written - the page shows the change's notice"]
+  checkF -- admitted --> writeF["Undo 3,8: the card's row before the flag returns, the earlier flag included"]
+  writeF --> clearF["LAST_MARK and the kept card cleared - the review asks for its card again"]
+```
+
+### 7d. The check at the write
+
+`judge_change` (`crates/engine-core/src/undo_change.rs`) answers the first refusal that holds, in
+this order. `judge` (`crates/engine-core/src/undo_answer.rs:71-98`) still judges an answer, unchanged.
+
+```mermaid
+flowchart TD
+  judgeIn["judge_change: the record, the undo status read through 3,7, the CardMark read, the target card"] --> row{"does the card have a row?"}
+  row -- no --> gone1["Gone"]
+  row -- yes --> cardCheck{"is the record's card the target?"}
+  cardCheck -- no --> other["NotTheCard"]
+  cardCheck -- yes --> still{"bury: is the card user-buried? flag: is its user flag the recorded flag?"}
+  still -- no --> changed1["Changed"]
+  still -- yes --> synced{"is the card's usn -1?"}
+  synced -- no --> sent["Synced"]
+  synced -- yes --> queue{"does the engine have anything to undo?"}
+  queue -- no --> gone2["Gone"]
+  queue -- yes --> step{"is the last step the record's?"}
+  step -- no --> changed2["Changed"]
+  step -- yes --> labelCheck{"is the undo label the record's?"}
+  labelCheck -- no --> changed3["Changed"]
+  labelCheck -- yes --> admit["admitted: run_restore runs Undo 3,8"]
+```
+
+### 7e. The sync
+
+```mermaid
+sequenceDiagram
+  participant L as learner
+  participant P as page
+  participant W as Worker
+  participant E as engine
+  L->>P: bury or flag
+  P->>W: bury or flag with the card
+  W->>E: the change, then GetUndoStatus 3,7 and the CardMark read
+  Note over W: LAST_MARK records the change, and the card's usn is -1
+  alt a normal sync before the undo
+    W->>E: SyncCollection
+    Note over E: the change is sent, the card's usn leaves -1, and the undo queue is discarded
+    L->>P: Undo
+    P->>W: undoOffer
+    W->>E: GetUndoStatus 3,7 and the CardMark read
+    W-->>P: no offer, why synced
+    Note over P: the control is disabled and says the last change has synced
+  else no sync before the undo
+    L->>P: Undo, then the dialog's confirmation
+    P->>W: undo with the offer's card and step
+    W->>E: the owner's gesture, judge_change, then Undo 3,8
+    Note over E: the card's row before the change returns, its usn included, so the next sync has nothing to send for it
+  end
+```
+
+### 7f. Who can reach it
+
+| client | bury and flag | undo of a bury or a flag |
+|---|---|---|
+| the web review | `wasm.rs` `bury` and `flag`, which keep the slot | through `undo_offer` and `undo`, the owner's gesture and `run_restore` (SPEC-383) |
+| the native clients | `crates/ffi/src/engine.rs` `bury` (`:214-218`) and `flag` (`:226-231`) | none: the native `run` refuses (3,8), and no native undo exists (#714) |
+| the server and the bot | no crate writes either | none; the bot's own habit undo is unchanged (#714) |
+
+### 7g. What carries state, added to section 6
+
+- `LAST_MARK` (new, `wasm.rs`): the review's last bury or flag, its card, its kind, the engine's
+  undo status when it was made, and, for a bury, the state the card returns to, for a flag, the
+  flag before and after. `bury` and `flag` write it after their write, only when the `CardMark`
+  read shows the change, and clear `LAST_ANSWER`; `rate` clears it when it records an answer.
+  `current_card`, `undo_offer` and `undo` read it; a successful undo, `open` and `close` clear it.
+- `Recorded` (`undo_answer.rs`): gains `kind`, `flag` and `card`. A record with no kind is an
+  answer, so the bytes of the undo of an answer are read as before.
+- The card's row: its queue, flags and usn, read through the new fixed read `CardMark` when the
+  change is recorded, at the offer, and again at the write.
+- The model `formal/tla/UndoOwnAnswer` gains `mark`, `markOffers`, `markConfirmed` and `restored`,
+  and covers `judge_change`, `run_restore`, `bury`, `flag` and `current_card` beside its shipped
+  covers.
