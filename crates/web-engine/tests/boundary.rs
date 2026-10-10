@@ -1066,3 +1066,77 @@ fn the_backup_exports_reach_the_pool_only_through_files_and_the_core() {
         refused_texts.len()
     );
 }
+
+/// The helpers the backup exports call, each with what its body owes: the installed pool or a
+/// refusal, a record of each newly listed file before the list is answered, the age in whole
+/// seconds and never negative, and the export's refusal naming the id. Like the exports they are
+/// compiled for `wasm32` alone, so this census is their one native reader (SPEC-377 section 16).
+const BACKUP_HELPERS: [(&str, &[&str]); 4] = [
+    (
+        "installed",
+        &[
+            "POOL.with(|p| p.borrow().clone())",
+            ".ok_or_else(|| refuse(\"storage-refused: the pool is not installed\"))",
+        ],
+    ),
+    (
+        "recorded",
+        &[
+            "let unrecorded = files::unrecorded(&pool.list());",
+            "if !unrecorded.is_empty() {",
+            "pool.import_db_unchecked(&files::record(name, made), &[])",
+            "Ok(pool.list())",
+        ],
+    ),
+    ("age", &["u64::try_from((now - made) / 1000).unwrap_or(0)"]),
+    (
+        "unlisted",
+        &["refuse(format!(\"no listed backup is named {id}\"))"],
+    ),
+];
+
+/// Each statement of [`BACKUP_HELPERS`] that `source` does not hold, named with its helper.
+fn helper_problems(source: &str) -> Vec<String> {
+    lacks(
+        source,
+        &BACKUP_HELPERS.map(|(name, owed)| (name, "serves the backup exports", owed)),
+    )
+}
+
+#[test]
+fn the_backup_helpers_keep_the_pool_the_record_the_age_and_the_refusal() {
+    let source = boundary();
+    assert_eq!(helper_problems(&source), Vec::<String>::new());
+
+    // each helper answering a constant, its body replaced whole, is refused by its name
+    for (name, _) in BACKUP_HELPERS {
+        let held = body(&source, name).unwrap_or_else(|problem| panic!("{name}: {problem}"));
+        let constant = source.replacen(held, "{\n    Default::default()\n}", 1);
+        assert_ne!(constant, source, "{name}'s body was not replaced");
+        let refused = helper_problems(&constant);
+        assert!(
+            refused_by_name(&refused, name, "lacks"),
+            "{name} answering a constant is not refused by name: {refused:?}"
+        );
+    }
+    // the record's guard turned round, and the age's division turned to a remainder, are refused
+    for (name, from, to) in [
+        (
+            "recorded",
+            "if !unrecorded.is_empty() {",
+            "if unrecorded.is_empty() {",
+        ),
+        ("age", "(now - made) / 1000", "(now - made) % 1000"),
+    ] {
+        let planted = source.replacen(from, to, 1);
+        assert_ne!(planted, source, "{name}: `{from}` was not planted");
+        let refused = helper_problems(&planted);
+        assert!(
+            refused_by_name(&refused, name, "lacks"),
+            "`{to}` planted in {name} is not refused by name: {refused:?}"
+        );
+    }
+    let helpers = examined("backup helper(s) of src/wasm.rs", BACKUP_HELPERS.to_vec());
+    let owed: usize = helpers.iter().map(|(_, owed)| owed.len()).sum();
+    println!("examined {owed} owed statement(s)");
+}
