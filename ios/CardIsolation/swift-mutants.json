@@ -304,6 +304,46 @@
       "replace": "",
       "killer": "CardIsolationTests.DocumentPolicyTests/test_the_policy_admits_only_data_media_and_inline_style_and_script",
       "why": "weaker names a directive the candidate drops"
+    },
+    {
+      "id": "SW39200",
+      "file": "Sources/CardIsolation/LinkStrip.swift",
+      "find": "(0x41...0x5A).contains(byte) ? byte | 0x20 : byte",
+      "replace": "byte",
+      "killer": "CardIsolationTests.LinkStripTests/test_every_link_opener_is_renamed_to_a_wbr_opener_in_any_ascii_case",
+      "why": "the strip folds ASCII capitals"
+    },
+    {
+      "id": "SW39201",
+      "file": "Sources/CardIsolation/LinkStrip.swift",
+      "find": "out.append(contentsOf: renamed)",
+      "replace": "out.append(contentsOf: bytes[index..<(index + opener.count)])",
+      "killer": "CardIsolationTests.LinkStripTests/test_every_link_opener_is_renamed_to_a_wbr_opener_in_any_ascii_case",
+      "why": "the strip writes the renamed opener, not the one it found"
+    },
+    {
+      "id": "SW39202",
+      "file": "Sources/CardIsolation/LinkStrip.swift",
+      "find": "guard index + opener.count <= bytes.count else {",
+      "replace": "guard index + opener.count < bytes.count else {",
+      "killer": "CardIsolationTests.LinkStripTests/test_an_opener_at_either_end_of_the_card_is_renamed",
+      "why": "an opener that ends the card is renamed"
+    },
+    {
+      "id": "SW39203",
+      "file": "Sources/CardIsolation/LinkStrip.swift",
+      "find": "static let renamed = Array(\"<wbr\".utf8)",
+      "replace": "static let renamed = Array(\"<meta\".utf8)",
+      "killer": "CardIsolationTests.LinkStripTests/test_every_link_opener_is_renamed_to_a_wbr_opener_in_any_ascii_case",
+      "why": "the target is wbr, the void element with no attribute of its own"
+    },
+    {
+      "id": "SW39204",
+      "file": "Sources/CardIsolation/LinkStrip.swift",
+      "find": "for offset in 0..<opener.count where",
+      "replace": "for offset in 1..<opener.count where",
+      "killer": "CardIsolationTests.LinkStripTests/test_markup_holding_no_link_opener_is_returned_byte_for_byte",
+      "why": "the opener's < is matched, so text without one is left"
     }
   ]
 }
