@@ -30,4 +30,4 @@ export const FRAME_POLICY =
  * inherits it from its creation, before its first byte is parsed, so it holds an image-set
  * candidate an engine fetches ahead of the card document's own policy meta.
  */
-export const HOST_POLICY = '';
+export const HOST_POLICY = "img-src data:; script-src 'none'; object-src 'none'; base-uri 'none'";

@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { frameHost } from './frame-host';
+import { frameHost, hosted } from './frame-host';
 
 // SPEC-407 R1 to R3, R7; ADR-421 D2 to D4. The card frame's host: a head carrying the host policy
 // and one frame whose `srcdoc` is the card document, read back byte for byte. These tests parse the
@@ -12,6 +12,8 @@ import { frameHost } from './frame-host';
 // code under test.
 
 const POLICY = "img-src data:; script-src 'none'; object-src 'none'; base-uri 'none'";
+const STYLE =
+  '<style>html,body{margin:0;height:100%;overflow:hidden}iframe{display:block;border:0;width:100%;height:100%}</style>';
 const APP = join(import.meta.dirname, '..', '..', '..');
 
 /** The host's document, parsed as the frame will parse it. */
@@ -48,6 +50,36 @@ describe('the card frame host', () => {
     expect(frameHost('<p>ab</p>', 'The\rcard')).toEqual({ refused: 'escaped' });
     expect(frameHost('<p>ab</p>', 'The card', 'img-src "data:"')).toEqual({ refused: 'escaped' });
     expect(frameHost('<p>ab</p>', 'The card').refused).toBeUndefined();
+  });
+
+  // The killers of the host's own code, one behaviour each (SPEC-407 R1, R3; ADR-421 D4).
+  it('the head holds exactly the policy meta and the style, and no meta for an empty policy', () => {
+    const meta = `<meta http-equiv="Content-Security-Policy" content="${POLICY}">`;
+    expect(parsed(frameHost('<p>a</p>', 'The card').srcdoc).head.innerHTML).toBe(meta + STYLE);
+    expect(parsed(frameHost('<p>a</p>', 'The card', '').srcdoc).head.innerHTML).toBe(STYLE);
+  });
+
+  it('a card holding an ampersand, a quote, a reference and a line feed is read back byte for byte', () => {
+    for (const card of ['a &amp; b', 'a & b', 'say "hi"', '&quot;&#13;&lt;', 'one\ntwo', '&"']) {
+      const kept = frameHost(card, 'The card');
+      expect(hosted(kept.srcdoc ?? '')).toBe(card);
+    }
+    const title = parsed(frameHost('<p>a</p>', 'a & "b" &amp;').srcdoc).body.children[0].getAttribute('title');
+    expect(title).toBe('a & "b" &amp;');
+  });
+
+  it('a policy, a card or a title the parser changes is refused, each alone', () => {
+    expect(frameHost('<p>a</p>', 'The card', 'img-src\u00a0data:')).toEqual({ refused: 'escaped' });
+    expect(frameHost('<p>a\u0000b</p>', 'The card')).toEqual({ refused: 'escaped' });
+    expect(frameHost('<p>a</p>', 'The\u0000card')).toEqual({ refused: 'escaped' });
+  });
+
+  it('a document that is not a host carries no frame document', () => {
+    expect(hosted('')).toBeNull();
+    expect(hosted('<p srcdoc="a"></p>')).toBeNull();
+    expect(hosted('<iframe srcdoc="a"></iframe><iframe srcdoc="b"></iframe>')).toBeNull();
+    expect(hosted('<iframe srcdoc="a"></iframe>')).toBe('a');
+    expect(hosted('<iframe></iframe>')).toBeNull();
   });
 
   // SPEC-407 A6. The Playwright case runs in `card-sandbox`; the tdd probe resolves no Playwright

@@ -24,7 +24,7 @@ describe('the card frame', () => {
     const [frame] = frames;
     expect(frame.getAttribute('sandbox')).toBe('');
     expect(frame.getAttributeNames().sort()).toEqual(['sandbox', 'srcdoc', 'title']);
-    expect(frame.getAttribute('srcdoc')?.startsWith(OPENING)).toBe(true);
+    expect(cardDocument(frame)?.startsWith(OPENING)).toBe(true);
     expect(frame.getAttribute('title')).toBe('The card');
 
     // a refused card renders a frame with no document, still sandboxed, marked as refused
@@ -44,7 +44,7 @@ describe('the card frame', () => {
 
     expect(frames).toHaveLength(1);
     const [frame] = frames;
-    const body = new DOMParser().parseFromString(frame.getAttribute('srcdoc') ?? '', 'text/html').body;
+    const body = new DOMParser().parseFromString(cardDocument(frame) ?? '', 'text/html').body;
     expect(body.getAttribute('class')).toBe('card card2 nightMode night_mode');
     expect(frame.getAttributeNames().sort()).toEqual(['sandbox', 'srcdoc', 'title']);
     expect(frame.getAttribute('sandbox')).toBe('');
