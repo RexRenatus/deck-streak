@@ -65,6 +65,7 @@ use crate::notifications_routes;
 use crate::progress_routes;
 use crate::sensitive_decks_routes;
 use crate::session_routes::{self, OwnerAccess};
+use crate::snapshot_routes::{self, SnapshotLister};
 use crate::streak_routes;
 use crate::sync_seal_routes;
 use crate::wallet_routes;
@@ -94,6 +95,7 @@ pub struct ApiState {
     inbox: Option<Arc<InboxCaptures<RealFs>>>,
     linking: Option<(LinkingConfig, Owner)>,
     seal: Option<Arc<SealSecret>>,
+    snapshot: Option<Arc<dyn SnapshotLister>>,
 }
 
 impl std::fmt::Debug for ApiState {
@@ -110,6 +112,10 @@ impl std::fmt::Debug for ApiState {
         // The seal port is named only while it is held: off is the release's default (SPEC-363 R5).
         if self.seal.is_some() {
             line.field("seal", &true);
+        }
+        // The archive's lister is named only while one is wired: off answers unknown (SPEC-377 R14).
+        if self.snapshot.is_some() {
+            line.field("snapshot", &true);
         }
         line.finish()
     }
@@ -129,6 +135,7 @@ impl ApiState {
             inbox: None,
             linking: None,
             seal: None,
+            snapshot: None,
         }
     }
 
@@ -159,6 +166,14 @@ impl ApiState {
     #[must_use]
     pub fn with_seal(mut self, secret: SealSecret) -> Self {
         self.seal = Some(Arc::new(secret));
+        self
+    }
+
+    /// This state, answering the snapshot route from `lister`, the archive's listing (SPEC-377
+    /// R14). Without it the route answers `{"found": null}`, unknown.
+    #[must_use]
+    pub fn with_snapshot(mut self, lister: Arc<dyn SnapshotLister>) -> Self {
+        self.snapshot = Some(lister);
         self
     }
 
@@ -215,6 +230,7 @@ pub fn router(state: ApiState) -> Router {
     let inbox = state.inbox.clone();
     let linking = state.linking.clone();
     let seal = state.seal.clone();
+    let snapshot = state.snapshot.clone();
     let routes = health::routes()
         .merge(minimum_client::routes())
         .with_state(state);
@@ -242,6 +258,7 @@ pub fn router(state: ApiState) -> Router {
                 .merge(law_routes::routes(access.clone(), readiness.clone()))
                 .merge(session_routes::routes(access.clone()))
                 .merge(sync_seal_routes::routes(access.clone(), seal))
+                .merge(snapshot_routes::routes(access.clone(), snapshot))
                 .merge(drill_routes::routes(
                     access.clone(),
                     readiness.clone(),

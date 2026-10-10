@@ -70,6 +70,11 @@ so the key is gone even when your device is offline; clearing this site's data i
 removes all three. None of it is the service's store: an export of your data does not include it,
 and only your browser holds it.
 
+The web app also keeps backups in your browser: saved copies of this device's collection and saved
+copies of the server's collection, at most three of each kind, the oldest of a kind removed first.
+They stay on your device alone, are never sent to the service, and leave your device only when you
+export one from the sync screen.
+
 ## Your copy of your data, and erasing it
 
 From Telegram, the bot answers two commands, and only yours:

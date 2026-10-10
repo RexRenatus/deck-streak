@@ -23,6 +23,8 @@
 //! one seal id, to the owner's session alone, and off while the service holds no seal secret.
 //! SPEC-374 adds the statement of the oldest client level the sync service accepts
 //! ([`minimum_client`]), to any caller, beside the health routes.
+//! SPEC-377 adds the snapshot answer ([`snapshot_routes`]): whether the archive holds a sealed
+//! snapshot of the server's collection, and its age, to the owner's session alone.
 //!
 //! The context map (docs/CONTEXT-MAP.md) is binding: this crate depends only on what its line
 //! there declares, and a new edge is an ADR, never a fix to make code compile.
@@ -46,6 +48,7 @@ pub mod sensitive_decks_routes;
 pub mod serve;
 pub mod session_routes;
 pub mod settings;
+pub mod snapshot_routes;
 pub mod streak_routes;
 pub mod sync_seal_routes;
 pub mod wallet_routes;

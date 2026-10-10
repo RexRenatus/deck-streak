@@ -10,6 +10,7 @@ and part 2's components are marked as such.
 flowchart LR
   subgraph Browser["The browser, one origin"]
     Page["Page: SvelteKit screens, the sync form, sign-out, also runs Telegram's script (app.html:6)"]
+    %% Note (SPEC-400): app.html:6 is removed; Telegram's script now loads only on a launch from Telegram.
     subgraph WorkerBox["Dedicated Worker (worker.ts:39-46, own-origin messages only)"]
       Cred["credential.ts: the store adapter (part 2)"]
       Engine["web engine, wasm: the engine and the core's rule exports"]
@@ -58,6 +59,7 @@ flowchart LR
 
 The accepted residual is the second row: a same-origin script during a live session can open the
 record (ADR-374 Consequences). Telegram's script, which loads on every route (app.html:6), is one
+(SPEC-400 has since removed app.html:6, so Telegram's script now loads only on a launch from Telegram)
 such script, and ADR-374 names it as the accepted residual of this design.
 
 ## 2. The key's life: obtain, store, use in a sync, replace, remove

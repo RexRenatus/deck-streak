@@ -302,3 +302,11 @@ send and settle. Its rows that change:
   D1's sealed record could then drop the service's part.
 - More than one API process behind the edge: the release's window would need sharing as the
   session store's would.
+
+## Amendment: ADR-414 closes the residual of Telegram's script on every route
+
+Lines 286-290 accept, as this decision's residual, that Telegram's script loads on every route of
+the page. ADR-414 (SPEC-400) closes it: the script loads only when Telegram launched the page, and
+outside a launch the page adds a policy that refuses the script's origin. The web client outside
+the Mini App therefore runs no script from Telegram beside the release and the sync form. The rest
+of this decision is unchanged.

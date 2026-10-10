@@ -226,3 +226,20 @@ Each is corrected above; the reasons are these.
 Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
 packs' and neutral names for their repository, binary and checkout under the public-text rule
 (ADR-059).
+
+## Amendment: SPEC-400, Telegram's script loads only on a launch
+
+SPEC-400 (ADR-414) takes Telegram's script out of the page shell. The app's start hook adds it only
+when Telegram launched the page, and awaits it before the router's first navigation. Outside a
+launch it adds no script, and the page adds a second policy that refuses the script's origin.
+
+So "first in `<head>`" no longer describes the page where this SPEC says it:
+
+- line 16, the platform's requirement;
+- lines 40-41, R1: the shell now loads no script, and still inlines nothing (SPEC-400 A11);
+- line 54, R4;
+- line 139, the manifest's `web/app/src/app.html` row;
+- lines 206 and 223, which record the shell as this delivery found and left it.
+
+What "first in `<head>`" was for, the script running before any navigation so that no navigation
+loses the launch, is now held by SPEC-400's A3.
