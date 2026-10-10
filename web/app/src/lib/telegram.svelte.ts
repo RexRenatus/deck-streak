@@ -1,14 +1,14 @@
 /**
  * The one wrapper around Telegram's Mini App script (ADR-005; SPEC-028 R2, R4).
  *
- * `telegram-web-app.js`, the first script in `app.html`'s head, runs before any app code: it
+ * On a launch, `telegram-web-app.js` runs before any app code: the app's start hook adds it to the
+ * head only when Telegram launched the page and waits for it (`telegram-launch.ts`, SPEC-400). It
  * parses the launch parameters out of the URL hash, keeps them for the session, and sets the
  * `--tg-*` CSS variables the design tokens read. This module is the only one that reads the
  * script's object (`telegram-boundary.test.ts` holds every other module to that). It reads the
- * launch once, when the module loads, which is before the router's first navigation; it exposes
- * what the screens need as runes state; and it calls a method newer than the first Mini App
- * version only behind `isVersionAtLeast`, because the script throws on an older client. Outside
- * Telegram (a plain browser tab) it says so, and nothing it offers throws.
+ * launch once, when the module loads, after the script has run; it exposes what the screens need
+ * as runes state; it gates a newer method behind `isVersionAtLeast`, as the script throws on an
+ * older client. Outside a launch (a plain browser tab) it says so, and nothing it offers throws.
  */
 
 /** Telegram's colour scheme for the chat the Mini App opened from. */
