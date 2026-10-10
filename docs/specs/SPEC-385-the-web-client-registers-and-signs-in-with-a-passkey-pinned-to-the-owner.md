@@ -206,6 +206,7 @@ reopen wording, the posted finish) second, so a page that did nothing cannot pas
 | `docs/decisions/ADR-132-passkeys-through-webauthn-rs-with-the-mini-apps-host-as-the-relying-party.md` | document | its status line only |
 | `docs/schematics/passkey-sign-in-on-the-web.md` | document | sections appended; nothing above them changes |
 | `docs/red-first/SPEC-385.md` | document | new |
+| `docs/specs/planned/SPEC-057-every-surviving-mutant-is-killed-or-recorded-equivalent-before-the-first-mutation-gated-release.md` | document | section 7's `miniapp` row only, refilled whole from one battery pair |
 | `changelog.d/web-passkey-385.md` | document | new |
 | `web/app/src/lib/passkeys.ts` | web client | new |
 | `web/app/src/lib/passkeys.test.ts` | web client | new |
