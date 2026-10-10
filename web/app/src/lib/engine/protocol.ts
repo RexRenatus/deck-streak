@@ -11,7 +11,8 @@
  * the page names a direction and nothing else (SPEC-377 R6). A grade is recorded only by `rate`, on
  * the card shown: no operation answers the queue's head (SPEC-365 R9). `undo-offer` reads the
  * review's own last answer and writes nothing, and `undo` reverts only the answer an offer named, by
- * its card and its step (SPEC-371 R12). */
+ * its card and its step (SPEC-371 R12). The last two list the browser's backups after retention, and
+ * export one by its id alone, never a path (SPEC-377 R15, R16). */
 export const OPS = [
   'open',
   'seed',
@@ -35,7 +36,9 @@ export const OPS = [
   'choice-count',
   'choice-confirm',
   'choice-cancel',
-  'unsynced'
+  'unsynced',
+  'backups',
+  'backup-export'
 ] as const;
 export type Op = (typeof OPS)[number];
 
@@ -65,7 +68,9 @@ export type Request =
   | { id: number; op: 'sync-login'; user: string; password: string }
   | { id: number; op: 'sync' }
   | { id: number; op: 'choice-count' | 'choice-cancel' | 'unsynced' }
-  | { id: number; op: 'choice-confirm'; direction: Direction };
+  | { id: number; op: 'choice-confirm'; direction: Direction }
+  | { id: number; op: 'backups' }
+  | { id: number; op: 'backup-export'; backup: string };
 
 /** What a normal sync found the collections need, in the engine's order: the engine answers the
  * index, and this list names it (SPEC-364 R18). */
@@ -218,6 +223,9 @@ const languages = (value: unknown) =>
 const LOGIN = 1024;
 /** A sync login's user or password: a non-empty string of at most `LOGIN` characters. */
 const loginText = (value: unknown) => typeof value === 'string' && value.length >= 1 && value.length <= LOGIN;
+/** A backup's id: its kind and its number from 1, as the web engine names it, and never a path. */
+const BACKUP = /^(backup|server)-[1-9][0-9]{0,8}$/;
+const backupId = (value: unknown) => typeof value === 'string' && BACKUP.test(value);
 
 /** Each operation's arguments, and the test each must pass: the engine's own types bound them. */
 const ARGS: Record<Op, Record<string, (value: unknown) => boolean>> = {
@@ -243,7 +251,9 @@ const ARGS: Record<Op, Record<string, (value: unknown) => boolean>> = {
   'choice-count': {},
   'choice-confirm': { direction: (value) => (DIRECTIONS as readonly unknown[]).includes(value) },
   'choice-cancel': {},
-  unsynced: {}
+  unsynced: {},
+  backups: {},
+  'backup-export': { backup: backupId }
 };
 
 /** Reads a request off the wire. Anything but an operation of `OPS` with exactly its arguments,
@@ -331,4 +341,22 @@ export interface Unsynced {
   reviews: number;
   changed: boolean;
   schema: boolean;
+}
+
+/** The kinds of the browser's backups: a backup of the side a write replaced, and a copy of the
+ * server's collection (SPEC-377 R15). */
+export type BackupKind = 'backup' | 'server';
+
+/** One backup the browser keeps: its id, its kind and its age in whole seconds. */
+export interface Backup {
+  id: string;
+  kind: BackupKind;
+  age: number;
+}
+
+/** What `backups` answers: the backups newest first, and each one retention removed before the
+ * list, by its kind and its age (SPEC-377 R17). */
+export interface BackupsListed {
+  backups: Backup[];
+  removed: Omit<Backup, 'id'>[];
 }

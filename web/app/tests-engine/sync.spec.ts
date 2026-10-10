@@ -14,6 +14,8 @@ import {
   type PlaywrightWorkerArgs,
   type PlaywrightWorkerOptions
 } from '@playwright/test';
+import { writeFileSync } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
 import type { Harness } from '../engine-harness/main';
 
 /** How the sync route answers: see vite.engine.config.ts's `MODES`. */
@@ -380,6 +382,48 @@ test('an evicted collection is restored from the server', async ({ playwright, b
     expect(restored.counted).toMatchObject({ status: 'held', counts: { upload: null, download: { reviews: 0, cards: 0, notes: 0 } } });
     expect(restored.confirmed).toEqual({ status: 'held', outcome: 'written' });
     expect(await reps(page, kept)).toBe(1);
+    expect(await page.evaluate(() => window.harness.violations)).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
+
+test('a backup is listed and exported', async ({ playwright, browserName, baseURL, request }, testInfo) => {
+  // SPEC-377 B6, R15, R16: a download leaves the backup of the side it replaced listed in the
+  // browser, and that backup leaves the browser as a file the engine opens with every device review
+  await answering(request, 'pass');
+  await uploaded(playwright, browserName, baseURL, request);
+  const { user, password } = account(browserName);
+  const context = await profile(playwright, browserName, baseURL);
+  try {
+    const page = await context.newPage();
+    await boot(page);
+    const own = (await reviewed(page, 2)).card!;
+    expect(await login(page, user, password)).toBe('held');
+    expect(await synced(page)).toMatchObject({ answer: { required: 'full-sync' } });
+    await snapshotting(request, 'refused');
+    expect((await chosen(page, 'download')).confirmed).toEqual({ status: 'held', outcome: 'written' });
+    const listed = await page.evaluate(() => window.harness.client!.backups());
+    expect(listed.backups.map((each) => each.kind)).toContain('backup');
+    expect(listed.removed).toEqual([]);
+    const backup = listed.backups.find((each) => each.kind === 'backup')!;
+    const bytes = await page.evaluate(
+      async (id) => [...(await window.harness.client!.backupExport(id))],
+      backup.id
+    );
+    // the exported file is the collection this device held before the download: it opens, and it
+    // holds the device's own answer, its card reviewed once and its one review row
+    const file = testInfo.outputPath('backup.anki2');
+    writeFileSync(file, Uint8Array.from(bytes));
+    const opened = new DatabaseSync(file, { readOnly: true });
+    try {
+      expect([
+        opened.prepare('SELECT reps FROM cards WHERE id = ?').get(Number(own)),
+        opened.prepare('SELECT count(*) AS rows FROM revlog WHERE cid = ?').get(Number(own))
+      ]).toEqual([{ reps: 1 }, { rows: 1 }]);
+    } finally {
+      opened.close();
+    }
     expect(await page.evaluate(() => window.harness.violations)).toEqual([]);
   } finally {
     await context.close();
