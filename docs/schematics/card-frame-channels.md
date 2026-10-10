@@ -99,16 +99,16 @@ dash means at least two layers hold it, so no single-layer variant opens it.
 | `stylesheet` | `link rel=stylesheet` | W3, W2 | - |
 | `preload` | `link rel=preload` and `rel=modulepreload` | W3, W2 | - |
 | `prefetch` | `link rel=prefetch` | W3, W2 | - (UNOBSERVABLE in WebKit, measured: it sends no prefetch request under the suite) |
-| `preconnect` | `link rel=preconnect` (a TCP connection, no request) | W3 | W3 (UNOBSERVABLE in Chromium, measured: it opens no preconnect connection under the suite) |
+| `preconnect` | `link rel=preconnect` (a TCP connection, no request) | W3 | W3 (UNOBSERVABLE in Chromium, measured: it opens no preconnect connection under the suite; UNOBSERVABLE in Firefox, measured: it opens no preconnect connection under the suite) |
 | `dns-prefetch` | `link rel=dns-prefetch` | W3 | W3 (UNOBSERVABLE: no lookup reaches a listener) |
-| `shadow-link` | a `template shadowrootmode=open` holding `link rel=preconnect` | W3 | W3 (UNOBSERVABLE in Chromium, measured: it opens no preconnect connection under the suite, in a shadow tree or out of one) |
+| `shadow-link` | a `template shadowrootmode=open` holding `link rel=preconnect` | W3 | W3 (UNOBSERVABLE in Chromium, measured: it opens no preconnect connection under the suite, in a shadow tree or out of one; UNOBSERVABLE in Firefox, measured: it opens no preconnect connection under the suite, in a shadow tree or out of one) |
 | `meta-refresh` | `meta http-equiv=refresh` to the listener | W3, W4, W1 in some engines | - |
 | `base` | `base href` at the listener, then a relative `img` | W3, W2, P | - |
 | `nav-self` | a full-frame link at the listener, clicked | W4 | W4 (SEC01-F13) |
 | `nav-top` | a full-frame link with `target=_top`, clicked | W1 | W1 |
 | `nav-blank` | a full-frame link with `target=_blank`, clicked | W1 | W1 |
 | `download` | a full-frame link with `download`, clicked | W4 (measured in Chromium: a `download` link to another origin is followed as a navigation of the frame, which the sandbox allows); W1 stops a download itself | W4 |
-| `ping` | a same-document link with `ping` at the listener, clicked | W2, P | - |
+| `ping` | a same-document link with `ping` at the listener, clicked | W2, P | - (UNOBSERVABLE in Firefox, measured: it sends no hyperlink audit under the suite) |
 | `form` | a full-frame submit button in a form whose action is the listener, clicked | W1, W2, W4 | - |
 | `nested-frame` | `iframe src` at the listener, and an `iframe srcdoc` holding an `img` at the listener | the `iframe src`: W2, P (the inherited `frame-src 'none'`); the srcdoc child: W2 (measured in Chromium: a `srcdoc` document is not fetched, so `frame-src` does not apply to it, and the inherited page policy admits its `img`) | W2 |
 | `external-scheme` | a full-frame `mailto:` link, clicked | W1, W4 | - (UNOBSERVABLE: no listener sees a handler launch) |
@@ -117,7 +117,7 @@ dash means at least two layers hold it, so no single-layer variant opens it.
 | `script-src` | `script src` at the listener | W1, W2, P | - |
 | `event-handler` | a data-image `onload` that fetches the listener | W1, W2, P | - |
 | `javascript-url` | a full-frame `javascript:` link that fetches the listener, clicked | W1, W2, P | - |
-| `webrtc` | an inline script that opens a peer connection to the UDP listener as its STUN server | W1, W2, P (none of them by policy: they stop the script, not the peer connection) | - |
+| `webrtc` | an inline script that opens a peer connection to the UDP listener as its STUN server | W1, W2, P (none of them by policy: they stop the script, not the peer connection) | - (UNOBSERVABLE in Firefox, measured: its peer connection sends no datagram to the UDP listener under the suite) |
 | `bridge` | an inline script that calls the page's bridge stand-in, posts to the parent and the top, posts on a BroadcastChannel, and reads the page's storage markers | W1, W2, P | - |
 
 **The scripts-on measurement (SEC01-F14).** One variant gives the frame `allow-scripts` and admits
@@ -530,3 +530,161 @@ The card's own permitted loads are its document, handed as a string with no base
 `data:` URLs, which the rule list does not act on and the policy admits only as images, media
 and fonts. The `permitted` card proves the layer leaves them; every other card proves it leaves
 nothing else.
+
+## 9. The web's browser test matrix (SPEC-398, ADR-412)
+
+Kind: component (each browser configuration, the engines it runs in, the job that runs it, and the
+check-run its verdict is read from). Read at DeckStreak `dev` `164ac206`
+(`web/app/playwright.config.ts`, `web/app/playwright.card.config.ts`,
+`web/app/playwright.engine.config.ts`, `web/app/playwright.study.config.ts`,
+`.github/workflows/ci.yml`). SPEC-398 adds Firefox to the card configuration and to the
+`card-sandbox` job; every other edge is as measured there. The thick edge is SPEC-398's.
+
+```mermaid
+flowchart LR
+  subgraph CFG["browser configurations, web/app"]
+    E2E["e2e: playwright.config.ts<br/>tests/, card-policy.spec.ts among them"]
+    CARD["card: playwright.card.config.ts<br/>tests-card/card.spec.ts, one worker, engines in turn"]
+    ENG["engine: playwright.engine.config.ts<br/>tests-engine/engine.spec.ts and sync.spec.ts"]
+    STUDY["study: playwright.study.config.ts<br/>tests-study/study.spec.ts"]
+  end
+  subgraph BROWSERS["engines"]
+    CR["Chromium"]
+    WK["WebKit"]
+    FF["Firefox, SPEC-398"]
+  end
+  subgraph JOBS["CI jobs, .github/workflows/ci.yml"]
+    JWEB["web: the gate's web stage"]
+    JCARD["card-sandbox: installs Firefox, then Chromium and WebKit, bound 30 minutes"]
+    JENG["web-engine: the engine build, then the engine and study suites"]
+  end
+  AGG["ci: the aggregate check, needs every job"]
+  JWEB -->|runs| E2E
+  JCARD -->|runs the card script| CARD
+  JENG -->|runs the engine script| ENG
+  JENG -->|runs the study script| STUDY
+  E2E --> CR
+  CARD --> CR
+  CARD --> WK
+  CARD ==> FF
+  ENG --> CR
+  ENG --> WK
+  STUDY --> CR
+  STUDY --> WK
+  JWEB -->|check-run web| AGG
+  JCARD -->|check-run card-sandbox| AGG
+  JENG -->|check-run web-engine| AGG
+```
+
+| engine | configuration, projects at | job, at | card-frame tests | engine tests | verdict read as |
+|---|---|---|---|---|---|
+| Chromium | e2e, no `projects` key (`playwright.config.ts:3-10`) | `web` (`ci.yml:201-253`) | `tests/card-policy.spec.ts:11`, which reads the built page's policy text and does not depend on the engine | none | `web`, then `ci` |
+| Chromium, WebKit | card (`playwright.card.config.ts:17-20`) | `card-sandbox` (`ci.yml:268-295`) | `tests-card/card.spec.ts`: the census `:101`, the pairs `:109`, the single-layer variants `:133`, scripts on `:143` and `:158`, the render proof `:185` | none | `card-sandbox`, then `ci` |
+| Firefox (SPEC-398) | card, the third project | `card-sandbox`, from its own install step | `tests-card/card.spec.ts`, every test above | none | `card-sandbox`, then `ci` |
+| Chromium, WebKit | engine (`playwright.engine.config.ts:36-39`) | `web-engine` (`ci.yml:767-832`) | none | `tests-engine/engine.spec.ts:55`, `:104`, `:132`, `:169`, `:189`, `:214`, `:292`; `tests-engine/sync.spec.ts:99`, `:126`, `:153`, `:177` | `web-engine`, then `ci` |
+| Chromium, WebKit | study (`playwright.study.config.ts:19-22`) | `web-engine` (`ci.yml:837-838`) | none | none | `web-engine`, then `ci` |
+
+**Where the card frame's verdict is read.** The check-run `card-sandbox`. Its log prints one census
+line per project, `examined 28 planted cards, 28 pairs, 112 variants in <project>`
+(`card.spec.ts:103`), so a run that skipped Firefox shows two lines, not three. The upload
+`card-sandbox-results` keeps every project's failures whatever the verdict (`ci.yml:289-295`). The
+aggregate `ci` check needs `card-sandbox` (`ci.yml:876`).
+
+**How the three engines share the job.** The card configuration runs one worker with no
+parallelism (`playwright.card.config.ts:12-13`), so the projects run one after another. Each
+project's listeners are that worker's module state, and each pair's settle window comes from the
+same engine's reference latency, so a slow engine widens its own windows and no other's.
+
+**What one engine's readings decide.** Section 3's notes name, per engine, each channel its
+reference frame cannot reach. Firefox's are measured by its first `card-sandbox` run and noted
+there in the form "UNOBSERVABLE in Firefox, measured: ...". A reading in which the card frame
+reaches a listener, a single layer opens a set the table does not give it, or the render proof
+shows a blank frame, is a new design for every engine, never a note.
+
+**Firefox's first run.** Firefox's reference frame reaches no listener for `preconnect`,
+`shadow-link`, `ping` and `webrtc`, so section 3 notes each as unobservable in Firefox; WebKit
+observes the first two, and Chromium and WebKit the last two. In Firefox, W2 holds five of the
+`img` card's seven forms alone, and its two image-set forms, `img srcset` and `picture source`,
+only beside W1 and W4: the engine fetches an image-set candidate ahead of its tree builder as an
+image set, for which it does not consult its speculative copy of the frame policy (ADR-412 D6). The
+strip of every `srcset` (#771) gives those two forms a layer built for them in every
+engine. This section reads Firefox over it, and the `img` row is that delivery's to change.
+
+**Not in the matrix.** The engine and study suites in Firefox (#652; the engine configuration is
+open work in #748), the e2e and accessibility suites in Firefox (#652), and a learner's installed
+browser with its own preferences (#652).
+
+## 10. iPhone and iPad: the link strip, and the followed link closed (SPEC-392, ADR-406)
+
+Kind: data flow (the card's path from the note to the view on each client, and where the link
+strip sits on it) and component (L14, the layer it adds, beside what it does not stop). Read at
+`ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift`,
+`ios/App/Sources/EngineSession.swift`, `ios/App/Sources/ReviewView.swift`,
+`ios/App/Sources/CardFaceView.swift`, `ios/Harness/Sources/CardWebView.swift`,
+`ios/CardProbeTests/Planted.swift` and `web/app/src/lib/card/frame-document.ts` at 164ac206, and at
+the cut's base before the build writes.
+
+L1 to L13 are sections 4, 7 and 8's; L9 stays retired and its number is not reused. One layer
+joins, on iPhone and iPad only:
+
+| layer | what it is | where it lives | what it does NOT stop |
+|---|---|---|---|
+| L14 | the link strip: every `<link` in the card's text, its four letters in any ASCII case, renamed to `<wbr` before L12's prefix and the load; every other byte kept | `LinkStrip.swift`, called by the factory's `build` (`CardWebViewFactory.swift:47`) | a link a script adds (L3 holds its hint); a link in a document a frame loads (L5); any other element's load (L3, L12); the five characters shown as text, which it renames too |
+
+L14 is no control: it is not in `required`, `CONTROLS`, the read-back (`present`) or `LAYERS`, and
+the planted probe composes it only through the variant `referenceWith`, a view the factory does
+not build whose layers are the set it names. A renamed tag is a `wbr`, which is void, so it wraps
+nothing after it, and which has no attribute of its own, so the renamed tag's attributes grant
+nothing.
+
+On iPhone and iPad, from the note to the view. The strip runs inside `build`, before L12's prefix
+and L7's string load, so the shipped view is the only view the factory strips:
+
+```mermaid
+flowchart TD
+    face["the engine's card face"] --> session["EngineSession.face, EngineSession.swift:150-166, ReviewFace.document at :35-36"]
+    session --> review["ReviewView, ReviewView.swift:33"]
+    review --> faceview["CardFaceView, CardFaceView.swift:24"]
+    faceview --> make["makeCardWebView, CardWebViewFactory.swift:25-28: the rule list L3 compiles, or no view"]
+    harness["the harness's own call, CardWebView.swift:44"] --> make
+    make --> build["build and make: L1 to L8, L10 to L13"]
+    build --> l14["L14 at :47: every link opener renamed to a wbr opener"]
+    l14 --> loadstep["load: L12's policy prefixed at :59, L7's string load at :64"]
+    loadstep --> view["the card view"]
+    view --> act["a link activated, by a person or by the card"]
+    act --> l10["L10 cancels the default: no early connection, no navigation asked"]
+```
+
+On the web, unchanged: W3 already removes every `link`, `meta`, `base` and `template` before the
+frame, and the review refuses a card whose document re-parses with one:
+
+```mermaid
+flowchart TD
+    page["the engine's card face in the page"] --> frame["CardFrame.svelte:12, frameDocument"]
+    frame --> w3["W3, frame-document.ts:17 and :38-51: link, meta, base and template removed"]
+    w3 --> srcdoc["the sandboxed frame's srcdoc, CardFrame.svelte:15"]
+    w3 --> again["review.ts:212 reads the same composition"]
+    again --> refused["a card that escapes it is refused"]
+```
+
+**#677 is closed by this record.** A followed link opens no connection from the card view: L10
+cancels a link activation's default before the engine's click handler can start an early
+connection, and L11 refuses a detached node's activation, as section 8 built them. SPEC-392's A7
+reads zero connections for every planted card from the card view on both simulators, and its
+control, `nav-self` and `nav-blank` each opening a connection from `shippedWithout(.L10)`, proves
+the suite sees the channel. Section 6's residual paragraph (`:232-234`) and ADR-360 D8's tolerance
+of one connection are superseded by this record and stand as history.
+
+The readings SPEC-392 predicts. Each is a prediction until its run; a measurement that contradicts
+one is a STOP, reported before the second push:
+
+| criterion | view | cards | predicted reading |
+|---|---|---|---|
+| A5 | the reference | every card of `PLANTED` | a `link` count above 0 for exactly the cards of `LINKED` (`stylesheet`, `preload`, `prefetch`, `preconnect`, `dns-prefetch`, `shadow-link`) |
+| A5 | the card view | every card of `PLANTED` | a `link` count of 0 for every card |
+| A6 | the reference | `preconnect`, `preload`, `shadow-link`, `stylesheet` | each reached |
+| A6 | `referenceWith([.L14])`, only L14 on | the same four | none reached, and no connection opened |
+| A7 | the card view | every planted card | zero connections on both simulators; `nav-self` and `nav-blank` each open one from `shippedWithout(.L10)` |
+
+`LINKED` less `UNOBSERVABLE` is A6's population: `dns-prefetch` and `prefetch` reach no listener
+a test owns, so a reading of them proves nothing alone, and L3 still holds their hints.
