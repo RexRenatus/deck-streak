@@ -404,3 +404,11 @@ These are read by the owner, not by CI.
 | V1 | On Safari on iPhone, as a Home Screen app, and on a desktop browser: a sync after signing in to sync; after sign-out the next sync asks for the sync password again | the owner, in the acceptance session, after SPEC-357's part c lands (#637) |
 | V2 | A new tab opened after the web session ended studies at once and asks to sign in before it syncs; once signed in it syncs without the sync password | the owner, in the acceptance session (#637) |
 | V3 | After the sync password changes on the server, the next sync drops the old key and asks for the new password, and study is never held | the owner, in the acceptance session (#637) |
+
+## Amendment: SPEC-400 closes M11
+
+M11 (line 49) measured that every route of the page loads Telegram's script, and lines 272-277
+accept it as this SPEC's residual. SPEC-400 (ADR-414) closes it: the page loads the script only when
+Telegram launched it, and outside a launch the page's policy refuses the script's origin, so the web
+client in a plain browser tab runs no script from Telegram beside the page that asks for the release
+and holds the sync form.

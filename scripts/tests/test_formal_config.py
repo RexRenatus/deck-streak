@@ -24,7 +24,7 @@ PIN_FILE = Path("config") / "formal-toolchain.json"
 EXPECTED = {
     "k": 20,
     "budgets": {
-        "tla_seconds": 300,
+        "tla_seconds": 480,
         "lean_seconds": 600,
         "entry_seconds": 300,
         "entries": {
@@ -33,6 +33,7 @@ EXPECTED = {
             "tla/LandmarkOnce": 420,
             "tla/MintReadsTheFinalBase": 180,
             "tla/RelightOrder": 360,
+            "tla/SecondRoute": 480,
             "tla/StagedNoJournal": 120,
             "tla/SyncCredential": 60,
             "tla/SyncSnapshotWindow": 60,

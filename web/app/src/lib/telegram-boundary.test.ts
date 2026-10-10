@@ -10,6 +10,11 @@ import { describe, expect, it } from 'vitest';
 const APP = fileURLToPath(new URL('../..', import.meta.url));
 const SRC = join(APP, 'src');
 const WRAPPER = 'src/lib/telegram.svelte.ts';
+// SPEC-400 R8: the launch module is the one reader of the launch parameters, and the start hook
+// reaches it.
+const LAUNCH = 'src/lib/telegram-launch.ts';
+const HOOK = 'src/hooks.client.ts';
+const PARAMETER = /\btgWebApp[A-Z]/;
 
 const TOUCHES: readonly RegExp[] = [
   // a member of the global `Telegram` object, reached with `.`, `?.` or brackets (a sentence that
@@ -70,5 +75,31 @@ describe('the Telegram boundary', () => {
     expect(planted.filter(touches)).toEqual(planted);
     expect(touches("import { telegram } from '$lib/telegram.svelte'; telegram.ready();")).toBe(false);
     expect(touches('// null outside Telegram. The wrapper says so.')).toBe(false);
+  });
+
+  it("only the launch module names Telegram's launch parameters", () => {
+    // SPEC-400 R8, A9: one module decides a launch, so no second reader can decide it by another
+    // rule. The planted names are assembled at run time, so this file never names one itself.
+    const planted = [`${'tgWebApp'}Data`, `${'tgWebApp'}Version`, `${'tgWebApp'}Platform`];
+    expect(planted.filter((name) => PARAMETER.test(name))).toEqual(planted);
+
+    const files = examined('Mini App source files', sources(SRC));
+    const naming = files.filter((file) => PARAMETER.test(readFileSync(join(APP, file), 'utf8')));
+
+    expect(naming).toEqual([LAUNCH]);
+  });
+
+  it("the hook that loads Telegram's script never imports the wrapper", () => {
+    // SPEC-400 R8, A10: the start hook runs before any component and before the script has
+    // loaded, so it reaches the launch module and never the wrapper that reads the script's object.
+    const wrapper = /telegram\.svelte/;
+    expect(wrapper.test("import { telegram } from '$lib/telegram.svelte';")).toBe(true);
+
+    const hook = readFileSync(join(APP, HOOK), 'utf8');
+    const launch = readFileSync(join(APP, LAUNCH), 'utf8');
+
+    expect(wrapper.test(hook), HOOK).toBe(false);
+    expect(wrapper.test(launch), LAUNCH).toBe(false);
+    expect(/from\s+['"]\$lib\/telegram-launch['"]/.test(hook), `${HOOK} imports the launch module`).toBe(true);
   });
 });

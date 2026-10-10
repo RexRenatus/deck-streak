@@ -41,13 +41,6 @@ describe('the page policy', () => {
       'connect-src': ['self'],
       'frame-src': ['none']
     });
-    // the page shell runs one script, Telegram's, by its URL: nothing is inlined into it
-    const scripts = [...SHELL.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)].map(
-      ([, attributes, body]) => ({ attributes: attributes.trim(), body: body.trim() })
-    );
-    expect(scripts).toEqual([
-      { attributes: `src="${TELEGRAM}/js/telegram-web-app.js"`, body: '' }
-    ]);
     // and the judgement refuses a weaker policy
     expect(unsafe(["'self'", "'unsafe-inline'", "'unsafe-eval'", '*', 'https:', TELEGRAM])).toEqual([
       "'unsafe-inline'",
@@ -79,12 +72,32 @@ describe('the page policy', () => {
   });
 
   it('the page sends no referrer to another origin', () => {
-    // A meta referrer policy governs only what loads after it, so it precedes Telegram's script.
+    // A meta referrer policy governs only what loads after it, so it precedes everything SvelteKit
+    // adds to the head; the start hook appends Telegram's script on a launch later still (SPEC-400 R3).
     const policy = SHELL.indexOf('<meta name="referrer" content="same-origin" />');
-    const telegram = SHELL.indexOf('<script src=');
+    const head = SHELL.indexOf('%sveltekit.head%');
 
     expect(policy).toBeGreaterThan(-1);
-    expect(policy).toBeLessThan(telegram);
+    expect(policy).toBeLessThan(head);
+  });
+
+  it('the page shell carries no script, inline or by URL', () => {
+    // SPEC-400 R7, A11: the start hook adds Telegram's script only on a launch, so the shell runs
+    // none, and nothing is inlined into it.
+    const scriptsIn = (shell: string) =>
+      [...shell.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)].map(([, attributes, body]) => ({
+        attributes: attributes.trim(),
+        body: body.trim()
+      }));
+    // the census finds a script by URL and an inline one in a planted shell
+    expect(
+      scriptsIn(`<head><script src="${TELEGRAM}/js/telegram-web-app.js"></script><script>go()</script></head>`)
+    ).toEqual([
+      { attributes: `src="${TELEGRAM}/js/telegram-web-app.js"`, body: '' },
+      { attributes: '', body: 'go()' }
+    ]);
+
+    expect(scriptsIn(SHELL)).toEqual([]);
   });
 
   it('the page policy lets no frame navigate', () => {
