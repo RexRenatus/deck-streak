@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import config from '../../svelte.config.js';
 import { policyHeader } from '../../policy-header';
-import { admitLaunch, launchData, wasAccepted, type Send } from './telegram-launch';
+import { accepts, admitLaunch, launchData, wasAccepted, type Send } from './telegram-launch';
 
 // SPEC-400 R2, R3, R4 as SPEC-403 R1 to R7 restate them (ADR-414 D2, D3; ADR-417 D2). The app's
 // start hook reads the launch data from the fragment's `tgWebAppData` value, or the tab's accepted
@@ -162,11 +162,15 @@ describe('the launch gate', () => {
     expect(sessionStorage.getItem(MARK)).toBeNull();
     for (const element of document.head.querySelectorAll('meta[http-equiv]')) element.remove();
 
-    // a 204 accepts: the mark is written, the script follows once, and the start waits on it
+    // a 204 accepts: the mark is written, the script follows once, and the start waits on it; the
+    // deadline's timer is cleared, so it never aborts an answered request
     const send = answering(204);
     const launched = admitLaunch(window, send);
     expect(await settledNow(launched)).toBe(false);
     const added = scripts();
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(DEADLINE);
+    expect(send.mock.calls[0]![1].signal?.aborted).toBe(false);
 
     expect(send).toHaveBeenCalledTimes(1);
     expect(added.map((script) => script.getAttribute('src'))).toEqual([SCRIPT]);
@@ -236,6 +240,19 @@ describe('the launch gate', () => {
     expect(signal?.aborted).toBe(true);
     expect(scripts()).toEqual([]);
     expect(policies()).toHaveLength(1);
+  });
+
+  it('the server accepts a launch only with a 204, and says so with a boolean', async () => {
+    vi.useFakeTimers();
+    expect(await accepts('x', answering(204))).toBe(true);
+    for (const status of [200, 401, 403, 429, 500]) {
+      expect(await accepts('x', answering(status)), String(status)).toBe(false);
+    }
+    expect(await accepts('x', vi.fn<Send>(() => Promise.reject(new TypeError('the request failed'))))).toBe(false);
+    const { send } = pending();
+    const waiting = accepts('x', send);
+    await vi.advanceTimersByTimeAsync(DEADLINE);
+    expect(await waiting).toBe(false);
   });
 
   it('an acceptance after the deadline adds no script', async () => {
