@@ -139,6 +139,7 @@ runs; a name other than `github-actions[bot]` is a defect against R4.
 | `docs/schematics/testflight-lane.md` | schematic | an insert-only pointer row after line 12: release trigger, amended (SPEC-405) |
 | `scripts/mutation-rows.d/S40500-S40599.json` | rows | new band, S40500 to S40515 |
 | `changelog.d/release-lanes-second-path-405.md` | changelog | fragment |
+| `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | threat model | the five citations of lines this delivery moves, re-derived at the tree (T5's three of `test_testflight_workflows.py` and one more of it; the lane's `tags:` line); every other line kept |
 
 ## 6. What this does NOT cover
 
