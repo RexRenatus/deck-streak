@@ -173,11 +173,7 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     let state = StateDirectory::from_env(env)?;
     let freshness = Freshness::from_env(env)?;
     let credentials = CredentialsDirectory::from_env(env)?;
-    // The archive's lister is read before the loader takes the directory: a list command that is
-    // set and malformed refuses start, and an absent command or credential turns it off (SPEC-377
-    // R14).
-    let archive_lister = CommandLister::configured(env, &credentials)?;
-    let loader = CredentialLoader::new(credentials, redactor.clone());
+    let loader = CredentialLoader::new(credentials.clone(), redactor.clone());
     let gate = OwnerGate::load(&loader, freshness)?;
     // The seal secret is read beside the other credentials, before anything is bound: an absent one
     // turns the release off, and one that is held and malformed refuses start (SPEC-363 R5).
@@ -186,6 +182,11 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     let _conventions = Conventions::load(env)?;
     // So does a public origin that is set and is not an https origin (SPEC-359 R1).
     let linking = LinkingConfig::from_env(env)?;
+    // The archive's lister is read last of the settings and credentials, still before anything is
+    // bound: a list command that is set and malformed refuses start, and an absent command or
+    // credential turns it off with an INFO line, which comes after every other refusal so that a
+    // refusal is the role's first line (SPEC-377 R14).
+    let archive_lister = CommandLister::configured(env, &credentials)?;
     let notifier = Notifier::from_env(env);
     let shutdown = ShutdownSignal::install().map_err(ApiRoleError::Signals)?;
 
