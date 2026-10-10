@@ -187,7 +187,7 @@ fn fillable(dispatcher: &Dispatcher, path: &Path) -> Result<(), Reason> {
     if dispatcher.opens(path) {
         return Err(Reason::OpenCollection);
     }
-    if path.exists() && holds_a_row(&read(dispatcher, path)?) {
+    if dispatcher.holds(path) && holds_a_row(&read(dispatcher, path)?) {
         return Err(Reason::HoldsRows);
     }
     Ok(())

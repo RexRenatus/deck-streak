@@ -254,3 +254,91 @@ describe("the credential census's population", () => {
     expect(paths.filter((path) => /\.(test|spec)\./.test(path))).toEqual([]);
   });
 });
+
+// SPEC-377 R6, A16: the choice's four operations join the census. An absence census: no reply to
+// them carries the host key, the password, the user or a released key, and no page module imports
+// the choice module; each is held by a planted control caught by name.
+const CHOICE = join(SOURCE, 'lib', 'engine', 'choice');
+
+describe('where the sync key reaches the choice', () => {
+  it('no reply to the choice operations carries a secret', async () => {
+    const hostKey = sentinel('host', 'key', 'choice', 'reach');
+    const password = sentinel('pass', 'word', 'choice', 'reach');
+    const user = sentinel('choice', 'user', 'choice', 'reach');
+    const release = new ReleaseService();
+    const engine = {
+      ...standIn(),
+      sync_login: () => hostKey,
+      sync_collection: () => 4,
+      handshake: () => undefined,
+      full_sync_count: async () => JSON.stringify({ upload: { reviews: 1, cards: 1, notes: 1 }, download: null }),
+      full_sync_confirm: async () => JSON.stringify({ outcome: 'written' }),
+      full_sync_cancel: () => undefined,
+      unsynced: () => JSON.stringify({ reviews: 0, changed: false, schema: false })
+    };
+    const store = new CredentialStore(workerDeps(new IDBFactory(), release, new Bus(), engine));
+    const { serve } = await import('./worker');
+    const { Sync } = await import('./sync');
+    const { Choice } = await import('./choice');
+    const fetch = async (input: string) =>
+      new Response(input.endsWith('/api/sync/snapshot') ? '{"found":true,"age_seconds":60}' : '{"minimum_client_level":1}', {
+        status: 200
+      });
+    const replies: unknown[] = [];
+    let hear: (event: MessageEvent) => void = () => {};
+    const deps = {
+      lock: async () => 'held' as const,
+      storage: async () => null,
+      load: async () => studyEngine(),
+      credential: store,
+      sync: new Sync(store, async () => engine, ENDPOINT, fetch),
+      choice: new Choice(store, async () => engine, ENDPOINT, fetch)
+    };
+    const session = serve(
+      { postMessage: (reply) => replies.push(reply), addEventListener: (_, listener) => (hear = listener) },
+      deps,
+      ORIGIN
+    );
+    const requests = [
+      { op: 'open' },
+      { op: 'sync-login', user, password },
+      { op: 'sync' },
+      { op: 'choice-count' },
+      { op: 'choice-confirm', direction: 'upload' },
+      { op: 'choice-count' },
+      { op: 'choice-cancel' },
+      { op: 'unsynced' }
+    ];
+    for (const [id, body] of requests.entries()) hear(new MessageEvent('message', { data: { id, ...body } }));
+    const last = await session.handle({ id: requests.length, op: 'credential-status' });
+    const answers: [string, unknown][] = [
+      ...replies.map((reply, at): [string, unknown] => [`reply ${at}`, reply]),
+      ['a last status', last]
+    ];
+    const secrets: [string, string][] = [
+      ['the host key', hostKey],
+      ['the password', password],
+      ['the user', user],
+      ...release.keys.map((key, at): [string, string] => [`released key ${at}`, key])
+    ];
+    examined('replies to the choice operations and the sync before them', answers);
+    expect(leaks(answers, secrets)).toEqual([]);
+    // the positive control: a planted choice reply that carries the host key is caught by name
+    expect(
+      leaks([['a planted choice reply', { id: 9, ok: true, value: { status: 'held', outcome: 'written', key: hostKey } }]], secrets)
+    ).toEqual(['a planted choice reply carries the host key']);
+  });
+
+  it('no page module imports the choice module', () => {
+    const sources = examined('production modules under web/app/src', production(SOURCE));
+    expect(importersOf(sources, CHOICE).filter((path) => path !== 'lib/engine/worker.ts')).toEqual([]);
+    // the positive control: a planted page that imports the choice module is refused by name
+    const planted = {
+      path: join(SOURCE, 'routes', 'planted', '+page.svelte'),
+      text: `<script lang="ts">\n  import { Choice } from '$lib/engine/choice';\n</script>\n`
+    };
+    expect(importersOf([...sources, planted], CHOICE).filter((path) => path !== 'lib/engine/worker.ts')).toEqual([
+      'routes/planted/+page.svelte'
+    ]);
+  });
+});

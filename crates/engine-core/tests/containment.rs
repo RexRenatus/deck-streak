@@ -110,7 +110,7 @@ const ANSWER_FIXTURE: &str =
 
 /// Each line outside the core that may name the engine or the gesture (SPEC-345 section 8): its
 /// file, its exact trimmed text, how many times the file holds it, and why.
-const HELD: [(&str, &str, usize, &str); 31] = [
+const HELD: [(&str, &str, usize, &str); 33] = [
     (
         "crates/ingest/src/engine.rs",
         "col.full_download(auth, engine_client())",
@@ -276,6 +276,18 @@ const HELD: [(&str, &str, usize, &str); 31] = [
     (
         "crates/web-engine/tests/boundary.rs",
         "\".run_exempt(gesture, &recorded.encode_to_vec())\",",
+        1,
+        BOUNDARY_CENSUS_LITERAL,
+    ),
+    (
+        "crates/web-engine/tests/boundary.rs",
+        "\"OwnerGesture::from_tap(ExemptWrite::OneWaySync, Target::Collection)\",",
+        1,
+        BOUNDARY_CENSUS_LITERAL,
+    ),
+    (
+        "crates/web-engine/tests/boundary.rs",
+        "\".run_one_way(\",",
         1,
         BOUNDARY_CENSUS_LITERAL,
     ),
