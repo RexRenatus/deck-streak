@@ -1,11 +1,11 @@
 -------------------------- MODULE SensitiveDeckGate --------------------------
-\* @phx covers crates/agent/src/duty.rs anchor=decide digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/ingest/src/sensitive.rs anchor=read_marked digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/ingest/src/sensitive.rs anchor=admits digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/readings/src/day_set.rs anchor=hold_back_sensitive digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/readings/resolve.rs anchor=resolve_study_day digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/daemon/src/wiring.rs anchor=judge digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/daemon/src/wiring.rs anchor=judge_deck_scope digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/agent/src/duty.rs anchor=decide digest=sha256:fc5cf0e7154af8b370c20c9607a3e4d5c5863e1122dc96e2b411bebb9737cdcd
+\* @phx covers crates/ingest/src/sensitive.rs anchor=read_marked digest=sha256:8b0622370cd2a92acc83524ee034a4d7bc09fa84533475c3d71aec5d284b056d
+\* @phx covers crates/ingest/src/sensitive.rs anchor=admits digest=sha256:1cbdfb7d696284f79f5ba4277789db3790240ee866022892bbe2ef0fb40dd426
+\* @phx covers crates/readings/src/day_set.rs anchor=hold_back_sensitive digest=sha256:87ed2e5be28bae7bde084775f68e8725ddaf1e95c93e913aa35711630dbfed09
+\* @phx covers crates/coordination/src/readings/resolve.rs anchor=resolve_study_day digest=sha256:849dfd45db9b268f444c244c198a9d37911ef1cbc0f0afe817131b68cf570cdf
+\* @phx covers crates/daemon/src/wiring.rs anchor=judge digest=sha256:cea6b6731dfe4bbf948f119ca0a5461283d389c9f372be4c1282b2dd7f6635e0
+\* @phx covers crates/daemon/src/wiring.rs anchor=judge_deck_scope digest=sha256:7c141c72acbcdc55a3b21cbe15a337120ac8d73a940d93e4de07eec176c1726b
 \* @phx cites #751
 \* @phx property NoMarkedDeckIsSent ramp=report
 \* @phx property AnUnreadableSetSendsNothing ramp=report
