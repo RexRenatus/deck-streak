@@ -457,6 +457,31 @@ fn a_review_cards_due_is_its_last_review_day_plus_its_interval() {
 }
 
 #[test]
+fn a_review_before_today_began_is_due_that_many_whole_days_back_plus_its_interval() {
+    let built = built("replay-review-before-today", 1);
+    let card = built.cards[0];
+    let mut col = engine(&built.collection);
+    answer(&mut col, card, Rating::Easy, now_millis());
+    let reviewed_at = newest_row(&col, card) / 1000;
+    col.close(None).expect("the engine closes the collection");
+    // Today is the engine day 1000 and began 2 days and 1234 seconds before the next rollover less
+    // a day, so the review lies 2 whole days and 1234 seconds before the instant today began:
+    // three engine days back by the floor, day 997. A first Easy's interval at 0.9 is 54 days (the
+    // pin of the schedule test above), so the card is due on day 1051. Subtraction of the days
+    // back reads 1003 + 54, and a quotient in place of the difference reads 1000 + 54.
+    let day = EngineDay {
+        days_elapsed: 1000,
+        next_day_at: reviewed_at + 3 * 86_400 + 1234,
+    };
+    let replay = replay_on(&built, &[HOME], MAX_IVL, day);
+    assert_eq!(
+        replay[&card].schedule,
+        Some(Schedule { ivl: 54, due: 1051 }),
+        "a review that many whole days before today began is due 997 plus its interval"
+    );
+}
+
+#[test]
 fn a_learning_card_keeps_its_due_and_interval() {
     let built = built("replay-learning-card", 1);
     let card = built.cards[0];
