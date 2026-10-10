@@ -232,6 +232,34 @@ What it was chosen AGAINST:
 | A command line built as a string | a shell would parse it, so a setting could carry a second command |
 | A credential with read access | the answer needs a listing, never an object |
 
+### D17. A backup's age is the web engine's record of when it first listed the file (part c2)
+
+The pool keeps no file times, and part c1 mints the first free number, so a number freed by
+retention is minted again for the newest file. The web engine records the time it first lists each
+backup or server copy as an empty pool entry beside it, and orders by that record, then the number.
+
+What it was chosen AGAINST:
+
+| alternative | why it lost |
+|---|---|
+| The minted number as the order | a number freed by retention is minted again, so the newest file can carry the lowest number |
+| The pool's file times | the pool keeps none |
+| The collection's own modified time inside each file | a read outside the core's fixed set of statements, and it dates the collection, never the copy |
+| A time in the minted name | part c1's mint, pinned by its census and its rows, would change |
+
+### D18. Retention runs before each backup list, which the screen reads after every write or cancel (part c2)
+
+The Worker's choice is part c1's and stays as it merged; the sync screen asks for the list at its
+start and after every write or cancel, and the Worker runs retention first. The web engine refuses
+retention while a stage is held, so it never runs inside a choice.
+
+What it was chosen AGAINST:
+
+| alternative | why it lost |
+|---|---|
+| Retention inside the choice's confirm and cancel | it rewrites part c1's choice, which this part may not change |
+| A timer in the Worker | it could run while the owner reads counts, and only the stage check would hold it back |
+
 ## Consequences
 
 - The fork gains one commit and one tag, and the root manifest's `[patch]` moves to it; ADR-058

@@ -38,7 +38,17 @@ const SYNC_KEYS = [
   'sync_choice_changed_server',
   'sync_choice_changed_device',
   'sync_choice_written',
-  'sync_choice_refused'
+  'sync_choice_refused',
+  'sync_backups_title',
+  'sync_backups_none',
+  'sync_backup_device',
+  'sync_backup_server',
+  'sync_backup_export',
+  'sync_backup_removed',
+  'sync_storage_persisted',
+  'sync_storage_not_persisted',
+  'sync_storage_unknown',
+  'sync_storage_evicted'
 ] as const;
 
 function examined<T>(what: string, items: T[]): T[] {
