@@ -106,7 +106,7 @@ struct Declared {
 }
 
 /// Every AI call site of the tree, declared.
-const DECLARED: [Declared; 12] = [
+const DECLARED: [Declared; 13] = [
     Declared {
         path: "crates/agent/src/duty.rs",
         shape: Shape::RunnerCall,
@@ -148,6 +148,13 @@ const DECLARED: [Declared; 12] = [
         count: 1,
         class: Class::NotDeckContent,
         reason: "the vault gate's probe over a staged note: it runs a pack's check, and no model",
+    },
+    Declared {
+        path: "crates/daemon/src/snapshot_lister.rs",
+        shape: Shape::ProcessLaunch,
+        count: 1,
+        class: Class::NotDeckContent,
+        reason: "the snapshot lister: it runs the archive's list command, which returns snapshot names and times",
     },
     Declared {
         path: "crates/daemon/src/role_job.rs",
