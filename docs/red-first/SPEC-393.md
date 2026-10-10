@@ -27,6 +27,20 @@ A16: red at 401182c0: AssertionError: Lists differ: ['ios/CardIsolation/Sources/
 A17: red at d4298b50: run 38054884550, job apple / harness, step "the card view's planted suite, Debug, on the iPhone and then the iPad": on the iPhone, FactoryTests.test_the_factory_plays_media_inline failed: XCTAssertTrue failed - A17: the factory's view plays media inline; on the iPad it passed
 A18: not red: guards that the Swift wiring adds no decision; it passed at the base (1 test, examined 61 Swift files, 19 decision counts)
 A19: red at d4298b50: assertion `left == right` failed: each font is inlined under its own type, and the rest is as written; left keeps url("_a.ttf") ...
+A1: green at 530f6478
+A2: green at 530f6478
+A3: green at 530f6478
+A4: green at 530f6478
+A5: green at 530f6478
+A7: green at 530f6478
+A8: green at 530f6478
+A9: green at 530f6478
+A10: green at 530f6478
+A12: green at 530f6478
+A13: green at 530f6478
+A15: green at 530f6478
+A16: green at 530f6478
+A19: green at 530f6478
 ```
 
 A3's test was on the base before this delivery. Its two literals now read `"card card1"` by day and
@@ -37,6 +51,10 @@ skipped, filtered or narrowed. Its red above is that test reading the base's cla
 The whole suites at d4298b50, every binary run: the core's 117 tests, 111 passed and 6 failed (A1,
 A4, A5, A7, A9 and A19); the native adapter's 43 tests, 36 passed and 7 failed (A2, A3, A8, A10,
 A12, A13 and A15); the web engine's 37 passed. Every other check was green there.
+
+At 530f6478 every local line above passes alone, and the whole suites pass with every binary run:
+the core's 117 tests, the native adapter's 43 and the web engine's 37, with both censuses, the
+formatter, the lints and the web engine's release build green.
 
 A17's two destinations are read from the step's result bundle, whose first test action names the iPhone
 and whose second names the iPad: the factory's test failed in the first and passed in the second. The
