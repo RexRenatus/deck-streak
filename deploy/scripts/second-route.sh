@@ -92,7 +92,8 @@ read_alert_path() {
   set -f
   if listed="$(systemctl list-units --state=failed --plain --no-legend --no-pager --full \
     'deck-streak-alert@*.service')"; then
-    while IFS= read -r line; do
+    # The list comes in on descriptor 3, so a command the loop runs never reads its later lines.
+    while IFS= read -r line <&3; do
       [ -n "$line" ] || continue
       # shellcheck disable=SC2086
       set -- $line
@@ -119,7 +120,7 @@ read_alert_path() {
       else
         unreadable=1
       fi
-    done <<EOF_LISTED
+    done 3<<EOF_LISTED
 $listed
 EOF_LISTED
   else
