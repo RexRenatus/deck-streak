@@ -789,3 +789,29 @@ describe("the API client's capture", () => {
     expect(lines(dropped.sent)).toEqual(['POST /api/session', 'POST /api/inbox/captures']);
   });
 });
+
+// SPEC-385 R9, A5; ADR-399 D2. Outside Telegram there is no launch data to post, so the client
+// sends each owner call with the session cookie alone; a call refused 401 asks for sign-in once
+// and answers reopen to its screen, and the answer kinds stay three.
+describe('the API client outside Telegram', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('outside telegram a refused call asks for sign-in', async () => {
+    const askSignIn = vi.fn();
+    const { fetch, sent } = server([200, 401]);
+    const options = { launchData: () => null, fetch, askSignIn };
+    const api = createApi(options);
+
+    // a call in a session answers as inside Telegram, and asks for nothing
+    expect(await api.me()).toEqual({ kind: 'ok', value: { studyDay: STUDY_DAY } });
+    expect(askSignIn).not.toHaveBeenCalled();
+    // a call refused 401 asks for sign-in, once, and answers reopen
+    expect(await api.me()).toEqual({ kind: 'reopen' });
+    expect(askSignIn).toHaveBeenCalledOnce();
+    // the session cookie alone: no handshake and no renewal
+    expect(lines(sent)).toEqual(['GET /api/me', 'GET /api/me']);
+    expect(sent.map((request) => request.credentials)).toEqual(['same-origin', 'same-origin']);
+  });
+});
