@@ -256,6 +256,7 @@ pub fn router(state: ApiState) -> Router {
                 ))
                 .merge(law_routes::routes(access.clone(), readiness.clone()))
                 .merge(session_routes::routes(access.clone()))
+                .merge(session_routes::launch_routes(access.clone()))
                 .merge(sync_seal_routes::routes(access.clone(), seal))
                 .merge(snapshot_routes::routes(access.clone(), snapshot))
                 .merge(drill_routes::routes(
