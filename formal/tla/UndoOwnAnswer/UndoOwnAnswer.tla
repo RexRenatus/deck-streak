@@ -1,14 +1,14 @@
 ---------------------------- MODULE UndoOwnAnswer ----------------------------
 \* @phx covers crates/engine-core/src/undo_answer.rs anchor=judge digest=sha256:686f406bd7dc83ab6f6ef1fd2a3c82720ed6ea95094333f1cc51956ee8b85901
-\* @phx covers crates/engine-core/src/dispatch.rs anchor=run_undo digest=sha256:29ad324c9103ecea4fe9ce5973690b61fd0f418ed7b6c2da7c296f861525459f
-\* @phx covers crates/web-engine/src/wasm.rs anchor=undo digest=sha256:d7bfeff5fb8dbae04a77d0b1c94e919bd30d7c48a07a82c77a88ab8ea753c115
-\* @phx covers crates/web-engine/src/wasm.rs anchor=undo_offer digest=sha256:101511962778651131c410f35df7f809a89671660378035518d61e7344488d38
-\* @phx covers crates/web-engine/src/wasm.rs anchor=rate digest=sha256:7724033b501870b01a0dd831e264a3ff17cf89c5e7106462d6e3558535a8b8e6
-\* @phx covers crates/engine-core/src/undo_change.rs anchor=judge_change digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/dispatch.rs anchor=run_restore digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/web-engine/src/wasm.rs anchor=bury digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/web-engine/src/wasm.rs anchor=flag digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/web-engine/src/wasm.rs anchor=current_card digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/engine-core/src/dispatch.rs anchor=run_undo digest=sha256:1f4af5161b839f139a64cdbac7836c41e4d6cd04ee37c65393158430c842f55d
+\* @phx covers crates/web-engine/src/wasm.rs anchor=undo digest=sha256:077b9c1970511cf1dcae6081072a8f869c268dbf9ec3182f23d0721521f2505c
+\* @phx covers crates/web-engine/src/wasm.rs anchor=undo_offer digest=sha256:eec69a4f94009f79212e85b34bcc7938bcc912f5762801d404b53e37525c438f
+\* @phx covers crates/web-engine/src/wasm.rs anchor=rate digest=sha256:ec4876c9095cd9dda71a594741e87ecb2ec897e92871e3f696dbd610e8abe7db
+\* @phx covers crates/engine-core/src/undo_change.rs anchor=judge_change digest=sha256:e3e1264f81ceb88d981f48b294e5a01a4968a7d16a71ddc969709b614cc7bffd
+\* @phx covers crates/engine-core/src/dispatch.rs anchor=run_restore digest=sha256:55e9a0dfa787cbad789a8631d7d50926166dc8c984cc920c81ac301e13f5630e
+\* @phx covers crates/web-engine/src/wasm.rs anchor=bury digest=sha256:92b201917eaa8281e924399340f1551030f8fa659352f3ae951f9b16ed960ed6
+\* @phx covers crates/web-engine/src/wasm.rs anchor=flag digest=sha256:21ef36f04c73eb7704a55eb933c52b2c81860793018cbaac4cb4aae62cc73429
+\* @phx covers crates/web-engine/src/wasm.rs anchor=current_card digest=sha256:605adfade6242520ebc39f34b2852dc699ed1dcb1029ca71522fdef82edf8118
 \* @phx cites #714
 \* @phx cites #753
 \* @phx property AnUndoRevertsOnlyTheOfferedAnswer ramp=report
