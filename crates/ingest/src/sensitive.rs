@@ -11,6 +11,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use deck_streak_kernel::{Db, KernelError, UtcMillis};
+use sqlx::SqliteConnection;
+
+use crate::settings::DECK_SEPARATOR;
 
 /// What `admits` decides for one card.
 #[must_use]
@@ -44,8 +47,39 @@ pub fn admits(
     home: i64,
     current: i64,
 ) -> Admission {
-    let _ = (marked, tree, home, current);
-    Admission::Admitted
+    let Some(marked) = marked else {
+        return Admission::Unreadable;
+    };
+    let (Some(home), Some(current)) = (tree.get(&home), tree.get(&current)) else {
+        return Admission::Unresolved;
+    };
+    let kept_away = marked
+        .iter()
+        .filter_map(|deck| tree.get(deck))
+        .any(|marked| under(home, marked) || under(current, marked));
+    if kept_away {
+        Admission::KeptAway
+    } else {
+        Admission::Admitted
+    }
+}
+
+/// Whether the deck named `name` is the deck named `ancestor` or sits under it: its name is the
+/// ancestor's, or begins with the ancestor's name and a [`DECK_SEPARATOR`], so `Lawyer` is not
+/// under `Law`.
+fn under(name: &str, ancestor: &str) -> bool {
+    name.strip_prefix(ancestor)
+        .is_some_and(|rest| rest.is_empty() || rest.starts_with(DECK_SEPARATOR))
+}
+
+/// Every marked deck's id, ascending, read on `connection`.
+async fn marked_on(connection: &mut SqliteConnection) -> Result<BTreeSet<i64>, sqlx::Error> {
+    let decks = sqlx::query_scalar!(
+        r#"SELECT deck_id AS "deck_id!" FROM sensitive_decks ORDER BY deck_id"#
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(decks.into_iter().collect())
 }
 
 /// `sensitive_decks` in the service's own database.
@@ -67,8 +101,8 @@ impl SqliteSensitiveDecks {
     ///
     /// [`KernelError::Database`] when the read fails; a caller reads that as every deck kept away.
     pub async fn read_marked(&self) -> Result<BTreeSet<i64>, KernelError> {
-        let _connection = self.db.reader().acquire().await?;
-        Ok(BTreeSet::new())
+        let mut connection = self.db.reader().acquire().await?;
+        Ok(marked_on(&mut connection).await?)
     }
 
     /// Marks `deck` at `at`, and answers every marked deck's id. Marking a marked deck changes
@@ -78,8 +112,19 @@ impl SqliteSensitiveDecks {
     ///
     /// [`KernelError::Database`] when the write fails, or `deck` is not a positive id.
     pub async fn mark(&self, deck: i64, at: UtcMillis) -> Result<BTreeSet<i64>, KernelError> {
-        let _ = (deck, at);
-        self.read_marked().await
+        let mut write = self.db.write().await?;
+        let at = at.epoch_millis();
+        sqlx::query!(
+            "INSERT INTO sensitive_decks (deck_id, created_at) VALUES (?1, ?2) \
+             ON CONFLICT(deck_id) DO NOTHING",
+            deck,
+            at
+        )
+        .execute(&mut *write)
+        .await?;
+        let marked = marked_on(&mut write).await?;
+        write.commit().await?;
+        Ok(marked)
     }
 
     /// Unmarks `deck`, and answers every marked deck's id. Unmarking an unmarked deck changes
@@ -89,7 +134,12 @@ impl SqliteSensitiveDecks {
     ///
     /// [`KernelError::Database`] when the write fails.
     pub async fn unmark(&self, deck: i64) -> Result<BTreeSet<i64>, KernelError> {
-        let _ = deck;
-        self.read_marked().await
+        let mut write = self.db.write().await?;
+        sqlx::query!("DELETE FROM sensitive_decks WHERE deck_id = ?1", deck)
+            .execute(&mut *write)
+            .await?;
+        let marked = marked_on(&mut write).await?;
+        write.commit().await?;
+        Ok(marked)
     }
 }

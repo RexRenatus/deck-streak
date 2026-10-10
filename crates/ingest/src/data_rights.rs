@@ -91,6 +91,29 @@ async fn export_skip_days(connection: &mut SqliteConnection) -> Result<ExportedT
     })
 }
 
+/// The decks kept away from AI (SPEC-381 R10), exported whole: every column, one row per mark.
+async fn export_sensitive_decks(
+    connection: &mut SqliteConnection,
+) -> Result<ExportedTable, sqlx::Error> {
+    let rows = sqlx::query!(
+        r#"SELECT deck_id AS "deck_id!", created_at FROM sensitive_decks ORDER BY deck_id"#
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(ExportedTable {
+        table: SENSITIVE_DECKS_TABLE,
+        rows: rows
+            .into_iter()
+            .map(|row| {
+                json!({
+                    "deck_id": row.deck_id,
+                    "created_at": row.created_at,
+                })
+            })
+            .collect(),
+    })
+}
+
 /// The skip card snapshot, exported whole: card ids and scheduling only.
 async fn export_skip_card_snapshot(
     connection: &mut SqliteConnection,
@@ -240,7 +263,8 @@ impl DataRights for IngestDataRights {
                         .collect(),
                 },
                 export_skip_days(&mut *connection).await?,
-                export_skip_card_snapshot(connection).await?,
+                export_skip_card_snapshot(&mut *connection).await?,
+                export_sensitive_decks(connection).await?,
                 state,
             ])
         })
@@ -256,6 +280,10 @@ impl DataRights for IngestDataRights {
                 .execute(&mut *connection)
                 .await?;
             sqlx::query!("DELETE FROM skip_days")
+                .execute(&mut *connection)
+                .await?;
+            // Every mark goes, so after an erase every deck is readable again (SPEC-381 R10).
+            sqlx::query!("DELETE FROM sensitive_decks")
                 .execute(&mut *connection)
                 .await?;
             // The declared reset row (`ingest_state_reset`): the row itself, and when it was made,

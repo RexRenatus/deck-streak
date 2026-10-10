@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM sensitive_decks WHERE deck_id = ?1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "341149ca7570ef9d94f0eac466db15b1152fba38d367d97ce948d670dd6d1065"
+}
