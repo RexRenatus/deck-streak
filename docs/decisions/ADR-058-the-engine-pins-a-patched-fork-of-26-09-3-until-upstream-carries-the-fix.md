@@ -245,3 +245,24 @@ ADR-336 and ADR-348, which this note leaves as they stand.
 | `browser-xhr` | `5dbd27443794cc0575a54506b93882f5fcbee295` | the browser's asynchronous fetch never answers while the engine blocks the Worker, so the sync request is a synchronous request from the dedicated Worker | upstream builds its sync transport for the browser |
 | `wasm-clock-threads` | `6f7acd1887eb02f106699413d963523e9b0102f9` | tokio has no time driver on `wasm32`, where a timer panics, and the browser gives the engine no thread | tokio drives timers on `wasm32`, and upstream starts no thread for a sync's abort or a background media sync |
 | `wasm-collection-size` | `2cfa70478a1174f49cf98fc71a8b8c47fc54b3fb` | the browser gives the engine no file system on `wasm32`, so a normal sync could not read the collection file's size before its first request; the sync meta reads the open collection's SQLite page count times its page size instead, and the upload size check keeps the real size | upstream reads the collection's size without the file system on `wasm32` |
+
+## Note, appended by SPEC-377: the pin moves to the browser's full sync files
+
+SPEC-377's part c1 adds one patch to the fork's branch `wasm32-26.09.3`, its own commit over
+`2cfa70478a1174f49cf98fc71a8b8c47fc54b3fb`, and a new tag, `deckstreak-pin-26.09.3-wasm32-full-sync`,
+names it; the earlier tags stay where they are. The root manifest's `[patch]` entry takes `anki` and
+`anki_proto` by `rev` from the new tag's commit. `browser-full-sync-files` lets a full upload and a
+full download move the collection through SQLite where the browser gives the engine no file system,
+and keeps the full sync's progress monitor off tokio's timer. The patch is a `cfg` on the target and
+a dependency line for `wasm32` alone, so the native engine is the one this ADR pinned. Read with
+ADR-336, ADR-348 and ADR-388, which this note leaves as they stand.
+
+| record | measured |
+|---|---|
+| the pinned commit | `bd4fe2f4e9aa6e37434678e7770e6934b6071fcb`, the head of branch `wasm32-26.09.3`, tagged `deckstreak-pin-26.09.3-wasm32-full-sync` (`git ls-remote`) |
+| its range | fourteen commits over `57382da`, one per patch; none adds a workflow file (`git diff --stat 57382da bd4fe2f -- .github` is empty) |
+| `git diff --stat 26.09.3 bd4fe2f` on the fork | 26 files changed, 576 insertions(+), 71 deletions(-) |
+
+| patch | commit | reason | removal condition |
+|---|---|---|---|
+| `browser-full-sync-files` | `bd4fe2f4e9aa6e37434678e7770e6934b6071fcb` | the browser gives the engine no file system on `wasm32`, so a full upload could not read the closed collection and a full download could not write a temporary file and rename it over the collection; an upload reads the collection through SQLite's serialize, a download is checked in memory and written by SQLite's backup in one step, and the full sync's progress monitor never ticks, because tokio has no time driver there | upstream reads and writes a full sync's collection without the file system on `wasm32`, and tokio drives timers there |

@@ -168,9 +168,11 @@ aes-gcm = "0.10.3"
 # wasm32 patch, and `anki_proto` from the same commit, so the web engine and ingest share one engine.
 # SPEC-364 moved it to the fork's tag `deckstreak-pin-26.09.3-wasm32-sync`: that commit plus the
 # browser's sync transport and its two companion wasm32 patches, one commit each (ADR-058's note).
+# SPEC-377 moved it to the fork's tag `deckstreak-pin-26.09.3-wasm32-full-sync`: that commit plus
+# the browser's full sync files patch, one commit (ADR-058's note).
 [patch."https://github.com/ankitects/anki.git"]
-anki = { git = "https://github.com/RexRenatus/anki.git", rev = "2cfa70478a1174f49cf98fc71a8b8c47fc54b3fb" }
-anki_proto = { git = "https://github.com/RexRenatus/anki.git", rev = "2cfa70478a1174f49cf98fc71a8b8c47fc54b3fb" }
+anki = { git = "https://github.com/RexRenatus/anki.git", rev = "bd4fe2f4e9aa6e37434678e7770e6934b6071fcb" }
+anki_proto = { git = "https://github.com/RexRenatus/anki.git", rev = "bd4fe2f4e9aa6e37434678e7770e6934b6071fcb" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

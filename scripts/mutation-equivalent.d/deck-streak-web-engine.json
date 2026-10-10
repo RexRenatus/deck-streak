@@ -5,7 +5,7 @@
       "mutant": "replace refuse -> JsValue with Default::default()",
       "anchor": "fn refuse(message: impl std::fmt::Display) -> JsValue {\n    JsValue::from_str(&message.to_string())\n}",
       "reason": "The mutated function `refuse` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test the browser tests of web/app/tests-engine/engine.spec.ts ('opens, answers and undoes over OPFS') of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test the browser tests of web/app/tests-engine/engine.spec.ts ('opens, answers and undoes over OPFS') of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
@@ -14,25 +14,25 @@
       "mutant": "replace decode -> Result<M, JsValue> with Ok(Default::default())",
       "anchor": "fn decode<M: Message + Default>(bytes: &[u8]) -> Result<M, JsValue> {\n    M::decode(bytes).map_err(refuse)\n}",
       "reason": "The mutated function `decode` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test the browser tests of web/app/tests-engine/engine.spec.ts ('opens, answers and undoes over OPFS') of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test the browser tests of web/app/tests-engine/engine.spec.ts ('opens, answers and undoes over OPFS') of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
     {
       "file": "crates/web-engine/src/wasm.rs",
       "mutant": "replace install_storage -> Result<u32, JsValue> with Ok(0)",
-      "anchor": "pub async fn install_storage() -> Result<u32, JsValue> {\n    let cfg = OpfsSAHPoolCfgBuilder::new().directory(DIRECTORY).build();\n    let pool = install::<sqlite_wasm_rs::WasmOsCallback>(&cfg, true)\n        .await\n        .map_err(|e| refuse(format!(\"storage-refused: {e}\")))?;\n    let count = pool.count();\n    POOL.with(|p| *p.borrow_mut() = Some(pool));\n    Ok(count)\n}",
+      "anchor": "#[wasm_bindgen]\npub async fn install_storage() -> Result<u32, JsValue> {\n    let cfg = OpfsSAHPoolCfgBuilder::new().directory(DIRECTORY).build();\n    let pool = install::<sqlite_wasm_rs::WasmOsCallback>(&cfg, true)\n        .await\n        .map_err(|e| refuse(format!(\"storage-refused: {e}\")))?;\n    let count = pool.count();\n    POOL.with(|p| *p.borrow_mut() = Some(std::rc::Rc::new(pool)));\n    Ok(count)\n}",
       "reason": "The mutated function `install_storage` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' and 'a context that refuses OPFS is refused' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' and 'a context that refuses OPFS is refused' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
     {
       "file": "crates/web-engine/src/wasm.rs",
       "mutant": "replace install_storage -> Result<u32, JsValue> with Ok(1)",
-      "anchor": "pub async fn install_storage() -> Result<u32, JsValue> {\n    let cfg = OpfsSAHPoolCfgBuilder::new().directory(DIRECTORY).build();\n    let pool = install::<sqlite_wasm_rs::WasmOsCallback>(&cfg, true)\n        .await\n        .map_err(|e| refuse(format!(\"storage-refused: {e}\")))?;\n    let count = pool.count();\n    POOL.with(|p| *p.borrow_mut() = Some(pool));\n    Ok(count)\n}",
+      "anchor": "#[wasm_bindgen]\npub async fn install_storage() -> Result<u32, JsValue> {\n    let cfg = OpfsSAHPoolCfgBuilder::new().directory(DIRECTORY).build();\n    let pool = install::<sqlite_wasm_rs::WasmOsCallback>(&cfg, true)\n        .await\n        .map_err(|e| refuse(format!(\"storage-refused: {e}\")))?;\n    let count = pool.count();\n    POOL.with(|p| *p.borrow_mut() = Some(std::rc::Rc::new(pool)));\n    Ok(count)\n}",
       "reason": "The mutated function `install_storage` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' and 'a context that refuses OPFS is refused' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' and 'a context that refuses OPFS is refused' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
@@ -68,7 +68,7 @@
       "mutant": "replace close -> Result<(), JsValue> with Ok(())",
       "anchor": "pub fn close() -> Result<(), JsValue> {\n    LAST_ANSWER.with(|kept| *kept.borrow_mut() = None);\n    let request = CloseCollectionRequest {\n        downgrade_to_schema11: false,\n    };\n    call(service::COLLECTION, 1, &request.encode_to_vec()).map(|_| ())\n}",
       "reason": "The mutated function `close` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
@@ -77,7 +77,7 @@
       "mutant": "replace now_millis -> i64 with 0",
       "anchor": "fn now_millis() -> i64 {\n    js_sys::Date::now() as i64\n}",
       "reason": "The mutated function `now_millis` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
@@ -86,7 +86,7 @@
       "mutant": "replace now_millis -> i64 with 1",
       "anchor": "fn now_millis() -> i64 {\n    js_sys::Date::now() as i64\n}",
       "reason": "The mutated function `now_millis` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
@@ -95,7 +95,7 @@
       "mutant": "replace now_millis -> i64 with -1",
       "anchor": "fn now_millis() -> i64 {\n    js_sys::Date::now() as i64\n}",
       "reason": "The mutated function `now_millis` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
@@ -104,7 +104,7 @@
       "mutant": "replace first_queued -> Result<Option<anki_proto::scheduler::queued_cards::QueuedCard>, JsValue> with Ok(None)",
       "anchor": "fn first_queued() -> Result<Option<anki_proto::scheduler::queued_cards::QueuedCard>, JsValue> {\n    let request = GetQueuedCardsRequest {\n        fetch_limit: 1,\n        intraday_learning_only: false,\n    };\n    let queued: QueuedCards = decode(&call(service::SCHEDULER, 3, &request.encode_to_vec())?)?;\n    Ok(queued.cards.into_iter().next())\n}",
       "reason": "The mutated function `first_queued` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
@@ -113,7 +113,7 @@
       "mutant": "replace first_queued -> Result<Option<anki_proto::scheduler::queued_cards::QueuedCard>, JsValue> with Ok(Some(Default::default()))",
       "anchor": "fn first_queued() -> Result<Option<anki_proto::scheduler::queued_cards::QueuedCard>, JsValue> {\n    let request = GetQueuedCardsRequest {\n        fetch_limit: 1,\n        intraday_learning_only: false,\n    };\n    let queued: QueuedCards = decode(&call(service::SCHEDULER, 3, &request.encode_to_vec())?)?;\n    Ok(queued.cards.into_iter().next())\n}",
       "reason": "The mutated function `first_queued` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
@@ -122,7 +122,7 @@
       "mutant": "replace next_card -> Result<Option<i64>, JsValue> with Ok(None)",
       "anchor": "pub fn next_card() -> Result<Option<i64>, JsValue> {\n    Ok(first_queued()?\n        .and_then(|queued| queued.card)\n        .map(|card| card.id))\n}",
       "reason": "The mutated function `next_card` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
@@ -131,7 +131,7 @@
       "mutant": "replace next_card -> Result<Option<i64>, JsValue> with Ok(Some(0))",
       "anchor": "pub fn next_card() -> Result<Option<i64>, JsValue> {\n    Ok(first_queued()?\n        .and_then(|queued| queued.card)\n        .map(|card| card.id))\n}",
       "reason": "The mutated function `next_card` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
@@ -140,7 +140,7 @@
       "mutant": "replace next_card -> Result<Option<i64>, JsValue> with Ok(Some(1))",
       "anchor": "pub fn next_card() -> Result<Option<i64>, JsValue> {\n    Ok(first_queued()?\n        .and_then(|queued| queued.card)\n        .map(|card| card.id))\n}",
       "reason": "The mutated function `next_card` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
@@ -149,7 +149,7 @@
       "mutant": "replace next_card -> Result<Option<i64>, JsValue> with Ok(Some(-1))",
       "anchor": "pub fn next_card() -> Result<Option<i64>, JsValue> {\n    Ok(first_queued()?\n        .and_then(|queued| queued.card)\n        .map(|card| card.id))\n}",
       "reason": "The mutated function `next_card` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
@@ -158,7 +158,7 @@
       "mutant": "replace memory_pages -> u32 with 0",
       "anchor": "pub fn memory_pages() -> u32 {\n    u32::try_from(core::arch::wasm32::memory_size::<0>()).unwrap_or(u32::MAX)\n}",
       "reason": "The mutated function `memory_pages` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'measures the engine over a seeded collection' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'measures the engine over a seeded collection' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
@@ -167,7 +167,7 @@
       "mutant": "replace memory_pages -> u32 with 1",
       "anchor": "pub fn memory_pages() -> u32 {\n    u32::try_from(core::arch::wasm32::memory_size::<0>()).unwrap_or(u32::MAX)\n}",
       "reason": "The mutated function `memory_pages` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'measures the engine over a seeded collection' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test 'measures the engine over a seeded collection' of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
@@ -176,7 +176,7 @@
       "mutant": "replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![])",
       "anchor": "pub fn run_method(service: u32, method: u32, input: &[u8]) -> Result<Vec<u8>, JsValue> {\n    admit(service, method).map_err(refuse)?;\n    call(service, method, input)\n}",
       "reason": "The mutated function `run_method` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test the browser tests of web/app/tests-engine/engine.spec.ts ('opens, answers and undoes over OPFS') of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test the browser tests of web/app/tests-engine/engine.spec.ts ('opens, answers and undoes over OPFS') of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
@@ -185,7 +185,7 @@
       "mutant": "replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![0])",
       "anchor": "pub fn run_method(service: u32, method: u32, input: &[u8]) -> Result<Vec<u8>, JsValue> {\n    admit(service, method).map_err(refuse)?;\n    call(service, method, input)\n}",
       "reason": "The mutated function `run_method` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test the browser tests of web/app/tests-engine/engine.spec.ts ('opens, answers and undoes over OPFS') of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test the browser tests of web/app/tests-engine/engine.spec.ts ('opens, answers and undoes over OPFS') of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
@@ -194,7 +194,7 @@
       "mutant": "replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])",
       "anchor": "pub fn run_method(service: u32, method: u32, input: &[u8]) -> Result<Vec<u8>, JsValue> {\n    admit(service, method).map_err(refuse)?;\n    call(service, method, input)\n}",
       "reason": "The mutated function `run_method` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test the browser tests of web/app/tests-engine/engine.spec.ts ('opens, answers and undoes over OPFS') of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate; the function runs for real in the browser test the browser tests of web/app/tests-engine/engine.spec.ts ('opens, answers and undoes over OPFS') of `web/app/tests-engine/engine.spec.ts`, over a real origin private file system.",
       "reached_by": "study::run_method_admits_only_the_study_calls",
       "issue": "#303"
     },
@@ -203,7 +203,7 @@
       "mutant": "delete match arm 0 in credential_on_outcome",
       "anchor": "pub fn credential_on_outcome(sent: u64, current: u64, outcome: u8) -> bool {\n    let outcome = match outcome {\n        0 => Outcome::Accepted,\n        1 => Outcome::Refused,\n        _ => Outcome::Failed,\n    };\n    credential::on_outcome(Generation::from(sent), Generation::from(current), outcome)\n}",
       "reason": "The mutated match arm of `credential_on_outcome` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. On wasm32 too it answers as the original does: without the arm, 0 reads as failed, and `credential::on_outcome` (`crates/engine-core/src/credential.rs` line 106) drops the key only on a refusal, so an accepted answer and a failed one both keep it.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. On wasm32 too it answers as the original does: without the arm, 0 reads as failed, and `credential::on_outcome` (`crates/engine-core/src/credential.rs` line 106) drops the key only on a refusal, so an accepted answer and a failed one both keep it.",
       "reached_by": "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
       "issue": "#303"
     },
@@ -212,7 +212,7 @@
       "mutant": "delete match arm 1 in credential_on_outcome",
       "anchor": "pub fn credential_on_outcome(sent: u64, current: u64, outcome: u8) -> bool {\n    let outcome = match outcome {\n        0 => Outcome::Accepted,\n        1 => Outcome::Refused,\n        _ => Outcome::Failed,\n    };\n    credential::on_outcome(Generation::from(sent), Generation::from(current), outcome)\n}",
       "reason": "The mutated match arm of `credential_on_outcome` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. The native census `boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher` holds the body's call to `credential::on_outcome`, and engine-core's `credential::a_refusal_drops_only_the_generation_it_refused` holds the refusal rule it calls (SPEC-363 A5); no test runs this export on wasm32 yet, and part 2's Worker store is its first caller (SPEC-363 section 7).",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. The native census `boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher` holds the body's call to `credential::on_outcome`, and engine-core's `credential::a_refusal_drops_only_the_generation_it_refused` holds the refusal rule it calls (SPEC-363 A5); no test runs this export on wasm32 yet, and part 2's Worker store is its first caller (SPEC-363 section 7).",
       "reached_by": "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
       "issue": "#303"
     },
@@ -221,7 +221,7 @@
       "mutant": "replace no_offer -> String with String::new()",
       "anchor": "fn no_offer(refusal: UndoRefusal) -> String {\n    serde_json::json!({ \"offer\": null, \"why\": refusal.why() }).to_string()\n}",
       "reason": "The mutated function `no_offer` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `no_offer` is a private helper the census does not read whole: it holds the owed bodies of `undo_offer` and `undo`, and `crates/web-engine/tests/study.rs` `the_offer_names_its_grade_and_state_and_why_none_is_made` holds each refusal's `why` word that this helper writes (SPEC-371 R7); the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `no_offer` is a private helper the census does not read whole: it holds the owed bodies of `undo_offer` and `undo`, and `crates/web-engine/tests/study.rs` `the_offer_names_its_grade_and_state_and_why_none_is_made` holds each refusal's `why` word that this helper writes (SPEC-371 R7); the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation.",
       "reached_by": "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
       "issue": "#714"
     },
@@ -230,7 +230,7 @@
       "mutant": "replace no_offer -> String with \"xyzzy\".into()",
       "anchor": "fn no_offer(refusal: UndoRefusal) -> String {\n    serde_json::json!({ \"offer\": null, \"why\": refusal.why() }).to_string()\n}",
       "reason": "The mutated function `no_offer` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `no_offer` is a private helper the census does not read whole: it holds the owed bodies of `undo_offer` and `undo`, and `crates/web-engine/tests/study.rs` `the_offer_names_its_grade_and_state_and_why_none_is_made` holds each refusal's `why` word that this helper writes (SPEC-371 R7); the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `no_offer` is a private helper the census does not read whole: it holds the owed bodies of `undo_offer` and `undo`, and `crates/web-engine/tests/study.rs` `the_offer_names_its_grade_and_state_and_why_none_is_made` holds each refusal's `why` word that this helper writes (SPEC-371 R7); the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation.",
       "reached_by": "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
       "issue": "#714"
     },
@@ -239,7 +239,7 @@
       "mutant": "replace engine_record -> undo_answer::Recorded with Default::default()",
       "anchor": "fn engine_record(last: &LastAnswer) -> undo_answer::Recorded {\n    undo_answer::Recorded {\n        status: Some(UndoStatus {\n            undo: last.recorded.label.clone(),\n            redo: String::new(),\n            last_step: last.recorded.step,\n        }),\n        review: last.recorded.review,\n    }\n}",
       "reason": "The mutated function `engine_record` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `engine_record` is a private helper the census does not read whole; the census holds the `undo_answer::judge(&recorded, ...)` statements of `undo_offer` and `undo` that judge its record, and an empty record names no review row, which engine-core's `undo_answer::a_record_whose_review_is_gone_is_refused` holds is refused (SPEC-371 A7); the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `engine_record` is a private helper the census does not read whole; the census holds the `undo_answer::judge(&recorded, ...)` statements of `undo_offer` and `undo` that judge its record, and an empty record names no review row, which engine-core's `undo_answer::a_record_whose_review_is_gone_is_refused` holds is refused (SPEC-371 A7); the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation.",
       "reached_by": "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
       "issue": "#714"
     },
@@ -248,7 +248,7 @@
       "mutant": "replace review_of -> Result<Option<Review>, JsValue> with Ok(None)",
       "anchor": "fn review_of(id: i64) -> Result<Option<Review>, JsValue> {\n    let rows = query(Read::Review(id))?;\n    let Some(row) = rows.pointer(\"/0\") else {\n        return Ok(None);\n    };\n    let cid = row.pointer(\"/0\").and_then(serde_json::Value::as_i64);\n    let usn = row\n        .pointer(\"/1\")\n        .and_then(serde_json::Value::as_i64)\n        .and_then(|usn| i32::try_from(usn).ok());\n    match (cid, usn) {\n        (Some(cid), Some(usn)) => Ok(Some(Review { cid, usn })),\n        _ => Err(refuse(\n            \"the review read answered other than a card and a sync mark\",\n        )),\n    }\n}",
       "reason": "The mutated function `review_of` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `review_of` is a private helper the census does not read whole; it reads the core's fixed `Read::Review` read, and engine-core's `undo_answer::a_record_whose_review_is_gone_is_refused`, `undo_answer::a_record_for_another_card_is_refused` and `undo_answer::a_synced_answer_is_refused` hold the rule it feeds (SPEC-371 A7 to A9); the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `review_of` is a private helper the census does not read whole; it reads the core's fixed `Read::Review` read, and engine-core's `undo_answer::a_record_whose_review_is_gone_is_refused`, `undo_answer::a_record_for_another_card_is_refused` and `undo_answer::a_synced_answer_is_refused` hold the rule it feeds (SPEC-371 A7 to A9); the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation.",
       "reached_by": "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
       "issue": "#714"
     },
@@ -257,7 +257,7 @@
       "mutant": "replace review_of -> Result<Option<Review>, JsValue> with Ok(Some(Default::default()))",
       "anchor": "fn review_of(id: i64) -> Result<Option<Review>, JsValue> {\n    let rows = query(Read::Review(id))?;\n    let Some(row) = rows.pointer(\"/0\") else {\n        return Ok(None);\n    };\n    let cid = row.pointer(\"/0\").and_then(serde_json::Value::as_i64);\n    let usn = row\n        .pointer(\"/1\")\n        .and_then(serde_json::Value::as_i64)\n        .and_then(|usn| i32::try_from(usn).ok());\n    match (cid, usn) {\n        (Some(cid), Some(usn)) => Ok(Some(Review { cid, usn })),\n        _ => Err(refuse(\n            \"the review read answered other than a card and a sync mark\",\n        )),\n    }\n}",
       "reason": "The mutated function `review_of` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `review_of` is a private helper the census does not read whole; it reads the core's fixed `Read::Review` read, and engine-core's `undo_answer::a_record_whose_review_is_gone_is_refused`, `undo_answer::a_record_for_another_card_is_refused` and `undo_answer::a_synced_answer_is_refused` hold the rule it feeds (SPEC-371 A7 to A9); the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation. On wasm32 this mutant does not build: the core's `Review` derives no `Default`.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `review_of` is a private helper the census does not read whole; it reads the core's fixed `Read::Review` read, and engine-core's `undo_answer::a_record_whose_review_is_gone_is_refused`, `undo_answer::a_record_for_another_card_is_refused` and `undo_answer::a_synced_answer_is_refused` hold the rule it feeds (SPEC-371 A7 to A9); the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation. On wasm32 this mutant does not build: the core's `Review` derives no `Default`.",
       "reached_by": "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
       "issue": "#714"
     },
@@ -266,7 +266,7 @@
       "mutant": "delete match arm (Some(cid), Some(usn)) in review_of",
       "anchor": "fn review_of(id: i64) -> Result<Option<Review>, JsValue> {\n    let rows = query(Read::Review(id))?;\n    let Some(row) = rows.pointer(\"/0\") else {\n        return Ok(None);\n    };\n    let cid = row.pointer(\"/0\").and_then(serde_json::Value::as_i64);\n    let usn = row\n        .pointer(\"/1\")\n        .and_then(serde_json::Value::as_i64)\n        .and_then(|usn| i32::try_from(usn).ok());\n    match (cid, usn) {\n        (Some(cid), Some(usn)) => Ok(Some(Review { cid, usn })),\n        _ => Err(refuse(\n            \"the review read answered other than a card and a sync mark\",\n        )),\n    }\n}",
       "reason": "The mutated match arm of `review_of` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `review_of` is a private helper the census does not read whole; it reads the core's fixed `Read::Review` read, and engine-core's `undo_answer::a_record_whose_review_is_gone_is_refused`, `undo_answer::a_record_for_another_card_is_refused` and `undo_answer::a_synced_answer_is_refused` hold the rule it feeds (SPEC-371 A7 to A9); the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `review_of` is a private helper the census does not read whole; it reads the core's fixed `Read::Review` read, and engine-core's `undo_answer::a_record_whose_review_is_gone_is_refused`, `undo_answer::a_record_for_another_card_is_refused` and `undo_answer::a_synced_answer_is_refused` hold the rule it feeds (SPEC-371 A7 to A9); the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation.",
       "reached_by": "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
       "issue": "#714"
     },
@@ -275,7 +275,7 @@
       "mutant": "replace mirrored -> UndoRefusal with Default::default()",
       "anchor": "fn mirrored(refusal: undo_answer::UndoRefusal) -> UndoRefusal {\n    match refusal {\n        undo_answer::UndoRefusal::Gone => UndoRefusal::Gone,\n        undo_answer::UndoRefusal::NotTheCard => UndoRefusal::NotTheCard,\n        undo_answer::UndoRefusal::Synced => UndoRefusal::Synced,\n        undo_answer::UndoRefusal::Changed => UndoRefusal::Changed,\n    }\n}",
       "reason": "The mutated function `mirrored` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `mirrored` maps the core's refusal one for one onto the study rule's; on wasm32 this mutant does not build, because the study rule's `UndoRefusal` derives no `Default`, and `crates/web-engine/tests/study.rs` `a_refused_undo_reads_as_its_own_sentence` holds each refusal's sentence (SPEC-371 R12).",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `mirrored` maps the core's refusal one for one onto the study rule's; on wasm32 this mutant does not build, because the study rule's `UndoRefusal` derives no `Default`, and `crates/web-engine/tests/study.rs` `a_refused_undo_reads_as_its_own_sentence` holds each refusal's sentence (SPEC-371 R12).",
       "reached_by": "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
       "issue": "#714"
     },
@@ -284,7 +284,7 @@
       "mutant": "replace returned -> Returns with Default::default()",
       "anchor": "fn returned(state: Option<&SchedulingState>) -> Returns {\n    let Some(state) = state else {\n        return Returns::New;\n    };\n    match undo_answer::returns_to(state) {\n        undo_answer::Returns::New => Returns::New,\n        undo_answer::Returns::Learning => Returns::Learning,\n        undo_answer::Returns::Review => Returns::Review,\n        undo_answer::Returns::Relearning => Returns::Relearning,\n        undo_answer::Returns::Preview => Returns::Preview,\n    }\n}",
       "reason": "The mutated function `returned` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `returned` maps the core's `returns_to` onto the study rule's kind; on wasm32 this mutant does not build, because the study rule's `Returns` derives no `Default`, and engine-core's `undo_answer::an_undone_answer_returns_its_card_to_the_state_it_left` holds the rule it maps (SPEC-371 A14).",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `returned` maps the core's `returns_to` onto the study rule's kind; on wasm32 this mutant does not build, because the study rule's `Returns` derives no `Default`, and engine-core's `undo_answer::an_undone_answer_returns_its_card_to_the_state_it_left` holds the rule it maps (SPEC-371 A14).",
       "reached_by": "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
       "issue": "#714"
     },
@@ -293,7 +293,7 @@
       "mutant": "replace newest_review -> Result<Option<Newest>, JsValue> with Ok(None)",
       "anchor": "fn newest_review(rows: &serde_json::Value) -> Result<Option<Newest>, JsValue> {\n    let Some(row) = rows.pointer(\"/0\") else {\n        return Ok(None);\n    };\n    let id = row.pointer(\"/0\").and_then(serde_json::Value::as_i64);\n    let card = row.pointer(\"/1\").and_then(serde_json::Value::as_i64);\n    match (id, card) {\n        (Some(id), Some(card)) => Ok(Some(Newest { id, card })),\n        _ => Err(refuse(\n            \"the newest review read answered other than a row and a card\",\n        )),\n    }\n}",
       "reason": "The mutated function `newest_review` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `newest_review` is a private helper the census does not read whole; the census holds `rate`'s `query(Read::NewestReview)?` and `newest.card == shown.card` statements that read and check its answer (SPEC-371 A17), and row `S37115` pins that check; the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `newest_review` is a private helper the census does not read whole; the census holds `rate`'s `query(Read::NewestReview)?` and `newest.card == shown.card` statements that read and check its answer (SPEC-371 A17), and row `S37115` pins that check; the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation.",
       "reached_by": "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
       "issue": "#714"
     },
@@ -302,7 +302,7 @@
       "mutant": "replace newest_review -> Result<Option<Newest>, JsValue> with Ok(Some(Default::default()))",
       "anchor": "fn newest_review(rows: &serde_json::Value) -> Result<Option<Newest>, JsValue> {\n    let Some(row) = rows.pointer(\"/0\") else {\n        return Ok(None);\n    };\n    let id = row.pointer(\"/0\").and_then(serde_json::Value::as_i64);\n    let card = row.pointer(\"/1\").and_then(serde_json::Value::as_i64);\n    match (id, card) {\n        (Some(id), Some(card)) => Ok(Some(Newest { id, card })),\n        _ => Err(refuse(\n            \"the newest review read answered other than a row and a card\",\n        )),\n    }\n}",
       "reason": "The mutated function `newest_review` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `newest_review` is a private helper the census does not read whole; the census holds `rate`'s `query(Read::NewestReview)?` and `newest.card == shown.card` statements that read and check its answer (SPEC-371 A17), and row `S37115` pins that check; the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation. On wasm32 this mutant does not build: `Newest` derives no `Default`.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `newest_review` is a private helper the census does not read whole; the census holds `rate`'s `query(Read::NewestReview)?` and `newest.card == shown.card` statements that read and check its answer (SPEC-371 A17), and row `S37115` pins that check; the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation. On wasm32 this mutant does not build: `Newest` derives no `Default`.",
       "reached_by": "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
       "issue": "#714"
     },
@@ -311,9 +311,126 @@
       "mutant": "delete match arm (Some(id), Some(card)) in newest_review",
       "anchor": "fn newest_review(rows: &serde_json::Value) -> Result<Option<Newest>, JsValue> {\n    let Some(row) = rows.pointer(\"/0\") else {\n        return Ok(None);\n    };\n    let id = row.pointer(\"/0\").and_then(serde_json::Value::as_i64);\n    let card = row.pointer(\"/1\").and_then(serde_json::Value::as_i64);\n    match (id, card) {\n        (Some(id), Some(card)) => Ok(Some(Newest { id, card })),\n        _ => Err(refuse(\n            \"the newest review read answered other than a row and a card\",\n        )),\n    }\n}",
       "reason": "The mutated match arm of `newest_review` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
-      "evidence": "`crates/web-engine/src/lib.rs` line 10 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `newest_review` is a private helper the census does not read whole; the census holds `rate`'s `query(Read::NewestReview)?` and `newest.card == shown.card` statements that read and check its answer (SPEC-371 A17), and row `S37115` pins that check; the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace run_method -> Result<Vec<u8>, JsValue> with Ok(vec![1])`. `newest_review` is a private helper the census does not read whole; the census holds `rate`'s `query(Read::NewestReview)?` and `newest.card == shown.card` statements that read and check its answer (SPEC-371 A17), and row `S37115` pins that check; the browser engine suite's 'opens, answers and undoes over OPFS' of `web/app/tests-engine/engine.spec.ts` runs it through the offer and the confirmation.",
       "reached_by": "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
       "issue": "#714"
+    },
+    {
+      "file": "crates/web-engine/src/wasm.rs",
+      "mutant": "replace storage -> JsValue with Default::default()",
+      "anchor": "fn storage(error: impl std::fmt::Display) -> JsValue {\n    refuse(format!(\"storage-refused: {error}\"))\n}",
+      "reason": "The mutated function `storage` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace install_storage -> Result<u32, JsValue> with Ok(0)`. `storage` serves the full sync's choice (SPEC-377 R5); the `boundary` census reads `wasm.rs`'s source natively, and the browser engine suite's 'an upload waits for its snapshot', 'a download is written after its backup' and 'an evicted collection is restored from the server' of `web/app/tests-engine/sync.spec.ts` run the choice's exports on `wasm32`.",
+      "reached_by": "boundary::the_snapshot_answer_reaches_the_core_as_the_worker_read_it",
+      "issue": "#631"
+    },
+    {
+      "file": "crates/web-engine/src/wasm.rs",
+      "mutant": "replace sync_auth -> SyncAuth with Default::default()",
+      "anchor": "fn sync_auth(key: String, endpoint: String) -> SyncAuth {\n    SyncAuth {\n        hkey: key,\n        endpoint: Some(endpoint),\n        io_timeout_secs: None,\n    }\n}",
+      "reason": "The mutated function `sync_auth` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace install_storage -> Result<u32, JsValue> with Ok(0)`. `sync_auth` serves the full sync's choice (SPEC-377 R5); the `boundary` census reads `wasm.rs`'s source natively, and the browser engine suite's 'an upload waits for its snapshot', 'a download is written after its backup' and 'an evicted collection is restored from the server' of `web/app/tests-engine/sync.spec.ts` run the choice's exports on `wasm32`.",
+      "reached_by": "boundary::the_snapshot_answer_reaches_the_core_as_the_worker_read_it",
+      "issue": "#631"
+    },
+    {
+      "file": "crates/web-engine/src/wasm.rs",
+      "mutant": "replace losses_json -> serde_json::Value with Default::default()",
+      "anchor": "fn losses_json(losses: Option<Losses>) -> serde_json::Value {\n    losses.map_or(serde_json::Value::Null, |losses| {\n        serde_json::json!({\n            \"reviews\": losses.reviews,\n            \"cards\": losses.cards,\n            \"notes\": losses.notes,\n        })\n    })\n}",
+      "reason": "The mutated function `losses_json` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace install_storage -> Result<u32, JsValue> with Ok(0)`. `losses_json` serves the full sync's choice (SPEC-377 R5); the `boundary` census reads `wasm.rs`'s source natively, and the browser engine suite's 'an upload waits for its snapshot', 'a download is written after its backup' and 'an evicted collection is restored from the server' of `web/app/tests-engine/sync.spec.ts` run the choice's exports on `wasm32`.",
+      "reached_by": "boundary::the_snapshot_answer_reaches_the_core_as_the_worker_read_it",
+      "issue": "#631"
+    },
+    {
+      "file": "crates/web-engine/src/wasm.rs",
+      "mutant": "replace refused -> String with String::new()",
+      "anchor": "fn refused(why: &str) -> String {\n    serde_json::json!({ \"outcome\": \"refused\", \"why\": why }).to_string()\n}",
+      "reason": "The mutated function `refused` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace install_storage -> Result<u32, JsValue> with Ok(0)`. `refused` serves the full sync's choice (SPEC-377 R5); the `boundary` census reads `wasm.rs`'s source natively, and the browser engine suite's 'an upload waits for its snapshot', 'a download is written after its backup' and 'an evicted collection is restored from the server' of `web/app/tests-engine/sync.spec.ts` run the choice's exports on `wasm32`.",
+      "reached_by": "boundary::the_snapshot_answer_reaches_the_core_as_the_worker_read_it",
+      "issue": "#631"
+    },
+    {
+      "file": "crates/web-engine/src/wasm.rs",
+      "mutant": "replace refused -> String with \"xyzzy\".into()",
+      "anchor": "fn refused(why: &str) -> String {\n    serde_json::json!({ \"outcome\": \"refused\", \"why\": why }).to_string()\n}",
+      "reason": "The mutated function `refused` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace install_storage -> Result<u32, JsValue> with Ok(0)`. `refused` serves the full sync's choice (SPEC-377 R5); the `boundary` census reads `wasm.rs`'s source natively, and the browser engine suite's 'an upload waits for its snapshot', 'a download is written after its backup' and 'an evicted collection is restored from the server' of `web/app/tests-engine/sync.spec.ts` run the choice's exports on `wasm32`.",
+      "reached_by": "boundary::the_snapshot_answer_reaches_the_core_as_the_worker_read_it",
+      "issue": "#631"
+    },
+    {
+      "file": "crates/web-engine/src/wasm.rs",
+      "mutant": "replace changed -> String with String::new()",
+      "anchor": "fn changed(side: &str, counts: Counts) -> String {\n    serde_json::json!({\n        \"outcome\": \"changed\",\n        \"why\": side,\n        \"upload\": losses_json(counts.upload),\n        \"download\": losses_json(counts.download),\n    })\n    .to_string()\n}",
+      "reason": "The mutated function `changed` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace install_storage -> Result<u32, JsValue> with Ok(0)`. `changed` serves the full sync's choice (SPEC-377 R5); the `boundary` census reads `wasm.rs`'s source natively, and the browser engine suite's 'an upload waits for its snapshot', 'a download is written after its backup' and 'an evicted collection is restored from the server' of `web/app/tests-engine/sync.spec.ts` run the choice's exports on `wasm32`.",
+      "reached_by": "boundary::the_snapshot_answer_reaches_the_core_as_the_worker_read_it",
+      "issue": "#631"
+    },
+    {
+      "file": "crates/web-engine/src/wasm.rs",
+      "mutant": "replace changed -> String with \"xyzzy\".into()",
+      "anchor": "fn changed(side: &str, counts: Counts) -> String {\n    serde_json::json!({\n        \"outcome\": \"changed\",\n        \"why\": side,\n        \"upload\": losses_json(counts.upload),\n        \"download\": losses_json(counts.download),\n    })\n    .to_string()\n}",
+      "reason": "The mutated function `changed` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace install_storage -> Result<u32, JsValue> with Ok(0)`. `changed` serves the full sync's choice (SPEC-377 R5); the `boundary` census reads `wasm.rs`'s source natively, and the browser engine suite's 'an upload waits for its snapshot', 'a download is written after its backup' and 'an evicted collection is restored from the server' of `web/app/tests-engine/sync.spec.ts` run the choice's exports on `wasm32`.",
+      "reached_by": "boundary::the_snapshot_answer_reaches_the_core_as_the_worker_read_it",
+      "issue": "#631"
+    },
+    {
+      "file": "crates/web-engine/src/wasm.rs",
+      "mutant": "replace why -> Result<&'static str, JsValue> with Ok(\"\")",
+      "anchor": "fn why(reason: Reason) -> Result<&'static str, JsValue> {\n    match reason {\n        Reason::Engine(refusal) => Err(sync_refusal(refusal)),\n        Reason::Gesture(GestureRefusal::Engine { error }) => {\n            Err(Uint8Array::from(error.as_slice()).into())\n        }\n        Reason::Gesture(_) => Ok(\"gesture\"),\n        Reason::OpenCollection => Ok(\"open-collection\"),\n        Reason::HoldsRows => Ok(\"holds-rows\"),\n        Reason::Unheld => Ok(\"unheld\"),\n    }\n}",
+      "reason": "The mutated function `why` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace install_storage -> Result<u32, JsValue> with Ok(0)`. `why` serves the full sync's choice (SPEC-377 R5); the `boundary` census reads `wasm.rs`'s source natively, and the browser engine suite's 'an upload waits for its snapshot', 'a download is written after its backup' and 'an evicted collection is restored from the server' of `web/app/tests-engine/sync.spec.ts` run the choice's exports on `wasm32`.",
+      "reached_by": "boundary::the_snapshot_answer_reaches_the_core_as_the_worker_read_it",
+      "issue": "#631"
+    },
+    {
+      "file": "crates/web-engine/src/wasm.rs",
+      "mutant": "replace why -> Result<&'static str, JsValue> with Ok(\"xyzzy\")",
+      "anchor": "fn why(reason: Reason) -> Result<&'static str, JsValue> {\n    match reason {\n        Reason::Engine(refusal) => Err(sync_refusal(refusal)),\n        Reason::Gesture(GestureRefusal::Engine { error }) => {\n            Err(Uint8Array::from(error.as_slice()).into())\n        }\n        Reason::Gesture(_) => Ok(\"gesture\"),\n        Reason::OpenCollection => Ok(\"open-collection\"),\n        Reason::HoldsRows => Ok(\"holds-rows\"),\n        Reason::Unheld => Ok(\"unheld\"),\n    }\n}",
+      "reason": "The mutated function `why` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace install_storage -> Result<u32, JsValue> with Ok(0)`. `why` serves the full sync's choice (SPEC-377 R5); the `boundary` census reads `wasm.rs`'s source natively, and the browser engine suite's 'an upload waits for its snapshot', 'a download is written after its backup' and 'an evicted collection is restored from the server' of `web/app/tests-engine/sync.spec.ts` run the choice's exports on `wasm32`.",
+      "reached_by": "boundary::the_snapshot_answer_reaches_the_core_as_the_worker_read_it",
+      "issue": "#631"
+    },
+    {
+      "file": "crates/web-engine/src/wasm.rs",
+      "mutant": "replace uncounted -> JsValue with Default::default()",
+      "anchor": "fn uncounted(reason: Reason) -> JsValue {\n    match why(reason) {\n        Ok(word) => refuse(format!(\"choice-refused: {word}\")),\n        Err(bytes) => bytes,\n    }\n}",
+      "reason": "The mutated function `uncounted` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace install_storage -> Result<u32, JsValue> with Ok(0)`. `uncounted` serves the full sync's choice (SPEC-377 R5); the `boundary` census reads `wasm.rs`'s source natively, and the browser engine suite's 'an upload waits for its snapshot', 'a download is written after its backup' and 'an evicted collection is restored from the server' of `web/app/tests-engine/sync.spec.ts` run the choice's exports on `wasm32`.",
+      "reached_by": "boundary::the_snapshot_answer_reaches_the_core_as_the_worker_read_it",
+      "issue": "#631"
+    },
+    {
+      "file": "crates/web-engine/src/wasm.rs",
+      "mutant": "delete field required from struct SyncCollectionResponse expression in full_sync_count",
+      "anchor": "#[wasm_bindgen]\npub async fn full_sync_count(key: String, endpoint: String, required: u32) -> Json {\n    let answer = SyncCollectionResponse {\n        required: i32::try_from(required).map_err(refuse)?,\n        ..SyncCollectionResponse::default()\n    };\n    let auth = sync_auth(key, endpoint);\n    let copy = choice_file(Kind::Server).await?;\n    let counted =\n        one_way::count(&dispatcher()?, &answer, &auth, Path::new(&copy)).map_err(uncounted)?;\n    let counts = counted.counts();\n    STAGE.with(|stage| *stage.borrow_mut() = Some(Stage { counted, copy }));\n    Ok(serde_json::json!({\n        \"upload\": losses_json(counts.upload),\n        \"download\": losses_json(counts.download),\n    })\n    .to_string())\n}",
+      "reason": "The deleted field of `full_sync_count`'s response lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace install_storage -> Result<u32, JsValue> with Ok(0)`. `full_sync_count` serves the full sync's choice (SPEC-377 R5); the `boundary` census reads `wasm.rs`'s source natively, and the browser engine suite's 'an upload waits for its snapshot', 'a download is written after its backup' and 'an evicted collection is restored from the server' of `web/app/tests-engine/sync.spec.ts` run the choice's exports on `wasm32`.",
+      "reached_by": "boundary::the_snapshot_answer_reaches_the_core_as_the_worker_read_it",
+      "issue": "#631"
+    },
+    {
+      "file": "crates/web-engine/src/wasm.rs",
+      "mutant": "delete match arm 0 in full_sync_confirm",
+      "anchor": "#[wasm_bindgen]\npub async fn full_sync_confirm(direction: u32, key: String, endpoint: String, found: bool) -> Json {\n    let Some(Stage { counted, copy }) = STAGE.with_borrow(Clone::clone) else {\n        return Ok(refused(\"no-stage\"));\n    };\n    let direction = match direction {\n        0 => Direction::Upload,\n        1 => Direction::Download,\n        _ => return Ok(refused(\"not-offered\")),\n    };\n    let Ok(gesture) = OwnerGesture::from_tap(ExemptWrite::OneWaySync, Target::Collection) else {\n        return Ok(refused(\"gesture\"));\n    };\n    let Ok(confirmed) = counted.confirm(direction) else {\n        return Ok(refused(\"not-offered\"));\n    };\n    let auth = sync_auth(key, endpoint);\n    let dispatcher = dispatcher()?;\n    let backup = choice_file(Kind::Backup).await?;\n    let made = one_way::back_up(&dispatcher, confirmed, Path::new(&backup), Path::new(&copy));\n    let backed_up = match made {\n        Ok(backed_up) => backed_up,\n        Err(refusal) => return why(refusal.reason).map(refused),\n    };\n    let ready = match backed_up.download_ready() {\n        Ok(ready) => ready,\n        Err(backed_up) => {\n            let Ok(checked) = backed_up.snapshot_found(&SnapshotAnswer { found }) else {\n                return Ok(refused(\"no-snapshot\"));\n            };\n            let fresh = choice_file(Kind::Server).await?;\n            match one_way::recheck(&dispatcher, checked, &auth, Path::new(&fresh)) {\n                Ok(Ok(ready)) => ready,\n                Ok(Err(counted)) => {\n                    let counts = counted.counts();\n                    STAGE.set(Some(Stage {\n                        counted,\n                        copy: fresh,\n                    }));\n                    return Ok(changed(\"server\", counts));\n                }\n                Err(refusal) => return why(refusal.reason).map(refused),\n            }\n        }\n    };\n    match one_way::write(&dispatcher, ready, gesture, &auth) {\n        Ok(()) => {\n            STAGE.set(None);\n            Ok(serde_json::json!({ \"outcome\": \"written\" }).to_string())\n        }\n        Err(Unwritten::Recount(counted)) => {\n            let counts = counted.counts();\n            STAGE.set(Some(Stage { counted, copy }));\n            Ok(changed(\"device\", counts))\n        }\n        Err(Unwritten::Refused(reason)) => why(reason).map(refused),\n    }\n}",
+      "reason": "The mutated match arm of `full_sync_confirm` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace install_storage -> Result<u32, JsValue> with Ok(0)`. `full_sync_confirm` serves the full sync's choice (SPEC-377 R5); the `boundary` census reads `wasm.rs`'s source natively, and the browser engine suite's 'an upload waits for its snapshot', 'a download is written after its backup' and 'an evicted collection is restored from the server' of `web/app/tests-engine/sync.spec.ts` run the choice's exports on `wasm32`.",
+      "reached_by": "boundary::the_snapshot_answer_reaches_the_core_as_the_worker_read_it",
+      "issue": "#631"
+    },
+    {
+      "file": "crates/web-engine/src/wasm.rs",
+      "mutant": "delete match arm 1 in full_sync_confirm",
+      "anchor": "#[wasm_bindgen]\npub async fn full_sync_confirm(direction: u32, key: String, endpoint: String, found: bool) -> Json {\n    let Some(Stage { counted, copy }) = STAGE.with_borrow(Clone::clone) else {\n        return Ok(refused(\"no-stage\"));\n    };\n    let direction = match direction {\n        0 => Direction::Upload,\n        1 => Direction::Download,\n        _ => return Ok(refused(\"not-offered\")),\n    };\n    let Ok(gesture) = OwnerGesture::from_tap(ExemptWrite::OneWaySync, Target::Collection) else {\n        return Ok(refused(\"gesture\"));\n    };\n    let Ok(confirmed) = counted.confirm(direction) else {\n        return Ok(refused(\"not-offered\"));\n    };\n    let auth = sync_auth(key, endpoint);\n    let dispatcher = dispatcher()?;\n    let backup = choice_file(Kind::Backup).await?;\n    let made = one_way::back_up(&dispatcher, confirmed, Path::new(&backup), Path::new(&copy));\n    let backed_up = match made {\n        Ok(backed_up) => backed_up,\n        Err(refusal) => return why(refusal.reason).map(refused),\n    };\n    let ready = match backed_up.download_ready() {\n        Ok(ready) => ready,\n        Err(backed_up) => {\n            let Ok(checked) = backed_up.snapshot_found(&SnapshotAnswer { found }) else {\n                return Ok(refused(\"no-snapshot\"));\n            };\n            let fresh = choice_file(Kind::Server).await?;\n            match one_way::recheck(&dispatcher, checked, &auth, Path::new(&fresh)) {\n                Ok(Ok(ready)) => ready,\n                Ok(Err(counted)) => {\n                    let counts = counted.counts();\n                    STAGE.set(Some(Stage {\n                        counted,\n                        copy: fresh,\n                    }));\n                    return Ok(changed(\"server\", counts));\n                }\n                Err(refusal) => return why(refusal.reason).map(refused),\n            }\n        }\n    };\n    match one_way::write(&dispatcher, ready, gesture, &auth) {\n        Ok(()) => {\n            STAGE.set(None);\n            Ok(serde_json::json!({ \"outcome\": \"written\" }).to_string())\n        }\n        Err(Unwritten::Recount(counted)) => {\n            let counts = counted.counts();\n            STAGE.set(Some(Stage { counted, copy }));\n            Ok(changed(\"device\", counts))\n        }\n        Err(Unwritten::Refused(reason)) => why(reason).map(refused),\n    }\n}",
+      "reason": "The mutated match arm of `full_sync_confirm` lies in `wasm.rs`, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
+      "evidence": "`crates/web-engine/src/lib.rs` line 11 gates the module on target_arch = \"wasm32\", so `cargo mutants` lists this mutant and builds it natively as the unchanged crate, the class of this file's record for `replace install_storage -> Result<u32, JsValue> with Ok(0)`. `full_sync_confirm` serves the full sync's choice (SPEC-377 R5); the `boundary` census reads `wasm.rs`'s source natively, and the browser engine suite's 'an upload waits for its snapshot', 'a download is written after its backup' and 'an evicted collection is restored from the server' of `web/app/tests-engine/sync.spec.ts` run the choice's exports on `wasm32`.",
+      "reached_by": "boundary::the_snapshot_answer_reaches_the_core_as_the_worker_read_it",
+      "issue": "#631"
     }
   ]
 }

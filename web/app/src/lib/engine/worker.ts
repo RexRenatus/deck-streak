@@ -1,5 +1,7 @@
 // The web engine's Worker entry (SPEC-338 R3, ADR-348): the session served on the Worker's own
 // scope, over the browser's Web Locks, origin private file system and the module the build ships.
+import { Choice } from './choice';
+import type { ChoiceEngine } from './choice';
 import { CredentialStore, SYNC_ROUTE } from './credential';
 import type { CredentialEngine } from './credential';
 import { readMedia } from './media';
@@ -143,10 +145,13 @@ export function start(scope: object = globalThis, load: ImportModule = importMod
   // sync's three; the sync reads the statement at the Worker's own origin first (SPEC-374 R22),
   // takes its key from the one store the credential operations reach, and sends it only to the
   // Worker's own origin's sync route (SPEC-364 R17, R18)
-  const engine = once(deps.load) as () => Promise<EngineModule & CredentialEngine & SyncEngine>;
+  const engine = once(deps.load) as () => Promise<EngineModule & CredentialEngine & SyncEngine & ChoiceEngine>;
   const credential = browserCredential(worker, engine);
   const sync = new Sync(credential, engine, worker.location.origin + SYNC_ROUTE, (input, init) => worker.fetch(input, init));
-  serve(worker, { ...deps, load: engine, credential, sync }, worker.location.origin);
+  // the full sync's choice takes each send's key from the same store, reads the snapshot answer at
+  // the Worker's own origin itself, and hears what each normal sync answered (SPEC-377 R6)
+  const choice = new Choice(credential, engine, worker.location.origin + SYNC_ROUTE, (input, init) => worker.fetch(input, init));
+  serve(worker, { ...deps, load: engine, credential, sync, choice }, worker.location.origin);
   return true;
 }
 

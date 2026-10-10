@@ -116,6 +116,12 @@ describe('the planted card suite', () => {
     }
     for (const card of PLANTED) expect(card.paths.length, card.id).toBeGreaterThan(0);
 
+    // SPEC-402 R4, A3; ADR-416 D5: the image-set forms are planted on the srcset card alone, so no
+    // other card's variants can read them through its own prefix
+    const listener = { http: 'http://listener.invalid', tcp: 'http://listener.invalid:2', udp: 3 };
+    const carriers = PLANTED.filter((card) => /\bsrcset=/i.test(card.html(listener))).map((card) => card.id);
+    expect(carriers).toEqual(['srcset']);
+
     // a channel the schematic calls unobservable is declared so in every engine
     const blind = examined(
       'channels the schematic calls unobservable',

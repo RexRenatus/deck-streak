@@ -72,6 +72,44 @@ describe('the frame document', () => {
     expect(examined('planted elements', [...inert.body.querySelectorAll(STRIPPED)])).toHaveLength(planted.length);
   });
 
+  // SPEC-402 R1, A1; ADR-416 D2. An image-set candidate is a fetch the element's src does not
+  // make, so the strip removes every srcset, on an img, a picture's source or any other element,
+  // and keeps each element with its src
+  it('the frame document removes every srcset and keeps each element and its src', () => {
+    const planted = [
+      `<img alt="a dog" src="${IMAGE}" srcset="${ELSEWHERE}a.png 1x">`,
+      `<picture><source srcset="${ELSEWHERE}b.png"><img alt="a cat" src="${IMAGE}"></picture>`,
+      `<span srcset="${ELSEWHERE}c.png">any element</span>`
+    ];
+    const body = read(frameDocument(planted.join(''), CSS).srcdoc).body;
+
+    // no srcset reaches the frame's body
+    expect([...body.querySelectorAll('[srcset]')].map((element) => element.outerHTML)).toEqual([]);
+    // and every element is kept, each image with its src
+    expect(body.innerHTML).toBe(
+      `<img alt="a dog" src="${IMAGE}"><picture><source><img alt="a cat" src="${IMAGE}"></picture><span>any element</span>`
+    );
+    // each plant carries a srcset the frame would read, one per plant
+    const inert = new DOMParser().parseFromString(`<!doctype html><body>${planted.join('')}`, 'text/html');
+    expect(examined('planted srcset carriers', [...inert.body.querySelectorAll('[srcset]')])).toHaveLength(planted.length);
+  });
+
+  // SPEC-402 R2, A2; ADR-416 D3. Markup the first parse reads as a style's text, and the frame's
+  // parse as an element carrying a srcset: on an img, a picture's source, or the root element,
+  // which an html start tag inside the body gives its attributes to
+  it('a card whose re-parse brings a srcset back is refused', () => {
+    const mutation = '<form><math><mtext></form><form><mglyph><style></math>';
+    const returns = [
+      `<img alt="" srcset="${ELSEWHERE}a.png 1x">`,
+      `<picture><source srcset="${ELSEWHERE}b.png"><img alt=""></picture>`,
+      `<html srcset="${ELSEWHERE}c.png">`
+    ];
+    for (const element of returns) {
+      expect(frameDocument(mutation + element, CSS), element).toStrictEqual({ refused: 'escaped' });
+    }
+    examined('srcsets the re-parse brings back', returns);
+  });
+
   it('a card whose markup escapes the frame document is refused', () => {
     const escapes: [html: string, css: string][] = [
       // CSS that ends the style element and opens a link, then a refresh, in either case

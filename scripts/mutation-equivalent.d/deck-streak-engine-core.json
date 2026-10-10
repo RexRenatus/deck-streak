@@ -26,6 +26,15 @@
       "evidence": "admits builds BackendError with ..BackendError::default(), and the engine's proto/anki/backend.proto, line 25, reads `INVALID_INPUT = 0;`, so the default kind is that zero. A proto3 scalar at its default is not encoded, so the bytes with the field and without it are equal. The anchor occurs once (1) in handshake.rs, and the below-minimum test, which asserts the refusal's kind and sentence, passes with the field deleted.",
       "reached_by": "handshake::a_client_below_the_minimum_is_refused_every_sync_before_the_engine",
       "issue": "#671"
+    },
+    {
+      "file": "crates/engine-core/src/files.rs",
+      "mutant": "replace target_default -> Arc<dyn Files> with Arc::new(Default::default())",
+      "anchor": "#[cfg(target_arch = \"wasm32\")]\n#[must_use]\npub fn target_default() -> Arc<dyn Files> {\n    Arc::new(FailClosed)\n}",
+      "reason": "The mutated `target_default` is the `wasm32` one, which `#[cfg(target_arch = \"wasm32\")]` removes from every native build, so the mutant compiles to the very program the original does.",
+      "evidence": "`crates/engine-core/src/files.rs` line 52 gates this `target_default` on target_arch = \"wasm32\" and line 59 gates its native twin on the opposite, so `cargo mutants` lists both under one name and builds this one natively as the unchanged crate; the twin's mutant is unviable in the same run. The `FailClosed` port it returns is asserted natively by `one_way::an_uninstalled_browser_port_refuses_every_choice_path`, whose row `S37702` is killed by hand.",
+      "reached_by": "one_way::an_uninstalled_browser_port_refuses_every_choice_path",
+      "issue": "#631"
     }
   ]
 }

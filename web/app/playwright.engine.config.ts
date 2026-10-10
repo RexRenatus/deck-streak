@@ -15,10 +15,11 @@ const HOST = '127.0.0.1';
 
 // The engine's own sync server, which the sync tests reach through Vite's proxy (SPEC-364 B1 to
 // B3, ADR-375 D20). Its port is ENGINE_SYNC_PORT's, else 4177, beside the card's 4175 and the
-// study suite's 4176. Its one user is synthetic, built here from parts with a password drawn for
-// the run, and its base is an empty directory made for the run. Playwright loads this file again
-// in each test worker, so each value is set once, by the first process, and the workers inherit it
-// through their environment.
+// study suite's 4176. Its users are synthetic, one per project (Chromium's the first, WebKit's the
+// second, so neither project's uploads reach the other's server collection; SPEC-377 A1 to A3),
+// built here from parts with a password drawn for the run, and its base is an empty directory made
+// for the run. Playwright loads this file again in each test worker, so each value is set once,
+// by the first process, and the workers inherit it through their environment.
 const syncPort = Number(process.env.ENGINE_SYNC_PORT ?? 4177);
 process.env.ENGINE_SYNC_USER ??= ['engine', 'sync', 'tester'].join('-');
 process.env.ENGINE_SYNC_PASSWORD ??= randomBytes(18).toString('base64url');
@@ -55,6 +56,7 @@ export default defineConfig({
       timeout: 1_200_000,
       env: {
         SYNC_USER1: `${process.env.ENGINE_SYNC_USER}:${process.env.ENGINE_SYNC_PASSWORD}`,
+        SYNC_USER2: `${process.env.ENGINE_SYNC_USER}-webkit:${process.env.ENGINE_SYNC_PASSWORD}`,
         SYNC_HOST: HOST,
         SYNC_PORT: String(syncPort),
         SYNC_BASE: process.env.ENGINE_SYNC_BASE
