@@ -202,3 +202,19 @@ test for B6 1 passed, the storage status test for B7 1 passed, and the lister te
 passed. The pull request proves by `git diff --quiet` that the tests and code of B1 to B4 are
 byte-identical between 4edd078f and the pushed head, and that the seven paths changed since are
 byte-identical between c63b0a27 and the pushed head.
+
+## Census fix round
+
+Two checks of the pull request's own reds were watched failing in CI before any fix, in run
+38021001105 over 526852d6.
+
+- Job 114121749093 (hygiene), the setting-shape pin test, read:
+  `daemon::ListCommand (src/snapshot_lister.rs) "an absolute program and its arguments"` as
+  unpinned (`1 unpinned`, 30 impls examined).
+- Job 114121749032 (rust), the capture census, read:
+  `assertion `left == right` failed: capture population: 736 file(s) read; 0 raw capture(s), 24 routed, 1 global default(s)`
+  with `left: 24` and `right: 23`, at `crates/kernel/tests/log_capture_class.rs:1588:5`.
+
+The fix pins the lister command's shape in a test of its crate, and raises the census's routed
+figure from 23 to 24 for the one capture this delivery added, the route test's
+`hold_capture` call. The raw figure stays 0 and no assertion is removed.

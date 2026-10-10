@@ -305,3 +305,22 @@ fn the_lister_is_wired_only_with_its_command_and_its_credential() {
     );
     assert!(!off.contains("snapshot"), "{off}");
 }
+
+#[test]
+fn a_relative_program_is_refused_with_the_shape_spelled_out() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let directory = CredentialsDirectory::new(dir.path()).expect("an absolute directory");
+    let relative = Environment::from_vars([(ARCHIVE_LIST_COMMAND, "lister ls")]);
+    let refusal = match CommandLister::configured(&relative, &directory) {
+        Err(error) => error.to_string(),
+        Ok(_) => panic!("a relative program must refuse start"),
+    };
+    let shape = "an absolute program and its arguments";
+    assert!(
+        refusal.ends_with(&format!("it must be {shape}")),
+        "{refusal}"
+    );
+    assert!(ListCommand::parse("/usr/bin/lister ls -l").is_some());
+    assert!(ListCommand::parse("lister ls").is_none());
+    assert!(ListCommand::parse("").is_none());
+}
