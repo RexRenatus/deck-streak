@@ -160,3 +160,22 @@ B6: red at b743e782: in Chromium, at tests-engine/sync.spec.ts:407 `expect(recei
 B7: red at 8ac52ee7: AssertionError: expected { en: [ …(10) ], es: [ …(10) ], …(5) } to deeply equal { Object (en, es, ...) } with "en lacks sync_backups_title"; and at b743e782: AssertionError: kept: expected [] to deeply equal [ …(2) ]
 B9: red at 5948644e: panicked at crates/daemon/tests/snapshot_lister.rs:81:5: left: None right: Some(["sync-a.tar.age", "sync-a.sha256.age"]); and at :112:5: left: None; and at :126:5: a command inside its bound is listed left: None; and at :161:5: 64 bytes are read whole left: None; and at :180:5: a command that exits 0 is listed left: None; and at :224:5: no credential, no lister
 ```
+
+### The greens
+
+Every fence line of part c2 passes at 4edd078f, the commit that builds section 11 whole and changes
+no test file. B6 passed in Chromium locally; WebKit runs in CI. The record names 4edd078f rather
+than the pushed tip: the tests and the code they exercise are byte-identical between the two,
+which the pull request proves with `git diff --quiet` over their paths. B8 has no line here: the
+privacy pack's `policy-published` row decides it in CI.
+
+```red-first
+B1: green at 4edd078f
+B2: green at 4edd078f
+B3: green at 4edd078f
+B4: green at 4edd078f
+B5: green at 4edd078f
+B6: green at 4edd078f
+B7: green at 4edd078f
+B9: green at 4edd078f
+```
