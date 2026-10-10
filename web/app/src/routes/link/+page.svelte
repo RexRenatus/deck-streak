@@ -64,7 +64,7 @@
     <button
       type="button"
       class="mt-6 inline-flex min-h-11 items-center rounded-md border px-4"
-      disabled={stage === 'working'}
+      disabled={stage !== 'ready'}
       onclick={create}
     >
       {m.link_create()}

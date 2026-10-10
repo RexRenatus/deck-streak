@@ -19,14 +19,13 @@
   let message = $state<Wording | null>(null);
   let working = $state(false);
 
-  const methods = $derived(
-    listed?.kind === 'ok'
-      ? [
-          ...listed.value.filter((method) => method.kind === 'telegram'),
-          ...listed.value.filter((method) => method.kind === 'passkey')
-        ]
-      : []
-  );
+  /** Telegram first, then each passkey in the order the list holds them. */
+  function ordered(value: readonly Method[]): Method[] {
+    return [
+      ...value.filter((method) => method.kind === 'telegram'),
+      ...value.filter((method) => method.kind === 'passkey')
+    ];
+  }
 
   async function list(): Promise<void> {
     listed = await api.identities();
@@ -72,7 +71,7 @@
   <p class="mt-6" role="alert">{m.server_unavailable()}</p>
 {:else}
   <ul class="mt-6 space-y-3">
-    {#each methods as method (method.id)}
+    {#each ordered(listed.value) as method (method.id)}
       <li class="rounded-lg bg-card p-4 text-card-foreground">
         {#if method.kind === 'telegram'}
           <p>{m.methods_telegram()}</p>
