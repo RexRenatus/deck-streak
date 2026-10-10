@@ -189,6 +189,22 @@ def read(doc):
     return doc
 
 
+# SPEC-404 R1 and R2: the keys the formal checker reads under `tlc_slot`, each with the largest
+# value its reader takes: an unsigned 32-bit integer for the capacity, an unsigned 64-bit integer
+# for the wait. The file states both keys, so the checker never reads a default compiled into it.
+SLOT_KEYS = {
+    "capacity": 2**32 - 1,
+    "wait_seconds": 2**64 - 1,
+}
+
+
+def slot_reading(doc):
+    """The slot setting as the formal checker reads it from the file alone (SPEC-404): both keys
+    named, each within its reader's range. This stub keeps every input and refuses nothing, so the
+    two tests that hold the file to the checker's reading are red before the rule exists."""
+    return tuple((doc.get("tlc_slot") or {}).get(key) for key in SLOT_KEYS)
+
+
 def toolchain_sources(doc, root):
     """The toolchain sources the tree at `root` names, as the checker reads them: the settings
     field when the document names it, and the pin file when the tree holds one. A link at the
@@ -542,6 +558,79 @@ class FormalConfig(unittest.TestCase):
         arms = examined("refusal arms of the reader", reader_arms())
         self.assertEqual(set(arms) - reached, set(), "a refusal arm no planted fault reaches")
         self.assertEqual(reached - set(arms), set())
+
+    def test_the_checker_reads_the_slot_from_the_file_alone(self):
+        """A1 (SPEC-404): the committed file's slot reading is its own two values, read from the
+        loaded file; the keys the rule judges are the keys the reader's table lists under
+        `tlc_slot`; and a document that omits `tlc_slot`, its capacity or its wait is admitted by
+        the test's reader and refused by the slot rule, the refusal naming exactly the omitted
+        name."""
+        doc = load()
+        try:
+            read(doc)
+        except Refused as refusal:
+            self.fail(f"presence control: the file is refused: {refusal}")
+        lever = doc["tlc_slot"]
+        try:
+            reading = slot_reading(doc)
+        except Refused as refusal:
+            self.fail(f"the slot rule refuses the committed file: {refusal}")
+        self.assertEqual(reading, (lever["capacity"], lever["wait_seconds"]))
+        self.assertEqual(set(SLOT_KEYS), {"capacity", "wait_seconds"})
+        listed = {path[1] for path, _, _ in FIELDS if path[0] == "tlc_slot" and len(path) == 2}
+        self.assertEqual(listed, {"capacity", "wait_seconds"})
+        plants = [
+            ("tlc_slot", without(("tlc_slot",))),
+            ("tlc_slot.capacity", without(("tlc_slot", "capacity"))),
+            ("tlc_slot.wait_seconds", without(("tlc_slot", "wait_seconds"))),
+        ]
+        reached = 0
+        for name, plant in plants:
+            try:
+                read(plant)
+            except Refused as refusal:
+                self.fail(f"presence control: {name} omitted is refused by the reader: {refusal}")
+            with self.assertRaises(Refused, msg=f"{name} omitted was read as stated") as caught:
+                slot_reading(plant)
+            self.assertEqual(caught.exception.arm, "slot-unnamed")
+            self.assertEqual(str(caught.exception), f"{name} is not stated")
+            reached += 1
+        print(f"examined {reached} of {len(plants)} slot plants")
+        self.assertEqual(reached, len(plants), "a slot plant did not reach its assertion")
+
+    def test_each_slot_value_is_one_the_checkers_reader_takes(self):
+        """A2 (SPEC-404): for each slot key, the document holding its bound is admitted and read
+        as that value, and the document holding the first integer past the bound is refused by the
+        range arm naming the key. The values are spelled here, never derived from the rule."""
+        values = [
+            ("capacity", 4294967295, True),
+            ("capacity", 4294967296, False),
+            ("wait_seconds", 18446744073709551615, True),
+            ("wait_seconds", 18446744073709551616, False),
+        ]
+        reached = 0
+        for key, value, admitted in values:
+            plant = with_value(("tlc_slot", key), value)
+            try:
+                read(plant)
+            except Refused as refusal:
+                self.fail(f"presence control: {key} = {value} is refused by the reader: {refusal}")
+            if admitted:
+                try:
+                    reading = slot_reading(plant)
+                except Refused as refusal:
+                    self.fail(
+                        f"tlc_slot.{key} = {value} is within the range, yet refused: {refusal}"
+                    )
+                self.assertEqual(dict(zip(("capacity", "wait_seconds"), reading))[key], value)
+            else:
+                with self.assertRaises(Refused, msg=f"{key} = {value} was read") as caught:
+                    slot_reading(plant)
+                self.assertEqual(caught.exception.arm, "slot-range")
+                self.assertEqual(str(caught.exception), f"tlc_slot.{key} is past its range")
+            reached += 1
+        print(f"examined {reached} of {len(values)} slot values")
+        self.assertEqual(reached, len(values), "a slot value did not reach its assertion")
 
     def test_the_toolchain_identity_is_named_and_a_malformed_one_is_refused(self):
         """A6: the committed file names the checker's toolchain by one 64-digit lowercase hex
