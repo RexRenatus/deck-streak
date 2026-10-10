@@ -91,7 +91,7 @@ far end.
 ```mermaid
 flowchart LR
   subgraph first [the first route: the alert sender]
-    units[every service and scheduled job] -->|"OnFailure=deck-streak-alert@%n.service"| atpl[deck-streak-alert@.service]
+    units[every service and scheduled job] -->|"OnFailure=deck-streak-alert@%n.service"| atpl["deck-streak-alert@.service"]
     atpl --> ascript[the alert script]
     acreds[credentials: the bot token and the owner's id] --> ascript
   end
