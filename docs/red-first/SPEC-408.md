@@ -28,3 +28,11 @@ A4: green at ce1edda232f8f29ad90cdbe81591748bce465338
 A5: red at 26e165437cf67cfbfe15e03528457c1de04513a8: assertion left == right failed: left: [], right: ["100", "3", "70"] (the sentence is absent)
 A5: green at ce1edda232f8f29ad90cdbe81591748bce465338
 ```
+
+Correction. The five red lines above name `26e165437cf67cfbfe15e03528457c1de04513a8`, the docs
+commit, which carries none of the five criteria's tests. The tests arrive in its child
+`6606bf2fa2b32eb558a6b838de07830b2e586b2c`, which changes only test files and this record
+(`git diff --name-only 26e16543 6606bf2f`), so the code under test is the same at both
+commits and each red above reads at `6606bf2f`, the commit those lines should name. A4's left
+value, verbatim, is `Some("🏴 <b>Beta</b>: A2, 43% mastery, no unit yet")`: the `<flag>`
+above stands for the Beta course's flag, `\u{1f3f4}` in the test.
