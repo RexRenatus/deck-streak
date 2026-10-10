@@ -3,7 +3,7 @@ import WebKit
 
 /// The card view's layers: the seven of SPEC-349 R2 (the schematic's section 4), then L8, the
 /// peer-connection removal (SPEC-355 R3, section 7), then L10 to L13, the containment layer for
-/// card scripts (SPEC-361 R3 to R6, section 8), then L14, the link strip (SPEC-392, section 9).
+/// card scripts (SPEC-361 R3 to R6, section 8), then L14, the link strip (SPEC-392, section 10).
 /// L9 is retired (SPEC-361 R2), and its number is not reused.
 public enum CardLayer: String, CaseIterable, Sendable {
     case L1, L2, L3, L4, L5, L6, L7, L8, L10, L11, L12, L13, L14

@@ -114,7 +114,7 @@ requests by path and points `nav-self` at its HTTP listener
 (`web/app/tests-card/listeners.ts:45-55`, `web/app/tests-card/planted.ts:160`), so it cannot see a
 followed link's bare connection; SPEC-392 section 5 records that gap with its owner.
 
-- Chosen: keep L10 and L11 as SPEC-361 built them, because the suite already reads the zero this issue asks for, and close #677 on this delivery's own `harness` reading of it on both simulators. The schematic's section 9 records the closure; section 6's residual paragraph and ADR-360 D8's tolerance stand as history, superseded by that record.
+- Chosen: keep L10 and L11 as SPEC-361 built them, because the suite already reads the zero this issue asks for, and close #677 on this delivery's own `harness` reading of it on both simulators. The schematic's section 10 records the closure; section 6's residual paragraph and ADR-360 D8's tolerance stand as history, superseded by that record.
 - A navigation-gate change that decides before any request: rejected because the early connection
   starts in the click handler whatever the delegate answers, so no answer from L5 can hold it, as
   SPEC-349's run measured with the gate cancelling every followed link.

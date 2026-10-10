@@ -6,7 +6,7 @@
   It builds on ADR-360 (L1 to L7), ADR-366 (the switch, its read-back, L8) and ADR-372 (L10 to
   L13), and amends none of them in place.
 - **Schematic:** `docs/schematics/card-frame-channels.md`, amended INSERT-ONLY by an appended
-  section 9 that places L14 in the card's path from the note to the view on each client, records
+  section 10 that places L14 in the card's path from the note to the view on each client, records
   #677's closure, and states the readings this SPEC predicts.
 - **Status:** proposed.
 
@@ -58,7 +58,7 @@ cites.
   text too, in a text area, a title, raw text, a comment or an attribute value.
 - **R3.** `CardLayer` names L14 in place: `:9` becomes
   `case L1, L2, L3, L4, L5, L6, L7, L8, L10, L11, L12, L13, L14`. Its doc comment (`:4-7`) is
-  amended in place, four lines still, to add "then L14, the link strip (SPEC-392, section 9)", and
+  amended in place, four lines still, to add "then L14, the link strip (SPEC-392, section 10)", and
   `build`'s doc comment (`:38-39`) is amended in place to name L14. L14 is NOT in `required`,
   `CONTROLS`, the read-back (`present`, `:129-175`) or `LAYERS`. In `CardScripts.swift:10` and
   `CardScriptsTests.swift:17`, the words "every layer but L2, which is the verdict itself." are
@@ -76,7 +76,7 @@ cites.
   `let LINKED: Set<String> = ["stylesheet", "preload", "prefetch", "preconnect", "dns-prefetch", "shadow-link"]`
   after its last line.
 - **R6.** No new layer holds #677. L10 and L11 hold a followed link as SPEC-361 built them, A7's
-  reading on both simulators closes the issue, and the schematic's section 9 records the closure.
+  reading on both simulators closes the issue, and the schematic's section 10 records the closure.
 - **R7.** The web card frame is unchanged: W3 already removes every `link`.
 - **R8.** The rows of section 8: S39200 and S39201 in `scripts/mutation-rows.d/S39200-S39299.json`,
   and SW39200 to SW39204 appended to `ios/CardIsolation/swift-mutants.json`.
@@ -169,7 +169,7 @@ A8: xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -destinatio
 | `scripts/mutation-rows.d/S39200-S39299.json` | mutation | added: S39200 and S39201 (R8) |
 | `docs/specs/SPEC-392-the-iphone-and-ipad-card-view-strips-every-link-element-and-a-followed-link-opens-no-connection.md` | docs | added: this SPEC |
 | `docs/decisions/ADR-406-a-link-strip-renames-every-link-start-tag-before-the-card-view-and-the-link-activation-refusal-holds-a-followed-link.md` | docs | added |
-| `docs/schematics/card-frame-channels.md` | docs | changed: section 9 appended, insert-only |
+| `docs/schematics/card-frame-channels.md` | docs | changed: section 10 appended, insert-only |
 | `docs/red-first/SPEC-392.md` | docs | added (R9) |
 | `changelog.d/card-view-network-residuals-392.md` | docs | added (R9) |
 

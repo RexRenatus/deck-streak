@@ -1,4 +1,4 @@
-/// L14, the link strip (SPEC-392 R2, ADR-406 D1, the schematic's section 9): every `<link` in a
+/// L14, the link strip (SPEC-392 R2, ADR-406 D1, the schematic's section 10): every `<link` in a
 /// card's text, its four letters in any ASCII case and wherever the five characters stand, is
 /// renamed to `<wbr` before the factory prefixes L12's policy and loads the card, and every other
 /// byte is kept. A `wbr` is void and has no attribute of its own, so a renamed tag wraps nothing
