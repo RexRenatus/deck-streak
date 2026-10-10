@@ -29,6 +29,7 @@ use deck_streak_kernel::{
 use tokio::sync::oneshot;
 
 use crate::lifecycle::{self, Notifier, NotifyState, ShutdownSignal};
+use crate::snapshot_lister::CommandLister;
 use crate::wiring::{self, StateDirectory, WiringError};
 
 /// Why the `api` role stopped with an error.
@@ -143,6 +144,16 @@ fn law_tier_source(env: &Environment, offload: &Offload) -> Option<Arc<dyn LawTi
 pub fn with_seal_secret(state: ApiState, secret: Option<SealSecret>) -> ApiState {
     match secret {
         Some(secret) => state.with_seal(secret),
+        None => state,
+    }
+}
+
+/// `state`, answering the snapshot route from `lister` when the role's settings and credentials
+/// configure one (SPEC-377 R14). With none the route answers unknown and the role still starts.
+#[must_use]
+pub fn with_snapshot_lister(state: ApiState, lister: Option<CommandLister>) -> ApiState {
+    match lister {
+        Some(lister) => state.with_snapshot(Arc::new(lister)),
         None => state,
     }
 }
