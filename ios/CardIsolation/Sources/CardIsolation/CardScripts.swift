@@ -7,7 +7,7 @@ public enum CardScripts {
     public static let switchedOn = false
 
     /// The controls a scripted card view must carry, each read back from the view built: every
-    /// layer but L2, which is the verdict itself.
+    /// layer but L2, which is the verdict itself, and L14, the link strip, which is no control.
     public static let required: Set<CardLayer> = [
         .L1,
         .L3,
