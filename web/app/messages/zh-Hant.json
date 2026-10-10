@@ -167,5 +167,13 @@
   "sync_storage_persisted": "此瀏覽器會保留本網站的儲存空間。",
   "sync_storage_not_persisted": "此瀏覽器在空間不足時可能會清除本網站的儲存空間。",
   "sync_storage_unknown": "無法確定此瀏覽器是否會保留本網站的儲存空間。",
-  "sync_storage_evicted": "如果收藏被清除，請下載伺服器的副本來還原。"
+  "sync_storage_evicted": "如果收藏被清除，請下載伺服器的副本來還原。",
+  "ai_decks_title": "AI 與你的牌組",
+  "ai_decks_lead": "開啟某個牌組的開關，即可讓其卡片不被 AI 功能使用。無論開關與否，學習方式都一樣。",
+  "ai_decks_switch": "不讓 AI 使用{name}",
+  "ai_decks_kept_by": "因為{parent}已開啟，所以不被 AI 使用。",
+  "ai_decks_load_failed": "無法載入這些設定。",
+  "ai_decks_save_failed": "此變更未儲存。請再試一次。",
+  "ai_decks_retry": "再試一次",
+  "ai_decks_back": "返回牌組"
 }

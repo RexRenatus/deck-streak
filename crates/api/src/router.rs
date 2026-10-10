@@ -63,6 +63,7 @@ use crate::linking_routes;
 use crate::minimum_client;
 use crate::notifications_routes;
 use crate::progress_routes;
+use crate::sensitive_decks_routes;
 use crate::session_routes::{self, OwnerAccess};
 use crate::snapshot_routes::{self, SnapshotLister};
 use crate::streak_routes;
@@ -270,6 +271,10 @@ pub fn router(state: ApiState) -> Router {
                     inbox,
                 ))
                 .merge(linking_routes::routes(&access, readiness.clone(), linking))
+                .merge(sensitive_decks_routes::routes(
+                    access.clone(),
+                    readiness.clone(),
+                ))
                 .merge(notifications_routes::routes(access.clone(), readiness));
             match instruments {
                 Some(service) => routes.merge(insights_routes::routes(access, service)),

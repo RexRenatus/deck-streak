@@ -4,6 +4,8 @@
 //! as never recomputed, so the next cycle runs the recompute and recounts the window.
 //! The declared write class's stop, `write_class_stop`, is exempt (SPEC-083 R36): only the
 //! owner's command clears it, and an erase that cleared it would be a second path.
+//! The decks the learner keeps away from AI, `sensitive_decks`, are exported and erased by delete
+//! (SPEC-381 R10), so after an erase every deck is readable again until the learner keeps one away.
 
 use deck_streak_kernel::{
     DataRights, DataRightsError, Declaration, Disposition, ExportedTable, PortFuture, TableRights,
@@ -22,6 +24,8 @@ pub const SKIP_CARD_SNAPSHOT_TABLE: &str = "skip_card_snapshot";
 /// The table the change gate's anchor, the rescore flag and the window's base live in
 /// (`migrations/002301_ingest_state.sql`).
 pub const INGEST_STATE_TABLE: &str = "ingest_state";
+/// The table the marked decks live in (`migrations/038101_ingest_sensitive_decks.sql`, SPEC-381 R10).
+pub const SENSITIVE_DECKS_TABLE: &str = "sensitive_decks";
 /// The table the declared write class's stop lives in
 /// (`migrations/008303_ingest_write_class_stop.sql`).
 pub const WRITE_CLASS_STOP_TABLE: &str = "write_class_stop";
@@ -80,6 +84,29 @@ async fn export_skip_days(connection: &mut SqliteConnection) -> Result<ExportedT
                     "tariff_unfunded": row.tariff_unfunded,
                     "undone": row.undone,
                     "undone_at": row.undone_at,
+                    "created_at": row.created_at,
+                })
+            })
+            .collect(),
+    })
+}
+
+/// The decks kept away from AI (SPEC-381 R10), exported whole: every column, one row per mark.
+async fn export_sensitive_decks(
+    connection: &mut SqliteConnection,
+) -> Result<ExportedTable, sqlx::Error> {
+    let rows = sqlx::query!(
+        r#"SELECT deck_id AS "deck_id!", created_at FROM sensitive_decks ORDER BY deck_id"#
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(ExportedTable {
+        table: SENSITIVE_DECKS_TABLE,
+        rows: rows
+            .into_iter()
+            .map(|row| {
+                json!({
+                    "deck_id": row.deck_id,
                     "created_at": row.created_at,
                 })
             })
@@ -148,6 +175,10 @@ impl DataRights for IngestDataRights {
                 },
                 TableRights {
                     table: SKIP_CARD_SNAPSHOT_TABLE,
+                    disposition: Disposition::ExportAndErase,
+                },
+                TableRights {
+                    table: SENSITIVE_DECKS_TABLE,
                     disposition: Disposition::ExportAndErase,
                 },
                 TableRights {
@@ -232,7 +263,8 @@ impl DataRights for IngestDataRights {
                         .collect(),
                 },
                 export_skip_days(&mut *connection).await?,
-                export_skip_card_snapshot(connection).await?,
+                export_skip_card_snapshot(&mut *connection).await?,
+                export_sensitive_decks(connection).await?,
                 state,
             ])
         })
@@ -248,6 +280,10 @@ impl DataRights for IngestDataRights {
                 .execute(&mut *connection)
                 .await?;
             sqlx::query!("DELETE FROM skip_days")
+                .execute(&mut *connection)
+                .await?;
+            // Every mark goes, so after an erase every deck is readable again (SPEC-381 R10).
+            sqlx::query!("DELETE FROM sensitive_decks")
                 .execute(&mut *connection)
                 .await?;
             // The declared reset row (`ingest_state_reset`): the row itself, and when it was made,

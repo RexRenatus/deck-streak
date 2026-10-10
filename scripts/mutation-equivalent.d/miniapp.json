@@ -205,6 +205,14 @@
       "reason": "A failed cancel's answer becomes undefined in place of null, and the cancel never reads it.",
       "evidence": "The awaited value is discarded: `cancel` goes on to `ondone('cancelled')` whatever the Worker answered, so only the wait is kept, and it is the same wait either way.",
       "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/api.ts",
+      "mutant": "ArrowFunction: () => undefined",
+      "anchor": "parseMarked(await response.json().catch(() => null))",
+      "reason": "parseMarked reads an undefined body as it reads null.",
+      "evidence": "parseMarked answers null for a body that is null or whose typeof is not 'object', and typeof undefined is 'undefined', so a change answer whose body is not JSON names no marked decks under either value, and setSensitive answers unavailable; the test 'an answer that is not an object names no marked decks' pins parseMarked(undefined) and parseMarked(null) to null.",
+      "issue": "#751"
     }
   ]
 }

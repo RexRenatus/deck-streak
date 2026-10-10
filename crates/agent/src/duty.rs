@@ -63,6 +63,7 @@ impl DutySpec {
 use deck_streak_kernel::{Clock, KernelError};
 
 use crate::compose::{Parts, compose};
+use crate::deck_gate::{DECK_SENSITIVE, DECK_UNREADABLE, DeckGate, DeckScope, DeckVerdict};
 use crate::gate::{GateOutcome, OutputGate};
 use crate::route::AiRoute;
 use crate::runner::Runner;
@@ -117,6 +118,8 @@ pub struct DutyInput<'a> {
     pub subject: &'a str,
     /// The composed pieces: the engine fills nothing in.
     pub parts: Parts<'a>,
+    /// The deck scope of the cards in `parts`: each card's home and current deck (SPEC-381 R4).
+    pub scope: DeckScope<'a>,
 }
 
 /// The engine: one duty run, from route check to record (R6, R9 to R12, R16).
@@ -125,6 +128,8 @@ pub struct DutyEngine<'a> {
     pub route: AiRoute,
     /// The runner.
     pub runner: &'a dyn Runner,
+    /// The deck gate, asked before the input gate, `compose` and the runner (SPEC-381 R4).
+    pub deck_gate: &'a dyn DeckGate,
     /// The output gate.
     pub gate: &'a dyn OutputGate,
     /// The alert router.
@@ -165,6 +170,33 @@ impl DutyEngine<'_> {
     async fn decide(&self, duty: &DutySpec, input: &DutyInput<'_>) -> (Verdict, Option<Telemetry>) {
         if !self.route.is_configured() {
             return (Verdict::AiRouteAbsent, None);
+        }
+        // Cards with no scope cannot be judged, so the run is withheld unread (SPEC-381 R4).
+        if input.scope.is_empty() && !input.parts.cards.is_empty() {
+            let finding = "cards carry no deck scope".to_owned();
+            return (
+                self.withhold(duty, DECK_UNREADABLE.to_owned(), vec![finding]),
+                None,
+            );
+        }
+        // The gate stands before the input gate, `compose` and the runner; a refusal carries counts
+        // only, never a deck's name, an id or a card's text.
+        match self.deck_gate.judge(input.scope).await {
+            DeckVerdict::Admitted => {}
+            DeckVerdict::KeptAway { cards } => {
+                let kept_away = format!("{cards} card(s) kept away");
+                return (
+                    self.withhold(duty, DECK_SENSITIVE.to_owned(), vec![kept_away]),
+                    None,
+                );
+            }
+            DeckVerdict::Unreadable { cards } => {
+                let not_judged = format!("{cards} card(s) not judged");
+                return (
+                    self.withhold(duty, DECK_UNREADABLE.to_owned(), vec![not_judged]),
+                    None,
+                );
+            }
         }
         for untrusted in [input.parts.memory, input.parts.cards] {
             if let GateOutcome::Failed { class, findings } = self.gate.check_input(untrusted).await

@@ -1,0 +1,14 @@
+// A planted second launch of the agent (SPEC-381 R6): a module that starts the runner's script
+// itself, outside the one runner that decide calls after the deck gate.
+use std::path::Path;
+use std::process::Command;
+
+// A comment that writes Command::new("bash") is not a launch.
+const NOTE: &str = "Command::new(\"bash\") in a string is not a launch either";
+
+pub fn launch(prompt: &Path) -> std::io::Result<std::process::ExitStatus> {
+    Command::new("bash")
+        .arg("agent/run-headless.sh")
+        .arg(prompt)
+        .status()
+}

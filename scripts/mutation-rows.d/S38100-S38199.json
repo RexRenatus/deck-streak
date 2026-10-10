@@ -1,0 +1,105 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S38100-A-KEPT-AWAY-DECK-IS-SENT",
+        "agent",
+        "src/duty.rs",
+        "                let kept_away = format!(\"{cards} card(s) kept away\");\n                return (\n                    self.withhold(duty, DECK_SENSITIVE.to_owned(), vec![kept_away]),\n                    None,\n                );\n",
+        "                let kept_away = format!(\"{cards} card(s) kept away\");\n                let _ = (DECK_SENSITIVE, kept_away);\n",
+        "deck_gate::a_kept_away_deck_is_withheld_before_the_runner_starts",
+        "a scope the gate keeps away ends the run withheld, class deck-sensitive, and the runner never starts (SPEC-381 R4, A4)"
+      ],
+      [
+        "S38101-AN-UNREADABLE-GATE-ADMITS",
+        "agent",
+        "src/duty.rs",
+        "                let not_judged = format!(\"{cards} card(s) not judged\");\n                return (\n                    self.withhold(duty, DECK_UNREADABLE.to_owned(), vec![not_judged]),\n                    None,\n                );\n",
+        "                let not_judged = format!(\"{cards} card(s) not judged\");\n                let _ = not_judged;\n",
+        "deck_gate::an_unreadable_gate_is_withheld_before_the_runner_starts",
+        "a scope the gate cannot judge ends the run withheld, class deck-unreadable, and the runner never starts (SPEC-381 R4, A5)"
+      ],
+      [
+        "S38102-AN-UNSCOPED-CARD-IS-ADMITTED",
+        "agent",
+        "src/duty.rs",
+        "        if input.scope.is_empty() && !input.parts.cards.is_empty() {\n",
+        "        if false && input.scope.is_empty() && !input.parts.cards.is_empty() {\n",
+        "deck_gate::cards_with_no_deck_scope_are_withheld_before_the_runner_starts",
+        "a run whose cards carry no deck scope ends withheld, class deck-unreadable, and the runner never starts (SPEC-381 R4, A6)"
+      ],
+      [
+        "S38103-A-CHILD-ESCAPES-ITS-PARENT",
+        "ingest",
+        "src/sensitive.rs",
+        "        .is_some_and(|rest| rest.is_empty() || rest.starts_with(DECK_SEPARATOR))",
+        "        .is_some_and(|rest| rest.is_empty() || (rest.starts_with(DECK_SEPARATOR) && false))",
+        "sensitive::a_marked_deck_refuses_its_own_cards_its_childrens_and_the_cards_a_filtered_deck_borrowed",
+        "a deck under a marked deck by name is kept away too, so the ancestor walk reads past the deck itself (SPEC-381 R2, A2)"
+      ],
+      [
+        "S38104-THE-HOME-DECK-IS-NOT-READ",
+        "ingest",
+        "src/sensitive.rs",
+        "        .any(|marked| under(home, marked) || under(current, marked));",
+        "        .any(|marked| (under(home, marked) && false) || under(current, marked));",
+        "sensitive::a_marked_deck_refuses_its_own_cards_its_childrens_and_the_cards_a_filtered_deck_borrowed",
+        "a card a filtered deck borrowed from a marked deck is kept away by its home deck (SPEC-381 R2, A2)"
+      ],
+      [
+        "S38105-THE-CURRENT-DECK-IS-NOT-READ",
+        "ingest",
+        "src/sensitive.rs",
+        "        .any(|marked| under(home, marked) || under(current, marked));",
+        "        .any(|marked| under(home, marked) || (under(current, marked) && false));",
+        "sensitive::a_marked_deck_refuses_its_own_cards_its_childrens_and_the_cards_a_filtered_deck_borrowed",
+        "a card that sits in a marked deck now is kept away by its current deck (SPEC-381 R2, A2)"
+      ],
+      [
+        "S38106-AN-UNRESOLVED-DECK-IS-ADMITTED",
+        "ingest",
+        "src/sensitive.rs",
+        "        return Admission::Unresolved;",
+        "        return Admission::Admitted;",
+        "sensitive::an_unresolved_deck_or_an_unreadable_set_reads_as_kept_away",
+        "a card whose deck the tree cannot resolve is refused, never admitted (SPEC-381 R2, A3)"
+      ],
+      [
+        "S38107-ERASE-KEEPS-THE-MARKS",
+        "ingest",
+        "src/data_rights.rs",
+        "            sqlx::query!(\"DELETE FROM sensitive_decks\")",
+        "            sqlx::query(\"DELETE FROM sensitive_decks WHERE 0\")",
+        "sensitive::the_marks_are_exported_and_an_erase_leaves_every_deck_readable",
+        "an erase removes every mark, so every deck is readable again; the mutant re-spells the checked statement as a runtime query that deletes nothing (SPEC-381 R10, A11)"
+      ],
+      [
+        "S38108-THE-DAY-SET-KEEPS-A-KEPT-AWAY-CARD",
+        "readings",
+        "src/day_set.rs",
+        "                admits(Some(marked), deck_names, card.home_deck_id(), card.deck_id).admitted()",
+        "                admits(Some(marked), deck_names, card.home_deck_id(), card.deck_id).admitted() || true",
+        "sensitive_day_set::a_kept_away_decks_cards_are_never_selected_into_a_day_set",
+        "the day set holds back every card the one rule refuses and keeps the rest (SPEC-381 R3, A7)"
+      ],
+      [
+        "S38109-AN-UNREADABLE-SET-RESOLVES-A-DAY",
+        "coordination",
+        "src/readings/resolve.rs",
+        "    let marked = marks.read_marked().await.map_err(ResolveError::Marks)?;",
+        "    let marked = marks.read_marked().await.map_err(ResolveError::Marks).unwrap_or_default();",
+        "readings_resolve::an_unreadable_set_resolves_no_day_and_records_nothing",
+        "a failed read of the marks ends the resolution with its named error and records no day, never an empty set (SPEC-381 R3, A8)"
+      ],
+      [
+        "S38110-A-CROSS-SITE-MARK-IS-ACCEPTED",
+        "api",
+        "src/sensitive_decks_routes.rs",
+        "    _owner: OwnerSession,\n    _change: StateChange,\n",
+        "    _owner: OwnerSession,\n",
+        "sensitive_decks::a_cross_site_or_signed_out_change_marks_nothing",
+        "the PUT that marks or unmarks a deck stands behind the same-origin state-change check, so a cross-site change marks nothing (SPEC-381 R7, A10)"
+      ]
+    ]
+  }
+}

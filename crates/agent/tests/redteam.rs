@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use deck_streak_agent::compose::Parts;
+use deck_streak_agent::deck_gate::{CardDecks, DeckScope};
 use deck_streak_agent::duty::{DutyCaps, DutyEngine, DutyInput, DutySpec};
 use deck_streak_agent::gate::{GateClassSpec, ProbeGate};
 use deck_streak_agent::route::AiRoute;
@@ -17,7 +18,7 @@ use deck_streak_agent::runner::{RunFuture, RunReply, Runner};
 use deck_streak_agent::runs::AgentRuns;
 use deck_streak_agent::verdict::{Telemetry, Verdict};
 use deck_streak_kernel::{Db, ManualClock, UtcMillis};
-use support::{RecordedAlerts, RecordedVault};
+use support::{FixedDeckGate, RecordedAlerts, RecordedVault};
 
 const TEMPLATE: &str = "{{persona}} {{duty_rules}}\n<untrusted source=\"memory\">\n{{memory|json}}\n</untrusted>\n<untrusted source=\"cards\">\n{{cards|json}}\n</untrusted>\n";
 
@@ -88,9 +89,11 @@ async fn drive(attack: &str, source: &str, benign: bool) -> (Verdict, Vec<String
         gate(dir.path()),
     );
     let clock = ManualClock::new(UtcMillis::from_epoch_millis(1));
+    let deck_gate = FixedDeckGate::admitting();
     let engine = DutyEngine {
         route: AiRoute::Proxy,
         runner: &runner,
+        deck_gate: &deck_gate,
         gate: &gate,
         alerts: &alerts,
         vault: &vault,
@@ -113,6 +116,12 @@ async fn drive(attack: &str, source: &str, benign: bool) -> (Verdict, Vec<String
             duty: "d",
             memory,
             cards,
+        },
+        scope: DeckScope {
+            cards: &[CardDecks {
+                home: 1,
+                current: 1,
+            }],
         },
     };
     let verdict = engine

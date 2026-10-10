@@ -26,6 +26,7 @@ use std::time::Duration;
 use deck_streak_ingest::engine::{AnkiEngine, EngineError, NewCardQueue, QUEUE_FETCH_LIMIT};
 use deck_streak_ingest::lock::CollectionLock;
 use deck_streak_ingest::reader::{Card, CollectionData, ReadError};
+use deck_streak_ingest::sensitive::admits;
 use deck_streak_ingest::settings::{DECK_SEPARATOR, SyncSettings};
 use deck_streak_kernel::{Offload, StudyDay, StudyDayRule};
 use sha2::{Digest as _, Sha256};
@@ -256,6 +257,36 @@ pub fn resolve_day_sets(
         no_new_today,
         undetermined,
     }
+}
+
+/// Holds back from the day set every card ingest's one rule refuses (SPEC-381 R3): a card whose
+/// home deck or current deck, or an ancestor of either, is in `marked`, or whose deck `deck_names`
+/// does not hold. It logs how many cards it held back, never a deck's name.
+#[must_use]
+pub fn hold_back_sensitive(
+    queries: Vec<DaySetQuery>,
+    deck_names: &BTreeMap<i64, String>,
+    marked: &BTreeSet<i64>,
+) -> Vec<DaySetQuery> {
+    let mut held_back = 0_usize;
+    let queries = queries
+        .into_iter()
+        .map(|mut query| {
+            let before = query.cards.len();
+            query.cards.retain(|card| {
+                admits(Some(marked), deck_names, card.home_deck_id(), card.deck_id).admitted()
+            });
+            held_back += before - query.cards.len();
+            query
+        })
+        .collect();
+    if held_back > 0 {
+        tracing::info!(
+            held_back,
+            "cards of decks kept away from AI were held back from the day set"
+        );
+    }
+    queries
 }
 
 /// Every topic the taxonomy maps a deck to, each with the roots whose decks map to it
@@ -587,9 +618,21 @@ impl StudyDayResolution {
     }
 }
 
-/// Resolves a study day's topics (R4): the last-sync gate, then a run with no taxonomy or no read
-/// refused whole, then the pause gate, and only then the queue, within [`RESOLVE_BUDGET`].
+/// Resolves a study day's topics (R4) with no deck kept away from AI: [`resolve_holding_back`]
+/// over an empty set of marks.
 pub async fn resolve<Q: QueuePort>(inputs: ResolveInputs<'_>, queue: &Q) -> StudyDayResolution {
+    resolve_holding_back(inputs, &BTreeSet::new(), queue).await
+}
+
+/// Resolves a study day's topics (R4): the last-sync gate, then a run with no taxonomy or no read
+/// refused whole, then the pause gate, and only then the queue, within [`RESOLVE_BUDGET`]; every
+/// card of a deck in `marked`, the decks the learner keeps away from AI, is held back from the day
+/// set by [`hold_back_sensitive`] (SPEC-381 R3).
+pub async fn resolve_holding_back<Q: QueuePort>(
+    inputs: ResolveInputs<'_>,
+    marked: &BTreeSet<i64>,
+    queue: &Q,
+) -> StudyDayResolution {
     let universe = match (inputs.taxonomy, inputs.read) {
         (Some(taxonomy), Ok(data)) => universe(&data.deck_names, taxonomy),
         _ => BTreeMap::new(),
@@ -618,6 +661,7 @@ pub async fn resolve<Q: QueuePort>(inputs: ResolveInputs<'_>, queue: &Q) -> Stud
         }
     };
     let (queries, saturated_roots) = queries_of(&answer, &data.cards, &data.deck_names);
+    let queries = hold_back_sensitive(queries, &data.deck_names, marked);
     let resolution = resolve_day_sets(&queries, &data.deck_names, taxonomy, &saturated_roots);
     for deck in &resolution.unmapped {
         tracing::info!(

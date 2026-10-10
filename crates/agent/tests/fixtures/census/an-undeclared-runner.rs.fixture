@@ -1,0 +1,15 @@
+// A planted runner the census has not declared (SPEC-381 R6).
+use deck_streak_agent::duty::DutyCaps;
+use deck_streak_agent::runner::{RunFuture, Runner};
+use deck_streak_agent::verdict::Cause;
+
+// impl Runner for Commented {} is a comment, not a runner.
+const NOTE: &str = "impl Runner for Quoted {}";
+
+pub struct Sideways;
+
+impl Runner for Sideways {
+    fn run<'a>(&'a self, _prompt: &'a str, _caps: &'a DutyCaps) -> RunFuture<'a> {
+        Box::pin(async { Err(Cause::RunFailed) })
+    }
+}

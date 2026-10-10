@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO sensitive_decks (deck_id, created_at) VALUES (?1, ?2) ON CONFLICT(deck_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "79f1467d8691dbcdd5f2a76a98d75c6ef4406bf2538a1d17208afd34586df456"
+}

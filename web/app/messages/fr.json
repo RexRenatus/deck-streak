@@ -167,5 +167,13 @@
   "sync_storage_persisted": "Ce navigateur conserve le stockage de ce site.",
   "sync_storage_not_persisted": "Ce navigateur peut effacer le stockage de ce site s'il manque de place.",
   "sync_storage_unknown": "Ce navigateur ne peut pas dire s'il conserve le stockage de ce site.",
-  "sync_storage_evicted": "S'il efface votre collection, téléchargez la copie du serveur pour la restaurer."
+  "sync_storage_evicted": "S'il efface votre collection, téléchargez la copie du serveur pour la restaurer.",
+  "ai_decks_title": "L’IA et vos paquets",
+  "ai_decks_lead": "Activez l’interrupteur d’un paquet pour tenir ses cartes à l’écart des fonctions d’IA. L’étude fonctionne de la même façon dans les deux cas.",
+  "ai_decks_switch": "Tenir {name} à l’écart de l’IA",
+  "ai_decks_kept_by": "Tenu à l’écart parce que {parent} l’est.",
+  "ai_decks_load_failed": "Ces réglages n’ont pas pu être chargés.",
+  "ai_decks_save_failed": "Cette modification n’a pas été enregistrée. Réessayez.",
+  "ai_decks_retry": "Réessayer",
+  "ai_decks_back": "Retour aux paquets"
 }

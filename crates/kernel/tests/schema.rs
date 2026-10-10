@@ -223,6 +223,12 @@ async fn every_migration_names_the_context_that_owns_its_tables() {
             }
         }
     }
+    // A positive control: the decks kept away from AI are created by their own migration and owned
+    // by ingest (SPEC-381 R1).
+    assert!(
+        owned.contains(&(38_101, "sensitive_decks".to_owned(), "ingest".to_owned())),
+        "migration 38101 creates sensitive_decks for ingest: {owned:?}"
+    );
     for (version, table, context) in examined("table(s) the migrations create", owned) {
         assert_eq!(
             register.get(&table),

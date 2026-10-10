@@ -167,5 +167,13 @@
   "sync_storage_persisted": "Este navegador conserva el almacenamiento de este sitio.",
   "sync_storage_not_persisted": "Este navegador puede borrar el almacenamiento de este sitio cuando necesite espacio.",
   "sync_storage_unknown": "Este navegador no puede indicar si conserva el almacenamiento de este sitio.",
-  "sync_storage_evicted": "Si borra tu colección, descarga la copia del servidor para restaurarla."
+  "sync_storage_evicted": "Si borra tu colección, descarga la copia del servidor para restaurarla.",
+  "ai_decks_title": "La IA y tus mazos",
+  "ai_decks_lead": "Activa el interruptor de un mazo para mantener sus tarjetas fuera del alcance de las funciones de IA. El estudio funciona igual en ambos casos.",
+  "ai_decks_switch": "Mantener {name} fuera del alcance de la IA",
+  "ai_decks_kept_by": "Fuera del alcance porque {parent} lo está.",
+  "ai_decks_load_failed": "No se pudieron cargar estos ajustes.",
+  "ai_decks_save_failed": "Ese cambio no se guardó. Inténtalo de nuevo.",
+  "ai_decks_retry": "Reintentar",
+  "ai_decks_back": "Volver a los mazos"
 }

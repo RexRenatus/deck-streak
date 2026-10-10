@@ -295,3 +295,72 @@ The view is built when the card is shown. A card shown before the rollover and a
 keeps the view it was shown with: a card due today shows no line and is then answered past its due
 day (the line is absent, never false); a card past its due day when shown is still past it when
 answered (the line stays true).
+
+## 7. AI and your decks: the mark from the server to every AI duty (SPEC-381)
+
+Read at the base `e7ecf10d6b796eb1f86fe6544e04a96a0583c791` (`dev`). Every `path:line` in this
+section is at that base; a name this section adds (`sensitive_decks`, `admits`, `DeckGate`,
+`hold_back_sensitive`, `/study/ai-decks`) is SPEC-381's and has no line yet. Decided by ADR-392.
+
+### 7a. Data flow: where the mark lives and who reads it
+
+The mark is a row on the server. The collection sync never carries it, so every client, and every
+duty, reads the same set, and a client that does not know the setting cannot weaken it.
+
+```mermaid
+flowchart LR
+    learner["learner"] --> screen["/study/ai-decks: one switch per deck"]
+    decklist["deck list"] -->|link| screen
+    screen -->|"api.ts: GET and PUT"| routes["sensitive_decks_routes: owner session, same-origin change"]
+    routes --> usecase["coordination::sensitive_decks"]
+    usecase --> store[("sensitive_decks: one row per marked deck")]
+    store -->|read_marked| rule["ingest::sensitive::admits: the one rule"]
+    tree[("collection deck tree, reader.rs:35")] --> rule
+    rule --> selection["readings: hold_back_sensitive"]
+    rule --> wiring["daemon wiring: judge_deck_scope"]
+    wiring --> gate["agent: DeckGate in decide"]
+    native["native clients: no setting"] -.->|"collection sync carries no mark"| tree
+```
+
+### 7b. The gate in front of every AI duty, and the fail-closed path
+
+`decide` (`crates/agent/src/duty.rs:165`) asks the gate after the route check (`:166-168`) and before
+the input gate (`:169-173`), `compose` (`:175`) and the runner (`:178`). Every arm but one ends the
+run before the runner starts.
+
+```mermaid
+flowchart TD
+    start["decide"] --> route{"AI route present?"}
+    route -->|no| absent["ai_route_absent, recorded"]
+    route -->|yes| scope{"cards present and scope empty?"}
+    scope -->|yes| unread["withheld, class deck-unreadable, one alert"]
+    scope -->|no| ask["DeckGate: read the set, resolve each deck"]
+    ask -->|"set unreadable or a deck unresolved"| unread
+    ask -->|"a home deck, current deck or ancestor is marked"| kept["withheld, class deck-sensitive, one alert"]
+    ask -->|admitted| input["input gate"]
+    input --> compose["compose"]
+    compose --> runner["runner: the one launch"]
+    runner --> output["output gate, then the vault"]
+```
+
+The day set's selection reads the same rule first, so a reading skips the kept-away decks and goes
+on with the rest. A failed read of the set there ends the resolution with its named error and
+records no day, as `ResolveError::Ledger` does (`crates/coordination/src/readings/resolve.rs:90`).
+
+### 7c. What crosses each new edge
+
+| edge | carries | never carries |
+|---|---|---|
+| the screen to the routes | a deck id as a decimal string and one boolean | a deck name or a card |
+| the routes to the learner | the marked ids, ascending | another learner's data, a name |
+| the store to the rule | the marked ids | a name or a card |
+| the selection to the duty | the cards it kept, each with its home and current deck ids | a kept-away card |
+| the gate to the run record | the class and counts | a deck name, an id or a card's text |
+
+### 7d. A mark while a run is in flight
+
+A mark holds for every run whose gate reads the set after the mark commits. A run whose gate read
+the set before it may send that deck's cards once. The gate reads the set again in `decide`, after
+the selection, so a mark made between a day's selection and its run holds. The formal entry
+`SensitiveDeckGate` states both, and its witness `a-gate-that-trusts-the-selection` is the design
+that would let such a mark through.
