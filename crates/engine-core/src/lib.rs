@@ -40,8 +40,9 @@
 //! - [`replay`]: the replay of a deck set's review history into stock-field values, and their
 //!   mapping onto the engine's card; it writes nothing (SPEC-386 R7 to R13).
 //!
-//! The core depends on the engine and on no crate of this workspace; only the two client
-//! adapters depend on it (ADR-356 D4, held by the graph census).
+//! The core depends on the engine and on one crate of this workspace, the isolated FSRS-7
+//! scheduler, which [`replay`] alone names; only the two client adapters depend on it (ADR-356 D4
+//! as amended by ADR-400 D1, held by the graph census).
 
 #![forbid(unsafe_code)]
 

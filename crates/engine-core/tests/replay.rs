@@ -35,6 +35,7 @@ use anki_proto::sync::sync_collection_response::ChangesRequired;
 use deck_streak_engine_core::answer::{Grade, OwnerAnswer};
 use deck_streak_engine_core::dispatch::{Dispatcher, Read, Refusal};
 use deck_streak_engine_core::gesture::{OwnerGesture, Target};
+use deck_streak_engine_core::late::EngineDay;
 use deck_streak_engine_core::replay::{CardReplay, Schedule};
 use deck_streak_engine_core::table::{ExemptWrite, Transport};
 use deck_streak_engine_core::undo_answer::Recorded;
@@ -237,10 +238,24 @@ fn close(dispatcher: &Dispatcher) {
         .expect("the web dispatcher closes the collection");
 }
 
-/// The replay of `decks` under the pinned defaults, by card.
+/// The replay of `decks` under the pinned defaults, by card, on the engine day the dispatcher
+/// reads just before it: the replay itself makes no engine call, so its caller reads the day.
 fn replayed(dispatcher: &Dispatcher, decks: &[i64], max_ivl: u32) -> BTreeMap<i64, CardReplay> {
+    let day = dispatcher
+        .engine_day()
+        .expect("the engine reads its day before the replay");
+    replayed_on(dispatcher, decks, max_ivl, day)
+}
+
+/// The replay of `decks` under the pinned defaults on the given engine `day`, by card.
+fn replayed_on(
+    dispatcher: &Dispatcher,
+    decks: &[i64],
+    max_ivl: u32,
+    day: EngineDay,
+) -> BTreeMap<i64, CardReplay> {
     dispatcher
-        .replay(decks, &[], RETENTION, max_ivl)
+        .replay(decks, &[], RETENTION, max_ivl, day)
         .expect("the replay runs")
         .into_iter()
         .map(|entry| (entry.card, entry))
@@ -251,6 +266,20 @@ fn replayed(dispatcher: &Dispatcher, decks: &[i64], max_ivl: u32) -> BTreeMap<i6
 fn replay_of(built: &Built, decks: &[i64], max_ivl: u32) -> BTreeMap<i64, CardReplay> {
     let dispatcher = opened(built);
     let replay = replayed(&dispatcher, decks, max_ivl);
+    close(&dispatcher);
+    replay
+}
+
+/// The replay of `decks` on the given engine `day` by a dispatcher opened for it and closed after
+/// it: an open, the one read and a close, and no other engine call.
+fn replay_on(
+    built: &Built,
+    decks: &[i64],
+    max_ivl: u32,
+    day: EngineDay,
+) -> BTreeMap<i64, CardReplay> {
+    let dispatcher = opened(built);
+    let replay = replayed_on(&dispatcher, decks, max_ivl, day);
     close(&dispatcher);
     replay
 }
@@ -499,6 +528,13 @@ fn undo_status(dispatcher: &Dispatcher) -> UndoStatus {
         .expect("the undo status is admitted on the web")
 }
 
+/// The day A16's replays are given. A16 reads no due, so its day is a literal that costs its
+/// collection no engine call: the engine's own day read writes on a new day (SPEC-386 R8, R10).
+const UNREAD_DAY: EngineDay = EngineDay {
+    days_elapsed: 0,
+    next_day_at: 0,
+};
+
 #[test]
 fn the_replay_moves_no_stamp_no_undo_and_no_row() {
     let built = built("replay-writes-nothing", 2);
@@ -509,7 +545,7 @@ fn the_replay_moves_no_stamp_no_undo_and_no_row() {
     close(&opened(&built));
     let before = every_row(&built.collection);
 
-    let replay = replay_of(&built, &[HOME], MAX_IVL);
+    let replay = replay_on(&built, &[HOME], MAX_IVL, UNREAD_DAY);
     assert_eq!(
         cards_of(&replay),
         BTreeSet::from([reviewed]),
@@ -524,7 +560,7 @@ fn the_replay_moves_no_stamp_no_undo_and_no_row() {
     let dispatcher = opened(&built);
     let (studied, _) = answer_head(&dispatcher);
     let status = undo_status(&dispatcher);
-    let answered = replayed(&dispatcher, &[HOME], MAX_IVL);
+    let answered = replayed_on(&dispatcher, &[HOME], MAX_IVL, UNREAD_DAY);
     let after = undo_status(&dispatcher);
     close(&dispatcher);
     assert_eq!(
@@ -975,9 +1011,12 @@ fn a_parameter_vector_of_another_length_is_refused_whole() {
     // refuses; each is the default vector's values, cycled.
     let lengths = support::examined("parameter length(s)", vec![1, 17, 19, 21, 33, 35]);
     let dispatcher = opened(&built);
-    let defaults = replayed(&dispatcher, &[HOME], MAX_IVL);
+    let day = dispatcher
+        .engine_day()
+        .expect("the engine reads its day before the replay");
+    let defaults = replayed_on(&dispatcher, &[HOME], MAX_IVL, day);
     let typed = dispatcher
-        .replay(&[HOME], &DEFAULT_PARAMETERS, RETENTION, MAX_IVL)
+        .replay(&[HOME], &DEFAULT_PARAMETERS, RETENTION, MAX_IVL, day)
         .map(|replay| {
             replay
                 .into_iter()
@@ -992,7 +1031,7 @@ fn a_parameter_vector_of_another_length_is_refused_whole() {
                 .cycle()
                 .take(length)
                 .collect();
-            let reply = dispatcher.replay(&[HOME], &parameters, RETENTION, MAX_IVL);
+            let reply = dispatcher.replay(&[HOME], &parameters, RETENTION, MAX_IVL, day);
             (length, reply.err().as_ref().and_then(kind))
         })
         .collect();

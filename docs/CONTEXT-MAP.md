@@ -34,7 +34,7 @@ deck-streak-coordination  (use cases and scheduled jobs across contexts)  depend
 deck-streak-api           (axum HTTPS adapter for the Mini App)  depends on: kernel, identity, notifications, coordination
 deck-streak-bot           (Telegram Bot API adapter)  depends on: kernel, identity, notifications, coordination
 deck-streak-mcp           (MCP adapter: the bearer guard, the server and its tools)  depends on: kernel, coordination
-deck-streak-engine-core   (the engine core: Anki's engine for both clients behind one per-transport table; ADR-356)  depends on: nothing
+deck-streak-engine-core   (the engine core: Anki's engine for both clients behind one per-transport table; ADR-356)  depends on: fsrs7
 deck-streak-ffi           (the umbrella FFI crate, the app's one Rust static library: the engine's backend behind an allow-list; ADR-345, ADR-357)  depends on: engine-core
 deck-streak-fsrs7         (the isolated FSRS-7 scheduler: review history replayed into memory state; ADR-338)  depends on: nothing
 deck-streak-daemon        (composition root: the deckstreakd binary)  depends on: kernel, ingest, identity, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault, agent, insights, publishing, privacy, coordination, api, bot, mcp
@@ -53,7 +53,9 @@ case (SPEC-345, ADR-356 D1). `deck-streak-ffi` depends on the core alone: it kee
 allow-list for a native client, checked first, and reaches the engine only through the core's
 dispatcher on the native transport (SPEC-336, ADR-345 D1; ADR-356 D3). `deck-streak-web-engine`
 reaches it the same way on the web transport, from its `wasm32` table only. The daemon composes
-none of the three: a native client links the adapter into its own binary.
+none of the three: a native client links the adapter into its own binary. The core's one edge
+inside the workspace is `deck-streak-fsrs7`, named by its `replay` module alone: the replay of a
+deck set's review history into stock-field values, which writes nothing (SPEC-386, ADR-400 D1).
 
 `deck-streak-fsrs7` is the isolated FSRS-7 scheduler (ADR-338): it replays a card's review history
 into FSRS-7 memory state, and it depends on no context and never on the engine. Its one external

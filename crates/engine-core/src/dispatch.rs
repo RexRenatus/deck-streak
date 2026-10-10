@@ -55,6 +55,13 @@ const FULL_SYNC: (u32, u32) = (1, 6);
 /// The engine's normal sync, `BackendSyncService.SyncCollection`: admitted on the web, its
 /// endpoint guarded and its media refused before the engine sees it (SPEC-364 R2).
 const SYNC_COLLECTION: (u32, u32) = (1, 5);
+/// The replay's one read (SPEC-386 R8): the review rows of every card whose home deck, the deck
+/// it came from when it sits in a filtered deck, is in the deck set bound as a JSON array, each
+/// with its card's type, by card and id. A row whose card no longer exists joins no card.
+const HISTORY_SQL: &str = "SELECT r.cid, r.id, r.ease, r.type, r.factor, c.type \
+    FROM revlog AS r JOIN cards AS c ON c.id = r.cid \
+    WHERE (CASE WHEN c.odid != 0 THEN c.odid ELSE c.did END) \
+    IN (SELECT value FROM json_each(?1)) ORDER BY r.cid, r.id";
 /// Every review-log id: the reviews a full sync can lose (SPEC-357 R5, R9).
 const REVIEW_IDS_SQL: &str = "select id from revlog";
 /// Every card id.
@@ -465,6 +472,28 @@ impl Dispatcher {
             .run_db_command_bytes(request.to_string().as_bytes())
     }
 
+    /// The review rows of every card whose home deck is in `decks`, each as `[card, id, ease,
+    /// kind, factor, card type]`, by card and id: the replay's one read, by one fixed statement
+    /// through the engine's database door (SPEC-386 R8). It writes nothing.
+    ///
+    /// # Errors
+    ///
+    /// [`Refusal::Engine`] when the engine cannot run the read, a closed collection among them, or
+    /// answers it with a row that is not the six integers the statement selects.
+    pub(crate) fn history(&self, decks: &[i64]) -> Result<Vec<[i64; 6]>, Refusal> {
+        let request = serde_json::json!({
+            "kind": "query",
+            "sql": HISTORY_SQL,
+            "args": [serde_json::Value::from(decks.to_vec()).to_string()],
+            "first_row_only": false,
+        });
+        let reply = self
+            .backend
+            .run_db_command_bytes(request.to_string().as_bytes())
+            .map_err(|error| Refusal::Engine { error })?;
+        serde_json::from_slice(&reply).map_err(|_| unreadable(HISTORY_SQL))
+    }
+
     /// Every review-log, card and note id of the open collection, and its upload re-check stamp:
     /// what a full sync's counts, its backup check and its re-check compare (SPEC-357 R5, R9;
     /// SPEC-364 R6). Every row, by the core's fixed statements; no adapter passes SQL.
@@ -620,7 +649,7 @@ fn utf8(path: &Path) -> Result<&str, Refusal> {
 
 /// A refusal of the core's own, in the engine's error shape: an encoded `BackendError` of kind
 /// `INVALID_INPUT` whose message names what failed.
-fn failed(message: &str) -> Refusal {
+pub(crate) fn failed(message: &str) -> Refusal {
     Refusal::Engine {
         error: BackendError {
             message: message.to_owned(),
