@@ -179,6 +179,7 @@ on the continuous integration's simulator step; their reds and greens are read t
 | `docs/decisions/ADR-391-the-engine-core-marks-an-image-occlusion-question-and-each-review-withholds-it-with-one-line.md` | docs | added |
 | `docs/schematics/web-study-screens.md` | docs | one section appended at its end (section 7); no existing line changes |
 | `docs/schematics/ios-review-screen.md` | docs | one section appended at its end (section 6); no existing line changes |
+| `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | docs | three cited line numbers follow the lines this delivery moves in `crates/engine-core/src/lib.rs`, `crates/web-engine/src/wasm.rs` and `web/app/src/lib/engine/protocol.ts`; no quoted text changes |
 | `docs/red-first/SPEC-380.md` | docs | added |
 | `changelog.d/occlusion-mask-guard-380.md` | docs | added |
 | `scripts/mutation-rows.d/S38000-S38099.json` | docs | added (section 9) |

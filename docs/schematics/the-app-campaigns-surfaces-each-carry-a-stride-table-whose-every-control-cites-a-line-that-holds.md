@@ -33,7 +33,7 @@ cut, and `scripts/threat_model.py` holds every one in CI (SPEC-375 R5, A2).
 | the iPhone and iPad client | `ios/App/Sources/DeckStreakApp.swift:5:@main` |
 | the web client | `web/app/src/routes/study/review/+page.svelte:7:<ReviewScreen`, `web/app/src/lib/engine/worker.ts:78:scope.addEventListener('message'`, `crates/api/src/sync_seal_routes.rs:40:pub const SEAL_KEY_PATH` |
 | the sync service | `deploy/systemd/deck-streak-sync-server.service:21:ExecStart=`, `deploy/scripts/sync-server.sh:19:set -euo pipefail` |
-| the engine and its boundaries | `crates/engine-core/src/lib.rs:44:#![forbid(unsafe_code)]`, `crates/ffi/src/lib.rs:21:#![forbid(unsafe_code)]`, `crates/web-engine/src/wasm.rs:125:#[wasm_bindgen]` |
+| the engine and its boundaries | `crates/engine-core/src/lib.rs:46:#![forbid(unsafe_code)]`, `crates/ffi/src/lib.rs:21:#![forbid(unsafe_code)]`, `crates/web-engine/src/wasm.rs:126:#[wasm_bindgen]` |
 | the build and release lanes | `.github/workflows/testflight-internal.yml:26:permissions:`, `.github/workflows/testflight-release.yml:9:tags:`, `.github/workflows/release.yml:19:permissions:` |
 
 ## 3. Components and trust boundaries
@@ -74,7 +74,7 @@ flowchart LR
 
 | id | threat | asset | control | pinned by |
 |---|---|---|---|---|
-| S2 | a message from another origin poses as the page to the Worker | what the Worker holds | the Worker's channel admits a message only from its own origin: `web/app/src/lib/engine/credential.ts:148:channel.addEventListener('message'`, `web/app/src/lib/engine/protocol.ts:273:export function admitsOrigin(sender: string, own: string): boolean {` | `web/app/src/lib/engine/credential.test.ts:367:a message from another origin changes nothing a Worker holds` |
+| S2 | a message from another origin poses as the page to the Worker | what the Worker holds | the Worker's channel admits a message only from its own origin: `web/app/src/lib/engine/credential.ts:148:channel.addEventListener('message'`, `web/app/src/lib/engine/protocol.ts:276:export function admitsOrigin(sender: string, own: string): boolean {` | `web/app/src/lib/engine/credential.test.ts:367:a message from another origin changes nothing a Worker holds` |
 | T2 | a frame loads a page from elsewhere into the review | the review page | the page's policy lets no frame source load: `web/app/src/lib/card/policy.js:11:export const PAGE_FRAME_SRC = ['none'];`, `web/app/svelte.config.js:31:'frame-src': PAGE_FRAME_SRC` | `web/app/src/lib/csp.test.ts:90:the page policy lets no frame navigate` |
 | R2 | a sealing key is released and no record says so | the seal on the web's sync record | each release writes a record of itself: `crates/api/src/sync_seal_routes.rs:103:tracing::info!("a sealing key was released");` | `crates/api/tests/sync_seal_routes.rs:558:async fn no_seal_secret_id_or_key_reaches_a_record()` |
 | I3 | a card face reads the page, the learner's reviews or the network | the review history and the sync key | the card frame is sandboxed with no allowance, and its own policy fetches only data: `web/app/src/lib/card/policy.js:18:export const FRAME_SANDBOX = '';`, `web/app/src/lib/card/policy.js:26:default-src 'none'; img-src data:` | `web/app/src/lib/card/card-frame.test.ts:19:the card frame is a sandboxed srcdoc frame with no token`, `web/app/src/lib/card/policy.test.ts:36:the card frame's policy fetches only data and runs no script` |
