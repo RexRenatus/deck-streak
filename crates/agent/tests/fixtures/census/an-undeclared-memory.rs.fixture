@@ -1,0 +1,14 @@
+// A planted memory port the census has not declared (SPEC-381 R6): it would carry a card's text.
+use deck_streak_agent::{MemoryPort, Subject};
+use deck_streak_kernel::PortFuture;
+
+/* impl MemoryPort for Commented {} is a comment, not a port. */
+const NOTE: &str = "impl MemoryPort for Quoted {}";
+
+pub struct CardTextMemory;
+
+impl MemoryPort for CardTextMemory {
+    fn read<'a>(&'a self, _subject: &'a Subject) -> PortFuture<'a, Vec<String>> {
+        Box::pin(async { Ok(vec![String::from("a card's front and back")]) })
+    }
+}
