@@ -1,6 +1,6 @@
--- @phx covers crates/ingest/src/sensitive.rs anchor=admits digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/ingest/src/sensitive.rs anchor=under digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/ingest/src/settings.rs anchor=DECK_SEPARATOR digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/ingest/src/sensitive.rs anchor=admits digest=sha256:1cbdfb7d696284f79f5ba4277789db3790240ee866022892bbe2ef0fb40dd426
+-- @phx covers crates/ingest/src/sensitive.rs anchor=under digest=sha256:9927ba2d923f9a116779603de23693a3597dbf70bb7e6582cfcf4fd0e9e0a218
+-- @phx covers crates/ingest/src/settings.rs anchor=DECK_SEPARATOR digest=sha256:bd9858995e88958a33f54813dcd4393738b4d88fe946be1d9be17034144d5b6a
 -- @phx vectors formal/vectors/sensitive-deck.jsonl
 -- @phx cites #751
 -- @phx theorem a_marked_deck_or_an_ancestor_refuses_the_card ramp=report
