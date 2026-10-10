@@ -75,3 +75,15 @@ decisions and the changed workflow lines, each killed by one criterion's test. T
 removes and re-anchors no Swift row, so no package's sweep line is recorded here; the second push's
 run of the change caller is the module's first sweep of both packages, and its two last lines are
 read by name from the `harness-wire` and `card-isolation` job logs.
+
+Correction, appended: the paragraph under the fence says the second push's head leaves the module
+as the fix commit wrote it, and it does not. Commit be1c77bcf92ec6251ecd2fac7de9c41677edf781,
+between the fix commit and the second push's head, rewrites seven sites of
+`scripts/swift_mutants.py` into behaviour-neutral forms, dropping terms that the mutation run over
+the module found no test could observe. The commit after it adds mutation-coverage tests to
+`test_swift_mutants.py`, which are no SPEC-397 criterion and are never counted as red-first
+evidence, and runs the module in a session of its own in that file's `module()` helper; no
+assertion of A1 to A11 changes. Neither commit touches `test_ci_workflows.py` or the workflows:
+`git diff --quiet 5db3288859caf7ab141d54f0c639212120e85bc8 HEAD --
+scripts/tests/test_ci_workflows.py .github/workflows/` exits 0, so A7 to A9 still read the fix
+commit's bytes of that test module and of the three workflows at the second push's head.

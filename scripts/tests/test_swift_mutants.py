@@ -5,14 +5,21 @@ temporary directory. A5's `swift` is a planted shell script first on `PATH`: it 
 runner's case lines, in the form the base's inline sweep programs read, as markers in the planted
 source decide. A6 calls the verdict function over every class of its inputs, against a table the
 test writes from R6. A11 reads the module's source.
+
+The classes after A11 are MUTATION COVERAGE: each pins a behaviour of the module that the
+mutation run over it found no test observing. They are not SPEC-397 criteria, they were green when
+they were written, and they are never counted as red-first evidence.
 """
 
 import ast
 import contextlib
+import dataclasses
 import hashlib
+import io
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import tempfile
@@ -48,7 +55,8 @@ def runner_module():
 
 
 def module(root, *args, env=None):
-    """The module's command line over `root`, bounded by RUN_BOUND seconds."""
+    """The module's command line over `root`, bounded by RUN_BOUND seconds, in a session of its
+    own: a process group the module ends past a killer's bound is then never the test runner's."""
     return subprocess.run(
         [sys.executable, str(MODULE), *args, "--root", str(root)],
         capture_output=True,
@@ -56,6 +64,7 @@ def module(root, *args, env=None):
         env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", **(env or {})),
         timeout=RUN_BOUND,
         check=False,
+        start_new_session=True,
     )
 
 
@@ -691,6 +700,600 @@ class TheModuleImportsOnlyTheStandardLibrary(unittest.TestCase):
         self.assertEqual(
             foreign_imports(source), [], "scripts/swift_mutants.py imports outside the stdlib"
         )
+
+
+# --------------------------------------------------------------------------- MUTATION COVERAGE
+
+#: How long a coverage test waits for a line the sweep prints while one of its runs is held.
+STREAM_SECONDS = 10
+
+
+def command(*args, env=None):
+    """The module's command line exactly as given, with no `--root`, bounded and in a session of
+    its own as `module` is."""
+    return subprocess.run(
+        [sys.executable, str(MODULE), *args],
+        capture_output=True,
+        text=True,
+        env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", **(env or {})),
+        timeout=RUN_BOUND,
+        check=False,
+        start_new_session=True,
+    )
+
+
+def start(root, *args, env):
+    """The module's command line over `root`, started and not awaited, in a session of its own,
+    its output and its errors on one pipe."""
+    return subprocess.Popen(
+        [sys.executable, str(MODULE), *args, "--root", str(root)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", **env),
+        start_new_session=True,
+    )
+
+
+def end(process):
+    """End a started run's whole group if it still runs, reap it and close its pipe."""
+    if process.poll() is None:
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(process.pid, signal.SIGKILL)
+    process.wait(timeout=RUN_BOUND)
+    process.stdout.close()
+
+
+def read_until(stream, seen, want, deadline):
+    """Read the non-blocking pipe `stream` into the list `seen` until the text read holds `want`
+    (or, when `want` is None, until the pipe ends), or `deadline` passes; the text read so far."""
+    while (want is None or want not in "".join(seen)) and time.monotonic() < deadline:
+        try:
+            chunk = os.read(stream, 65536)
+        except BlockingIOError:
+            time.sleep(0.02)
+            continue
+        if not chunk:
+            break
+        seen.append(chunk.decode("utf-8", "replace"))
+    return "".join(seen)
+
+
+def json_error(text):
+    """The message Python's own JSON reader gives for `text`, which is not JSON."""
+    try:
+        json.loads(text)
+    except json.JSONDecodeError as error:
+        return str(error)
+    raise AssertionError(f"{text!r} reads as JSON")
+
+
+#: A planted `swift` for the coverage tests. It logs its whole argument list as one line of
+#: `[argument]`s; when FAKE_HOLD names a directory it then waits for `release-<n>` there, n
+#: counting its runs; then it prints one test case's lines as the method and the planted source
+#: decide: `test_kills` fails once its marker is mutated, `test_quiet` prints no `Executed` line,
+#: and `test_stalls` never ends.
+COVERAGE_SWIFT = """#!/bin/sh
+for argument in "$@"; do printf '[%s]' "$argument"; done >> "$FAKE_ARGV"
+printf '\\n' >> "$FAKE_ARGV"
+runs=$(wc -l < "$FAKE_ARGV")
+if [ -n "$FAKE_HOLD" ]; then
+  while [ ! -e "$FAKE_HOLD/release-$((runs))" ]; do sleep 0.02; done
+fi
+sources="$3/Sources/Delta"
+method="${5##*/}"
+method="${method%?}"
+case "$5" in
+  *test_kills*)
+    if grep -q 'let kills = 1' "$sources/Code.swift"; then verdict=passed; else verdict=failed; fi ;;
+  *test_quiet*)
+    echo "Test Case '-[DeltaTests.CodeTests $method]' started."
+    echo "Test Case '-[DeltaTests.CodeTests $method]' passed (0.001 seconds)."
+    exit 0 ;;
+  *test_stalls*) exec sleep HANG ;;
+  *) verdict=failed ;;
+esac
+echo "Test Case '-[DeltaTests.CodeTests $method]' started."
+echo "Test Case '-[DeltaTests.CodeTests $method]' $verdict (0.001 seconds)."
+if [ "$verdict" = passed ]; then
+  echo "Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds"
+  exit 0
+fi
+echo "Executed 1 test, with 1 failure (0 unexpected) in 0.001 (0.001) seconds"
+exit 1
+""".replace("HANG", str(HANG_SECONDS))
+
+DELTA = "ios/Delta"
+DELTA_SOURCE = "ios/Delta/Sources/Delta/Code.swift"
+DELTA_TEXT = "let kills = 1\nlet quiet = 1\nlet stalls = 1\nlet survives = 1\n"
+DELTA_METHODS = ("test_kills", "test_quiet", "test_stalls")
+#: Each run COVERAGE_SWIFT logs for a killer, `[test][--package-path][ios/Delta][--filter][...]`.
+DELTA_RUN = "[test][--package-path][ios/Delta][--filter][^DeltaTests\\.CodeTests/{}$]"
+
+
+def delta(rows):
+    """A planted Delta package holding `rows`, each (id, its find's marker, its killer's method)."""
+    return {
+        DELTA_SOURCE: DELTA_TEXT,
+        "ios/Delta/Tests/DeltaTests/CodeTests.swift": swift_test_file("CodeTests", *DELTA_METHODS),
+        f"{DELTA}/swift-mutants.json": {
+            "population": "the planted Delta package's sources",
+            "mutants": [
+                swift_row(
+                    row_id,
+                    "Sources/Delta/Code.swift",
+                    f"let {marker} = 1",
+                    f"let {marker} = 0",
+                    f"DeltaTests.CodeTests/{method}",
+                    f"the {marker} marker",
+                )
+                for row_id, marker, method in rows
+            ],
+        },
+    }
+
+
+def plant_delta(scratch, rows):
+    """Plant the Delta package holding `rows` under `scratch/tree`, and COVERAGE_SWIFT; the
+    environment a sweep of it runs in, with no hold and no step summary."""
+    scratch = Path(scratch)
+    write_tree(scratch / "tree", delta(rows))
+    fake = scratch / "bin" / "swift"
+    fake.parent.mkdir()
+    fake.write_text(COVERAGE_SWIFT, encoding="utf-8")
+    fake.chmod(0o755)
+    (scratch / "argv.log").write_text("", encoding="utf-8")
+    return {
+        "PATH": f"{fake.parent}{os.pathsep}{os.environ['PATH']}",
+        "FAKE_ARGV": str(scratch / "argv.log"),
+        "FAKE_HOLD": "",
+        "GITHUB_STEP_SUMMARY": "",
+    }
+
+
+def sweep_args(report, run_seconds):
+    return ("sweep", "--package", DELTA, "--report", str(report), "--run-seconds", run_seconds)
+
+
+class TheCensusPrintsEachRefusalWhole(unittest.TestCase):
+    """MUTATION COVERAGE (SPEC-397 R2): each refusal line, its detail included, and a broken row
+    file that leaves the next file examined. Not a SPEC-397 criterion; green when written."""
+
+    #: Each row-level plant: (label, the edit of the clean tree, the one refusal line).
+    ROW_LINES = (
+        (
+            "a row that is not an object",
+            lambda t: t[ALPHA].update(mutants=["SW00001"]),
+            "refused row-form: ios/Alpha/swift-mutants.json: row 0: the row is not an object",
+        ),
+        (
+            "a field that is not a string",
+            lambda t: alpha(t).update(find=1),
+            "refused row-form: ios/Alpha/swift-mutants.json: SW00001: not a string: find",
+        ),
+        (
+            "an empty find",
+            lambda t: alpha(t).update(find=""),
+            "refused find-empty: ios/Alpha/swift-mutants.json: SW00001: the find is empty",
+        ),
+        (
+            "a find equal to its replacement",
+            lambda t: alpha(t).update(replace="let kills = 1"),
+            "refused find-equals-replace: ios/Alpha/swift-mutants.json: SW00001: "
+            "the find equals its replacement",
+        ),
+        (
+            "an empty reason",
+            lambda t: alpha(t).update(why=" "),
+            "refused why-empty: ios/Alpha/swift-mutants.json: SW00001: the reason is empty",
+        ),
+    )
+
+    #: Each file-level plant on Alpha, sorted before the whole Beta: (label, the edit, the refusal
+    #: lines, the rows still examined).
+    FILE_LINES = (
+        (
+            "a row file that is a directory",
+            lambda t: (t.pop(ALPHA), t.update({f"{ALPHA}/kept": ""})),
+            ["refused no-row-file: ios/Alpha/swift-mutants.json: the file: it does not exist"],
+            1,
+        ),
+        (
+            "a row file that is not JSON",
+            lambda t: t.update({ALPHA: "{not json\n"}),
+            [
+                "refused not-json: ios/Alpha/swift-mutants.json: the file: "
+                + json_error("{not json\n")
+            ],
+            1,
+        ),
+        (
+            "a row file with an extra top-level key",
+            lambda t: t[ALPHA].update(extra=[]),
+            [
+                "refused top-level-keys: ios/Alpha/swift-mutants.json: the file: "
+                "its keys are not exactly population, mutants"
+            ],
+            2,
+        ),
+        (
+            "an empty population",
+            lambda t: t[ALPHA].update(population=" "),
+            [
+                "refused population: ios/Alpha/swift-mutants.json: the file: "
+                "the population is not a non-empty string"
+            ],
+            2,
+        ),
+        (
+            "mutants that are not a list",
+            lambda t: t[ALPHA].update(mutants={}),
+            ["refused mutants: ios/Alpha/swift-mutants.json: the file: the mutants are not a list"],
+            1,
+        ),
+    )
+
+    def census_of(self, edit):
+        with tempfile.TemporaryDirectory() as scratch:
+            tree = alpha_beta()
+            edit(tree)
+            write_tree(scratch, tree)
+            return module(scratch, "census")
+
+    def test_each_row_refusal_line_is_printed_whole(self):
+        for label, edit, line in examined("row refusal lines", self.ROW_LINES):
+            with self.subTest(plant=label):
+                done = self.census_of(edit)
+                said = done.stdout.splitlines()
+                self.assertEqual([s for s in said if s.startswith("refused ")], [line], said)
+                self.assertEqual(said[-1:], ["examined 2 row(s) in 2 file(s)"], done.stderr)
+                self.assertEqual(done.returncode, 2, done.stdout)
+
+    def test_a_broken_row_file_leaves_the_next_file_examined(self):
+        for label, edit, lines, rows in examined("broken row files", self.FILE_LINES):
+            with self.subTest(plant=label):
+                done = self.census_of(edit)
+                said = done.stdout.splitlines()
+                self.assertEqual([s for s in said if s.startswith("refused ")], lines, said)
+                self.assertEqual(said[-1:], [f"examined {rows} row(s) in 2 file(s)"], done.stderr)
+                self.assertEqual(done.returncode, 2, done.stdout)
+
+    def test_a_census_that_examines_no_row_is_void(self):
+        trees = (
+            ("a row file with no row", {ALPHA: {"population": "p", "mutants": []}}, 1),
+            ("a tree with no row file", {}, 0),
+        )
+        for label, tree, files in examined("trees with no row", trees):
+            with self.subTest(tree=label), tempfile.TemporaryDirectory() as scratch:
+                write_tree(scratch, tree)
+                done = module(scratch, "census")
+                self.assertEqual(
+                    (done.returncode, done.stdout),
+                    (3, f"examined 0 row(s) in {files} file(s)\n"),
+                    done.stderr,
+                )
+
+
+class TheDeparturesCheckReadsOnlyRowFiles(unittest.TestCase):
+    """MUTATION COVERAGE (SPEC-397 R4): a base that cannot be read is refused, a package file
+    that is no row file is read past, and an approval entry that lacks a key approves nothing.
+    Not a SPEC-397 criterion; green when written."""
+
+    def retired_over(self, scratch, base_tree, work_trees, *args):
+        """`retired` over each work tree in turn, against one committed base."""
+        base = Path(scratch) / "base"
+        write_tree(base, base_tree)
+        git(base, "init", "-q")
+        git(base, "add", "-A")
+        git(base, "commit", "-q", "-m", "the base")
+        done = []
+        for at, tree in enumerate(work_trees):
+            work = Path(scratch) / f"work-{at}"
+            write_tree(work, tree)
+            (work / ".git").write_text(f"gitdir: {base / '.git'}\n", encoding="utf-8")
+            done.append(module(work, "retired", *args))
+        return done
+
+    def test_a_base_that_cannot_be_read_is_refused(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            (done,) = self.retired_over(
+                scratch, departure_base(), [departure_base()], "--base", "no-such-revision"
+            )
+        (line,) = done.stdout.splitlines()
+        self.assertTrue(line.startswith("retired: REFUSED: Command '['git', "), line)
+        self.assertIn("'no-such-revision'", line)
+        self.assertTrue(line.endswith("' returned non-zero exit status 128."), line)
+        self.assertEqual(done.returncode, 2, done.stdout)
+
+    def test_a_package_file_that_is_no_row_file_is_read_past(self):
+        tree = {**departure_base(), "ios/Alpha/Package.swift": "// the package manifest\n"}
+        with tempfile.TemporaryDirectory() as scratch:
+            (done,) = self.retired_over(scratch, tree, [tree], "--base", "HEAD")
+        self.assertEqual((done.returncode, done.stdout), (0, "examined 3\n"), done.stderr)
+
+    def test_an_approval_entry_missing_a_key_approves_nothing(self):
+        entries = (
+            ("no reason key", {"id": "SW00001", "approval": "the maintainer"}),
+            ("no approval key", {"id": "SW00001", "reason": "moved"}),
+        )
+        trees = [
+            {**without(departure_base(), "SW00001"), APPROVALS: {"retired": [entry]}}
+            for _label, entry in examined("approval entries missing a key", entries)
+        ]
+        with tempfile.TemporaryDirectory() as scratch:
+            runs = self.retired_over(scratch, departure_base(), trees, "--base", "HEAD")
+        for (label, _entry), done in zip(entries, runs):
+            with self.subTest(entry=label):
+                said = done.stdout.splitlines()
+                self.assertEqual(said, [REFUSED_SW00001, "examined 3"], done.stderr)
+                self.assertEqual(done.returncode, 1, done.stdout)
+
+
+class TheSweepReadsEachRunWhole(unittest.TestCase):
+    """MUTATION COVERAGE (SPEC-397 R5): the exact command of each killer run, each unmutated and
+    verdict line whole, a census refusal that applies nothing, the report directory made or
+    reused, each line printed as it is decided, and a SIGTERM that restores the file in flight.
+    Not a SPEC-397 criterion; green when written."""
+
+    def test_each_killer_run_is_its_exact_command_and_each_line_is_whole(self):
+        rows = (
+            ("SW00020", "kills", "test_kills"),
+            ("SW00021", "quiet", "test_quiet"),
+            ("SW00022", "stalls", "test_stalls"),
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            env = plant_delta(scratch, rows)
+            root = Path(scratch) / "tree"
+            done = module(root, *sweep_args(Path(scratch) / "report", "1"), env=env)
+            logged = (Path(scratch) / "argv.log").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(
+            logged,
+            [DELTA_RUN.format(method) for method in (*DELTA_METHODS, "test_kills")],
+        )
+        seconds = r", (\d+\.\d) s"
+        expected = [
+            re.escape("examined 3 mutant row(s)"),
+            re.escape("unmutated DeltaTests.CodeTests/test_kills: 1 started, 0 failed, ")
+            + re.escape("Executed 1, exit 0")
+            + seconds,
+            re.escape("unmutated DeltaTests.CodeTests/test_quiet: 1 started, 0 failed, ")
+            + re.escape("Executed none, exit 0")
+            + seconds,
+            re.escape("unmutated DeltaTests.CodeTests/test_stalls: 0 started, 0 failed, ")
+            + re.escape("Executed none, exit -9")
+            + seconds
+            + re.escape(", past its bound"),
+            re.escape("SW00020: KILLED") + seconds,
+            re.escape("SW00021: VOID: its killer is not green on one test unmutated"),
+            re.escape("SW00022: VOID: its killer is not green on one test unmutated"),
+            re.escape("swift-mutants ios/Delta: examined 3 row(s): 1 killed, 0 survived, 2 void"),
+        ]
+        said = done.stdout.splitlines()
+        self.assertEqual(len(said), len(expected), done.stdout + done.stderr)
+        timed = []
+        for line, pattern in zip(said, examined("sweep lines", expected)):
+            match = re.fullmatch(pattern, line)
+            self.assertIsNotNone(match, f"{line!r} is not {pattern!r}")
+            timed += [float(each) for each in match.groups()]
+        self.assertEqual(len(timed), 4, said)
+        for each in timed:
+            self.assertLess(each, 5.0, f"a run of a one-second bound read {each} s: {said}")
+        self.assertEqual(done.returncode, 1, done.stdout)
+
+    def test_a_sweep_whose_census_refuses_applies_nothing(self):
+        cases = (
+            (
+                "a row with an empty reason",
+                DELTA,
+                lambda t: t[f"{DELTA}/swift-mutants.json"]["mutants"][0].update(why=" "),
+                "refused why-empty: ios/Delta/swift-mutants.json: SW00020: the reason is empty",
+            ),
+            (
+                "a package with no row file",
+                "ios/Absent",
+                lambda t: None,
+                "refused no-row-file: ios/Absent/swift-mutants.json: the file: it does not exist",
+            ),
+        )
+        for label, package, edit, line in examined("refusing sweeps", cases):
+            with self.subTest(case=label), tempfile.TemporaryDirectory() as scratch:
+                env = plant_delta(scratch, [("SW00020", "kills", "test_kills")])
+                tree = delta([("SW00020", "kills", "test_kills")])
+                edit(tree)
+                write_tree(Path(scratch) / "tree", tree)
+                report = str(Path(scratch) / "report")
+                args = ("sweep", "--package", package, "--report", report, "--run-seconds", "10")
+                done = module(Path(scratch) / "tree", *args, env=env)
+                logged = (Path(scratch) / "argv.log").read_text(encoding="utf-8")
+                refusal = (
+                    f"sweep: REFUSED: the census refused {package}'s rows; nothing was applied"
+                )
+                self.assertEqual(done.stdout.splitlines(), [line, refusal], done.stderr)
+                self.assertEqual(done.returncode, 2, done.stdout)
+                self.assertEqual(logged, "")
+
+    def test_the_report_directory_is_made_with_its_parents_or_reused(self):
+        last = "swift-mutants ios/Delta: examined 1 row(s): 1 killed, 0 survived, 0 void"
+        with tempfile.TemporaryDirectory() as scratch:
+            env = plant_delta(scratch, [("SW00020", "kills", "test_kills")])
+            made = Path(scratch) / "made" / "with" / "parents"
+            reused = Path(scratch) / "reused"
+            reused.mkdir()
+            reports = (("its parents absent", made), ("already made", reused))
+            for label, report in examined("report directories", reports):
+                with self.subTest(report=label):
+                    done = module(Path(scratch) / "tree", *sweep_args(report, "10"), env=env)
+                    self.assertEqual(
+                        (done.returncode, done.stdout.splitlines()[-1:]), (0, [last]), done.stderr
+                    )
+                    written = (report / "sweep.md").read_text(encoding="utf-8")
+                    self.assertEqual(written.splitlines()[-1:], [last])
+
+    def test_each_line_is_printed_as_it_is_decided(self):
+        rows = (("SW00030", "kills", "test_kills"), ("SW00031", "survives", "test_kills"))
+        #: (the killer run held, a line the sweep must print before that run is released).
+        stages = (
+            (1, "examined 2 mutant row(s)\n"),
+            (2, "unmutated DeltaTests.CodeTests/test_kills: 1 started, 0 failed, Executed 1, "),
+            (3, "SW00030: KILLED, "),
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            env = plant_delta(scratch, rows)
+            hold = Path(scratch) / "hold"
+            hold.mkdir()
+            env["FAKE_HOLD"] = str(hold)
+            sweep = start(
+                Path(scratch) / "tree", *sweep_args(Path(scratch) / "report", "60"), env=env
+            )
+            seen = []
+            try:
+                stream = sweep.stdout.fileno()
+                os.set_blocking(stream, False)
+                for run, want in examined("lines printed while a run is held", stages):
+                    text = read_until(stream, seen, want, time.monotonic() + STREAM_SECONDS)
+                    self.assertIn(want, text, f"killer run {run} is held and this was not printed")
+                    (hold / f"release-{run}").write_text("", encoding="utf-8")
+                text = read_until(stream, seen, None, time.monotonic() + RUN_BOUND)
+                self.assertEqual(sweep.wait(timeout=RUN_BOUND), 1, text)
+                self.assertEqual(
+                    text.splitlines()[-1:],
+                    ["swift-mutants ios/Delta: examined 2 row(s): 1 killed, 1 survived, 0 void"],
+                )
+            finally:
+                for run, _want in stages:
+                    (hold / f"release-{run}").write_text("", encoding="utf-8")
+                end(sweep)
+
+    def test_a_sigterm_restores_the_file_in_flight_and_exits_143(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            env = plant_delta(scratch, [("SW00040", "kills", "test_kills")])
+            hold = Path(scratch) / "hold"
+            hold.mkdir()
+            (hold / "release-1").write_text("", encoding="utf-8")
+            env["FAKE_HOLD"] = str(hold)
+            source = Path(scratch) / "tree" / DELTA_SOURCE
+            logged = Path(scratch) / "argv.log"
+            sweep = start(
+                Path(scratch) / "tree", *sweep_args(Path(scratch) / "report", "60"), env=env
+            )
+            try:
+                deadline = time.monotonic() + STREAM_SECONDS
+                while time.monotonic() < deadline:
+                    if len(logged.read_text(encoding="utf-8").splitlines()) >= 2:
+                        break
+                    time.sleep(0.02)
+                self.assertEqual(
+                    source.read_text(encoding="utf-8"),
+                    DELTA_TEXT.replace("let kills = 1", "let kills = 0"),
+                    "the mutant is installed while its killer run is held",
+                )
+                sweep.terminate()
+                self.assertEqual(sweep.wait(timeout=RUN_BOUND), 143)
+                self.assertEqual(
+                    hashlib.sha256(source.read_bytes()).hexdigest(),
+                    hashlib.sha256(DELTA_TEXT.encode("utf-8")).hexdigest(),
+                )
+            finally:
+                (hold / "release-2").write_text("", encoding="utf-8")
+                end(sweep)
+
+
+class TheRunRecordAndTheRestoreArePinned(unittest.TestCase):
+    """MUTATION COVERAGE (SPEC-397 R5, R6): a run's record cannot change once made, a row never
+    run reads no case and no exit, and a file not restored byte for byte ends the sweep with exit
+    4 and its two lines. Not a SPEC-397 criterion; green when written."""
+
+    def test_a_run_is_frozen_and_a_row_never_run_reads_nothing(self):
+        swift_mutants = runner_module()
+        run = swift_mutants.Run(started=1, failed=0, executed="1", code=0)
+        with self.assertRaises(dataclasses.FrozenInstanceError):
+            run.code = 1
+        self.assertIs(run.timed_out, False)
+        self.assertEqual(run.seconds, 0.0)
+        unrun = swift_mutants.UNRUN
+        self.assertEqual(
+            (unrun.started, unrun.failed, unrun.executed, unrun.code, unrun.timed_out),
+            (0, 0, "none", 0, False),
+        )
+        self.assertEqual(unrun.seconds, 0.0)
+
+    def test_a_file_not_restored_ends_the_sweep_with_exit_4(self):
+        swift_mutants = runner_module()
+        original = b"let kills = 1\n"
+        with tempfile.TemporaryDirectory() as scratch:
+            path = Path(scratch) / "Code.swift"
+            path.write_bytes(b"let kills = 0\n")
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said):
+                swift_mutants.restore(
+                    path, original, hashlib.sha256(original).hexdigest(), "SW00001"
+                )
+            self.assertEqual((said.getvalue(), path.read_bytes()), ("", original))
+            with self.assertRaises(SystemExit) as stopped, contextlib.redirect_stdout(said):
+                swift_mutants.restore(path, original, "0" * 64, "SW00001")
+            self.assertEqual(stopped.exception.code, 4)
+            self.assertEqual(
+                said.getvalue(),
+                "SW00001: VOID: the file was not restored byte for byte\n"
+                f"sweep: REFUSED: {path} was not restored; stopping before another row\n",
+            )
+
+
+class TheCommandLineNamesWhatItNeeds(unittest.TestCase):
+    """MUTATION COVERAGE (SPEC-397 R2, R4, R5): the help names the module and each option, a
+    census with no `--root` reads the tree the module is in, and each missing or bad argument is
+    refused by name with exit 2. Not a SPEC-397 criterion; green when written."""
+
+    HELP_TEXTS = (
+        "swift_mutants: DeckStreak's hand-written Swift mutant rows, censused, swept and retired "
+        "(SPEC-397, ADR-411).",
+        "retired: the revision to compare the rows against",
+        "sweep: the package directory, ios/<package>",
+        "sweep: the directory sweep.md is written to",
+        "sweep: the bound on each killer run",
+    )
+
+    def test_the_help_names_the_module_and_each_option(self):
+        done = command("--help", env={"COLUMNS": "200"})
+        text = " ".join(done.stdout.split())
+        for each in examined("help texts", self.HELP_TEXTS):
+            self.assertIn(each, text)
+        self.assertEqual(done.returncode, 0, done.stderr)
+
+    def test_a_census_with_no_root_reads_the_tree_the_module_is_in(self):
+        rooted = module(REPO, "census")
+        self.assertRegex(rooted.stdout, r"^examined [1-9]\d* row\(s\) in [1-9]\d* file\(s\)\n$")
+        done = command("census")
+        self.assertEqual((done.returncode, done.stdout), (0, rooted.stdout), done.stderr)
+
+    def test_each_missing_or_bad_argument_is_refused_by_name(self):
+        needs = "sweep needs --package, --report and --run-seconds"
+        cases = (
+            ("retired with no --base", ("retired",), "retired needs --base"),
+            (
+                "a sweep with no --report",
+                ("sweep", "--package", "ios/Alpha", "--run-seconds", "10"),
+                needs,
+            ),
+            (
+                "a sweep with no --package",
+                ("sweep", "--report", "REPORT", "--run-seconds", "10"),
+                needs,
+            ),
+            (
+                "a sweep bound below one second",
+                ("sweep", "--package", "ios/Alpha", "--report", "REPORT", "--run-seconds", "-1"),
+                "--run-seconds must be at least 1",
+            ),
+        )
+        for label, args, message in examined("refused arguments", cases):
+            with self.subTest(case=label), tempfile.TemporaryDirectory() as scratch:
+                write_tree(scratch, alpha_beta())
+                report = str(Path(scratch) / "report")
+                done = module(scratch, *(report if each == "REPORT" else each for each in args))
+                self.assertEqual(
+                    done.stderr.splitlines()[-1:], [f"swift_mutants.py: error: {message}"]
+                )
+                self.assertEqual((done.returncode, done.stdout), (2, ""))
 
 
 if __name__ == "__main__":
