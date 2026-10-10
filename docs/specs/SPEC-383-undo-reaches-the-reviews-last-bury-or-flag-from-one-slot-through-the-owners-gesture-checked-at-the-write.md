@@ -290,6 +290,8 @@ SPEC and ADR-397 record the change):
 | `formal/tla/UndoOwnAnswer/MCUndoOwnAnswer.cfg` | formal | the two properties and each one's `_base` |
 | `formal/tla/UndoOwnAnswer/witness/an-undo-restores-only-the-offered-change.cfg` | formal | added |
 | `formal/tla/UndoOwnAnswer/witness/a-restore-runs-only-on-a-confirm.cfg` | formal | added |
+| `config/formal.json` | config | `budgets.entries` gains `tla/UndoOwnAnswer` between `tla/SyncSnapshotWindow` and `tla/WalletFloor`, its value measured whole (RULED 1086 Q-H, Q-J) |
+| `scripts/tests/test_formal_config.py` | scripts | `EXPECTED` gains the same `budgets.entries` row in the same place, so SPEC-295 A1 still pins the committed file whole (RULED 1086 Q-H) |
 | `scripts/mutation-rows.d/S38300-S38399.json` | scripts | added (section 9) |
 | `scripts/mutation-equivalent.d/deck-streak-web-engine.json` | scripts | changed only if the browser target's mutation verdict shows a `wasm.rs` row of section 9 equivalent, each record with its reason; and the shipped `engine_record` record's `anchor` follows that function's new text, its mutant, reason and evidence kept as they stand |
 | `scripts/mutation-equivalent.d/miniapp.json` | scripts | changed only if StrykerJS shows a mutant equivalent, each record with its reason |
