@@ -23,6 +23,7 @@ use crate::media::Reader;
 use crate::one_way;
 use crate::table::{ANSWERED, Decision, EXEMPT, Exempt, ExemptWrite, Transport, decide};
 use crate::undo_answer::{self, Recorded, Review};
+use crate::undo_change::{self, Mark};
 
 /// The one read of a card the page may make: its scheduling fields, by id (moved from the web
 /// engine, which passed it to the engine's database door itself).
@@ -306,18 +307,40 @@ impl Dispatcher {
             .map_err(engine)
     }
 
-    /// Runs the undo of the recorded bury or flag on `card` (SPEC-383 R6), with the undo row's
-    /// empty request.
+    /// Runs the undo of the recorded bury or flag on `card` (SPEC-383 R6): the engine's undo status
+    /// and the card's mark are read at the write, [`undo_change::judge_change`] judges them against
+    /// the record, and only then does the engine undo, with the undo row's empty request. A refusal
+    /// is the gesture's `NotTheTarget`, as an answer's is.
     fn run_restore(
         &self,
         card: i64,
         recorded: &Recorded,
         row: &Exempt,
     ) -> Result<Vec<u8>, GestureRefusal> {
-        let _ = (card, recorded);
+        let engine = |error| GestureRefusal::Engine { error };
+        let refused = |_| GestureRefusal::NotTheTarget {
+            write: ExemptWrite::Undo,
+            target: Target::Card(card),
+        };
+        let status = self
+            .backend
+            .run_service_method(GET_UNDO_STATUS.0, GET_UNDO_STATUS.1, &[])
+            .map_err(engine)?;
+        let now = UndoStatus::decode(status.as_slice()).map_err(|_| engine(status.clone()))?;
+        let mark = self.card_mark(card).map_err(engine)?;
+        undo_change::judge_change(recorded, &now, mark, card).map_err(refused)?;
         self.backend
             .run_service_method(row.service, row.method, &[])
-            .map_err(|error| GestureRefusal::Engine { error })
+            .map_err(engine)
+    }
+
+    /// The card's mark, by the core's fixed read, or `None` when the collection lacks the card. An
+    /// error is the engine's, encoded.
+    fn card_mark(&self, card: i64) -> Result<Option<Mark>, Vec<u8>> {
+        let reply = self.query(Read::CardMark(card))?;
+        let rows: serde_json::Value =
+            serde_json::from_slice(&reply).map_err(|_| unreadable_error(CARD_MARK_SQL))?;
+        Mark::from_rows(&rows).map_err(|_| unreadable_error(CARD_MARK_SQL))
     }
 
     /// The review-log row `id`, by the core's fixed read, or `None` when the collection lacks it.

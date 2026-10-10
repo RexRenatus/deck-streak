@@ -9,11 +9,14 @@
 
 use anki_proto::collection::UndoStatus;
 
-use crate::undo_answer::{Recorded, UndoRefusal};
+use crate::undo_answer::{Kind, Recorded, UndoRefusal};
 
 /// The user flag's bits in a card's `flags` column: the low three, the only bits the engine's
 /// `SetFlag` writes, and every other bit it keeps.
 const USER_FLAG: u32 = 7;
+
+/// The engine's queue for a card the user buried, which a bury's undo finds it still in.
+const USER_BURIED: i32 = -3;
 
 /// A card's queue, flags and sync mark, as the core's fixed read `CardMark` answers them
 /// (SPEC-383 R4).
@@ -25,6 +28,35 @@ pub struct Mark {
     pub flags: u32,
     /// The card's update sequence number: -1 until a sync sends it.
     pub usn: i32,
+}
+
+/// The reply of the mark read held a row that is not a card's mark: a column missing, or out of
+/// its column's range. The dispatcher answers it as the engine's own unreadable reply.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Unreadable;
+
+impl Mark {
+    /// The mark the rows of `CardMark` hold, `[[queue, flags, usn]]`, as the engine's database door
+    /// answers them; `None` when no row matched, because the card is gone. Both the core's restore
+    /// and the web engine's record read the mark through here, so the two never read it apart.
+    ///
+    /// # Errors
+    ///
+    /// [`Unreadable`] when the first row's three columns are not a queue, a flags column and a
+    /// sync mark.
+    pub fn from_rows(rows: &serde_json::Value) -> Result<Option<Self>, Unreadable> {
+        let Some(row) = rows.pointer("/0") else {
+            return Ok(None);
+        };
+        let column = |at: &str| row.pointer(at).and_then(serde_json::Value::as_i64);
+        let queue = column("/0").and_then(|queue| i32::try_from(queue).ok());
+        let flags = column("/1").and_then(|flags| u32::try_from(flags).ok());
+        let usn = column("/2").and_then(|usn| i32::try_from(usn).ok());
+        match (queue, flags, usn) {
+            (Some(queue), Some(flags), Some(usn)) => Ok(Some(Self { queue, flags, usn })),
+            _ => Err(Unreadable),
+        }
+    }
 }
 
 /// Whether the recorded bury or flag may be undone now, on `card`: `now` is the engine's undo
@@ -44,6 +76,34 @@ pub fn judge_change(
     mark: Option<Mark>,
     card: i64,
 ) -> Result<(), UndoRefusal> {
-    let _ = (recorded, now, mark, card, USER_FLAG);
+    let Some(mark) = mark else {
+        return Err(UndoRefusal::Gone);
+    };
+    if recorded.card != card {
+        return Err(UndoRefusal::NotTheCard);
+    }
+    let kept = match Kind::try_from(recorded.kind) {
+        Ok(Kind::Bury) => mark.queue == USER_BURIED,
+        Ok(Kind::Flag) => (mark.flags & USER_FLAG) == recorded.flag,
+        Ok(Kind::Answer) | Err(_) => false,
+    };
+    if !kept {
+        return Err(UndoRefusal::Changed);
+    }
+    if mark.usn != -1 {
+        return Err(UndoRefusal::Synced);
+    }
+    if now.undo.is_empty() {
+        return Err(UndoRefusal::Gone);
+    }
+    let then = recorded.status.as_ref();
+    let last_step = then.map_or(0, |then| then.last_step);
+    let label = then.map_or("", |then| then.undo.as_str());
+    if now.last_step != last_step {
+        return Err(UndoRefusal::Changed);
+    }
+    if now.undo != label {
+        return Err(UndoRefusal::Changed);
+    }
     Ok(())
 }
