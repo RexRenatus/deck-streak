@@ -192,6 +192,7 @@ Changed:
 - `crates/fsrs7/src/measure/history.rs` (fsrs7: the generator sets a non-zero factor)
 - `crates/fsrs7/tests/convert.rs` (fsrs7: A2 to A4; the row helper's factor)
 - `crates/fsrs7/tests/replay.rs` (fsrs7: A5, A6)
+- `crates/fsrs7/tests/history.rs` (fsrs7: the generator golden's row literal gains `factor`)
 - `crates/engine-core/Cargo.toml` (engine-core: the one edge)
 - `crates/engine-core/src/lib.rs` (engine-core: `pub mod replay`, and the doc sentence of `:41-42`)
 - `crates/engine-core/src/dispatch.rs` (engine-core: the fixed history statement and the many-row read)
