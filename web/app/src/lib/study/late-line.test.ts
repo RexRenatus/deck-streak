@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { describe, expect, it } from 'vitest';
+import { hosted } from '$lib/card/frame-host';
 import type { CardView, Head, UndoOffer } from '$lib/engine/protocol';
 import type { StudyClient } from './review';
 import ReviewScreen from './ReviewScreen.svelte';
@@ -130,7 +131,7 @@ function frame(): HTMLIFrameElement {
 }
 
 function shown(): { title: string; text: string } {
-  const doc = new DOMParser().parseFromString(frame().getAttribute('srcdoc') ?? '', 'text/html');
+  const doc = new DOMParser().parseFromString(hosted(frame().getAttribute('srcdoc') ?? '') ?? '', 'text/html');
   return { title: frame().title, text: doc.body.textContent?.trim() ?? '' };
 }
 
