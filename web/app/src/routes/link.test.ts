@@ -188,3 +188,100 @@ describe('the link page', () => {
     ]);
   });
 });
+
+// MUTATION COVERAGE (SPEC-385 §7): every other stage the page shows, each green when its test was
+// written; none is a criterion of §3.
+describe('the link page, each stage', () => {
+  it('a link with no code asks for a new one and offers nothing', async () => {
+    at('/link');
+    const sent = server(REGISTERS);
+    authenticator();
+    render(Link);
+    await settle();
+
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Link a passkey');
+    expect(screen.getByRole('alert').textContent).toBe(
+      'This link has no code. Get a new one from DeckStreak in Telegram.'
+    );
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(lines(sent)).toEqual([]);
+  });
+
+  it('a spent code says so, registers nothing and offers no second try', async () => {
+    at('/link#c0de');
+    const sent = server({
+      ...REGISTERS,
+      'POST /api/link/redeem': () => Response.json({ reason: 'link_code_invalid' }, { status: 401 })
+    });
+    const { create } = authenticator();
+    render(Link);
+    await settle();
+    await fireEvent.click(screen.getByRole('button', { name: 'Create a passkey' }));
+    await settle();
+
+    expect(lines(sent)).toEqual(['POST /api/link/redeem']);
+    expect(create).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toBe(
+      'This link expired or was already used. Get a new one from DeckStreak in Telegram.'
+    );
+    expect(screen.queryByRole('button')).toBeNull();
+    // the address no longer carries the code
+    expect(mocks.replaceState.mock.calls.map(([url]) => url)).toEqual(['/link']);
+  });
+
+  it('a refused registration offers a new start without redeeming the code again', async () => {
+    at('/link#c0de');
+    const sent = server(REGISTERS);
+    const { create } = authenticator();
+    create.mockRejectedValueOnce(new DOMException('the owner cancelled', 'NotAllowedError'));
+    render(Link);
+    await settle();
+    await fireEvent.click(screen.getByRole('button', { name: 'Create a passkey' }));
+    await settle();
+
+    // the cancel is shown, nothing is finished, and the page offers a new start
+    expect(screen.getByRole('alert').textContent).toBe('No passkey was used. You can start again.');
+    expect(lines(sent)).toEqual(['POST /api/link/redeem', 'POST /api/passkeys/register/start']);
+    expect(screen.queryByRole('status')).toBeNull();
+    const again = screen.getByRole('button', { name: 'Create a passkey' }) as HTMLButtonElement;
+    expect(again.disabled).toBe(false);
+
+    // the new start registers inside the same link session, with no second redeem
+    await fireEvent.click(again);
+    await settle();
+    expect(lines(sent)).toEqual([
+      'POST /api/link/redeem',
+      'POST /api/passkeys/register/start',
+      'POST /api/passkeys/register/start',
+      'POST /api/passkeys/register/finish'
+    ]);
+    expect(screen.getByRole('status').textContent).toBe(
+      'Passkey created. You can now sign in to DeckStreak in this browser.'
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('the button waits while a step is pending, and returns after a refusal', async () => {
+    at('/link#c0de');
+    let answer: (response: Response) => void = () => undefined;
+    server({
+      ...REGISTERS,
+      'POST /api/link/redeem': () => new Promise<Response>((resolve) => (answer = resolve))
+    });
+    authenticator();
+    render(Link);
+    await settle();
+    const button = () => screen.getByRole('button', { name: 'Create a passkey' }) as HTMLButtonElement;
+
+    expect(button().disabled).toBe(false);
+    await fireEvent.click(button());
+    await settle();
+    expect(button().disabled).toBe(true);
+    answer(Response.json({ reason: 'too_many_ceremonies' }, { status: 429 }));
+    await settle();
+    expect(button().disabled).toBe(false);
+    expect(screen.getByRole('alert').textContent).toBe(
+      'Too many attempts. Wait a minute, then start again.'
+    );
+  });
+});

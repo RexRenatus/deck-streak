@@ -205,6 +205,46 @@
       "reason": "A failed cancel's answer becomes undefined in place of null, and the cancel never reads it.",
       "evidence": "The awaited value is discarded: `cancel` goes on to `ondone('cancelled')` whatever the Worker answered, so only the wait is kept, and it is the same wait either way.",
       "issue": "#631"
+    },
+    {
+      "file": "web/app/src/routes/link/+page.svelte",
+      "mutant": "StringLiteral: \"\"",
+      "anchor": "let stage = $state<Stage>('reading');",
+      "reason": "The page's first stage becomes the empty string in place of reading, and the mount replaces it before anything reads the page.",
+      "evidence": "onMount sets the stage from the fragment in the same flush that mounts the page, and the app renders on the client only (`ssr = false` in `+layout.ts`), so the stage the page starts in is never drawn; `link.test.ts` renders the page through testing-library, whose render flushes the mount, and asserts what each later stage shows.",
+      "issue": "#627"
+    },
+    {
+      "file": "web/app/src/routes/link/+page.svelte",
+      "mutant": "StringLiteral: \"Stryker was here!\"",
+      "anchor": "let code = '';",
+      "reason": "The code's first value becomes another text, and the mount overwrites it before anything reads it.",
+      "evidence": "onMount assigns the fragment to `code` before the owner can tap, and only `create`, which the tap runs, reads it; 'the link page posts the code from the fragment' of `link.test.ts` asserts the redeem body carries the fragment's code.",
+      "issue": "#627"
+    },
+    {
+      "file": "web/app/src/routes/link/+page.svelte",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "{:else if stage !== 'reading'}",
+      "reason": "The button branch is offered while the page still reads its fragment, a stage the mount leaves before anything reads the page.",
+      "evidence": "onMount sets the stage from the fragment in the same flush that mounts the page, and the app renders on the client only (`ssr = false` in `+layout.ts`); every other stage that reaches this branch is ready or working, where the condition already holds, and `link.test.ts` asserts the button or its absence in each of them.",
+      "issue": "#627"
+    },
+    {
+      "file": "web/app/src/routes/link/+page.svelte",
+      "mutant": "StringLiteral: \"\"",
+      "anchor": "{:else if stage !== 'reading'}",
+      "reason": "The branch compares the stage with the empty string in place of reading, which differs only while the page reads its fragment, before the mount.",
+      "evidence": "No stage is ever the empty string, so the branch is offered in every stage the chain above leaves, reading included; onMount sets the stage from the fragment in the same flush that mounts the page, and the app renders on the client only (`ssr = false` in `+layout.ts`), so that extra branch is never drawn, and `link.test.ts` asserts each later stage.",
+      "issue": "#627"
+    },
+    {
+      "file": "web/app/src/routes/link/+page.svelte",
+      "mutant": "StringLiteral: \"\"",
+      "anchor": "stage = 'working';",
+      "reason": "A pending step's stage becomes the empty string, and the page draws a stage it does not name as it draws working: the button, held.",
+      "evidence": "The template names no-code, no-webauthn, spent and done, offers the button in every other stage past reading and holds it in each but ready, so the empty string draws what working draws; `create` sets the stage again before it returns, and 'the button waits while a step is pending, and returns after a refusal' of `link.test.ts` asserts the held button and its return.",
+      "issue": "#627"
     }
   ]
 }

@@ -815,3 +815,70 @@ describe('the API client outside Telegram', () => {
     expect(sent.map((request) => request.credentials)).toEqual(['same-origin', 'same-origin']);
   });
 });
+
+// MUTATION COVERAGE (SPEC-385 §7): the app's own client outside Telegram, a call in a sign-in
+// session that meets no answer, and the methods list. Each was green when its test was written,
+// and none is a criterion of §3. The router is replaced, so the sign-in page opens nowhere.
+const navigation = vi.hoisted(() => ({ goto: vi.fn() }));
+vi.mock('$app/navigation', () => ({ goto: navigation.goto }));
+
+describe("the API client's sign-in surface", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    navigation.goto.mockReset();
+  });
+
+  it("the app's own client opens the sign-in page for a refused call outside telegram", async () => {
+    const { fetch, sent } = server([401]);
+    vi.stubGlobal('fetch', fetch);
+    const { api } = await import('./api');
+
+    expect(await api.me()).toEqual({ kind: 'reopen' });
+    await vi.waitFor(() => expect(navigation.goto).toHaveBeenCalledOnce());
+    expect(navigation.goto.mock.calls).toEqual([['/signin']]);
+    // with the session cookie alone: no handshake was posted
+    expect(lines(sent)).toEqual(['GET /api/me']);
+  });
+
+  it('a call in a sign-in session that meets no answer is unavailable, and asks for nothing', async () => {
+    const askSignIn = vi.fn();
+    const fetch = vi.fn(async () => {
+      throw new TypeError('the network dropped the request');
+    });
+    const api = createApi({
+      launchData: () => null,
+      fetch: fetch as unknown as typeof globalThis.fetch,
+      askSignIn
+    });
+
+    expect(await api.me()).toEqual({ kind: 'unavailable' });
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(askSignIn).not.toHaveBeenCalled();
+  });
+
+  it('reads the sign-in methods from /api/identities', async () => {
+    const ADDED = Date.UTC(2001, 1, 3, 12);
+    const sent: string[] = [];
+    const fetch = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      sent.push(`${init.method ?? 'GET'} ${String(input)}`);
+      if (String(input) !== '/api/identities') return new Response(null, { status: 200 });
+      return Response.json([
+        { id: 1, kind: 'telegram' },
+        { id: 4, kind: 'passkey', created_at: ADDED }
+      ]);
+    });
+    const api = createApi({
+      launchData: () => LAUNCH,
+      fetch: fetch as unknown as typeof globalThis.fetch
+    });
+
+    expect(await api.identities()).toEqual({
+      kind: 'ok',
+      value: [
+        { id: 1, kind: 'telegram' },
+        { id: 4, kind: 'passkey', createdAt: ADDED }
+      ]
+    });
+    expect(sent).toEqual(['POST /api/session', 'GET /api/identities']);
+  });
+});

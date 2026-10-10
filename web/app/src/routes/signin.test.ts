@@ -171,3 +171,30 @@ describe('the sign-in page', () => {
     expect(get).toHaveBeenCalledTimes(2);
   });
 });
+
+// MUTATION COVERAGE (SPEC-385 §7): the button's pending state, green when its test was written; it
+// is no criterion of §3.
+describe('the sign-in page, while it works', () => {
+  it('the button waits while a sign-in is pending, and returns after a refusal', async () => {
+    let answer: (response: Response) => void = () => undefined;
+    const fetched = vi.fn(() => new Promise<Response>((resolve) => (answer = resolve)));
+    vi.stubGlobal('fetch', fetched);
+    authenticator();
+    render(SignIn);
+    await settle();
+    const button = () => screen.getByRole('button', { name: OFFER }) as HTMLButtonElement;
+
+    expect(button().disabled).toBe(false);
+    await fireEvent.click(button());
+    await settle();
+    expect(button().disabled).toBe(true);
+    answer(Response.json({ reason: 'not_linked' }, { status: 401 }));
+    await settle();
+    expect(button().disabled).toBe(false);
+    expect(screen.getByRole('alert').textContent).toBe(
+      'No passkey is linked yet. Link one from DeckStreak in Telegram.'
+    );
+    expect(fetched).toHaveBeenCalledOnce();
+    expect(mocks.goto).not.toHaveBeenCalled();
+  });
+});

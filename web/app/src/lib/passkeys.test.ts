@@ -8,12 +8,16 @@ import {
   decode,
   encode,
   mint,
+  parseMethods,
   redeem,
   register,
   registrationJSON,
   remove,
   requestOptions,
   signIn,
+  webauthn,
+  wordingOf,
+  wordingOfThrown,
   type Wording
 } from './passkeys';
 
@@ -344,5 +348,145 @@ describe('the passkey ceremony client', () => {
       {}
     ]);
     expect(stored).not.toHaveBeenCalled();
+  });
+});
+
+// MUTATION COVERAGE (SPEC-385 §7). Each test below was green when it was written: it pins a
+// behaviour StrykerJS found no test observing, and none of them is a criterion of §3.
+describe('the passkey ceremony client, at its edges', () => {
+  it('a failed server, or an answer naming no code, meets the unavailable wording', () => {
+    // 500 is the first failed status; 499 is still a refusal, and its code decides
+    expect(wordingOf(500, 'not_linked')).toBe('server_unavailable');
+    expect(wordingOf(499, 'not_linked')).toBe('signin_not_linked');
+    // a code that is no string names no code
+    expect(wordingOf(401, undefined)).toBe('server_unavailable');
+    expect(wordingOf(401, 7)).toBe('server_unavailable');
+  });
+
+  it('an authenticator refusal with no name meets the refusal wording', () => {
+    expect(wordingOfThrown(null)).toBe('passkey_refused');
+    expect(wordingOfThrown(undefined)).toBe('passkey_refused');
+    expect(wordingOfThrown({ name: 'NotAllowedError' })).toBe('passkey_cancelled');
+  });
+
+  it('a start that answered no options names no relying party', () => {
+    expect(creationOptions(null, HOST)).toBeNull();
+    expect(requestOptions(null, HOST)).toBeNull();
+  });
+
+  it('the identities list reads telegram and each dated passkey, and refuses anything else', () => {
+    const ADDED = Date.UTC(2001, 1, 3, 12);
+    const BODIES: readonly (readonly [string, unknown, unknown])[] = [
+      ['an empty list', [], []],
+      [
+        'telegram and a passkey',
+        [
+          { id: 1, kind: 'telegram' },
+          { id: 4, kind: 'passkey', created_at: ADDED }
+        ],
+        [
+          { id: 1, kind: 'telegram' },
+          { id: 4, kind: 'passkey', createdAt: ADDED }
+        ]
+      ],
+      ['an object, not a list', {}, null],
+      ['no body', null, null],
+      ['a null item', [null], null],
+      ['an item with no id', [{ kind: 'telegram' }], null],
+      ['an id that is no number', [{ id: '1', kind: 'telegram' }], null],
+      ['a passkey with no date', [{ id: 2, kind: 'passkey' }], null],
+      ['a date that is no number', [{ id: 2, kind: 'passkey', created_at: '5' }], null],
+      ['a kind no row names', [{ id: 3, kind: 'password', created_at: 5 }], null]
+    ];
+    let judged = 0;
+    for (const [name, body, methods] of BODIES) {
+      expect([name, parseMethods(body)]).toEqual([name, methods]);
+      judged += 1;
+    }
+    console.log(`examined ${judged} of ${BODIES.length} bodies`);
+    expect(judged).toBe(BODIES.length);
+  });
+
+  it('webauthn is offered only where the browser has the credential type and its container', () => {
+    authenticator();
+    expect(webauthn()).toBe(true);
+    // a container with no credential type
+    vi.stubGlobal('PublicKeyCredential', undefined);
+    expect(webauthn()).toBe(false);
+    // a credential type with no container
+    vi.stubGlobal('PublicKeyCredential', class {});
+    delete (navigator as { credentials?: unknown }).credentials;
+    expect(navigator.credentials).toBeUndefined();
+    expect(webauthn()).toBe(false);
+  });
+
+  it('a request that meets no answer is unavailable, and nothing follows it', async () => {
+    const fetched = vi.fn(async () => {
+      throw new TypeError('the network dropped the request');
+    });
+    vi.stubGlobal('fetch', fetched);
+    const { create, get } = authenticator();
+    const unavailable = { kind: 'refused', wording: 'server_unavailable' };
+
+    expect(await redeem('c0de')).toEqual(unavailable);
+    expect(await register()).toEqual(unavailable);
+    expect(await signIn()).toEqual(unavailable);
+    expect(await mint()).toEqual(unavailable);
+    expect(await remove(7)).toEqual(unavailable);
+    // one request each, and the authenticator was asked nothing
+    expect(fetched).toHaveBeenCalledTimes(5);
+    expect([create.mock.calls.length, get.mock.calls.length]).toEqual([0, 0]);
+  });
+
+  it('a sign-in finish or a mint answered with a body it cannot read is refused', async () => {
+    server({
+      ...SUCCEEDS,
+      'POST /api/passkeys/sign-in/finish': () => new Response('signed in', { status: 200 }),
+      'POST /api/link/code': () => new Response('a code', { status: 200 })
+    });
+    const signalled = vi.fn(async (options: unknown) => {
+      void options;
+    });
+    authenticator({ signalAllAcceptedCredentials: signalled });
+
+    expect(await signIn()).toEqual({ kind: 'refused', wording: 'passkey_refused' });
+    expect(signalled).not.toHaveBeenCalled();
+    expect(await mint()).toEqual({ kind: 'refused', wording: 'passkey_refused' });
+    // a code that is no string is no code
+    server({ 'POST /api/link/code': () => Response.json({ code: 5 }) });
+    expect(await mint()).toEqual({ kind: 'refused', wording: 'passkey_refused' });
+  });
+
+  it('a sign-in asks the authenticator with the decoded options, and a cancel posts no finish', async () => {
+    const sent = server(SUCCEEDS);
+    const { get } = authenticator();
+
+    expect(await signIn()).toEqual({ kind: 'ok', value: true });
+    const publicKey = get.mock.calls[0][0].publicKey as unknown as Record<string, never>;
+    expect(numbers(publicKey.challenge)).toEqual([0xff, 0xff, 0xff]);
+    expect(publicKey.rpId).toBe(HOST);
+    expect(numbers((publicKey.allowCredentials as Record<string, unknown>[])[0].id)).toEqual([
+      0xfb, 0xef, 0xbe
+    ]);
+
+    // the owner's cancel offers a new start, and no finish is posted
+    get.mockRejectedValueOnce(new DOMException('the owner cancelled', 'NotAllowedError'));
+    const before = sent.length;
+    expect(await signIn()).toEqual({ kind: 'refused', wording: 'passkey_cancelled' });
+    expect(lines(sent.slice(before))).toEqual(['POST /api/passkeys/sign-in/start']);
+  });
+
+  it('a signal the browser refuses leaves the owner signed in', async () => {
+    server(SUCCEEDS);
+    const signalled = vi.fn(async (options: unknown) => {
+      void options;
+      throw new DOMException('the browser refused the signal', 'NotAllowedError');
+    });
+    authenticator({ signalAllAcceptedCredentials: signalled });
+
+    expect(await signIn()).toEqual({ kind: 'ok', value: true });
+    expect(signalled).toHaveBeenCalledOnce();
+    // asked as the browser's own method, on the credential type
+    expect(signalled.mock.contexts[0]).toBe(globalThis.PublicKeyCredential);
   });
 });

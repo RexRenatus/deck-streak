@@ -171,3 +171,131 @@ describe('the sign-in methods screen', () => {
     expect(mocks.identities).toHaveBeenCalledTimes(2);
   });
 });
+
+// MUTATION COVERAGE (SPEC-385 §7): every other state the screen shows, each green when its test
+// was written; none is a criterion of §3.
+describe('the sign-in methods screen, each state', () => {
+  it('the screen says it is loading until the list is read', async () => {
+    let answer: (listed: unknown) => void = () => undefined;
+    mocks.identities.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    render(Methods);
+    await settle();
+
+    expect(screen.getByRole('status').textContent).toBe('Loading…');
+    expect(screen.queryAllByRole('listitem')).toEqual([]);
+    answer({ kind: 'ok', value: [LISTED[0]] });
+    await settle();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(rows()).toHaveLength(1);
+    // and the screen leads back to Today
+    expect(screen.getByRole('link', { name: 'Back to Today' }).getAttribute('href')).toBe('/');
+  });
+
+  it('a list the screen cannot read says why, and shows no row', async () => {
+    const ANSWERS = [
+      ['reopen', 'Reopen DeckStreak from Telegram to sign in again.'],
+      ['unavailable', 'DeckStreak could not reach its server. Try again in a moment.']
+    ] as const;
+    let judged = 0;
+    for (const [kind, text] of ANSWERS) {
+      mocks.identities.mockResolvedValue({ kind });
+      const shown = render(Methods);
+      await settle();
+      expect([kind, screen.getByRole('alert').textContent]).toEqual([kind, text]);
+      expect(screen.queryAllByRole('listitem')).toEqual([]);
+      shown.unmount();
+      judged += 1;
+    }
+    console.log(`examined ${judged} of ${ANSWERS.length} answers`);
+    expect(judged).toBe(ANSWERS.length);
+  });
+
+  it('a passkey row shows the day it was added', async () => {
+    mocks.identities.mockResolvedValue({ kind: 'ok', value: [LISTED[0], LISTED[1]] });
+    render(Methods);
+    await settle();
+
+    const day = new Date(LISTED[1].createdAt ?? 0).getDate();
+    expect(rows()[1].textContent).toContain(`Added Feb ${day}, 2001`);
+  });
+
+  it('outside telegram the screen offers no link', async () => {
+    mocks.telegram.launchData = null;
+    mocks.identities.mockResolvedValue({ kind: 'ok', value: [LISTED[0]] });
+    render(Methods);
+    await settle();
+
+    expect(rows()).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Link a passkey' })).toBeNull();
+  });
+
+  it('a mint holds every button until it answers, and a refused one shows why', async () => {
+    mocks.identities.mockResolvedValue({ kind: 'ok', value: [LISTED[0], LISTED[1]] });
+    let answer: (response: Response) => void = () => undefined;
+    const fetched = vi.fn(() => new Promise<Response>((resolve) => (answer = resolve)));
+    vi.stubGlobal('fetch', fetched);
+    render(Methods);
+    await settle();
+    const held = () =>
+      [
+        screen.getByRole('button', { name: 'Link a passkey' }),
+        within(rows()[1]).getByRole('button', { name: 'Remove' })
+      ].map((button) => (button as HTMLButtonElement).disabled);
+
+    expect(held()).toEqual([false, false]);
+    await fireEvent.click(screen.getByRole('button', { name: 'Link a passkey' }));
+    await settle();
+    expect(held()).toEqual([true, true]);
+    answer(Response.json({ reason: 'too_many_ceremonies' }, { status: 429 }));
+    await settle();
+    expect(held()).toEqual([false, false]);
+    expect(screen.getByRole('alert').textContent).toBe(
+      'Too many attempts. Wait a minute, then start again.'
+    );
+    expect(fetched).toHaveBeenCalledOnce();
+    expect(mocks.telegram.openLink).not.toHaveBeenCalled();
+  });
+
+  it('a removal holds its buttons until it answers; a refusal shows why, and a gone one is read away', async () => {
+    mocks.identities.mockResolvedValue({ kind: 'ok', value: [LISTED[0], LISTED[1]] });
+    let answer: (response: Response) => void = () => undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>((resolve) => (answer = resolve)))
+    );
+    render(Methods);
+    await settle();
+    const confirm = async () => {
+      await fireEvent.click(within(rows()[1]).getByRole('button', { name: 'Remove' }));
+      await settle();
+      await fireEvent.click(within(rows()[1]).getByRole('button', { name: 'Remove' }));
+      await settle();
+    };
+
+    // while the delete is pending, Remove and Keep are both held
+    await confirm();
+    const pending = within(rows()[1])
+      .getAllByRole('button')
+      .map((button) => [button.textContent?.trim(), (button as HTMLButtonElement).disabled]);
+    expect(pending).toEqual([
+      ['Remove', true],
+      ['Keep', true]
+    ]);
+    // a refusal with its wording is shown, the list is not read again, and Remove returns
+    answer(Response.json({ reason: 'too_many_ceremonies' }, { status: 429 }));
+    await settle();
+    expect(screen.getByRole('alert').textContent).toBe(
+      'Too many attempts. Wait a minute, then start again.'
+    );
+    expect(mocks.identities).toHaveBeenCalledOnce();
+    const remove = within(rows()[1]).getByRole('button', { name: 'Remove' }) as HTMLButtonElement;
+    expect(remove.disabled).toBe(false);
+
+    // a passkey already gone answers no wording: nothing is shown, and the list is read again
+    await confirm();
+    answer(Response.json({ reason: 'identity_unknown' }, { status: 404 }));
+    await settle();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(mocks.identities).toHaveBeenCalledTimes(2);
+  });
+});
