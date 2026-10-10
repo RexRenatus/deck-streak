@@ -69,4 +69,10 @@ A16: red at bd2efd4b: AssertionError: expected [ 'POST /api/link/code', …(2) ]
 A17: red at bd2efd4b: AssertionError: expected [ 'DELETE /api/identities/4' ] to deeply equal [] (sign-in-methods.test.ts:156)
 A18: red at bd2efd4b: AssertionError: expected "setItem" to not be called at all, but actually been called 1 times (link.test.ts:182)
 A19: red at bd2efd4b: AssertionError: expected [ 'en', 'signin_title', false ] to deeply equal [ 'en', 'signin_title', true ] (passkey-messages.test.ts:56)
+A6: green at bdc244de
+A7: green at bdc244de
+A11: green at bdc244de
+A13: green at bdc244de
+A14: green at bdc244de
+A19: green at bdc244de
 ```

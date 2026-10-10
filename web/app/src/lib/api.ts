@@ -35,6 +35,9 @@ import { telegram } from './telegram.svelte';
  * its bound, the client stops calling, and the screen asks the owner to reopen DeckStreak from
  * Telegram, which hands the page fresh launch data.
  *
+ * Outside Telegram there is no launch data: a passkey sign-in opened the session, every call
+ * carries its cookie alone, and a call refused 401 asks for sign-in (SPEC-385 R9).
+ *
  * The launch data goes into that one request body and nowhere else: never a URL, a header, the
  * device's storage or a log line.
  */
@@ -57,6 +60,12 @@ export interface ApiOptions {
   readonly launchData: () => string | null;
   /** The transport; the page's own `fetch` by default. */
   readonly fetch?: typeof globalThis.fetch;
+  /**
+   * Asks the owner to sign in, where a page outside Telegram has no launch data to open a session
+   * with (SPEC-385 R9; ADR-399 D2). Given it, such a page sends each call with the session cookie
+   * alone, and a call refused 401 asks for sign-in; without it, such a page sends nothing.
+   */
+  readonly askSignIn?: () => void;
 }
 
 /** The Mini App's one API client. */
@@ -103,6 +112,9 @@ type Opened = 'open' | 'refused' | 'failed';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** The sign-in page a call refused outside Telegram opens (SPEC-385 R9). */
+const SIGN_IN = '/signin';
+
 /** A client over `options`: one session, opened on the first call and renewed at most once per expiry. */
 export function createApi(options: ApiOptions): Api {
   const send: typeof globalThis.fetch =
@@ -139,6 +151,9 @@ export function createApi(options: ApiOptions): Api {
    * answer came. A renewal repeats the request as it was, body and all.
    */
   async function call(path: string, init: RequestInit = {}): Promise<Response | 'reopen' | null> {
+    if (options.askSignIn !== undefined && options.launchData() === null) {
+      return signedIn(path, init, options.askSignIn);
+    }
     let renewed = false;
     for (;;) {
       if (stopped) return 'reopen';
@@ -170,6 +185,27 @@ export function createApi(options: ApiOptions): Api {
       renewed = true;
       if (session === used) session = null;
     }
+  }
+
+  /**
+   * A call outside Telegram (SPEC-385 R9): the session a passkey sign-in opened, carried by its
+   * cookie alone, with no handshake and no renewal. A call refused 401 asks for sign-in and
+   * answers `'reopen'`; no other call is held back, so the screen reads again once signed in.
+   */
+  async function signedIn(
+    path: string,
+    init: RequestInit,
+    askSignIn: () => void
+  ): Promise<Response | 'reopen' | null> {
+    let response: Response;
+    try {
+      response = await send(path, { ...init, credentials: 'same-origin' });
+    } catch {
+      return null;
+    }
+    if (response.status !== 401) return response;
+    askSignIn();
+    return 'reopen';
   }
 
   /** A GET of `path` whose JSON body `parse` reads: its value, or why there is none. */
@@ -235,5 +271,13 @@ function parseMe(body: unknown): Me | null {
   return typeof day === 'string' && ISO_DATE.test(day) ? { studyDay: day } : null;
 }
 
-/** The app's client, opening its session with the launch data the wrapper read. */
-export const api: Api = createApi({ launchData: () => telegram.launchData });
+/**
+ * The app's client, opening its session with the launch data the wrapper read; outside Telegram, a
+ * call refused 401 opens the sign-in page (SPEC-385 R9).
+ */
+export const api: Api = createApi({
+  launchData: () => telegram.launchData,
+  // imported on use: the router module reads the browser's window as it loads, which a
+  // server-side render has not got
+  askSignIn: () => void import('$app/navigation').then(({ goto }) => goto(SIGN_IN))
+});
