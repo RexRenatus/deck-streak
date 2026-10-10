@@ -71,10 +71,10 @@ struct ReviewChrome: View {
         .padding(.vertical, 8)
     }
 
-    /// Whether a bury or a flag may start: from a card's question or its answer, never while a
-    /// call runs (SPEC-358 R5).
+    /// Whether a bury or a flag may start: from a card's question or its answer, or a card the
+    /// engine withheld, never while a call runs (SPEC-358 R5, SPEC-380 R7).
     private var idle: Bool {
-        model.phase == .question || model.phase == .answer
+        [ReviewPhase.question, .answer, .withheld].contains(model.phase)
     }
 
     /// The flag button's title and symbol: an icon with a text label, never a colour alone.

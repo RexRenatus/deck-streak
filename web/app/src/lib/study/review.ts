@@ -11,9 +11,9 @@ import { EngineError } from '$lib/engine/client';
 import type { CardView, Clip, Counts, ErrorCode, Faces, Head, Rating, UndoOffer } from '$lib/engine/protocol';
 import { sideAfter, type Action, type Side } from '$lib/remote/actions';
 
-/** The schematic's states: a card loading, a side shown, a request in flight, an undo offered and
- * asking to be confirmed, a refusal, done. */
-export type Phase = 'loading' | 'question' | 'answer' | 'busy' | 'confirming' | 'refused' | 'done';
+/** The schematic's states: a card loading, a side shown, a withheld card shown, a request in
+ * flight, an undo offered and asking to be confirmed, a refusal, done. */
+export type Phase = 'loading' | 'question' | 'answer' | 'withheld' | 'busy' | 'confirming' | 'refused' | 'done';
 
 /** What moves the machine: an action, keeping an offered answer, or the outcome of the request in
  * flight. */
@@ -21,6 +21,7 @@ export type ReviewEvent =
   | Action
   | 'keep'
   | 'view'
+  | 'withheld'
   | 'empty'
   | 'settled'
   | 'flagged'
@@ -38,10 +39,14 @@ export type Effect = 'none' | 'card' | 'rate' | 'bury' | 'flag' | 'offer' | 'und
  * grade and the state it returns to (SPEC-371 R7). */
 export type Offer = Extract<UndoOffer, { offer: object }>['offer'];
 
-/** The machine's state: its phase, and the side the review shows or returns to. */
+/** What the review shows: a side, or a card the engine withheld, which has no side to show
+ * (SPEC-380 R5). */
+export type Shown = Side | 'withheld';
+
+/** The machine's state: its phase, and what the review shows or returns to. */
 export interface ReviewState {
   phase: Phase;
-  side: Side;
+  side: Shown;
 }
 
 /** One cell: the next phase (`side` is the side's own phase) and the request it asks for. A cell
@@ -71,11 +76,14 @@ const REPLAY: Cell = { phase: 'side', effect: 'replay' };
 const TABLE: Record<Phase, Partial<Record<ReviewEvent, Cell>>> = {
   loading: {
     view: { phase: 'question', effect: 'none' },
+    withheld: { phase: 'withheld', effect: 'none' },
     empty: { phase: 'done', effect: 'none' },
     refusal: REFUSED
   },
   question: { 'show-answer': { phase: 'answer', effect: 'none' }, undo: OFFER, bury: BURY, flag: FLAG, replay: REPLAY },
   answer: { again: RATE, good: RATE, undo: OFFER, bury: BURY, flag: FLAG, replay: REPLAY },
+  // a withheld card is the question side less its reveal and its replay: no rating reaches it (R5)
+  withheld: { undo: OFFER, bury: BURY, flag: FLAG },
   busy: {
     settled: NEXT,
     'not-shown': NEXT,
@@ -103,9 +111,17 @@ const TABLE: Record<Phase, Partial<Record<ReviewEvent, Cell>>> = {
 export function step(state: ReviewState, event: ReviewEvent): { state: ReviewState; effect: Effect } {
   const cell = TABLE[state.phase][event];
   if (cell === undefined) return { state, effect: 'none' };
-  // a new card shows its question; an action moves the side as the remote's reviewer does, and an
-  // action that is kept rather than carried out moves nothing
-  const side = event === 'view' ? 'question' : cell.keeps ? state.side : sideAfter(event as Action, state.side);
+  // a new card shows its question, or its line when the engine withheld it; an action moves the
+  // side as the remote's reviewer does, and an action that is kept rather than carried out moves
+  // nothing. A withheld card has no cell that moves a side, so it stays withheld until the next card
+  const side: Shown =
+    event === 'view'
+      ? 'question'
+      : event === 'withheld'
+        ? 'withheld'
+        : cell.keeps
+          ? state.side
+          : sideAfter(event as Action, state.side as Side);
   return { state: { phase: cell.phase === 'side' ? side : cell.phase, side }, effect: cell.effect };
 }
 
@@ -139,8 +155,9 @@ export interface ClipPlayer {
   play(clips: readonly Clip[]): Promise<boolean>;
 }
 
-/** What the status region announces: a refusal's code, a card the frame refused, a done deck. */
-export type Status = ErrorCode | 'escaped' | 'done';
+/** What the status region announces: a refusal's code, a card the frame refused, a card the engine
+ * withheld, a done deck. */
+export type Status = ErrorCode | 'escaped' | 'withheld' | 'done';
 
 /** What the frame shows: the card last shown, and its side. */
 export interface Face {
@@ -180,8 +197,10 @@ export class Review {
     return this.#state.phase;
   }
 
+  /** The side the keys and the remote read: a withheld card reads as its question, on which only a
+   * reveal fires, and the withheld card has no reveal (SPEC-380 R5). */
   get side(): Side {
-    return this.#state.side;
+    return this.#state.side === 'withheld' ? 'question' : this.#state.side;
   }
 
   /** The card shown, or `null` before the first and after the last. */
@@ -216,7 +235,7 @@ export class Review {
   get status(): Status | null {
     if (this.#state.phase === 'refused') return this.#refusal;
     if (this.#state.phase === 'done') return 'done';
-    return this.#notice ?? (this.escaped ? 'escaped' : null);
+    return this.#notice ?? (this.#face?.view.withheld ? 'withheld' : this.escaped ? 'escaped' : null);
   }
 
   /** The controls the face shows: a card the frame refused keeps them (A12); undo only while the
@@ -225,7 +244,8 @@ export class Review {
   get controls(): Action[] {
     const face = this.#face;
     if (face === null) return [];
-    const side: Action[] = face.side === 'question' ? ['show-answer'] : ['again', 'good'];
+    // a withheld card offers neither a reveal nor a grade (SPEC-380 R5)
+    const side: Action[] = face.view.withheld ? [] : face.side === 'question' ? ['show-answer'] : ['again', 'good'];
     const undo: Action[] = face.view.undo === 'answer' ? ['undo'] : [];
     // Replay only on a side with replay clips; a blocked play leaves it there to ask again (R15)
     const replay: Action[] = this.#faces?.[face.side].replay.length ? ['replay'] : [];
@@ -283,9 +303,10 @@ export class Review {
     } while (current !== this.#inFlight);
   }
 
-  /** Announces `notice` on the side the review shows, and moves nothing. */
+  /** Announces `notice` on the side the review shows, or on a withheld card as on its question
+   * (SPEC-380 R5), and moves nothing. */
   #announce(notice: Status): void {
-    if (this.#state.phase !== 'question' && this.#state.phase !== 'answer') return;
+    if (!(['question', 'answer', 'withheld'] as Phase[]).includes(this.#state.phase)) return;
     this.#notice = notice;
     this.#onChange();
   }
@@ -305,7 +326,7 @@ export class Review {
   #sound(event: ReviewEvent, from: Phase, effect: Effect): void {
     const faces = this.#faces;
     if (faces === null) return;
-    const face = faces[this.#state.side];
+    const face = faces[this.side];
     if (effect === 'replay') {
       void this.#player?.play(face.replay);
     } else if (AUTOPLAY.includes(event) && this.#state.phase !== from) {
@@ -317,8 +338,8 @@ export class Review {
    * keep the face, so a grade leaves the rated card's answer on screen until the next card shows;
    * a refusal and a done deck show none. */
   #show(phase: Phase): void {
-    if (phase === 'question' || phase === 'answer') {
-      this.#face = { view: this.#view as CardView, side: phase };
+    if (phase === 'question' || phase === 'answer' || phase === 'withheld') {
+      this.#face = { view: this.#view as CardView, side: this.side };
     } else if (phase === 'refused' || phase === 'done') {
       this.#face = null;
     }
@@ -346,7 +367,7 @@ export class Review {
           ? head.card
           : { ...(head.card as CardView), question: faces.question.text, answer: faces.answer.text };
       this.#shownAt = this.#now();
-      return head.card === null ? 'empty' : 'view';
+      return head.card === null ? 'empty' : head.card.withheld ? 'withheld' : 'view';
     }
     if (effect === 'offer') return this.#offered(await client.undoOffer());
     const card = (this.#view as CardView).id;

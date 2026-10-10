@@ -131,8 +131,10 @@ export interface Counts {
 /** The card the review shows: both sides rendered by the engine with sound and speech tags
  * stripped, the note type's CSS, the four interval labels, and whether the review's own last answer
  * can be undone: `answer` when it can, `synced` when it has synced, `null` when there is none to
- * undo (SPEC-371 R7); and whether the engine's day is past the card's due day, so this review
- * cannot count toward the streak for that day (SPEC-376 R4). */
+ * undo (SPEC-371 R7); whether the engine's day is past the card's due day, so this review
+ * cannot count toward the streak for that day (SPEC-376 R4); and whether its question is an image
+ * occlusion question whose masks this app does not draw, so the engine emptied both sides and its
+ * CSS and the review withholds it (SPEC-380 R3). */
 export interface CardView {
   id: bigint;
   ordinal: number;
@@ -143,6 +145,7 @@ export interface CardView {
   labels: string[];
   undo: 'answer' | 'synced' | null;
   late: boolean;
+  withheld: boolean;
 }
 
 /** The grade an offered answer gave, as the review names it. */

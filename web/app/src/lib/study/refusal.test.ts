@@ -21,6 +21,7 @@ const EXPECTED = {
   'undo-synced': 'undo_synced',
   'not-undoable': 'undo_gone',
   escaped: 'study_card_escaped',
+  withheld: 'study_card_withheld',
   done: 'study_done'
 };
 

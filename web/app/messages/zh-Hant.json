@@ -72,6 +72,7 @@
   "study_refused_not_open": "你的收藏尚未開啟。請再試一次。",
   "study_refused_not_shown": "那張卡片已不在畫面上，複習現在顯示的是目前的卡片。",
   "study_card_escaped": "這張卡片無法在這裡安全顯示。你仍然可以作答、暫時擱置或標記它。",
+  "study_card_withheld": "這張影像遮擋卡片無法在這裡顯示，因為此應用程式不會繪製它的遮罩。你仍然可以暫時擱置或標記它。",
   "study_done": "這個牌組今天已經學完了。",
   "study_title": "學習",
   "study_decks": "牌組",

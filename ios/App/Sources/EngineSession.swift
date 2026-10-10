@@ -31,17 +31,19 @@ struct Deck: Hashable, Sendable {
 
 /// A face as the review screen shows it: the engine's document for the factory's view, the clips
 /// it plays and replays, the media it could not show, and the languages its speech uses, each
-/// once, for the voice picker (SPEC-348 R9, R13, R14).
+/// once, for the voice picker (SPEC-348 R9, R13, R14); and whether the engine withheld the card,
+/// whose document then holds the ffi's one line in the card's place (SPEC-380 R4, R7).
 struct ReviewFace: Equatable, Sendable {
     var document: String
     var autoplay: [ReviewClip]
     var replay: [ReviewClip]
     var omitted: [String]
     var languages: [String]
+    var withheld: Bool
 
     /// The face before the first card and after the last: nothing to show and nothing to play.
     static let empty = ReviewFace(
-        document: "", autoplay: [], replay: [], omitted: [], languages: [])
+        document: "", autoplay: [], replay: [], omitted: [], languages: [], withheld: false)
 }
 
 /// One language the current face speaks, with the installed voices the picker offers for it and
@@ -162,7 +164,8 @@ actor EngineSession {
             replay: replay.map { $0.clip },
             omitted: face.omitted,
             languages: NSOrderedSet(array: replay.compactMap { $0.language }).array
-                .compactMap { $0 as? String })
+                .compactMap { $0 as? String },
+            withheld: face.withheld)
     }
 
     /// For each language, the installed voices offered for it and the one chosen (SPEC-348 R14).

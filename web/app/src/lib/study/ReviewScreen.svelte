@@ -189,17 +189,20 @@
       {#if shown.status !== null}{statusText(shown.status)}{/if}
     </p>
     {#if face !== null}
-      {#if face.view.late}
-        <p class="text-sm">{m.study_late_review()}</p>
+      <!-- a withheld card shows its line in the status region alone: no late line and no frame (SPEC-380 R5) -->
+      {#if !face.view.withheld}
+        {#if face.view.late}
+          <p class="text-sm">{m.study_late_review()}</p>
+        {/if}
+        <div class="h-[55dvh] *:size-full *:border-0">
+          <CardFrame
+            html={face.side === 'answer' ? face.view.answer : face.view.question}
+            css={face.view.css}
+            title={face.side === 'answer' ? m.study_answer_frame() : m.study_question_frame()}
+            classes={`card card${face.view.ordinal + 1}${telegram.colorScheme === 'dark' ? ' nightMode night_mode' : ''}`}
+          />
+        </div>
       {/if}
-      <div class="h-[55dvh] *:size-full *:border-0">
-        <CardFrame
-          html={face.side === 'answer' ? face.view.answer : face.view.question}
-          css={face.view.css}
-          title={face.side === 'answer' ? m.study_answer_frame() : m.study_question_frame()}
-          classes={`card card${face.view.ordinal + 1}${telegram.colorScheme === 'dark' ? ' nightMode night_mode' : ''}`}
-        />
-      </div>
       {#if shown.offer !== null}
         {@const offer = shown.offer}
         <div
@@ -254,7 +257,7 @@
           >
             {m.study_show_answer()}
           </button>
-        {:else}
+        {:else if shown.controls.includes('good')}
           <AnswerButtons labels={face.view.labels} onanswer={(grade) => input.click(grade)} />
         {/if}
         <div class="flex flex-wrap gap-2">

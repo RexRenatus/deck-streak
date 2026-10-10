@@ -211,3 +211,34 @@ L8 and L10 to L13 (lines 4 to 10; L9 is retired and its number not reused), agai
 L1 to L7, and `load(_:into:)` (line 55) prefixes the document policy ahead of the HTML it is
 given. The card view hands `CardFace.document` to it unchanged, so the page carries the policy's
 doctype and then the face's own; nothing in the app sets anything on a configuration.
+
+## 6. The withheld phase (SPEC-380)
+
+Read at the base `e7ecf10d6b796eb1f86fe6544e04a96a0583c791` (`dev`). Decided by ADR-391. This
+section is appended to `docs/schematics/ios-review-screen.md`; no line above it changes. The rule
+and both reviews' data flow are drawn in `docs/schematics/web-study-screens.md` section 7.
+
+```mermaid
+stateDiagram-v2
+  Loading --> Withheld: a card whose face is withheld / face(question)
+  Loading --> Question: a card whose face is not withheld / face(question)
+  Withheld --> Marking: Bury, or Flag
+  Marking --> Loading: after a bury / (13,3)
+  Marking --> Withheld: after a flag, back to its side
+  Marking --> Refused: an engine refusal
+```
+
+- `ReviewSession.next` answers `withheld` when the ffi's face is withheld and `question`
+  otherwise (`ios/App/Sources/ReviewSession.swift:63`): the session's one new decision, 3 to 4 of
+  its ceiling of 4.
+- In `Withheld` the bar disables Show Answer and every rating, as it does outside their own phases
+  (`ios/App/Sources/AnswerBar.swift:33`, `:58`), and `perform` has no arm for them there: a tap is
+  not a transition, and no rating is sent.
+- Bury and flag join `perform`'s existing patterns (`ios/App/Sources/ReviewModel.swift:86`, `:92`),
+  and the chrome's idle names `withheld` by one decision in place of one
+  (`ios/App/Sources/ReviewChrome.swift:76-78`).
+- The card's place shows the ffi's withheld document, which holds the English line
+  (`ios/App/Sources/ReviewView.swift:33`): the view gains no branch, and `withheld` joins the
+  phase's one case list (`:7`).
+- The head card stays the withheld one until a bury, so a flag marks the card the learner was told
+  about.

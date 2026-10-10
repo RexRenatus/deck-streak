@@ -56,7 +56,8 @@ describe('the study routes', () => {
       css: '',
       labels: ['<1m', '<6m', '<10m', '4d'],
       undo: null,
-      late: false
+      late: false,
+      withheld: false
     };
     const head: Head = { counts: { new: 1, learning: 0, review: 0 }, card };
     mocks.client.mockResolvedValue({ card: async () => head });

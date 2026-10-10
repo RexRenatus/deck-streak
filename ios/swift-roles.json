@@ -11,7 +11,7 @@
   "ios/App/Sources/ReviewChrome.swift": {"role": "view", "decisions": 3},
   "ios/App/Sources/ReviewModel.swift": {"role": "model", "decisions": 6},
   "ios/App/Sources/ReviewPlayback.swift": {"role": "model", "decisions": 2},
-  "ios/App/Sources/ReviewSession.swift": {"role": "session", "decisions": 3},
+  "ios/App/Sources/ReviewSession.swift": {"role": "session", "decisions": 4},
   "ios/App/Sources/ReviewView.swift": {"role": "view", "decisions": 3},
   "ios/App/Sources/SyncConfiguration.swift": {"role": "config", "decisions": 2},
   "ios/App/Sources/SyncCredentialStore.swift": {"role": "credential", "decisions": 3},

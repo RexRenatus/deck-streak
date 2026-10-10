@@ -1,7 +1,7 @@
 // SPEC-350 R5, R10, R11; ADR-361. Each status the review announces, by its message: every refusal
-// the engine answers with, the card the frame refused, and the done deck. An undo the engine
-// refuses, or does not offer, says why: the answer has synced, or something changed after it
-// (SPEC-371 R10).
+// the engine answers with, the card the frame refused, the card the engine withheld (SPEC-380 R6),
+// and the done deck. An undo the engine refuses, or does not offer, says why: the answer has
+// synced, or something changed after it (SPEC-371 R10).
 import { m } from '$lib/paraglide/messages.js';
 import type { Status } from './review';
 
@@ -13,6 +13,7 @@ type StatusKey =
   | 'study_refused_not_open'
   | 'study_refused_not_shown'
   | 'study_card_escaped'
+  | 'study_card_withheld'
   | 'study_done'
   | 'undo_synced'
   | 'undo_gone';
@@ -28,6 +29,7 @@ export const STATUS_KEYS: Record<Status, StatusKey> = {
   'undo-synced': 'undo_synced',
   'not-undoable': 'undo_gone',
   escaped: 'study_card_escaped',
+  withheld: 'study_card_withheld',
   done: 'study_done'
 };
 

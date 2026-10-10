@@ -1,0 +1,132 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S38000-OCCLUSION-LAYER-ARM-DROPPED",
+        "engine-core",
+        "src/occlusion.rs",
+        "question.contains(MASK_LAYER) || question.contains(SHAPE)",
+        "(question.contains(MASK_LAYER) && false) || question.contains(SHAPE)",
+        "occlusion::a_question_holding_the_mask_layer_is_withheld",
+        "a question holding the engine's mask layer and no shape is marked; with the layer's arm answering false, such a question would be shown with the parts its masks hide (SPEC-380 A1)"
+      ],
+      [
+        "S38001-OCCLUSION-SHAPE-ARM-DROPPED",
+        "engine-core",
+        "src/occlusion.rs",
+        "question.contains(MASK_LAYER) || question.contains(SHAPE)",
+        "question.contains(MASK_LAYER) || (question.contains(SHAPE) && false)",
+        "occlusion::a_question_holding_an_occlusion_shape_is_withheld",
+        "a question holding an occlusion shape and no mask layer is marked; with the shape's arm answering false, such a question would be shown with the parts its masks hide (SPEC-380 A2)"
+      ],
+      [
+        "S38002-OCCLUSION-EITHER-BECOMES-BOTH",
+        "engine-core",
+        "src/occlusion.rs",
+        "question.contains(MASK_LAYER) || question.contains(SHAPE)",
+        "question.contains(MASK_LAYER) && question.contains(SHAPE)",
+        "occlusion::a_question_holding_the_mask_layer_is_withheld",
+        "either marker alone marks a question; joined by both instead of either, a question holding the layer and no shape would be shown (SPEC-380 A1)"
+      ],
+      [
+        "S38003-OCCLUSION-LAYER-NAME",
+        "engine-core",
+        "src/occlusion.rs",
+        "const MASK_LAYER: &str = \"image-occlusion-canvas\";",
+        "const MASK_LAYER: &str = \"image-occlusion-layer\";",
+        "occlusion::a_question_holding_the_mask_layer_is_withheld",
+        "the mask layer's marker is the engine's own canvas id, measured on a note the engine builds; with another name, the engine's layer would mark nothing (SPEC-380 R1, A1)"
+      ],
+      [
+        "S38004-OCCLUSION-SHAPE-NAME",
+        "engine-core",
+        "src/occlusion.rs",
+        "const SHAPE: &str = \"data-shape=\";",
+        "const SHAPE: &str = \"data-shapes=\";",
+        "occlusion::a_question_holding_an_occlusion_shape_is_withheld",
+        "the shape's marker is the attribute every engine shape carries, measured on a note the engine builds; with another name, a shape would mark nothing (SPEC-380 R1, A2)"
+      ],
+      [
+        "S38005-FACE-WITHHELD-NEVER",
+        "engine-core",
+        "src/face.rs",
+        "withheld: true,",
+        "withheld: false,",
+        "occlusion::the_engines_occlusion_card_is_withheld_on_both_sides",
+        "a face the rule marks says so; with its withheld set false, a review would treat an emptied face as a card to show and grade (SPEC-380 R2, A4)"
+      ],
+      [
+        "S38006-FACE-TEXT-KEPT",
+        "engine-core",
+        "src/face.rs",
+        "            text: String::new(),\n            css: String::new(),",
+        "            text,\n            css: String::new(),",
+        "occlusion::the_engines_occlusion_card_is_withheld_on_both_sides",
+        "a withheld face holds no text; keeping it, the question's image and its unmasked parts would reach the review (SPEC-380 R2, A4)"
+      ],
+      [
+        "S38007-FACE-CLIPS-KEPT",
+        "engine-core",
+        "src/face.rs",
+        "            autoplay: Vec::new(),\n            replay: Vec::new(),",
+        "            autoplay,\n            replay,",
+        "occlusion::the_engines_occlusion_card_is_withheld_on_both_sides",
+        "a withheld face plays nothing; keeping its clips, the note's audio would play for a card that is not shown (SPEC-380 R2, A4)"
+      ],
+      [
+        "S38008-FACE-CSS-KEPT",
+        "engine-core",
+        "src/face.rs",
+        "css: String::new(),",
+        "css: rendered.css.clone(),",
+        "occlusion::the_engines_occlusion_card_is_withheld_on_both_sides",
+        "a withheld face carries no note style; keeping its CSS, the note's style would reach a page that shows none of the note (SPEC-380 R2, A4)"
+      ],
+      [
+        "S38009-FFI-WITHHELD-NEVER",
+        "ffi",
+        "src/face.rs",
+        "withheld: face.withheld,",
+        "withheld: false,",
+        "occlusion::an_occlusion_card_face_is_withheld_with_the_line",
+        "the card face carries the core's withheld answer; set false, the native review would offer Show Answer and the ratings on a card it cannot show (SPEC-380 R4, A7)"
+      ],
+      [
+        "S38010-FFI-LINE-DROPPED",
+        "ffi",
+        "src/face.rs",
+        "let text = if face.withheld {",
+        "let text = if face.withheld && WITHHELD.is_empty() {",
+        "occlusion::an_occlusion_card_face_is_withheld_with_the_line",
+        "a withheld face's page holds the line in the card's place; wrapping the face's emptied text instead, the learner would see a blank card and no reason (SPEC-380 R4, A7)"
+      ],
+      [
+        "S38011-FFI-LINE-TEXT",
+        "ffi",
+        "src/face.rs",
+        "You can still bury or flag it.\";",
+        "You can still bury it.\";",
+        "occlusion::an_occlusion_card_face_is_withheld_with_the_line",
+        "the native line is the web's en line word for word, compared with a literal in the test; a changed line would tell the learner less than the web does (SPEC-380 R6, A7)"
+      ],
+      [
+        "S38012-WASM-WITHHELD-NEVER",
+        "web-engine",
+        "src/wasm.rs",
+        "\"withheld\": withheld,",
+        "\"withheld\": false,",
+        "occlusion_view::the_shown_card_carries_the_cores_withheld_answer",
+        "the shown card's view carries the core's withheld answer; set false, the web review would draw the card's frame and offer a reveal and the grades on it (SPEC-380 R3, A6)"
+      ],
+      [
+        "S38013-WASM-QUESTION-KEPT",
+        "web-engine",
+        "src/wasm.rs",
+        "\"question\": unless_withheld(question.val),",
+        "\"question\": question.val,",
+        "occlusion_view::the_shown_card_carries_the_cores_withheld_answer",
+        "a withheld view's question is empty; keeping it, the question's image and its unmasked parts would reach the page (SPEC-380 R3, A6)"
+      ]
+    ]
+  }
+}
