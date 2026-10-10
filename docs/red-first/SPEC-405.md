@@ -34,12 +34,34 @@ and SPEC-352 A5
 (`test_ios_lane.LanePlan.test_the_release_plan_admits_only_an_annotated_semver_tag_on_mains_first_parent_chain`)
 move by ADR-419 D6, and each is red at the first commit: A14's release pin now expects the dispatch
 the lane does not declare yet, and A5's refused dispatch at a branch named like the tag now expects
-the new message. Each one's failing line, as CI reads it at the first commit, is recorded here with
-the fence's results.
+the new message. Each one's failing line, as CI reads it at the first commit `390d129f`, follows,
+and each is green at the fix commit `3652fe61`:
+
+- SPEC-352 A14: `AssertionError: {'push': {'tags': ['v[0-9]+.[0-9]+.[0-9]+']}} != {'push': {'tags': ['v[0-9]+.[0-9]+.[0-9]+']}, 'workflow_dispatch': None}`
+- SPEC-352 A5: `AssertionError: "the release lane runs on a tag's push or dispatch only, not on push of refs/heads/main" not found in ['the release lane runs on a tag push only, not on push of refs/heads/main']`
+
+The first commit also reddened one test that is no criterion of this SPEC,
+`test_threat_model.TheModelHolds.test_every_control_cites_a_line_that_holds`, which CI reads at
+`390d129f` as `AssertionError: Lists differ: ['docs/schematics/the-app-campaigns-surfac[1008 chars]ial'] != []`.
+Its red is a moved citation, not a criterion red: the first commit's two added imports and the
+longer pin comment moved two test definitions that the threat model cites by line, and the fix's
+header moves the lane's `tags:` line, which the model also cites. Commit `364b2e26` is its cure: it
+re-derives those five citations to the lines their quotes now sit on and changes only the numbers.
+The fence records no line for it.
 
 A6 and A7 hold properties the change must keep, so they are not red: green at the base and after.
 
 ```red-first
 A6: not red: holds that only the app job reads the credential, a property the change must keep; green at the base and after
 A7: not red: holds that apple-on-tag.yml calls the job body on every release tag, unchanged by ADR-419 D2b; green at the base and after
+A1: red at 390d129f: AssertionError: Lists differ: ['push'] != ['push', 'workflow_dispatch']
+A1: green at 3652fe61
+A2: red at 390d129f: AssertionError: {} != {'lane': 'release', 'number': '3', 'version': '0.2.0'}
+A2: green at 3652fe61
+A3: red at 390d129f: AssertionError: 'workflow_dispatch' not found in ['push'] : the lane declares no workflow_dispatch trigger
+A3: green at 3652fe61
+A4: red at 390d129f: AssertionError: 'gh run list --workflow testflight-release.yml --commit "$(git rev-parse \'vX.Y.Z^{commit}\')"' not found in ['## 8. TestFlight builds of the iPhone and iPad app'
+A4: green at 3652fe61
+A5: red at 390d129f: AssertionError: 'the release lane takes no run that github-actions[bot] started' not found in []
+A5: green at 3652fe61
 ```
