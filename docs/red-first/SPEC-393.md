@@ -41,6 +41,9 @@ A13: green at 530f6478
 A15: green at 530f6478
 A16: green at 530f6478
 A19: green at 530f6478
+A14: not read red at push 1 (the harness skipped step 15 behind A17's planned red; run 38054884550)
+A14: green at cf1acd50: run 38064479715, job apple / harness, step "the review screen's tests, Debug, on the iPhone and then the iPad": ReviewSessionTests.test_the_parity_card_speaks_the_voice_its_template_asks passed on the iPhone and on the iPad
+A17: green at cf1acd50: run 38064479715, job apple / harness, step "the card view's planted suite, Debug, on the iPhone and then the iPad": FactoryTests.test_the_factory_plays_media_inline passed on the iPhone and on the iPad
 ```
 
 A3's test was on the base before this delivery. Its two literals now read `"card card1"` by day and
@@ -64,3 +67,14 @@ A14 has no line here, because its step did not run at d4298b50. In the same job,
 red skipped every later step, and the review screen's step runs only when the app's step ran, so it
 was skipped too. A14's red at this commit is unproven: it is not recorded as red, and it is not
 recorded as not red.
+
+A14 and A17 were read green at cf1acd50, the second head the pull request's checks ran. Both
+destinations are read from each step's result bundle, whose first test action names the iPhone and
+whose second names the iPad: the review screen's test and the factory's test passed in both. A14's
+red stays unproven, as the paragraph above says; its line records that it was not read, not that it
+was not red.
+
+Between the greens at 530f6478 and cf1acd50, the branch took the base branch's card view layers in
+one merge (f4125e1a), re-derived the three factory lines a schematic cites (7cdcaa50), and added two
+unit tests to the native adapter's face module for a mutant the in-diff run missed (cf1acd50). None
+of the three changes an assertion of any criterion's test.
