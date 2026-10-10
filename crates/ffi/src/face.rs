@@ -107,9 +107,11 @@ fn plays_inline(text: &str) -> String {
         .windows(VIDEO_OPEN.len())
         .position(|window| window.eq_ignore_ascii_case(VIDEO_OPEN.as_bytes()))
     {
-        let name_end = start + VIDEO_OPEN.len();
-        written.push_str(&rest[..name_end]);
-        rest = &rest[name_end..];
+        let (before, tag) = rest.split_at(start);
+        written.push_str(before);
+        let (name, after) = tag.split_at(VIDEO_OPEN.len());
+        written.push_str(name);
+        rest = after;
         if rest.starts_with(|next: char| next.is_ascii_whitespace() || next == '/' || next == '>') {
             written.push_str(PLAYS_INLINE);
         }
