@@ -204,6 +204,11 @@ line, never computed by the code under test.
 | `docs/schematics/fsrs-7-replay-undo-probe-and-full-sync-choice.md` | document | sections 6 to 8, insert-only |
 | `formal/lean/Formal/Vectors.lean` | formal | one writer arm |
 | `formal/lean/Formal.lean` | formal | one import |
+| `.github/workflows/apple-on-change.yml` | ci | the change caller watches `crates/fsrs7/**` |
+| `.github/workflows/testflight-internal.yml` | ci | the internal push filter watches `crates/fsrs7/**` |
+| `scripts/tests/test_ci_workflows.py` | tests | `APPLE_PATHS` gains `crates/fsrs7/**` |
+| `scripts/tests/test_testflight_workflows.py` | tests | `INTERNAL_PATHS` gains `crates/fsrs7/**` |
+| `docs/schematics/context-map.md` | document | the `engine-core --> fsrs7` arrow and its layer, and the prose beside it |
 
 No migration. No file under `web/`, `ios/`, `crates/ffi/` or `crates/web-engine/` changes.
 
