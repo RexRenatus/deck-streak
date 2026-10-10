@@ -199,7 +199,7 @@ The study suite (`web/app/tests-study`) also runs the narrowed page, in two brow
 | `web/app/tests/streak-calendar.spec.ts` | miniapp (browser) | opens the page as a launch |
 | `web/app/tests-study/study.spec.ts` | miniapp (browser) | the comment at lines 32-34 only |
 | `scripts/tests/test_threat_model.py` | hygiene | the web surface's pinned row-id list gains `"E6"`; no assertion is removed |
-| `scripts/mutation-equivalent.d/miniapp.json` | mutation | only if a StrykerJS survivor in `telegram-launch.ts` is triaged equivalent |
+| `scripts/mutation-equivalent.d/miniapp.json` | mutation | unchanged: no StrykerJS survivor in `telegram-launch.ts` was triaged equivalent |
 
 `web/app/svelte.config.js` and `deploy/caddy/deck-streak.caddy` are unchanged. No migration, and no
 hand mutation row.
