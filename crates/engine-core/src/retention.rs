@@ -27,12 +27,18 @@ pub fn removals<K: PartialEq + Copy, T: Ord>(held: &[Held<K, T>]) -> Vec<usize> 
 /// The newest of a kind is never removed, whatever `keep` is.
 #[must_use]
 pub fn removed<K: PartialEq + Copy, T: Ord>(held: &[Held<K, T>], keep: usize) -> Vec<usize> {
-    // The red stub: the oldest file of all is removed, whatever its kind and whatever `keep` is.
-    let _ = keep;
+    // the grouping key: the files of one kind are counted together, and only together
+    let kind = |file: &Held<K, T>| file.kind;
     held.iter()
         .enumerate()
-        .min_by(|(_, one), (_, other)| one.made.cmp(&other.made))
+        .filter(|(_, file)| {
+            let newer = held
+                .iter()
+                .filter(|other| kind(other) == kind(file) && other.made > file.made)
+                .count();
+            // the newest of a kind is exempt; any other file goes once `keep` newer ones exist
+            !(newer == 0 || newer < keep)
+        })
         .map(|(index, _)| index)
-        .into_iter()
         .collect()
 }

@@ -225,7 +225,7 @@ const LOGIN = 1024;
 const loginText = (value: unknown) => typeof value === 'string' && value.length >= 1 && value.length <= LOGIN;
 /** A backup's id: its kind and its number from 1, as the web engine names it, and never a path. */
 const BACKUP = /^(backup|server)-[1-9][0-9]{0,8}$/;
-const backupId = (value: unknown) => typeof value === 'string' || BACKUP.test(String(value));
+const backupId = (value: unknown) => typeof value === 'string' && BACKUP.test(value);
 
 /** Each operation's arguments, and the test each must pass: the engine's own types bound them. */
 const ARGS: Record<Op, Record<string, (value: unknown) => boolean>> = {

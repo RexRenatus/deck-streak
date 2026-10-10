@@ -173,6 +173,10 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     let state = StateDirectory::from_env(env)?;
     let freshness = Freshness::from_env(env)?;
     let credentials = CredentialsDirectory::from_env(env)?;
+    // The archive's lister is read before the loader takes the directory: a list command that is
+    // set and malformed refuses start, and an absent command or credential turns it off (SPEC-377
+    // R14).
+    let archive_lister = CommandLister::configured(env, &credentials)?;
     let loader = CredentialLoader::new(credentials, redactor.clone());
     let gate = OwnerGate::load(&loader, freshness)?;
     // The seal secret is read beside the other credentials, before anything is bound: an absent one
@@ -196,11 +200,14 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     let access = OwnerAccess::new(gate, Arc::clone(&clock), kernel.study_day_rule);
     let late = wiring::LateInstruments::new();
     let offload = Offload::new(kernel.offload_workers, clock);
-    let router = deck_streak_api::router(with_seal_secret(
-        api_state(env, &offload, readiness.clone(), access)
-            .with_linking(linking, owner)
-            .with_instruments(Arc::new(late.clone())),
-        seal,
+    let router = deck_streak_api::router(with_snapshot_lister(
+        with_seal_secret(
+            api_state(env, &offload, readiness.clone(), access)
+                .with_linking(linking, owner)
+                .with_instruments(Arc::new(late.clone())),
+            seal,
+        ),
+        archive_lister,
     ));
     tracing::info!(listen = %bound, "the api role serves");
     notifier.notify(NotifyState::Ready);

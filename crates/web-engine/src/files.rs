@@ -117,7 +117,7 @@ pub fn unrecorded(listed: &[String]) -> Vec<String> {
 /// then by the number minted (ADR-388 D17). One with no record is not listed yet.
 #[must_use]
 pub fn backups(listed: &[String]) -> Vec<Backup> {
-    let found: Vec<Backup> = listed
+    let mut found: Vec<Backup> = listed
         .iter()
         .filter_map(|name| {
             let (kind, number) = backup_of(name)?;
@@ -132,7 +132,7 @@ pub fn backups(listed: &[String]) -> Vec<Backup> {
             })
         })
         .collect();
-    // The red stub: the pool's order, unsorted.
+    found.sort_by_key(|backup| std::cmp::Reverse((backup.made, backup.number)));
     found
 }
 
@@ -144,7 +144,6 @@ pub fn exported(listed: &[String], collection: &str, id: &str) -> Option<String>
         .rsplit_once('/')
         .map_or("", |(directory, _)| directory);
     let name = format!("{directory}/{id}.anki2");
-    // The red stub: any id is exported.
-    let _ = listed;
-    Some(name)
+    let backup = backup_of(&name).is_some();
+    (backup && holds(listed, &name)).then_some(name)
 }

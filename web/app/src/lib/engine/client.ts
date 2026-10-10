@@ -201,7 +201,7 @@ export class EngineClient {
 
   /** One backup's bytes, by an id `backups` answered; the Worker moves them to the page by
    * transfer (SPEC-377 R16). */
-  backupExport(backup: string): Promise<Uint8Array> {
-    return this.#send({ op: 'backup-export', backup }) as Promise<Uint8Array>;
+  backupExport(backup: string): Promise<Uint8Array<ArrayBuffer>> {
+    return this.#send({ op: 'backup-export', backup }) as Promise<Uint8Array<ArrayBuffer>>;
   }
 }
