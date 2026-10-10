@@ -6508,6 +6508,14 @@ DYNAMIC_IMPORTS = {
             1,
         ),
         ("test_backup_units", "load_backup", "spec.loader.exec_module(module)", 1),
+        ("test_dynamic_imports_check", "load", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_dynamic_imports_check",
+            "load",
+            "importlib.util.spec_from_file_location('dynamic_imports_check', SCRIPT)",
+            1,
+        ),
+        ("test_dynamic_imports_check", "load", "spec.loader.exec_module(module)", 1),
         ("test_web_engine_size", "load_gate", "importlib.util.module_from_spec(spec)", 1),
         (
             "test_web_engine_size",
