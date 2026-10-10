@@ -74,7 +74,11 @@ A10: green at 583e09d235e433e709fc65fa945c94769b54c6aa
 A11: red at 003d865917abf764aef500aca8aacb261a578af9: crates/ingest/tests/sensitive.rs:165:5: assertion `left == right` failed: the export carries every mark, every column; left: None; right: Some([{"created_at": 1700000000000, "deck_id": 1}, {"created_at": 1700000000500, "deck_id": 4}])
 A11: green at 96d496bdcd05141ab13a9d627fbfa69339e6aafb
 A12: red at b8b6c3abf41855cf1d662c17a9a9205b30d0a09c: web/app/src/lib/study/ai-decks.test.ts:139:68: AssertionError: expected [ [], [ …(4) ], '', [] ] to deeply equal [ [ [ '2', true ] ], [ …(4) ], …(2) ]: turning Spanish's switch on asked the server for nothing and the server holds no mark
+A12: green at 427fba4dfa6cca0ad4d27bc2c54d38cb53ed7aa2
 A13: red at b8b6c3abf41855cf1d662c17a9a9205b30d0a09c: web/app/src/lib/study/ai-decks.test.ts:174:21: AssertionError: expected [ [ …(4) ], …(3) ] to deeply equal [ [ …(4) ], …(3) ]: every switch shows off; Default is marked and on, and Kana and Hiragana under it are on, locked and read "Kept away because Default is."
+A13: green at 427fba4dfa6cca0ad4d27bc2c54d38cb53ed7aa2
 A14: red at b8b6c3abf41855cf1d662c17a9a9205b30d0a09c: web/app/src/lib/study/ai-decks.test.ts:221:46: AssertionError: expected [ [], [ [ …(4) ], [ …(4) ] ], '' ] to deeply equal [ [ [ '2', true ] ], …(2) ]: Spanish's switch is left on with no message; it is turned back off and the status reads "That change was not saved. Try again."
+A14: green at 427fba4dfa6cca0ad4d27bc2c54d38cb53ed7aa2
 A15: red at b8b6c3abf41855cf1d662c17a9a9205b30d0a09c: web/app/src/lib/study/ai-decks-locales.test.ts:77:19: AssertionError: expected { en: [ …(8) ], …(6) } to deeply equal { en: [], 'zh-Hans': [], …(5) }: each of the seven locales lacks all eight keys ("en lacks ai_decks_title" through "zh-Hant lacks ai_decks_back")
+A15: green at 427fba4dfa6cca0ad4d27bc2c54d38cb53ed7aa2
 ```
