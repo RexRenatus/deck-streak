@@ -204,6 +204,7 @@ on the continuous integration's simulator step; their reds and greens are read t
 | `web/app/messages/zh-Hans.json` | `miniapp` | `study_card_withheld` (R6) |
 | `web/app/messages/zh-Hant.json` | `miniapp` | `study_card_withheld` (R6) |
 | `web/app/src/lib/study/occlusion-guard.test.ts` | `miniapp` | added: A9 to A12 |
+| `web/app/src/lib/study/refusal.test.ts` | `miniapp` | `withheld: 'study_card_withheld'` in its written-out status register (R6); no other change |
 | `web/app/src/lib/study/audio.test.ts` | `miniapp` | `withheld: false` in its card view fixtures; no assertion changes |
 | `web/app/src/lib/study/late-line.test.ts` | `miniapp` | `withheld: false` in its card view fixtures; no assertion changes |
 | `web/app/src/lib/study/review-screen.test.ts` | `miniapp` | `withheld: false` in its card view fixtures; no assertion changes |

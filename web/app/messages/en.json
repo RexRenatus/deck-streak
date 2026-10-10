@@ -172,6 +172,7 @@
   "study_refused_not_open": "Your collection is not open yet. Try again.",
   "study_refused_not_shown": "That card was no longer on screen, so the review showed the card that is.",
   "study_card_escaped": "This card cannot be shown safely here. You can still answer, bury or flag it.",
+  "study_card_withheld": "This image occlusion card cannot be shown here, because this app does not draw its masks. You can still bury or flag it.",
   "study_done": "This deck is done for today.",
   "study_title": "Study",
   "study_decks": "Decks",

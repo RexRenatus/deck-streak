@@ -59,8 +59,11 @@ actor ReviewSession {
             card.cardID, answer: false, autoplay: autoplay, installed: installed)
         head = card
         shownAt = Date()
+        // A card the engine withheld shows in its own phase, where only a bury or a flag starts
+        // (SPEC-380 R7).
         return ReviewStep(
-            phase: .question, face: face, counts: counts, intervals: intervals, flag: card.flag)
+            phase: face.withheld ? .withheld : .question, face: face, counts: counts,
+            intervals: intervals, flag: card.flag)
     }
 
     /// The shown card's answer face, or the empty face when no card is shown.

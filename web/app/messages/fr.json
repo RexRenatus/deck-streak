@@ -72,6 +72,7 @@
   "study_refused_not_open": "Votre collection n’est pas encore ouverte. Réessayez.",
   "study_refused_not_shown": "Cette carte n’était plus à l’écran ; la révision affiche maintenant celle qui l’est.",
   "study_card_escaped": "Cette carte ne peut pas être affichée ici en toute sécurité. Vous pouvez quand même y répondre, l’enfouir ou la marquer.",
+  "study_card_withheld": "Cette carte de type Schéma à Remplir ne peut pas être affichée ici, car cette application ne dessine pas ses masques. Vous pouvez quand même l’enfouir ou la marquer.",
   "study_done": "Ce paquet est terminé pour aujourd’hui.",
   "study_title": "Étudier",
   "study_decks": "Paquets",

@@ -72,6 +72,7 @@
   "study_refused_not_open": "Tu colección aún no está abierta. Inténtalo de nuevo.",
   "study_refused_not_shown": "Esa tarjeta ya no estaba en pantalla, así que el repaso mostró la que sí lo está.",
   "study_card_escaped": "Esta tarjeta no se puede mostrar aquí de forma segura. Aún puedes responderla, enterrarla o marcarla.",
+  "study_card_withheld": "Esta tarjeta de oclusión de imagen no se puede mostrar aquí, porque esta aplicación no dibuja sus máscaras. Aún puedes enterrarla o marcarla.",
   "study_done": "Has terminado este mazo por hoy.",
   "study_title": "Estudiar",
   "study_decks": "Mazos",

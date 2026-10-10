@@ -17,6 +17,9 @@ use deck_streak_engine_core::media::Reader;
 const DAY: &str = "card";
 /// The body's classes on a night face: Anki's two spellings of night mode beside the card's.
 const NIGHT: &str = "card nightMode night_mode";
+/// The line a withheld face's page holds in the card's place (SPEC-380 R4, R6): the web's `en` line,
+/// since the native review shows English alone.
+const WITHHELD: &str = "This image occlusion card cannot be shown here, because this app does not draw its masks. You can still bury or flag it.";
 
 /// One thing a face plays, as a native client receives it.
 #[derive(Debug, Clone, PartialEq, uniffi::Enum)]
@@ -68,9 +71,15 @@ impl Reader for MediaFolder {
     }
 }
 
-/// The page that holds `face`'s text, with the night classes only when `night` asks for them.
+/// The page that holds `face`'s text, with the night classes only when `night` asks for them; a
+/// withheld face's page holds the one line in the text's place, and its CSS is already empty.
 fn document(face: &Face, night: bool) -> String {
     let classes = if night { NIGHT } else { DAY };
+    let text = if face.withheld {
+        WITHHELD
+    } else {
+        face.text.as_str()
+    };
     format!(
         concat!(
             "<!DOCTYPE html><html><head><meta charset=\"utf-8\">",
@@ -79,7 +88,7 @@ fn document(face: &Face, night: bool) -> String {
         ),
         css = face.css,
         classes = classes,
-        text = face.text,
+        text = text,
     )
 }
 
@@ -107,7 +116,7 @@ impl CardFace {
             autoplay: face.autoplay.into_iter().map(clip).collect(),
             replay: face.replay.into_iter().map(clip).collect(),
             omitted: face.omitted,
-            withheld: false,
+            withheld: face.withheld,
         }
     }
 }
