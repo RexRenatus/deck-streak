@@ -189,3 +189,44 @@ async fn the_marks_are_exported_and_an_erase_leaves_every_deck_readable() {
     );
     db.close().await;
 }
+
+#[test]
+fn only_an_admitted_card_is_admitted() {
+    let decided = [
+        (Admission::Admitted, true),
+        (Admission::KeptAway, false),
+        (Admission::Unresolved, false),
+        (Admission::Unreadable, false),
+    ]
+    .map(|(admission, _)| (admission, admission.admitted()));
+    assert_eq!(
+        decided,
+        [
+            (Admission::Admitted, true),
+            (Admission::KeptAway, false),
+            (Admission::Unresolved, false),
+            (Admission::Unreadable, false),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn a_mark_and_an_unmark_answer_the_exact_set_they_leave() {
+    let (_directory, db) = migrated().await;
+    let store = SqliteSensitiveDecks::new(db.clone());
+    let at = deck_streak_kernel::UtcMillis::from_epoch_millis(1_700_000_000_000);
+    let first = store.mark(5, at).await.expect("the first mark");
+    let second = store.mark(9, at).await.expect("the second mark");
+    let unmarked = store.unmark(5).await.expect("the unmark");
+    let read = store.read_marked().await.expect("the read");
+    assert_eq!(
+        (first, second, unmarked, read),
+        (
+            BTreeSet::from([5]),
+            BTreeSet::from([5, 9]),
+            BTreeSet::from([9]),
+            BTreeSet::from([9]),
+        )
+    );
+    db.close().await;
+}

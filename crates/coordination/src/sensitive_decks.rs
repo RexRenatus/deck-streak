@@ -38,3 +38,35 @@ pub async fn mark(db: &Db, deck: i64, at: UtcMillis) -> Result<BTreeSet<i64>, Ke
 pub async fn unmark(db: &Db, deck: i64) -> Result<BTreeSet<i64>, KernelError> {
     SqliteSensitiveDecks::new(db.clone()).unmark(deck).await
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::expect_used)]
+
+    use super::*;
+
+    #[tokio::test]
+    async fn list_mark_and_unmark_answer_the_exact_set() {
+        let directory = tempfile::tempdir().expect("a scratch directory");
+        let db = Db::open(&directory.path().join("deckstreak.db"))
+            .await
+            .expect("the database opens");
+        let at = UtcMillis::from_epoch_millis(1_700_000_000_000);
+        let empty = list(&db).await.expect("the first list");
+        let first = mark(&db, 5, at).await.expect("the first mark");
+        let second = mark(&db, 9, at).await.expect("the second mark");
+        let listed = list(&db).await.expect("the second list");
+        let unmarked = unmark(&db, 5).await.expect("the unmark");
+        assert_eq!(
+            (empty, first, second, listed, unmarked),
+            (
+                BTreeSet::new(),
+                BTreeSet::from([5]),
+                BTreeSet::from([5, 9]),
+                BTreeSet::from([5, 9]),
+                BTreeSet::from([9]),
+            )
+        );
+        db.close().await;
+    }
+}
