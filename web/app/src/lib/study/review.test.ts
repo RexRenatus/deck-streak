@@ -4,7 +4,16 @@
 import { describe, expect, it } from 'vitest';
 import { EngineError } from '$lib/engine/client';
 import type { CardView, Head, UndoOffer } from '$lib/engine/protocol';
-import { Review, step, type Effect, type Phase, type ReviewEvent, type ReviewState, type StudyClient } from './review';
+import {
+  Review,
+  step,
+  type Effect,
+  type Phase,
+  type ReviewEvent,
+  type ReviewState,
+  type Status,
+  type StudyClient
+} from './review';
 
 // SPEC-350 R2, R7, R10, A11, A12; ADR-361. The review's machine shows a card's question, reveals
 // its answer, rates the shown card with the time since its question showed, and moves on; while a
@@ -319,7 +328,7 @@ describe('the review', () => {
     expect([review.phase, review.face]).toEqual(['busy', { view: view(2), side: 'question' }]);
     client.release();
     await review.settled();
-    expect(review.face).toEqual({ view: view(2, { flag: 1 }), side: 'question' });
+    expect(review.face).toEqual({ view: view(2, { flag: 1, undo: 'flag' }), side: 'question' });
 
     // a refused bury clears the card, and the status region speaks instead
     client.refusals.bury = new EngineError('collection-busy', 'another tab has the collection');
@@ -695,5 +704,167 @@ describe('the review', () => {
     client.release();
     await review.settled();
     expect([review.phase, review.view?.id, review.status]).toEqual(['question', 3n, null]);
+  });
+});
+
+// SPEC-383 R10, R13, A21 to A24; ADR-397. The undo control names the change it would undo; a flag
+// sets the view's undo to the flag's; a pressed undo of a bury or a flag asks before it writes; and
+// a refused undo of a change says why in the change's own words, while an answer's keep theirs.
+describe("the undo of the review's last bury or flag", () => {
+  /** The offer of the review's bury of card 1 at step 9, which goes back to review. */
+  const BURY: UndoOffer = { offer: { kind: 'bury', card: 1n, step: 9, text: 'question 1', returns: 'review' } };
+  /** The offer of the review's flag of card 1 at step 9, which added the red flag. */
+  const FLAG: UndoOffer = { offer: { kind: 'flag', card: 1n, step: 9, text: 'question 1', flag: 'added' } };
+  const CHANGE_SYNCED = 'Your last change has synced, so it can no longer be undone.';
+  const CHANGE_GONE = 'This change can no longer be undone: something changed after it.';
+
+  /** A review of `client`'s cards, settled on its first card's question. */
+  async function started(client: FakeClient): Promise<Review> {
+    const review = new Review(
+      async () => client,
+      () => 0,
+      () => undefined
+    );
+    review.start();
+    await review.settled();
+    return review;
+  }
+
+  it('the undo control names the change it would undo', async () => {
+    const cases: [undo: CardView['undo'], shown: boolean, label: string][] = [
+      ['bury', true, 'Undo bury'],
+      ['flag', true, 'Undo flag'],
+      ['answer', true, 'Undo answer'],
+      ['synced', false, 'Undo answer'],
+      ['change-synced', false, 'Undo'],
+      [null, false, 'Undo answer']
+    ];
+    for (const [undo, shown, label] of cases) {
+      const review = await started(new FakeClient([head(view(1, { undo }))]));
+      expect([review.controls.includes('undo'), review.undoLabel], String(undo)).toEqual([shown, label]);
+    }
+    examined('views', cases);
+  });
+
+  it('after a flag the undo control offers the flag', async () => {
+    const before: CardView['undo'][] = ['answer', null, 'synced'];
+    for (const undo of before) {
+      const client = new FakeClient([head(view(1, { undo }))]);
+      const review = await started(client);
+      review.act('flag');
+      await review.settled();
+      expect([review.view?.undo, review.view?.flag, review.phase], String(undo)).toEqual(['flag', 1, 'question']);
+      expect([review.controls, review.undoLabel, client.calls], String(undo)).toEqual([
+        ['show-answer', 'undo', 'bury', 'flag'],
+        'Undo flag',
+        ['card', 'flag 1']
+      ]);
+    }
+    examined('views before a flag', before);
+  });
+
+  it('a pressed undo of a bury or a flag asks before it writes', async () => {
+    const offers: [undo: 'bury' | 'flag', offered: UndoOffer][] = [
+      ['bury', BURY],
+      ['flag', FLAG]
+    ];
+    for (const [undo, offered] of offers) {
+      const client = new FakeClient([head(view(2, { undo })), head(view(1))]);
+      client.offered = offered;
+      const review = await started(client);
+      review.act('undo');
+      await review.settled();
+      // the press read the offer and wrote nothing: the review asks, naming the change
+      expect([review.phase, review.offer, client.calls], undo).toEqual([
+        'confirming',
+        offered.offer,
+        ['card', 'undo-offer']
+      ]);
+      // the confirmation writes the offered card and step, and only it
+      review.act('undo');
+      await review.settled();
+      expect([review.phase, review.view?.id, review.offer, client.calls], undo).toEqual([
+        'question',
+        1n,
+        null,
+        ['card', 'undo-offer', 'undo 1 9', 'card']
+      ]);
+    }
+    examined('offers of a change', offers);
+  });
+
+  it('a refused undo of a change reads its own notice', async () => {
+    // an offer the Worker declines reads the change's notice, back on the side, with nothing written
+    const declined: [undo: 'bury' | 'flag', why: 'synced' | 'none', status: Status, line: string][] = [
+      ['bury', 'synced', 'undo-synced', CHANGE_SYNCED],
+      ['bury', 'none', 'not-undoable', CHANGE_GONE],
+      ['flag', 'synced', 'undo-synced', CHANGE_SYNCED],
+      ['flag', 'none', 'not-undoable', CHANGE_GONE]
+    ];
+    for (const [undo, why, status, line] of declined) {
+      const client = new FakeClient([head(view(2, { undo }))]);
+      client.offered = { offer: null, why };
+      const review = await started(client);
+      review.act('undo');
+      await review.settled();
+      expect([review.phase, review.status, review.statusLine, client.calls], `${undo} ${why}`).toEqual([
+        'question',
+        status,
+        line,
+        ['card', 'undo-offer']
+      ]);
+    }
+    examined('declined offers of a change', declined);
+
+    // a confirmation the Worker refuses loads the next card, and says why in the change's words
+    const refused: [code: 'undo-synced' | 'not-undoable', line: string][] = [
+      ['undo-synced', CHANGE_SYNCED],
+      ['not-undoable', CHANGE_GONE]
+    ];
+    for (const [code, line] of refused) {
+      const client = new FakeClient([head(view(2, { undo: 'flag' })), head(view(3))]);
+      client.offered = FLAG;
+      const review = await started(client);
+      review.act('undo');
+      await review.settled();
+      client.refusals.undo = new EngineError(code, `${code}: refused`);
+      review.act('undo');
+      await review.settled();
+      expect([review.phase, review.view?.id, review.status, review.statusLine], code).toEqual([
+        'question',
+        3n,
+        code,
+        line
+      ]);
+    }
+    examined('refused confirmations of a change', refused);
+
+    // a change the view already says has synced is announced, and nothing is sent
+    const synced = new FakeClient([head(view(2, { undo: 'change-synced' }))]);
+    const review = await started(synced);
+    review.act('undo');
+    await review.settled();
+    expect([review.phase, review.status, review.statusLine, synced.calls]).toEqual([
+      'question',
+      'undo-synced',
+      CHANGE_SYNCED,
+      ['card']
+    ]);
+
+    // an answer's notices are its own, and a quiet region reads nothing
+    const answers: [why: 'synced' | 'none', line: string][] = [
+      ['synced', 'Your last answer has synced, so it can no longer be undone.'],
+      ['none', 'This answer can no longer be undone: something changed after it.']
+    ];
+    for (const [why, line] of answers) {
+      const client = new FakeClient([head(view(2, { undo: 'answer' }))]);
+      client.offered = { offer: null, why };
+      const answered = await started(client);
+      expect(answered.statusLine, why).toBeNull();
+      answered.act('undo');
+      await answered.settled();
+      expect(answered.statusLine, why).toBe(line);
+    }
+    examined("an answer's notices", answers);
   });
 });
