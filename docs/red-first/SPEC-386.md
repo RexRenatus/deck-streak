@@ -98,3 +98,11 @@ A23: green at 461ea72
 - **A10's expectation for the engine core changed** at 23272d2, from `nothing` to `fsrs7`: R7's one
   edge (ADR-400 D1). It read red until 7fded39 drew the edge in the context map.
 - **56af18a and 70d25b8 change only the SPEC and the schematic**; no test.
+
+Correction. The green lines above for A9, A11 to A21 and A23 name `7fded39` or `461ea72`,
+commits the pull request's checks never ran, and the files behind each changed after it: the
+engine core's sources (A9) and its replay tests (A11 to A21) after `7fded39`, and the
+replay-history vectors (A23) after `461ea72`. Each of the thirteen reads green at `2c6f2adb`,
+the head the checks ran, in run 38084848577's rust job (114309116489). The other six green lines
+above hold as written: the fsrs7 crate is byte-identical at `461ea72` and `2c6f2adb` (A2 to A4,
+A7 and A8), and so are A10's census test, the context map and every manifest at `7fded39`.
