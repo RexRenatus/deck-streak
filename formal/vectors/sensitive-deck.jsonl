@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"SensitiveDeck","covers":"crates/ingest/src/sensitive.rs","anchor":"admits","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":139}
+{"schema":"phx.formal.vectors.v1","entry":"SensitiveDeck","covers":"crates/ingest/src/sensitive.rs","anchor":"admits","digest":"sha256:1cbdfb7d696284f79f5ba4277789db3790240ee866022892bbe2ef0fb40dd426","vectors":139}
 {"rule":"tree","deck":1,"parts":["Default"]}
 {"rule":"tree","deck":2,"parts":["Law"]}
 {"rule":"tree","deck":3,"parts":["Law","Contracts"]}
