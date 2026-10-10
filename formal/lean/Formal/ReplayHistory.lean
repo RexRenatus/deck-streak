@@ -1,8 +1,8 @@
--- @phx covers crates/fsrs7/src/convert.rs anchor=histories digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/fsrs7/src/convert.rs anchor=kept digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/fsrs7/src/convert.rs anchor=reset digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/fsrs7/src/convert.rs anchor=RESET_KIND digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/fsrs7/src/convert.rs anchor=DROPPED_KINDS digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/fsrs7/src/convert.rs anchor=histories digest=sha256:4789e62c1752f5d5c2d19aa3e3fd6b3d0a27a36746c590917f17cc71fa8df0b0
+-- @phx covers crates/fsrs7/src/convert.rs anchor=kept digest=sha256:8f8a3c47f4c0cb225ff0ed2057520b53f2481544d840a00ce3ca17ca6a0bdbed
+-- @phx covers crates/fsrs7/src/convert.rs anchor=reset digest=sha256:2a6fffea3f2ef16160b233c11ce83ceab78b23e4943762bc087e711128ed81a5
+-- @phx covers crates/fsrs7/src/convert.rs anchor=RESET_KIND digest=sha256:675e879a6a7a66f0e5b0a1efb9665605fccb00f8fc6b0e25c96d9f1cd5435185
+-- @phx covers crates/fsrs7/src/convert.rs anchor=DROPPED_KINDS digest=sha256:fb1c40c92aa7cbb8c62b9e31439abf4b05781e08c983efb6e588cfc2cc0db22a
 -- @phx cites #641
 -- @phx theorem the_selection_keeps_the_rated_reviews_after_the_last_reset ramp=report
 -- @phx witness merge_base_keeps_a_review_before_its_reset kills=the_selection_keeps_the_rated_reviews_after_the_last_reset
