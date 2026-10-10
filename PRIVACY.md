@@ -12,6 +12,7 @@ inventory, in the form the repository's privacy checks read.
 | `sync-history` | the record of each sync of your collection: when it ran, what started it, its outcome and its attempts | running your daily sync, and telling you when it stops | contract | until account deletion |
 | `skip-days` | the record of each skip day: its study day, how many reviews were due, whether it was applied, failed or undone, and the cards it moved with their scheduling before and after | showing the skip, bridging your streak over it, and undoing it exactly | contract | until account deletion |
 | `ingest-state` | what the last recompute of your reviews saw, whether you asked for a rescore, why and when a request of yours was refused, and the base of the review window | recomputing your scores only when your collection or your settings changed | contract | until account deletion |
+| `preset-proposals` | each proposal to move one of your presets to the scheduler's default parameters: the preset, the parameters it would replace and the proposed ones, its desired retention, how many cards the change recomputes, and whether it is open, applied or diverged | proposing the defaults for a preset when you ask, keeping the values that undo the change, and settling the proposal once your Anki app has applied it | contract | until account deletion |
 | `service-counters` | one counter of how many times your settings changed, and a digest of your courses file | telling the recompute that a setting or your courses changed | contract | until account deletion |
 | `xp-ledger` | every XP grant: the study day it pays for, what it was for, the track, the amount, and whether it pays once a day or once ever | keeping your XP total and level, and paying each award at most once | contract | until account deletion |
 | `settled-xp` | the XP each study day earned, settled once per source and track, and whether the day had closed | keeping your XP total and level from your reviews and the day's bonuses | contract | until account deletion |
@@ -124,11 +125,15 @@ You can also export and erase on the host that runs DeckStreak:
 
 ## Models and your data
 
-DeckStreak does not train, fine-tune or fit a model on your data, and does not build a dataset from
-it. The scheduling parameters in your collection come from your Anki app: DeckStreak reads them, and
-the memory state Anki stores for each card, to schedule the cards you study, and does not fit them
-to your reviews. An AI duty runs only when the host's AI route is configured, which it is not by
-default. Each run sends the cards that duty covers and a summary of your leeches, lapses and graded
-practice, not your journal, as the context of that one run, and DeckStreak's database keeps neither
-the prompt nor the reply. A reply that passes its checks is written to your own vault. What the
-model's provider keeps is set by that provider's terms.
+DeckStreak does not train or fine-tune a neural network or a language model on your data, and does
+not build a dataset from it. The scheduling parameters in your collection are your own scheduler's:
+either a fit of that scheduler to your own reviews, made by your Anki app, or the scheduler's
+defaults. DeckStreak reads them, and the memory state Anki stores for each card, to schedule the
+cards you study, and does not fit them itself. When you ask, DeckStreak proposes the scheduler's
+defaults for one preset and keeps a record of the proposal and of the parameters it would replace,
+so the change can be undone; your Anki app applies it, not DeckStreak. An AI duty runs only when the
+host's AI route is configured, which it is not by default. Each run sends the cards that duty covers
+and a summary of your leeches, lapses and graded practice, not your journal, as the context of that
+one run, and DeckStreak's database keeps neither the prompt nor the reply. A reply that passes its
+checks is written to your own vault. What the model's provider keeps is set by that provider's
+terms.

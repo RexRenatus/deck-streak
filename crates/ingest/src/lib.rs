@@ -33,3 +33,7 @@ pub mod tier;
 pub mod window;
 pub mod wire;
 pub mod write_class_stop;
+
+// SPEC-387's preset read and proposal, in a group of its own so that the declarations the crate's
+// source-text guards pin keep their neighbours.
+pub mod preset;

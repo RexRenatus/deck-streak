@@ -194,3 +194,12 @@ test module, whose guards each carry a planted control that must be refused firs
 | C1 | The whole Python test suite passes with the new class and the edited page | CI on the pull request |
 | C2 | A3 and A5 judge the CI checkout's tracked files, and the counts they print match the build's | CI on the pull request |
 | C3 | The repository's artifact bar and public-text scan read the SPEC, ADR, fragment and page clean | CI on the pull request |
+
+## 10. Amendments
+
+### SPEC-387: R2's paragraph is replaced
+
+SPEC-387 R10 replaces R2's paragraph with the text quoted there, in its own delivery, as R3
+and R7 require. R1 and R3 to R7 stand, and every census of R6 and R7 is unchanged. DeckStreak
+still fits nothing: a fit, when one exists, is made by the learner's Anki app, and DeckStreak
+now proposes the scheduler's defaults for one preset on request and records the proposal.

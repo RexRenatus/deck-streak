@@ -1,6 +1,7 @@
 //! Ingest's data-rights port (SPEC-022 R12, SPEC-023 R13): `sync_runs` is exported and erased, like
 //! every table of the owner's data, and the singleton `ingest_state` is exported and reset in place
-//! (CHARTER 13), through the kernel's port that `privacy` drives (#14). A reset `ingest_state` reads
+//! (CHARTER 13), through the kernel's port that `privacy` drives (#14). `preset_proposals` is
+//! exported and erased too (SPEC-387 R9). A reset `ingest_state` reads
 //! as never recomputed, so the next cycle runs the recompute and recounts the window.
 //! The declared write class's stop, `write_class_stop`, is exempt (SPEC-083 R36): only the
 //! owner's command clears it, and an erase that cleared it would be a second path.
@@ -25,6 +26,9 @@ pub const INGEST_STATE_TABLE: &str = "ingest_state";
 /// The table the declared write class's stop lives in
 /// (`migrations/008303_ingest_write_class_stop.sql`).
 pub const WRITE_CLASS_STOP_TABLE: &str = "write_class_stop";
+/// The table a preset proposal's record lives in
+/// (`migrations/038701_ingest_preset_proposals.sql`, SPEC-387 R9).
+pub const PRESET_PROPOSALS_TABLE: &str = "preset_proposals";
 
 /// Why the class's stop survives an erase (SPEC-083 R36, ADR-321 D16).
 const WRITE_CLASS_STOP_EXEMPTION: &str = "only the owner's command clears the class's stop, and \
@@ -129,6 +133,42 @@ async fn export_skip_card_snapshot(
     })
 }
 
+/// The preset proposals, exported whole: every column, one row per proposal, each vector as the
+/// JSON array the record holds (SPEC-387 R9).
+async fn export_preset_proposals(
+    connection: &mut SqliteConnection,
+) -> Result<ExportedTable, sqlx::Error> {
+    let rows = sqlx::query!(
+        r#"SELECT id AS "id!", preset_id, preset_name, prior_vector, prior_field, proposed_vector,
+                  desired_retention, non_new_cards, state, settled_at, retention_kept, created_at
+           FROM preset_proposals ORDER BY id"#
+    )
+    .fetch_all(connection)
+    .await?;
+    Ok(ExportedTable {
+        table: PRESET_PROPOSALS_TABLE,
+        rows: rows
+            .into_iter()
+            .map(|row| {
+                json!({
+                    "id": row.id,
+                    "preset_id": row.preset_id,
+                    "preset_name": row.preset_name,
+                    "prior_vector": row.prior_vector,
+                    "prior_field": row.prior_field,
+                    "proposed_vector": row.proposed_vector,
+                    "desired_retention": row.desired_retention,
+                    "non_new_cards": row.non_new_cards,
+                    "state": row.state,
+                    "settled_at": row.settled_at,
+                    "retention_kept": row.retention_kept,
+                    "created_at": row.created_at,
+                })
+            })
+            .collect(),
+    })
+}
+
 /// Ingest's implementation of the kernel's data-rights port.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct IngestDataRights;
@@ -155,6 +195,10 @@ impl DataRights for IngestDataRights {
                     disposition: Disposition::ResetInPlace {
                         row: ingest_state_reset(),
                     },
+                },
+                TableRights {
+                    table: PRESET_PROPOSALS_TABLE,
+                    disposition: Disposition::ExportAndErase,
                 },
                 TableRights {
                     table: WRITE_CLASS_STOP_TABLE,
@@ -232,7 +276,8 @@ impl DataRights for IngestDataRights {
                         .collect(),
                 },
                 export_skip_days(&mut *connection).await?,
-                export_skip_card_snapshot(connection).await?,
+                export_skip_card_snapshot(&mut *connection).await?,
+                export_preset_proposals(connection).await?,
                 state,
             ])
         })
@@ -248,6 +293,9 @@ impl DataRights for IngestDataRights {
                 .execute(&mut *connection)
                 .await?;
             sqlx::query!("DELETE FROM skip_days")
+                .execute(&mut *connection)
+                .await?;
+            sqlx::query!("DELETE FROM preset_proposals")
                 .execute(&mut *connection)
                 .await?;
             // The declared reset row (`ingest_state_reset`): the row itself, and when it was made,

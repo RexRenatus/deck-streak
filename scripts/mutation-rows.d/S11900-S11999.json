@@ -257,8 +257,8 @@
         "S11937-MCP-ROLE",
         "daemon",
         "src/main.rs",
-        "    const NAMES: [&'static str; 5] = [\"api\", \"bot\", \"job\", \"data\", \"mcp\"];",
-        "    const NAMES: [&'static str; 5] = [\"api\", \"bot\", \"job\", \"data\", \"mpc\"];",
+        "    const NAMES: [&'static str; 6] = [\"api\", \"bot\", \"job\", \"data\", \"mcp\", \"preset\"];",
+        "    const NAMES: [&'static str; 6] = [\"api\", \"bot\", \"job\", \"data\", \"mpc\", \"preset\"];",
         "roles::the_mcp_role_is_a_known_role",
         "deckstreakd's usage line names the mcp role among the roles (SPEC-119, A38)"
       ]

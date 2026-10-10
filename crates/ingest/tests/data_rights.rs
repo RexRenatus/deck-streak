@@ -1,5 +1,6 @@
 //! Ingest's data-rights port (SPEC-022 A13, R12): `sync_runs` is exported and erased; and
-//! (SPEC-023 A20, R13) `ingest_state` is exported and reset in place.
+//! (SPEC-023 A20, R13) `ingest_state` is exported and reset in place; and (SPEC-387 A12, R9)
+//! `preset_proposals` is exported and erased.
 
 mod support;
 
@@ -234,4 +235,62 @@ fn the_declared_reset_row_clears_the_anchor_and_the_base_and_no_more() {
         assert_eq!(row.get(column), Some(&Value::Null), "{column}");
     }
     assert_eq!(row.get("rescore_pending"), Some(&json!(0)));
+}
+
+#[tokio::test]
+async fn preset_proposals_are_exported_and_erased() {
+    let declaration = IngestDataRights
+        .declaration()
+        .expect("ingest's declaration is well formed");
+    assert_eq!(
+        declaration.disposition("preset_proposals"),
+        Some(&Disposition::ExportAndErase),
+        "preset_proposals is the owner's data: exported and erased (SPEC-387 R9)"
+    );
+
+    // What the declaration says, the port does: an open and a settled proposal are exported with
+    // their values, then erased.
+    let fixture = support::Fixture::new("http://127.0.0.1:9/");
+    let db = fixture.db().await;
+    let mut write = db.write().await.expect("a write");
+    sqlx::query(
+        "INSERT INTO preset_proposals (preset_id, preset_name, prior_vector, prior_field, \
+         proposed_vector, desired_retention, non_new_cards, state, settled_at, retention_kept, \
+         created_at) VALUES \
+         (1001, 'Main', '[0.5,1.25]', 'fsrs6', '[0.25,2.5]', 0.85, 5, 'open', NULL, NULL, 7000), \
+         (1002, 'Five', '[]', 'empty', '[0.25,2.5]', 0.9, 1, 'moved', 9000, 1, 8000)",
+    )
+    .execute(&mut *write)
+    .await
+    .expect("two proposals are recorded");
+    let exported = IngestDataRights
+        .export(&mut write)
+        .await
+        .expect("the port exports");
+    let table = exported
+        .iter()
+        .find(|table| table.table == "preset_proposals")
+        .expect("preset_proposals is exported");
+    let names: Vec<(&Value, &Value, &Value)> = table
+        .rows
+        .iter()
+        .map(|row| (&row["preset_name"], &row["state"], &row["prior_vector"]))
+        .collect();
+    assert_eq!(
+        names,
+        vec![
+            (&json!("Main"), &json!("open"), &json!("[0.5,1.25]")),
+            (&json!("Five"), &json!("moved"), &json!("[]")),
+        ]
+    );
+    IngestDataRights
+        .erase(&mut write)
+        .await
+        .expect("the port erases");
+    write.commit().await.expect("the erase commits");
+    let remaining: i64 = sqlx::query_scalar("SELECT count(*) FROM preset_proposals")
+        .fetch_one(db.reader())
+        .await
+        .expect("a count");
+    assert_eq!(remaining, 0, "the erased record holds no proposal");
 }
