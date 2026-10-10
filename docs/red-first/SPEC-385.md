@@ -77,4 +77,11 @@ A14: green at bdc244de
 A19: green at bdc244de
 A5: green at 4b82077c
 A15: green at 4b82077c
+A1: green at 77c313c0
+A2: green at 77c313c0
+A8: green at 77c313c0
+A9: green at 77c313c0
+A10: green at 77c313c0
+A12: green at 77c313c0
+A18: green at 77c313c0
 ```

@@ -22,6 +22,7 @@ import { parseScore, type ScoreToday } from './score/score';
 import { parseWallet, walletPath, type WalletView } from './economy/wallet';
 import { parseBoard, type BoardView } from './records/board';
 import { parseExchange, type ExchangeView } from './level/exchange';
+import { parseMethods, type Method } from './passkeys';
 import { telegram } from './telegram.svelte';
 
 /**
@@ -105,6 +106,8 @@ export interface Api {
   wallet(before?: number): Promise<Answer<WalletView>>;
   /** Saves a quick capture into the vault's inbox, once per capture id (SPEC-118 R10). */
   capture(request: CaptureRequest): Promise<Answer<Saved>>;
+  /** The owner's ways in: Telegram, and each passkey with the day it was added (SPEC-385 R12). */
+  identities(): Promise<Answer<Method[]>>;
 }
 
 /** How opening a session ended: a session, a refusal only reopening the app can answer, or no answer. */
@@ -239,6 +242,7 @@ export function createApi(options: ApiOptions): Api {
     lawTiers: () => read('/api/level/law-tiers', parseLawTiers),
     feed: () => read(FEED_PATH, parseFeed),
     wallet: (before) => read(walletPath(before), parseWallet),
+    identities: () => read('/api/identities', parseMethods),
     insights: () => read('/api/insights', parseListings),
     insight: (id) =>
       read(`/api/insights/${encodeURIComponent(id)}`, (body) => {
