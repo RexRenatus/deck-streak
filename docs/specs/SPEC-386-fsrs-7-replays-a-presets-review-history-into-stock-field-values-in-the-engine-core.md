@@ -209,6 +209,7 @@ line, never computed by the code under test.
 | `scripts/tests/test_ci_workflows.py` | tests | `APPLE_PATHS` gains `crates/fsrs7/**` |
 | `scripts/tests/test_testflight_workflows.py` | tests | `INTERNAL_PATHS` gains `crates/fsrs7/**` |
 | `docs/schematics/context-map.md` | document | the `engine-core --> fsrs7` arrow and its layer, and the prose beside it |
+| `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | document | ten citations of the two path-filter files re-cited one line down, for the line each filter gains |
 
 No migration. No file under `web/`, `ios/`, `crates/ffi/` or `crates/web-engine/` changes.
 
