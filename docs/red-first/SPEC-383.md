@@ -89,7 +89,7 @@ A21: red at ba488bd2: AssertionError: bury: expected [ false, undefined ] to dee
 A22: red at ba488bd2: AssertionError: answer: expected [ 'answer', 1, 'question' ] to deeply equal [ 'flag', 1, 'question' ]: the view keeps the undo it had before the flag
 A23: not red: the shipped press stops only an empty or a synced view, so a bury or a flag view's press already asks for the offer and the confirmation already sends the offer's card and step; it guards that path, it proves no new behaviour
 A24: red at ba488bd2: AssertionError: bury synced: expected the line "Your last change has synced, so it can no longer be undone." and received undefined: the page has no notice by the kind it pressed
-A25: red at ba488bd2: AssertionError: expected { title: 'Undo this answer?', …(2) } to deeply equal { title: 'Undo this bury?', …(2) }: a bury offer renders the answer's dialog
+A25: red at ba488bd2: AssertionError: expected { title: 'Undo this answer?', …(2) } to deeply equal { title: 'Undo this bury?', …(2) }: a bury offer renders the answer's dialog. SPEC-383 section 3 predicted that no dialog would render for a bury offer, while the answer's dialog rendered.
 A26: red at ba488bd2: TestingLibraryElementError: Unable to find an accessible element with the role "alertdialog" (TypeError: RETURNS[get(...).returns] is not a function): no dialog renders for a flag offer
 A27: not red: the shipped toOffer spreads every field the engine sends, so a bury's returns, a flag's flag and the kind already reach the page; it guards the mapping, it proves no new behaviour
 A21: green at 3e483a8c
