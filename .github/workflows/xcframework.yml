@@ -177,7 +177,7 @@ jobs:
 
   harness-wire:
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 5
     env:
       REPORT: ${{ github.workspace }}/harness-wire-report
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
@@ -192,70 +192,8 @@ jobs:
           swift test --package-path ios/HarnessWire 2>&1 | tee "$REPORT/swift-test.log"
       - name: the codec's mutants, each against its one killer
         run: |
-          python3 - <<'PY'
-          import hashlib, json, os, pathlib, re, subprocess, sys
-
-          package = pathlib.Path("ios/HarnessWire")
-          rows = json.loads((package / "swift-mutants.json").read_text())["mutants"]
-          report = pathlib.Path(os.environ["REPORT"])
-          print(f"examined {len(rows)} mutant row(s)")
-          if not rows:
-              sys.exit("examined 0 mutant rows: nothing was judged")
-
-          def run(killer):
-              """The killer alone: cases started, cases failed, the outermost count, the exit."""
-              selector = "^" + re.escape(killer) + "$"
-              done = subprocess.run(
-                  ["swift", "test", "--package-path", str(package), "--filter", selector],
-                  capture_output=True, text=True)
-              out = done.stdout + done.stderr
-              started = len(re.findall(r"^Test Case '.*' started\.$", out, re.M))
-              failed = len(re.findall(r"^Test Case '.*' failed \(", out, re.M))
-              executed = re.findall(r"Executed (\d+) tests?, with", out)
-              return started, failed, (executed[-1] if executed else "none"), done.returncode
-
-          lines = ["| id | verdict | why |", "|---|---|---|"]
-          bad = 0
-          baseline = {}
-          for killer in sorted({row["killer"] for row in rows}):
-              started, failed, executed, code = run(killer)
-              baseline[killer] = started == 1 and failed == 0 and executed == "1" and code == 0
-              print(f"unmutated {killer}: {started} started, {failed} failed, "
-                    f"Executed {executed}, exit {code}")
-          for row in rows:
-              path = package / row["file"]
-              original = path.read_bytes()
-              digest = hashlib.sha256(original).hexdigest()
-              text = original.decode()
-              if not baseline[row["killer"]]:
-                  verdict = "VOID: its killer is not green on one test unmutated"
-              elif text.count(row["find"]) != 1:
-                  verdict = f"VOID: its find occurs {text.count(row['find'])} times"
-              else:
-                  try:
-                      path.write_text(text.replace(row["find"], row["replace"], 1))
-                      started, failed, executed, code = run(row["killer"])
-                  finally:
-                      path.write_bytes(original)
-                  if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
-                      verdict = "VOID: the file was not restored byte for byte"
-                  elif started == 1 and failed == 1 and code != 0:
-                      verdict = "KILLED"
-                  elif started == 1 and failed == 0 and code == 0:
-                      verdict = "SURVIVED"
-                  else:
-                      verdict = (f"VOID: {started} started, {failed} failed, "
-                                 f"exit {code}, so the killer did not judge it")
-              bad += verdict != "KILLED"
-              print(f"{row['id']}: {verdict}")
-              lines.append(f"| {row['id']} | {verdict} | {row['why']} |")
-          lines.append("")
-          lines.append(f"{len(rows) - bad} of {len(rows)} killed; {bad} survived or void")
-          (report / "sweep.md").write_text("\n".join(lines) + "\n")
-          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
-              summary.write("\n".join(lines) + "\n")
-          sys.exit(1 if bad else 0)
-          PY
+          python3 --version
+          python3 scripts/swift_mutants.py sweep --package ios/HarnessWire --report "$REPORT" --run-seconds 60
       - name: upload the codec's report
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -266,7 +204,7 @@ jobs:
 
   card-isolation:
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 10
     env:
       REPORT: ${{ github.workspace }}/card-isolation-report
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
@@ -281,70 +219,8 @@ jobs:
           swift test --package-path ios/CardIsolation 2>&1 | tee "$REPORT/swift-test.log"
       - name: the card view's mutants, each against its one killer
         run: |
-          python3 - <<'PY'
-          import hashlib, json, os, pathlib, re, subprocess, sys
-
-          package = pathlib.Path("ios/CardIsolation")
-          rows = json.loads((package / "swift-mutants.json").read_text())["mutants"]
-          report = pathlib.Path(os.environ["REPORT"])
-          print(f"examined {len(rows)} mutant row(s)")
-          if not rows:
-              sys.exit("examined 0 mutant rows: nothing was judged")
-
-          def run(killer):
-              """The killer alone: cases started, cases failed, the outermost count, the exit."""
-              selector = "^" + re.escape(killer) + "$"
-              done = subprocess.run(
-                  ["swift", "test", "--package-path", str(package), "--filter", selector],
-                  capture_output=True, text=True)
-              out = done.stdout + done.stderr
-              started = len(re.findall(r"^Test Case '.*' started\.$", out, re.M))
-              failed = len(re.findall(r"^Test Case '.*' failed \(", out, re.M))
-              executed = re.findall(r"Executed (\d+) tests?, with", out)
-              return started, failed, (executed[-1] if executed else "none"), done.returncode
-
-          lines = ["| id | verdict | why |", "|---|---|---|"]
-          bad = 0
-          baseline = {}
-          for killer in sorted({row["killer"] for row in rows}):
-              started, failed, executed, code = run(killer)
-              baseline[killer] = started == 1 and failed == 0 and executed == "1" and code == 0
-              print(f"unmutated {killer}: {started} started, {failed} failed, "
-                    f"Executed {executed}, exit {code}")
-          for row in rows:
-              path = package / row["file"]
-              original = path.read_bytes()
-              digest = hashlib.sha256(original).hexdigest()
-              text = original.decode()
-              if not baseline[row["killer"]]:
-                  verdict = "VOID: its killer is not green on one test unmutated"
-              elif text.count(row["find"]) != 1:
-                  verdict = f"VOID: its find occurs {text.count(row['find'])} times"
-              else:
-                  try:
-                      path.write_text(text.replace(row["find"], row["replace"], 1))
-                      started, failed, executed, code = run(row["killer"])
-                  finally:
-                      path.write_bytes(original)
-                  if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
-                      verdict = "VOID: the file was not restored byte for byte"
-                  elif started == 1 and failed == 1 and code != 0:
-                      verdict = "KILLED"
-                  elif started == 1 and failed == 0 and code == 0:
-                      verdict = "SURVIVED"
-                  else:
-                      verdict = (f"VOID: {started} started, {failed} failed, "
-                                 f"exit {code}, so the killer did not judge it")
-              bad += verdict != "KILLED"
-              print(f"{row['id']}: {verdict}")
-              lines.append(f"| {row['id']} | {verdict} | {row['why']} |")
-          lines.append("")
-          lines.append(f"{len(rows) - bad} of {len(rows)} killed; {bad} survived or void")
-          (report / "sweep.md").write_text("\n".join(lines) + "\n")
-          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
-              summary.write("\n".join(lines) + "\n")
-          sys.exit(1 if bad else 0)
-          PY
+          python3 --version
+          python3 scripts/swift_mutants.py sweep --package ios/CardIsolation --report "$REPORT" --run-seconds 60
       - name: upload the card view's report
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

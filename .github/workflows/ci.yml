@@ -629,7 +629,7 @@ jobs:
           echo "the rows runner exited $rc"
       - name: no row leaves while its target stays, unless the maintainer approved it
         if: ${{ needs.mutation-plan.outputs.scope == 'diff' }}
-        run: python3 scripts/mutation_rows.py retired --base HEAD^1
+        run: rc=0; python3 scripts/mutation_rows.py retired --base HEAD^1 || rc=1; python3 scripts/swift_mutants.py retired --base HEAD^1 || rc=1; exit "$rc"
       - name: keep the rows' report
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

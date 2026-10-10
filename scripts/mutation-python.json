@@ -67,6 +67,12 @@
       "test_deploy_templates"
     ]
   },
+  "scripts/swift_mutants.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_swift_mutants"
+    ]
+  },
   "scripts/testflight_age.py": {
     "dir": "scripts/tests",
     "modules": [

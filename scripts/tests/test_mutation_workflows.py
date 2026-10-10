@@ -359,6 +359,51 @@ class TheMutationJobsGateEveryPullRequest(unittest.TestCase):
         self.assertIn("stryker run", found["mutation-web"])
 
 
+#: A planted `python3` for SPEC-397 A10: it prints the arguments it was called with, then exits with
+#: the code the environment plants for the check its first argument names.
+FAKE_PYTHON = """#!/bin/sh
+echo "called $*"
+case "$1" in
+  scripts/mutation_rows.py) exit "$ROWS_EXIT" ;;
+  scripts/swift_mutants.py) exit "$SWIFT_EXIT" ;;
+esac
+exit 97
+"""
+
+
+class TheRowsJobHoldsTheSwiftRows(unittest.TestCase):
+    def test_the_rows_job_runs_the_swift_retired_check_on_a_diff(self):
+        """SPEC-397 A10 (R10): the `mutation-rows` job's retired step, under the diff scope, runs
+        both retired checks on its one `run:` line, calls both whatever either returns, and fails
+        when either fails."""
+        job = jobs(workflow(CI))["mutation-rows"]
+        (step,) = [s for s in steps(job) if "mutation_rows.py retired" in s]
+        self.assertIn("if: ${{ needs.mutation-plan.outputs.scope == 'diff' }}\n", step)
+        lines = re.findall(r"(?m)^        run: (.+)$", step)
+        self.assertEqual(len(lines), 1, step)
+        called = [
+            "called scripts/mutation_rows.py retired --base HEAD^1",
+            "called scripts/swift_mutants.py retired --base HEAD^1",
+        ]
+        with tempfile.TemporaryDirectory() as scratch:
+            fake = Path(scratch) / "python3"
+            fake.write_text(FAKE_PYTHON, encoding="utf-8")
+            fake.chmod(0o755)
+            path = f"{scratch}{os.pathsep}{os.environ['PATH']}"
+            for rows, swift in examined("planted exits", [(0, 0), (1, 0), (0, 1), (1, 1)]):
+                with self.subTest(rows=rows, swift=swift):
+                    done = subprocess.run(
+                        ["bash", "--noprofile", "--norc", "-eo", "pipefail", "-c", lines[0]],
+                        capture_output=True,
+                        text=True,
+                        env=dict(os.environ, PATH=path, ROWS_EXIT=str(rows), SWIFT_EXIT=str(swift)),
+                        timeout=60,
+                        check=False,
+                    )
+                    self.assertEqual(done.stdout.splitlines(), called, done.stderr)
+                    self.assertEqual(done.returncode != 0, bool(rows or swift), done.stdout)
+
+
 class TheShardsAreThePlans(unittest.TestCase):
     def test_the_sharded_job_runs_the_plans_matrix_and_the_verdict_counts_every_shard(self):
         found = jobs(workflow(CI))

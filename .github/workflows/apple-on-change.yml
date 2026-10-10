@@ -17,6 +17,7 @@ on:
       - "rust-toolchain.toml"
       - ".github/workflows/xcframework.yml"
       - ".github/workflows/apple-on-change.yml"
+      - "scripts/swift_mutants.py"
 
 permissions:
   contents: read
