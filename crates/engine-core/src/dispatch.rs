@@ -21,7 +21,7 @@ use crate::late::EngineDay;
 use crate::login_guard;
 use crate::media::Reader;
 use crate::one_way;
-use crate::table::{ANSWERED, Decision, EXEMPT, ExemptWrite, Transport, decide};
+use crate::table::{ANSWERED, Decision, EXEMPT, Exempt, ExemptWrite, Transport, decide};
 use crate::undo_answer::{self, Recorded, Review};
 
 /// The one read of a card the page may make: its scheduling fields, by id (moved from the web
@@ -266,6 +266,10 @@ impl Dispatcher {
     /// the recorded review row are read at the write, the rule judges them against the record, and
     /// only then does the engine undo, with an empty request. A refusal is the gesture's
     /// `NotTheTarget`: the record names other than an undo of the card's own last answer.
+    ///
+    /// The record's kind is read first, by its number (SPEC-383 R6): a bury or a flag takes
+    /// [`Self::run_restore`], and a number no kind names is refused before the engine is asked
+    /// anything, so a record of an unknown change never reaches the answer's path.
     fn run_undo(&self, card: i64, recorded: &Recorded) -> Result<Vec<u8>, GestureRefusal> {
         let target = Target::Card(card);
         let Some(row) = EXEMPT.iter().find(|row| row.write == ExemptWrite::Undo) else {
@@ -274,6 +278,17 @@ impl Dispatcher {
                 target,
             });
         };
+        let unknown = GestureRefusal::NotTheTarget {
+            write: ExemptWrite::Undo,
+            target,
+        };
+        match undo_answer::Kind::try_from(recorded.kind) {
+            Ok(undo_answer::Kind::Answer) => {}
+            Ok(undo_answer::Kind::Bury | undo_answer::Kind::Flag) => {
+                return self.run_restore(card, recorded, row);
+            }
+            Err(_) => return Err(unknown),
+        }
         let engine = |error| GestureRefusal::Engine { error };
         let refused = |_| GestureRefusal::NotTheTarget {
             write: ExemptWrite::Undo,
@@ -289,6 +304,20 @@ impl Dispatcher {
         self.backend
             .run_service_method(row.service, row.method, &[])
             .map_err(engine)
+    }
+
+    /// Runs the undo of the recorded bury or flag on `card` (SPEC-383 R6), with the undo row's
+    /// empty request.
+    fn run_restore(
+        &self,
+        card: i64,
+        recorded: &Recorded,
+        row: &Exempt,
+    ) -> Result<Vec<u8>, GestureRefusal> {
+        let _ = (card, recorded);
+        self.backend
+            .run_service_method(row.service, row.method, &[])
+            .map_err(|error| GestureRefusal::Engine { error })
     }
 
     /// The review-log row `id`, by the core's fixed read, or `None` when the collection lacks it.

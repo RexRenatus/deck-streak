@@ -341,6 +341,70 @@ fn an_undo_of_a_bury_after_an_answer_leaves_the_answer() {
 }
 
 #[test]
+fn an_undo_of_a_bury_after_a_later_change_is_refused_and_changes_nothing() {
+    let (synthetic, dispatcher) = opened("undo-bury-after-a-later-change");
+    let buried = synthetic.cards[0];
+    let recorded = bury(&dispatcher, buried);
+    let (answered, answer) = answer_head(&dispatcher);
+    let buried_rows = reads(&dispatcher, buried);
+    let answered_rows = reads(&dispatcher, answered);
+    let review = first_row(&dispatcher, Read::Review(answer.review));
+    let undone = undo(&dispatcher, buried, &recorded);
+    assert_eq!(
+        (
+            undone,
+            reads(&dispatcher, buried),
+            reads(&dispatcher, answered),
+            first_row(&dispatcher, Read::Review(answer.review)),
+        ),
+        (
+            refused(buried),
+            buried_rows.clone(),
+            answered_rows.clone(),
+            review.clone()
+        ),
+        "an undo with the bury's record after a later answer is refused, the buried card stays \
+         buried, and the answer keeps its card's state and its review row"
+    );
+    assert_eq!(
+        (
+            answered,
+            buried_rows.1[MARK_QUEUE].as_i64(),
+            answered_rows.0[REPS].as_i64(),
+            review.is_null()
+        ),
+        (other(&synthetic, buried), Some(USER_BURIED), Some(1), false),
+        "the bury had buried the card, and the queue's head, the other card, was answered after it"
+    );
+}
+
+#[test]
+fn an_undo_of_a_change_aimed_at_another_card_is_refused() {
+    let (synthetic, dispatcher) = opened("undo-change-aimed-elsewhere");
+    let buried = synthetic.cards[0];
+    let aimed = other(&synthetic, buried);
+    let recorded = bury(&dispatcher, buried);
+    let buried_rows = reads(&dispatcher, buried);
+    let aimed_rows = reads(&dispatcher, aimed);
+    let undone = undo(&dispatcher, aimed, &recorded);
+    assert_eq!(
+        (
+            undone,
+            reads(&dispatcher, buried),
+            reads(&dispatcher, aimed)
+        ),
+        (refused(aimed), buried_rows.clone(), aimed_rows),
+        "a confirmation aimed at the other card with this card's bury record is refused, and the \
+         buried card stays buried"
+    );
+    assert_eq!(
+        buried_rows.1[MARK_QUEUE].as_i64(),
+        Some(USER_BURIED),
+        "the bury had buried the card"
+    );
+}
+
+#[test]
 fn a_change_whose_card_is_gone_is_refused() {
     let (recorded, now, mark, card) = admitted_bury();
     assert_eq!(
