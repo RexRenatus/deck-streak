@@ -51,10 +51,10 @@ def loader_sites(source):
                 elif name == LOADER_BUILTIN:
                     own_exec = True
         elif isinstance(node, ast.ImportFrom):
-            top = (node.module or "").split(".")[0]
+            top = node.module.split(".")[0] if node.module and not node.level else None
             for alias in node.names:
                 name = alias.asname or alias.name
-                if top in LOADER_MODULES and not node.level and alias.name != "*":
+                if top in LOADER_MODULES:
                     bound[name] = top
                 elif name == LOADER_BUILTIN:
                     own_exec = True
@@ -139,7 +139,6 @@ def _git(root, *args):
     done = subprocess.run(
         ["git", "-C", str(root), *args],
         capture_output=True,
-        text=True,
         encoding="utf-8",
         check=False,
     )
@@ -195,9 +194,9 @@ def _judge(root, base):
 
 def main(argv=None):
     """Run the check; return the exit status."""
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--root", default=str(REPO), help="the repository to judge")
-    parser.add_argument("--base", default="origin/dev", help="the ref the push is judged against")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--root", default=str(REPO))
+    parser.add_argument("--base", default="origin/dev")
     args = parser.parse_args(argv)
     try:
         lines, status = _judge(Path(args.root), args.base)
