@@ -279,7 +279,7 @@ def retired(root: pathlib.Path, base: str) -> int:
         document = json.loads(path.read_text(encoding="utf-8"))
         now |= {str(row.get("id")) for row in document.get("mutants", [])}
     approved = approvals(root)
-    refused = 0
+    refused = False
     for package, row_id, file in before:
         if row_id in now:
             continue
@@ -289,7 +289,7 @@ def retired(root: pathlib.Path, base: str) -> int:
         elif row_id in approved:
             print(f"retired: {row_id}: its file stays; retired with approval: {approved[row_id]}")
         else:
-            refused += 1
+            refused = True
             print(
                 f"retired: {row_id}: REFUSED: it left while its file {source} stays, and "
                 f"{RETIRED} records no reason and approval for it"
@@ -311,7 +311,7 @@ def run_killer(root: pathlib.Path, package: str, killer: str, run_seconds: int) 
         cwd=root,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        text=True,
+        # An `errors` handler alone opens the pipe as text, so a byte that is not UTF-8 is replaced.
         errors="replace",
         start_new_session=True,
     )
@@ -337,20 +337,19 @@ def restore(path: pathlib.Path, original: bytes, digest: str, row_id: str) -> No
     """Write the file back and check its sha256; on a mismatch, exit 4 at once."""
     path.write_bytes(original)
     if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
-        print(f"{row_id}: {NOT_RESTORED}", flush=True)
-        print(
-            f"sweep: REFUSED: {path} was not restored; stopping before another row",
-            flush=True,
-        )
+        print(f"{row_id}: {NOT_RESTORED}")
+        print(f"sweep: REFUSED: {path} was not restored; stopping before another row")
+        sys.stdout.flush()
         sys.exit(EXIT_RESTORE)
 
 
 def sweep(root: pathlib.Path, package: str, report: pathlib.Path, run_seconds: int) -> int:
     problems, rows, _examined = census_files(root, [root / package / ROW_FILE])
     for line in problems:
-        print(line, flush=True)
+        print(line)
     if problems:
         print(f"sweep: REFUSED: the census refused {package}'s rows; nothing was applied")
+        sys.stdout.flush()
         return EXIT_REFUSED
     print(f"examined {len(rows)} mutant row(s)", flush=True)
     baseline = {}
@@ -373,7 +372,7 @@ def sweep(root: pathlib.Path, package: str, report: pathlib.Path, run_seconds: i
         mutated = UNRUN
         if baseline_green(baseline[row["killer"]]) and occurs == 1:
             try:
-                path.write_bytes(text.replace(row["find"], row["replace"], 1).encode("utf-8"))
+                path.write_bytes(text.replace(row["find"], row["replace"]).encode("utf-8"))
                 mutated = run_killer(root, package, row["killer"], run_seconds)
             finally:
                 restore(path, original, digest, row["id"])
@@ -393,7 +392,8 @@ def sweep(root: pathlib.Path, package: str, report: pathlib.Path, run_seconds: i
     if summary:
         with pathlib.Path(summary).open("a", encoding="utf-8") as handle:
             handle.write("\n".join(lines) + "\n")
-    print(last, flush=True)
+    print(last)
+    sys.stdout.flush()
     if not rows:
         return EXIT_VOID
     return EXIT_OK if tally[KILLED] == len(rows) else EXIT_SURVIVED
