@@ -55,8 +55,8 @@ export class Backups {
 
 /** The objects a reply moves to the page rather than copies: an export's bytes. */
 export function transferred(reply: Reply): Transferable[] {
-  if (!reply.ok) return [];
-  const { value } = reply;
-  // a shared buffer cannot be transferred, and is copied like any other value
-  return value instanceof Uint8Array && value.buffer instanceof ArrayBuffer ? [value.buffer] : [];
+  // a refusal carries no value, and a shared buffer cannot be transferred: both are copied
+  return reply.ok && reply.value instanceof Uint8Array && reply.value.buffer instanceof ArrayBuffer
+    ? [reply.value.buffer]
+    : [];
 }

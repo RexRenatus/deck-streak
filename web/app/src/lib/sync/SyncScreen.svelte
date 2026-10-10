@@ -75,21 +75,26 @@
     listed = await sync.backups();
   }
 
-  /** Asks the browser whether it keeps this site's storage; a browser that cannot answer, or a page
-   * with no storage to ask, cannot tell. */
+  /** Asks the browser whether it keeps this site's storage. A browser that cannot answer cannot
+   * tell, and neither can a page with no storage to ask: asking it throws, and reads as unknown. */
   async function keeps(): Promise<void> {
     try {
-      kept = storage === undefined ? 'unknown' : (await storage.persisted()) ? 'persisted' : 'not_persisted';
+      kept = (await storage!.persisted()) ? 'persisted' : 'not_persisted';
     } catch {
       kept = 'unknown';
     }
   }
 
-  /** The storage status in the owner's words. */
+  /** The storage status in the owner's words, one for each answer. */
   function keptText(answer: Kept): string {
-    if (answer === 'persisted') return m.sync_storage_persisted();
-    if (answer === 'not_persisted') return m.sync_storage_not_persisted();
-    return m.sync_storage_unknown();
+    switch (answer) {
+      case 'persisted':
+        return m.sync_storage_persisted();
+      case 'not_persisted':
+        return m.sync_storage_not_persisted();
+      case 'unknown':
+        return m.sync_storage_unknown();
+    }
   }
 
   /** Posts the sync user and password once. The fields are emptied before the post, and the
