@@ -19,6 +19,13 @@ function textOf(element: Element | null | undefined): string {
   return (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
 }
 
+// SPEC-408 R1, R4, A1. The law block's mastery line says what law mastery measures, in plain words
+// beside its figure, and no other line does.
+const LAW_ABOUT =
+  'Law mastery starts at 100% and drops 3 points for each active law leech, a law card you keep forgetting, never below 70%; it does not measure how much law you know.';
+const COURSE_ABOUT =
+  'Mastery is an estimate from your reviews: the average, over the cards it counts, of how likely you are to recall each card now, with cards not yet firmly learned counted for less and new or suspended cards counted as 0.';
+
 /** A synthetic block: shown on its streak and XP, the dues, the leeches and the mastery pending. */
 function viewed(overrides: Partial<LawView> = {}): LawView {
   return {
@@ -72,13 +79,36 @@ describe('the law block', () => {
       'Law streak: 6 days',
       'Law XP today: 35',
       'Law cards due: 4',
-      'Law mastery: 94%',
+      'Law mastery: 94% Law mastery starts at 100% and drops 3 points for each active law leech, a law card you keep forgetting, never below 70%; it does not measure how much law you know.',
       'Active law leeches: 2'
     ]);
     // nothing is pending, so there is no list of pending counts
     expect(screen.queryByRole('list', { name: 'Not counted yet' })).toBeNull();
     expect(screen.queryByText('Not counted yet')).toBeNull();
     expect(screen.queryByRole('region', { name: 'Law' })).not.toBeNull();
+  });
+
+  it('the mastery line says what law mastery measures and no other line does', () => {
+    const view = viewed({
+      lines: ['total_xp', 'streak', 'xp_today', 'dues', 'mastery', 'leeches'],
+      dues: 4,
+      leeches: 2,
+      mastery: 93.6
+    });
+    const { container } = render(LawBlock, { view, tiers: TIERS });
+
+    const mastery = container.querySelector('li[data-line="mastery"]');
+    expect(textOf(mastery?.querySelector('[data-mastery-about="law"]'))).toBe(LAW_ABOUT);
+    const shown = examined('shown mastery descriptions', [...container.querySelectorAll('[data-mastery-about]')]);
+    expect(shown).toHaveLength(1);
+    expect(textOf(mastery)).toBe(`Law mastery: 94% ${LAW_ABOUT}`);
+    expect(textOf(container)).not.toContain(COURSE_ABOUT);
+
+    // a block whose mastery is still pending holds no sentence, and its pending line is unchanged
+    document.body.innerHTML = '';
+    const pending = render(LawBlock, { view: viewed(), tiers: null });
+    expect(pending.container.querySelectorAll('[data-mastery-about]')).toHaveLength(0);
+    expect(textOf(pending.container.querySelector('[data-pending="mastery"]'))).toBe('Law mastery: pending');
   });
 
   it('names no level when the server does not, and keeps the server order', () => {

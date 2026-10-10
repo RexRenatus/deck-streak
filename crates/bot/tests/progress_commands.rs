@@ -84,6 +84,47 @@ async fn progress_shows_each_course_band_and_mastery() {
     );
 }
 
+/// SPEC-408 R3, R8, A4. The reply for stored courses ends with the course sentence in italics, and
+/// the sentence is the English message file's `progress_mastery_about`.
+#[tokio::test]
+async fn the_progress_reply_ends_with_the_course_mastery_description() {
+    const ABOUT: &str = "Mastery is an estimate from your reviews: the average, over the cards it counts, of how likely you are to recall each card now, with cards not yet firmly learned counted for less and new or suspended cards counted as 0.";
+    let bench = Bench::start().await;
+    let mut commands = bench
+        .commands(ScriptedSync::default())
+        .with_courses(courses());
+    store(
+        &bench.db,
+        "ga",
+        ("Alpha & co", "\u{1f3f3}"),
+        "B1",
+        61.6,
+        Some(12),
+    )
+    .await;
+    store(&bench.db, "be", ("Beta", "\u{1f3f4}"), "A2", 42.5, None).await;
+    commands.handle(incoming(owner_says(1, "/progress"))).await;
+    let sent = payload(&bench.fake.calls_of("sendMessage").pop().expect("a send"));
+    let text = sent["text"].as_str().expect("the reply text");
+    assert_eq!(
+        text.lines().last(),
+        Some(format!("<i>{ABOUT}</i>").as_str())
+    );
+    assert!(
+        !ABOUT.contains(['<', '>', '&']),
+        "the sentence needs no escaping"
+    );
+    let messages: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../web/app/messages/en.json"
+        ))
+        .expect("the English message file"),
+    )
+    .expect("the English message file parses");
+    assert_eq!(messages["progress_mastery_about"].as_str(), Some(ABOUT));
+}
+
 /// Before a recompute stores a configured course, the command says the courses appear after the
 /// next sync, and keeps the button into the Mini App. Mutation coverage beside A18, not a
 /// criterion.
