@@ -25,13 +25,15 @@ use anki::notes::NoteId;
 use anki::scheduler::answering::{CardAnswer, Rating};
 use anki::sync::login::{SyncAuth, sync_login};
 use anki::timestamp::TimestampMillis;
+use anki_proto::backend::BackendError;
+use anki_proto::backend::backend_error::Kind;
 use anki_proto::cards::{self, Card, UpdateCardsRequest};
 use anki_proto::collection::{CloseCollectionRequest, OpenCollectionRequest, UndoStatus};
 use anki_proto::scheduler::{GetQueuedCardsRequest, QueuedCards, card_answer};
 use anki_proto::sync::SyncCollectionResponse;
 use anki_proto::sync::sync_collection_response::ChangesRequired;
 use deck_streak_engine_core::answer::{Grade, OwnerAnswer};
-use deck_streak_engine_core::dispatch::{Dispatcher, Read};
+use deck_streak_engine_core::dispatch::{Dispatcher, Read, Refusal};
 use deck_streak_engine_core::gesture::{OwnerGesture, Target};
 use deck_streak_engine_core::replay::{CardReplay, Schedule};
 use deck_streak_engine_core::table::{ExemptWrite, Transport};
@@ -940,5 +942,78 @@ fn two_replays_of_one_collection_are_equal() {
     assert_eq!(
         twice, once,
         "a second replay of the same collection is equal"
+    );
+}
+
+/// The pinned revision's FSRS-7 default parameters, typed by hand from `src/inference_v7.rs:1-5`
+/// at its pin: a vector of the one length a preset's fitted vector has.
+const DEFAULT_PARAMETERS: [f32; 34] = [
+    0.1104, 2.2395, 3.9221, 11.7841, 6.1686, 0.6457, 3.6807, 1.9795, 0.0, 1.3826, 0.7024, 0.5999,
+    0.8146, 0.6398, 1.0, 1.3207, 0.6707, 3.8668, 0.4416, 0.0934, 1.8631, 0.6162, 1.0869, 0.1567,
+    0.0801, 0.2421, 0.9464, 0.1433, 0.7145, 0.0, 0.5667, 0.3734, 0.5333, 0.3048,
+];
+
+/// The error kind of a refusal the engine's error shape carries, or `None` for any other refusal.
+fn kind(refusal: &Refusal) -> Option<i32> {
+    match refusal {
+        Refusal::Engine { error } => BackendError::decode(error.as_slice())
+            .ok()
+            .map(|error| error.kind),
+        _ => None,
+    }
+}
+
+#[test]
+fn a_parameter_vector_of_another_length_is_refused_whole() {
+    let built = built("replay-parameter-length", 1);
+    let card = built.cards[0];
+    let mut col = engine(&built.collection);
+    answer(&mut col, card, Rating::Good, now_millis() - DAY_MS);
+    col.close(None).expect("the engine closes the collection");
+
+    // The lengths the scheduler itself reads as an older model's (17, 19 and 21) and lengths it
+    // refuses; each is the default vector's values, cycled.
+    let lengths = support::examined("parameter length(s)", vec![1, 17, 19, 21, 33, 35]);
+    let dispatcher = opened(&built);
+    let defaults = replayed(&dispatcher, &[HOME], MAX_IVL);
+    let typed = dispatcher
+        .replay(&[HOME], &DEFAULT_PARAMETERS, RETENTION, MAX_IVL)
+        .map(|replay| {
+            replay
+                .into_iter()
+                .map(|entry| (entry.card, entry))
+                .collect::<BTreeMap<_, _>>()
+        });
+    let refused: Vec<(usize, Option<i32>)> = lengths
+        .iter()
+        .map(|&length| {
+            let parameters: Vec<f32> = DEFAULT_PARAMETERS
+                .into_iter()
+                .cycle()
+                .take(length)
+                .collect();
+            let reply = dispatcher.replay(&[HOME], &parameters, RETENTION, MAX_IVL);
+            (length, reply.err().as_ref().and_then(kind))
+        })
+        .collect();
+    close(&dispatcher);
+
+    assert_eq!(
+        cards_of(&defaults),
+        BTreeSet::from([card]),
+        "the card is replayed under the empty vector"
+    );
+    assert_eq!(
+        typed,
+        Ok(defaults),
+        "the 34 default values replay as the empty vector does"
+    );
+    assert_eq!(
+        refused,
+        lengths
+            .iter()
+            .map(|&length| (length, Some(Kind::InvalidInput as i32)))
+            .collect::<Vec<_>>(),
+        "a vector neither empty nor 34 long is refused whole, in the engine's error shape"
     );
 }
