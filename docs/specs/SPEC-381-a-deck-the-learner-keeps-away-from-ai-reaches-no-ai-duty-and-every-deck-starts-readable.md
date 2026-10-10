@@ -241,6 +241,7 @@ stubs. `docs/red-first/SPEC-381.md` quotes each red and each green.
 | `formal/lean/Formal/SensitiveDeckVectors.lean` | formal | added |
 | `formal/vectors/sensitive-deck.jsonl` | formal | added |
 | `formal/lean/Formal.lean` | formal | changed: the import line |
+| `formal/lean/Formal/Vectors.lean` | formal | changed: one import and one writer arm |
 | `docs/specs/SPEC-381-a-deck-the-learner-keeps-away-from-ai-reaches-no-ai-duty-and-every-deck-starts-readable.md` | docs | added |
 | `docs/decisions/ADR-392-the-mark-lives-on-the-server-and-one-deck-gate-stands-before-every-ai-runner.md` | docs | added |
 | `docs/red-first/SPEC-381.md` | docs | added |
