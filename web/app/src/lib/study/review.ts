@@ -6,10 +6,15 @@
 // and writes nothing; the offer moves the review to `confirming`, where only the Undo action again
 // writes, naming the offered card and step, and every other action keeps the answer and is not
 // carried out.
+// SPEC-383 R10, R13; ADR-397. The same press and confirmation reach the review's last bury or flag:
+// the control names the change it would undo, a flag's own return offers the flag's undo, and a
+// refused undo of a bury or a flag reads the change's notice, picked by the kind it pressed.
 import { frameDocument } from '$lib/card/frame-document';
 import { EngineError } from '$lib/engine/client';
 import type { CardView, Clip, Counts, ErrorCode, Faces, Head, Rating, UndoOffer } from '$lib/engine/protocol';
+import { m } from '$lib/paraglide/messages.js';
 import { sideAfter, type Action, type Side } from '$lib/remote/actions';
+import { statusText } from './refusal';
 
 /** The schematic's states: a card loading, a side shown, a request in flight, an undo offered and
  * asking to be confirmed, a refusal, done. */
@@ -34,8 +39,9 @@ export type ReviewEvent =
 /** The request a step asks for. */
 export type Effect = 'none' | 'card' | 'rate' | 'bury' | 'flag' | 'offer' | 'undo' | 'replay';
 
-/** The answer an offer names: its card, the step the confirmation carries back, its text, its
- * grade and the state it returns to (SPEC-371 R7). */
+/** The change an offer names: its card, the step the confirmation carries back and its text; an
+ * answer's grade and the state it returns to (SPEC-371 R7), a bury's state, or what a flag's undo
+ * does to the flag (SPEC-383 R9). */
 export type Offer = Extract<UndoOffer, { offer: object }>['offer'];
 
 /** The machine's state: its phase, and the side the review shows or returns to. */
@@ -119,6 +125,30 @@ const LOCAL: readonly Effect[] = ['none', 'replay'];
 /** The two grades, as the wire numbers them. */
 const RATING: Partial<Record<Action, Rating>> = { again: 1, good: 3 };
 
+/** The view's undo values the control offers: the review's last answer, bury or flag, while it has
+ * not synced (SPEC-371 R7, SPEC-383 R10). */
+const OFFERED: readonly CardView['undo'][] = ['answer', 'bury', 'flag'];
+
+/** The control's words, by what the view would undo: a synced answer keeps the answer's, and a
+ * synced bury or flag reads the plain "Undo" (SPEC-383 R10). */
+const LABELS: Record<NonNullable<CardView['undo']>, () => string> = {
+  answer: () => m.study_undo_answer(),
+  synced: () => m.study_undo_answer(),
+  bury: () => m.study_undo_bury(),
+  flag: () => m.study_undo_flag(),
+  'change-synced': () => m.study_undo()
+};
+
+/** The view's undo values whose refusal reads the change's notice, not the answer's (SPEC-383 R13). */
+const CHANGES: readonly CardView['undo'][] = ['bury', 'flag', 'change-synced'];
+
+/** A refused undo of a bury or a flag, by its notice: it has synced, or something changed after it
+ * (SPEC-383 R13). */
+const CHANGE_NOTICES: Partial<Record<Status, () => string>> = {
+  'undo-synced': () => m.undo_change_synced(),
+  'not-undoable': () => m.undo_change_gone()
+};
+
 /** What the review asks of the engine: the study operations, and nothing else (R2, A17). */
 export interface StudyClient {
   card(): Promise<Head>;
@@ -162,8 +192,10 @@ export class Review {
   #refusal: ErrorCode | null = null;
   /** A refusal the review recovered from, announced until the next gesture. */
   #notice: Status | null = null;
-  /** The answer the engine offered to undo, kept until its confirmation sends it. */
+  /** The change the engine offered to undo, kept until its confirmation sends it. */
   #offer: Offer | null = null;
+  /** What the last undo press was for, so its refusal reads that change's notice (SPEC-383 R13). */
+  #pressed: CardView['undo'] = null;
   #shownAt = 0;
   #inFlight: Promise<void> = Promise.resolve();
 
@@ -199,7 +231,7 @@ export class Review {
     return this.#counts;
   }
 
-  /** The answer the review asks to undo, while it asks, or `null` (SPEC-371 R10). */
+  /** The change the review asks to undo, while it asks, or `null` (SPEC-371 R10, SPEC-383 R11). */
   get offer(): Offer | null {
     return this.#state.phase === 'confirming' ? this.#offer : null;
   }
@@ -219,14 +251,28 @@ export class Review {
     return this.#notice ?? (this.escaped ? 'escaped' : null);
   }
 
+  /** The status region's words, or `null` when it is quiet: a refused undo of a bury or a flag
+   * reads the change's notice, and every other status its own (SPEC-383 R13). */
+  get statusLine(): string | null {
+    const status = this.status;
+    if (status === null) return null;
+    const change = CHANGES.includes(this.#pressed) ? CHANGE_NOTICES[status] : undefined;
+    return change?.() ?? statusText(status);
+  }
+
+  /** The undo control's words, by the change the shown card's view would undo (SPEC-383 R10). */
+  get undoLabel(): string {
+    return LABELS[this.#face?.view.undo ?? 'answer']();
+  }
+
   /** The controls the face shows: a card the frame refused keeps them (A12); undo only while the
-   * review's own last answer can be undone, which a synced one cannot (SPEC-371 R7). They stay
-   * shown while a request is in flight. */
+   * review's own last answer, bury or flag can be undone, which a synced one cannot (SPEC-371 R7,
+   * SPEC-383 R10). They stay shown while a request is in flight. */
   get controls(): Action[] {
     const face = this.#face;
     if (face === null) return [];
     const side: Action[] = face.side === 'question' ? ['show-answer'] : ['again', 'good'];
-    const undo: Action[] = face.view.undo === 'answer' ? ['undo'] : [];
+    const undo: Action[] = OFFERED.includes(face.view.undo) ? ['undo'] : [];
     // Replay only on a side with replay clips; a blocked play leaves it there to ask again (R15)
     const replay: Action[] = this.#faces?.[face.side].replay.length ? ['replay'] : [];
     return [...side, ...undo, ...replay, 'bury', 'flag'];
@@ -248,12 +294,13 @@ export class Review {
 
   /** The one handler every source reaches: a key, a gamepad, the stick and a click (R8). */
   act(action: Action): void {
-    // undo asks only while the review's own last answer can be undone; a
-    // synced one is announced and nothing is sent (SPEC-371 R9)
+    // undo asks only while the review's own last answer, bury or flag can be undone; a synced one
+    // is announced and nothing is sent (SPEC-371 R9, SPEC-383 R10)
     if (action === 'undo') {
       const undo = this.#view?.undo ?? null;
       if (undo === null) return;
-      if (undo === 'synced') {
+      this.#pressed = undo;
+      if (undo === 'synced' || undo === 'change-synced') {
         this.#announce('undo-synced');
         return;
       }
@@ -359,8 +406,9 @@ export class Review {
       this.#offer = null;
       await client.undo(offer.card, offer.step);
     } else {
+      // the flag is now the review's last change, so the control offers its undo (SPEC-383 R10)
       const flag = await client.flag(card);
-      this.#view = { ...(this.#view as CardView), flag };
+      this.#view = { ...(this.#view as CardView), flag, undo: 'flag' };
       return 'flagged';
     }
     return 'settled';

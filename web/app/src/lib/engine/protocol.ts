@@ -131,8 +131,9 @@ export interface Counts {
 /** The card the review shows: both sides rendered by the engine with sound and speech tags
  * stripped, the note type's CSS, the four interval labels, and whether the review's own last answer
  * can be undone: `answer` when it can, `synced` when it has synced, `null` when there is none to
- * undo (SPEC-371 R7); and whether the engine's day is past the card's due day, so this review
- * cannot count toward the streak for that day (SPEC-376 R4). */
+ * undo (SPEC-371 R7); or its last bury or flag: `bury` or `flag` when it can, `change-synced` when
+ * it has synced (SPEC-383 R9); and whether the engine's day is past the card's due day, so this
+ * review cannot count toward the streak for that day (SPEC-376 R4). */
 export interface CardView {
   id: bigint;
   ordinal: number;
@@ -141,7 +142,7 @@ export interface CardView {
   answer: string;
   css: string;
   labels: string[];
-  undo: 'answer' | 'synced' | null;
+  undo: 'answer' | 'synced' | 'bury' | 'flag' | 'change-synced' | null;
   late: boolean;
 }
 
@@ -151,11 +152,22 @@ export type OfferGrade = 'again' | 'good';
 /** The state an undone answer returns its card to. */
 export type Returns = 'new' | 'learning' | 'review' | 'relearning' | 'preview';
 
+/** What undoing a flag does to the card's flag, as the review changed it: it added the red flag,
+ * removed it, or replaced another flag with it (SPEC-383 R9). */
+export type FlagChange = 'added' | 'removed' | 'replaced';
+
 /** What `undo-offer` answers: the review's own last answer, its card's text as one line, its grade
  * and the state the card goes back to, with the card and the step a confirmation carries back; or
- * no offer, and why: `synced` when it has synced, `none` for every other reason (SPEC-371 R7). */
+ * no offer, and why: `synced` when it has synced, `none` for every other reason (SPEC-371 R7). The
+ * review's last bury names the state its card goes back to, and its last flag what the undo does to
+ * the flag; an offer with no kind is an answer's, as the engine has always sent it (SPEC-383 R9). */
 export type UndoOffer =
-  | { offer: { card: bigint; step: number; text: string; grade: OfferGrade; returns: Returns } }
+  | {
+      offer:
+        | { kind?: 'answer'; card: bigint; step: number; text: string; grade: OfferGrade; returns: Returns }
+        | { kind: 'bury'; card: bigint; step: number; text: string; returns: Returns }
+        | { kind: 'flag'; card: bigint; step: number; text: string; flag: FlagChange };
+    }
   | { offer: null; why: 'synced' | 'none' };
 
 /** What `card` answers: the queue's counts, and the card it shows, or `null` when the deck is done. */
