@@ -155,5 +155,13 @@
   "sync_choice_changed_server": "統計後伺服器的副本有了變化。以下是新的統計。",
   "sync_choice_changed_device": "統計後此裝置記錄了一次複習。以下是新的統計。",
   "sync_choice_written": "完成。你的收藏已同步。",
-  "sync_choice_refused": "沒有取代任何內容。你可以再試一次。"
+  "sync_choice_refused": "沒有取代任何內容。你可以再試一次。",
+  "ai_decks_title": "AI 與你的牌組",
+  "ai_decks_lead": "開啟某個牌組的開關，即可讓其卡片不被 AI 功能使用。無論開關與否，學習方式都一樣。",
+  "ai_decks_switch": "不讓 AI 使用{name}",
+  "ai_decks_kept_by": "因為{parent}已開啟，所以不被 AI 使用。",
+  "ai_decks_load_failed": "無法載入這些設定。",
+  "ai_decks_save_failed": "此變更未儲存。請再試一次。",
+  "ai_decks_retry": "再試一次",
+  "ai_decks_back": "返回牌組"
 }

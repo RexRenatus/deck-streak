@@ -43,7 +43,7 @@
   async function turn(id: string, on: boolean): Promise<void> {
     failure = null;
     marked = turned(marked, id, on);
-    const saved = await save(marks, marked, id, on);
+    const saved = await save(marks, id, on);
     if (saved === null) {
       marked = turned(marked, id, !on);
       failure = 'save';
@@ -69,10 +69,10 @@
             aria-describedby={deck.keptBy === null ? undefined : `kept-by-${deck.id}`}
             onchange={(event) => void turn(deck.id, event.currentTarget.checked)}
           />
-          <span>Keep {deck.name} away from AI</span>
+          <span>{m.ai_decks_switch({ name: deck.name })}</span>
         </label>
         {#if deck.keptBy !== null}
-          <p id="kept-by-{deck.id}" class="px-4 text-sm">Kept away because {deck.keptBy} is.</p>
+          <p id="kept-by-{deck.id}" class="px-4 text-sm">{m.ai_decks_kept_by({ parent: deck.keptBy })}</p>
         {/if}
         {#if deck.children.length > 0}
           {@render branch(deck.children)}
@@ -83,10 +83,10 @@
 {/snippet}
 
 <main class="mx-auto flex max-w-prose flex-col gap-4 px-6 py-12">
-  <h1 class="text-2xl font-semibold tracking-tight">AI and your decks</h1>
-  <p>Turn on a deck's switch to keep its cards away from AI features. Studying works the same either way.</p>
+  <h1 class="text-2xl font-semibold tracking-tight">{m.ai_decks_title()}</h1>
+  <p>{m.ai_decks_lead()}</p>
   <p role="status" class="min-h-6">
-    {#if failure === 'load'}These settings could not be loaded.{:else if failure === 'save'}That change was not saved. Try again.{/if}
+    {#if failure === 'load'}{m.ai_decks_load_failed()}{:else if failure === 'save'}{m.ai_decks_save_failed()}{/if}
   </p>
   {#if failure === 'load'}
     <button
@@ -94,7 +94,7 @@
       class="min-h-11 self-start rounded-md bg-foreground px-4 font-medium text-background transition-colors duration-150"
       onclick={() => void load()}
     >
-      Try again
+      {m.ai_decks_retry()}
     </button>
   {:else if tree === null}
     <p>{m.loading()}</p>
@@ -102,6 +102,6 @@
     {@render branch(shown)}
   {/if}
   <nav>
-    <a href="/study" class="inline-flex min-h-11 items-center rounded-md border px-4">Back to decks</a>
+    <a href="/study" class="inline-flex min-h-11 items-center rounded-md border px-4">{m.ai_decks_back()}</a>
   </nav>
 </main>

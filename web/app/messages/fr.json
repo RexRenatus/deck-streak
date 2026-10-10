@@ -155,5 +155,13 @@
   "sync_choice_changed_server": "La copie du serveur a changé depuis le décompte. Voici les nouveaux chiffres.",
   "sync_choice_changed_device": "Cet appareil a enregistré une révision depuis le décompte. Voici les nouveaux chiffres.",
   "sync_choice_written": "Terminé. Votre collection est synchronisée.",
-  "sync_choice_refused": "Rien n’a été remplacé. Vous pouvez réessayer."
+  "sync_choice_refused": "Rien n’a été remplacé. Vous pouvez réessayer.",
+  "ai_decks_title": "L’IA et vos paquets",
+  "ai_decks_lead": "Activez l’interrupteur d’un paquet pour tenir ses cartes à l’écart des fonctions d’IA. L’étude fonctionne de la même façon dans les deux cas.",
+  "ai_decks_switch": "Tenir {name} à l’écart de l’IA",
+  "ai_decks_kept_by": "Tenu à l’écart parce que {parent} l’est.",
+  "ai_decks_load_failed": "Ces réglages n’ont pas pu être chargés.",
+  "ai_decks_save_failed": "Cette modification n’a pas été enregistrée. Réessayez.",
+  "ai_decks_retry": "Réessayer",
+  "ai_decks_back": "Retour aux paquets"
 }

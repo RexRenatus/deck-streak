@@ -255,5 +255,13 @@
   "sync_choice_changed_server": "The server's copy changed since the count. These are the new counts.",
   "sync_choice_changed_device": "This device recorded a review since the count. These are the new counts.",
   "sync_choice_written": "Done. Your collection is synced.",
-  "sync_choice_refused": "Nothing was replaced. You can try again."
+  "sync_choice_refused": "Nothing was replaced. You can try again.",
+  "ai_decks_title": "AI and your decks",
+  "ai_decks_lead": "Turn on a deck's switch to keep its cards away from AI features. Studying works the same either way.",
+  "ai_decks_switch": "Keep {name} away from AI",
+  "ai_decks_kept_by": "Kept away because {parent} is.",
+  "ai_decks_load_failed": "These settings could not be loaded.",
+  "ai_decks_save_failed": "That change was not saved. Try again.",
+  "ai_decks_retry": "Try again",
+  "ai_decks_back": "Back to decks"
 }

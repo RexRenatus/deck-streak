@@ -155,5 +155,13 @@
   "sync_choice_changed_server": "集計後にサーバーのコピーが変更されました。新しい集計は次のとおりです。",
   "sync_choice_changed_device": "集計後にこの端末で復習が記録されました。新しい集計は次のとおりです。",
   "sync_choice_written": "完了しました。コレクションは同期されています。",
-  "sync_choice_refused": "何も置き換えられていません。もう一度お試しください。"
+  "sync_choice_refused": "何も置き換えられていません。もう一度お試しください。",
+  "ai_decks_title": "AIとデッキ",
+  "ai_decks_lead": "デッキのスイッチをオンにすると、そのカードはAI機能に使われません。どちらでも学習は同じように行えます。",
+  "ai_decks_switch": "{name}をAIに使わせない",
+  "ai_decks_kept_by": "{parent}がオンのため、AIに使われません。",
+  "ai_decks_load_failed": "この設定を読み込めませんでした。",
+  "ai_decks_save_failed": "この変更は保存されませんでした。もう一度お試しください。",
+  "ai_decks_retry": "もう一度試す",
+  "ai_decks_back": "デッキ一覧に戻る"
 }

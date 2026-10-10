@@ -789,3 +789,71 @@ describe("the API client's capture", () => {
     expect(lines(dropped.sent)).toEqual(['POST /api/session', 'POST /api/inbox/captures']);
   });
 });
+
+// SPEC-381 R7. The decks kept away from AI live on the server alone: the client reads the marked
+// set from one path, and changes one deck with a PUT of a JSON body to the deck's own encoded path,
+// in the same session, and reads the set the server answers. Anything else is unavailable.
+describe("the API client's decks kept away from AI", () => {
+  /** A server answering the n-th request with the n-th of `answers`, recording each request. */
+  function marking(answers: readonly (() => Response)[], launchData: () => string | null = () => LAUNCH) {
+    const sent: Sent[] = [];
+    const fetch = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      sent.push({
+        url: String(input),
+        method: init.method ?? 'GET',
+        credentials: init.credentials,
+        headers: Object.fromEntries(new Headers(init.headers).entries()),
+        body: typeof init.body === 'string' ? init.body : undefined
+      });
+      return (answers[sent.length - 1] ?? (() => new Response(null, { status: 599 })))();
+    });
+    const api = createApi({ launchData, fetch: fetch as unknown as typeof globalThis.fetch });
+    return { api, sent };
+  }
+
+  const open = () => new Response(null, { status: 200 });
+  const marked = (decks: unknown) => () => Response.json({ decks });
+
+  it('reads the marked decks from /api/decks/sensitive', async () => {
+    const { api, sent } = marking([open, marked(['2', '17'])]);
+    expect(await api.sensitiveDecks()).toEqual({ kind: 'ok', value: ['2', '17'] });
+    expect(lines(sent)).toEqual(['POST /api/session', 'GET /api/decks/sensitive']);
+  });
+
+  it('answers unavailable when the marked decks are not a list of deck ids', async () => {
+    for (const body of [['02'], ['0'], ['-3'], ['1.5'], [3], '1', null]) {
+      const { api } = marking([open, marked(body)]);
+      expect([body, await api.sensitiveDecks()]).toEqual([body, { kind: 'unavailable' }]);
+    }
+    const { api } = marking([open, () => Response.json({ nope: ['1'] })]);
+    expect(await api.sensitiveDecks()).toEqual({ kind: 'unavailable' });
+  });
+
+  it('marks and unmarks one deck with a PUT of a JSON body to its encoded path', async () => {
+    const { api, sent } = marking([open, marked(['7']), marked([])]);
+    expect(await api.setSensitive('7', true)).toEqual({ kind: 'ok', value: ['7'] });
+    expect(await api.setSensitive('a/b', false)).toEqual({ kind: 'ok', value: [] });
+    expect(lines(sent)).toEqual([
+      'POST /api/session',
+      'PUT /api/decks/7/sensitive',
+      'PUT /api/decks/a%2Fb/sensitive'
+    ]);
+    expect(sent.slice(1).map((request) => [request.headers, request.credentials, request.body])).toEqual([
+      [{ 'content-type': 'application/json' }, 'same-origin', '{"sensitive":true}'],
+      [{ 'content-type': 'application/json' }, 'same-origin', '{"sensitive":false}']
+    ]);
+  });
+
+  it('a change the server did not save is unavailable, and one outside Telegram asks to reopen', async () => {
+    const refused = marking([open, () => Response.json({ decks: ['7'] }, { status: 500 })]);
+    expect(await refused.api.setSensitive('7', true)).toEqual({ kind: 'unavailable' });
+    const garbled = marking([open, () => new Response('not json', { status: 200 })]);
+    expect(await garbled.api.setSensitive('7', true)).toEqual({ kind: 'unavailable' });
+    const dropped = marking([open, () => Response.json({ decks: [7] })]);
+    expect(await dropped.api.setSensitive('7', true)).toEqual({ kind: 'unavailable' });
+    const outside = marking([], () => null);
+    expect([await outside.api.setSensitive('7', true), lines(outside.sent)]).toEqual([{ kind: 'reopen' }, []]);
+    const unreachable = marking([open, () => Promise.reject(new TypeError('offline')) as unknown as Response]);
+    expect(await unreachable.api.setSensitive('7', true)).toEqual({ kind: 'unavailable' });
+  });
+});

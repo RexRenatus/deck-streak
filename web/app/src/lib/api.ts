@@ -8,6 +8,12 @@ import {
 } from './capture/capture';
 import { FEED_PATH, parseFeed, type FeedItem } from './ladder/feed';
 import {
+  SENSITIVE_DECKS_PATH,
+  parseMarked,
+  sensitiveBody,
+  sensitiveDeckPath
+} from './study/ai-decks';
+import {
   parseEnvelope,
   parseListings,
   type Envelope,
@@ -226,8 +232,18 @@ export function createApi(options: ApiOptions): Api {
       const saved = parseSaved(response.status, await response.json().catch(() => null));
       return saved === null ? { kind: 'unavailable' } : { kind: 'ok', value: saved };
     },
-    sensitiveDecks: async () => ({ kind: 'unavailable' }),
-    setSensitive: async () => ({ kind: 'unavailable' })
+    sensitiveDecks: () => read(SENSITIVE_DECKS_PATH, parseMarked),
+    setSensitive: async (id, sensitive) => {
+      const response = await call(sensitiveDeckPath(id), {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: sensitiveBody(sensitive)
+      });
+      if (response === 'reopen') return { kind: 'reopen' };
+      if (response === null || !response.ok) return { kind: 'unavailable' };
+      const marked = parseMarked(await response.json().catch(() => null));
+      return marked === null ? { kind: 'unavailable' } : { kind: 'ok', value: marked };
+    }
   };
 }
 

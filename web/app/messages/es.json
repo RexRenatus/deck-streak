@@ -155,5 +155,13 @@
   "sync_choice_changed_server": "La copia del servidor cambió desde el recuento. Estos son los nuevos recuentos.",
   "sync_choice_changed_device": "Este dispositivo registró un repaso desde el recuento. Estos son los nuevos recuentos.",
   "sync_choice_written": "Listo. Tu colección está sincronizada.",
-  "sync_choice_refused": "No se reemplazó nada. Puedes intentarlo de nuevo."
+  "sync_choice_refused": "No se reemplazó nada. Puedes intentarlo de nuevo.",
+  "ai_decks_title": "La IA y tus mazos",
+  "ai_decks_lead": "Activa el interruptor de un mazo para mantener sus tarjetas fuera del alcance de las funciones de IA. El estudio funciona igual en ambos casos.",
+  "ai_decks_switch": "Mantener {name} fuera del alcance de la IA",
+  "ai_decks_kept_by": "Fuera del alcance porque {parent} lo está.",
+  "ai_decks_load_failed": "No se pudieron cargar estos ajustes.",
+  "ai_decks_save_failed": "Ese cambio no se guardó. Inténtalo de nuevo.",
+  "ai_decks_retry": "Reintentar",
+  "ai_decks_back": "Volver a los mazos"
 }

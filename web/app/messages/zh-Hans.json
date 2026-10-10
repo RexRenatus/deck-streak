@@ -155,5 +155,13 @@
   "sync_choice_changed_server": "统计后服务器的副本发生了变化。以下是新的统计。",
   "sync_choice_changed_device": "统计后此设备记录了一次复习。以下是新的统计。",
   "sync_choice_written": "完成。你的收藏已同步。",
-  "sync_choice_refused": "没有替换任何内容。你可以重试。"
+  "sync_choice_refused": "没有替换任何内容。你可以重试。",
+  "ai_decks_title": "AI 与你的牌组",
+  "ai_decks_lead": "打开某个牌组的开关，即可让其卡片不被 AI 功能使用。无论开关与否，学习方式都一样。",
+  "ai_decks_switch": "不让 AI 使用{name}",
+  "ai_decks_kept_by": "因为{parent}已开启，所以不被 AI 使用。",
+  "ai_decks_load_failed": "无法加载这些设置。",
+  "ai_decks_save_failed": "此更改未保存。请重试。",
+  "ai_decks_retry": "重试",
+  "ai_decks_back": "返回牌组"
 }

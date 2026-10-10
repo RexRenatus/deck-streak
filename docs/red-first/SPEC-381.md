@@ -52,6 +52,7 @@ Each line's command is the criterion's line in SPEC-381 section 3's fence, run a
 
 ```red-first
 A1: red at 003d865917abf764aef500aca8aacb261a578af9: crates/api/tests/sensitive_decks.rs:162:5: assertion `left == right` failed: a fresh server marks no deck; left: (501, Null); right: (200, Object {"decks": Array []})
+A1: green at 583e09d235e433e709fc65fa945c94769b54c6aa
 A2: red at 003d865917abf764aef500aca8aacb261a578af9: crates/ingest/tests/sensitive.rs:85:5: assertion `left == right` failed; left: every one of the 7 labelled cards `Admitted`; right: `own card`, `child's card`, `borrowed from a child`, `sits in a marked filtered deck` `KeptAway`, the other three `Admitted`
 A2: green at 96d496bdcd05141ab13a9d627fbfa69339e6aafb
 A3: red at 003d865917abf764aef500aca8aacb261a578af9: crates/ingest/tests/sensitive.rs:128:5: assertion `left == right` failed; left: all five `Admitted`; right: `home deck unknown` and `current deck unknown` `Unresolved`, `marks unread` and `marks' read failed` `Unreadable`, `control` `Admitted`
@@ -69,6 +70,7 @@ A8: green at 77792e625b3cdc5058765cbb1df0b64a002668f9
 A9: red at 5a0590a7c3233102f9ff7ba87b3e1cff1dfd190a: crates/agent/tests/deck_gate_census.rs:718:5: assertion `left == right` failed: the census refused; left: ["crates/agent/src/duty.rs: decide calls no deck gate (`self.deck_gate.judge(`)"]; right: []
 A9: green at 003d865917abf764aef500aca8aacb261a578af9
 A10: red at 003d865917abf764aef500aca8aacb261a578af9: crates/api/tests/sensitive_decks.rs:211:5: assertion `left == right` failed: neither change marked the deck; left: (501, Null); right: (200, Object {"decks": Array []})
+A10: green at 583e09d235e433e709fc65fa945c94769b54c6aa
 A11: red at 003d865917abf764aef500aca8aacb261a578af9: crates/ingest/tests/sensitive.rs:165:5: assertion `left == right` failed: the export carries every mark, every column; left: None; right: Some([{"created_at": 1700000000000, "deck_id": 1}, {"created_at": 1700000000500, "deck_id": 4}])
 A11: green at 96d496bdcd05141ab13a9d627fbfa69339e6aafb
 A12: red at b8b6c3abf41855cf1d662c17a9a9205b30d0a09c: web/app/src/lib/study/ai-decks.test.ts:139:68: AssertionError: expected [ [], [ …(4) ], '', [] ] to deeply equal [ [ [ '2', true ] ], [ …(4) ], …(2) ]: turning Spanish's switch on asked the server for nothing and the server holds no mark
