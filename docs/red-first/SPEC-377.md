@@ -218,3 +218,11 @@ Two checks of the pull request's own reds were watched failing in CI before any 
 The fix pins the lister command's shape in a test of its crate, and raises the census's routed
 figure from 23 to 24 for the one capture this delivery added, the route test's
 `hold_capture` call. The raw figure stays 0 and no assertion is removed.
+
+Both are green at c940cb43.
+
+- The setting-shape pin test: `Ran 76 tests`, `OK`, with the lister command's shape now spelled by
+  a test of its own crate.
+- The capture census: `capture population: 736 file(s) read; 0 raw capture(s), 24 routed, 1 global default(s)`
+  and `test result: ok. 1 passed`. The kernel crate's whole suite and the lister test file (8
+  passed) are green as well.
