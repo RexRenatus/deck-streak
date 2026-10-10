@@ -578,14 +578,14 @@ closing runs.
 | 1 | `deck-streak-vault` | 943 | 861 | 15 | 0 | 67 | #277 (runs 36438243392, 36483219611) |
 | 2 | `deck-streak-ingest` | 309 | 239 | 3 | 0 | 67 | #313 (runs 36502008965, 36505515113) |
 | 3 | `deck-streak-kernel` | 779 | 714 | 2 | 0 | 63 | #546 (runs 36965665452, 36986911724) |
-| 4 | `deck-streak-identity` | 145 | 110 | 5 | 0 | 30 | #317 (runs 36511057164, 36511654824) |
+| 4 | `deck-streak-identity` | 338 | 244 | 5 | 0 | 89 | #754 (runs 37952349493, 37955658270) |
 | 5 | `deck-streak-daemon` | 101 | 71 | 1 | 0 | 29 | #318 (runs 36515002230, 36517001675) |
 | 6 | `deck-streak-coordination` | 409 | 324 | 2 | 0 | 83 | #329 (runs 36526822999, 36528662545) |
 | 7 | `deck-streak-api` | 70 | 50 | 0 | 0 | 20 | #328 (runs 36528558184, 36529229929) |
 | 8 | `deck-streak-agent` | 239 | 174 | 0 | 0 | 65 | #338 (runs 36543074674, 36545641689) |
 | 9 | `deck-streak-progression` | 57 | 39 | 0 | 0 | 18 | #333 (runs 36533129255, 36534197772) |
 | 10 | `deck-streak-privacy` | 29 | 26 | 0 | 0 | 3 | #332 (runs 36533127814, 36533533659) |
-| 11 | `miniapp` | 1647 | 1632 | 14 | 0 | 1 | #309 (runs 36499404209, 37085974717) |
+| 11 | `miniapp` | 6886 | 6859 | 25 | 0 | 2 | #748 (runs 37954437036, 37924800926) |
 
 A delivered row's PR cell reads `#<pull request> (runs <opening>, <closing>)`.
 

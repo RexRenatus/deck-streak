@@ -584,3 +584,349 @@ fn the_body_reader_skips_a_brace_inside_a_string_and_refuses_a_name_defined_twic
         Err("`fn h(`'s body never closes".to_owned())
     );
 }
+
+// SPEC-377 R4, R5, A6 (ADR-388 D7 to D9): the full sync's choice in the web engine. The pool is
+// installed as the core's `Files` port at start; the four choice exports reach the engine only
+// through `one_way` and the dispatcher's unsynced read, and take no path, id set or snapshot answer
+// of their own; the confirm hands the core the Worker's answer; the cancel drops the held stage;
+// and every choice file is a new name minted after the pool is reserved for it.
+
+/// The pool's port and its install, compared as [`OWED`]'s statements are (SPEC-377 R4).
+const POOL_PORT: [(&str, &str, &[&str]); 3] = [
+    (
+        "create_backend",
+        "installs the pool as the core's files port when it starts the dispatcher",
+        &[
+            "let port: Arc<dyn CoreFiles> = Arc::new(PoolPort);",
+            "dispatcher.install_files(port);",
+        ],
+    ),
+    (
+        "holds",
+        "answers that a path holds a file only when the pool lists its one name",
+        &["files::holds(&pool.list(), &name)"],
+    ),
+    (
+        "same",
+        "names two paths one file only when they are one pool name",
+        &["files::same(&open.to_string_lossy(), &path.to_string_lossy())"],
+    ),
+];
+
+/// The confirm's snapshot check: the answer the core judges is the Worker's (SPEC-377 R5, R6).
+const SNAPSHOT: [(&str, &str, &[&str]); 1] = [(
+    "full_sync_confirm",
+    "hands the core the snapshot answer the Worker read, and no answer of its own",
+    &["backed_up.snapshot_found(&SnapshotAnswer { found })"],
+)];
+
+/// The cancel: the held stage is dropped, the model's `Cancel` (ADR-388 D9).
+const CANCEL: [(&str, &str, &[&str]); 1] = [(
+    "full_sync_cancel",
+    "drops the stage held between the owner's taps",
+    &["STAGE.with(|stage| {", "*stage.borrow_mut() = None;"],
+)];
+
+/// The reserve before each choice file (ADR-388 D8): the pool grows before the name is minted.
+const RESERVE: [(&str, &str, &[&str]); 1] = [(
+    "choice_file",
+    "reserves the pool for a new file before it mints that file's name",
+    &[
+        "pool.reserve_minimum_capacity(pool.count() + 3).await.map_err(storage)?;",
+        "files::choice_name(&pool.list(), COLLECTION_PATH, kind)",
+    ],
+)];
+
+/// The four choice exports (SPEC-377 R5): each name, the parameters it takes and nothing more, and
+/// the statements its body holds, each a call of `one_way` or of the dispatcher's unsynced read.
+const CHOICE_EXPORTS: [(&str, &str, &[&str]); 4] = [
+    (
+        "full_sync_count",
+        "key: String, endpoint: String, required: u32",
+        &[
+            "let copy = choice_file(Kind::Server).await?;",
+            "one_way::count(&dispatcher()?, &answer, &auth, Path::new(&copy))",
+            "STAGE.with(|stage| *stage.borrow_mut() = Some(Stage { counted, copy }));",
+        ],
+    ),
+    (
+        "full_sync_confirm",
+        "direction: u32, key: String, endpoint: String, found: bool",
+        &[
+            "OwnerGesture::from_tap(ExemptWrite::OneWaySync, Target::Collection)",
+            "let backup = choice_file(Kind::Backup).await?;",
+            "one_way::back_up(&dispatcher, confirmed, Path::new(&backup), Path::new(&copy))",
+            "let fresh = choice_file(Kind::Server).await?;",
+            "one_way::recheck(&dispatcher, checked, &auth, Path::new(&fresh))",
+            "one_way::write(&dispatcher, ready, gesture, &auth)",
+        ],
+    ),
+    ("full_sync_cancel", "", &["*stage.borrow_mut() = None;"]),
+    ("unsynced", "", &["dispatcher()?.unsynced()"]),
+];
+
+/// What no choice export may hold: an engine call other than `one_way`'s and the unsynced read,
+/// an id set or a counted state of its own making, or a name minted without the reserve.
+const CHOICE_REFUSED: [&str; 11] = [
+    "call(",
+    "query(",
+    ".run(",
+    "run_method(",
+    "admit(",
+    ".execute(",
+    ".private(",
+    ".run_one_way(",
+    "IdSets",
+    "Counted::show(",
+    "choice_name(",
+];
+
+/// Each statement of `owed` that `source` does not hold, named with its function and why.
+fn lacks(source: &str, owed: &[(&str, &str, &[&str])]) -> Vec<String> {
+    let mut found = Vec::new();
+    for (name, why, statements) in owed {
+        match body(source, name) {
+            Err(problem) => found.push(format!("{name}: {problem}")),
+            Ok(text) => {
+                let text = squeezed(text);
+                for statement in *statements {
+                    if !text.contains(&squeezed(statement)) {
+                        found.push(format!("{name} {why}, and its body lacks `{statement}`"));
+                    }
+                }
+            }
+        }
+    }
+    found
+}
+
+/// The parameter list of `fn <name>(`, up to its closing parenthesis, with every blank removed.
+fn parameters(source: &str, name: &str) -> Option<String> {
+    let head = format!("fn {name}(");
+    let start = source.find(&head)? + head.len();
+    let end = source[start..].find(')')? + start;
+    Some(squeezed(&source[start..end]))
+}
+
+/// What the choice exports owe and hold that they must not, each named with its export: an export
+/// the module does not make, a parameter beyond its list, a statement it lacks, or a refused text.
+fn choice_problems(source: &str) -> Vec<String> {
+    let mut found = lacks(
+        source,
+        &CHOICE_EXPORTS.map(|(name, _, owed)| {
+            (
+                name,
+                "reaches the engine through `one_way` and the dispatcher",
+                owed,
+            )
+        }),
+    );
+    let whole = squeezed(source);
+    for (name, wanted, _) in CHOICE_EXPORTS {
+        let exported = ["pubasyncfn", "pubfn"]
+            .iter()
+            .any(|head| whole.contains(&format!("#[wasm_bindgen]{head}{name}(")));
+        if !exported {
+            found.push(format!("{name} is not an export of the module"));
+        }
+        let taken = parameters(source, name);
+        if taken.as_deref() != Some(squeezed(wanted).as_str()) {
+            found.push(format!("{name} takes `{taken:?}`, not `{wanted}` alone"));
+        }
+        if let Ok(text) = body(source, name) {
+            let text = squeezed(text);
+            for refused in CHOICE_REFUSED {
+                if text.contains(&squeezed(refused)) {
+                    found.push(format!(
+                        "{name} reaches past `one_way`, and holds `{refused}`"
+                    ));
+                }
+            }
+        }
+    }
+    found
+}
+
+/// Where `choice_file` mints a name before it reserves the pool, named with the function.
+fn reserve_problems(source: &str) -> Vec<String> {
+    let mut found = lacks(source, &RESERVE);
+    if let Ok(text) = body(source, "choice_file") {
+        let text = squeezed(text);
+        let [(_, _, [reserve, name])] = RESERVE else {
+            return found;
+        };
+        let at = |statement: &str| text.find(&squeezed(statement));
+        if let (Some(reserved), Some(named)) = (at(reserve), at(name))
+            && named < reserved
+        {
+            found.push(format!("choice_file mints `{name}` before `{reserve}`"));
+        }
+    }
+    found
+}
+
+/// `source` with `planted` written as the first statement of `name`'s body.
+fn planted_in(source: &str, name: &str, planted: &str) -> String {
+    let held = body(source, name).unwrap_or_else(|problem| panic!("{name}: {problem}"));
+    source.replacen(held, &format!("{{\n    {planted}\n{}", &held[1..]), 1)
+}
+
+/// Whether `refused` names `name` and the text `text` as its cause.
+fn refused_by_name(refused: &[String], name: &str, text: &str) -> bool {
+    refused
+        .iter()
+        .any(|line| line.starts_with(&format!("{name} ")) && line.contains(text))
+}
+
+#[test]
+fn the_web_engine_installs_the_pool_as_the_cores_files_port() {
+    let source = boundary();
+    assert_eq!(lacks(&source, &POOL_PORT), Vec::<String>::new());
+
+    // the install planted out, and each port answer planted as a constant, are refused by name
+    let install = "dispatcher.install_files(port);";
+    let uninstalled = source.replacen(install, "let _ = &port;", 1);
+    assert_ne!(uninstalled, source, "the install was not planted out");
+    let refused = lacks(&uninstalled, &POOL_PORT);
+    assert!(
+        refused_by_name(&refused, "create_backend", install),
+        "an uninstalled port is not refused by name: {refused:?}"
+    );
+    for name in ["holds", "same"] {
+        let held = body(&source, name).expect("each port answer has one body");
+        let constant = source.replacen(held, "{\n    true\n}", 1);
+        let refused = lacks(&constant, &POOL_PORT);
+        assert!(
+            refused_by_name(&refused, name, "lacks"),
+            "a constant {name} is not refused by name: {refused:?}"
+        );
+    }
+    examined("pool port function(s) of src/wasm.rs", POOL_PORT.to_vec());
+}
+
+#[test]
+fn the_snapshot_answer_reaches_the_core_as_the_worker_read_it() {
+    let source = boundary();
+    assert_eq!(lacks(&source, &SNAPSHOT), Vec::<String>::new());
+    assert_eq!(
+        parameters(&source, "full_sync_confirm").filter(|taken| taken.ends_with("found:bool")),
+        Some(squeezed(CHOICE_EXPORTS[1].1)),
+        "the confirm takes the Worker's answer as its last parameter"
+    );
+
+    // an answer of the export's own making is refused by name
+    let forged = source.replacen(
+        "SnapshotAnswer { found }",
+        "SnapshotAnswer { found: true }",
+        1,
+    );
+    assert_ne!(forged, source, "the answer was not planted");
+    let refused = lacks(&forged, &SNAPSHOT);
+    assert!(
+        refused_by_name(&refused, "full_sync_confirm", "SnapshotAnswer"),
+        "a forged snapshot answer is not refused by name: {refused:?}"
+    );
+    examined("snapshot check(s) of src/wasm.rs", SNAPSHOT.to_vec());
+}
+
+#[test]
+fn a_cancel_drops_the_held_stage() {
+    let source = boundary();
+    assert_eq!(lacks(&source, &CANCEL), Vec::<String>::new());
+
+    // a cancel that keeps the stage is refused by name
+    let kept = source.replacen("*stage.borrow_mut() = None;", "let _ = &stage;", 1);
+    assert_ne!(kept, source, "the clearing was not planted out");
+    let held = body(&kept, "full_sync_cancel").expect("the cancel has one body");
+    let refused = lacks(&kept, &CANCEL);
+    assert!(
+        squeezed(held).contains("let_=&stage;")
+            && refused_by_name(&refused, "full_sync_cancel", "= None;"),
+        "a cancel that keeps the stage is not refused by name: {refused:?}"
+    );
+    examined("cancel(s) of src/wasm.rs", CANCEL.to_vec());
+}
+
+#[test]
+fn each_choice_file_is_reserved_before_it_is_named() {
+    let source = boundary();
+    assert_eq!(reserve_problems(&source), Vec::<String>::new());
+    let minting: Vec<&str> = CHOICE_EXPORTS
+        .iter()
+        .filter(|(name, _, _)| {
+            body(&source, name).is_ok_and(|text| squeezed(text).contains("choice_file(Kind::"))
+        })
+        .map(|(name, _, _)| *name)
+        .collect();
+    assert_eq!(minting, ["full_sync_count", "full_sync_confirm"]);
+
+    // a name minted unreserved, or minted before the reserve, is refused by name
+    let [(_, _, [reserve, name])] = RESERVE else {
+        panic!("the reserve census names one reserve and one name");
+    };
+    let unreserved = source.replacen(reserve, "let _ = &pool;", 1);
+    assert_ne!(unreserved, source, "the reserve was not planted out");
+    let refused = reserve_problems(&unreserved);
+    assert!(
+        refused_by_name(&refused, "choice_file", "reserve_minimum_capacity"),
+        "an unreserved name is not refused by name: {refused:?}"
+    );
+    let early = planted_in(&source, "choice_file", &format!("let _ = {name};"));
+    let refused = reserve_problems(&early);
+    assert!(
+        refused_by_name(&refused, "choice_file", "before"),
+        "a name minted before the reserve is not refused by name: {refused:?}"
+    );
+    let direct = planted_in(
+        &source,
+        "full_sync_confirm",
+        "let _ = files::choice_name(&[], COLLECTION_PATH, Kind::Backup);",
+    );
+    let refused = choice_problems(&direct);
+    assert!(
+        refused_by_name(&refused, "full_sync_confirm", "choice_name("),
+        "a name minted past the reserve is not refused by name: {refused:?}"
+    );
+    examined("choice file minter(s) of src/wasm.rs", RESERVE.to_vec());
+}
+
+#[test]
+fn the_choice_exports_reach_the_engine_only_through_one_way_and_the_dispatcher() {
+    let source = boundary();
+    assert_eq!(choice_problems(&source), Vec::<String>::new());
+
+    // an engine call past `one_way`, a parameter beyond the list, and an export unmade are each
+    // refused by the export's name
+    for (name, _, _) in CHOICE_EXPORTS {
+        let past = planted_in(&source, name, "call(service::SYNC, 5, &[])?;");
+        let refused = choice_problems(&past);
+        assert!(
+            refused_by_name(&refused, name, "`call(`"),
+            "an engine call planted in {name} is not refused by name: {refused:?}"
+        );
+        let head = format!("fn {name}(");
+        let widened = source.replacen(&head, &format!("{head}copy: String, "), 1);
+        let refused = choice_problems(&widened);
+        assert!(
+            refused_by_name(&refused, name, "takes"),
+            "a path parameter planted in {name} is not refused by name: {refused:?}"
+        );
+    }
+    let unexported = source.replacen("#[wasm_bindgen]\npub fn unsynced(", "pub fn unsynced(", 1);
+    assert_ne!(
+        unexported, source,
+        "the unsynced export was not planted out"
+    );
+    let refused = choice_problems(&unexported);
+    assert!(
+        refused_by_name(&refused, "unsynced", "not an export"),
+        "an unexported read is not refused by name: {refused:?}"
+    );
+    let exports = examined("choice export(s) of src/wasm.rs", CHOICE_EXPORTS.to_vec());
+    let refused_texts = examined("refused text(s)", CHOICE_REFUSED.to_vec());
+    println!(
+        "examined {} x {} refusal(s)",
+        exports.len(),
+        refused_texts.len()
+    );
+}
