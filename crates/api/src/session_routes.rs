@@ -264,3 +264,36 @@ fn refused(status: StatusCode, reason: &'static str) -> Response {
     let body = serde_json::json!({ "reason": reason }).to_string();
     (status, [(CONTENT_TYPE, "application/json")], body).into_response()
 }
+
+/// The launch validation's path (SPEC-403 R8; ADR-417 D3): the start hook posts the fragment's
+/// launch data here before it loads Telegram's script.
+pub const LAUNCH_PATH: &str = "/api/launch";
+
+/// The launch route over `access`, served beside the session routes. It carries the handshake's
+/// own body limit on its handler, for the reason [`routes`] gives, so a launch is bounded exactly
+/// as a handshake is.
+pub(crate) fn launch_routes(access: OwnerAccess) -> Router {
+    let validate = validate_launch.layer(DefaultBodyLimit::max(HANDSHAKE_BODY_LIMIT_BYTES));
+    Router::new()
+        .route(LAUNCH_PATH, post(validate))
+        .with_state(access)
+}
+
+/// `POST /api/launch`: whether the launch data is the owner's, validated by the gate the
+/// handshake uses and under its three guards (the state-change guard, a slot from its bound and
+/// its body limit). It answers 204 with no body and no cookie, and opens no session: the page
+/// asks only whether to load Telegram's script. A refusal is the gate's status and reason alone.
+async fn validate_launch(
+    _state_change: StateChange,
+    _slot: HandshakeSlot,
+    State(access): State<OwnerAccess>,
+    body: Bytes,
+) -> Response {
+    let Ok(Handshake { init_data }) = serde_json::from_slice(&body) else {
+        return Refusal::InitDataInvalid.into_response();
+    };
+    match access.gate.admit(&init_data, access.clock.now()) {
+        Ok(_) => StatusCode::NO_CONTENT.into_response(),
+        Err(refusal) => refusal.into_response(),
+    }
+}
