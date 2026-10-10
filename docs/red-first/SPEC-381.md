@@ -57,8 +57,11 @@ A2: green at 96d496bdcd05141ab13a9d627fbfa69339e6aafb
 A3: red at 003d865917abf764aef500aca8aacb261a578af9: crates/ingest/tests/sensitive.rs:128:5: assertion `left == right` failed; left: all five `Admitted`; right: `home deck unknown` and `current deck unknown` `Unresolved`, `marks unread` and `marks' read failed` `Unreadable`, `control` `Admitted`
 A3: green at 96d496bdcd05141ab13a9d627fbfa69339e6aafb
 A4: red at 003d865917abf764aef500aca8aacb261a578af9: crates/agent/tests/deck_gate.rs:111:5: assertion `left == right` failed; left: Delivered(Delivered { output: "a reading", .. }); right: Withheld(Withheld { class: "deck-sensitive", findings: ["1 card(s) kept away"] })
+A4: green at 68ce4bfae087d8db2e8b2f4fa046b8e6251d90ce
 A5: red at 003d865917abf764aef500aca8aacb261a578af9: crates/agent/tests/deck_gate.rs:111:5: same left; right: Withheld(Withheld { class: "deck-unreadable", findings: ["2 card(s) not judged"] })
+A5: green at 68ce4bfae087d8db2e8b2f4fa046b8e6251d90ce
 A6: red at 003d865917abf764aef500aca8aacb261a578af9: crates/agent/tests/deck_gate.rs:111:5: same left; right: Withheld(Withheld { class: "deck-unreadable", findings: ["cards carry no deck scope"] })
+A6: green at 68ce4bfae087d8db2e8b2f4fa046b8e6251d90ce
 A7: red at 003d865917abf764aef500aca8aacb261a578af9: crates/readings/tests/sensitive_day_set.rs:80:5: assertion `left == right` failed: every card of the kept-away root, of its child and borrowed from it is held back; left: [("Alpha", [101, 102, 103]), ("Beta", [301, 302])]; right: [("Alpha", []), ("Beta", [301, 302])]
 A8: red at 003d865917abf764aef500aca8aacb261a578af9: crates/coordination/tests/readings_resolve.rs:287:5: a failed read of the marks ends the resolution with its named error: Ok(Resolved { run: RunId(1), .. })
 A9: red at 5a0590a7c3233102f9ff7ba87b3e1cff1dfd190a: crates/agent/tests/deck_gate_census.rs:718:5: assertion `left == right` failed: the census refused; left: ["crates/agent/src/duty.rs: decide calls no deck gate (`self.deck_gate.judge(`)"]; right: []

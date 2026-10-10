@@ -105,7 +105,7 @@ pub async fn resolve_study_day<E>(
 where
     E: AnkiEngine + Clone + Send + Sync + 'static,
 {
-    let marked = marks.read_marked().await.unwrap_or_default();
+    let marked = marks.read_marked().await.map_err(ResolveError::Marks)?;
     let started_at = parts.clock.now();
     let today = parts.rule.study_day(started_at);
     let history = parts.runs.history().await.map_err(ResolveError::Ledger)?;

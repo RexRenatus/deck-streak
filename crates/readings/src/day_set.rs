@@ -26,6 +26,7 @@ use std::time::Duration;
 use deck_streak_ingest::engine::{AnkiEngine, EngineError, NewCardQueue, QUEUE_FETCH_LIMIT};
 use deck_streak_ingest::lock::CollectionLock;
 use deck_streak_ingest::reader::{Card, CollectionData, ReadError};
+use deck_streak_ingest::sensitive::admits;
 use deck_streak_ingest::settings::{DECK_SEPARATOR, SyncSettings};
 use deck_streak_kernel::{Offload, StudyDay, StudyDayRule};
 use sha2::{Digest as _, Sha256};
@@ -267,7 +268,24 @@ pub fn hold_back_sensitive(
     deck_names: &BTreeMap<i64, String>,
     marked: &BTreeSet<i64>,
 ) -> Vec<DaySetQuery> {
-    let _ = (deck_names, marked);
+    let mut held_back = 0_usize;
+    let queries = queries
+        .into_iter()
+        .map(|mut query| {
+            let before = query.cards.len();
+            query.cards.retain(|card| {
+                admits(Some(marked), deck_names, card.home_deck_id(), card.deck_id).admitted()
+            });
+            held_back += before - query.cards.len();
+            query
+        })
+        .collect();
+    if held_back > 0 {
+        tracing::info!(
+            held_back,
+            "cards of decks kept away from AI were held back from the day set"
+        );
+    }
     queries
 }
 
