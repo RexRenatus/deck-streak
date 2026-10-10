@@ -5,11 +5,11 @@
 //
 // Run: pnpm exec playwright test tests/streak-calendar.spec.ts   (CI runs every spec in tests/)
 import { expect, test } from '@playwright/test';
+import { TELEGRAM_SDK, launchFragment } from './launch-fragment';
 
-const TELEGRAM_SDK = 'https://telegram.org/js/telegram-web-app.js';
-
-// Telegram's script stood in for at its own URL, as the accessibility audit does: launch data for
-// the session handshake, and the Mini App object the wrapper reads. Nothing reaches the network.
+// Telegram's script stood in for at its own URL, as the accessibility audit does, and loaded by
+// opening the page as a launch (SPEC-400): launch data for the session handshake, and the Mini App
+// object the wrapper reads. Nothing reaches the network.
 const STAND_IN = `(() => {
   const noop = () => {};
   const inset = { top: 0, bottom: 0, left: 0, right: 0 };
@@ -85,7 +85,11 @@ test.beforeEach(async ({ page }) => {
 test('the streak calendar lays out whole weeks, Monday first, and does not scroll sideways at 360 px', async ({
   page
 }) => {
-  await page.goto('/streak');
+  await page.goto('/streak' + launchFragment('auth_date=1&hash=synthetic'));
+  // the stand-in ran: the Mini App object it sets is there for the wrapper
+  await expect
+    .poll(() => page.evaluate(() => typeof (window as unknown as { Telegram?: { WebApp?: object } }).Telegram?.WebApp))
+    .toBe('object');
   let examined = 0;
   for (const track of ['language', 'law']) {
     const cells = page.locator(`article[data-track="${track}"] li[data-day]`);
