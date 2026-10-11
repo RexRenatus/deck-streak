@@ -58,4 +58,29 @@ A17: red at ce03cbf2: panicked at crates/daemon/src/wiring.rs:1090:9: assertion 
 A18: red at ce03cbf2: panicked at crates/notifications/tests/quiet_window.rs:67:5: assertion `left == right` failed: the policy's 23:00 to 07:30 answers until the owner sets hours, and the owner's after; left: ([false, true, false], [false, true, false]), right: ([false, true, false], [true, false, true])
 A19: red at ce03cbf2: panicked at crates/quests/tests/tokens_window.rs:265:5: assertion `left == right` failed: two tokens are held, and the window opened an hour ago ends an hour from now; left: Holdings { held: 5, window_ends_at: None }, right: Holdings { held: 2, window_ends_at: Some(UtcMillis(1700103600000)) }
 A20: not red: pins SPEC-081 A15's table, which the base already holds; it guards that table against this delivery
+A1: green at 15431374
+A2: green at 148412ce
+A3: green at 148412ce
+A4: green at 148412ce
+A5: green at 148412ce
+A6: green at 148412ce
+A7: green at 148412ce
+A8: green at 148412ce
+A9: green at 148412ce
+A10: green at 148412ce
+A11: green at 148412ce
+A12: green at 148412ce
+A13: green at 6a28b264
+A14: green at 6a28b264
+A15: green at 6a28b264
+A16: green at 6a28b264
+A17: green at 3c4d620d
+A18: green at f0665ade
+A19: green at 09d10541
 ```
+
+The daemon commit 3c4d620d, which turns A17 green, also extends the expected step lists of two
+existing tests, `wiring::tests::the_recompute_fold_registers_the_analytics_xp_and_streak_steps_in_their_phases`
+and `wiring::tests::the_recompute_fold_registers_the_habit_step_in_the_day_steps_phase` (whose
+slice `2..7` becomes `2..9`): each names the chest and sweep steps, and the first also the token
+bonus step, where the fold now registers them; no expected step is removed.
