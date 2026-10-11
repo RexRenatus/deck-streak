@@ -50,4 +50,18 @@ A13: red at 3c8a74e6: AssertionError: expected { en: [ …(4) ], es: [ …(4) ],
 A14: red at 3c8a74e6: AssertionError: expected { 'src/lib/study/engine.ts': 1 } to deeply equal { 'src/lib/study/engine.ts': 1, …(1) }: the walk finds engine.ts alone (update-now.test.ts:163)
 A15: not red: the base holds a session's two syncs and this delivery changes no line of engine.ts; it guards them
 A16: not red: the base holds the daily sync slot and this delivery changes no server file; it guards them
+A1: green at 64c98a3d
+A2: green at 64c98a3d
+A3: green at 64c98a3d
+A4: green at 64c98a3d
+A5: green at 64c98a3d
+A6: green at 64c98a3d
+A7: green at 64c98a3d
+A8: green at 64c98a3d
+A9: green at 64c98a3d
+A10: green at 64c98a3d
+A11: green at 64c98a3d
+A12: green at 64c98a3d
+A13: green at 64c98a3d
+A14: green at 64c98a3d
 ```
