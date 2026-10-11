@@ -1,5 +1,5 @@
--- @phx covers crates/engine-core/src/reorder.rs anchor=reorder digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/engine-core/src/reorder.rs anchor=DueScores digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/engine-core/src/reorder.rs anchor=reorder digest=sha256:53ecc76b432d129c28afe261e3fbd07105d0b8d4196fe6e1a8d38f45f2d99be6
+-- @phx covers crates/engine-core/src/reorder.rs anchor=DueScores digest=sha256:119b477dcdc7359de9f6a2e7ed584dcf9cf451769c65be8ad129ca0b0ea3545c
 -- @phx cites #824
 -- @phx vectors formal/vectors/due-reorder.jsonl
 -- @phx theorem the_reorder_is_a_permutation_of_the_stock_queue ramp=report

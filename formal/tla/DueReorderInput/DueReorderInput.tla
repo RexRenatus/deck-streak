@@ -1,6 +1,6 @@
 --------------------------- MODULE DueReorderInput ---------------------------
-\* @phx covers crates/engine-core/src/reorder.rs anchor=reorder digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/reorder.rs anchor=DueScores digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/engine-core/src/reorder.rs anchor=reorder digest=sha256:53ecc76b432d129c28afe261e3fbd07105d0b8d4196fe6e1a8d38f45f2d99be6
+\* @phx covers crates/engine-core/src/reorder.rs anchor=DueScores digest=sha256:119b477dcdc7359de9f6a2e7ed584dcf9cf451769c65be8ad129ca0b0ea3545c
 \* @phx covers crates/web-engine/src/wasm.rs anchor=current_card digest=sha256:605adfade6242520ebc39f34b2852dc699ed1dcb1029ca71522fdef82edf8118
 \* @phx covers crates/web-engine/src/wasm.rs anchor=first_queued digest=sha256:066ce8c542e98e05a351d8e1b51ad8d2781edcf69e574faf6fd1dc23150398e0
 \* @phx covers crates/web-engine/src/wasm.rs anchor=rate digest=sha256:ec4876c9095cd9dda71a594741e87ecb2ec897e92871e3f696dbd610e8abe7db
