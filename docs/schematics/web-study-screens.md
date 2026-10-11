@@ -295,3 +295,111 @@ The view is built when the card is shown. A card shown before the rollover and a
 keeps the view it was shown with: a card due today shows no line and is then answered past its due
 day (the line is absent, never false); a card past its due day when shown is still past it when
 answered (the line stays true).
+
+## 7. The one-tap sync after a late review (SPEC-409)
+
+Read at the base `6e256acb925d5f6b4da908974e698a696bc651d8` (`dev`). Decided by ADR-423. This
+section is appended to `docs/schematics/web-study-screens.md`; no line above it changes.
+
+A late review has one source, section 6's rule, carried to the review as the card view's `late`.
+The review machine counts each rate of a late view the engine answers; the screen raises the offer
+at the first, below the control bar. One tap runs the client's own sync through the Worker's one
+queue and then reads the unsynced count, exactly as the Sync page's "Sync now" does. The session's
+two syncs and the server's daily sync are untouched. The native app raises nothing yet: it has no
+late line (`#738`) and no sync (`#633`).
+
+### 7a. Data flow, from the late review to the sync
+
+```mermaid
+flowchart LR
+  subgraph core["the engine core"]
+    lateRule["late::past_due_day, section 6"]
+  end
+  subgraph webengine["web engine"]
+    cardView["the card view, with late"]
+  end
+  subgraph machine["review machine, review.ts"]
+    lateRate["a rate of a late view, answered"]
+    lateCount["lateReviews rises by one"]
+  end
+  subgraph page["review screen"]
+    offerBlock["the offer, below the control bar"]
+    tapSync["Sync now, one tap"]
+    offerLine["the offer's status line"]
+  end
+  subgraph worker["the Worker's one queue"]
+    queueRun["sync, then unsynced"]
+  end
+  subgraph kept["unchanged by this section"]
+    sessionSyncs["the session's two syncs, at the open and the close"]
+    dailySync["the server's daily sync, once a study day"]
+    ownerRequest["the owner's sync request, through the bot"]
+  end
+  syncStore["the sync server"]
+  nativeApp["native app: no offer, its own issues"]
+  lateRule --> cardView --> lateRate --> lateCount --> offerBlock --> tapSync --> queueRun
+  queueRun --> offerLine
+  queueRun --> syncStore
+  sessionSyncs --> queueRun
+  dailySync --> syncStore
+  ownerRequest --> dailySync
+  lateRule -. "when the native late line and sync land" .-> nativeApp
+```
+
+### 7b. The offer's states
+
+```mermaid
+stateDiagram-v2
+  [*] --> hidden
+  hidden --> shown: the first late review of the screen settles, and the screen has an update client
+  shown --> working: Sync now
+  working --> outcome: the sync and the count answer, or one throws
+  outcome --> working: Sync now again
+  shown --> dismissed: Not now
+  outcome --> dismissed: Not now
+  working --> dismissed: Not now, and the running sync ends with no line
+  dismissed --> [*]
+```
+
+A screen given no update client stays `hidden` for its life. Neither `hidden`, `shown` nor
+`dismissed` calls the client; `working` makes one `sync` call and then one `unsynced` call.
+
+### 7c. One tap, in order
+
+```mermaid
+sequenceDiagram
+  participant L as learner
+  participant S as ReviewScreen
+  participant U as UpdateNow
+  participant W as Worker queue
+  L->>S: presses Sync now
+  S->>U: tap
+  U-->>S: working, the button disabled
+  U->>W: sync
+  W-->>U: the status word and the required kind
+  U->>W: unsynced
+  W-->>U: the reviews still waiting
+  U-->>S: the outcome line, then the count
+```
+
+### 7d. The line after each answer
+
+| the sync's answer | the line | then |
+|---|---|---|
+| status `held`, a required kind `choosing` does not name | `study_update_done` "Sync finished." | `sync_unsynced` with the count |
+| a required kind `choosing` names | `sync_full_required` | the link to the Sync page (`study_update_open_sync`), then the count |
+| status `absent` or `needs-sign-in` | the Sync page's line for that word | the link to the Sync page, then the count |
+| any other status word | the Sync page's line for that word | the count |
+| `sync` or `unsynced` throws | `study_refused_engine` | no count |
+
+After every row, "Sync now" is enabled again and "Not now" stays.
+
+### 7e. What stays as it is
+
+| sync | its trigger | its timing | changed here |
+|---|---|---|---|
+| the server's daily sync | the job table, claimed once per study day (ADR-037) | once a study day | no |
+| the owner's sync request | the bot's `/sync` | when the owner asks | no |
+| the session's syncs | the study engine's open and close (ADR-388 D12) | once after the open, once before the close | no |
+| the Sync page's "Sync now" | the learner, on the Sync page | when pressed | no |
+| the offer's "Sync now" | the learner, after a late review | when pressed | added |
