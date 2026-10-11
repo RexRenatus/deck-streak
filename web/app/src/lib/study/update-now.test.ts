@@ -3,11 +3,26 @@
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
+import { flushSync } from 'svelte';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { CardView, Head, StatusWord, Synced, Unsynced, UndoOffer } from '$lib/engine/protocol';
+import StudyReview from '../../routes/study/review/+page.svelte';
+import { Review, type StudyClient } from './review';
+import ReviewScreen from './ReviewScreen.svelte';
+import type { UpdateClient } from './update-now';
 
 // SPEC-409 R10, R11, A13, A14; ADR-423 D4, D5. Every locale holds the four words of the one-tap
 // sync offer under one set of keys, with its own text and no word for the streak, and the study
 // code's shipped sync calls are the session's one and the offer's one.
+const routes = vi.hoisted(() => ({ client: vi.fn() }));
+vi.mock('$lib/study/engine', () => ({ studyEngine: () => ({ client: routes.client }) }));
+
+afterEach(() => {
+  cleanup();
+  routes.client.mockReset();
+});
+
 const APP = resolve(import.meta.dirname, '../../..');
 
 /** The offer's four keys, with the English as SPEC-409 R10 words it. */
@@ -181,5 +196,407 @@ describe('the tap is the one new sync call in the study code', () => {
 
     examined('shipped source files under the study modules and routes', files);
     expect(files).toContain('src/lib/study/ReviewScreen.svelte');
+  });
+});
+
+// ---- the screen's offer: A1 to A12 ----
+
+/** The offer's lines in English, as SPEC-409 R6 and R10 word them. */
+const PROMPT = ENGLISH.study_update_prompt;
+const DONE = 'Sync finished.';
+const OFFLINE = 'The sync server cannot be reached right now. Your reviews stay on this device.';
+const ABSENT = 'You are not signed in to sync.';
+const ENDED = 'Your sign-in has ended. Sign in again to sync.';
+const FULL =
+  'The server and this device changed in ways a normal sync cannot merge. Choose which copy to keep.';
+const STOPPED = 'The study engine stopped. Try again.';
+
+/** A card view as the engine reads it, on time unless `extra` says otherwise. */
+function view(id: number, extra: Partial<CardView> = {}): CardView {
+  return {
+    id: BigInt(id),
+    ordinal: 0,
+    flag: 0,
+    question: `<p>question ${id}</p>`,
+    answer: `<p>answer ${id}</p>`,
+    css: '',
+    labels: ['<1m', '<6m', '<10m', '4d'],
+    undo: null,
+    late: false,
+    ...extra
+  };
+}
+
+function head(card: CardView | null): Head {
+  return { counts: { new: 0, learning: 0, review: 3 }, card };
+}
+
+/** The engine as the review sees it: the heads queued in order, each rate counted, or refused. */
+class FakeStudy implements StudyClient {
+  heads: Head[];
+  rates: bigint[] = [];
+  refuse = false;
+  buried: bigint[] = [];
+
+  constructor(heads: Head[]) {
+    this.heads = heads;
+  }
+
+  card(): Promise<Head> {
+    return Promise.resolve(this.heads.shift() as Head);
+  }
+
+  rate(card: bigint): Promise<null> {
+    if (this.refuse) return Promise.reject(new Error('refused'));
+    this.rates.push(card);
+    return Promise.resolve(null);
+  }
+
+  bury(card: bigint): Promise<null> {
+    this.buried.push(card);
+    return Promise.resolve(null);
+  }
+
+  flag(): Promise<number> {
+    return Promise.resolve(1);
+  }
+
+  undo(): Promise<null> {
+    return Promise.resolve(null);
+  }
+
+  undoOffer(): Promise<UndoOffer> {
+    return Promise.resolve({ offer: null, why: 'none' });
+  }
+}
+
+/** The sync client as the offer sees it: each call counted in order, answered from fixed values,
+ * or held pending until the test lets it answer. */
+class FakeUpdate implements UpdateClient {
+  calls: string[] = [];
+  answer: Synced | Error = { status: 'held', required: null };
+  count: Unsynced | Error = { reviews: 0, changed: false, schema: false };
+  hold = false;
+  release: (() => void) | null = null;
+
+  sync(): Promise<Synced> {
+    this.calls.push('sync');
+    const answer = this.answer;
+    const settle = () => (answer instanceof Error ? Promise.reject(answer) : Promise.resolve(answer));
+    if (!this.hold) return settle();
+    return new Promise<void>((resolve) => (this.release = resolve)).then(settle);
+  }
+
+  unsynced(): Promise<Unsynced> {
+    this.calls.push('unsynced');
+    return this.count instanceof Error ? Promise.reject(this.count) : Promise.resolve(this.count);
+  }
+}
+
+/** Lets every answer arrive and every timer of zero run, then lets Svelte update the page. */
+async function settle(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  flushSync();
+}
+
+/** Shows the screen over `study`, with `update` when given. */
+async function open(study: FakeStudy, update?: FakeUpdate): Promise<void> {
+  render(ReviewScreen, { client: async () => study, ...(update === undefined ? {} : { update: async () => update }) });
+  await settle();
+}
+
+/** Shows the answer of the card on screen and grades it Good. */
+async function answerGood(): Promise<void> {
+  await fireEvent.click(screen.getByRole('button', { name: 'Show answer' }));
+  await fireEvent.click(screen.getByRole('button', { name: 'Good <10m' }));
+  await settle();
+}
+
+/** Whether `first` comes before `second` in the page. */
+function before(first: Node, second: Node): boolean {
+  return (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+}
+
+/** The status regions the page holds, in order; the offer's is the last. */
+function regions(): HTMLElement[] {
+  return [...document.querySelectorAll<HTMLElement>('[role="status"]')];
+}
+
+function tap(): HTMLButtonElement {
+  return screen.getByRole('button', { name: 'Sync now' });
+}
+
+describe('the one-tap sync offer', () => {
+  it('a late review raises the offer below the controls', async () => {
+    const study = new FakeStudy([head(view(1, { late: true })), head(view(2)), head(null)]);
+    const update = new FakeUpdate();
+    await open(study, update);
+    expect(screen.queryByText(PROMPT)).toBeNull();
+
+    const focus = document.activeElement;
+    await answerGood();
+    expect(study.rates).toEqual([1n]);
+    const line = screen.getByText(PROMPT);
+    expect(screen.getAllByRole('button').map((button) => button.textContent?.trim()).filter((name) => name === 'Sync now' || name === 'Not now')).toEqual([
+      'Sync now',
+      'Not now'
+    ]);
+    // after the control bar and before the nav
+    expect(before(screen.getByRole('button', { name: 'Flag' }), line)).toBe(true);
+    expect(before(line, screen.getByRole('link', { name: 'Back to decks' }))).toBe(true);
+    expect(document.activeElement).toBe(focus);
+    expect(update.calls).toEqual([]);
+  });
+
+  it('an on-time review and an unanswered late card raise no offer', async () => {
+    const study = new FakeStudy([head(view(1)), head(view(2, { late: true })), head(view(3)), head(null)]);
+    await open(study, new FakeUpdate());
+    await answerGood();
+    expect(study.rates).toEqual([1n]);
+    // the late card is shown, and not answered
+    expect(screen.queryByRole('button', { name: 'Show answer' })).not.toBeNull();
+    expect(screen.queryByText(ENGLISH.study_update_prompt)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Not now' })).toBeNull();
+
+    // its first answer raises it
+    await answerGood();
+    expect(study.rates).toEqual([1n, 2n]);
+    expect(screen.queryByText(PROMPT)).not.toBeNull();
+  });
+
+  it('not now hides the offer for the screen and syncs nothing', async () => {
+    const study = new FakeStudy([head(view(1, { late: true })), head(view(2, { late: true })), head(view(3, { late: true })), head(null)]);
+    const update = new FakeUpdate();
+    await open(study, update);
+    await answerGood();
+    expect(screen.queryByText(PROMPT)).not.toBeNull();
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
+    await settle();
+    expect(screen.queryByText(PROMPT)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sync now' })).toBeNull();
+
+    // a later late review raises nothing
+    await answerGood();
+    expect(study.rates).toEqual([1n, 2n]);
+    expect(screen.queryByText(PROMPT)).toBeNull();
+    expect(update.calls).toEqual([]);
+
+    // pressed while a sync runs, it hides the offer and the sync ends without a line
+    cleanup();
+    const held = new FakeStudy([head(view(1, { late: true })), head(null)]);
+    const pending = new FakeUpdate();
+    pending.hold = true;
+    await open(held, pending);
+    await answerGood();
+    await fireEvent.click(tap());
+    await settle();
+    expect(pending.calls).toEqual(['sync']);
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
+    (pending.release as () => void)();
+    await settle();
+    expect(pending.calls).toEqual(['sync', 'unsynced']);
+    expect([screen.queryByText(DONE), screen.queryByText(PROMPT), screen.queryByText('Syncing…')]).toEqual([null, null, null]);
+    expect(regions().at(-1)?.textContent?.trim()).toBe('');
+  });
+
+  it('one tap syncs once and shows the result', async () => {
+    const study = new FakeStudy([head(view(1, { late: true })), head(view(2)), head(null)]);
+    const update = new FakeUpdate();
+    update.hold = true;
+    await open(study, update);
+    await answerGood();
+    const focus = document.activeElement;
+
+    await fireEvent.click(tap());
+    await settle();
+    expect(update.calls).toEqual(['sync']);
+    expect(screen.queryByText('Syncing…')).not.toBeNull();
+    expect(tap().disabled).toBe(true);
+
+    (update.release as () => void)();
+    await settle();
+    expect(update.calls).toEqual(['sync', 'unsynced']);
+    expect(screen.queryByText(DONE)).not.toBeNull();
+    expect(screen.queryByText('Reviews waiting to sync: 0')).not.toBeNull();
+    expect(screen.queryByText('Syncing…')).toBeNull();
+    expect(tap().disabled).toBe(false);
+    expect(document.activeElement).toBe(focus);
+  });
+
+  it('an offline answer says so and lets the learner retry', async () => {
+    const study = new FakeStudy([head(view(1, { late: true })), head(null)]);
+    const update = new FakeUpdate();
+    update.answer = { status: 'offline', required: null };
+    update.count = { reviews: 3, changed: false, schema: false };
+    await open(study, update);
+    await answerGood();
+
+    await fireEvent.click(tap());
+    await settle();
+    expect(screen.queryByText(OFFLINE)).not.toBeNull();
+    expect(screen.queryByText('Reviews waiting to sync: 3')).not.toBeNull();
+    expect(screen.queryByRole('link', { name: 'Open the sync page' })).toBeNull();
+    expect(tap().disabled).toBe(false);
+
+    await fireEvent.click(tap());
+    await settle();
+    expect(update.calls).toEqual(['sync', 'unsynced', 'sync', 'unsynced']);
+  });
+
+  it('a sync with no sign-in links to the sync page', async () => {
+    const lines: [StatusWord, string][] = [
+      ['absent', ABSENT],
+      ['needs-sign-in', ENDED]
+    ];
+    for (const [status, line] of lines) {
+      const study = new FakeStudy([head(view(1, { late: true })), head(null)]);
+      const update = new FakeUpdate();
+      update.answer = { status, required: null };
+      update.count = { reviews: 2, changed: false, schema: false };
+      await open(study, update);
+      await answerGood();
+      await fireEvent.click(tap());
+      await settle();
+      expect(screen.queryByText(line), status).not.toBeNull();
+      expect(screen.getByRole('link', { name: 'Open the sync page' }).getAttribute('href'), status).toBe('/sync');
+      expect(screen.queryByText('Reviews waiting to sync: 2'), status).not.toBeNull();
+      cleanup();
+    }
+  });
+
+  it('a full sync required sends the learner to the sync page', async () => {
+    const study = new FakeStudy([head(view(1, { late: true })), head(null)]);
+    const update = new FakeUpdate();
+    update.answer = { status: 'held', required: 'full-sync' };
+    update.count = { reviews: 4, changed: false, schema: false };
+    await open(study, update);
+    await answerGood();
+    await fireEvent.click(tap());
+    await settle();
+    expect(screen.queryByText(FULL)).not.toBeNull();
+    expect(screen.queryByText(DONE)).toBeNull();
+    expect(screen.getByRole('link', { name: 'Open the sync page' }).getAttribute('href')).toBe('/sync');
+    expect(screen.queryByText('Reviews waiting to sync: 4')).not.toBeNull();
+    // the review makes no full-sync call: the client it was given holds none
+    expect(update.calls).toEqual(['sync', 'unsynced']);
+  });
+
+  it('a refused sync says the engine stopped and lets the learner retry', async () => {
+    for (const refuse of ['sync', 'unsynced']) {
+      const study = new FakeStudy([head(view(1, { late: true })), head(null)]);
+      const update = new FakeUpdate();
+      if (refuse === 'sync') update.answer = new Error('stopped');
+      else update.count = new Error('stopped');
+      await open(study, update);
+      await answerGood();
+      await fireEvent.click(tap());
+      await settle();
+      expect(screen.queryByText(STOPPED), refuse).not.toBeNull();
+      expect(screen.queryByText(/Reviews waiting to sync/), refuse).toBeNull();
+      expect(tap().disabled, refuse).toBe(false);
+      cleanup();
+    }
+  });
+
+  it('the review goes on while a sync is pending', async () => {
+    const study = new FakeStudy([head(view(1, { late: true })), head(view(2)), head(null)]);
+    const update = new FakeUpdate();
+    update.hold = true;
+    await open(study, update);
+    await answerGood();
+    await fireEvent.click(tap());
+    await settle();
+    expect(update.calls).toEqual(['sync']);
+
+    // the next card shows and its rate reaches the client, with the sync still pending
+    expect(screen.queryByRole('button', { name: 'Show answer' })).not.toBeNull();
+    await answerGood();
+    expect(study.rates).toEqual([1n, 2n]);
+    expect(update.calls).toEqual(['sync']);
+  });
+
+  it('the offer is reachable by touch keyboard and screen reader', async () => {
+    const study = new FakeStudy([head(view(1, { late: true })), head(null)]);
+    await open(study, new FakeUpdate());
+    // the region is in the page, empty, before the offer shows
+    expect(regions().length).toBe(2);
+    expect(regions().at(-1)?.textContent?.trim()).toBe('');
+
+    await answerGood();
+    const buttons = ['Sync now', 'Not now'].map((name) => screen.getByRole('button', { name }) as HTMLButtonElement);
+    for (const button of buttons) {
+      expect(button.tagName).toBe('BUTTON');
+      expect(button.type).toBe('button');
+      expect(button.classList.contains('min-h-11')).toBe(true);
+    }
+    expect(regions().at(-1)?.textContent).toContain(PROMPT);
+
+    // a screen given no update client holds no region and no offer
+    cleanup();
+    await open(new FakeStudy([head(view(1, { late: true })), head(null)]));
+    await answerGood();
+    expect(regions().length).toBe(1);
+    expect(screen.queryByText(PROMPT)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sync now' })).toBeNull();
+  });
+
+  it('the review route gives the screen the engine sync', async () => {
+    const study = new FakeStudy([head(view(1, { late: true })), head(null)]);
+    const update = new FakeUpdate();
+    routes.client.mockResolvedValue(Object.assign(study, { sync: () => update.sync(), unsynced: () => update.unsynced() }));
+    render(StudyReview);
+    await settle();
+    await answerGood();
+    expect(screen.queryByText(PROMPT)).not.toBeNull();
+    await fireEvent.click(tap());
+    await settle();
+    expect(update.calls).toEqual(['sync', 'unsynced']);
+    expect(screen.queryByText(DONE)).not.toBeNull();
+  });
+});
+
+describe('the review counts only settled late answers', () => {
+  it('the review counts only settled late answers', async () => {
+    const study = new FakeStudy([
+      head(view(1, { late: true })),
+      head(view(2)),
+      head(view(3, { late: true })),
+      head(view(4, { late: true })),
+      head(null)
+    ]);
+    const review = new Review(async () => study, () => 0, () => undefined);
+    const rate = async (): Promise<void> => {
+      review.act('show-answer');
+      review.act('good');
+      await review.settled();
+    };
+    review.start();
+    await review.settled();
+    expect(review.lateReviews).toBe(0);
+
+    await rate();
+    expect(study.rates).toEqual([1n]);
+    expect(review.lateReviews).toBe(1);
+
+    // an on-time rate counts none
+    await rate();
+    expect(study.rates).toEqual([1n, 2n]);
+    expect(review.lateReviews).toBe(1);
+
+    // a bury of a late card counts none
+    review.act('bury');
+    await review.settled();
+    expect(study.buried).toEqual([3n]);
+    expect(review.lateReviews).toBe(1);
+
+    // a refused late rate counts none
+    study.refuse = true;
+    review.act('show-answer');
+    review.act('good');
+    await review.settled();
+    expect(study.rates).toEqual([1n, 2n]);
+    expect(review.lateReviews).toBe(1);
   });
 });
