@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"Fsrs7Stock","covers":"crates/fsrs7/src/stock.rs","anchor":"project","digest":"sha256:b541abd153973192e71c40abce6ce90e706e647f2e854b1c6eee7a58aede025b","digests":["sha256:b541abd153973192e71c40abce6ce90e706e647f2e854b1c6eee7a58aede025b","sha256:c422caccdcd84138a84c828729330781f1a0ac36af1ab819a0617b28b1863b94","sha256:95738f66444b06fcb6744cc4ac26bdb9bc56c5831b50b8cb55399a0a43cefb85","sha256:1555dc14a511d6c197e35fefac3d9d82fed48de2c966fb0edef39e6c39458838"],"vectors":26}
+{"schema":"phx.formal.vectors.v1","entry":"Fsrs7Stock","covers":"crates/fsrs7/src/stock.rs","anchor":"project","digest":"sha256:b541abd153973192e71c40abce6ce90e706e647f2e854b1c6eee7a58aede025b","digests":["sha256:b541abd153973192e71c40abce6ce90e706e647f2e854b1c6eee7a58aede025b","sha256:c422caccdcd84138a84c828729330781f1a0ac36af1ab819a0617b28b1863b94","sha256:95738f66444b06fcb6744cc4ac26bdb9bc56c5831b50b8cb55399a0a43cefb85","sha256:1555dc14a511d6c197e35fefac3d9d82fed48de2c966fb0edef39e6c39458838","sha256:0000000000000000000000000000000000000000000000000000000000000000","sha256:0000000000000000000000000000000000000000000000000000000000000000"],"vectors":38}
 {"difficulty":[0],"stock":[0]}
 {"difficulty":[1],"stock":[3,1,1]}
 {"difficulty":[2],"stock":[3,10,1]}
@@ -25,3 +25,15 @@
 {"gap":[3,1073741824,1],"read":[3,1073741824,1],"review":0}
 {"gap":[3,140737488355328,1],"read":[3,140737488355328,1],"review":0}
 {"gap":[2],"read":[2],"review":0}
+{"interval":[0],"stability":[3,13743895,137438953472]}
+{"interval":[1],"stability":[3,13743895,137438953472]}
+{"interval":[3,-1,1],"stability":[3,13743895,137438953472]}
+{"interval":[3,0,1],"stability":[3,13743895,137438953472]}
+{"interval":[3,1,1048576],"stability":[3,13743895,137438953472]}
+{"interval":[3,2630281,68719476736],"stability":[3,13743895,137438953472]}
+{"interval":[3,13743895,137438953472],"stability":[3,13743895,137438953472]}
+{"interval":[3,1717987,17179869184],"stability":[3,1717987,17179869184]}
+{"interval":[3,1,2],"stability":[3,1,2]}
+{"interval":[3,1,1],"stability":[3,1,1]}
+{"interval":[3,36500,1],"stability":[3,36500,1]}
+{"interval":[2],"stability":[2]}

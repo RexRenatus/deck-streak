@@ -2,6 +2,8 @@
 -- @phx covers crates/fsrs7/src/stock.rs anchor=DIFFICULTY_MIN digest=sha256:c422caccdcd84138a84c828729330781f1a0ac36af1ab819a0617b28b1863b94
 -- @phx covers crates/fsrs7/src/stock.rs anchor=DIFFICULTY_MAX digest=sha256:95738f66444b06fcb6744cc4ac26bdb9bc56c5831b50b8cb55399a0a43cefb85
 -- @phx covers crates/fsrs7/src/stock.rs anchor=STOCK_RETENTION digest=sha256:1555dc14a511d6c197e35fefac3d9d82fed48de2c966fb0edef39e6c39458838
+-- @phx covers crates/fsrs7/src/stock.rs anchor=stock_stability digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/fsrs7/src/stock.rs anchor=STABILITY_MIN digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 -- @phx cites #823
 -- @phx theorem the_stock_difficulty_lies_in_the_stock_range ramp=report
 -- @phx witness a_difficulty_with_no_clamp_leaves_the_range kills=the_stock_difficulty_lies_in_the_stock_range
@@ -9,6 +11,8 @@
 -- @phx witness an_unsquashed_curve_reads_one_at_the_review kills=the_curve_reads_between_its_floor_and_its_ceiling
 -- @phx theorem the_curve_never_rises_with_time ramp=report
 -- @phx witness a_curve_read_at_a_negative_gap_rises_to_the_review kills=the_curve_never_rises_with_time
+-- @phx theorem the_stock_stability_is_at_least_the_floor_and_stored_above_zero ramp=report
+-- @phx witness an_unfloored_stability_stores_as_zero kills=the_stock_stability_is_at_least_the_floor_and_stored_above_zero
 -- @phx vectors formal/vectors/fsrs7-stock.jsonl
 
 /-!
@@ -16,7 +20,8 @@
 
 A replayed FSRS-7 state as the stock fields hold it (#823): `project` in
 `crates/fsrs7/src/stock.rs`, and the pinned scheduler's forgetting curve, whose 0.9 point
-`project` writes as the stock stability (`STOCK_RETENTION`).
+`project` writes as the stock stability (`STOCK_RETENTION`), held at the revision's least stability
+(`stock_stability`, `STABILITY_MIN`).
 
 **The claims.**
 - `the_stock_difficulty_lies_in_the_stock_range`: for every `f32` difficulty but NaN, infinities
@@ -28,11 +33,16 @@ A replayed FSRS-7 state as the stock fields hold it (#823): `project` in
   the curve's last step maps its mixture onto that band.
 - `the_curve_never_rises_with_time`: a later gap never reads a higher retrievability, negative
   gaps included, which read as zero.
+- `the_stock_stability_is_at_least_the_floor_and_stored_above_zero`: for every `f32` the 90-percent
+  interval can be, NaN and the infinities included, the stock stability is positive infinity or a
+  finite value at least `STABILITY_MIN` that the engine's four-place store keeps above zero; and an
+  interval at or above the floor is kept as it is.
 
 **What is ported.** The difficulty's `f32::clamp`, with NaN and the infinities. The curve,
 `fsrs7_forgetting_curve_scalar_for_state` at the pinned revision: the gap read through
 `max(0.0)`, the two components' mixture by their weights, and the final
-`mul_add(1.0 - 2e-5, 1e-5)`, over exact rationals.
+`mul_add(1.0 - 2e-5, 1e-5)`, over exact rationals. The stock stability's `f32::max` with the floor,
+with NaN and the infinities, and the floor as its exact `f32` value.
 
 **What is not ported, and why.** Each component's power law and each weight's value: they are a
 parameter of the claims (`Curve`), held to the laws the pinned code gives them (`Laws`): a weight
@@ -41,7 +51,15 @@ of zero, since `powf(1.0, y)` is 1; and it lies in 0 to 1 and never rises over a
 since its base is at least 1 and its exponent negative. The curve's `f32` rounding is not ported:
 the constants `1e-5` and `1.0 - 2e-5` are read as exact, and the monotonicity of `powf` is taken
 from its specification, not from the platform's library. The 0.9 point's arithmetic, the crate's
-Newton and bisection search, is not ported.
+Newton and bisection search, is not ported: the floor's claim holds for every `f32` it returns.
+The engine's store, `(v * 10^4).round() / 10^4`, is the engine's code, not this repository's: it is
+stated over exact rationals (`stored`), and its `f32` product is not ported; SPEC-413 A1 reads the
+store's rounding on the real `f32`.
+
+**The witnesses** port the merge-base's code. The floor's, `an_unfloored_stability_stores_as_zero`,
+ports `project`'s stability at the merge base (`crates/fsrs7/src/stock.rs:36`), the 90-percent
+interval written as it is, at the interval a first review rated Again gets under the default
+parameters.
 -/
 
 namespace Formal.Fsrs7Stock
@@ -108,6 +126,28 @@ def retrievability (c : Curve) (t : Rat) : Rat :=
   let retention := (c.w1 * c.r1 t + c.w2 * c.r2 t) / (c.w1 + c.w2)
   retention * (1 - 2 / 100000) + 1 / 100000
 
+/-- `STABILITY_MIN`, `0.0001` as its `f32`: `13743895 / 2^37`. -/
+def stabilityMin : Rat := 13743895 / 137438953472
+
+/-- `f32::max(lo)` for a finite `lo`: NaN and negative infinity read `lo`, as IEEE `maxNum` gives
+the other operand; positive infinity stays; and a finite value below `lo` reads `lo`. -/
+def F32.atLeast (x : F32) (lo : Rat) : F32 :=
+  match x with
+  | .nan => .fin lo
+  | .negInf => .fin lo
+  | .posInf => .posInf
+  | .fin q => if q < lo then .fin lo else .fin q
+
+/-- `stock_stability`: `interval.max(STABILITY_MIN)`, the stability `project` writes. -/
+def stockStability (interval : F32) : F32 := interval.atLeast stabilityMin
+
+/-- `f32::round`: half away from zero. -/
+def roundHalfAway (x : Rat) : Int :=
+  if 0 ≤ x then (x + 1 / 2).floor else -((-x + 1 / 2).floor)
+
+/-- The engine's store of a stability, over exact rationals: rounded to four decimal places. -/
+def stored (q : Rat) : Rat := (roundHalfAway (q * 10000) : Rat) / 10000
+
 /-! ## The claims -/
 
 /-- The difficulty claim over a difficulty function. -/
@@ -123,6 +163,11 @@ def BandRule (r : Curve → Rat → Rat) : Prop :=
 /-- The falling claim over a curve. -/
 def FallingRule (r : Curve → Rat → Rat) : Prop :=
   ∀ c, Laws c → ∀ a b, a ≤ b → r c b ≤ r c a
+
+/-- The floor claim over a stability function. -/
+def StabilityRule (f : F32 → F32) : Prop :=
+  (∀ v, f v = .posInf ∨ ∃ q, f v = .fin q ∧ stabilityMin ≤ q ∧ 0 < stored q) ∧
+  (∀ q, stabilityMin ≤ q → f (.fin q) = .fin q)
 
 /-! ## The proofs -/
 
@@ -221,6 +266,45 @@ theorem the_curve_never_rises_with_time : FallingRule retrievability := by
   simp only [retrievability]
   grind
 
+/-- A stability at or above the floor is stored above zero: its four-place rounding is at least
+`0.0001`. -/
+theorem stored_pos {q : Rat} (h : stabilityMin ≤ q) : 0 < stored q := by
+  have hm : (0 : Rat) < stabilityMin := by decide +kernel
+  have h0 : 0 ≤ q * 10000 := Rat.mul_nonneg (by grind) (by decide +kernel)
+  have hk : stabilityMin * 10000 ≤ q * 10000 :=
+    Rat.mul_le_mul_of_nonneg_right h (by decide +kernel)
+  have hc : (1 : Rat) ≤ stabilityMin * 10000 + 1 / 2 := by decide +kernel
+  have hf : (1 : Int) ≤ (q * 10000 + 1 / 2).floor := by
+    rw [Rat.le_floor_iff]
+    have : (((1 : Int) : Rat)) = 1 := rfl
+    rw [this]
+    grind
+  have hr : (1 : Rat) ≤ ((q * 10000 + 1 / 2).floor : Rat) := by exact_mod_cast hf
+  simp only [stored, roundHalfAway, h0, ↓reduceIte]
+  exact (Rat.lt_div_iff (by decide +kernel)).mpr (by grind)
+
+/-- The stock stability is positive infinity or a value at least the floor that the store keeps
+above zero, whatever `f32` the interval is, and an interval at or above the floor is kept. -/
+theorem the_stock_stability_is_at_least_the_floor_and_stored_above_zero :
+    StabilityRule stockStability := by
+  have hm : stabilityMin ≤ stabilityMin := by decide +kernel
+  refine ⟨?_, ?_⟩
+  · intro v
+    rcases v with _ | _ | _ | q
+    · exact Or.inr ⟨stabilityMin, rfl, hm, stored_pos hm⟩
+    · exact Or.inr ⟨stabilityMin, rfl, hm, stored_pos hm⟩
+    · exact Or.inl rfl
+    · simp only [stockStability, F32.atLeast]
+      by_cases hq : q < stabilityMin
+      · simp only [hq, ↓reduceIte]
+        exact Or.inr ⟨stabilityMin, rfl, hm, stored_pos hm⟩
+      · simp only [hq, ↓reduceIte]
+        have hl : stabilityMin ≤ q := by grind
+        exact Or.inr ⟨q, rfl, hl, stored_pos hl⟩
+  · intro q hq
+    have n : ¬ q < stabilityMin := by grind
+    simp only [stockStability, F32.atLeast, n, ↓reduceIte]
+
 /-! ## The witnesses -/
 
 /-- The difficulty with no clamp. -/
@@ -298,5 +382,23 @@ theorem a_curve_read_at_a_negative_gap_rises_to_the_review :
   have := h stepCurve stepCurve_laws (-1) 0 (by decide +kernel)
   revert this
   decide +kernel
+
+/-- `project`'s stability at the merge base (`crates/fsrs7/src/stock.rs:36`): the revision's
+90-percent interval, written as it is. -/
+def stockStabilityUnfloored (interval : F32) : F32 := interval
+
+/-- The 90-percent interval of a first review rated Again under the default parameters,
+`3.827_562_6e-5` days as its `f32`: `2630281 / 2^36`. -/
+def againInterval : Rat := 2630281 / 68719476736
+
+/-- Written as it is, the Again interval is stored as zero. -/
+theorem an_unfloored_stability_stores_as_zero : ¬ StabilityRule stockStabilityUnfloored := by
+  intro h
+  rcases h.1 (.fin againInterval) with e | ⟨q, e, _, h2⟩
+  · simp [stockStabilityUnfloored] at e
+  · simp only [stockStabilityUnfloored, F32.fin.injEq] at e
+    subst e
+    revert h2
+    decide +kernel
 
 end Formal.Fsrs7Stock

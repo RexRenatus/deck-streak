@@ -17,7 +17,9 @@ it. A gap line carries a gap, the gap the curve reads (`F32.maxZero`), and wheth
 the review itself, a gap of 0, where the curve reads its ceiling. The port leaves each component
 of the curve abstract, so a gap line carries no retrievability: the Rust test reads the pinned
 crate's curve at each gap and holds the band, the ceiling at the review and the fall on what it
-returns. This module carries no header line, so the registry lists it as support.
+returns. A stability line carries a 90-percent interval and the stock stability the port gives it,
+which `stock::stock_stability` must give bit for bit. This module carries no header line, so the
+registry lists it as support.
 -/
 
 namespace Formal.Fsrs7StockVectors
@@ -74,6 +76,17 @@ def gapLine (g : F32) : String :=
   "{\"gap\":" ++ f32Json g ++ ",\"read\":" ++ f32Json read ++ ",\"review\":" ++
     (if read = .fin 0 then "1" else "0") ++ "}"
 
+/-- The 90-percent intervals: NaN, both infinities, below zero, zero, two below the floor (the
+Again interval of a first review under the default parameters among them), the floor, the next
+`f32` above it, and three inside the scheduler's range. -/
+def stabilities : List F32 :=
+  [.nan, .negInf, .fin (-1), .fin 0, .fin (1 / 1048576), .fin againInterval, .fin stabilityMin,
+    .fin (1717987 / 17179869184), .fin (1 / 2), .fin 1, .fin 36500, .posInf]
+
+/-- One stability line: an interval and the stock stability the port gives it. -/
+def stabilityLine (v : F32) : String :=
+  "{\"interval\":" ++ f32Json v ++ ",\"stability\":" ++ f32Json (stockStability v) ++ "}"
+
 /-- Print the header and every vector. -/
 def run : IO UInt32 := do
   let module ← IO.FS.readFile "Formal/Fsrs7Stock.lean"
@@ -84,11 +97,13 @@ def run : IO UInt32 := do
   | (path, anchor, digest) :: rest =>
     let digests := digest :: rest.map fun (_, _, recorded) => recorded
     IO.println (headerLine "Fsrs7Stock" path anchor digest digests
-      (difficulties.length + gaps.length))
+      (difficulties.length + gaps.length + stabilities.length))
     for d in difficulties do
       IO.println (difficultyLine d)
     for g in gaps do
       IO.println (gapLine g)
+    for v in stabilities do
+      IO.println (stabilityLine v)
     return 0
 
 end Formal.Fsrs7StockVectors

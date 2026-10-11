@@ -3,7 +3,7 @@
 -- @phx covers crates/fsrs7/src/convert.rs anchor=reset digest=sha256:2a6fffea3f2ef16160b233c11ce83ceab78b23e4943762bc087e711128ed81a5
 -- @phx covers crates/fsrs7/src/convert.rs anchor=RESET_KIND digest=sha256:675e879a6a7a66f0e5b0a1efb9665605fccb00f8fc6b0e25c96d9f1cd5435185
 -- @phx covers crates/fsrs7/src/convert.rs anchor=DROPPED_KINDS digest=sha256:fb1c40c92aa7cbb8c62b9e31439abf4b05781e08c983efb6e588cfc2cc0db22a
--- @phx cites #641
+-- @phx cites #641, #823
 -- @phx theorem the_selection_keeps_the_rated_reviews_after_the_last_reset ramp=report
 -- @phx witness merge_base_keeps_a_review_before_its_reset kills=the_selection_keeps_the_rated_reviews_after_the_last_reset
 -- @phx vectors formal/vectors/replay-history.jsonl
@@ -29,7 +29,10 @@ and `histories` branch for branch: a `BTreeMap` keyed by card is the sorted list
 (`sortById`); `rposition` is the index of the last row the predicate admits; the slice from it is
 `List.drop`, then `filter(kept)`; `last()?` is `getLast?`, and a card whose selection is empty gets
 no history, as `filter_map` drops it. A review's distance is kept in milliseconds: `days`, the
-division into a fractional number of days, is not ported, and the vectors' reader divides.
+division into a fractional number of days, is not ported, and the vectors' reader divides. The
+distance is `abs_diff` of the two ids (#823), their natural distance: Lean's integers do not
+overflow, so the port holds the `u64` the code computes, and the rows' id order makes it their
+difference.
 
 **What is not ported.** The replay over the model's floating-point arithmetic, which is the pinned
 revision's own code, held by its own test values (SPEC-386 A5), and `days`.
@@ -107,13 +110,14 @@ def insertCid (cid : Int) : List Int → List Int
 def cids (rows : List RevlogRow) : List Int := rows.foldr (fun row keys => insertCid row.cid keys) []
 
 /-- The map from a card's kept rows to its reviews: the first at the distance 0, each later one at
-its distance from the one before (`previous.map_or(0.0, ...)`). -/
+its distance from the one before (`previous.map_or(0.0, ...)`), `abs_diff` of the two ids: their
+natural distance, which an `Int` holds whole as a `u64` does (#823). -/
 def reviewsOf : Option Int → List RevlogRow → List Review
   | _, [] => []
   | previous, row :: rest =>
     ⟨row.ease, match previous with
       | none => 0
-      | some before => row.id - before⟩ :: reviewsOf (some row.id) rest
+      | some before => ((row.id - before).natAbs : Int)⟩ :: reviewsOf (some row.id) rest
 
 /-- One card's history: its rows sorted by id, cut at the last reset, the kept rows, and the last
 kept row's id; none when no row is kept. -/
