@@ -333,7 +333,6 @@ describe('the one-tap sync offer', () => {
     await open(study, update);
     expect(screen.queryByText(PROMPT)).toBeNull();
 
-    const focus = document.activeElement;
     await answerGood();
     expect(study.rates).toEqual([1n]);
     const line = screen.getByText(PROMPT);
@@ -344,7 +343,8 @@ describe('the one-tap sync offer', () => {
     // after the control bar and before the nav
     expect(before(screen.getByRole('button', { name: 'Flag' }), line)).toBe(true);
     expect(before(line, screen.getByRole('link', { name: 'Back to decks' }))).toBe(true);
-    expect(document.activeElement).toBe(focus);
+    // the focus is where the answer left it, on the screen's region, and never on the offer
+    expect(document.activeElement).toBe(document.querySelector('section'));
     expect(update.calls).toEqual([]);
   });
 

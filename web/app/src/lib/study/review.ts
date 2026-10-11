@@ -165,6 +165,8 @@ export class Review {
   /** The answer the engine offered to undo, kept until its confirmation sends it. */
   #offer: Offer | null = null;
   #shownAt = 0;
+  /** The late cards the engine has rated, which raise the one-tap sync offer (SPEC-409 R1). */
+  #lateReviews = 0;
   #inFlight: Promise<void> = Promise.resolve();
 
   /** `client` is the engine's, once started; `now` is in milliseconds; `onChange` follows each step;
@@ -182,6 +184,11 @@ export class Review {
 
   get side(): Side {
     return this.#state.side;
+  }
+
+  /** How many late cards the review has rated and the engine has answered (SPEC-409 R1). */
+  get lateReviews(): number {
+    return this.#lateReviews;
   }
 
   /** The card shown, or `null` before the first and after the last. */
@@ -352,6 +359,7 @@ export class Review {
     const card = (this.#view as CardView).id;
     if (effect === 'rate') {
       await client.rate(card, RATING[event as Action] as Rating, Math.round(this.#now() - this.#shownAt));
+      if ((this.#view as CardView).late) this.#lateReviews += 1;
     } else if (effect === 'bury') {
       await client.bury(card);
     } else if (effect === 'undo') {
