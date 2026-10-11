@@ -115,3 +115,8 @@ removes, skips, filters or narrows an assertion.
   adds 60 lines and removes none in `web/app/tests-engine/engine.spec.ts`: the browser suite's
   bury and flag undo cases that SPEC-383 C1 names. They are added tests, and no test the red or the
   green runs is changed by them.
+
+Correction. The green lines above name the local commits `676a3189`, `9ac5d4af`, `36d9b835`
+and `3e483a8c`, and CI ran none of them. CI ran the pull request's head `97d60147` (run
+38123190771), where each criterion's test passes by name: A1 to A20 in its `rust` job
+(114421994746) and A21 to A28 in its `web` job (114421994886).

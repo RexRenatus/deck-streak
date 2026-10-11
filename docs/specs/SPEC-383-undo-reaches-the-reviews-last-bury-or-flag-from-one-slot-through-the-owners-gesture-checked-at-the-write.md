@@ -12,7 +12,7 @@
   section at its end, after SPEC-371's, in the form SPEC-371's sections take
   (`## Amendment: <title> (SPEC-383)`, opening "ADR-397 amends"), and no existing line of any of them
   changes. It works under ADR-356 (no table row and no exempt row is added) and ADR-348 (no export
-  is added; three exports change their bodies).
+  is added; eight exports change their bodies).
 - **Schematic:** `docs/schematics/undo-the-reviews-own-last-answer.md`, amended insert-only by a new
   section 7 (the bury and the flag, from the press to the restored card, and every refused path);
   `docs/schematics/web-study-screens.md:130`, `:131`, `:133` and `:136` follow R10.
