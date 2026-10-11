@@ -21,8 +21,15 @@ pub struct DueScores {
     pub scores: BTreeMap<i64, f64>,
 }
 
-/// The order the review presents today's stock `queue` in, by ADR-339's input as it reads: an
-/// identifier and a score for each card, applied whenever the input is switched on.
+/// The order the review presents today's stock `queue` in.
+///
+/// The queue comes back exactly when `on` is false, `input` is `None`, or the input was made for
+/// another day than `today` or another snapshot than `snapshot`: a stale input cannot be told
+/// from a fresh one by anything else it holds (ADR-428 D1). Otherwise every entry whose card has
+/// a score in `[0, 1]` comes first, highest first, entries with equal scores in their stock order
+/// (`-0.0` equals `0.0` under `partial_cmp`), then every other entry in its stock order: NaN, the
+/// infinities and a score outside `[0, 1]` count as no score (D4). `card` reads an entry's card id
+/// and is the only way the function looks into an entry.
 #[must_use]
 pub fn reorder<T>(
     on: bool,
@@ -32,9 +39,8 @@ pub fn reorder<T>(
     queue: Vec<T>,
     card: impl Fn(&T) -> i64,
 ) -> Vec<T> {
-    let _ = (today, snapshot);
     let applied = match input {
-        Some(input) if on => input,
+        Some(input) if on && input.day == today && input.snapshot == snapshot => input,
         _ => return queue,
     };
     let mut scored = Vec::new();
@@ -45,6 +51,7 @@ pub fn reorder<T>(
             _ => unscored.push(entry),
         }
     }
+    // A used score is never NaN, so `partial_cmp` always orders two of them.
     scored.sort_by(|(first, _), (second, _)| second.partial_cmp(first).unwrap_or(Ordering::Equal));
     scored
         .into_iter()
