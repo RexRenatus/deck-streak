@@ -7,10 +7,10 @@
 \* @phx covers crates/quests/src/chest_store.rs anchor=settle_choice digest=sha256:c42c52f076764878b3b139e17cd9a61025d6c4670af8ec62cf078d2f17ea8e8b
 \* @phx covers crates/quests/src/chest_store.rs anchor=sweep_resolve digest=sha256:074596e8b7e9cff568c22f0267cb48bdf4823f40aac362fb7eeb00d737b4eeac
 \* @phx covers crates/kernel/src/db.rs anchor=write digest=sha256:c3d700eda268a6f46c7eea0aabcd2f62d8fc0aeffbe03d1cd1e8437a88bdb916
-\* @phx covers crates/coordination/src/chests.rs anchor=open_chest digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/chests.rs anchor=pick_epic_choice digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/freeze.rs anchor=grant_freeze_on digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/recompute/chests.rs anchor=sweep_and_pay digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/coordination/src/chests.rs anchor=open_chest digest=sha256:763cce5b22ba17c03358c47c7de8a2e2d5749f8ba8258d6fc752887746ad0da4
+\* @phx covers crates/coordination/src/chests.rs anchor=pick_epic_choice digest=sha256:db57599fdba7fc44a2d976906f0667b8693855fcce97cb5cefe591ab74092d32
+\* @phx covers crates/coordination/src/freeze.rs anchor=grant_freeze_on digest=sha256:80e51859d1adb864875c67cd958ca26c97e21393e0e10c2cfeda485ebbb76db5
+\* @phx covers crates/coordination/src/recompute/chests.rs anchor=sweep_and_pay digest=sha256:b5890cf0edc7a6f7a679f72eb2e5d64cfa01b24087eccc3c8db0ab9697443e0e
 \* @phx cites #102, #103
 \* @phx property OneRewardPerChest ramp=report
 \* @phx property AResolvedChestStaysResolved ramp=report

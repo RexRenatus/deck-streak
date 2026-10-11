@@ -3,7 +3,7 @@
 \* @phx covers crates/quests/src/chest_store.rs anchor=insert_chest digest=sha256:57e9fcc9f8651b8a7e8717b234ba2f4b0c4c2920ab0231d3a41d48687517a5f9
 \* @phx covers crates/quests/src/chest_store.rs anchor=set_pity digest=sha256:5229f5dd55355ac3fb12b6d15e6326b0ddadea3fb28017c69274566eea866e0c
 \* @phx covers crates/kernel/src/db.rs anchor=write digest=sha256:c3d700eda268a6f46c7eea0aabcd2f62d8fc0aeffbe03d1cd1e8437a88bdb916
-\* @phx covers crates/coordination/src/recompute/chests.rs anchor=grant_day_chests digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/coordination/src/recompute/chests.rs anchor=grant_day_chests digest=sha256:929d74da0c6dffa3c5b6fbe1a0dfe2e7338e9bcc3097db980c35b63234034091
 \* @phx cites #102, #103
 \* @phx property OneChestPerKey ramp=report
 \* @phx property PityEqualsChests ramp=report
