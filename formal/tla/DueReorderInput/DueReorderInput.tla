@@ -1,4 +1,6 @@
 --------------------------- MODULE DueReorderInput ---------------------------
+\* @phx covers crates/engine-core/src/reorder.rs anchor=reorder digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/engine-core/src/reorder.rs anchor=DueScores digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 \* @phx covers crates/web-engine/src/wasm.rs anchor=current_card digest=sha256:605adfade6242520ebc39f34b2852dc699ed1dcb1029ca71522fdef82edf8118
 \* @phx covers crates/web-engine/src/wasm.rs anchor=first_queued digest=sha256:066ce8c542e98e05a351d8e1b51ad8d2781edcf69e574faf6fd1dc23150398e0
 \* @phx covers crates/web-engine/src/wasm.rs anchor=rate digest=sha256:ec4876c9095cd9dda71a594741e87ecb2ec897e92871e3f696dbd610e8abe7db
@@ -22,11 +24,12 @@
 \* path, the owner switches the input, the study day rolls over and a full sync replaces the
 \* collection. Scores arrive late, or never.
 \*
-\* The model is written ahead of the reorder's code. It covers the items that exist and that the
-\* reorder will change or must agree with: `current_card` and `first_queued` in
-\* `crates/web-engine/src/wasm.rs` each present the head of the engine's `GetQueuedCards` (13,3),
-\* and `rate` answers the shown card. The delivery that writes the reorder adds a cover for its
-\* function in the commit that creates it, and re-stamps these.
+\* The model covers the reorder and its input, `reorder` and `DueScores` in
+\* `crates/engine-core/src/reorder.rs`: `Reorder` and the `Keyed` guard below are that function's,
+\* and `inbox` holds a `DueScores`. It also covers the items the reorder must agree with once a
+\* client calls it: `current_card` and `first_queued` in `crates/web-engine/src/wasm.rs` each
+\* present the head of the engine's `GetQueuedCards` (13,3), and `rate` answers the shown card. No
+\* queue reader calls the reorder yet; the delivery that wires one re-reads these covers.
 \*
 \* What the model abstracts, and why:
 \* - A card is a number in `Cards`, and its stock fields (due date, interval, ease or difficulty,
@@ -47,7 +50,11 @@
 \*   and the scores. `appliedKey` is a ghost: the key of the scores that ordered the queue now
 \*   presented, or `NOKEY` when the queue is in stock order.
 \* - A study day is a number that only grows, and a snapshot id is `gen`, which every full sync
-\*   advances. Which value the scorer and the client each compute for it is left to the design.
+\*   advances. The code computes them as the engine's day count and the collection's schema stamp
+\*   (ADR-428 D2). The schema stamp moves on every full sync the engine requires for two copies
+\*   whose stamps differ, and not on the server's one-way sync forced by the collection's size. The
+\*   model's `FullSync` advances `gen` on every full sync, so it does not check scores applied
+\*   across that one path, which replaces a copy with one of the same lineage within the same day.
 \* - An answer is Good or Again on the presented head. Again puts the card in `relearn`, from which
 \*   it may come back into the queue at any position the stock rules pick. A card leaving the queue
 \*   by another path (a sibling's bury, a suspend) is `Leave`.

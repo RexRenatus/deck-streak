@@ -1,3 +1,5 @@
+-- @phx covers crates/engine-core/src/reorder.rs anchor=reorder digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/engine-core/src/reorder.rs anchor=DueScores digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 -- @phx cites #824
 -- @phx vectors formal/vectors/due-reorder.jsonl
 -- @phx theorem the_reorder_is_a_permutation_of_the_stock_queue ramp=report
@@ -20,10 +22,13 @@
 
 The reorder-only input of external due-card scores (#824; ADR-339): a total function that takes
 the stock scheduler's queue for today, the input's switch, today's study day, the collection's
-snapshot id and an optional input of scores, and returns the order the review presents. The model
-is written ahead of its code: no Rust item holds the function yet, so the entry covers nothing,
-and the delivery that creates the item adds its `covers` line in the commit that creates it and
-replays the vectors in a Rust test.
+snapshot id and an optional input of scores, and returns the order the review presents. The port
+is `reorder` in `crates/engine-core/src/reorder.rs`, and its input is `DueScores` there, both
+covered: the input's day is the engine's day count and its snapshot id the collection's schema
+stamp. Rust's stable `sort_by` stands for the stable insertion sort below, which
+`scored_entries_lead_by_score_then_stock_order` characterises exactly, and Rust compares scores
+with `partial_cmp`, under which `-0.0` equals `0.0`. A Rust test replays the vectors against the
+function. No queue reader calls it yet.
 
 **The input.** A study day, a snapshot id and a score map: for each card id, a score or nothing.
 The map is any function from a card id to an optional score, so every finite map is one, and its

@@ -41,6 +41,9 @@
 //!   engine's day, and the rule that judges a card past its due day in it (SPEC-376 R1, R2).
 //! - [`replay`]: the replay of a deck set's review history into stock-field values, and their
 //!   mapping onto the engine's card; it writes nothing (SPEC-386 R7 to R13).
+//! - [`reorder`]: the reorder-only input of due-card scores and the one function that orders
+//!   today's stock queue by it, only on the input's own day and schema stamp; it moves entries and
+//!   writes nothing (SPEC-414 R1 to R6).
 //!
 //! The core depends on the engine and on one crate of this workspace, the isolated FSRS-7
 //! scheduler, which [`replay`] alone names; only the two client adapters depend on it (ADR-356 D4
@@ -60,6 +63,7 @@ pub mod late;
 pub mod login_guard;
 pub mod media;
 pub mod one_way;
+pub mod reorder;
 pub mod replay;
 pub mod retention;
 pub mod review;
