@@ -2,7 +2,7 @@
 
 | field | value |
 |---|---|
-| status | proposed, with SPEC-413 |
+| status | accepted, with SPEC-413 |
 | spec | SPEC-413 |
 | issue | #823 |
 | builds on | ADR-338, ADR-353, ADR-400 |
