@@ -526,3 +526,63 @@ async fn the_chest_routes_answer_each_outcome_by_its_status() {
         "every route answers 503 until the database opens"
     );
 }
+
+/// Makes every grant the ledger is asked for fail, as a refused write does.
+async fn refuse_grants(db: &Db) {
+    let mut write = db.write().await.expect("a write");
+    sqlx::query(
+        "CREATE TRIGGER refuse_grants BEFORE INSERT ON xp_ledger \
+         BEGIN SELECT RAISE(ABORT, 'a refused grant'); END",
+    )
+    .execute(&mut *write)
+    .await
+    .expect("the refusal installed");
+    write.commit().await.expect("the refusal committed");
+}
+
+#[tokio::test]
+async fn a_signed_chest_id_is_no_id_and_opens_nothing() {
+    let scratch = tempfile::tempdir().expect("a scratch directory");
+    let (app, db) = app(&scratch).await;
+    seed_chest(&db, 1_000, "rare", 45, "sealed").await;
+    let cookie = owner_cookie(&app).await;
+    let owner = Some(cookie.as_str());
+    let signed = open(&app, "+1", owner).await.read();
+    let after_signed = written(&db).await;
+    let digits = open(&app, "1", owner).await.read();
+    assert_eq!(
+        (signed, after_signed, digits, written(&db).await),
+        (
+            (StatusCode::BAD_REQUEST, Value::Null),
+            (vec![chest(1, "sealed", "")], vec![], vec![]),
+            (
+                StatusCode::OK,
+                json!({ "chest_id": 1, "rarity": "rare", "xp": 45, "choice_pending": false })
+            ),
+            (
+                vec![chest(1, "resolved", "")],
+                vec![(YESTERDAY, "chest:1".to_owned(), 45)],
+                vec![]
+            ),
+        ),
+        "a signed id is no id and opens nothing; the same chest by its digits opens and pays once"
+    );
+}
+
+#[tokio::test]
+async fn a_failed_open_answers_500_and_leaves_the_chest_sealed() {
+    let scratch = tempfile::tempdir().expect("a scratch directory");
+    let (app, db) = app(&scratch).await;
+    seed_chest(&db, 1_000, "rare", 45, "sealed").await;
+    refuse_grants(&db).await;
+    let cookie = owner_cookie(&app).await;
+    let answer = open(&app, "1", Some(&cookie)).await;
+    assert_eq!(
+        ((answer.status, answer.body), written(&db).await),
+        (
+            (StatusCode::INTERNAL_SERVER_ERROR, String::new()),
+            (vec![chest(1, "sealed", "")], vec![], vec![]),
+        ),
+        "a payout the ledger refuses answers 500 naming no chest, and the open is undone with it"
+    );
+}

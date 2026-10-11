@@ -19,6 +19,7 @@ use deck_streak_coordination::recompute::{
     DayEvaluation, DayStep, Evaluation, Fold, FoldInput, Phase, RecomputeFacts,
 };
 use deck_streak_ingest::reader::{Card, CollectionData, Review};
+use deck_streak_ingest::tier::Tier;
 use deck_streak_kernel::{Db, StudyDay, StudyDayRule, Track, UtcMillis};
 use deck_streak_progression::settle::settled_of_day;
 use deck_streak_quests::draw::{Draw, DrawError};
@@ -439,5 +440,122 @@ async fn a_failed_draw_keeps_the_day_and_the_next_fold_grants_the_chest() {
             3
         ),
         "the refused draw writes no chest and keeps the day's XP; the next fold grants the chest"
+    );
+}
+
+/// A card `id` on `track` whose note carries `tier`.
+const fn tagged(id: i64, track: Track, tier: Tier) -> Card {
+    Card {
+        track,
+        tier: Some(tier),
+        ..card(id)
+    }
+}
+
+/// A hard answer of `card` at `instant` on a young card: 13 XP at the base rate (10, times 1.0 for
+/// hard, 1.3 for young, 1.0 for a review and 1.0 untagged).
+const fn hard_young(instant: i64, card: i64) -> Review {
+    Review {
+        ease: 2,
+        interval: 5,
+        last_interval: 2,
+        ..review(instant, card)
+    }
+}
+
+/// Stores a token activated at `opened` whose window ends at `ends`, not yet consumed.
+async fn seed_open_token(db: &Db, opened: i64, ends: i64) {
+    let mut write = db.write().await.expect("a write");
+    sqlx::query(
+        "INSERT INTO xp_tokens (chest_id, granted_at, activated_at, window_ends_at, consumed, \
+         created_at) VALUES (0, ?1, ?1, ?2, 0, ?1)",
+    )
+    .bind(opened)
+    .bind(ends)
+    .execute(&mut *write)
+    .await
+    .expect("a token stored");
+    write.commit().await.expect("the token committed");
+}
+
+#[test]
+fn the_fold_names_each_quests_step_in_its_phase() {
+    let draw = Scripted::new(&[]);
+    assert_eq!(
+        fold(&draw).steps(),
+        vec![
+            (Phase::RollupAndScore, "analytics.rollup_and_score"),
+            (Phase::BaseXp, "progression.base_xp"),
+            (Phase::DaySteps, "quests.chests"),
+            (Phase::DaySteps, "quests.chest_sweep"),
+            (Phase::DerivedBonuses, "quests.token_bonuses"),
+        ],
+        "the fold's report and log name each quests step by its own name, in its phase"
+    );
+}
+
+#[tokio::test]
+async fn a_token_bonus_counts_a_law_cards_tier_and_never_a_language_cards() {
+    let scratch = tempfile::tempdir().expect("a scratch directory");
+    let db = database(&scratch).await;
+    // A token whose window opened at noon of D0 and ends two hours later.
+    let opened = at(D0, 12);
+    seed_open_token(&db, opened, opened + 2 * HOUR_MS).await;
+    // A law card tagged T4 earns 24 times 5, 120 XP; a language card tagged T2 earns 24, untagged.
+    let data = CollectionData {
+        reviews: vec![
+            review(opened + 10 * MINUTE_MS, 1),
+            review(opened + 20 * MINUTE_MS, 2),
+        ],
+        cards: vec![
+            tagged(1, Track::Law, Tier::T4),
+            tagged(2, Track::Language, Tier::T2),
+        ],
+        ..collection(Vec::new())
+    };
+    let facts = RecomputeFacts::new(
+        &data,
+        StudyDayRule::default(),
+        UtcMillis::from_epoch_millis(at(D0, 13)),
+        None,
+    );
+    let today = DayEvaluation {
+        day: day(D0),
+        evaluation: Evaluation::Current,
+        facts: &facts,
+    };
+    let mut write = db.write().await.expect("a write");
+    TokenBonusStep
+        .evaluate(&today, &mut write)
+        .await
+        .expect("the token-bonus step runs");
+    write.commit().await.expect("the day committed");
+    assert_eq!(
+        settled(&db, D0, "2x:1", "language").await,
+        Some(144),
+        "the window's bonus is the law card's T4 120 and the language card's untagged 24"
+    );
+}
+
+#[tokio::test]
+async fn a_sessions_payout_cap_counts_its_own_reviews_and_no_other_of_its_day() {
+    let scratch = tempfile::tempdir().expect("a scratch directory");
+    let db = database(&scratch).await;
+    let draw = Scripted::new(&RARE_60);
+    let fold = fold(&draw);
+    // Fifteen hard answers on young cards from 09:00 earn 195 XP, so the session's Rare is capped at
+    // 58, 30% of 195, under the 60 its draws pay. One good answer at 11:00 of the same day, outside
+    // the session, earns 24 XP and no chest; counted in the session, it would lift the cap to 65.
+    let start = at(D0, 9);
+    let mut reviews: Vec<Review> = (0..15)
+        .map(|n| hard_young(start + n * MINUTE_MS, 1 + n))
+        .collect();
+    reviews.push(review(at(D0, 11), 101));
+    let data = collection(reviews);
+    recompute(&fold, &db, &data, at(D0, 13), D0).await;
+    assert_eq!(
+        (chests(&db).await, draw.calls()),
+        (vec![row(D0, start, "rare", 58, "sealed")], 2),
+        "the session's Rare is capped by its own reviews' XP, never by its day's other reviews"
     );
 }

@@ -357,3 +357,39 @@ async fn a_second_activation_opens_no_second_window() {
         "the oldest token opens a two-hour window, and the second activation leaves the next held"
     );
 }
+
+/// The name of the prize a pick paid, none when the pick paid nothing.
+fn prize_named(answer: PickAnswer) -> Option<&'static str> {
+    if let PickAnswer::Chosen { prize, .. } = answer {
+        Some(prize.name())
+    } else {
+        None
+    }
+}
+
+#[tokio::test]
+async fn each_picked_prize_is_named_as_its_chest_stores_the_choice() {
+    let scratch = tempfile::tempdir().expect("a scratch directory");
+    let db = database(&scratch).await;
+    let start = TODAY * DAY_MS - 2 * HOUR_MS;
+    let token_epic = seed_chest(&db, TODAY - 1, start, "epic", 0, "opened").await;
+    let freeze_epic = seed_chest(&db, TODAY - 1, start + HOUR_MS, "epic", 0, "opened").await;
+    let mut named = Vec::new();
+    for (id, prize) in [(token_epic, Prize::Token), (freeze_epic, Prize::Freeze)] {
+        let answer = pick_epic_choice(&db, id, prize, day(TODAY), now())
+            .await
+            .expect("the pick runs");
+        named.push(prize_named(answer));
+    }
+    assert_eq!(
+        (named, chests(&db).await),
+        (
+            vec![Some("token"), Some("freeze")],
+            vec![
+                chest_row(1, "resolved", "token"),
+                chest_row(2, "resolved", "freeze")
+            ],
+        ),
+        "each picked prize is named by the word its chest stores, as the owner's surfaces write it"
+    );
+}
