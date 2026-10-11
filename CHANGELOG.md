@@ -12,6 +12,9 @@ process compiles the fragments into a new version section here.
 
 ## [0.3.0] - 2026-10-05
 
+Version 0.2.0 was never tagged or released, so this release also ships every change in the 0.2.0
+section below.
+
 ### Added
 
 - On the iPhone and iPad review screen, a sound tag that names a video file (`.mp4`, `.m4v` or
@@ -1611,6 +1614,8 @@ process compiles the fragments into a new version section here.
 
 ## [0.2.0] - 2026-09-28
 
+Never tagged or released: these changes ship within 0.3.0.
+
 ### Added
 
 - The private deploy rail's public contract (SPEC-061, ADR-061). `deploy/rail-contract.json` lists
@@ -2128,5 +2133,5 @@ process compiles the fragments into a new version section here.
 
 [Unreleased]: https://github.com/RexRenatus/deck-streak/compare/v0.3.0...dev
 [0.3.0]: https://github.com/RexRenatus/deck-streak/releases/tag/v0.3.0
-[0.2.0]: https://github.com/RexRenatus/deck-streak/releases/tag/v0.2.0
+[0.2.0]: https://github.com/RexRenatus/deck-streak/releases/tag/v0.3.0
 [0.1.0]: https://github.com/RexRenatus/deck-streak/releases/tag/v0.1.0
