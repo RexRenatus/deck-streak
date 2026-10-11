@@ -1,7 +1,7 @@
 --------------------------- MODULE DueReorderInput ---------------------------
-\* @phx covers crates/web-engine/src/wasm.rs anchor=current_card digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/web-engine/src/wasm.rs anchor=first_queued digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/web-engine/src/wasm.rs anchor=rate digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/web-engine/src/wasm.rs anchor=current_card digest=sha256:605adfade6242520ebc39f34b2852dc699ed1dcb1029ca71522fdef82edf8118
+\* @phx covers crates/web-engine/src/wasm.rs anchor=first_queued digest=sha256:066ce8c542e98e05a351d8e1b51ad8d2781edcf69e574faf6fd1dc23150398e0
+\* @phx covers crates/web-engine/src/wasm.rs anchor=rate digest=sha256:ec4876c9095cd9dda71a594741e87ecb2ec897e92871e3f696dbd610e8abe7db
 \* @phx cites #824
 \* @phx property PresentedIsTheStockDueSet ramp=report
 \* @phx property NoScoreOrReorderWritesACardField ramp=report
