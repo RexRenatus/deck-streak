@@ -7,6 +7,7 @@
 //! schema stamp), an absent one, a switched-off one and an invalid score each leave the stock
 //! order. No client calls it yet; the wiring is the study screens' (ADR-428 D5).
 
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
 /// An outside scorer's scores for the cards due on one day of one collection snapshot.
@@ -20,8 +21,8 @@ pub struct DueScores {
     pub scores: BTreeMap<i64, f64>,
 }
 
-/// The order the review presents today's stock `queue` in: for now the stock order, whatever the
-/// input holds.
+/// The order the review presents today's stock `queue` in, by ADR-339's input as it reads: an
+/// identifier and a score for each card, applied whenever the input is switched on.
 #[must_use]
 pub fn reorder<T>(
     on: bool,
@@ -31,6 +32,23 @@ pub fn reorder<T>(
     queue: Vec<T>,
     card: impl Fn(&T) -> i64,
 ) -> Vec<T> {
-    let _ = (on, today, snapshot, input, card);
-    queue
+    let _ = (today, snapshot);
+    let applied = match input {
+        Some(input) if on => input,
+        _ => return queue,
+    };
+    let mut scored = Vec::new();
+    let mut unscored = Vec::new();
+    for entry in queue {
+        match applied.scores.get(&card(&entry)) {
+            Some(&score) if (0.0..=1.0).contains(&score) => scored.push((score, entry)),
+            _ => unscored.push(entry),
+        }
+    }
+    scored.sort_by(|(first, _), (second, _)| second.partial_cmp(first).unwrap_or(Ordering::Equal));
+    scored
+        .into_iter()
+        .map(|(_, entry)| entry)
+        .chain(unscored)
+        .collect()
 }
