@@ -163,6 +163,23 @@ Once the owner has created the release environment with the owner as its require
 (ADR-363 D7), its `app` job waits for that review before it reads any credential; until then no
 part is placed and a run stops before the upload.
 
+If a release tag's push started no `testflight-release.yml` run, this lists none:
+
+```sh
+gh run list --workflow testflight-release.yml --commit "$(git rev-parse 'vX.Y.Z^{commit}')"
+```
+
+Build the same tag by a manual dispatch of the lane at the tag's own ref. The run checks the tag
+exactly as its push would have, waits for the same review, and takes its turn in the tag's queue:
+
+```sh
+gh workflow run testflight-release.yml --ref vX.Y.Z
+```
+
+The dispatch works only for a tag whose commit carries the lane's dispatch trigger, and the lane
+refuses a run that a workflow's own token started. `apple-on-tag.yml` takes no dispatch: the
+lane's `framework` job runs the same Apple build at the tag's ref (ADR-419).
+
 Each lane reads the upload credential only from its own GitHub environment, and only in the steps
 that use it (ADR-363). The internal environment's profile is an App Store profile for the dev app
 id, and the release environment's for the release app id (ADR-344). The certificate and the

@@ -1,20 +1,23 @@
 name: testflight-release
 
-# The release TestFlight lane (SPEC-352 R1, R4 and R16; ADR-363 D2 and D7): a push of a SemVer tag,
-# and nothing else, starts it, and its plan job first runs release.yml's own tag guard on the full
-# history, refusing a tag that is not SemVer, a lightweight tag and a commit that is not on main. No
-# pull request starts it, its token is read-only, and every action is pinned by its full commit SHA.
+# The release TestFlight lane (SPEC-352 R1, R4 and R16; ADR-363 D2 and D7; SPEC-405; ADR-419 D2a):
+# a push of a SemVer tag starts it, and so does a manual dispatch at the tag's own ref, which takes
+# no input. Its plan job first runs release.yml's own tag guard on the full history, refusing a ref
+# that is not the tag, a tag that is not SemVer, a lightweight tag and a commit that is not on main,
+# and its plan refuses a run that a workflow's own token started. No pull request starts it, its
+# token is read-only, and every action is pinned by its full commit SHA.
 on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-# One tag's runs take one group and wait their turn, as release.yml's runs do: a run in progress
-# is never cancelled and a waiting one is not replaced, up to queue: max's hundred waiting runs
-# (ADR-292).
+# One tag's runs, pushed or dispatched at the tag's ref, take one group and wait their turn, as
+# release.yml's runs do: a run in progress is never cancelled and a waiting one is not replaced, up
+# to queue: max's hundred waiting runs (ADR-292, ADR-419 D2a).
 concurrency:
   group: testflight-release-${{ github.ref }}
   cancel-in-progress: false
