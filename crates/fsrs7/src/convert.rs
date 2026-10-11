@@ -65,7 +65,7 @@ pub fn histories(rows: &[RevlogRow]) -> Vec<CardHistory> {
             let reviews = selected
                 .iter()
                 .map(|row| {
-                    let delta_t = previous.map_or(0.0, |at| days(row.id - at));
+                    let delta_t = previous.map_or(0.0, |at| days(row.id.abs_diff(at)));
                     previous = Some(row.id);
                     FSRSReview {
                         rating: u32::from(row.ease),
@@ -93,13 +93,15 @@ fn kept(row: &RevlogRow) -> bool {
     row.ease != 0 && !DROPPED_KINDS.contains(&row.kind)
 }
 
-/// An interval in milliseconds, as days.
+/// An interval in milliseconds, as days. The interval is the unsigned distance of two review ids,
+/// whole for every pair: their difference, since the rows are in id order (SPEC-413 R3, ADR-427
+/// D2).
 #[allow(
     clippy::cast_precision_loss,
     clippy::cast_possible_truncation,
     reason = "FSRS-7 reads an interval as an f32 number of days; an interval of a collection's \
               lifetime is exact in an f64 and a few days' rounding in an f32 is below its own"
 )]
-fn days(elapsed_ms: i64) -> f32 {
+fn days(elapsed_ms: u64) -> f32 {
     (elapsed_ms as f64 / MS_PER_DAY) as f32
 }

@@ -41,7 +41,7 @@ pub struct CardReplay {
     /// The id of the card's last kept review: its answer's time, in milliseconds.
     pub last_review: i64,
     /// The stock stability: the interval, in days, at which the replayed state's forgetting curve
-    /// reads 0.9.
+    /// reads 0.9, held at the revision's least stability, 0.0001, when it is shorter (SPEC-413).
     pub stability: f32,
     /// The replayed difficulty, held to the stock range of 1 to 10.
     pub difficulty: f32,

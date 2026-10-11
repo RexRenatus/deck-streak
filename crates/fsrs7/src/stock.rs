@@ -41,7 +41,7 @@ pub struct Stock {
 /// (SPEC-413 R1, ADR-427 D1).
 #[must_use]
 pub fn stock_stability(interval: f32) -> f32 {
-    interval
+    interval.max(STABILITY_MIN)
 }
 
 /// The stock values of `state` under `model`, with the interval at `retention`. Both intervals
