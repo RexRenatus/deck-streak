@@ -1,6 +1,6 @@
--- @phx covers crates/engine-core/src/replay.rs anchor=scheduled digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/engine-core/src/replay.rs anchor=day_of digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/engine-core/src/replay.rs anchor=stock_fields digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/engine-core/src/replay.rs anchor=scheduled digest=sha256:dc0a95482bfccf9b0b4ada1d7e6c6da4b3e317ee6e3defc9f549f3c52debdd82
+-- @phx covers crates/engine-core/src/replay.rs anchor=day_of digest=sha256:42eb7c98f1767965db418bf03dd654018a1a2f9b96b216e0c61a5b43da0b970a
+-- @phx covers crates/engine-core/src/replay.rs anchor=stock_fields digest=sha256:f337f6656e167d5f2dcdd6f91fdb8323b6b86e45785dde3413133a07f70ebdd4
 -- @phx cites #823
 -- @phx theorem the_interval_is_a_day_or_more_and_never_past_the_maximum ramp=report
 -- @phx witness an_interval_with_no_floor_reads_zero_days kills=the_interval_is_a_day_or_more_and_never_past_the_maximum

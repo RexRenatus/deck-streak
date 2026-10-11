@@ -1,7 +1,7 @@
--- @phx covers crates/fsrs7/src/stock.rs anchor=project digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/fsrs7/src/stock.rs anchor=DIFFICULTY_MIN digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/fsrs7/src/stock.rs anchor=DIFFICULTY_MAX digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/fsrs7/src/stock.rs anchor=STOCK_RETENTION digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/fsrs7/src/stock.rs anchor=project digest=sha256:b541abd153973192e71c40abce6ce90e706e647f2e854b1c6eee7a58aede025b
+-- @phx covers crates/fsrs7/src/stock.rs anchor=DIFFICULTY_MIN digest=sha256:c422caccdcd84138a84c828729330781f1a0ac36af1ab819a0617b28b1863b94
+-- @phx covers crates/fsrs7/src/stock.rs anchor=DIFFICULTY_MAX digest=sha256:95738f66444b06fcb6744cc4ac26bdb9bc56c5831b50b8cb55399a0a43cefb85
+-- @phx covers crates/fsrs7/src/stock.rs anchor=STOCK_RETENTION digest=sha256:1555dc14a511d6c197e35fefac3d9d82fed48de2c966fb0edef39e6c39458838
 -- @phx cites #823
 -- @phx theorem the_stock_difficulty_lies_in_the_stock_range ramp=report
 -- @phx witness a_difficulty_with_no_clamp_leaves_the_range kills=the_stock_difficulty_lies_in_the_stock_range
