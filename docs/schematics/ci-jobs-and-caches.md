@@ -176,3 +176,59 @@ so one process is stopped, never the scope. A listing (`cargo mutants --list`) r
 cap stops is never caught and never a timeout: its leg fails naming it, and every other result in the leg stands. How a
 named kill is scored is decided in `score_memory_cap` alone. The timeouts, the listing, the partition and the baseline are
 the ones in the sections above; the scope adds a bound on memory and changes no bound on time.
+
+## The dynamic-import register: before the push, and the census in the hygiene job (SPEC-406, ADR-420)
+
+Kind: data flow. Read at DeckStreak `dev` 32f6217 (`scripts/tests/test_ci_workflows.py`,
+`.github/workflows/ci.yml`, `scripts/check.sh`, `docs/specs/_TEMPLATE.md`). Decided by ADR-420;
+built by SPEC-406.
+
+A module under `scripts/tests` that loads code through `importlib`, `runpy` or `exec` is held to
+the `DYNAMIC_IMPORTS` register twice: by `scripts/dynamic-imports-check.py` before the push, at the
+module, and by the census in the `hygiene` job after it, at every site with its count. The check
+reads only what `HEAD` commits; the census reads the checked-out tree.
+
+```mermaid
+flowchart TD
+  added["a commit adds or changes scripts/tests/NAME.py"] --> pre["python3 scripts/dynamic-imports-check.py --base BASE"]
+  pre --> regread["git show HEAD:scripts/tests/test_ci_workflows.py, parsed: the one DYNAMIC_IMPORTS assignment"]
+  regread --> regshape{"a dict display of allowed groups, each site a tuple led by a module string, one module or more?"}
+  regshape -->|"no"| void["VOID: exit 2, the cause named; nothing judged"]
+  regshape -->|"yes"| regline["register: N module(s) in DYNAMIC_IMPORTS at HEAD"]
+  regline --> changed["git diff --name-only --no-renames --diff-filter=AM BASE...HEAD -- scripts/tests: the .py paths"]
+  changed --> anychange{"any changed module?"}
+  anychange -->|"no"| na["NOT-APPLICABLE: exit 0, examined 0"]
+  anychange -->|"yes"| parsed["each path by git show HEAD:PATH, parsed; a module that does not parse is VOID"]
+  parsed --> loaderq{"a load of a name an importlib or runpy import binds, or a bare exec the module does not bind?"}
+  loaderq -->|"no: the non-loader path"| nonloader["counted, not loader-style"]
+  loaderq -->|"yes: loader-style"| memberq{"does the register name the module's dotted name?"}
+  memberq -->|"yes: the registered path"| registered["counted, admitted"]
+  memberq -->|"no: the unregistered path"| refused["REFUSED: exit 1, the path, the loader and its line; no push until the register names the module"]
+  nonloader --> okline["examined M changed module(s), L loader-style; OK, exit 0"]
+  registered --> okline
+  okline --> pushed["the push"]
+  na --> pushed
+  pushed --> hygiene["the hygiene job: bash scripts/check.sh python scrub secrets"]
+  hygiene --> census["the census: every site in every scripts/tests module, by module, qualified name and text"]
+  census --> sums{"each site's count equals what NOT_WORKFLOW_READS and DYNAMIC_IMPORTS list?"}
+  sums -->|"yes"| green["hygiene green; the aggregate ci needs it"]
+  sums -->|"no"| red["hygiene red, naming the site"]
+```
+
+| path | what the check reads | its verdict | what the census then reads |
+|---|---|---|---|
+| registered | a changed module whose syntax tree loads code, and its dotted name among the register's modules | counted, `OK` | each of its sites against the register's count for it |
+| unregistered | a changed module whose syntax tree loads code, and no tuple of the register naming it | `REFUSED`, exit 1, before any push | nothing yet: the push waits |
+| non-loader | a changed module with no such load, the loader's words in a string or a comment included | counted, `OK` | its sites, if any other dynamic name is among them |
+
+Every site the check counts is one the census counts: `importlib` and `runpy` are not in
+`VETTED_MODULES` (`test_ci_workflows.py:4149`), and `exec` is in `BARE_DYNAMIC` (4069-4080). So the
+check refuses a module only where the census would refuse it as well, and the census stays the
+judge of a registered module that gains a site, of each tuple's text and count, and of every other
+dynamic name. The register is the dict at `test_ci_workflows.py:6482-7064`, each group built by
+`allowed()` (4779-4782); a module is named as `module_sources()` names it (4510-4518). The census
+runs in `stage_python` (`scripts/check.sh:179-195`), the step at `.github/workflows/ci.yml:347-351`
+of the `hygiene` job (line 298), which the aggregate `ci` needs (lines 875-878).
+
+The SPEC template's file manifest section (`docs/specs/_TEMPLATE.md`, section 4) tells a delivery
+that adds such a load to list `scripts/tests/test_ci_workflows.py` as changed, and names the check.

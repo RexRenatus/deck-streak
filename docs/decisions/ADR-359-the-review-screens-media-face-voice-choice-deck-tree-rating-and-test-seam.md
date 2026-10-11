@@ -200,3 +200,11 @@ answer time. The rest of the record stands.
 - The pick in the adapter, from the states the card was shown with: chosen because the next state is then chosen beside the token, as the web's `rate` chooses it, and the native code chooses none.
 - The pick kept in the codec, with the codec's `CardAnswer` sent through the adapter: rejected because the native code would still choose a next state the token does not check.
 - A core `answer(card, rating)` that reads the states again at answer time: rejected for D5's own reason, that the interval the learner read and the one applied could differ.
+
+## Amendment: fonts, voices and the body class (SPEC-393, ADR-407)
+
+- D1 gains a second closed table, `FONT_TYPES`, read only by the face's CSS pass and only for a reader that
+  asks (ADR-407 D2 and D6). `TYPES` and the HTML rewrite are unchanged, and every font reaches the frame as
+  a `data:` URL inside the document.
+- D3's choice is the first of three: the kept choice, then the tag's requested voices the picker would
+  offer, then the language's own (ADR-407 D3).

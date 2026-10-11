@@ -761,3 +761,67 @@ one is a STOP, reported before the second push:
 
 `LINKED` less `UNOBSERVABLE` is A6's population: `dns-prefetch` and `prefetch` reach no listener
 a test owns, so a reading of them proves nothing alone, and L3 still holds their hints.
+
+## 11. How section 3's unobservable cells are held (SPEC-399, ADR-413)
+
+Kind: data flow. Read at DeckStreak `dev` cfa7279991a9cf0f01312f38e85afabaed09080f
+(`web/app/src/lib/card/planted-coverage.test.ts`, `web/app/tests-card/planted.ts`,
+`web/app/playwright.card.config.ts`, and section 3 of this file).
+
+An `UNOBSERVABLE` note in a section-3 row records that the reference frame reaches no listener for
+that channel in an engine, so the planted suite proves "reaches nothing" there through the layers'
+own tests rather than through a listener. The planted suite declares the same set in `planted.ts`,
+and its spec holds that table equal to what each engine measures. The coverage test holds the table
+equal to this section's cells, both ways:
+
+- Every `UNOBSERVABLE` token in every cell of a channel row is read in one of two spellings.
+  `UNOBSERVABLE:` names every engine the card suite runs. `UNOBSERVABLE in <Engine>` followed by a
+  comma or a closing parenthesis names the one engine whose project name equals `<Engine>`
+  case-folded. Any other spelling, or an engine no project carries, fails the test with the row's
+  id.
+- The engines are the project names in the card suite's configuration, read from its text, one
+  literal name per project, in order. The test keeps no list of its own.
+- The pairs the cells name, each keyed `<engine> <id>`, equal the pairs `planted.ts` declares:
+  nothing missing, nothing extra, and nothing held twice on either side.
+- The test prints what it examined, after judging it, and refuses a count of zero.
+- Its own planted mismatches, in copied cell text and a copied table inside the test, show each
+  difference and each refusal by name on every run.
+
+```mermaid
+flowchart LR
+  sec3["section 3 of this file:<br/>the channel rows, every cell"]
+  cfgfile["web/app/playwright.card.config.ts:<br/>the projects array"]
+  decl["web/app/tests-card/planted.ts:<br/>UNOBSERVABLE, one engine and id each"]
+  engines["the engines: one literal name<br/>per project, in order"]
+  tokens["each UNOBSERVABLE token in a row,<br/>counted case-insensitively"]
+  refusals["refused with the row id:<br/>another spelling, or a name no project carries"]
+  named["pairs the cells name, engine and id:<br/>UNOBSERVABLE: one for every engine<br/>UNOBSERVABLE in Name: that engine alone"]
+  declared["pairs planted.ts declares, engine and id"]
+  compare["missing: named and not declared<br/>extra: declared and not named<br/>both empty, and the sorted lists equal"]
+  counts["count lines after the judgment:<br/>engines, cells, named pairs, declared pairs"]
+  plants["test-local plants: copied cells and a<br/>copied table, each with one mismatch"]
+  cfgfile --> engines
+  sec3 --> tokens
+  engines --> tokens
+  tokens --> named
+  tokens --> refusals
+  decl --> declared
+  named --> compare
+  declared --> compare
+  plants --> tokens
+  plants --> compare
+  compare --> counts
+```
+
+| what | at cfa7279991a9 | where |
+|---|---|---|
+| configured engines | 3: `chromium`, `webkit`, `firefox` | `web/app/playwright.card.config.ts` lines 17-21 |
+| channel rows in section 3 | 29 | lines 97-125 of this file |
+| unobservable cells | 7: two for every engine, two for two engines, three for one engine | lines 105, 106, 107, 108, 115, 118 and 124 of this file |
+| pairs the cells name | 13 | the seven cells over the three engines |
+| pairs declared | 13 | `web/app/tests-card/planted.ts` lines 207-219 |
+| difference | none, in either direction | the two lists above |
+
+What this check does NOT hold: the iPhone and iPad sections' unobservable cells (sections 4 and
+6) against the iOS planted table, and the measurement itself, which the planted suite makes in each
+engine.

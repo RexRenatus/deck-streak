@@ -48,6 +48,7 @@ inventory, in the form the repository's privacy checks read.
 | `minutes-log` | each reading entry you logged: the course, the study day, the minutes, the note you added if any (up to 200 characters), and when it was written | settling each course's reading XP of the day and its weekly bonus from your entries, and removing the newest entry when you undo it | contract | until account deletion |
 | `writing-log` | each study day you confirmed writing in a writing course: the course, the study day, and when it was confirmed | earning the writing XP and counting the writing streaks | contract | until account deletion |
 | `passkeys` | each passkey you registered for signing in on the web: its credential id, the random user handle your passkeys share, the stored credential with its public key, the signature counter, the backup state, and when it was added and last used | signing you in on the web with a passkey | contract | until account deletion |
+| `sensitive-decks` | the ids of the decks you keep away from AI, and when each was marked; never a deck's name or its cards | keeping every card of a deck you marked, and of the decks under it, away from every AI feature; after an erase every deck is readable again until you keep one away | contract | until account deletion |
 
 The lawful basis of each is the contract (GDPR Article 6(1)(b)): the service you run needs it. None
 is kept for a fixed period. Each is kept until you erase it, which is how an account is deleted here.
