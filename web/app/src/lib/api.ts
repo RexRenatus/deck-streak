@@ -28,6 +28,7 @@ import { parseScore, type ScoreToday } from './score/score';
 import { parseWallet, walletPath, type WalletView } from './economy/wallet';
 import { parseBoard, type BoardView } from './records/board';
 import { parseExchange, type ExchangeView } from './level/exchange';
+import { parseMethods, type Method } from './passkeys';
 import { telegram } from './telegram.svelte';
 
 /**
@@ -40,6 +41,9 @@ import { telegram } from './telegram.svelte';
  * client opens a new session once; if the server refuses that too, the launch data has aged past
  * its bound, the client stops calling, and the screen asks the owner to reopen DeckStreak from
  * Telegram, which hands the page fresh launch data.
+ *
+ * Outside Telegram there is no launch data: a passkey sign-in opened the session, every call
+ * carries its cookie alone, and a call refused 401 asks for sign-in (SPEC-385 R9).
  *
  * The launch data goes into that one request body and nowhere else: never a URL, a header, the
  * device's storage or a log line.
@@ -63,6 +67,12 @@ export interface ApiOptions {
   readonly launchData: () => string | null;
   /** The transport; the page's own `fetch` by default. */
   readonly fetch?: typeof globalThis.fetch;
+  /**
+   * Asks the owner to sign in, where a page outside Telegram has no launch data to open a session
+   * with (SPEC-385 R9; ADR-399 D2). Given it, such a page sends each call with the session cookie
+   * alone, and a call refused 401 asks for sign-in; without it, such a page sends nothing.
+   */
+  readonly askSignIn?: () => void;
 }
 
 /** The Mini App's one API client. */
@@ -106,12 +116,17 @@ export interface Api {
   sensitiveDecks(): Promise<Answer<string[]>>;
   /** Keeps the deck `id` away from AI, or lets AI read it again, and answers the marked decks (SPEC-381 R7). */
   setSensitive(id: string, sensitive: boolean): Promise<Answer<string[]>>;
+  /** The owner's ways in: Telegram, and each passkey with the day it was added (SPEC-385 R12). */
+  identities(): Promise<Answer<Method[]>>;
 }
 
 /** How opening a session ended: a session, a refusal only reopening the app can answer, or no answer. */
 type Opened = 'open' | 'refused' | 'failed';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** The sign-in page a call refused outside Telegram opens (SPEC-385 R9). */
+const SIGN_IN = '/signin';
 
 /** A client over `options`: one session, opened on the first call and renewed at most once per expiry. */
 export function createApi(options: ApiOptions): Api {
@@ -149,6 +164,9 @@ export function createApi(options: ApiOptions): Api {
    * answer came. A renewal repeats the request as it was, body and all.
    */
   async function call(path: string, init: RequestInit = {}): Promise<Response | 'reopen' | null> {
+    if (options.askSignIn !== undefined && options.launchData() === null) {
+      return signedIn(path, init, options.askSignIn);
+    }
     let renewed = false;
     for (;;) {
       if (stopped) return 'reopen';
@@ -182,6 +200,27 @@ export function createApi(options: ApiOptions): Api {
     }
   }
 
+  /**
+   * A call outside Telegram (SPEC-385 R9): the session a passkey sign-in opened, carried by its
+   * cookie alone, with no handshake and no renewal. A call refused 401 asks for sign-in and
+   * answers `'reopen'`; no other call is held back, so the screen reads again once signed in.
+   */
+  async function signedIn(
+    path: string,
+    init: RequestInit,
+    askSignIn: () => void
+  ): Promise<Response | 'reopen' | null> {
+    let response: Response;
+    try {
+      response = await send(path, { ...init, credentials: 'same-origin' });
+    } catch {
+      return null;
+    }
+    if (response.status !== 401) return response;
+    askSignIn();
+    return 'reopen';
+  }
+
   /** A GET of `path` whose JSON body `parse` reads: its value, or why there is none. */
   async function read<T>(path: string, parse: (body: unknown) => T | null): Promise<Answer<T>> {
     const response = await call(path);
@@ -213,6 +252,7 @@ export function createApi(options: ApiOptions): Api {
     lawTiers: () => read('/api/level/law-tiers', parseLawTiers),
     feed: () => read(FEED_PATH, parseFeed),
     wallet: (before) => read(walletPath(before), parseWallet),
+    identities: () => read('/api/identities', parseMethods),
     insights: () => read('/api/insights', parseListings),
     insight: (id) =>
       read(`/api/insights/${encodeURIComponent(id)}`, (body) => {
@@ -257,5 +297,13 @@ function parseMe(body: unknown): Me | null {
   return typeof day === 'string' && ISO_DATE.test(day) ? { studyDay: day } : null;
 }
 
-/** The app's client, opening its session with the launch data the wrapper read. */
-export const api: Api = createApi({ launchData: () => telegram.launchData });
+/**
+ * The app's client, opening its session with the launch data the wrapper read; outside Telegram, a
+ * call refused 401 opens the sign-in page (SPEC-385 R9).
+ */
+export const api: Api = createApi({
+  launchData: () => telegram.launchData,
+  // imported on use: the router module reads the browser's window as it loads, which a
+  // server-side render has not got
+  askSignIn: () => void import('$app/navigation').then(({ goto }) => goto(SIGN_IN))
+});

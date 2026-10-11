@@ -45,7 +45,8 @@
     {/if}
   </section>
 
-  <nav class="mt-8">
+  <nav class="mt-8 flex flex-wrap gap-x-6 gap-y-2">
     <a href="/about">{m.about()}</a>
+    <a href="/sign-in-methods">{m.methods_title()}</a>
   </nav>
 </main>
