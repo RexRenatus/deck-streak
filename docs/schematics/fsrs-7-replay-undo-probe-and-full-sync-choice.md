@@ -254,3 +254,36 @@ flowchart LR
   `the_context_map_declares_the_core_and_its_two_edges` (A10).
 - The read is one statement, so it adds no interleaving: the native engine object is shared without a lock of its own
   (`crates/ffi/src/engine.rs:69-70`), and the engine runs each statement under its own collection lock.
+
+## 9. The stock floor and the whole gap (SPEC-413, ADR-427)
+
+Read at dev `c74b6b96`. Kind: data flow. Section 6's `fsrs7 stock` step, and the gap inside `fsrs7 convert`, as they
+are after SPEC-413. The 90-percent interval passes through one floor before it is a stock stability; the distance
+between two kept reviews is the unsigned distance of their ids.
+
+```mermaid
+flowchart TD
+  ids["two kept reviews of one card, in id order: ids in milliseconds, each an i64"] --> dist["abs_diff: their distance, a u64, exact for every pair"]
+  dist --> days["days: the distance over 86400000, an f32 number of days"]
+  days --> item["the review's delta_t in the card's item"]
+  item --> replay["fsrs7 replay: the pinned revision's memory state"]
+  replay --> ninety["the revision's interval at 0.9"]
+  ninety --> floor["stock_stability: the interval, or STABILITY_MIN 0.0001 when it is lower or NaN"]
+  floor --> stab["Stock stability"]
+  replay --> diff["Stock difficulty: clamped 1 to 10"]
+  replay --> ivl["Stock interval: the revision's interval at the retention, unfloored"]
+  ivl --> sched["engine core: rounded, at least 1 day, at most the preset's maximum"]
+  stab --> fields["engine core: stock_fields writes the memory state"]
+  diff --> fields
+  sched --> fields
+  fields --> store["the engine's store: the stability at four decimal places, never 0"]
+```
+
+- **The floor.** `STABILITY_MIN` is the pinned revision's least stability. The engine stores a stability rounded to
+  four decimal places, so the floor is also the least value it keeps above zero; an Again on a first review, whose
+  90-percent interval is `3.827_562_6e-5` days, is written as the floor (SPEC-413 A1).
+- **The interval is not floored here.** The schedule's floor of 1 day already holds it (`lean/Fsrs7Schedule`).
+- **The gap.** Section 6's rows are sorted by id before the distances are taken, so `abs_diff` is the difference
+  itself; a pair whose difference passes the signed range is read whole (SPEC-413 A2).
+- **Proved.** `lean/Fsrs7Stock` proves the floor over every `f32` the interval can be, NaN and the infinities
+  included, and `lean/ReplayHistory` ports the distance as the natural distance of the two ids.
