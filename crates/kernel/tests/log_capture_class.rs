@@ -1585,7 +1585,7 @@ fn every_capture_in_the_workspace_goes_through_the_helper() {
         [GLOBAL_DEFAULT],
         "the one production global default is the only one: {report}"
     );
-    assert_eq!(routed, 24, "{report}");
+    assert_eq!(routed, 25, "{report}");
 }
 
 /// A capture whose body panics lowers the helper's count as it unwinds, so a later capture on the

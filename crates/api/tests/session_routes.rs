@@ -147,6 +147,26 @@ async fn handshake(app: &Router, init_data: &str, cookie: Option<&str>) -> Answe
     .await
 }
 
+/// A same-origin JSON launch validation with `init_data`, carrying `cookie` when one is given
+/// (SPEC-403 R8).
+async fn launch(app: &Router, init_data: &str, cookie: Option<&str>) -> Answer {
+    let mut headers = vec![
+        ("content-type", "application/json"),
+        ("sec-fetch-site", "same-origin"),
+    ];
+    if let Some(cookie) = cookie {
+        headers.push(("cookie", cookie));
+    }
+    send(
+        app,
+        "POST",
+        "/api/launch",
+        &headers,
+        handshake_body(init_data),
+    )
+    .await
+}
+
 /// `GET /api/me` carrying `cookie`, or no cookie.
 async fn me(app: &Router, cookie: Option<&str>) -> Answer {
     let headers: Vec<(&str, &str)> = cookie
@@ -559,4 +579,182 @@ fn the_owner_access_debug_names_its_parts_and_never_the_signing_token() {
     assert!(shown.contains("sessions:"), "{shown}");
     assert!(shown.contains("rule:"), "{shown}");
     assert!(!shown.contains(BOT_TOKEN), "{shown}");
+}
+
+#[tokio::test]
+async fn a_launch_the_gate_admits_is_accepted_with_204_and_opens_no_session() {
+    let (_clock, app) = app();
+
+    // The owner's launch data: 204, no body, no cookie, and no session behind it.
+    let accepted = launch(&app, OWNER_PAYLOAD, None).await;
+    assert_eq!(accepted.status, StatusCode::NO_CONTENT, "{}", accepted.body);
+    assert_eq!(accepted.body, "");
+    assert!(
+        accepted.headers.get(SET_COOKIE).is_none(),
+        "{:?}",
+        accepted.headers
+    );
+    assert_eq!(me(&app, None).await.status, StatusCode::UNAUTHORIZED);
+
+    // A launch carrying a live session's cookie is accepted too, and ends nothing.
+    let cookie = signed_in(&app).await;
+    let carried = launch(&app, OWNER_PAYLOAD, Some(&cookie)).await;
+    assert_eq!(carried.status, StatusCode::NO_CONTENT, "{}", carried.body);
+    assert!(carried.headers.get(SET_COOKIE).is_none());
+    assert_eq!(me(&app, Some(&cookie)).await.status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn a_forged_foreign_stale_or_malformed_launch_is_refused_with_its_reason_alone() {
+    let (clock, app) = app();
+    let headers = [
+        ("content-type", "application/json"),
+        ("sec-fetch-site", "same-origin"),
+    ];
+
+    let forged = launch(&app, FORGED_PAYLOAD, None).await;
+    let foreign = launch(&app, STRANGER_PAYLOAD, None).await;
+    // The malformed launch is a JSON body with no `init_data`.
+    let malformed = send(&app, "POST", "/api/launch", &headers, "{}".to_owned()).await;
+    // The stale launch is the owner's, validly signed, read past the gate's freshness bound.
+    clock.advance(Freshness::default().max_age() + Duration::from_secs(1));
+    let stale = launch(&app, OWNER_PAYLOAD, None).await;
+
+    let judged = [
+        (
+            forged,
+            StatusCode::UNAUTHORIZED,
+            "{\"reason\":\"init_data_invalid\"}",
+        ),
+        (foreign, StatusCode::FORBIDDEN, "{\"reason\":\"not_owner\"}"),
+        (
+            stale,
+            StatusCode::UNAUTHORIZED,
+            "{\"reason\":\"init_data_stale\"}",
+        ),
+        (
+            malformed,
+            StatusCode::UNAUTHORIZED,
+            "{\"reason\":\"init_data_invalid\"}",
+        ),
+    ];
+    for (answer, status, body) in examined("refused launch(es)", judged.into_iter().collect()) {
+        assert_eq!((answer.status, answer.body.as_str()), (status, body));
+        assert!(answer.headers.get(SET_COOKIE).is_none());
+    }
+}
+
+#[tokio::test]
+async fn a_cross_site_or_non_json_launch_is_refused() {
+    let (_clock, app) = app();
+    let body = handshake_body(OWNER_PAYLOAD);
+
+    // The owner's own valid launch data, sent cross-site or as something other than JSON: 403,
+    // before the route reads it.
+    let refusals: Vec<Refused> = vec![
+        (
+            "POST",
+            vec![
+                ("content-type", "application/json"),
+                ("sec-fetch-site", "cross-site"),
+            ],
+            "cross_site_request",
+        ),
+        (
+            "POST",
+            vec![
+                ("content-type", "application/json"),
+                ("sec-fetch-site", "same-site"),
+            ],
+            "cross_site_request",
+        ),
+        (
+            "POST",
+            vec![
+                ("content-type", "text/plain"),
+                ("sec-fetch-site", "same-origin"),
+            ],
+            "not_json",
+        ),
+        (
+            "POST",
+            vec![("content-type", "application/x-www-form-urlencoded")],
+            "not_json",
+        ),
+        ("POST", vec![], "not_json"),
+    ];
+    for (method, headers, reason) in examined("refused launch(es)", refusals) {
+        let answer = send(&app, method, "/api/launch", &headers, body.clone()).await;
+        assert_eq!(
+            (answer.status, answer.body.as_str()),
+            (
+                StatusCode::FORBIDDEN,
+                format!("{{\"reason\":\"{reason}\"}}").as_str()
+            ),
+            "{method} {headers:?}"
+        );
+    }
+
+    // The same launch data as same-origin JSON is admitted.
+    assert_eq!(
+        launch(&app, OWNER_PAYLOAD, None).await.status,
+        StatusCode::NO_CONTENT
+    );
+}
+
+#[tokio::test]
+async fn the_launch_body_is_bounded_like_the_handshake() {
+    let (_clock, app) = app();
+    let headers = [
+        ("content-type", "application/json"),
+        ("sec-fetch-site", "same-origin"),
+    ];
+    let padded = |length: usize| {
+        let frame = handshake_body("").len();
+        handshake_body(&"a".repeat(length - frame))
+    };
+
+    // A body at the handshake's limit is read, and refused as launch data it is not.
+    let at_limit = send(
+        &app,
+        "POST",
+        "/api/launch",
+        &headers,
+        padded(HANDSHAKE_BODY_LIMIT_BYTES),
+    )
+    .await;
+    assert_eq!(
+        (at_limit.status, at_limit.body.as_str()),
+        (
+            StatusCode::UNAUTHORIZED,
+            "{\"reason\":\"init_data_invalid\"}"
+        )
+    );
+    // One byte more is refused 413: the shell's own limit would have read it.
+    let over = send(
+        &app,
+        "POST",
+        "/api/launch",
+        &headers,
+        padded(HANDSHAKE_BODY_LIMIT_BYTES + 1),
+    )
+    .await;
+    assert_eq!(over.status, StatusCode::PAYLOAD_TOO_LARGE);
+}
+
+#[tokio::test]
+async fn launches_and_handshakes_share_the_handshake_bound() {
+    let (_clock, app) = app();
+
+    // Thirty forged launches in the minute: each is judged and refused as forged.
+    let mut judged = Vec::new();
+    for _ in examined("launch(es)", (1..=30).collect::<Vec<u32>>()) {
+        judged.push(launch(&app, FORGED_PAYLOAD, None).await.status);
+    }
+    assert_eq!(judged, vec![StatusCode::UNAUTHORIZED; 30]);
+
+    // The owner's handshake is the thirty-first request the bound counts: refused before it is judged.
+    let refused = handshake(&app, OWNER_PAYLOAD, None).await;
+    assert_eq!(refused.status, StatusCode::TOO_MANY_REQUESTS);
+    assert_eq!(refused.body, "{\"reason\":\"too_many_handshakes\"}");
 }

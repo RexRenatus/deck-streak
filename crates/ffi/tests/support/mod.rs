@@ -1,8 +1,10 @@
 //! Support shared by the adapter's integration tests (SPEC-336, SPEC-339): the synthetic
 //! collection's builder, which the `harness-fixture` example also includes alone, the wire
-//! helpers that encode each request and decode each response, and the open request every test
-//! sends first.
+//! helpers that encode each request and decode each response, the open request every test
+//! sends first, and the parity collection's builder (SPEC-393 R15), which the `review-fixture`
+//! example also includes alone.
 
+pub mod parity;
 pub mod synthetic;
 pub mod wire;
 

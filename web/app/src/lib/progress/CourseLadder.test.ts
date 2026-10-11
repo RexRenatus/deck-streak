@@ -20,6 +20,13 @@ function textOf(element: Element | null | undefined): string {
   return (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
 }
 
+// SPEC-408 R2, R4, A2. Each course says what its mastery measures, in plain words, right after its
+// summary.
+const COURSE_ABOUT =
+  'Mastery is an estimate from your reviews: the average, over the cards it counts, of how likely you are to recall each card now, with cards not yet firmly learned counted for less and new or suspended cards counted as 0.';
+const LAW_ABOUT =
+  'Law mastery starts at 100% and drops 3 points for each active law leech, a law card you keep forgetting, never below 70%; it does not measure how much law you know.';
+
 /** A synthetic course: A1 and A2 achieved, B1 under way, B2 begun, C1 and C2 empty. */
 function course(overrides: Partial<CourseProgress> = {}): CourseProgress {
   return {
@@ -42,6 +49,18 @@ function course(overrides: Partial<CourseProgress> = {}): CourseProgress {
 }
 
 describe('the course ladder', () => {
+  it('each course says what its mastery measures right after its summary', () => {
+    const { container } = render(CourseLadder, { course: course() });
+
+    const summary = container.querySelector('[data-course-summary]');
+    const about = summary?.nextElementSibling;
+    expect(about?.getAttribute('data-mastery-about')).toBe('course');
+    expect(textOf(about)).toBe(COURSE_ABOUT);
+    const shown = examined('shown mastery descriptions', [...container.querySelectorAll('[data-mastery-about]')]);
+    expect(shown).toHaveLength(1);
+    expect(textOf(container)).not.toContain(LAW_ABOUT);
+  });
+
   it('draws each band cell with its mastery and the current unit', () => {
     render(CourseLadder, { course: course() });
 

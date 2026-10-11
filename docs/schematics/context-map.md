@@ -55,10 +55,12 @@ flowchart TB
     identity
     agent
   end
+  subgraph engine[the engine over the replay maths]
+    engine_core["engine-core"]
+  end
   subgraph foundations[no workspace dependency]
     kernel
     xp
-    engine_core["engine-core"]
     fsrs7
   end
 
@@ -105,6 +107,8 @@ flowchart TB
   ffi --> engine_core
 
   web_engine --> engine_core
+
+  engine_core --> fsrs7
 
   coordination --> kernel
   coordination --> ingest
@@ -161,7 +165,7 @@ The daemon composes none of `ffi`, `web-engine` and `push`. A native client link
 own binary and the web client runs `web-engine`, each over `engine-core`; `push` joins the daemon
 when native push carries the one router (#640). The clients' edges to `xp` are #639's.
 
-`fsrs7` depends on no workspace crate, and no crate depends on it.
+`fsrs7` depends on no workspace crate, and `engine-core` alone depends on it.
 
 `deck-streak-migration` is planned in the fence and has no directory under `crates/`, so it is not
 drawn until the delivery that builds it.

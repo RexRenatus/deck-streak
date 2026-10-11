@@ -4,6 +4,10 @@
 //! of its own under the target's scratch space. The test opens it, asks for each language's
 //! choice against an installed set, asks for a picker's options, records and clears a choice, and
 //! opens the file again to read what survived.
+//!
+//! The parity tests (SPEC-393 A10 to A12) ask which voice speaks a TTS tag that requests voices,
+//! with and without a kept choice, against the installed set and one more `en-US` voice whose name
+//! holds a space.
 
 #![allow(
     clippy::expect_used,
@@ -203,5 +207,89 @@ fn a_choice_that_cannot_be_written_is_refused_in_words() {
             .to_string()
             .starts_with("the voice choice was not written: "),
         "the refusal reads as a sentence: {refusal}"
+    );
+}
+
+/// The installed set, and the `en-US` voice `Parity Voice` a parity tag asks for by name.
+fn parity_installed() -> Vec<Voice> {
+    let mut installed = installed();
+    installed.push(voice(
+        "test.voice.parity",
+        "Parity Voice",
+        "en-US",
+        VoiceQuality::Default,
+    ));
+    installed
+}
+
+/// Choices opened from a file that does not exist yet, so none is kept.
+fn no_choices() -> std::sync::Arc<VoiceChoices> {
+    let file = scratch().join("voices.tsv");
+    VoiceChoices::open(file.to_str().expect("a scratch path is UTF-8").to_owned())
+}
+
+fn requested(entries: &[&str]) -> Vec<String> {
+    entries.iter().map(|&entry| entry.to_owned()).collect()
+}
+
+/// RED-FIRST (SPEC-393 R8, A10): with no kept choice, the first requested entry naming a voice the
+/// picker offers speaks: `Desk_Parity_Voice` names `Parity Voice` after its first `_`, the name's
+/// space written `_`.
+#[test]
+fn a_requested_voice_speaks_when_no_choice_is_kept() {
+    let choices = no_choices();
+    assert_eq!(
+        choices.voice_for(
+            "en-US".to_owned(),
+            requested(&["Absent_Voice", "Desk_Parity_Voice"]),
+            parity_installed(),
+        ),
+        Some("test.voice.parity".to_owned()),
+        "the second entry names the installed voice Parity Voice"
+    );
+}
+
+/// NOT RED (SPEC-393 R8, A11): a kept choice that is installed speaks, though the request names
+/// another installed voice.
+#[test]
+fn a_kept_choice_speaks_over_a_requested_voice() {
+    let choices = no_choices();
+    choices
+        .choose("en-US".to_owned(), Some("voice.zoe".to_owned()))
+        .expect("the choice is written");
+    assert_eq!(
+        choices.voice_for(
+            "en-US".to_owned(),
+            requested(&["Desk_Parity_Voice"]),
+            parity_installed(),
+        ),
+        Some("voice.zoe".to_owned()),
+        "the kept choice speaks over the requested voice"
+    );
+}
+
+/// RED-FIRST (SPEC-393 R8, A12): an entry naming a voice of another language, or one not
+/// installed, is passed over; an installed voice's identifier speaks before a later entry; and a
+/// request whose every entry is passed over answers nothing.
+#[test]
+fn a_request_the_picker_would_not_offer_is_passed_over() {
+    let choices = no_choices();
+    assert_eq!(
+        choices.voice_for(
+            "en-US".to_owned(),
+            requested(&["Thomas", "Absent_Voice", "voice.ava", "Zoe"]),
+            parity_installed(),
+        ),
+        Some("voice.ava".to_owned()),
+        "a French voice and an absent one are passed over, and the identifier speaks first"
+    );
+    assert_eq!(
+        choices.voice_for(
+            "en-US".to_owned(),
+            requested(&["Thomas", "Absent_Voice", "voice.karen"]),
+            parity_installed(),
+        ),
+        None,
+        "no entry names a voice the picker offers for en-US"
     );
 }

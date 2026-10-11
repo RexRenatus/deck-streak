@@ -24,6 +24,7 @@ export const ROUTES = [
   '/study',
   '/study/review',
   '/study/mapping',
+  '/study/ai-decks',
   '/sync'
 ] as const;
 
