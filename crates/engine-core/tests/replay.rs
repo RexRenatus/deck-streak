@@ -941,6 +941,7 @@ fn answer_head(dispatcher: &Dispatcher) -> (i64, Recorded) {
         Recorded {
             status: Some(undo_status(dispatcher)),
             review,
+            ..Recorded::default()
         },
     )
 }
