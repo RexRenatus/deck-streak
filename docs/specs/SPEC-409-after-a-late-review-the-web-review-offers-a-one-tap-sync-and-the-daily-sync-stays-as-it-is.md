@@ -135,7 +135,7 @@ chooses the line of R6; the screen draws it.
 
 | # | criterion | red at the base, for this reason | test |
 |---|---|---|---|
-| A1 | A late review raises the offer: after a late card is rated and the rate answers, the line and both buttons show after the control bar, and the focus has not moved | the base shows no offer | `web/app/src/lib/study/update-now.test.ts` `a late review raises the offer below the controls` (added) |
+| A1 | A late review raises the offer: after a late card is rated and the rate answers, the line and both buttons show after the control bar, and focus stays on the screen's own region, never on the offer | the base shows no offer | `web/app/src/lib/study/update-now.test.ts` `a late review raises the offer below the controls` (added) |
 | A2 | An on-time review and a late card shown but not yet rated raise no offer; the same screen raises it at its first late answer | the base never raises it, so the late half fails | `update-now.test.ts` `an on-time review and an unanswered late card raise no offer` (added) |
 | A3 | "Not now" hides the offer for the screen's life, a later late review raises nothing, neither raising nor dismissing calls the update client, and "Not now" pressed while a sync runs hides the offer with no line after the sync answers | the base has no "Not now" | `update-now.test.ts` `not now hides the offer for the screen and syncs nothing` (added) |
 | A4 | One press runs one sync then one count read; "Syncing…" shows with "Sync now" disabled while the sync runs; then "Sync finished." and "Reviews waiting to sync: 0", with the focus where it was | the base has no "Sync now" on the review | `update-now.test.ts` `one tap syncs once and shows the result` (added) |
