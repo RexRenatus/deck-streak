@@ -4,7 +4,9 @@
 // another's answers. The fixture's deck `Review` holds four new cards in order: a text card, an
 // image card, a sound card and a speech card. Beside it, `parity/` is the parity collection
 // (SPEC-393 R15), whose deck `Parity` opens with a card that speaks its front through a TTS tag
-// asking for the voices `Absent_Voice` and `Desk_Parity_Voice`.
+// asking for the voices `Absent_Voice` and `Desk_Parity_Voice`; and `sound-video/` is the sound
+// video collection (SPEC-410 R8), whose deck `Sound video` holds one card whose question's sound
+// tags name two videos and a sound.
 import Foundation
 import XCTest
 
@@ -94,5 +96,39 @@ final class ReviewSessionTests: XCTestCase {
             first.face.replay,
             [.speech(text: "a parity card", language: "en-US", rate: 0.5, voice: "test.voice.parity")],
             "A14: the parity card's replay speaks its front in the voice its tag asks for")
+    }
+
+    /// SPEC-410 A6 (R9): the sound video collection's first face shows sign's video, then wave's,
+    /// each inline over its own bytes, and replays its one sound.
+    func test_a_sound_tags_video_shows_in_the_review_screens_face() async throws {
+        let directory = try freshFixture().appending(
+            path: "sound-video", directoryHint: .isDirectory)
+        let engine = EngineSession()
+        try await engine.open(
+            arguments: ["DeckStreak", "-DSCollectionDirectory", directory.path(percentEncoded: false)])
+        let decks = try await engine.decks()
+        let soundVideo = try XCTUnwrap(
+            decks.first { $0.name == "Sound video" },
+            "the sound video collection's deck Sound video is listed; the decks read "
+                + "\(decks.map(\.name))")
+        let session = ReviewSession(engine: engine)
+        try await session.choose(soundVideo)
+        let first = try await session.next(autoplay: false, installed: [])
+        let document = first.face.document
+        let signVideo: String =
+            #"<video playsinline controls style="display:block;max-width:100%;height:auto;"#
+            + #"margin:0 auto" src="data:video/mp4;base64,c2lnbi12aWRlbw=="></video>"#
+        let waveVideo: String =
+            #"<video playsinline controls style="display:block;max-width:100%;height:auto;"#
+            + #"margin:0 auto" src="data:video/mp4;base64,d2F2ZS12aWRlbw=="></video>"#
+        let sign = try XCTUnwrap(
+            document.range(of: signVideo), "A6: the document holds sign's video: \(document)")
+        let wave = try XCTUnwrap(
+            document.range(of: waveVideo), "A6: the document holds wave's video: \(document)")
+        XCTAssertEqual(
+            sign.upperBound <= wave.lowerBound, true, "A6: sign's video comes before wave's")
+        XCTAssertEqual(
+            first.face.replay, [.sound(name: "beep.mp3", bytes: Data("beep-sound".utf8))],
+            "A6: the first face replays its one sound")
     }
 }

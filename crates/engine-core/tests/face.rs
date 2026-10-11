@@ -14,6 +14,11 @@
 //! one note of a copy of a stock note type: two templates for the ordinal, a CSS that names fonts
 //! for the font pass, and a template that speaks through TTS tags for the voices. A reader that
 //! asks for fonts and one that keeps the trait's own answer read from memory.
+//!
+//! The sound video tests (SPEC-410 A1 to A4) each build a collection of their own holding one
+//! Basic note twice, on the default preset and on one that skips the question when replaying the
+//! answer, whose sound tags name videos and a sound. A reader that asks for video and one that
+//! keeps the trait's own answer read from memory.
 
 #![allow(
     clippy::expect_used,
@@ -885,4 +890,228 @@ fn every_font_type_is_inlined_under_its_own_type() {
         "each font is inlined under its own type, and the rest is as written"
     );
     assert_eq!(face.omitted, Vec::<String>::new(), "nothing omitted");
+}
+
+/// The sound video note (SPEC-410 section 9): a front whose sound tags name an `.mp4` video, a
+/// sound and an `.m4v` video, and a back whose sound tag names a `.MOV` video in capitals.
+const VIDEO_FRONT: &str = "[sound:sign.mp4][sound:beep.mp3][sound:wave.m4v]";
+const VIDEO_BACK: &str = "[sound:turn.MOV]";
+/// The sound video note's files and their bytes.
+const SIGN: &str = "sign.mp4";
+const SIGN_BYTES: &[u8] = b"sign-video";
+const BEEP: &str = "beep.mp3";
+const BEEP_BYTES: &[u8] = b"beep-sound";
+const WAVE: &str = "wave.m4v";
+const WAVE_BYTES: &[u8] = b"wave-video";
+const TURN: &str = "turn.MOV";
+const TURN_BYTES: &[u8] = b"turn-video";
+/// Each video's element, written out in full: the type its extension names and its bytes' base64,
+/// worked out by hand (SPEC-410 R3).
+const SIGN_ELEMENT: &str = concat!(
+    r#"<video controls style="display:block;max-width:100%;height:auto;margin:0 auto" "#,
+    r#"src="data:video/mp4;base64,c2lnbi12aWRlbw=="></video>"#,
+);
+const WAVE_ELEMENT: &str = concat!(
+    r#"<video controls style="display:block;max-width:100%;height:auto;margin:0 auto" "#,
+    r#"src="data:video/mp4;base64,d2F2ZS12aWRlbw=="></video>"#,
+);
+const TURN_ELEMENT: &str = concat!(
+    r#"<video controls style="display:block;max-width:100%;height:auto;margin:0 auto" "#,
+    r#"src="data:video/quicktime;base64,dHVybi12aWRlbw=="></video>"#,
+);
+const SMALL_ELEMENT: &str = concat!(
+    r#"<video controls style="display:block;max-width:100%;height:auto;margin:0 auto" "#,
+    r#"src="data:video/mp4;base64,c21hbGwtdmlkZW8="></video>"#,
+);
+
+/// The cards of a collection holding one note twice: in the deck `Plain`, on the default preset,
+/// and in the deck `Skip`, whose preset skips the question when replaying the answer.
+struct VideoCards {
+    plain: i64,
+    skip: i64,
+}
+
+/// A collection of the test's own holding the Basic note `front` and `back` twice, as `fixture`
+/// holds its sound note: in `Plain` and in `Skip`. A dispatcher with it open, and the two cards.
+fn video_notes(test: &str, front: &str, back: &str) -> (Dispatcher, VideoCards) {
+    let dir = support::scratch("engine-core-face", test);
+    std::fs::create_dir_all(dir.join("collection.media")).expect("a media directory");
+    let collection = dir.join("collection.anki2");
+    let mut col = CollectionBuilder::new(&collection)
+        .build()
+        .expect("the engine creates the collection");
+    let plain = deck(&mut col, "Plain");
+    let skip = deck(&mut col, "Skip");
+    preset(&mut col, skip, "Skip", |config| {
+        config.skip_question_when_replaying_answer = true;
+    });
+    let basic = col
+        .get_notetype_by_name("Basic")
+        .expect("the note types are read")
+        .expect("the engine creates its stock Basic note type");
+    let cards = VideoCards {
+        plain: note(&mut col, &basic, plain, front, back),
+        skip: note(&mut col, &basic, skip, front, back),
+    };
+    col.close(None).expect("the engine closes the collection");
+    (open_at(&dir, &collection), cards)
+}
+
+/// The sound video note's four files, in memory.
+fn video_files() -> Memory {
+    Memory(HashMap::from([
+        (SIGN, SIGN_BYTES.to_vec()),
+        (BEEP, BEEP_BYTES.to_vec()),
+        (WAVE, WAVE_BYTES.to_vec()),
+        (TURN, TURN_BYTES.to_vec()),
+    ]))
+}
+
+/// Reads from memory like [`Memory`], and asks for a sound tag's video (SPEC-410 R2).
+struct Showing(Memory);
+
+impl Reader for Showing {
+    fn read(&self, name: &str, limit: u64) -> Option<Vec<u8>> {
+        self.0.read(name, limit)
+    }
+
+    fn shows_video(&self) -> bool {
+        true
+    }
+}
+
+/// `text` from its first `<video` on, or nothing when it holds none: the elements a reader that
+/// asks gains after the side's own text.
+fn videos(text: &str) -> &str {
+    text.find("<video").map_or("", |start| &text[start..])
+}
+
+/// RED-FIRST (SPEC-410 R1, R3, R6, A1): for a reader that asks, the question's sound tags that name
+/// a video become elements after its text, in the tags' order, and only the sound is played.
+#[test]
+fn a_sound_tags_video_is_written_into_the_face_for_a_reader_that_asks() {
+    let (dispatcher, cards) = video_notes("video-question", VIDEO_FRONT, VIDEO_BACK);
+    let face = dispatcher
+        .face(cards.plain, Side::Question, true, &Showing(video_files()))
+        .expect("the engine renders the card");
+    assert_eq!(
+        videos(&face.text),
+        format!("{SIGN_ELEMENT}{WAVE_ELEMENT}"),
+        "the question's text ends with sign's element, then wave's: {}",
+        face.text
+    );
+    assert_eq!(
+        face.replay,
+        vec![sound(BEEP, BEEP_BYTES)],
+        "the question replays its one sound"
+    );
+    assert_eq!(
+        face.autoplay,
+        vec![sound(BEEP, BEEP_BYTES)],
+        "the question starts its one sound alone"
+    );
+    assert_eq!(face.omitted, Vec::<String>::new(), "nothing omitted");
+}
+
+/// RED-FIRST (SPEC-410 R1, R3, A2): the answer shows the question's videos, then its own, typed by
+/// its extension in any case; when the preset skips the question on replay, its own alone.
+#[test]
+fn the_answer_shows_the_question_videos_then_its_own_unless_the_preset_skips() {
+    let (dispatcher, cards) = video_notes("video-answer", VIDEO_FRONT, VIDEO_BACK);
+    let reader = Showing(video_files());
+    let plain = dispatcher
+        .face(cards.plain, Side::Answer, true, &reader)
+        .expect("the engine renders the card");
+    let skip = dispatcher
+        .face(cards.skip, Side::Answer, true, &reader)
+        .expect("the engine renders the card");
+    assert_eq!(
+        videos(&plain.text),
+        format!("{SIGN_ELEMENT}{WAVE_ELEMENT}{TURN_ELEMENT}"),
+        "the answer ends with the question's videos, then its own: {}",
+        plain.text
+    );
+    assert_eq!(
+        videos(&skip.text),
+        TURN_ELEMENT,
+        "the preset that skips the question on replay leaves the answer's own video alone: {}",
+        skip.text
+    );
+    assert_eq!(
+        plain.replay,
+        vec![sound(BEEP, BEEP_BYTES)],
+        "the answer replays the question's one sound"
+    );
+    assert_eq!(
+        skip.replay,
+        Vec::<Clip>::new(),
+        "the skipping preset replays nothing"
+    );
+    assert_eq!(
+        (plain.omitted, skip.omitted),
+        (Vec::<String>::new(), Vec::<String>::new()),
+        "nothing omitted"
+    );
+}
+
+/// RED-FIRST (SPEC-410 R4, A3): a video one byte over the file cap adds no element and is named
+/// once, and the video within the cap is written alone.
+#[test]
+fn a_video_over_the_file_cap_is_omitted_and_named_once() {
+    let (dispatcher, cards) = video_notes("video-cap", "[sound:large.mp4][sound:small.mp4]", "");
+    let reader = Showing(Memory(HashMap::from([
+        ("large.mp4", vec![0; 4_194_305]),
+        ("small.mp4", b"small-video".to_vec()),
+    ])));
+    let face = dispatcher
+        .face(cards.plain, Side::Question, true, &reader)
+        .expect("the engine renders the card");
+    assert_eq!(
+        videos(&face.text),
+        SMALL_ELEMENT,
+        "the question's text ends with small's element alone: {}",
+        face.text
+    );
+    assert_eq!(
+        face.omitted,
+        vec!["large.mp4".to_owned()],
+        "the video over the cap is named once"
+    );
+    assert_eq!(face.replay, Vec::<Clip>::new(), "nothing is played");
+}
+
+/// NOT RED (SPEC-410 R7, A4): for a reader that keeps the trait's own answer, every face is as the
+/// base completes it: an `.mp4` sound tag plays as a sound, and an `.m4v` or `.MOV` one is named.
+#[test]
+fn a_reader_that_does_not_ask_keeps_a_video_tag_as_a_sound() {
+    let (dispatcher, cards) = video_notes("video-not-asked", VIDEO_FRONT, VIDEO_BACK);
+    let reader = video_files();
+    let question = dispatcher
+        .face(cards.plain, Side::Question, true, &reader)
+        .expect("the engine renders the card");
+    let answer = dispatcher
+        .face(cards.plain, Side::Answer, true, &reader)
+        .expect("the engine renders the card");
+    assert_eq!(
+        question.replay,
+        vec![sound(SIGN, SIGN_BYTES), sound(BEEP, BEEP_BYTES)],
+        "the question replays sign, then beep, as sounds"
+    );
+    assert_eq!(
+        question.omitted,
+        vec![WAVE.to_owned()],
+        "the question names wave"
+    );
+    assert_eq!(
+        answer.omitted,
+        vec![WAVE.to_owned(), TURN.to_owned()],
+        "the answer names wave, then turn"
+    );
+    for face in [&question, &answer] {
+        assert!(
+            !face.text.contains("<video"),
+            "the text holds no element: {}",
+            face.text
+        );
+    }
 }
