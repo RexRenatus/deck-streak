@@ -89,3 +89,8 @@ A4: green at 1d657022
 A16: green at 1d657022
 A17: green at 1d657022
 ```
+
+Correction. The green lines above name the local commits `bdc244de`, `4b82077c`, `77c313c0`
+and `1d657022`, and CI ran none of them. CI ran the pull request's head `9f7a9a75` (run
+38138078691), where the test files of every criterion, A1 to A19, pass in its `web` job
+(114465991358).
