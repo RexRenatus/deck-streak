@@ -14,6 +14,9 @@ const GAP_HOURS: [i64; 5] = [24, 36, 72, 12, 168];
 const HOUR_MS: i64 = 3_600_000;
 /// A review-log row's kind for a review.
 const REVIEW: u8 = 1;
+/// The ease factor each row logs, in thousandths: a reviewed card's, never 0, so the history holds
+/// no reset row (SPEC-386 R2) and every row is kept.
+const FACTOR: u32 = 2500;
 
 /// The cards' lengths for `reviews` rows at a mean of `mean` reviews per card: the lengths cycle
 /// through 1 to `2 * mean - 1`, whose mean is `mean`, and the last card is cut so the lengths sum
@@ -49,6 +52,7 @@ pub fn rows(reviews: usize, mean: usize) -> Vec<RevlogRow> {
                 id: at,
                 ease: EASES[rows.len() % EASES.len()],
                 kind: REVIEW,
+                factor: FACTOR,
             });
             at += GAP_HOURS[review % GAP_HOURS.len()] * HOUR_MS;
         }

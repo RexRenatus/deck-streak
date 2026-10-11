@@ -39,9 +39,12 @@
 //!   it reads and the order of its refusals (SPEC-383 R5).
 //! - [`late`]: whether a review cannot count toward the streak for its card's due day: the
 //!   engine's day, and the rule that judges a card past its due day in it (SPEC-376 R1, R2).
+//! - [`replay`]: the replay of a deck set's review history into stock-field values, and their
+//!   mapping onto the engine's card; it writes nothing (SPEC-386 R7 to R13).
 //!
-//! The core depends on the engine and on no crate of this workspace; only the two client
-//! adapters depend on it (ADR-356 D4, held by the graph census).
+//! The core depends on the engine and on one crate of this workspace, the isolated FSRS-7
+//! scheduler, which [`replay`] alone names; only the two client adapters depend on it (ADR-356 D4
+//! as amended by ADR-400 D1, held by the graph census).
 
 #![forbid(unsafe_code)]
 
@@ -57,6 +60,7 @@ pub mod late;
 pub mod login_guard;
 pub mod media;
 pub mod one_way;
+pub mod replay;
 pub mod retention;
 pub mod review;
 pub mod table;

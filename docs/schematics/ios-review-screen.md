@@ -211,3 +211,49 @@ L8 and L10 to L13 (lines 4 to 10; L9 is retired and its number not reused), agai
 L1 to L7, and `load(_:into:)` (line 55) prefixes the document policy ahead of the HTML it is
 given. The card view hands `CardFace.document` to it unchanged, so the page carries the policy's
 doctype and then the face's own; nothing in the app sets anything on a configuration.
+
+## 6. SPEC-393: four parity gaps from the engine to the card view
+
+- **For:** SPEC-393, ADR-407. **Kind:** data flow. **Read at:** DEV `164ac206`.
+- **Stands on:** section 3 (the data of one card) and the card view's isolation (#619).
+
+Section 3's boundary list changes in one record: the speech clip is `Speech {text, language, rate, voices}`.
+Rust still hands WebKit nothing directly: every font and video reaches the frame as a `data:` URL inside the
+one document string.
+
+```mermaid
+flowchart TD
+  CR["card record, read once for the preset"] -->|"template index"| ORD["Face.ordinal"]
+  TX["rendered text and AV tags"] --> MR["media rewrite over TYPES, then the clips"]
+  NT["note type CSS"] --> FP["font pass over FONT_TYPES, only for a reader that asks"]
+  MR --> BG["one face budget: FILE_CAP per file, FACE_CAP per face"]
+  FP -->|"taken after the media and the clips"| BG
+  FP -->|"admitted"| FD["url of a data: font"]
+  FP -->|"refused"| FE["empty url, name joins omitted"]
+  TT["tts tag voices list"] --> SV["Clip::Speech.voices, in order"]
+  SV --> FC["ffi Clip::Speech.voices"]
+  FC --> ES["EngineSession.clip"]
+  ES -->|"voice_for language, requested, installed"| VC["kept choice, else first request the picker offers, else none"]
+  VC --> CP["ClipPlayer speaks"]
+  ORD --> DOC["ffi document: body class card cardN, N is ordinal plus one, then the night classes"]
+  FD --> DOC
+  MR --> DOC
+  DOC -->|"each video start tag gains playsinline"| HS["one closed HTML string"]
+  HS -->|"loadHTMLString, baseURL nil"| CV
+  subgraph CONTAIN["containment, unchanged"]
+    CV["factory view: allowsInlineMediaPlayback true on iOS"]
+    RL["rule list blocks every load"]
+    PO["policy: font-src data:, media-src data:"]
+  end
+```
+
+| gap | engine output | ffi | native view | file:line at DEV it changes |
+|---|---|---|---|---|
+| card class | `Face.ordinal` | `document()` writes `card card<n>` | none | `crates/engine-core/src/face.rs:77-90`, `crates/ffi/src/face.rs:17-19,69-81` |
+| fonts | `Face.css` with `data:` fonts | `MediaFolder` answers `inlines_fonts` | none | `crates/engine-core/src/media.rs:40-44`, `crates/engine-core/src/face.rs:217-219` |
+| voices | `Clip::Speech.voices` | `Clip::Speech.voices`, `VoiceChoices::voice_for` | `EngineSession.clip` binds and calls | `crates/engine-core/src/face.rs:141-151`, `crates/ffi/src/voices.rs:112-144`, `ios/App/Sources/EngineSession.swift:228-240` |
+| inline video | unchanged | `playsinline` on each video start tag | factory sets inline playback on iOS | `crates/ffi/src/face.rs:69-81`, `ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift:194-240` |
+| sound tag naming a video | cut (SPEC-393 section 9) | unchanged | unchanged | none |
+
+Unchanged and outside the change: `RuleList.swift:13`, `DocumentPolicy.swift:13-15`, the planted suite, and the
+web's faces (`crates/web-engine/src/wasm.rs` gains only a rest pattern in `clip_value`).

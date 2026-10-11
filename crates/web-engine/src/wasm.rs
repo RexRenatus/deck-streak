@@ -1037,6 +1037,7 @@ fn clip_value(clip: Clip) -> Result<JsValue, JsValue> {
             text,
             language,
             rate,
+            ..
         } => {
             set(&value, "kind", &"speech".into())?;
             set(&value, "text", &text.into())?;

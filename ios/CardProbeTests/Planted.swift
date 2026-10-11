@@ -584,3 +584,7 @@ let PERMITTED = Planted.document(
         + " body { font: 16px permitted, sans-serif; }</style>",
     body: "<p>permitted</p><img id=\"permitted-image\" alt=\"\" src=\"\(pixel)\">"
         + "<audio id=\"permitted-audio\" preload=\"auto\" src=\"data:audio/wav;base64,\(permittedAudio)\"></audio>")
+
+/// SPEC-392 R5: the planted cards whose markup holds a static `link` element, the ones a reference
+/// view counts a `link` element in (A5); the link strip renames each one's opener in the card view.
+let LINKED: Set<String> = ["stylesheet", "preload", "prefetch", "preconnect", "dns-prefetch", "shadow-link"]
