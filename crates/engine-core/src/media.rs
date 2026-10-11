@@ -60,6 +60,14 @@ pub trait Reader {
     fn inlines_fonts(&self) -> bool {
         false
     }
+
+    /// Whether a sound tag that names a video is written into the face's text as a video element
+    /// rather than played as a sound (SPEC-410 R2, R3; ADR-424 D1). A reader that renders the
+    /// face's document asks for it, because only a document can show the picture; a reader that
+    /// does not ask keeps every sound tag a sound, as before.
+    fn shows_video(&self) -> bool {
+        false
+    }
 }
 
 /// Whether `name` is a plain file name: not empty, no separator or NUL, and not `.` or `..`.
