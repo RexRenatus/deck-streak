@@ -253,9 +253,10 @@ fn an_invalid_score_counts_as_no_score() {
     for (name, score) in invalid {
         let scores = input(TODAY, SNAPSHOT, &[(11, score), (13, 0.5)]);
         assert_eq!(
-            order(true, Some(&scores), &[11, 12, 13]),
-            vec![13, 11, 12],
-            "a score of {name} counts as no score: 11 keeps its stock place among the unscored"
+            order(true, Some(&scores), &[12, 11, 13]),
+            vec![13, 12, 11],
+            "a score of {name} counts as no score: 11 stays after the unscored 12, as the stock \
+             order has it, and behind the scored 13"
         );
     }
 
