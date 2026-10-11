@@ -20,17 +20,17 @@ the release pull request #822's run, which was then cancelled.
 
 - **The legs examined nothing.** Job 114529706626 (`mutation-rust`, shard 0) read `Cache not
   found` (log line 252), listed 49 mutants, and then `FAILED   Unmutated baseline in 345s build +
-  935s test` (line 387). Its step took 1283 s and ended `cargo-mutants exited 4` (line 6137); the
-  job concluded success. Every completed `mutation-rust` leg of the run read the same baseline
-  failure.
+  935s test` (line 387). Job 114529706626's step took 1283 s and ended `cargo-mutants exited 4`
+  (line 6137); the job concluded success. Every completed `mutation-rust` leg of the run read the
+  same baseline failure.
 - **The failing test is the progression census.** It runs `cargo metadata --format-version 1
   --locked --offline --all-features` (`crates/progression/tests/xp_census.rs:714-716`) and, in
   that job, failed in 3.548 s with `failed to download` a package (`accessory`, line 6120); fail-
   fast then stopped three other tests.
 - **The jobs that fetch first passed on the same miss.** Job 114529617445 (`rust`) also read a
-  cache miss (line 287); its `cargo fetch --locked --manifest-path Cargo.toml` step ran 36 s and
-  downloaded that package (line 339), and the census passed. Job 114529617364 (`release`) fetched
-  in 39 s and was green.
+  cache miss (line 287), and its `cargo fetch --locked --manifest-path Cargo.toml` step
+  (job 114529617445) ran 36 s and downloaded that package (line 339); the census passed. Job
+  114529617364 (`release`) fetched in 39 s and was green.
 - **Why.** A pull request into `main` restores no cache written on `dev`. A build downloads only
   the packages it compiles; the census asks for every target's, offline. `ci.yml`'s `rust`
   (`:65-66`), `release` (`:187-188`) and `mutation-rows` (`:622-624`) jobs fetch after their

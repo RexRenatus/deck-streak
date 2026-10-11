@@ -23,8 +23,8 @@ So the census failed, the baseline was red, and cargo-mutants examined no mutant
 - job 114529706626 (`mutation-rust`, shard 0): `Cache not found` (log line 252); 49 mutants
   listed; `FAILED   Unmutated baseline in 345s build + 935s test` (line 387); the census test
   failed in 3.548 s on `failed to download` a package (`accessory`, line 6120), and fail-fast
-  stopped three others; `cargo-mutants exited 4` (line 6137). The step took 1283 s, and the job
-  concluded success.
+  stopped three others; `cargo-mutants exited 4` (line 6137).
+  Job 114529706626's step took 1283 s, and the job concluded success.
 - job 114529617445 (`rust`): the same miss (line 287); its fetch step ran 36 s and downloaded that
   package (line 339); the census passed and the job was green.
 - job 114529617364 (`release`): its fetch step ran 39 s; green.
