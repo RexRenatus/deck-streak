@@ -124,5 +124,32 @@ class TheReleaseRunbookRecoversATagWithNoRun(unittest.TestCase):
             self.assertNotIn(move, text, f"the runbook never moves a release tag: {move}")
 
 
+class TheLaneRunbookRecoversATagWithNoLaneRun(unittest.TestCase):
+    """SPEC-405 R7 (ADR-419 D2a and D2b): the runbook builds a release tag whose push started no
+    app release lane run by a manual dispatch of the lane at the tag's own ref, and says why
+    `apple-on-tag.yml` takes no dispatch."""
+
+    def test_the_runbook_builds_a_tag_with_no_lane_run_by_a_dispatch_at_its_own_ref(self):
+        lines = (REPO / "RELEASING.md").read_text(encoding="utf-8").splitlines()
+        heading = "## 8. TestFlight builds of the iPhone and iPad app"
+        self.assertIn(heading, lines)
+        start = lines.index(heading)
+        later = [n for n in range(start + 1, len(lines)) if lines[n].startswith("## ")]
+        section = lines[start : later[0] if later else len(lines)]
+        commands = [
+            "gh run list --workflow testflight-release.yml"
+            " --commit \"$(git rev-parse 'vX.Y.Z^{commit}')\"",
+            "gh workflow run testflight-release.yml --ref vX.Y.Z",
+        ]
+        for command in examined("runbook commands", commands):
+            self.assertIn(command, section, f"section 8 holds the line {command}")
+        folded = " ".join(" ".join(section).split())
+        self.assertIn(
+            "`apple-on-tag.yml` takes no dispatch: the lane's `framework` job runs the same Apple"
+            " build at the tag's ref",
+            folded,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

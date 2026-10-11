@@ -101,3 +101,11 @@ while it has not synced. Whether that undo is the never-list's entry 1 is read t
 owner-taps ruling's table maps entry 1 to undoing an answer after it has synced, and ADR-361 D1
 says the never-list does not name undo. ADR-382 builds to the stricter reading: the undo meets all
 three of the ruling's conditions whichever reading holds.
+
+## Amendment: the undo of an unsynced bury or flag (SPEC-383)
+
+ADR-397 amends the Decision Outcome (`:41-44`), as SPEC-371's amendment did. The exempt Undo also
+holds the undo of the review's last bury or flag while it has not synced. It meets the owner-taps
+ruling's three conditions as the undo of an answer does: it is reachable only from the review, it
+writes only on the card the gesture names, and it is shown, with what it changes, before it is
+made.
