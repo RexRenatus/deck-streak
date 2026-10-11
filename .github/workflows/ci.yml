@@ -494,6 +494,9 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - name: the locked dependency graph, every target's packages (the census reads it offline at the baseline)
+        if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
+        run: cargo fetch --locked --manifest-path Cargo.toml
       - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
         with:
