@@ -9,6 +9,7 @@
 // view the factory builds by default is the scripts-off card view.
 // SPEC-361 A17: WebKit has started before any measured wait, once per process, and a card that
 // never loads reads not loaded only after the whole wait (R16, #681).
+// SPEC-393 A17: the factory's view plays a card's video in the card, on the iPhone as on the iPad.
 import WebKit
 import XCTest
 
@@ -214,5 +215,16 @@ final class FactoryTests: XCTestCase {
         XCTAssertFalse(loaded, "a card with no planted-card meta read loaded: \(line)")
         XCTAssertGreaterThanOrEqual(
             elapsed, Probe.loadSeconds, "the wait read the card not loaded before its whole bound: \(line)")
+    }
+
+    /// SPEC-393 A17 (R10): a view the factory makes reads `allowsInlineMediaPlayback` as true, so a
+    /// card's video plays inside the card on the iPhone, whose default is off, as on the iPad.
+    @MainActor
+    func test_the_factory_plays_media_inline() async throws {
+        let view = try await CardWebViewFactory.makeCardWebView(
+            html: Planted.document(id: "inline", head: "", body: "<p>a card</p>"))
+        let inline = view.configuration.allowsInlineMediaPlayback
+        print("factory inline playback: \(inline)")
+        XCTAssertTrue(inline, "A17: the factory's view plays media inline")
     }
 }

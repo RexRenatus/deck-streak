@@ -4,6 +4,7 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { hosted } from '$lib/card/frame-host';
 import { EngineError } from '$lib/engine/client';
 import type { CardView, Head, UndoOffer } from '$lib/engine/protocol';
 import type { Clip, Faces } from '$lib/engine/protocol';
@@ -174,7 +175,7 @@ function frame(): HTMLIFrameElement {
 }
 
 function body(): { title: string; classes: string; text: string } {
-  const doc = new DOMParser().parseFromString(frame().getAttribute('srcdoc') ?? '', 'text/html');
+  const doc = new DOMParser().parseFromString(hosted(frame().getAttribute('srcdoc') ?? '') ?? '', 'text/html');
   return { title: frame().title, classes: doc.body.className, text: doc.body.textContent?.trim() ?? '' };
 }
 

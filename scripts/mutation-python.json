@@ -9,6 +9,12 @@
     "dir": "scripts/tests",
     "modules": []
   },
+  "scripts/dynamic-imports-check.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_dynamic_imports_check"
+    ]
+  },
   "scripts/ios_icon.py": {
     "dir": "scripts/tests",
     "modules": [

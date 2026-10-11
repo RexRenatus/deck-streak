@@ -268,3 +268,8 @@ amendment, `S29500` to `S29508`, and `S29510` to `S29529` keep their anchors (#5
 A9: python3 -m unittest discover -s scripts/tests -p test_formal_config.py -k the_committed_file_holds_exactly_the_declared_fields
 A10: python3 -m unittest discover -s scripts/tests -p test_formal_config.py -k the_committed_file_holds_exactly_the_declared_fields
 ```
+
+## 15. Amendments: SPEC-404 supersedes R7's reason (#703)
+
+- R7's value stands, and so do A9 and A10. Its reason, "equal to the formal checker's own compiled setting", is superseded by SPEC-404 and ADR-418 D2: the settings file is the one place the slot setting is stated, the formal checker reads it there, and SPEC-404's tests hold the file to the reading the checker's reader takes (#703).
+- The row S29530 keeps its id and its anchor; its words name the superseded reason, and its meaning is read from SPEC-404 (#516).

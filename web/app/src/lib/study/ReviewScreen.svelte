@@ -15,7 +15,9 @@
   // it goes back to, with the focus on keeping it; Escape keeps it too. SPEC-376 R5, R6; ADR-387: a
   // card the engine marks past its due day shows one line, below the status line and above the card,
   // on both sides, saying its review does not count toward the streak for that day; a card on time
-  // shows none.
+  // shows none. SPEC-409; ADR-423: after the first late review the engine answers, a block below the
+  // control bar offers one tap that syncs this device's reviews and shows the result, never takes
+  // the focus, and goes away for the screen's life on "Not now".
   import { onMount } from 'svelte';
   import CardFrame from '$lib/card/CardFrame.svelte';
   import type { Returns } from '$lib/engine/protocol';
@@ -31,19 +33,30 @@
   import { Review, type ClipPlayer, type StudyClient } from './review';
   import { deviceSpeaker } from './speech';
   import { VoiceChoices } from './voice';
+  import { UpdateNow, type UpdateClient } from './update-now';
   import VoicePicker from './VoicePicker.svelte';
 
-  let { client, player }: { client: () => Promise<StudyClient>; player?: ClipPlayer } = $props();
+  let {
+    client,
+    player,
+    update
+  }: { client: () => Promise<StudyClient>; player?: ClipPlayer; update?: () => Promise<UpdateClient> } = $props();
 
   let region: HTMLElement;
 
   const choices = new VoiceChoices(deviceStorage());
   const devicePlayer = new Player(new Audio(), URL, deviceSpeaker(choices));
 
+  const updateNow = new UpdateNow(() => update, () => (offer = updateNow.face));
+  let offer = $state.raw(updateNow.face);
+
   const review = new Review(
     () => client(),
     () => performance.now(),
-    () => (shown = read()),
+    () => {
+      shown = read();
+      if (review.lateReviews > 0) updateNow.raise();
+    },
     { play: (clips) => (player ?? devicePlayer).play(clips) }
   );
 
@@ -301,6 +314,38 @@
       >
         {m.study_retry()}
       </button>
+    {/if}
+    {#if update !== undefined}
+      <div class="flex flex-col gap-2">
+        <div role="status" class="flex flex-col gap-1 text-sm">
+          {#if offer.shown}
+            <p>{offer.line}</p>
+            {#if offer.count !== null}<p>{m.sync_unsynced({ count: offer.count })}</p>{/if}
+          {/if}
+        </div>
+        {#if offer.shown}
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              class="min-h-11 rounded-md border px-4 transition-colors duration-150 disabled:opacity-60"
+              disabled={offer.working}
+              onclick={() => void updateNow.tap()}
+            >
+              {m.sync_now()}
+            </button>
+            <button
+              type="button"
+              class="min-h-11 rounded-md border px-4 transition-colors duration-150"
+              onclick={() => updateNow.dismiss()}
+            >
+              {m.study_update_dismiss()}
+            </button>
+            {#if offer.link}
+              <a href="/sync" class="inline-flex min-h-11 items-center rounded-md border px-4">{m.study_update_open_sync()}</a>
+            {/if}
+          </div>
+        {/if}
+      </div>
     {/if}
   </section>
 

@@ -266,11 +266,11 @@ jobs:
           if-no-files-found: warn
 
   card-sandbox:
-    # SPEC-341 R12: the planted card suite in Chromium and WebKit. Each planted card reaches its
-    # listener from the reference frame and nothing from the shipped card frame, and each layer
-    # removed alone opens exactly the channels the schematic gives it.
+    # SPEC-341 R12 and SPEC-398: the planted card suite in Chromium, WebKit and Firefox. Each
+    # planted card reaches its listener from the reference frame and nothing from the shipped card
+    # frame, and each layer removed alone opens exactly the channels the schematic gives it.
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -282,9 +282,11 @@ jobs:
           package-manager-cache: false
       - name: the Mini App's dependencies
         run: pnpm install --frozen-lockfile
+      - name: Firefox, with its system libraries
+        run: pnpm --dir web/app exec playwright install --with-deps firefox
       - name: Chromium's headless shell and WebKit, with their system libraries
         run: pnpm --dir web/app exec playwright install --with-deps --only-shell chromium webkit
-      - name: the planted cards, in Chromium and WebKit
+      - name: the planted cards, in Chromium, WebKit and Firefox
         run: pnpm --dir web/app test:card
       - name: upload the planted suite's results
         if: ${{ always() }}

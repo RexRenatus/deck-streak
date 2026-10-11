@@ -11,6 +11,7 @@ on:
     paths:
       - "crates/ffi/**"
       - "crates/engine-core/**"
+      - "crates/fsrs7/**"
       - "ios/**"
       - "Cargo.lock"
       - "Cargo.toml"

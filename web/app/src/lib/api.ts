@@ -8,6 +8,12 @@ import {
 } from './capture/capture';
 import { FEED_PATH, parseFeed, type FeedItem } from './ladder/feed';
 import {
+  SENSITIVE_DECKS_PATH,
+  parseMarked,
+  sensitiveBody,
+  sensitiveDeckPath
+} from './study/ai-decks';
+import {
   parseEnvelope,
   parseListings,
   type Envelope,
@@ -106,6 +112,10 @@ export interface Api {
   wallet(before?: number): Promise<Answer<WalletView>>;
   /** Saves a quick capture into the vault's inbox, once per capture id (SPEC-118 R10). */
   capture(request: CaptureRequest): Promise<Answer<Saved>>;
+  /** The decks the learner keeps away from AI, by id as a decimal string (SPEC-381 R7). */
+  sensitiveDecks(): Promise<Answer<string[]>>;
+  /** Keeps the deck `id` away from AI, or lets AI read it again, and answers the marked decks (SPEC-381 R7). */
+  setSensitive(id: string, sensitive: boolean): Promise<Answer<string[]>>;
   /** The owner's ways in: Telegram, and each passkey with the day it was added (SPEC-385 R12). */
   identities(): Promise<Answer<Method[]>>;
 }
@@ -261,6 +271,18 @@ export function createApi(options: ApiOptions): Api {
       if (response === null) return { kind: 'unavailable' };
       const saved = parseSaved(response.status, await response.json().catch(() => null));
       return saved === null ? { kind: 'unavailable' } : { kind: 'ok', value: saved };
+    },
+    sensitiveDecks: () => read(SENSITIVE_DECKS_PATH, parseMarked),
+    setSensitive: async (id, sensitive) => {
+      const response = await call(sensitiveDeckPath(id), {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: sensitiveBody(sensitive)
+      });
+      if (response === 'reopen') return { kind: 'reopen' };
+      if (response === null || !response.ok) return { kind: 'unavailable' };
+      const marked = parseMarked(await response.json().catch(() => null));
+      return marked === null ? { kind: 'unavailable' } : { kind: 'ok', value: marked };
     }
   };
 }
