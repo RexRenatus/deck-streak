@@ -197,6 +197,7 @@ appended section's diagrams in the whole suite.
 | `changelog.d/update-now-prompt-409.md` | docs | added: the changelog fragment |
 | `web/app/src/lib/study/update-now.ts` | miniapp | added: `UpdateNow` and `UpdateClient` (R2, R4 to R7, R12) |
 | `web/app/src/lib/study/update-now.test.ts` | miniapp | added: A1 to A14 |
+| `web/app/src/lib/study/update-now-machine.test.ts` | miniapp | added: the offer's state machine driven without a screen, one test per guard (R2, R4 to R7, R12) |
 | `web/app/src/lib/study/review.ts` | miniapp | changed: the settled late count, `lateReviews` (R1) |
 | `web/app/src/lib/study/ReviewScreen.svelte` | miniapp | changed: the `update` property, the offer and its status region, and the header comment's SPEC-409 sentence (R2, R3, R8, R9) |
 | `web/app/src/routes/study/review/+page.svelte` | miniapp | changed: gives `update` (R2) |
