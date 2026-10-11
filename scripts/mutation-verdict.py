@@ -984,10 +984,20 @@ def python_listing(path: str | None) -> list[dict] | None:
     return [entry for entry in document["mutants"] if isinstance(entry, dict)]
 
 
-def python_shards(listing: list[dict]) -> dict:
-    """The Python matrix, sized by the diff's listing (R9): the ceiling of listed over 20, clamped
-    to 1 to 32, each shard's mutants round-robin as the runner assigns them, `i mod count`."""
-    count = min(PYTHON_MAX_SHARDS, max(1, -(-len(listing) // PYTHON_SHARD_MUTANTS)))
+def python_needed(listed: int) -> int:
+    """The Python legs a listing of `listed` mutants needs at PYTHON_SHARD_MUTANTS a leg, one for
+    none (SPEC-415 R1)."""
+    return max(1, -(-listed // PYTHON_SHARD_MUTANTS))
+
+
+def python_shards(listing: list[dict]) -> dict | None:
+    """The Python matrix, sized by the diff's listing (R9): the ceiling of listed over 20, each
+    shard's mutants round-robin as the runner assigns them, `i mod count`; None when the listing
+    needs more than PYTHON_MAX_SHARDS legs, which the plan refuses whole and never caps
+    (SPEC-415 R2)."""
+    count = python_needed(len(listing))
+    if count > PYTHON_MAX_SHARDS:
+        return None
     names = [str(entry.get("name")) for entry in listing]
     return {
         "count": count,
@@ -1021,6 +1031,14 @@ def shards(
             print(f"mutation: shards: VOID {python_listed} holds no Python mutant listing")
             return EXIT_VOID
         python = python_shards(listing)
+        if python is None:
+            print(
+                f"mutation: shards: REFUSED: {len(listing)} python mutant(s) need "
+                f"{python_needed(len(listing))} legs of at most {PYTHON_SHARD_MUTANTS}, more than "
+                f"the pull request run's {PYTHON_MAX_SHARDS} python legs: split the change, since "
+                f"a run is never capped"
+            )
+            return EXIT_FAIL
     mutants: list[tuple[str, str]] = []
     if plan["classes"]["rust"]["applies"]:
         listed = read_listing(listed_path)
@@ -1072,7 +1090,8 @@ def shards(
     if python is not None:
         print(
             f"mutation: shards: {python['count']} python shard(s) for "
-            f"{sum(len(shard['mutants']) for shard in python['shards'])} listed mutant(s)"
+            f"{sum(len(shard['mutants']) for shard in python['shards'])} listed mutant(s); "
+            f"python legs {python['count']} of ceiling {PYTHON_MAX_SHARDS}"
         )
     print(
         f"mutation: shards: {count} shard(s) for {len(mutants)} listed mutant(s), projected at "

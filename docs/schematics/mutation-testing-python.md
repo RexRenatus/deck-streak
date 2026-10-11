@@ -127,3 +127,70 @@ flowchart LR
 | `mutation-rows` | `mutation-verdict` | the rows' outcomes, counted into each class's examined | `rows.json` |
 | the tree | `mutation-verdict` | the Python records | `scripts/mutation-equivalent.d/python.json` |
 | the weekly `python` job | `survivors`, `battery`, `table` | sixteen reports with every killer | `python.json` each |
+
+## 5. Amendment (SPEC-415): a release's Python plan, before and after the refusal
+
+Insert-only; every earlier byte of this schematic is kept. Kind: data flow (the plan, the Python
+legs and the verdict) with one decision node, where the plan sizes or refuses. Read at DeckStreak
+`dev` c74b6b9 (`scripts/mutation-verdict.py:120-121`, `:987-995`, `:1017-1023`, `:1072-1075` and
+`:1603-1611`; `.github/workflows/ci.yml:376-446`, `:531-571`, `:646-702` and `:875-905`). Decided
+by ADR-429; built by SPEC-415.
+
+Section 1's node `pyshards` still reads "ceiling of listed over 40, clamped 1 to 32". SPEC-362 R14
+made the rule 20 listed mutants a leg, and SPEC-415 makes the clamp a refusal: the node is kept as
+it was drawn, and this section is the plan as it now runs.
+
+### 5.1 Before: the cap
+
+```mermaid
+flowchart TD
+  blist["mutation_python.py list --plan: 5423 listed, plan job 114529617353, 24 seconds"] --> bsize["python_shards: ceil of 5423 over 20 is 272 legs, and min of 32 and 272 is 32"]
+  bsize --> bmatrix["python_matrix 0 to 31, 169 or 170 mutants a leg; the plan exits 0 and prints no refusal"]
+  bmatrix --> bleg["mutation-python leg k: run --shard k/32 --failfast, timeout-minutes 60"]
+  bleg -->|"28 legs, cut at 60 minutes"| bcut(["cancelled at the bound, before the runner writes its report"])
+  bleg -->|"4 legs, 33 to 54 minutes"| bshut(["runner shutdown, exit 143, no report"])
+  bcut --> bverdict{"mutation-verdict: a report from every leg 0 to 31?"}
+  bshut --> bverdict
+  bverdict -->|"none of 32"| bvoid(["VOID, each leg by name; ci fails"])
+```
+
+The cap cuts at `python_shards`' `min`: 272 legs of work go into 32 jobs. The bound cuts at the
+job's `timeout-minutes: 60`, and because the runner writes its report only when its run ends, a cut
+leg leaves nothing for the verdict to read: no outcome, no examined count and no cost.
+
+### 5.2 After: the refusal
+
+```mermaid
+flowchart TD
+  alist["mutation_python.py list --plan: n listed"] --> aneed["python_needed: the larger of 1 and the ceiling of n over 20"]
+  aneed --> afit{"legs needed at most 32?"}
+  afit -->|"yes, n at most 640"| amatrix["python_shards: c legs dealt round robin; prints python legs c of ceiling 32"]
+  amatrix --> aleg["mutation-python leg k: run --shard k/c --failfast, timeout-minutes 60, at most 20 mutants"]
+  aleg --> areport[("mutation-python-shard-k: report.json")]
+  areport --> averdict{"mutation-verdict: every leg 0 to c-1 reported whole, each examining the plan's mutants?"}
+  averdict -->|"yes"| ajudge(["judged: each mutant killed, survived or recorded, by name"])
+  averdict -->|"a leg cut or missing"| avoidleg(["VOID, the leg by name; ci fails"])
+  afit -->|"no, n at least 641; 5423 needs 272"| arefuse(["REFUSED by name, exit 1: no plan byte and no step output written"])
+  arefuse --> askip["mutation-plan fails: no Python leg and no Rust leg starts"]
+  askip --> avoidplan(["mutation-verdict: VOID, the plan names no python shards; ci fails"])
+```
+
+### 5.3 What crosses each step, before and after
+
+| step | before | after |
+|---|---|---|
+| the listing | 5423 listed, the runner's own listing | unchanged: nothing sampled, filtered or dropped |
+| the legs | 272 needed, 32 run | 272 needed, refused whole at the plan |
+| a leg's mutants | 169 or 170 | at most 20, or none run |
+| a leg's bound | `timeout-minutes: 60` | unchanged |
+| a mutant's bound | the larger of 60 seconds and five times its file's control run | unchanged |
+| `--failfast` | on, for each mutant's run | unchanged |
+| the plan's exit | 0, with no refusal | 1, with the refusal by name |
+| the verdict | VOID, each of 32 legs named | VOID, the plan names no python shards |
+| what stays examined | every listed mutant promised, none reported | in a sized plan, every listed mutant in exactly one leg, the examined sum equal to the listing |
+
+### 5.4 How the Python and Rust legs share the run
+
+The run holds 256 jobs. The Python legs keep a fixed share of at most 32, the Rust legs at most
+209 (`LEG_CEILING["ci"]`, derived with the Python legs counted at 32), and 15 other jobs hold the
+rest. Each plan refuses whole above its own share, by name, and neither borrows the other's.

@@ -62,6 +62,13 @@ request's do, in legs sized from the tool's own listing (SPEC-362, ADR-373). `mu
 prints `legs N of ceiling C`, where C is the most legs the run holds beside its other jobs, and a
 plan that needs more than C is refused whole, by name, never capped.
 
+**The Python plan prints its headroom too.** The release's Python mutants run in the same run, at
+most 20 to a leg (SPEC-362 R14). `mutation-plan` prints `python legs N of ceiling 32`, and a
+listing that needs more than 32 Python legs is refused whole, by name, never capped (SPEC-415,
+ADR-429): the plan fails, no leg starts, and `mutation-verdict` reads the run VOID. A refused plan
+is not a shard that never reported: re-running its failed jobs refuses it again, and a range past
+the ceiling waits for the Python legs to be sized by a measured cost (#825).
+
 **Cut a release before its range reaches the ceiling.** A release pull request's plan lists every
 mutant `dev` gained since the last release, so the range only grows until it ships, and a range past
 the ceiling cannot be judged by any run. The scheduled battery's plan of the whole tree, the largest
