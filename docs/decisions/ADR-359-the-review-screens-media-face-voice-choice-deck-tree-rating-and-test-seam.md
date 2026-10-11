@@ -208,3 +208,10 @@ answer time. The rest of the record stands.
   a `data:` URL inside the document.
 - D3's choice is the first of three: the kept choice, then the tag's requested voices the picker would
   offer, then the language's own (ADR-407 D3).
+
+## Amendment: a sound tag that names a video (SPEC-410, ADR-424)
+
+- D1 gains a third closed table, `VIDEO_TYPES`, read only for a reader that asks (ADR-424 D1, which names
+  the options it was chosen against). A sound tag naming a video crosses as a `data:` video element inside
+  the document, not as clip bytes, under D1's caps, unchanged (ADR-424 D2).
+- D7 stands: the element carries no `autoplay`, so nothing starts it but the learner.

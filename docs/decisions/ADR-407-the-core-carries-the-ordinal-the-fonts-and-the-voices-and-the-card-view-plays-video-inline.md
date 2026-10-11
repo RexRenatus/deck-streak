@@ -240,3 +240,12 @@ view's planted-suite step. Push 1 carries their reds, push 2 their greens.
   picture: an HTML video source would need its own type, which re-opens ADR-359 D1.
 - Learners asking for the template's voices over their own choice: D3's order becomes a setting.
 - A second client that renders the face's own CSS: it answers `inlines_fonts` with `true`.
+
+## Amendment: the cut gap is built (SPEC-410, ADR-424)
+
+- D5's cut gap, a sound tag that names a video, is built by SPEC-410 as ADR-424 D1 decides: an element the
+  core writes for a reader that asks, played inline by D4's factory setting, contained by D6's `data:` route.
+- SPEC-393 section 9's first follow-up is built except its replay: Replay and Stop do not act on such a video
+  (#632).
+- The last bullet of the Consequences, that such a tag keeps playing as a sound, no longer holds for the
+  native client.

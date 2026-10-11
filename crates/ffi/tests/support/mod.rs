@@ -2,9 +2,10 @@
 //! collection's builder, which the `harness-fixture` example also includes alone, the wire
 //! helpers that encode each request and decode each response, the open request every test
 //! sends first, and the parity collection's builder (SPEC-393 R15), which the `review-fixture`
-//! example also includes alone.
+//! example also includes alone, as it does the sound video collection's builder (SPEC-410 R8).
 
 pub mod parity;
+pub mod sound_video;
 pub mod synthetic;
 pub mod wire;
 
