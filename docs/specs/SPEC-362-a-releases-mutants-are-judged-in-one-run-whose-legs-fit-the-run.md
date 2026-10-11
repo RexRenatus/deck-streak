@@ -253,3 +253,20 @@ Insert-only; every earlier byte is kept. Section 5 records the release's Stryker
 been cut at that bound (job 113826350088), so SPEC-379 raises both web legs' `timeout-minutes` to
 100 by measurement, held inside 100 to 120 (ADR-390). The web sweep is still not sharded, and its
 StrykerJS settings are unchanged: sharding stays #693.
+
+## Amendment: past 32 legs the Python listing is refused (SPEC-415)
+
+Insert-only; every earlier byte is kept. R14's 20 listed mutants a leg holds, and so does its bound
+of 1 to 32 legs (`PYTHON_MAX_SHARDS`). Above 32 the listing is refused whole, by name, never capped:
+`shards --python-listed` exits 1 before any leg is dealt, as R3 refuses a Rust listing past its
+ceiling (SPEC-415, ADR-429). The clamp it replaces was measured on the release's plan: 5423 listed
+Python mutants went into 32 legs of 169 or 170, where 272 legs of 20 hold them, and no leg
+reported. Shard 0 (job 114529704945) was cancelled at its bound after 60 minutes 6 seconds, and
+shard 28 (job 114529704969) ended in a runner shutdown after 33 minutes 45 seconds.
+
+A12 keeps its id, its command and its test name,
+`test_the_matrix_takes_twenty_listed_mutants_a_shard_clamped_to_thirty_two`, and every case: 20
+listed still read 1 shard, 21 read 2 and 68 read 4. Only its last case, 32 x 20 + 1, now reads
+refused, where the table above states 32. This is not a retirement in SPEC-056 R14's form, because
+A12's test stays: R14 retires a criterion whose test is removed, and this one keeps its test with
+every case.

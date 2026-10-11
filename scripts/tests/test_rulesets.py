@@ -151,5 +151,25 @@ class TheLaneRunbookRecoversATagWithNoLaneRun(unittest.TestCase):
         )
 
 
+class TheReleaseRunbookNamesThePythonCeiling(unittest.TestCase):
+    """SPEC-415 R6 (ADR-429): section 2 of the release runbook names the Python plan's headroom
+    line, its whole refusal past 32 legs, and that re-running a refused plan refuses it again."""
+
+    def test_the_runbook_names_the_python_ceiling_and_its_whole_refusal(self):
+        lines = (REPO / "RELEASING.md").read_text(encoding="utf-8").splitlines()
+        start, end = "## 2. The release pull request", "## 3. Tag it on main"
+        self.assertIn(start, lines)
+        self.assertIn(end, lines)
+        section = " ".join(" ".join(lines[lines.index(start) : lines.index(end)]).split())
+        phrases = [
+            "`python legs N of ceiling 32`",
+            "needs more than 32 Python legs is refused whole, by name, never capped",
+            "re-running its failed jobs refuses it again",
+            "SPEC-415",
+        ]
+        for phrase in examined("runbook phrases", phrases):
+            self.assertIn(phrase, section, f"section 2 names {phrase}")
+
+
 if __name__ == "__main__":
     unittest.main()
