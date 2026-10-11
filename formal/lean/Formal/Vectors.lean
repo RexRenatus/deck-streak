@@ -1,5 +1,8 @@
 import Formal.ChestVectors
 import Formal.ExchangeVectors
+import Formal.Fsrs7MemoryStateVectors
+import Formal.Fsrs7ScheduleVectors
+import Formal.Fsrs7StockVectors
 import Formal.HabitWritingVectors
 import Formal.NextMilestoneVectors
 import Formal.OpenLapseVectors
@@ -30,6 +33,9 @@ def main (args : List String) : IO UInt32 := do
   match args with
   | ["Chest"] => Formal.ChestVectors.run
   | ["Exchange"] => Formal.ExchangeVectors.run
+  | ["Fsrs7MemoryState"] => Formal.Fsrs7MemoryStateVectors.run
+  | ["Fsrs7Schedule"] => Formal.Fsrs7ScheduleVectors.run
+  | ["Fsrs7Stock"] => Formal.Fsrs7StockVectors.run
   | ["HabitWriting"] => Formal.HabitWritingVectors.run
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run
   | ["OpenLapse"] => Formal.OpenLapseVectors.run
