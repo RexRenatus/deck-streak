@@ -28,9 +28,23 @@ A3: red at 503916e46897b3f4ef387ab7bdb24cb2cc9aeb0e: assertion `left == right` f
 A4: not red: pins what the base already does for a reader that does not ask, on the path the change touches: sign.mp4 and beep.mp3 replay as sounds, and wave.m4v and turn.MOV are named in omitted (SPEC-410 section 3); it passed over the seam commit (1 test)
 A5: red at 503916e46897b3f4ef387ab7bdb24cb2cc9aeb0e: the body ends with sign's video, then wave's, each playing inline: the document's body is empty, <body class="card card1"></body></html>
 A7: not red: guards that no Swift product decision is added; it passed over the seam commit with the new test in the tree (1 test, examined 63 Swift files, 209 doors, 19 decision counts) (SPEC-410 section 3)
+A1: green at 5f2c8989b23fa90cb93a747bc260a63f14871950
+A2: green at 5f2c8989b23fa90cb93a747bc260a63f14871950
+A3: green at 5f2c8989b23fa90cb93a747bc260a63f14871950
+A5: green at 5f2c8989b23fa90cb93a747bc260a63f14871950
+A6: red at 503916e46897b3f4ef387ab7bdb24cb2cc9aeb0e: read on the pull request's checks over the tests' commit, run 38111902719, job `apple / harness` (114390604829), step "the review screen's tests, Debug, on the iPhone and then the iPad": iPhone 17 Failed and iPad (A16) Failed, each at ReviewSessionTests.swift:124: XCTUnwrap failed: expected non-nil value of type "Range<Index>" - A6: the document holds sign's video; the document's body is empty, <body class="card card1"></body></html>
 ```
 
 The whole suites over the seam commit with these tests in the tree, every binary run: the core's
 121 tests, 118 passed and 3 failed (A1, A2 and A3); the native adapter's 46 tests, 45 passed and 1
 failed (A5); the web engine's 37 passed. The formatter and the lints of all three crates were green,
 and the review fixture's example wrote `sound-video/` with its four files.
+
+The green is the commit `5f2c8989`, which changes `crates/engine-core/src/media.rs` and
+`crates/engine-core/src/face.rs` only, over the tests the commit `dc20bbaf` added beside this record
+and left unchanged since. A1, A2, A3 and A5 each passed there, one test selected each, and A4 and A7
+still pass. The whole suites over that tree, every binary run: the core's 121 tests passed, the
+native adapter's 46 and the web engine's 37; the formatter and the lints of all three crates were
+green, the web engine built for the browser target, and the review fixture's example wrote
+`sound-video/` with its four files. A6's green is read on the pull request's checks at the next
+push, by run, job, step and destination, and its line joins this record only after that read.
