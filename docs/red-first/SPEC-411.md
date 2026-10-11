@@ -84,3 +84,5 @@ existing tests, `wiring::tests::the_recompute_fold_registers_the_analytics_xp_an
 and `wiring::tests::the_recompute_fold_registers_the_habit_step_in_the_day_steps_phase` (whose
 slice `2..7` becomes `2..9`): each names the chest and sweep steps, and the first also the token
 bonus step, where the fold now registers them; no expected step is removed.
+
+Commit 5095806e, after the greens above, adds six tests that kill the mutants a cargo-mutants run over the delivery's diff left missed, each asserting behaviour the criteria above already state, so none carries a criterion line of its own: `a_signed_chest_id_is_no_id_and_opens_nothing` and `a_failed_open_answers_500_and_leaves_the_chest_sealed` in `crates/api/tests/chests_routes.rs`, `each_picked_prize_is_named_as_its_chest_stores_the_choice` in `crates/coordination/tests/chests_use_cases.rs`, and `the_fold_names_each_quests_step_in_its_phase`, `a_token_bonus_counts_a_law_cards_tier_and_never_a_language_cards` and `a_sessions_payout_cap_counts_its_own_reviews_and_no_other_of_its_day` in `crates/coordination/tests/chests_steps.rs`.
