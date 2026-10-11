@@ -453,7 +453,7 @@ fn the_context_map_declares_the_core_and_its_two_edges() {
     assert_eq!(
         declared(&map, &contexts),
         vec![
-            ("deck-streak-engine-core", Some("nothing".to_owned())),
+            ("deck-streak-engine-core", Some("fsrs7".to_owned())),
             ("deck-streak-ffi", Some("engine-core".to_owned())),
             ("deck-streak-web-engine", Some("engine-core".to_owned())),
         ],
@@ -473,4 +473,158 @@ fn the_context_map_declares_the_core_and_its_two_edges() {
         ],
         "a planted map without the core reads as such"
     );
+}
+
+/// The FSRS-7 crate's name as source code spells it.
+const SEAM_CRATE: &str = "deck_streak_fsrs7";
+
+/// The one core source that may name the FSRS-7 crate (SPEC-386 R7, ADR-400 D1).
+const SEAM_FILE: &str = "src/replay.rs";
+
+/// What no client adapter's source may name: the replay's call, its result and its crate (SPEC-386 R14).
+const REPLAY_NAMES: [&str; 3] = [".replay(", "CardReplay", SEAM_CRATE];
+
+/// Every `.rs` file under `root.join(dir)`, as `/`-separated paths relative to `root`, sorted.
+fn sources(root: &Path, dir: &str) -> Vec<String> {
+    let mut pending = vec![root.join(dir)];
+    let mut found = Vec::new();
+    while let Some(next) = pending.pop() {
+        for entry in fs::read_dir(&next).expect("a source directory reads") {
+            let path = entry.expect("a source entry reads").path();
+            if path.is_dir() {
+                pending.push(path);
+            } else if path.extension().is_some_and(|extension| extension == "rs") {
+                let relative = path
+                    .strip_prefix(root)
+                    .expect("a walked file sits under its root");
+                found.push(
+                    relative
+                        .components()
+                        .map(|part| part.as_os_str().to_string_lossy().into_owned())
+                        .collect::<Vec<_>>()
+                        .join("/"),
+                );
+            }
+        }
+    }
+    found.sort();
+    found
+}
+
+/// Each of `files` (relative to `root`) whose text holds `name`.
+fn naming(root: &Path, files: &[String], name: &str) -> Vec<String> {
+    files
+        .iter()
+        .filter(|file| {
+            fs::read_to_string(root.join(file.as_str()))
+                .expect("a walked source reads")
+                .contains(name)
+        })
+        .cloned()
+        .collect()
+}
+
+/// The core's sources that name the FSRS-7 crate, each refused unless it is the one seam file.
+fn seam_refusals(core: &Path, walked: &[String]) -> Vec<String> {
+    naming(core, walked, SEAM_CRATE)
+        .into_iter()
+        .filter(|file| file.as_str() != SEAM_FILE)
+        .map(|file| format!("{file} names {SEAM_CRATE}: only {SEAM_FILE} may"))
+        .collect()
+}
+
+#[test]
+fn only_the_replay_module_names_the_fsrs7_crate() {
+    let core = support::workspace().join("crates/engine-core");
+    let walked = sources(&core, "src");
+    assert_eq!(
+        naming(&core, &walked, SEAM_CRATE),
+        vec![SEAM_FILE.to_owned()],
+        "the core's sources that name the FSRS-7 crate"
+    );
+    assert_eq!(
+        seam_refusals(&core, &walked),
+        Vec::<String>::new(),
+        "the core's seam census"
+    );
+    support::examined("engine-core source file(s)", walked);
+
+    let planted = plant(
+        "only_the_replay_module_names_the_fsrs7_crate",
+        &[
+            ("src/lib.rs", "pub mod replay;\npub mod second;\n"),
+            ("src/replay.rs", "use deck_streak_fsrs7::stock;\n"),
+            ("src/second.rs", "use deck_streak_fsrs7::convert;\n"),
+        ],
+    );
+    let planted_walk = sources(&planted, "src");
+    assert_eq!(
+        seam_refusals(&planted, &planted_walk),
+        vec!["src/second.rs names deck_streak_fsrs7: only src/replay.rs may".to_owned()],
+        "a planted second file naming the crate is refused by name"
+    );
+    support::examined("planted source file(s)", planted_walk);
+}
+
+/// Each adapter source under `root` that names the replay, refused by the name it holds.
+fn adapter_refusals(root: &Path, walked: &[String]) -> Vec<String> {
+    REPLAY_NAMES
+        .iter()
+        .flat_map(|name| {
+            naming(root, walked, name)
+                .into_iter()
+                .map(move |file| format!("{file} names {name}: no client adapter may"))
+        })
+        .collect()
+}
+
+#[test]
+fn no_client_adapter_names_the_replay() {
+    let workspace = support::workspace();
+    let walked = [
+        sources(&workspace, "crates/ffi/src"),
+        sources(&workspace, "crates/web-engine/src"),
+    ]
+    .concat();
+    assert_eq!(
+        adapter_refusals(&workspace, &walked),
+        Vec::<String>::new(),
+        "the client adapters' sources that name the replay"
+    );
+    support::examined("client adapter source file(s)", walked);
+
+    let planted = plant(
+        "no_client_adapter_names_the_replay",
+        &[
+            (
+                "crates/ffi/src/engine.rs",
+                "let result = core.replay(&decks, &[], 0.9, 36500);\n",
+            ),
+            ("crates/ffi/src/lib.rs", "pub mod engine;\n"),
+            (
+                "crates/web-engine/src/wasm.rs",
+                "fn open(result: CardReplay) {}\n",
+            ),
+            (
+                "crates/web-engine/src/study.rs",
+                "use deck_streak_fsrs7::stock;\n",
+            ),
+        ],
+    );
+    let planted_walk = [
+        sources(&planted, "crates/ffi/src"),
+        sources(&planted, "crates/web-engine/src"),
+    ]
+    .concat();
+    assert_eq!(
+        adapter_refusals(&planted, &planted_walk),
+        vec![
+            "crates/ffi/src/engine.rs names .replay(: no client adapter may".to_owned(),
+            "crates/web-engine/src/wasm.rs names CardReplay: no client adapter may".to_owned(),
+            "crates/web-engine/src/study.rs names deck_streak_fsrs7: no client adapter may"
+                .to_owned(),
+        ],
+        "each planted adapter source naming the replay is refused by name"
+    );
+    support::examined("planted adapter source file(s)", planted_walk);
 }

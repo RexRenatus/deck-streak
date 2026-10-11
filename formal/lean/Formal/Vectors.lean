@@ -3,6 +3,7 @@ import Formal.ExchangeVectors
 import Formal.HabitWritingVectors
 import Formal.NextMilestoneVectors
 import Formal.OpenLapseVectors
+import Formal.ReplayHistoryVectors
 import Formal.RoadToC2Vectors
 import Formal.SensitiveDeckVectors
 import Formal.SkipTariffVectors
@@ -32,6 +33,7 @@ def main (args : List String) : IO UInt32 := do
   | ["HabitWriting"] => Formal.HabitWritingVectors.run
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run
   | ["OpenLapse"] => Formal.OpenLapseVectors.run
+  | ["ReplayHistory"] => Formal.ReplayHistoryVectors.run
   | ["RoadToC2"] => Formal.RoadToC2Vectors.run
   | ["SensitiveDeck"] => Formal.SensitiveDeckVectors.run
   | ["SkipTariff"] => Formal.SkipTariffVectors.run
