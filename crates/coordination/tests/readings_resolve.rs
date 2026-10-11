@@ -15,9 +15,12 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use deck_streak_coordination::readings::resolve::{ResolveParts, Resolved, resolve_study_day};
+use deck_streak_coordination::readings::resolve::{
+    ResolveError, ResolveParts, Resolved, resolve_study_day,
+};
 use deck_streak_ingest::engine::{AnkiEngine, RslibEngine};
 use deck_streak_ingest::reader::CollectionReader;
+use deck_streak_ingest::sensitive::SqliteSensitiveDecks;
 use deck_streak_ingest::settings::{STATE_DIRECTORY, SYNC_ENDPOINT, ScopeSettings, SyncSettings};
 use deck_streak_ingest::sync_runs::{ReasonCode, SqliteSyncRuns, SyncRun, SyncRunStore, Trigger};
 use deck_streak_kernel::{
@@ -111,6 +114,11 @@ impl Deployment {
         )
     }
 
+    /// The marks of the decks kept away from AI, in the service's database (SPEC-381 R3).
+    fn marks(&self) -> SqliteSensitiveDecks {
+        SqliteSensitiveDecks::new(self.db.clone())
+    }
+
     /// Records a sync `minutes` before the start, succeeded or failed.
     async fn synced(&self, outcome: Result<(), ReasonCode>) {
         let at = UtcMillis::from_epoch_millis(START - 60 * 60_000);
@@ -164,6 +172,7 @@ async fn a_failed_last_sync_records_every_topic_could_not_tell() {
     deployment.synced(Err(ReasonCode::ServerError)).await;
     let Resolved { run, resolution } = resolve_study_day(
         &deployment.parts(Some(&deployment.taxonomy)),
+        &deployment.marks(),
         RunTrigger::Scheduled,
     )
     .await
@@ -189,6 +198,7 @@ async fn two_silent_days_record_every_topic_paused() {
     deployment.synced(Ok(())).await;
     resolve_study_day(
         &deployment.parts(Some(&deployment.taxonomy)),
+        &deployment.marks(),
         RunTrigger::Owner,
     )
     .await
@@ -210,10 +220,13 @@ async fn a_missing_taxonomy_records_a_config_fault_and_no_topic() {
     // No taxonomy configured, then one whose file is not there: both are missing.
     let absent_file = deployment.taxonomy.with_file_name("absent.json");
     for (index, taxonomy) in [None, Some(absent_file.as_path())].into_iter().enumerate() {
-        let Resolved { resolution, .. } =
-            resolve_study_day(&deployment.parts(taxonomy), RunTrigger::Scheduled)
-                .await
-                .expect("the resolution is recorded");
+        let Resolved { resolution, .. } = resolve_study_day(
+            &deployment.parts(taxonomy),
+            &deployment.marks(),
+            RunTrigger::Scheduled,
+        )
+        .await
+        .expect("the resolution is recorded");
         assert_eq!(resolution.outcome, missing, "{taxonomy:?}");
         assert_eq!(resolution.topics.len(), 0);
         let runs = deployment.store.runs().await.expect("the runs");
@@ -233,6 +246,7 @@ async fn an_unreadable_copy_records_a_rail_that_could_not_open_it() {
         .set(UtcMillis::from_epoch_millis(START + 1_000));
     let Resolved { resolution, .. } = resolve_study_day(
         &deployment.parts(Some(&deployment.taxonomy)),
+        &deployment.marks(),
         RunTrigger::Scheduled,
     )
     .await
@@ -250,5 +264,37 @@ async fn an_unreadable_copy_records_a_rail_that_could_not_open_it() {
         }
     );
     assert_eq!(days.len(), 0, "no topic is named without a read");
+    deployment.db.close().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_unreadable_set_resolves_no_day_and_records_nothing() {
+    let deployment = Deployment::new().await;
+    deployment.synced(Ok(())).await;
+    // The marks' table moved away: every other table of the service's database still reads.
+    let mut write = deployment.db.write().await.expect("a write");
+    sqlx::query("ALTER TABLE sensitive_decks RENAME TO sensitive_decks_moved")
+        .execute(&mut *write)
+        .await
+        .expect("the table moves");
+    write.commit().await.expect("the move commits");
+    let resolved = resolve_study_day(
+        &deployment.parts(Some(&deployment.taxonomy)),
+        &deployment.marks(),
+        RunTrigger::Scheduled,
+    )
+    .await;
+    assert!(
+        matches!(resolved, Err(ResolveError::Marks(_))),
+        "a failed read of the marks ends the resolution with its named error: {resolved:?}"
+    );
+    let runs = deployment.store.runs().await.expect("the runs");
+    assert_eq!(runs.len(), 0, "no run is recorded");
+    let days = deployment
+        .store
+        .topic_days(StudyDay::from_epoch_day(20_000))
+        .await
+        .expect("the topic days");
+    assert_eq!(days.len(), 0, "no topic day is recorded");
     deployment.db.close().await;
 }

@@ -167,5 +167,13 @@
   "sync_storage_persisted": "このブラウザはこのサイトのストレージを保持します。",
   "sync_storage_not_persisted": "このブラウザは容量が不足するとこのサイトのストレージを消去することがあります。",
   "sync_storage_unknown": "このブラウザがこのサイトのストレージを保持するかどうかはわかりません。",
-  "sync_storage_evicted": "コレクションが消去された場合は、サーバーのコピーをダウンロードして復元してください。"
+  "sync_storage_evicted": "コレクションが消去された場合は、サーバーのコピーをダウンロードして復元してください。",
+  "ai_decks_title": "AIとデッキ",
+  "ai_decks_lead": "デッキのスイッチをオンにすると、そのカードはAI機能に使われません。どちらでも学習は同じように行えます。",
+  "ai_decks_switch": "{name}をAIに使わせない",
+  "ai_decks_kept_by": "{parent}がオンのため、AIに使われません。",
+  "ai_decks_load_failed": "この設定を読み込めませんでした。",
+  "ai_decks_save_failed": "この変更は保存されませんでした。もう一度お試しください。",
+  "ai_decks_retry": "もう一度試す",
+  "ai_decks_back": "デッキ一覧に戻る"
 }

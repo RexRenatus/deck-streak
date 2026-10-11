@@ -267,5 +267,13 @@
   "sync_storage_persisted": "This browser keeps this site's storage.",
   "sync_storage_not_persisted": "This browser may clear this site's storage when it needs room.",
   "sync_storage_unknown": "This browser cannot tell whether it keeps this site's storage.",
-  "sync_storage_evicted": "If it clears your collection, download the server's copy to restore it."
+  "sync_storage_evicted": "If it clears your collection, download the server's copy to restore it.",
+  "ai_decks_title": "AI and your decks",
+  "ai_decks_lead": "Turn on a deck's switch to keep its cards away from AI features. Studying works the same either way.",
+  "ai_decks_switch": "Keep {name} away from AI",
+  "ai_decks_kept_by": "Kept away because {parent} is.",
+  "ai_decks_load_failed": "These settings could not be loaded.",
+  "ai_decks_save_failed": "That change was not saved. Try again.",
+  "ai_decks_retry": "Try again",
+  "ai_decks_back": "Back to decks"
 }

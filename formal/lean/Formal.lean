@@ -1,5 +1,6 @@
 import Formal.NextMilestone
 import Formal.RoadToC2
+import Formal.SensitiveDeck
 import Formal.SkipTariff
 import Formal.Wallet
 
