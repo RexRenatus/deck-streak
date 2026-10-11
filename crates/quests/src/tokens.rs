@@ -182,13 +182,22 @@ pub async fn holdings_on(
     connection: &mut SqliteConnection,
     now: UtcMillis,
 ) -> Result<Holdings, ChestError> {
-    let _ = now;
-    let held: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM xp_tokens")
-        .fetch_one(&mut *connection)
-        .await?;
+    let held = sqlx::query_scalar!(
+        r#"SELECT COUNT(*) AS "held!: i64" FROM xp_tokens WHERE consumed = 0 AND activated_at = 0"#
+    )
+    .fetch_one(&mut *connection)
+    .await?;
+    let now_ms = now.epoch_millis();
+    let window_ends_at = sqlx::query_scalar!(
+        "SELECT window_ends_at FROM xp_tokens WHERE consumed = 0 AND activated_at > 0 \
+         AND window_ends_at > ?1 ORDER BY id DESC LIMIT 1",
+        now_ms
+    )
+    .fetch_optional(&mut *connection)
+    .await?;
     Ok(Holdings {
         held,
-        window_ends_at: None,
+        window_ends_at: window_ends_at.map(UtcMillis::from_epoch_millis),
     })
 }
 
