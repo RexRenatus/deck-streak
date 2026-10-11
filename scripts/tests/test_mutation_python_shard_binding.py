@@ -283,14 +283,37 @@ def listing_members(plan):
 
 
 class ThePythonMatrixIsSizedToTheHostedJob(unittest.TestCase):
-    """SPEC-362 R14: at most twenty listed mutants a shard, clamped to 1 to 32 shards. The numbers
-    are literals here, so a mutant of the rule's constant changes what it is held against."""
+    """SPEC-362 R14: at most twenty listed mutants a shard, clamped to 1 to 32 shards. Past 32 legs
+    SPEC-415 refuses the listing whole. The numbers are literals here, so a mutant of the rule's
+    constant changes what it is held against."""
 
     def test_the_matrix_takes_twenty_listed_mutants_a_shard_clamped_to_thirty_two(self):
         program = verdict_program()
-        for listed_count, shards in ((20, 1), (21, 2), (68, 4), (32 * 20 + 1, 32)):
+        for listed_count, shards in ((20, 1), (21, 2), (68, 4), (32 * 20 + 1, None)):
             sized = program.python_shards([{"name": f"m{i}"} for i in range(listed_count)])
+            if shards is None:
+                self.assertIsNone(sized, f"{listed_count} listed")
+                continue
             self.assertEqual(sized["count"], shards, f"{listed_count} listed")
+
+    def test_a_listing_past_thirty_two_legs_is_refused_whole_and_never_capped(self):
+        """SPEC-415 R1 and R2: a listing that needs more than 32 legs of 20 is refused, never
+        capped; at or below 32 legs the deal is unchanged."""
+        program = verdict_program()
+        refused = ((32 * 20 + 1, 33), (2000, 100), (5423, 272))
+        for listed_count, needed in examined("refused listings", refused):
+            sized = program.python_shards([{"name": f"m{i}"} for i in range(listed_count)])
+            self.assertIsNone(sized and sized["count"], f"{listed_count} listed: never capped")
+            self.assertEqual(program.python_needed(listed_count), needed, f"{listed_count} listed")
+        sizes = ((0, 1), (1, 1), (20, 1), (21, 2), (68, 4), (32 * 20, 32))
+        for listed_count, shards in examined("sized listings", sizes):
+            names = [f"m{i}" for i in range(listed_count)]
+            matrix = program.python_shards([{"name": name} for name in names])
+            self.assertEqual(matrix["count"], shards, f"{listed_count} listed")
+            dealt = [shard["mutants"] for shard in matrix["shards"]]
+            self.assertEqual(
+                dealt, [names[k::shards] for k in range(shards)], f"{listed_count} listed"
+            )
 
 
 class TheReportIsBoundToItsSlotAndItsListing(unittest.TestCase):

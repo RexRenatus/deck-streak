@@ -257,16 +257,22 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
             (161, 9),
             (420, 21),
             (640, 32),
-            (641, 32),
-            (2000, 32),
+            (641, None),
+            (2000, None),
         ]
         for count, shards in examined("listing sizes", cases):
             entries = [
                 {"name": f"scripts/guard.py:{n}:1: replace + with - in guard", "file": SCRIPT}
                 for n in range(1, count + 1)
             ]
-            expected = min(32, max(1, math.ceil(count / 20)))
+            needed = max(1, math.ceil(count / 20))
+            expected = needed if needed <= 32 else None
             self.assertEqual(expected, shards, count)
+            if shards is None:
+                _done, written = shard_the_plan(fixture, entries, expect=1)
+                self.assertNotIn("python_shards", written, f"{count} listed")
+                self.assertNotIn("python_matrix", written, f"{count} listed")
+                continue
             _done, written = shard_the_plan(fixture, entries)
             plan = json.loads((fixture.out / "plan.json").read_text(encoding="utf-8"))
             python = plan["python"]
@@ -292,6 +298,39 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
         )
         self.assertEqual(broken.returncode, 3, broken.stdout + broken.stderr)
         self.assertIn("VOID", broken.stdout)
+
+    def test_a_python_listing_past_the_ceiling_refuses_the_plan_whole_by_name(self):
+        """SPEC-415 R3: a listing that needs more than 32 legs of 20 fails the plan by name, writes
+        no step output and leaves the plan's bytes as `plan` wrote them."""
+        fixture = changed_fixture(self)
+        before = (fixture.out / "plan.json").read_bytes()
+        entries = [
+            {"name": f"scripts/guard.py:{n}:1: replace + with - in guard", "file": SCRIPT}
+            for n in range(1, 642)
+        ]
+        done, written = shard_the_plan(fixture, entries, expect=1)
+        self.assertIn(
+            "mutation: shards: REFUSED: 641 python mutant(s) need 33 legs of at most 20, more than "
+            "the pull request run's 32 python legs: split the change, since a run is never capped",
+            done.stdout,
+        )
+        self.assertEqual(written, {})
+        self.assertEqual((fixture.out / "plan.json").read_bytes(), before)
+
+    def test_the_plan_prints_its_python_legs_against_their_ceiling(self):
+        """SPEC-415 R4: a sized plan prints its Python legs against their ceiling of 32."""
+        fixture = changed_fixture(self)
+        for count, legs in examined("sized python plans", ((68, 4), (640, 32))):
+            entries = [
+                {"name": f"scripts/guard.py:{n}:1: replace + with - in guard", "file": SCRIPT}
+                for n in range(1, count + 1)
+            ]
+            done, _written = shard_the_plan(fixture, entries)
+            self.assertIn(
+                f"mutation: shards: {legs} python shard(s) for {count} listed mutant(s); "
+                f"python legs {legs} of ceiling 32\n",
+                done.stdout,
+            )
 
     def test_a_plan_of_python_mutants_and_no_rust_mutant_lists_zero(self):
         # `listed` is the RUST listing's own count (SPEC-290 R1); the Python shards' mutants are
