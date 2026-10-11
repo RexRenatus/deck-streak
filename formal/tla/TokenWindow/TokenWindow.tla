@@ -2,6 +2,8 @@
 \* @phx covers crates/quests/src/tokens.rs anchor=activate_token_on digest=sha256:0218568f0e771a6a4f21bc2eb81abc648477d842ea3a01b8e608d1269ac4a0a4
 \* @phx covers crates/quests/src/tokens.rs anchor=grant_token digest=sha256:bc0428e21e65fbe87078f0c51c3d6fdc58d12c1d2427ff96ff8d86b49844d11f
 \* @phx covers crates/kernel/src/db.rs anchor=write digest=sha256:c3d700eda268a6f46c7eea0aabcd2f62d8fc0aeffbe03d1cd1e8437a88bdb916
+\* @phx covers crates/coordination/src/chests.rs anchor=activate_token digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/coordination/src/recompute/chests.rs anchor=settle_day_token_bonuses digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 \* @phx cites #102, #103
 \* @phx property AtMostOneOpenWindow ramp=report
 \* @phx property OldestHeldFirst ramp=report
@@ -12,6 +14,12 @@
 \* One double-XP window at a time, the oldest token first (#102, #103): N callers activate tokens
 \* through tokens.rs::activate_token_on while Epic choices store new ones through
 \* tokens.rs::grant_token and the clock runs. The xp_tokens table is migration 008101's.
+\*
+\* The callers (#102, #103): coordination's chests.rs::activate_token, the owner's activation,
+\* runs tokens.rs::activate_token_on alone in one write of its own, so it is one more caller of
+\* the activation below; recompute/chests.rs::settle_day_token_bonuses runs
+\* tokens.rs::settle_token_bonuses_on inside a study day's one write, the consumption this model
+\* leaves out as it is abstracted below.
 \*
 \* An activation is ONE write of its caller, and the model takes it in steps:
 \* - db.rs::write opens every write with BEGIN IMMEDIATE, which takes SQLite's write lock at once,

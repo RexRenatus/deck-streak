@@ -3,6 +3,7 @@
 \* @phx covers crates/quests/src/chest_store.rs anchor=insert_chest digest=sha256:57e9fcc9f8651b8a7e8717b234ba2f4b0c4c2920ab0231d3a41d48687517a5f9
 \* @phx covers crates/quests/src/chest_store.rs anchor=set_pity digest=sha256:5229f5dd55355ac3fb12b6d15e6326b0ddadea3fb28017c69274566eea866e0c
 \* @phx covers crates/kernel/src/db.rs anchor=write digest=sha256:c3d700eda268a6f46c7eea0aabcd2f62d8fc0aeffbe03d1cd1e8437a88bdb916
+\* @phx covers crates/coordination/src/recompute/chests.rs anchor=grant_day_chests digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 \* @phx cites #102, #103
 \* @phx property OneChestPerKey ramp=report
 \* @phx property PityEqualsChests ramp=report
@@ -14,6 +15,11 @@
 \* A session's chest is rolled once (#102, #103): N recomputes, each granting the session chests
 \* of one study day through chests.rs::grant_session_chests_on, over one set of chest keys. The
 \* chests table and its unique key are migration 008101's; the pity counters are its pity row.
+\*
+\* The fold's caller (#102): recompute/chests.rs::grant_day_chests grants a settled or current
+\* study day's earned sessions, one request each, inside the day's one write; a failed draw ends
+\* the day's chest grants and the day's write commits what came before it, one of the two ends
+\* the model leaves open.
 \*
 \* A recompute is ONE write of its caller, and the model takes it in steps:
 \* - Begin: the recompute takes the write lock. db.rs::write opens every write with BEGIN
