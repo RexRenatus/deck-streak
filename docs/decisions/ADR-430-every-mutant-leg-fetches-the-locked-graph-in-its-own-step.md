@@ -21,9 +21,9 @@ registry. A build downloads only the packages it compiles, and the census needs 
 So the census failed, the baseline was red, and cargo-mutants examined no mutant in any leg:
 
 - job 114529706626 (`mutation-rust`, shard 0): `Cache not found` (log line 252); 49 mutants
-  listed; `FAILED   Unmutated baseline in 345s build + 935s test` (line 387); the census test
-  failed in 3.548 s on `failed to download` a package (`accessory`, line 6120), and fail-fast
-  stopped three others; `cargo-mutants exited 4` (line 6137).
+  listed; job 114529706626 read `FAILED   Unmutated baseline in 345s build + 935s test` (line 387);
+  the census test failed in 3.548 s in job 114529706626 on `failed to download` a package
+  (`accessory`, line 6120); fail-fast stopped three others; `cargo-mutants exited 4` (line 6137).
   Job 114529706626's step took 1283 s, and the job concluded success.
 - job 114529617445 (`rust`): the same miss (line 287); its fetch step ran 36 s and downloaded that
   package (line 339); the census passed and the job was green.
@@ -128,8 +128,8 @@ The step's `run:` line is the `rust` and `release` jobs' own. It is not the rows
 - Good: every leg's baseline sees every target's packages, so a baseline is red only when a test
   is red, and the release's re-run examines its mutants.
 - Good: the census keeps `--locked --offline --all-features`.
-- Neutral: each leg spends about 40 s more (the measured fetches above), inside the half-bound
-  margin each leg's projection already keeps (SPEC-362 R2).
+- Neutral: each leg spends about 40 s more (36 s in job 114529617445, 39 s in job 114529617364),
+  inside the half-bound margin each leg's projection already keeps (SPEC-362 R2).
 - Bad: one more network call per leg. A registry outage now fails the leg's fetch step. The leg
   then uploads no report, which the verdict reads as VOID, never as a pass.
 
