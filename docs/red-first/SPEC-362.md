@@ -71,3 +71,9 @@ move earlier criteria's literals, so they are disclosed here with no fence lines
 `1430 != 1521`, the baseline pin `1768 != 2141`, the byte pins over `BOUNDS` read `--timeout 2200` where
 they hold 2300, the census package's baseline sum `3198 != 3662`, and R7's boundary test finds no VOID
 line naming the 2300 s timeout. The criteria's own lines above stay as recorded.
+The pins hold SPEC-362's A4, A5, A6 and A10. Two assertions of `test_mutation_verdict.py` moved in
+the green commit 01cb3ca5 instead, because the new figures change their arithmetic: the largest
+projection in `test_the_592_listing_fits_its_bound` (line 950 there), from 9612 to 10440, and the
+one-leg projection, the serial projection and the slowest leg in
+`test_a_dispatch_of_a_census_package_is_sized_with_the_census` (lines 973 to 977), from 10978, 7780
+and 7866 to 11897, 8235 and 8603.

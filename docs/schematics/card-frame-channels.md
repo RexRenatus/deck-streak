@@ -825,3 +825,12 @@ flowchart LR
 What this check does NOT hold: the iPhone and iPad sections' unobservable cells (sections 4 and
 6) against the iOS planted table, and the measurement itself, which the planted suite makes in each
 engine.
+
+## 12. The image forms' line citations, read again (SPEC-402, ADR-416)
+
+The image forms' subsection of section 3 cites `web/app/src/lib/card/frame-document.ts` by lines
+that a later commit of the same delivery moved. Read at c21cc6b3, they are: the inert parse at
+line 42 (cited as `:38`, in the prose and in the diagram's node), the strip at line 43 (cited as
+`:39`) with the `srcset` removal at line 45, the composed document at line 51 (cited as `:45`), the
+re-parse at line 52 (cited as `:46`), the kept check at lines 53 to 57 with its `srcset` conjunct
+at line 56 (cited as `:47-50`), and the refusal at line 58 (cited as `:51`).
