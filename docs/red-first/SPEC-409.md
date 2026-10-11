@@ -29,6 +29,13 @@ Each of the 17 lines of SPEC-409 section 3's fence runs the test it names, in `w
 | 16 | A16 | `crates/coordination/tests/job_table.rs` `the_job_table_holds_sync_to_one_daily_slot_claimed_per_study_day` | shipped, kept |
 | 17 | A16 | `crates/coordination/tests/job_table.rs` `the_daily_sync_slot_keeps_off_the_predecessors_ticks_and_every_other_slot` | shipped, kept |
 
+## Disclosure
+
+Commit 64c98a3 changed one assertion of A1 between its red and its green: the test first read the
+focus before the answer and asserted it had not moved, and now asserts R8's stronger invariant,
+that focus stays on the screen's own region and never on the offer. The change strengthens the
+check (it names where focus must be), and SPEC-409's A1 row carries R8's wording.
+
 ## The reds and greens
 
 Each line's command is the criterion's line in SPEC-409 section 3's fence, run at the commit named.
