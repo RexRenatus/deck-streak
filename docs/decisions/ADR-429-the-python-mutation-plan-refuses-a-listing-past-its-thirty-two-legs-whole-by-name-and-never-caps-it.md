@@ -19,8 +19,9 @@ no refusal. The Rust plan sizes its legs from a cost model and refuses whole, by
 run's ceiling ("never capped", `fewest_shards`). The Python plan does neither.
 
 The release pull request measured it. Its plan listed 5423 Python mutants and printed
-`mutation: shards: 32 python shard(s) for 5423 listed mutant(s)` (plan job 114529617353, which
-ran 24 seconds), so each leg held 169 or 170 mutants where the rule holds 20. Every one of the 32
+`mutation: shards: 32 python shard(s) for 5423 listed mutant(s)`
+(plan job 114529617353, which ran 24 seconds), so each leg held 169 or 170 mutants where the
+rule holds 20. Every one of the 32
 legs ended without a report: 28 were cancelled at the job's 60-minute bound (shard 0, job
 114529704945, its run step 60 minutes 6 seconds; shard 14, job 114529704978, 60 minutes 8
 seconds), and 4 failed with exit 143, "The runner has received a shutdown signal", after 33 to 54
