@@ -66,9 +66,13 @@ class FakeEngine implements EngineModule {
     const [id, held] = this.journal.pop()!;
     this.cards.set(id, held);
   }
+  /** An offer the module answers in place of the journal's, as JSON, when a test sets one: the
+   * review's last bury or flag (SPEC-383 A27). */
+  offered: object | undefined;
   /** The offer of the last answer the journal holds, its card's id a decimal string, or none. */
   undo_offer() {
     this.#call('undo_offer');
+    if (this.offered !== undefined) return JSON.stringify(this.offered);
     const last = this.journal.at(-1);
     if (last === undefined) return JSON.stringify({ offer: null, why: 'none' });
     const [id] = last;
@@ -377,6 +381,37 @@ describe('the Worker session', () => {
     );
     // an engine refusal leaves the session open
     expect(await session.handle({ id: 4, op: 'snapshot', card: 9n })).toEqual({ id: 4, ok: true, value: null });
+  });
+
+  // SPEC-383 R9, A27: the offer of the review's last bury carries its kind and the state the card
+  // goes back to, and a flag's its kind and what the undo does to the flag, each with its card's id
+  // a bigint; an answer's offer, which names no kind, is as it was.
+  it('an offer of a bury or a flag reads its kind', async () => {
+    const engine = new FakeEngine();
+    const { session } = browser(engine);
+    expect((await session.handle({ id: 1, op: 'open' })).ok).toBe(true);
+    const offers: [sent: object, read: object][] = [
+      [
+        { offer: { kind: 'bury', card: '1001', step: 4, text: 'front 1001', returns: 'review' } },
+        { offer: { kind: 'bury', card: 1001n, step: 4, text: 'front 1001', returns: 'review' } }
+      ],
+      [
+        { offer: { kind: 'flag', card: '1002', step: 5, text: 'front 1002', flag: 'replaced' } },
+        { offer: { kind: 'flag', card: 1002n, step: 5, text: 'front 1002', flag: 'replaced' } }
+      ],
+      [
+        { offer: { card: '1003', step: 6, text: 'front 1003', grade: 'again', returns: 'learning' } },
+        { offer: { card: 1003n, step: 6, text: 'front 1003', grade: 'again', returns: 'learning' } }
+      ],
+      [{ offer: null, why: 'synced' }, { offer: null, why: 'synced' }]
+    ];
+    let id = 2;
+    for (const [sent, read] of offers) {
+      engine.offered = sent;
+      expect(await session.handle({ id, op: 'undo-offer' })).toEqual({ id, ok: true, value: read });
+      id += 1;
+    }
+    expect(engine.calls.filter(([name]) => name === 'undo_offer')).toHaveLength(offers.length);
   });
 
   it('the session refuses the queue-head answer as an unknown operation', async () => {

@@ -131,10 +131,14 @@ function toHead(text: string): Head {
   return { counts: head.counts, card: head.card === null ? null : { ...head.card, id: BigInt(head.card.id) } };
 }
 
-/** The offer with its card's id as a bigint. */
+/** Each kind of offer as the module sends it: the same fields, its card's id a string. */
+type Sent<Offer> = Offer extends { card: bigint } ? Omit<Offer, 'card'> & { card: string } : never;
+
+/** The offer with its card's id as a bigint, and every other field, its kind among them, as the
+ * module sent it (SPEC-383 R9). */
 function toOffer(text: string): UndoOffer {
   const read = JSON.parse(text) as
-    | { offer: Omit<Extract<UndoOffer, { offer: object }>['offer'], 'card'> & { card: string } }
+    | { offer: Sent<Extract<UndoOffer, { offer: object }>['offer']> }
     | Extract<UndoOffer, { offer: null }>;
   return read.offer === null ? read : { offer: { ...read.offer, card: BigInt(read.offer.card) } };
 }

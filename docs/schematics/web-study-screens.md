@@ -127,13 +127,13 @@ sequenceDiagram
       W-->>P: refused, not-shown
     end
   end
-  opt undo, the review's own last answer only (SPEC-371 R9, R10)
-    L->>P: u, the remote's undo, or the bar's Undo answer button
+  opt undo, the review's last answer, bury or flag (SPEC-371 R9, R10, SPEC-383 R10)
+    L->>P: u, the remote's undo, or the bar's Undo answer, Undo bury or Undo flag button
     P->>W: undoOffer
-    W->>E: GetUndoStatus (3,7) and the newest review, judged against the Worker's record
+    W->>E: GetUndoStatus (3,7) and the newest review or the card's CardMark read, judged against the Worker's record
     W-->>P: the offer with the card as text, the answer and the state it returns to, or none and why
     P->>P: confirming, the dialog with focus on Keep it
-    alt the Undo action again, or the dialog's Undo answer button
+    alt the Undo action again, or the dialog's Undo answer, Undo bury or Undo flag button
       P->>W: undo with the offer's card and step
       W->>E: the owner's gesture for Undo, checked at the write, then Undo (3,8)
       Note over P,W: the record and the kept card cleared, and the next card request shows the undone card again
