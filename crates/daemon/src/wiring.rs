@@ -47,6 +47,7 @@ use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
 use deck_streak_coordination::recompute::badges::BadgesStep;
 use deck_streak_coordination::recompute::band_badges::BandBadgesStep;
+use deck_streak_coordination::recompute::chests::{ChestStep, ChestSweepStep, TokenBonusStep};
 use deck_streak_coordination::recompute::day_bonuses::DayBonusesStep;
 use deck_streak_coordination::recompute::habit_badges::HabitBadgesStep;
 use deck_streak_coordination::recompute::habits::HabitsStep;
@@ -301,7 +302,11 @@ pub fn recompute_fold_with_relights(
     fold.register(Phase::DaySteps, Box::new(HabitsStep))?;
     let writing = WritingStep::new(courses.clone());
     fold.register(Phase::DaySteps, Box::new(writing))?;
+    let chests = ChestStep::new();
+    fold.register(Phase::DaySteps, Box::new(chests))?;
+    fold.register(Phase::DaySteps, Box::new(ChestSweepStep))?;
     fold.register(Phase::DerivedBonuses, Box::new(DayBonusesStep))?;
+    fold.register(Phase::DerivedBonuses, Box::new(TokenBonusStep))?;
     fold.register(Phase::CoinMint, Box::new(MintStep))?;
     let habit_badges = HabitBadgesStep::new(courses.clone());
     fold.register(Phase::Awards, Box::new(habit_badges))?;
@@ -1027,7 +1032,10 @@ mod tests {
                 (Phase::DaySteps, PROGRESS_STEP),
                 (Phase::DaySteps, HABITS_STEP),
                 (Phase::DaySteps, WRITING_STEP),
+                (Phase::DaySteps, CHEST_STEP),
+                (Phase::DaySteps, CHEST_SWEEP_STEP),
                 (Phase::DerivedBonuses, DAY_BONUSES_STEP),
+                (Phase::DerivedBonuses, TOKEN_BONUS_STEP),
                 (Phase::CoinMint, MINT_STEP),
                 (Phase::Awards, HABIT_BADGES_STEP),
                 (Phase::Awards, BADGES_STEP),
@@ -1063,13 +1071,15 @@ mod tests {
         let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
         let steps = fold.steps();
         assert_eq!(
-            steps.get(2..7),
+            steps.get(2..9),
             Some(
                 &[
                     (Phase::StreaksAndGovernor, STREAKS_STEP),
                     (Phase::DaySteps, PROGRESS_STEP),
                     (Phase::DaySteps, HABITS_STEP),
                     (Phase::DaySteps, WRITING_STEP),
+                    (Phase::DaySteps, CHEST_STEP),
+                    (Phase::DaySteps, CHEST_SWEEP_STEP),
                     (Phase::DerivedBonuses, DAY_BONUSES_STEP),
                 ][..]
             ),
