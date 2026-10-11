@@ -158,10 +158,16 @@ fn speech(tag: &TtsTag) -> Clip {
 }
 
 /// A side's AV tags as clips: a sound the budget admits as audio, and every TTS tag. A sound it
-/// refuses is left out, and its name joins the omitted ones.
-fn clips(tags: &[AvTag], budget: &mut Budget<'_>) -> Vec<Clip> {
+/// refuses is left out, and its name joins the omitted ones. A sound tag the budget shows as a
+/// video yields no clip: its element, when admitted, joins `videos` in the tags' order (SPEC-410
+/// R3, R6).
+fn clips(tags: &[AvTag], budget: &mut Budget<'_>, videos: &mut Vec<String>) -> Vec<Clip> {
     tags.iter()
         .filter_map(|tag| match tag.value.as_ref()? {
+            av_tag::Value::SoundOrVideo(name) if budget.shows_video(name) => {
+                videos.extend(budget.video(name));
+                None
+            }
             av_tag::Value::SoundOrVideo(name) => budget.sound(name).map(|bytes| Clip::Sound {
                 name: name.clone(),
                 bytes,
@@ -199,21 +205,28 @@ pub(crate) fn complete(
 
     let mut budget = Budget::new(media);
     let text = budget.rewrite(&shown);
+    // A side's videos follow its replay order: the question's on the question side; on the
+    // answer side the question's, unless the preset skips them, then the answer's own (SPEC-410 R3).
+    let mut videos = Vec::new();
     let (shown_clips, replay) = match side {
         Side::Question => {
-            let question = clips(&question_tags, &mut budget);
+            let question = clips(&question_tags, &mut budget, &mut videos);
             (question.clone(), question)
         }
         Side::Answer => {
             let mut replay = Vec::new();
+            let mut question_videos = Vec::new();
             if !preset.skip_question_when_replaying_answer {
-                replay = clips(&question_tags, &mut budget);
+                replay = clips(&question_tags, &mut budget, &mut question_videos);
             }
-            let answer = clips(&answer_tags, &mut budget);
+            let mut answer_videos = Vec::new();
+            let answer = clips(&answer_tags, &mut budget, &mut answer_videos);
             replay.extend(answer.iter().cloned());
+            videos = [question_videos, answer_videos].concat();
             (answer, replay)
         }
     };
+    let text = text + &videos.concat();
     // The fonts take from the budget after the text's media and the clips, so a font never
     // crowds out the card's own media (SPEC-393 R5, R6).
     if media.inlines_fonts() {
