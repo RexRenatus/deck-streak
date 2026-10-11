@@ -118,3 +118,5 @@ killed by its own killer for its own key; SPEC-062 A8 and A18 green on the chang
   the tag: every dispatch would be refused at the guard, which its message would show on the first
   one. It is also wrong if the deploy's verification pinned the triggering event; the build reads
   that verification before it changes anything.
+- Amended by ADR-419 (#733): the release lane `testflight-release.yml` now takes a dispatch at
+  the tag's own ref as well, so the Neutral consequence above holds only for `apple-on-tag.yml`.

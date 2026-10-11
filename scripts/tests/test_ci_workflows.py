@@ -778,6 +778,7 @@ class WorkflowsAreHardened(unittest.TestCase):
 APPLE_PATHS = [
     "crates/ffi/**",
     "crates/engine-core/**",
+    "crates/fsrs7/**",
     "ios/**",
     "Cargo.lock",
     "Cargo.toml",
