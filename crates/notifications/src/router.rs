@@ -1199,20 +1199,14 @@ impl Router {
         }
     }
 
-    /// Whether `now` falls in the owner's quiet window, or the policy's where the owner set none.
+    /// Whether `now` falls in the owner's quiet window, or the policy's where the owner set none:
+    /// [`in_quiet_window_on`], the one check the fold's chest step reads too (SPEC-411 R12).
     async fn in_quiet_window(
         &self,
         write: &mut SqliteConnection,
         now: UtcMillis,
     ) -> Result<bool, KernelError> {
-        let quiet = &self.policy.quiet_hours;
-        let start = minutes_setting(write, QUIET_START_SETTING, quiet.start.minutes()).await?;
-        let end = minutes_setting(write, QUIET_END_SETTING, quiet.end.minutes()).await?;
-        Ok(in_quiet_hours(
-            local_minute(now, self.rule.utc_offset()),
-            start,
-            end,
-        ))
+        in_quiet_window_on(write, &self.policy, self.rule.utc_offset(), now).await
     }
 
     /// Whether the outage breaker is open: a bot send failed less than the cooldown before `now`.
@@ -1325,23 +1319,16 @@ async fn minutes_setting(
 /// # Errors
 ///
 /// [`KernelError`] when the owner's settings cannot be read.
-#[expect(
-    clippy::unused_async,
-    reason = "SPEC-411's red stub reads the policy only; the green awaits the owner's hours"
-)]
 pub async fn in_quiet_window_on(
     write: &mut SqliteConnection,
     policy: &Policy,
     offset: UtcOffset,
     now: UtcMillis,
 ) -> Result<bool, KernelError> {
-    let _ = write;
     let quiet = &policy.quiet_hours;
-    Ok(in_quiet_hours(
-        local_minute(now, offset),
-        quiet.start.minutes(),
-        quiet.end.minutes(),
-    ))
+    let start = minutes_setting(write, QUIET_START_SETTING, quiet.start.minutes()).await?;
+    let end = minutes_setting(write, QUIET_END_SETTING, quiet.end.minutes()).await?;
+    Ok(in_quiet_hours(local_minute(now, offset), start, end))
 }
 
 /// The tier a nudge, a digest or an alert renders at: nothing at T0, and a line at every other tier.
