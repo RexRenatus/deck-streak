@@ -8,7 +8,7 @@
   day, plus the owner's trigger), ADR-388 D12 (the session syncs once after the open and once
   before the close) and ADR-387 (the late line), and changes no rule of any of them.
 - **Schematic:** `docs/schematics/web-study-screens.md`, amended by one section appended at its end
-  (section 7, the late review to the offer and the one-tap sync). No existing line of it changes.
+  (section 8, the late review to the offer and the one-tap sync). No existing line of it changes.
 - **Status:** one delivery. **Mutation band:** `S40900-S40999`, claimed, holding no rows file
   (section 9). **Model:** none (section 8).
 
@@ -192,7 +192,7 @@ appended section's diagrams in the whole suite.
 |---|---|---|
 | `docs/specs/SPEC-409-after-a-late-review-the-web-review-offers-a-one-tap-sync-and-the-daily-sync-stays-as-it-is.md` | docs | added |
 | `docs/decisions/ADR-423-one-tap-runs-the-clients-own-sync-once-a-late-review-settles-and-the-daily-sync-stays-as-it-is.md` | docs | added |
-| `docs/schematics/web-study-screens.md` | docs | section 7 appended; no existing line changes |
+| `docs/schematics/web-study-screens.md` | docs | section 8 appended; no existing line changes |
 | `docs/red-first/SPEC-409.md` | docs | added: the red-first record |
 | `changelog.d/update-now-prompt-409.md` | docs | added: the changelog fragment |
 | `web/app/src/lib/study/update-now.ts` | miniapp | added: `UpdateNow` and `UpdateClient` (R2, R4 to R7, R12) |

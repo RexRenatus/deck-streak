@@ -4,6 +4,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
+use deck_streak_agent::deck_gate::{CardDecks, DeckFuture, DeckGate, DeckScope, DeckVerdict};
 use deck_streak_agent::duty::DutyCaps;
 use deck_streak_agent::duty::{AgentAlert, Alerts, Vault, VaultRefused};
 use deck_streak_agent::gate::{GateFuture, GateOutcome, OutputGate};
@@ -88,6 +89,33 @@ impl OutputGate for FixedGate {
     }
     fn check_input<'a>(&'a self, _input: &'a str) -> GateFuture<'a> {
         Box::pin(async { GateOutcome::Passed })
+    }
+}
+
+/// A deck gate with a fixed verdict, which records every scope it was asked to judge.
+pub struct FixedDeckGate {
+    pub verdict: DeckVerdict,
+    pub asked: Mutex<Vec<Vec<CardDecks>>>,
+}
+
+impl FixedDeckGate {
+    /// The gate the shipped tests run under: it admits every scope (SPEC-381 R4).
+    pub fn admitting() -> Self {
+        Self::answering(DeckVerdict::Admitted)
+    }
+    pub fn answering(verdict: DeckVerdict) -> Self {
+        Self {
+            verdict,
+            asked: Mutex::new(Vec::new()),
+        }
+    }
+}
+
+impl DeckGate for FixedDeckGate {
+    fn judge<'a>(&'a self, scope: DeckScope<'a>) -> DeckFuture<'a> {
+        self.asked.lock().expect("asked").push(scope.cards.to_vec());
+        let verdict = self.verdict;
+        Box::pin(async move { verdict })
     }
 }
 

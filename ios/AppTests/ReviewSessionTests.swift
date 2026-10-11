@@ -2,7 +2,9 @@
 // fixture to the test runner as `DS_REVIEW_FIXTURE`; each test copies it into a fresh directory
 // beside it and opens that copy through the launch argument the app reads, so no test meets
 // another's answers. The fixture's deck `Review` holds four new cards in order: a text card, an
-// image card, a sound card and a speech card.
+// image card, a sound card and a speech card. Beside it, `parity/` is the parity collection
+// (SPEC-393 R15), whose deck `Parity` opens with a card that speaks its front through a TTS tag
+// asking for the voices `Absent_Voice` and `Desk_Parity_Voice`.
 import Foundation
 import XCTest
 
@@ -68,5 +70,29 @@ final class ReviewSessionTests: XCTestCase {
             ["<1m", "<10m"],
             "A17: Again and Good carry the intervals A1 pins for a new card, each picked by its "
                 + "number as the bar picks it (SPEC-365 R13)")
+    }
+
+    /// SPEC-393 A14 (R8, R9): with no voice kept, the parity card's replay speaks its front in the
+    /// installed voice `Parity Voice`, which its tag's second requested voice names.
+    func test_the_parity_card_speaks_the_voice_its_template_asks() async throws {
+        let directory = try freshFixture().appending(path: "parity", directoryHint: .isDirectory)
+        let engine = EngineSession()
+        try await engine.open(
+            arguments: ["DeckStreak", "-DSCollectionDirectory", directory.path(percentEncoded: false)])
+        let decks = try await engine.decks()
+        let parity = try XCTUnwrap(
+            decks.first { $0.name == "Parity" },
+            "the parity collection's deck Parity is listed; the decks read \(decks.map(\.name))")
+        let session = ReviewSession(engine: engine)
+        try await session.choose(parity)
+        let installed = [
+            InstalledVoice(
+                identifier: "test.voice.parity", name: "Parity Voice", language: "en-US", quality: 0)
+        ]
+        let first = try await session.next(autoplay: false, installed: installed)
+        XCTAssertEqual(
+            first.face.replay,
+            [.speech(text: "a parity card", language: "en-US", rate: 0.5, voice: "test.voice.parity")],
+            "A14: the parity card's replay speaks its front in the voice its tag asks for")
     }
 }

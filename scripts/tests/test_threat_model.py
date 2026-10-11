@@ -228,7 +228,7 @@ class TheModelHolds(unittest.TestCase):
         self.assertEqual(
             report.rows,
             ["S1", "T1", "R1", "I1", "I2", "D1", "E1"]
-            + ["S2", "T2", "R2", "I3", "I4", "D2", "E2", "E6", "S6"]
+            + ["S2", "T2", "R2", "I3", "I4", "S7", "T7", "I9", "D2", "E2", "E6", "S6"]
             + ["S3", "T3", "R3", "I5", "I6", "D3", "E3"]
             + ["S4", "T4", "R4", "I7", "D4", "E4"]
             + ["S5", "T5", "T6", "R5", "I8", "D5", "E5"],
