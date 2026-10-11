@@ -168,3 +168,7 @@ Part two delivers D3 as it is decided, with the tests D4 names, as the second of
 - Reusing the internal lane's upload credential: lost because it is a wider credential than a read needs, held every day by a job that runs on a schedule.
 
 Placing the credential is an owner act outside this delivery. Until it is placed, every run fails closed with a named reason and dispatches nothing (SPEC-374 R14, A11).
+
+The decision this amendment adds is D12, the next after D11 (line 116). Its heading above repeats
+D10, the number line 107 already gives to where and when the web client reads the statement. A
+citation of this amendment's decision names D12.

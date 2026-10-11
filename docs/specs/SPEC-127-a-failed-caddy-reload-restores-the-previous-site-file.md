@@ -432,6 +432,8 @@ Four rows in `scripts/mutation-rows.d/S12700-S12799.json` pin it, one per change
 install's reload, the install's restoring reload, the removal's reload and the removal's restoring
 reload), each killed by the test of A40. Rows S12703 and S12707 contain a restoring reload line, so
 their find text moves to the new line with the same meaning.
+The four rows are S12747 for the install's reload, S12748 for the install's restoring reload, and
+for the removal, S12749 for its reload and S12750 for its restoring reload.
 
 The insertion this amendment makes is this section, appended after the file's last line, and
 nothing above it is edited (SPEC-038 section 8, ruling (i)).
