@@ -7,8 +7,10 @@
 //! reads the pinned crate's curve at each gap, under the scheduler's defaults and four parameter
 //! sets at the clipper's bounds, for states across the scheduler's range: the curve reads the same
 //! at a gap as at its reading, lies between its floor and its ceiling, reads its ceiling at the
-//! review, and never rises with the gap. The crate's one dependency stays the pinned scheduler,
-//! so the vectors are read by a small parser of integer arrays.
+//! review, and never rises with the gap. A stability line carries a 90-percent interval and the
+//! stock stability the port gives it, which `stock::stock_stability` must give bit for bit
+//! (SPEC-413 R5). The crate's one dependency stays the pinned scheduler, so the vectors are read
+//! by a small parser of integer arrays.
 
 #![allow(
     clippy::expect_used,
@@ -145,6 +147,16 @@ fn difficulty_holds(model: &FSRS, line: &str, replayed: &Value, stock: &Value) {
     );
 }
 
+/// A stability line: `stock_stability` gives the port's stock stability (SPEC-413 R5).
+fn stability_holds(line: &str, interval: &Value, stability: &Value) {
+    let floored = stock::stock_stability(float(interval));
+    let want = float(stability);
+    assert!(
+        floored.to_bits() == want.to_bits() || (floored.is_nan() && want.is_nan()),
+        "{line}: the stock stability is {floored}, not {want}"
+    );
+}
+
 #[test]
 fn the_stock_projection_and_the_curve_hold_the_lean_claims_on_every_vector() {
     let mut lines = VECTORS.lines();
@@ -163,10 +175,16 @@ fn the_stock_projection_and_the_curve_hold_the_lean_claims_on_every_vector() {
     let ceiling = 1.0_f32.mul_add(1.0 - 2e-5, 1e-5);
 
     let mut examined = 0_i64;
+    let mut stabilities = 0_usize;
     let mut gaps: Vec<(f32, f32, bool)> = Vec::new();
     for line in lines {
         if let (Some(replayed), Some(stock)) = (field(line, "difficulty"), field(line, "stock")) {
             difficulty_holds(&models[0].1, line, &replayed, &stock);
+        } else if let (Some(interval), Some(stability)) =
+            (field(line, "interval"), field(line, "stability"))
+        {
+            stability_holds(line, &interval, &stability);
+            stabilities += 1;
         } else {
             let gap = float(&field(line, "gap").expect("a gap"));
             let read = float(&field(line, "read").expect("a reading"));
@@ -220,9 +238,16 @@ fn the_stock_projection_and_the_curve_hold_the_lean_claims_on_every_vector() {
         examined, declared,
         "the header declares {declared} vector(s)"
     );
-    println!("examined {examined} vector(s), {readings} curve reading(s)");
+    println!(
+        "examined {examined} vector(s), {stabilities} stability line(s), {readings} curve \
+         reading(s)"
+    );
     assert!(
         examined > 0,
         "examined 0 vectors: the population is empty, so nothing was judged"
+    );
+    assert!(
+        stabilities > 0,
+        "examined 0 stability lines: the floor's population is empty, so nothing was judged"
     );
 }

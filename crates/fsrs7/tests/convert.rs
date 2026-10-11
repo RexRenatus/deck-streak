@@ -1,7 +1,8 @@
 //! SPEC-342 A5 and A6 (R4): review-log rows become one FSRS-7 item per card; SPEC-386 A2 to A4
 //! (R2 to R4): a reset cuts a card's history, a history names its last kept review, and the
-//! selection is a function of the row set. Every expected value is typed by hand from those
-//! requirements, never printed by the crate.
+//! selection is a function of the row set; SPEC-413 A2 (R3): a gap past the signed range is read
+//! whole. Every expected value is typed by hand from those requirements, never printed by the
+//! crate.
 
 #![allow(
     clippy::print_stdout,
@@ -237,4 +238,21 @@ fn any_arrival_order_gives_the_same_histories() {
         );
     }
     examined("arrival order(s)", orders);
+}
+
+/// `u64::MAX` milliseconds in days, the distance between the least and the greatest `i64` id, as
+/// the `f32` nearest it: 18446744073709551615 / 86400000 is 213503982334.6 days.
+const WHOLE_RANGE_DAYS: f32 = 213_503_983_616.0;
+
+#[test]
+fn a_gap_past_the_signed_range_is_read_whole() {
+    // Card 7's two reviews carry the least and the greatest id an i64 holds: their distance is
+    // past the signed range, and is read whole, never as an overflow and never wrapped.
+    let rows = [row(7, i64::MAX, 3, REVIEW), row(7, i64::MIN, 4, REVIEW)];
+
+    assert_eq!(
+        convert::histories(&rows),
+        vec![ended(7, i64::MAX, &[(4, 0.0), (3, WHOLE_RANGE_DAYS)])],
+        "the second review is u64::MAX milliseconds after the first"
+    );
 }
