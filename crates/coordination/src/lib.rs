@@ -15,6 +15,7 @@
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
 
+pub mod chests;
 pub mod courses;
 pub mod data_rights;
 pub mod data_rights_registry;

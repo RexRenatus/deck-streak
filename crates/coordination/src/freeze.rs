@@ -9,6 +9,7 @@ use deck_streak_kernel::{Db, KernelError, StudyDay, UtcMillis};
 use deck_streak_streaks::freeze::{FreezeReason, Refusal, admit};
 use deck_streak_streaks::store;
 use deck_streak_streaks::streak::StreakState;
+use sqlx::SqliteConnection;
 
 /// What a freeze grant came to.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -42,5 +43,25 @@ pub async fn grant_freeze(
     }
     store::add_freeze(&mut write, day, reason, at).await?;
     write.commit().await?;
+    Ok(FreezeGrant::Granted)
+}
+
+/// Grants one freeze for `reason` on `day` inside the caller's `write` (SPEC-411 R9), judging the
+/// caps first, so a use case that pays a freeze writes it in the write that earned it.
+///
+/// # Errors
+///
+/// [`KernelError`] when a read or the write fails.
+#[expect(
+    clippy::unused_async,
+    reason = "SPEC-411's red stub; the green awaits its write"
+)]
+pub async fn grant_freeze_on(
+    write: &mut SqliteConnection,
+    day: StudyDay,
+    reason: FreezeReason,
+    at: UtcMillis,
+) -> Result<FreezeGrant, KernelError> {
+    let _ = (write, day, reason, at);
     Ok(FreezeGrant::Granted)
 }

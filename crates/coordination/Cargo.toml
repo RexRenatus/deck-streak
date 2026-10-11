@@ -49,3 +49,5 @@ serde.workspace = true
 # gate's tests run whole cycles over a temporary database and copy (SPEC-023 section 7).
 tempfile.workspace = true
 tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread", "sync"] }
+# SPEC-411 A7: a refused draw is the generator's own refusal, built as the quests tests build it.
+getrandom.workspace = true

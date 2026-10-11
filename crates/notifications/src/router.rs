@@ -30,7 +30,7 @@ use std::cmp::Reverse;
 use std::fmt;
 use std::sync::{Arc, Mutex, PoisonError};
 
-use deck_streak_kernel::{Clock, Db, KernelError, StudyDay, StudyDayRule, UtcMillis};
+use deck_streak_kernel::{Clock, Db, KernelError, StudyDay, StudyDayRule, UtcMillis, UtcOffset};
 use sqlx::{Sqlite, SqliteConnection, Transaction};
 
 use crate::ladder::{self, DICE_EMOJI, REACTION_EMOJI, REVEAL_PAUSE, REVEAL_PLACEHOLDER};
@@ -1317,6 +1317,31 @@ async fn minutes_setting(
         .await?
         .and_then(|value| value.parse().ok())
         .unwrap_or(default))
+}
+
+/// Whether `now`, read at `offset`, falls in the owner's quiet window, or in `policy`'s where the
+/// owner set none (SPEC-411 R12): the one quiet check the router and the fold's chest step share.
+///
+/// # Errors
+///
+/// [`KernelError`] when the owner's settings cannot be read.
+#[expect(
+    clippy::unused_async,
+    reason = "SPEC-411's red stub reads the policy only; the green awaits the owner's hours"
+)]
+pub async fn in_quiet_window_on(
+    write: &mut SqliteConnection,
+    policy: &Policy,
+    offset: UtcOffset,
+    now: UtcMillis,
+) -> Result<bool, KernelError> {
+    let _ = write;
+    let quiet = &policy.quiet_hours;
+    Ok(in_quiet_hours(
+        local_minute(now, offset),
+        quiet.start.minutes(),
+        quiet.end.minutes(),
+    ))
 }
 
 /// The tier a nudge, a digest or an alert renders at: nothing at T0, and a line at every other tier.
