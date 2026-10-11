@@ -1,0 +1,42 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S41300-STABILITY-MIN",
+        "fsrs7",
+        "src/stock.rs",
+        "pub const STABILITY_MIN: f32 = 0.0001;",
+        "pub const STABILITY_MIN: f32 = 0.001;",
+        "stock::a_first_review_rated_again_keeps_a_stock_stability_the_store_holds",
+        "the floor is the pinned revision's own least stability, 0.0001; moved to 0.001 it would raise every stock stability between the two, values the store keeps and the stock curve reads finite (SPEC-413 R1, A1)"
+      ],
+      [
+        "S41301-STABILITY-FLOOR",
+        "fsrs7",
+        "src/stock.rs",
+        "stability: stock_stability(model.interval_at_retrievability(state, STOCK_RETENTION)),",
+        "stability: model.interval_at_retrievability(state, STOCK_RETENTION),",
+        "stock::a_first_review_rated_again_keeps_a_stock_stability_the_store_holds",
+        "project writes the 90-percent interval through the floor; written as it is, a first review rated Again has a stock stability the store keeps as 0 (SPEC-413 R2, A1)"
+      ],
+      [
+        "S41302-GAP-WHOLE",
+        "fsrs7",
+        "src/convert.rs",
+        "days(row.id.abs_diff(at))",
+        "days(row.id.wrapping_sub(at).unsigned_abs())",
+        "convert::a_gap_past_the_signed_range_is_read_whole",
+        "the gap between two kept reviews is the unsigned distance of their ids, whole for every pair; a wrapped difference reads the least and the greatest id as 1 millisecond apart (SPEC-413 R3, A2)"
+      ],
+      [
+        "S41303-STABILITY-MAX",
+        "fsrs7",
+        "src/stock.rs",
+        "interval.max(STABILITY_MIN)",
+        "interval.min(STABILITY_MIN)",
+        "formal_vectors_fsrs7_stock::the_stock_projection_and_the_curve_hold_the_lean_claims_on_every_vector",
+        "the stock stability is the interval or the floor, whichever is greater; the lesser would hold every interval above the floor at it, and the Lean vectors' stability lines read the port's greater (SPEC-413 R1, R5, A3)"
+      ]
+    ]
+  }
+}

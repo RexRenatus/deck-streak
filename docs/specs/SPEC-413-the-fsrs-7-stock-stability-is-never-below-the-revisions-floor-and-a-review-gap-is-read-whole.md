@@ -161,3 +161,4 @@ after `cargo fmt` and occurs exactly once at its target.
 | S41300-STABILITY-MIN | `crates/fsrs7/src/stock.rs` | the floor moved off `0.0001` | `stock::a_first_review_rated_again_keeps_a_stock_stability_the_store_holds` |
 | S41301-STABILITY-FLOOR | `crates/fsrs7/src/stock.rs` | `project` writes the interval with no floor | `stock::a_first_review_rated_again_keeps_a_stock_stability_the_store_holds` |
 | S41302-GAP-WHOLE | `crates/fsrs7/src/convert.rs` | the gap wraps at the signed range | `convert::a_gap_past_the_signed_range_is_read_whole` |
+| S41303-STABILITY-MAX | `crates/fsrs7/src/stock.rs` | the floor takes the lesser of the interval and the floor | `formal_vectors_fsrs7_stock::the_stock_projection_and_the_curve_hold_the_lean_claims_on_every_vector` |
