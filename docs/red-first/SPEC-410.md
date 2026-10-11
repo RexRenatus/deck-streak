@@ -33,6 +33,7 @@ A2: green at 5f2c8989b23fa90cb93a747bc260a63f14871950
 A3: green at 5f2c8989b23fa90cb93a747bc260a63f14871950
 A5: green at 5f2c8989b23fa90cb93a747bc260a63f14871950
 A6: red at 503916e46897b3f4ef387ab7bdb24cb2cc9aeb0e: read on the pull request's checks over the tests' commit, run 38111902719, job `apple / harness` (114390604829), step "the review screen's tests, Debug, on the iPhone and then the iPad": iPhone 17 Failed and iPad (A16) Failed, each at ReviewSessionTests.swift:124: XCTUnwrap failed: expected non-nil value of type "Range<Index>" - A6: the document holds sign's video; the document's body is empty, <body class="card card1"></body></html>
+A6: green at 5f2c8989b23fa90cb93a747bc260a63f14871950
 ```
 
 The whole suites over the seam commit with these tests in the tree, every binary run: the core's
