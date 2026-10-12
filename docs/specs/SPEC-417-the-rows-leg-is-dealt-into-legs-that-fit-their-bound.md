@@ -155,7 +155,7 @@ delivery.
 | `scripts/tests/test_dispatch_shards.py` | CI tests | changed: `generated()` counts the rows axis; the ceiling literal (A10); the release, refusal, whole-tree and headroom pins (A12, R14) |
 | `scripts/tests/test_verdict_download.py` | CI tests | changed: the rows legs' artifacts in its model, and its two rows tests (A11) |
 | `scripts/tests/test_mutation_verdict.py` | CI tests | changed: the cap, constants and whole-tree pins of the `ci` ceiling, and a comment (A12, R14) |
-| `scripts/tests/test_ci_workflows.py` | CI tests | changed: three register entries: the refusal test's moved call, `plan_shards(entries('deck-streak-ingest', 13125))` (R14); the release test's new `size(listing)` call (R14); and `test_mutation_workflows`' new `rows_constant` read of `scripts/mutation_rows.py`'s text (R11, A9, A10) |
+| `scripts/tests/test_ci_workflows.py` | CI tests | changed: seven register entries: the refusal test's moved call, `plan_shards(entries('deck-streak-ingest', 13125))` (R14); the release test's new `size(listing)` call (R14); `test_mutation_workflows`' new `rows_constant` read of `scripts/mutation_rows.py`'s text (R11, A9, A10); and the four sites of `test_mutation_rows`' in-process loader `load_runner`, each under the register's existing reason for its kind |
 | `scripts/mutation-rows.d/S41700-S41799.json` | CI scripts | added: rows S41700 to S41715 (section 9) |
 | `scripts/mutation-rows.d/S36200-S36299.json` | CI scripts | changed: S36201 re-anchored (R12) |
 | `docs/specs/SPEC-417-the-rows-leg-is-dealt-into-legs-that-fit-their-bound.md` | docs | added: this file |

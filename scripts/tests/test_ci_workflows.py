@@ -6591,6 +6591,14 @@ DYNAMIC_IMPORTS = {
             1,
         ),
         ("test_mutation_python_verdict", "runner", "spec.loader.exec_module(module)", 1),
+        ("test_mutation_rows", "load_runner", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_mutation_rows",
+            "load_runner",
+            "importlib.util.spec_from_file_location('mutation_rows_inprocess', RUNNER)",
+            1,
+        ),
+        ("test_mutation_rows", "load_runner", "spec.loader.exec_module(module)", 1),
         ("test_mutation_rows_group", "<module>", "SPEC.loader.exec_module(runner)", 1),
         ("test_mutation_rows_group", "<module>", "importlib.util.module_from_spec(SPEC)", 1),
         (
@@ -6781,6 +6789,7 @@ DYNAMIC_IMPORTS = {
         ("test_mutation_python_judge_kills", "load", "sys.modules", 1),
         ("test_mutation_python_lister_kills", "load", "sys.modules", 1),
         ("test_mutation_python_verdict", "runner", "sys.modules", 1),
+        ("test_mutation_rows", "load_runner", "sys.modules", 1),
         ("test_mutation_rows_group", "<module>", "sys.modules", 1),
         ("test_mutation_verdict", "verdict_module", "sys.modules", 1),
     ),
