@@ -235,3 +235,58 @@ artifact.
 - SPEC-415 and ADR-429 (the count rule and its whole refusal), SPEC-362 and ADR-373 (one run, legs
   sized to the hosted job, the leg ceiling), SPEC-087 (the Python runner and its plan legs).
 - Issue #825 tracks the Python legs' fit; #822 is the release whose run measured it.
+
+## Amendment: the price table's first fill, its lower bounds and its refresh (SPEC-420, ADR-434)
+
+Insert-only; every earlier byte is kept. SPEC-420 fills `PYTHON_CONTROL_SECONDS` for the first time
+from the cost records of battery run 38242806596. Each of that run's sixteen Python legs ran to the
+job's 120-minute bound: two failed, and fourteen were cancelled. The amendment keeps D2's count rule
+for every unpriced file, and every decision above.
+
+**What it fills.** Exactly the seven lines `mutation-verdict.py prices --costs <dir>` prints over the
+twelve `costs.jsonl` files the run kept. Legs 0, 5, 6 and 14 kept none. The verb reads 1017
+records, none torn. The records are committed as a test fixture, and a test re-derives the table
+from them byte for byte, so no figure is typed.
+
+**Lower bounds, disclosed.** Every figure is a lower bound of its file's control cost, for three
+reasons:
+- twelve of the sixteen legs reported;
+- every leg stopped at its bound;
+- a leg's largest control is the largest that leg reached, not the largest the file has.
+
+The largest control recorded sets `mutation-verdict.py`'s 224: 223.66 s, in leg 13 (job
+114789331343, cancelled at its 120-minute bound). Two disclosures of the measurement behind
+SPEC-420's scoped test set bind as well:
+- `mutation_rows.py`'s and `public-scrub.py`'s prices are lower bounds, because their held modules
+  were not measured;
+- `mutation_python.py` had no control in CI until SPEC-420 added one.
+
+These seven figures depart from D2's driver that a price is never a lower bound. They are admitted
+because the only alternative is to leave each file unpriced. Unpriced, a 224 s mutant is dealt
+twenty to a leg, and the release reads 284 legs. Priced, it is dealt six to a leg, and the release
+reads 557. An under-priced leg overruns its job and reads VOID by name, never a pass.
+
+**Unpriced files.** A listed file the table does not price keeps the count rule of 20 a leg inside
+the share (D2, unchanged). That covers:
+- the eight release files no recorded leg reached (2272 of the 5670 mutants);
+- the files of the four absent legs;
+- any file the population gains later.
+
+No file is priced at a default figure.
+
+**Refresh.** SPEC-420's runner records every file's control and sentinel before any mutant of its
+leg. So a later run's legs leave a control record for every file they hold, even when they are cut.
+A later delivery refreshes the table by running the verb over that run's downloaded records, and
+commits the output and the records together in one commit. The same test re-derives the table, and
+each line keeps naming its run, attempt and shard.
+
+Chosen against:
+- (A) Battery substitution, reading the scheduled battery's Python results in place of the pull
+  request run's legs: rejected because the battery runs from main, and its legs are cut at their
+  bound (this run examined a fraction of the listing), so substituting it would pass mutants that
+  nobody examined.
+- A range split of the release into several runs: rejected because the base is dev. The release
+  pull request is one range, main...dev. A split into sub-ranges examines no mutant the one range
+  does not, and every sub-range run is a run that no release pull request names.
+- An owner-signed leg-time raise: rejected because this delivery does not need it. It prices and
+  scopes within the 1800 s legs, and a raise stays the owner's lever alone.

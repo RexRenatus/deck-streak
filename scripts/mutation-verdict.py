@@ -118,8 +118,13 @@ ORACLE = frozenset({"tools/parity-oracle/generate.py"})
 SCRIPTS = re.compile(r"scripts/[^/]+\.py")
 #: The Python mutation runner's report schema, and its listing's (`mutation_python.py`).
 PYTHON_SCHEMA = "deckstreak.mutation-python.v1"
-#: The mutants one Python shard holds, and the most shards a pull request's matrix runs (R9).
-PYTHON_SHARD_MUTANTS, PYTHON_MAX_SHARDS = 20, 32
+#: The mutants one Python shard holds under the count rule (R9).
+PYTHON_SHARD_MUTANTS = 20
+#: The share: the most Python legs a pull request's run deals. It is the owner's one value,
+#: spelled on this line alone, and every reader reads it by name (SPEC-420 R1, R3).
+PYTHON_MAX_SHARDS = 32
+#: The ceiling no signed share may pass: a share outside 1 to it is refused before any deal.
+PYTHON_SHARE_CAP = None
 #: A Python leg's projected time may reach half its job's `timeout-minutes` of 60, the margin the
 #: Rust legs keep under theirs, since a projection is a price and not a measurement (SPEC-418 R1).
 PYTHON_LEG_BOUND_SECONDS = 1800
@@ -990,6 +995,13 @@ def python_listing(path: str | None) -> list[dict] | None:
     ):
         return None
     return [entry for entry in document["mutants"] if isinstance(entry, dict)]
+
+
+def python_share_refused() -> str | None:
+    """The refusal a share that is not a whole number from 1 to `PYTHON_SHARE_CAP` reads before
+    any deal, or None: a share above the cap never deals a leg, whoever signs it (SPEC-420 R2).
+    """
+    return None
 
 
 def python_needed(listed: int) -> int:
@@ -3402,6 +3414,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.verb == "shards":
         if not args.plan:
             parser.error("shards needs --plan")
+        refused = python_share_refused()
+        if refused:
+            print(refused)
+            return EXIT_FAIL
         return shards(pathlib.Path(args.plan), args.listed, args.python_listed)
     if args.verb == "size":
         return size(args.listed, args.package)

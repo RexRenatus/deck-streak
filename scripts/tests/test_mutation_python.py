@@ -23,6 +23,7 @@ installed. AV1: a failed restore writes its report with the run's exit (4) under
 hang passes a short `--test-seconds` and a subprocess timeout.
 """
 
+import ast
 import hashlib
 import importlib.util
 import json
@@ -1107,6 +1108,355 @@ class ThePlannedLegIsTheMultisetItsShardLists(unittest.TestCase):
         legs = [module.planned_leg(plan, chosen, k, 2) for k in range(2)]
         self.assertEqual(legs, [chosen[:2], chosen[2:]])
         examined("planned legs", legs)
+
+
+FIXTURES = REPO / "scripts" / "tests" / "fixtures"
+#: The scope fixture's target as a planted tree holds it, and a plan selecting every line of it.
+SCOPE_TARGET = "scripts/scope_target.py"
+SCOPE_PLAN = {
+    "classes": {"scripts": {"applies": True}},
+    "files": [{"path": SCOPE_TARGET, "class": "scripts", "code": list(range(1, 38))}],
+}
+#: The leg control's fixture directory, and its three mutants in listing order.
+CONTROL_DIR = "scripts/tests/fixtures/mutation-python-control"
+CONTROL_NAMES = [
+    f"{CONTROL_DIR}/control_target.py:10:18: replace + with - in direct",
+    f"{CONTROL_DIR}/control_target.py:14:18: replace * with / in in_child",
+    f"{CONTROL_DIR}/control_target.py:18:18: replace - with + in unobserved",
+]
+VERDICT = REPO / "scripts" / "mutation-verdict.py"
+#: The prices verb's last line over the committed records of the recorded run.
+PRICES_EXAMINED = "mutation: prices: examined 1017 record(s) in 12 file(s); torn 0\n"
+#: Each scope case's leg, run once and read by every test that names the case.
+SCOPE_LEGS = {}
+
+
+def leg(test, tree, *args):
+    """One `run` with its report and its `costs.jsonl` in a directory of their own: (the run, the
+    report or None, the cost records in the order they were written)."""
+    scratch = tempfile.TemporaryDirectory()
+    test.addCleanup(scratch.cleanup)
+    target = Path(scratch.name) / "report.json"
+    done = tree.runner("run", *args, "--report", str(target))
+    report = json.loads(target.read_text(encoding="utf-8")) if target.exists() else None
+    costs = Path(scratch.name) / "costs.jsonl"
+    lines = costs.read_text(encoding="utf-8").splitlines() if costs.exists() else []
+    return done, report, [json.loads(line) for line in lines]
+
+
+def scope_tree(test):
+    """A planted tree holding the scope fixture's target under `scripts/` and its checks under
+    `scripts/tests/`, the one mapped to the other."""
+    folder = FIXTURES / "mutation-python-scope"
+    return Tree(
+        test,
+        {},
+        mapping={SCOPE_TARGET: {"dir": "scripts/tests", "modules": ["scope_checks"]}},
+        extra={
+            SCOPE_TARGET: (folder / "scope_target.py").read_text(encoding="utf-8"),
+            "scripts/tests/scope_checks.py": (folder / "scope_checks.py").read_text(
+                encoding="utf-8"
+            ),
+        },
+    )
+
+
+def mutant_costs(records):
+    """Each mutant's cost record by its name, in the order the leg judged them."""
+    return {record["name"]: record for record in records if record["kind"] == "mutant"}
+
+
+def scope_leg(test, case):
+    """The scope fixture's `run --plan` leg with `SCOPE_CASE` set to `case`, run once per case:
+    (the run, the report, each mutant's cost record by its name)."""
+    if case not in SCOPE_LEGS:
+        tree = scope_tree(test)
+        plan = tree.write("plan.json", json.dumps(SCOPE_PLAN))
+        with mock.patch.dict(os.environ, {"SCOPE_CASE": case}):
+            done, report, records = leg(test, tree, "--plan", str(plan), "--control-seconds", "1")
+        SCOPE_LEGS[case] = (done, report, mutant_costs(records))
+    return SCOPE_LEGS[case]
+
+
+def on_line(costs, number):
+    """The cost records of the mutants on line `number`, in the order the leg judged them."""
+    return [record for name, record in costs.items() if int(name.split(":")[1]) == number]
+
+
+def by_name(report):
+    """Each judged mutant of the report by its name."""
+    return {mutant["name"]: mutant for entry in report["files"] for mutant in entry["mutants"]}
+
+
+def ids(*names):
+    """The scope fixture's check ids, as the runner names them."""
+    return [f"scope_checks.Lines.{name}" for name in names]
+
+
+def executes():
+    """The scope fixture's own table of the checks that execute each function's line, read from
+    its text: the oracle the scoped sets are held against, which no code under test builds."""
+    source = (FIXTURES / "mutation-python-scope" / "scope_checks.py").read_text(encoding="utf-8")
+    table = next(
+        node.value
+        for node in ast.parse(source).body
+        if isinstance(node, ast.Assign)
+        and [each.id for each in node.targets if isinstance(each, ast.Name)] == ["EXECUTES"]
+    )
+    return ast.literal_eval(table)
+
+
+def table_lines():
+    """The lines of `mutation-verdict.py`'s `PYTHON_CONTROL_SECONDS` between its opening line and
+    its closing brace, or none while the table is the one-line empty dict."""
+    lines = VERDICT.read_text(encoding="utf-8").splitlines()
+    opening = "PYTHON_CONTROL_SECONDS: dict[str, int] = {"
+    if opening not in lines:
+        return []
+    start = lines.index(opening) + 1
+    return lines[start : lines.index("}", start)]
+
+
+#: What a test that joins every scoped set leaves on lines 13 and 17: `test_case` beside the
+#: tests that execute each line, in the suite's order.
+JOINED = [("in_process", ids("test_case", "test_in_process"))] * 2 + [
+    ("shared", ids("test_case", "test_shared_one", "test_shared_two"))
+] * 2
+
+
+class EachMutantRunsTheTestsItsLineTraced(unittest.TestCase):
+    """SPEC-420 R6 to R10 (A7 to A18): every file's control is recorded before any mutant of the
+    leg; in a `--plan` leg each mutant runs the tests whose processes executed its line, or the
+    whole suite on each fallback, named in its cost record; the battery runs every mutant whole;
+    and the leg's control runs first, its wrong reading voiding every file by name. The scope
+    fixture's own `EXECUTES` table and its cases fix what each line's set must be."""
+
+    def joined(self, case):
+        """(function, scoped set) for each mutant on lines 13 and 17 under `case`."""
+        _done, _report, costs = scope_leg(self, case)
+        return [
+            (record["name"].rsplit(" in ", 1)[1], record.get("scoped"))
+            for number in (13, 17)
+            for record in on_line(costs, number)
+        ]
+
+    def test_every_files_control_is_recorded_before_any_mutant_of_the_leg(self):
+        """A7 (R6): both files' control lines come before the first mutant line of either."""
+        tree = Tree(self, {"calc": CALC, "loose": LOOSE})
+        _done, _report, records = leg(self, tree, "--all", "--control-seconds", "20")
+        self.assertEqual(
+            [(record["kind"], record["path"]) for record in records],
+            [("control", "scripts/calc.py"), ("control", "scripts/loose.py")]
+            + [("mutant", "scripts/calc.py")] * 3
+            + [("mutant", "scripts/loose.py")] * 3,
+        )
+        examined("cost records", records)
+
+    def test_each_mutant_runs_only_the_tests_that_execute_its_line(self):
+        """A8 (R7): each of the 14 mutants' scoped set is exactly the checks the fixture's table
+        names for its function; a whole-suite line names none."""
+        _done, _report, costs = scope_leg(self, "")
+        table = executes()
+        self.assertEqual(len(costs), 14, list(costs))
+        for name, record in costs.items():
+            function = name.rsplit(" in ", 1)[1]
+            self.assertEqual(record.get("scoped", []), ids(*table.get(function, [])), name)
+        examined("functions in the fixture's table", table)
+
+    def test_a_line_run_at_import_or_outside_a_test_runs_the_whole_suite(self):
+        """A9 (R7): the module-level mutant, the class body's and the `setUpClass` line's."""
+        _done, _report, costs = scope_leg(self, "")
+        seen = [
+            (number, record.get("scope"), record.get("why"))
+            for number in (9, 25, 29)
+            for record in on_line(costs, number)
+        ]
+        self.assertEqual(
+            seen,
+            [(9, "whole", "module")]
+            + [(25, "whole", "import")] * 2
+            + [(29, "whole", "import")] * 2,
+        )
+        examined("mutants run at import or outside a test", seen)
+
+    def test_a_line_no_traced_test_executes_runs_the_whole_suite(self):
+        """A10 (R7): line 33 is executed by no check, so its mutant runs whole and survives."""
+        _done, _report, costs = scope_leg(self, "")
+        found = on_line(costs, 33)
+        self.assertEqual(
+            [(r.get("scope"), r.get("why"), r["outcome"]) for r in found],
+            [("whole", "unreached", "survived")],
+        )
+        examined("mutants on an unreached line", found)
+
+    def test_a_line_only_a_child_process_executes_keeps_that_test(self):
+        """A11 (R7): line 21 runs only in the child `test_in_child` starts, so its set is that
+        check, by the child's record, and that check kills both mutants."""
+        _done, report, costs = scope_leg(self, "")
+        found = on_line(costs, 21)
+        self.assertEqual(
+            [(r.get("scope"), r.get("scoped"), r["outcome"]) for r in found],
+            [("lines", ids("test_in_child"), "killed")] * 2,
+        )
+        mutants = by_name(report)
+        self.assertEqual([mutants[r["name"]]["killers"] for r in found], [ids("test_in_child")] * 2)
+        examined("mutants only a child executes", found)
+
+    def test_a_test_whose_process_left_no_record_joins_every_scoped_set(self):
+        """A12 (R7): `test_case` starts a shell, then a Python child that ends by `os._exit`."""
+        cases = ("shell", "quit")
+        for case in cases:
+            self.assertEqual(self.joined(case), JOINED, case)
+        examined("cases", cases)
+
+    def test_a_test_whose_child_execs_joins_every_scoped_set(self):
+        """A12 (R7): `test_case` starts a child that replaces its image with `os.execv`."""
+        found = self.joined("exec")
+        self.assertEqual(found, JOINED)
+        examined("mutants on lines 13 and 17", found)
+
+    def test_a_test_that_leaves_a_thread_running_joins_every_scoped_set(self):
+        """A12 (R7): `test_case` leaves a daemon thread waiting past its end."""
+        found = self.joined("thread")
+        self.assertEqual(found, JOINED)
+        examined("mutants on lines 13 and 17", found)
+
+    def test_a_failed_or_partial_trace_runs_every_mutant_of_its_file_whole(self):
+        """A13 (R7): the checks take every monitoring tool id at import, the trace's among them."""
+        _done, _report, costs = scope_leg(self, "tool")
+        self.assertEqual(len(costs), 14, list(costs))
+        for name, record in costs.items():
+            self.assertEqual((record.get("scope"), record.get("why")), ("whole", "trace"), name)
+            self.assertIn(record["outcome"], ("killed", "survived"), name)
+        examined("mutants of a file whose trace failed", costs)
+
+    def test_a_scoped_run_that_ran_fewer_tests_than_its_set_reruns_whole(self):
+        """A14 (R7): a check defined only while a trace is taken executes line 33, so the scoped
+        run cannot load it and the mutant reruns whole."""
+        _done, _report, costs = scope_leg(self, "ghost")
+        found = on_line(costs, 33)
+        self.assertEqual(
+            [(r.get("scope"), r.get("why"), r["outcome"]) for r in found],
+            [("whole", "ran", "survived")],
+        )
+        examined("mutants on the ghost's line", found)
+
+    def test_a_scoped_survivor_is_confirmed_by_the_whole_suite(self):
+        """A15 (R7): line 37's mutants pass `test_textual_runs`, its one executing check, and are
+        killed by `test_reads_text`, which reads the text and executes nothing of the target."""
+        _done, report, costs = scope_leg(self, "")
+        found = on_line(costs, 37)
+        self.assertEqual(
+            [(r.get("scope"), r.get("why"), r["outcome"]) for r in found],
+            [("whole", "survivor", "killed")] * 2,
+        )
+        mutants = by_name(report)
+        for record in found:
+            killers = mutants[record["name"]]["killers"]
+            self.assertIn("scope_checks.Lines.test_reads_text", killers, record["name"])
+        examined("scoped survivors confirmed whole", found)
+
+    def test_the_battery_runs_every_mutant_against_the_whole_suite(self):
+        """A16 (R8): `run --all` takes no trace, so every mutant runs whole and names no set."""
+        tree = scope_tree(self)
+        done, _report, records = leg(self, tree, "--all", "--control-seconds", "1")
+        costs = mutant_costs(records)
+        self.assertEqual(len(costs), 14, done.stdout + done.stderr)
+        for name, record in costs.items():
+            seen = (record.get("scope", "whole"), record.get("why", "all"))
+            self.assertEqual(seen, ("whole", "all"), name)
+            self.assertNotIn("scoped", record, name)
+        examined("mutants the battery runs whole", costs)
+
+    def test_a_leg_whose_control_reads_wrong_voids_every_file_by_name(self):
+        """A17 (R9): the control's checks with `test_direct`'s assertion taken out, so its first
+        mutant survives where it must be killed."""
+        folder = FIXTURES / "mutation-python-control"
+        checks = (folder / "control_checks.py").read_text(encoding="utf-8")
+        blind = checks.replace("        self.assertEqual(box, [5])\n", "")
+        self.assertNotEqual(blind, checks)
+        tree = Tree(
+            self,
+            {"calc": CALC},
+            extra={
+                f"{CONTROL_DIR}/control_target.py": (folder / "control_target.py").read_text(
+                    encoding="utf-8"
+                ),
+                f"{CONTROL_DIR}/control_checks.py": blind,
+            },
+        )
+        done, report, _records = leg(self, tree, "--all", "--control-seconds", "20")
+        void = f"control: {CONTROL_NAMES[0]} read survived, expected killed"
+        self.assertEqual([entry.get("void") for entry in report["files"]], [void])
+        self.assertIn(f"mutation-python: VOID: scripts/calc.py: {void}\n", done.stdout)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        examined("file entries", report["files"])
+
+    def test_the_repository_holds_the_leg_control_and_its_three_mutants(self):
+        """A17 (R9): the committed control lists exactly its three mutants, and a leg over it reads
+        each as expected, by the check that executes its line."""
+        folder = FIXTURES / "mutation-python-control"
+        target = (folder / "control_target.py").read_text(encoding="utf-8")
+        listed = [
+            m.name(f"{CONTROL_DIR}/control_target.py") for m in runner_module().list_source(target)
+        ]
+        self.assertEqual(listed, CONTROL_NAMES)
+        tree = Tree(
+            self,
+            {"calc": CALC},
+            extra={
+                f"{CONTROL_DIR}/control_target.py": target,
+                f"{CONTROL_DIR}/control_checks.py": (folder / "control_checks.py").read_text(
+                    encoding="utf-8"
+                ),
+            },
+        )
+        done, report, records = leg(self, tree, "--all", "--control-seconds", "20")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(
+            [(c["name"], c["outcome"], c["expected"], c["killers"]) for c in report["control"]],
+            [
+                (CONTROL_NAMES[0], "killed", "killed", ["control_checks.Control.test_direct"]),
+                (CONTROL_NAMES[1], "killed", "killed", ["control_checks.Control.test_in_child"]),
+                (CONTROL_NAMES[2], "survived", "survived", []),
+            ],
+        )
+        self.assertEqual(
+            [(record["kind"], record["path"]) for record in records],
+            [("control", "scripts/calc.py")] + [("mutant", "scripts/calc.py")] * 3,
+        )
+        examined("control mutants", report["control"])
+
+    def test_each_mutant_record_names_its_scope_and_its_tests(self):
+        """A18 (R10): each mutant line names its scope, why when whole, and how many tests it ran;
+        `prices` over the recorded run's records, which carry none of those, still prints the
+        table the verdict holds."""
+        _done, _report, costs = scope_leg(self, "")
+        self.assertEqual(len(costs), 14, list(costs))
+        for name, record in costs.items():
+            scope = record.get("scope")
+            self.assertIn(scope, ("lines", "whole"), name)
+            self.assertEqual(record.get("why") is not None, scope == "whole", name)
+            self.assertIsInstance(record.get("tests"), int, name)
+            if scope == "lines":
+                self.assertEqual(record["tests"], len(record["scoped"]), name)
+        done = subprocess.run(
+            [
+                sys.executable,
+                str(VERDICT),
+                "prices",
+                "--costs",
+                str(FIXTURES / "mutation-prices-38242806596"),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=SUBPROCESS_SECONDS,
+            check=False,
+        )
+        self.assertEqual(
+            done.stdout, "".join(line + "\n" for line in table_lines()) + PRICES_EXAMINED
+        )
+        examined("mutant cost records", costs)
 
 
 if __name__ == "__main__":

@@ -255,3 +255,109 @@ and each mutant at the control's cost. The bound is 1800 seconds, half the `muta
 | `mutation-python` | its uploaded artifact | each file's control seconds and each mutant's seconds, as paid | `costs.jsonl`, one JSON line each: `control`, `uncovered`, `mutant` |
 | a run's downloaded artifacts | `mutation-verdict.py prices` | every leg's `costs.jsonl` | one table line per file, with its run, attempt and shard |
 | `prices`' output | `PYTHON_CONTROL_SECONDS` | a file's price, committed by a later delivery | a whole number of seconds per path |
+
+## 7. The share, the measured prices and the scoped test set (SPEC-420, ADR-434)
+
+Every `path:line` in this section was read at dev `e64a778e`. Section 6 stays as written. This
+section shows what changes around it: the share, one value with a cap; the price table, filled by
+the `prices` verb from one recorded run; and each mutant, run against the tests its line's trace
+names.
+
+### 7.1 Before: a Python leg at dev `e64a778e`
+
+```mermaid
+flowchart TD
+  bList["plan job: mutation_python.py list over the diff"] --> bShards["mutation-verdict.py shards"]
+  bTable["PYTHON_CONTROL_SECONDS, empty"] --> bShards
+  bShards -->|"no file priced: the count rule, 20 a leg"| bShare{"legs above PYTHON_MAX_SHARDS?"}
+  bShare -->|"yes"| bRefuse["REFUSED by name; no leg starts"]
+  bShare -->|"no"| bMatrix["python_matrix output"]
+  bMatrix --> bLeg["each leg: run --plan --shard k/n --failfast"]
+  bLeg --> bFile["per file in turn: control, bound, sentinel, then that file's mutants"]
+  bFile --> bMut["each mutant: every mapped test module, less the byte readers"]
+  bMut --> bReport["report.json and costs.jsonl"]
+  bReport --> bVerdict["mutation-verdict.py: every listed mutant examined; each void read by name"]
+```
+
+The share is `PYTHON_MAX_SHARDS`, on line 122, beside the count rule's 20, and nothing caps it. No
+leg runs a control mutant.
+
+### 7.2 After: a Python leg under SPEC-420
+
+```mermaid
+flowchart TD
+  aList["plan job: mutation_python.py list over the diff"] --> aCap{"share outside 1 to PYTHON_SHARE_CAP?"}
+  aCap -->|"yes"| aCapRefuse["REFUSED by name before any deal"]
+  aCap -->|"no"| aShards["mutation-verdict.py shards: priced files by cost, unpriced files by the count rule"]
+  aTable["PYTHON_CONTROL_SECONDS: the prices verb over one recorded run, re-derived by a test"] --> aShards
+  aShards --> aShare{"legs above the share?"}
+  aShare -->|"yes"| aRefuse["REFUSED by name, unchanged"]
+  aShare -->|"no"| aMatrix["python_matrix output, unchanged"]
+  aMatrix --> aLeg["each leg: run --plan --shard k/n --failfast"]
+  aLeg --> aControl["leg control: three named mutants, expected KILLED, KILLED, SURVIVED"]
+  aControl -->|"any other outcome"| aVoid["every file entry void: control, by name"]
+  aControl -->|"as expected"| aPrep["every file first: control, bound, sentinel with its trace"]
+  aPrep --> aSets["scoped set per line, or the whole suite"]
+  aSets --> aMut["each mutant: its scoped tests in suite order, or the whole suite"]
+  aMut -->|"scoped pass"| aConfirm["whole suite confirms before SURVIVED"]
+  aMut -->|"kill, or a whole run"| aReport["report.json and costs.jsonl with scope, why and tests"]
+  aConfirm --> aReport
+  aVoid --> aReport
+  aReport --> aVerdict["mutation-verdict.py: unchanged readers"]
+```
+
+In `run --all`, the scheduled battery's mode, the leg control runs and every file is prepared
+first, but no trace is taken and every mutant runs the whole suite.
+
+### 7.3 One mutant's tests
+
+```mermaid
+flowchart TD
+  sStart["mutant on line L of file F"] --> sTrace{"F's trace whole?"}
+  sTrace -->|"no: failed or partial"| sWhole["whole suite"]
+  sTrace -->|"yes"| sModule{"name says in module, or L ran at import or outside a test?"}
+  sModule -->|"yes"| sWhole
+  sModule -->|"no"| sSet{"any test executed L?"}
+  sSet -->|"no"| sWhole
+  sSet -->|"yes"| sScoped["tests that executed L, plus every test that joins all sets"]
+  sScoped --> sRan{"ran as many tests as the set names?"}
+  sRan -->|"no"| sWhole
+  sRan -->|"yes, a test failed"| sKilled["KILLED"]
+  sRan -->|"yes, all passed"| sWhole
+  sWhole --> sOutcome["KILLED or SURVIVED, by the whole suite"]
+```
+
+A test joins every scoped set of F when a process it started left no record, when its process image
+was replaced by `os.exec`, or when it left a thread running past its end. Byte readers, the tests the
+sentinel turns red, stay out of the scoped and the whole runs alike.
+
+### 7.4 The trace records
+
+The trace is taken in the sentinel run: the unmutated lines, with one comment appended. It is taken
+inside the leg, on every run.
+- **The runner's process** records each test's lines of F through `sys.monitoring` `LINE` events,
+  restarted at each test's start. It counts each test's spawns from the process-creation audit
+  events.
+- **Each child process** gets the same tracer and audit hook from a scratch `sitecustomize`, and
+  writes one record when it exits: its pid, its parent's pid, its test, its lines of F, and how
+  many processes it started.
+- **The judge** reads the directory once, after the runner exits. For each process, it counts the
+  records that name it as their parent. A process with fewer records naming it than processes it
+  started makes its test join every set.
+
+`formal/tla/TracedSetCovers` checks that a dropped test never executed L, in every order of spawn,
+exit, write and read.
+
+### 7.5 What crosses each step
+
+| step | before (dev `e64a778e`) | after (SPEC-420) |
+|---|---|---|
+| listing | `mutation_python.py list` over the diff | unchanged |
+| trace | none | the sentinel run's, per file, per leg, in `run --plan` only |
+| scoped set | every mapped module, less the byte readers | the tests that executed the line, or the whole suite on each fallback |
+| price | `PYTHON_CONTROL_SECONDS`, empty | the `prices` verb's seven lines over one recorded run's 1017 records, re-derived by a test |
+| deal | SPEC-418's cost deal; the count rule for unpriced files | unchanged |
+| share | `PYTHON_MAX_SHARDS` on line 122, uncapped | `PYTHON_MAX_SHARDS` alone on its line; `PYTHON_SHARE_CAP = 128` |
+| refusal | by name above the share | by name outside 1 to the cap, before any deal; by name above the share, unchanged |
+| control | none | three named mutants first in every leg, read through each file entry's `void` |
+| verdict | every listed mutant examined; each `void` read by name | unchanged readers; a mutant record names `scope`, `why` and `tests` |

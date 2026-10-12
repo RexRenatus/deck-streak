@@ -6757,6 +6757,16 @@ DYNAMIC_IMPORTS = {
         ("test_github_setup", "<module>", "unittest.main(argv=[sys.argv[0]])", 1),
     ),
     **allowed(
+        "the fixture's checks import their target from the directory the runner's child puts on the path; nothing reads a workflow",
+        (
+            "fixtures.mutation-python-control.control_checks",
+            "<module>",
+            "import control_target",
+            1,
+        ),
+        ("fixtures.mutation-python-scope.scope_checks", "<module>", "import scope_target", 1),
+    ),
+    **allowed(
         "a stat result's field, by a key the test lists",
         (
             "test_host_scrub",

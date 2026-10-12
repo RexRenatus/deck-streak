@@ -42,6 +42,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import tokenize
 import unittest
@@ -64,6 +65,19 @@ BOUND_FLOOR = 60.0
 BOUND_FACTOR = 5
 OUTCOMES = ("killed", "survived", "uncovered", "unviable", "timeout", "void")
 EXIT_OK, EXIT_SURVIVED, EXIT_USAGE, EXIT_VOID, EXIT_RESTORE = 0, 1, 2, 3, 4
+#: The leg control (SPEC-420 R9): the fixture whose three mutants every `run` judges first when
+#: its root holds it, its checks, and the outcome each mutant must read, in listing order.
+CONTROL = "scripts/tests/fixtures/mutation-python-control"
+CONTROL_ENTRY = {"dir": CONTROL, "modules": ["control_checks"]}
+CONTROL_EXPECTED = ("killed", "killed", "survived")
+#: The `sys.monitoring` tool id a traced run takes, the coverage tool's, and its name (R7).
+TRACE_TOOL, TRACE_NAME = 1, "mutation-python-trace"
+#: What a traced run's processes inherit: the record directory, the target, and the test whose
+#: process started them (`child_trace` spells the same names, since it imports nothing of ours).
+TRACE_DIR, TRACE_TARGET = "MUTATION_PYTHON_TRACE_DIR", "MUTATION_PYTHON_TRACE_TARGET"
+TRACE_TEST, TRACE_PARENT = "MUTATION_PYTHON_TRACE_TEST", "MUTATION_PYTHON_TRACE_PARENT"
+#: The events that start a process, in the audit table of the interpreter CI runs (R7).
+SPAWNS = frozenset({"os.fork", "os.forkpty", "os.spawn", "os.system"})
 NEWLINE = re.compile(r"\r\n|\r|\n")
 QUIET = frozenset(
     {
@@ -442,10 +456,21 @@ def census(root: pathlib.Path) -> int:
 class Collect(unittest.TestResult):
     """Which tests failed, each down to its sub-test, and how many distinct tests broke."""
 
-    def __init__(self) -> None:
+    def __init__(self, trace: Trace | None = None) -> None:
         super().__init__()
         self.failed: list[str] = []
         self.broken: set[str] = set()
+        self.trace = trace
+
+    def startTest(self, test):  # noqa: N802
+        super().startTest(test)
+        if self.trace is not None:
+            self.trace.start(test.id())
+
+    def stopTest(self, test):  # noqa: N802
+        if self.trace is not None:
+            self.trace.stop(test.id())
+        super().stopTest(test)
 
     def note(self, test: unittest.TestCase, whole: unittest.TestCase | None = None) -> None:
         identifier = test.id() if not hasattr(test, "_subDescription") else str(test)
@@ -484,6 +509,165 @@ def skipped(test: unittest.TestCase, skip: list[str]) -> bool:
     return any(gone == identifier or gone.startswith(identifier + " ") for gone in skip)
 
 
+def read_by(identifier: str, readers: list[str]) -> bool:
+    """Whether a test is one of the byte readers, as `skipped` reads `--skip`."""
+    return any(gone == identifier or gone.startswith(identifier + " ") for gone in readers)
+
+
+def child_trace() -> None:
+    """One child process's trace (SPEC-420 R7), the body of the scratch `sitecustomize` a traced
+    run writes: the target's lines it executes, under the test whose process started it, how many
+    processes it starts, and one record when it exits or replaces its image. It imports what it
+    uses and fails closed: a process that writes no record leaves its parent's count short, so its
+    test joins every scoped set of the file."""
+    return
+
+
+#: The tail of the scratch `sitecustomize`: the one it shadows on `sys.path`, run as the
+#: interpreter would have run it.
+SITE_CHAIN = """
+
+def chain_site():
+    import importlib.machinery
+    import importlib.util
+    import os
+    import sys
+
+    here = os.path.dirname(os.path.abspath(__file__))
+    rest = [entry for entry in sys.path if os.path.abspath(entry or os.curdir) != here]
+    spec = importlib.machinery.PathFinder.find_spec("sitecustomize", rest)
+    if spec is not None and spec.loader is not None:
+        spec.loader.exec_module(importlib.util.module_from_spec(spec))
+
+
+chain_site()
+"""
+
+
+def site_source() -> str:
+    """The scratch `sitecustomize`: `child_trace`'s own text and a call of it, then `SITE_CHAIN`."""
+    text = pathlib.Path(__file__).read_text(encoding="utf-8")
+    node = next(
+        each
+        for each in ast.parse(text).body
+        if isinstance(each, ast.FunctionDef) and each.name == "child_trace"
+    )
+    return f"{ast.get_source_segment(text, node)}\n\n\nchild_trace()\n{SITE_CHAIN}"
+
+
+class Trace:
+    """The root process's trace of a sentinel run (SPEC-420 R7): each test's lines of the target
+    through `sys.monitoring` `LINE` events, reset at its start and its stop, the lines run outside
+    any test, the processes each test starts, the tests that leave a thread running, and one
+    record when the run ends. Its processes inherit the scratch `sitecustomize`."""
+
+    def __init__(self, folder: str, target: str) -> None:
+        self.records = pathlib.Path(folder) / "records"
+        self.records.mkdir(parents=True, exist_ok=True)
+        self.target = os.path.realpath(target)
+        self.token = os.urandom(8).hex()
+        self.test: str | None = None
+        self.order: list[str] = []
+        self.lines: dict[str, set[int]] = {}
+        self.outside: set[int] = set()
+        self.spawned: collections.Counter = collections.Counter()
+        self.execs: set[str] = set()
+        self.threads: list[str] = []
+        self.known: dict[str, bool] = {}
+        self.before: set[threading.Thread] = set()
+        self.last: object = None
+        self.forked = False
+        self.failed: str | None = None
+        monitoring = getattr(sys, "monitoring", None)
+        if monitoring is None:
+            self.failed = "the interpreter has no sys.monitoring"
+            return
+        try:
+            monitoring.use_tool_id(TRACE_TOOL, TRACE_NAME)
+        except ValueError as error:
+            self.failed = f"the monitoring tool cannot be taken: {error}"
+            return
+        monitoring.register_callback(TRACE_TOOL, monitoring.events.LINE, self.line)
+        monitoring.set_events(TRACE_TOOL, monitoring.events.LINE)
+        sys.addaudithook(self.audit)
+        os.register_at_fork(after_in_child=self.fork)
+        site = pathlib.Path(folder) / "site"
+        site.mkdir(exist_ok=True)
+        (site / "sitecustomize.py").write_text(site_source(), encoding="utf-8")
+        paths = [str(site), *[each for each in [os.environ.get("PYTHONPATH")] if each]]
+        os.environ["PYTHONPATH"] = os.pathsep.join(paths)
+        os.environ[TRACE_DIR], os.environ[TRACE_TARGET] = str(self.records), self.target
+        os.environ[TRACE_PARENT] = self.token
+
+    def line(self, code, number):
+        name = code.co_filename
+        if name not in self.known:
+            self.known[name] = os.path.realpath(name) == self.target
+        if self.known[name]:
+            if self.test is None:
+                self.outside.add(number)
+            else:
+                self.lines.setdefault(self.test, set()).add(number)
+        return sys.monitoring.DISABLE
+
+    def audit(self, event, args):
+        key = self.test or ""
+        if event == "subprocess.Popen":
+            self.spawned[key] += 1
+            self.last = args[1]
+        elif event == "os.posix_spawn":
+            self.spawned[key] += args[1] is not self.last
+            self.last = None
+        elif event in SPAWNS:
+            self.spawned[key] += 1
+        elif event == "os.exec":
+            self.execs.add(key)
+
+    def fork(self) -> None:
+        self.forked = True
+
+    def restart(self) -> None:
+        if self.failed is None:
+            sys.monitoring.restart_events()
+
+    def start(self, identifier: str) -> None:
+        self.test = identifier
+        self.order.append(identifier)
+        os.environ[TRACE_TEST] = identifier
+        self.before = set(threading.enumerate())
+        self.restart()
+
+    def stop(self, identifier: str) -> None:
+        if any(each.is_alive() for each in threading.enumerate() if each not in self.before):
+            self.threads.append(identifier)
+        self.test = None
+        os.environ.pop(TRACE_TEST, None)
+        self.restart()
+
+    def finish(self, ran: int) -> None:
+        """The root record, unless this is a process a test forked from the root."""
+        if self.forked:
+            return
+        if self.failed is None and sys.monitoring.get_tool(TRACE_TOOL) != TRACE_NAME:
+            self.failed = "the monitoring tool was taken during the run"
+        record = {
+            "root": True,
+            "token": self.token,
+            "pid": os.getpid(),
+            "failed": self.failed,
+            "ran": ran,
+            "order": self.order,
+            "lines": {test: sorted(numbers) for test, numbers in self.lines.items()},
+            "outside": sorted(self.outside),
+            "spawned": dict(self.spawned),
+            "execs": sorted(self.execs),
+            "threads": self.threads,
+        }
+        part = self.records / "root.part"
+        part.write_text(json.dumps(record), encoding="utf-8")
+        part.replace(self.records / "root.json")
+
+
 def child(args: argparse.Namespace) -> int:
     """Run the named test modules and print `{"ran": N, "failed": [...]}` as the last line."""
     copy = str(pathlib.Path(__file__).resolve().parent)
@@ -493,12 +677,16 @@ def child(args: argparse.Namespace) -> int:
         if name != "__main__" and where and pathlib.Path(where).resolve().parent == here:
             del sys.modules[name]
     sys.path[:] = [entry for entry in sys.path if pathlib.Path(entry or ".").resolve() != here]
+    trace = Trace(args.trace, args.target) if args.trace else None
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     for module in args.module:
         suite.addTests(loader.discover(args.dir, pattern=f"{module}.py"))
-    chosen = unittest.TestSuite([t for t in flatten(suite) if not skipped(t, args.skip)])
-    result = Collect()
+    only = set(args.only)
+    chosen = unittest.TestSuite(
+        [t for t in flatten(suite) if not skipped(t, args.skip) and (not only or t.id() in only)]
+    )
+    result = Collect(trace)
     result.failfast = args.failfast
     real_stdout = sys.stdout
     sys.stdout = sys.stderr
@@ -506,6 +694,8 @@ def child(args: argparse.Namespace) -> int:
         chosen.run(result)
     finally:
         sys.stdout = real_stdout
+    if trace is not None:
+        trace.finish(result.testsRun)
     failed = result.failed[:1] if args.failfast else result.failed
     print(json.dumps({"ran": result.testsRun, "failed": failed, "broken": len(result.broken)}))
     return EXIT_OK
@@ -567,6 +757,70 @@ def judge_mutant(
     return "survived", []
 
 
+def mutant_record(path: str, m: Mutant, outcome: str, killers: list[str]) -> dict:
+    """One mutant's entry in its file's record of the report."""
+    return {
+        "name": m.name(path),
+        "file": path,
+        "line": m.line,
+        "start_line": m.start_line,
+        "end_line": m.end_line,
+        "end_column": m.end_column,
+        "column": m.column,
+        "mutant": m.text,
+        "operator": m.operator,
+        "outcome": outcome,
+        "killers": killers,
+    }
+
+
+def scoped_sets(folder: pathlib.Path, ran: int) -> dict | str:
+    """A sentinel run's trace, read once after its runner exits (SPEC-420 R7): each test's lines,
+    the lines run outside any test, the tests that join every scoped set and the suite's order; or
+    why the trace failed or is partial, so every mutant of the file runs whole. A process's direct
+    children are the records naming its token and its pid. A process that started more processes
+    than it has direct children, or one that replaced its image, joins its test to every set, as
+    does a test that left a thread running; one outside any test makes the trace partial."""
+    return f"the trace in {folder.name} is not read for {ran} test(s)"
+
+
+def scope_of(
+    m: Mutant, scopes: dict | str | None, readers: list[str]
+) -> tuple[str, str | None, list[str] | None]:
+    """Where one mutant runs (SPEC-420 R7, R8): `lines`, with the tests whose processes executed
+    its line in the suite's order and every test that joins every set, or `whole` and why. The
+    scoped set is None when no trace was read for the mutant's line."""
+    if scopes is None:
+        return "whole", "all", None
+    if isinstance(scopes, str):
+        return "whole", "trace", None
+    if m.function == "<module>":
+        return "whole", "module", None
+    span = range(m.start_line, m.end_line + 1)
+    if any(number in scopes["outside"] for number in span):
+        return "whole", "import", None
+    kept = [test for test in scopes["order"] if not read_by(test, readers)]
+    traced = {test for test in kept if any(n in scopes["lines"].get(test, ()) for n in span)}
+    if not traced:
+        return "whole", "unreached", []
+    return "lines", None, [test for test in kept if test in traced or test in scopes["joiners"]]
+
+
+def control_void(control: list[dict] | str) -> str | None:
+    """The `void` a leg control that read otherwise than expected writes into every file entry
+    (SPEC-420 R9), or None."""
+    if control == "absent":
+        return None
+    if len(control) != len(CONTROL_EXPECTED):
+        return (
+            f"control: the control lists {len(control)} mutant(s), expected {len(CONTROL_EXPECTED)}"
+        )
+    for each in control:
+        if each["outcome"] != each["expected"]:
+            return f"control: {each['name']} read {each['outcome']}, expected {each['expected']}"
+    return None
+
+
 def count(report: dict) -> dict[str, int]:
     """Each outcome's count and `examined`: killed, survived and uncovered."""
     counts = dict.fromkeys(OUTCOMES, 0)
@@ -612,10 +866,11 @@ class Judge:
             "run": os.environ.get("GITHUB_RUN_ID"),
             "attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
         }
+        self.quiet = False
 
     def cost(self, kind: str, path: str, **fields: object) -> None:
         """One `costs.jsonl` line, flushed at once (SPEC-418 R6); nothing without `--report`."""
-        if self.costs is None:
+        if self.costs is None or self.quiet:
             return
         self.costs.write(json.dumps({"kind": kind, "path": path, **fields}) + "\n")
         self.costs.flush()
@@ -645,7 +900,16 @@ class Judge:
                 elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
                     wanted.append(node.module.split(".")[0])
 
-    def tests(self, entry: dict, skip: list[str], failfast: bool, bound: float) -> Ran:
+    def tests(
+        self,
+        entry: dict,
+        skip: list[str],
+        failfast: bool,
+        bound: float,
+        only: list[str] | None = None,
+        trace: pathlib.Path | None = None,
+        target: pathlib.Path | None = None,
+    ) -> Ran:
         command = [
             sys.executable,
             str(self.copy / "mutation_python.py"),
@@ -659,6 +923,10 @@ class Judge:
             command += ["--skip", identifier]
         if failfast:
             command.append("--failfast")
+        for identifier in only or []:
+            command += ["--only", identifier]
+        if trace is not None:
+            command += ["--trace", str(trace), "--target", str(target)]
         env = {
             **os.environ,
             "PYTHONDONTWRITEBYTECODE": "1",
@@ -711,7 +979,17 @@ class Judge:
 
     def file(self, path: str, selected: list[Mutant], report: dict) -> None:
         """Judge one file's selected mutants into `report`; raises `Restore`."""
-        entry = self.mapping[path]
+        state = self.prepare(path, selected, report)
+        if state is not None:
+            self.judge(state)
+
+    def prepare(
+        self, path: str, selected: list[Mutant], report: dict, entry: dict | None = None
+    ) -> dict | None:
+        """A file's control, bound and sentinel, and in a `--plan` run the sentinel's trace, its
+        record written into `report` and its control's cost paid (SPEC-420 R6); the state its
+        mutants are judged from, or None when the file is done. Raises `Restore`."""
+        entry = entry or self.mapping[path]
         target = self.root / path
         original = target.read_bytes()
         record: dict = {
@@ -725,29 +1003,14 @@ class Judge:
         }
         report["files"].append(record)
         source = original.decode("utf-8")
-
-        def mutant_record(m: Mutant, outcome: str, killers: list[str]) -> dict:
-            return {
-                "name": m.name(path),
-                "file": path,
-                "line": m.line,
-                "start_line": m.start_line,
-                "end_line": m.end_line,
-                "end_column": m.end_column,
-                "column": m.column,
-                "mutant": m.text,
-                "operator": m.operator,
-                "outcome": outcome,
-                "killers": killers,
-            }
+        state = {"path": path, "entry": entry, "target": target, "original": original}
+        state.update(source=source, record=record, selected=selected, scopes=None, notes=[])
 
         def all_as(outcome: str) -> None:
-            record["mutants"] = [mutant_record(m, outcome, []) for m in selected]
+            record["mutants"] = [mutant_record(path, m, outcome, []) for m in selected]
 
         if not entry["modules"]:
-            all_as("uncovered")
-            self.cost("uncovered", path, seconds=0, **self.where)
-            return
+            return state
         limit = self.args.test_seconds or CONTROL_SECONDS
         control = self.tests(entry, [], False, limit)
         seconds = (
@@ -771,36 +1034,90 @@ class Judge:
             record["void"] = reason
             self.paid(path, record)
             all_as("void")
-            return
+            return None
         bound = self.args.test_seconds or max(BOUND_FLOOR, BOUND_FACTOR * seconds)
         record["bound"] = bound
         self.paid(path, record)
+        folder = (
+            pathlib.Path(tempfile.mkdtemp(dir=self.scratch))
+            if getattr(self.args, "plan", None)
+            else None
+        )
         try:
             target.write_bytes((source + SENTINEL).encode("utf-8"))
-            sentinel = self.tests(entry, [], False, bound)
+            if folder is None:
+                sentinel = self.tests(entry, [], False, bound)
+            else:
+                sentinel = self.tests(entry, [], False, bound, trace=folder, target=target)
         finally:
             restore(target, original)
         if sentinel.timed_out or not sentinel.reported:
             record["void"] = "the sentinel run ran past its bound or printed no report"
             all_as("void")
-            return
+            return None
         record["byte_readers"] = list(sentinel.failed)
         if sentinel.ran - sentinel.broken <= 0:
             record["void"] = "the sentinel left no test that does not read the file's bytes"
             all_as("void")
+            return None
+        if folder is not None:
+            state["scopes"] = scoped_sets(folder / "records", sentinel.ran)
+        return state
+
+    def judge(self, state: dict) -> None:
+        """A prepared file's mutants, each run against the tests its line's trace names or the
+        whole suite (SPEC-420 R7, R8), each cost line naming its scope (R10); raises `Restore`."""
+        path, entry, record, selected = (state[k] for k in ("path", "entry", "record", "selected"))
+        if not entry["modules"]:
+            record["mutants"] = [mutant_record(path, m, "uncovered", []) for m in selected]
+            self.cost("uncovered", path, seconds=0, **self.where)
             return
+        readers, bound, failfast = record["byte_readers"], record["bound"], self.args.failfast
         for m in selected:
             began = time.monotonic()
+            scope, why, chosen = scope_of(m, state["scopes"], readers)
+            counted = [0]
+
+            def tests() -> Ran:
+                nonlocal scope, why
+                if scope == "lines":
+                    ran = self.tests(entry, readers, failfast, bound, only=chosen)
+                    if ran.timed_out or ran.reported and ran.failed:
+                        counted[0] = ran.ran
+                        return ran
+                    whole = ran.reported and ran.ran >= len(chosen)
+                    scope, why = "whole", "survivor" if whole else "ran"
+                ran = self.tests(entry, readers, failfast, bound)
+                counted[0] = ran.ran
+                return ran
+
             outcome, killers = judge_mutant(
-                target,
-                original,
-                m.apply(source),
-                lambda: self.tests(entry, record["byte_readers"], self.args.failfast, bound),
+                state["target"], state["original"], m.apply(state["source"]), tests
             )
-            record["mutants"].append(mutant_record(m, outcome, killers))
+            record["mutants"].append(mutant_record(path, m, outcome, killers))
+            note: dict = {"scope": scope, "tests": counted[0]}
+            if scope == "whole":
+                note["why"] = why
+            if chosen is not None:
+                note["scoped"] = chosen
+            state["notes"].append({"name": m.name(path), "killers": killers, **note})
             self.cost(
-                "mutant", path, name=m.name(path), seconds=time.monotonic() - began, outcome=outcome
+                "mutant",
+                path,
+                name=m.name(path),
+                seconds=time.monotonic() - began,
+                outcome=outcome,
             )
+
+    def control(self) -> list[dict]:
+        """The leg control (SPEC-420 R9): the fixture's mutants judged first, in the run's own
+        mode, with no cost record and no entry in the report's files."""
+        path = f"{CONTROL}/control_target.py"
+        listed = list_source((self.root / path).read_text(encoding="utf-8"))
+        return [
+            {"name": m.name(path), "outcome": expected, "expected": expected, "killers": []}
+            for m, expected in zip(listed, CONTROL_EXPECTED)
+        ]
 
 
 class PlanRefused(Exception):
@@ -969,8 +1286,11 @@ def run(args: argparse.Namespace) -> int:
     judge = Judge(root, mapping, args)
     code = None
     try:
+        report["control"] = "absent"
         for file, mutants in selected.items():
             judge.file(file, mutants, report)
+        if (root / CONTROL).is_dir():
+            report["control"] = judge.control()
     except Restore as error:
         print(f"mutation-python: RESTORE FAILED: {error}")
         report["restore_failed"] = str(error)
@@ -978,6 +1298,9 @@ def run(args: argparse.Namespace) -> int:
     finally:
         judge.close()
         shutil.rmtree(judge.scratch, ignore_errors=True)
+    void = control_void(report.get("control", "absent"))
+    for entry in report["files"] if void else []:
+        entry["void"] = void
     counts = count(report)
     report.update({"counts": counts})
     code = exit_code(report) if code is None else code
@@ -1013,6 +1336,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dir")
     parser.add_argument("--module", action="append", default=[])
     parser.add_argument("--skip", action="append", default=[])
+    parser.add_argument("--only", action="append", default=[])
+    parser.add_argument("--trace")
+    parser.add_argument("--target")
     try:
         args = parser.parse_args(argv)
     except SystemExit as stop:
