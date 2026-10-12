@@ -31,3 +31,40 @@ controls of `test_the_census_is_red_on_every_planted_site`, all on one cause, th
 script in the test of A1, `(REPO / WEB_SHARDS_SCRIPT).read_text(encoding='utf-8')`, which the
 register `NOT_WORKFLOW_READS` in `scripts/tests/test_ci_workflows.py` did not list, and the green
 commit cures all four by adding that one entry to the register.
+
+The reds were read in job 114893256663, `hygiene` over the red commit `0b34613d`: the thirteen
+tests the first fence names failed, each by its own `AssertionError` and none by an error, A8
+with 8 failures, A12 with 17 and A13 with 24, and the only other failures were the census and its
+three controls named above. Each red quotes its test's first `AssertionError` line as CI printed it,
+unittest's own `[N chars]` cuts included. CI runs the pull request's tip, whose workflow, script
+and tests are byte-identical to the green commit's, so each green is read in the checks over the
+tip.
+
+```red-first
+A1: red at 0b34613df1cb531c2a0ec52df3080f94c5785986: AssertionError: Lists differ: ['ci.yml has no mutation-web-shard job', "[696 chars]dge'] != [] (job 114893256663)
+A1: green at 8cbc25caa1d22593e66bb93d7433a55db3b4733b
+A2: red at 0b34613df1cb531c2a0ec52df3080f94c5785986: AssertionError: Lists differ: ['ci.yml has no mutation-web-shard job', "[696 chars]dge'] != [] (job 114893256663)
+A2: green at 8cbc25caa1d22593e66bb93d7433a55db3b4733b
+A3: red at 0b34613df1cb531c2a0ec52df3080f94c5785986: AssertionError: Lists differ: ['bas[150 chars]b', 'release', 'rust', 'web', 'web-engine', 'workflow-lint'] != ['bas[150 chars]b', 'mutation-web-shard', 'release', 'rust', '[31 chars]int'] (job 114893256663)
+A3: green at 8cbc25caa1d22593e66bb93d7433a55db3b4733b
+A4: red at 0b34613df1cb531c2a0ec52df3080f94c5785986: AssertionError: Lists differ: [] != ['${{ always() }}'] (job 114893256663)
+A4: green at 8cbc25caa1d22593e66bb93d7433a55db3b4733b
+A5: red at 0b34613df1cb531c2a0ec52df3080f94c5785986: AssertionError: Lists differ: [] != ['${{ always() }}'] (job 114893256663)
+A5: green at 8cbc25caa1d22593e66bb93d7433a55db3b4733b
+A6: red at 0b34613df1cb531c2a0ec52df3080f94c5785986: AssertionError: Lists differ: [[], [], []] != [['src/a.ts', 'src/f.ts'], ['src/b.ts', 'sr[46 chars]ts']] (job 114893256663)
+A6: green at 8cbc25caa1d22593e66bb93d7433a55db3b4733b
+A7: red at 0b34613df1cb531c2a0ec52df3080f94c5785986: AssertionError: Lists differ: [[], [], []] != [['src/w.ts', 'src/z.ts'], ['src/x.ts'], ['src/y.ts']] (job 114893256663)
+A7: green at 8cbc25caa1d22593e66bb93d7433a55db3b4733b
+A8: red at 0b34613df1cb531c2a0ec52df3080f94c5785986: AssertionError: Lists differ: [] != ['src/f00.ts', 'src/f01.ts', 'src/f02.ts',[513 chars].ts'] (job 114893256663)
+A8: green at 8cbc25caa1d22593e66bb93d7433a55db3b4733b
+A9: red at 0b34613df1cb531c2a0ec52df3080f94c5785986: AssertionError: Tuples differ: (0, '') != (0, 'web shards: shard 2 of 3 holds 0 file(s), 0 mutant(s)\n') (job 114893256663)
+A9: green at 8cbc25caa1d22593e66bb93d7433a55db3b4733b
+A10: red at 0b34613df1cb531c2a0ec52df3080f94c5785986: AssertionError: Tuples differ: (0, '') != (0, 'web shards: shard 0 of 3 holds 2 file(s), 45 mutant(s)\n') (job 114893256663)
+A10: green at 8cbc25caa1d22593e66bb93d7433a55db3b4733b
+A11: red at 0b34613df1cb531c2a0ec52df3080f94c5785986: AssertionError: Tuples differ: (0, '') != (0, 'web shards: counted 3 of 3 reports whole\[127 chars]n\n') (job 114893256663)
+A11: green at 8cbc25caa1d22593e66bb93d7433a55db3b4733b
+A12: red at 0b34613df1cb531c2a0ec52df3080f94c5785986: AssertionError: Tuples differ: (0, '') != (3, 'web shards: MISSING: mutation-web-sha[231 chars]n\n') (job 114893256663)
+A12: green at 8cbc25caa1d22593e66bb93d7433a55db3b4733b
+A13: red at 0b34613df1cb531c2a0ec52df3080f94c5785986: AssertionError: Tuples differ: (0, '') != (2, '') (job 114893256663)
+A13: green at 8cbc25caa1d22593e66bb93d7433a55db3b4733b
+```

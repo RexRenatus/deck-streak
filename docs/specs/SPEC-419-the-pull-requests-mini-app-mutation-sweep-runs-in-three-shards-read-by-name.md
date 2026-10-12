@@ -190,4 +190,19 @@ their outcome. Three readers of one plan, joined once, have no interleaving to m
 
 ## 9. Mutation rows
 
-Filled with the rows commit; each row's killer is named in `scripts/mutation-rows.d/S41900-S41999.json`.
+| row | behaviour | mutant | killer |
+|---|---|---|---|
+| S41900 | the sweep runs in exactly three shards | the matrix `[0, 1, 2]` to `[0]` | A1 |
+| S41901 | the matrix names every shard the deal fills | the matrix to `[0, 1]` | A1 |
+| S41902 | the matrix names no shard the deal lacks | the matrix to `[0, 1, 2, 3]` | A1 |
+| S41903 | each shard keeps the leg's bound | the shard job's `timeout-minutes` to 101 | A1 |
+| S41904 | a shard with no record reads VOID | the `MISSING` finding dropped, so the shard reads as holding nothing | A12 |
+| S41905 | a file goes onto the lightest shard | `min` to `max` in the deal | A6 |
+| S41906 | a shard sweeps its own deal only | the StrykerJS step's `MUTATE` read from the plan's files | A1 |
+| S41907 | an empty shard writes its record | the record written only when the shard holds mutants | A9 |
+
+Each row's anchor is unique in its file and byte-identical to the line the mutant replaces; its
+killer is the criterion's test, run by CI's `rows` job. The three rows on
+`scripts/web_mutation_shards.py` are killed by `scripts/tests/test_web_mutation_shards.py`; the
+five on `.github/workflows/ci.yml` by A1 in `scripts/tests/test_ci_workflows.py`, which runs only
+in CI.
