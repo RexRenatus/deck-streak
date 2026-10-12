@@ -942,6 +942,44 @@ class EachLegRunsItsPlannedNames(unittest.TestCase):
         )
         examined("cost records", records)
 
+    def test_a_sharded_legs_cost_records_name_their_shard_one_record_a_line(self):
+        """R6 under `--shard`: the plan deals all three of calc.py's names to leg 0 of 2, so the
+        leg writes four records, one a line; the control's names its shard, 0/2, beside the run
+        and attempt this test's environment fixes; and no mutant's seconds exceed the wall time
+        this test measured around the whole run."""
+        tree = Tree(self, {"calc": CALC})
+        plan = self.plan(tree, "plan.json", [CALC_NAMES, []])
+        began = time.monotonic()
+        with mock.patch.dict(os.environ, {"GITHUB_RUN_ID": "5151", "GITHUB_RUN_ATTEMPT": "3"}):
+            done, report, lines = self.leg(
+                tree, "--plan", str(plan), "--shard", "0/2", "--control-seconds", "20"
+            )
+        took = time.monotonic() - began
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(report["shard"], "0/2")
+        self.assertIsNotNone(lines, "no costs.jsonl beside the report")
+        self.assertEqual(len(lines), 4, lines)
+        records = [json.loads(line) for line in lines]
+        self.assertEqual(
+            records[0],
+            {
+                "kind": "control",
+                "path": "scripts/calc.py",
+                "ran": 1,
+                "failures": 0,
+                "seconds": 20.0,
+                "bound": 100.0,
+                "shard": "0/2",
+                "run": "5151",
+                "attempt": "3",
+            },
+        )
+        self.assertEqual([r["name"] for r in records[1:]], CALC_NAMES)
+        for record in records[1:]:
+            self.assertGreaterEqual(record["seconds"], 0)
+            self.assertLessEqual(record["seconds"], took)
+        examined("sharded cost records", records)
+
 
 def runner_module():
     """The runner's file loaded fresh, so a constant a row mutates in place is read as it stands."""
@@ -985,6 +1023,90 @@ class TheRunnersConstantsAreNamedWhole(unittest.TestCase):
                 }
             ),
         )
+
+
+def planned_name(line):
+    """The name the runner gives a.py's `+` to `-` mutant at `line`, column 5, in `f`."""
+    return f"a.py:{line}:5: replace + with - in f"
+
+
+class ThePlannedLegIsTheMultisetItsShardLists(unittest.TestCase):
+    """SPEC-418 R5 in process: `planned_leg` over mutants built here, so a name can be listed
+    twice and a plan holding an extra name alone can be read whole."""
+
+    def chosen(self, module, lines):
+        """One a.py mutant per entry of `lines`, named by `planned_name`; a repeated line is a
+        second mutant of the same name, told apart by its offsets."""
+        return [
+            (
+                "a.py",
+                module.Mutant(
+                    line=line,
+                    column=5,
+                    start_line=line,
+                    end_line=line,
+                    end_column=6,
+                    start=index,
+                    end=index + 1,
+                    old="+",
+                    new="-",
+                    operator="arithmetic",
+                    function="f",
+                ),
+            )
+            for index, line in enumerate(lines)
+        ]
+
+    def plan(self, *legs):
+        return {
+            "python": {
+                "count": len(legs),
+                "shards": [{"shard": k, "mutants": list(names)} for k, names in enumerate(legs)],
+            }
+        }
+
+    def refusal(self, module, plan, chosen):
+        """What `planned_leg` raises for leg 0 of `plan`'s count, or None when it returns."""
+        try:
+            module.planned_leg(plan, chosen, 0, plan["python"]["count"])
+        except Exception as raised:
+            return raised
+        return None
+
+    def test_the_plans_python_matrix_decides_the_leg_never_k_mod_n(self):
+        """The plan deals lines 1 and 2 to leg 0 and line 3 to leg 1, where `k::2` would deal
+        lines 1 and 3, then line 2."""
+        module = runner_module()
+        chosen = self.chosen(module, [1, 2, 3])
+        plan = self.plan([planned_name(1), planned_name(2)], [planned_name(3)])
+        legs = [module.planned_leg(plan, chosen, k, 2) for k in range(2)]
+        self.assertEqual(legs, [chosen[:2], chosen[2:]])
+        examined("planned legs", legs)
+
+    def test_a_plan_holding_one_extra_name_is_refused_naming_it_first_in_plan_order(self):
+        """Every listed name is dealt, and leg 1 also holds line 9, which the listing lacks: the
+        refusal counts 0 missing and 1 extra, and names line 9, the first extra in plan order."""
+        module = runner_module()
+        chosen = self.chosen(module, [1, 2])
+        plan = self.plan([planned_name(1)], [planned_name(2), planned_name(9)])
+        raised = self.refusal(module, plan, chosen)
+        self.assertIsInstance(raised, module.PlanRefused)
+        self.assertEqual(
+            str(raised),
+            "the plan's python legs do not partition the listing: 0 missing, 1 extra, first "
+            "a.py:9:5: replace + with - in f",
+        )
+        examined("refused plans", [plan])
+
+    def test_a_name_listed_twice_runs_twice_when_its_leg_deals_it_twice(self):
+        """Two mutants share line 4's name and the plan deals both copies to leg 0, so leg 0 runs
+        both and leg 1 runs line 5 alone."""
+        module = runner_module()
+        chosen = self.chosen(module, [4, 4, 5])
+        plan = self.plan([planned_name(4), planned_name(4)], [planned_name(5)])
+        legs = [module.planned_leg(plan, chosen, k, 2) for k in range(2)]
+        self.assertEqual(legs, [chosen[:2], chosen[2:]])
+        examined("planned legs", legs)
 
 
 if __name__ == "__main__":

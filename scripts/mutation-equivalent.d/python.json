@@ -8,6 +8,42 @@
       "evidence": "pathlib.Path('') == pathlib.Path('.') is True and both resolve to the working directory, so an empty sys.path entry is kept or dropped exactly as before.",
       "issue": "#340",
       "reached_by": "test_mutation_python_lister_kills.TheChildReportsWhatFailed.test_the_child_keeps_its_own_main_module_and_reports_a_pass"
+    },
+    {
+      "file": "scripts/mutation-verdict.py",
+      "mutant": "replace + with - in python_by_cost",
+      "anchor": "(2 + len(priced[path]))",
+      "reason": "The floor only chooses where the leg-count search starts, and a lower start only adds counts that cannot fit.",
+      "evidence": "Every leg that holds a priced file's mutants pays that file's control and sentinel, so any deal's total load is at least sum((2 + n) * price) over the priced files; every count below that sum over the leg bound makes python_deal return None, so the mutated start reaches the same first fitting count, the same deal and the same output.",
+      "issue": "#829",
+      "reached_by": "test_mutation_python_shard_binding.EachArmOfTheCostDealIsObserved.test_runs_that_fit_one_leg_share_it_and_the_search_stops_at_the_first_fit"
+    },
+    {
+      "file": "scripts/mutation-verdict.py",
+      "mutant": "replace 1 with 2 in python_by_cost",
+      "anchor": "len(runs) + 1)",
+      "reason": "The search never reaches its upper end, because a deal of one leg a run always fits first.",
+      "evidence": "Past `if not priced: return None` the runs list is non-empty; a run holds at most k = bound // price - 2 mutants, so (2 + k) * price is within the bound, and at len(runs) legs the heaviest-first deal puts each run on an empty leg; the loop breaks at a count of at most len(runs), so the extra count is never tried.",
+      "issue": "#829",
+      "reached_by": "test_mutation_python_shard_binding.EachArmOfTheCostDealIsObserved.test_runs_that_fit_one_leg_share_it_and_the_search_stops_at_the_first_fit"
+    },
+    {
+      "file": "scripts/mutation-verdict.py",
+      "mutant": "replace 0 with 1 in prices",
+      "anchor": "max(controls[name], default=0)",
+      "reason": "This default applies only to a file with no control record, and the outer max(1, ...) clamp already lifts it to 1.",
+      "evidence": "The price is max(1, ceil(max(control, mean))): a mean m at or below 1 gives 1 with either default and a mean above 1 gives ceil(m) with either, so the printed price, its sources, the counts and the exit code are unchanged.",
+      "issue": "#829",
+      "reached_by": "test_mutation_python_shard_binding.EachArmOfTheCostDealIsObserved.test_the_prices_verb_reads_past_a_blank_and_a_torn_line_and_averages_mutants"
+    },
+    {
+      "file": "scripts/mutation-verdict.py",
+      "mutant": "replace 0 with 1 in prices",
+      "anchor": "if mutants[name] else 0",
+      "reason": "The mean's default applies only to a file with no mutant record, and the outer max(1, ...) clamp already lifts it to 1.",
+      "evidence": "Such a file has a control c, and max(1, ceil(max(c, 0))) equals max(1, ceil(max(c, 1))) for every c: c at or below 1 gives 1 both ways and c above 1 gives ceil(c); nothing else reads the mean.",
+      "issue": "#829",
+      "reached_by": "test_mutation_python_shard_binding.EachArmOfTheCostDealIsObserved.test_the_prices_verb_reads_past_a_blank_and_a_torn_line_and_averages_mutants"
     }
   ]
 }
