@@ -270,3 +270,26 @@ listed still read 1 shard, 21 read 2 and 68 read 4. Only its last case, 32 x 20 
 refused, where the table above states 32. This is not a retirement in SPEC-056 R14's form, because
 A12's test stays: R14 retires a criterion whose test is removed, and this one keeps its test with
 every case.
+
+## Amendment: the rows job counts at its most legs (SPEC-417)
+
+Insert-only; every earlier byte is kept. R3's rule is unchanged: the pull request's ceiling for
+Rust legs is the run's job budget, 256, less the most jobs every other `ci.yml` job can generate.
+SPEC-417 deals `mutation-rows` into at most 17 legs, so R3 now counts it at 17, and the value R3
+derives moves (SPEC-417 R11, R14; ADR-431):
+
+| SPEC-362 pin | old | new | derivation |
+|---|---|---|---|
+| R3's value, `LEG_CEILING["ci"]` (`scripts/mutation-verdict.py:879`) | 209 | 193 | at the base, 256 less 47: 13 single jobs, the rows job among them, the engine's 2 slices and 32 Python legs; after it, 256 less 63: 12 single jobs, the 2 slices, 32 Python legs and 17 rows legs |
+| A1, the release's listing at #691 within the `ci` ceiling | 200 legs, within 209 | refused whole by name by the pull request's plan, and sized at 200 legs within the battery's 234 (SPEC-417 R14) | 200 is more than 193 |
+| section 6's risk, the whole tree's 200 legs of a ceiling of 209 | 9 legs to spare | 7 legs past the pull request's 193, refused by name; #822's 192 fit with 1 to spare | 193 less 192 |
+
+The value 193 was derived at this delivery's cut, `dev` 8870392, after the Python plan's refusal
+(SPEC-415) landed, from the 63 jobs every other `ci.yml` job can generate there: 12 single jobs,
+the engine's 2 slices, 32 Python legs (`PYTHON_MAX_SHARDS`) and 17 rows legs (`ROWS_MAX_LEGS`).
+No bound rises: the ceiling falls by 16, and no other bound moves.
+
+A1 keeps its id, its command and its test name, `test_the_release_listing_fits_one_run`. Its
+listing is unchanged; it now reads that listing refused whole by the pull request's plan, by
+name, and sized at 200 legs within the battery's ceiling. This is a tightening, not a retirement
+in SPEC-056 R14's form, because A1's test stays: R14 retires a criterion whose test is removed.

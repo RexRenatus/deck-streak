@@ -146,11 +146,17 @@ class Fixture:
         git(self.root, "commit", "-q", "-m", message)
         return git(self.root, "rev-parse", "HEAD").strip()
 
-    def run(self, *args, path=None):
-        env = {k: v for k, v in os.environ.items() if k != "CARGO_TARGET_DIR"}
+    def run(self, *args, path=None, output=None):
+        # A job's own `GITHUB_OUTPUT` never reaches the runner: a test that reads the step's
+        # outputs names the file they go to (SPEC-417 A3).
+        env = {
+            k: v for k, v in os.environ.items() if k not in ("CARGO_TARGET_DIR", "GITHUB_OUTPUT")
+        }
         env["PYTHONDONTWRITEBYTECODE"] = "1"
         if path is not None:
             env["PATH"] = path
+        if output is not None:
+            env["GITHUB_OUTPUT"] = str(output)
         return subprocess.run(
             [sys.executable, str(RUNNER), *args, "--root", str(self.root)],
             capture_output=True,
@@ -1022,6 +1028,197 @@ class TheBinKillerFollowsRustcAndRefusesAShadow(unittest.TestCase):
             done.stdout,
         )
         self.assertRegex(done.stdout, r"(?m)^examined 1 row")
+
+
+#: The rows legs' population: one row past the 2686 that 17 legs of 158 rows hold (SPEC-417 R1,
+#: R2, R4). Every row's find is absent from the target, so no row of these tests runs a killer.
+LEG_ROWS = 2687
+LEG_KILLER = "test_fixmod.Double.test_two_doubles_to_four"
+LEGS_LINE = re.compile(r"(?m)^legs: (\d+) leg\(s\) for (\d+) row\(s\)")
+
+
+def unproved_row(identifier):
+    """A row whose find the target lacks: its proof is VOID and its killer never runs."""
+    return ("SCRIPT_MUTATIONS", script_row(identifier, "x * 9", "x * 8", LEG_KILLER))
+
+
+def outputs(path):
+    """The step outputs a run appended to `path`, as {name: value}; none when it wrote none."""
+    if not path.is_file():
+        return {}
+    lines = path.read_text(encoding="utf-8").splitlines()
+    return dict(line.split("=", 1) for line in lines if line)
+
+
+class TheRowsLegsFitTheirBound(unittest.TestCase):
+    """SPEC-417 A1 to A3 (R1 to R4): `legs` deals the plan's rows into the fewest legs whose
+    largest is projected within half of the rows job's bound, and refuses a count past the most
+    legs by name, never capping it."""
+
+    def setUp(self):
+        self.ids = [f"S00000-L{n}" for n in range(LEG_ROWS)]
+        self.fixture = Fixture(self, [unproved_row(identifier) for identifier in self.ids])
+
+    def legs(self, count, output=None):
+        plan = self.fixture.write("plan.json", json.dumps({"rows": self.ids[:count]}))
+        return self.fixture.run("legs", "--rows-from", str(plan), output=output)
+
+    def test_the_fewest_legs_whose_largest_leg_fits_the_bound(self):
+        cases = [
+            (0, 1),
+            (1, 1),
+            (158, 1),
+            (159, 2),
+            (317, 3),
+            (2512, 16),
+            (2528, 16),
+            (2529, 17),
+            (2686, 17),
+        ]
+        for count, want in examined("row counts", cases):
+            done = self.legs(count)
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            line = LEGS_LINE.search(done.stdout)
+            self.assertIsNotNone(line, done.stdout + done.stderr)
+            self.assertEqual(int(line.group(2)), count, done.stdout)
+            found = int(line.group(1))
+            self.assertEqual(found, want, f"{count} rows read {found}, want {want}")
+
+    def test_a_population_past_the_most_legs_is_refused_by_name(self):
+        sink = self.fixture.write("refused-output", "")
+        done = self.legs(LEG_ROWS, output=sink)
+        self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+        self.assertRegex(done.stdout, r"(?m)^legs: REFUSED: 2687 row\(s\) need more than 17 legs\b")
+        self.assertIsNone(LEGS_LINE.search(done.stdout), done.stdout)
+        self.assertEqual(outputs(sink), {}, "a refused count wrote outputs")
+
+    def test_the_legs_reach_the_workflow_as_a_count_and_a_matrix(self):
+        sink = self.fixture.write("output", "")
+        done = self.legs(2512, output=sink)
+        written = outputs(sink)
+        self.assertEqual(written.get("rows_legs"), "16", done.stdout + done.stderr)
+        self.assertEqual(json.loads(written.get("rows_matrix", "null")), list(range(16)))
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn(
+            "legs: 16 leg(s) for 2512 row(s), the largest 157 row(s), projected at 2669 s",
+            done.stdout,
+        )
+
+
+class TheRunnerProvesOnlyItsLegsRows(unittest.TestCase):
+    """SPEC-417 A4 and A5 (R5, R6): `prove --leg k/n` proves the chosen rows `[k::n]` in the plan's
+    order, and a leg that is not `k/n` with `0 <= k < n` is refused before any row runs."""
+
+    IDS = ("S00001-FIRST", "S00002-SECOND", "S00003-THIRD")
+
+    def fixture(self):
+        fixture = Fixture(self, [unproved_row(identifier) for identifier in self.IDS])
+        plan = fixture.write("plan.json", json.dumps({"rows": list(self.IDS)}))
+        return fixture, plan
+
+    def test_each_leg_proves_its_dealt_rows_and_the_legs_cover_the_plan_once(self):
+        fixture, plan = self.fixture()
+        first, second, third = self.IDS
+        proved = []
+        for leg, want in examined("legs", [("0/2", [first, third]), ("1/2", [second])]):
+            done = fixture.run("prove", "--rows-from", str(plan), f"--leg={leg}")
+            found = list(verdicts(done))
+            self.assertEqual(found, want, f"leg {leg}: {done.stdout}{done.stderr}")
+            self.assertRegex(done.stdout, rf"(?m)^examined {len(want)}$", leg)
+            proved += found
+        self.assertEqual(sorted(proved), sorted(self.IDS), "the legs do not cover the plan once")
+        self.assertEqual(fixture.observed(), [], "a killer ran for a row whose find is absent")
+
+    def test_a_malformed_leg_is_refused_before_any_row_runs(self):
+        fixture, plan = self.fixture()
+        for spelling in examined("malformed legs", ["2/2", "0/0", "-1/2", "1"]):
+            # The `=` form, so the option parser never reads `-1/2` as an option of its own.
+            done = fixture.run("prove", "--rows-from", str(plan), f"--leg={spelling}")
+            out = done.stdout + done.stderr
+            self.assertEqual(done.returncode, 2, f"--leg {spelling}: {out}")
+            self.assertEqual(verdicts(done), {}, f"--leg {spelling} proved a row: {out}")
+            self.assertIn(f"--leg {spelling} ", out)
+
+
+class TheMergeKeepsEveryLeg(unittest.TestCase):
+    """SPEC-417 A6 and A7 (R7, R8): `merge` writes every present leg's rows in leg order and names
+    each absent leg, and refuses, writing nothing, a row in two legs or in a leg its deal did not
+    give it."""
+
+    IDS = tuple(f"S0000{n}-ROW{n}" for n in range(6))
+
+    def setUp(self):
+        self.fixture = Fixture(self, [unproved_row(identifier) for identifier in self.IDS])
+        self.plan = self.fixture.write("plan.json", json.dumps({"rows": list(self.IDS)}))
+
+    def plant(self, name, legs):
+        """Each leg's report as the leg writes it, under `name/`: {leg: [its entries]}."""
+        planted = {}
+        for k, ids in legs.items():
+            planted[k] = [
+                {"id": identifier, "verdict": "KILLED", "reason": f"planted in leg {k}"}
+                for identifier in ids
+            ]
+            self.fixture.write(f"{name}/rows-leg-{k}.json", json.dumps(planted[k]))
+        return planted
+
+    def merge(self, name):
+        report = self.fixture.root / f"merged-{name}.json"
+        done = self.fixture.run(
+            "merge",
+            "--rows-from",
+            str(self.plan),
+            "--legs",
+            "3",
+            "--from",
+            str(self.fixture.root / name),
+            "--report",
+            str(report),
+        )
+        merged = json.loads(report.read_text(encoding="utf-8")) if report.is_file() else None
+        return done, merged
+
+    def test_the_merge_writes_every_legs_rows_and_names_a_missing_leg(self):
+        r = self.IDS
+        deal = {0: [r[0], r[3]], 1: [r[1], r[4]], 2: [r[2], r[5]]}
+        every = self.plant("every", deal)
+        done, merged = self.merge("every")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(merged, every[0] + every[1] + every[2], done.stdout)
+        gap = self.plant("gap", {0: deal[0], 2: deal[2]})
+        done, merged = self.merge("gap")
+        out = done.stdout + done.stderr
+        self.assertEqual(done.returncode, 0, out)
+        self.assertEqual(merged, gap[0] + gap[2], out)
+        lines = done.stdout.splitlines()
+        absent = [n for n, line in enumerate(lines) if "leg 1 " in line and "absent" in line]
+        self.assertEqual(len(absent), 1, f"one line names leg 1 absent: {out}")
+        counted = [n for n, line in enumerate(lines) if EXAMINED.match(line)]
+        self.assertEqual(len(counted), 1, out)
+        self.assertLess(absent[0], counted[0], out)
+        self.assertEqual(lines[counted[0]], "examined 4", out)
+
+    def test_the_merge_refuses_a_row_the_deal_did_not_give_its_leg(self):
+        r = self.IDS
+        cases = [
+            (
+                "twice",
+                {0: [r[0], r[3]], 1: [r[1], r[4], r[0]], 2: [r[2], r[5]]},
+                f"{r[0]} is held by two legs",
+            ),
+            (
+                "misdealt",
+                {0: [r[0], r[1]], 1: [r[3], r[4]], 2: [r[2], r[5]]},
+                f"leg 0 holds {r[1]}, which its deal did not give it",
+            ),
+        ]
+        for name, legs, refusal in examined("planted deals", cases):
+            self.plant(name, legs)
+            done, merged = self.merge(name)
+            out = done.stdout + done.stderr
+            self.assertEqual(done.returncode, 2, f"{name}: {out}")
+            self.assertIn(refusal, out, name)
+            self.assertIsNone(merged, f"{name}: a refused merge wrote a report")
 
 
 if __name__ == "__main__":

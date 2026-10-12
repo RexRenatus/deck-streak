@@ -102,6 +102,15 @@ PARSE_SECONDS = 60
 #: A shebang that names a shell, directly or after `env`: group 1 is `sh`, `bash` or `dash`.
 SHELL_SHEBANG = re.compile(r"^#!\s*(?:\S*/)?(?:env\s+(?:-\S+\s+)*)?(?:\S*/)?(sh|bash|dash)(?=\s|$)")
 TEST_SECONDS = 900
+#: A row's price in a rows leg: the measured mean of one row's proof, rounded up to the second
+#: (SPEC-417 R4, ADR-431 D2).
+ROW_SECONDS = 17
+#: A rows leg's projection may reach half of `mutation-rows`' `timeout-minutes` of 90, so a slower
+#: runner or a costlier row than measured does not cut it (SPEC-417 R10).
+ROWS_BOUND_SECONDS = 2700
+#: The most legs the rows are dealt into; the run's ceiling for Rust legs counts the rows job at
+#: this many (SPEC-417 R11, ADR-431 D2).
+ROWS_MAX_LEGS = 17
 
 EXIT_OK, EXIT_SURVIVED, EXIT_REFUSED, EXIT_VOID, EXIT_RESTORE = 0, 1, 2, 3, 4
 
@@ -1222,6 +1231,33 @@ def prove(root: pathlib.Path, args: argparse.Namespace) -> int:
     return EXIT_VOID if void else EXIT_OK
 
 
+# --------------------------------------------------------------------------- the legs
+
+
+def legs(root: pathlib.Path, args: argparse.Namespace) -> int:
+    """The rows' legs, as the red commit answers them: every count in one leg (SPEC-417 R1)."""
+    try:
+        rows = chosen(rows_of(load_tree(root)), args)
+    except (OSError, json.JSONDecodeError, PopulationRefused, UnresolvableTarget) as e:
+        print(f"legs: REFUSED: {e}")
+        return EXIT_REFUSED
+    print(f"legs: 1 leg(s) for {len(rows)} row(s)")
+    return EXIT_OK
+
+
+def merge(args: argparse.Namespace) -> int:
+    """The legs' reports in one, as the red commit merges them: every present report, in leg
+    order (SPEC-417 R7)."""
+    report = []
+    for k in range(args.legs or 0):
+        path = pathlib.Path(args.source) / f"rows-leg-{k}.json"
+        if path.is_file():
+            report += json.loads(path.read_text(encoding="utf-8"))
+    pathlib.Path(args.report).write_text(json.dumps(report, indent=2) + "\n", "utf-8")
+    print(f"examined {len(report)}")
+    return EXIT_OK
+
+
 # --------------------------------------------------------------------------- retirement
 
 
@@ -1275,7 +1311,9 @@ def end_on_sigterm() -> None:
 def main(argv: list[str] | None = None) -> int:
     end_on_sigterm()
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("verb", choices=["count", "ids", "census", "prove", "retired"])
+    parser.add_argument(
+        "verb", choices=["count", "ids", "census", "prove", "retired", "legs", "merge"]
+    )
     parser.add_argument("--root", default=str(pathlib.Path(__file__).resolve().parents[1]))
     parser.add_argument("--all", action="store_true", help="prove every row")
     parser.add_argument("--row", action="append", default=[], help="prove this row id")
@@ -1283,6 +1321,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--rows-from", help="prove the rows a mutation-verdict plan selected")
     parser.add_argument("--report", help="write each row's proof here, as JSON")
     parser.add_argument("--base", help="retired: the revision to compare the rows against")
+    parser.add_argument("--leg", help="prove: only the rows leg k of n deals, as k/n")
+    parser.add_argument("--legs", type=int, help="merge: how many legs the plan dealt")
+    parser.add_argument("--from", dest="source", help="merge: the directory of the legs' reports")
     args = parser.parse_args(argv)
     root = pathlib.Path(args.root).resolve()
     if args.verb in ("count", "ids"):
@@ -1308,6 +1349,14 @@ def main(argv: list[str] | None = None) -> int:
         except ToolMissing as refusal:
             print(f"prove: REFUSED: {refusal}")
             return EXIT_REFUSED
+    if args.verb == "legs":
+        if not args.rows_from:
+            parser.error("legs needs --rows-from")
+        return legs(root, args)
+    if args.verb == "merge":
+        if not (args.rows_from and args.legs is not None and args.source and args.report):
+            parser.error("merge needs --rows-from, --legs, --from and --report")
+        return merge(args)
     if not args.base:
         parser.error("retired needs --base")
     try:
