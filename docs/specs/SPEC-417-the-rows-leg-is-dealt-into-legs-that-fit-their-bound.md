@@ -150,6 +150,7 @@ delivery.
 | `scripts/mutation_rows.py` | CI scripts | changed: three constants, the `legs` and `merge` verbs, `prove --leg` |
 | `scripts/mutation-verdict.py` | CI scripts | changed: `LEG_CEILING["ci"]`, 209 to 193, and its comment's count of other `ci.yml` jobs, 47 to 63 |
 | `scripts/tests/test_mutation_rows.py` | CI tests | changed: A1 to A7 |
+| `scripts/tests/test_mutation_rows_group.py` | CI tests | changed: its driver's `prove` stub takes the `leg` argument that `main` now passes (no assertion changed) |
 | `scripts/tests/test_mutation_workflows.py` | CI tests | changed: A8 and A9 |
 | `scripts/tests/test_dispatch_shards.py` | CI tests | changed: `generated()` counts the rows axis; the ceiling literal (A10); the release, refusal, whole-tree and headroom pins (A12, R14) |
 | `scripts/tests/test_verdict_download.py` | CI tests | changed: the rows legs' artifacts in its model, and its two rows tests (A11) |
