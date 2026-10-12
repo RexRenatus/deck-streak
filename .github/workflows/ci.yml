@@ -731,11 +731,19 @@ jobs:
           exit "$status"
 
   # StrykerJS over every web production file the diff changes, whole, so a survivor already on a
-  # touched file is the pull request's own (SPEC-039 R3, ADR-057 D3). It restores the pnpm store
-  # and saves none.
-  mutation-web:
+  # touched file is the pull request's own (SPEC-039 R3, ADR-057 D3), dealt into three shards
+  # (SPEC-419, ADR-433). Each shard plans as the leg always has, asks StrykerJS's own mutation
+  # server how many mutants each planned file holds, takes its share of the files dealt whole by
+  # that count, largest first onto the lightest shard, and runs StrykerJS over its share. It keeps
+  # its record and its report under its own index whatever its outcome, and one shard's failure
+  # cancels no other. It restores the pnpm store and saves none.
+  mutation-web-shard:
     runs-on: ubuntu-24.04
     timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -773,16 +781,65 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm --dir web/app exec paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations --silent
           pnpm --dir web/app exec svelte-kit sync
-      - name: StrykerJS over each changed file, whole (the verdict reads its report)
-        if: ${{ steps.plan.outputs.web == 'true' }}
+      # A plan that names no web file deals every shard an explicit empty record and asks nothing.
+      - name: this shard's deal, by StrykerJS's own count of each planned file's mutants
+        id: deal
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: python3 scripts/web_mutation_shards.py deal --plan "$RUNNER_TEMP/mutation/plan.json" --shard "$SHARD" --out "$RUNNER_TEMP/shards" --app web/app --node node
+      - name: StrykerJS over this shard's files, whole (the verdict job reads its report)
+        if: ${{ steps.deal.outputs.run == 'true' }}
         working-directory: web/app
         env:
-          MUTATE: ${{ steps.plan.outputs.mutate }}
+          MUTATE: ${{ steps.deal.outputs.mutate }}
+          SHARD: ${{ matrix.shard }}
         run: |
+          out="$RUNNER_TEMP/shards/mutation-web-shard-$SHARD"
           rc=0
           pnpm exec stryker run --mutate "$MUTATE" || rc=$?
-          cp -r reports/mutation "$RUNNER_TEMP/mutation/stryker" || true
+          cp reports/mutation/mutation.json "$out/mutation.json" || true
+          echo "$rc" > "$out/stryker.exit"
           echo "StrykerJS exited $rc"
+      - name: keep this shard's record and report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-web-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/shards/
+          if-no-files-found: warn
+
+  # The web sweep's verdict (SPEC-419 R6, R7): one job of the leg's own name, not a matrix, so the
+  # check that reports it still reports under that name. It runs whatever the shards returned,
+  # reads every shard's record and report by name, and judges their union as it judged one report;
+  # a missing, cut, partial, foreign or misdealt shard reads VOID by name and writes no union.
+  mutation-web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    needs: [mutation-web-shard]
+    if: ${{ always() }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: the plan (the event's case, the diff's classes, the web files it changes)
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          SUBJECT: ${{ github.event.head_commit.message }}
+        run: python3 scripts/mutation-verdict.py plan --base HEAD^1 --head HEAD --out "$RUNNER_TEMP/mutation" --event "$EVENT" --base-ref "$BASE_REF" --subject "$SUBJECT"
+      # Each shard's artifact holds its own directory named by its index, so merging lays one shard
+      # and three at the same paths; a shard that kept nothing is named by the union, not here.
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: mutation-web-shard-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/shards
+      - name: every shard read by name, united into the one report the verdict reads
+        env:
+          RESULT: ${{ needs.mutation-web-shard.result }}
+        run: python3 scripts/web_mutation_shards.py union --plan "$RUNNER_TEMP/mutation/plan.json" --reports "$RUNNER_TEMP/shards" --result "$RESULT" --out "$RUNNER_TEMP/mutation/stryker/mutation.json"
       - name: the verdict, from Stryker's own report (the plan names a not-applicable case)
         run: python3 scripts/mutation-verdict.py judge --plan "$RUNNER_TEMP/mutation/plan.json" --class web --stryker "$RUNNER_TEMP/mutation/stryker/mutation.json"
       - name: keep the plan and the report
@@ -907,7 +964,7 @@ jobs:
   ci:
     name: ${{ github.event_name == 'pull_request' && 'ci' || 'ci (push)' }}
     if: ${{ always() }}
-    needs: [rust, engine, release, web, card-sandbox, hygiene, mutation-plan, mutation-rust, mutation-python, mutation-rows, mutation-verdict, mutation-web, web-engine, workflow-lint, base-is-dev]
+    needs: [rust, engine, release, web, card-sandbox, hygiene, mutation-plan, mutation-rust, mutation-python, mutation-rows, mutation-verdict, mutation-web-shard, mutation-web, web-engine, workflow-lint, base-is-dev]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

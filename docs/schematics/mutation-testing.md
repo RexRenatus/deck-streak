@@ -505,3 +505,47 @@ by the item named beside it after that.
 | `LEG_CEILING` | `scripts/mutation-verdict.py:879` |
 | `judge_rows`: a selected row with no proof is VOID | `scripts/mutation-verdict.py:1195` |
 | the rows that pin each new constant, verb and step | `scripts/mutation-rows.d/S41700-S41799.json` |
+
+## 10. The pull request's web sweep in three shards, read by name (SPEC-419, ADR-433)
+
+Kind: data flow. Read at DeckStreak `dev` e64a778 (`.github/workflows/ci.yml:736-794`, the one
+`mutation-web` job before this change; `scripts/mutation-verdict.py:1993-2051`, `judge_web`, which
+reads only the report's `files` and is unchanged). Decided by ADR-433; built by SPEC-419 (rows
+band S41900-S41999). It supersedes the `mutation-web` subgraph of section 1: names are the jobs,
+artifacts and files the workflow and `scripts/web_mutation_shards.py` write.
+
+### 10.1 Before: one job, cut at its bound
+
+```mermaid
+flowchart TD
+  plan1["job mutation-web, one job<br/>timeout-minutes: 100<br/>mutation-verdict.py plan"] --> run1["stryker run --mutate every changed web file"]
+  run1 --> fits{"done within 100 minutes,<br/>upload included?"}
+  fits -->|"yes"| report1["reports/mutation/mutation.json"]
+  fits -->|"no: the job is cut"| cut1["the job reads cancelled<br/>even when StrykerJS finished"]
+  report1 --> judge1["mutation-verdict.py judge --class web"]
+```
+
+### 10.2 After: three shards dealt by StrykerJS's own count, one job reads them by name
+
+```mermaid
+flowchart TD
+  shard["job mutation-web-shard, matrix shard k = 0, 1, 2<br/>timeout-minutes: 100, fail-fast: false"] --> planS["mutation-verdict.py plan<br/>stryker_mutate: the changed web files"]
+  planS --> count["web_mutation_shards.py deal --shard k<br/>stryker serve stdio: configure, discover<br/>each planned file's mutant count"]
+  count -->|"the count fails"| novoid["VOID, no shard.json written"]
+  count --> deal["whole files, largest count first,<br/>each onto the lightest shard;<br/>ties by path, then the lowest index"]
+  deal --> record["shard.json: counts, the whole deal,<br/>this shard's files and mutants, empty"]
+  record -->|"mutants above 0"| sweep["stryker run --mutate this shard's files<br/>stryker.exit and mutation.json"]
+  record -->|"no mutant: an explicit empty record"| keep["artifact mutation-web-shard-k<br/>uploaded if: always()"]
+  sweep --> keep
+  keep -->|"needs: every shard has ended"| verdictjob["job mutation-web, one job, if: always()<br/>timeout-minutes: 100<br/>downloads mutation-web-shard-*"]
+  verdictjob --> union["web_mutation_shards.py union<br/>reads mutation-web-shard-0, -1 and -2 by name"]
+  union --> whole{"every record present and its shard's,<br/>its files the deal of its counts,<br/>every dealt mutant in its report,<br/>every planned file in one shard,<br/>the shards' result success?"}
+  whole -->|"no"| void2["VOID by name, exit 3<br/>no union written"]
+  whole -->|"yes"| merged["the shards' files merged<br/>stryker/mutation.json"]
+  merged --> judge2["mutation-verdict.py judge --class web, unchanged"]
+```
+
+A shard cut at its bound reads `cancelled`, so the union reads VOID by name and judges no mutant;
+a shard the deal gave nothing still writes and uploads its record, so a missing record is always a
+defect, never an empty shard. The shards share no written object: each writes its own directory
+and artifact, and the verdict's job reads them only after every shard has ended.

@@ -303,3 +303,23 @@ mutants by cost within that bound and prints a joint line: its legs against 225,
 Rust, and its projected runner-minutes against 35700. `LEG_CEILING` stays
 `{"ci": 193, "battery": 234}`, and the count rule of 20 listed mutants a leg stays the rule for
 every unpriced file.
+
+## Amendment: the Mini App sweep's three shard legs lower the pull request ceiling (SPEC-419)
+
+Insert-only; every earlier byte is kept. R3's rule is unchanged: the pull request's ceiling for
+Rust legs is the run's job budget, 256, less the most jobs every other `ci.yml` job can generate.
+SPEC-419 deals the Mini App sweep into three `mutation-web-shard` legs, so R3 now counts 66 other
+jobs in place of 63, and the value R3 derives moves (SPEC-419, ADR-433):
+
+| SPEC-362 pin | old | new | derivation |
+|---|---|---|---|
+| R3's value, `LEG_CEILING["ci"]` (`scripts/mutation-verdict.py:887`) | 193 | 190 | after SPEC-417, 256 less 63; after SPEC-419, 256 less 66: the 3 web shard legs join the 12 single jobs, the 2 slices, 32 Python legs and 17 rows legs |
+| the joint line's share of legs, 32 Python and the Rust ceiling | 225 | 222 | 32 plus 190 |
+| the joint line's runner-minutes, `(32 x 1800 + ceiling x 10800) // 60` | 35700 | 35160 | 32 x 1800 + 190 x 10800 |
+| the refused pull request listing of ingest mutants of 126 s | 13125, projected at 1653750 s | 12921, projected at 1628046 s | 190 legs of 68 mutants hold 12920; one more is refused |
+
+The battery's ceiling of 234 and the Python share of 32 do not move. The ceiling falls by 3, and
+a pull request listing past 190 legs is refused whole by name, never capped. The last pull
+request run recorded as planned, #822's release run at 192 legs, was planned under the ceiling of
+209. `fewest_shards` refuses a listing past the ceiling and never deals fewer, longer legs, so 190
+lengthens no leg.

@@ -279,12 +279,12 @@ class TheReleaseFitsOneRun(unittest.TestCase):
             entry for name, count in RELEASE_691 for entry in entries(f"deck-streak-{name}", count)
         ]
         self.assertEqual(len(examined("release mutants", listing)), 8367)
-        # The pull request's run counts the rows job at its most legs, so its ceiling is 193 and
+        # The pull request's run counts the rows job at its most legs, so its ceiling is 190 and
         # #691's 200 legs no longer fit it: its plan refuses the listing whole, by name, and the
         # battery's ceiling of 234 still sizes it at 200 legs within the bound (SPEC-417 R14).
         code, out, planned = plan_shards(listing)
         self.assertEqual(code, 1, out)
-        self.assertIn("need more than 193 legs", out)
+        self.assertIn("need more than 190 legs", out)
         self.assertNotIn("shards", planned)
         code, out, written = size(listing)
         self.assertEqual(code, 0, out)
@@ -329,11 +329,11 @@ class TheReleaseFitsOneRun(unittest.TestCase):
             ]
             derived[key] = RUN_JOBS - sum(others)
         self.assertEqual(getattr(module, "LEG_CEILING", None), derived)
-        self.assertEqual(derived, {"ci": 193, "battery": 234})
+        self.assertEqual(derived, {"ci": 190, "battery": 234})
 
     def test_a_listing_beyond_the_ceiling_is_refused_whole(self):
         # 68 ingest mutants of 126 s fit a leg's 10800 s after its 2141 s baseline, so the
-        # battery's 234 legs hold 15912 and the pull request's 193 legs hold 13124.
+        # battery's 234 legs hold 15912 and the pull request's 190 legs hold 12920.
         code, out, written = size(entries("deck-streak-ingest", 15913), "deck-streak-ingest")
         self.assertEqual(code, 1, out)
         self.assertIn(
@@ -343,10 +343,10 @@ class TheReleaseFitsOneRun(unittest.TestCase):
         self.assertEqual(written, {}, "a refused sizing wrote outputs")
         code, out, written = size(entries("deck-streak-ingest", 15912), "deck-streak-ingest")
         self.assertEqual((code, written.get("shards")), (0, "234"), out)
-        code, out, planned = plan_shards(entries("deck-streak-ingest", 13125))
+        code, out, planned = plan_shards(entries("deck-streak-ingest", 12921))
         self.assertEqual(code, 1, out)
         self.assertIn(
-            "REFUSED: 13125 mutant(s), projected at 1653750 s serially, need more than 193 legs",
+            "REFUSED: 12921 mutant(s), projected at 1628046 s serially, need more than 190 legs",
             out,
         )
         self.assertNotIn("shards", planned)
@@ -375,7 +375,7 @@ class TheReleaseFitsOneRun(unittest.TestCase):
         self.assertIn("legs 1 of ceiling 234", out)
         code, out, _ = plan_shards(entries("deck-streak-daemon", 113))
         self.assertEqual(code, 0, out)
-        self.assertIn("legs 2 of ceiling 193", out)
+        self.assertIn("legs 2 of ceiling 190", out)
 
 
 class TheWorkflowReadsTheOneCount(unittest.TestCase):

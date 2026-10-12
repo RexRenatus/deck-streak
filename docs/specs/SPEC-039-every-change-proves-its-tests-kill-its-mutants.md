@@ -1380,3 +1380,17 @@ uploads its own report; leg 0 alone runs the retirement check; and the verdict's
 every leg's report and merges them into the one rows report before the judge step, whose lines
 are unchanged. R18's 90 minutes stands, now each leg's. The rows a change selects (R10) are
 unchanged, and no other bound in R18 moves.
+
+## 40. Amendment: the pull request's web sweep runs in three shards (SPEC-419)
+
+Insert-only; every earlier byte is kept. R3 says a release's Mini App changes run in one
+`mutation-web` job (R18). That one job was cut at its bound on a release although its StrykerJS run
+had finished (job 114789042867), so SPEC-419 deals the sweep into three shards (ADR-433):
+`mutation-web-shard` is one matrix over shards 0, 1 and 2, each counting every planned web file's
+mutants by StrykerJS's own discover, taking its whole files by that count, largest first onto the
+lightest shard, running StrykerJS over them and keeping its record and report as
+`mutation-web-shard-<k>`; and `mutation-web`, now one job that needs the shards and runs always,
+reads each shard by name, reads VOID when one is missing, cut or partial, and hands their merged
+files to the judge step, whose line is unchanged. R3's rule stands: every changed web file is
+mutated whole, now in exactly one shard. R18's 100 minutes stands on each shard and on
+`mutation-web`, and no StrykerJS setting changes.
