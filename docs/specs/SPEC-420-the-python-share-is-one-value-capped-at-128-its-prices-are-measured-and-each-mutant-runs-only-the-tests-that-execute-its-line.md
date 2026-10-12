@@ -197,7 +197,7 @@ with that reason. Every other criterion is red at the red commit, on an assertio
 | `scripts/tests/test_mutation_python_shard_binding.py` | mutation tests | changed: A1, A2, A3, A5 and A6; the two pinned-line tests patch the share and `LEG_CEILING` |
 | `scripts/tests/test_mutation_python.py` | mutation tests | changed: A7 to A18 |
 | `scripts/tests/test_rulesets.py` | runbook tests | changed: A4; SPEC-415's runbook test names the share instead of its number |
-| `scripts/tests/test_ci_workflows.py` | read census | changed: `NOT_WORKFLOW_READS` lists each read the new tests add, with its count |
+| `scripts/tests/test_ci_workflows.py` | read census | changed: `DYNAMIC_IMPORTS` names the two import sites the fixture checks add, each with its count; the new tests add no `NOT_WORKFLOW_READS` read |
 | `scripts/tests/fixtures/mutation-prices-38242806596/mutation-python-shard-1/costs.jsonl` | fixture | added: leg 1's kept `costs.jsonl`, in the downloaded layout |
 | `scripts/tests/fixtures/mutation-prices-38242806596/mutation-python-shard-2/costs.jsonl` | fixture | added: leg 2's kept `costs.jsonl`, in the downloaded layout |
 | `scripts/tests/fixtures/mutation-prices-38242806596/mutation-python-shard-3/costs.jsonl` | fixture | added: leg 3's kept `costs.jsonl`, in the downloaded layout |
@@ -219,6 +219,8 @@ with that reason. Every other criterion is red at the red commit, on an assertio
 | `formal/tla/TracedSetCovers/MCTracedSetCovers.cfg` | formal model | added |
 | `formal/tla/TracedSetCovers/witness/NoSpawnCount.cfg` | formal model | added |
 | `scripts/mutation-rows.d/S42000-S42099.json` | mutation rows | added: S42000-S42028 |
+| `scripts/mutation-rows.d/S08700-S08799.json` | mutation rows | changed: `S08704-A-BYTE-READER-IS-NEVER-A-KILLER` alone is re-anchored, on the line where `Judge.judge` reads the byte readers; its killer is unchanged (RULED 1421) |
+| `scripts/mutation-rows.d/S41500-S41599.json` | mutation rows | changed: `S41506-THE-RUNBOOK-NAMES-THE-LEG-SIZE-AS-THE-CEILING` alone is re-anchored, on section 2's `python legs N of ceiling S`; its killer is unchanged (RULED 1421) |
 | `docs/specs/SPEC-420-the-python-share-is-one-value-capped-at-128-its-prices-are-measured-and-each-mutant-runs-only-the-tests-that-execute-its-line.md` | spec | added |
 | `docs/decisions/ADR-434-the-python-share-is-one-capped-value-the-price-table-is-derived-from-a-recorded-run-and-each-mutant-runs-the-tests-its-line-traced.md` | decision | added |
 | `docs/decisions/ADR-432-the-python-mutation-legs-are-dealt-by-each-files-measured-control-cost-under-the-runs-fixed-leg-shares.md` | decision | changed: one insert-only amendment |

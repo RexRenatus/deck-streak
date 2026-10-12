@@ -52,8 +52,8 @@
       [
         "S41506-THE-RUNBOOK-NAMES-THE-LEG-SIZE-AS-THE-CEILING",
         "RELEASING.md",
+        "`python legs N of ceiling S`",
         "`python legs N of ceiling 32`",
-        "`python legs N of ceiling 20`",
         "the release runbook names the Python plan's headroom line against the ceiling of 32 legs (SPEC-415 R6)",
         "test_rulesets.TheReleaseRunbookNamesThePythonCeiling.test_the_runbook_names_the_python_ceiling_and_its_whole_refusal"
       ],

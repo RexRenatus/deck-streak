@@ -162,8 +162,8 @@ class TheReleaseRunbookNamesThePythonCeiling(unittest.TestCase):
         self.assertIn(end, lines)
         section = " ".join(" ".join(lines[lines.index(start) : lines.index(end)]).split())
         phrases = [
-            "`python legs N of ceiling 32`",
-            "needs more than 32 Python legs is refused whole, by name, never capped",
+            "`python legs N of ceiling S`, where S is the share `PYTHON_MAX_SHARDS`",
+            "needs more than `PYTHON_MAX_SHARDS` Python legs is refused whole, by name, never capped",
             "re-running its failed jobs refuses it again",
             "SPEC-415",
         ]

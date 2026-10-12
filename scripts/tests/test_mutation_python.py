@@ -928,7 +928,10 @@ class EachLegRunsItsPlannedNames(unittest.TestCase):
         self.assertEqual([r["name"] for r in records[1:4]], CALC_NAMES)
         self.assertEqual([r["outcome"] for r in records[1:4]], ["killed"] * 3)
         for record in records[1:4]:
-            self.assertEqual(sorted(record), ["kind", "name", "outcome", "path", "seconds"])
+            self.assertEqual(
+                sorted(record),
+                ["kind", "name", "outcome", "path", "scope", "seconds", "tests", "why"],
+            )
             self.assertGreaterEqual(record["seconds"], 0)
         self.assertEqual(
             records[4],

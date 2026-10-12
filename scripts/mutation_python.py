@@ -520,7 +520,69 @@ def child_trace() -> None:
     processes it starts, and one record when it exits or replaces its image. It imports what it
     uses and fails closed: a process that writes no record leaves its parent's count short, so its
     test joins every scoped set of the file."""
-    return
+    import atexit
+    import json
+    import os
+    import sys
+
+    folder = os.environ.get("MUTATION_PYTHON_TRACE_DIR")
+    target = os.environ.get("MUTATION_PYTHON_TRACE_TARGET")
+    monitoring = getattr(sys, "monitoring", None)
+    if not folder or not target or monitoring is None:
+        return
+    record = {
+        "token": os.urandom(8).hex(),
+        "parent": os.environ.get("MUTATION_PYTHON_TRACE_PARENT"),
+        "pid": os.getpid(),
+        "ppid": os.getppid(),
+        "test": os.environ.get("MUTATION_PYTHON_TRACE_TEST"),
+        "lines": set(),
+        "spawned": 0,
+        "exec": False,
+    }
+    known, last, live = {}, [None], [True]
+
+    def write():
+        if live[0]:
+            path = os.path.join(folder, record["token"] + ".json")
+            with open(path + ".part", "w", encoding="utf-8") as sink:
+                json.dump({**record, "lines": sorted(record["lines"])}, sink)
+            os.replace(path + ".part", path)
+
+    def line(code, number):
+        name = code.co_filename
+        if name not in known:
+            known[name] = os.path.realpath(name) == target
+        if known[name]:
+            record["lines"].add(number)
+        return monitoring.DISABLE
+
+    def audit(event, args):
+        if event == "subprocess.Popen":
+            record["spawned"] += 1
+            last[0] = args[1]
+        elif event == "os.posix_spawn":
+            record["spawned"] += args[1] is not last[0]
+            last[0] = None
+        elif event in ("os.fork", "os.forkpty", "os.spawn", "os.system"):
+            record["spawned"] += 1
+        elif event == "os.exec":
+            record["exec"] = True
+            write()
+
+    def forked():
+        live[0] = False
+
+    try:
+        monitoring.use_tool_id(1, "mutation-python-trace")
+    except ValueError:
+        return
+    monitoring.register_callback(1, monitoring.events.LINE, line)
+    monitoring.set_events(1, monitoring.events.LINE)
+    sys.addaudithook(audit)
+    os.environ["MUTATION_PYTHON_TRACE_PARENT"] = record["token"]
+    os.register_at_fork(after_in_child=forked)
+    atexit.register(write)
 
 
 #: The tail of the scratch `sitecustomize`: the one it shadows on `sys.path`, run as the
@@ -677,12 +739,14 @@ def child(args: argparse.Namespace) -> int:
         if name != "__main__" and where and pathlib.Path(where).resolve().parent == here:
             del sys.modules[name]
     sys.path[:] = [entry for entry in sys.path if pathlib.Path(entry or ".").resolve() != here]
-    trace = Trace(args.trace, args.target) if args.trace else None
+    # A caller's namespace that names no trace and no `--only` runs untraced and whole.
+    traced = getattr(args, "trace", None)
+    trace = Trace(traced, args.target) if traced else None
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     for module in args.module:
         suite.addTests(loader.discover(args.dir, pattern=f"{module}.py"))
-    only = set(args.only)
+    only = set(getattr(args, "only", ()))
     chosen = unittest.TestSuite(
         [t for t in flatten(suite) if not skipped(t, args.skip) and (not only or t.id() in only)]
     )
@@ -781,7 +845,38 @@ def scoped_sets(folder: pathlib.Path, ran: int) -> dict | str:
     children are the records naming its token and its pid. A process that started more processes
     than it has direct children, or one that replaced its image, joins its test to every set, as
     does a test that left a thread running; one outside any test makes the trace partial."""
-    return f"the trace in {folder.name} is not read for {ran} test(s)"
+    records = []
+    for path in sorted(folder.glob("*.json")):
+        try:
+            records.append(json.loads(path.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            return f"the trace record {path.name} cannot be read"
+    root = next((record for record in records if record.get("root")), None)
+    if root is None:
+        return "the trace left no record of its run"
+    if root["failed"]:
+        return str(root["failed"])
+    if root["ran"] != ran:
+        return f"the trace counted {root['ran']} test(s) and the sentinel ran {ran}"
+    lines = {test: set(numbers) for test, numbers in root["lines"].items()}
+    outside = set(root["outside"])
+    joiners = set(root["execs"]) | set(root["threads"])
+    children = [record for record in records if record is not root]
+    direct = collections.Counter((r["parent"], r["ppid"], r["test"] or "") for r in children)
+    for record in children:
+        test = record["test"]
+        (outside if test is None else lines.setdefault(test, set())).update(record["lines"])
+        if record["exec"]:
+            joiners.add(test or "")
+        started = sum(n for key, n in direct.items() if key[:2] == (record["token"], record["pid"]))
+        if record["spawned"] > started:
+            joiners.add(test or "")
+    for test, spawned in root["spawned"].items():
+        if spawned > direct[root["token"], root["pid"], test]:
+            joiners.add(test)
+    if "" in joiners:
+        return "a process outside any test left no record or replaced its image"
+    return {"order": root["order"], "lines": lines, "outside": outside, "joiners": joiners}
 
 
 def scope_of(
@@ -1107,6 +1202,7 @@ class Judge:
                 name=m.name(path),
                 seconds=time.monotonic() - began,
                 outcome=outcome,
+                **note,
             )
 
     def control(self) -> list[dict]:
@@ -1114,10 +1210,28 @@ class Judge:
         mode, with no cost record and no entry in the report's files."""
         path = f"{CONTROL}/control_target.py"
         listed = list_source((self.root / path).read_text(encoding="utf-8"))
-        return [
-            {"name": m.name(path), "outcome": expected, "expected": expected, "killers": []}
-            for m, expected in zip(listed, CONTROL_EXPECTED)
-        ]
+        held: dict = {"files": []}
+        self.quiet = True
+        try:
+            state = self.prepare(path, listed, held, CONTROL_ENTRY)
+            if state is not None:
+                self.judge(state)
+        finally:
+            self.quiet = False
+        notes = {note["name"]: note for note in (state or {"notes": []})["notes"]}
+        found = []
+        for index, mutant in enumerate(held["files"][0]["mutants"]):
+            note = notes.get(mutant["name"], {})
+            found.append(
+                {
+                    "name": mutant["name"],
+                    "outcome": mutant["outcome"],
+                    "expected": CONTROL_EXPECTED[index] if index < len(CONTROL_EXPECTED) else None,
+                    "killers": mutant["killers"],
+                    **{key: note[key] for key in ("scope", "why", "tests") if key in note},
+                }
+            )
+        return found
 
 
 class PlanRefused(Exception):
@@ -1286,11 +1400,11 @@ def run(args: argparse.Namespace) -> int:
     judge = Judge(root, mapping, args)
     code = None
     try:
-        report["control"] = "absent"
-        for file, mutants in selected.items():
-            judge.file(file, mutants, report)
-        if (root / CONTROL).is_dir():
-            report["control"] = judge.control()
+        report["control"] = judge.control() if (root / CONTROL).is_dir() else "absent"
+        prepared = [judge.prepare(file, mutants, report) for file, mutants in selected.items()]
+        for state in prepared:
+            if state is not None:
+                judge.judge(state)
     except Restore as error:
         print(f"mutation-python: RESTORE FAILED: {error}")
         report["restore_failed"] = str(error)

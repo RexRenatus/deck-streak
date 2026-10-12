@@ -381,13 +381,16 @@ class ThePythonLegsAreDealtByCost(unittest.TestCase):
 
     def test_a_listing_with_no_priced_file_keeps_the_count_rule(self):
         """A3: no listed file priced reads None, so `shards` keeps SPEC-415's matrix byte for
-        byte; and the shipped table prices nothing."""
+        byte; and the shipped table is the recorded run's, derived by the `prices` verb (SPEC-420
+        R4)."""
         program = verdict_program()
         listing = priced("a.py", 68)
         tables = ({}, {"elsewhere.py": 5})
         for prices in tables:
             self.assertIsNone(program.python_by_cost(listing, prices), prices)
-        self.assertEqual(program.PYTHON_CONTROL_SECONDS, {})
+        self.assertEqual(
+            program.PYTHON_CONTROL_SECONDS, recorded_table(recorded_prices(program)[1])
+        )
         examined("price tables", tables)
 
     def test_unpriced_mutants_keep_twenty_a_leg_beside_the_priced_legs(self):
@@ -432,6 +435,8 @@ class ThePythonLegsAreDealtByCost(unittest.TestCase):
                 sink.write_text("", encoding="utf-8")
                 out = io.StringIO()
                 with (
+                    mock.patch.object(program, "PYTHON_MAX_SHARDS", 32),
+                    mock.patch.dict(program.LEG_CEILING, {"ci": 193}),
                     mock.patch.dict(program.PYTHON_CONTROL_SECONDS, prices, clear=True),
                     mock.patch.dict(os.environ, {"GITHUB_OUTPUT": str(sink)}),
                     contextlib.redirect_stdout(out),
@@ -658,6 +663,8 @@ class EachArmOfTheCostDealIsObserved(unittest.TestCase):
             sink.write_text("", encoding="utf-8")
             out = io.StringIO()
             with (
+                mock.patch.object(program, "PYTHON_MAX_SHARDS", 32),
+                mock.patch.dict(program.LEG_CEILING, {"ci": 193}),
                 mock.patch.dict(program.PYTHON_CONTROL_SECONDS, {"a.py": 100}, clear=True),
                 mock.patch.dict(os.environ, {"GITHUB_OUTPUT": str(sink)}),
                 contextlib.redirect_stdout(out),
