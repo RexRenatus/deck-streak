@@ -159,3 +159,22 @@ to 193, as this branch wrote them, while pinning the base's lines for a ceiling 
 puts back this branch's lines under that patch, so the lines they pin stay SPEC-418's, as the
 green commit's note above says. The shipped ceiling stays the base's 190, and no assertion is
 removed.
+
+## The traced sentinel's greens
+
+Each red line above is green at the cure commit: the nine pass under the traced sentinel's trace,
+so the sentinel lists none of them as a byte reader, and A2's test fails on the survivor's mutant.
+CI reads both again on the next push.
+
+```text
+test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_line_no_traced_test_executes_runs_the_whole_suite: green at e782d9624acd456ae3031e05273cc299bd230ffe
+test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_line_only_a_child_process_executes_keeps_that_test: green at e782d9624acd456ae3031e05273cc299bd230ffe
+test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_line_run_at_import_or_outside_a_test_runs_the_whole_suite: green at e782d9624acd456ae3031e05273cc299bd230ffe
+test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_scoped_run_that_ran_fewer_tests_than_its_set_reruns_whole: green at e782d9624acd456ae3031e05273cc299bd230ffe
+test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_scoped_survivor_is_confirmed_by_the_whole_suite: green at e782d9624acd456ae3031e05273cc299bd230ffe
+test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_test_that_leaves_a_thread_running_joins_every_scoped_set: green at e782d9624acd456ae3031e05273cc299bd230ffe
+test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_test_whose_child_execs_joins_every_scoped_set: green at e782d9624acd456ae3031e05273cc299bd230ffe
+test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_test_whose_process_left_no_record_joins_every_scoped_set: green at e782d9624acd456ae3031e05273cc299bd230ffe
+test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_each_mutant_runs_only_the_tests_that_execute_its_line: green at e782d9624acd456ae3031e05273cc299bd230ffe
+scripts/mutation-verdict.py:1014:42: replace 1 with 2 in python_share_refused: green at e782d9624acd456ae3031e05273cc299bd230ffe
+```
