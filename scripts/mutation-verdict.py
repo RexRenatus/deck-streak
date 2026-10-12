@@ -875,8 +875,8 @@ CENSUS_SECONDS = {"deck-streak-progression": 1521}
 #: projection (SPEC-039 R18, SPEC-362 R2).
 SHARD_BOUND_SECONDS = 10800
 #: The most legs each workflow's run holds: the 256 jobs of one run, less the most every other job
-#: of that workflow can generate, 47 in `ci.yml` and 22 in `mutation-weekly.yml` (SPEC-362 R3).
-LEG_CEILING = {"ci": 209, "battery": 234}
+#: of that workflow can generate, 63 in `ci.yml` and 22 in `mutation-weekly.yml` (SPEC-362 R3).
+LEG_CEILING = {"ci": 193, "battery": 234}
 #: The per-mutant `--timeout` every cargo-mutants command carries (SPEC-327 R2), and the margin a
 #: leg's slowest baseline test must keep under it (SPEC-362 R7).
 MUTANT_TIMEOUT_SECONDS = 2300

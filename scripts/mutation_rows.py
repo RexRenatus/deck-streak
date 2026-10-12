@@ -5,8 +5,11 @@
     python3 scripts/mutation_rows.py count|ids [--root DIR]
     python3 scripts/mutation_rows.py census [--root DIR]
     python3 scripts/mutation_rows.py prove [--root DIR] (--all | --row ID ... | --band S<lo>-S<hi>
-                                           | --rows-from PLAN) [--report FILE]
+                                           | --rows-from PLAN) [--leg K/N] [--report FILE]
     python3 scripts/mutation_rows.py retired --base REF [--root DIR]
+    python3 scripts/mutation_rows.py legs --rows-from PLAN [--root DIR]
+    python3 scripts/mutation_rows.py merge --rows-from PLAN --legs N --from DIR --report FILE
+                                           [--root DIR]
 
 WHY. A generated mutant tests code the way a tool can mutate it. A constant, a method named `new`
 (cargo-mutants never looks inside one), a guard or a parity comparison is tested weakly or not at
@@ -1197,7 +1200,8 @@ def chosen(rows: list[Row], args: argparse.Namespace) -> list[Row]:
     return [by_id[identifier] for identifier in dict.fromkeys(wanted)]
 
 
-def prove(root: pathlib.Path, args: argparse.Namespace) -> int:
+def prove(root: pathlib.Path, args: argparse.Namespace, leg: tuple[int, int] | None = None) -> int:
+    """Prove the chosen rows, or with `leg` only the rows that leg's deal gives it (SPEC-417 R5)."""
     dirty = tracked_changes(root)
     if dirty:
         print(f"prove: REFUSED: a tracked change the proofs would overwrite: {', '.join(dirty)}")
@@ -1207,6 +1211,8 @@ def prove(root: pathlib.Path, args: argparse.Namespace) -> int:
     except (OSError, json.JSONDecodeError, PopulationRefused, UnresolvableTarget) as e:
         print(f"prove: REFUSED: {e}")
         return EXIT_REFUSED
+    if leg is not None:
+        rows = dealt(rows, leg)
     report = []
     with tempfile.TemporaryDirectory(prefix="mutation-rows-") as scratch:
         for row in rows:
@@ -1234,26 +1240,139 @@ def prove(root: pathlib.Path, args: argparse.Namespace) -> int:
 # --------------------------------------------------------------------------- the legs
 
 
+#: A rows leg as `prove --leg` spells it, `k/n`: leg k of n, each a count in decimal digits.
+LEG_SPELLING = re.compile(r"([0-9]+)/([0-9]+)")
+
+
+def largest_leg(count: int, legs: int) -> int:
+    """The rows the largest of `legs` legs holds when `count` rows are dealt round robin: the
+    count divided by the legs, rounded up, since a leg holds a whole row or none of it."""
+    return -(-count // legs)
+
+
+def leg_count(count: int) -> int | None:
+    """The fewest legs whose largest is projected within `ROWS_BOUND_SECONDS` at `ROW_SECONDS` a
+    row, or None when more than `ROWS_MAX_LEGS` would be needed, so a population that outgrows
+    the legs is refused rather than cut (SPEC-417 R1, R2). No rows take one leg, which runs the
+    retirement check and proves nothing."""
+    if not count:
+        return 1
+    fitting = [
+        legs
+        for legs in range(1, ROWS_MAX_LEGS + 1)
+        if largest_leg(count, legs) * ROW_SECONDS <= ROWS_BOUND_SECONDS
+    ]
+    return fitting[0] if fitting else None
+
+
+def parse_leg(spelling: str) -> tuple[int, int] | None:
+    """`k/n` as `(k, n)` when `0 <= k < n`; None for any other spelling, which `prove` refuses
+    before any row runs (SPEC-417 R6)."""
+    found = LEG_SPELLING.fullmatch(spelling)
+    if found is None:
+        return None
+    k, n = int(found.group(1)), int(found.group(2))
+    return (k, n) if k < n else None
+
+
+def dealt(rows: list, leg: tuple[int, int]) -> list:
+    """The rows leg k of n proves: every n-th chosen row from the k-th, in the plan's order, so the
+    legs 0 to n-1 hold each chosen row once and a slow band's rows spread over every leg (SPEC-417
+    R5, ADR-431 D4)."""
+    k, n = leg
+    return rows[k::n]
+
+
 def legs(root: pathlib.Path, args: argparse.Namespace) -> int:
-    """The rows' legs, as the red commit answers them: every count in one leg (SPEC-417 R1)."""
+    """The fewest legs the plan's rows are dealt into, written for the workflow as `rows_legs` and
+    `rows_matrix` when `GITHUB_OUTPUT` names a file; past `ROWS_MAX_LEGS` the count is refused
+    whole by name and nothing is written (SPEC-417 R1 to R3)."""
     try:
         rows = chosen(rows_of(load_tree(root)), args)
     except (OSError, json.JSONDecodeError, PopulationRefused, UnresolvableTarget) as e:
         print(f"legs: REFUSED: {e}")
         return EXIT_REFUSED
-    print(f"legs: 1 leg(s) for {len(rows)} row(s)")
+    count = leg_count(len(rows))
+    if count is None:
+        print(
+            f"legs: REFUSED: {len(rows)} row(s) need more than {ROWS_MAX_LEGS} legs of at most "
+            f"{ROWS_BOUND_SECONDS // ROW_SECONDS} row(s), each projected within "
+            f"{ROWS_BOUND_SECONDS} s at {ROW_SECONDS} s a row"
+        )
+        return EXIT_REFUSED
+    output = os.environ.get("GITHUB_OUTPUT")
+    if output:
+        with open(output, "a", encoding="utf-8") as sink:
+            sink.write(f"rows_legs={count}\n")
+            sink.write(f"rows_matrix={json.dumps(list(range(count)))}\n")
+    largest = largest_leg(len(rows), count)
+    print(
+        f"legs: {count} leg(s) for {len(rows)} row(s), the largest {largest} row(s), "
+        f"projected at {largest * ROW_SECONDS} s"
+    )
     return EXIT_OK
 
 
-def merge(args: argparse.Namespace) -> int:
-    """The legs' reports in one, as the red commit merges them: every present report, in leg
-    order (SPEC-417 R7)."""
-    report = []
-    for k in range(args.legs or 0):
-        path = pathlib.Path(args.source) / f"rows-leg-{k}.json"
-        if path.is_file():
-            report += json.loads(path.read_text(encoding="utf-8"))
-    pathlib.Path(args.report).write_text(json.dumps(report, indent=2) + "\n", "utf-8")
+def merge(root: pathlib.Path, args: argparse.Namespace) -> int:
+    """The legs' reports in the one report the judge reads, legs 0 to n-1 in leg order (SPEC-417
+    R7, R8). An absent leg is named on its own line and its rows stay out, so the judge reads them
+    VOID by id. A row two legs hold, or one a leg's deal did not give it, is refused by name and no
+    report is written."""
+    try:
+        rows = chosen(rows_of(load_tree(root)), args)
+    except (OSError, json.JSONDecodeError, PopulationRefused, UnresolvableTarget) as e:
+        print(f"merge: REFUSED: {e}")
+        return EXIT_REFUSED
+    if args.legs < 1:
+        print(f"merge: REFUSED: --legs {args.legs} is not a count of legs")
+        return EXIT_REFUSED
+    held = {}
+    for number in range(args.legs):
+        path = pathlib.Path(args.source) / f"rows-leg-{number}.json"
+        if not path.is_file():
+            print(
+                f"merge: leg {number} is absent: it uploaded no report, so its rows stay unproved"
+            )
+            continue
+        try:
+            entries = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            print(f"merge: REFUSED: leg {number}'s report is unreadable: {e}")
+            return EXIT_REFUSED
+        if not isinstance(entries, list) or not all(
+            isinstance(entry, dict) and "id" in entry for entry in entries
+        ):
+            print(f"merge: REFUSED: leg {number}'s report is not a list of proved rows")
+            return EXIT_REFUSED
+        held[number] = entries
+    holder: dict[str, int] = {}
+    for number, entries in held.items():
+        for identifier in dict.fromkeys(entry["id"] for entry in entries):
+            if identifier in holder:
+                print(
+                    f"merge: REFUSED: {identifier} is held by two legs, "
+                    f"leg {holder[identifier]} and leg {number}"
+                )
+                return EXIT_REFUSED
+            holder[identifier] = number
+    for number, entries in held.items():
+        given = [row.id for row in dealt(rows, (number, args.legs))]
+        ids = [entry["id"] for entry in entries]
+        if ids != given:
+            stray = next((identifier for identifier in ids if identifier not in given), None)
+            if stray is not None:
+                print(f"merge: REFUSED: leg {number} holds {stray}, which its deal did not give it")
+            else:
+                print(
+                    f"merge: REFUSED: leg {number}'s {len(ids)} row(s) are not its deal's "
+                    f"{len(given)}, in the plan's order"
+                )
+            return EXIT_REFUSED
+    report = [entry for entries in held.values() for entry in entries]
+    target = pathlib.Path(args.report)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(report, indent=2) + "\n", "utf-8")
+    print(f"merge: {len(held)} of {args.legs} leg(s) reported, {len(report)} row(s) merged")
     print(f"examined {len(report)}")
     return EXIT_OK
 
@@ -1344,8 +1463,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.verb == "prove":
         if not (args.all or args.row or args.band or args.rows_from):
             parser.error("prove needs --all, --row, --band or --rows-from")
+        leg = None
+        if args.leg is not None:
+            leg = parse_leg(args.leg)
+            if leg is None:
+                print(f"prove: REFUSED: --leg {args.leg} is not k/n with 0 <= k < n")
+                return EXIT_REFUSED
         try:
-            return prove(root, args)
+            return prove(root, args, leg)
         except ToolMissing as refusal:
             print(f"prove: REFUSED: {refusal}")
             return EXIT_REFUSED
@@ -1356,7 +1481,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.verb == "merge":
         if not (args.rows_from and args.legs is not None and args.source and args.report):
             parser.error("merge needs --rows-from, --legs, --from and --report")
-        return merge(args)
+        return merge(root, args)
     if not args.base:
         parser.error("retired needs --base")
     try:
