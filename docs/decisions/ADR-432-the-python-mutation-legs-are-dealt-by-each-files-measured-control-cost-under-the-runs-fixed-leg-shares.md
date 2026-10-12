@@ -23,8 +23,8 @@ seconds; its Python legs each about 60 minutes):
 
 - The plan listed 5423 Python mutants in 14 files and dealt them into 32 legs of 169 or 170.
 - 30 of the 32 Python leg logs were read; two logs are gone. Every one shows exactly 0 lines
-  printed by the runner between the start of its run step and the job's end: leg 0 (job
-  114529704945) ran 60 minutes 6 seconds and printed nothing, and the four legs lost to a runner
+  printed by the runner between the start of its run step and the job's end: leg 0
+  (job 114529704945) ran 60 minutes 6 seconds and printed nothing, and the four legs lost to a runner
   shutdown (jobs 114529704969 at 33 minutes 45 seconds, 114529704958 at 44 minutes 3 seconds,
   114529704961 at 50 minutes 37 seconds, 114529704919 at 53 minutes 12 seconds) printed nothing.
   Each leg's upload step ran after the cut and found no file.
@@ -33,7 +33,7 @@ seconds; its Python legs each about 60 minutes):
   report only when the run ends, and prints only its closing counts. A cut leg therefore leaves no
   cost anywhere: not in its log and not in an artifact.
 - So the run holds no per-file control second. Its legs bound the cost from below only: a leg of
-  170 that ran 3606 seconds without finishing costs more than 21.2 seconds a mutant, its files'
+  170 that ran 3606 seconds in job 114529704945 without finishing costs more than 21.2 seconds a mutant, its files'
   control and sentinel runs included. The tree's one per-mutant figure, about 96.5 seconds (SPEC-362
   R14), came from another diff's files.
 

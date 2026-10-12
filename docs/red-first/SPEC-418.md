@@ -25,18 +25,34 @@ A10: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k
 A11: python3 -m unittest discover -s scripts/tests -p test_rulesets.py -k test_the_runbook_names_the_python_cost_deal
 ```
 
+The reds were read in job 114685530289, which ran 17 minutes 49 seconds, `hygiene` over the
+red commit: ten failures, each the test the fence above names for A1, A2 and A4 to A11, and no
+other, while A3 passed there. Each red quotes its test's first `AssertionError` line as CI
+printed it, unittest's own `[N chars]` cuts included. The greens are read in the checks over the
+green commit.
+
 ```red-first
-A1: red at <C1 sha>: <the failure line, quoted from CI>
-A2: red at <C1 sha>: <the failure line, quoted from CI>
+A1: red at 8b545d2ca59c4e3d39666e093d1827e0f9cdce2b: AssertionError: None != {'count': 3, 'shards': [{'shard': 0, 'mut[2999 chars]20}]}
+A1: green at a423e79df0b3e9464b7a365d117bd711470811b5
+A2: red at 8b545d2ca59c4e3d39666e093d1827e0f9cdce2b: AssertionError: None != "mutation: shards: REFUSED: d.py's contro[92 chars]ound"
+A2: green at a423e79df0b3e9464b7a365d117bd711470811b5
 A3: not red: pins the count rule the base already has for a listing with no priced file
-A4: red at <C1 sha>: <the failure line, quoted from CI>
-A5: red at <C1 sha>: <the failure line, quoted from CI>
-A6: red at <C1 sha>: <the failure line, quoted from CI>
-A7: red at <C1 sha>: <the failure line, quoted from CI>
-A8: red at <C1 sha>: <the failure line, quoted from CI>
-A9: red at <C1 sha>: <the failure line, quoted from CI>
-A10: red at <C1 sha>: <the failure line, quoted from CI>
-A11: red at <C1 sha>: <the failure line, quoted from CI>
+A4: red at 8b545d2ca59c4e3d39666e093d1827e0f9cdce2b: AssertionError: None != {'count': 5, 'shards': [{'shard': 0, 'mut[2784 chars]00}]}
+A4: green at a423e79df0b3e9464b7a365d117bd711470811b5
+A5: red at 8b545d2ca59c4e3d39666e093d1827e0f9cdce2b: AssertionError: 'muta[99 chars]rds: 1 shard(s) for 0 listed mutant(s), projec[84 chars]93\n' != 'muta[99 chars]rds: python legs dealt by cost: 2 priced leg(s[330 chars]00\n'
+A5: green at a423e79df0b3e9464b7a365d117bd711470811b5
+A6: red at 8b545d2ca59c4e3d39666e093d1827e0f9cdce2b: AssertionError: Lists differ: [['sc[85 chars]y:2:16: replace 2 with 3 in double'], ['script[40 chars]le']] != [['sc[85 chars]y:2:14: replace * with / in double'], ['script[40 chars]le']]
+A6: green at a423e79df0b3e9464b7a365d117bd711470811b5
+A7: red at 8b545d2ca59c4e3d39666e093d1827e0f9cdce2b: AssertionError: 0 != 2 : the count: mutation-python: killed 2, survived 0, uncovered 0, unviable 0, timeout 0, void 0
+A7: green at a423e79df0b3e9464b7a365d117bd711470811b5
+A8: red at 8b545d2ca59c4e3d39666e093d1827e0f9cdce2b: AssertionError: unexpectedly None : no costs.jsonl beside the report
+A8: green at a423e79df0b3e9464b7a365d117bd711470811b5
+A9: red at 8b545d2ca59c4e3d39666e093d1827e0f9cdce2b: AssertionError: '' != '    "scripts/a.py": 36,  # run 4242 attem[185 chars] 1\n'
+A9: green at a423e79df0b3e9464b7a365d117bd711470811b5
+A10: red at 8b545d2ca59c4e3d39666e093d1827e0f9cdce2b: AssertionError: 3600 != 1800
+A10: green at a423e79df0b3e9464b7a365d117bd711470811b5
+A11: red at 8b545d2ca59c4e3d39666e093d1827e0f9cdce2b: AssertionError: Lists differ: ["the Python legs are dealt by each file's[110 chars]418'] != []
+A11: green at a423e79df0b3e9464b7a365d117bd711470811b5
 ```
 
 A3 pins the count rule the base already has: a listing with no priced file reads None from the

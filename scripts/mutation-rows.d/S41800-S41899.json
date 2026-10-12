@@ -1,0 +1,126 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S41800-THE-PYTHON-BOUND-IS-HALF-THE-JOB",
+        "scripts/mutation-verdict.py",
+        "PYTHON_LEG_BOUND_SECONDS = 1800\n",
+        "PYTHON_LEG_BOUND_SECONDS = 3600\n",
+        "a Python leg's projection may reach half of its job's 60 minutes, in seconds (SPEC-418 R1)",
+        "test_dispatch_shards.TheReleaseFitsOneRun.test_the_python_bound_is_half_of_the_python_legs_timeout"
+      ],
+      [
+        "S41801-A-RUN-PAYS-ITS-CONTROL-AND-SENTINEL",
+        "scripts/mutation-verdict.py",
+        "else 2 + size",
+        "else 1 + size",
+        "a run joining a leg that lacks its file pays the file's control and sentinel beside its mutants (SPEC-418 R3 (d))",
+        "test_mutation_python_shard_binding.ThePythonLegsAreDealtByCost.test_a_priced_listing_is_dealt_by_cost_into_the_fewest_legs_within_the_bound"
+      ],
+      [
+        "S41802-ONE-MUTANT-PAST-THE-BOUND-REFUSES",
+        "scripts/mutation-verdict.py",
+        "        if k < 1:\n",
+        "        if k < 0:\n",
+        "a file whose one mutant cannot fit a leg beside its control and sentinel refuses the plan by name (SPEC-418 R3 (b))",
+        "test_mutation_python_shard_binding.ThePythonLegsAreDealtByCost.test_a_listing_the_cost_deal_cannot_fit_is_refused_whole_by_name"
+      ],
+      [
+        "S41803-A-RUN-GOES-ONTO-THE-LIGHTEST-LEG",
+        "scripts/mutation-verdict.py",
+        "min(range(count), key=lambda each: (loads[each], each))",
+        "max(range(count), key=lambda each: (loads[each], each))",
+        "each run is dealt onto the lightest leg, ties to the lowest index (SPEC-418 R3 (d))",
+        "test_mutation_python_shard_binding.ThePythonLegsAreDealtByCost.test_a_priced_listing_is_dealt_by_cost_into_the_fewest_legs_within_the_bound"
+      ],
+      [
+        "S41804-MORE-THAN-32-PYTHON-LEGS-REFUSE",
+        "scripts/mutation-verdict.py",
+        "    if count + unpriced_legs > PYTHON_MAX_SHARDS:\n",
+        "    if count + unpriced_legs > PYTHON_MAX_SHARDS + 1:\n",
+        "priced and unpriced legs above the run's 32 Python legs refuse the plan whole, never capped (SPEC-418 R3 (g))",
+        "test_mutation_python_shard_binding.ThePythonLegsAreDealtByCost.test_a_listing_the_cost_deal_cannot_fit_is_refused_whole_by_name"
+      ],
+      [
+        "S41805-UNPRICED-MUTANTS-TAKE-TWENTY-A-LEG",
+        "scripts/mutation-verdict.py",
+        "python_needed(unpriced)",
+        "python_needed(-(-unpriced // 2))",
+        "the unpriced mutants keep the count rule of at most 20 a leg beside the priced legs (SPEC-418 R3 (f))",
+        "test_mutation_python_shard_binding.ThePythonLegsAreDealtByCost.test_unpriced_mutants_keep_twenty_a_leg_beside_the_priced_legs"
+      ],
+      [
+        "S41806-NO-PRICED-FILE-KEEPS-THE-COUNT-RULE",
+        "scripts/mutation-verdict.py",
+        "    if not priced:\n        return None\n",
+        "    if not priced:\n        return {\"count\": 0, \"shards\": []}\n",
+        "a listing with no priced file reads None, so the count rule's matrix stands byte for byte (SPEC-418 R3 (a))",
+        "test_mutation_python_shard_binding.ThePythonLegsAreDealtByCost.test_a_listing_with_no_priced_file_keeps_the_count_rule"
+      ],
+      [
+        "S41807-A-COST-REFUSAL-FAILS-THE-PLAN",
+        "scripts/mutation-verdict.py",
+        "            print(deal)\n            return EXIT_FAIL\n",
+        "            print(deal)\n            return EXIT_OK\n",
+        "a cost refusal fails the plan with no step output, so no leg starts (SPEC-418 R4)",
+        "test_mutation_python_shard_binding.ThePythonLegsAreDealtByCost.test_the_plan_deals_by_cost_and_refuses_whole_by_name"
+      ],
+      [
+        "S41808-A-PRICE-TAKES-THE-DEARER-READING",
+        "scripts/mutation-verdict.py",
+        "math.ceil(max(control, mean))",
+        "math.ceil(min(control, mean))",
+        "a file's price is the dearer of its control and its mutants' mean, rounded up (SPEC-418 R7)",
+        "test_mutation_python_shard_binding.ThePythonLegsAreDealtByCost.test_the_prices_verb_derives_each_files_price_from_the_recorded_runs"
+      ],
+      [
+        "S41809-ZERO-COST-RECORDS-READ-VOID",
+        "scripts/mutation-verdict.py",
+        "    return EXIT_OK if records else EXIT_FAIL\n",
+        "    return EXIT_OK if records else EXIT_OK\n",
+        "a costs directory holding no record reads VOID and fails, never an empty table (SPEC-418 R7)",
+        "test_mutation_python_shard_binding.ThePythonLegsAreDealtByCost.test_the_prices_verb_derives_each_files_price_from_the_recorded_runs"
+      ],
+      [
+        "S41810-A-LEG-RUNS-ITS-PLANS-NAMES",
+        "scripts/mutation_python.py",
+        "        chosen = planned_leg(plan, chosen, k, n)\n",
+        "        chosen = chosen[k::n]\n",
+        "a leg run with a plan runs the names its plan's python shard deals it, never k::n (SPEC-418 R5)",
+        "test_mutation_python.EachLegRunsItsPlannedNames.test_a_leg_runs_the_names_its_plan_deals_it"
+      ],
+      [
+        "S41811-THE-PARTITION-CHECK-REFUSES",
+        "scripts/mutation_python.py",
+        "    if dealt != listed:\n",
+        "    if False:\n",
+        "a plan whose python legs do not partition the listing is refused before any mutant (SPEC-418 R5)",
+        "test_mutation_python.EachLegRunsItsPlannedNames.test_a_plan_whose_python_legs_do_not_partition_the_listing_is_refused"
+      ],
+      [
+        "S41812-THE-COUNT-CHECK-REFUSES",
+        "scripts/mutation_python.py",
+        "    if python.get(\"count\") != n:\n",
+        "    if False:\n",
+        "a plan whose python leg count is not the leg's n is refused before any mutant (SPEC-418 R5)",
+        "test_mutation_python.EachLegRunsItsPlannedNames.test_a_plan_whose_python_legs_do_not_partition_the_listing_is_refused"
+      ],
+      [
+        "S41813-THE-CONTROL-LINE-IS-RECORDED",
+        "scripts/mutation_python.py",
+        "        record[\"bound\"] = bound\n        self.paid(path, record)\n",
+        "        record[\"bound\"] = bound\n",
+        "each file's control cost is recorded beside the report before its mutants (SPEC-418 R6)",
+        "test_mutation_python.EachLegRunsItsPlannedNames.test_each_files_control_cost_is_recorded_beside_the_report_before_its_mutants"
+      ],
+      [
+        "S41814-THE-RUNBOOK-NAMES-THE-COST-DEAL",
+        "RELEASING.md",
+        "the Python legs are dealt by each file's measured cost",
+        "the Python legs are dealt by each file's measured price",
+        "the release runbook names the Python cost deal in section 2 (SPEC-418 R9)",
+        "test_rulesets.TheReleaseRunbookNamesThePythonCostDeal.test_the_runbook_names_the_python_cost_deal"
+      ]
+    ]
+  }
+}

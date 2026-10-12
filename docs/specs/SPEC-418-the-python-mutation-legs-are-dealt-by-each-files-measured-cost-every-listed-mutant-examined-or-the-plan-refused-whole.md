@@ -171,7 +171,7 @@ A11: python3 -m unittest discover -s scripts/tests -p test_rulesets.py -k test_t
 ```
 
 A10 is `TheReleaseFitsOneRun.test_the_python_bound_is_half_of_the_python_legs_timeout`, and its
-reading of the verdict module is allowed by one census tuple in `scripts/tests/test_ci_workflows.py`
+reading of the verdict module is allowed by two census tuples in `scripts/tests/test_ci_workflows.py`
 beside the two that already name `TheReleaseFitsOneRun`. The red commit carries stubs that keep the
 base behaviour (`python_by_cost` returns None, `planned_leg` returns `k::n`, `prices` examines
 nothing, `PYTHON_LEG_BOUND_SECONDS` is 3600), so each red is its criterion's assertion and never a
@@ -188,7 +188,7 @@ unittest, so it has no line in the fence.
 | `scripts/tests/test_mutation_python_shard_binding.py` | tests | changed: A1 to A5 and A9 |
 | `scripts/tests/test_mutation_python.py` | tests | changed: A6 to A8 |
 | `scripts/tests/test_dispatch_shards.py` | tests | changed: A10 |
-| `scripts/tests/test_ci_workflows.py` | tests | changed: one census tuple for A10 |
+| `scripts/tests/test_ci_workflows.py` | tests | changed: two census tuples for A10 |
 | `scripts/tests/test_rulesets.py` | tests | changed: A11 |
 | `scripts/mutation-rows.d/S41800-S41899.json` | mutation rows | added: S41800-S41814 |
 | `RELEASING.md` | runbook | changed: one paragraph in section 2 |
