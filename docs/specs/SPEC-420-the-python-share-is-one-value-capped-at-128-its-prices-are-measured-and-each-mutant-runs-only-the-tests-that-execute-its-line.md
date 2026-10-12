@@ -219,8 +219,8 @@ with that reason. Every other criterion is red at the red commit, on an assertio
 | `formal/tla/TracedSetCovers/MCTracedSetCovers.cfg` | formal model | added |
 | `formal/tla/TracedSetCovers/witness/NoSpawnCount.cfg` | formal model | added |
 | `scripts/mutation-rows.d/S42000-S42099.json` | mutation rows | added: S42000-S42028 |
-| `scripts/mutation-rows.d/S08700-S08799.json` | mutation rows | changed: `S08704-A-BYTE-READER-IS-NEVER-A-KILLER` alone is re-anchored, on the line where `Judge.judge` reads the byte readers; its killer is unchanged (RULED 1421) |
-| `scripts/mutation-rows.d/S41500-S41599.json` | mutation rows | changed: `S41506-THE-RUNBOOK-NAMES-THE-LEG-SIZE-AS-THE-CEILING` alone is re-anchored, on section 2's `python legs N of ceiling S`; its killer is unchanged (RULED 1421) |
+| `scripts/mutation-rows.d/S08700-S08799.json` | mutation rows | changed: `S08704-A-BYTE-READER-IS-NEVER-A-KILLER` alone is re-anchored, on the line where `Judge.judge` reads the byte readers; its killer is unchanged |
+| `scripts/mutation-rows.d/S41500-S41599.json` | mutation rows | changed: `S41506-THE-RUNBOOK-NAMES-THE-LEG-SIZE-AS-THE-CEILING` alone is re-anchored, on section 2's `python legs N of ceiling S`; its killer is unchanged |
 | `docs/specs/SPEC-420-the-python-share-is-one-value-capped-at-128-its-prices-are-measured-and-each-mutant-runs-only-the-tests-that-execute-its-line.md` | spec | added |
 | `docs/decisions/ADR-434-the-python-share-is-one-capped-value-the-price-table-is-derived-from-a-recorded-run-and-each-mutant-runs-the-tests-its-line-traced.md` | decision | added |
 | `docs/decisions/ADR-432-the-python-mutation-legs-are-dealt-by-each-files-measured-control-cost-under-the-runs-fixed-leg-shares.md` | decision | changed: one insert-only amendment |
@@ -263,7 +263,6 @@ with that reason. Every other criterion is red at the red commit, on an assertio
 - Every red and green of A1-A18. No test module of this delivery runs outside CI.
 - Each leg's control outcomes, in the report's `control`.
 - The plan line of this delivery's own run, within the share at 32.
-- The `formal/tla/TracedSetCovers` check, and `formal/tla/EveryLegCounted` reading no `STALE` cover.
 - The release's plan refusal, read when #822 re-runs. This delivery does not run it.
 
 ## 8. Formal model
@@ -275,7 +274,7 @@ with that reason. Every other criterion is red at the red commit, on an assertio
 - the table and the constants are module constants;
 - `planned_leg` is untouched.
 
-So no digest moves. CI's formal check reading no `STALE` line for the entry confirms it.
+So no digest moves.
 
 **`formal/tla/TracedSetCovers`: new, because the trace records are an interleaving surface.**
 - Actors: the runner's process, each test's child and grandchild processes, and the judge.
@@ -283,8 +282,13 @@ So no digest moves. CI's formal check reading no `STALE` line for the entry conf
 - Check then act: the judge reads the directory once, after the runner exits, while a process that
   outlived it may still write.
 
-The model has one test, two target lines, a root and up to three descendants. They spawn, execute a
-line, write a record and exit in any order, and the judge reads once.
+The model has two tests, one target line, a root and up to three descendant processes. They
+spawn, execute a line, write a record and exit in any order, and the judge reads once.
+
+The bound is two tests because one test makes the witness vacuous: every line that test
+executed is either traced by it or runs whole, so the per-parent count could be removed and no
+test would be dropped. One target line is enough because each line's check reads only that
+line's events and the line-free joiners, so a violation over more lines projects onto one line.
 
 Property `NoExecutorDropped`: for each line, every test any of whose processes executed it is in
 that line's scoped set, or the line runs whole.

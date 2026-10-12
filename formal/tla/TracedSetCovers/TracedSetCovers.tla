@@ -58,8 +58,8 @@
 \* line, since each line's conjunct reads only that line's events and the line-free joiners, so a
 \* violation with more lines projects onto one line by deleting the other lines' steps.
 \*
-\* @phx covers scripts/mutation_python.py anchor=child_trace digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers scripts/mutation_python.py anchor=scoped_sets digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers scripts/mutation_python.py anchor=child_trace digest=sha256:89641e6b21234ddc433bc34639b9f425c1be9c670fd6b0d90cabc73ce74401db
+\* @phx covers scripts/mutation_python.py anchor=scoped_sets digest=sha256:353a692092005990ef283d6ae451b90349878614930192b90f2179931abf5368
 \* @phx cites #829
 \* @phx property NoExecutorDropped ramp=report
 \* @phx witness witness/NoSpawnCount.cfg kills=NoExecutorDropped
