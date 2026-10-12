@@ -35,6 +35,7 @@ import time
 import tokenize
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from _support import REPO, examined
 
@@ -799,6 +800,147 @@ class TheReportCarriesWhatItSays(unittest.TestCase):
             "--file", "scripts/calc.py", "--control-seconds", "20", "--test-seconds", "7"
         )
         self.assertEqual(report["files"][0]["bound"], 7)
+
+
+#: `calc.py`'s mutants in the runner's listing order, spelled out.
+CALC_NAMES = [
+    "scripts/calc.py:2:12: replace return value with return None in double",
+    "scripts/calc.py:2:14: replace * with / in double",
+    "scripts/calc.py:2:16: replace 2 with 3 in double",
+]
+#: A name no listing of `calc.py` holds.
+GHOST = "scripts/calc.py:9:1: replace + with - in ghost"
+
+
+class EachLegRunsItsPlannedNames(unittest.TestCase):
+    """SPEC-418 R5 and R6 (A6 to A8): a leg run with `--plan` and `--shard k/n` runs the names
+    the plan's python shard k lists, refuses before any mutant a plan whose legs are not its own
+    listing's partition or whose count is not n, and records each cost beside its report."""
+
+    def plan(self, tree, name, legs, count=None):
+        plan = {
+            "classes": {"scripts": {"applies": True}},
+            "files": [{"path": "scripts/calc.py", "class": "scripts", "code": [2]}],
+            "python": {
+                "count": len(legs) if count is None else count,
+                "shards": [{"shard": k, "mutants": names} for k, names in enumerate(legs)],
+            },
+        }
+        return tree.write(name, json.dumps(plan))
+
+    def leg(self, tree, *args):
+        """One `run` with its report in a directory of its own: (the run, the report or None, the
+        cost record's lines or None)."""
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        target = Path(scratch.name) / "report.json"
+        done = tree.runner("run", *args, "--report", str(target))
+        report = json.loads(target.read_text(encoding="utf-8")) if target.exists() else None
+        costs = Path(scratch.name) / "costs.jsonl"
+        lines = costs.read_text(encoding="utf-8").splitlines() if costs.exists() else None
+        return done, report, lines
+
+    def test_a_leg_runs_the_names_its_plan_deals_it(self):
+        """A6 (R5): the plan deals [0, 1] and [2], which `k::2` would deal as [0, 2] and [1]."""
+        tree = Tree(self, {"calc": CALC})
+        plan = self.plan(tree, "plan.json", [CALC_NAMES[:2], CALC_NAMES[2:]])
+        ran = []
+        for k in range(2):
+            done, report, _ = self.leg(
+                tree, "--plan", str(plan), "--shard", f"{k}/2", "--control-seconds", "1"
+            )
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            self.assertEqual(report["shard"], f"{k}/2")
+            ran.append([m["name"] for m in mutants_of(report)])
+        self.assertEqual(ran, [CALC_NAMES[:2], CALC_NAMES[2:]])
+        self.assertEqual(sorted(sum(ran, [])), sorted(examined("planned names", CALC_NAMES)))
+
+    def test_a_plan_whose_python_legs_do_not_partition_the_listing_is_refused(self):
+        """A7 (R5): each check decides alone. The count case's legs are a true partition of the
+        listing, and the partition case's count is the leg's n."""
+        tree = Tree(self, {"calc": CALC})
+        before = digest(tree.root / "scripts/calc.py")
+        cases = (
+            (
+                "the count",
+                self.plan(tree, "count.json", [CALC_NAMES[0::2], CALC_NAMES[1::2]], count=3),
+                "mutation-python: usage: the plan deals 3 python leg(s), not 2",
+            ),
+            (
+                "the partition",
+                self.plan(tree, "partition.json", [[CALC_NAMES[0], GHOST], [CALC_NAMES[2]]]),
+                "mutation-python: usage: the plan's python legs do not partition the listing: "
+                f"1 missing, 1 extra, first {CALC_NAMES[1]}",
+            ),
+        )
+        for label, plan, refusal in cases:
+            done, report, lines = self.leg(
+                tree, "--plan", str(plan), "--shard", "0/2", "--control-seconds", "1"
+            )
+            self.assertEqual(done.returncode, 2, f"{label}: {done.stdout}{done.stderr}")
+            self.assertEqual(done.stderr, refusal + "\n", label)
+            self.assertEqual(done.stdout, "", label)
+            self.assertIsNone(report, label)
+            self.assertIsNone(lines, label)
+            self.assertEqual(digest(tree.root / "scripts/calc.py"), before, label)
+        examined("refused plans", cases)
+
+    def test_each_files_control_cost_is_recorded_beside_the_report_before_its_mutants(self):
+        """A8 (R6): `calc.py` is judged and `loose.py` has no test module; the control figure is
+        fixed by `--control-seconds` and the run's id and attempt by this test's environment."""
+        tree = Tree(self, {"calc": CALC, "loose": LOOSE}, tests={"loose": []})
+        with mock.patch.dict(os.environ, {"GITHUB_RUN_ID": "4242", "GITHUB_RUN_ATTEMPT": "2"}):
+            done, report, lines = self.leg(tree, "--all", "--control-seconds", "20")
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(
+            done.stdout,
+            "mutation-python: killed 3, survived 0, uncovered 3, unviable 0, timeout 0, void 0\n"
+            "examined 6\n",
+        )
+        self.assertEqual(report["counts"]["examined"], 6)
+        self.assertIsNotNone(lines, "no costs.jsonl beside the report")
+        records = [json.loads(line) for line in lines]
+        self.assertEqual(
+            [(r["kind"], r["path"]) for r in records],
+            [
+                ("control", "scripts/calc.py"),
+                ("mutant", "scripts/calc.py"),
+                ("mutant", "scripts/calc.py"),
+                ("mutant", "scripts/calc.py"),
+                ("uncovered", "scripts/loose.py"),
+            ],
+        )
+        self.assertEqual(
+            records[0],
+            {
+                "kind": "control",
+                "path": "scripts/calc.py",
+                "ran": 1,
+                "failures": 0,
+                "seconds": 20.0,
+                "bound": 100.0,
+                "shard": None,
+                "run": "4242",
+                "attempt": "2",
+            },
+        )
+        self.assertEqual([r["name"] for r in records[1:4]], CALC_NAMES)
+        self.assertEqual([r["outcome"] for r in records[1:4]], ["killed"] * 3)
+        for record in records[1:4]:
+            self.assertEqual(sorted(record), ["kind", "name", "outcome", "path", "seconds"])
+            self.assertGreaterEqual(record["seconds"], 0)
+        self.assertEqual(
+            records[4],
+            {
+                "kind": "uncovered",
+                "path": "scripts/loose.py",
+                "seconds": 0,
+                "shard": None,
+                "run": "4242",
+                "attempt": "2",
+            },
+        )
+        examined("cost records", records)
 
 
 def runner_module():

@@ -194,3 +194,64 @@ flowchart TD
 The run holds 256 jobs. The Python legs keep a fixed share of at most 32, the Rust legs at most
 209 (`LEG_CEILING["ci"]`, derived with the Python legs counted at 32), and 15 other jobs hold the
 rest. Each plan refuses whole above its own share, by name, and neither borrows the other's.
+
+## 6. The Python legs dealt by each file's cost (SPEC-418, ADR-432)
+
+Added after section 5; every earlier byte is kept. Kind: data flow. Read at DeckStreak `dev`
+c74b6b9, whose line numbers these are, with SPEC-415's change on top (`scripts/mutation-verdict.py`
+`python_shards` at 987-995 and `shards` at 1008-1093, `scripts/mutation_python.py` `select` at
+768-796 and its report at 901-902, `.github/workflows/ci.yml` `mutation-python` at 531-570).
+Decided by ADR-432; built by SPEC-418.
+
+Before: the legs are sized by a count, and a leg runs its own `k::n`. Nothing is written until a
+run ends, so a leg cut at its 60 minutes leaves no cost behind.
+
+```mermaid
+flowchart LR
+  listing["listing: N Python mutants, in listing order"] --> count["python_shards: N over 20 legs, rounded up"]
+  count --> refused["more than 32 legs: the plan refused whole, by name"]
+  count --> dealt["shard k holds the names k::n"]
+  dealt --> leg["leg k of n: runs chosen k::n of its own listing, never checked against the plan"]
+  leg --> cut["a leg cut at its 60 minutes: no report and no cost, nothing uploaded"]
+  leg --> report[("report.json, written only when the run ends")]
+  report --> verdict["mutation-verdict: the python class"]
+  cut --> verdict
+```
+
+After: a priced file's mutants are dealt by what they cost, within half the job, and every leg
+records each cost as it is paid, so a cut leg still measures the next plan.
+
+```mermaid
+flowchart LR
+  listing["listing: N Python mutants, in listing order"] --> bycost["python_by_cost"]
+  table[("PYTHON_CONTROL_SECONDS: a price per file, shipped empty")] --> bycost
+  bycost -->|no listed file priced| count["the count rule of section 5, byte for byte"]
+  bycost -->|a priced file| runs["each priced file cut into runs of at most k, k = floor of 1800 over its price, less 2"]
+  runs --> dealt["runs dealt heaviest first onto the lightest leg, in the fewest legs whose slowest is within 1800 s"]
+  dealt --> unpriced["unpriced mutants: 20 a leg, round robin, after the priced legs"]
+  unpriced --> refused["more than 32 legs, or one mutant's leg past 1800 s: refused whole by name, exit 1, the plan unwritten"]
+  unpriced --> plan[("plan.json python: count, shards, projected_seconds")]
+  count --> plan
+  plan --> leg["leg k of n: planned_leg holds the plan's count and partition to its own listing"]
+  leg -->|a name missing or extra| usage["refused before any mutant: exit 2, no report"]
+  leg -->|the partition holds| ran["runs exactly the names shard k lists"]
+  ran --> costs[("costs.jsonl beside report.json: a control line, then one line per mutant, each flushed")]
+  ran --> report[("report.json, when the run ends")]
+  costs --> prices["mutation-verdict.py prices --costs DIR: each file's price, with its run, attempt and shard"]
+  prices -.->|a later delivery commits the table| table
+  report --> verdict["mutation-verdict: the python class, every planned leg counted"]
+  usage --> verdict
+```
+
+A priced file's leg projects (2 + m) x price for its m mutants there: its control, its sentinel
+and each mutant at the control's cost. The bound is 1800 seconds, half the `mutation-python` job's
+60 minutes. The run's 225 legs (256 jobs less the 31 others) stay in fixed shares, 32 Python and
+193 Rust, so the plan's joint line reads its legs and projected runner-minutes against
+32 x 30 + 193 x 180 = 35700, and the leg ceiling is unchanged.
+
+| from | to | what | shape |
+|---|---|---|---|
+| `mutation-plan` | `mutation-python` | each leg's names and its projection | `plan.json` `python`: `count`, `shards[].mutants`, `shards[].projected_seconds` |
+| `mutation-python` | its uploaded artifact | each file's control seconds and each mutant's seconds, as paid | `costs.jsonl`, one JSON line each: `control`, `uncovered`, `mutant` |
+| a run's downloaded artifacts | `mutation-verdict.py prices` | every leg's `costs.jsonl` | one table line per file, with its run, attempt and shard |
+| `prices`' output | `PYTHON_CONTROL_SECONDS` | a file's price, committed by a later delivery | a whole number of seconds per path |

@@ -199,3 +199,10 @@ Chosen against:
 - Keeping the cap: rejected because it spent 32 legs of up to an hour each on a run that read
   VOID, and gives no sign in the plan that the run cannot be judged.
 - Sampling or filtering the listing to fit 32 legs: rejected because it drops mutants, a weakening.
+
+## Amendment: the Python legs are dealt by cost under fixed shares (SPEC-418, ADR-432)
+
+Insert-only; every earlier byte is kept. ADR-432 deals the Python legs by each file's measured
+control cost within half their job, in fixed shares of the run's 225 legs, 32 Python and 193 Rust,
+so this decision's leg ceiling is unchanged. Chosen against: a floating split, in which the Python
+legs take what the Rust plan leaves, because it raises the Python ceiling above 32 (ADR-432 D2).

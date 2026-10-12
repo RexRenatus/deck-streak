@@ -765,6 +765,13 @@ class Judge:
             record["mutants"].append(mutant_record(m, outcome, killers))
 
 
+def planned_leg(
+    plan: dict | None, chosen: list[tuple[str, Mutant]], k: int, n: int
+) -> list[tuple[str, Mutant]]:
+    """Leg k of n of the chosen mutants, as the plan dealt them (SPEC-418 R5)."""
+    return chosen[k::n]
+
+
 def select(root: pathlib.Path, mapping: dict, args: argparse.Namespace) -> dict[str, list[Mutant]]:
     """The selected mutants by file, files in path order, after `--shard`."""
     if args.all:

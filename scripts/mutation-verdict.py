@@ -119,6 +119,13 @@ SCRIPTS = re.compile(r"scripts/[^/]+\.py")
 PYTHON_SCHEMA = "deckstreak.mutation-python.v1"
 #: The mutants one Python shard holds, and the most shards a pull request's matrix runs (R9).
 PYTHON_SHARD_MUTANTS, PYTHON_MAX_SHARDS = 20, 32
+#: A Python leg's projected time may reach half its job's `timeout-minutes` of 60, the margin the
+#: Rust legs keep under theirs, since a projection is a price and not a measurement (SPEC-418 R1).
+PYTHON_LEG_BOUND_SECONDS = 3600
+#: Each Python file's price, whole seconds of its control run, by repository-relative path. It
+#: ships empty: an entry is written only from `prices` over a recorded run's `costs.jsonl`, and
+#: names the run, attempt and shard it came from; an unpriced file keeps the count rule (R2).
+PYTHON_CONTROL_SECONDS: dict[str, int] = {}
 #: The weekly battery's Python shards, each `run --all --shard k/16` (R14).
 PYTHON_WEEKLY_SHARDS = 16
 #: The weekly dispatch's `package` value that sweeps the Python population alone (R14).
@@ -1003,6 +1010,12 @@ def python_shards(listing: list[dict]) -> dict | None:
         "count": count,
         "shards": [{"shard": k, "mutants": names[k::count]} for k in range(count)],
     }
+
+
+def python_by_cost(listing: list[dict], prices: dict[str, int]) -> dict | str | None:
+    """The Python matrix dealt by each listed file's price (SPEC-418 R3): None when no listed
+    file is priced, so the count rule stands."""
+    return None
 
 
 def announce(count: int) -> None:
@@ -3163,6 +3176,11 @@ def table_web(root, reports, records, tally, fail, void) -> int:
 # --------------------------------------------------------------------------- the command line
 
 
+def prices(directory: str) -> int:
+    """Each Python file's price from the `costs.jsonl` records under `directory` (SPEC-418 R7)."""
+    return EXIT_OK
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
@@ -3179,6 +3197,7 @@ def main(argv: list[str] | None = None) -> int:
             "exclusions",
             "census",
             "table",
+            "prices",
         ],
     )
     parser.add_argument("--root", default=str(pathlib.Path(__file__).resolve().parents[1]))
@@ -3207,6 +3226,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--package")
     parser.add_argument("--rust-leg")
     parser.add_argument("--rows-leg")
+    parser.add_argument("--costs")
     args = parser.parse_args(argv)
     root = pathlib.Path(args.root).resolve()
     if args.verb == "plan":
@@ -3252,6 +3272,10 @@ def main(argv: list[str] | None = None) -> int:
         if not args.reports:
             parser.error("table needs --reports")
         return table(args)
+    if args.verb == "prices":
+        if not args.costs:
+            parser.error("prices needs --costs")
+        return prices(args.costs)
     return exclusions(root)
 
 
