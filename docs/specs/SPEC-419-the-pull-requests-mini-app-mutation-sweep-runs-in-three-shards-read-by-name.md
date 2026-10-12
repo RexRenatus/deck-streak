@@ -140,6 +140,17 @@ All thirteen are read red and green from CI's `hygiene` job, which runs `scripts
 | `docs/specs/SPEC-039-every-change-proves-its-tests-kill-its-mutants.md` | docs | changed: an amendment section |
 | `docs/schematics/mutation-testing.md` | docs | changed: section 10 |
 | `changelog.d/web-mutation-shards-419.md` | docs | added: the fragment |
+| `scripts/mutation-verdict.py` | CI scripts | changed: `LEG_CEILING["ci"]`, 193 to 190, and its comment's count of other `ci.yml` jobs, 63 to 66 |
+| `scripts/tests/test_dispatch_shards.py` | CI tests | changed: the pull request ceiling's pins, 193 to 190, and the refused listing, 13125 to 12921 ingest mutants at 1628046 s |
+| `scripts/tests/test_mutation_verdict.py` | CI tests | changed: the cap, constants and headroom pins follow 190 |
+| `scripts/tests/test_mutation_python_shard_binding.py` | CI tests | changed: the joint line's pins, 222 legs and 35160 runner-minutes, and the ceiling in its text |
+| `scripts/mutation-rows.d/S36200-S36299.json` | CI tests | changed: row S36201's find follows the ceiling, `"ci": 193` to `"ci": 190` |
+| `docs/specs/SPEC-362-a-releases-mutants-are-judged-in-one-run-whose-legs-fit-the-run.md` | docs | changed: an amendment section recording R3's value, 193 to 190 |
+
+The pull request ceiling for Rust legs falls from 193 to 190 under SPEC-362 R3, because the three
+`mutation-web-shard` legs raise the other `ci.yml` jobs from 63 to 66; a listing past 190 legs is
+refused whole. That constant is the one line of `scripts/mutation-verdict.py` this delivery moves
+(with its comment): the judge, its thresholds and its settings are unchanged.
 
 ## 5. What this does NOT cover
 

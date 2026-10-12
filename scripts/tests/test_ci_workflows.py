@@ -5338,7 +5338,7 @@ NOT_WORKFLOW_READS = {
         (
             "test_dispatch_shards",
             "TheReleaseFitsOneRun.test_a_listing_beyond_the_ceiling_is_refused_whole",
-            "plan_shards(entries('deck-streak-ingest', 13125))",
+            "plan_shards(entries('deck-streak-ingest', 12921))",
             1,
         ),
         (

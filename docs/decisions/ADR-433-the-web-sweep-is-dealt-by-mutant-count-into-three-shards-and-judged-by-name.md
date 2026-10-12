@@ -119,6 +119,10 @@ arithmetic, each figure with its job:
   count read VOID until it is followed.
 - Neutral: the judge, its thresholds, the equivalence records and the survivors table read exactly
   as before; only the number of StrykerJS runs behind the one report changes.
+- Bad: the Rust legs' ceiling falls by 3, to 190, under SPEC-362 R3, because the three shard legs
+  raise the other `ci.yml` jobs from 63 to 66, and a release listing past 190 legs is refused
+  whole; that constant, with its comment, is the one line of `scripts/mutation-verdict.py` this
+  delivery moves.
 
 ### Confirmation
 

@@ -40,6 +40,8 @@ unittest's own `[N chars]` cuts included. CI runs the pull request's tip, whose 
 and tests are byte-identical to the green commit's, so each green is read in the checks over the
 tip.
 
+The `hygiene` job 114938699081 at `4145fb2b` failed one test of the suite, `test_dispatch_shards.TheReleaseFitsOneRun.test_the_ceiling_is_the_runs_job_budget`, reading `{'ci': 193, 'battery': 234} != {'ci': 190, 'battery': 234}`, on one cause: the three shard legs raise the other `ci.yml` jobs from 63 to 66, and the commit that follows moves `LEG_CEILING["ci"]` and its pins to 190.
+
 ```red-first
 A1: red at 0b34613df1cb531c2a0ec52df3080f94c5785986: AssertionError: Lists differ: ['ci.yml has no mutation-web-shard job', "[696 chars]dge'] != [] (job 114893256663)
 A1: green at 8cbc25caa1d22593e66bb93d7433a55db3b4733b
