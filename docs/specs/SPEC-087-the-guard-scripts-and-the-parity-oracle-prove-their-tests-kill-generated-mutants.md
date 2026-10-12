@@ -627,3 +627,13 @@ and no byte of the plan, and exits 1 before any leg is dealt (SPEC-415 R1 to R3,
   since the plan names no python shards.
 - Section 12's last case of SPEC-362 A12, 32 x 20 + 1, now reads refused instead of 32 shards; the
   test keeps its name, its command and its id, as SPEC-362's own amendment records.
+
+## Amendment: each Python plan leg runs its plan's names and records its costs (SPEC-418)
+
+Insert-only; every earlier byte is kept. When the plan carries a `python` matrix, a leg run with
+`--plan` and `--shard k/n` runs exactly the names the plan's shard k lists, and refuses before its
+first mutant, writing no report, when the plan's count is not n or its legs do not hold the
+runner's own listing exactly once each (SPEC-418 R5). With `--report`, the runner records each
+file's control seconds and each mutant's seconds in `costs.jsonl` beside the report as they are
+paid (SPEC-418 R6); the report and the standard output are unchanged. `--all` and `--file` keep
+`k::n`.

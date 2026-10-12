@@ -69,6 +69,14 @@ ADR-429): the plan fails, no leg starts, and `mutation-verdict` reads the run VO
 is not a shard that never reported: re-running its failed jobs refuses it again, and a range past
 the ceiling waits for the Python legs to be sized by a measured cost (#825).
 
+**A priced Python file is dealt by its cost (SPEC-418, ADR-432).** Once a file has a price,
+the Python legs are dealt by each file's measured cost: a leg holds what its files' control runs
+project within half the job, and `mutation-plan` prints the priced and unpriced legs, then the
+run's joint line after the Rust line. The price table is filled only from
+`mutation-verdict.py prices --costs <dir>` over a run's downloaded leg artifacts, never by hand;
+an unpriced file keeps the count rule of 20 a leg; and a listing the run cannot hold is refused
+whole, by name, never capped.
+
 **Cut a release before its range reaches the ceiling.** A release pull request's plan lists every
 mutant `dev` gained since the last release, so the range only grows until it ships, and a range past
 the ceiling cannot be judged by any run. The scheduled battery's plan of the whole tree, the largest

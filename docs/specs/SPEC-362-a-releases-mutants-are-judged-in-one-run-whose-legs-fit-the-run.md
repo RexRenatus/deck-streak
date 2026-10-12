@@ -293,3 +293,13 @@ A1 keeps its id, its command and its test name, `test_the_release_listing_fits_o
 listing is unchanged; it now reads that listing refused whole by the pull request's plan, by
 name, and sized at 200 legs within the battery's ceiling. This is a tightening, not a retirement
 in SPEC-056 R14's form, because A1's test stays: R14 retires a criterion whose test is removed.
+
+## Amendment: the Python legs' bound is half their job, beside the unchanged leg ceiling (SPEC-418)
+
+Insert-only; every earlier byte is kept. The Python legs gain a bound of their own,
+`PYTHON_LEG_BOUND_SECONDS` = 1800, half the `mutation-python` job's 60 minutes, held against the
+workflow as `SHARD_BOUND_SECONDS` is for the Rust legs. Once a file is priced, the plan deals its
+mutants by cost within that bound and prints a joint line: its legs against 225, 32 Python and 193
+Rust, and its projected runner-minutes against 35700. `LEG_CEILING` stays
+`{"ci": 193, "battery": 234}`, and the count rule of 20 listed mutants a leg stays the rule for
+every unpriced file.

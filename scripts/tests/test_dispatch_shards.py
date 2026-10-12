@@ -304,6 +304,16 @@ class TheReleaseFitsOneRun(unittest.TestCase):
         for leg, value in minutes.items():
             self.assertEqual(module.SHARD_BOUND_SECONDS, value * 60 // 2, leg)
 
+    def test_the_python_bound_is_half_of_the_python_legs_timeout(self):
+        """SPEC-418 A10 (R1): a Python leg's projection may reach half its job's limit, held
+        against the workflow as the Rust legs' bound is."""
+        job = jobs(workflow(CI)).get("mutation-python", "")
+        found = re.findall(r"(?m)^    timeout-minutes: (\d+)$", job)
+        self.assertEqual(found, ["60"])
+        module = verdict_module()
+        self.assertEqual(module.PYTHON_LEG_BOUND_SECONDS, int(found[0]) * 60 // 2)
+        examined("python leg jobs", found)
+
     def test_the_ceiling_is_the_runs_job_budget(self):
         module = verdict_module()
         derived = {}

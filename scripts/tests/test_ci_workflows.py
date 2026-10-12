@@ -5762,6 +5762,12 @@ NOT_WORKFLOW_READS = {
             1,
         ),
         (
+            "test_dispatch_shards",
+            "TheReleaseFitsOneRun.test_the_python_bound_is_half_of_the_python_legs_timeout",
+            "verdict_module()",
+            1,
+        ),
+        (
             "test_not_started_legs",
             "ALegWithNothingToExamineIsNotStarted.test_a_leg_the_listing_gives_nothing_reads_not_started",
             "judge(reports)",
@@ -6017,6 +6023,12 @@ NOT_WORKFLOW_READS = {
             "test_dispatch_shards",
             "TheReleaseFitsOneRun.test_the_ceiling_is_the_runs_job_budget",
             "module.PYTHON_MAX_SHARDS",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheReleaseFitsOneRun.test_the_python_bound_is_half_of_the_python_legs_timeout",
+            "module.PYTHON_LEG_BOUND_SECONDS",
             1,
         ),
     ),

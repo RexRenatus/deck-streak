@@ -171,5 +171,26 @@ class TheReleaseRunbookNamesThePythonCeiling(unittest.TestCase):
             self.assertIn(phrase, section, f"section 2 names {phrase}")
 
 
+class TheReleaseRunbookNamesThePythonCostDeal(unittest.TestCase):
+    """SPEC-418 A11 (R9, ADR-432): section 2 of the release runbook names the Python cost deal,
+    the one command that fills its price table, and the count rule an unpriced file keeps."""
+
+    def test_the_runbook_names_the_python_cost_deal(self):
+        lines = (REPO / "RELEASING.md").read_text(encoding="utf-8").splitlines()
+        start, end = "## 2. The release pull request", "## 3. Tag it on main"
+        self.assertIn(start, lines)
+        self.assertIn(end, lines)
+        section = " ".join(" ".join(lines[lines.index(start) : lines.index(end)]).split())
+        phrases = [
+            "the Python legs are dealt by each file's measured cost",
+            "`mutation-verdict.py prices --costs <dir>`",
+            "an unpriced file keeps the count rule",
+            "SPEC-418",
+        ]
+        missing = [phrase for phrase in phrases if phrase not in section]
+        self.assertEqual(missing, [], "section 2 names the Python cost deal")
+        examined("runbook phrases", phrases)
+
+
 if __name__ == "__main__":
     unittest.main()

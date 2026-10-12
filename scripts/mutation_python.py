@@ -32,6 +32,7 @@ from __future__ import annotations
 import argparse
 import ast
 import bisect
+import collections
 import json
 import os
 import pathlib
@@ -597,6 +598,36 @@ class Judge:
         self.copy.mkdir()
         self.copy_runner()
         self.pycache = self.scratch / "pycache"
+        # Each cost is written and flushed as it is paid, beside the report, so a leg its job cuts
+        # short still leaves every cost it paid; the report and the output never change (R6).
+        report = getattr(args, "report", None)
+        self.costs = (
+            open(pathlib.Path(report).parent / "costs.jsonl", "a", encoding="utf-8")
+            if report
+            else None
+        )
+        shard = getattr(args, "shard", None)
+        self.where = {
+            "shard": f"{shard[0]}/{shard[1]}" if shard else None,
+            "run": os.environ.get("GITHUB_RUN_ID"),
+            "attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+        }
+
+    def cost(self, kind: str, path: str, **fields: object) -> None:
+        """One `costs.jsonl` line, flushed at once (SPEC-418 R6); nothing without `--report`."""
+        if self.costs is None:
+            return
+        self.costs.write(json.dumps({"kind": kind, "path": path, **fields}) + "\n")
+        self.costs.flush()
+
+    def paid(self, path: str, record: dict) -> None:
+        """The control line: the file's control run as used, its bound, and where it ran, the
+        figures `mutation-verdict.py prices` derives the file's price from (SPEC-418 R6)."""
+        self.cost("control", path, **record["control"], bound=record["bound"], **self.where)
+
+    def close(self) -> None:
+        if self.costs is not None:
+            self.costs.close()
 
     def copy_runner(self) -> None:
         here = pathlib.Path(__file__).resolve().parent
@@ -715,6 +746,7 @@ class Judge:
 
         if not entry["modules"]:
             all_as("uncovered")
+            self.cost("uncovered", path, seconds=0, **self.where)
             return
         limit = self.args.test_seconds or CONTROL_SECONDS
         control = self.tests(entry, [], False, limit)
@@ -737,10 +769,12 @@ class Judge:
                 else "the control selected no test"
             )
             record["void"] = reason
+            self.paid(path, record)
             all_as("void")
             return
         bound = self.args.test_seconds or max(BOUND_FLOOR, BOUND_FACTOR * seconds)
         record["bound"] = bound
+        self.paid(path, record)
         try:
             target.write_bytes((source + SENTINEL).encode("utf-8"))
             sentinel = self.tests(entry, [], False, bound)
@@ -756,6 +790,7 @@ class Judge:
             all_as("void")
             return
         for m in selected:
+            began = time.monotonic()
             outcome, killers = judge_mutant(
                 target,
                 original,
@@ -763,10 +798,56 @@ class Judge:
                 lambda: self.tests(entry, record["byte_readers"], self.args.failfast, bound),
             )
             record["mutants"].append(mutant_record(m, outcome, killers))
+            self.cost(
+                "mutant", path, name=m.name(path), seconds=time.monotonic() - began, outcome=outcome
+            )
+
+
+class PlanRefused(Exception):
+    """A plan whose Python legs this leg cannot run as dealt, refused before any mutant is
+    installed and before any report is written (SPEC-418 R5)."""
+
+
+def planned_leg(
+    plan: dict | None, chosen: list[tuple[str, Mutant]], k: int, n: int
+) -> list[tuple[str, Mutant]]:
+    """Leg k of n of the chosen mutants, as the plan dealt them (SPEC-418 R5): the chosen whose
+    names the plan's python shard k lists, in listing order, once the plan deals n legs that hold
+    the runner's own listing exactly once each. A plan with no python matrix, `--all` and
+    `--file` keep `k::n`."""
+    python = plan.get("python") if isinstance(plan, dict) else None
+    if not isinstance(python, dict):
+        return chosen[k::n]
+    if python.get("count") != n:
+        raise PlanRefused(f"the plan deals {python.get('count')} python leg(s), not {n}")
+    legs = [leg for leg in python.get("shards", []) if isinstance(leg, dict)]
+    names = [mutant.name(file) for file, mutant in chosen]
+    dealt = collections.Counter(str(name) for leg in legs for name in leg.get("mutants", []))
+    listed = collections.Counter(names)
+    if dealt != listed:
+        missing, extra = listed - dealt, dealt - listed
+        first = next((name for name in names if missing[name]), None)
+        if first is None:
+            plan_order = (str(name) for leg in legs for name in leg.get("mutants", []))
+            first = next(name for name in plan_order if extra[name])
+        raise PlanRefused(
+            f"the plan's python legs do not partition the listing: {sum(missing.values())} "
+            f"missing, {sum(extra.values())} extra, first {first}"
+        )
+    wanted = collections.Counter(
+        str(name) for leg in legs if leg.get("shard") == k for name in leg.get("mutants", [])
+    )
+    ran: list[tuple[str, Mutant]] = []
+    for (file, mutant), name in zip(chosen, names):
+        if wanted[name] > 0:
+            wanted[name] -= 1
+            ran.append((file, mutant))
+    return ran
 
 
 def select(root: pathlib.Path, mapping: dict, args: argparse.Namespace) -> dict[str, list[Mutant]]:
     """The selected mutants by file, files in path order, after `--shard`."""
+    plan = None
     if args.all:
         files = sorted(mapping)
         lines: dict[str, set[int] | None] = dict.fromkeys(files)
@@ -789,7 +870,7 @@ def select(root: pathlib.Path, mapping: dict, args: argparse.Namespace) -> dict[
                 chosen.append((file, mutant))
     if args.shard:
         k, n = args.shard
-        chosen = chosen[k::n]
+        chosen = planned_leg(plan, chosen, k, n)
     by_file: dict[str, list[Mutant]] = {}
     for file, mutant in chosen:
         by_file.setdefault(file, []).append(mutant)
@@ -832,6 +913,8 @@ def prepare(args: argparse.Namespace) -> tuple[pathlib.Path, dict, dict] | int:
         return usage(f"--file {args.file} is outside the population")
     try:
         return root, mapping, select(root, mapping, args)
+    except PlanRefused as refusal:
+        return usage(str(refusal))
     except (OSError, ValueError, KeyError) as error:
         return usage(f"the selection cannot be read: {error}")
 
@@ -893,6 +976,7 @@ def run(args: argparse.Namespace) -> int:
         report["restore_failed"] = str(error)
         code = EXIT_RESTORE
     finally:
+        judge.close()
         shutil.rmtree(judge.scratch, ignore_errors=True)
     counts = count(report)
     report.update({"counts": counts})
