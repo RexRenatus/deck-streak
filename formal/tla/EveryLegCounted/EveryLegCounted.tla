@@ -74,6 +74,8 @@
 \* @phx covers scripts/mutation-verdict.py anchor=partition digest=sha256:9b2464deb33fb55acce4bade799fac1d1d5094a4526a528d634aeb1f78f57677
 \* @phx covers scripts/mutation-verdict.py anchor=examined_sum digest=sha256:072ec1b6768a7616f7cf7b1f0e03846367d35874bcce6493458c470c4f63966e
 \* @phx covers scripts/mutation-verdict.py anchor=population_gaps digest=sha256:7c6d3867026cb32da3c8997757c7884886cbaa523a1af2b29bd260d9ca68b03f
+\* @phx covers scripts/mutation-verdict.py anchor=python_by_cost digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers scripts/mutation_python.py anchor=planned_leg digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 \* @phx cites #220, #691
 \* @phx property PassMeansEveryLegCounted ramp=report
 \* @phx property PassMeansThePartition ramp=report
