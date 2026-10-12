@@ -27,9 +27,9 @@ log or from StrykerJS's own report.
   although StrykerJS logged "Done in 99 minutes and 30 seconds" (job 114789042867), every one of
   its 7805 mutants carries a status and the verdict step read `verdict: ok`. A required leg at
   100.2 percent of its bound is cut by any growth or any slower runner.
-- **What one mutant costs.** In that job, mutation testing ran 5849.24 s over 7805 mutants, 0.7494 s
-  a mutant (job 114789042867). The weekly battery's whole sweep ran 4484.84 s over 6446 mutants,
-  0.6958 s a mutant (job 113901239242).
+- **What one mutant costs.** In job 114789042867 mutation testing ran 5849.24 s over 7805
+  mutants, 0.7494 s a mutant. In job 113901239242 the weekly battery's whole sweep ran 4484.84 s
+  over 6446 mutants, 0.6958 s a mutant.
 - **What one shard costs before its first mutant.** Set-up 34 s, StrykerJS's start to the end of
   its initial test run 122 s, and the report's tail 6.7 s: 162.7 s a shard (job 114789042867).
   Every shard repeats the initial test run, because StrykerJS measures each test's coverage there.
@@ -130,7 +130,7 @@ All thirteen are read red and green from CI's `hygiene` job, which runs `scripts
 | `scripts/web_mutation_shards.py` | CI | added: the count, the deal, the shard's record and the union read by name |
 | `scripts/mutation-python.json` | CI | changed: the new script's entry, its killer module `test_web_mutation_shards` (the Python runner's census needs every `scripts/*.py`) |
 | `scripts/tests/test_web_mutation_shards.py` | CI tests | added: A6 to A13 |
-| `scripts/tests/test_ci_workflows.py` | CI tests | changed: the shard checker and A1, A2; A3's list of `ci`'s needs |
+| `scripts/tests/test_ci_workflows.py` | CI tests | changed: the shard checker and A1, A2; A3's list of `ci`'s needs; the census register's one entry for A6 to A13's import of the new script |
 | `scripts/tests/test_mutation_workflows.py` | CI tests | changed: `JOB_CONDITIONS` and A4's jobs |
 | `scripts/tests/test_not_started_legs.py` | CI tests | changed: A5's conditions |
 | `scripts/mutation-rows.d/S41900-S41999.json` | CI tests | added: rows `S41900` onward |

@@ -91,6 +91,12 @@
       "test_web_engine_size"
     ]
   },
+  "scripts/web_mutation_shards.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_web_mutation_shards"
+    ]
+  },
   "scripts/write-back-issues.py": {
     "dir": "scripts/tests",
     "modules": []
