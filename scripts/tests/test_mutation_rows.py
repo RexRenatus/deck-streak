@@ -9,11 +9,16 @@ killer ran, and against which bytes. A9 reads the committed rows, and A11 plants
 must refuse.
 """
 
+import argparse
+import contextlib
 import hashlib
+import importlib.util
+import io
 import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -1219,6 +1224,204 @@ class TheMergeKeepsEveryLeg(unittest.TestCase):
             self.assertEqual(done.returncode, 2, f"{name}: {out}")
             self.assertIn(refusal, out, name)
             self.assertIsNone(merged, f"{name}: a refused merge wrote a report")
+
+
+def load_runner():
+    """The runner as a module in this process, read from its file as it stands, so a test can
+    observe the exit code `legs`, `merge` and `main` return: through a subprocess a returned None
+    and a returned 0 both end the process with status 0."""
+    spec = importlib.util.spec_from_file_location("mutation_rows_inprocess", RUNNER)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+class TheLegsAndMergeAnswerWithTheirOwnExitCodes(unittest.TestCase):
+    """SPEC-417 A1 to A3, A6 and A7 (R1 to R3, R7, R8): `legs`, `merge` and `main` called as
+    functions return the exit code they print and write, and shape the merged report's bytes."""
+
+    IDS = tuple(f"S0000{n}-ROW{n}" for n in range(6))
+
+    def setUp(self):
+        patcher = mock.patch.dict(os.environ)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        os.environ.pop("GITHUB_OUTPUT", None)
+        previous = signal.getsignal(signal.SIGTERM)
+        self.addCleanup(signal.signal, signal.SIGTERM, previous)
+        self.runner = load_runner()
+        self.fixture = Fixture(self, [unproved_row(identifier) for identifier in self.IDS])
+        self.plan = self.fixture.write("plan.json", json.dumps({"rows": list(self.IDS)}))
+
+    def args(self, **given):
+        wanted = dict(
+            all=False,
+            row=[],
+            band=None,
+            rows_from=str(self.plan),
+            report=None,
+            base=None,
+            leg=None,
+            legs=None,
+            source=None,
+        )
+        wanted.update(given)
+        return argparse.Namespace(**wanted)
+
+    def call(self, function, args):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = function(self.fixture.root, args)
+        return code, out.getvalue()
+
+    def plant(self, name, legs, count):
+        """Each leg's report under `name/`, holding the rows its deal of `count` legs gives it."""
+        for k in range(legs):
+            entries = [
+                {"id": i, "verdict": "KILLED", "reason": "planted"} for i in self.IDS[k::count]
+            ]
+            self.fixture.write(f"{name}/rows-leg-{k}.json", json.dumps(entries))
+        return self.fixture.root / name
+
+    def merge(self, source, legs, report=None):
+        report = report or self.fixture.root / "merged.json"
+        args = self.args(legs=legs, source=str(source), report=str(report))
+        code, out = self.call(self.runner.merge, args)
+        return code, out, report
+
+    def main(self, *argv):
+        """`main(argv)` as a function: (exit code, stdout, stderr); an argparse exit is its code."""
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            try:
+                code = self.runner.main(list(argv))
+            except SystemExit as stop:
+                code = stop.code
+        return code, out.getvalue(), err.getvalue()
+
+    def test_legs_returns_ok_after_it_prints_its_deal(self):
+        code, out = self.call(self.runner.legs, self.args())
+        self.assertEqual(code, 0, out)
+        self.assertIn("legs: 1 leg(s) for 6 row(s), the largest 6 row(s)", out)
+
+    def test_legs_returns_refused_for_a_plan_naming_no_row(self):
+        plan = self.fixture.write("ghost.json", json.dumps({"rows": ["S99999-GHOST"]}))
+        code, out = self.call(self.runner.legs, self.args(rows_from=str(plan)))
+        self.assertEqual(code, 2, out)
+        self.assertIn("legs: REFUSED: no row holds the id(s) S99999-GHOST", out)
+
+    def test_merge_returns_ok_and_writes_the_report_bytes_under_new_directories(self):
+        source = self.plant("every", 3, 3)
+        report = self.fixture.root / "out" / "deep" / "merged.json"
+        code, out, _ = self.merge(source, 3, report)
+        self.assertEqual(code, 0, out)
+        want = [
+            {"id": i, "verdict": "KILLED", "reason": "planted"}
+            for k in range(3)
+            for i in self.IDS[k::3]
+        ]
+        text = report.read_text(encoding="utf-8")
+        self.assertEqual(text, json.dumps(want, indent=2) + "\n")
+        self.assertTrue(text.endswith("]\n"), repr(text[-4:]))
+        self.assertIn("merge: 3 of 3 leg(s) reported, 6 row(s) merged", out)
+        self.assertIn("examined 6", out.splitlines())
+
+    def test_merge_takes_a_single_leg_and_refuses_a_count_below_one(self):
+        source = self.plant("single", 1, 1)
+        code, out, _ = self.merge(source, 1)
+        self.assertEqual(code, 0, out)
+        self.assertIn("merge: 1 of 1 leg(s) reported, 6 row(s) merged", out)
+        for count in examined("leg counts", [0, -1]):
+            code, out, report = self.merge(source, count, self.fixture.root / f"none{count}.json")
+            self.assertEqual(code, 2, out)
+            self.assertIn(f"merge: REFUSED: --legs {count} is not a count of legs", out)
+            self.assertFalse(report.exists(), "a refused count wrote a report")
+
+    def test_merge_returns_refused_for_a_plan_naming_no_row(self):
+        source = self.plant("ghost-src", 3, 3)
+        plan = self.fixture.write("ghost.json", json.dumps({"rows": ["S99999-GHOST"]}))
+        args = self.args(rows_from=str(plan), legs=3, source=str(source), report="unused.json")
+        code, out = self.call(self.runner.merge, args)
+        self.assertEqual(code, 2, out)
+        self.assertIn("merge: REFUSED: no row holds the id(s) S99999-GHOST", out)
+
+    def test_merge_returns_refused_for_an_unreadable_leg_report(self):
+        source = self.plant("broken", 3, 3)
+        self.fixture.write("broken/rows-leg-1.json", "{not json")
+        code, out, report = self.merge(source, 3)
+        self.assertEqual(code, 2, out)
+        self.assertIn("merge: REFUSED: leg 1's report is unreadable", out)
+        self.assertFalse(report.exists(), "a refused merge wrote a report")
+
+    def test_merge_returns_refused_for_a_report_that_is_not_a_list_of_proved_rows(self):
+        shapes = [
+            ("no id", [{"verdict": "KILLED"}]),
+            ("not a row", ["id"]),
+            ("an empty object", {}),
+            ("a row among strings", [{"id": self.IDS[0]}, "id"]),
+        ]
+        for name, shape in examined("report shapes", shapes):
+            source = self.plant(f"shape-{name.replace(' ', '-')}", 3, 3)
+            self.fixture.write(f"shape-{name.replace(' ', '-')}/rows-leg-0.json", json.dumps(shape))
+            code, out, report = self.merge(source, 3)
+            self.assertEqual(code, 2, f"{name}: {out}")
+            self.assertIn("merge: REFUSED: leg 0's report is not a list of proved rows", out, name)
+            self.assertFalse(report.exists(), f"{name}: a refused merge wrote a report")
+
+    def test_main_counts_and_lists_the_rows(self):
+        root = str(self.fixture.root)
+        code, out, err = self.main("count", "--root", root)
+        self.assertEqual((code, out.strip()), (0, "6"), err)
+        code, out, err = self.main("ids", "--root", root)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(sorted(out.split()), sorted(self.IDS))
+
+    def test_main_names_a_missing_legs_plan(self):
+        code, _, err = self.main("legs", "--root", str(self.fixture.root))
+        self.assertEqual(code, 2)
+        self.assertIn("error: legs needs --rows-from", err)
+
+    def test_main_names_a_merge_missing_any_one_of_its_four_options(self):
+        root = str(self.fixture.root)
+        source = self.plant("main-src", 3, 3)
+        options = {
+            "--rows-from": str(self.plan),
+            "--legs": "3",
+            "--from": str(source),
+            "--report": str(self.fixture.root / "main-merged.json"),
+        }
+
+        def argv(leave):
+            return ["merge", "--root", root] + [
+                part for name, value in options.items() if name != leave for part in (name, value)
+            ]
+
+        code, out, err = self.main(*argv(None))
+        self.assertEqual(code, 0, out + err)
+        self.assertIn("merge: 3 of 3 leg(s) reported, 6 row(s) merged", out)
+        for leave in examined("left-out options", options):
+            code, out, err = self.main(*argv(leave))
+            self.assertEqual(code, 2, f"without {leave}: {out}{err}")
+            self.assertIn("error: merge needs --rows-from, --legs, --from and --report", err, leave)
+            self.assertEqual(out, "", f"without {leave}: {out}")
+        code, out, err = self.main(*argv("--legs"), "--legs", "0")
+        self.assertEqual(code, 2, out + err)
+        self.assertIn("merge: REFUSED: --legs 0 is not a count of legs", out)
+
+    def test_main_describes_the_options_of_prove_and_merge(self):
+        code, out, err = self.main("--help")
+        self.assertEqual(code, 0, err)
+        flat = " ".join(out.split())
+        for text in examined(
+            "help texts",
+            [
+                "prove: only the rows leg k of n deals, as k/n",
+                "merge: how many legs the plan dealt",
+                "merge: the directory of the legs' reports",
+            ],
+        ):
+            self.assertIn(text, flat)
 
 
 if __name__ == "__main__":
