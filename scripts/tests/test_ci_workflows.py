@@ -5156,6 +5156,10 @@ NOT_WORKFLOW_READS = {
         ("test_mutation_workflows", "<module>", "GUARD.read_text(encoding='utf-8')", 1),
     ),
     **allowed(
+        "the rows runner's own Python source, read for one module constant and never imported; never a workflow file",
+        ("test_mutation_workflows", "rows_constant", "ROWS_RUNNER.read_text(encoding='utf-8')", 1),
+    ),
+    **allowed(
         "calls the bash oracle, which runs planted scripts with cargo stubbed and reads the stubs' logs",
         (
             "test_dispatch_shards",
@@ -5282,6 +5286,12 @@ NOT_WORKFLOW_READS = {
         ),
         (
             "test_dispatch_shards",
+            "TheReleaseFitsOneRun.test_the_release_listing_fits_one_run",
+            "size(listing)",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
             "TheReleaseFitsOneRun.test_the_whole_tree_is_sized_from_its_listing",
             "size(listing)",
             1,
@@ -5317,7 +5327,7 @@ NOT_WORKFLOW_READS = {
         (
             "test_dispatch_shards",
             "TheReleaseFitsOneRun.test_a_listing_beyond_the_ceiling_is_refused_whole",
-            "plan_shards(entries('deck-streak-ingest', 14213))",
+            "plan_shards(entries('deck-streak-ingest', 13125))",
             1,
         ),
         (
@@ -6581,6 +6591,14 @@ DYNAMIC_IMPORTS = {
             1,
         ),
         ("test_mutation_python_verdict", "runner", "spec.loader.exec_module(module)", 1),
+        ("test_mutation_rows", "load_runner", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_mutation_rows",
+            "load_runner",
+            "importlib.util.spec_from_file_location('mutation_rows_inprocess', RUNNER)",
+            1,
+        ),
+        ("test_mutation_rows", "load_runner", "spec.loader.exec_module(module)", 1),
         ("test_mutation_rows_group", "<module>", "SPEC.loader.exec_module(runner)", 1),
         ("test_mutation_rows_group", "<module>", "importlib.util.module_from_spec(SPEC)", 1),
         (
@@ -6771,6 +6789,7 @@ DYNAMIC_IMPORTS = {
         ("test_mutation_python_judge_kills", "load", "sys.modules", 1),
         ("test_mutation_python_lister_kills", "load", "sys.modules", 1),
         ("test_mutation_python_verdict", "runner", "sys.modules", 1),
+        ("test_mutation_rows", "load_runner", "sys.modules", 1),
         ("test_mutation_rows_group", "<module>", "sys.modules", 1),
         ("test_mutation_verdict", "verdict_module", "sys.modules", 1),
     ),

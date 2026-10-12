@@ -1367,3 +1367,16 @@ battery's `web` job's with it, by its stated rule from measured whole-app sweeps
 `WEB_MUTATION_TIMEOUT_MINUTES` in `scripts/tests/test_ci_workflows.py` holds both inside 100 to 120
 (ADR-390). No other bound in R18 changes, R3's `mutation-web` still mutates every changed web
 file whole, and no StrykerJS setting changes.
+
+## 39. Amendment: the rows job is dealt into legs (SPEC-417)
+
+Insert-only; every earlier byte is kept. R3 names `mutation-rows` as one job: the rows the diff
+selects (R10), then the retirement check (R11). A re-run that selects every row proves them
+serially past R18's 90 minutes, so SPEC-417 deals the rows into legs (ADR-431): the plan job
+writes a leg count and a matrix, `rows_legs` and `rows_matrix`, from a `legs` step;
+`mutation-rows` becomes one job per rows leg, a matrix over the plan's `rows_matrix` with
+`fail-fast: false`, at most `ROWS_MAX_LEGS` 17 legs; each leg proves only the rows dealt to it and
+uploads its own report; leg 0 alone runs the retirement check; and the verdict's job downloads
+every leg's report and merges them into the one rows report before the judge step, whose lines
+are unchanged. R18's 90 minutes stands, now each leg's. The rows a change selects (R10) are
+unchanged, and no other bound in R18 moves.

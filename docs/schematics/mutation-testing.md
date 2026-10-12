@@ -410,3 +410,98 @@ cited. A line moves with any edit above it, so search by the item named beside i
 | the battery's verdict | `.github/workflows/mutation-weekly.yml:395`; `scripts/mutation-verdict.py:2109` |
 | the model of the legs and the verdict | `formal/tla/EveryLegCounted/EveryLegCounted.tla` |
 | the rows that pin each new constant and check | `scripts/mutation-rows.d/S36200-S36299.json` |
+
+## 9. The rows legs: dealt by measured cost, merged before the verdict (SPEC-417, ADR-431)
+
+Kind: data flow. Read at DeckStreak `dev` 8870392 (`.github/workflows/ci.yml:376-441`, `:578`,
+`:582`, `:615`, `:628-644`, `:668-672`, `:685-702`; `scripts/mutation_rows.py:1169-1188`,
+`:1191-1222`; `scripts/mutation-verdict.py:879`, `:1195`). Decided by ADR-431; built by SPEC-417.
+
+Schematic for SPEC-417 and ADR-431 (rows band S41700-S41799). It draws how a pull request's
+hand-written mutation rows reach the verdict, before and after the rows are dealt into legs. Names
+are the jobs, artifacts and files the workflow writes; section 9.4 cites each step by `path:line`.
+The rows job keeps its bound of 90 minutes: what changes is how many jobs share the rows.
+
+### 9.1 Before: one rows job, cut at its bound
+
+```mermaid
+flowchart TD
+  plan["job mutation-plan<br/>artifact mutation-plan, plan.json"] -->|"needs"| rows["job mutation-rows, one job<br/>timeout-minutes: 90"]
+  rows --> prove["mutation_rows.py prove<br/>every chosen row, one at a time"]
+  prove --> bound{"every row proved<br/>within 90 minutes?"}
+  bound -->|"yes"| report["rows.json, written after the last row<br/>artifact mutation-rows"]
+  bound -->|"no: cut at the bound"| noreport["no report written<br/>nothing uploaded"]
+  report --> verdict["job mutation-verdict<br/>downloads mutation-rows by name"]
+  noreport --> verdict
+  verdict --> judge["judge_rows"]
+  judge -->|"a report"| graded["each row KILLED or SURVIVED"]
+  judge -->|"no report"| void["every selected row VOID<br/>selected and never proved"]
+```
+
+A release's diff selects all 2512 rows. At the measured mean of 16.2 s a row they need about 678
+minutes, more than the 360 minutes a hosted job may run, so one job cannot hold them at any bound.
+The release run's rows job proved 331 of them in 5357 s and was cut at its 90 minutes, with no
+report.
+
+### 9.2 After: legs dealt by measured cost, merged before the verdict
+
+```mermaid
+flowchart TD
+  plan["job mutation-plan<br/>mutation_rows.py legs"] --> fit{"the fewest legs n whose largest,<br/>ceil(R / n) rows x ROW_SECONDS,<br/>is within ROWS_BOUND_SECONDS,<br/>with n at most ROWS_MAX_LEGS?"}
+  fit -->|"none"| refused["REFUSED, whole, by name:<br/>the count and the most legs<br/>exit 2, no output written"]
+  refused -->|"the plan job fails"| cifail["job ci fails"]
+  fit -->|"n"| outputs["outputs rows_legs = n<br/>rows_matrix = 0 to n-1"]
+  outputs -->|"needs"| leg["job mutation-rows, matrix leg k = 0 to n-1<br/>timeout-minutes: 90, fail-fast: false"]
+  leg --> deal["mutation_rows.py prove --leg k/n<br/>the chosen rows k, k+n, k+2n, in plan order"]
+  leg --> retired["leg 0 only<br/>mutation_rows.py retired"]
+  deal --> legreport["rows-leg-k.json<br/>artifact mutation-rows-leg-k"]
+  legreport -->|"needs: every leg has ended"| download["job mutation-verdict<br/>downloads every mutation-rows-leg-k,<br/>merged into reports/mutation-rows"]
+  download --> merge["mutation_rows.py merge<br/>legs 0 to n-1, in leg order"]
+  merge --> dealcheck{"every id in the leg its deal gave it,<br/>and in one leg only?"}
+  dealcheck -->|"no"| refusedmerge["REFUSED by name<br/>exit 2, no report written"]
+  dealcheck -->|"yes"| merged["rows.json, the one report<br/>each absent leg named on its own line"]
+  merged --> judge["judge_rows, unchanged"]
+  judge --> graded["each proved row KILLED or SURVIVED"]
+  judge --> void["an absent leg's rows VOID by id"]
+```
+
+A leg cut at its bound uploads nothing, so `merge` names it and the judge reads its rows as VOID
+by id, never as a pass. The legs share no written object: each uploads its own artifact, they read
+the plan's artifact and a restore-only cache, and the verdict's job reads the legs only after
+`needs` has ended every one (ADR-431 D8).
+
+### 9.3 The arithmetic, and the run's ceiling
+
+- price: 5357 s over 331 rows is 16.2 s a row; `ROW_SECONDS = 17`, rounded up to the second;
+- bound: the rows job keeps 90 minutes, 5400 s, now each leg's; `ROWS_BOUND_SECONDS = 2700`, half
+  of it; a leg holds at most 158 rows (158 x 17 = 2686 s; 159 x 17 = 2703 s);
+- a release's 2512 rows: 2512 x 17 = 42,704 s in all; 15 legs hold 2370 rows, too few, so 16 legs
+  of at most 157 rows, each projected at 157 x 17 = 2669 s, within 2700 s;
+- room: `ROWS_MAX_LEGS = 17` legs hold 2686 rows; 2687 rows are refused whole, by name;
+- the release's re-run: at least 2539 rows, the 2512 with SPEC-415's 8, SPEC-416's 3 and this delivery's 16;
+  16 legs hold 2528, too few, so 17 legs of at most 150 rows, each projected at 2550 s;
+- the run's ceiling for Rust legs: every `ci.yml` job but `mutation-rust` can generate 47 jobs at
+  the base, the rows job among them as one; counted at its most legs, they generate 63, so
+  `LEG_CEILING["ci"]` falls from 209 to 193, the run's 256 less 63. A release listing of 200 Rust
+  legs is then refused whole by name, and a listing of 192 fits.
+
+### 9.4 Where each step lives
+
+Read at `8870392`, before this delivery's change. A line moves with any edit above it, so search
+by the item named beside it after that.
+
+| step | `path:line` |
+|---|---|
+| job `mutation-plan`, its outputs and its steps | `.github/workflows/ci.yml:376-441` |
+| job `mutation-rows`, and its `timeout-minutes: 90` | `.github/workflows/ci.yml:578`, `:582` |
+| the rows job's dependency cache, restored only | `.github/workflows/ci.yml:615` |
+| `mutation_rows.py prove`, the rows the diff selects | `.github/workflows/ci.yml:628-634` |
+| `mutation_rows.py retired` | `.github/workflows/ci.yml:635-637` |
+| artifact `mutation-rows` | `.github/workflows/ci.yml:638-644` |
+| the verdict's download of the rows report, by name | `.github/workflows/ci.yml:668-672` |
+| the judge step | `.github/workflows/ci.yml:685-702` |
+| `chosen`: the population the runner proves | `scripts/mutation_rows.py:1169-1188` |
+| `prove`, its report written once, after the last row | `scripts/mutation_rows.py:1191-1222`, `:1217-1218` |
+| `LEG_CEILING` | `scripts/mutation-verdict.py:879` |
+| `judge_rows`: a selected row with no proof is VOID | `scripts/mutation-verdict.py:1195` |
+| the rows that pin each new constant, verb and step | `scripts/mutation-rows.d/S41700-S41799.json` |
