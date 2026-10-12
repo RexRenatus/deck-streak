@@ -1,0 +1,70 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S41900-THE-WEB-SWEEP-RUNS-IN-ONE-SHARD",
+        ".github/workflows/ci.yml",
+        "        shard: [0, 1, 2]\n",
+        "        shard: [0]\n",
+        "the pull request's web sweep runs in exactly three shards, so each holds about a third of the mutants inside its 100 minutes; one shard holds the whole sweep again and is cut at its bound (SPEC-419 R1)",
+        "test_ci_workflows.ThePullRequestsWebSweepRunsInShards.test_the_web_sweep_runs_in_three_shards_read_by_name"
+      ],
+      [
+        "S41901-THE-WEB-SWEEP-RUNS-IN-TWO-SHARDS",
+        ".github/workflows/ci.yml",
+        "        shard: [0, 1, 2]\n",
+        "        shard: [0, 1]\n",
+        "the matrix names every shard the script deals; with two legs the third shard's files are dealt and never swept (SPEC-419 R1)",
+        "test_ci_workflows.ThePullRequestsWebSweepRunsInShards.test_the_web_sweep_runs_in_three_shards_read_by_name"
+      ],
+      [
+        "S41902-THE-WEB-SWEEP-RUNS-IN-FOUR-SHARDS",
+        ".github/workflows/ci.yml",
+        "        shard: [0, 1, 2]\n",
+        "        shard: [0, 1, 2, 3]\n",
+        "the matrix names exactly the script's three shards; a fourth leg asks for a shard the deal does not hold (SPEC-419 R1)",
+        "test_ci_workflows.ThePullRequestsWebSweepRunsInShards.test_the_web_sweep_runs_in_three_shards_read_by_name"
+      ],
+      [
+        "S41903-A-WEB-SHARD-PASSES-ITS-BOUND",
+        ".github/workflows/ci.yml",
+        "  mutation-web-shard:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 100\n",
+        "  mutation-web-shard:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 101\n",
+        "each web shard keeps the leg's 100 minutes; a raised bound is refused (SPEC-419 R3)",
+        "test_ci_workflows.ThePullRequestsWebSweepRunsInShards.test_the_web_sweep_runs_in_three_shards_read_by_name"
+      ],
+      [
+        "S41904-A-MISSING-WEB-SHARD-READS-OK",
+        "scripts/web_mutation_shards.py",
+        "        return [], {}, [f\"MISSING: {name} holds no readable {RECORD}\"]\n",
+        "        return [], {}, []\n",
+        "a shard whose record is absent reads VOID by name, never as a shard that held nothing, so an empty shard's lost record cannot pass as whole (SPEC-419 R5, R6)",
+        "test_web_mutation_shards.TheUnionReadsEveryShardByName.test_a_missing_cut_or_partial_shard_reads_void_and_writes_nothing"
+      ],
+      [
+        "S41905-THE-DEAL-GOES-ONTO-THE-HEAVIEST-SHARD",
+        "scripts/web_mutation_shards.py",
+        "        dealt[min(range(shards), key=lambda index: (loads[index], index))].append(path)\n",
+        "        dealt[max(range(shards), key=lambda index: (loads[index], index))].append(path)\n",
+        "each file goes onto the shard holding the fewest mutants so far, so the slowest shard stays near a third of the sweep (SPEC-419 R2)",
+        "test_web_mutation_shards.TheDealPutsTheLargestFileOntoTheLightestShard.test_the_deal_puts_the_largest_file_first_onto_the_lightest_shard"
+      ],
+      [
+        "S41906-EVERY-WEB-SHARD-SWEEPS-EVERY-PLANNED-FILE",
+        ".github/workflows/ci.yml",
+        "          MUTATE: ${{ steps.deal.outputs.mutate }}\n",
+        "          MUTATE: ${{ steps.plan.outputs.mutate }}\n",
+        "each shard runs StrykerJS over its own deal's files only; over the plan's files every file is split across all three shards and each shard runs the whole sweep (SPEC-419 R2, R3)",
+        "test_ci_workflows.ThePullRequestsWebSweepRunsInShards.test_the_web_sweep_runs_in_three_shards_read_by_name"
+      ],
+      [
+        "S41907-AN-EMPTY-WEB-SHARD-WRITES-NO-RECORD",
+        "scripts/web_mutation_shards.py",
+        "    (where / RECORD).write_text(json.dumps(record), encoding=\"utf-8\")\n",
+        "    if record[\"mutants\"]:\n        (where / RECORD).write_text(json.dumps(record), encoding=\"utf-8\")\n",
+        "a shard dealt no mutant writes its record all the same, marked empty, so it is read by name and never absent (SPEC-419 R5)",
+        "test_web_mutation_shards.EachShardRecordsItsDeal.test_a_shard_dealt_nothing_writes_an_explicit_empty_record"
+      ]
+    ]
+  }
+}

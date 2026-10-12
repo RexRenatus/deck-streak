@@ -38,9 +38,9 @@ ZERO_SCOPE = {
 }
 EXAMINED = re.compile(r"^examined (\d+)", re.MULTILINE)
 INSTALL = re.compile(r"(?m)^\s*tool: cargo-mutants@27\.1\.0$")
-#: Each mutation job's job-level conditions (SPEC-290): the plan and the web job always start, the
-#: verdict runs whatever its needs returned, and a leg is not started only when the plan's listing
-#: gives it nothing to examine.
+#: Each mutation job's job-level conditions (SPEC-290): the plan and the web shards always start,
+#: the verdict and the web sweep's verdict (SPEC-419) run whatever their needs returned, and a leg
+#: is not started only when the plan's listing gives it nothing to examine.
 JOB_CONDITIONS = {
     "mutation-plan": [],
     "mutation-rust": ["${{ needs.mutation-plan.outputs.listed != '0' }}"],
@@ -49,7 +49,8 @@ JOB_CONDITIONS = {
         "needs.mutation-plan.outputs.scope == 'diff' }}"
     ],
     "mutation-verdict": ["${{ always() }}"],
-    "mutation-web": [],
+    "mutation-web": ["${{ always() }}"],
+    "mutation-web-shard": [],
 }
 
 
@@ -332,7 +333,7 @@ class TheMutationJobsGateEveryPullRequest(unittest.TestCase):
         found = jobs(text)
         aggregate = found.get("ci", "")
         names = ["mutation-plan", "mutation-rust", "mutation-rows", "mutation-verdict"]
-        for name in examined("mutation jobs", [*names, "mutation-web"]):
+        for name in examined("mutation jobs", [*names, "mutation-web", "mutation-web-shard"]):
             self.assertIn(name, found, f"ci.yml has no {name} job")
             job = found[name]
             self.assertRegex(aggregate, rf"needs: \[[^\]]*\b{name}\b", f"ci does not need {name}")
@@ -368,7 +369,9 @@ class TheMutationJobsGateEveryPullRequest(unittest.TestCase):
             0 <= made < prove.find("mutation_rows.py prove"),
             "the rows job never makes the directory its report goes to",
         )
-        self.assertIn("stryker run", found["mutation-web"])
+        # SPEC-419: StrykerJS runs in each web shard, and the job of the leg's name only judges.
+        self.assertIn("stryker run", found["mutation-web-shard"])
+        self.assertNotIn("stryker run", found["mutation-web"])
 
 
 class TheShardsAreThePlans(unittest.TestCase):
