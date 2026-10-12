@@ -24,3 +24,10 @@ A11: python3 -m unittest discover -s scripts/tests -p test_web_mutation_shards.p
 A12: python3 -m unittest discover -s scripts/tests -p test_web_mutation_shards.py -k test_a_missing_cut_or_partial_shard_reads_void_and_writes_nothing
 A13: python3 -m unittest discover -s scripts/tests -p test_web_mutation_shards.py -k test_the_command_line_refuses_what_it_cannot_read
 ```
+
+The same `hygiene` job 114893256663 at `0b34613d` also failed the read census
+`test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read` and three
+controls of `test_the_census_is_red_on_every_planted_site`, all on one cause, the raw read of the
+script in the test of A1, `(REPO / WEB_SHARDS_SCRIPT).read_text(encoding='utf-8')`, which the
+register `NOT_WORKFLOW_READS` in `scripts/tests/test_ci_workflows.py` did not list, and the green
+commit cures all four by adding that one entry to the register.

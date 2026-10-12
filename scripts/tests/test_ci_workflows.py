@@ -4817,6 +4817,15 @@ NOT_WORKFLOW_READS = {
         ),
     ),
     **allowed(
+        "the web shard script, whose shard count and artifact prefix the SPEC-419 pin reads; never handed to the reader",
+        (
+            "test_ci_workflows",
+            "ThePullRequestsWebSweepRunsInShards.test_the_web_sweep_runs_in_three_shards_read_by_name",
+            "(REPO / WEB_SHARDS_SCRIPT).read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
         "calls run_step, which runs a cache step's shell over a planted lockfile's text and reads its outputs",
         (
             "test_ci_workflows",
