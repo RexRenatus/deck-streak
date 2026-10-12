@@ -1169,13 +1169,26 @@ def mutant_costs(records):
     return {record["name"]: record for record in records if record["kind"] == "mutant"}
 
 
+def untraced(**names):
+    """This process's environment without what a traced run hands its tests' processes: the
+    `MUTATION_PYTHON_TRACE_` names and the `PYTHONPATH` that puts the trace's `sitecustomize`
+    first. A process started with them holds the monitoring tool from start-up, so a `--plan` leg
+    started with them could take no trace of its own; `names` are added."""
+    kept = {
+        name: value
+        for name, value in os.environ.items()
+        if not name.startswith("MUTATION_PYTHON_TRACE_") and name != "PYTHONPATH"
+    }
+    return {**kept, **names}
+
+
 def scope_leg(test, case):
-    """The scope fixture's `run --plan` leg with `SCOPE_CASE` set to `case`, run once per case:
-    (the run, the report, each mutant's cost record by its name)."""
+    """The scope fixture's `run --plan` leg with `SCOPE_CASE` set to `case`, run once per case
+    from an untraced environment: (the run, the report, each mutant's cost record by its name)."""
     if case not in SCOPE_LEGS:
         tree = scope_tree(test)
         plan = tree.write("plan.json", json.dumps(SCOPE_PLAN))
-        with mock.patch.dict(os.environ, {"SCOPE_CASE": case}):
+        with mock.patch.dict(os.environ, untraced(SCOPE_CASE=case), clear=True):
             done, report, records = leg(test, tree, "--plan", str(plan), "--control-seconds", "1")
         SCOPE_LEGS[case] = (done, report, mutant_costs(records))
     return SCOPE_LEGS[case]

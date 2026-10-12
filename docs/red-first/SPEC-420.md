@@ -122,3 +122,40 @@ A18: green at d01a8dfc216981b9f2305b8acb920e35da12418b
 A3, A6 and A16 are not red first, because the base already reads the share at call time, keeps
 the count rule, and runs every mutant whole. Each is recorded `not red`, with that reason, and
 holds its behaviour against a change.
+
+## The traced sentinel's reds
+
+The second push's `mutation-verdict` job, 115022243114, read nine tests of
+`test_mutation_python.py` as byte readers of `scripts/mutation_python.py`: each failed in the
+traced sentinel run, so every mutant run of that file skipped it, and the mutants only they
+observe survived. The same job read one survivor of A2's share check. Each line is quoted once,
+as CI printed it, without CI's timestamp:
+
+```text
+job 115022243114 red at af64c424dc53784411d195d0e789058bc45f6cab: mutation: scripts: byte reader: scripts/mutation_python.py: test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_line_no_traced_test_executes_runs_the_whole_suite
+job 115022243114 red at af64c424dc53784411d195d0e789058bc45f6cab: mutation: scripts: byte reader: scripts/mutation_python.py: test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_line_only_a_child_process_executes_keeps_that_test
+job 115022243114 red at af64c424dc53784411d195d0e789058bc45f6cab: mutation: scripts: byte reader: scripts/mutation_python.py: test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_line_run_at_import_or_outside_a_test_runs_the_whole_suite
+job 115022243114 red at af64c424dc53784411d195d0e789058bc45f6cab: mutation: scripts: byte reader: scripts/mutation_python.py: test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_scoped_run_that_ran_fewer_tests_than_its_set_reruns_whole
+job 115022243114 red at af64c424dc53784411d195d0e789058bc45f6cab: mutation: scripts: byte reader: scripts/mutation_python.py: test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_scoped_survivor_is_confirmed_by_the_whole_suite
+job 115022243114 red at af64c424dc53784411d195d0e789058bc45f6cab: mutation: scripts: byte reader: scripts/mutation_python.py: test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_test_that_leaves_a_thread_running_joins_every_scoped_set
+job 115022243114 red at af64c424dc53784411d195d0e789058bc45f6cab: mutation: scripts: byte reader: scripts/mutation_python.py: test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_test_whose_child_execs_joins_every_scoped_set
+job 115022243114 red at af64c424dc53784411d195d0e789058bc45f6cab: mutation: scripts: byte reader: scripts/mutation_python.py: test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_test_whose_process_left_no_record_joins_every_scoped_set
+job 115022243114 red at af64c424dc53784411d195d0e789058bc45f6cab: mutation: scripts: byte reader: scripts/mutation_python.py: test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_each_mutant_runs_only_the_tests_that_execute_its_line
+job 115022243114 red at af64c424dc53784411d195d0e789058bc45f6cab: mutation: scripts: SURVIVED scripts/mutation-verdict.py:1014:42: replace 1 with 2 in python_share_refused
+```
+
+The nine are the tests that start a `run --plan` leg of the scope fixture as a subprocess. That
+leg inherited the traced test process's environment: the `MUTATION_PYTHON_TRACE_` names, and the
+`PYTHONPATH` that puts the trace's `sitecustomize` first. So the leg's own tests process held the
+monitoring tool from its start, the leg could take no trace of its own, and every mutant of the
+leg ran whole, which is not what the nine assert. The cure is in the test module: each scope leg
+starts from an environment without those names and without that `PYTHONPATH` (`untraced`), and no
+assertion of the nine changes. A2's test now also reads that a share of 1, the lowest whole share,
+is not refused, which is the observation the survivor lacked.
+
+The same commit edits one more thing, and it holds no criterion's test. Merging the base left two
+of SPEC-418's plan-line tests in `test_mutation_python_shard_binding.py` patching the leg ceiling
+to 193, as this branch wrote them, while pinning the base's lines for a ceiling of 190. The commit
+puts back this branch's lines under that patch, so the lines they pin stay SPEC-418's, as the
+green commit's note above says. The shipped ceiling stays the base's 190, and no assertion is
+removed.
