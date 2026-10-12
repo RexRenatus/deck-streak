@@ -30,6 +30,34 @@ A12: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -
 A12: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k test_the_whole_tree_is_sized_at_the_batterys_ceiling
 ```
 
+The reds were read in job 114621932441, `hygiene` over the red commit: 17 failures, each a
+test the fence above names for A1 to A8 and A10 to A12, and no other, while A9 passed there.
+A criterion with several tests quotes one of them, and `<the job's text>` stands for the
+`mutation-rows` job's text, which A8's message prints whole. The greens are read in the checks
+over the green commit.
+
 ```red-first
+A1: red at 7cd75c03fa926259b80a9d2384c549613fce2a54: AssertionError: 1 != 2 : 159 rows read 1, want 2
+A1: green at f579a71396392635321ea469ae3327b9fa235147
+A2: red at 7cd75c03fa926259b80a9d2384c549613fce2a54: AssertionError: 0 != 2 : legs: 1 leg(s) for 2687 row(s)
+A2: green at f579a71396392635321ea469ae3327b9fa235147
+A3: red at 7cd75c03fa926259b80a9d2384c549613fce2a54: AssertionError: None != '16' : legs: 1 leg(s) for 2512 row(s)
+A3: green at f579a71396392635321ea469ae3327b9fa235147
+A4: red at 7cd75c03fa926259b80a9d2384c549613fce2a54: AssertionError: Lists differ: ['S00001-FIRST', 'S00002-SECOND', 'S00003-THIRD'] != ['S00001-FIRST', 'S00003-THIRD']
+A4: green at f579a71396392635321ea469ae3327b9fa235147
+A5: red at 7cd75c03fa926259b80a9d2384c549613fce2a54: AssertionError: 3 != 2 : --leg 2/2: S00001-FIRST: VOID: its anchor occurs 0 times in scripts/fixmod.py
+A5: green at f579a71396392635321ea469ae3327b9fa235147
+A6: red at 7cd75c03fa926259b80a9d2384c549613fce2a54: AssertionError: 0 != 1 : one line names leg 1 absent: examined 4
+A6: green at f579a71396392635321ea469ae3327b9fa235147
+A7: red at 7cd75c03fa926259b80a9d2384c549613fce2a54: AssertionError: 0 != 2 : twice: examined 7
+A7: green at f579a71396392635321ea469ae3327b9fa235147
+A8: red at 7cd75c03fa926259b80a9d2384c549613fce2a54: AssertionError: '      matrix:\n        leg: ${{ fromJSON(needs.mutation-plan.outputs.rows_matrix) }}\n' not found in '<the job's text>' : mutation-rows has no matrix over rows_matrix
+A8: green at f579a71396392635321ea469ae3327b9fa235147
 A9: not red: the red commit's stub carries ROWS_BOUND_SECONDS = 2700 and the base keeps 90 minutes, so it is green there; it guards the kept bound as the killer of S41701 and S41712
+A10: red at 7cd75c03fa926259b80a9d2384c549613fce2a54: AssertionError: {'ci': 209, 'battery': 234} != {'ci': 193, 'battery': 234}
+A10: green at f579a71396392635321ea469ae3327b9fa235147
+A11: red at 7cd75c03fa926259b80a9d2384c549613fce2a54: AssertionError: 'mutation-rows' unexpectedly found in ['mutation-plan', 'mutation-rows', None, None] : the verdict asks for mutation-rows by name, which no leg uploads
+A11: green at f579a71396392635321ea469ae3327b9fa235147
+A12: red at 7cd75c03fa926259b80a9d2384c549613fce2a54: AssertionError: 0 != 1 : mutation: shards: 200 shard(s) for 8367 listed mutant(s), projected at 1253460 s serially; the slowest at 10175 s of its 10800 s bound; legs 200 of ceiling 209
+A12: green at f579a71396392635321ea469ae3327b9fa235147
 ```

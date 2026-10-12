@@ -12,8 +12,8 @@
       [
         "S36201-THE-PULL-REQUEST-CEILING-IS-ITS-RUNS-JOB-BUDGET",
         "scripts/mutation-verdict.py",
-        "\"ci\": 209",
-        "\"ci\": 210",
+        "\"ci\": 193",
+        "\"ci\": 194",
         "the pull request run's leg ceiling is 256 less what ci.yml's other jobs can generate (SPEC-362 R3)",
         "test_dispatch_shards.TheReleaseFitsOneRun.test_the_ceiling_is_the_runs_job_budget"
       ],
