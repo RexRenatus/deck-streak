@@ -200,7 +200,6 @@ unittest, so it has no line in the fence.
 | `docs/specs/SPEC-362-a-releases-mutants-are-judged-in-one-run-whose-legs-fit-the-run.md` | records | changed: an insert-only amendment section |
 | `docs/decisions/ADR-373-a-release-is-judged-in-one-run-of-round-robin-legs-sized-to-the-hosted-job.md` | records | changed: an insert-only amendment section |
 | `docs/schematics/mutation-testing-python.md` | records | changed: section 6, insert-only |
-| `scripts/mutation-equivalent.d/python.json` | mutation records | changed: four equivalence records in `python_by_cost` and `prices` |
 | `changelog.d/python-cost-418.md` | records | added: the changelog fragment |
 
 ## 5. What this does NOT cover

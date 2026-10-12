@@ -68,8 +68,8 @@
       [
         "S41808-A-PRICE-TAKES-THE-DEARER-READING",
         "scripts/mutation-verdict.py",
-        "math.ceil(max(control, mean))",
-        "math.ceil(min(control, mean))",
+        "math.ceil(max(figures))",
+        "math.ceil(min(figures))",
         "a file's price is the dearer of its control and its mutants' mean, rounded up (SPEC-418 R7)",
         "test_mutation_python_shard_binding.ThePythonLegsAreDealtByCost.test_the_prices_verb_derives_each_files_price_from_the_recorded_runs"
       ],

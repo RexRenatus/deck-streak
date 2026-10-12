@@ -1074,11 +1074,10 @@ def python_by_cost(listing: list[dict], prices: dict[str, int]) -> dict | str | 
             runs.append((path, price, indices[start:end]))
             start = end
     runs.sort(key=lambda run: (-(2 + len(run[2])) * run[1], run[0], run[2][0]))
-    # No deal fits in fewer legs than hold every priced file's mutants beside its control and
-    # sentinel once, and one leg for each run always fits, since a run holds at most k mutants.
-    floor = sum((2 + len(priced[path])) * prices[path] for path in priced)
+    # The search starts at one leg and stops by one leg a run, which always fits: a run holds at
+    # most k mutants, so each run alone on its own leg is within the bound.
     legs = None
-    for count in range(max(1, -(-floor // PYTHON_LEG_BOUND_SECONDS)), len(runs) + 1):
+    for count, _ in enumerate(runs, 1):
         legs = python_deal(runs, count)
         if legs is not None:
             break
@@ -3329,9 +3328,11 @@ def prices(directory: str) -> int:
                 f"run {record.get('run')} attempt {record.get('attempt')} shard {record.get('shard')}"
             )
     for name in sorted(set(controls) | set(mutants)):
-        control = max(controls[name], default=0)
-        mean = sum(mutants[name]) / len(mutants[name]) if mutants[name] else 0
-        price = max(1, math.ceil(max(control, mean)))
+        # Each name holds a control or a mutant record, so its figures are never empty.
+        if mutants[name]:
+            mean = sum(mutants[name]) / len(mutants[name])
+        figures = controls[name] + ([mean] if mutants[name] else [])
+        price = max(1, math.ceil(max(figures)))
         print(f'    "{name}": {price},  # {"; ".join(sources[name]) or "no control recorded"}')
     print(f"mutation: prices: examined {records} record(s) in {len(files)} file(s); torn {torn}")
     if not records:
