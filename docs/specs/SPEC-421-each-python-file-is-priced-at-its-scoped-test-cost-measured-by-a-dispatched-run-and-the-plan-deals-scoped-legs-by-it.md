@@ -38,7 +38,7 @@ Every `path:line` below was read at dev `c726af67`.
 | 115088058658 | 713.44 s | the same |
 | 115088058757 | 803.78 s | the same |
 
-- Over those legs a scoped mutant took about 60 s (58 to 67 s), against the 224 s the plan
+- Over those legs a scoped mutant took about 60 s (58 to 67 s; job 115088058737 and the four job ids above), against the 224 s the plan
   charged it.
 - The plan's deal (`scripts/mutation-verdict.py shards`) over the release's 6186 listed Python
   mutants reads 447 priced legs and 139 unpriced legs: 586, against the share of 32.

@@ -9327,5 +9327,44 @@ class ThePullRequestsWebSweepRunsInShards(unittest.TestCase):
                 self.assertEqual(web_shard_problems(planted_job(text, job, (old, new))), [refusal])
 
 
+#: The scoped price workflow, and the one command each of its legs runs (SPEC-421 R11).
+PRICE_WORKFLOW = "mutation-prices.yml"
+PRICE_COMMAND = (
+    'python3 scripts/mutation_python.py run --file "$FILE" --scoped --sample 20 --failfast '
+    '--report "$out/report.json"'
+)
+
+
+class ThePriceWorkflowMeasuresScoped(unittest.TestCase):
+    def test_the_price_workflow_measures_scoped_on_the_python_legs_runner_class(self):
+        """SPEC-421 A16 (R11): the price workflow's one matrix job runs on the runner class of
+        ci.yml's `mutation-python` legs and runs each file `--scoped --sample 20 --failfast`, the
+        step taking `MUTATION_JOB_ID` from `job.check_run_id`; it keeps each leg's report as
+        `mutation-prices-<job index>` under `if: always()`, and no permission it holds writes."""
+        prices, ci = load(PRICE_WORKFLOW), load("ci.yml")
+        jobs = examined("price workflow jobs", list(prices["jobs"].items()))
+        legs = [(name, job) for name, job in jobs if "matrix" in (job.get("strategy") or {})]
+        self.assertEqual([name for name, _job in legs], ["price"])
+        job = legs[0][1]
+        self.assertEqual(job.get("runs-on"), ci["jobs"]["mutation-python"]["runs-on"])
+        steps = examined("price leg steps", job["steps"])
+        runs = [step for step in steps if PRICE_COMMAND in str(step.get("run") or "")]
+        self.assertEqual(len(runs), 1, "the leg runs the scoped, sampled command once")
+        job_id = (runs[0].get("env") or {}).get("MUTATION_JOB_ID")
+        self.assertEqual(job_id, "${{ job.check_run_id }}")
+        uploads = [
+            step
+            for step in steps
+            if str(step.get("uses") or "").startswith("actions/upload-artifact@")
+        ]
+        self.assertEqual(
+            [(step.get("if"), (step.get("with") or {}).get("name")) for step in uploads],
+            [("${{ always() }}", "mutation-prices-${{ strategy.job-index }}")],
+        )
+        self.assertEqual(prices.get("permissions"), {"contents": "read"})
+        granted = [str(each.get("permissions")) for _name, each in jobs if each.get("permissions")]
+        self.assertEqual([grant for grant in granted if "write" in grant], [])
+
+
 if __name__ == "__main__":
     unittest.main()

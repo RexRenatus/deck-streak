@@ -34,6 +34,7 @@ import ast
 import bisect
 import collections
 import json
+import math
 import os
 import pathlib
 import re
@@ -963,6 +964,7 @@ class Judge:
             "shard": f"{shard[0]}/{shard[1]}" if shard else None,
             "run": os.environ.get("GITHUB_RUN_ID"),
             "attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+            "job": os.environ.get("MUTATION_JOB_ID"),
         }
         self.quiet = False
 
@@ -1084,9 +1086,10 @@ class Judge:
     def prepare(
         self, path: str, selected: list[Mutant], report: dict, entry: dict | None = None
     ) -> dict | None:
-        """A file's control, bound and sentinel, and in a `--plan` run the sentinel's trace, its
-        record written into `report` and its control's cost paid (SPEC-420 R6); the state its
-        mutants are judged from, or None when the file is done. Raises `Restore`."""
+        """A file's control, bound and sentinel, and in a traced run (a selection in
+        `SCOPED_SELECTIONS`, or `--file --scoped`) the sentinel's trace and its seconds, its
+        record written into `report` and its control's cost paid (SPEC-420 R6, SPEC-421 R4); the
+        state its mutants are judged from, or None when the file is done. Raises `Restore`."""
         entry = entry or self.mapping[path]
         target = self.root / path
         original = target.read_bytes()
@@ -1138,7 +1141,7 @@ class Judge:
         self.paid(path, record)
         folder = (
             pathlib.Path(tempfile.mkdtemp(dir=self.scratch))
-            if getattr(self.args, "plan", None)
+            if selection(self.args) in SCOPED_SELECTIONS or getattr(self.args, "scoped", None)
             else None
         )
         try:
@@ -1160,12 +1163,16 @@ class Judge:
             return None
         if folder is not None:
             state["scopes"] = scoped_sets(folder / "records", sentinel.ran)
+            state["sentinel"] = sentinel.seconds
         return state
 
     def judge(self, state: dict) -> None:
         """A prepared file's mutants, each run against the tests its line's trace names or the
-        whole suite (SPEC-420 R7, R8), each cost line naming its scope (R10); raises `Restore`."""
+        whole suite (SPEC-420 R7, R8), each cost line naming its scope (R10); raises `Restore`.
+        A traced file's sentinel cost is recorded first (SPEC-421 R5)."""
         path, entry, record, selected = (state[k] for k in ("path", "entry", "record", "selected"))
+        if state.get("sentinel") is not None:
+            self.cost("sentinel", path, seconds=state["sentinel"], **self.where)
         if not entry["modules"]:
             record["mutants"] = [mutant_record(path, m, "uncovered", []) for m in selected]
             self.cost("uncovered", path, seconds=0, **self.where)
@@ -1324,6 +1331,36 @@ def selection(args: argparse.Namespace) -> str:
     return "all" if getattr(args, "all", None) else "file"
 
 
+#: What each price-run flag is accepted with, as its refusal names it (SPEC-421 R3).
+ALONE = {"--scoped": "--file", "--sample": "--file --scoped"}
+
+
+def refused(args: argparse.Namespace) -> str | None:
+    """The refusal of a `--scoped` or `--sample` this run does not accept, by name, before any
+    mutant runs (SPEC-421 R2, R3): only a price run samples, so no verdict run and no battery
+    leaves a mutant out."""
+    scoped, sample = getattr(args, "scoped", None), getattr(args, "sample", None)
+    plan, whole = getattr(args, "plan", None), getattr(args, "all", None)
+    for flag, held, how in (
+        ("--scoped", scoped and plan, "beside --plan"),
+        ("--scoped", scoped and whole, "beside --all"),
+        ("--sample", sample is not None and plan, "beside --plan"),
+        ("--sample", sample is not None and whole, "beside --all"),
+        ("--sample", sample is not None and not scoped, "without --scoped"),
+    ):
+        if held:
+            return f"{flag} {how} is refused: {flag} is accepted with {ALONE[flag]} alone"
+    if sample is not None and sample < 1:
+        return f"--sample {sample} is refused: --sample takes a whole number of 1 or more"
+    return None
+
+
+def sampled(mutants: list[Mutant], sample: int) -> list[Mutant]:
+    """Every ceil(m / S)-th of a file's m selected mutants in listing order, from the first, so
+    at most S of them spread over the file (SPEC-421 R2)."""
+    return mutants[:: max(1, math.ceil(len(mutants) / sample))]
+
+
 def shard_of(text: str | None) -> tuple[int, int] | None | str:
     if text is None:
         return None
@@ -1391,10 +1428,16 @@ def listing(args: argparse.Namespace) -> int:
 
 
 def run(args: argparse.Namespace) -> int:
+    refusal = refused(args)
+    if refusal:
+        return usage(refusal)
     prepared = prepare(args)
     if isinstance(prepared, int):
         return prepared
     root, mapping, selected = prepared
+    sample = getattr(args, "sample", None)
+    if sample is not None:
+        selected = {file: sampled(mutants, sample) for file, mutants in selected.items()}
     try:
         dirty = mutation_rows.tracked_changes(root)
     except (subprocess.CalledProcessError, OSError) as error:
