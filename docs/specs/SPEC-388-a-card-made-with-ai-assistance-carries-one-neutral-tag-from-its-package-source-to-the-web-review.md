@@ -191,6 +191,7 @@ A14 judge before they count, report what they examined, refuse zero, and carry p
 | `web/app/src/lib/study/review.test.ts` | `miniapp` | `assisted: false` in its card view fixtures; no assertion changes |
 | `web/app/src/lib/study/voice.test.ts` | `miniapp` | `assisted: false` in its card view fixtures; no assertion changes |
 | `web/app/src/routes/study.test.ts` | `miniapp` | `assisted: false` in its card view fixtures; no assertion changes |
+| `web/app/src/lib/study/update-now.test.ts` | `miniapp` | `assisted: false` in its card view helper, a file the type check names beyond the seven; no assertion changes |
 | `formal/tla/UndoOwnAnswer/UndoOwnAnswer.tla` | `formal` | the `current_card` cover's `digest=` moved and one abstraction comment line; no action, property or witness changes |
 
 The seven fixture files are those whose card view literals carry `late` at the base

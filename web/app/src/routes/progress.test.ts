@@ -70,6 +70,16 @@ function course(code: string, name: string) {
 
 const PROGRESS = { courses: [course('fr', 'French'), course('es', 'Spanish')] };
 
+// SPEC-388 R8, A15, A16; ADR-402 D3. With a course listed, the screen states once, below the
+// course list, how a card made with AI assistance is marked; with none, it says nothing of it.
+/** The course sentence in English, as SPEC-388 R8 words it. */
+const SENTENCE = 'Cards made with AI assistance carry the tag ai-assisted.';
+
+/** Whether `first` comes before `second` in the page. */
+function before(first: Node, second: Node): boolean {
+  return (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+}
+
 describe('the progress screen page', () => {
   it('waits with a status, then shows each course and a way back', async () => {
     let release = () => undefined as void;
@@ -109,6 +119,34 @@ describe('the progress screen page', () => {
     expect(screen.queryByRole('heading', { name: 'Road to C2' })?.tagName).toBe('H2');
     expect(screen.queryAllByRole('heading', { level: 3 })).toEqual([]);
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('states once how AI-assisted cards are marked, under the courses', async () => {
+    server.state.body = PROGRESS;
+
+    render(Progress);
+
+    await vi.waitFor(() => expect(screen.queryAllByRole('heading', { level: 3 })).toHaveLength(2));
+    const sentences = screen.queryAllByText(SENTENCE);
+    expect(sentences, 'the sentence shows exactly once').toHaveLength(1);
+    // below every course's ladder, inside the screen's own section, as a paragraph
+    const [sentence] = sentences;
+    const ladders = screen.getAllByRole('list', { name: /band by band/ });
+    expect(ladders.map((ladder) => before(ladder, sentence))).toEqual([true, true]);
+    expect([sentence.tagName, sentence.closest('section')?.getAttribute('aria-labelledby')]).toEqual([
+      'P',
+      'progress-title'
+    ]);
+    expect(screen.queryByText(/has no course yet/)).toBeNull();
+  });
+
+  it('says nothing about AI-assisted cards when there is no course', async () => {
+    server.state.body = { courses: [] };
+
+    render(Progress);
+
+    await vi.waitFor(() => expect(screen.queryByText(/has no course yet/)?.tagName).toBe('P'));
+    expect([screen.queryByText(SENTENCE), screen.queryByText(/ai-assisted/)]).toEqual([null, null]);
   });
 
   it('says the server could not be reached when the progress cannot be read', async () => {
