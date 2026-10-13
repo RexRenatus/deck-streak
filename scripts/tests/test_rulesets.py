@@ -162,8 +162,8 @@ class TheReleaseRunbookNamesThePythonCeiling(unittest.TestCase):
         self.assertIn(end, lines)
         section = " ".join(" ".join(lines[lines.index(start) : lines.index(end)]).split())
         phrases = [
-            "`python legs N of ceiling 32`",
-            "needs more than 32 Python legs is refused whole, by name, never capped",
+            "`python legs N of ceiling S`, where S is the share `PYTHON_MAX_SHARDS`",
+            "needs more than `PYTHON_MAX_SHARDS` Python legs is refused whole, by name, never capped",
             "re-running its failed jobs refuses it again",
             "SPEC-415",
         ]
@@ -190,6 +190,24 @@ class TheReleaseRunbookNamesThePythonCostDeal(unittest.TestCase):
         missing = [phrase for phrase in phrases if phrase not in section]
         self.assertEqual(missing, [], "section 2 names the Python cost deal")
         examined("runbook phrases", phrases)
+
+
+class TheReleaseRunbookNamesThePythonShare(unittest.TestCase):
+    """SPEC-420 A4 (R3, ADR-434): section 2 of the release runbook names the Python share and its
+    cap by their names, and spells the share's number nowhere, so a signed share never leaves the
+    runbook stale."""
+
+    def test_the_runbook_names_the_python_share_by_its_name_never_its_number(self):
+        lines = (REPO / "RELEASING.md").read_text(encoding="utf-8").splitlines()
+        start, end = "## 2. The release pull request", "## 3. Tag it on main"
+        self.assertIn(start, lines)
+        self.assertIn(end, lines)
+        section = " ".join(" ".join(lines[lines.index(start) : lines.index(end)]).split())
+        names = ["PYTHON_MAX_SHARDS", "PYTHON_SHARE_CAP"]
+        self.assertEqual([name for name in names if name in section], names)
+        spelled = re.findall(r"python legs N of ceiling \d+|more than \d+ Python legs", section)
+        self.assertEqual(spelled, [], "section 2 spells the share's number")
+        examined("share names", names)
 
 
 if __name__ == "__main__":

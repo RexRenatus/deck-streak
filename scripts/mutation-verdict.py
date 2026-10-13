@@ -118,15 +118,29 @@ ORACLE = frozenset({"tools/parity-oracle/generate.py"})
 SCRIPTS = re.compile(r"scripts/[^/]+\.py")
 #: The Python mutation runner's report schema, and its listing's (`mutation_python.py`).
 PYTHON_SCHEMA = "deckstreak.mutation-python.v1"
-#: The mutants one Python shard holds, and the most shards a pull request's matrix runs (R9).
-PYTHON_SHARD_MUTANTS, PYTHON_MAX_SHARDS = 20, 32
+#: The mutants one Python shard holds under the count rule (R9).
+PYTHON_SHARD_MUTANTS = 20
+#: The share: the most Python legs a pull request's run deals. It is the owner's one value,
+#: spelled on this line alone, and every reader reads it by name (SPEC-420 R1, R3).
+PYTHON_MAX_SHARDS = 32
+#: The ceiling no signed share may pass: a share outside 1 to it is refused before any deal.
+PYTHON_SHARE_CAP = 128
 #: A Python leg's projected time may reach half its job's `timeout-minutes` of 60, the margin the
 #: Rust legs keep under theirs, since a projection is a price and not a measurement (SPEC-418 R1).
 PYTHON_LEG_BOUND_SECONDS = 1800
-#: Each Python file's price, whole seconds of its control run, by repository-relative path. It
-#: ships empty: an entry is written only from `prices` over a recorded run's `costs.jsonl`, and
-#: names the run, attempt and shard it came from; an unpriced file keeps the count rule (R2).
-PYTHON_CONTROL_SECONDS: dict[str, int] = {}
+#: Each Python file's price, whole seconds of its control run, by repository-relative path. Every
+#: line is the `prices` verb's output over one recorded run's `costs.jsonl`, committed under
+#: `scripts/tests/fixtures/`, and names the run, attempt and shard it came from. A test
+#: re-derives it byte for byte, and an unpriced file keeps the count rule (R2; SPEC-420 R4, R5).
+PYTHON_CONTROL_SECONDS: dict[str, int] = {
+    "scripts/audit-web-verdict.py": 3,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
+    "scripts/create-issues.py": 1,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
+    "scripts/dynamic-imports-check.py": 2,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
+    "scripts/ios_icon.py": 2,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
+    "scripts/ios_lane.py": 13,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
+    "scripts/memory_scope.py": 39,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
+    "scripts/mutation-verdict.py": 224,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
+}
 #: The weekly battery's Python shards, each `run --all --shard k/16` (R14).
 PYTHON_WEEKLY_SHARDS = 16
 #: The weekly dispatch's `package` value that sweeps the Python population alone (R14).
@@ -990,6 +1004,19 @@ def python_listing(path: str | None) -> list[dict] | None:
     ):
         return None
     return [entry for entry in document["mutants"] if isinstance(entry, dict)]
+
+
+def python_share_refused() -> str | None:
+    """The refusal a share that is not a whole number from 1 to `PYTHON_SHARE_CAP` reads before
+    any deal, or None: a share above the cap never deals a leg, whoever signs it (SPEC-420 R2).
+    """
+    share = PYTHON_MAX_SHARDS
+    if type(share) is not int or share < 1 or share > PYTHON_SHARE_CAP:
+        return (
+            f"mutation: shards: REFUSED: the python share PYTHON_MAX_SHARDS = {share} is outside "
+            f"1..{PYTHON_SHARE_CAP} (PYTHON_SHARE_CAP); a share above the cap is never dealt"
+        )
+    return None
 
 
 def python_needed(listed: int) -> int:
@@ -3402,6 +3429,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.verb == "shards":
         if not args.plan:
             parser.error("shards needs --plan")
+        refused = python_share_refused()
+        if refused:
+            print(refused)
+            return EXIT_FAIL
         return shards(pathlib.Path(args.plan), args.listed, args.python_listed)
     if args.verb == "size":
         return size(args.listed, args.package)

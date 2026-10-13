@@ -381,13 +381,16 @@ class ThePythonLegsAreDealtByCost(unittest.TestCase):
 
     def test_a_listing_with_no_priced_file_keeps_the_count_rule(self):
         """A3: no listed file priced reads None, so `shards` keeps SPEC-415's matrix byte for
-        byte; and the shipped table prices nothing."""
+        byte; and the shipped table is the recorded run's, derived by the `prices` verb (SPEC-420
+        R4)."""
         program = verdict_program()
         listing = priced("a.py", 68)
         tables = ({}, {"elsewhere.py": 5})
         for prices in tables:
             self.assertIsNone(program.python_by_cost(listing, prices), prices)
-        self.assertEqual(program.PYTHON_CONTROL_SECONDS, {})
+        self.assertEqual(
+            program.PYTHON_CONTROL_SECONDS, recorded_table(recorded_prices(program)[1])
+        )
         examined("price tables", tables)
 
     def test_unpriced_mutants_keep_twenty_a_leg_beside_the_priced_legs(self):
@@ -432,6 +435,8 @@ class ThePythonLegsAreDealtByCost(unittest.TestCase):
                 sink.write_text("", encoding="utf-8")
                 out = io.StringIO()
                 with (
+                    mock.patch.object(program, "PYTHON_MAX_SHARDS", 32),
+                    mock.patch.dict(program.LEG_CEILING, {"ci": 193}),
                     mock.patch.dict(program.PYTHON_CONTROL_SECONDS, prices, clear=True),
                     mock.patch.dict(os.environ, {"GITHUB_OUTPUT": str(sink)}),
                     contextlib.redirect_stdout(out),
@@ -449,9 +454,9 @@ class ThePythonLegsAreDealtByCost(unittest.TestCase):
                 "mutation: shards: python legs dealt by cost: 2 priced leg(s), the slowest at 1700 "
                 "s of its 1800 s bound; 0 unpriced leg(s) of at most 20\n"
                 "mutation: shards: 1 shard(s) for 0 listed mutant(s), projected at 0 s serially; "
-                "the slowest at 2141 s of its 10800 s bound; legs 1 of ceiling 190\n"
-                "mutation: shards: run legs 3 of 222: python 2 of 32, rust 1 of 190; projected 93 "
-                "runner-minute(s) of 35160\n",
+                "the slowest at 2141 s of its 10800 s bound; legs 1 of ceiling 193\n"
+                "mutation: shards: run legs 3 of 225: python 2 of 32, rust 1 of 193; projected 93 "
+                "runner-minute(s) of 35700\n",
             )
             self.assertEqual(code, 0)
             written = json.loads(plan.read_text(encoding="utf-8"))
@@ -643,7 +648,7 @@ class EachArmOfTheCostDealIsObserved(unittest.TestCase):
         """`shards` with a.py's 3 mutants priced at 100 s, one leg of (2 + 3) x 100 = 500 s, and
         u.py's 21 unpriced mutants in two legs at the 1800 s bound: the cost line counts the one
         priced leg and reads the slowest of it alone, and the joint line holds the run to
-        (32 x 1800 + 190 x 10800) // 60 = 35160 runner-minutes. The Rust lines are A5's own."""
+        (32 x 1800 + 193 x 10800) // 60 = 35700 runner-minutes. The Rust lines are A5's own."""
         program = verdict_program()
         entries = priced("a.py", 3) + priced("u.py", 21)
         with tempfile.TemporaryDirectory() as scratch:
@@ -658,6 +663,8 @@ class EachArmOfTheCostDealIsObserved(unittest.TestCase):
             sink.write_text("", encoding="utf-8")
             out = io.StringIO()
             with (
+                mock.patch.object(program, "PYTHON_MAX_SHARDS", 32),
+                mock.patch.dict(program.LEG_CEILING, {"ci": 193}),
                 mock.patch.dict(program.PYTHON_CONTROL_SECONDS, {"a.py": 100}, clear=True),
                 mock.patch.dict(os.environ, {"GITHUB_OUTPUT": str(sink)}),
                 contextlib.redirect_stdout(out),
@@ -672,9 +679,9 @@ class EachArmOfTheCostDealIsObserved(unittest.TestCase):
             "mutation: shards: python legs dealt by cost: 1 priced leg(s), the slowest at 500 s of "
             "its 1800 s bound; 2 unpriced leg(s) of at most 20\n"
             "mutation: shards: 1 shard(s) for 0 listed mutant(s), projected at 0 s serially; the "
-            "slowest at 2141 s of its 10800 s bound; legs 1 of ceiling 190\n"
-            "mutation: shards: run legs 4 of 222: python 3 of 32, rust 1 of 190; projected 105 "
-            "runner-minute(s) of 35160\n",
+            "slowest at 2141 s of its 10800 s bound; legs 1 of ceiling 193\n"
+            "mutation: shards: run legs 4 of 225: python 3 of 32, rust 1 of 193; projected 105 "
+            "runner-minute(s) of 35700\n",
         )
         self.assertEqual(code, 0)
         examined("planned listings", [entries])
@@ -1938,3 +1945,183 @@ class EveryVariablePartOfAMessageIsPinned(unittest.TestCase):
         for kind, floor in (("DROP", 47), ("CONST", 47), ("SWAP", 23)):
             self.assertGreaterEqual(kinds[kind], floor, f"fewer {kind} field mutants than planted")
         self.assertEqual(missed, [])
+
+
+#: The recorded run's twelve kept legs' cost records, committed in the layout they download in.
+PRICES_RUN = VERDICT.parent / "tests" / "fixtures" / "mutation-prices-38242806596"
+#: The prices verb's last line over those records.
+PRICES_EXAMINED = "mutation: prices: examined 1017 record(s) in 12 file(s); torn 0\n"
+
+
+def table_lines():
+    """The lines of `mutation-verdict.py`'s `PYTHON_CONTROL_SECONDS` between its opening line and
+    its closing brace, or none while the table is the one-line empty dict."""
+    lines = VERDICT.read_text(encoding="utf-8").splitlines()
+    opening = "PYTHON_CONTROL_SECONDS: dict[str, int] = {"
+    if opening not in lines:
+        return []
+    start = lines.index(opening) + 1
+    return lines[start : lines.index("}", start)]
+
+
+def recorded_prices(program):
+    """`prices --costs` over the recorded run's records, run by the program's own `main`:
+    (the exit, the printed text)."""
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        code = program.main(["prices", "--costs", str(PRICES_RUN)])
+    return code, out.getvalue()
+
+
+def recorded_table(out):
+    """The table the prices verb's printed lines spell, each path with its whole seconds."""
+    return {
+        path: int(price) for path, price in re.findall(r'^    "([^"]+)": (\d+),', out, re.MULTILINE)
+    }
+
+
+class ThePythonShareIsOneCappedValue(unittest.TestCase):
+    """SPEC-420 R1 to R5 (A1, A2, A3, A5 and A6): the share is one named value under a cap of 128
+    that `shards` refuses past before any deal, every printed line reads it, and the price table
+    is the prices verb's output over the committed records of one recorded run. The share and the
+    Rust ceiling are patched to literals of each test's own, so no test spells the in-tree share."""
+
+    def shards(self, share):
+        """`shards` over thirty mutants of a.py priced at 100 s, with the share patched to
+        `share` and the Rust ceiling to 193: (the exit, the printed text, the plan's text after
+        it, the step output's text)."""
+        program = verdict_program()
+        entries = priced("a.py", 30)
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            listing = root / "python-listed.json"
+            listing.write_text(
+                json.dumps({"schema": program.PYTHON_SCHEMA, "listed": 30, "mutants": entries}),
+                encoding="utf-8",
+            )
+            plan, sink = root / "plan.json", root / "github-output"
+            plan.write_text(json.dumps({"classes": {"rust": {"applies": False}}}), encoding="utf-8")
+            sink.write_text("", encoding="utf-8")
+            out = io.StringIO()
+            with (
+                mock.patch.object(program, "PYTHON_MAX_SHARDS", share),
+                mock.patch.dict(program.LEG_CEILING, {"ci": 193}),
+                mock.patch.dict(program.PYTHON_CONTROL_SECONDS, {"a.py": 100}, clear=True),
+                mock.patch.dict(os.environ, {"GITHUB_OUTPUT": str(sink)}),
+                contextlib.redirect_stdout(out),
+            ):
+                code = program.main(
+                    ["shards", "--plan", str(plan), "--python-listed", str(listing)]
+                )
+            return (
+                code,
+                out.getvalue(),
+                plan.read_text(encoding="utf-8"),
+                sink.read_text(encoding="utf-8"),
+            )
+
+    def test_the_share_is_one_value_capped_at_128_in_the_tree(self):
+        """A1 (R1, R3): the cap is 128 and the share a multiple of 8 within it, spelled on one
+        line of its own; the share's value is read from the program, never written here."""
+        program = verdict_program()
+        self.assertEqual(program.PYTHON_SHARE_CAP, 128)
+        share = program.PYTHON_MAX_SHARDS
+        self.assertIs(type(share), int)
+        self.assertEqual(share % 8, 0, share)
+        self.assertTrue(8 <= share <= program.PYTHON_SHARE_CAP, share)
+        spelled = [
+            line
+            for line in VERDICT.read_text(encoding="utf-8").splitlines()
+            if line.startswith("PYTHON_MAX_SHARDS")
+        ]
+        self.assertEqual(spelled, [f"PYTHON_MAX_SHARDS = {share}"])
+        examined("lines spelling the share", spelled)
+
+    def test_a_share_outside_the_cap_refuses_the_plan_whole_by_name(self):
+        """A2 (R2): a share of 136, and one of 0, is refused before any deal, the plan untouched
+        and no step output written; at the cap itself the same listing is dealt, and a share of 1,
+        the lowest whole share, reads no refusal."""
+        original = json.dumps({"classes": {"rust": {"applies": False}}})
+        refused = (136, 0)
+        for share in refused:
+            code, out, plan, sink = self.shards(share)
+            self.assertEqual(
+                out,
+                f"mutation: shards: REFUSED: the python share PYTHON_MAX_SHARDS = {share} is "
+                "outside 1..128 (PYTHON_SHARE_CAP); a share above the cap is never dealt\n",
+                share,
+            )
+            self.assertEqual(code, 1, share)
+            self.assertEqual(plan, original, share)
+            self.assertEqual(sink, "", share)
+        code, out, plan, _sink = self.shards(128)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(json.loads(plan)["python"]["count"], 2)
+        self.assertTrue(out.splitlines()[0].endswith("python legs 2 of ceiling 128"), out)
+        program = verdict_program()
+        with mock.patch.object(program, "PYTHON_MAX_SHARDS", 1):
+            self.assertIsNone(program.python_share_refused())
+        examined("refused shares", refused)
+
+    def test_every_printed_share_reads_the_one_value(self):
+        """A3 (R3): at a share of 40 and a Rust ceiling of 193, the python line, the cost line and
+        the joint line each read 40, and the joint budget is 40 legs of 1800 s and 193 of 10800 s."""
+        code, out, _plan, _sink = self.shards(40)
+        self.assertEqual(
+            out,
+            "mutation: shards: 2 python shard(s) for 30 listed mutant(s); python legs 2 of "
+            "ceiling 40\n"
+            "mutation: shards: python legs dealt by cost: 2 priced leg(s), the slowest at 1700 "
+            "s of its 1800 s bound; 0 unpriced leg(s) of at most 20\n"
+            "mutation: shards: 1 shard(s) for 0 listed mutant(s), projected at 0 s serially; "
+            "the slowest at 2141 s of its 10800 s bound; legs 1 of ceiling 193\n"
+            "mutation: shards: run legs 3 of 233: python 2 of 40, rust 1 of 193; projected 93 "
+            "runner-minute(s) of 35940\n",
+        )
+        self.assertEqual(code, 0)
+        examined("printed lines", out.splitlines())
+
+    def test_the_price_table_is_the_prices_verbs_output_over_the_recorded_run(self):
+        """A5 (R4): the verb's seven figure lines over the committed records are the table's
+        lines byte for byte, its examined line last, and the table holds what they spell."""
+        program = verdict_program()
+        code, out = recorded_prices(program)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out, "".join(line + "\n" for line in table_lines()) + PRICES_EXAMINED)
+        self.assertEqual(program.PYTHON_CONTROL_SECONDS, recorded_table(out))
+        examined("priced files", program.PYTHON_CONTROL_SECONDS)
+
+    def test_a_file_the_filled_table_does_not_price_keeps_the_count_rule(self):
+        """A6 (R5): over the table the recorded run derives, the web sweep's 41 mutants beside
+        create-issues.py's 5 are dealt as one priced leg and three unpriced legs of at most 20,
+        and at a share of 3 the four legs are refused whole by name."""
+        program = verdict_program()
+        _code, out = recorded_prices(program)
+        table = recorded_table(out)
+        self.assertEqual(table["scripts/create-issues.py"], 1)
+        self.assertNotIn("scripts/web_mutation_shards.py", table)
+        issues = priced("scripts/create-issues.py", 5)
+        sweep = priced("scripts/web_mutation_shards.py", 41)
+        names = names_of(sweep)
+        dealt = program.python_by_cost(issues + sweep, table)
+        self.assertEqual(
+            dealt,
+            {
+                "count": 4,
+                "shards": [
+                    {"shard": 0, "mutants": names_of(issues), "projected_seconds": 7},
+                    {"shard": 1, "mutants": names[0::3], "projected_seconds": 1800},
+                    {"shard": 2, "mutants": names[1::3], "projected_seconds": 1800},
+                    {"shard": 3, "mutants": names[2::3], "projected_seconds": 1800},
+                ],
+            },
+        )
+        with mock.patch.object(program, "PYTHON_MAX_SHARDS", 3):
+            refused = program.python_by_cost(issues + sweep, table)
+        self.assertEqual(
+            refused,
+            "mutation: shards: REFUSED: 46 python mutant(s) need 1 leg(s) priced at most 1800 s "
+            "each and 3 unpriced leg(s) of at most 20, more than the pull request run's 3 python "
+            "legs: split the change, since a run is never capped",
+        )
+        examined("dealt legs", dealt["shards"])
