@@ -63,3 +63,11 @@ quoted here, below the criteria, so that no criterion is recorded twice.
 ```text
 test_alert_unit.ASecondRouteTellsTheOwner.test_each_failed_invocation_is_reported_once: red at cf4833e5e8e533b230bea20defccd2852e9c0574: AssertionError: Lists differ: [] != ['failed deck-streak-alert@deck-streak-uni[51 chars]f90']
 ```
+
+Three quotes above are not CI's bytes. The red line of A7 adds a gloss: CI prints
+`AssertionError: 0 != 1 : ` with an empty message, and the parenthesis after it is this record's.
+The red line of A9 abbreviates the dict CI prints whole: the quote matches CI through
+`Unit(name='deck-streak-alert@.service', ` and its `...` stands for the rest. The threat model's
+red line paraphrases: CI reads
+`AssertionError: Lists differ: ['docs/schematics/the-app-campaigns-surfac[1741 chars]mes'] != []`,
+then `First list contains 7 additional elements.` No red or green above is claimed again.

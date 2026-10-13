@@ -778,6 +778,7 @@ class WorkflowsAreHardened(unittest.TestCase):
 APPLE_PATHS = [
     "crates/ffi/**",
     "crates/engine-core/**",
+    "crates/fsrs7/**",
     "ios/**",
     "Cargo.lock",
     "Cargo.toml",
@@ -2396,6 +2397,8 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
             "mutation-rows",
             "mutation-verdict",
             "mutation-web",
+            # SPEC-419 deals the web sweep into shards, a job ci needs beside the one that judges.
+            "mutation-web-shard",
         ]
         # SPEC-338 adds the web engine's job, which builds the module and holds it to its budget.
         self.assertEqual(
@@ -4814,6 +4817,15 @@ NOT_WORKFLOW_READS = {
         ),
     ),
     **allowed(
+        "the web shard script, whose shard count and artifact prefix the SPEC-419 pin reads; never handed to the reader",
+        (
+            "test_ci_workflows",
+            "ThePullRequestsWebSweepRunsInShards.test_the_web_sweep_runs_in_three_shards_read_by_name",
+            "(REPO / WEB_SHARDS_SCRIPT).read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
         "calls run_step, which runs a cache step's shell over a planted lockfile's text and reads its outputs",
         (
             "test_ci_workflows",
@@ -5155,6 +5167,10 @@ NOT_WORKFLOW_READS = {
         ("test_mutation_workflows", "<module>", "GUARD.read_text(encoding='utf-8')", 1),
     ),
     **allowed(
+        "the rows runner's own Python source, read for one module constant and never imported; never a workflow file",
+        ("test_mutation_workflows", "rows_constant", "ROWS_RUNNER.read_text(encoding='utf-8')", 1),
+    ),
+    **allowed(
         "calls the bash oracle, which runs planted scripts with cargo stubbed and reads the stubs' logs",
         (
             "test_dispatch_shards",
@@ -5281,6 +5297,12 @@ NOT_WORKFLOW_READS = {
         ),
         (
             "test_dispatch_shards",
+            "TheReleaseFitsOneRun.test_the_release_listing_fits_one_run",
+            "size(listing)",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
             "TheReleaseFitsOneRun.test_the_whole_tree_is_sized_from_its_listing",
             "size(listing)",
             1,
@@ -5316,7 +5338,7 @@ NOT_WORKFLOW_READS = {
         (
             "test_dispatch_shards",
             "TheReleaseFitsOneRun.test_a_listing_beyond_the_ceiling_is_refused_whole",
-            "plan_shards(entries('deck-streak-ingest', 14213))",
+            "plan_shards(entries('deck-streak-ingest', 12921))",
             1,
         ),
         (
@@ -5751,6 +5773,12 @@ NOT_WORKFLOW_READS = {
             1,
         ),
         (
+            "test_dispatch_shards",
+            "TheReleaseFitsOneRun.test_the_python_bound_is_half_of_the_python_legs_timeout",
+            "verdict_module()",
+            1,
+        ),
+        (
             "test_not_started_legs",
             "ALegWithNothingToExamineIsNotStarted.test_a_leg_the_listing_gives_nothing_reads_not_started",
             "judge(reports)",
@@ -6006,6 +6034,12 @@ NOT_WORKFLOW_READS = {
             "test_dispatch_shards",
             "TheReleaseFitsOneRun.test_the_ceiling_is_the_runs_job_budget",
             "module.PYTHON_MAX_SHARDS",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheReleaseFitsOneRun.test_the_python_bound_is_half_of_the_python_legs_timeout",
+            "module.PYTHON_LEG_BOUND_SECONDS",
             1,
         ),
     ),
@@ -6508,6 +6542,14 @@ DYNAMIC_IMPORTS = {
             1,
         ),
         ("test_backup_units", "load_backup", "spec.loader.exec_module(module)", 1),
+        ("test_dynamic_imports_check", "load", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_dynamic_imports_check",
+            "load",
+            "importlib.util.spec_from_file_location('dynamic_imports_check', SCRIPT)",
+            1,
+        ),
+        ("test_dynamic_imports_check", "load", "spec.loader.exec_module(module)", 1),
         ("test_web_engine_size", "load_gate", "importlib.util.module_from_spec(spec)", 1),
         (
             "test_web_engine_size",
@@ -6572,6 +6614,14 @@ DYNAMIC_IMPORTS = {
             1,
         ),
         ("test_mutation_python_verdict", "runner", "spec.loader.exec_module(module)", 1),
+        ("test_mutation_rows", "load_runner", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_mutation_rows",
+            "load_runner",
+            "importlib.util.spec_from_file_location('mutation_rows_inprocess', RUNNER)",
+            1,
+        ),
+        ("test_mutation_rows", "load_runner", "spec.loader.exec_module(module)", 1),
         ("test_mutation_rows_group", "<module>", "SPEC.loader.exec_module(runner)", 1),
         ("test_mutation_rows_group", "<module>", "importlib.util.module_from_spec(SPEC)", 1),
         (
@@ -6667,6 +6717,7 @@ DYNAMIC_IMPORTS = {
             1,
         ),
         ("test_mutation_rows", "runner_module", "import mutation_rows", 1),
+        ("test_web_mutation_shards", "<module>", "import web_mutation_shards", 1),
     ),
     **allowed(
         "an import of this repository's own script module by its constant name, `import mutation_rows`, after a sys.path insert of the constant scripts directory; it reads no workflow file",
@@ -6718,6 +6769,16 @@ DYNAMIC_IMPORTS = {
         ("test_github_setup", "<module>", "unittest.main(argv=[sys.argv[0]])", 1),
     ),
     **allowed(
+        "the fixture's checks import their target from the directory the runner's child puts on the path; nothing reads a workflow",
+        (
+            "fixtures.mutation-python-control.control_checks",
+            "<module>",
+            "import control_target",
+            1,
+        ),
+        ("fixtures.mutation-python-scope.scope_checks", "<module>", "import scope_target", 1),
+    ),
+    **allowed(
         "a stat result's field, by a key the test lists",
         (
             "test_host_scrub",
@@ -6762,6 +6823,7 @@ DYNAMIC_IMPORTS = {
         ("test_mutation_python_judge_kills", "load", "sys.modules", 1),
         ("test_mutation_python_lister_kills", "load", "sys.modules", 1),
         ("test_mutation_python_verdict", "runner", "sys.modules", 1),
+        ("test_mutation_rows", "load_runner", "sys.modules", 1),
         ("test_mutation_rows_group", "<module>", "sys.modules", 1),
         ("test_mutation_verdict", "verdict_module", "sys.modules", 1),
     ),
@@ -9084,6 +9146,185 @@ class TheWebMutationLegsHoldTheWholeSweep(unittest.TestCase):
                 workflows = {other: leg(other, job, floor) for other, job in WEB_MUTATION_LEGS}
                 workflows[name] = leg(name, job_id, minutes)
                 self.assertEqual(web_mutation_bound_problems(workflows), [refusal])
+
+
+# ------------------------------- the pull request's web sweep in three shards (SPEC-419 R1 to R8)
+
+# The pull request's Mini App sweep is one matrix job of three shards, each dealt whole files by
+# StrykerJS's own mutant count, and one job of the leg's own name, not a matrix, so the check that
+# reports `mutation-web` still reports under that name, reads every shard by name before its judge.
+WEB_SHARD_JOB = "mutation-web-shard"
+WEB_VERDICT_JOB = "mutation-web"
+WEB_SHARDS = 3
+WEB_SHARD_MINUTES = "100"
+WEB_SHARD_ARTIFACT = "mutation-web-shard-${{ matrix.shard }}"
+WEB_SHARDS_SCRIPT = "scripts/web_mutation_shards.py"
+
+
+def web_shard_problems(workflow):
+    """What ci.yml gets wrong about the pull request's sharded web sweep (SPEC-419 R1, R3, R4, R6):
+    a shard job that is not one matrix of exactly shards 0, 1 and 2, lets one shard's failure
+    cancel the others, or is bounded other than 100 minutes; a shard that does not deal its own
+    shard, runs StrykerJS over other files than its deal's, or keeps its report under a name
+    without its index or only when it succeeds; and a verdict job that is a matrix, does not need
+    the shards, can be skipped, runs StrykerJS itself, or judges without first reading every
+    shard's artifact by name into the one report its judge reads."""
+    jobs = workflow.get("jobs") or {}
+    problems = []
+    shard = jobs.get(WEB_SHARD_JOB)
+    if not isinstance(shard, dict):
+        problems.append(f"ci.yml has no {WEB_SHARD_JOB} job")
+        shard = {}
+    strategy = shard.get("strategy") or {}
+    matrix = strategy.get("matrix") or {}
+    shards = matrix.get("shard") if isinstance(matrix, dict) else None
+    wanted = [str(index) for index in range(WEB_SHARDS)]
+    if not isinstance(shards, list) or [str(index) for index in shards] != wanted:
+        problems.append(f"the {WEB_SHARD_JOB} shards are {shards}, not {wanted}")
+    if str(strategy.get("fail-fast")) != "false":
+        problems.append(f"one {WEB_SHARD_JOB} failure cancels the other shards")
+    minutes = str(shard.get("timeout-minutes") or "unset")
+    if minutes != WEB_SHARD_MINUTES:
+        problems.append(
+            f"the {WEB_SHARD_JOB} job's timeout is {minutes}, not {WEB_SHARD_MINUTES} minutes"
+        )
+    steps = shard.get("steps") or []
+    deals = [s for s in steps if f"{WEB_SHARDS_SCRIPT} deal " in str(s.get("run", ""))]
+    handed = [(s.get("id"), (s.get("env") or {}).get("SHARD")) for s in deals]
+    if handed != [("deal", "${{ matrix.shard }}")]:
+        problems.append(f"the {WEB_SHARD_JOB} job deals {handed}, not its own shard once")
+    sweeps = [s for s in steps if "stryker run" in str(s.get("run", ""))]
+    swept = [(s.get("if"), (s.get("env") or {}).get("MUTATE")) for s in sweeps]
+    if swept != [("${{ steps.deal.outputs.run == 'true' }}", "${{ steps.deal.outputs.mutate }}")]:
+        problems.append(f"the {WEB_SHARD_JOB} job runs StrykerJS as {swept}, not over its deal")
+    kept = [s for s in steps if action(s) == "actions/upload-artifact"]
+    names = [((s.get("with") or {}).get("name"), s.get("if")) for s in kept]
+    if names != [(WEB_SHARD_ARTIFACT, "${{ always() }}")]:
+        problems.append(
+            f"the {WEB_SHARD_JOB} job keeps {names}, not {WEB_SHARD_ARTIFACT} whatever its outcome"
+        )
+    verdict = jobs.get(WEB_VERDICT_JOB)
+    if not isinstance(verdict, dict):
+        return [*problems, f"ci.yml has no {WEB_VERDICT_JOB} job"]
+    if "strategy" in verdict:
+        problems.append(f"the {WEB_VERDICT_JOB} job is a matrix, so no check reports its own name")
+    needs = verdict.get("needs")
+    if WEB_SHARD_JOB not in (needs if isinstance(needs, list) else [needs]):
+        problems.append(f"the {WEB_VERDICT_JOB} job does not need {WEB_SHARD_JOB}")
+    if verdict.get("if") != "${{ always() }}":
+        problems.append(f"the {WEB_VERDICT_JOB} job is skipped when a shard fails")
+    steps = verdict.get("steps") or []
+    runs = [str(s.get("run", "")) for s in steps]
+    if any("stryker run" in run for run in runs):
+        problems.append(f"the {WEB_VERDICT_JOB} job runs StrykerJS itself")
+    fetched = [s.get("with") or {} for s in steps if action(s) == "actions/download-artifact"]
+    patterns = [(w.get("name"), w.get("pattern"), str(w.get("merge-multiple"))) for w in fetched]
+    if patterns != [(None, "mutation-web-shard-*", "true")]:
+        problems.append(f"the {WEB_VERDICT_JOB} job downloads {patterns}, not every shard")
+    unions = [at for at, run in enumerate(runs) if f"{WEB_SHARDS_SCRIPT} union " in run]
+    judges = [at for at, run in enumerate(runs) if "mutation-verdict.py judge " in run]
+    if len(unions) != 1 or len(judges) != 1 or unions[0] > judges[0]:
+        problems.append(f"the {WEB_VERDICT_JOB} job does not read every shard before its judge")
+        return problems
+    union, judge = steps[unions[0]], runs[judges[0]]
+    if (union.get("env") or {}).get("RESULT") != f"${{{{ needs.{WEB_SHARD_JOB}.result }}}}":
+        problems.append(f"the {WEB_VERDICT_JOB} job's union does not read the shards' result")
+    out = re.search(r'--out "([^"]+)"', str(union.get("run")))
+    read = re.search(r'--stryker "([^"]+)"', judge)
+    if out is None or read is None or out.group(1) != read.group(1):
+        problems.append(f"the {WEB_VERDICT_JOB} job's judge does not read the union's report")
+    return problems
+
+
+class ThePullRequestsWebSweepRunsInShards(unittest.TestCase):
+    def test_the_web_sweep_runs_in_three_shards_read_by_name(self):
+        """SPEC-419 A1: `mutation-web-shard` is one matrix of exactly shards 0, 1 and 2, each
+        bounded at 100 minutes, dealing its own shard and keeping its report by its index, and
+        `mutation-web` reads every shard by name before its judge. The script deals and reads the
+        same three shards by the same name the matrix uploads."""
+        workflow = load("ci.yml")
+        self.assertEqual(web_shard_problems(workflow), [])
+        examined("web shards", workflow["jobs"][WEB_SHARD_JOB]["strategy"]["matrix"]["shard"])
+        script = (REPO / WEB_SHARDS_SCRIPT).read_text(encoding="utf-8")
+        self.assertRegex(script, rf"(?m)^SHARDS = {WEB_SHARDS}$")
+        prefix = WEB_SHARD_ARTIFACT.removesuffix("${{ matrix.shard }}")
+        self.assertRegex(script, rf'(?m)^PREFIX = "{re.escape(prefix)}"$')
+        self.assertNotIn("stryker run", str(workflow["jobs"][WEB_VERDICT_JOB]))
+
+    def test_a_web_shard_defect_is_refused_by_name(self):
+        """SPEC-419 A2: each defect planted into a copy of ci.yml is refused by its own line and
+        by no other: one, two or four shards, a shard bound past 100, one shard's failure
+        cancelling the others, StrykerJS over the plan's files instead of the deal's, a report kept
+        without its index, and a verdict job that can be skipped, does not wait for the shards or
+        downloads one shard."""
+        text = workflow_file_text(WORKFLOWS / "ci.yml")
+        self.assertEqual(web_shard_problems(read_workflow(text)), [])
+        shard, verdict = WEB_SHARD_JOB, WEB_VERDICT_JOB
+        wanted = "['0', '1', '2']"
+        mutate = "MUTATE: ${{ steps.deal.outputs.mutate }}"
+        plants = [
+            (
+                shard,
+                "        shard: [0, 1, 2]\n",
+                "        shard: [0]\n",
+                f"the {shard} shards are ['0'], not {wanted}",
+            ),
+            (
+                shard,
+                "        shard: [0, 1, 2]\n",
+                "        shard: [0, 1]\n",
+                f"the {shard} shards are ['0', '1'], not {wanted}",
+            ),
+            (
+                shard,
+                "        shard: [0, 1, 2]\n",
+                "        shard: [0, 1, 2, 3]\n",
+                f"the {shard} shards are ['0', '1', '2', '3'], not {wanted}",
+            ),
+            (
+                shard,
+                "    timeout-minutes: 100\n",
+                "    timeout-minutes: 101\n",
+                f"the {shard} job's timeout is 101, not 100 minutes",
+            ),
+            (
+                shard,
+                "      fail-fast: false\n",
+                "",
+                f"one {shard} failure cancels the other shards",
+            ),
+            (
+                shard,
+                mutate,
+                "MUTATE: ${{ steps.plan.outputs.mutate }}",
+                f"the {shard} job runs StrykerJS as [(\"${{{{ steps.deal.outputs.run == 'true' }}}}\""
+                ", '${{ steps.plan.outputs.mutate }}')], not over its deal",
+            ),
+            (
+                shard,
+                f"name: {WEB_SHARD_ARTIFACT}\n",
+                "name: mutation-web-shard\n",
+                f"the {shard} job keeps [('mutation-web-shard', '${{{{ always() }}}}')], not "
+                f"{WEB_SHARD_ARTIFACT} whatever its outcome",
+            ),
+            (
+                verdict,
+                f"    needs: [{shard}]\n    if: ${{{{ always() }}}}\n",
+                f"    needs: [{shard}]\n",
+                f"the {verdict} job is skipped when a shard fails",
+            ),
+            (verdict, f"    needs: [{shard}]\n", "", f"the {verdict} job does not need {shard}"),
+            (
+                verdict,
+                "pattern: mutation-web-shard-*\n",
+                "pattern: mutation-web-shard-0\n",
+                f"the {verdict} job downloads [(None, 'mutation-web-shard-0', 'true')], not every "
+                "shard",
+            ),
+        ]
+        for job, old, new, refusal in examined("planted web shard defects", plants):
+            with self.subTest(job=job, plant=new):
+                self.assertEqual(web_shard_problems(planted_job(text, job, (old, new))), [refusal])
 
 
 if __name__ == "__main__":

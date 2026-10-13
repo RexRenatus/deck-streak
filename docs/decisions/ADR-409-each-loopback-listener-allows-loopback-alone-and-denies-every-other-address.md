@@ -169,3 +169,10 @@ SPEC-395 section 7.
 - SPEC-354 and ADR-365 (#678), whose rule D2 keeps; SPEC-340 and ADR-351 D6, whose sync-server lists
   D1 takes as the shape.
 - The deployment schematic's last section, "Each loopback listener's peers (SPEC-395, ADR-409)".
+
+## Amendment: A2 was not red
+
+The Confirmation (line 155) says A1 to A3 were each red at the red commit. A1 and A3 were; A2 was
+not, because it pins the listen settings the base already had, each a loopback address in the
+census's table: it guards the census's population and proves no new behaviour
+(`docs/red-first/SPEC-395.md`, line 10).

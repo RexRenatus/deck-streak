@@ -167,3 +167,9 @@ A1's red and green readings are recorded in `docs/red-first/SPEC-379.md`.
   Python legs are sized by shards the verdict already reads one by one, unlike the web report.
 - SPEC-327 R2 (the 1.5 margin); SPEC-361 R15 with ADR-372 D10, and SPEC-367 with ADR-378 (job
   bounds raised by measurement); ADR-199 (the first driver).
+
+## Amendment: D3's "no ruling"
+
+D3 says the `harness` and `release` job bounds rose "each with no ruling" (line 72). Read it as
+"each with no ruling the owner signed": the line D3 draws is between those job bounds and the
+per-mutant budget raises, which the owner signed.

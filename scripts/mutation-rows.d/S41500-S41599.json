@@ -1,0 +1,70 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S41500-THE-PYTHON-PLAN-CAPS-PAST-ITS-CEILING",
+        "scripts/mutation-verdict.py",
+        "        return None\n    names = [str(entry.get(\"name\")) for entry in listing]\n",
+        "        count = PYTHON_MAX_SHARDS\n    names = [str(entry.get(\"name\")) for entry in listing]\n",
+        "a listing that needs more than 32 Python legs is refused, never capped at 32 legs (SPEC-415 R2)",
+        "test_mutation_python_shard_binding.ThePythonMatrixIsSizedToTheHostedJob.test_a_listing_past_thirty_two_legs_is_refused_whole_and_never_capped"
+      ],
+      [
+        "S41501-THE-PYTHON-CEILING-REFUSES-THIRTY-TWO",
+        "scripts/mutation-verdict.py",
+        "    if count > PYTHON_MAX_SHARDS:\n",
+        "    if count >= PYTHON_MAX_SHARDS:\n",
+        "a listing that needs exactly 32 Python legs is dealt, and only one that needs more is refused (SPEC-415 R2)",
+        "test_mutation_python_shard_binding.ThePythonMatrixIsSizedToTheHostedJob.test_a_listing_past_thirty_two_legs_is_refused_whole_and_never_capped"
+      ],
+      [
+        "S41502-A-REFUSED-PYTHON-PLAN-EXITS-ZERO",
+        "scripts/mutation-verdict.py",
+        "            return EXIT_FAIL\n    mutants: list[tuple[str, str]] = []\n",
+        "            return EXIT_OK\n    mutants: list[tuple[str, str]] = []\n",
+        "a refused Python plan fails the plan with exit 1 before any leg is dealt (SPEC-415 R3)",
+        "test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_a_python_listing_past_the_ceiling_refuses_the_plan_whole_by_name"
+      ],
+      [
+        "S41503-THE-REFUSAL-NAMES-THE-LISTING-AS-ITS-LEGS",
+        "scripts/mutation-verdict.py",
+        "{python_needed(len(listing))} legs of at most",
+        "{len(listing)} legs of at most",
+        "the refusal names the legs the listing needs, never its mutant count in their place (SPEC-415 R3)",
+        "test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_a_python_listing_past_the_ceiling_refuses_the_plan_whole_by_name"
+      ],
+      [
+        "S41504-THE-HEADROOM-NAMES-THE-LEG-SIZE-AS-ITS-CEILING",
+        "scripts/mutation-verdict.py",
+        "of ceiling {PYTHON_MAX_SHARDS}\"",
+        "of ceiling {PYTHON_SHARD_MUTANTS}\"",
+        "a sized plan prints its Python legs against the ceiling of 32 legs, never the leg size (SPEC-415 R4)",
+        "test_mutation_python_verdict.TheVerdictReadsThePythonReports.test_the_plan_prints_its_python_legs_against_their_ceiling"
+      ],
+      [
+        "S41505-AN-EMPTY-LISTING-NEEDS-NO-LEG",
+        "scripts/mutation-verdict.py",
+        "    return max(1, -(-listed // PYTHON_SHARD_MUTANTS))\n",
+        "    return max(0, -(-listed // PYTHON_SHARD_MUTANTS))\n",
+        "an empty Python listing still needs one leg, so the plan always deals at least one (SPEC-415 R1)",
+        "test_mutation_python_shard_binding.ThePythonMatrixIsSizedToTheHostedJob.test_a_listing_past_thirty_two_legs_is_refused_whole_and_never_capped"
+      ],
+      [
+        "S41506-THE-RUNBOOK-NAMES-THE-LEG-SIZE-AS-THE-CEILING",
+        "RELEASING.md",
+        "`python legs N of ceiling S`",
+        "`python legs N of ceiling 32`",
+        "the release runbook names the Python plan's headroom line against the ceiling of 32 legs (SPEC-415 R6)",
+        "test_rulesets.TheReleaseRunbookNamesThePythonCeiling.test_the_runbook_names_the_python_ceiling_and_its_whole_refusal"
+      ],
+      [
+        "S41507-THE-RUNBOOK-SENDS-A-REFUSED-PLAN-TO-A-RE-RUN",
+        "RELEASING.md",
+        "re-running its failed jobs refuses it again",
+        "re-running its failed jobs runs it",
+        "the release runbook says re-running a refused plan's failed jobs refuses it again (SPEC-415 R6)",
+        "test_rulesets.TheReleaseRunbookNamesThePythonCeiling.test_the_runbook_names_the_python_ceiling_and_its_whole_refusal"
+      ]
+    ]
+  }
+}

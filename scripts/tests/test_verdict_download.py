@@ -25,6 +25,8 @@ SHARD_COUNTS = (0, 1, 3)
 DOWNLOAD = "actions/download-artifact@"
 UPLOAD = "actions/upload-artifact@"
 ROWS_PLANNED = "needs.mutation-plan.outputs.rows == 'true'"
+ROWS_PATTERN = "mutation-rows-leg-*"
+ROWS_LEGS = (0, 1, 2, 17)
 
 
 REPORTS = "$reports"
@@ -328,17 +330,37 @@ def shard_artifact(shard, family="rust"):
     return name, files
 
 
-def artifacts(shards, rows, web):
+def artifacts(shards, legs, web):
     """{artifact name: {file inside it}} the run uploaded, as the jobs' own text produces them."""
     found = {"mutation-plan": {"plan.json", "whole.json", "git.diff"}}
     for shard in range(shards):
         for family in FAMILIES:
             name, files = shard_artifact(shard, family)
             found[name] = files
-    if rows:
-        found["mutation-rows"] = {"rows.json"}
+    found.update(rows_artifacts(legs))
     if web:
         found["mutation-web"] = {"plan.json", "stryker/mutation.json"}
+    return found
+
+
+def rows_artifacts(legs):
+    """{artifact name: {file inside it}} the rows job's legs 0 to `legs`-1 upload, from the rows
+    job's own text: its report's path and its upload's name and path, each leg's spelled out.
+    Legs that upload under one name are one artifact (SPEC-417 R9)."""
+    text = jobs(workflow(CI))["mutation-rows"]
+    report = re.search(r'--report "\$RUNNER_TEMP/([^"]+)"', text)
+    upload = [s for s in steps(text) if UPLOAD in s]
+    given = inputs(upload[0]) if len(upload) == 1 else {}
+    if report is None or "path" not in given or "name" not in given:
+        raise AssertionError("mutation-rows does not name its report and its one upload")
+    root = local(given["path"])
+    found = {}
+    for leg in range(legs):
+        out = local(f"{TEMP}/" + report.group(1).replace("$LEG", str(leg)))
+        if out != root and not out.startswith(root + "/"):
+            raise AssertionError(f"rows leg {leg} writes {out}, outside what it uploads ({root})")
+        name = given["name"].replace("${{ matrix.leg }}", str(leg))
+        found.setdefault(name, set()).add(posixpath.relpath(out, root))
     return found
 
 
@@ -378,23 +400,35 @@ def layout(uploaded, rows):
 
 def scenarios():
     return [
-        (shards, rows, web)
+        (shards, legs, web)
         for shards in SHARD_COUNTS
-        for rows in (False, True)
+        for legs in ROWS_LEGS
         for web in (False, True)
     ]
+
+
+def leg_reports(legs):
+    """The files the verdict's downloads must lay under reports/mutation-rows: one per leg."""
+    return {f"{TEMP}/reports/mutation-rows/rows-leg-{leg}.json" for leg in range(legs)}
+
+
+def rows_placed(placed):
+    """The files laid under reports/mutation-rows."""
+    return {p for p in placed if p.startswith(f"{TEMP}/reports/mutation-rows/")}
 
 
 class TheVerdictReadsEachReportByName(unittest.TestCase):
     def test_the_layout_holds_for_every_count_of_artifacts(self):
         reports = f"{TEMP}/reports"
-        for shards, rows, web in examined("artifact scenarios", scenarios()):
-            where = f"{shards} shard(s), rows {rows}, web {web}"
-            placed = layout(artifacts(shards, rows, web), rows)
+        for shards, legs, web in examined("artifact scenarios", scenarios()):
+            where = f"{shards} shard(s), {legs} rows leg(s), web {web}"
+            try:
+                placed = layout(artifacts(shards, legs, web), legs > 0)
+            except StepFailed as failed:
+                self.fail(f"{where}: {failed}")
             self.assertIn(f"{reports}/mutation-plan/plan.json", placed, where)
             self.assertIn(f"{reports}/mutation-plan/whole.json", placed, where)
-            if rows:
-                self.assertIn(f"{reports}/mutation-rows/rows.json", placed, where)
+            self.assertEqual(rows_placed(placed), leg_reports(legs), where)
             for shard in range(shards):
                 self.assertIn(
                     f"{reports}/mutation-rust-shard-{shard}/mutants.out/outcomes.json",
@@ -438,26 +472,41 @@ class TheVerdictReadsEachReportByName(unittest.TestCase):
                 fnmatch.fnmatchcase("mutation-web", wanted),
                 f"a verdict download reaches mutation-web: {wanted}",
             )
-        for shards, rows, _ in examined("artifact scenarios", scenarios()):
-            with_web = layout(artifacts(shards, rows, True), rows)
-            without = layout(artifacts(shards, rows, False), rows)
-            self.assertEqual(with_web, without, f"{shards} shard(s), rows {rows}")
+        for shards, legs, _ in examined("artifact scenarios", scenarios()):
+            with_web = layout(artifacts(shards, legs, True), legs > 0)
+            without = layout(artifacts(shards, legs, False), legs > 0)
+            self.assertEqual(with_web, without, f"{shards} shard(s), {legs} rows leg(s)")
 
     def test_a_producer_that_uploaded_nothing_leaves_the_reading_unchanged(self):
         verdict = jobs(workflow(CI))["mutation-verdict"]
         self.assertNotIn("continue-on-error", verdict)
-        rows_steps = [
-            s for s in steps(verdict) if DOWNLOAD in s and inputs(s).get("name") == "mutation-rows"
-        ]
-        self.assertEqual(len(rows_steps), 1, "the rows' report is not downloaded by name")
+        downloads = [s for s in steps(verdict) if DOWNLOAD in s]
+        self.assertNotIn(
+            "mutation-rows",
+            [inputs(s).get("name") for s in downloads],
+            "the verdict asks for mutation-rows by name, which no leg uploads",
+        )
+        rows_steps = [s for s in downloads if inputs(s).get("pattern") == ROWS_PATTERN]
+        self.assertEqual(len(rows_steps), 1, "the rows legs' reports are not downloaded by pattern")
+        self.assertEqual(
+            inputs(rows_steps[0]).get("merge-multiple"),
+            "true",
+            "the rows legs' reports are not laid into one directory",
+        )
         self.assertIn(ROWS_PLANNED, rows_steps[0], "the rows' download does not track the rows job")
-        for shards, _, web in examined("artifact scenarios", scenarios()):
-            uploaded = artifacts(shards, False, web)
-            placed = layout(uploaded, False)
-            stray = [p for p in placed if "/mutation-rows/" in p]
-            self.assertEqual(stray, [], f"{shards} shard(s), web {web}")
-            with_rows = layout(artifacts(shards, True, web), True)
-            self.assertIn(f"{TEMP}/reports/mutation-rows/rows.json", with_rows)
+        for shards, legs, web in examined("artifact scenarios", scenarios()):
+            where = f"{shards} shard(s), {legs} rows leg(s), web {web}"
+            placed = layout(artifacts(shards, legs, web), legs > 0)
+            self.assertEqual(rows_placed(placed), leg_reports(legs), where)
+        uploaded = artifacts(1, 3, False)
+        self.assertIn("mutation-rows-leg-1", uploaded, "rows leg 1 of 3 uploads no report")
+        del uploaded["mutation-rows-leg-1"]
+        placed = layout(uploaded, True)
+        self.assertEqual(
+            rows_placed(placed),
+            leg_reports(3) - {f"{TEMP}/reports/mutation-rows/rows-leg-1.json"},
+            "with leg 1 of 3 absent, legs 0 and 2 are not laid out",
+        )
 
     def test_the_judge_reads_the_paths_the_downloads_lay_down(self):
         verdict = jobs(workflow(CI))["mutation-verdict"]

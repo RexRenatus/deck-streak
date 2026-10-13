@@ -253,3 +253,73 @@ Insert-only; every earlier byte is kept. Section 5 records the release's Stryker
 been cut at that bound (job 113826350088), so SPEC-379 raises both web legs' `timeout-minutes` to
 100 by measurement, held inside 100 to 120 (ADR-390). The web sweep is still not sharded, and its
 StrykerJS settings are unchanged: sharding stays #693.
+
+## Amendment: past 32 legs the Python listing is refused (SPEC-415)
+
+Insert-only; every earlier byte is kept. R14's 20 listed mutants a leg holds, and so does its bound
+of 1 to 32 legs (`PYTHON_MAX_SHARDS`). Above 32 the listing is refused whole, by name, never capped:
+`shards --python-listed` exits 1 before any leg is dealt, as R3 refuses a Rust listing past its
+ceiling (SPEC-415, ADR-429). The clamp it replaces was measured on the release's plan: 5423 listed
+Python mutants went into 32 legs of 169 or 170, where 272 legs of 20 hold them, and no leg
+reported. Shard 0 (job 114529704945) was cancelled at its bound after 60 minutes 6 seconds, and
+shard 28 (job 114529704969) ended in a runner shutdown after 33 minutes 45 seconds.
+
+A12 keeps its id, its command and its test name,
+`test_the_matrix_takes_twenty_listed_mutants_a_shard_clamped_to_thirty_two`, and every case: 20
+listed still read 1 shard, 21 read 2 and 68 read 4. Only its last case, 32 x 20 + 1, now reads
+refused, where the table above states 32. This is not a retirement in SPEC-056 R14's form, because
+A12's test stays: R14 retires a criterion whose test is removed, and this one keeps its test with
+every case.
+
+## Amendment: the rows job counts at its most legs (SPEC-417)
+
+Insert-only; every earlier byte is kept. R3's rule is unchanged: the pull request's ceiling for
+Rust legs is the run's job budget, 256, less the most jobs every other `ci.yml` job can generate.
+SPEC-417 deals `mutation-rows` into at most 17 legs, so R3 now counts it at 17, and the value R3
+derives moves (SPEC-417 R11, R14; ADR-431):
+
+| SPEC-362 pin | old | new | derivation |
+|---|---|---|---|
+| R3's value, `LEG_CEILING["ci"]` (`scripts/mutation-verdict.py:879`) | 209 | 193 | at the base, 256 less 47: 13 single jobs, the rows job among them, the engine's 2 slices and 32 Python legs; after it, 256 less 63: 12 single jobs, the 2 slices, 32 Python legs and 17 rows legs |
+| A1, the release's listing at #691 within the `ci` ceiling | 200 legs, within 209 | refused whole by name by the pull request's plan, and sized at 200 legs within the battery's 234 (SPEC-417 R14) | 200 is more than 193 |
+| section 6's risk, the whole tree's 200 legs of a ceiling of 209 | 9 legs to spare | 7 legs past the pull request's 193, refused by name; #822's 192 fit with 1 to spare | 193 less 192 |
+
+The value 193 was derived at this delivery's cut, `dev` 8870392, after the Python plan's refusal
+(SPEC-415) landed, from the 63 jobs every other `ci.yml` job can generate there: 12 single jobs,
+the engine's 2 slices, 32 Python legs (`PYTHON_MAX_SHARDS`) and 17 rows legs (`ROWS_MAX_LEGS`).
+No bound rises: the ceiling falls by 16, and no other bound moves.
+
+A1 keeps its id, its command and its test name, `test_the_release_listing_fits_one_run`. Its
+listing is unchanged; it now reads that listing refused whole by the pull request's plan, by
+name, and sized at 200 legs within the battery's ceiling. This is a tightening, not a retirement
+in SPEC-056 R14's form, because A1's test stays: R14 retires a criterion whose test is removed.
+
+## Amendment: the Python legs' bound is half their job, beside the unchanged leg ceiling (SPEC-418)
+
+Insert-only; every earlier byte is kept. The Python legs gain a bound of their own,
+`PYTHON_LEG_BOUND_SECONDS` = 1800, half the `mutation-python` job's 60 minutes, held against the
+workflow as `SHARD_BOUND_SECONDS` is for the Rust legs. Once a file is priced, the plan deals its
+mutants by cost within that bound and prints a joint line: its legs against 225, 32 Python and 193
+Rust, and its projected runner-minutes against 35700. `LEG_CEILING` stays
+`{"ci": 193, "battery": 234}`, and the count rule of 20 listed mutants a leg stays the rule for
+every unpriced file.
+
+## Amendment: the Mini App sweep's three shard legs lower the pull request ceiling (SPEC-419)
+
+Insert-only; every earlier byte is kept. R3's rule is unchanged: the pull request's ceiling for
+Rust legs is the run's job budget, 256, less the most jobs every other `ci.yml` job can generate.
+SPEC-419 deals the Mini App sweep into three `mutation-web-shard` legs, so R3 now counts 66 other
+jobs in place of 63, and the value R3 derives moves (SPEC-419, ADR-433):
+
+| SPEC-362 pin | old | new | derivation |
+|---|---|---|---|
+| R3's value, `LEG_CEILING["ci"]` (`scripts/mutation-verdict.py:887`) | 193 | 190 | after SPEC-417, 256 less 63; after SPEC-419, 256 less 66: the 3 web shard legs join the 12 single jobs, the 2 slices, 32 Python legs and 17 rows legs |
+| the joint line's share of legs, 32 Python and the Rust ceiling | 225 | 222 | 32 plus 190 |
+| the joint line's runner-minutes, `(32 x 1800 + ceiling x 10800) // 60` | 35700 | 35160 | 32 x 1800 + 190 x 10800 |
+| the refused pull request listing of ingest mutants of 126 s | 13125, projected at 1653750 s | 12921, projected at 1628046 s | 190 legs of 68 mutants hold 12920; one more is refused |
+
+The battery's ceiling of 234 and the Python share of 32 do not move. The ceiling falls by 3, and
+a pull request listing past 190 legs is refused whole by name, never capped. The last pull
+request run recorded as planned, #822's release run at 192 legs, was planned under the ceiling of
+209. `fewest_shards` refuses a listing past the ceiling and never deals fewer, longer legs, so 190
+lengthens no leg.

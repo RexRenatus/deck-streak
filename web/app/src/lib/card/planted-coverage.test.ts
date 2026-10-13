@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { LAYERS, PLANTED, RENDER, UNOBSERVABLE, type Engine } from '../../../tests-card/planted';
+import { LAYERS, PLANTED, RENDER, UNOBSERVABLE } from '../../../tests-card/planted';
 
 // SPEC-341 R8 to R12, A8 to A12. The planted suite (tests-card/card.spec.ts) runs in Playwright,
 // which the tdd probe does not resolve, so this test proves its coverage instead, as
@@ -16,7 +16,7 @@ const SUITE = join(APP, 'tests-card');
 const SPEC = join(SUITE, 'card.spec.ts');
 const CARD_CONFIG = join(APP, 'vite.card.config.ts');
 const PLAYWRIGHT_CARD = join(APP, 'playwright.card.config.ts');
-const ENGINES: readonly Engine[] = ['chromium', 'webkit', 'firefox'];
+const ENGINES: readonly string[] = configuredEngines(readFileSync(PLAYWRIGHT_CARD, 'utf8')).engines;
 
 /** The repository root, found by walking up to the workspace file, so a StrykerJS sandbox below
  * `web/app/.stryker-tmp` still finds the schematic. */
@@ -54,6 +54,102 @@ function webChannels(): { id: string; alone: string }[] {
       const cells = row[2].split('|').map((cell) => cell.trim());
       return [{ id: row[1], alone: cells[cells.length - 1] }];
     });
+}
+
+/** The engines the card configuration runs: the literal `name` of each project object in its
+ * `projects` array, in order, read from the file's text (SPEC-399 R2). */
+function configuredEngines(config: string): { engines: string[]; refused: string[] } {
+  const engines: string[] = [];
+  const start = /\bprojects:\s*\[/.exec(config);
+  if (start === null) return { engines, refused: ['no projects array'] };
+  const open = start.index + start[0].length - 1;
+  let depth = 0;
+  let close = -1;
+  for (let at = open; at < config.length; at += 1) {
+    if (config[at] === '[') depth += 1;
+    if (config[at] === ']') depth -= 1;
+    if (depth === 0) {
+      close = at;
+      break;
+    }
+  }
+  if (close < 0) return { engines, refused: ['no projects array'] };
+
+  // each top-level object of the array, kept without the objects nested in it
+  const projects: string[] = [];
+  let braces = 0;
+  let own = '';
+  for (const char of config.slice(open + 1, close)) {
+    if (char === '{') {
+      braces += 1;
+      if (braces === 1) own = '';
+      continue;
+    }
+    if (char === '}') {
+      braces -= 1;
+      if (braces === 0) projects.push(own);
+      continue;
+    }
+    if (braces === 1) own += char;
+  }
+
+  const refused: string[] = [];
+  projects.forEach((project, index) => {
+    const name = /(?:^|[\s,])name:\s*(['"])([^'"]*)\1/.exec(project)?.[2];
+    if (name === undefined) refused.push(`project ${index + 1} has no literal name`);
+    else if (engines.includes(name)) refused.push(`${name} is named twice`);
+    else engines.push(name);
+  });
+  return { engines, refused };
+}
+
+/** Section 3's unobservable cells and the `<engine> <id>` pairs they name, over `engines`
+ * (SPEC-399 R1). A token read in no form the check knows is refused with its row's id. */
+function unobservableCells(
+  section: string,
+  engines: readonly string[]
+): { cells: string[]; pairs: string[]; refused: string[] } {
+  const cells: string[] = [];
+  const pairs: string[] = [];
+  const refused: string[] = [];
+  for (const line of section.split('\n')) {
+    const row = /^\|\s*`([a-z0-9-]+)`\s*\|(.*)\|\s*$/.exec(line);
+    if (row === null) continue;
+    const id = row[1];
+    for (const cell of row[2].split('|')) {
+      const seen = cell.match(/unobservable/gi)?.length ?? 0;
+      if (seen === 0) continue;
+      const tokens = [...cell.matchAll(/UNOBSERVABLE(?::| in ([A-Za-z]+)(?=[,)]))/g)];
+      if (tokens.length !== seen) {
+        refused.push(`${id}: ${seen} UNOBSERVABLE tokens in a cell, ${tokens.length} in a form the check reads`);
+        continue;
+      }
+      cells.push(id);
+      for (const token of tokens) {
+        if (token[1] === undefined) {
+          for (const engine of engines) pairs.push(`${engine} ${id}`);
+        } else if (engines.includes(token[1].toLowerCase())) {
+          pairs.push(`${token[1].toLowerCase()} ${id}`);
+        } else {
+          refused.push(`${id}: no configured engine is named ${token[1]}`);
+        }
+      }
+    }
+  }
+  return { cells, pairs, refused };
+}
+
+/** The named pairs no declaration holds, and the declared pairs no cell names, each sorted. */
+function pairDifference(
+  named: readonly string[],
+  declared: readonly string[]
+): { missing: string[]; extra: string[] } {
+  const have = new Set(declared);
+  const want = new Set(named);
+  return {
+    missing: [...want].filter((pair) => !have.has(pair)).sort(),
+    extra: [...have].filter((pair) => !want.has(pair)).sort()
+  };
 }
 
 /** Section 3's layer rows: W1 to W4, in the table's order (the page policy P is no layer). */
@@ -246,5 +342,146 @@ describe('the planted card suite', () => {
     expect(config).toMatch(/workers:\s*1,/);
     expect(config).toMatch(/fullyParallel:\s*false,/);
     examined('card projects', projects);
+  });
+
+  it("the schematic's unobservable cells equal the declared unobservable pairs both ways", () => {
+    // SPEC-399 A1; ADR-413 D2: every cell, in either spelling, over the configured engines
+    const { cells, pairs, refused } = unobservableCells(webSection(), ENGINES);
+    const declared = UNOBSERVABLE.map((entry) => `${entry.engine} ${entry.id}`);
+
+    expect(refused, 'a token section 3 spells in a form the check does not read').toEqual([]);
+    expect(pairDifference(pairs, declared)).toEqual({ missing: [], extra: [] });
+    expect([...pairs].sort()).toEqual([...declared].sort());
+
+    examined('engines in the card configuration', [...ENGINES]);
+    examined('unobservable cells in section 3', cells);
+    examined('unobservable pairs section 3 names', pairs);
+    examined('unobservable pairs planted.ts declares', declared);
+  });
+
+  it('a planted mismatch between the cells and the declared pairs is refused', () => {
+    // SPEC-399 A2: section 3's seven unobservable rows, copied, and the pairs they name
+    const FIXTURE = [
+      '3. Web channels',
+    '| `prefetch` | `link rel=prefetch` | W3, W2 | - (UNOBSERVABLE in WebKit, measured: it sends no prefetch request under the suite) |',
+    '| `preconnect` | `link rel=preconnect` (a TCP connection, no request) | W3 | W3 (UNOBSERVABLE in Chromium, measured: it opens no preconnect connection under the suite; UNOBSERVABLE in Firefox, measured: it opens no preconnect connection under the suite) |',
+    '| `dns-prefetch` | `link rel=dns-prefetch` | W3 | W3 (UNOBSERVABLE: no lookup reaches a listener) |',
+    '| `shadow-link` | a `template shadowrootmode=open` holding `link rel=preconnect` | W3 | W3 (UNOBSERVABLE in Chromium, measured: it opens no preconnect connection under the suite, in a shadow tree or out of one; UNOBSERVABLE in Firefox, measured: it opens no preconnect connection under the suite, in a shadow tree or out of one) |',
+    '| `ping` | a same-document link with `ping` at the listener, clicked | W2, P | - (UNOBSERVABLE in Firefox, measured: it sends no hyperlink audit under the suite) |',
+    '| `external-scheme` | a full-frame `mailto:` link, clicked | W1, W4 | - (UNOBSERVABLE: no listener sees a handler launch) |',
+    '| `webrtc` | an inline script that opens a peer connection to the UDP listener as its STUN server | W1, W2, P (none of them by policy: they stop the script, not the peer connection) | - (UNOBSERVABLE in Firefox, measured: its peer connection sends no datagram to the UDP listener under the suite) |',
+      ''
+    ].join('\n');
+    const THREE = ['chromium', 'webkit', 'firefox'];
+    const THIRTEEN = [
+      'chromium dns-prefetch',
+      'webkit dns-prefetch',
+      'firefox dns-prefetch',
+      'webkit prefetch',
+      'chromium preconnect',
+      'firefox preconnect',
+      'chromium shadow-link',
+      'firefox shadow-link',
+      'firefox ping',
+      'chromium external-scheme',
+      'webkit external-scheme',
+      'firefox external-scheme',
+      'firefox webrtc'
+    ];
+    const once = (text: string, part: string): void => {
+      expect(text.split(part).length - 1, `${part} occurs once`).toBe(1);
+    };
+    const read = (text: string, engines: readonly string[]) => unobservableCells(text, engines);
+    const plants: string[] = [];
+
+    // 1: a cell for one engine with no declared pair
+    plants.push('a one-engine cell with no declared pair');
+    expect(
+      pairDifference(read(FIXTURE, THREE).pairs, THIRTEEN.filter((pair) => pair !== 'webkit prefetch'))
+    ).toEqual({ missing: ['webkit prefetch'], extra: [] });
+
+    // 2: a declared pair no cell names
+    plants.push('a declared pair with no cell');
+    expect(pairDifference(read(FIXTURE, THREE).pairs, [...THIRTEEN, 'webkit preconnect'])).toEqual({
+      missing: [],
+      extra: ['webkit preconnect']
+    });
+
+    // 3: an every-engine cell declared in one engine only
+    plants.push('an every-engine cell declared in one engine');
+    expect(
+      pairDifference(read(FIXTURE, THREE).pairs, THIRTEEN.filter((pair) => pair !== 'webkit dns-prefetch'))
+    ).toEqual({ missing: ['webkit dns-prefetch'], extra: [] });
+
+    // 4: an engine no project carries
+    plants.push('an engine no project carries');
+    once(FIXTURE, 'UNOBSERVABLE in WebKit');
+    const elsewhere = read(FIXTURE.replace('UNOBSERVABLE in WebKit', 'UNOBSERVABLE in Elsewhere'), THREE);
+    expect(elsewhere.refused).toHaveLength(1);
+    expect(elsewhere.refused[0]).toMatch(/^prefetch: /);
+
+    // 5: two engines in one note, which neither spelling carries
+    plants.push('a note for two engines in one token');
+    const preconnect = FIXTURE.split('\n').filter((line) => line.startsWith('| `preconnect` |'));
+    expect(preconnect).toHaveLength(1);
+    once(FIXTURE, preconnect[0]);
+    once(preconnect[0], 'UNOBSERVABLE in Chromium,');
+    const both = read(
+      FIXTURE.replace(preconnect[0], preconnect[0].replace('UNOBSERVABLE in Chromium,', 'UNOBSERVABLE in Chromium and WebKit,')),
+      THREE
+    );
+    expect(both.refused).toHaveLength(1);
+    expect(both.refused[0]).toMatch(/^preconnect: /);
+
+    // 6: a token in another case
+    plants.push('a token in lower case');
+    const lower = read(FIXTURE.replace('UNOBSERVABLE in WebKit', 'unobservable in WebKit'), THREE);
+    expect(lower.refused).toHaveLength(1);
+    expect(lower.refused[0]).toMatch(/^prefetch: /);
+
+    // 7: a further configured engine takes a pair from each every-engine cell
+    plants.push('a further configured engine');
+    expect(read(FIXTURE, ['chromium', 'firefox', 'third', 'webkit']).pairs.sort()).toEqual(
+      [...THIRTEEN, 'third dns-prefetch', 'third external-scheme'].sort()
+    );
+
+    // the control: the copied rows over the three engines read clean and equal the thirteen
+    const control = read(FIXTURE, THREE);
+    expect(control.refused).toEqual([]);
+    expect(control.cells).toHaveLength(7);
+    expect([...control.pairs].sort()).toEqual([...THIRTEEN].sort());
+
+    examined('planted mismatches', plants);
+  });
+
+  it("the engines are the card configuration's projects", () => {
+    // SPEC-399 A3; ADR-413 D2: the literal name of each project, in order, from the file's text
+    const configuration = (...projects: string[]): string =>
+      `export default defineConfig({\n  projects: [\n    ${projects.join(',\n    ')}\n  ],\n  workers: 1\n});\n`;
+    const altered = configuredEngines(
+      configuration(
+        "{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }",
+        "{ name: 'third', use: { ...devices['Desktop Safari'] } }",
+        "{ name: 'webkit', use: {} }"
+      )
+    );
+    expect(altered.engines).toEqual(['chromium', 'third', 'webkit']);
+    expect(altered.refused).toEqual([]);
+
+    expect(
+      configuredEngines(
+        configuration("{ name: 'chromium', use: {} }", '{ name: projectName, use: {} }', "{ name: 'webkit', use: {} }")
+      ).refused
+    ).toEqual(['project 2 has no literal name']);
+    expect(
+      configuredEngines(configuration("{ name: 'chromium', use: {} }", "{ name: 'chromium', use: {} }")).refused
+    ).toEqual(['chromium is named twice']);
+    expect(configuredEngines('export default defineConfig({ workers: 1 });').refused).toEqual(['no projects array']);
+
+    const real = configuredEngines(readFileSync(PLAYWRIGHT_CARD, 'utf8'));
+    expect(real.refused).toEqual([]);
+    for (const name of real.engines) expect(name).toMatch(/^[a-z0-9-]+$/);
+    expect(real.engines).toEqual(ENGINES);
+    examined('projects in the card configuration', real.engines);
   });
 });

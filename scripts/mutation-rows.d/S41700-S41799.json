@@ -1,0 +1,134 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S41700-THE-ROW-PRICE-IS-THE-MEASURED-MEAN",
+        "scripts/mutation_rows.py",
+        "ROW_SECONDS = 17",
+        "ROW_SECONDS = 16",
+        "a row is priced at 17 s, the measured mean, when the legs are counted (SPEC-417 R1, R4)",
+        "test_mutation_rows.TheRowsLegsFitTheirBound.test_the_fewest_legs_whose_largest_leg_fits_the_bound"
+      ],
+      [
+        "S41701-THE-ROWS-BOUND-IS-HALF-OF-ITS-JOBS-TIMEOUT",
+        "scripts/mutation_rows.py",
+        "ROWS_BOUND_SECONDS = 2700",
+        "ROWS_BOUND_SECONDS = 2701",
+        "a rows leg's projected bound is half of the rows job's 90 minutes, in seconds (SPEC-417 R4, R10)",
+        "test_mutation_workflows.TheRowsLegsRunAsPlanned.test_the_rows_bound_is_half_of_the_rows_jobs_timeout"
+      ],
+      [
+        "S41702-THE-MOST-ROWS-LEGS-IS-SEVENTEEN",
+        "scripts/mutation_rows.py",
+        "ROWS_MAX_LEGS = 17",
+        "ROWS_MAX_LEGS = 18",
+        "the plan deals the rows into at most 17 legs, and refuses a count that needs more (SPEC-417 R2, R4)",
+        "test_mutation_rows.TheRowsLegsFitTheirBound.test_a_population_past_the_most_legs_is_refused_by_name"
+      ],
+      [
+        "S41703-THE-LEGS-ROUND-UP",
+        "scripts/mutation_rows.py",
+        "    return -(-count // legs)\n",
+        "    return count // legs\n",
+        "the largest leg holds the rows over the legs rounded up, since a leg holds whole rows (SPEC-417 R1)",
+        "test_mutation_rows.TheRowsLegsFitTheirBound.test_the_fewest_legs_whose_largest_leg_fits_the_bound"
+      ],
+      [
+        "S41704-A-POPULATION-PAST-THE-MOST-IS-CAPPED",
+        "scripts/mutation_rows.py",
+        "    return fitting[0] if fitting else None\n",
+        "    return fitting[0] if fitting else ROWS_MAX_LEGS\n",
+        "a count past the most legs is refused whole by name, never capped at the most legs (SPEC-417 R2)",
+        "test_mutation_rows.TheRowsLegsFitTheirBound.test_a_population_past_the_most_legs_is_refused_by_name"
+      ],
+      [
+        "S41705-NO-ROWS-RUN-NO-LEG",
+        "scripts/mutation_rows.py",
+        "    if not count:\n        return 1\n",
+        "    if not count:\n        return 0\n",
+        "no rows take one leg, which runs the retirement check and proves nothing (SPEC-417 R1)",
+        "test_mutation_rows.TheRowsLegsFitTheirBound.test_the_fewest_legs_whose_largest_leg_fits_the_bound"
+      ],
+      [
+        "S41706-THE-MATRIX-NEVER-REACHES-THE-WORKFLOW",
+        "scripts/mutation_rows.py",
+        "            sink.write(f\"rows_matrix={json.dumps(list(range(count)))}\\n\")\n",
+        "            pass\n",
+        "the legs reach the workflow as a count, rows_legs, and a matrix, rows_matrix (SPEC-417 R3)",
+        "test_mutation_rows.TheRowsLegsFitTheirBound.test_the_legs_reach_the_workflow_as_a_count_and_a_matrix"
+      ],
+      [
+        "S41707-A-LEG-PROVES-EVERY-ROW",
+        "scripts/mutation_rows.py",
+        "    return rows[k::n]\n",
+        "    return rows[k::1]\n",
+        "leg k of n proves every n-th chosen row from the k-th, so the legs hold each row once (SPEC-417 R5)",
+        "test_mutation_rows.TheRunnerProvesOnlyItsLegsRows.test_each_leg_proves_its_dealt_rows_and_the_legs_cover_the_plan_once"
+      ],
+      [
+        "S41708-A-LEG-PAST-ITS-COUNT-IS-ACCEPTED",
+        "scripts/mutation_rows.py",
+        "    return (k, n) if k < n else None\n",
+        "    return (k, n)\n",
+        "a leg k/n whose k is not below n is refused before any row runs (SPEC-417 R6)",
+        "test_mutation_rows.TheRunnerProvesOnlyItsLegsRows.test_a_malformed_leg_is_refused_before_any_row_runs"
+      ],
+      [
+        "S41709-THE-MERGE-DROPS-THE-LAST-LEG",
+        "scripts/mutation_rows.py",
+        "    for number in range(args.legs):\n",
+        "    for number in range(args.legs - 1):\n",
+        "the merge reads every leg, 0 to n-1, and names each absent one (SPEC-417 R7)",
+        "test_mutation_rows.TheMergeKeepsEveryLeg.test_the_merge_writes_every_legs_rows_and_names_a_missing_leg"
+      ],
+      [
+        "S41710-THE-MERGE-KEEPS-A-DUPLICATE",
+        "scripts/mutation_rows.py",
+        "            if identifier in holder:\n",
+        "            if False:\n",
+        "the merge refuses, by name, a row two legs hold (SPEC-417 R8)",
+        "test_mutation_rows.TheMergeKeepsEveryLeg.test_the_merge_refuses_a_row_the_deal_did_not_give_its_leg"
+      ],
+      [
+        "S41711-THE-MERGE-KEEPS-A-MISDEALT-ROW",
+        "scripts/mutation_rows.py",
+        "        if ids != given:\n",
+        "        if False:\n",
+        "the merge refuses, by name, a row its leg's deal did not give it (SPEC-417 R8)",
+        "test_mutation_rows.TheMergeKeepsEveryLeg.test_the_merge_refuses_a_row_the_deal_did_not_give_its_leg"
+      ],
+      [
+        "S41712-THE-ROWS-LEG-KEEPS-NINETY-MINUTES",
+        ".github/workflows/ci.yml",
+        "    timeout-minutes: 90\n",
+        "    timeout-minutes: 91\n",
+        "the rows job keeps its 90 minutes, now each leg's (SPEC-417 R10)",
+        "test_mutation_workflows.TheRowsLegsRunAsPlanned.test_the_rows_bound_is_half_of_the_rows_jobs_timeout"
+      ],
+      [
+        "S41713-THE-ROWS-JOB-RUNS-ONE-LEG",
+        ".github/workflows/ci.yml",
+        "        leg: ${{ fromJSON(needs.mutation-plan.outputs.rows_matrix) }}\n",
+        "        leg: [0]\n",
+        "the rows job runs one leg for each entry of the plan's rows matrix (SPEC-417 R9)",
+        "test_mutation_workflows.TheRowsLegsRunAsPlanned.test_the_rows_legs_run_as_planned_and_the_verdict_merges_them_first"
+      ],
+      [
+        "S41714-EACH-LEG-PROVES-THE-WHOLE-PLAN",
+        ".github/workflows/ci.yml",
+        " --leg \"$LEG/$LEGS\" --report",
+        " --report",
+        "each rows leg proves only its own deal, leg k of n (SPEC-417 R9)",
+        "test_mutation_workflows.TheRowsLegsRunAsPlanned.test_the_rows_legs_run_as_planned_and_the_verdict_merges_them_first"
+      ],
+      [
+        "S41715-THE-VERDICT-JUDGES-UNMERGED-ROWS",
+        ".github/workflows/ci.yml",
+        "      - name: the rows legs' reports, merged into the one the verdict reads\n        if: ${{ needs.mutation-plan.outputs.rows == 'true' }}\n",
+        "      - name: the rows legs' reports, merged into the one the verdict reads\n        if: ${{ needs.mutation-plan.outputs.rows == 'false' }}\n",
+        "the verdict merges the legs' reports whenever the plan selected rows (SPEC-417 R9)",
+        "test_mutation_workflows.TheRowsLegsRunAsPlanned.test_the_rows_legs_run_as_planned_and_the_verdict_merges_them_first"
+      ]
+    ]
+  }
+}

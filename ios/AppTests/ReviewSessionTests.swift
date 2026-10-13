@@ -2,8 +2,13 @@
 // fixture to the test runner as `DS_REVIEW_FIXTURE`; each test copies it into a fresh directory
 // beside it and opens that copy through the launch argument the app reads, so no test meets
 // another's answers. The fixture's deck `Review` holds four new cards in order: a text card, an
-// image card, a sound card and a speech card. Its second collection, in `occlusion/`, holds the
-// deck `Occlusion` with one image occlusion card, which the session withholds (SPEC-380 A13).
+// image card, a sound card and a speech card. Beside it, `parity/` is the parity collection
+// (SPEC-393 R15), whose deck `Parity` opens with a card that speaks its front through a TTS tag
+// asking for the voices `Absent_Voice` and `Desk_Parity_Voice`; and `sound-video/` is the sound
+// video collection (SPEC-410 R8), whose deck `Sound video` holds one card whose question's sound
+// tags name two videos and a sound.
+// Its second collection, in `occlusion/`, holds the deck `Occlusion` with one image occlusion card,
+// which the session withholds (SPEC-380 A13).
 import Foundation
 import XCTest
 
@@ -86,6 +91,64 @@ final class ReviewSessionTests: XCTestCase {
             ["<1m", "<10m"],
             "A17: Again and Good carry the intervals A1 pins for a new card, each picked by its "
                 + "number as the bar picks it (SPEC-365 R13)")
+    }
+
+    /// SPEC-393 A14 (R8, R9): with no voice kept, the parity card's replay speaks its front in the
+    /// installed voice `Parity Voice`, which its tag's second requested voice names.
+    func test_the_parity_card_speaks_the_voice_its_template_asks() async throws {
+        let directory = try freshFixture().appending(path: "parity", directoryHint: .isDirectory)
+        let engine = EngineSession()
+        try await engine.open(
+            arguments: ["DeckStreak", "-DSCollectionDirectory", directory.path(percentEncoded: false)])
+        let decks = try await engine.decks()
+        let parity = try XCTUnwrap(
+            decks.first { $0.name == "Parity" },
+            "the parity collection's deck Parity is listed; the decks read \(decks.map(\.name))")
+        let session = ReviewSession(engine: engine)
+        try await session.choose(parity)
+        let installed = [
+            InstalledVoice(
+                identifier: "test.voice.parity", name: "Parity Voice", language: "en-US", quality: 0)
+        ]
+        let first = try await session.next(autoplay: false, installed: installed)
+        XCTAssertEqual(
+            first.face.replay,
+            [.speech(text: "a parity card", language: "en-US", rate: 0.5, voice: "test.voice.parity")],
+            "A14: the parity card's replay speaks its front in the voice its tag asks for")
+    }
+
+    /// SPEC-410 A6 (R9): the sound video collection's first face shows sign's video, then wave's,
+    /// each inline over its own bytes, and replays its one sound.
+    func test_a_sound_tags_video_shows_in_the_review_screens_face() async throws {
+        let directory = try freshFixture().appending(
+            path: "sound-video", directoryHint: .isDirectory)
+        let engine = EngineSession()
+        try await engine.open(
+            arguments: ["DeckStreak", "-DSCollectionDirectory", directory.path(percentEncoded: false)])
+        let decks = try await engine.decks()
+        let soundVideo = try XCTUnwrap(
+            decks.first { $0.name == "Sound video" },
+            "the sound video collection's deck Sound video is listed; the decks read "
+                + "\(decks.map(\.name))")
+        let session = ReviewSession(engine: engine)
+        try await session.choose(soundVideo)
+        let first = try await session.next(autoplay: false, installed: [])
+        let document = first.face.document
+        let signVideo: String =
+            #"<video playsinline controls style="display:block;max-width:100%;height:auto;"#
+            + #"margin:0 auto" src="data:video/mp4;base64,c2lnbi12aWRlbw=="></video>"#
+        let waveVideo: String =
+            #"<video playsinline controls style="display:block;max-width:100%;height:auto;"#
+            + #"margin:0 auto" src="data:video/mp4;base64,d2F2ZS12aWRlbw=="></video>"#
+        let sign = try XCTUnwrap(
+            document.range(of: signVideo), "A6: the document holds sign's video: \(document)")
+        let wave = try XCTUnwrap(
+            document.range(of: waveVideo), "A6: the document holds wave's video: \(document)")
+        XCTAssertEqual(
+            sign.upperBound <= wave.lowerBound, true, "A6: sign's video comes before wave's")
+        XCTAssertEqual(
+            first.face.replay, [.sound(name: "beep.mp3", bytes: Data("beep-sound".utf8))],
+            "A6: the first face replays its one sound")
     }
 
     func test_an_occlusion_card_is_withheld() async throws {

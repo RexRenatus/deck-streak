@@ -789,3 +789,164 @@ describe("the API client's capture", () => {
     expect(lines(dropped.sent)).toEqual(['POST /api/session', 'POST /api/inbox/captures']);
   });
 });
+
+// SPEC-381 R7. The decks kept away from AI live on the server alone: the client reads the marked
+// set from one path, and changes one deck with a PUT of a JSON body to the deck's own encoded path,
+// in the same session, and reads the set the server answers. Anything else is unavailable.
+describe("the API client's decks kept away from AI", () => {
+  /** A server answering the n-th request with the n-th of `answers`, recording each request. */
+  function marking(answers: readonly (() => Response)[], launchData: () => string | null = () => LAUNCH) {
+    const sent: Sent[] = [];
+    const fetch = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      sent.push({
+        url: String(input),
+        method: init.method ?? 'GET',
+        credentials: init.credentials,
+        headers: Object.fromEntries(new Headers(init.headers).entries()),
+        body: typeof init.body === 'string' ? init.body : undefined
+      });
+      return (answers[sent.length - 1] ?? (() => new Response(null, { status: 599 })))();
+    });
+    const api = createApi({ launchData, fetch: fetch as unknown as typeof globalThis.fetch });
+    return { api, sent };
+  }
+
+  const open = () => new Response(null, { status: 200 });
+  const marked = (decks: unknown) => () => Response.json({ decks });
+
+  it('reads the marked decks from /api/decks/sensitive', async () => {
+    const { api, sent } = marking([open, marked(['2', '17'])]);
+    expect(await api.sensitiveDecks()).toEqual({ kind: 'ok', value: ['2', '17'] });
+    expect(lines(sent)).toEqual(['POST /api/session', 'GET /api/decks/sensitive']);
+  });
+
+  it('answers unavailable when the marked decks are not a list of deck ids', async () => {
+    for (const body of [['02'], ['0'], ['-3'], ['1.5'], [3], '1', null]) {
+      const { api } = marking([open, marked(body)]);
+      expect([body, await api.sensitiveDecks()]).toEqual([body, { kind: 'unavailable' }]);
+    }
+    const { api } = marking([open, () => Response.json({ nope: ['1'] })]);
+    expect(await api.sensitiveDecks()).toEqual({ kind: 'unavailable' });
+  });
+
+  it('marks and unmarks one deck with a PUT of a JSON body to its encoded path', async () => {
+    const { api, sent } = marking([open, marked(['7']), marked([])]);
+    expect(await api.setSensitive('7', true)).toEqual({ kind: 'ok', value: ['7'] });
+    expect(await api.setSensitive('a/b', false)).toEqual({ kind: 'ok', value: [] });
+    expect(lines(sent)).toEqual([
+      'POST /api/session',
+      'PUT /api/decks/7/sensitive',
+      'PUT /api/decks/a%2Fb/sensitive'
+    ]);
+    expect(sent.slice(1).map((request) => [request.headers, request.credentials, request.body])).toEqual([
+      [{ 'content-type': 'application/json' }, 'same-origin', '{"sensitive":true}'],
+      [{ 'content-type': 'application/json' }, 'same-origin', '{"sensitive":false}']
+    ]);
+  });
+
+  it('a change the server did not save is unavailable, and one outside Telegram asks to reopen', async () => {
+    const refused = marking([open, () => Response.json({ decks: ['7'] }, { status: 500 })]);
+    expect(await refused.api.setSensitive('7', true)).toEqual({ kind: 'unavailable' });
+    const garbled = marking([open, () => new Response('not json', { status: 200 })]);
+    expect(await garbled.api.setSensitive('7', true)).toEqual({ kind: 'unavailable' });
+    const dropped = marking([open, () => Response.json({ decks: [7] })]);
+    expect(await dropped.api.setSensitive('7', true)).toEqual({ kind: 'unavailable' });
+    const outside = marking([], () => null);
+    expect([await outside.api.setSensitive('7', true), lines(outside.sent)]).toEqual([{ kind: 'reopen' }, []]);
+    const unreachable = marking([open, () => Promise.reject(new TypeError('offline')) as unknown as Response]);
+    expect(await unreachable.api.setSensitive('7', true)).toEqual({ kind: 'unavailable' });
+  });
+});
+
+// SPEC-385 R9, A5; ADR-399 D2. Outside Telegram there is no launch data to post, so the client
+// sends each owner call with the session cookie alone; a call refused 401 asks for sign-in once
+// and answers reopen to its screen, and the answer kinds stay three.
+describe('the API client outside Telegram', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('outside telegram a refused call asks for sign-in', async () => {
+    const askSignIn = vi.fn();
+    const { fetch, sent } = server([200, 401]);
+    const options = { launchData: () => null, fetch, askSignIn };
+    const api = createApi(options);
+
+    // a call in a session answers as inside Telegram, and asks for nothing
+    expect(await api.me()).toEqual({ kind: 'ok', value: { studyDay: STUDY_DAY } });
+    expect(askSignIn).not.toHaveBeenCalled();
+    // a call refused 401 asks for sign-in, once, and answers reopen
+    expect(await api.me()).toEqual({ kind: 'reopen' });
+    expect(askSignIn).toHaveBeenCalledOnce();
+    // the session cookie alone: no handshake and no renewal
+    expect(lines(sent)).toEqual(['GET /api/me', 'GET /api/me']);
+    expect(sent.map((request) => request.credentials)).toEqual(['same-origin', 'same-origin']);
+  });
+});
+
+// MUTATION COVERAGE (SPEC-385 §7): the app's own client outside Telegram, a call in a sign-in
+// session that meets no answer, and the methods list. Each was green when its test was written,
+// and none is a criterion of §3. The router is replaced, so the sign-in page opens nowhere.
+const navigation = vi.hoisted(() => ({ goto: vi.fn() }));
+vi.mock('$app/navigation', () => ({ goto: navigation.goto }));
+
+describe("the API client's sign-in surface", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    navigation.goto.mockReset();
+  });
+
+  it("the app's own client opens the sign-in page for a refused call outside telegram", async () => {
+    const { fetch, sent } = server([401]);
+    vi.stubGlobal('fetch', fetch);
+    const { api } = await import('./api');
+
+    expect(await api.me()).toEqual({ kind: 'reopen' });
+    await vi.waitFor(() => expect(navigation.goto).toHaveBeenCalledOnce());
+    expect(navigation.goto.mock.calls).toEqual([['/signin']]);
+    // with the session cookie alone: no handshake was posted
+    expect(lines(sent)).toEqual(['GET /api/me']);
+  });
+
+  it('a call in a sign-in session that meets no answer is unavailable, and asks for nothing', async () => {
+    const askSignIn = vi.fn();
+    const fetch = vi.fn(async () => {
+      throw new TypeError('the network dropped the request');
+    });
+    const api = createApi({
+      launchData: () => null,
+      fetch: fetch as unknown as typeof globalThis.fetch,
+      askSignIn
+    });
+
+    expect(await api.me()).toEqual({ kind: 'unavailable' });
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(askSignIn).not.toHaveBeenCalled();
+  });
+
+  it('reads the sign-in methods from /api/identities', async () => {
+    const ADDED = Date.UTC(2001, 1, 3, 12);
+    const sent: string[] = [];
+    const fetch = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      sent.push(`${init.method ?? 'GET'} ${String(input)}`);
+      if (String(input) !== '/api/identities') return new Response(null, { status: 200 });
+      return Response.json([
+        { id: 1, kind: 'telegram' },
+        { id: 4, kind: 'passkey', created_at: ADDED }
+      ]);
+    });
+    const api = createApi({
+      launchData: () => LAUNCH,
+      fetch: fetch as unknown as typeof globalThis.fetch
+    });
+
+    expect(await api.identities()).toEqual({
+      kind: 'ok',
+      value: [
+        { id: 1, kind: 'telegram' },
+        { id: 4, kind: 'passkey', createdAt: ADDED }
+      ]
+    });
+    expect(sent).toEqual(['POST /api/session', 'GET /api/identities']);
+  });
+});

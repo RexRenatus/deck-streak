@@ -1367,3 +1367,30 @@ battery's `web` job's with it, by its stated rule from measured whole-app sweeps
 `WEB_MUTATION_TIMEOUT_MINUTES` in `scripts/tests/test_ci_workflows.py` holds both inside 100 to 120
 (ADR-390). No other bound in R18 changes, R3's `mutation-web` still mutates every changed web
 file whole, and no StrykerJS setting changes.
+
+## 39. Amendment: the rows job is dealt into legs (SPEC-417)
+
+Insert-only; every earlier byte is kept. R3 names `mutation-rows` as one job: the rows the diff
+selects (R10), then the retirement check (R11). A re-run that selects every row proves them
+serially past R18's 90 minutes, so SPEC-417 deals the rows into legs (ADR-431): the plan job
+writes a leg count and a matrix, `rows_legs` and `rows_matrix`, from a `legs` step;
+`mutation-rows` becomes one job per rows leg, a matrix over the plan's `rows_matrix` with
+`fail-fast: false`, at most `ROWS_MAX_LEGS` 17 legs; each leg proves only the rows dealt to it and
+uploads its own report; leg 0 alone runs the retirement check; and the verdict's job downloads
+every leg's report and merges them into the one rows report before the judge step, whose lines
+are unchanged. R18's 90 minutes stands, now each leg's. The rows a change selects (R10) are
+unchanged, and no other bound in R18 moves.
+
+## 40. Amendment: the pull request's web sweep runs in three shards (SPEC-419)
+
+Insert-only; every earlier byte is kept. R3 says a release's Mini App changes run in one
+`mutation-web` job (R18). That one job was cut at its bound on a release although its StrykerJS run
+had finished (job 114789042867), so SPEC-419 deals the sweep into three shards (ADR-433):
+`mutation-web-shard` is one matrix over shards 0, 1 and 2, each counting every planned web file's
+mutants by StrykerJS's own discover, taking its whole files by that count, largest first onto the
+lightest shard, running StrykerJS over them and keeping its record and report as
+`mutation-web-shard-<k>`; and `mutation-web`, now one job that needs the shards and runs always,
+reads each shard by name, reads VOID when one is missing, cut or partial, and hands their merged
+files to the judge step, whose line is unchanged. R3's rule stands: every changed web file is
+mutated whole, now in exactly one shard. R18's 100 minutes stands on each shard and on
+`mutation-web`, and no StrykerJS setting changes.

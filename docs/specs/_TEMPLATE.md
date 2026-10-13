@@ -43,6 +43,13 @@ a browser criterion names its Playwright spec in the table and its fence line ru
 
 Every file the delivery adds or changes. A file outside this list needs an amendment first.
 
+A delivery that adds a module under `scripts/tests` that loads code through `importlib`, `runpy` or
+`exec`, or adds such a load to a module there, lists `scripts/tests/test_ci_workflows.py` in this
+table as changed: its `DYNAMIC_IMPORTS` register names each such site by its module, qualified name
+and text, with its count, and the census in the python stage refuses a site the register does not
+name. Before the push, `python3 scripts/dynamic-imports-check.py --base <the pull request's base>`
+refuses a new or changed module there that loads code and that the register does not name.
+
 ## 5. What this does NOT do
 
 - Each exclusion is one bullet and cites the issue that owns it, `#N`. An exclusion with no owner is

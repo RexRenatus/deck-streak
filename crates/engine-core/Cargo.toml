@@ -28,6 +28,9 @@ url.workspace = true
 # ADR-359 D1: the encoder for a face's `data:` URLs (SPEC-348 R3); the engine's own dependencies
 # already bring this version, so it adds no package.
 base64.workspace = true
+# ADR-400 D1: the isolated FSRS-7 scheduler, the core's one workspace edge, named by
+# `src/replay.rs` alone and held by the graph census (SPEC-386 R7).
+deck-streak-fsrs7 = { path = "../fsrs7" }
 
 [dev-dependencies]
 # ADR-375 (SPEC-364 section 3): the runtime that runs the engine's own sync server as a child of the

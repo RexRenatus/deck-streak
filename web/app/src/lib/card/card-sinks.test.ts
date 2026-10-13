@@ -64,8 +64,11 @@ describe('the card frame is the only way card HTML reaches the page', () => {
       if (Object.keys(found).length > 0) census[file] = found;
     }
 
-    // one sink in the whole Mini App: the card frame's own srcdoc, once
-    expect(census).toEqual({ 'src/lib/card/CardFrame.svelte': { srcdoc: 1 } });
+    // two sinks in the whole Mini App, both the card frame's: its component and its host, once each
+    expect(census).toEqual({
+      'src/lib/card/CardFrame.svelte': { srcdoc: 1 },
+      'src/lib/card/frame-host.ts': { srcdoc: 1 }
+    });
     examined('shipped source files under src', files);
 
     // and the matcher refuses each sink by name, where a read or a comparison is no sink
