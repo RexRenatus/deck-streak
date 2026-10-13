@@ -545,8 +545,14 @@ impl Dispatcher {
     /// [`Refusal::Engine`] when the engine cannot run the read, a closed collection among them, or
     /// answers it with a reply that is not the one text of tags it selects.
     pub fn ai_assisted(&self, note: i64) -> Result<bool, Refusal> {
-        self.read(Read::NoteTags(note))?;
-        Ok(false)
+        let reply = self.read(Read::NoteTags(note))?;
+        let rows: Vec<[String; 1]> =
+            serde_json::from_slice(&reply).map_err(|_| unreadable(NOTE_TAGS_SQL))?;
+        match rows.as_slice() {
+            [] => Ok(false),
+            [[tags]] => Ok(crate::ai_assisted::carries(tags)),
+            _ => Err(unreadable(NOTE_TAGS_SQL)),
+        }
     }
 
     /// The review rows of every card whose home deck is in `decks`, each as `[card, id, ease,

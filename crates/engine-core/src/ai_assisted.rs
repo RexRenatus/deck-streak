@@ -12,6 +12,7 @@ pub const MARKER: &str = "ai-assisted";
 /// as the engine compares tags. A longer tag, a child tag or a part of the tag does not mark it, and
 /// a note with no tags is unmarked.
 #[must_use]
-pub fn carries(_tags: &str) -> bool {
-    false
+pub fn carries(tags: &str) -> bool {
+    tags.split_whitespace()
+        .any(|tag| tag.eq_ignore_ascii_case(MARKER))
 }
