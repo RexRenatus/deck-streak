@@ -2,8 +2,8 @@
 
 The SPEC, ADR-402 and the schematic's section were committed first (7aed4334), before any test or
 code. The engine core's tests, with the stubs that keep every input, were committed next
-(a8e170ae), each before the code that turns it green. Each red below is quoted from the run at the
-red commit.
+(a8e170ae), and the view's census, A10, was then committed alone (a0ae3f7e), each before the code
+that turns it green. Each red below is quoted from the run at the red commit.
 
 ## The fence, line by line
 
@@ -42,6 +42,7 @@ A6: not red: the stub read runs the fixed statement and answers false; it pins t
 A7: red at a8e170ae: panicked at crates/engine-core/tests/ai_assisted.rs:356:5: assertion `left == right` failed: the core reads the imported marked note marked and the other unmarked; left: [Ok(false), Ok(false)], right: [Ok(true), Ok(false)]
 A8: red at a8e170ae: panicked at crates/engine-core/tests/ai_assisted.rs:397:5: assertion `left == right` failed: the core reads the note unmarked, then marked after the marking package, then unmarked after the newer package without the marker; left: [Ok(false), Ok(false), Ok(false)], right: [Ok(false), Ok(true), Ok(false)]
 A9: red at a8e170ae: panicked at crates/engine-core/tests/ai_assisted.rs:491:5: assertion `left == right` failed: the core reads the marked note marked on the second device, and the note marked later unmarked before the normal syncs and marked after them; left: [Ok(false), Ok(false), Ok(false)], right: [Ok(true), Ok(false), Ok(true)]
+A10: red at a0ae3f7e: panicked at crates/web-engine/tests/ai_assisted_view.rs:209:5: assertion `left == right` failed: the shown card's view does not carry the core's marker answer for its note, in one place; left: ["current_card binds `assisted` from the core's read of the shown card's note 0 time(s), not once", "current_card's view holds 0 `assisted` key(s), not one", "src/wasm.rs reads the core's marker 0 time(s), not once"], right: []
 ```
 
 ## What the record discloses
