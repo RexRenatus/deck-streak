@@ -1399,8 +1399,10 @@ def run(args: argparse.Namespace) -> int:
     }
     judge = Judge(root, mapping, args)
     code = None
+    void = None
     try:
         report["control"] = judge.control() if (root / CONTROL).is_dir() else "absent"
+        void = control_void(report["control"])
         prepared = [judge.prepare(file, mutants, report) for file, mutants in selected.items()]
         for state in prepared:
             if state is not None:
@@ -1412,7 +1414,6 @@ def run(args: argparse.Namespace) -> int:
     finally:
         judge.close()
         shutil.rmtree(judge.scratch, ignore_errors=True)
-    void = control_void(report.get("control", "absent"))
     for entry in report["files"] if void else []:
         entry["void"] = void
     counts = count(report)
