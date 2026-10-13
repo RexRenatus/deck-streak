@@ -163,6 +163,7 @@ A14 judge before they count, report what they examined, refuse zero, and carry p
 | `docs/specs/SPEC-388-a-card-made-with-ai-assistance-carries-one-neutral-tag-from-its-package-source-to-the-web-review.md` | docs | added |
 | `docs/decisions/ADR-402-deckstreak-is-a-personal-study-tool-and-a-card-made-with-ai-assistance-carries-the-ai-assisted-tag-at-its-package-source.md` | docs | added |
 | `docs/schematics/vault-card-package-delivery.md` | docs | one section appended at its end; no existing line changes |
+| `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | docs | three cited line numbers re-pointed to the lines this delivery moved (`lib.rs` 49 to 51, `dispatch.rs` 153 to 156, `protocol.ts` 295 to 297); no row or control text changes |
 | `docs/red-first/SPEC-388.md` | docs | added |
 | `changelog.d/ai-assisted-marker-388.md` | docs | added |
 | `scripts/mutation-rows.d/S38800-S38899.json` | docs | added (section 9) |
