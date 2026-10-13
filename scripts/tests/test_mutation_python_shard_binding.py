@@ -2504,3 +2504,44 @@ class AScopedLegIsPricedByItsTriple(unittest.TestCase):
             with self.subTest(scoped=scoped):
                 _code, bare, _python, _sink = plan_shards(listing, whole, scoped)
                 self.assertNotIn("priced scoped", bare)
+
+
+class TheDealAndTheScopedReaderArmsAreObserved(unittest.TestCase):
+    """MUTATION COVERAGE: two arms the deal and the scoped reader carry that no earlier fixture
+    observed. SPEC-418 R3's setup-once rule, as SPEC-421 R9 keeps it, charges a file's setup to a
+    leg once however many of its runs the leg holds; SPEC-421 R7 and R8's reader passes over a blank
+    line and a torn line and goes on to the records after them. Neither test is RED-FIRST: each is
+    green at the base of the code."""
+
+    def test_a_second_run_of_one_file_on_its_leg_pays_no_setup(self):
+        """Two runs of one file on the one leg, of 2 and 3 mutants at 1 s each, with a 10 s setup:
+        the setup is paid once, so the leg carries 10 + 2 + 3 = 15 s, under the 1800 s bound, and
+        holds the five mutants in the order the runs were dealt."""
+        program = verdict_program()
+        self.assertEqual(program.PYTHON_LEG_BOUND_SECONDS, 1800)
+        self.assertEqual(
+            program.python_deal([("a.py", 10, 1, [0, 1]), ("a.py", 10, 1, [2, 3, 4])], 1),
+            ([15], [[0, 1, 2, 3, 4]]),
+        )
+
+    def test_the_scoped_prices_verb_reads_past_a_blank_and_a_torn_line(self):
+        """A blank line and then a torn line come BEFORE the one valid record: the reader counts
+        the torn line, passes over both, and still prices the record after them. Every other population
+        file is unpriced for its control."""
+        imports = "scripts/dynamic-imports-check.py"
+        torn = '{"kind": "bogus", "path": "t.py", "seconds": 9}'
+        code, out = scoped_prices({0: ["", torn, scoped_record("uncovered", imports, 0)]})
+        population = sorted(json.loads(POPULATION.read_text(encoding="utf-8")))
+        unpriced = "".join(
+            f"mutation: prices: {path} unpriced: no control record\n"
+            for path in population
+            if path != imports
+        )
+        self.assertEqual(
+            out,
+            f'    "{imports}": (1, 1, 1),  # run 88 attempt 1 job 501: 0 scoped mutant record(s)\n'
+            + unpriced
+            + "mutation: prices: examined 1 record(s) in 1 file(s); torn 1\n",
+        )
+        self.assertEqual(code, 0)
+        examined("population files", population)
