@@ -106,7 +106,7 @@ DRIVER = textwrap.dedent(
     import mutation_rows as runner
 
 
-    def prove(root, args):
+    def prove(root, args, leg=None):
         killer = runner.Killer(
             "script", "hanging_killer.Killer.test_hangs_with_a_grandchild", "hanging_killer.py", cwd="."
         )

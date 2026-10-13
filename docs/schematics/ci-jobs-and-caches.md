@@ -176,3 +176,113 @@ so one process is stopped, never the scope. A listing (`cargo mutants --list`) r
 cap stops is never caught and never a timeout: its leg fails naming it, and every other result in the leg stands. How a
 named kill is scored is decided in `score_memory_cap` alone. The timeouts, the listing, the partition and the baseline are
 the ones in the sections above; the scope adds a bound on memory and changes no bound on time.
+
+## The dynamic-import register: before the push, and the census in the hygiene job (SPEC-406, ADR-420)
+
+Kind: data flow. Read at DeckStreak `dev` 32f6217 (`scripts/tests/test_ci_workflows.py`,
+`.github/workflows/ci.yml`, `scripts/check.sh`, `docs/specs/_TEMPLATE.md`). Decided by ADR-420;
+built by SPEC-406.
+
+A module under `scripts/tests` that loads code through `importlib`, `runpy` or `exec` is held to
+the `DYNAMIC_IMPORTS` register twice: by `scripts/dynamic-imports-check.py` before the push, at the
+module, and by the census in the `hygiene` job after it, at every site with its count. The check
+reads only what `HEAD` commits; the census reads the checked-out tree.
+
+```mermaid
+flowchart TD
+  added["a commit adds or changes scripts/tests/NAME.py"] --> pre["python3 scripts/dynamic-imports-check.py --base BASE"]
+  pre --> regread["git show HEAD:scripts/tests/test_ci_workflows.py, parsed: the one DYNAMIC_IMPORTS assignment"]
+  regread --> regshape{"a dict display of allowed groups, each site a tuple led by a module string, one module or more?"}
+  regshape -->|"no"| void["VOID: exit 2, the cause named; nothing judged"]
+  regshape -->|"yes"| regline["register: N module(s) in DYNAMIC_IMPORTS at HEAD"]
+  regline --> changed["git diff --name-only --no-renames --diff-filter=AM BASE...HEAD -- scripts/tests: the .py paths"]
+  changed --> anychange{"any changed module?"}
+  anychange -->|"no"| na["NOT-APPLICABLE: exit 0, examined 0"]
+  anychange -->|"yes"| parsed["each path by git show HEAD:PATH, parsed; a module that does not parse is VOID"]
+  parsed --> loaderq{"a load of a name an importlib or runpy import binds, or a bare exec the module does not bind?"}
+  loaderq -->|"no: the non-loader path"| nonloader["counted, not loader-style"]
+  loaderq -->|"yes: loader-style"| memberq{"does the register name the module's dotted name?"}
+  memberq -->|"yes: the registered path"| registered["counted, admitted"]
+  memberq -->|"no: the unregistered path"| refused["REFUSED: exit 1, the path, the loader and its line; no push until the register names the module"]
+  nonloader --> okline["examined M changed module(s), L loader-style; OK, exit 0"]
+  registered --> okline
+  okline --> pushed["the push"]
+  na --> pushed
+  pushed --> hygiene["the hygiene job: bash scripts/check.sh python scrub secrets"]
+  hygiene --> census["the census: every site in every scripts/tests module, by module, qualified name and text"]
+  census --> sums{"each site's count equals what NOT_WORKFLOW_READS and DYNAMIC_IMPORTS list?"}
+  sums -->|"yes"| green["hygiene green; the aggregate ci needs it"]
+  sums -->|"no"| red["hygiene red, naming the site"]
+```
+
+| path | what the check reads | its verdict | what the census then reads |
+|---|---|---|---|
+| registered | a changed module whose syntax tree loads code, and its dotted name among the register's modules | counted, `OK` | each of its sites against the register's count for it |
+| unregistered | a changed module whose syntax tree loads code, and no tuple of the register naming it | `REFUSED`, exit 1, before any push | nothing yet: the push waits |
+| non-loader | a changed module with no such load, the loader's words in a string or a comment included | counted, `OK` | its sites, if any other dynamic name is among them |
+
+Every site the check counts is one the census counts: `importlib` and `runpy` are not in
+`VETTED_MODULES` (`test_ci_workflows.py:4149`), and `exec` is in `BARE_DYNAMIC` (4069-4080). So the
+check refuses a module only where the census would refuse it as well, and the census stays the
+judge of a registered module that gains a site, of each tuple's text and count, and of every other
+dynamic name. The register is the dict at `test_ci_workflows.py:6482-7064`, each group built by
+`allowed()` (4779-4782); a module is named as `module_sources()` names it (4510-4518). The census
+runs in `stage_python` (`scripts/check.sh:179-195`), the step at `.github/workflows/ci.yml:347-351`
+of the `hygiene` job (line 298), which the aggregate `ci` needs (lines 875-878).
+
+The SPEC template's file manifest section (`docs/specs/_TEMPLATE.md`, section 4) tells a delivery
+that adds such a load to list `scripts/tests/test_ci_workflows.py` as changed, and names the check.
+
+## The mutant leg's fetch before its baseline, and how a red baseline reaches the verdict (SPEC-416, ADR-430)
+
+Kind: data flow. Read at DeckStreak `dev` c74b6b9 (`.github/workflows/ci.yml:65-66`, `:187-188`,
+`:447-524`, `:485-496`, `:516-518`, `:622-624`, `:682-699`, `:904`; `scripts/mutation-verdict.py:133-140`,
+`:1134`, `:1203-1206`, `:1260`; `crates/progression/tests/xp_census.rs:715`). Decided by ADR-430;
+built by SPEC-416.
+
+A `mutation-rust` leg of a pull request's run restores the Rust cache by key (`ci.yml:485-496`) and then
+runs cargo-mutants (`:507-518`), whose first act is the unmutated baseline: the workspace's tests,
+unmutated. One of those tests, the progression census, asks `cargo metadata --locked --offline` for the
+graph (`xp_census.rs:715`). Offline, cargo reads only the packages already in the registry cache. A pull
+request into `main` restores no cache written on `dev`, and a build downloads only the packages it
+compiles, so the census can ask for a package no earlier step fetched. The `rust` job (`ci.yml:65-66`),
+the `release` job (`:187-188`) and the `mutation-rows` job (`:622-624`) run a fetch after their restore;
+`mutation-rust` (`:447-524`) runs none.
+
+Before: a cache miss leaves the baseline to fail, and the leg still uploads a report.
+
+```mermaid
+flowchart TD
+  restore["restore the Rust cache by key (ci.yml:485-496)"] -->|"a pull request into main: cache miss"| empty["an empty registry"]
+  empty -->|"no fetch step in mutation-rust"| baseline["cargo-mutants: the unmutated baseline, build then test (ci.yml:507-518)"]
+  baseline -->|"the progression census runs cargo metadata --locked --offline"| census["the census: failed to download a package"]
+  census -->|"a red test, so a red baseline"| exitfour["cargo-mutants exits 4, 0 mutants examined"]
+  exitfour -->|"rc captured and echoed (ci.yml:516-518)"| greenstep["the step is green; the report and cargo-mutants.exit are uploaded"]
+  greenstep -->|"the verdict job downloads every leg's report"| partial["partial_reason: exit 4 is outside WHOLE_EXITS (mutation-verdict.py:133-140, :1203-1206)"]
+  partial -->|"whole_reports records it (mutation-verdict.py:1260)"| void["the leg is VOID by name"]
+  void -->|"Verdict.close returns EXIT_VOID (mutation-verdict.py:1134)"| judge["the judge step exits with its status (ci.yml:682-699)"]
+  judge -->|"the aggregate exits 1 unless the result is success (ci.yml:904)"| cifail["the aggregate ci job fails"]
+```
+
+After: one fetch step sits between the restore and cargo-mutants, under the same `if:` as the cargo-mutants
+step, so the baseline sees every target's packages and is red only when a test is red.
+
+```mermaid
+flowchart TD
+  restore2["restore the Rust cache by key (ci.yml:485-496)"] -->|"hit or miss"| fetch["cargo fetch --locked --manifest-path Cargo.toml, under the cargo-mutants step's if"]
+  fetch -->|"every target's packages are in the registry"| baseline2["cargo-mutants: the unmutated baseline"]
+  baseline2 -->|"the census reads the graph offline and finds every package"| green["the baseline is green"]
+  green -->|"mutants are tested"| examined["mutants examined in the leg"]
+  examined -->|"the leg's report and exit are uploaded"| judge2["the verdict judges the examined count (unchanged)"]
+  fetch -->|"a registry outage: the step fails"| noreport["no report is uploaded"]
+  noreport -->|"a missing report is VOID by name"| judge2
+```
+
+The leg's colour stays green by design: its step records cargo-mutants' exit instead of returning it
+(`ci.yml:516-518`), and the verdict reads that exit from the leg's report. So the verdict is where a red
+baseline fails closed, at every step from the report to the aggregate (ADR-430 D3), and this delivery
+changes no line of `scripts/mutation-verdict.py`. The fetch step changes no test: the census keeps
+`--locked --offline`, and no test is skipped or filtered. The rows job's own fetch line (`ci.yml:622-624`)
+stays the only line of its kind, because the new step's line is the `rust` and `release` jobs' own. The
+weekly battery's `rust` leg and its rehearsal are not changed here; they stay open under the issue SPEC-416
+refers to.

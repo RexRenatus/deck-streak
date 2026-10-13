@@ -242,3 +242,18 @@ Inserted at `:107`, insert-only, in the record's own note form (`- **Note (<date
   ADR-382). It is reachable only from the review, writes only on the card the gesture names, and
   is shown, with what it changes, before it is made.
 ```
+
+## Amendment: Undo also reaches the review's last bury or flag (SPEC-383)
+
+ADR-397 amends D2 and the Consequences. The rest of each stands.
+
+- **D2 (`:59-66`).** D2 chose the review's own last answer only and rejected "Any last change: an
+  answer, a bury or a flag", because a bury or a flag leaves no row the core can read back without
+  new reads. ADR-397 adds those reads: a record that names its kind and its card, and a fixed read
+  of the card's queue, flag and sync mark. The rejected option returns as the review's last action,
+  one of the three, in one slot, checked at the write by its kind (ADR-397 D2, D3), as "What would
+  make this wrong" (`:171-181`) anticipated. The answer's record and `judge` are unchanged. "After a
+  bury or a flag, Undo is therefore not offered; a flag toggles back by itself" no longer holds:
+  Undo offers that bury or flag while it has not synced.
+- **Consequences (`:158`).** "Bad: undoing a bury or a flag is no longer offered (D2)" no longer
+  holds after SPEC-383.

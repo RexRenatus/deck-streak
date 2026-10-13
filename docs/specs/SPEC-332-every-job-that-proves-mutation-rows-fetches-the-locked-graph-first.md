@@ -69,3 +69,11 @@ A2: python3 -m unittest discover -s scripts/tests -p test_rows_jobs_fetch_graph.
 - A future proving job is added without the step. The test enumerates every workflow, so it fails then.
 - Mutation rows: S33200 and S33201 mutate `ci.yml`'s fetch step (delete it, move it after prove)
   and are killed by the new test.
+
+## Amendment: SPEC-416 holds the mutant legs to the same rule
+
+Section 5's exclusion of a job that runs an offline cargo call without proving rows no longer
+covers a job that runs a cargo-mutants baseline. SPEC-416 R1 to R4 hold `mutation-rust` to "fetch
+after the last cache restore and before the first offline call". `refusals()` in
+`scripts/tests/test_rows_jobs_fetch_graph.py` takes the anchor step as a parameter, and with its
+default it returns this SPEC's messages unchanged.

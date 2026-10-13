@@ -38,9 +38,9 @@ ZERO_SCOPE = {
 }
 EXAMINED = re.compile(r"^examined (\d+)", re.MULTILINE)
 INSTALL = re.compile(r"(?m)^\s*tool: cargo-mutants@27\.1\.0$")
-#: Each mutation job's job-level conditions (SPEC-290): the plan and the web job always start, the
-#: verdict runs whatever its needs returned, and a leg is not started only when the plan's listing
-#: gives it nothing to examine.
+#: Each mutation job's job-level conditions (SPEC-290): the plan and the web shards always start,
+#: the verdict and the web sweep's verdict (SPEC-419) run whatever their needs returned, and a leg
+#: is not started only when the plan's listing gives it nothing to examine.
 JOB_CONDITIONS = {
     "mutation-plan": [],
     "mutation-rust": ["${{ needs.mutation-plan.outputs.listed != '0' }}"],
@@ -49,7 +49,8 @@ JOB_CONDITIONS = {
         "needs.mutation-plan.outputs.scope == 'diff' }}"
     ],
     "mutation-verdict": ["${{ always() }}"],
-    "mutation-web": [],
+    "mutation-web": ["${{ always() }}"],
+    "mutation-web-shard": [],
 }
 
 
@@ -90,6 +91,18 @@ def run(*args, env=None):
         timeout=300,
         check=False,
     )
+
+
+#: The rows runner: its module constants are read from its text and never imported (SPEC-417 R11).
+ROWS_RUNNER = REPO / "scripts" / "mutation_rows.py"
+
+
+def rows_constant(name):
+    """The rows runner's module constant `name`, an integer read from its text."""
+    found = re.search(rf"(?m)^{name} = (\d+)$", ROWS_RUNNER.read_text(encoding="utf-8"))
+    if found is None:
+        raise AssertionError(f"scripts/mutation_rows.py sets no {name}")
+    return int(found.group(1))
 
 
 class NoExclusionHidesAMutant(unittest.TestCase):
@@ -320,7 +333,7 @@ class TheMutationJobsGateEveryPullRequest(unittest.TestCase):
         found = jobs(text)
         aggregate = found.get("ci", "")
         names = ["mutation-plan", "mutation-rust", "mutation-rows", "mutation-verdict"]
-        for name in examined("mutation jobs", [*names, "mutation-web"]):
+        for name in examined("mutation jobs", [*names, "mutation-web", "mutation-web-shard"]):
             self.assertIn(name, found, f"ci.yml has no {name} job")
             job = found[name]
             self.assertRegex(aggregate, rf"needs: \[[^\]]*\b{name}\b", f"ci does not need {name}")
@@ -356,7 +369,9 @@ class TheMutationJobsGateEveryPullRequest(unittest.TestCase):
             0 <= made < prove.find("mutation_rows.py prove"),
             "the rows job never makes the directory its report goes to",
         )
-        self.assertIn("stryker run", found["mutation-web"])
+        # SPEC-419: StrykerJS runs in each web shard, and the job of the leg's name only judges.
+        self.assertIn("stryker run", found["mutation-web-shard"])
+        self.assertNotIn("stryker run", found["mutation-web"])
 
 
 #: A planted `python3` for SPEC-397 A10: it prints the arguments it was called with, then exits with
@@ -442,6 +457,78 @@ class TheShardsAreThePlans(unittest.TestCase):
         self.assertRegex(verdict, r"(?m)^    if: \$\{\{ always\(\) \}\}$")
         self.assertRegex(verdict, r"(?m)^\s+pattern: mutation-rust-shard-\*$")
         self.assertRegex(verdict, r"judge [^\n]*--class rust [^\n]*--shard-reports ")
+
+
+#: The rows legs' axis: the plan deals the rows into at most `ROWS_MAX_LEGS` legs (SPEC-417 R9).
+ROWS_AXIS_LINE = "        leg: ${{ fromJSON(needs.mutation-plan.outputs.rows_matrix) }}"
+ROWS_PLANNED_IF = "${{ needs.mutation-plan.outputs.rows == 'true' }}"
+STEP_IF = re.compile(r"(?m)^        if: (.*)$")
+
+
+def numbered(job, *held):
+    """The positions of the job's steps whose text holds every one of `held`."""
+    return [n for n, step in enumerate(steps(job)) if all(text in step for text in held)]
+
+
+class TheRowsLegsRunAsPlanned(unittest.TestCase):
+    """SPEC-417 A8 and A9 (R9, R10): the plan deals the rows into legs, each leg proves its deal
+    within the rows job's kept bound, and the verdict merges the legs before it judges."""
+
+    def test_the_rows_legs_run_as_planned_and_the_verdict_merges_them_first(self):
+        found = jobs(workflow(CI))
+        plan, rows, verdict = (
+            found.get(name, "") for name in ("mutation-plan", "mutation-rows", "mutation-verdict")
+        )
+        self.assertIn(
+            f"      matrix:\n{ROWS_AXIS_LINE}\n",
+            rows,
+            "mutation-rows has no matrix over rows_matrix",
+        )
+        self.assertRegex(rows, r"(?m)^      fail-fast: false$")
+        for output in examined("rows plan outputs", ["rows_legs", "rows_matrix"]):
+            self.assertRegex(
+                plan, rf"(?m)^      {output}: \$\{{\{{ steps\.legs\.outputs\.{output} \}}\}}$"
+            )
+        sized = numbered(plan, "        id: legs\n")
+        sharded = numbered(plan, "        id: shards\n")
+        self.assertEqual((len(sized), len(sharded)), (1, 1), "the plan's steps legs and shards")
+        self.assertGreater(sized[0], sharded[0], "the rows legs are dealt before the shards")
+        self.assertIn(
+            'mutation_rows.py legs --rows-from "$RUNNER_TEMP/mutation/plan.json"',
+            steps(plan)[sized[0]],
+        )
+        prove = numbered(rows, "mutation_rows.py prove")
+        self.assertEqual(len(prove), 1, "the rows job's prove steps")
+        proving = steps(rows)[prove[0]]
+        for held in ('--leg "$LEG/$LEGS"', '--report "$RUNNER_TEMP/rows/rows-leg-$LEG.json"'):
+            self.assertIn(held, proving)
+        self.assertRegex(proving, r"(?m)^          LEG: \$\{\{ matrix\.leg \}\}$")
+        self.assertRegex(
+            proving, r"(?m)^          LEGS: \$\{\{ needs\.mutation-plan\.outputs\.rows_legs \}\}$"
+        )
+        retired = numbered(rows, "mutation_rows.py retired")
+        self.assertEqual(len(retired), 1, "the rows job's retirement steps")
+        self.assertRegex(
+            STEP_IF.search(steps(rows)[retired[0]]).group(1), r"&& matrix\.leg == 0 \}\}$"
+        )
+        self.assertRegex(rows, r"(?m)^          name: mutation-rows-leg-\$\{\{ matrix\.leg \}\}$")
+        download = numbered(verdict, "          pattern: mutation-rows-leg-*\n")
+        merge = numbered(verdict, "mutation_rows.py merge")
+        judge = numbered(verdict, "mutation-verdict.py judge")
+        self.assertEqual(
+            (len(download), len(merge), len(judge)), (1, 1, 1), "the rows download, merge, judge"
+        )
+        self.assertIn("          merge-multiple: true\n", steps(verdict)[download[0]])
+        self.assertLess(download[0], merge[0], "the merge runs before the rows are downloaded")
+        self.assertLess(merge[0], judge[0], "the judge runs before the merge")
+        conditions = [STEP_IF.findall(steps(verdict)[n]) for n in (download[0], merge[0])]
+        self.assertEqual(conditions, [[ROWS_PLANNED_IF], [ROWS_PLANNED_IF]])
+
+    def test_the_rows_bound_is_half_of_the_rows_jobs_timeout(self):
+        rows = jobs(workflow(CI)).get("mutation-rows", "")
+        found = re.findall(r"(?m)^    timeout-minutes: (\d+)$", rows)
+        self.assertEqual(found, ["90"], "mutation-rows keeps 90 minutes, now each leg's")
+        self.assertEqual(rows_constant("ROWS_BOUND_SECONDS") * 2, int(found[0]) * 60)
 
 
 #: The guard's module, read here as text and never imported: its tests load the wrapper, and this

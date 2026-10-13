@@ -353,6 +353,11 @@ by the mutation run over each changed file whole; an equivalent mutant is record
 disabled. Part 2 also composes the seal-secret reader in the API role, so its manifest admits two
 Rust paths, `crates/daemon/src/role_api.rs` and `crates/daemon/tests/seal_release_composed.rs`
 (B14, held by mutation row `S36317`), beside one doc sentence of `crates/daemon/src/wiring.rs`.
+Its supporting files are `web/app/package.json` and `pnpm-lock.yaml` (the exact dev dependency
+`fake-indexeddb`), the tests `web/app/src/lib/engine/client.test.ts`,
+`web/app/src/lib/engine/session.test.ts` and `web/app/src/lib/engine/worker.test.ts`, the stand-in
+`web/app/src/lib/engine/credential-stand-in.test.support.ts`, the band file
+`scripts/mutation-rows.d/S36300-S36399.json` and this SPEC.
 
 ## 8. Formal model
 
@@ -394,6 +399,7 @@ Each row names a behaviour of R3 to R7, its mutant and the one test that kills i
 | `S36314` | `sync_seal_routes.rs` | the handler drops its state-change guard | `sync_seal_routes::the_release_is_not_stored_and_not_cross_site` |
 | `S36315` | `sync_seal_routes.rs` | the route releases when no secret is configured | `sync_seal_routes::the_release_is_off_without_the_seal_secret` |
 | `S36316` | `crates/daemon/src/wiring.rs` | a missing seal secret refuses start instead of turning the release off | `lib::wiring::tests::a_missing_seal_secret_turns_the_release_off` |
+| `S36317` | `crates/daemon/src/role_api.rs` | the API role reads the seal secret and does not compose it, so the release stays off | `seal_release_composed::an_owner_session_gets_the_release_when_the_role_holds_a_seal_secret` |
 
 ## 10. What only a device or a person proves
 
@@ -412,3 +418,9 @@ accept it as this SPEC's residual. SPEC-400 (ADR-414) closes it: the page loads 
 Telegram launched it, and outside a launch the page's policy refuses the script's origin, so the web
 client in a plain browser tab runs no script from Telegram beside the page that asks for the release
 and holds the sync form.
+
+## 11. Amendments: part 2 is delivered
+
+The Status line at the head of this SPEC is part 1's, as it was written. Part 2, the Worker's
+store, its operations, the page's sign-out and the reach census (section 7, decided by section 7a),
+has landed as well, so this SPEC is delivered whole.

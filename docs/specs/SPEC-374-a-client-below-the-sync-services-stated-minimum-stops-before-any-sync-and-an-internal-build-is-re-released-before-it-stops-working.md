@@ -371,6 +371,8 @@ Part two delivers section 7 as it is written: R13 to R21, decided by A8 to A15. 
 - The check reads with a credential of its own, held in an environment of its own that only the default branch may enter. ADR-385's amendment records the decision and the alternative it was chosen against.
 - Placing that credential is an owner act outside this delivery. Until it is placed, every run fails closed, says the credential is not placed, reads nothing and dispatches nothing (R14, A11).
 - Files: `.github/workflows/testflight-rerelease-check.yml` (new), `scripts/testflight_age.py` (new), `scripts/tests/test_testflight_age.py` (new), `scripts/tests/test_ci_workflows.py`, `docs/red-first/SPEC-374.md`, `scripts/mutation-rows.d/S37400-S37499.json`, `changelog.d/min-client-rerelease-374-b.md`.
+- `scripts/mutation-python.json` belongs on the Files line above as well: part two registers `scripts/testflight_age.py` in it for the mutation run.
+- R13's concurrency group (section 7) is the workflow's own: `.github/workflows/testflight-rerelease-check.yml` declares it at the workflow level, so the check's one job runs under it and cancels nothing.
 
 ## 11. Acceptance criteria of the part-two amendment
 

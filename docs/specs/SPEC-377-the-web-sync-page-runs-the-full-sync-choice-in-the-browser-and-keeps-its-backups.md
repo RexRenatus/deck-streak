@@ -517,3 +517,10 @@ from the constant. The TypeScript and Svelte are held by StrykerJS with `break` 
 | `S37720-AN-EXPORT-TAKES-ANY-NAME` | web-engine `src/files.rs` | the listed check ends `\|\| true` | `files::only_a_listed_backup_is_exported` |
 | `S37721-THE-LISTER-WAITS-UNBOUNDED` | daemon `src/snapshot_lister.rs` | the time bound's comparison reads `false` | `snapshot_lister::a_command_past_its_time_bound_answers_unknown` |
 | `S37722-THE-LISTER-READS-PAST-ITS-BOUND` | daemon `src/snapshot_lister.rs` | the output bound's comparison reads `false` | `snapshot_lister::output_past_its_bound_answers_unknown` |
+
+## 17. Amendments: what part c1 left unchanged
+
+Section 4 names two files that part c1 did not need to touch:
+
+- `web/app/src/lib/engine/credential-stand-in.test.support.ts`: unchanged in part c1; A16 spreads the stand-in in place
+- `web/app/engine-harness/main.ts`: unchanged in part c1; the sync suite reaches the choice calls through the harness's existing client

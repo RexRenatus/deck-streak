@@ -5,7 +5,7 @@
 //
 // Run: pnpm exec playwright test tests/streak-calendar.spec.ts   (CI runs every spec in tests/)
 import { expect, test } from '@playwright/test';
-import { TELEGRAM_SDK, launchFragment } from './launch-fragment';
+import { TELEGRAM_SDK, answerLaunches, launchFragment } from './launch-fragment';
 
 // Telegram's script stood in for at its own URL, as the accessibility audit does, and loaded by
 // opening the page as a launch (SPEC-400): launch data for the session handshake, and the Mini App
@@ -63,6 +63,7 @@ test.beforeEach(async ({ page }) => {
   await page.route(`${TELEGRAM_SDK}*`, (intercepted) =>
     intercepted.fulfill({ contentType: 'text/javascript', body: STAND_IN })
   );
+  await answerLaunches(page, 204);
   await page.route('**/api/session', (intercepted) => intercepted.fulfill({ status: 200 }));
   await page.route('**/api/streak', (intercepted) =>
     intercepted.fulfill({
