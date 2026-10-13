@@ -25,7 +25,10 @@ export const ROUTES = [
   '/study/review',
   '/study/mapping',
   '/study/ai-decks',
-  '/sync'
+  '/sync',
+  '/link',
+  '/signin',
+  '/sign-in-methods'
 ] as const;
 
 /** A path the route table lists. */

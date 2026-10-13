@@ -9,6 +9,9 @@
 //! The parity tests (SPEC-393 A2, A8, A13, A15) build the parity collection the same way and ask
 //! for its two cards' faces: the speaking card's for its font and its voices, the showing card's
 //! for its body class and its videos.
+//!
+//! The sound video test (SPEC-410 A5) builds the sound video collection the same way and asks for
+//! its card's question: each sound tag that names a video shows inline, and the sound plays.
 
 #![allow(
     clippy::expect_used,
@@ -18,8 +21,8 @@
 
 #[expect(
     dead_code,
-    reason = "this test opens the review fixture and the parity collection, so it reads only the \
-              wire helpers and the parity builder"
+    reason = "this test opens the review fixture, the parity collection and the sound video \
+              collection, so it reads only the wire helpers and those two builders"
 )]
 mod support;
 
@@ -33,6 +36,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use deck_streak_ffi::engine::Engine;
 use deck_streak_ffi::face::Clip;
 use support::parity::{self, Cards};
+use support::sound_video;
 
 /// `BackendCollectionService.OpenCollection`.
 const OPEN_COLLECTION: (u32, u32) = (3, 0);
@@ -229,6 +233,20 @@ fn opened_parity(test: &str) -> (Arc<Engine>, Cards) {
     (opened(&built.dir, &built.collection), built.cards)
 }
 
+/// The sound video collection (SPEC-410 R8), built in a scratch directory of the test's own and
+/// opened through the adapter, with its card's id.
+fn opened_sound_video(test: &str) -> (Arc<Engine>, i64) {
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("the clock reads after the epoch")
+        .as_nanos();
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join("ffi-native-face")
+        .join(format!("{test}-{}-{stamp}", std::process::id()));
+    let built = sound_video::build(&dir).expect("the builder writes the sound video collection");
+    (opened(&built.dir, &built.collection), built.card)
+}
+
 /// Every `url(` argument in `document`, the name matched in any ASCII case: read up to its `)`,
 /// trimmed, and stripped of one pair of matching quotes.
 fn url_arguments(document: &str) -> Vec<&str> {
@@ -352,6 +370,48 @@ fn a_video_plays_inline_in_the_native_document() {
     assert!(
         document.contains("<video-note>a note beside the video</video-note>"),
         "the custom element is as the template wrote it: {document}"
+    );
+    examined("video start tags of 2", tags);
+}
+
+/// RED-FIRST (SPEC-410 R3, R5, R6, A5): the native reader asks for a sound tag's video, so the
+/// fixture card's question shows sign's video then wave's inline, each typed by its extension over
+/// its bytes, and replays the one sound.
+#[test]
+fn a_sound_tags_video_plays_inline_in_the_native_document() {
+    const SIGN: &str = concat!(
+        r#"<video playsinline controls style="display:block;max-width:100%;height:auto;margin:0 auto" "#,
+        r#"src="data:video/mp4;base64,c2lnbi12aWRlbw=="></video>"#,
+    );
+    const WAVE: &str = concat!(
+        r#"<video playsinline controls style="display:block;max-width:100%;height:auto;margin:0 auto" "#,
+        r#"src="data:video/mp4;base64,d2F2ZS12aWRlbw=="></video>"#,
+    );
+    let (engine, card) = opened_sound_video("sound-video");
+    let face = engine
+        .face(card, false, false, true)
+        .expect("the adapter completes the sound video card's face");
+    let document = &face.document;
+    assert!(
+        document.contains(&format!("{SIGN}{WAVE}</body>")),
+        "the body ends with sign's video, then wave's, each playing inline: {document}"
+    );
+    assert_eq!(
+        face.replay,
+        vec![Clip::Sound {
+            name: "beep.mp3".to_owned(),
+            bytes: b"beep-sound".to_vec(),
+        }],
+        "the question replays its one sound"
+    );
+    let tags = video_start_tags(document);
+    assert_eq!(
+        tags,
+        [
+            r#"<video playsinline controls style="display:block;max-width:100%;height:auto;margin:0 auto" src="data:video/mp4;base64,c2lnbi12aWRlbw==">"#,
+            r#"<video playsinline controls style="display:block;max-width:100%;height:auto;margin:0 auto" src="data:video/mp4;base64,d2F2ZS12aWRlbw==">"#,
+        ],
+        "the document's two video start tags are sign's and wave's"
     );
     examined("video start tags of 2", tags);
 }

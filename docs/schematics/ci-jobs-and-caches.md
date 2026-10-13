@@ -232,3 +232,57 @@ of the `hygiene` job (line 298), which the aggregate `ci` needs (lines 875-878).
 
 The SPEC template's file manifest section (`docs/specs/_TEMPLATE.md`, section 4) tells a delivery
 that adds such a load to list `scripts/tests/test_ci_workflows.py` as changed, and names the check.
+
+## The mutant leg's fetch before its baseline, and how a red baseline reaches the verdict (SPEC-416, ADR-430)
+
+Kind: data flow. Read at DeckStreak `dev` c74b6b9 (`.github/workflows/ci.yml:65-66`, `:187-188`,
+`:447-524`, `:485-496`, `:516-518`, `:622-624`, `:682-699`, `:904`; `scripts/mutation-verdict.py:133-140`,
+`:1134`, `:1203-1206`, `:1260`; `crates/progression/tests/xp_census.rs:715`). Decided by ADR-430;
+built by SPEC-416.
+
+A `mutation-rust` leg of a pull request's run restores the Rust cache by key (`ci.yml:485-496`) and then
+runs cargo-mutants (`:507-518`), whose first act is the unmutated baseline: the workspace's tests,
+unmutated. One of those tests, the progression census, asks `cargo metadata --locked --offline` for the
+graph (`xp_census.rs:715`). Offline, cargo reads only the packages already in the registry cache. A pull
+request into `main` restores no cache written on `dev`, and a build downloads only the packages it
+compiles, so the census can ask for a package no earlier step fetched. The `rust` job (`ci.yml:65-66`),
+the `release` job (`:187-188`) and the `mutation-rows` job (`:622-624`) run a fetch after their restore;
+`mutation-rust` (`:447-524`) runs none.
+
+Before: a cache miss leaves the baseline to fail, and the leg still uploads a report.
+
+```mermaid
+flowchart TD
+  restore["restore the Rust cache by key (ci.yml:485-496)"] -->|"a pull request into main: cache miss"| empty["an empty registry"]
+  empty -->|"no fetch step in mutation-rust"| baseline["cargo-mutants: the unmutated baseline, build then test (ci.yml:507-518)"]
+  baseline -->|"the progression census runs cargo metadata --locked --offline"| census["the census: failed to download a package"]
+  census -->|"a red test, so a red baseline"| exitfour["cargo-mutants exits 4, 0 mutants examined"]
+  exitfour -->|"rc captured and echoed (ci.yml:516-518)"| greenstep["the step is green; the report and cargo-mutants.exit are uploaded"]
+  greenstep -->|"the verdict job downloads every leg's report"| partial["partial_reason: exit 4 is outside WHOLE_EXITS (mutation-verdict.py:133-140, :1203-1206)"]
+  partial -->|"whole_reports records it (mutation-verdict.py:1260)"| void["the leg is VOID by name"]
+  void -->|"Verdict.close returns EXIT_VOID (mutation-verdict.py:1134)"| judge["the judge step exits with its status (ci.yml:682-699)"]
+  judge -->|"the aggregate exits 1 unless the result is success (ci.yml:904)"| cifail["the aggregate ci job fails"]
+```
+
+After: one fetch step sits between the restore and cargo-mutants, under the same `if:` as the cargo-mutants
+step, so the baseline sees every target's packages and is red only when a test is red.
+
+```mermaid
+flowchart TD
+  restore2["restore the Rust cache by key (ci.yml:485-496)"] -->|"hit or miss"| fetch["cargo fetch --locked --manifest-path Cargo.toml, under the cargo-mutants step's if"]
+  fetch -->|"every target's packages are in the registry"| baseline2["cargo-mutants: the unmutated baseline"]
+  baseline2 -->|"the census reads the graph offline and finds every package"| green["the baseline is green"]
+  green -->|"mutants are tested"| examined["mutants examined in the leg"]
+  examined -->|"the leg's report and exit are uploaded"| judge2["the verdict judges the examined count (unchanged)"]
+  fetch -->|"a registry outage: the step fails"| noreport["no report is uploaded"]
+  noreport -->|"a missing report is VOID by name"| judge2
+```
+
+The leg's colour stays green by design: its step records cargo-mutants' exit instead of returning it
+(`ci.yml:516-518`), and the verdict reads that exit from the leg's report. So the verdict is where a red
+baseline fails closed, at every step from the report to the aggregate (ADR-430 D3), and this delivery
+changes no line of `scripts/mutation-verdict.py`. The fetch step changes no test: the census keeps
+`--locked --offline`, and no test is skipped or filtered. The rows job's own fetch line (`ci.yml:622-624`)
+stays the only line of its kind, because the new step's line is the `rust` and `release` jobs' own. The
+weekly battery's `rust` leg and its rehearsal are not changed here; they stay open under the issue SPEC-416
+refers to.

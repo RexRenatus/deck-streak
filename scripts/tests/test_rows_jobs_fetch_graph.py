@@ -1,5 +1,8 @@
 """Every CI job that proves mutation rows fetches the locked dependency graph first (SPEC-332).
 
+SPEC-416 holds every `ci.yml` job that runs a cargo-mutants baseline to the same rule, judged by the
+same `refusals()` with the anchor step it orders the fetch before given as a parameter.
+
 A job restores the Rust cache by key, and with no exact hit it restores an older one by key prefix,
 whose registry can lack a package the current `Cargo.lock` adds. The rows runner's first cargo call
 is offline, so such a job read every row VOID (#606). The workflows are read as text, job by job,
@@ -9,6 +12,7 @@ step is the block under its `- ` at six spaces.
 
 import re
 import unittest
+from collections import namedtuple
 
 from _support import REPO, examined
 
@@ -16,6 +20,8 @@ WORKFLOWS = REPO / ".github" / "workflows"
 PROVE = "mutation_rows.py prove"
 FETCH = "cargo fetch --locked"
 RESTORE = re.compile(r"uses:\s*actions/cache(/restore)?@")
+MUTANTS = "cargo mutants"
+IF = re.compile(r"(?m)^        if:\s*(.+?)\s*$")
 
 
 def workflow_texts():
@@ -54,6 +60,22 @@ def runs(step, needle):
     return any(needle in line for line in code_lines(step))
 
 
+def runs_a_baseline(step):
+    """True when a step's code runs `cargo mutants` and not only to list (`--list`)."""
+    return any(MUTANTS in line and "--list" not in line for line in code_lines(step))
+
+
+def step_if(step):
+    """The step's own `if:` expression, or None."""
+    match = IF.search(step)
+    return match.group(1) if match else None
+
+
+Anchor = namedtuple("Anchor", "label found same_if")
+PROVE_ANCHOR = Anchor("prove", lambda step: runs(step, PROVE), False)
+BASELINE_ANCHOR = Anchor("cargo-mutants baseline", runs_a_baseline, True)
+
+
 def proving_jobs():
     """[(file, job, its steps)] for every job that runs the rows runner's `prove`."""
     found = []
@@ -65,10 +87,14 @@ def proving_jobs():
     return examined("jobs that run mutation_rows.py prove", found)
 
 
-def refusals(file, job, job_steps):
-    """Why a proving job does not fetch the locked graph before its first prove; [] when it does."""
+def refusals(file, job, job_steps, anchor=PROVE_ANCHOR):
+    """Why a job does not fetch the locked graph before its first anchor step; [] when it does.
+
+    The anchor defaults to the rows runner's `prove` (SPEC-332); SPEC-416 passes the cargo-mutants
+    baseline, whose `if:` the fetch step must also carry.
+    """
     where = f"{file}:{job}"
-    prove = next(i for i, step in enumerate(job_steps) if runs(step, PROVE))
+    prove = next(i for i, step in enumerate(job_steps) if anchor.found(step))
     restores = [i for i, step in enumerate(job_steps) if RESTORE.search(step)]
     fetches = [i for i, step in enumerate(job_steps) if runs(step, FETCH)]
     if not fetches:
@@ -79,13 +105,15 @@ def refusals(file, job, job_steps):
     elif fetches[0] <= restores[-1]:
         out.append(f"{where}: the fetch (step {fetches[0]}) is not after the last cache restore")
     if fetches[0] >= prove:
-        out.append(f"{where}: the fetch (step {fetches[0]}) is not before the first prove")
+        out.append(f"{where}: the fetch (step {fetches[0]}) is not before the first {anchor.label}")
     step = job_steps[fetches[0]]
     if "continue-on-error" in step:
         out.append(f"{where}: the fetch step carries continue-on-error")
     swallow = [line for line in code_lines(step) if "||" in line or "set +e" in line]
     if swallow:
         out.append(f"{where}: the fetch step swallows its exit code: {swallow[0]}")
+    if anchor.same_if and step_if(step) != step_if(job_steps[prove]):
+        out.append(f"{where}: the fetch step's `if:` is not the {anchor.label} step's `if:`")
     return out
 
 
@@ -181,6 +209,114 @@ class TheJudgeRefusesEachPlantedShape(unittest.TestCase):
     def test_a_commented_fetch_is_no_fetch(self):
         got = planted("      - run: |\n          # cargo fetch --locked\n          true\n")
         self.assertEqual(["planted.yml:j: no step runs `cargo fetch --locked`"], got)
+
+
+def baseline_jobs():
+    """[(file, job, its steps)] for every `ci.yml` job that runs a cargo-mutants baseline."""
+    found = []
+    for job, block in jobs(workflow_texts()["ci.yml"]).items():
+        job_steps = steps(block)
+        if any(runs_a_baseline(step) for step in job_steps):
+            found.append(("ci.yml", job, job_steps))
+    return found
+
+
+class EveryMutantsJobFetchesTheLockedGraph(unittest.TestCase):
+    """SPEC-416 A1: the mutant legs' baseline reads the census offline (#827)."""
+
+    def test_each_baseline_job_fetches_after_its_cache_restore_and_before_cargo_mutants(self):
+        baseline = baseline_jobs()
+        self.assertIn("mutation-rust", [job for _, job, _ in baseline])
+        found = []
+        for file, job, job_steps in examined("jobs that run a cargo-mutants baseline", baseline):
+            found.extend(refusals(file, job, job_steps, BASELINE_ANCHOR))
+        self.assertEqual([], found)
+
+
+BASELINE_RESTORE = "      - uses: actions/cache/restore@abc\n"
+BASELINE_IF = "        if: ${{ needs.plan.outputs.rust == 'true' }}\n"
+BASELINE_RUN = (
+    "      - name: baseline\n" + BASELINE_IF + "        run: cargo mutants --in-place --in-diff d\n"
+)
+
+
+def fetch_step(run="cargo fetch --locked --manifest-path Cargo.toml", extra="", cond=BASELINE_IF):
+    return "      - name: fetch\n" + cond + f"        run: {run}\n" + extra
+
+
+def planted_baseline(*step_blocks):
+    job = jobs("\njobs:\n  j:\n    steps:\n" + "".join(step_blocks))["j"]
+    return refusals("planted.yml", "j", steps(job), BASELINE_ANCHOR)
+
+
+class TheJudgeRefusesEachPlantedBaselineShape(unittest.TestCase):
+    """SPEC-416 A2: positive controls on a cargo-mutants job."""
+
+    def test_the_judge_refuses_each_planted_shape_on_a_baseline_job(self):
+        where = "planted.yml:j"
+        planted_shapes = [
+            ("the fixed shape", (BASELINE_RESTORE, fetch_step(), BASELINE_RUN), []),
+            (
+                "no fetch",
+                (BASELINE_RESTORE, BASELINE_RUN),
+                [f"{where}: no step runs `{FETCH}`"],
+            ),
+            (
+                "a fetch before the restore",
+                (fetch_step(), BASELINE_RESTORE, BASELINE_RUN),
+                [f"{where}: the fetch (step 0) is not after the last cache restore"],
+            ),
+            (
+                "a fetch after cargo-mutants",
+                (BASELINE_RESTORE, BASELINE_RUN, fetch_step()),
+                [f"{where}: the fetch (step 2) is not before the first cargo-mutants baseline"],
+            ),
+            (
+                "a swallowed fetch (|| true)",
+                (BASELINE_RESTORE, fetch_step(run="cargo fetch --locked || true"), BASELINE_RUN),
+                [
+                    f"{where}: the fetch step swallows its exit code: "
+                    "run: cargo fetch --locked || true"
+                ],
+            ),
+            (
+                "a fetch behind set +e",
+                (
+                    BASELINE_RESTORE,
+                    "      - name: fetch\n"
+                    + BASELINE_IF
+                    + "        run: |\n          set +e\n          cargo fetch --locked\n",
+                    BASELINE_RUN,
+                ),
+                [f"{where}: the fetch step swallows its exit code: set +e"],
+            ),
+            (
+                "continue-on-error",
+                (
+                    BASELINE_RESTORE,
+                    fetch_step(extra="        continue-on-error: true\n"),
+                    BASELINE_RUN,
+                ),
+                [f"{where}: the fetch step carries continue-on-error"],
+            ),
+            (
+                "an if that differs",
+                (
+                    BASELINE_RESTORE,
+                    fetch_step(cond="        if: ${{ needs.plan.outputs.rows == 'true' }}\n"),
+                    BASELINE_RUN,
+                ),
+                [f"{where}: the fetch step's `if:` is not the cargo-mutants baseline step's `if:`"],
+            ),
+        ]
+        for name, blocks, expected in examined("planted baseline shapes", planted_shapes):
+            with self.subTest(shape=name):
+                self.assertEqual(expected, planted_baseline(*blocks))
+
+    def test_a_listing_step_is_not_a_baseline(self):
+        listing = "      - name: list\n        run: cargo mutants --no-shuffle --list --json\n"
+        job = jobs("\njobs:\n  j:\n    steps:\n" + listing)["j"]
+        self.assertEqual([], [s for s in steps(job) if runs_a_baseline(s)])
 
 
 if __name__ == "__main__":

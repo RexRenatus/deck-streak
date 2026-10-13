@@ -45,6 +45,27 @@ pub const FONT_TYPES: [(&str, &str); 4] = [
     ("woff2", "font/woff2"),
 ];
 
+/// The closed video table (SPEC-410 R1; ADR-424 D1): a sound tag's file extension, compared
+/// ASCII-case-insensitively, and the type its video element names. It is closed because only these
+/// containers play as video in both clients' documents, and it is read only for a reader that shows
+/// video, so for every other reader, and for a template's own references, [`TYPES`] still decides.
+pub const VIDEO_TYPES: [(&str, &str); 3] = [
+    ("mp4", "video/mp4"),
+    ("m4v", "video/mp4"),
+    ("mov", "video/quicktime"),
+];
+
+/// A sound tag's video element up to its source's media type (SPEC-410 R3; ADR-424 D2). It is a
+/// constant, so the element carries nothing of the written name, and it starts no playback.
+const VIDEO_OPEN: &str = concat!(
+    "<video controls ",
+    "style=\"display:block;max-width:100%;height:auto;margin:0 auto\" ",
+    "src=\"data:",
+);
+
+/// The rest of a sound tag's video element after its source's base64 bytes.
+const VIDEO_CLOSE: &str = "\"></video>";
+
 /// The opening of a CSS `url(` reference, matched ASCII-case-insensitively.
 const URL_OPEN: &str = "url(";
 
@@ -58,6 +79,14 @@ pub trait Reader {
     /// Whether the face's CSS has its fonts inlined as `data:` URLs read through this reader. A
     /// reader that does not ask gets the note type's CSS byte for byte, and is asked for no font.
     fn inlines_fonts(&self) -> bool {
+        false
+    }
+
+    /// Whether a sound tag that names a video is written into the face's text as a video element
+    /// rather than played as a sound (SPEC-410 R2, R3; ADR-424 D1). A reader that renders the
+    /// face's document asks for it, because only a document can show the picture; a reader that
+    /// does not ask keeps every sound tag a sound, as before.
+    fn shows_video(&self) -> bool {
         false
     }
 }
@@ -156,6 +185,26 @@ impl<'a> Budget<'a> {
     /// The bytes of the sound file `written` names, when the rules admit it and its type is audio.
     pub(crate) fn sound(&mut self, written: &str) -> Option<Vec<u8>> {
         self.take(written, &TYPES, "audio/").map(|(_, bytes)| bytes)
+    }
+
+    /// Whether the sound tag that wrote `written` is shown as a video rather than played
+    /// (SPEC-410 R3, R7): only for a reader that asks, and only for an extension in
+    /// [`VIDEO_TYPES`]. Both must hold; either alone leaves the tag a sound, as before.
+    pub(crate) fn shows_video(&self, written: &str) -> bool {
+        self.reader.shows_video() && media_type(written, &VIDEO_TYPES).is_some()
+    }
+
+    /// The video element of the file `written` names, when SPEC-348 R3's rules and both caps admit
+    /// it under [`VIDEO_TYPES`] (SPEC-410 R3, R4): the table's type and the file's bytes in padded
+    /// base64, inside constant pieces. A refused file yields no element and joins the omitted names.
+    pub(crate) fn video(&mut self, written: &str) -> Option<String> {
+        self.take(written, &VIDEO_TYPES, "video/")
+            .map(|(media_type, bytes)| {
+                format!(
+                    "{VIDEO_OPEN}{media_type};base64,{}{VIDEO_CLOSE}",
+                    STANDARD.encode(bytes)
+                )
+            })
     }
 
     /// `css` with each `url(` that names a font rewritten (SPEC-393 R4): to the `data:` URL of the

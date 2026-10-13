@@ -17,3 +17,8 @@ A3: green at c70ad382e8a68913da545f8c7d717e3ce7007155
 A4: red at c70ad382e8a68913da545f8c7d717e3ce7007155: Error: srcset opened with W2 off in chromium; Error: srcset opened with W2 off in webkit (card-sandbox, W2 off: srcset stays closed, paths /srcset/1 and /srcset/2 both reached)
 A4: green at e69e27cd46a8c7a7721583e0000deab0a4b646b0
 ```
+
+The red of A3 above was read from the planted suite's existing assertion over the channel set: 28
+planted ids against the schematic's 29 channels. The test's new `carriers` assertion (R4) comes
+after it and did not run to a verdict at the red commit, so its own red was not observed. This
+record claims no new red.

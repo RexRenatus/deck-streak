@@ -62,6 +62,31 @@ request's do, in legs sized from the tool's own listing (SPEC-362, ADR-373). `mu
 prints `legs N of ceiling C`, where C is the most legs the run holds beside its other jobs, and a
 plan that needs more than C is refused whole, by name, never capped.
 
+**The Python plan prints its headroom too.** The release's Python mutants run in the same run, at
+most 20 to a leg (SPEC-362 R14). `mutation-plan` prints `python legs N of ceiling S`, where S is
+the share `PYTHON_MAX_SHARDS` in `scripts/mutation-verdict.py`, and a listing that needs more than
+`PYTHON_MAX_SHARDS` Python legs is refused whole, by name, never capped (SPEC-415, ADR-429): the
+plan fails, no leg starts, and `mutation-verdict` reads the run VOID. A refused plan is not a shard
+that never reported: re-running its failed jobs refuses it again, and a range past the ceiling
+waits for the Python legs to be sized by a measured cost (#825). The share is the owner's one
+value, signed on its own line, and a share outside 1 to `PYTHON_SHARE_CAP` is refused before any
+deal, whoever signs it (SPEC-420, ADR-434).
+
+**A priced Python file is dealt by its cost (SPEC-418, ADR-432).** Once a file has a price,
+the Python legs are dealt by each file's measured cost: a leg holds what its files' control runs
+project within half the job, and `mutation-plan` prints the priced and unpriced legs, then the
+run's joint line after the Rust line. The price table is filled only from
+`mutation-verdict.py prices --costs <dir>` over a run's downloaded leg artifacts, never by hand;
+an unpriced file keeps the count rule of 20 a leg; and a listing the run cannot hold is refused
+whole, by name, never capped.
+
+**Each Python mutant runs the tests its line's trace names (SPEC-420, ADR-434).** In a pull
+request's legs, a mutant runs only the scoped test set: the tests whose processes executed its line
+in its file's traced sentinel run. It runs the whole suite on every gap, and a scoped pass is
+confirmed by the whole suite before it reads SURVIVED. The scheduled battery runs every mutant
+whole. Every leg runs the leg control first, three named mutants expected KILLED, KILLED and
+SURVIVED, and any other outcome voids every file of the leg by name.
+
 **Cut a release before its range reaches the ceiling.** A release pull request's plan lists every
 mutant `dev` gained since the last release, so the range only grows until it ships, and a range past
 the ceiling cannot be judged by any run. The scheduled battery's plan of the whole tree, the largest

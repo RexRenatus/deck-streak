@@ -508,3 +508,24 @@ above is read without it:
 - The card view plays an HTML video inline on an iPhone (SPEC-393 R10, R11).
 
 A sound tag that names a video still plays as a sound (SPEC-393 section 9, #666).
+
+## 12. Amendments: a sound tag that names a video plays as video (SPEC-410, ADR-424)
+
+SPEC-410 builds the gap section 11's last line leaves open. This section is the pointer, so no rule above is
+read without it:
+
+- R4 holds for every reader that does not ask. For a reader that asks (`Reader::shows_video`, which the
+  native client's reader answers `true`), a `[sound:name]` tag whose extension is in `VIDEO_TYPES` (`mp4`,
+  `m4v`, `mov`, in any ASCII case) becomes no clip: the core appends a `data:` video element with native
+  controls to the face's text, in the side's replay order, under R3's rules and caps (ADR-424 D1, D2).
+- Such a video never autoplays and is not replayed: the learner starts it from its controls (ADR-424 D2).
+- Section 11's last line, that a sound tag naming a video still plays as a sound, holds now only for a
+  reader that does not ask.
+
+## 13. Amendments: part 2 changed two test files
+
+Section 10 names the review fixture's builder and the review pairs test as delivered by part 1.
+Part 2 changed both: `crates/ffi/tests/support/review.rs` now gives the fixture's cards fixed ids,
+and a test in `crates/ffi/tests/review_pairs.rs` asserts the four intervals of the first card the
+screen shows. The engine seeds each interval's fuzz from the card's id, and its load balancer reads
+a new card's position as its due, so a test that pins intervals needs fixed ids.

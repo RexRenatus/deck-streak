@@ -257,3 +257,52 @@ flowchart TD
 
 Unchanged and outside the change: `RuleList.swift:13`, `DocumentPolicy.swift:13-15`, the planted suite, and the
 web's faces (`crates/web-engine/src/wasm.rs` gains only a rest pattern in `clip_value`).
+
+## 7. SPEC-410: a sound tag's video, from the collection to the card view
+
+- **For:** SPEC-410, ADR-424. **Kind:** data flow. **Read at:** DEV `ff405424`.
+- **Stands on:** section 6 (the four parity gaps) and the card view's isolation (#619).
+
+Section 6's last table row, the sound tag naming a video that SPEC-393 cut, is built here. Rust still hands
+the web view nothing directly: a sound tag's video reaches the frame as a `data:` URL inside the one document
+string, the route section 6 already draws for fonts and a template's own video.
+
+```mermaid
+flowchart TD
+  MF["collection media folder"] -->|"read through the Reader, never fetched"| RD["MediaFolder: shows_video true"]
+  TG["the side's AV tags: SoundOrVideo name"] --> CL["core clips: routes by VIDEO_TYPES, only for a reader that asks"]
+  RD --> CL
+  CL -->|"any other sound name"| SC["Clip::Sound bytes, as before"]
+  CL -->|"an mp4, m4v or mov name"| BG["one face budget: FILE_CAP per file, FACE_CAP per face"]
+  BG -->|"admitted"| EL["constant video element: controls, a data: source, no name"]
+  BG -->|"refused"| OM["the name joins omitted once"]
+  EL -->|"appended after the side's text, in replay order"| TX["Face.text"]
+  TX --> DOC["ffi document: playsinline after each video start tag"]
+  DOC --> RF["EngineSession: ReviewFace.document"]
+  RF --> CF["CardFaceView"]
+  CF -->|"loadHTMLString, baseURL nil"| CV
+  OM --> CH["ReviewChrome: Media files not shown"]
+  SC --> CP["ClipPlayer plays the sound"]
+  subgraph CONTAIN["containment, unchanged"]
+    CV["factory view: inline playback on iOS, started by a tap on the controls"]
+    RL["rule list blocks every load"]
+    PO["policy: media-src data:"]
+    JS["card scripts off"]
+  end
+```
+
+| step | engine output | ffi | native view | file:line at DEV it changes |
+|---|---|---|---|---|
+| classify | `VIDEO_TYPES`, read only when the reader answers `shows_video` | `MediaFolder` answers `true` | none | `crates/engine-core/src/media.rs:17-36`, `:53-63`; `crates/ffi/src/face.rs:64-77` |
+| admit | the face's one budget, kind `video/`, both caps | none | none | `crates/engine-core/src/media.rs:157-159`, `:217-254` |
+| write | one element per admitted video, appended to `Face.text` in replay order; no clip | the existing pass writes `playsinline` | none | `crates/engine-core/src/face.rs:162-172`, `:175-237` |
+| refuse | the name joins `omitted` once | none | the existing count of files not shown | none |
+
+The boundary the video stays inside, each part as DEV holds it: the document's policy admits `media-src
+data:` (`DocumentPolicy.swift:13-15`); the rule list blocks every load (`RuleList.swift:13`); the document is
+loaded with no base URL (`CardWebViewFactory.swift:64`); card scripts are off (`CardScripts.swift:7`); and the
+bytes come from the opened collection's media folder through the `Reader` (`crates/ffi/src/face.rs:64-77`).
+
+Unchanged and outside the change: `RuleList.swift`, `DocumentPolicy.swift`, `CardWebViewFactory.swift`,
+`CardScripts.swift`, the planted suite, every Swift product file, `TYPES`, and the web's faces
+(`crates/web-engine/src/wasm.rs` is untouched; the web's reader keeps `shows_video` at its default).

@@ -74,6 +74,10 @@ impl Reader for MediaFolder {
     fn inlines_fonts(&self) -> bool {
         true
     }
+
+    fn shows_video(&self) -> bool {
+        true
+    }
 }
 
 /// The page that holds `face`'s text. Its body's classes are `card card<n>`, `<n>` the card's

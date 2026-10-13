@@ -57,6 +57,10 @@
 (*     (Verdict): the model is sound for every reading.                    *)
 (*   - A mutant the plan dealt to no leg is Dropped, one past the last     *)
 (*     leg, so that every comparison is between integers.                 *)
+(*   - The Python plan's refusal: shards() returns before any deal         *)
+(*     when the Python listing needs more legs than the run's Python       *)
+(*     ceiling, as the Rust refusal already does: no leg is dealt and      *)
+(*     no verdict can pass, a stuttering step for this model (#825).       *)
 (*                                                                         *)
 (* Switches, each FALSE in MCEveryLegCounted.cfg, which models the code:   *)
 (*   CountReported - the verdict promises only the legs whose report       *)
@@ -65,11 +69,14 @@
 (*   TrustThePlan  - the verdict takes the plan's legs as the population   *)
 (*                   and never holds them to the tool's listing.           *)
 (***************************************************************************)
-\* @phx covers scripts/mutation-verdict.py anchor=shards digest=sha256:190874e5158025c39f987a531469ec61a0baa564f1a945e6ce4894010332e6c2
+\* mutation-verdict.py::python_by_cost is one deal Plan admits; mutation_python.py::planned_leg runs its leg's slice (ran) or refuses with no report (LegVoid).
+\* @phx covers scripts/mutation-verdict.py anchor=shards digest=sha256:4a61a9cd1abc97c0ba6fe58c0a9b2d07b9f8172210a033f66189fc2f320c8435
 \* @phx covers scripts/mutation-verdict.py anchor=whole_reports digest=sha256:4c2a91086efb74a19dee70816f1f39aac90712652548599ce8befd94f2340983
 \* @phx covers scripts/mutation-verdict.py anchor=partition digest=sha256:9b2464deb33fb55acce4bade799fac1d1d5094a4526a528d634aeb1f78f57677
 \* @phx covers scripts/mutation-verdict.py anchor=examined_sum digest=sha256:072ec1b6768a7616f7cf7b1f0e03846367d35874bcce6493458c470c4f63966e
 \* @phx covers scripts/mutation-verdict.py anchor=population_gaps digest=sha256:7c6d3867026cb32da3c8997757c7884886cbaa523a1af2b29bd260d9ca68b03f
+\* @phx covers scripts/mutation-verdict.py anchor=python_by_cost digest=sha256:365b108d302518f5b9397043fc8e218d6c924bd71877bf1a6aeb1d365242603a
+\* @phx covers scripts/mutation_python.py anchor=planned_leg digest=sha256:6c7d8c820d1f1217cf16d187766c2cbaeb6c89aeaa60cb721f5922eb86d6ae6d
 \* @phx cites #220, #691
 \* @phx property PassMeansEveryLegCounted ramp=report
 \* @phx property PassMeansThePartition ramp=report
