@@ -10,8 +10,8 @@
   the engine and on no crate of this workspace) and ADR-352 D1 (no card script runs, on either
   platform), both of which it keeps.
 - **Schematic:** `docs/schematics/web-study-screens.md`, amended by one section appended at its end
-  (section 7, the withheld question from the engine to both reviews), and
-  `docs/schematics/ios-review-screen.md`, amended by one section appended at its end (section 6,
+  (section 9, the withheld question from the engine to both reviews), and
+  `docs/schematics/ios-review-screen.md`, amended by one section appended at its end (section 8,
   the native review's withheld phase). No existing line of either changes.
 - **Status:** one delivery. **Mutation band:** `S38000-S38099` (section 9). **Model:** none
   (section 8).
@@ -177,8 +177,10 @@ on the continuous integration's simulator step; their reds and greens are read t
 |---|---|---|
 | `docs/specs/SPEC-380-both-reviews-withhold-an-image-occlusion-question-whose-masks-are-not-drawn.md` | docs | added |
 | `docs/decisions/ADR-391-the-engine-core-marks-an-image-occlusion-question-and-each-review-withholds-it-with-one-line.md` | docs | added |
-| `docs/schematics/web-study-screens.md` | docs | one section appended at its end (section 7); no existing line changes |
-| `docs/schematics/ios-review-screen.md` | docs | one section appended at its end (section 6); no existing line changes |
+| `docs/schematics/web-study-screens.md` | docs | one section appended at its end (section 9); no existing line changes |
+| `docs/schematics/ios-review-screen.md` | docs | one section appended at its end (section 8); no existing line changes |
+| `web/app/src/lib/study/update-now.test.ts` | web | `withheld: false` added to view()'s defaults, a dev fixture the merge left without the now-required field (RULED 1491 Q5) |
+| `formal/tla/UndoOwnAnswer/UndoOwnAnswer.tla` | formal | line 11's `current_card` digest re-pinned to the merged span, which carries this delivery's withheld lines (RULED 1491 Q8) |
 | `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | docs | three cited line numbers follow the lines this delivery moves in `crates/engine-core/src/lib.rs`, `crates/web-engine/src/wasm.rs` and `web/app/src/lib/engine/protocol.ts`; no quoted text changes |
 | `docs/red-first/SPEC-380.md` | docs | added |
 | `changelog.d/occlusion-mask-guard-380.md` | docs | added |

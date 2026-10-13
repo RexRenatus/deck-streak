@@ -94,7 +94,7 @@ fn open(dir: &Path, collection: &Path) -> Arc<Engine> {
 fn face(css: &str, body: &str, withheld: bool) -> CardFace {
     CardFace {
         document: format!(
-            "{HEAD}<style>{css}</style></head><body class=\"card\">{body}</body></html>"
+            "{HEAD}<style>{css}</style></head><body class=\"card card1\">{body}</body></html>"
         ),
         autoplay: Vec::new(),
         replay: Vec::new(),

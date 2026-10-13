@@ -250,6 +250,7 @@ pub(crate) fn complete(
         return Ok(Face {
             text: String::new(),
             css: String::new(),
+            ordinal,
             autoplay: Vec::new(),
             replay: Vec::new(),
             omitted: Vec::new(),

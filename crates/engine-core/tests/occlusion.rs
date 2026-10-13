@@ -204,6 +204,7 @@ fn withheld() -> Face {
     Face {
         text: String::new(),
         css: String::new(),
+        ordinal: 0,
         autoplay: Vec::new(),
         replay: Vec::new(),
         omitted: Vec::new(),
@@ -216,6 +217,7 @@ fn shown(text: &str, css: &str) -> Face {
     Face {
         text: text.to_owned(),
         css: css.to_owned(),
+        ordinal: 0,
         autoplay: Vec::new(),
         replay: Vec::new(),
         omitted: Vec::new(),
