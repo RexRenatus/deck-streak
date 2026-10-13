@@ -283,6 +283,9 @@ Shipped tests that this delivery leaves as they are:
 | `crates/daemon/src/role_preset.rs` | daemon | added: the role's run over ingest's preset module |
 | `scripts/tests/test_privacy_policy.py` | tests | `PARAGRAPH` replaced (A13); A15 added |
 | `scripts/mutation-rows.d/S38700-S38799.json` | tests | added: the rows of section 8 |
+| `crates/daemon/tests/logging.rs` | tests | the `preset` role's invocation (`preset list`) added to the per-role invocation loop, so the logging test drives every role in `NAMES` |
+| `crates/engine-core/tests/containment.rs` | tests | one `HELD` census row for `crates/ingest/tests/preset_zero_upload.rs`'s `set_due_date` call on its own scratch fixture copy (33 rows to 34; RULED 955 Q1 (a)) |
+| `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | docs | two STRIDE citations of `containment.rs` re-anchored to the lines the `HELD` row moved (`:958` to `:964`, `:979` to `:985`; RULED 980) |
 
 ## 5. What this does NOT cover
 
