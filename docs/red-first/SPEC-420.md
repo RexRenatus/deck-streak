@@ -272,3 +272,99 @@ The killers are in `test_mutation_python.py`, in four classes: the scope functio
 interpreter's hooks recorded in place, the judge's steps with their seams recorded in place,
 and child interpreters run under a scratch `sitecustomize` that holds the runner's own
 `child_trace`. Each compares the whole value it observes.
+
+## The third push's greens
+
+Each of the 77 lines above is answered here, in the same order. Seventy-six are green at the
+killer commit: each of those mutants fails a test of `test_mutation_python.py` that compares the
+whole value it changes. CI reads the kills again on the next push.
+
+```text
+scripts/mutation_python.py:514:12: replace return value with return None in read_by: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:567:24: replace "os.fork" with "" in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:659:64: replace "PYTHONPATH" with "" in Trace.__init__: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:685:23: replace "os.exec" with "" in Trace.audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:860:16: replace return value with return None in scoped_sets: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:871:65: replace == with != in scoped_sets: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:911:13: replace return value with return None in control_void: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:514:21: replace == with != in read_by: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:567:35: replace "os.forkpty" with "" in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:689:23: replace True with False in Trace.fork: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:1231:51: replace "scope" with "" in Judge.control: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:514:35: replace or with and in read_by: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:567:49: replace "os.spawn" with "" in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:1231:60: replace "why" with "" in Judge.control: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:514:65: replace + with - in read_by: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:567:61: replace "os.system" with "" in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:1231:67: replace "tests" with "" in Judge.control: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:514:67: replace " " with "" in read_by: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:558:16: replace return value with return None in line: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:568:20: replace "spawned" with "" in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:1231:83: replace in with not in in Judge.control: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:568:34: replace 1 with 2 in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:673:16: replace return value with return None in Trace.line: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:873:30: replace or with and in scoped_sets: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:1146:50: replace False with True in Judge.prepare: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:1174:24: replace 0 with 1 in Judge.judge: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:1221:56: replace or with and in Judge.control: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:561:21: replace "subprocess.Popen" with "" in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:628:36: replace True with False in Trace.__init__: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:873:33: replace "" with "XX" in scoped_sets: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:1221:60: replace "notes" with "" in Judge.control: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:74:26: replace 1 with 2 in <module>: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:562:20: replace "spawned" with "" in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:569:23: replace "os.exec" with "" in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:628:51: replace True with False in Trace.__init__: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:676:28: replace "" with "XX" in Trace.audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:74:29: replace "mutation-python-trace" with "" in <module>: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:562:34: replace 1 with 2 in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:630:33: replace 8 with 9 in Trace.__init__: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:531:19: replace or with and in child_trace: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:563:18: replace 0 with 1 in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:853:20: replace return value with return None in scoped_sets: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:563:28: replace 1 with 2 in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:574:14: replace 0 with 1 in forked: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:531:33: replace or with and in child_trace: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:574:19: replace False with True in forked: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:679:30: replace 1 with 2 in Trace.audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:865:72: replace "" with "XX" in scoped_sets: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:877:8: replace "" with "XX" in scoped_sets: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:1415:47: replace "absent" with "" in run: site removed at d8ba4e09690d4d48fa3b039b25726ff5b2e90b53 (equivalent; RULED 1438 Question 1, its differential run in the build-PYEG-h hand-back)
+scripts/mutation_python.py:564:23: replace "os.posix_spawn" with "" in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:645:27: replace "the interpreter has no sys.monitoring" with "" in Trace.__init__: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:856:16: replace "the trace left no record of its run" with "" in scoped_sets: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:80:21: replace "os.fork" with "" in <module>: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:565:20: replace "spawned" with "" in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:577:35: replace "mutation-python-trace" with "" in child_trace: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:680:23: replace "os.posix_spawn" with "" in Trace.audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:856:16: replace return value with return None in scoped_sets: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:878:16: replace "a process outside any test left no r... with "" in scoped_sets: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:80:32: replace "os.forkpty" with "" in <module>: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:534:29: replace 8 with 9 in child_trace: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:565:39: replace 1 with 2 in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:656:39: replace "site" with "" in Trace.__init__: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:681:39: replace 1 with 2 in Trace.audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:878:16: replace return value with return None in scoped_sets: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:1198:58: replace "killers" with "" in Judge.judge: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:80:46: replace "os.spawn" with "" in <module>: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:565:42: replace is not with is in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:657:29: replace True with False in Trace.__init__: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:681:42: replace is not with is in Trace.audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:894:45: replace 1 with 2 in scope_of: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:80:58: replace "os.system" with "" in <module>: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:565:54: replace 0 with 1 in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:566:18: replace 0 with 1 in audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:684:34: replace 1 with 2 in Trace.audit: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:870:33: replace "" with "XX" in scoped_sets: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+scripts/mutation_python.py:871:62: replace 2 with 3 in scoped_sets: green at e14a2fcc4b3bedbd1b4b47e4a3cb6be169f7e60a
+```
+
+The one line not answered by a killer is `run`'s second read of the control. After the judge
+closed, `run` read `report.get("control", "absent")`. The key is missing only when reading the
+control raised `Restore`, and then no file had been prepared, so the void that read produced was
+written into no file entry: the mutant of its default changed nothing a caller could observe. The
+cure reads the control's void once, inside the `try`, right after the control is read, and drops
+the second read. A differential run of the old and the new `run`, with the tree reader and the
+judge replaced as the killers replace them, gave the same exit code, the same output and the same
+report, byte for byte, for a control that returns, a control that raises `Restore` and no control
+directory. The new read's own mutant fails the plan test of `TheRunnerListsItsMutants`.
