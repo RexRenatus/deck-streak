@@ -12,8 +12,8 @@
       [
         "S41801-A-RUN-PAYS-ITS-CONTROL-AND-SENTINEL",
         "scripts/mutation-verdict.py",
-        "else 2 + size",
-        "else 1 + size",
+        "setup = control + sentinel",
+        "setup = control",
         "a run joining a leg that lacks its file pays the file's control and sentinel beside its mutants (SPEC-418 R3 (d))",
         "test_mutation_python_shard_binding.ThePythonLegsAreDealtByCost.test_a_priced_listing_is_dealt_by_cost_into_the_fewest_legs_within_the_bound"
       ],

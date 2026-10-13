@@ -203,7 +203,8 @@ the red commit, on an assertion of its behaviour.
 | `scripts/tests/test_rulesets.py` | runbook tests | changed: A15 |
 | `scripts/tests/test_ci_workflows.py` | workflow tests | changed: A16; any census entry the new workflow's reads need |
 | `scripts/tests/fixtures/mutation-scoped-prices-<run>/` | test fixture | added: the price run's `costs.jsonl` files in the download's layout; `<run>` is written at the fill with the run's slowest leg duration |
-| `scripts/mutation-rows.json` | mutation rows | changed: S41801 and S42025 re-anchored, each keeping its id, behaviour and killer |
+| `scripts/mutation-rows.d/S41800-S41899.json` | mutation rows | changed: S41801 re-anchored, keeping its id, behaviour and killer |
+| `scripts/mutation-rows.d/S42000-S42099.json` | mutation rows | changed: S42025 re-anchored, keeping its id, behaviour and killer |
 | `scripts/mutation-rows.d/S42100-S42199.json` | mutation rows | added: section 9's rows |
 | `RELEASING.md` | release runbook | changed: one paragraph in section 2 |
 | `docs/specs/SPEC-418-the-python-mutation-legs-are-dealt-by-each-files-measured-cost-every-listed-mutant-examined-or-the-plan-refused-whole.md` | records | changed: an insert-only amendment section |
