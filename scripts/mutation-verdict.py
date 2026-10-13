@@ -147,21 +147,22 @@ PYTHON_CONTROL_SECONDS: dict[str, int] = {
 #: under `scripts/tests/fixtures/`, and names the run, attempt and job its figures came from.
 # fmt: off
 PYTHON_SCOPED_SECONDS: dict[str, tuple[int, int, int]] = {
-    "scripts/audit-web-verdict.py": (3, 3, 1),  # run 38376110236 attempt 1 job 115224845674: 19 scoped mutant record(s)
-    "scripts/create-issues.py": (1, 1, 1),  # run 38376110236 attempt 1 job 115224845695: 0 scoped mutant record(s)
-    "scripts/dynamic-imports-check.py": (2, 2, 1),  # run 38376110236 attempt 1 job 115224845809: 18 scoped mutant record(s)
-    "scripts/ios_icon.py": (1, 2, 1),  # run 38376110236 attempt 1 job 115224845760: 14 scoped mutant record(s)
-    "scripts/ios_lane.py": (13, 18, 4),  # run 38376110236 attempt 1 job 115224845970: 20 scoped mutant record(s)
-    "scripts/memory_scope.py": (32, 50, 13),  # run 38376110236 attempt 1 job 115224845805: 20 scoped mutant record(s)
-    "scripts/mutation_python.py": (252, 270, 77),  # run 38376110236 attempt 1 job 115224845667: 20 scoped mutant record(s)
-    "scripts/mutation_rows.py": (174, 174, 61),  # run 38376110236 attempt 1 job 115224845897: 20 scoped mutant record(s)
-    "scripts/public-scrub.py": (54, 62, 17),  # run 38376110236 attempt 1 job 115224845785: 20 scoped mutant record(s)
-    "scripts/testflight_age.py": (6, 6, 2),  # run 38376110236 attempt 1 job 115224845921: 20 scoped mutant record(s)
-    "scripts/threat_model.py": (1, 1, 1),  # run 38376110236 attempt 1 job 115224845804: 20 scoped mutant record(s)
-    "scripts/web-engine-size.py": (11, 12, 5),  # run 38376110236 attempt 1 job 115224845752: 18 scoped mutant record(s)
-    "scripts/web_mutation_shards.py": (13, 15, 2),  # run 38376110236 attempt 1 job 115224845986: 20 scoped mutant record(s)
-    "scripts/write-back-issues.py": (1, 1, 1),  # run 38376110236 attempt 1 job 115224845724: 0 scoped mutant record(s)
-    "tools/parity-oracle/generate.py": (2, 2, 1),  # run 38376110236 attempt 1 job 115224845919: 19 scoped mutant record(s)
+    "scripts/audit-web-verdict.py": (3, 3, 1),  # run 38432909235 attempt 1 job 115419489219: 19 scoped mutant record(s)
+    "scripts/create-issues.py": (1, 1, 1),  # run 38432909235 attempt 1 job 115419489210: 0 scoped mutant record(s)
+    "scripts/dynamic-imports-check.py": (2, 2, 1),  # run 38432909235 attempt 1 job 115419489573: 18 scoped mutant record(s)
+    "scripts/ios_icon.py": (1, 2, 1),  # run 38432909235 attempt 1 job 115419489248: 14 scoped mutant record(s)
+    "scripts/ios_lane.py": (10, 11, 4),  # run 38432909235 attempt 1 job 115419489348: 20 scoped mutant record(s)
+    "scripts/memory_scope.py": (36, 52, 13),  # run 38432909235 attempt 1 job 115419489225: 20 scoped mutant record(s)
+    "scripts/mutation-verdict.py": (152, 158, 107),  # run 38432909235 attempt 1 job 115419489314: 20 scoped mutant record(s)
+    "scripts/mutation_python.py": (184, 204, 53),  # run 38432909235 attempt 1 job 115419489320: 20 scoped mutant record(s)
+    "scripts/mutation_rows.py": (172, 171, 58),  # run 38432909235 attempt 1 job 115419489293: 20 scoped mutant record(s)
+    "scripts/public-scrub.py": (53, 60, 17),  # run 38432909235 attempt 1 job 115419489252: 20 scoped mutant record(s)
+    "scripts/testflight_age.py": (6, 5, 2),  # run 38432909235 attempt 1 job 115419489382: 20 scoped mutant record(s)
+    "scripts/threat_model.py": (1, 1, 1),  # run 38432909235 attempt 1 job 115419489378: 20 scoped mutant record(s)
+    "scripts/web-engine-size.py": (13, 13, 5),  # run 38432909235 attempt 1 job 115419489199: 18 scoped mutant record(s)
+    "scripts/web_mutation_shards.py": (12, 14, 2),  # run 38432909235 attempt 1 job 115419489341: 20 scoped mutant record(s)
+    "scripts/write-back-issues.py": (1, 1, 1),  # run 38432909235 attempt 1 job 115419489261: 0 scoped mutant record(s)
+    "tools/parity-oracle/generate.py": (2, 2, 1),  # run 38432909235 attempt 1 job 115419489457: 19 scoped mutant record(s)
 }
 # fmt: on
 #: The weekly battery's Python shards, each `run --all --shard k/16` (R14).
