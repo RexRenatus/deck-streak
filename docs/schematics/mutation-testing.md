@@ -550,7 +550,7 @@ a shard the deal gave nothing still writes and uploads its record, so a missing 
 defect, never an empty shard. The shards share no written object: each writes its own directory
 and artifact, and the verdict's job reads them only after every shard has ended.
 
-## 9. Swift mutant rows, from a package's row file to the verdict (SPEC-397, ADR-411)
+## 11. Swift mutant rows, from a package's row file to the verdict (SPEC-397, ADR-411)
 
 Kind: data flow. Read at DeckStreak `dev` `164ac206` (`.github/workflows/xcframework.yml`,
 `.github/workflows/apple-on-change.yml`, `.github/workflows/ci.yml`, `scripts/mutation_rows.py`

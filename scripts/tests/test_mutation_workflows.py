@@ -393,7 +393,9 @@ class TheRowsJobHoldsTheSwiftRows(unittest.TestCase):
         when either fails."""
         job = jobs(workflow(CI))["mutation-rows"]
         (step,) = [s for s in steps(job) if "mutation_rows.py retired" in s]
-        self.assertIn("if: ${{ needs.mutation-plan.outputs.scope == 'diff' }}\n", step)
+        self.assertIn(
+            "if: ${{ needs.mutation-plan.outputs.scope == 'diff' && matrix.leg == 0 }}\n", step
+        )
         lines = re.findall(r"(?m)^        run: (.+)$", step)
         self.assertEqual(len(lines), 1, step)
         called = [

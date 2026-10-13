@@ -235,4 +235,4 @@ second push's run.
 
 ## More Information
 
-Built by SPEC-397. The schematic is `docs/schematics/mutation-testing.md` §9.
+Built by SPEC-397. The schematic is `docs/schematics/mutation-testing.md` §11.
