@@ -2265,6 +2265,54 @@ class AScopedFileRunPricesItsFile(unittest.TestCase):
         self.assertEqual(list(mutant_costs(records)), sample)
         examined("listed mutants", names)
 
+    def test_a_sample_of_one_is_accepted_and_runs_only_the_first_mutant(self):
+        """A3 (R2): S is a whole number of 1 or more, so `--sample 1` is accepted, and over
+        calc.py's 3 listed mutants it steps by ceil(3 / 1) = 3 and runs the mutant at position 0
+        alone; a refusal of a sample of 1 would exit 2 and run none."""
+        tree = Tree(self, {"calc": CALC})
+        with mock.patch.dict(os.environ, untraced(SCOPE_CASE=""), clear=True):
+            done, report, records = leg(
+                self,
+                tree,
+                "--file",
+                "scripts/calc.py",
+                "--scoped",
+                "--control-seconds",
+                "20",
+                "--sample",
+                "1",
+            )
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual([m["name"] for m in mutants_of(report)], CALC_NAMES[:1])
+        self.assertEqual(list(mutant_costs(records)), CALC_NAMES[:1])
+        examined("listed mutants", CALC_NAMES)
+
+    def test_a_sample_at_or_over_the_listing_runs_every_mutant_in_order(self):
+        """A3 (R2): when S is at least the m selected mutants, the step ceil(m / S) is 1, so
+        `--sample S` runs every one of calc.py's 3 listed mutants in listing order, at S = 3 = m
+        and at S = 20 > m; a step of 2 would run the mutants at positions 0 and 2 alone."""
+        tree = Tree(self, {"calc": CALC})
+        listed = tree.runner("list", "--file", "scripts/calc.py")
+        self.assertEqual(listed.stdout.splitlines()[1:], CALC_NAMES, listed.stdout + listed.stderr)
+        for sample in examined("samples at or over the listing", ("3", "20")):
+            with self.subTest(sample=sample):
+                with mock.patch.dict(os.environ, untraced(SCOPE_CASE=""), clear=True):
+                    done, report, records = leg(
+                        self,
+                        tree,
+                        "--file",
+                        "scripts/calc.py",
+                        "--scoped",
+                        "--control-seconds",
+                        "20",
+                        "--sample",
+                        sample,
+                    )
+                self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+                self.assertEqual([m["name"] for m in mutants_of(report)], CALC_NAMES)
+                self.assertEqual(list(mutant_costs(records)), CALC_NAMES)
+        examined("listed mutants", CALC_NAMES)
+
     def test_each_setup_record_names_its_job(self):
         """A4 (R5): over a plan of calc.py, which is judged, and loose.py, which no test covers,
         the control, sentinel and uncovered records name the job `MUTATION_JOB_ID` holds, and
