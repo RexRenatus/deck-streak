@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { hosted } from '$lib/card/frame-host';
 import { EngineError } from '$lib/engine/client';
 import type { CardView, Faces, Head, UndoOffer } from '$lib/engine/protocol';
 import { telegram } from '$lib/telegram.svelte';
@@ -239,7 +240,7 @@ interface Observation {
 }
 
 function observe(card: GoldenCard, side: 'question' | 'answer'): Observation {
-  const srcdoc = frame().getAttribute('srcdoc');
+  const srcdoc = hosted(frame().getAttribute('srcdoc') ?? '');
   const doc = new DOMParser().parseFromString(srcdoc ?? '', 'text/html');
   return {
     name: `${card.note} ordinal ${card.ordinal} ${side}`,

@@ -70,6 +70,8 @@ pub enum Clip {
         language: String,
         /// The platform's rate: the engine's speed times its default, held to its range.
         rate: f32,
+        /// The voices the tag's `voices=` names, in its order; none when it names none.
+        voices: Vec<String>,
     },
 }
 
@@ -80,6 +82,8 @@ pub struct Face {
     pub text: String,
     /// The note type's CSS.
     pub css: String,
+    /// The card's template index: 0 for its note type's first template.
+    pub ordinal: u32,
     /// The clips to play when the side is shown: none unless the client wishes it and the card's
     /// preset allows it.
     pub autoplay: Vec<Clip>,
@@ -122,9 +126,11 @@ fn call<T: Message + Default>(
     T::decode(reply.as_slice()).map_err(|_| engine_error(Vec::new()))
 }
 
-/// The preset of `card`'s deck: its home deck's when it sits in a filtered deck.
-fn preset(backend: &Backend, card: i64) -> Result<Config, Refusal> {
+/// The preset of `card`'s deck (its home deck's when it sits in a filtered deck) and the card's
+/// template index, both from the one read of the card (SPEC-393 R1).
+fn preset(backend: &Backend, card: i64) -> Result<(Config, u32), Refusal> {
     let card: Card = call(backend, GET_CARD, &CardId { cid: card })?;
+    let ordinal = card.template_idx;
     let deck_id = match card.original_deck_id {
         0 => card.deck_id,
         home => home,
@@ -135,11 +141,11 @@ fn preset(backend: &Backend, card: i64) -> Result<Config, Refusal> {
         _ => DEFAULT_PRESET,
     };
     let preset: DeckConfig = call(backend, GET_DECK_CONFIG, &DeckConfigId { dcid: preset_id })?;
-    Ok(preset.config.unwrap_or_default())
+    Ok((preset.config.unwrap_or_default(), ordinal))
 }
 
-/// A TTS tag in the platform's terms: one plain line, the language with a hyphen, and the
-/// engine's speed scaled to the platform's rate and held to its range.
+/// A TTS tag in the platform's terms: one plain line, the language with a hyphen, the engine's
+/// speed scaled to the platform's rate and held to its range, and the voices the tag asks for.
 fn speech(tag: &TtsTag) -> Clip {
     let language = tag.lang.replace('_', "-");
     let rate = (tag.speed * DEFAULT_RATE).clamp(MINIMUM_RATE, MAXIMUM_RATE);
@@ -147,14 +153,21 @@ fn speech(tag: &TtsTag) -> Clip {
         text: html_to_text_line(&tag.field_text, false).into_owned(),
         language,
         rate,
+        voices: tag.voices.clone(),
     }
 }
 
 /// A side's AV tags as clips: a sound the budget admits as audio, and every TTS tag. A sound it
-/// refuses is left out, and its name joins the omitted ones.
-fn clips(tags: &[AvTag], budget: &mut Budget<'_>) -> Vec<Clip> {
+/// refuses is left out, and its name joins the omitted ones. A sound tag the budget shows as a
+/// video yields no clip: its element, when admitted, joins `videos` in the tags' order (SPEC-410
+/// R3, R6).
+fn clips(tags: &[AvTag], budget: &mut Budget<'_>, videos: &mut Vec<String>) -> Vec<Clip> {
     tags.iter()
         .filter_map(|tag| match tag.value.as_ref()? {
+            av_tag::Value::SoundOrVideo(name) if budget.shows_video(name) => {
+                videos.extend(budget.video(name));
+                None
+            }
             av_tag::Value::SoundOrVideo(name) => budget.sound(name).map(|bytes| Clip::Sound {
                 name: name.clone(),
                 bytes,
@@ -172,13 +185,13 @@ pub(crate) fn complete(
     autoplay: bool,
     media: &dyn Reader,
 ) -> Result<Face, Refusal> {
-    let preset = preset(backend, card)?;
+    let (preset, ordinal) = preset(backend, card)?;
     let request = RenderExistingCardRequest {
         card_id: card,
         browser: false,
         partial_render: true,
     };
-    let rendered: RenderCardResponse = call(backend, RENDER_EXISTING_CARD, &request)?;
+    let mut rendered: RenderCardResponse = call(backend, RENDER_EXISTING_CARD, &request)?;
     let tr = backend.i18n();
     let question_raw = join(&rendered.question_nodes, None);
     let (question_extracted, question_tags) = extract_av_tags(question_raw.as_str(), true, tr);
@@ -192,21 +205,33 @@ pub(crate) fn complete(
 
     let mut budget = Budget::new(media);
     let text = budget.rewrite(&shown);
+    // A side's videos follow its replay order: the question's on the question side; on the
+    // answer side the question's, unless the preset skips them, then the answer's own (SPEC-410 R3).
+    let mut videos = Vec::new();
     let (shown_clips, replay) = match side {
         Side::Question => {
-            let question = clips(&question_tags, &mut budget);
+            let question = clips(&question_tags, &mut budget, &mut videos);
             (question.clone(), question)
         }
         Side::Answer => {
             let mut replay = Vec::new();
+            let mut question_videos = Vec::new();
             if !preset.skip_question_when_replaying_answer {
-                replay = clips(&question_tags, &mut budget);
+                replay = clips(&question_tags, &mut budget, &mut question_videos);
             }
-            let answer = clips(&answer_tags, &mut budget);
+            let mut answer_videos = Vec::new();
+            let answer = clips(&answer_tags, &mut budget, &mut answer_videos);
             replay.extend(answer.iter().cloned());
+            videos = [question_videos, answer_videos].concat();
             (answer, replay)
         }
     };
+    let text = text + &videos.concat();
+    // The fonts take from the budget after the text's media and the clips, so a font never
+    // crowds out the card's own media (SPEC-393 R5, R6).
+    if media.inlines_fonts() {
+        rendered.css = budget.fonts(&rendered.css);
+    }
     let wished = autoplay;
     let allowed = !preset.disable_autoplay;
     let autoplay = if wished && allowed {
@@ -217,6 +242,7 @@ pub(crate) fn complete(
     Ok(Face {
         text,
         css: rendered.css,
+        ordinal,
         autoplay,
         replay,
         omitted: budget.into_omitted(),

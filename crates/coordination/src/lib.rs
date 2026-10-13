@@ -41,6 +41,7 @@ pub mod recompute;
 pub mod relight;
 pub mod runner;
 pub mod score;
+pub mod sensitive_decks;
 pub mod skip;
 pub mod streak_views;
 pub mod sync_cycle;

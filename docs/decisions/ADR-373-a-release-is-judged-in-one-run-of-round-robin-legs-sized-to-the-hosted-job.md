@@ -166,3 +166,43 @@ Chosen against:
   never examined.
 - Waiting for the census test's own speed-up: rejected as the cure for this delivery, because no
   release can be judged until it lands; it stays the cure that can lower the budget again.
+
+## Amendment: D1, past 32 legs the Python listing is refused (SPEC-415)
+
+Insert-only; every earlier byte is kept. The D1 amendment above sized the Python legs at 20 listed
+mutants each and kept `PYTHON_MAX_SHARDS` at 32, clamping the count to 1 to 32. ADR-429 makes the
+clamp a refusal: a listing that needs more than 32 Python legs is refused whole at the plan, by
+name, and never capped, under this decision's own rule that a plan beyond its ceiling is refused.
+The Python legs keep their fixed share of at most 32 of the run's jobs, and `LEG_CEILING` is
+unchanged. A sized plan still examines every listed mutant, and a refused plan reads VOID by name,
+so no verdict moves in the permissive direction.
+
+Chosen against:
+
+- Chosen: the Python plan refuses whole above 32 legs, by name, and never caps, because it is the
+  Rust plan's own rule (SPEC-362 R3) applied to the Python legs and it needs no figure nobody has
+  measured; 20 a leg, the 60-minute job, `--failfast`, the round-robin deal, `LEG_CEILING` and
+  the weekly 16 legs all stay as they are.
+- Sizing the Python legs by measured per-mutant cost: rejected for this delivery because no per-file
+  cost is measured (ADR-429 D1), where `fewest_shards` sizes the Rust legs by theirs; it stays the
+  follow-up #825 tracks, priced from the per-file control seconds a completed leg's report records.
+- Packing each of the 32 legs up to the job's own 60 minutes before refusing: rejected because the
+  only figure that would set the packing is the 96.5 seconds of ADR-429 D1, from another diff, and
+  37 a leg at that figure leaves 30 seconds of the hour for setup.
+- Raising the Python job's `timeout-minutes`: rejected because the precedent's band reaches 120
+  minutes (ADR-390 D2) and no shape fits the release's listing at 120 (half the job, 37 a leg,
+  needs 147 legs; the whole job, 74 a leg, needs 74; the run has 49 jobs to spare beside 192 Rust
+  legs); a bound past that band is a signed ruling's to make.
+- A joint budget, the Python and Rust legs sharing the 241 jobs the other 15 jobs leave: rejected
+  for this delivery because it re-derives `LEG_CEILING` and every row and test that pins 209 and
+  234, and at 20 a leg it still holds 980 of the 5423 mutants beside 192 Rust legs.
+- Keeping the cap: rejected because it spent 32 legs of up to an hour each on a run that read
+  VOID, and gives no sign in the plan that the run cannot be judged.
+- Sampling or filtering the listing to fit 32 legs: rejected because it drops mutants, a weakening.
+
+## Amendment: the Python legs are dealt by cost under fixed shares (SPEC-418, ADR-432)
+
+Insert-only; every earlier byte is kept. ADR-432 deals the Python legs by each file's measured
+control cost within half their job, in fixed shares of the run's 225 legs, 32 Python and 193 Rust,
+so this decision's leg ceiling is unchanged. Chosen against: a floating split, in which the Python
+legs take what the Rust plan leaves, because it raises the Python ceiling above 32 (ADR-432 D2).

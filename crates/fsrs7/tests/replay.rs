@@ -1,10 +1,10 @@
 //! SPEC-342 A8 and A9 (R6): the replay from the pinned revision's FSRS-7 defaults, card by card and
-//! in one batch.
+//! in one batch; SPEC-386 A5 and A6 (R5): the replay equals the pinned revision's own values.
 
 use deck_streak_fsrs7::convert;
 use deck_streak_fsrs7::measure::history;
 use deck_streak_fsrs7::replay::{self, Method};
-use fsrs7::{FSRS, FSRSItem, FSRSReview};
+use fsrs7::{FSRS, FSRSError, FSRSItem, FSRSReview, MemoryState};
 
 /// FSRS-7's initial stability for Good at the pinned revision: the model takes a first review's
 /// stability from its parameters by rating (`init_stability`, src/model.rs:173-175), and Good's is
@@ -84,4 +84,72 @@ fn the_single_and_batch_methods_agree_on_every_card() {
         "the checksums are {one} by single and {all} by batch"
     );
     println!("examined {cards} card(s)");
+}
+
+/// The four ratings, Again to Easy.
+const RATINGS: [u32; 4] = [1, 2, 3, 4];
+
+/// The four first-review states, Again to Easy, as the pinned revision's `next_states` example
+/// asserts them (src/inference.rs:334-352, values at :346-349): `FSRS::default()`, no previous
+/// state, a desired retention of 0.9 and 0 days elapsed, compared exactly (`assert_eq!`). A
+/// first review replays at the delta 0, which is that example's elapsed time.
+const FIRST_STATES: [(f32, f32, f32); 4] = [
+    (0.1104, 6.1686, 0.08832),
+    (2.2395, 5.261_278, 1.791_600_1),
+    (3.9221, 3.530_724_3, 3.13768),
+    (11.7841, 1.0, 9.427_279),
+];
+
+/// FSRS-7's four initial stabilities, Again to Easy: the first four of the pinned revision's
+/// `DEFAULT_PARAMETERS` (src/inference_v7.rs:1-5), typed from that line.
+const INITIAL_STABILITIES: [f32; 4] = [0.1104, 2.2395, 3.9221, 11.7841];
+
+/// Each rating's one-review item replayed by `method` from the pinned defaults, Again to Easy.
+fn first_reviews(method: Method) -> Result<Vec<MemoryState>, FSRSError> {
+    let items = RATINGS
+        .iter()
+        .map(|&rating| FSRSItem {
+            reviews: vec![FSRSReview {
+                rating,
+                delta_t: 0.0,
+            }],
+        })
+        .collect();
+    replay::replay(method, &FSRS::default(), items)
+}
+
+#[test]
+fn the_replay_equals_the_pinned_revisions_own_vectors() {
+    for method in Method::ALL {
+        assert_eq!(
+            first_reviews(method).expect("four first reviews replay"),
+            FIRST_STATES
+                .iter()
+                .map(|&(stability, difficulty, stability_fast)| MemoryState {
+                    stability,
+                    difficulty,
+                    stability_fast,
+                })
+                .collect::<Vec<_>>(),
+            "{}: the four first reviews, Again to Easy",
+            method.name()
+        );
+    }
+}
+
+#[test]
+fn each_first_rating_replays_to_its_initial_stability() {
+    for method in Method::ALL {
+        let stabilities: Vec<u32> = first_reviews(method)
+            .expect("four first reviews replay")
+            .iter()
+            .map(|state| state.stability.to_bits())
+            .collect();
+        assert_eq!(
+            stabilities,
+            INITIAL_STABILITIES.map(f32::to_bits).to_vec(),
+            "{}: the four first ratings' stabilities, Again to Easy",
+            method.name()
+        );
+    }
 }

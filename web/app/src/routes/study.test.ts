@@ -4,6 +4,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { hosted } from '$lib/card/frame-host';
 import type { CardView, Deck, Head } from '$lib/engine/protocol';
 import Study from './study/+page.svelte';
 import StudyReview from './study/review/+page.svelte';
@@ -64,7 +65,7 @@ describe('the study routes', () => {
     await settle();
 
     const frame = screen.getByTitle("The card's question");
-    const body = new DOMParser().parseFromString(frame.getAttribute('srcdoc') ?? '', 'text/html').body;
+    const body = new DOMParser().parseFromString(hosted(frame.getAttribute('srcdoc') ?? '') ?? '', 'text/html').body;
     expect([body.className, body.textContent?.trim(), mocks.client.mock.calls.length > 0]).toEqual([
       'card card2',
       'question 9',

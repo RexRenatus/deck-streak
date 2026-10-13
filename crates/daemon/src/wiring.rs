@@ -25,12 +25,15 @@
 //! succeeds (R7). Every recompute cycle [`RecomputeSetup::cycle`] hands out holds a router with no
 //! transport, which holds the celebrations it routes for those senders (SPEC-319).
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{File, OpenOptions};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
-use deck_streak_agent::{CefrBand, LiveBand, Subject, SubjectKind};
+use deck_streak_agent::{
+    CefrBand, DeckFuture, DeckGate, DeckScope, DeckVerdict, LiveBand, Subject, SubjectKind,
+};
 use deck_streak_analytics::settings::AnalyticsSettings;
 use deck_streak_bot::{OwnerChat, Scores, SyncAnswer, SyncOutcome, Transport};
 use deck_streak_coordination::courses::{CoursesDisagree, agree};
@@ -63,6 +66,7 @@ use deck_streak_identity::sync_seal::{SealError, SealSecret};
 use deck_streak_ingest::engine::{AnkiEngine, RslibEngine};
 use deck_streak_ingest::gate::{ChangeGate, GateError};
 use deck_streak_ingest::reader::CollectionReader;
+use deck_streak_ingest::sensitive::{Admission, SqliteSensitiveDecks, admits};
 use deck_streak_ingest::settings::{ScopeSettings, SyncSettings};
 use deck_streak_ingest::state::RefusalReason;
 use deck_streak_ingest::structure::StructureReads;
@@ -752,6 +756,58 @@ impl deck_streak_agent::MemoryPort for DrillGradesMemory {
     }
 }
 
+/// The deck gate over the learner's marks (SPEC-381 R5; ADR-392 D2): it reads the marks at every
+/// judgement, so a mark made after a day's selection still holds for the run, and it decides with
+/// ingest's one rule, [`admits`], and nothing else. A failed read is judged as an unreadable set,
+/// which `admits` refuses, so the gate fails closed.
+pub struct MarksDeckGate {
+    marks: SqliteSensitiveDecks,
+    tree: BTreeMap<i64, String>,
+}
+
+impl MarksDeckGate {
+    /// The gate over `marks`, judging against `tree`, the collection's deck names by id.
+    #[must_use]
+    pub const fn new(marks: SqliteSensitiveDecks, tree: BTreeMap<i64, String>) -> Self {
+        Self { marks, tree }
+    }
+}
+
+impl DeckGate for MarksDeckGate {
+    fn judge<'a>(&'a self, scope: DeckScope<'a>) -> DeckFuture<'a> {
+        Box::pin(async move {
+            let marked = self.marks.read_marked().await.ok();
+            judge_deck_scope(marked.as_ref(), &self.tree, scope)
+        })
+    }
+}
+
+/// Judges every card of `scope` with [`admits`] over `marked` (`None` when the marks could not be
+/// read) and `tree`, and counts: any card that cannot be judged makes the scope unreadable, else
+/// any card kept away makes it kept away, else it is admitted. The verdict carries counts only.
+pub fn judge_deck_scope(
+    marked: Option<&BTreeSet<i64>>,
+    tree: &BTreeMap<i64, String>,
+    scope: DeckScope<'_>,
+) -> DeckVerdict {
+    let mut kept_away = 0;
+    let mut not_judged = 0;
+    for card in scope.cards {
+        match admits(marked, tree, card.home, card.current) {
+            Admission::Admitted => {}
+            Admission::KeptAway => kept_away += 1,
+            Admission::Unresolved | Admission::Unreadable => not_judged += 1,
+        }
+    }
+    if not_judged > 0 {
+        DeckVerdict::Unreadable { cards: not_judged }
+    } else if kept_away > 0 {
+        DeckVerdict::KeptAway { cards: kept_away }
+    } else {
+        DeckVerdict::Admitted
+    }
+}
+
 /// The one way a test captures log lines (SPEC-024, the 2026-09-30 amendment).
 #[cfg(test)]
 #[path = "../../../tools/log-capture/capture.rs"]
@@ -791,9 +847,107 @@ mod tests {
     use deck_streak_coordination::recompute::writing::WRITING_STEP;
     use deck_streak_coordination::recompute::xp::XP_STEP;
 
+    use super::{MarksDeckGate, judge_deck_scope};
     use super::{OwnerSyncCycle, RecomputeSetup, TransportMarker, answer_of, recompute_fold};
 
     use super::log_capture;
+
+    use std::collections::{BTreeMap, BTreeSet};
+
+    use deck_streak_agent::{CardDecks, DeckGate, DeckScope, DeckVerdict};
+    use deck_streak_ingest::sensitive::SqliteSensitiveDecks;
+
+    /// A deck tree: `Law`, `Law::Evidence` under it, `Spanish`, and a filtered deck.
+    fn tree() -> BTreeMap<i64, String> {
+        [
+            (1, "Law"),
+            (2, "Law\u{1f}Evidence"),
+            (3, "Spanish"),
+            (40, "Filtered"),
+        ]
+        .into_iter()
+        .map(|(id, name)| (id, name.to_owned()))
+        .collect()
+    }
+
+    /// One card in `home`, sitting in `current`.
+    const fn card(home: i64, current: i64) -> CardDecks {
+        CardDecks { home, current }
+    }
+
+    /// SPEC-381 R5: the scope's verdict counts `admits` per card, an unjudgeable card first.
+    #[test]
+    fn the_deck_gate_counts_each_card_by_the_one_rule_and_an_unjudged_card_comes_first() {
+        let tree = tree();
+        let law = BTreeSet::from([1]);
+        let none = BTreeSet::new();
+        let judge = |marked: Option<&BTreeSet<i64>>, cards: &[CardDecks]| {
+            judge_deck_scope(marked, &tree, DeckScope { cards })
+        };
+        assert_eq!(
+            judge(Some(&law), &[card(2, 2), card(3, 40), card(3, 3)]),
+            DeckVerdict::KeptAway { cards: 1 },
+            "a card under a marked deck is kept away; the rest are counted out"
+        );
+        assert_eq!(
+            judge(Some(&law), &[card(3, 3), card(2, 40), card(1, 1)]),
+            DeckVerdict::KeptAway { cards: 2 },
+            "a card borrowed from a marked deck's child is kept away too"
+        );
+        assert_eq!(
+            judge(Some(&law), &[card(2, 2), card(99, 3)]),
+            DeckVerdict::Unreadable { cards: 1 },
+            "a deck the tree does not hold makes the scope unreadable, before any kept-away card"
+        );
+        assert_eq!(
+            judge(None, &[card(3, 3), card(3, 40)]),
+            DeckVerdict::Unreadable { cards: 2 },
+            "unreadable marks judge no card"
+        );
+        assert_eq!(
+            judge(Some(&none), &[card(2, 2), card(3, 40)]),
+            DeckVerdict::Admitted,
+            "with no mark every resolved card is admitted"
+        );
+        assert_eq!(
+            judge(Some(&law), &[card(3, 3), card(3, 40)]),
+            DeckVerdict::Admitted,
+            "an unmarked deck's cards are admitted"
+        );
+    }
+
+    /// SPEC-381 R5: the gate reads the marks at every judgement, and a set it cannot read is
+    /// judged unreadable, never admitted.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn the_marks_deck_gate_reads_the_marks_at_each_judgement_and_fails_closed() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let db = Db::open(&directory.path().join("deck_streak.db"))
+            .await
+            .expect("the database opens");
+        let marks = SqliteSensitiveDecks::new(db.clone());
+        let gate = MarksDeckGate::new(marks.clone(), tree());
+        let cards = [card(2, 2), card(3, 3)];
+        assert_eq!(
+            gate.judge(DeckScope { cards: &cards }).await,
+            DeckVerdict::Admitted,
+            "no deck is marked yet"
+        );
+        marks
+            .mark(1, UtcMillis::from_epoch_millis(1_000))
+            .await
+            .expect("the mark is stored");
+        assert_eq!(
+            gate.judge(DeckScope { cards: &cards }).await,
+            DeckVerdict::KeptAway { cards: 1 },
+            "a mark made after the gate was built holds"
+        );
+        db.close().await;
+        assert_eq!(
+            gate.judge(DeckScope { cards: &cards }).await,
+            DeckVerdict::Unreadable { cards: 2 },
+            "a closed database reads as unreadable marks"
+        );
+    }
 
     /// A run of the given outcome, with synthetic instants.
     fn run(outcome: Result<(), ReasonCode>) -> SyncRun {

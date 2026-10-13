@@ -386,6 +386,8 @@ jobs:
       python_shards: ${{ steps.shards.outputs.python_shards }}
       python_matrix: ${{ steps.shards.outputs.python_matrix }}
       listed: ${{ steps.shards.outputs.listed }}
+      rows_legs: ${{ steps.legs.outputs.rows_legs }}
+      rows_matrix: ${{ steps.legs.outputs.rows_matrix }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -432,6 +434,13 @@ jobs:
       - name: the shards, the fewest whose slowest is projected within its bound
         id: shards
         run: python3 scripts/mutation-verdict.py shards --plan "$RUNNER_TEMP/mutation/plan.json" --listed "$RUNNER_TEMP/mutation/listed.json" --python-listed "$RUNNER_TEMP/mutation/python-listed.json"
+      # The plan's rows are dealt into the fewest legs whose largest is projected within half of
+      # the rows job's 90 minutes, at the measured cost of a row; a count past the most legs is
+      # refused whole, by name, and fails this job (SPEC-417, ADR-431). It runs whether or not the
+      # plan selects rows: no rows take one leg, which still runs the retirement check.
+      - name: the rows legs, the fewest whose largest is projected within its bound
+        id: legs
+        run: python3 scripts/mutation_rows.py legs --rows-from "$RUNNER_TEMP/mutation/plan.json"
       - name: keep the plan, the diff and the listing for every job after it
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -494,6 +503,9 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - name: the locked dependency graph, every target's packages (the census reads it offline at the baseline)
+        if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
+        run: cargo fetch --locked --manifest-path Cargo.toml
       - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
         with:
@@ -571,12 +583,19 @@ jobs:
 
   # The hand-proved rows the diff selects, and the retirement check: no row leaves while its target
   # stays, unless the maintainer approved it. It is not started only when the plan selects no row
-  # and no retirement check is due, which is a push that merges a pull request (SPEC-290 R3).
+  # and no retirement check is due, which is a push that merges a pull request (SPEC-290 R3). The
+  # plan deals the rows into legs, one job each, and every leg keeps the 90 minutes: a leg proves
+  # the rows its deal gives it and uploads its own report, and leg 0 alone runs the retirement
+  # check (SPEC-417, ADR-431).
   mutation-rows:
     needs: [mutation-plan]
     if: ${{ needs.mutation-plan.outputs.rows == 'true' || needs.mutation-plan.outputs.scope == 'diff' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: ${{ fromJSON(needs.mutation-plan.outputs.rows_matrix) }}
     env:
       CARGO_INCREMENTAL: "0"
     steps:
@@ -622,21 +641,24 @@ jobs:
       - name: fetch the locked dependency graph, so the offline census finds every package
         if: ${{ needs.mutation-plan.outputs.rows == 'true' }}
         run: cargo fetch --locked
-      - name: the rows the diff selects (the verdict reads their report)
+      - name: the rows the plan deals this leg (the verdict merges every leg's report)
         if: ${{ needs.mutation-plan.outputs.rows == 'true' }}
+        env:
+          LEG: ${{ matrix.leg }}
+          LEGS: ${{ needs.mutation-plan.outputs.rows_legs }}
         run: |
           mkdir -p "$RUNNER_TEMP/rows"
           rc=0
-          python3 scripts/mutation_rows.py prove --rows-from "$RUNNER_TEMP/mutation/plan.json" --report "$RUNNER_TEMP/rows/rows.json" || rc=$?
+          python3 scripts/mutation_rows.py prove --rows-from "$RUNNER_TEMP/mutation/plan.json" --leg "$LEG/$LEGS" --report "$RUNNER_TEMP/rows/rows-leg-$LEG.json" || rc=$?
           echo "the rows runner exited $rc"
       - name: no row leaves while its target stays, unless the maintainer approved it
-        if: ${{ needs.mutation-plan.outputs.scope == 'diff' }}
+        if: ${{ needs.mutation-plan.outputs.scope == 'diff' && matrix.leg == 0 }}
         run: python3 scripts/mutation_rows.py retired --base HEAD^1
-      - name: keep the rows' report
+      - name: keep the rows leg's report
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: mutation-rows
+          name: mutation-rows-leg-${{ matrix.leg }}
           path: ${{ runner.temp }}/rows/
           if-no-files-found: warn
 
@@ -660,12 +682,15 @@ jobs:
         with:
           name: mutation-plan
           path: ${{ runner.temp }}/reports/mutation-plan
-      # The rows' job makes its report directory only when the plan selected rows, and a download
-      # by name of an artifact that was never uploaded fails the step.
+      # Each rows leg uploads its own report, `rows-leg-<k>.json`, under its own artifact, and only
+      # when the plan selected rows. One pattern, merged, lays one leg and many at the same paths, and
+      # a leg that uploaded nothing is named by the merge below, never by a failed download
+      # (SPEC-417 R9).
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         if: ${{ needs.mutation-plan.outputs.rows == 'true' }}
         with:
-          name: mutation-rows
+          pattern: mutation-rows-leg-*
+          merge-multiple: true
           path: ${{ runner.temp }}/reports/mutation-rows
       # Each shard's artifact holds its own `mutation-rust-shard-<i>/` directory, so merging puts
       # one shard and many at the same paths; no shard at all matches nothing and is not an error.
@@ -679,6 +704,13 @@ jobs:
           pattern: mutation-python-shard-*
           merge-multiple: true
           path: ${{ runner.temp }}/reports
+      # The legs' reports become the one rows report the judge reads, in leg order; a row two legs
+      # hold, or one its leg's deal did not give it, is refused by name (SPEC-417 R7, R8).
+      - name: the rows legs' reports, merged into the one the verdict reads
+        if: ${{ needs.mutation-plan.outputs.rows == 'true' }}
+        env:
+          LEGS: ${{ needs.mutation-plan.outputs.rows_legs }}
+        run: python3 scripts/mutation_rows.py merge --rows-from "$RUNNER_TEMP/reports/mutation-plan/plan.json" --legs "$LEGS" --from "$RUNNER_TEMP/reports/mutation-rows" --report "$RUNNER_TEMP/reports/mutation-rows/rows.json"
       - name: the verdict, from every shard's report and the rows' (the plan names a not-applicable case)
         env:
           RUST_LEG: ${{ needs.mutation-rust.result }}
@@ -699,11 +731,19 @@ jobs:
           exit "$status"
 
   # StrykerJS over every web production file the diff changes, whole, so a survivor already on a
-  # touched file is the pull request's own (SPEC-039 R3, ADR-057 D3). It restores the pnpm store
-  # and saves none.
-  mutation-web:
+  # touched file is the pull request's own (SPEC-039 R3, ADR-057 D3), dealt into three shards
+  # (SPEC-419, ADR-433). Each shard plans as the leg always has, asks StrykerJS's own mutation
+  # server how many mutants each planned file holds, takes its share of the files dealt whole by
+  # that count, largest first onto the lightest shard, and runs StrykerJS over its share. It keeps
+  # its record and its report under its own index whatever its outcome, and one shard's failure
+  # cancels no other. It restores the pnpm store and saves none.
+  mutation-web-shard:
     runs-on: ubuntu-24.04
     timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -741,16 +781,65 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm --dir web/app exec paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations --silent
           pnpm --dir web/app exec svelte-kit sync
-      - name: StrykerJS over each changed file, whole (the verdict reads its report)
-        if: ${{ steps.plan.outputs.web == 'true' }}
+      # A plan that names no web file deals every shard an explicit empty record and asks nothing.
+      - name: this shard's deal, by StrykerJS's own count of each planned file's mutants
+        id: deal
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: python3 scripts/web_mutation_shards.py deal --plan "$RUNNER_TEMP/mutation/plan.json" --shard "$SHARD" --out "$RUNNER_TEMP/shards" --app web/app --node node
+      - name: StrykerJS over this shard's files, whole (the verdict job reads its report)
+        if: ${{ steps.deal.outputs.run == 'true' }}
         working-directory: web/app
         env:
-          MUTATE: ${{ steps.plan.outputs.mutate }}
+          MUTATE: ${{ steps.deal.outputs.mutate }}
+          SHARD: ${{ matrix.shard }}
         run: |
+          out="$RUNNER_TEMP/shards/mutation-web-shard-$SHARD"
           rc=0
           pnpm exec stryker run --mutate "$MUTATE" || rc=$?
-          cp -r reports/mutation "$RUNNER_TEMP/mutation/stryker" || true
+          cp reports/mutation/mutation.json "$out/mutation.json" || true
+          echo "$rc" > "$out/stryker.exit"
           echo "StrykerJS exited $rc"
+      - name: keep this shard's record and report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-web-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/shards/
+          if-no-files-found: warn
+
+  # The web sweep's verdict (SPEC-419 R6, R7): one job of the leg's own name, not a matrix, so the
+  # check that reports it still reports under that name. It runs whatever the shards returned,
+  # reads every shard's record and report by name, and judges their union as it judged one report;
+  # a missing, cut, partial, foreign or misdealt shard reads VOID by name and writes no union.
+  mutation-web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    needs: [mutation-web-shard]
+    if: ${{ always() }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: the plan (the event's case, the diff's classes, the web files it changes)
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          SUBJECT: ${{ github.event.head_commit.message }}
+        run: python3 scripts/mutation-verdict.py plan --base HEAD^1 --head HEAD --out "$RUNNER_TEMP/mutation" --event "$EVENT" --base-ref "$BASE_REF" --subject "$SUBJECT"
+      # Each shard's artifact holds its own directory named by its index, so merging lays one shard
+      # and three at the same paths; a shard that kept nothing is named by the union, not here.
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: mutation-web-shard-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/shards
+      - name: every shard read by name, united into the one report the verdict reads
+        env:
+          RESULT: ${{ needs.mutation-web-shard.result }}
+        run: python3 scripts/web_mutation_shards.py union --plan "$RUNNER_TEMP/mutation/plan.json" --reports "$RUNNER_TEMP/shards" --result "$RESULT" --out "$RUNNER_TEMP/mutation/stryker/mutation.json"
       - name: the verdict, from Stryker's own report (the plan names a not-applicable case)
         run: python3 scripts/mutation-verdict.py judge --plan "$RUNNER_TEMP/mutation/plan.json" --class web --stryker "$RUNNER_TEMP/mutation/stryker/mutation.json"
       - name: keep the plan and the report
@@ -875,7 +964,7 @@ jobs:
   ci:
     name: ${{ github.event_name == 'pull_request' && 'ci' || 'ci (push)' }}
     if: ${{ always() }}
-    needs: [rust, engine, release, web, card-sandbox, hygiene, mutation-plan, mutation-rust, mutation-python, mutation-rows, mutation-verdict, mutation-web, web-engine, workflow-lint, base-is-dev]
+    needs: [rust, engine, release, web, card-sandbox, hygiene, mutation-plan, mutation-rust, mutation-python, mutation-rows, mutation-verdict, mutation-web-shard, mutation-web, web-engine, workflow-lint, base-is-dev]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

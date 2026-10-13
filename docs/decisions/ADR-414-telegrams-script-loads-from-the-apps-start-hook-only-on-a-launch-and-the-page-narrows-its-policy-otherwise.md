@@ -233,3 +233,7 @@ The build cuts only after #748 lands, and pushes twice.
   Telegram.
 - **SvelteKit stops awaiting `init` before its first navigation.** SPEC-400 A3 goes red: the
   redirect drops the fragment before the stand-in reads it.
+
+## Amended by ADR-417
+
+ADR-417 (SPEC-403, #775) amends D2's detection for a launch read from the fragment (lines 78-79). The start hook reads the fragment's `tgWebAppData` value, sends it to `POST /api/launch`, and adds Telegram's script only when that answers 204. A 401 or a 403, any other answer, a failed request, or no answer within 10 s adds no script and narrows the policy. The tab's mark is written only after a 204, under a new key. D1, D3 and D4 stand. The crafted-link consequence (lines 219-221) is closed by it.
