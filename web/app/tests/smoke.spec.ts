@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { TELEGRAM_SDK, launchFragment } from './launch-fragment';
+import { TELEGRAM_SDK, answerLaunches, launchFragment } from './launch-fragment';
 
 function tagline(locale: string): string {
   const file = new URL(`../messages/${locale}.json`, import.meta.url);
@@ -28,7 +28,9 @@ test('telegram-web-app.js is in the head only when Telegram launched the page', 
   await page.goto('/', { waitUntil: 'networkidle' });
   await expect(page.locator(`head script[src="${TELEGRAM_SDK}"]`)).toHaveCount(0);
 
-  // a launch, on another path: a navigation that changes only the fragment re-runs nothing
+  // a launch, on another path, which the server accepts (SPEC-403): a navigation that changes only
+  // the fragment re-runs nothing
+  await answerLaunches(page, 204);
   await page.goto('/about' + launchFragment('auth_date=1&hash=synthetic'));
   const script = page.locator(`head script[src="${TELEGRAM_SDK}"]`);
   await expect(script).toHaveCount(1);

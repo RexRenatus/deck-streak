@@ -145,8 +145,9 @@ actor EngineSession {
 
     /// The face of `cardID`: its question, or its answer when `answer` is set, with the clips to
     /// play by themselves when `autoplay` is wished, each line of speech in the voice chosen for
-    /// its language when that voice is installed (SPEC-348 R5, R13). It asks for the day face: the
-    /// screen sets no night classes in this part.
+    /// its language when that voice is installed, else in the installed voice its tag asks for
+    /// (SPEC-348 R5, R13; SPEC-393 R9). It asks for the day face: the screen sets no night classes
+    /// in this part.
     func face(
         _ cardID: Int64, answer: Bool, autoplay: Bool, installed: [InstalledVoice]
     ) throws -> ReviewFace {
@@ -229,11 +230,12 @@ actor EngineSession {
         switch clip {
         case .sound(let name, let bytes):
             return (.sound(name: name, bytes: bytes), nil)
-        case .speech(let text, let language, let rate):
+        case .speech(let text, let language, let rate, let requested):
             return (
                 .speech(
                     text: text, language: language, rate: rate,
-                    voice: choices.chosen(language: language, installed: voices)),
+                    voice: choices.voiceFor(
+                        language: language, requested: requested, installed: voices)),
                 language
             )
         }

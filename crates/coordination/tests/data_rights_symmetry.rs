@@ -247,6 +247,8 @@ const SEEDS: [&str; 45] = [
      SELECT 4242, CAST('synthetic-credential-' || i AS BLOB), zeroblob(16), \
      'synthetic credential ' || i, i, i % 2, 1000 * i, \
      CASE WHEN i % 2 = 0 THEN 1000 * i + 500 END FROM n",
+    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
+     INSERT INTO sensitive_decks (deck_id, created_at) SELECT 7000 + i, 1000 * i FROM n",
 ];
 
 /// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).

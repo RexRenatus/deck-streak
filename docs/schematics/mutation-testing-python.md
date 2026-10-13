@@ -127,3 +127,237 @@ flowchart LR
 | `mutation-rows` | `mutation-verdict` | the rows' outcomes, counted into each class's examined | `rows.json` |
 | the tree | `mutation-verdict` | the Python records | `scripts/mutation-equivalent.d/python.json` |
 | the weekly `python` job | `survivors`, `battery`, `table` | sixteen reports with every killer | `python.json` each |
+
+## 5. Amendment (SPEC-415): a release's Python plan, before and after the refusal
+
+Insert-only; every earlier byte of this schematic is kept. Kind: data flow (the plan, the Python
+legs and the verdict) with one decision node, where the plan sizes or refuses. Read at DeckStreak
+`dev` c74b6b9 (`scripts/mutation-verdict.py:120-121`, `:987-995`, `:1017-1023`, `:1072-1075` and
+`:1603-1611`; `.github/workflows/ci.yml:376-446`, `:531-571`, `:646-702` and `:875-905`). Decided
+by ADR-429; built by SPEC-415.
+
+Section 1's node `pyshards` still reads "ceiling of listed over 40, clamped 1 to 32". SPEC-362 R14
+made the rule 20 listed mutants a leg, and SPEC-415 makes the clamp a refusal: the node is kept as
+it was drawn, and this section is the plan as it now runs.
+
+### 5.1 Before: the cap
+
+```mermaid
+flowchart TD
+  blist["mutation_python.py list --plan: 5423 listed, plan job 114529617353, 24 seconds"] --> bsize["python_shards: ceil of 5423 over 20 is 272 legs, and min of 32 and 272 is 32"]
+  bsize --> bmatrix["python_matrix 0 to 31, 169 or 170 mutants a leg; the plan exits 0 and prints no refusal"]
+  bmatrix --> bleg["mutation-python leg k: run --shard k/32 --failfast, timeout-minutes 60"]
+  bleg -->|"28 legs, cut at 60 minutes"| bcut(["cancelled at the bound, before the runner writes its report"])
+  bleg -->|"4 legs, 33 to 54 minutes"| bshut(["runner shutdown, exit 143, no report"])
+  bcut --> bverdict{"mutation-verdict: a report from every leg 0 to 31?"}
+  bshut --> bverdict
+  bverdict -->|"none of 32"| bvoid(["VOID, each leg by name; ci fails"])
+```
+
+The cap cuts at `python_shards`' `min`: 272 legs of work go into 32 jobs. The bound cuts at the
+job's `timeout-minutes: 60`, and because the runner writes its report only when its run ends, a cut
+leg leaves nothing for the verdict to read: no outcome, no examined count and no cost.
+
+### 5.2 After: the refusal
+
+```mermaid
+flowchart TD
+  alist["mutation_python.py list --plan: n listed"] --> aneed["python_needed: the larger of 1 and the ceiling of n over 20"]
+  aneed --> afit{"legs needed at most 32?"}
+  afit -->|"yes, n at most 640"| amatrix["python_shards: c legs dealt round robin; prints python legs c of ceiling 32"]
+  amatrix --> aleg["mutation-python leg k: run --shard k/c --failfast, timeout-minutes 60, at most 20 mutants"]
+  aleg --> areport[("mutation-python-shard-k: report.json")]
+  areport --> averdict{"mutation-verdict: every leg 0 to c-1 reported whole, each examining the plan's mutants?"}
+  averdict -->|"yes"| ajudge(["judged: each mutant killed, survived or recorded, by name"])
+  averdict -->|"a leg cut or missing"| avoidleg(["VOID, the leg by name; ci fails"])
+  afit -->|"no, n at least 641; 5423 needs 272"| arefuse(["REFUSED by name, exit 1: no plan byte and no step output written"])
+  arefuse --> askip["mutation-plan fails: no Python leg and no Rust leg starts"]
+  askip --> avoidplan(["mutation-verdict: VOID, the plan names no python shards; ci fails"])
+```
+
+### 5.3 What crosses each step, before and after
+
+| step | before | after |
+|---|---|---|
+| the listing | 5423 listed, the runner's own listing | unchanged: nothing sampled, filtered or dropped |
+| the legs | 272 needed, 32 run | 272 needed, refused whole at the plan |
+| a leg's mutants | 169 or 170 | at most 20, or none run |
+| a leg's bound | `timeout-minutes: 60` | unchanged |
+| a mutant's bound | the larger of 60 seconds and five times its file's control run | unchanged |
+| `--failfast` | on, for each mutant's run | unchanged |
+| the plan's exit | 0, with no refusal | 1, with the refusal by name |
+| the verdict | VOID, each of 32 legs named | VOID, the plan names no python shards |
+| what stays examined | every listed mutant promised, none reported | in a sized plan, every listed mutant in exactly one leg, the examined sum equal to the listing |
+
+### 5.4 How the Python and Rust legs share the run
+
+The run holds 256 jobs. The Python legs keep a fixed share of at most 32, the Rust legs at most
+209 (`LEG_CEILING["ci"]`, derived with the Python legs counted at 32), and 15 other jobs hold the
+rest. Each plan refuses whole above its own share, by name, and neither borrows the other's.
+
+## 6. The Python legs dealt by each file's cost (SPEC-418, ADR-432)
+
+Added after section 5; every earlier byte is kept. Kind: data flow. Read at DeckStreak `dev`
+c74b6b9, whose line numbers these are, with SPEC-415's change on top (`scripts/mutation-verdict.py`
+`python_shards` at 987-995 and `shards` at 1008-1093, `scripts/mutation_python.py` `select` at
+768-796 and its report at 901-902, `.github/workflows/ci.yml` `mutation-python` at 531-570).
+Decided by ADR-432; built by SPEC-418.
+
+Before: the legs are sized by a count, and a leg runs its own `k::n`. Nothing is written until a
+run ends, so a leg cut at its 60 minutes leaves no cost behind.
+
+```mermaid
+flowchart LR
+  listing["listing: N Python mutants, in listing order"] --> count["python_shards: N over 20 legs, rounded up"]
+  count --> refused["more than 32 legs: the plan refused whole, by name"]
+  count --> dealt["shard k holds the names k::n"]
+  dealt --> leg["leg k of n: runs chosen k::n of its own listing, never checked against the plan"]
+  leg --> cut["a leg cut at its 60 minutes: no report and no cost, nothing uploaded"]
+  leg --> report[("report.json, written only when the run ends")]
+  report --> verdict["mutation-verdict: the python class"]
+  cut --> verdict
+```
+
+After: a priced file's mutants are dealt by what they cost, within half the job, and every leg
+records each cost as it is paid, so a cut leg still measures the next plan.
+
+```mermaid
+flowchart LR
+  listing["listing: N Python mutants, in listing order"] --> bycost["python_by_cost"]
+  table[("PYTHON_CONTROL_SECONDS: a price per file, shipped empty")] --> bycost
+  bycost -->|no listed file priced| count["the count rule of section 5, byte for byte"]
+  bycost -->|a priced file| runs["each priced file cut into runs of at most k, k = floor of 1800 over its price, less 2"]
+  runs --> dealt["runs dealt heaviest first onto the lightest leg, in the fewest legs whose slowest is within 1800 s"]
+  dealt --> unpriced["unpriced mutants: 20 a leg, round robin, after the priced legs"]
+  unpriced --> refused["more than 32 legs, or one mutant's leg past 1800 s: refused whole by name, exit 1, the plan unwritten"]
+  unpriced --> plan[("plan.json python: count, shards, projected_seconds")]
+  count --> plan
+  plan --> leg["leg k of n: planned_leg holds the plan's count and partition to its own listing"]
+  leg -->|a name missing or extra| usage["refused before any mutant: exit 2, no report"]
+  leg -->|the partition holds| ran["runs exactly the names shard k lists"]
+  ran --> costs[("costs.jsonl beside report.json: a control line, then one line per mutant, each flushed")]
+  ran --> report[("report.json, when the run ends")]
+  costs --> prices["mutation-verdict.py prices --costs DIR: each file's price, with its run, attempt and shard"]
+  prices -.->|a later delivery commits the table| table
+  report --> verdict["mutation-verdict: the python class, every planned leg counted"]
+  usage --> verdict
+```
+
+A priced file's leg projects (2 + m) x price for its m mutants there: its control, its sentinel
+and each mutant at the control's cost. The bound is 1800 seconds, half the `mutation-python` job's
+60 minutes. The run's 225 legs (256 jobs less the 31 others) stay in fixed shares, 32 Python and
+193 Rust, so the plan's joint line reads its legs and projected runner-minutes against
+32 x 30 + 193 x 180 = 35700, and the leg ceiling is unchanged.
+
+| from | to | what | shape |
+|---|---|---|---|
+| `mutation-plan` | `mutation-python` | each leg's names and its projection | `plan.json` `python`: `count`, `shards[].mutants`, `shards[].projected_seconds` |
+| `mutation-python` | its uploaded artifact | each file's control seconds and each mutant's seconds, as paid | `costs.jsonl`, one JSON line each: `control`, `uncovered`, `mutant` |
+| a run's downloaded artifacts | `mutation-verdict.py prices` | every leg's `costs.jsonl` | one table line per file, with its run, attempt and shard |
+| `prices`' output | `PYTHON_CONTROL_SECONDS` | a file's price, committed by a later delivery | a whole number of seconds per path |
+
+## 7. The share, the measured prices and the scoped test set (SPEC-420, ADR-434)
+
+Every `path:line` in this section was read at dev `e64a778e`. Section 6 stays as written. This
+section shows what changes around it: the share, one value with a cap; the price table, filled by
+the `prices` verb from one recorded run; and each mutant, run against the tests its line's trace
+names.
+
+### 7.1 Before: a Python leg at dev `e64a778e`
+
+```mermaid
+flowchart TD
+  bList["plan job: mutation_python.py list over the diff"] --> bShards["mutation-verdict.py shards"]
+  bTable["PYTHON_CONTROL_SECONDS, empty"] --> bShards
+  bShards -->|"no file priced: the count rule, 20 a leg"| bShare{"legs above PYTHON_MAX_SHARDS?"}
+  bShare -->|"yes"| bRefuse["REFUSED by name; no leg starts"]
+  bShare -->|"no"| bMatrix["python_matrix output"]
+  bMatrix --> bLeg["each leg: run --plan --shard k/n --failfast"]
+  bLeg --> bFile["per file in turn: control, bound, sentinel, then that file's mutants"]
+  bFile --> bMut["each mutant: every mapped test module, less the byte readers"]
+  bMut --> bReport["report.json and costs.jsonl"]
+  bReport --> bVerdict["mutation-verdict.py: every listed mutant examined; each void read by name"]
+```
+
+The share is `PYTHON_MAX_SHARDS`, on line 122, beside the count rule's 20, and nothing caps it. No
+leg runs a control mutant.
+
+### 7.2 After: a Python leg under SPEC-420
+
+```mermaid
+flowchart TD
+  aList["plan job: mutation_python.py list over the diff"] --> aCap{"share outside 1 to PYTHON_SHARE_CAP?"}
+  aCap -->|"yes"| aCapRefuse["REFUSED by name before any deal"]
+  aCap -->|"no"| aShards["mutation-verdict.py shards: priced files by cost, unpriced files by the count rule"]
+  aTable["PYTHON_CONTROL_SECONDS: the prices verb over one recorded run, re-derived by a test"] --> aShards
+  aShards --> aShare{"legs above the share?"}
+  aShare -->|"yes"| aRefuse["REFUSED by name, unchanged"]
+  aShare -->|"no"| aMatrix["python_matrix output, unchanged"]
+  aMatrix --> aLeg["each leg: run --plan --shard k/n --failfast"]
+  aLeg --> aControl["leg control: three named mutants, expected KILLED, KILLED, SURVIVED"]
+  aControl -->|"any other outcome"| aVoid["every file entry void: control, by name"]
+  aControl -->|"as expected"| aPrep["every file first: control, bound, sentinel with its trace"]
+  aPrep --> aSets["scoped set per line, or the whole suite"]
+  aSets --> aMut["each mutant: its scoped tests in suite order, or the whole suite"]
+  aMut -->|"scoped pass"| aConfirm["whole suite confirms before SURVIVED"]
+  aMut -->|"kill, or a whole run"| aReport["report.json and costs.jsonl with scope, why and tests"]
+  aConfirm --> aReport
+  aVoid --> aReport
+  aReport --> aVerdict["mutation-verdict.py: unchanged readers"]
+```
+
+In `run --all`, the scheduled battery's mode, the leg control runs and every file is prepared
+first, but no trace is taken and every mutant runs the whole suite.
+
+### 7.3 One mutant's tests
+
+```mermaid
+flowchart TD
+  sStart["mutant on line L of file F"] --> sTrace{"F's trace whole?"}
+  sTrace -->|"no: failed or partial"| sWhole["whole suite"]
+  sTrace -->|"yes"| sModule{"name says in module, or L ran at import or outside a test?"}
+  sModule -->|"yes"| sWhole
+  sModule -->|"no"| sSet{"any test executed L?"}
+  sSet -->|"no"| sWhole
+  sSet -->|"yes"| sScoped["tests that executed L, plus every test that joins all sets"]
+  sScoped --> sRan{"ran as many tests as the set names?"}
+  sRan -->|"no"| sWhole
+  sRan -->|"yes, a test failed"| sKilled["KILLED"]
+  sRan -->|"yes, all passed"| sWhole
+  sWhole --> sOutcome["KILLED or SURVIVED, by the whole suite"]
+```
+
+A test joins every scoped set of F when a process it started left no record, when its process image
+was replaced by `os.exec`, or when it left a thread running past its end. Byte readers, the tests the
+sentinel turns red, stay out of the scoped and the whole runs alike.
+
+### 7.4 The trace records
+
+The trace is taken in the sentinel run: the unmutated lines, with one comment appended. It is taken
+inside the leg, on every run.
+- **The runner's process** records each test's lines of F through `sys.monitoring` `LINE` events,
+  restarted at each test's start. It counts each test's spawns from the process-creation audit
+  events.
+- **Each child process** gets the same tracer and audit hook from a scratch `sitecustomize`, and
+  writes one record when it exits: its pid, its parent's pid, its test, its lines of F, and how
+  many processes it started.
+- **The judge** reads the directory once, after the runner exits. For each process, it counts the
+  records that name it as their parent. A process with fewer records naming it than processes it
+  started makes its test join every set.
+
+`formal/tla/TracedSetCovers` checks that a dropped test never executed L, in every order of spawn,
+exit, write and read.
+
+### 7.5 What crosses each step
+
+| step | before (dev `e64a778e`) | after (SPEC-420) |
+|---|---|---|
+| listing | `mutation_python.py list` over the diff | unchanged |
+| trace | none | the sentinel run's, per file, per leg, in `run --plan` only |
+| scoped set | every mapped module, less the byte readers | the tests that executed the line, or the whole suite on each fallback |
+| price | `PYTHON_CONTROL_SECONDS`, empty | the `prices` verb's seven lines over one recorded run's 1017 records, re-derived by a test |
+| deal | SPEC-418's cost deal; the count rule for unpriced files | unchanged |
+| share | `PYTHON_MAX_SHARDS` on line 122, uncapped | `PYTHON_MAX_SHARDS` alone on its line; `PYTHON_SHARE_CAP = 128` |
+| refusal | by name above the share | by name outside 1 to the cap, before any deal; by name above the share, unchanged |
+| control | none | three named mutants first in every leg, read through each file entry's `void` |
+| verdict | every listed mutant examined; each `void` read by name | unchanged readers; a mutant record names `scope`, `why` and `tests` |

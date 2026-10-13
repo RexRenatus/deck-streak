@@ -387,7 +387,10 @@ class ALegWithNothingToExamineIsNotStarted(unittest.TestCase):
             r"(?m)^        shard: \$\{\{ fromJSON\(needs\.mutation-plan\.outputs\.matrix\) \}\}$",
         )
         self.assertEqual(job_condition(found["mutation-verdict"]), ["${{ always() }}"])
-        for name in ("mutation-plan", "mutation-web"):
+        # SPEC-419: the web sweep's verdict job, like the verdict, runs whatever its shards returned,
+        # and the shards, like the plan, always start.
+        self.assertEqual(job_condition(found["mutation-web"]), ["${{ always() }}"])
+        for name in ("mutation-plan", "mutation-web-shard"):
             self.assertEqual(job_condition(found[name]), [], name)
 
     def test_a_leg_the_listing_gives_nothing_reads_not_started(self):

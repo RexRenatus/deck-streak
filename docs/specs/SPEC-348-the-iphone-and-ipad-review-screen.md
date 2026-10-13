@@ -493,3 +493,39 @@ Part 1's rows, which this part leaves as they are:
 - `crates/ffi/tests/refusal_text.rs`: unchanged in this part; delivered by part 1
 - `crates/ffi/tests/support/review.rs`: unchanged in this part; delivered by part 1
 - `changelog.d/ios-review-348.md`: unchanged in this part; delivered by part 1 and folded into the changelog by the release
+
+## 11. Amendments: four of #666's gaps are built (SPEC-393, ADR-407)
+
+SPEC-393 builds four of the behaviours section 5 left to #666. This section is the pointer, so no rule
+above is read without it:
+
+- R5's body classes become `card card<n>`, `<n>` the card's template index plus one, then the night
+  classes when asked; A8's test reads `card card1` by day (SPEC-393 A3).
+- The face's CSS carries each font it names by `url()` as a `data:` URL, for the native reader (SPEC-393
+  R3 to R6). The HTML rewrite and its type table are unchanged.
+- `Clip::Speech` carries the tag's `voices`. The voice that speaks is the kept choice, else the first
+  requested voice the picker offers, else the language's own (SPEC-393 R7 to R9; ADR-407 D3).
+- The card view plays an HTML video inline on an iPhone (SPEC-393 R10, R11).
+
+A sound tag that names a video still plays as a sound (SPEC-393 section 9, #666).
+
+## 12. Amendments: a sound tag that names a video plays as video (SPEC-410, ADR-424)
+
+SPEC-410 builds the gap section 11's last line leaves open. This section is the pointer, so no rule above is
+read without it:
+
+- R4 holds for every reader that does not ask. For a reader that asks (`Reader::shows_video`, which the
+  native client's reader answers `true`), a `[sound:name]` tag whose extension is in `VIDEO_TYPES` (`mp4`,
+  `m4v`, `mov`, in any ASCII case) becomes no clip: the core appends a `data:` video element with native
+  controls to the face's text, in the side's replay order, under R3's rules and caps (ADR-424 D1, D2).
+- Such a video never autoplays and is not replayed: the learner starts it from its controls (ADR-424 D2).
+- Section 11's last line, that a sound tag naming a video still plays as a sound, holds now only for a
+  reader that does not ask.
+
+## 13. Amendments: part 2 changed two test files
+
+Section 10 names the review fixture's builder and the review pairs test as delivered by part 1.
+Part 2 changed both: `crates/ffi/tests/support/review.rs` now gives the fixture's cards fixed ids,
+and a test in `crates/ffi/tests/review_pairs.rs` asserts the four intervals of the first card the
+screen shows. The engine seeds each interval's fuzz from the card's id, and its load balancer reads
+a new card's position as its due, so a test that pins intervals needs fixed ids.

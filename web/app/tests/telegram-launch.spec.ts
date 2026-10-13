@@ -6,7 +6,7 @@
 // Run: pnpm exec playwright test tests/telegram-launch.spec.ts   (CI runs every spec in tests/)
 import { expect, test, type Page } from '@playwright/test';
 import { ROUTES } from '../src/lib/routes';
-import { STAND_IN, TELEGRAM_SDK, launchFragment, ownRequests, telegramRequestList, telegramRequests } from './launch-fragment';
+import { STAND_IN, TELEGRAM_SDK, answerLaunches, launchFragment, ownRequests, telegramRequestList, telegramRequests } from './launch-fragment';
 
 /** What the stand-in left in the page: its run count and the fragment it saw. */
 interface StandIn {
@@ -98,6 +98,7 @@ test('a launch loads Telegram\'s script before the first navigation and its laun
   // a launch whose startapp token routes the first navigation: the layout's redirect drops the fragment
   await standIn(page);
   await sessions(page);
+  await answerLaunches(page, 204);
   const telegram = telegramRequests(page);
   await page.goto('/' + launchFragment('auth_date=1&start_param=about&hash=synthetic'));
 
@@ -110,6 +111,7 @@ test('a launch loads Telegram\'s script before the first navigation and its laun
   // a launch on Today: its first call opens the session with the launch data, byte for byte
   const second = await page.context().newPage();
   await standIn(second);
+  await answerLaunches(second, 204);
   const bodies = await sessions(second);
   const opened = second.waitForRequest('**/api/session');
   await second.goto('/' + launchFragment('auth_date=1&hash=synthetic'));
@@ -122,6 +124,7 @@ test('a launch loads Telegram\'s script before the first navigation and its laun
 test('a reload after the launch\'s first navigation loads Telegram\'s script again', async ({ page }) => {
   await standIn(page);
   await sessions(page);
+  await answerLaunches(page, 204);
   const telegram = telegramRequests(page);
   await page.goto('/' + launchFragment('auth_date=1&start_param=about&hash=synthetic'));
   await expect.poll(() => new URL(page.url()).pathname).toBe('/about');

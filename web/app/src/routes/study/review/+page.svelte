@@ -4,4 +4,4 @@
   import { studyEngine } from '$lib/study/engine';
 </script>
 
-<ReviewScreen client={() => studyEngine().client()} />
+<ReviewScreen client={() => studyEngine().client()} update={() => studyEngine().client()} />

@@ -184,3 +184,9 @@ their acceptance criteria are SPEC-341's A1 to A13 and the iPhone and iPad deliv
 - The schematic `docs/schematics/card-frame-channels.md` holds the channel tables this ADR's D7
   runs.
 - The SEC-01 findings are cited by id: SEC01-F13, SEC01-F14 and SEC01-F15.
+
+## Amendments by ADR-412
+
+ADR-412 adds Firefox to D7's web engines: the planted suite runs in Chromium, WebKit and
+Firefox, in the same `card-sandbox` job. D7's decision and its alternatives are otherwise
+unchanged; ADR-412's D2 and D3 record what adding the engine was chosen against.

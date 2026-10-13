@@ -15,10 +15,15 @@
   // it goes back to, with the focus on keeping it; Escape keeps it too. SPEC-376 R5, R6; ADR-387: a
   // card the engine marks past its due day shows one line, below the status line and above the card,
   // on both sides, saying its review does not count toward the streak for that day; a card on time
-  // shows none.
+  // shows none. SPEC-409; ADR-423: after the first late review the engine answers, a block below the
+  // control bar offers one tap that syncs this device's reviews and shows the result, never takes
+  // the focus, and goes away for the screen's life on "Not now".
+  // SPEC-383 R10, R11; ADR-397: the bar's undo names the change it would undo, and the
+  // dialog asks for a bury with the state its card goes back to, and for a flag with what the undo
+  // does to the flag.
   import { onMount } from 'svelte';
   import CardFrame from '$lib/card/CardFrame.svelte';
-  import type { Returns } from '$lib/engine/protocol';
+  import type { FlagChange, Returns } from '$lib/engine/protocol';
   import { m } from '$lib/paraglide/messages.js';
   import { snapshotOf } from '$lib/remote/gamepad';
   import { WakeLockHolder, type Conditions } from '$lib/remote/wake-lock';
@@ -27,23 +32,33 @@
   import { Player } from './audio';
   import { deviceStorage, StudyInput } from './input';
   import { MappingStore } from './mapping-store';
-  import { statusText } from './refusal';
   import { Review, type ClipPlayer, type StudyClient } from './review';
   import { deviceSpeaker } from './speech';
   import { VoiceChoices } from './voice';
+  import { UpdateNow, type UpdateClient } from './update-now';
   import VoicePicker from './VoicePicker.svelte';
 
-  let { client, player }: { client: () => Promise<StudyClient>; player?: ClipPlayer } = $props();
+  let {
+    client,
+    player,
+    update
+  }: { client: () => Promise<StudyClient>; player?: ClipPlayer; update?: () => Promise<UpdateClient> } = $props();
 
   let region: HTMLElement;
 
   const choices = new VoiceChoices(deviceStorage());
   const devicePlayer = new Player(new Audio(), URL, deviceSpeaker(choices));
 
+  const updateNow = new UpdateNow(() => update, () => (offer = updateNow.face));
+  let offer = $state.raw(updateNow.face);
+
   const review = new Review(
     () => client(),
     () => performance.now(),
-    () => (shown = read()),
+    () => {
+      shown = read();
+      if (review.lateReviews > 0) updateNow.raise();
+    },
     { play: (clips) => (player ?? devicePlayer).play(clips) }
   );
 
@@ -54,6 +69,8 @@
       face: review.face,
       counts: review.counts,
       status: review.status,
+      statusLine: review.statusLine,
+      undoLabel: review.undoLabel,
       controls: review.controls,
       languages: review.languages,
       offer: review.offer
@@ -70,6 +87,21 @@
     review: () => m.undo_returns_review(),
     relearning: () => m.undo_returns_relearning(),
     preview: () => m.undo_returns_preview()
+  };
+
+  /** What undoing a flag does to the card's flag, by its line (SPEC-383 R11). */
+  const FLAG_LINES: Record<FlagChange, () => string> = {
+    added: () => m.undo_flag_added(),
+    removed: () => m.undo_flag_removed(),
+    replaced: () => m.undo_flag_replaced()
+  };
+
+  /** The dialog's undo button, by the kind of change the offer names; an offer with no kind is an
+   * answer's (SPEC-383 R9, R11). */
+  const CONFIRMS: Record<'answer' | 'bury' | 'flag', () => string> = {
+    answer: () => m.study_undo_answer(),
+    bury: () => m.study_undo_bury(),
+    flag: () => m.study_undo_flag()
   };
 
   /** "Keep it", which takes the focus while the review asks (SPEC-371 R10). */
@@ -186,7 +218,7 @@
 
   <section bind:this={region} tabindex="-1" aria-label={m.study_review_title()} class="mt-4 flex flex-col gap-3">
     <p role="status" class="min-h-6">
-      {#if shown.status !== null}{statusText(shown.status)}{/if}
+      {shown.statusLine}
     </p>
     {#if face !== null}
       {#if face.view.late}
@@ -208,32 +240,59 @@
           aria-describedby="undo-unsynced"
           class="flex flex-col gap-3 rounded-md border p-4"
         >
-          <h2 id="undo-title" class="text-lg font-semibold">{m.undo_title()}</h2>
-          <dl class="flex flex-col gap-1">
-            <div>
-              <dt class="inline font-medium">{m.undo_card()}</dt>{' '}<dd class="inline">
-                {offer.text === '' ? m.undo_no_text() : offer.text}
-              </dd>
-            </div>
-            <div>
-              <dt class="inline font-medium">{m.undo_answer()}</dt>{' '}<dd class="inline">
-                {offer.grade === 'again' ? m.study_again() : m.study_good()}
-              </dd>
-            </div>
-            <div>
-              <dt class="inline font-medium">{m.undo_returns()}</dt>{' '}<dd class="inline">
-                {RETURNS[offer.returns]()}
-              </dd>
-            </div>
-          </dl>
-          <p id="undo-unsynced">{m.undo_unsynced()}</p>
+          {#if offer.kind === 'bury'}
+            <h2 id="undo-title" class="text-lg font-semibold">{m.undo_bury_title()}</h2>
+            <dl class="flex flex-col gap-1">
+              <div>
+                <dt class="inline font-medium">{m.undo_card()}</dt>{' '}<dd class="inline">
+                  {offer.text === '' ? m.undo_no_text() : offer.text}
+                </dd>
+              </div>
+              <div>
+                <dt class="inline font-medium">{m.undo_returns()}</dt>{' '}<dd class="inline">
+                  {RETURNS[offer.returns]()}
+                </dd>
+              </div>
+            </dl>
+            <p id="undo-unsynced">{m.undo_bury_unsynced()}</p>
+          {:else if offer.kind === 'flag'}
+            <h2 id="undo-title" class="text-lg font-semibold">{m.undo_flag_title()}</h2>
+            <dl class="flex flex-col gap-1">
+              <div>
+                <dt class="inline font-medium">{m.undo_card()}</dt>{' '}<dd class="inline">
+                  {offer.text === '' ? m.undo_no_text() : offer.text}
+                </dd>
+              </div>
+            </dl>
+            <p id="undo-unsynced">{FLAG_LINES[offer.flag]()}</p>
+          {:else}
+            <h2 id="undo-title" class="text-lg font-semibold">{m.undo_title()}</h2>
+            <dl class="flex flex-col gap-1">
+              <div>
+                <dt class="inline font-medium">{m.undo_card()}</dt>{' '}<dd class="inline">
+                  {offer.text === '' ? m.undo_no_text() : offer.text}
+                </dd>
+              </div>
+              <div>
+                <dt class="inline font-medium">{m.undo_answer()}</dt>{' '}<dd class="inline">
+                  {offer.grade === 'again' ? m.study_again() : m.study_good()}
+                </dd>
+              </div>
+              <div>
+                <dt class="inline font-medium">{m.undo_returns()}</dt>{' '}<dd class="inline">
+                  {RETURNS[offer.returns]()}
+                </dd>
+              </div>
+            </dl>
+            <p id="undo-unsynced">{m.undo_unsynced()}</p>
+          {/if}
           <div class="flex flex-wrap gap-2">
             <button
               type="button"
               class="min-h-11 rounded-md border px-4 transition-colors duration-150"
               onclick={() => input.click('undo')}
             >
-              {m.study_undo_answer()}
+              {CONFIRMS[offer.kind ?? 'answer']()}
             </button>
             <button
               bind:this={keeper}
@@ -264,7 +323,7 @@
             disabled={!shown.controls.includes('undo')}
             onclick={() => input.click('undo')}
           >
-            {m.study_undo_answer()}
+            {shown.undoLabel}
           </button>
           {#if shown.controls.includes('replay')}
             <button
@@ -301,6 +360,38 @@
       >
         {m.study_retry()}
       </button>
+    {/if}
+    {#if update !== undefined}
+      <div class="flex flex-col gap-2">
+        <div role="status" class="flex flex-col gap-1 text-sm">
+          {#if offer.shown}
+            <p>{offer.line}</p>
+            {#if offer.count !== null}<p>{m.sync_unsynced({ count: offer.count })}</p>{/if}
+          {/if}
+        </div>
+        {#if offer.shown}
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              class="min-h-11 rounded-md border px-4 transition-colors duration-150 disabled:opacity-60"
+              disabled={offer.working}
+              onclick={() => void updateNow.tap()}
+            >
+              {m.sync_now()}
+            </button>
+            <button
+              type="button"
+              class="min-h-11 rounded-md border px-4 transition-colors duration-150"
+              onclick={() => updateNow.dismiss()}
+            >
+              {m.study_update_dismiss()}
+            </button>
+            {#if offer.link}
+              <a href="/sync" class="inline-flex min-h-11 items-center rounded-md border px-4">{m.study_update_open_sync()}</a>
+            {/if}
+          </div>
+        {/if}
+      </div>
     {/if}
   </section>
 

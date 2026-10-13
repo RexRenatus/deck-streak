@@ -140,6 +140,19 @@ for (const layer of LAYERS) {
   }
 }
 
+test('the host policy alone holds the image-set forms in every engine', async ({ browser }, info) => {
+  const engine = engineOf(info);
+  const card = PLANTED.find((planted) => planted.id === 'srcset');
+  expect(card, 'planted.ts plants no srcset card').toBeDefined();
+  if (card === undefined) return;
+  const reference = await visit(browser, 'open.html', card.id, card.click);
+  await reaches(reference, ['/srcset/1', '/srcset/2']);
+  await reference.context.close();
+  const inherited = await visit(browser, 'variant.html?off=W3meta', card.id, card.click);
+  expect(await arrivals(inherited, card.id), `srcset opened under the host policy alone in ${engine}`).toEqual({});
+  await inherited.context.close();
+});
+
 test('scripts on: a peer connection from the card reaches the UDP listener', async ({ browser }, info) => {
   const engine = engineOf(info);
   const scripted = await visit(browser, 'variant.html?off=scripts', 'webrtc', false);

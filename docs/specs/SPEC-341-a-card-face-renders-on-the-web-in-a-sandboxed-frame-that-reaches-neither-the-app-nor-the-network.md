@@ -203,3 +203,17 @@ A13: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k th
 - **A slow runner settles a treatment before a late arrival lands.** The treatment's fixed window is
   at least the reference's measured latency for that card times a stated factor, and a sentinel
   request from the harness page after the window proves the listener was still counting.
+
+## 7. Amendments by SPEC-398: the planted suite runs in Firefox too
+
+SPEC-398 (ADR-412) adds Firefox as the planted suite's third engine, run by the same
+`card-sandbox` job. Where this SPEC says the suite runs in Chromium and WebKit, or in both
+engines, read Chromium, WebKit and Firefox: R8, R12, A9, A13, and section 5's bullet on
+Firefox, which SPEC-398 supersedes for the card frame (#652). A13's test still holds the
+Chromium and WebKit install step; SPEC-398's A2 holds the Firefox step beside it.
+
+Two more sentences say two engines, and SPEC-398 reads each as history: section 4's row for
+`web/app/playwright.card.config.ts`, which records the two projects this SPEC added and to which
+SPEC-398 adds `firefox`; and section 6's risk on the loopback interface, where A11's test now
+refuses an UNOBSERVABLE `webrtc` in every engine, so the peer connection is measured in at least
+one of the three (#652).

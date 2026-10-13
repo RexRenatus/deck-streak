@@ -316,7 +316,9 @@ async fn the_bot_role_answers_progress_from_the_courses_its_settings_name() {
     let sends = fake.calls_of("sendMessage");
     assert_eq!(
         payload(&sends[0])["text"],
-        json!("<b>Road to C2</b>\nF <b>Course Qaa</b>: A1, 63% mastery, unit 2"),
+        json!(
+            "<b>Road to C2</b>\nF <b>Course Qaa</b>: A1, 63% mastery, unit 2\n<i>Mastery is an estimate from your reviews: the average, over the cards it counts, of how likely you are to recall each card now, with cards not yet firmly learned counted for less and new or suspended cards counted as 0.</i>"
+        ),
         "the stored progress of the course the settings name; a role that read no course would say \
          none is stored yet"
     );

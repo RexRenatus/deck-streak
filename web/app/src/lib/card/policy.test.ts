@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FRAME_POLICY, FRAME_SANDBOX } from './policy.js';
+import { FRAME_POLICY, FRAME_SANDBOX, HOST_POLICY } from './policy.js';
 
 // SPEC-341 R2, R6, A1; ADR-352 D1, D3. The card frame runs no script (a sandbox with no token) and
 // its own policy fetches nothing but `data:` images, media and fonts: no script, connection, frame,
@@ -54,5 +54,19 @@ describe('the card frame policy', () => {
       )
     ).toEqual(["script-src 'self'", 'img-src *', 'connect-src https:', 'frame-src *']);
     expect(weaker('img-src data:')).toEqual(['default-src missing']);
+  });
+
+  // SPEC-407 R2; ADR-421 D3. The host policy adds nothing the frame policy does not enforce.
+  it('the host policy holds only what the frame policy already holds, and no frame source', () => {
+    const host = directives(HOST_POLICY);
+    const frame = directives(FRAME_POLICY);
+
+    expect(Object.keys(host)).toEqual(['img-src', 'script-src', 'object-src', 'base-uri']);
+    expect(host['img-src']).toEqual(frame['img-src']);
+    expect(host['base-uri']).toEqual(frame['base-uri']);
+    expect(host['script-src']).toEqual(["'none'"]);
+    expect(host['object-src']).toEqual(["'none'"]);
+    expect(frame['default-src']).toEqual(["'none'"]);
+    for (const name of ['default-src', 'frame-src', 'child-src']) expect(host[name]).toBeUndefined();
   });
 });

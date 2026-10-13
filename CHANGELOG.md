@@ -12,8 +12,312 @@ process compiles the fragments into a new version section here.
 
 ## [0.3.0] - 2026-10-05
 
+Version 0.2.0 was never tagged or released, so this release also ships every change in the 0.2.0
+section below.
+
 ### Added
 
+- On the iPhone and iPad review screen, a sound tag that names a video file (`.mp4`, `.m4v` or
+  `.mov`) now shows the video in the card, with its own controls, instead of playing only its sound;
+  the learner starts it, and Replay and Stop leave it alone. The web client is unchanged (SPEC-410,
+  ADR-424, #808).
+- After the first review of a card past its due day, the web review offers one tap, "Sync now",
+  that syncs this device's reviews and shows the result, with "Not now" to hide the offer for the
+  rest of the sitting. It takes no focus and never holds back the next card. The scheduled daily
+  sync and the syncs a study session makes when it opens and closes do not change. The native app
+  follows its own late-review line and sync (SPEC-409, ADR-423, #807).
+- A release tag whose push started no app release lane run is built by a manual dispatch of the
+  lane at the tag's own ref, through the same checks, review and queue as its push; the lane
+  refuses a run that a workflow's own token started (#733).
+- The review's Undo reaches its last bury or flag, not only its last answer (SPEC-383, ADR-397,
+  #753). The review keeps one undo slot: an answer, a bury or a flag, whichever came last. After a
+  bury the next card's bar offers "Undo bury", and after a flag the card's bar offers "Undo flag". A
+  press asks for the offer and writes nothing: a dialog names the card as one line of text and what
+  the undo changes (the state a buried card returns to, or whether the undo removes the red flag,
+  puts it back, or puts back the flag it replaced), with focus on "Keep it", and only its
+  confirmation undoes.
+- The engine core checks the undo at the write, through the same owner's exempt Undo an answer uses:
+  the change must still be on the card, the card must not have synced, and the change must still be
+  the front of the engine's undo queue. A later change, a sync or another card refuses it, and
+  nothing moves. The restore puts back the card's queue, flag and sync mark as they were, and writes
+  no review row.
+- A synced change is shown with a disabled control that says so, and a refused undo of a change
+  reads its own notice. The ten new messages are in all seven locales.
+- `scripts/dynamic-imports-check.py` refuses, before the push, a new or changed test module under
+  `scripts/tests` that loads code through `importlib`, `runpy` or `exec` while the
+  `DYNAMIC_IMPORTS` register in `scripts/tests/test_ci_workflows.py` names no site of it. The SPEC
+  template's file manifest section now tells an author to list that register when a delivery adds
+  such a load.
+- The iPhone and iPad review screen closes four of the desktop reviewer's parity gaps: each card's
+  body carries its template's class, `card1` for the first, so a note type's per-template styles
+  apply; the fonts a note type's styling names are carried inside the card; a TTS tag's `voices=`
+  choice speaks when the learner has kept no voice for that language; and a card's video plays in
+  place on an iPhone instead of filling the screen (SPEC-393, ADR-407, #666).
+- The engine core replays a deck set's review history through the FSRS-7 scheduler crate into
+  stock-field values (SPEC-386, ADR-400; #641). One fixed statement reads the review rows of the
+  cards whose home deck is in the set; the crate cuts each card's history at its last reset, drops
+  manual, rescheduled and unrated rows, and replays the rest under the preset's parameters; each
+  card's stability is projected to the stock 90-percent interval, its difficulty is held to 1 to 10,
+  and a review card gets an interval and a due on the engine day its caller read. Nothing is written:
+  the write is the scheduler switch (#611), and a test alone proves the mapping survives a sync. One
+  engine-core file names the crate, and a Lean proof with its vectors holds the history selection.
+- A deck the learner keeps away from AI reaches no AI duty (SPEC-381, ADR-392). Every deck starts
+  readable. A mark is one row per deck on the server, so it holds from the moment it is saved, on
+  every client, a client that shows no setting included.
+- One rule decides every card: a card is kept away when its home deck or the deck it sits in now,
+  or an ancestor of either by name, is marked. A deck the tree cannot resolve, or a set of marks
+  that cannot be read, keeps the card away.
+- The day set holds back every kept-away card and logs only how many it held back. A failed read
+  of the marks ends the day's resolution with its named error and records no day.
+- Every AI duty asks the deck gate before its input gate, its prompt and its runner. A refusal ends
+  the run withheld, class `deck-sensitive` or `deck-unreadable`, with counts only, and a census
+  holds every AI call site to the gate.
+- Two owner routes, `GET /api/decks/sensitive` and `PUT /api/decks/{id}/sensitive`; the change
+  stands behind the same-origin state-change check.
+- A screen, "AI and your decks", reached from the deck list: one switch per deck, off unless the
+  deck is marked. A deck under a marked deck shows on and names the deck it follows. Its words are
+  in all seven languages.
+- The marks are exported with the learner's data and erased with the account.
+- A TLA+ model of the mark, the day set's selection and the gate, and a Lean proof of the rule.
+- The web client links and signs in with a passkey pinned to the owner (SPEC-385, ADR-399).
+  Inside Telegram the sign-in methods screen lists the owner's ways in, Telegram first, removes a
+  passkey only after a confirm step, and opens a link page in the browser with a one-time code;
+  the browser redeems the code on a tap and creates the passkey there. Outside Telegram a sign-in
+  page signs in with that passkey and opens Today, and a call the server refuses for want of a
+  session asks for sign-in instead of asking to reopen the app. ADR-132 is accepted (#627).
+- The sync screen lists the browser's backups of the collection and the server copies it counted,
+  by kind and age, newest first, and exports one as a file the owner keeps (SPEC-377 part c2,
+  ADR-388; refs #631). Only a backup the list names can leave the browser.
+- The browser keeps the three newest backups of each kind and never removes the newest of a kind.
+  It removes older ones only while no full-sync choice is held, and the screen names each one it
+  removed.
+- The sync screen says whether the browser keeps this site's storage, that it does not, or that it
+  cannot tell, and that a collection the browser cleared is restored by a download the owner taps.
+- Before an upload, the service is asked whether a sealed snapshot of the server's copy exists and
+  how old the newest is. Until the service can list its archive, it answers that it does not know,
+  and the upload stays refused.
+- A second route tells the owner when the alert sender fails or goes silent (SPEC-396, ADR-410;
+  #285). A timer of its own runs `deploy/scripts/second-route.sh` as a oneshot unit with its own two
+  credentials, `second-route-check-in` and `second-route-report`: it reads the alert path from the
+  service manager, reports each failed alert instance once by its invocation id, an absent or
+  masked alert template and an unreadable answer to the receiver off the host, records the keys
+  only after the report is delivered, and checks in, withholding the check-in after an unreadable
+  read. The census, the host budget, the rail contract and the deploy README carry the unit, and
+  the TLA+ entry `formal/tla/SecondRoute` checks its three properties with a witness for each.
+  The formal checker's per-run cap in `config/formal.json` rises for every entry, and the entry
+  gains a budget of its own.
+- A link strip in the card view on iPhone and iPad (SPEC-392, ADR-406). Every `<link` opener in a
+  card, in any ASCII letter case and wherever it stands, is renamed to a `<wbr` opener before the
+  card is loaded, so no link element from a card's markup reaches the view, and every other byte
+  of the card is kept. The five characters shown as text are renamed too; a card that shows them
+  writes `&lt;link`, which is left as it is.
+- The planted card suite on iPhone and iPad counts the link elements in each card view, and reads
+  the link strip alone holding every linked card it can observe. Its reading of no connection from
+  a followed link, on both simulators, is now the recorded closure of that channel.
+- The planted card suite runs in Firefox as a third engine of the `card-sandbox` job, beside
+  Chromium and WebKit, so the card frame's layers are proved in the three engines a desktop learner
+  is likely to use (SPEC-398, ADR-412; #652). The job installs Firefox in a step of its own and its
+  bound grows from 20 to 30 minutes; its check-run name does not change. The engine, study and
+  end-to-end suites keep their engines (#764).
+- A Lean entry, `formal/lean/Formal/XpReconciliation.lean`, that proves a study day's confirmed XP is never below the XP the device shows, at every settle point of every trace of grades, undos, syncs, other clients' answers, fold reads and writes and the day's close, with the settle rule's closed-day arm and the per-track sum ported branch for branch (SPEC-389, #755).
+- Its vectors, `formal/vectors/xp-reconciliation.jsonl`, and the progression test that answers them through the shipping `settle` on a scratch ledger, with mutation rows S38900 to S38904 on the settle rule (SPEC-389, #755).
+- The context-map schematic draws every workspace crate and every dependency its manifest names,
+  one arrow per edge in declared layers, and a census test holds the drawing to the manifests and
+  the fence (SPEC-394, ADR-408; #689). The six crates and 29 edges the old drawing lacked are
+  drawn; no manifest, fence line or product code changes.
+- A decision on grades that arrive by sync (ADR-404; refs #715). A grade recorded on another client
+  and brought here by sync is outside the owner-press rule: the rule holds the one call that records
+  a grade to a press made in DeckStreak's own client, and sync records no grade of its own, so the
+  reviews it brings in stay as they were recorded. No code, test, table row, model or ruling changes.
+- The web client runs a full sync in the browser after the owner's choice (SPEC-377 part c1,
+  ADR-388). The engine reads and writes the collection for an upload or a download through its
+  database, where the browser gives it no file system; the native engine is unchanged (ADR-058's
+  note).
+- A sync screen at `/sync` signs in once and keeps neither the user nor the password, shows the
+  sync's status in the owner's words and the reviews waiting to sync, offline too, and signs out.
+- When a sync needs a full sync, the choice screen counts what each offered direction replaces,
+  preselects neither, and asks for one tap to confirm; every step before the write can be
+  cancelled. An upload waits until the service has a snapshot of the server's copy, and a server
+  that changed since the count returns to the counts with a sentence saying why.
+- A collection the browser lost is offered the download alone, never an upload over the server's
+  copy, and the sync screen says so and restores it by a download the owner taps.
+- A study session syncs once when it starts and once when it ends.
+- A daily check starts a re-release of the internal build before it stops working, and fails closed whenever it cannot read the build.
+- A grade recorded through the owner's press is pinned as an ordinary answer, outside every
+  exemption (SPEC-378, ADR-389; refs #716). Three tests in the engine core's answer tests name the
+  call that records a grade by its pair and its name, and hold that the table decides it for a
+  press on both transports, that no exempt row names it (three planted tables are refused by
+  name), and that `run` holds it for a press, never for a gesture. The never-list, the owner-taps
+  exemption, the exempt rows and the write classes are unchanged, and three mutation rows prove
+  each test can fail.
+- The web review says when a review cannot count toward the streak (SPEC-376, ADR-387). When the
+  card shown is past its due day, one line above the card, on the question and on the answer side,
+  says the card was due on an earlier day, so this review does not count toward the streak for that
+  day. A card on time shows no line.
+- The engine core decides it in the engine's own day: it reads the scheduler's timing of today
+  itself, through no adapter pair, and judges a review or day-learning card by its due day, an
+  intraday learning card by the instant the day began, and a card in a filtered deck by the due it
+  keeps for its home deck. A new or preview card is never late.
+- The line is in all seven locales, each with its own word for the streak.
+- The app campaign's threat model, a schematic declared by `trace: threat-model` with a STRIDE table for each surface, and `scripts/threat_model.py`, the reader CI runs over it (SPEC-375, #653).
+- A client below the sync service's stated minimum stops before any sync and says why (SPEC-374,
+  ADR-385). The service states the oldest client level it accepts at `GET /api/sync/minimum-client`,
+  the engine core refuses every sync until a statement that admits its level is read, the static
+  library the iPhone and iPad app links reads the statement before every sync login, and the web
+  app's Worker reads it before every sync login and normal sync, showing the sentence on a refusal.
+- Bury and flag on iPhone and iPad (SPEC-358, part a, #633): the review gains Bury and Flag beside
+  Replay, each acting on the shown card alone, with the bar's buttons held while the call runs. Bury
+  shows the next card; Flag turns the card red or clears it, shown as an icon with a text label. The
+  flag and bury rules move from the web engine into the shared core, so both clients run one copy,
+  and the native adapter gains its bury and flag calls. The client's codec carries the queued
+  card's flag, pinned by literal bytes. The Apple job's `harness` job gains the bury and flag
+  tests on both simulators. ADR-369 records the choices.
+- The web app's Worker syncs the collection itself (SPEC-364 part b2, ADR-375). A sync login sends
+  the sync user and password through the engine to the sync server and keeps only the host key
+  it answers, sealed in the browser; a normal sync sends that key and answers which sync the
+  collection needs next. Two Worker operations, `sync-login` and `sync`, each answer a status word,
+  and no reply carries the key, the password or the host key.
+- The engine reaches the sync server through two exports of its own beside the study calls, each
+  pinned to its engine method; a normal sync from the browser asks for no media.
+- A server's refusal drops the key, so the owner is asked to sign in again; a lost network keeps
+  it. A redirected answer is refused and nothing is synced. Every send settles, and a sync runs on
+  the session's queue.
+- Every session start asks the browser to keep the app's storage.
+- The browser tests run a login and a normal sync against the engine's own sync server, built from
+  the workspace and reached through the page's own origin.
+- A release tag whose push started no release run is released by a manual dispatch of the release
+  workflow at the tag's own ref, through the same checks and the same queue as its push (#475).
+- Tests show that the web review frame shows a cloze card, an answer that opens with its question
+  where its template says `{{FrontSide}}`, and a note type's own CSS as the engine renders them
+  (SPEC-372, ADR-383; #729). One golden file under `web/app/src/lib/study/` holds the fixture's
+  inputs and the frame CSS written by hand and the engine's render: the engine's test renders the
+  fixture and compares, and the review screen's test serves the render and reads the frame. No
+  production file, frame policy or dependency changes, and three mutation rows pin the face's CSS
+  and its text joining.
+- The engine core admits the sync login and the normal sync on the web transport, and checks every
+  normal sync and every one-way write against the login's one endpoint rule before the engine sees
+  it; a normal sync that asks for media is refused until media sync lands (SPEC-364, ADR-375).
+- The one-way sync is an exempt write: it needs the owner's tap, refuses to run from the gesture
+  alone, and runs only with the full-sync choice's write, from a request the core builds itself.
+- One driver both clients call runs the full-sync write in the order the choice checks: it fetches
+  the server's copy only into an empty file, backs up the side the write replaces and reads the
+  backup's ids from the written file, re-checks the server before an upload, and re-reads the
+  device before a download. Nothing it makes is deleted.
+- An evicted, empty device is offered the download alone and gets every server review back after
+  the owner's tap.
+- The web engine names the sync login and the normal sync as its sync calls, and the native
+  adapter reads a one-way tap's refusal as needing the choice.
+- The iPhone and iPad review screen (SPEC-348, part 2, #632): choosing a deck shows its cards in
+  the split view's detail pane, each face in the card view's isolated frame, with Show Answer and
+  the four ratings, each with its interval, in a bar at the bottom; haptics on a rating and at the
+  end; the face's sound and speech, held while VoiceOver runs; and a voice picker. The sidebar's
+  deck counts follow in a later part. The client's codec gains the review's requests and decoders, pinned by literal
+  bytes and by mutants. The thin-Swift census gains the `card` and `speech` roles, and a new census
+  keeps the card frame the factory's alone. The Apple job body's `harness` job gains the review
+  screen's tests on both simulators. ADR-359 D8 and D9 record the two choices this part adds.
+- The web app's Worker keeps the sync key sealed in the browser (SPEC-363 part 2, ADR-374). A sync
+  login asks the service for the sealing key first, so with no owner session the password never
+  leaves the page; the key is sealed with AES-GCM under that released key, imported so it cannot be
+  read out, and bound to the Worker's own origin's sync route, the user and the stored generation.
+  Every step reads, asks the core's rule and writes in one transaction of the browser's database.
+- The key goes only to the Worker's own origin's sync route. A Worker whose generation is stale
+  sends nothing and forgets what it held; a refusal of an older generation keeps the newer key, a
+  network failure keeps it, and a record that no longer opens is deleted.
+- Two Worker operations, `credential-status` and `credential-forget`, each answer one status word:
+  `absent`, `sealed`, `held`, `needs-sign-in` or `offline`. No reply carries the key, the password
+  or the sealing key, and only the Worker's modules import the credential module.
+- The page's sign-out forgets the sync key in the Worker first, telling every Worker of the origin,
+  and then ends the web session, so the key is gone when the device is offline.
+- The API role now composes the seal secret it reads, so an owner's session gets the release when
+  the secret is configured; with none, the release stays off and the API still starts.
+- `PRIVACY.md` says what the web app keeps in the browser, and how signing out and clearing the
+  site's data remove it.
+- The core decides, in one rule, when the web client keeps a sync login, when it may send its key,
+  which answer is the sync server's refusal, when a refusal drops the key, and what a removal does
+  to the stored generation. A login in flight across a sign-out is discarded, a failure never drops
+  the key, and the generation never wraps (SPEC-363, ADR-374).
+- The web engine exports that rule to the browser's Worker, each export calling the core and
+  deciding nothing itself.
+- The service releases the web client's sealing key for one seal id to the owner's session alone,
+  with its own bound of 30 a minute, `Cache-Control: no-store`, the cross-site guard and a 256-byte
+  body limit. No seal secret, seal id or released key reaches a log line.
+- A TLA+ model of the key's life, with five witnesses, checks the rule's order against a login in
+  flight, a sign-out, two Workers, a refusal after a rotation, a restart and the session's end.
+- The per-review XP rule as its own crate, `deck-streak-xp` (SPEC-360, #635): the rule, its
+  study-event guard and its table from `economy.json` move out of progression unchanged, with no
+  file, network or clock access, so both clients can link the same rule later. Progression
+  translates an ingest review into it at its edge, the server's XP is held to the predecessor's
+  recorded cases as before, and a census refuses any other dependency, an I/O call or a dependent
+  the context map does not draw.
+- The engine core's six exempt writes (forget a card, set its due date, delete a preset, change a
+  note's type, delete a card, delete a note) run only behind an owner-gesture token (SPEC-345, part
+  2): each client's adapter has one exempt entry that builds the token from a tap, and the core
+  runs the write only when its request names the tapped card, note or preset alone. A containment
+  test refuses any other caller of the token, its entry or the engine's write names.
+- A containment layer for card scripts on iPhone and iPad (SPEC-361, ADR-372). A link's activation
+  inside a card is refused before the engine follows it, a card cannot activate an element it has
+  detached or rewrite its own document, the card's document carries a policy that admits only data:
+  media and inline style and script, and a long press offers no link preview and no menu item that
+  opens a link. The switch defaults off on iOS pending a measured containment layer.
+- Passkey sign-in on the web, the server side (SPEC-359, #627, part one of two): the owner mints a
+  single-use link code from a fresh Telegram session, redeems it in the browser, and registers a
+  passkey there; a later sign-in over the owner's own passkeys opens a session of its own. Every
+  doubtful assertion is refused by name (another origin, no user verification, a reused, expired
+  or foreign ceremony, a signature that does not verify, a counter that does not advance), the
+  counter advances only by a compare-and-swap, and removing a passkey from a fresh Telegram session
+  ends the sessions it opened. The routes answer `linking_off` until the deployment sets its public
+  origin.
+- The engine core decides a full sync's choice in one rule: it offers only the directions the
+  server's answer allows, counts what each would lose, and writes only after a backup that holds
+  every replaced row, a found snapshot and a re-check before an upload, and a re-read of the device
+  before a download.
+- The web study screens, part 2 (SPEC-350): the review shows each card's images and sounds from
+  the engine's own face, read from the origin's `deck-streak-media` directory no further than the
+  engine's limits, with the card frame still sealed; it plays the card's sounds in order on show
+  and on reveal, with a Replay control and the remote's replay; it speaks a card's text in the
+  card's language with a voice the learner picks per language; the app installs to the Home
+  Screen from a manifest and plain icons; and `/study/mapping` edits the remote's keys and
+  buttons per device, with a default per mode.
+- The iPhone and iPad app's shell (SPEC-347, part 2 of 2, #625): a project of its own beside the
+  harness's, whose one split view lists the decks of the engine's own collection by name and opens
+  an account sheet. Signing in sends the configured user, the configured endpoint and the typed
+  password through the engine's login call; the host key it answers with is kept in one Keychain
+  item on this device only, the password is kept nowhere, and signing out deletes the item. The
+  sync settings are build settings whose committed values are reserved placeholders. The client's
+  codec gains the login request and two decoders, pinned by literal bytes and by mutants. Two
+  censuses hold the app's tree: every Swift file under `ios/` is registered with a role, doors and
+  an exact count of its decisions, and the app's property lists, settings and credential store keep
+  the seam. The Apple job body's `harness` job gains the app's tests on both simulators and an
+  unsigned archive for a device, whose required-reason imports are checked against its privacy
+  manifest. ADR-358 D9 and D10 record the two choices this part adds.
+- The card-script switch on iPhone and iPad (SPEC-355, ADR-366): the switch defaults off on iOS
+  pending a measured containment layer. A card's own scripts run only when the switch is on and the
+  factory reads back every control from the view it built; any missing control yields the
+  scripts-off card view. One layer joins the seven: a document-start user script in every frame
+  removes the peer-connection globals before card code runs. The window refusal also answers script
+  dialogs, media capture and motion requests with a refusal. The planted suite gains a scripted card
+  for every script-driven channel, each proved against a reference that is not blind, and a
+  multicast DNS witness for lookups.
+- The skip day, part two of three (SPEC-083, #108): the take's write. On the owner's confirm,
+  DeckStreak converges a working copy of the collection by one normal sync, moves exactly the
+  previewed review cards the search still selects with the engine's own Set Due Date, and pushes
+  them by one more normal sync; a card that changed or joined since the preview is left alone and
+  named, and a card studied during the take is listed to the owner.
+- A full or one-way sync demand at either sync aborts the take writing nothing. A changed preview,
+  a set of more than 5,000 cards, an engine day or a zone that differs from the study day, and an
+  unpinned zone each refuse before any request.
+- Before any card changes, each moved card's prior state is recorded and a backup of the working
+  copy is written beside the private copy, owner-only, and kept only after its restore check
+  passes; one backup is kept, and an erase removes every backup and nothing else.
+- Counts before and after the reschedule: any count other than the review-log rows and the due
+  count that moves sets the class's stop and ends the take before its push. While the stop is set,
+  the preview says who set it and why, and a take refuses; a stop set during a take ends it before
+  its push.
+- A model of the take against another client, the stop's setters, the server and the start-up
+  settlement, with one witness per property, and mutation rows for the abort, the selection, the
+  prior state, the card guard, the digest, the working copy, the read-back, the backup's mode and
+  the stop's one row. Nothing in the service calls the take yet; the undo, the commands and the
+  wiring land in part three.
 - The TestFlight lane for the iPhone and iPad app (SPEC-352, #634): `testflight-internal.yml`, a
   dispatch on `dev`, and `testflight-release.yml`, a SemVer tag on `main`, each plan the build
   number and version on Linux, call the one Apple job body, and sign and upload the harness to
@@ -707,6 +1011,111 @@ process compiles the fragments into a new version section here.
 
 ### Changed
 
+- The card coverage test now holds every unobservable cell of the card-frame channels schematic, the
+  ones that name one engine as well as the ones that name every engine, equal to the planted suite's
+  declared table in both directions, over the engines the card configuration runs, and prints what
+  it examined (SPEC-399, ADR-413, #661).
+- Each mastery percentage now says in plain words what it measures: Road to C2 and the bot's progress reply carry the course sentence, and the law block's mastery line carries the law sentence, in every language the app ships (SPEC-408).
+- The internal lane's environment admits a push to `dev` or a dispatch on `dev`, from `dev` alone
+  and with no required reviewer, by a ruling the owner signs in `docs/rulings/` (#773, for #772).
+  It amends one line of the earlier internal-lane secrets ruling, which keeps its signed text. This
+  pull request adds only that ruling and changes no code, test, row or assertion.
+- The mutation campaign table's identity row is refilled whole from one package-scoped battery pair at dev: 338 mutants listed, 244 killed, 5 recorded equivalent, none unexplained and 89 unviable.
+- Both web mutation legs, the weekly battery's `web` job and `mutation-web`, are bounded at 100 minutes, the worst measured cost a mutant times the larger measured count, one and a half times, plus set-up and tail, rounded up to the five, held inside 100 to 120 by a band test; no StrykerJS setting changes and no mutant is dropped (SPEC-379, ADR-390; refs #693).
+- A ruling the owner signs in `docs/rulings/` (#745) has every review DeckStreak reads from the
+  owner's review log carry which client made it, and amends SPEC-334 R14's MET-01 sentence so the new
+  interface's learning outcomes may be split by client. This pull request adds only that ruling and
+  changes no code, test, row or assertion.
+- Scheduler changes (a preset's refit, a preset's desired retention, and the order in which cards
+  already due are shown) wait no dwell time between changes, by a ruling the owner signs in
+  `docs/rulings/` (#744). This pull request adds only that ruling and changes no code, test, row or
+  assertion.
+- The engine pin moves to a new commit of the fork that adds three patches for the browser: the
+  sync request is a synchronous request from the Worker, a sync on the browser starts no timer and
+  no thread, and the sync reads the collection's size from its database instead of the file
+  system. The native engine is unchanged (ADR-058's note).
+- Undo reverts only the review's own last answer, and asks first (SPEC-371, ADR-382). The engine's
+  Undo is an owner's exempt write on the answered card, and the engine core undoes only while the
+  review's recorded answer is still the front of the engine's undo queue, its review row is still
+  there, of that card, and has not synced; a later change, such as a bury, refuses it, and the
+  answer stands. An undo press asks for the offer and writes nothing: a dialog names the card as
+  one line of text, the answer and the state the card returns to, with focus on "Keep it", and
+  only its confirmation undoes. A synced answer is not offered, and a refused undo reads as
+  `undo-synced` or `not-undoable`. The native app's allow-list no longer runs Undo.
+- An upload's re-check compares the server copy's ids and one stamp read from the server's synced
+  rows (their greatest usn and the collection's schema stamp) in place of the collection's
+  modified stamp, which every download moved, so an unchanged server now lets the upload proceed
+  and another client's sync or full upload still returns it to the counts.
+- An upload's re-check compares the server copy's ids and one integer stamp, built from the greatest
+  row usn over every synced table and the collection's schema stamp, by a ruling the owner signs in
+  `docs/rulings/` (#726). It replaces the collection's modified stamp, which every download
+  restamps. This pull request adds only that ruling and changes no code, test, row or assertion.
+- Only the owner's press records a grade (SPEC-365, ADR-376). The engine core holds AnswerCard for
+  an owner's answer, a one-use value naming the card a press showed and the grade it pressed, and
+  records only a request that names that card and that grade; `run` refuses the call on both
+  transports. The web's `rate` and the native `Engine::answer` mint the answer from the card the
+  review showed and the next state its grade picks, and the page's queue-head `answer` operation
+  is gone. Every engine door records Again or Good: the wire refuses Hard and Easy by name, and the
+  native codec, the review screen and its answer bar offer the two grades, Again then Good.
+- The MCP server's grant is read or write (SPEC-369, ADR-380). The core credential grants read;
+  an optional write credential, `mcp-write-token`, grants write, and a tool that changes data
+  needs it. No such tool is served yet, so no client loses anything, and no new credential is
+  needed until one is.
+- The MCP server's roster no longer carries the predecessor's data-export or erase-everything
+  tool (SPEC-369, ADR-380). Export and erase stay on the bot's `/export` and `/delete` and the
+  host's `deckstreakd data` commands.
+- `PRIVACY.md` says what DeckStreak does with your data that could be called training (SPEC-368,
+  ADR-379): it does not train or fit a model on your data, it reads the scheduling parameters
+  your Anki app stores, and it sends an AI duty's inputs only as the context of that one run.
+- The web review offers two grades, Again and Good (SPEC-366, ADR-377). The answer side shows two
+  buttons, each with its interval. Keys 1 and 3, the d-pad's left and right, and the stick's
+  horizontal axis grade a card; keys 2 and 4, the d-pad's up and down and the stick's vertical axis
+  fire nothing. A stored mapping that names Hard or Easy loads without those pairs, and the page
+  parses only the ratings 1 and 3.
+- The release job's bound is 100 minutes, one and a half times its slowest measured run, rounded up to the ten, held by a band test; no test leaves the step (SPEC-367, ADR-378; refs #692).
+- A ruling the owner signs in `docs/rulings/` (#708) admits one declared write class, live edit, which
+  may change a reviewed note's type and add fields to a note type only while the owner's live-edit
+  preference is on. Every other never-list entry stays bound, a one-way sync stays the owner's own
+  tap, and nothing builds or calls live edit before the ruling lands. This pull request adds only
+  that ruling and its fragment, and changes no code, test, row or gate.
+- The web app's tests gain one development dependency, `fake-indexeddb`, an in-memory browser
+  database for the credential store's tests.
+- Each card factory row is gated by its own load wait, by a ruling the owner signs in
+  `docs/rulings/` (#704). The ruling also admits one more fix round beyond the round budget and,
+  by name, one test-only keeper view under the existing warm-up bound. This pull request adds only
+  that ruling and changes no test, row, wait or assertion; nothing is skipped or deferred.
+- The mutation gate's per-mutant timeout is 2300 seconds, by the owner's signed ruling in
+  `docs/rulings/OWNER-RULING-2026-10-06-mutation-timeout-2300.md`, at the ten places that hold it
+  equal. The sizer's census term is 1521 s and its baseline 2141 s, from one measured run, so a
+  release's progression legs are judged instead of reading VOID. `--build-timeout`, each leg's
+  six-hour job limit and the shard bound are unchanged, and no mutant is skipped or deferred (SPEC-362,
+  ADR-373; refs #692).
+- The mutation gate's per-mutant timeout may rise from 2200 to 2300 seconds, by a ruling the owner
+  signs in `docs/rulings/` (#700). This pull request adds only that ruling and changes no workflow;
+  no mutant, leg or row is skipped, capped or deferred. The raise itself lands with SPEC-362.
+- A release pull request's Rust mutants are judged in one run, as every pull request's are: each
+  `mutation-rust` leg runs for up to six hours and is sized within half of that, and the legs never
+  outnumber what the run can hold beside its other jobs. A range that needs more is refused whole,
+  by name, and every plan prints `legs N of ceiling C` (SPEC-362, ADR-373).
+- The per-mutant timeout is 2200 s, covering the re-measured progression census with its 1.5
+  margin, by the owner's signed ruling; the baseline and five package prices are re-measured.
+- The verdict holds the plan's legs to the tool's own listing, counts every planned leg, and reads
+  a leg VOID when its slowest baseline test, with the margin, outgrows the per-mutant timeout.
+- A mutant's tests stop at their first failure (nextest's `mutants` profile); a mutant no test
+  kills still runs every test.
+- The scheduled battery sizes the whole tree from its listing at its own ceiling, no longer at a
+  fixed 32 legs. No mutant, leg or row is skipped, capped or deferred.
+- The Python mutation matrix is sized to the hosted job: at most 20 listed mutants a shard, clamped
+  to 1 to 32 shards, so a full shard fits its 60-minute job; no mutant is dropped (SPEC-362 R14,
+  ADR-373).
+- A tap on a link inside a card on iPhone or iPad no longer opens it, with card scripts on or off,
+  and a tap on an inline element inside a summary or a label no longer toggles it.
+- The mutation gate's per-mutant timeout may rise from 1200 to 2200 seconds, by a ruling the owner
+  signs in `docs/rulings/` (#696). This pull request adds only that ruling and changes no workflow;
+  no mutant, leg or row is skipped, capped or deferred. The raise itself lands with SPEC-362.
+- The internal TestFlight lane also starts on a push to `dev` that changes one of the app's inputs,
+  beside its dispatch. A dispatch and a push wait in groups of their own, no build in progress is
+  cancelled, and a newer push replaces the push build still waiting (SPEC-352 R22, ADR-363 D2).
 - The upload lane for iPhone and iPad builds keeps its credential as per-lane environment secrets,
   by a ruling the owner signs (`docs/rulings/`). Six neutral role names may appear only in the
   lane's two workflow files and the hardening test's admission table, never beside a value. No
@@ -896,6 +1305,23 @@ process compiles the fragments into a new version section here.
 
 ### Fixed
 
+- A card's image-set candidates (`srcset` and `picture source`) are held in every browser engine, Firefox included: the card document now inherits its content policy from a host document at its creation, so a candidate the engine fetches ahead of the document's own policy is refused.
+- The formal check's slot setting is stated once, in `config/formal.json`, and a test now holds
+  that file to the reading the formal checker takes: a document that leaves out a slot key, or
+  holds a value past the checker's range, fails the settings test instead of being read as a
+  default (SPEC-404, ADR-418, #703).
+- The web card frame's strip now removes the `srcset` attribute from every element that carries
+  one, keeping each element and its `src`, and its re-parse check refuses a card in which a `srcset`
+  comes back. The image-set forms are planted as their own `srcset` card in the card suite
+  (SPEC-402, ADR-416, #771).
+- A release now carries the web engine's module and its bindings at `web/engine/`, built as CI builds them and held to the size budget before the release is drafted, so the published app's Worker finds its engine at `/engine/` (#685).
+- The Caddy install and removal now tell Caddy to read the site file as a Caddyfile when they reload
+  it, the restoring reload after a failed one included, so a Caddyfile kept under any file name is
+  read as a Caddyfile and not as JSON (SPEC-127 A40, ADR-127, #674).
+- The review pairs test no longer fails for ten minutes before the collection's day rollover
+  (SPEC-348 R1, A2). The engine reads a learning interval that would cross the rollover in days,
+  so a new card's 10-minute interval read `1d` then. The test now pins the synthetic collection's
+  rollover to the hour furthest from the test's read and still asserts the three intervals exactly.
 - The Caddy install serves the site whether the Caddyfile is in the Caddy directory or set apart,
   and checks its candidate where the reload reads the Caddyfile.
 - Every CI job that proves mutation rows now runs `cargo fetch --locked` after its cache restore and
@@ -1157,6 +1583,20 @@ process compiles the fragments into a new version section here.
 
 ### Security
 
+- The page asks the server to validate a Telegram launch before it loads Telegram's script, and a launch the server refuses or does not answer loads none (SPEC-403, ADR-417). The start hook sends the fragment's launch data to a new `POST /api/launch`, which reuses the session's validation and bounds and opens no session (#775).
+- The page loads Telegram's Mini App script only when Telegram launched it (SPEC-400, ADR-414). Outside a launch no route asks for the script and the page adds a second policy that refuses Telegram's origin for the page's life; on a launch the start hook adds the script with no referrer to Telegram and waits for it before the first navigation (#706).
+- The API's and the MCP server's units now allow loopback peers alone and deny every other address,
+  as the sync server's unit already did, and a census holds the lists of every service that listens
+  on loopback and every listen setting in the example configuration (SPEC-395, ADR-409, #679).
+- The release is off, answering 404 `sync_seal_off`, while the service holds no seal secret. A seal
+  secret under 32 bytes refuses start by its credential role, `sync-seal-secret`, and an absent one
+  turns the release off rather than refusing start. The reader is not yet composed into the running
+  API, so the release stays off until a later change composes it.
+- The Mini App's development tools no longer resolve `katex` or `source-map-js` releases that carry
+  GHSA-238p-pmpm-9mq7 and GHSA-68fv-2mgg-jv7q (#687). `source-map-js` moved in the lockfile alone,
+  and one scoped pnpm override moves `katex` under Mermaid 11, because no update inside Mermaid's
+  range reaches a fixed release (ADR-005). Neither package reaches the built Mini App, whose output
+  is unchanged.
 - Every service that does not use the host's identity is denied the host's identity endpoint, and
   the services that use it are a closed list a test holds.
 - The edge serves the sync route under its one spelling and answers every other spelling of it
@@ -1173,6 +1613,8 @@ process compiles the fragments into a new version section here.
 - The formal check's trust root holds the owner's signing key, so a change the ratchet refuses as a weakening can be admitted only by a ruling the owner signs; the owner's ruling names the key by its fingerprint.
 
 ## [0.2.0] - 2026-09-28
+
+Never tagged or released: these changes ship within 0.3.0.
 
 ### Added
 
@@ -1691,5 +2133,5 @@ process compiles the fragments into a new version section here.
 
 [Unreleased]: https://github.com/RexRenatus/deck-streak/compare/v0.3.0...dev
 [0.3.0]: https://github.com/RexRenatus/deck-streak/releases/tag/v0.3.0
-[0.2.0]: https://github.com/RexRenatus/deck-streak/releases/tag/v0.2.0
+[0.2.0]: https://github.com/RexRenatus/deck-streak/releases/tag/v0.3.0
 [0.1.0]: https://github.com/RexRenatus/deck-streak/releases/tag/v0.1.0

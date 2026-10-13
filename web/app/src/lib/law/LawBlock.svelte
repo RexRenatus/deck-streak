@@ -45,7 +45,10 @@
   {#if view.shown}
     <ul class="mt-2 space-y-1" aria-label={m.law_title()}>
       {#each view.lines as key (key)}
-        <li data-line={key}>{line(key)}</li>
+        <li data-line={key}>
+          {line(key)}
+          {#if key === 'mastery'}<span class="block text-sm" data-mastery-about="law">{m.law_mastery_about()}</span>{/if}
+        </li>
       {/each}
     </ul>
   {:else}

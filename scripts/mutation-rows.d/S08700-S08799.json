@@ -28,8 +28,8 @@
       [
         "S08704-A-BYTE-READER-IS-NEVER-A-KILLER",
         "scripts/mutation_python.py",
-        "lambda: self.tests(entry, record[\"byte_readers\"], self.args.failfast, bound)",
-        "lambda: self.tests(entry, [], self.args.failfast, bound)",
+        "        readers, bound, failfast = record[\"byte_readers\"], record[\"bound\"], self.args.failfast",
+        "        readers, bound, failfast = [], record[\"bound\"], self.args.failfast",
         "a test that fails on the sentinel reads the file's own bytes, is named, and is left out of every mutant's run, so it is never a killer (SPEC-087 R6, A5)",
         "test_mutation_python.TheRunnerJudgesEachMutant.test_a_test_that_fails_on_the_sentinel_is_named_and_never_a_killer"
       ],
