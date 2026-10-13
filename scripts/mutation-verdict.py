@@ -141,6 +141,11 @@ PYTHON_CONTROL_SECONDS: dict[str, int] = {
     "scripts/memory_scope.py": 39,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
     "scripts/mutation-verdict.py": 224,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
 }
+#: Each Python file's scoped price, whole seconds of its control, its traced sentinel and its
+#: mean scoped mutant, by repository-relative path, read only when the legs trace (SPEC-421 R6).
+#: Every line is `prices --scoped` output over one dispatched price run's records, committed
+#: under `scripts/tests/fixtures/`, and names the run, attempt and job its figures came from.
+PYTHON_SCOPED_SECONDS: dict[str, tuple[int, int, int]] = {}
 #: The weekly battery's Python shards, each `run --all --shard k/16` (R14).
 PYTHON_WEEKLY_SHARDS = 16
 #: The weekly dispatch's `package` value that sweeps the Python population alone (R14).
@@ -1040,7 +1045,20 @@ def python_shards(listing: list[dict]) -> dict | None:
     }
 
 
-def python_unpriced_legs(listing: list[dict], prices: dict[str, int]) -> int:
+def python_price(
+    path: str, prices: dict[str, int], scoped: dict[str, tuple[int, int, int]] | None
+) -> tuple[int, int, int] | None:
+    """A listed file's (control, sentinel, mutant) price, or None when it has none and keeps the
+    count rule (SPEC-421 R9)."""
+    price = prices.get(path)
+    return (price, price, price) if price else None
+
+
+def python_unpriced_legs(
+    listing: list[dict],
+    prices: dict[str, int],
+    scoped: dict[str, tuple[int, int, int]] | None = None,
+) -> int:
     """The legs a listing's unpriced mutants take at PYTHON_SHARD_MUTANTS a leg, SPEC-415's count
     rule, and none when every listed file is priced (SPEC-418 R3 (f))."""
     unpriced = sum(1 for entry in listing if not prices.get(str(entry.get("file"))))
@@ -1068,7 +1086,11 @@ def python_deal(
     return loads, dealt
 
 
-def python_by_cost(listing: list[dict], prices: dict[str, int]) -> dict | str | None:
+def python_by_cost(
+    listing: list[dict],
+    prices: dict[str, int],
+    scoped: dict[str, tuple[int, int, int]] | None = None,
+) -> dict | str | None:
     """The Python matrix dealt by each listed file's price (SPEC-418 R3): None when no listed
     file is priced, so the count rule stands; a refusal by name when a priced file's one mutant
     cannot fit a leg, or the legs exceed the run's Python share; else the fewest priced legs
@@ -1160,7 +1182,7 @@ def shards(
             print(f"mutation: shards: VOID {python_listed} holds no Python mutant listing")
             return EXIT_VOID
         python = python_shards(listing)
-        deal = python_by_cost(listing, PYTHON_CONTROL_SECONDS)
+        deal = python_by_cost(listing, PYTHON_CONTROL_SECONDS, None)
         if isinstance(deal, str):
             print(deal)
             return EXIT_FAIL
@@ -3320,6 +3342,38 @@ def table_web(root, reports, records, tally, fail, void) -> int:
 # --------------------------------------------------------------------------- the command line
 
 
+#: The record kinds a scoped price run writes (SPEC-421 R5, R7); any other line is torn.
+SCOPED_KINDS = ("control", "uncovered", "sentinel", "mutant")
+
+
+def scoped_prices(root: pathlib.Path, directory: str) -> int:
+    """Each population file's scoped price from a price run's `costs.jsonl` records under
+    `directory`, printed as `PYTHON_SCOPED_SECONDS` lines (SPEC-421 R7, R8)."""
+    files = sorted(pathlib.Path(directory).rglob("costs.jsonl"))
+    found: dict[str, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
+    records = torn = 0
+    for path in files:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except ValueError:
+                record = None
+            if not (
+                isinstance(record, dict)
+                and record.get("kind") in SCOPED_KINDS
+                and isinstance(record.get("path"), str)
+                and isinstance(record.get("seconds"), (int, float))
+            ):
+                torn += 1
+                continue
+            records += 1
+            found[record["path"]][record["kind"]].append(record)
+    print(f"mutation: prices: examined {records} record(s) in {len(files)} file(s); torn {torn}")
+    return EXIT_OK
+
+
 def prices(directory: str) -> int:
     """Each Python file's price from the `costs.jsonl` records under `directory` (SPEC-418 R7):
     the dearer of its largest control seconds and its mean mutant seconds, rounded up and at least
@@ -3413,6 +3467,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--rust-leg")
     parser.add_argument("--rows-leg")
     parser.add_argument("--costs")
+    parser.add_argument("--scoped", action="store_true")
     args = parser.parse_args(argv)
     root = pathlib.Path(args.root).resolve()
     if args.verb == "plan":
@@ -3465,7 +3520,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.verb == "prices":
         if not args.costs:
             parser.error("prices needs --costs")
-        return prices(args.costs)
+        return scoped_prices(root, args.costs) if args.scoped else prices(args.costs)
     return exclusions(root)
 
 

@@ -356,3 +356,22 @@ line of the delivery's own run.
 SPEC-420; ADR-432 and SPEC-418 (the cost deal); ADR-429 and SPEC-415 (the count rule and its
 refusal); SPEC-362 R3 (the run's job budget). Issue #829 is this delivery's; #825 tracks the Python
 legs' fit; #822 is the release.
+
+## Amendment: the second, scoped figure is decided (SPEC-421, ADR-435)
+
+Insert-only; every earlier byte is kept. D2 above rejected "a second, scoped figure per mutant
+now", because no scoped run had been recorded and a projected figure is a hand figure. The
+Consequences above left the scoped speed-up uncounted until a scoped run is recorded and a second
+figure is decided. ADR-435 decides that figure:
+- a dispatched price run, `.github/workflows/mutation-prices.yml`, measures it on the runner class
+  of the pull request's Python legs; it is never projected;
+- it is a triple per file, (control, traced sentinel, mean scoped mutant), in
+  `PYTHON_SCOPED_SECONDS`, which `prices --scoped` prints from the run's committed records, each
+  line naming its run, attempt and job;
+- the plan reads it only when its legs run scoped, and `PYTHON_CONTROL_SECONDS` stays
+  byte-identical as the fallback.
+
+D2's reason is kept: ADR-435 fills the table only from a completed run's records, never from a
+projection. The figure of about 301 legs above replayed a local measurement's scoped prices.
+ADR-435 D5's projection of 268 replays one file's recorded legs. Neither is the release's figure;
+that is the plan's own line after the land. D1 to D7 and the rest of this ADR are unchanged.

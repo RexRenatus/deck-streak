@@ -2125,3 +2125,382 @@ class ThePythonShareIsOneCappedValue(unittest.TestCase):
             "legs: split the change, since a run is never capped",
         )
         examined("dealt legs", dealt["shards"])
+
+
+#: The fixtures directory a dispatched price run's records are committed under (SPEC-421 R12).
+FIXTURES = VERDICT.parent / "tests" / "fixtures"
+#: The Python population map, whose files the scoped prices verb prices or names unpriced.
+POPULATION = VERDICT.parent / "mutation-python.json"
+#: Where each setup record of the scoped verb's fixtures says it ran.
+WHERE = {"shard": None, "run": "88", "attempt": "1", "job": "501"}
+
+
+def scoped_table_lines():
+    """The lines of `mutation-verdict.py`'s `PYTHON_SCOPED_SECONDS` between its opening line and
+    its closing brace, or none while the table is the one-line empty dict."""
+    lines = VERDICT.read_text(encoding="utf-8").splitlines()
+    opening = "PYTHON_SCOPED_SECONDS: dict[str, tuple[int, int, int]] = {"
+    if opening not in lines:
+        return []
+    start = lines.index(opening) + 1
+    return lines[start : lines.index("}", start)]
+
+
+def scoped_record(kind, path, seconds, **fields):
+    """One cost record as a price leg writes it: a setup record names where it ran."""
+    where = {} if kind == "mutant" else WHERE
+    return {"kind": kind, "path": path, "seconds": seconds, **where, **fields}
+
+
+def scoped_mutant(path, seconds, **fields):
+    """One scoped mutant's cost record, as `run --file --scoped` writes it."""
+    note = {"name": f"{path}:2:5: m", "outcome": "killed", "scope": "lines", "tests": 1}
+    return scoped_record("mutant", path, seconds, **{**note, **fields})
+
+
+def scoped_prices(legs):
+    """`prices --scoped --costs` over one `mutation-prices-<leg>/costs.jsonl` per leg, each line a
+    record or, when text, written as it stands: (the exit, the printed text with the costs
+    directory spelled `<costs>`)."""
+    program = verdict_program()
+    with tempfile.TemporaryDirectory() as scratch:
+        root = Path(scratch)
+        for leg, records in legs.items():
+            directory = root / f"mutation-prices-{leg}"
+            directory.mkdir()
+            text = "".join((r if isinstance(r, str) else json.dumps(r)) + "\n" for r in records)
+            (directory / "costs.jsonl").write_text(text, encoding="utf-8")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = program.main(["prices", "--scoped", "--costs", str(root)])
+    return code, out.getvalue().replace(str(root), "<costs>")
+
+
+def plan_shards(entries, whole, scoped, selections=frozenset({"plan"})):
+    """`shards` over a plan whose Rust class does not apply and a Python listing of `entries`,
+    with the whole table, the scoped table and the runner's `SCOPED_SELECTIONS` patched to each
+    test's literals: (the exit, the printed text, the plan's python matrix, the step output)."""
+    program = verdict_program()
+    with tempfile.TemporaryDirectory() as scratch:
+        root = Path(scratch)
+        listing = root / "python-listed.json"
+        listing.write_text(
+            json.dumps(
+                {"schema": program.PYTHON_SCHEMA, "listed": len(entries), "mutants": entries}
+            ),
+            encoding="utf-8",
+        )
+        plan, sink = root / "plan.json", root / "github-output"
+        plan.write_text(json.dumps({"classes": {"rust": {"applies": False}}}), encoding="utf-8")
+        sink.write_text("", encoding="utf-8")
+        out = io.StringIO()
+        with (
+            mock.patch.object(program, "PYTHON_MAX_SHARDS", 32),
+            mock.patch.dict(program.LEG_CEILING, {"ci": 193}),
+            mock.patch.dict(program.PYTHON_CONTROL_SECONDS, whole, clear=True),
+            mock.patch.dict(program.PYTHON_SCOPED_SECONDS, scoped, clear=True),
+            mock.patch.object(program.mutation_python, "SCOPED_SELECTIONS", selections),
+            mock.patch.dict(os.environ, {"GITHUB_OUTPUT": str(sink)}),
+            contextlib.redirect_stdout(out),
+        ):
+            code = program.main(["shards", "--plan", str(plan), "--python-listed", str(listing)])
+        written = json.loads(plan.read_text(encoding="utf-8"))
+        return code, out.getvalue(), written.get("python"), sink.read_text(encoding="utf-8")
+
+
+class AScopedLegIsPricedByItsTriple(unittest.TestCase):
+    """SPEC-421 R6 to R10 (A6 to A14): the plan prices a file by its scoped triple exactly when the
+    legs trace, else by its whole price thrice, else by the count rule; a triple deals by its setup
+    and its mutant figure; an empty or absent scoped table leaves every whole deal and line byte
+    for byte; and `prices --scoped` prints each file's triple from its records, or reads VOID. Every
+    listing, price and record is a literal, and each docstring spells its arithmetic."""
+
+    def void(self, records, reason):
+        """`prices --scoped` over one leg of `records` reads VOID by `reason`, exits 1 and prints
+        no table line, only the VOID line and the examined line."""
+        code, out = scoped_prices({0: records})
+        examined_line = (
+            f"mutation: prices: examined {len(records)} record(s) in 1 file(s); torn 0\n"
+        )
+        self.assertEqual((code, out), (1, f"mutation: prices: VOID {reason}\n" + examined_line))
+
+    def test_the_plan_prices_scoped_exactly_when_the_legs_trace(self):
+        """A6 (R10): a.py at 100 s whole and (100, 100, 20) scoped. Scoped, setup is 200 s and a
+        leg holds (1800 - 200) // 20 = 80, so its 30 mutants are one leg of 200 + 30 x 20 = 800 s;
+        whole, it holds 16 a leg, two legs of (2 + 15) x 100 = 1700 s. The plan prices scoped when
+        `plan` is among the runner's `SCOPED_SELECTIONS`, and only then."""
+        entries = priced("a.py", 30)
+        scoped = [(names_of(entries), 800)]
+        whole = [(names_of(entries[:15]), 1700), (names_of(entries[15:]), 1700)]
+        cases = (
+            (frozenset({"plan"}), scoped),
+            (frozenset({"plan", "all"}), scoped),
+            (frozenset(), whole),
+            (frozenset({"all"}), whole),
+        )
+        for selections, legs in examined("selections", cases):
+            with self.subTest(selections=sorted(selections)):
+                code, out, python, _sink = plan_shards(
+                    entries, {"a.py": 100}, {"a.py": (100, 100, 20)}, selections
+                )
+                self.assertEqual(code, 0, out)
+                self.assertEqual(
+                    [(shard["mutants"], shard["projected_seconds"]) for shard in python["shards"]],
+                    legs,
+                )
+
+    def test_the_scoped_prices_verb_prints_one_triple_per_file(self):
+        """A7 (R7): create-issues.py's controls of 2.2 s and 3.4 s, sentinels of 5.5 s and 7.25 s
+        and mutants of 2 s and 3.5 s read (4, 8, 3): the largest control and sentinel and the mean
+        mutant, 2.75 s, each rounded up. dynamic-imports-check.py's uncovered record reads (1, 1,
+        1). A path outside the population is examined and prints no line; audit-web-verdict.py,
+        with a control alone, is unpriced for its sentinel, and every other population file for
+        its control. A torn line is counted and never read."""
+        issues, imports = "scripts/create-issues.py", "scripts/dynamic-imports-check.py"
+        audit = "scripts/audit-web-verdict.py"
+        legs = {
+            0: [
+                scoped_record("control", issues, 2.2, ran=4, failures=0, bound=60),
+                scoped_record("control", issues, 3.4, ran=4, failures=0, bound=60),
+                scoped_record("sentinel", issues, 5.5),
+                scoped_record("sentinel", issues, 7.25),
+                scoped_mutant(issues, 2.0),
+                scoped_mutant(issues, 3.5),
+                '{"kind": "bogus", "path": "t.py", "seconds": 9}',
+            ],
+            1: [scoped_record("uncovered", imports, 0, job="502")],
+            2: [
+                scoped_record("control", "elsewhere.py", 9, ran=1, failures=0, bound=60),
+                scoped_record("control", audit, 1.5, ran=2, failures=0, bound=60),
+            ],
+        }
+        code, out = scoped_prices(legs)
+        population = sorted(json.loads(POPULATION.read_text(encoding="utf-8")))
+        reasons = {audit: "no sentinel record"}
+        unpriced = "".join(
+            f"mutation: prices: {path} unpriced: {reasons.get(path, 'no control record')}\n"
+            for path in population
+            if path not in (issues, imports)
+        )
+        self.assertEqual(
+            out,
+            f'    "{issues}": (4, 8, 3),  # run 88 attempt 1 job 501: 2 scoped mutant record(s)\n'
+            f'    "{imports}": (1, 1, 1),  # run 88 attempt 1 job 502: 0 scoped mutant record(s)\n'
+            + unpriced
+            + "mutation: prices: examined 9 record(s) in 3 file(s); torn 1\n",
+        )
+        self.assertEqual(code, 0)
+        examined("population files", population)
+
+    def test_the_scoped_prices_verb_is_void_over_no_record(self):
+        """A8 (R8): a leg whose one line is torn holds no record."""
+        code, out = scoped_prices({0: ['{"kind": "bogus", "path": "t.py", "seconds": 9}']})
+        self.assertEqual(
+            (code, out),
+            (
+                1,
+                "mutation: prices: VOID <costs> holds no cost record\n"
+                "mutation: prices: examined 0 record(s) in 1 file(s); torn 1\n",
+            ),
+        )
+
+    def test_the_scoped_prices_verb_is_void_on_a_record_with_no_run(self):
+        """A8 (R8): an uncovered record whose run is None, its job and attempt named."""
+        self.void(
+            [scoped_record("uncovered", "scripts/create-issues.py", 0, run=None)],
+            "scripts/create-issues.py: its uncovered record names no run",
+        )
+
+    def test_the_scoped_prices_verb_is_void_on_a_record_with_no_job(self):
+        """A8 (R8): a control record that names no job, its run and attempt named."""
+        record = scoped_record("control", "scripts/create-issues.py", 2, ran=1, failures=0)
+        del record["job"]
+        self.void([record], "scripts/create-issues.py: its control record names no job")
+
+    def test_the_scoped_prices_verb_is_void_on_a_whole_run_mutant_record(self):
+        """A8 (R8): a mutant record whose `why` is `all` is a whole run's, beside a whole setup."""
+        path = "scripts/create-issues.py"
+        self.void(
+            [
+                scoped_record("control", path, 2, ran=1, failures=0, bound=60),
+                scoped_record("sentinel", path, 2),
+                scoped_mutant(path, 3, scope="whole", why="all"),
+            ],
+            f"{path}: mutant {path}:2:5: m ran the whole suite, a whole run's record",
+        )
+
+    def test_the_scoped_prices_verb_is_void_on_one_path_across_two_jobs(self):
+        """A8 (R8): one path's control names job 501 and its sentinel job 502."""
+        path = "scripts/create-issues.py"
+        self.void(
+            [
+                scoped_record("control", path, 2, ran=1, failures=0, bound=60),
+                scoped_record("sentinel", path, 2, job="502"),
+            ],
+            f"{path}: its records name 2 jobs",
+        )
+
+    def test_the_scoped_prices_verb_is_void_on_one_path_across_two_attempts(self):
+        """A8 (R8): one path's control names attempt 1 and its sentinel attempt 2."""
+        path = "scripts/create-issues.py"
+        self.void(
+            [
+                scoped_record("control", path, 2, ran=1, failures=0, bound=60),
+                scoped_record("sentinel", path, 2, attempt="2"),
+            ],
+            f"{path}: its records name 2 attempts",
+        )
+
+    def test_the_scoped_table_is_the_verbs_output_over_the_recorded_price_run(self):
+        """A9 (R6, R12): one price run's records are committed under the fixtures, the verb's
+        figure lines over them are the table's lines byte for byte, each naming its run, attempt
+        and job, and the table holds the triples they spell."""
+        runs = sorted(FIXTURES.glob("mutation-scoped-prices-*"))
+        self.assertEqual(len(runs), 1, runs)
+        program = verdict_program()
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = program.main(["prices", "--scoped", "--costs", str(runs[0])])
+        self.assertEqual(code, 0, out.getvalue())
+        figures = [line for line in out.getvalue().splitlines() if line.startswith('    "')]
+        self.assertEqual(figures, scoped_table_lines())
+        named = re.compile(
+            r'^    "([^"]+)": \((\d+), (\d+), (\d+)\),  # run \d+ attempt \d+ job \d+: '
+            r"\d+ scoped mutant record\(s\)$"
+        )
+        self.assertEqual([line for line in figures if not named.match(line)], [])
+        spelled = {
+            found[1]: (int(found[2]), int(found[3]), int(found[4]))
+            for found in (named.match(line) for line in figures)
+        }
+        self.assertEqual(program.PYTHON_SCOPED_SECONDS, spelled)
+        examined("scoped table lines", figures)
+
+    def test_a_triple_deals_by_its_setup_and_its_mutant_figure(self):
+        """A10 (R9): at (224, 224, 60) setup is 448 s and a leg holds (1800 - 448) // 60 = 22
+        mutants, so v.py's 44 are two legs of 448 + 22 x 60 = 1768 s; dividing by the control
+        would hold six. At (900, 900, 1) setup is the whole bound, k is 0, and the refusal reads
+        the control, 900 s, and setup + each, 1801 s."""
+        program = verdict_program()
+        listing = priced("v.py", 44)
+        self.assertEqual(
+            program.python_by_cost(listing, {}, {"v.py": (224, 224, 60)}),
+            {
+                "count": 2,
+                "shards": [
+                    {"shard": 0, "mutants": names_of(listing[:22]), "projected_seconds": 1768},
+                    {"shard": 1, "mutants": names_of(listing[22:]), "projected_seconds": 1768},
+                ],
+            },
+        )
+        self.assertEqual(
+            program.python_by_cost(listing, {}, {"v.py": (900, 900, 1)}),
+            "mutation: shards: REFUSED: v.py's control is priced at 900 s, so a leg holding one "
+            "of its mutants projects 1801 s, past its 1800 s bound",
+        )
+        examined("dealt mutants", listing)
+
+    def test_a_file_is_priced_scoped_then_whole_then_by_the_count_rule(self):
+        """A11 (R9): a file the scoped table holds reads its triple even beside a whole price; a
+        file only the whole table holds reads its price thrice, with or without a scoped table;
+        a file neither holds reads None, and the count rule deals it."""
+        price = verdict_program().python_price
+        cases = (
+            (("a.py", {"a.py": 100}, {"a.py": (5, 6, 7)}), (5, 6, 7)),
+            (("a.py", {}, {"a.py": (5, 6, 7)}), (5, 6, 7)),
+            (("a.py", {"a.py": 100}, {"b.py": (5, 6, 7)}), (100, 100, 100)),
+            (("a.py", {"a.py": 100}, {}), (100, 100, 100)),
+            (("a.py", {"a.py": 100}, None), (100, 100, 100)),
+            (("b.py", {"a.py": 100}, {"a.py": (5, 6, 7)}), None),
+            (("b.py", {}, None), None),
+        )
+        for arguments, expected in examined("price lookups", cases):
+            with self.subTest(arguments=arguments):
+                self.assertEqual(price(*arguments), expected)
+
+    def test_an_empty_or_absent_scoped_table_leaves_every_whole_deal_byte_identical(self):
+        """A12 (R9, R10): with no scoped table, None or an empty one, a.py at 100 s and b.py at
+        10 s deal as SPEC-418's A1 pins them, three legs of 1700, 1700 and 520 s; d.py at 601 s
+        refuses as SPEC-418's A2 pins it, 3 x 601 = 1803 s; u.py's 41 unpriced mutants take three
+        legs; and `shards` prints SPEC-418's A5 lines and no scoped line."""
+        program = verdict_program()
+        a, b = priced("a.py", 30), priced("b.py", 50)
+        dealt = {
+            "count": 3,
+            "shards": [
+                {"shard": 0, "mutants": names_of(a[:15]), "projected_seconds": 1700},
+                {"shard": 1, "mutants": names_of(a[15:]), "projected_seconds": 1700},
+                {"shard": 2, "mutants": names_of(b), "projected_seconds": 520},
+            ],
+        }
+        refusal = (
+            "mutation: shards: REFUSED: d.py's control is priced at 601 s, so a leg holding one "
+            "of its mutants projects 1803 s, past its 1800 s bound"
+        )
+        tables = (("absent", ()), ("None", (None,)), ("empty", ({},)))
+        for label, scoped in examined("scoped tables", tables):
+            with self.subTest(label):
+                prices = {"a.py": 100, "b.py": 10}
+                self.assertEqual(program.python_by_cost(a + b, prices, *scoped), dealt)
+                self.assertEqual(
+                    program.python_by_cost(priced("d.py", 1), {"d.py": 601}, *scoped), refusal
+                )
+                self.assertEqual(
+                    program.python_unpriced_legs(a + priced("u.py", 41), prices, *scoped), 3
+                )
+        code, out, _python, _sink = plan_shards(priced("a.py", 30), {"a.py": 100}, {})
+        self.assertEqual(
+            (code, out),
+            (
+                0,
+                "mutation: shards: 2 python shard(s) for 30 listed mutant(s); python legs 2 of "
+                "ceiling 32\n"
+                "mutation: shards: python legs dealt by cost: 2 priced leg(s), the slowest at 1700 "
+                "s of its 1800 s bound; 0 unpriced leg(s) of at most 20\n"
+                "mutation: shards: 1 shard(s) for 0 listed mutant(s), projected at 0 s serially; "
+                "the slowest at 2141 s of its 10800 s bound; legs 1 of ceiling 193\n"
+                "mutation: shards: run legs 3 of 225: python 2 of 32, rust 1 of 193; projected 93 "
+                "runner-minute(s) of 35700\n",
+            ),
+        )
+
+    def test_mixed_prices_keep_the_partition_and_the_count(self):
+        """A13 (R9): s.py priced scoped, w.py whole and u.py unpriced: every listed mutant is in
+        exactly one leg, and the plan's leg count is its matrix's, in the plan and in the step
+        output."""
+        listing = priced("s.py", 40) + priced("w.py", 30) + priced("u.py", 25)
+        code, out, python, sink = plan_shards(
+            listing, {"w.py": 100, "s.py": 300}, {"s.py": (50, 50, 30)}
+        )
+        self.assertEqual(code, 0, out)
+        dealt = [name for shard in python["shards"] for name in shard["mutants"]]
+        self.assertEqual(sorted(dealt), sorted(names_of(listing)))
+        self.assertEqual(len(dealt), len(set(dealt)))
+        count = python["count"]
+        self.assertEqual([shard["shard"] for shard in python["shards"]], list(range(count)))
+        self.assertIn(f"python_shards={count}\n", sink)
+        self.assertIn(f"python_matrix={json.dumps(list(range(count)))}\n", sink)
+        examined("dealt mutants", dealt)
+
+    def test_the_plan_prints_how_many_files_it_priced_scoped(self):
+        """A14 (R10): s.py and t.py are priced scoped, s.py though it has a whole price too, w.py
+        whole and u.py unpriced, so the scoped line follows the cost line with 2, 1 and 1; with an
+        empty scoped table, or one holding no listed file, no scoped line prints."""
+        listing = priced("s.py", 4) + priced("t.py", 3) + priced("w.py", 3) + priced("u.py", 2)
+        whole = {"w.py": 100, "s.py": 100}
+        code, out, _python, _sink = plan_shards(
+            listing, whole, {"s.py": (50, 50, 30), "t.py": (40, 40, 20)}
+        )
+        lines = out.splitlines()
+        cost = [i for i, line in enumerate(lines) if "python legs dealt by cost" in line]
+        self.assertEqual((code, len(cost)), (0, 1), out)
+        self.assertEqual(
+            lines[cost[0] + 1],
+            "mutation: shards: python legs priced scoped: 2 file(s) at their scoped price, 1 at "
+            "their whole-suite price, 1 unpriced",
+        )
+        tables = ({}, {"x.py": (50, 50, 30)})
+        for scoped in examined("unscoped tables", tables):
+            with self.subTest(scoped=scoped):
+                _code, bare, _python, _sink = plan_shards(listing, whole, scoped)
+                self.assertNotIn("priced scoped", bare)

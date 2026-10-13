@@ -70,6 +70,9 @@ EXIT_OK, EXIT_SURVIVED, EXIT_USAGE, EXIT_VOID, EXIT_RESTORE = 0, 1, 2, 3, 4
 CONTROL = "scripts/tests/fixtures/mutation-python-control"
 CONTROL_ENTRY = {"dir": CONTROL, "modules": ["control_checks"]}
 CONTROL_EXPECTED = ("killed", "killed", "survived")
+#: The selections whose runs trace each file's sentinel and run each mutant against its scoped
+#: set (SPEC-421 R4): `mutation-verdict.py shards` reads this same value to price a leg scoped.
+SCOPED_SELECTIONS = frozenset({"plan"})
 #: The `sys.monitoring` tool id a traced run takes, the coverage tool's, and its name (R7).
 TRACE_TOOL, TRACE_NAME = 1, "mutation-python-trace"
 #: What a traced run's processes inherit: the record directory, the target, and the test whose
@@ -1313,6 +1316,14 @@ def usage(message: str) -> int:
     return EXIT_USAGE
 
 
+def selection(args: argparse.Namespace) -> str:
+    """The run's selection as its report names it, `plan`, `all` or `file` (SPEC-421 R4): the
+    value `SCOPED_SELECTIONS` is read against."""
+    if getattr(args, "plan", None):
+        return "plan"
+    return "all" if getattr(args, "all", None) else "file"
+
+
 def shard_of(text: str | None) -> tuple[int, int] | None | str:
     if text is None:
         return None
@@ -1392,7 +1403,7 @@ def run(args: argparse.Namespace) -> int:
         return usage(f"the tree has tracked changes, so nothing was mutated: {', '.join(dirty)}")
     report: dict = {
         "schema": SCHEMA,
-        "selection": "plan" if args.plan else "all" if args.all else "file",
+        "selection": selection(args),
         "shard": None if not args.shard else f"{args.shard[0]}/{args.shard[1]}",
         "failfast": bool(args.failfast),
         "files": [],
@@ -1442,6 +1453,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--plan")
     parser.add_argument("--all", action="store_true")
     parser.add_argument("--file")
+    parser.add_argument("--scoped", action="store_true")
+    parser.add_argument("--sample", type=int)
     parser.add_argument("--shard")
     parser.add_argument("--failfast", action="store_true")
     parser.add_argument("--report")
