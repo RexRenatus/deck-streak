@@ -371,16 +371,29 @@ class TheVerdictReadsThePythonReports(unittest.TestCase):
             [m for m in listed(SCRIPT, SCRIPT_HEAD) if m["mutant"] == script_only]
             + [m for m in listed(GENERATOR, GENERATOR_HEAD) if m["mutant"] == gen_only],
         )
-        write_shard(
-            whole,
-            0,
-            report_of(
-                [
-                    file_entry(SCRIPT, SCRIPT_HEAD, {}, only=script_only),
-                    file_entry(GENERATOR, GENERATOR_HEAD, {}, only=gen_only),
-                ]
-            ),
+        # The generator's file carries a scoped price and the guard's carries none, so the plan
+        # deals each its own leg, the priced one first; each leg's report holds that leg's mutant.
+        python = json.loads((fixture.out / "plan.json").read_text(encoding="utf-8"))["python"]
+        script_name = mutant_named(SCRIPT, SCRIPT_HEAD, script_only)["name"]
+        gen_name = mutant_named(GENERATOR, GENERATOR_HEAD, gen_only)["name"]
+        self.assertEqual(python["count"], 2)
+        self.assertEqual(
+            [(leg["shard"], leg["mutants"]) for leg in python["shards"]],
+            [(0, [gen_name]), (1, [script_name])],
         )
+        entries = {
+            script_name: file_entry(SCRIPT, SCRIPT_HEAD, {}, only=script_only),
+            gen_name: file_entry(GENERATOR, GENERATOR_HEAD, {}, only=gen_only),
+        }
+        for leg in python["shards"]:
+            write_shard(
+                whole,
+                leg["shard"],
+                report_of(
+                    [entries[name] for name in leg["mutants"]],
+                    shard=f"{leg['shard']}/{python['count']}",
+                ),
+            )
         scripts = judged(fixture, "scripts", whole)
         self.assertEqual(scripts.returncode, 0, scripts.stdout + scripts.stderr)
         self.assertRegex(scripts.stdout, r"(?m)^examined 1$")

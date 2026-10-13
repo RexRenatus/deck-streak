@@ -200,6 +200,7 @@ the red commit, on an assertion of its behaviour.
 | `.github/workflows/mutation-prices.yml` | CI | added: the dispatch-only price workflow and its pull request rehearsal |
 | `scripts/tests/test_mutation_python.py` | mutation tests | changed: A1-A5; the control record's pinned dict gains `"job": None` |
 | `scripts/tests/test_mutation_python_shard_binding.py` | mutation tests | changed: A6-A14 |
+| `scripts/tests/test_mutation_python_verdict.py` | mutation tests | changed: the void-class test writes each report on the leg the plan deals it, since the filled table prices the generator fixture's path |
 | `scripts/tests/test_rulesets.py` | runbook tests | changed: A15 |
 | `scripts/tests/test_ci_workflows.py` | workflow tests | changed: A16; any census entry the new workflow's reads need |
 | `scripts/tests/fixtures/mutation-scoped-prices-38376110236/mutation-prices-0/costs.jsonl` | test fixture | added: the records of price job 115224845674, whose leg took 31 s |
