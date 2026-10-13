@@ -178,3 +178,97 @@ test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_test_whose_proce
 test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_each_mutant_runs_only_the_tests_that_execute_its_line: green at e782d9624acd456ae3031e05273cc299bd230ffe
 scripts/mutation-verdict.py:1014:42: replace 1 with 2 in python_share_refused: green at e782d9624acd456ae3031e05273cc299bd230ffe
 ```
+
+## The third push's survivors
+
+The third push's `mutation-verdict` job, 115065590957, read 77 mutants of
+`scripts/mutation_python.py` as SURVIVED, none of them equivalent: the trace's own functions
+(`child_trace` and its callbacks, `Trace`, `scoped_sets`, `scope_of` and `read_by`), the
+judge's notes and control, and the module's tool and spawn constants. No test observed what
+each changes. Each line is quoted once, as CI printed it, without CI's timestamp:
+
+```text
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:514:12: replace return value with return None in read_by
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:567:24: replace "os.fork" with "" in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:659:64: replace "PYTHONPATH" with "" in Trace.__init__
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:685:23: replace "os.exec" with "" in Trace.audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:860:16: replace return value with return None in scoped_sets
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:871:65: replace == with != in scoped_sets
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:911:13: replace return value with return None in control_void
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:514:21: replace == with != in read_by
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:567:35: replace "os.forkpty" with "" in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:689:23: replace True with False in Trace.fork
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:1231:51: replace "scope" with "" in Judge.control
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:514:35: replace or with and in read_by
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:567:49: replace "os.spawn" with "" in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:1231:60: replace "why" with "" in Judge.control
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:514:65: replace + with - in read_by
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:567:61: replace "os.system" with "" in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:1231:67: replace "tests" with "" in Judge.control
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:514:67: replace " " with "" in read_by
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:558:16: replace return value with return None in line
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:568:20: replace "spawned" with "" in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:1231:83: replace in with not in in Judge.control
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:568:34: replace 1 with 2 in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:673:16: replace return value with return None in Trace.line
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:873:30: replace or with and in scoped_sets
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:1146:50: replace False with True in Judge.prepare
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:1174:24: replace 0 with 1 in Judge.judge
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:1221:56: replace or with and in Judge.control
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:561:21: replace "subprocess.Popen" with "" in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:628:36: replace True with False in Trace.__init__
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:873:33: replace "" with "XX" in scoped_sets
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:1221:60: replace "notes" with "" in Judge.control
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:74:26: replace 1 with 2 in <module>
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:562:20: replace "spawned" with "" in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:569:23: replace "os.exec" with "" in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:628:51: replace True with False in Trace.__init__
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:676:28: replace "" with "XX" in Trace.audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:74:29: replace "mutation-python-trace" with "" in <module>
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:562:34: replace 1 with 2 in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:630:33: replace 8 with 9 in Trace.__init__
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:531:19: replace or with and in child_trace
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:563:18: replace 0 with 1 in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:853:20: replace return value with return None in scoped_sets
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:563:28: replace 1 with 2 in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:574:14: replace 0 with 1 in forked
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:531:33: replace or with and in child_trace
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:574:19: replace False with True in forked
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:679:30: replace 1 with 2 in Trace.audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:865:72: replace "" with "XX" in scoped_sets
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:877:8: replace "" with "XX" in scoped_sets
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:1415:47: replace "absent" with "" in run
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:564:23: replace "os.posix_spawn" with "" in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:645:27: replace "the interpreter has no sys.monitoring" with "" in Trace.__init__
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:856:16: replace "the trace left no record of its run" with "" in scoped_sets
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:80:21: replace "os.fork" with "" in <module>
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:565:20: replace "spawned" with "" in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:577:35: replace "mutation-python-trace" with "" in child_trace
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:680:23: replace "os.posix_spawn" with "" in Trace.audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:856:16: replace return value with return None in scoped_sets
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:878:16: replace "a process outside any test left no r... with "" in scoped_sets
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:80:32: replace "os.forkpty" with "" in <module>
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:534:29: replace 8 with 9 in child_trace
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:565:39: replace 1 with 2 in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:656:39: replace "site" with "" in Trace.__init__
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:681:39: replace 1 with 2 in Trace.audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:878:16: replace return value with return None in scoped_sets
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:1198:58: replace "killers" with "" in Judge.judge
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:80:46: replace "os.spawn" with "" in <module>
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:565:42: replace is not with is in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:657:29: replace True with False in Trace.__init__
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:681:42: replace is not with is in Trace.audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:894:45: replace 1 with 2 in scope_of
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:80:58: replace "os.system" with "" in <module>
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:565:54: replace 0 with 1 in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:566:18: replace 0 with 1 in audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:684:34: replace 1 with 2 in Trace.audit
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:870:33: replace "" with "XX" in scoped_sets
+job 115065590957 red at a1355bb249926d10aa96311d4f5b80b7c913eb7e: mutation: scripts: SURVIVED scripts/mutation_python.py:871:62: replace 2 with 3 in scoped_sets
+```
+
+The killers are in `test_mutation_python.py`, in four classes: the scope functions and
+`scoped_sets` called on the runner loaded fresh, the root trace's methods with the
+interpreter's hooks recorded in place, the judge's steps with their seams recorded in place,
+and child interpreters run under a scratch `sitecustomize` that holds the runner's own
+`child_trace`. Each compares the whole value it observes.

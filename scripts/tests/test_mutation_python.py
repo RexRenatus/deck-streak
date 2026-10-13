@@ -24,6 +24,7 @@ hang passes a short `--test-seconds` and a subprocess timeout.
 """
 
 import ast
+import collections
 import hashlib
 import importlib.util
 import json
@@ -34,6 +35,7 @@ import sys
 import tempfile
 import time
 import tokenize
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -1473,6 +1475,668 @@ class EachMutantRunsTheTestsItsLineTraced(unittest.TestCase):
             done.stdout, "".join(line + "\n" for line in table_lines()) + PRICES_EXAMINED
         )
         examined("mutant cost records", costs)
+
+
+def trace_root(**names):
+    """A sentinel trace's root record as `scoped_sets` reads it: two tests, one line traced in the
+    first and one outside any test, and no process started; `names` replace its fields."""
+    return {
+        "root": True,
+        "token": "R",
+        "pid": 1,
+        "failed": None,
+        "ran": 2,
+        "order": ["m.T.a", "m.T.b"],
+        "lines": {"m.T.a": [3]},
+        "outside": [9],
+        "spawned": {},
+        "execs": [],
+        "threads": [],
+        **names,
+    }
+
+
+def trace_child(token, parent, pids, test, spawned=0, lines=(), replaced=False):
+    """A child process's record as `scoped_sets` reads it: its token, its parent's token, its pid
+    and its parent's pid, its test, how many processes it started, the target's lines it ran and
+    whether it replaced its image."""
+    return {
+        "token": token,
+        "parent": parent,
+        "pid": pids[0],
+        "ppid": pids[1],
+        "test": test,
+        "lines": list(lines),
+        "spawned": spawned,
+        "exec": replaced,
+    }
+
+
+PARTIAL = "a process outside any test left no record or replaced its image"
+BOTH = ["m.T.a", "m.T.b"]
+#: (case, the records by file stem, the tests the sentinel ran, what `scoped_sets` returns).
+SCOPED_CASES = [
+    (
+        "a record that does not parse",
+        {"broken": "{"},
+        2,
+        "the trace record broken.json cannot be read",
+    ),
+    (
+        "no root record",
+        {"C": trace_child("C", "R", (10, 1), "m.T.a")},
+        2,
+        "the trace left no record of its run",
+    ),
+    (
+        "a root that counted another number of tests",
+        {"R": trace_root(ran=3)},
+        4,
+        "the trace counted 3 test(s) and the sentinel ran 4",
+    ),
+    (
+        "a child outside any test that the root started",
+        {
+            "R": trace_root(spawned={"": 1}),
+            "C": trace_child("C", "R", (10, 1), None, lines=[4]),
+        },
+        2,
+        {"order": BOTH, "lines": {"m.T.a": {3}}, "outside": {4, 9}, "joiners": set()},
+    ),
+    (
+        "a child outside any test that replaced its image",
+        {
+            "R": trace_root(spawned={"": 1}),
+            "C": trace_child("C", "R", (10, 1), None, replaced=True),
+        },
+        2,
+        PARTIAL,
+    ),
+    (
+        "a child whose two children each left a record",
+        {
+            "R": trace_root(spawned={"m.T.a": 1}),
+            "A": trace_child("A", "R", (10, 1), "m.T.a", spawned=2, lines=[5]),
+            "G": trace_child("G", "A", (11, 10), "m.T.a", lines=[6]),
+            "H": trace_child("H", "A", (12, 10), "m.T.a"),
+        },
+        2,
+        {"order": BOTH, "lines": {"m.T.a": {3, 5, 6}}, "outside": {9}, "joiners": set()},
+    ),
+    (
+        "a test's child that started a process that left no record",
+        {
+            "R": trace_root(spawned={"m.T.b": 1}),
+            "B": trace_child("B", "R", (10, 1), "m.T.b", spawned=1, lines=[7]),
+        },
+        2,
+        {
+            "order": BOTH,
+            "lines": {"m.T.a": {3}, "m.T.b": {7}},
+            "outside": {9},
+            "joiners": {"m.T.b"},
+        },
+    ),
+    (
+        "a child outside any test that started a process that left no record",
+        {
+            "R": trace_root(spawned={"": 1}),
+            "C": trace_child("C", "R", (10, 1), None, spawned=1),
+        },
+        2,
+        PARTIAL,
+    ),
+]
+
+
+class TheScopeIsReadWholeFromTheTrace(unittest.TestCase):
+    """SPEC-420 R7 and R9: the functions that read a trace into each mutant's scope, a byte reader
+    out of a scoped set and a wrong control into a void, each called on the runner loaded fresh
+    and compared by its whole value."""
+
+    def test_a_byte_reader_is_its_test_id_or_that_id_with_its_parameters(self):
+        """R7: a reader is the test's own id, or that id, a space and its parameters; never a test
+        whose id only begins with it."""
+        module = runner_module()
+        cases = [
+            (["m.T.t"], True),
+            (["m.T.t (case=1)"], True),
+            (["m.T.test_two"], False),
+            (["m.U.t"], False),
+            ([], False),
+        ]
+        read = [module.read_by("m.T.t", readers) for readers, _wanted in cases]
+        self.assertEqual(read, [wanted for _readers, wanted in cases])
+
+    def test_a_mutant_whose_lines_no_test_traced_runs_whole_as_unreached(self):
+        """R7: a mutant's span is its own lines, so a test that traced only the next line leaves
+        it unreached, and one that traced its line scopes it."""
+        module = runner_module()
+        mutant = types.SimpleNamespace(function="total", start_line=5, end_line=5)
+        scopes = {"order": ["m.T.t"], "lines": {"m.T.t": {6}}, "outside": set(), "joiners": set()}
+        self.assertEqual(module.scope_of(mutant, scopes, []), ("whole", "unreached", []))
+        scopes["lines"]["m.T.t"] = {5}
+        self.assertEqual(module.scope_of(mutant, scopes, []), ("lines", None, ["m.T.t"]))
+
+    def test_a_control_of_another_length_voids_by_the_count_it_lists(self):
+        """R9: a control that lists one mutant voids with the count it lists and the three it
+        expects; a root without the fixture voids nothing."""
+        module = runner_module()
+        held = [{"name": "c", "outcome": "killed", "expected": "killed"}]
+        self.assertEqual(
+            module.control_void(held), "control: the control lists 1 mutant(s), expected 3"
+        )
+        self.assertIsNone(module.control_void("absent"))
+
+    def test_a_trace_is_read_into_each_tests_lines_or_into_why_it_cannot_scope(self):
+        """R7: each case's records read into the whole scoped sets, or into the whole reason every
+        mutant of the file runs the whole suite."""
+        module = runner_module()
+        judged = []
+        for case, files, ran, expected in SCOPED_CASES:
+            with self.subTest(case), tempfile.TemporaryDirectory() as scratch:
+                folder = Path(scratch)
+                for stem, value in files.items():
+                    text = value if isinstance(value, str) else json.dumps(value)
+                    (folder / f"{stem}.json").write_text(text, encoding="utf-8")
+                self.assertEqual(module.scoped_sets(folder, ran), expected)
+                judged.append(case)
+        self.assertEqual(len(examined("trace record cases", judged)), len(SCOPED_CASES))
+
+
+#: The environment a root trace hands its processes.
+TRACE_NAMES = (
+    "PYTHONPATH",
+    "MUTATION_PYTHON_TRACE_DIR",
+    "MUTATION_PYTHON_TRACE_TARGET",
+    "MUTATION_PYTHON_TRACE_PARENT",
+    "MUTATION_PYTHON_TRACE_TEST",
+)
+
+
+class TheTraceTakesItsToolAndCountsEachTestsProcesses(unittest.TestCase):
+    """SPEC-420 R7: the root process's trace, each method called on the runner loaded fresh, with
+    the interpreter's monitoring, audit and fork hooks recorded in place so no test here takes the
+    tool a traced run holds; each observed value is compared whole."""
+
+    def test_a_trace_takes_its_tool_and_hooks_and_hands_its_site_to_its_processes(self):
+        """R7: the trace takes tool 1 under its name with its line callback, its audit and fork
+        hooks and a sixteen-digit token, makes its records and site folders under a folder that
+        need not exist, and hands its processes its site first on `PYTHONPATH`, its records, its
+        target and its token; a second trace over the same folder reuses both folders."""
+        module = runner_module()
+        calls, hooks, forks = [], [], []
+        monitoring = types.SimpleNamespace(
+            events=types.SimpleNamespace(LINE="line events"),
+            use_tool_id=lambda *args: calls.append(("use_tool_id", *args)),
+            register_callback=lambda *args: calls.append(("register_callback", *args)),
+            set_events=lambda *args: calls.append(("set_events", *args)),
+        )
+        interpreter = types.SimpleNamespace(monitoring=monitoring, addaudithook=hooks.append)
+        with tempfile.TemporaryDirectory() as scratch:
+            folder = Path(scratch) / "deep" / "trace"
+            target = Path(scratch) / "target.py"
+            target.write_text("total = 1\n", encoding="utf-8")
+            with (
+                mock.patch.dict(os.environ, untraced(PYTHONPATH="/elsewhere"), clear=True),
+                mock.patch.object(module, "sys", interpreter),
+                mock.patch.object(os, "register_at_fork", lambda **names: forks.append(names)),
+                mock.patch.object(os, "urandom", lambda size: bytes(range(size))),
+            ):
+                first = module.Trace(str(folder), str(target))
+                handed = {name: os.environ.get(name) for name in TRACE_NAMES}
+                second = module.Trace(str(folder), str(target))
+                again = os.environ["PYTHONPATH"]
+            listing = sorted(each.name for each in folder.iterdir())
+            site = (folder / "site" / "sitecustomize.py").read_text(encoding="utf-8")
+            expected = {
+                "PYTHONPATH": f"{folder / 'site'}{os.pathsep}/elsewhere",
+                "MUTATION_PYTHON_TRACE_DIR": str(folder / "records"),
+                "MUTATION_PYTHON_TRACE_TARGET": str(target.resolve()),
+                "MUTATION_PYTHON_TRACE_PARENT": "0001020304050607",
+                "MUTATION_PYTHON_TRACE_TEST": None,
+            }
+            stacked = os.pathsep.join([str(folder / "site"), str(folder / "site"), "/elsewhere"])
+        self.assertEqual(
+            (first.token, first.failed, second.failed), ("0001020304050607", None, None)
+        )
+        self.assertEqual(handed, expected)
+        self.assertEqual(again, stacked)
+        self.assertEqual(
+            calls,
+            [
+                ("use_tool_id", 1, "mutation-python-trace"),
+                ("register_callback", 1, "line events", first.line),
+                ("set_events", 1, "line events"),
+                ("use_tool_id", 1, "mutation-python-trace"),
+                ("register_callback", 1, "line events", second.line),
+                ("set_events", 1, "line events"),
+            ],
+        )
+        self.assertEqual(hooks, [first.audit, second.audit])
+        self.assertEqual(forks, [{"after_in_child": first.fork}, {"after_in_child": second.fork}])
+        self.assertEqual(listing, ["records", "site"])
+        self.assertEqual(site, module.site_source())
+
+    def test_an_interpreter_without_monitoring_fails_the_trace_by_name(self):
+        """R7: with no `sys.monitoring` the trace fails by name, before any hook, any site and any
+        name handed to its processes."""
+        module = runner_module()
+        hooks = []
+        interpreter = types.SimpleNamespace(addaudithook=hooks.append)
+        with tempfile.TemporaryDirectory() as scratch:
+            folder = Path(scratch) / "trace"
+            with (
+                mock.patch.dict(os.environ, untraced(), clear=True),
+                mock.patch.object(module, "sys", interpreter),
+            ):
+                trace = module.Trace(str(folder), str(Path(scratch) / "target.py"))
+                handed = {name: os.environ.get(name) for name in TRACE_NAMES}
+            listing = sorted(each.name for each in folder.iterdir())
+        self.assertEqual(trace.failed, "the interpreter has no sys.monitoring")
+        self.assertEqual((hooks, listing), ([], ["records"]))
+        self.assertEqual(handed, dict.fromkeys(TRACE_NAMES))
+
+    def test_a_line_of_the_target_is_kept_under_its_test_or_outside_and_disabled(self):
+        """R7: a target line is kept under the running test, or outside any test when none runs;
+        another file's line is not kept; each location is disabled once seen."""
+        module = runner_module()
+        with tempfile.TemporaryDirectory() as scratch:
+            target = Path(scratch) / "target.py"
+            target.write_text("total = 1\n", encoding="utf-8")
+            trace = types.SimpleNamespace(
+                known={}, target=str(target.resolve()), test="m.T.t", outside=set(), lines={}
+            )
+            aimed = types.SimpleNamespace(co_filename=str(target))
+            elsewhere = types.SimpleNamespace(co_filename=str(Path(scratch) / "other.py"))
+            answers = [module.Trace.line(trace, aimed, 5), module.Trace.line(trace, elsewhere, 6)]
+            trace.test = None
+            answers.append(module.Trace.line(trace, aimed, 7))
+        self.assertEqual([each is sys.monitoring.DISABLE for each in answers], [True, True, True])
+        self.assertEqual((trace.lines, trace.outside), ({"m.T.t": {5}}, {7}))
+
+    def test_each_process_creation_event_counts_once_under_its_test(self):
+        """R7: two `Popen`s and the `posix_spawn` that carries the second's argv count two, two
+        more `posix_spawn`s, a `fork`, a `forkpty`, a `spawn` and a `system` count six, and an
+        `exec` marks the test; outside any test both count under the empty name."""
+        module = runner_module()
+        trace = types.SimpleNamespace(
+            test="m.T.t", spawned=collections.Counter(), last=None, execs=set()
+        )
+        first, second, third, fourth, fifth = (
+            ["first"],
+            ["second"],
+            ["third"],
+            ["fourth"],
+            ["fifth"],
+        )
+        events = [
+            ("subprocess.Popen", ("python3", first, "here", {})),
+            ("subprocess.Popen", ("python3", second, "here", {})),
+            ("os.posix_spawn", ("python3", second, {})),
+            ("os.posix_spawn", ("python3", third, {})),
+            ("os.posix_spawn", ("python3", fourth, {})),
+            ("os.fork", ()),
+            ("os.forkpty", ()),
+            ("os.spawn", (0, "python3", fifth, {})),
+            ("os.system", (b"true",)),
+            ("os.exec", ("python3", fifth, {})),
+        ]
+        for event, args in events:
+            module.Trace.audit(trace, event, args)
+        trace.test = None
+        module.Trace.audit(trace, "subprocess.Popen", ("python3", fifth, "here", {}))
+        module.Trace.audit(trace, "os.exec", ("python3", fifth, {}))
+        self.assertEqual(trace.spawned, collections.Counter({"m.T.t": 8, "": 1}))
+        self.assertEqual(trace.execs, {"m.T.t", ""})
+
+    def test_a_fork_marks_the_trace_forked(self):
+        """R7: the fork hook marks the trace, so a forked child's copy writes no record."""
+        module = runner_module()
+        trace = types.SimpleNamespace(forked=False)
+        module.Trace.fork(trace)
+        self.assertIs(trace.forked, True)
+
+
+class TheJudgeNotesEachMutantAndReadsItsControl(unittest.TestCase):
+    """SPEC-420 R6, R9 and R10: the judge's own steps called on the runner loaded fresh, with its
+    seams (the test runs, the cost lines and the control's preparation) recorded in place; each
+    observed value is compared whole."""
+
+    def test_a_traced_sentinel_runs_every_test_with_no_fail_fast(self):
+        """R6, R7: a `--plan` file's control and its traced sentinel each run every test, the
+        sentinel under a trace folder of the run's scratch and on the file it traces; the record
+        holds the control, the bound and no byte reader, and the file's bytes are put back."""
+        module = runner_module()
+        calls, paid = [], []
+
+        def tests(*args, **names):
+            calls.append((args, names))
+            return module.Ran(reported=True, ran=2, seconds=0.25)
+
+        with tempfile.TemporaryDirectory() as scratch:
+            target = Path(scratch) / "scripts" / "total.py"
+            target.parent.mkdir()
+            target.write_text(READER, encoding="utf-8")
+            judge = types.SimpleNamespace(
+                root=Path(scratch),
+                args=types.SimpleNamespace(test_seconds=7.0, control_seconds=None, plan="p.json"),
+                tests=tests,
+                paid=lambda path, record: paid.append(path),
+                scratch=scratch,
+            )
+            entry = {"dir": "scripts/tests", "modules": ["test_total"]}
+            report = {"files": []}
+            state = module.Judge.prepare(judge, "scripts/total.py", [], report, entry)
+            after = target.read_text(encoding="utf-8")
+        self.assertEqual(len(calls), 2, calls)
+        folder = calls[1][1].get("trace")
+        self.assertEqual(
+            calls,
+            [
+                ((entry, [], False, 7.0), {}),
+                ((entry, [], False, 7.0), {"trace": folder, "target": target}),
+            ],
+        )
+        self.assertEqual(Path(folder).parent, Path(scratch))
+        record = {
+            "path": "scripts/total.py",
+            "modules": ["test_total"],
+            "control": {"ran": 2, "failures": 0, "seconds": 0.25},
+            "bound": 7.0,
+            "byte_readers": [],
+            "void": None,
+            "mutants": [],
+        }
+        self.assertEqual(report["files"], [record])
+        self.assertEqual(state["scopes"], "the trace left no record of its run")
+        self.assertEqual((paid, after), (["scripts/total.py"], READER))
+
+    def test_an_unviable_mutant_is_noted_whole_with_no_test_and_no_killer(self):
+        """R10: a mutant that does not parse runs no test, and its note and its cost line name
+        the whole scope, why, no test run and no killer."""
+        module = runner_module()
+        mutant = module.Mutant(1, 5, 1, 1, 6, 4, 5, "1", "(", "integer constant", "<module>")
+        costs = []
+
+        def refuse(*args, **names):
+            raise AssertionError(f"an unviable mutant ran its tests: {args} {names}")
+
+        judge = types.SimpleNamespace(
+            args=types.SimpleNamespace(failfast=False),
+            where={},
+            tests=refuse,
+            cost=lambda *args, **names: costs.append((args, names)),
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            target = Path(scratch) / "total.py"
+            record = {"byte_readers": [], "bound": 60.0, "mutants": []}
+            state = {
+                "path": "scripts/total.py",
+                "entry": {"modules": ["test_total"]},
+                "record": record,
+                "selected": [mutant],
+                "scopes": None,
+                "target": target,
+                "original": b"x = 1\n",
+                "source": "x = 1\n",
+                "notes": [],
+            }
+            module.Judge.judge(judge, state)
+            installed = target.exists()
+        name = "scripts/total.py:1:5: replace 1 with ( in <module>"
+        note = {"scope": "whole", "tests": 0, "why": "all"}
+        self.assertEqual(state["notes"], [{"name": name, "killers": [], **note}])
+        self.assertEqual(len(costs), 1, costs)
+        (kind, path), named = costs[0]
+        named.pop("seconds")
+        self.assertEqual(
+            (kind, path, named),
+            ("mutant", "scripts/total.py", {"name": name, "outcome": "unviable", **note}),
+        )
+        entry = {
+            "name": name,
+            "file": "scripts/total.py",
+            "line": 1,
+            "start_line": 1,
+            "end_line": 1,
+            "end_column": 6,
+            "column": 5,
+            "mutant": "replace 1 with ( in <module>",
+            "operator": "integer constant",
+            "outcome": "unviable",
+            "killers": [],
+        }
+        self.assertEqual((record["mutants"], installed), ([entry], False))
+
+    def test_the_control_reads_each_held_mutant_with_its_scope_note(self):
+        """R9, R10: each of the control's three mutants is read with the outcome it is expected
+        to read, its killers, and its note's scope, why and tests where its note holds them."""
+        module = runner_module()
+        seen, judged = [], []
+        state = {
+            "notes": [
+                {"name": "a", "killers": ["k.T.a"], "scope": "lines", "tests": 2, "scoped": []},
+                {
+                    "name": "b",
+                    "killers": ["k.T.b"],
+                    "scope": "whole",
+                    "why": "survivor",
+                    "tests": 3,
+                },
+            ]
+        }
+        mutants = [
+            {"name": "a", "outcome": "killed", "killers": ["k.T.a"]},
+            {"name": "b", "outcome": "killed", "killers": ["k.T.b"]},
+            {"name": "c", "outcome": "survived", "killers": []},
+        ]
+
+        def prepare(path, listed, held, entry):
+            seen.append((path, entry))
+            held["files"].append({"path": path, "mutants": mutants})
+            return state
+
+        judge = types.SimpleNamespace(root=REPO, quiet=None, prepare=prepare, judge=judged.append)
+        found = module.Judge.control(judge)
+        self.assertEqual(
+            found,
+            [
+                {
+                    "name": "a",
+                    "outcome": "killed",
+                    "expected": "killed",
+                    "killers": ["k.T.a"],
+                    "scope": "lines",
+                    "tests": 2,
+                },
+                {
+                    "name": "b",
+                    "outcome": "killed",
+                    "expected": "killed",
+                    "killers": ["k.T.b"],
+                    "scope": "whole",
+                    "why": "survivor",
+                    "tests": 3,
+                },
+                {"name": "c", "outcome": "survived", "expected": "survived", "killers": []},
+            ],
+        )
+        control = {"dir": CONTROL_DIR, "modules": ["control_checks"]}
+        self.assertEqual(seen, [(f"{CONTROL_DIR}/control_target.py", control)])
+        self.assertEqual((judged, judge.quiet), ([state], False))
+
+    def test_a_control_its_preparation_ends_is_read_with_no_note(self):
+        """R9: a control whose preparation ends it is read from its held mutants alone, with no
+        note and no judging."""
+        module = runner_module()
+        judged = []
+
+        def prepare(path, listed, held, entry):
+            mutants = [{"name": name, "outcome": "void", "killers": []} for name in "abc"]
+            held["files"].append({"path": path, "mutants": mutants})
+
+        judge = types.SimpleNamespace(root=REPO, quiet=None, prepare=prepare, judge=judged.append)
+        found = module.Judge.control(judge)
+        self.assertEqual(
+            found,
+            [
+                {"name": "a", "outcome": "void", "expected": "killed", "killers": []},
+                {"name": "b", "outcome": "void", "expected": "killed", "killers": []},
+                {"name": "c", "outcome": "void", "expected": "survived", "killers": []},
+            ],
+        )
+        self.assertEqual((judged, judge.quiet), ([], False))
+
+
+def child_trace_run(test, program, aimed=True):
+    """`program` run by a child interpreter whose scratch `sitecustomize` is the runner's own (its
+    `child_trace` and the chain to the next one), named as the test `m.T.t` with a scratch records
+    folder; the target is a two-line module the program may import, named only when `aimed`.
+    Returns the run and each record by its file's name."""
+    scratch = tempfile.TemporaryDirectory()
+    test.addCleanup(scratch.cleanup)
+    work = Path(scratch.name)
+    site, records = work / "site", work / "records"
+    site.mkdir()
+    records.mkdir()
+    (site / "sitecustomize.py").write_text(runner_module().site_source(), encoding="utf-8")
+    aim = work / "aim.py"
+    aim.write_text("first = 1\nsecond = first + 1\n", encoding="utf-8")
+    names = {"MUTATION_PYTHON_TRACE_TARGET": str(aim.resolve())} if aimed else {}
+    done = subprocess.run(
+        [sys.executable, "-c", program],
+        cwd=work,
+        env=untraced(
+            PYTHONPATH=str(site),
+            PYTHONDONTWRITEBYTECODE="1",
+            MUTATION_PYTHON_TRACE_DIR=str(records),
+            MUTATION_PYTHON_TRACE_PARENT="p0",
+            MUTATION_PYTHON_TRACE_TEST="m.T.t",
+            **names,
+        ),
+        capture_output=True,
+        text=True,
+        timeout=SUBPROCESS_SECONDS,
+        check=False,
+    )
+    found = {each.name: json.loads(each.read_text(encoding="utf-8")) for each in records.iterdir()}
+    return done, found
+
+
+#: A child that imports the target, calls its own line callback on a file that is not the target,
+#: names the tool it holds and its pid, then raises one of each process-creation audit event: two
+#: `Popen`s, the `posix_spawn` that carries the second's argv and two that carry their own, a
+#: `fork`, a `forkpty`, a `spawn` and a `system`, and last an `exec`.
+EVENTS_PROGRAM = """\
+import os
+import sys
+import types
+
+import aim
+
+monitoring = sys.monitoring
+line = monitoring.register_callback(1, monitoring.events.LINE, None)
+print(line(types.SimpleNamespace(co_filename="elsewhere.py"), 7) is monitoring.DISABLE)
+monitoring.register_callback(1, monitoring.events.LINE, line)
+print(monitoring.get_tool(1))
+print(os.getpid())
+first, second, third, fourth, fifth = ["first"], ["second"], ["third"], ["fourth"], ["fifth"]
+sys.audit("subprocess.Popen", "python3", first, "here", {})
+sys.audit("subprocess.Popen", "python3", second, "here", {})
+sys.audit("os.posix_spawn", "python3", second, {})
+sys.audit("os.posix_spawn", "python3", third, {})
+sys.audit("os.posix_spawn", "python3", fourth, {})
+sys.audit("os.fork")
+sys.audit("os.forkpty")
+sys.audit("os.spawn", 0, "python3", fifth, {})
+sys.audit("os.system", b"true")
+sys.audit("os.exec", "python3", fifth, {})
+"""
+#: A child that names its pid, forks, and replaces its image while its forked child waits; the
+#: forked child then starts a process and exits.
+FORK_PROGRAM = """\
+import os
+import sys
+
+print(os.getpid(), flush=True)
+reader, writer = os.pipe()
+child = os.fork()
+if child == 0:
+    os.close(writer)
+    os.read(reader, 1)
+    sys.audit("os.system", b"true")
+    sys.exit(0)
+os.close(reader)
+sys.audit("os.exec", "python3", ["python3"], {})
+os.write(writer, b"x")
+os.close(writer)
+os.waitpid(child, 0)
+os._exit(0)
+"""
+#: A child that names the tool it holds.
+TOOL_PROGRAM = "import sys\n\nprint(sys.monitoring.get_tool(1))\n"
+
+
+class TheTracesChildProcessesEachWriteOneRecord(unittest.TestCase):
+    """SPEC-420 R7: a child interpreter whose scratch `sitecustomize` is the runner's own takes the
+    trace's tool under its name, keeps the target's lines it runs, counts each process it starts
+    once, and writes one record, when it exits or replaces its image; a forked child writes none,
+    and a child with no target takes no tool. Each child writes to this module's own records
+    folder, so in a traced run each test here joins every scoped set; its class sorts after the
+    in-process ones."""
+
+    def test_a_child_counts_each_process_it_starts_once_and_records_its_exec(self):
+        """R7: the child's record holds its token, its parent's, its pid and its parent's, its
+        test, the target's two lines, eight processes started and its `exec`; its line callback
+        disables a location, and it holds the tool under the trace's name."""
+        done, found = child_trace_run(self, EVENTS_PROGRAM)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        disabled, tool, pid = done.stdout.splitlines()
+        self.assertEqual((disabled, tool), ("True", "mutation-python-trace"))
+        self.assertEqual(len(found), 1, found)
+        [(name, record)] = found.items()
+        token = record["token"]
+        self.assertRegex(token, r"\A[0-9a-f]{16}\Z")
+        self.assertEqual(name, f"{token}.json")
+        expected = {
+            "token": token,
+            "parent": "p0",
+            "pid": int(pid),
+            "ppid": os.getpid(),
+            "test": "m.T.t",
+            "lines": [1, 2],
+            "spawned": 8,
+            "exec": True,
+        }
+        self.assertEqual(record, expected)
+
+    def test_a_forked_child_writes_no_record_over_its_parents(self):
+        """R7: a process that forks and then replaces its image writes its record at the `exec`,
+        the fork counted; its forked child, which starts a process and exits, writes none."""
+        done, found = child_trace_run(self, FORK_PROGRAM)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual(len(found), 1, found)
+        [(name, record)] = found.items()
+        token = record["token"]
+        self.assertEqual(name, f"{token}.json")
+        expected = {
+            "token": token,
+            "parent": "p0",
+            "pid": int(done.stdout),
+            "ppid": os.getpid(),
+            "test": "m.T.t",
+            "lines": [],
+            "spawned": 1,
+            "exec": True,
+        }
+        self.assertEqual(record, expected)
+
+    def test_a_child_with_no_target_takes_no_tool_and_writes_no_record(self):
+        """R7: a child handed the records folder and no target leaves the tool free and writes
+        nothing."""
+        done, found = child_trace_run(self, TOOL_PROGRAM, aimed=False)
+        self.assertEqual((done.returncode, done.stdout, found), (0, "None\n", {}), done.stderr)
 
 
 if __name__ == "__main__":
