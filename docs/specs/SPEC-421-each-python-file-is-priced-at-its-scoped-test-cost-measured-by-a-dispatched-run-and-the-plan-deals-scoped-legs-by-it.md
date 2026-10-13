@@ -202,7 +202,22 @@ the red commit, on an assertion of its behaviour.
 | `scripts/tests/test_mutation_python_shard_binding.py` | mutation tests | changed: A6-A14 |
 | `scripts/tests/test_rulesets.py` | runbook tests | changed: A15 |
 | `scripts/tests/test_ci_workflows.py` | workflow tests | changed: A16; any census entry the new workflow's reads need |
-| `scripts/tests/fixtures/mutation-scoped-prices-<run>/` | test fixture | added: the price run's `costs.jsonl` files in the download's layout; `<run>` is written at the fill with the run's slowest leg duration |
+| `scripts/tests/fixtures/mutation-scoped-prices-38376110236/mutation-prices-0/costs.jsonl` | test fixture | added: the records of price job 115224845674, whose leg took 31 s |
+| `scripts/tests/fixtures/mutation-scoped-prices-38376110236/mutation-prices-1/costs.jsonl` | test fixture | added: the records of price job 115224845695, whose leg took 12 s |
+| `scripts/tests/fixtures/mutation-scoped-prices-38376110236/mutation-prices-2/costs.jsonl` | test fixture | added: the records of price job 115224845809, whose leg took 25 s |
+| `scripts/tests/fixtures/mutation-scoped-prices-38376110236/mutation-prices-3/costs.jsonl` | test fixture | added: the records of price job 115224845760, whose leg took 25 s |
+| `scripts/tests/fixtures/mutation-scoped-prices-38376110236/mutation-prices-4/costs.jsonl` | test fixture | added: the records of price job 115224845970, whose leg took 114 s |
+| `scripts/tests/fixtures/mutation-scoped-prices-38376110236/mutation-prices-5/costs.jsonl` | test fixture | added: the records of price job 115224845805, whose leg took 332 s |
+| `scripts/tests/fixtures/mutation-scoped-prices-38376110236/mutation-prices-6/costs.jsonl` | test fixture | added: the records of price job 115224845765, whose leg took 228 s |
+| `scripts/tests/fixtures/mutation-scoped-prices-38376110236/mutation-prices-7/costs.jsonl` | test fixture | added: the records of price job 115224845667, whose leg took 2063 s |
+| `scripts/tests/fixtures/mutation-scoped-prices-38376110236/mutation-prices-8/costs.jsonl` | test fixture | added: the records of price job 115224845897, whose leg took 1568 s |
+| `scripts/tests/fixtures/mutation-scoped-prices-38376110236/mutation-prices-9/costs.jsonl` | test fixture | added: the records of price job 115224845785, whose leg took 451 s |
+| `scripts/tests/fixtures/mutation-scoped-prices-38376110236/mutation-prices-10/costs.jsonl` | test fixture | added: the records of price job 115224845921, whose leg took 45 s |
+| `scripts/tests/fixtures/mutation-scoped-prices-38376110236/mutation-prices-11/costs.jsonl` | test fixture | added: the records of price job 115224845804, whose leg took 22 s |
+| `scripts/tests/fixtures/mutation-scoped-prices-38376110236/mutation-prices-12/costs.jsonl` | test fixture | added: the records of price job 115224845752, whose leg took 106 s |
+| `scripts/tests/fixtures/mutation-scoped-prices-38376110236/mutation-prices-13/costs.jsonl` | test fixture | added: the records of price job 115224845986, whose leg took 72 s |
+| `scripts/tests/fixtures/mutation-scoped-prices-38376110236/mutation-prices-14/costs.jsonl` | test fixture | added: the records of price job 115224845724, whose leg took 9 s |
+| `scripts/tests/fixtures/mutation-scoped-prices-38376110236/mutation-prices-15/costs.jsonl` | test fixture | added: the records of price job 115224845919, whose leg took 25 s |
 | `scripts/mutation-rows.d/S41800-S41899.json` | mutation rows | changed: S41801 re-anchored, keeping its id, behaviour and killer |
 | `scripts/mutation-rows.d/S42000-S42099.json` | mutation rows | changed: S42025 re-anchored, keeping its id, behaviour and killer |
 | `scripts/mutation-rows.d/S42100-S42199.json` | mutation rows | added: section 9's rows |
