@@ -108,8 +108,8 @@ rows SPEC-421 section 9 plans on that file's table line are not written.
 
 The green commit was read at the second push's head, whose other commit adds rows, and again at
 the third push's head, which adds two tests. The table commit is read at the fifth push's head,
-whose other commit adds this record and the changelog fragment. No CI run read either code commit
-alone.
+whose other two commits add this record and the changelog fragment, and keep the table whole
+under the formatter. No CI run read either code commit alone.
 
 ```red-first
 A1: red at a0f9c8f24527d53f5aaf166d9c2824c4a4816dab: AssertionError: Lists differ: [] != ['scope_checks.Lines.test_in_process']

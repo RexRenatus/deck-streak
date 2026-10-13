@@ -145,6 +145,7 @@ PYTHON_CONTROL_SECONDS: dict[str, int] = {
 #: mean scoped mutant, by repository-relative path, read only when the legs trace (SPEC-421 R6).
 #: Every line is `prices --scoped` output over one dispatched price run's records, committed
 #: under `scripts/tests/fixtures/`, and names the run, attempt and job its figures came from.
+# fmt: off
 PYTHON_SCOPED_SECONDS: dict[str, tuple[int, int, int]] = {
     "scripts/audit-web-verdict.py": (3, 3, 1),  # run 38376110236 attempt 1 job 115224845674: 19 scoped mutant record(s)
     "scripts/create-issues.py": (1, 1, 1),  # run 38376110236 attempt 1 job 115224845695: 0 scoped mutant record(s)
@@ -162,6 +163,7 @@ PYTHON_SCOPED_SECONDS: dict[str, tuple[int, int, int]] = {
     "scripts/write-back-issues.py": (1, 1, 1),  # run 38376110236 attempt 1 job 115224845724: 0 scoped mutant record(s)
     "tools/parity-oracle/generate.py": (2, 2, 1),  # run 38376110236 attempt 1 job 115224845919: 19 scoped mutant record(s)
 }
+# fmt: on
 #: The weekly battery's Python shards, each `run --all --shard k/16` (R14).
 PYTHON_WEEKLY_SHARDS = 16
 #: The weekly dispatch's `package` value that sweeps the Python population alone (R14).
