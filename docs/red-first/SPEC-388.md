@@ -2,8 +2,9 @@
 
 The SPEC, ADR-402 and the schematic's section were committed first (7aed4334), before any test or
 code. The engine core's tests, with the stubs that keep every input, were committed next
-(a8e170ae), and the view's census, A10, was then committed alone (a0ae3f7e), each before the code
-that turns it green. Each red below is quoted from the run at the red commit.
+(a8e170ae), the view's census, A10, was then committed alone (a0ae3f7e), and the web's tests with
+the card view's new field after it (13d1d10a), each before the code that turns it green. Each red
+below is quoted from the run at the red commit.
 
 ## The fence, line by line
 
@@ -43,6 +44,12 @@ A7: red at a8e170ae: panicked at crates/engine-core/tests/ai_assisted.rs:356:5: 
 A8: red at a8e170ae: panicked at crates/engine-core/tests/ai_assisted.rs:397:5: assertion `left == right` failed: the core reads the note unmarked, then marked after the marking package, then unmarked after the newer package without the marker; left: [Ok(false), Ok(false), Ok(false)], right: [Ok(false), Ok(true), Ok(false)]
 A9: red at a8e170ae: panicked at crates/engine-core/tests/ai_assisted.rs:491:5: assertion `left == right` failed: the core reads the marked note marked on the second device, and the note marked later unmarked before the normal syncs and marked after them; left: [Ok(false), Ok(false), Ok(false)], right: [Ok(true), Ok(false), Ok(true)]
 A10: red at a0ae3f7e: panicked at crates/web-engine/tests/ai_assisted_view.rs:209:5: assertion `left == right` failed: the shown card's view does not carry the core's marker answer for its note, in one place; left: ["current_card binds `assisted` from the core's read of the shown card's note 0 time(s), not once", "current_card's view holds 0 `assisted` key(s), not one", "src/wasm.rs reads the core's marker 0 time(s), not once"], right: []
+A11: red at 13d1d10a: AssertionError: a marked card shows the line on its question side: expected null not to be null (ai-assisted-line.test.ts:194)
+A12: not red: the base review screen draws no line; it guards the absence beside a drawn card
+A13: red at 13d1d10a: AssertionError: expected { en: [ …(2) ], es: [ …(2) ], …(5) } to deeply equal { Object (en, es, ...) }: en, es, fr, ja, ko, zh-Hans and zh-Hant each read "lacks study_ai_assisted" and "lacks progress_ai_assisted" (ai-assisted-line.test.ts:244)
+A14: red at 13d1d10a: AssertionError: expected { en: [ …(2) ], es: [ …(2) ], …(5) } to deeply equal { Object (en, es, ...) }: en, es, fr, ja, ko, zh-Hans and zh-Hant each read "lacks study_ai_assisted" and "lacks progress_ai_assisted" (ai-assisted-line.test.ts:273)
+A15: red at 13d1d10a: AssertionError: the sentence shows exactly once: expected [] to have a length of 1 but got +0 (progress.test.ts:131)
+A16: not red: the base progress screen draws no such sentence; it guards the absence beside the no-course line
 ```
 
 ## What the record discloses
@@ -55,3 +62,8 @@ A10: red at a0ae3f7e: panicked at crates/web-engine/tests/ai_assisted_view.rs:20
   the note's tags before the core's answer, and each failed on the core's line: the engine's
   package import took the marker away when a newer package without it arrived (A8), and the
   engine's full and normal sync carried it to the second device (A9).
+- **Eight fixture files, not seven, gained `assisted: false`.** SPEC-388 section 4 named seven;
+  the type check at 13d1d10a's parent, with `assisted` required and no fixture changed, refused
+  exactly eight: the seven and `web/app/src/lib/study/update-now.test.ts`, whose card view helper
+  the type check names too. It joined section 4's table in the same commit, and no assertion of
+  any of the eight changed.
