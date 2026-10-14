@@ -141,6 +141,30 @@ PYTHON_CONTROL_SECONDS: dict[str, int] = {
     "scripts/memory_scope.py": 39,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
     "scripts/mutation-verdict.py": 224,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
 }
+#: Each Python file's scoped price, whole seconds of its control, its traced sentinel and its
+#: mean scoped mutant, by repository-relative path, read only when the legs trace (SPEC-421 R6).
+#: Every line is `prices --scoped` output over one dispatched price run's records, committed
+#: under `scripts/tests/fixtures/`, and names the run, attempt and job its figures came from.
+# fmt: off
+PYTHON_SCOPED_SECONDS: dict[str, tuple[int, int, int]] = {
+    "scripts/audit-web-verdict.py": (3, 3, 1),  # run 38432909235 attempt 1 job 115419489219: 19 scoped mutant record(s)
+    "scripts/create-issues.py": (1, 1, 1),  # run 38432909235 attempt 1 job 115419489210: 0 scoped mutant record(s)
+    "scripts/dynamic-imports-check.py": (2, 2, 1),  # run 38432909235 attempt 1 job 115419489573: 18 scoped mutant record(s)
+    "scripts/ios_icon.py": (1, 2, 1),  # run 38432909235 attempt 1 job 115419489248: 14 scoped mutant record(s)
+    "scripts/ios_lane.py": (10, 11, 4),  # run 38432909235 attempt 1 job 115419489348: 20 scoped mutant record(s)
+    "scripts/memory_scope.py": (36, 52, 13),  # run 38432909235 attempt 1 job 115419489225: 20 scoped mutant record(s)
+    "scripts/mutation-verdict.py": (152, 158, 107),  # run 38432909235 attempt 1 job 115419489314: 20 scoped mutant record(s)
+    "scripts/mutation_python.py": (184, 204, 53),  # run 38432909235 attempt 1 job 115419489320: 20 scoped mutant record(s)
+    "scripts/mutation_rows.py": (172, 171, 58),  # run 38432909235 attempt 1 job 115419489293: 20 scoped mutant record(s)
+    "scripts/public-scrub.py": (53, 60, 17),  # run 38432909235 attempt 1 job 115419489252: 20 scoped mutant record(s)
+    "scripts/testflight_age.py": (6, 5, 2),  # run 38432909235 attempt 1 job 115419489382: 20 scoped mutant record(s)
+    "scripts/threat_model.py": (1, 1, 1),  # run 38432909235 attempt 1 job 115419489378: 20 scoped mutant record(s)
+    "scripts/web-engine-size.py": (13, 13, 5),  # run 38432909235 attempt 1 job 115419489199: 18 scoped mutant record(s)
+    "scripts/web_mutation_shards.py": (12, 14, 2),  # run 38432909235 attempt 1 job 115419489341: 20 scoped mutant record(s)
+    "scripts/write-back-issues.py": (1, 1, 1),  # run 38432909235 attempt 1 job 115419489261: 0 scoped mutant record(s)
+    "tools/parity-oracle/generate.py": (2, 2, 1),  # run 38432909235 attempt 1 job 115419489457: 19 scoped mutant record(s)
+}
+# fmt: on
 #: The weekly battery's Python shards, each `run --all --shard k/16` (R14).
 PYTHON_WEEKLY_SHARDS = 16
 #: The weekly dispatch's `package` value that sweeps the Python population alone (R14).
@@ -1040,27 +1064,46 @@ def python_shards(listing: list[dict]) -> dict | None:
     }
 
 
-def python_unpriced_legs(listing: list[dict], prices: dict[str, int]) -> int:
+def python_price(
+    path: str, prices: dict[str, int], scoped: dict[str, tuple[int, int, int]] | None
+) -> tuple[int, int, int] | None:
+    """A listed file's (control, sentinel, mutant) price, or None when it has none and keeps the
+    count rule (SPEC-421 R9): its scoped triple when the legs trace and the table holds it, else
+    its whole-suite price thrice."""
+    if scoped and path in scoped:
+        return scoped[path]
+    price = prices.get(path)
+    return (price, price, price) if price else None
+
+
+def python_unpriced_legs(
+    listing: list[dict],
+    prices: dict[str, int],
+    scoped: dict[str, tuple[int, int, int]] | None = None,
+) -> int:
     """The legs a listing's unpriced mutants take at PYTHON_SHARD_MUTANTS a leg, SPEC-415's count
-    rule, and none when every listed file is priced (SPEC-418 R3 (f))."""
-    unpriced = sum(1 for entry in listing if not prices.get(str(entry.get("file"))))
+    rule, and none when every listed file is priced (SPEC-418 R3 (f), SPEC-421 R9)."""
+    unpriced = sum(
+        1 for entry in listing if not python_price(str(entry.get("file")), prices, scoped)
+    )
     return python_needed(unpriced) if unpriced else 0
 
 
 def python_deal(
-    runs: list[tuple[str, int, list[int]]], count: int
+    runs: list[tuple[str, int, int, list[int]]], count: int
 ) -> tuple[list[int], list[list[int]]] | None:
     """`runs`, heaviest first, each dealt onto the lightest of `count` legs (ties to the lowest
     index): each leg's projected seconds and listing indices, or None once a leg passes the bound.
-    A leg pays a file's control and sentinel once, so a run joining its own file's leg adds only
-    its mutants (SPEC-418 R3 (d))."""
+    A run is its file, its setup (control and sentinel), its price a mutant and its listing
+    indices. A leg pays a file's setup once, so a run joining its own file's leg adds only its
+    mutants (SPEC-418 R3 (d), SPEC-421 R9)."""
     loads = [0] * count
     held: list[set[str]] = [set() for _ in range(count)]
     dealt: list[list[int]] = [[] for _ in range(count)]
-    for path, price, indices in runs:
+    for path, setup, price, indices in runs:
         leg = min(range(count), key=lambda each: (loads[each], each))
         size = len(indices)
-        loads[leg] += (size if path in held[leg] else 2 + size) * price
+        loads[leg] += size * price + (0 if path in held[leg] else setup)
         if loads[leg] > PYTHON_LEG_BOUND_SECONDS:
             return None
         held[leg].add(path)
@@ -1068,7 +1111,11 @@ def python_deal(
     return loads, dealt
 
 
-def python_by_cost(listing: list[dict], prices: dict[str, int]) -> dict | str | None:
+def python_by_cost(
+    listing: list[dict],
+    prices: dict[str, int],
+    scoped: dict[str, tuple[int, int, int]] | None = None,
+) -> dict | str | None:
     """The Python matrix dealt by each listed file's price (SPEC-418 R3): None when no listed
     file is priced, so the count rule stands; a refusal by name when a priced file's one mutant
     cannot fit a leg, or the legs exceed the run's Python share; else the fewest priced legs
@@ -1077,20 +1124,21 @@ def python_by_cost(listing: list[dict], prices: dict[str, int]) -> dict | str | 
     loose: list[int] = []
     for index, entry in enumerate(listing):
         path = str(entry.get("file"))
-        if prices.get(path):
+        if python_price(path, prices, scoped):
             priced.setdefault(path, []).append(index)
         else:
             loose.append(index)
     if not priced:
         return None
-    runs: list[tuple[str, int, list[int]]] = []
+    runs: list[tuple[str, int, int, list[int]]] = []
     for path, indices in priced.items():
-        price = prices[path]
-        k = PYTHON_LEG_BOUND_SECONDS // price - 2
+        control, sentinel, each = python_price(path, prices, scoped)
+        setup = control + sentinel
+        k = (PYTHON_LEG_BOUND_SECONDS - setup) // each
         if k < 1:
             return (
-                f"mutation: shards: REFUSED: {path}'s control is priced at {price} s, so a leg "
-                f"holding one of its mutants projects {3 * price} s, past its "
+                f"mutation: shards: REFUSED: {path}'s control is priced at {control} s, so a leg "
+                f"holding one of its mutants projects {setup + each} s, past its "
                 f"{PYTHON_LEG_BOUND_SECONDS} s bound"
             )
         cuts = -(-len(indices) // k)
@@ -1098,9 +1146,9 @@ def python_by_cost(listing: list[dict], prices: dict[str, int]) -> dict | str | 
         start = 0
         for cut in range(cuts):
             end = start + size + (1 if cut < larger else 0)
-            runs.append((path, price, indices[start:end]))
+            runs.append((path, setup, each, indices[start:end]))
             start = end
-    runs.sort(key=lambda run: (-(2 + len(run[2])) * run[1], run[0], run[2][0]))
+    runs.sort(key=lambda run: (-(run[1] + len(run[3]) * run[2]), run[0], run[3][0]))
     # The search starts at one leg and stops by one leg a run, which always fits: a run holds at
     # most k mutants, so each run alone on its own leg is within the bound.
     legs = None
@@ -1109,7 +1157,7 @@ def python_by_cost(listing: list[dict], prices: dict[str, int]) -> dict | str | 
         if legs is not None:
             break
     loads, dealt = legs
-    unpriced_legs = python_unpriced_legs(listing, prices)
+    unpriced_legs = python_unpriced_legs(listing, prices, scoped)
     if count + unpriced_legs > PYTHON_MAX_SHARDS:
         return (
             f"mutation: shards: REFUSED: {len(listing)} python mutant(s) need {count} leg(s) "
@@ -1160,7 +1208,10 @@ def shards(
             print(f"mutation: shards: VOID {python_listed} holds no Python mutant listing")
             return EXIT_VOID
         python = python_shards(listing)
-        deal = python_by_cost(listing, PYTHON_CONTROL_SECONDS)
+        # The legs trace exactly when a plan's selection does, so only then is a leg priced at
+        # what it pays: its scoped triple (SPEC-421 R10).
+        scoped = PYTHON_SCOPED_SECONDS if "plan" in mutation_python.SCOPED_SELECTIONS else None
+        deal = python_by_cost(listing, PYTHON_CONTROL_SECONDS, scoped)
         if isinstance(deal, str):
             print(deal)
             return EXIT_FAIL
@@ -1229,7 +1280,7 @@ def shards(
             f"python legs {python['count']} of ceiling {PYTHON_MAX_SHARDS}"
         )
     if deal is not None:
-        unpriced_legs = python_unpriced_legs(listing, PYTHON_CONTROL_SECONDS)
+        unpriced_legs = python_unpriced_legs(listing, PYTHON_CONTROL_SECONDS, scoped)
         priced_legs = deal["count"] - unpriced_legs
         slowest = max(shard["projected_seconds"] for shard in deal["shards"][:priced_legs])
         print(
@@ -1237,6 +1288,15 @@ def shards(
             f"slowest at {slowest} s of its {PYTHON_LEG_BOUND_SECONDS} s bound; {unpriced_legs} "
             f"unpriced leg(s) of at most {PYTHON_SHARD_MUTANTS}"
         )
+        listed = {str(entry.get("file")) for entry in listing}
+        scoped_files = listed & set(scoped or ())
+        if scoped_files:
+            whole = {path for path in listed - scoped_files if PYTHON_CONTROL_SECONDS.get(path)}
+            print(
+                f"mutation: shards: python legs priced scoped: {len(scoped_files)} file(s) at "
+                f"their scoped price, {len(whole)} at their whole-suite price, "
+                f"{len(listed - scoped_files - whole)} unpriced"
+            )
     print(
         f"mutation: shards: {count} shard(s) for {len(mutants)} listed mutant(s), projected at "
         f"{sum(costs)} s serially; the slowest at {max(times)} s of its {SHARD_BOUND_SECONDS} s "
@@ -3320,6 +3380,108 @@ def table_web(root, reports, records, tally, fail, void) -> int:
 # --------------------------------------------------------------------------- the command line
 
 
+#: The record kinds a scoped price run writes (SPEC-421 R5, R7); any other line is torn.
+SCOPED_KINDS = ("control", "uncovered", "sentinel", "mutant")
+
+
+def scoped_prices(root: pathlib.Path, directory: str) -> int:
+    """Each population file's scoped price from a price run's `costs.jsonl` records under
+    `directory`, printed as `PYTHON_SCOPED_SECONDS` lines in path order (SPEC-421 R7, R8): the
+    largest control, the largest traced sentinel and the mean scoped mutant, each rounded up and at
+    least one, or (1, 1, 1) for a file no test covers. A file it cannot price is named unpriced,
+    a record for a path outside the population prices nothing, and a VOID prints no figure."""
+    files = sorted(pathlib.Path(directory).rglob("costs.jsonl"))
+    found: dict[str, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
+    records = torn = 0
+    for path in files:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except ValueError:
+                record = None
+            if not (
+                isinstance(record, dict)
+                and record.get("kind") in SCOPED_KINDS
+                and isinstance(record.get("path"), str)
+                and isinstance(record.get("seconds"), (int, float))
+            ):
+                torn += 1
+                continue
+            records += 1
+            found[record["path"]][record["kind"]].append(record)
+    examined = (
+        f"mutation: prices: examined {records} record(s) in {len(files)} file(s); torn {torn}"
+    )
+    voids = scoped_voids(found)
+    if not found:
+        voids.append(f"{directory} holds no cost record")
+    if voids:
+        for reason in voids:
+            print(f"mutation: prices: VOID {reason}")
+        print(examined)
+        return EXIT_FAIL
+    lines: list[str] = []
+    unpriced: list[str] = []
+    for path in sorted(read_json(str(root / PYTHON_POPULATION))):
+        kinds = found.get(path, {})
+        mutants = kinds.get("mutant", [])
+        if kinds.get("uncovered"):
+            triple = (1, 1, 1)
+        else:
+            missing = [kind for kind in SCOPED_KINDS if kind != "uncovered" and not kinds.get(kind)]
+            if missing:
+                unpriced.append(f"mutation: prices: {path} unpriced: no {missing[0]} record")
+                continue
+            control = max(1, math.ceil(max(record["seconds"] for record in kinds["control"])))
+            sentinel = max(1, math.ceil(max(record["seconds"] for record in kinds["sentinel"])))
+            mean = sum(record["seconds"] for record in mutants) / len(mutants)
+            triple = (control, sentinel, max(1, math.ceil(mean)))
+        first = scoped_setup(kinds)[0]
+        lines.append(
+            f'    "{path}": ({triple[0]}, {triple[1]}, {triple[2]}),  # run {first.get("run")} '
+            f"attempt {first.get('attempt')} job {first.get('job')}: {len(mutants)} scoped "
+            "mutant record(s)"
+        )
+    for line in lines + unpriced:
+        print(line)
+    print(examined)
+    return EXIT_OK
+
+
+def scoped_setup(kinds: dict[str, list[dict]]) -> list[dict]:
+    """A path's setup records, the ones that name where they ran: its controls, its uncovered
+    record and its traced sentinels, in that order (SPEC-421 R5)."""
+    return [*kinds.get("control", []), *kinds.get("uncovered", []), *kinds.get("sentinel", [])]
+
+
+def scoped_voids(found: dict[str, dict[str, list[dict]]]) -> list[str]:
+    """Why a price run's records price nothing, path by path (SPEC-421 R8): a setup record that
+    names no run or no job, a mutant record a whole run wrote, or one path's setup records spread
+    over two jobs or two attempts, since each figure names the one job and attempt it came from."""
+    voids: list[str] = []
+    for path in sorted(found):
+        kinds = found[path]
+        setup = scoped_setup(kinds)
+        for record in setup:
+            if record.get("run") is None:
+                voids.append(f"{path}: its {record['kind']} record names no run")
+            if record.get("job") is None:
+                voids.append(f"{path}: its {record['kind']} record names no job")
+        for record in kinds.get("mutant", []):
+            if record.get("why") == "all":
+                name = record.get("name")
+                voids.append(f"{path}: mutant {name} ran the whole suite, a whole run's record")
+        jobs = {record.get("job") for record in setup}
+        if len(jobs) > 1:
+            voids.append(f"{path}: its records name {len(jobs)} jobs")
+        attempts = {record.get("attempt") for record in setup}
+        if len(attempts) > 1:
+            voids.append(f"{path}: its records name {len(attempts)} attempts")
+    return voids
+
+
 def prices(directory: str) -> int:
     """Each Python file's price from the `costs.jsonl` records under `directory` (SPEC-418 R7):
     the dearer of its largest control seconds and its mean mutant seconds, rounded up and at least
@@ -3413,6 +3575,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--rust-leg")
     parser.add_argument("--rows-leg")
     parser.add_argument("--costs")
+    parser.add_argument("--scoped", action="store_true")
     args = parser.parse_args(argv)
     root = pathlib.Path(args.root).resolve()
     if args.verb == "plan":
@@ -3465,7 +3628,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.verb == "prices":
         if not args.costs:
             parser.error("prices needs --costs")
-        return prices(args.costs)
+        return scoped_prices(root, args.costs) if args.scoped else prices(args.costs)
     return exclusions(root)
 
 

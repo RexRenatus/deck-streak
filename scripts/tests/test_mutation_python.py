@@ -893,6 +893,8 @@ class EachLegRunsItsPlannedNames(unittest.TestCase):
         fixed by `--control-seconds` and the run's id and attempt by this test's environment."""
         tree = Tree(self, {"calc": CALC, "loose": LOOSE}, tests={"loose": []})
         with mock.patch.dict(os.environ, {"GITHUB_RUN_ID": "4242", "GITHUB_RUN_ATTEMPT": "2"}):
+            # A price leg exports its job id; this run is no leg of one, so its records name none.
+            os.environ.pop("MUTATION_JOB_ID", None)
             done, report, lines = self.leg(tree, "--all", "--control-seconds", "20")
         self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
         self.assertEqual(
@@ -925,6 +927,7 @@ class EachLegRunsItsPlannedNames(unittest.TestCase):
                 "shard": None,
                 "run": "4242",
                 "attempt": "2",
+                "job": None,
             },
         )
         self.assertEqual([r["name"] for r in records[1:4]], CALC_NAMES)
@@ -944,19 +947,23 @@ class EachLegRunsItsPlannedNames(unittest.TestCase):
                 "shard": None,
                 "run": "4242",
                 "attempt": "2",
+                "job": None,
             },
         )
         examined("cost records", records)
 
     def test_a_sharded_legs_cost_records_name_their_shard_one_record_a_line(self):
         """R6 under `--shard`: the plan deals all three of calc.py's names to leg 0 of 2, so the
-        leg writes four records, one a line; the control's names its shard, 0/2, beside the run
-        and attempt this test's environment fixes; and no mutant's seconds exceed the wall time
-        this test measured around the whole run."""
+        leg writes five records, one a line: the control, the traced sentinel (SPEC-421 R5) and
+        the three mutants. The control's and the sentinel's name their shard, 0/2, beside the run
+        and attempt this test's environment fixes and no job, since no price leg exported one; and
+        no sentinel's or mutant's seconds exceed the wall time this test measured around the whole
+        run."""
         tree = Tree(self, {"calc": CALC})
         plan = self.plan(tree, "plan.json", [CALC_NAMES, []])
         began = time.monotonic()
         with mock.patch.dict(os.environ, {"GITHUB_RUN_ID": "5151", "GITHUB_RUN_ATTEMPT": "3"}):
+            os.environ.pop("MUTATION_JOB_ID", None)
             done, report, lines = self.leg(
                 tree, "--plan", str(plan), "--shard", "0/2", "--control-seconds", "20"
             )
@@ -964,7 +971,7 @@ class EachLegRunsItsPlannedNames(unittest.TestCase):
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertEqual(report["shard"], "0/2")
         self.assertIsNotNone(lines, "no costs.jsonl beside the report")
-        self.assertEqual(len(lines), 4, lines)
+        self.assertEqual(len(lines), 5, lines)
         records = [json.loads(line) for line in lines]
         self.assertEqual(
             records[0],
@@ -978,9 +985,21 @@ class EachLegRunsItsPlannedNames(unittest.TestCase):
                 "shard": "0/2",
                 "run": "5151",
                 "attempt": "3",
+                "job": None,
             },
         )
-        self.assertEqual([r["name"] for r in records[1:]], CALC_NAMES)
+        self.assertEqual(
+            {key: value for key, value in records[1].items() if key != "seconds"},
+            {
+                "kind": "sentinel",
+                "path": "scripts/calc.py",
+                "shard": "0/2",
+                "run": "5151",
+                "attempt": "3",
+                "job": None,
+            },
+        )
+        self.assertEqual([r["name"] for r in records[2:]], CALC_NAMES)
         for record in records[1:]:
             self.assertGreaterEqual(record["seconds"], 0)
             self.assertLessEqual(record["seconds"], took)
@@ -2137,6 +2156,194 @@ class TheTracesChildProcessesEachWriteOneRecord(unittest.TestCase):
         nothing."""
         done, found = child_trace_run(self, TOOL_PROGRAM, aimed=False)
         self.assertEqual((done.returncode, done.stdout, found), (0, "None\n", {}), done.stderr)
+
+
+def line_two_plan(tree, *names):
+    """A plan, written into `tree`, selecting line 2 of each named file, the line its mutants
+    are on; its path as text."""
+    plan = {
+        "classes": {"scripts": {"applies": True}},
+        "files": [{"path": f"scripts/{n}.py", "class": "scripts", "code": [2]} for n in names],
+    }
+    return str(tree.write("plan.json", json.dumps(plan)))
+
+
+class AScopedFileRunPricesItsFile(unittest.TestCase):
+    """SPEC-421 R1 to R5 (A1 to A5): `run --file --scoped` traces its file's sentinel and runs each
+    mutant against its scoped set as a `--plan` leg does; `--sample S` runs every ceil(m / S)-th
+    selected mutant in listing order; both flags are refused by name beside a verdict run; every
+    setup record names its job; and a whole run writes no sentinel record. The scope fixture's own
+    `EXECUTES` table fixes each mutant's set."""
+
+    def scoped(self, tree, *args):
+        """The scope fixture's target run `--file --scoped` from an untraced environment."""
+        with mock.patch.dict(os.environ, untraced(SCOPE_CASE=""), clear=True):
+            return leg(
+                self, tree, "--file", SCOPE_TARGET, "--scoped", "--control-seconds", "1", *args
+            )
+
+    def refusals(self, cases):
+        """Each case's `run` over calc.py exits 2 on its one usage line before any mutant runs:
+        no output, no report, no cost record, and the file's bytes unchanged."""
+        tree = Tree(self, {"calc": CALC})
+        plan = line_two_plan(tree, "calc")
+        before = digest(tree.root / "scripts/calc.py")
+        for args, refusal in examined("refused runs", cases):
+            with self.subTest(args=args):
+                done, report, records = leg(self, tree, *[plan if a == "PLAN" else a for a in args])
+                self.assertEqual(
+                    (done.returncode, done.stdout, done.stderr, report, records),
+                    (2, "", f"mutation-python: usage: {refusal}\n", None, []),
+                )
+                self.assertEqual(digest(tree.root / "scripts/calc.py"), before)
+
+    def test_a_scoped_file_run_scopes_each_mutant_and_records_its_sentinel(self):
+        """A1 (R1, R5): each of the 14 mutants' scoped set is exactly the checks the fixture's
+        table names for its function, a whole-suite line naming none, and the run writes one
+        sentinel record, its file's."""
+        _done, _report, records = self.scoped(scope_tree(self))
+        costs = mutant_costs(records)
+        table = executes()
+        self.assertEqual(len(costs), 14, list(costs))
+        for name, record in costs.items():
+            function = name.rsplit(" in ", 1)[1]
+            self.assertEqual(record.get("scoped", []), ids(*table.get(function, [])), name)
+        self.assertEqual(
+            [(r["kind"], r["path"]) for r in records if r["kind"] == "sentinel"],
+            [("sentinel", SCOPE_TARGET)],
+        )
+        examined("scoped mutants", costs)
+
+    def test_scoped_is_refused_beside_a_verdict_run(self):
+        """A2 (R3): `--scoped` beside `--plan` and beside `--all`."""
+        self.refusals(
+            [
+                (
+                    ["--plan", "PLAN", "--scoped"],
+                    "--scoped beside --plan is refused: --scoped is accepted with --file alone",
+                ),
+                (
+                    ["--all", "--scoped"],
+                    "--scoped beside --all is refused: --scoped is accepted with --file alone",
+                ),
+            ]
+        )
+
+    def test_sample_is_refused_outside_a_scoped_file_run(self):
+        """A2 (R2, R3): `--sample` beside `--plan`, beside `--all` and without `--scoped`, and a
+        sample under one, which R2 does not admit."""
+        alone = "--sample is accepted with --file --scoped alone"
+        self.refusals(
+            [
+                (
+                    ["--plan", "PLAN", "--sample", "2"],
+                    f"--sample beside --plan is refused: {alone}",
+                ),
+                (["--all", "--sample", "2"], f"--sample beside --all is refused: {alone}"),
+                (
+                    ["--file", "scripts/calc.py", "--sample", "2"],
+                    f"--sample without --scoped is refused: {alone}",
+                ),
+                (
+                    ["--file", "scripts/calc.py", "--scoped", "--sample", "0"],
+                    "--sample 0 is refused: --sample takes a whole number of 1 or more",
+                ),
+            ]
+        )
+
+    def test_a_sample_runs_every_ceil_m_over_s_th_mutant_in_order(self):
+        """A3 (R2): the fixture lists 14 mutants, so `--sample 3` steps by ceil(14 / 3) = 5 and
+        runs the mutants at positions 0, 5 and 10, in that order; a step of floor(14 / 3) = 4
+        would run four."""
+        tree = scope_tree(self)
+        listed = tree.runner("list", "--file", SCOPE_TARGET)
+        names = listed.stdout.splitlines()[1:]
+        self.assertEqual(len(names), 14, listed.stdout + listed.stderr)
+        _done, report, records = self.scoped(tree, "--sample", "3")
+        sample = [names[0], names[5], names[10]]
+        self.assertEqual([m["name"] for m in mutants_of(report)], sample)
+        self.assertEqual(list(mutant_costs(records)), sample)
+        examined("listed mutants", names)
+
+    def test_a_sample_of_one_is_accepted_and_runs_only_the_first_mutant(self):
+        """A3 (R2): S is a whole number of 1 or more, so `--sample 1` is accepted, and over
+        calc.py's 3 listed mutants it steps by ceil(3 / 1) = 3 and runs the mutant at position 0
+        alone; a refusal of a sample of 1 would exit 2 and run none."""
+        tree = Tree(self, {"calc": CALC})
+        with mock.patch.dict(os.environ, untraced(SCOPE_CASE=""), clear=True):
+            done, report, records = leg(
+                self,
+                tree,
+                "--file",
+                "scripts/calc.py",
+                "--scoped",
+                "--control-seconds",
+                "20",
+                "--sample",
+                "1",
+            )
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual([m["name"] for m in mutants_of(report)], CALC_NAMES[:1])
+        self.assertEqual(list(mutant_costs(records)), CALC_NAMES[:1])
+        examined("listed mutants", CALC_NAMES)
+
+    def test_a_sample_at_or_over_the_listing_runs_every_mutant_in_order(self):
+        """A3 (R2): when S is at least the m selected mutants, the step ceil(m / S) is 1, so
+        `--sample S` runs every one of calc.py's 3 listed mutants in listing order, at S = 3 = m
+        and at S = 20 > m; a step of 2 would run the mutants at positions 0 and 2 alone."""
+        tree = Tree(self, {"calc": CALC})
+        listed = tree.runner("list", "--file", "scripts/calc.py")
+        self.assertEqual(listed.stdout.splitlines()[1:], CALC_NAMES, listed.stdout + listed.stderr)
+        for sample in examined("samples at or over the listing", ("3", "20")):
+            with self.subTest(sample=sample):
+                with mock.patch.dict(os.environ, untraced(SCOPE_CASE=""), clear=True):
+                    done, report, records = leg(
+                        self,
+                        tree,
+                        "--file",
+                        "scripts/calc.py",
+                        "--scoped",
+                        "--control-seconds",
+                        "20",
+                        "--sample",
+                        sample,
+                    )
+                self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+                self.assertEqual([m["name"] for m in mutants_of(report)], CALC_NAMES)
+                self.assertEqual(list(mutant_costs(records)), CALC_NAMES)
+        examined("listed mutants", CALC_NAMES)
+
+    def test_each_setup_record_names_its_job(self):
+        """A4 (R5): over a plan of calc.py, which is judged, and loose.py, which no test covers,
+        the control, sentinel and uncovered records name the job `MUTATION_JOB_ID` holds, and
+        None when it is unset; the mutant records are unchanged and name none."""
+        tree = Tree(self, {"calc": CALC, "loose": LOOSE}, tests={"loose": []})
+        plan = line_two_plan(tree, "calc", "loose")
+        seen = {}
+        for job in examined("job ids", ("7373", None)):
+            with mock.patch.dict(os.environ, {"MUTATION_JOB_ID": str(job)}):
+                if job is None:
+                    os.environ.pop("MUTATION_JOB_ID")
+                _done, _report, records = leg(self, tree, "--plan", plan, "--control-seconds", "20")
+            seen[job] = sorted((r["kind"], r["path"], r.get("job", "no job")) for r in records)
+        for job in ("7373", None):
+            self.assertEqual(
+                seen[job],
+                [("control", "scripts/calc.py", job)]
+                + [("mutant", "scripts/calc.py", "no job")] * 3
+                + [("sentinel", "scripts/calc.py", job), ("uncovered", "scripts/loose.py", job)],
+                job,
+            )
+
+    def test_a_whole_run_writes_no_sentinel_record(self):
+        """A5 (R5): `run --all` and `run --file` without `--scoped` trace nothing, so each writes
+        its control and mutant records and no sentinel record."""
+        tree = Tree(self, {"calc": CALC})
+        kinds = []
+        for args in examined("whole runs", (["--all"], ["--file", "scripts/calc.py"])):
+            _done, _report, records = leg(self, tree, *args, "--control-seconds", "20")
+            kinds.append([r["kind"] for r in records])
+        self.assertEqual(kinds, [["control"] + ["mutant"] * 3] * 2)
 
 
 if __name__ == "__main__":

@@ -361,3 +361,90 @@ exit, write and read.
 | refusal | by name above the share | by name outside 1 to the cap, before any deal; by name above the share, unchanged |
 | control | none | three named mutants first in every leg, read through each file entry's `void` |
 | verdict | every listed mutant examined; each `void` read by name | unchanged readers; a mutant record names `scope`, `why` and `tests` |
+
+## 8. Scoped prices from a dispatched run (SPEC-421, ADR-435)
+
+Every `path:line` in this section was read at dev `c726af67`. Sections 6 and 7 stay as written.
+This section shows what changes around them: a dispatched price run measures each population file
+scoped, a verb turns its records into a second table of triples, and the plan reads that table
+when its legs run scoped.
+
+### 8.1 Before: a Python leg's price at dev `c726af67`
+
+```mermaid
+flowchart TD
+  bList["plan job: mutation_python.py list over the diff"] --> bShards["mutation-verdict.py shards"]
+  bWhole["PYTHON_CONTROL_SECONDS: seven whole-suite prices from one battery run"] --> bShards
+  bShards -->|"priced file: k = 1800 // price - 2; a run weighs (2 + size) x price"| bDeal["python_deal"]
+  bShards -->|"unpriced file: the count rule, 20 a leg"| bDeal
+  bDeal --> bShare{"legs above PYTHON_MAX_SHARDS?"}
+  bShare -->|"yes"| bRefuse["REFUSED by name; no leg starts"]
+  bShare -->|"no"| bLeg["each leg: run --plan --shard k/n --failfast"]
+  bLeg --> bScoped["each mutant: its scoped tests, or the whole suite"]
+  bScoped --> bCosts["costs.jsonl: control and mutant records; no sentinel record; no job"]
+  bCosts --> bVerdict["mutation-verdict.py: every listed mutant examined"]
+```
+
+The leg runs each mutant scoped, but the plan charged it the whole-suite control:
+`scripts/mutation-verdict.py` at 224 s a mutant, six a leg (`scripts/mutation-verdict.py:135-143`,
+:1071-1135). Nine listed files had no price, and no run measured a scoped one.
+
+### 8.2 After: the price run and the fill
+
+```mermaid
+flowchart TD
+  pDispatch["one dispatch of mutation-prices.yml at the delivery's branch"] --> pPop["population job: the files of scripts/mutation-python.json"]
+  pRehearsal["pull request rehearsal: one named file; registers the workflow"] --> pPop
+  pPop --> pLeg["one leg per file, on ci.yml's mutation-python runner class"]
+  pLeg --> pRun["run --file F --scoped --sample 20 --failfast; MUTATION_JOB_ID from job.check_run_id"]
+  pRun --> pRecords["costs.jsonl: control, sentinel, uncovered and mutant records; each setup record names run, attempt and job"]
+  pRecords --> pUpload["artifact mutation-prices-job-index, uploaded under if: always()"]
+  pUpload --> pCopy["the fill copies only the legs whose artifact holds report.json"]
+  pCopy --> pFixture["scripts/tests/fixtures/mutation-scoped-prices-run: committed apart from the table"]
+  pFixture --> pVerb["mutation-verdict.py prices --scoped --costs DIR"]
+  pVerb -->|"no record, no run, no job, a why of all, two jobs or two attempts"| pVoid["VOID; EXIT_FAIL; no table line"]
+  pVerb -->|"records read"| pLines["one triple line per population file, each naming run, attempt and job; unpriced lines; examined line"]
+  pLines --> pTable["PYTHON_SCOPED_SECONDS, re-derived byte for byte by a test"]
+```
+
+The workflow files nothing and judges nothing. A leg cut at its 120-minute limit leaves no
+`report.json`, so its file reads `unpriced` by name and keeps its fallback.
+
+### 8.3 After: the plan's choice of price
+
+```mermaid
+flowchart TD
+  aList["plan job: mutation_python.py list over the diff"] --> aCap{"share outside 1 to PYTHON_SHARE_CAP?"}
+  aCap -->|"yes"| aCapRefuse["REFUSED by name before any deal, unchanged"]
+  aCap -->|"no"| aSel{"plan in mutation_python.SCOPED_SELECTIONS?"}
+  aSel -->|"yes"| aScoped["scoped = PYTHON_SCOPED_SECONDS"]
+  aSel -->|"no"| aNone["scoped = None"]
+  aScoped --> aPrice["python_price per file: the scoped triple, else the whole price thrice, else None"]
+  aNone --> aPrice
+  aPrice -->|"a triple"| aCost["setup = control + sentinel; k = (1800 - setup) // each; a run weighs setup + size x each"]
+  aPrice -->|"None"| aCount["the count rule, 20 a leg, fail-closed"]
+  aCost --> aDeal["python_deal: a leg holding the file adds size x each"]
+  aCount --> aDeal
+  aDeal --> aShare{"legs above the share of 32?"}
+  aShare -->|"yes"| aRefuse["REFUSED by name, unchanged"]
+  aShare -->|"no"| aMatrix["python_matrix output; every listed mutant in exactly one leg"]
+  aMatrix --> aLine["when a file is priced scoped: python legs priced scoped line"]
+```
+
+`prepare` traces on the same value the plan reads, `selection(args) in SCOPED_SELECTIONS`, or on
+`--scoped`, so the plan prices a leg scoped exactly when the leg runs scoped. For a whole price the
+triple is (p, p, p), so every deal and every printed line is byte-identical to section 6's.
+
+### 8.4 What crosses each step
+
+| step | before (dev `c726af67`) | after (SPEC-421) |
+|---|---|---|
+| listing | `mutation_python.py list` over the diff | unchanged |
+| scoped set | the tests that executed the line, in `run --plan` only | unchanged in `run --plan`; also in a `--file --scoped` price run |
+| kept costs | control, uncovered and mutant records naming run and attempt | the setup records also name their job; a traced sentinel writes one sentinel record; a whole run writes none |
+| price record | `PYTHON_CONTROL_SECONDS`, seven whole-suite prices | unchanged, as the fallback; `PYTHON_SCOPED_SECONDS`, triples from one dispatched run's committed records, re-derived by a test |
+| scoped or whole | always whole | the scoped triple when `plan` is in `SCOPED_SELECTIONS` and the file has one; else the whole price thrice; else the count rule |
+| deal | a run weighs (2 + size) x price | a run weighs setup + size x each; byte-identical for a whole price |
+| share | `PYTHON_MAX_SHARDS` 32 under `PYTHON_SHARE_CAP` 128 | unchanged |
+| refusal | by name above the share; by name at k < 1 | unchanged in text; k read as (1800 - setup) // each |
+| verdict | every listed mutant examined; each `void` read by name | unchanged; no mutant leaves the plan, and every shard is counted |

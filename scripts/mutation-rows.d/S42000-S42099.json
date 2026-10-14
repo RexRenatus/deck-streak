@@ -204,8 +204,8 @@
       [
         "S42025-THE-BATTERY-STAYS-WHOLE",
         "scripts/mutation_python.py",
-        "            if getattr(self.args, \"plan\", None)\n",
-        "            if getattr(self.args, \"plan\", None) or getattr(self.args, \"all\", None)\n",
+        "SCOPED_SELECTIONS = frozenset({\"plan\"})",
+        "SCOPED_SELECTIONS = frozenset({\"plan\", \"all\"})",
         "run --all takes no trace and runs every mutant whole, why all (SPEC-420 R8, A16)",
         "test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_the_battery_runs_every_mutant_against_the_whole_suite"
       ],

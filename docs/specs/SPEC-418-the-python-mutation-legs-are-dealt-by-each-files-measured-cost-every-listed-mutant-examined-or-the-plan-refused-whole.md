@@ -272,3 +272,29 @@ re-read before any code lands.
 
 Each row's anchor is unique in its file and byte-identical to the line the mutant replaces; its
 killer is the criterion's test, run by CI's `rows` job.
+
+## Amendment: a scoped leg is priced by a triple (SPEC-421, ADR-435)
+
+Insert-only; every earlier byte is kept. SPEC-421 gives the plan a second price table,
+`PYTHON_SCOPED_SECONDS`, of (control, sentinel, mutant) triples that a dispatched price run
+measured, and the plan reads it when its legs run scoped. From SPEC-421 on, R3 (b), R3 (d) and R4
+above read as follows. Every other requirement stands as written.
+
+**R3 (b), read with a triple.** For each priced file F, the price is the triple
+(control, sentinel, each) that `python_price` returns: `PYTHON_SCOPED_SECONDS[F]` when the plan
+prices scoped and that table holds F, else (c, c, c) from `PYTHON_CONTROL_SECONDS`. With
+setup = control + sentinel, k = floor((1800 - setup) / each) is the most of F's mutants one leg
+holds beside F's control and sentinel. For a whole price that is floor(1800 / c) - 2, as above.
+k < 1 refuses the whole plan with the line above, its two figures read as the control and as
+setup + each. For a whole price those are c and 3c, so the line is byte-identical.
+
+**R3 (d), read with a triple.** A run weighs setup + size x each. A leg that already holds F adds
+size x each, and any other leg adds setup + size x each. For a whole price these are
+(2 + size) x c and size x c, as above, and the deal is byte-identical.
+
+**R4, read with the scoped table.** `shards` calls `python_by_cost(listing,
+PYTHON_CONTROL_SECONDS, scoped)`, where `scoped` is `PYTHON_SCOPED_SECONDS` when `"plan"` is in
+`mutation_python.SCOPED_SELECTIONS`, and None otherwise. When at least one file is priced scoped,
+the plan prints `mutation: shards: python legs priced scoped: <s> file(s) at their scoped price,
+<w> at their whole-suite price, <u> unpriced` after the `python legs dealt by cost` line. When no
+file is priced scoped, every line R4 names is byte-identical, and nothing new prints.

@@ -210,5 +210,22 @@ class TheReleaseRunbookNamesThePythonShare(unittest.TestCase):
         examined("share names", names)
 
 
+class TheReleaseRunbookNamesTheScopedPrices(unittest.TestCase):
+    """SPEC-421 A15 (R13, ADR-435): section 2 of the release runbook names the scoped price table,
+    the verb that prints it and the workflow whose dispatched run it is read from."""
+
+    def test_the_runbook_names_the_scoped_price_table_its_verb_and_its_workflow(self):
+        lines = (REPO / "RELEASING.md").read_text(encoding="utf-8").splitlines()
+        start, end = "## 2. The release pull request", "## 3. Tag it on main"
+        self.assertIn(start, lines)
+        self.assertIn(end, lines)
+        section = " ".join(" ".join(lines[lines.index(start) : lines.index(end)]).split())
+        names = ["PYTHON_SCOPED_SECONDS", "prices --scoped", "mutation-prices.yml"]
+        self.assertEqual(
+            [name for name in names if name not in section], [], "section 2 names the scoped prices"
+        )
+        examined("scoped price names", names)
+
+
 if __name__ == "__main__":
     unittest.main()

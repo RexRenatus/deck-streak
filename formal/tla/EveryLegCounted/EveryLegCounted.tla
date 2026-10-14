@@ -70,12 +70,23 @@
 (*                   and never holds them to the tool's listing.           *)
 (***************************************************************************)
 \* mutation-verdict.py::python_by_cost is one deal Plan admits; mutation_python.py::planned_leg runs its leg's slice (ran) or refuses with no report (LegVoid).
-\* @phx covers scripts/mutation-verdict.py anchor=shards digest=sha256:4a61a9cd1abc97c0ba6fe58c0a9b2d07b9f8172210a033f66189fc2f320c8435
+\* Re-read for SPEC-421 (ADR-435): every hunk of the two spans below implements Plan, and none moves a variable.
+\* mutation-verdict.py::python_by_cost prices each file by python_price's triple (control, sentinel, each): its
+\*   scoped triple first, else its whole-suite price p as (p, p, p). A run carries its setup, control plus
+\*   sentinel, once and each mutant at each; k is (PYTHON_LEG_BOUND_SECONDS - setup) // each; runs sort by that
+\*   weight; the refusal prints control and setup + each. A whole triple gives the base's k, weight and refusal
+\*   figures, so a whole-priced deal is the base's. Each listed mutant is still in exactly one run or in the
+\*   count rule's loose list, so the partition over legs is unchanged, and the count of legs moves only with the
+\*   deal, which Plan already chooses freely (dealt').
+\* mutation-verdict.py::shards passes PYTHON_SCOPED_SECONDS to python_by_cost and python_unpriced_legs exactly
+\*   when the legs trace, and prints one line counting the listed files priced scoped, whole and unpriced. The
+\*   line is printed after the deal and deals nothing: store, attempt, done, verdict and pick are untouched.
+\* @phx covers scripts/mutation-verdict.py anchor=shards digest=sha256:525ccb54c22d672f86e180b699c0004a495301cf97ef79a204867e31c23cb635
 \* @phx covers scripts/mutation-verdict.py anchor=whole_reports digest=sha256:4c2a91086efb74a19dee70816f1f39aac90712652548599ce8befd94f2340983
 \* @phx covers scripts/mutation-verdict.py anchor=partition digest=sha256:9b2464deb33fb55acce4bade799fac1d1d5094a4526a528d634aeb1f78f57677
 \* @phx covers scripts/mutation-verdict.py anchor=examined_sum digest=sha256:072ec1b6768a7616f7cf7b1f0e03846367d35874bcce6493458c470c4f63966e
 \* @phx covers scripts/mutation-verdict.py anchor=population_gaps digest=sha256:7c6d3867026cb32da3c8997757c7884886cbaa523a1af2b29bd260d9ca68b03f
-\* @phx covers scripts/mutation-verdict.py anchor=python_by_cost digest=sha256:365b108d302518f5b9397043fc8e218d6c924bd71877bf1a6aeb1d365242603a
+\* @phx covers scripts/mutation-verdict.py anchor=python_by_cost digest=sha256:ae7b4ac825232d25124ef22e39929fcb5d05a551cacf5a01422d0361cadb8e84
 \* @phx covers scripts/mutation_python.py anchor=planned_leg digest=sha256:6c7d8c820d1f1217cf16d187766c2cbaeb6c89aeaa60cb721f5922eb86d6ae6d
 \* @phx cites #220, #691
 \* @phx property PassMeansEveryLegCounted ramp=report

@@ -87,6 +87,16 @@ confirmed by the whole suite before it reads SURVIVED. The scheduled battery run
 whole. Every leg runs the leg control first, three named mutants expected KILLED, KILLED and
 SURVIVED, and any other outcome voids every file of the leg by name.
 
+**A scoped leg is priced at what it runs (SPEC-421, ADR-435).** When the legs trace, the plan
+prices each Python file by its triple in `PYTHON_SCOPED_SECONDS` (`scripts/mutation-verdict.py`):
+its control, its traced sentinel and its mean scoped mutant, measured by one dispatched run of
+`.github/workflows/mutation-prices.yml`, each line naming its run, attempt and job. A file with no
+triple keeps its whole-suite price, else the count rule. A refresh is one dispatch of
+`mutation-prices.yml`; its legs' `costs.jsonl` files are committed as the fixture
+`scripts/tests/fixtures/mutation-scoped-prices-<run>/`, and the table is replaced by the output of
+`mutation-verdict.py prices --scoped --costs <dir>` over that fixture, never by hand. The fixture
+and the table change together, in one delivery.
+
 **Cut a release before its range reaches the ceiling.** A release pull request's plan lists every
 mutant `dev` gained since the last release, so the range only grows until it ships, and a range past
 the ceiling cannot be judged by any run. The scheduled battery's plan of the whole tree, the largest
