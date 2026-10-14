@@ -128,6 +128,10 @@ PYTHON_SHARE_CAP = 128
 #: A Python leg's projected time may reach half its job's `timeout-minutes` of 60, the margin the
 #: Rust legs keep under theirs, since a projection is a price and not a measurement (SPEC-418 R1).
 PYTHON_LEG_BOUND_SECONDS = 1800
+#: The most Python legs one matrix job deals: a matrix generates at most 256 jobs (SPEC-422 R8).
+PYTHON_MATRIX_LEGS = 256
+#: The Python matrix jobs of `ci.yml`, each reading one Python matrix output (SPEC-422 R9).
+PYTHON_MATRICES = 2
 #: Each Python file's price, whole seconds of its control run, by repository-relative path. Every
 #: line is the `prices` verb's output over one recorded run's `costs.jsonl`, committed under
 #: `scripts/tests/fixtures/`, and names the run, attempt and shard it came from. A test
@@ -217,6 +221,12 @@ def scope_of(event: str, base_ref: str, subject: str) -> tuple[str, str]:
             )
         return "diff", "this push names no pull request, so its first-parent diff is judged"
     return "diff", f"the {event or 'local'} run is judged on its diff"
+
+
+def release_run(event: str, base_ref: str, head_ref: str, head_repo: str, repo: str) -> bool:
+    """Whether this run is the release pull request's, `dev` into `main` from this repository
+    (SPEC-422 R1); every input is taken and none is read yet, so no run is the release run."""
+    return False
 
 
 TITLE = "Mutation survivors: {}"
@@ -1115,6 +1125,7 @@ def python_by_cost(
     listing: list[dict],
     prices: dict[str, int],
     scoped: dict[str, tuple[int, int, int]] | None = None,
+    ceiling: int | None = None,
 ) -> dict | str | None:
     """The Python matrix dealt by each listed file's price (SPEC-418 R3): None when no listed
     file is priced, so the count rule stands; a refusal by name when a priced file's one mutant
@@ -3566,6 +3577,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--event", default="")
     parser.add_argument("--base-ref", default="")
     parser.add_argument("--subject", default="")
+    parser.add_argument("--head-ref", default="")
+    parser.add_argument("--head-repo", default="")
+    parser.add_argument("--repo", default="")
     parser.add_argument("--shards", type=int)
     parser.add_argument("--python-shards", type=int, default=PYTHON_WEEKLY_SHARDS)
     parser.add_argument("--listed")
@@ -3574,6 +3588,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--package")
     parser.add_argument("--rust-leg")
     parser.add_argument("--rows-leg")
+    parser.add_argument("--python-release-leg")
     parser.add_argument("--costs")
     parser.add_argument("--scoped", action="store_true")
     args = parser.parse_args(argv)

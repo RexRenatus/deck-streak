@@ -210,3 +210,19 @@ in place of the issue: `empty/` is run 36604153634 of #388, and `listed/` is run
 #410. The fixtures, the run ids and every measurement stand as written.
 
 This section inserts nothing else, and issue #455 records the correction.
+
+## 10. Amendment: `ci` admits a third leg that was not started, the release run's second Python matrix (SPEC-422)
+
+Made after the delivery, insert-only: every earlier byte is kept in order. R8 admits `skipped`
+from `mutation-rust` and `mutation-rows` only. SPEC-422 adds `mutation-python-release`, a leg the
+plan's listing gives nothing on every run but the release pull request's run whose Python legs
+pass `PYTHON_MATRIX_LEGS`. Its job-level condition reads the plan's `python_release_legs` output
+alone, with no leg's result and no status function, so it is skipped whenever that output is `0`.
+
+`ci` admits that skip once, beside R8's two, and prints it. `mutation-verdict` judges the leg
+against the plan through `legs --python-release-leg` (R6): the leg is owed exactly when the plan's
+Python count passes `PYTHON_MATRIX_LEGS`, and a leg skipped while owed, or a call that omits the
+argument while the leg is owed, reads VOID by name, so `ci` cannot pass with it. A call that omits
+the argument while the leg is not owed prints nothing, so every earlier output of `legs` stays
+byte for byte. Every other result that is not `success` still fails `ci`. R8's rule is unchanged
+in kind: a skip is admitted only from a leg the listing can give nothing, once for each such leg.

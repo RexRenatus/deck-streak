@@ -375,3 +375,22 @@ D2's reason is kept: ADR-435 fills the table only from a completed run's records
 projection. The figure of about 301 legs above replayed a local measurement's scoped prices.
 ADR-435 D5's projection of 268 replays one file's recorded legs. Neither is the release's figure;
 that is the plan's own line after the land. D1 to D7 and the rest of this ADR are unchanged.
+
+## Amendment: the per-matrix question is decided for the release run alone (SPEC-422, ADR-436)
+
+Insert-only; every earlier byte is kept. D1 left two routes past a share of 32 to the owner
+(#825): the Rust share falling by N - 32, or the 256-job limit read per matrix rather than per
+run. ADR-436 takes the second for the release pull request's run alone, on SPEC-422's committed
+measurement, and only up to `PYTHON_RELEASE_CEILING`, the one constant an owner-signed ruling file
+sets. D1's share line is untouched: `PYTHON_MAX_SHARDS` stays 32 and `PYTHON_SHARE_CAP` 128 on
+every run, and the job-budget test stays green at them. The release run's legs past the share are
+dealt by cost up to that ceiling (SPEC-418, SPEC-421), in matrices of at most
+`PYTHON_MATRIX_LEGS`. At its placeholder, `PYTHON_SHARE_CAP`, the release run is the pull request
+run. The Rust share does not move. D1 to D7 and the rest of this ADR are unchanged.
+
+Chosen against:
+
+- Raising the share for every run: rejected because pull requests into `dev` keep the share and
+  the cap, and the job-budget test reads red above 32 unless the Rust share falls.
+- Lowering the Rust share: rejected because it re-derives `LEG_CEILING` and every row and test
+  that pins 190 and 234.

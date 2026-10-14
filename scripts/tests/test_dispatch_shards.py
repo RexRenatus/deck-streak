@@ -39,6 +39,7 @@ from test_mutation_workflows import (
     shard,
     workflow,
 )
+from test_release_python_ceiling import deal, mutants
 
 WHOLE = 32
 COUNT = "${{ needs.size.outputs.shards }}"
@@ -218,6 +219,8 @@ RELEASE_691 = (
 RUN_JOBS = 256
 #: The axis the pull request's Python matrix reads: the plan writes at most `PYTHON_MAX_SHARDS`.
 PYTHON_AXIS = "${{ fromJSON(needs.mutation-plan.outputs.python_matrix) }}"
+#: The axis the release run's second Python matrix reads: the legs past `PYTHON_MATRIX_LEGS`.
+PYTHON_RELEASE_AXIS = "${{ fromJSON(needs.mutation-plan.outputs.python_release_matrix) }}"
 #: The axis the pull request's rows matrix reads: the plan deals at most `ROWS_MAX_LEGS` legs.
 ROWS_AXIS = "${{ fromJSON(needs.mutation-plan.outputs.rows_matrix) }}"
 
@@ -330,6 +333,30 @@ class TheReleaseFitsOneRun(unittest.TestCase):
             derived[key] = RUN_JOBS - sum(others)
         self.assertEqual(getattr(module, "LEG_CEILING", None), derived)
         self.assertEqual(derived, {"ci": 190, "battery": 234})
+
+    def test_each_python_matrix_of_the_release_run_fits_the_run_jobs(self):
+        """SPEC-422 A15 (R12): at the most legs any release ceiling admits, two matrices of
+        `PYTHON_MATRIX_LEGS`, the release run's deal writes each Python matrix within the run's
+        jobs, and one matrix's legs are exactly the run's limit."""
+        module = verdict_module()
+        self.assertEqual(module.PYTHON_MATRIX_LEGS, RUN_JOBS)
+        most = module.PYTHON_MATRIX_LEGS * module.PYTHON_MATRICES
+        code, out, outputs, _plan = deal(self, mutants(1, 20 * (most - 1)), True, most)
+        self.assertEqual(code, 0, out)
+        axes = {PYTHON_AXIS: "python_matrix", PYTHON_RELEASE_AXIS: "python_release_matrix"}
+        matrices = {}
+        for name, job in jobs(workflow(CI)).items():
+            block = re.search(r"(?ms)^      matrix:\n(.*?)(?=^      \S|^    \S|\Z)", job)
+            lines = [
+                line for line in (block.group(1) if block else "").splitlines() if line.strip()
+            ]
+            read = [axes.get(line.removeprefix("        shard: ")) for line in lines]
+            if any(read):
+                self.assertEqual(len(lines), 1, f"{name} has an axis beside its Python one")
+                matrices[name] = len(json.loads(outputs[read[0]]))
+        for name, legs in examined("python matrices of the release run", matrices.items()):
+            self.assertLessEqual(legs, RUN_JOBS, name)
+        self.assertEqual(sum(matrices.values()), most)
 
     def test_a_listing_beyond_the_ceiling_is_refused_whole(self):
         # 68 ingest mutants of 126 s fit a leg's 10800 s after its 2141 s baseline, so the
