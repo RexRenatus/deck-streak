@@ -86,7 +86,8 @@ function view(id: number): CardView {
     css: '',
     labels: ['<1m', '<6m', '<10m', '4d'],
     undo: null,
-    late: false
+    late: false,
+    withheld: false
   };
 }
 

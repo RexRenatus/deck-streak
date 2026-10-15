@@ -54,6 +54,7 @@ use deck_streak_engine_core::face::{Clip, Face, Side};
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
 use deck_streak_engine_core::late;
 use deck_streak_engine_core::media::{Reader, TYPES};
+use deck_streak_engine_core::occlusion;
 use deck_streak_engine_core::review::{bury_of, toggled_red};
 use deck_streak_engine_core::table::{ExemptWrite, Transport};
 use deck_streak_engine_core::undo_answer::{self, Review};
@@ -719,6 +720,8 @@ fn joined(nodes: &[RenderedTemplateNode]) -> String {
 /// so its review cannot count toward the streak for that day (SPEC-376 R4). Its `undo` names what
 /// the slot offers: `answer` or `synced` for the review's own last answer, and `bury`, `flag` or
 /// `change-synced` for its last bury or flag (SPEC-371 R7, SPEC-383 R9).
+/// It carries `withheld`, the core's answer whether the question is an image occlusion question
+/// whose masks are not drawn; a withheld card's question, answer and CSS are empty (SPEC-380 R3).
 #[wasm_bindgen]
 pub fn current_card() -> Result<String, JsValue> {
     SHOWN.with(|kept| *kept.borrow_mut() = None);
@@ -782,18 +785,21 @@ pub fn current_card() -> Result<String, JsValue> {
     let day = dispatcher()?
         .engine_day()
         .map_err(|_| refuse("the engine's day was not read"))?;
+    let withheld = occlusion::masks_not_drawn(&question.val);
+    let unless_withheld = |text: String| if withheld { String::new() } else { text };
     let mut view = serde_json::json!({
         "counts": counts,
         "card": {
             "id": card.id.to_string(),
             "ordinal": card.template_idx,
             "flag": card.flags,
-            "question": question.val,
-            "answer": answer.val,
-            "css": rendered.css,
+            "question": unless_withheld(question.val),
+            "answer": unless_withheld(answer.val),
+            "css": unless_withheld(rendered.css),
             "labels": labels.vals,
             "undo": undo_view(judged),
             "late": late::past_due_day(&card, day),
+            "withheld": withheld,
         },
     });
     if let (Some(marked), Some(undo)) = (mark_view(marked), view.pointer_mut("/card/undo")) {
