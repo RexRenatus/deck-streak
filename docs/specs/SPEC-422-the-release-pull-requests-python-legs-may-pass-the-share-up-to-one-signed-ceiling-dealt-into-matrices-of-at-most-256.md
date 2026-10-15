@@ -229,7 +229,6 @@ first assertion: the base holds no `PYTHON_RELEASE_CEILING` assignment with its 
 | `scripts/tests/test_verdict_download.py` | a pin, read | unchanged: its `FAMILIES` pattern for `mutation-python-shard-*` already names the release legs' artifacts |
 | `scripts/tests/test_rulesets.py` | a pin, read | unchanged: its reading of `RELEASING.md` section 2 holds over the two inserts |
 | `scripts/mutation-rows.d/S42200-S42299.json` | the rows | added: S42200 to S42218 (section 9) |
-| `scripts/mutation-rows.json` | existing rows | changed only by a re-anchor, by id, of an existing row whose anchor the delivery moves; none is planned, since S41500 to S41504, S41800 and the S29000 rows on `ci.yml` stay substrings |
 | `formal/tla/EveryLegCounted/EveryLegCounted.tla` | the formal record | `\*` comment lines and the two `digest=` values of `shards` and `python_by_cost` (section 8) |
 | `RELEASING.md` | the runbook | insert-only (R16) |
 | `docs/specs/SPEC-422-the-release-pull-requests-python-legs-may-pass-the-share-up-to-one-signed-ceiling-dealt-into-matrices-of-at-most-256.md` | this SPEC | added |
