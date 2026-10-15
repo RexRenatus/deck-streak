@@ -25,6 +25,7 @@ from test_mutation_workflows import CI, jobs, steps, workflow
 
 VERDICT = REPO / "scripts" / "mutation-verdict.py"
 RELEASING = REPO / "RELEASING.md"
+LIMIT = REPO / ".github" / "workflows" / "matrix-limit.yml"
 THIS_REPOSITORY = "RexRenatus/deck-streak"
 #: The one input R1 reads as the release run: `dev` into `main`, from this repository.
 RELEASE = ("pull_request", "main", "dev", THIS_REPOSITORY, THIS_REPOSITORY)
@@ -460,6 +461,105 @@ class EveryLegOfBothMatricesIsJudged(unittest.TestCase):
         self.assertEqual(len(examined("python matrix jobs", matrices)), module.PYTHON_MATRICES)
         read = sorted(output for outputs in matrices.values() for output in outputs)
         self.assertEqual(read, ["python_matrix", "python_release_matrix"])
+
+
+class TheMatrixLimitIsMeasuredInPublic(unittest.TestCase):
+    """R14 (A18): the workflow that measures whether the limit holds per matrix or per run."""
+
+    def test_the_matrix_limit_workflow_measures_two_matrices_in_one_run(self):
+        text = workflow(LIMIT)
+        head = significant(text.split("\njobs:\n", 1)[0])
+        for line in examined(
+            "lines of the triggers and the token",
+            [
+                "on:",
+                "  workflow_dispatch:",
+                "    inputs:",
+                "      legs:",
+                "        type: number",
+                "  pull_request:",
+                "    branches: [dev]",
+                "    types: [opened, synchronize, reopened]",
+                '      - ".github/workflows/matrix-limit.yml"',
+                "permissions:",
+                "  contents: read",
+            ],
+        ):
+            self.assertEqual(head.count(line), 1, line)
+        inputs = [line for line in head if re.fullmatch(r"      [\w-]+:", line)]
+        self.assertEqual(inputs, ["      legs:"], "the dispatch takes one input")
+        self.assertEqual(text.count("permissions:"), 1, "a job sets a token of its own")
+        found = jobs(text)
+        self.assertEqual(sorted(found), ["count", "empty", "first", "second", "size"])
+        needs = {name: re.findall(r"(?m)^    needs: (.*)$", job) for name, job in found.items()}
+        self.assertEqual(
+            needs,
+            {
+                "size": [],
+                "first": ["[size]"],
+                "second": ["[size]"],
+                "empty": ["[size]"],
+                "count": ["[size, first, second, empty]"],
+            },
+        )
+        conditions = {name: job_condition(job) for name, job in found.items()}
+        self.assertEqual(
+            conditions,
+            {
+                "size": [],
+                "first": [],
+                "second": [],
+                "empty": ["${{ needs.size.outputs.empty != '[]' }}"],
+                "count": ["${{ always() }}"],
+            },
+        )
+        axes = {name: re.findall(r"(?m)^        leg: (.*)$", job) for name, job in found.items()}
+        self.assertEqual(
+            axes,
+            {
+                "size": [],
+                "first": ["${{ fromJSON(needs.size.outputs.first) }}"],
+                "second": ["${{ fromJSON(needs.size.outputs.second) }}"],
+                "empty": ["${{ fromJSON(needs.size.outputs.empty) }}"],
+                "count": [],
+            },
+        )
+        written = re.findall(
+            r"(?m)^      (\w+): \$\{\{ steps\.axes\.outputs\.(\w+) \}\}$", found["size"]
+        )
+        self.assertEqual(written, [("first", "first"), ("second", "second"), ("empty", "empty")])
+        self.assertIn("is outside 1 to 256; refused", found["size"])
+        for matrix in examined("matrices", ["first", "second"]):
+            job = significant(found[matrix])
+            for line in (
+                f"          MATRIX: {matrix}",
+                "          LEG: ${{ matrix.leg }}",
+                "          TOTAL: ${{ strategy.job-total }}",
+                f"          name: matrix-limit-{matrix}-${{{{ matrix.leg }}}}",
+            ):
+                self.assertEqual(job.count(line), 1, f"{matrix}: {line}")
+        count = significant(found["count"])
+        for line in examined(
+            "lines of the count",
+            [
+                "          pattern: matrix-limit-*",
+                "          merge-multiple: true",
+                "          SIZE: ${{ needs.size.result }}",
+                "          FIRST: ${{ needs.first.result }}",
+                "          SECOND: ${{ needs.second.result }}",
+                "          EMPTY: ${{ needs.empty.result }}",
+                "          name: matrix-limit",
+                "          path: ${{ runner.temp }}/matrix-limit/matrix-limit.json",
+            ],
+        ):
+            self.assertEqual(count.count(line), 1, line)
+        self.assertIn('"run_jobs": run_jobs', found["count"])
+        # Each action is pinned as the Python legs pin it, byte for byte.
+        pinned = re.findall(r"(?m)^\s+(?:- )?uses: (.+)$", jobs(workflow(CI))["mutation-python"])
+        used = re.findall(r"(?m)^\s+(?:- )?uses: (.+)$", text)
+        for ref in examined("actions the workflow uses", used):
+            self.assertIn(ref, pinned)
+        self.assertEqual(len(set(used)), 3, "checkout, download and upload")
 
 
 class TheCeilingIsSignedAndTheRunbookSaysTheMethod(unittest.TestCase):

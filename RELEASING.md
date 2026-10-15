@@ -71,6 +71,7 @@ that never reported: re-running its failed jobs refuses it again, and a range pa
 waits for the Python legs to be sized by a measured cost (#825). The share is the owner's one
 value, signed on its own line, and a share outside 1 to `PYTHON_SHARE_CAP` is refused before any
 deal, whoever signs it (SPEC-420, ADR-434).
+Only the release pull request may deal past the share, up to `PYTHON_RELEASE_CEILING` (SPEC-422).
 
 **A priced Python file is dealt by its cost (SPEC-418, ADR-432).** Once a file has a price,
 the Python legs are dealt by each file's measured cost: a leg holds what its files' control runs
@@ -96,6 +97,17 @@ triple keeps its whole-suite price, else the count rule. A refresh is one dispat
 `scripts/tests/fixtures/mutation-scoped-prices-<run>/`, and the table is replaced by the output of
 `mutation-verdict.py prices --scoped --costs <dir>` over that fixture, never by hand. The fixture
 and the table change together, in one delivery.
+
+**The release run's Python legs pass the share only up to one signed ceiling (SPEC-422, ADR-436).**
+The release pull request, `dev` into `main` from this repository, may deal more Python legs than the
+share, up to `PYTHON_RELEASE_CEILING` in `scripts/mutation-verdict.py`, and every other run keeps
+the share. Until its ruling is signed the ceiling stands at `PYTHON_SHARE_CAP`, where the release
+run deals as any pull request's does. A matrix generates a bounded number of jobs, so the release
+legs are dealt over two matrices of at most `PYTHON_MATRIX_LEGS` each: `mutation-python` runs the
+first, and `mutation-python-release` runs the legs past it, each as a `mutation-python` leg runs.
+The second is not started on a run that deals it nothing, and `legs` judges that skip against the
+plan. A release listing past the ceiling is refused whole, by name, never capped. The ceiling is the
+one figure its signed ruling names, and a larger figure needs a new measurement and a new signature.
 
 **Cut a release before its range reaches the ceiling.** A release pull request's plan lists every
 mutant `dev` gained since the last release, so the range only grows until it ships, and a range past

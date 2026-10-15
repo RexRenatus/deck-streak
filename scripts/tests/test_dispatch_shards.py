@@ -248,9 +248,10 @@ def plan_shards(listing):
 
 def generated(job, python_most, rows_most):
     """The most jobs one workflow job can generate: one, or the product of its matrix's axes, a
-    listed axis by its length, the Python plan's axis by the most shards the plan writes and the
-    rows axis by the most legs the plan deals. An axis this cannot count is refused, never counted
-    as one."""
+    listed axis by its length, the Python plan's axis by the most shards the plan writes, the
+    release run's second Python axis by the shards past one matrix's `RUN_JOBS` (none on any run
+    the share holds) and the rows axis by the most legs the plan deals. An axis this cannot count
+    is refused, never counted as one."""
     block = re.search(r"(?ms)^      matrix:\n(.*?)(?=^      \S|^    \S|\Z)", job)
     if block is None:
         return 1
@@ -266,6 +267,8 @@ def generated(job, python_most, rows_most):
             most *= len([each for each in value[1:-1].split(",") if each.strip()])
         elif value == PYTHON_AXIS:
             most *= python_most
+        elif value == PYTHON_RELEASE_AXIS:
+            most *= max(0, python_most - RUN_JOBS)
         elif value == ROWS_AXIS:
             most *= rows_most
         else:
