@@ -66,7 +66,7 @@ jobs:
           set -o pipefail
           cargo test --release --locked -p deck-streak-ingest --test engine_budget \
             -- --nocapture --test-threads 1 2>&1 | tee "$REPORT/engine-budget.log"
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
         if: ${{ always() }}
         with:
           tool: cargo-deny

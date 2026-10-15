@@ -39,7 +39,7 @@ jobs:
           persist-credentials: false
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         run: rustup show
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
         with:
           tool: cargo-nextest,cargo-deny
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
@@ -109,7 +109,7 @@ jobs:
           persist-credentials: false
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         run: rustup show
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
         with:
           tool: cargo-nextest
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
@@ -161,7 +161,7 @@ jobs:
           persist-credentials: false
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         run: rustup show
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
         with:
           tool: cargo-nextest
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
@@ -313,7 +313,7 @@ jobs:
         run: rustup show
       # SPEC-055 A3 runs cargo deny from the python stage: every advisory exception and allowed
       # git source in deny.toml must still be live in the graph.
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
         with:
           tool: cargo-deny
       - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
@@ -409,14 +409,14 @@ jobs:
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         if: ${{ steps.plan.outputs.rust == 'true' }}
         run: rustup show
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
         if: ${{ steps.plan.outputs.rust == 'true' }}
         with:
           tool: cargo-mutants@27.1.0
           fallback: none
       # cargo-mutants reads .cargo/mutants.toml, whose test tool is nextest; the listing runs no
       # test and builds nothing, but it carries the same tool and bounds as every other command.
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
         if: ${{ steps.plan.outputs.rust == 'true' }}
         with:
           tool: cargo-nextest@0.9.146
@@ -511,12 +511,12 @@ jobs:
       - name: the locked dependency graph, every target's packages (the census reads it offline at the baseline)
         if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
         run: cargo fetch --locked --manifest-path Cargo.toml
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
         if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
         with:
           tool: cargo-mutants@27.1.0
           fallback: none
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
         if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
         with:
           tool: cargo-nextest@0.9.146
@@ -989,7 +989,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
         with:
           tool: zizmor
       - name: zizmor audits the workflows themselves
