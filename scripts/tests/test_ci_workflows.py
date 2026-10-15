@@ -6850,6 +6850,21 @@ NOT_WORKFLOW_READS = {
             1,
         ),
     ),
+    **allowed(
+        "the matrix-limit run's committed record and its jobs listing, a JSON file and a tab-separated one read for their facts; never a workflow",
+        (
+            "test_release_python_ceiling",
+            "TheMatrixLimitIsMeasuredInPublic.test_the_recorded_matrix_limit_run_ran_each_matrix_whole",
+            "(runs[0] / 'jobs.tsv').read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheMatrixLimitIsMeasuredInPublic.test_the_recorded_matrix_limit_run_ran_each_matrix_whole",
+            "(runs[0] / 'matrix-limit.json').read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
 }
 
 # Every site in the test directory that imports, runs code or reaches a namespace by a name held

@@ -26,6 +26,8 @@ from test_mutation_workflows import CI, jobs, steps, workflow
 VERDICT = REPO / "scripts" / "mutation-verdict.py"
 RELEASING = REPO / "RELEASING.md"
 LIMIT = REPO / ".github" / "workflows" / "matrix-limit.yml"
+#: Where the matrix-limit run's record is committed, one directory a run (R15).
+FIXTURES = REPO / "scripts" / "tests" / "fixtures"
 THIS_REPOSITORY = "RexRenatus/deck-streak"
 #: The one input R1 reads as the release run: `dev` into `main`, from this repository.
 RELEASE = ("pull_request", "main", "dev", THIS_REPOSITORY, THIS_REPOSITORY)
@@ -190,6 +192,43 @@ def ceiling_problems(source, root):
     if not re.search(rf"(?<![\w.]){value}(?![\w.])", first) or not re.search(r"\brelease\b", first):
         return [f"{cited[0]}'s first line does not hold {value} and the word release"]
     return []
+
+
+def matrix_limit_problems(record, rows):
+    """What R15 refuses in the matrix-limit run's record and its jobs listing (one row a job: id,
+    name, conclusion and seconds): each matrix reported its 256 legs, numbered on from the first
+    matrix's 0 as the release deal numbers them; each leg read a job total of 256; `first` and
+    `second` succeeded and `empty` was skipped, by the record and by the listing; and the run held
+    more than 256 jobs, one count that the record and the listing both read."""
+    problems = []
+    for name, start in (("first", 0), ("second", 256)):
+        matrix = record["matrices"][name]
+        if matrix["legs"] != 256 or matrix["leg_values"] != list(range(start, start + 256)):
+            problems.append(f"{name}: {matrix['legs']} leg(s), not the 256 numbered from {start}")
+        if matrix["job_totals"] != [256]:
+            problems.append(f"{name}: job total(s) {matrix['job_totals']}, not [256]")
+    listed = {}
+    for row in rows:
+        listed.setdefault(row[1].split(" (")[0], []).append(row[2])
+    for job, result, count in (
+        ("first", "success", 256),
+        ("second", "success", 256),
+        ("empty", "skipped", 1),
+    ):
+        if record["results"].get(job) != result:
+            problems.append(f"{job}: the record reads {record['results'].get(job)}, not {result}")
+        got = listed.get(job, [])
+        if got != [result] * count:
+            problems.append(
+                f"the listing holds {len(got)} {job} job(s) reading {sorted(set(got))}, "
+                f"not {count} reading {[result]}"
+            )
+    if not record["run_jobs"] == len(rows) > 256:
+        problems.append(
+            f"the record counts {record['run_jobs']} job(s) and the listing {len(rows)}, "
+            "not one count past 256"
+        )
+    return problems
 
 
 class TheReleaseRunIsNamedByAFailClosedPredicate(unittest.TestCase):
@@ -487,7 +526,8 @@ class EveryLegOfBothMatricesIsJudged(unittest.TestCase):
 
 
 class TheMatrixLimitIsMeasuredInPublic(unittest.TestCase):
-    """R14 (A18): the workflow that measures whether the limit holds per matrix or per run."""
+    """R14 and R15 (A18, A19): the workflow that measures whether the limit holds per matrix or per
+    run, and the committed record of its one dispatch."""
 
     def test_the_matrix_limit_workflow_measures_two_matrices_in_one_run(self):
         text = workflow(LIMIT)
@@ -583,6 +623,48 @@ class TheMatrixLimitIsMeasuredInPublic(unittest.TestCase):
         for ref in examined("actions the workflow uses", used):
             self.assertIn(ref, pinned)
         self.assertEqual(len(set(used)), 3, "checkout, download and upload")
+
+    def test_the_recorded_matrix_limit_run_ran_each_matrix_whole(self):
+        """R15 (A19): the one dispatch at `legs` 256 is committed as the count job's record and the
+        attempt's jobs listing. Both read R15's six facts, and a planted copy less one leg, built
+        here from the record, is refused by the same reading."""
+        runs = examined("matrix-limit records", sorted(FIXTURES.glob("matrix-limit-*")))
+        self.assertEqual(len(runs), 1, runs)
+        text = (runs[0] / "matrix-limit.json").read_text(encoding="utf-8")
+        listing = (runs[0] / "jobs.tsv").read_text(encoding="utf-8")
+        record = json.loads(text)
+        rows = [line.split("\t") for line in listing.splitlines()]
+        # The record is the count job's own file, byte for byte as its step writes it.
+        self.assertEqual(text, json.dumps(record, indent=2, sort_keys=True))
+        self.assertEqual([len(row) for row in rows], [4] * len(rows))
+        self.assertEqual(
+            {
+                name: (matrix["legs"], matrix["job_totals"])
+                for name, matrix in record["matrices"].items()
+            },
+            {"first": (256, [256]), "second": (256, [256])},
+        )
+        self.assertEqual(
+            record["results"],
+            {"size": "success", "first": "success", "second": "success", "empty": "skipped"},
+        )
+        self.assertEqual(record["records"], 512)
+        self.assertEqual(record["run_jobs"], len(rows))
+        self.assertGreater(len(rows), 256)
+        self.assertEqual(matrix_limit_problems(record, rows), [])
+        planted, kept = json.loads(text), list(rows)
+        planted["matrices"]["first"]["legs"] -= 1
+        planted["matrices"]["first"]["leg_values"].pop()
+        planted["records"] -= 1
+        planted["run_jobs"] -= 1
+        kept.remove(next(row for row in kept if row[1].startswith("first (")))
+        self.assertEqual(
+            matrix_limit_problems(planted, kept),
+            [
+                "first: 255 leg(s), not the 256 numbered from 0",
+                "the listing holds 255 first job(s) reading ['success'], not 256 reading ['success']",
+            ],
+        )
 
 
 class TheCeilingIsSignedAndTheRunbookSaysTheMethod(unittest.TestCase):
