@@ -54,6 +54,7 @@ use tracing::Level;
 
 use crate::analytics_routes;
 use crate::badges_routes;
+use crate::chests_routes;
 use crate::drill_routes;
 use crate::health::{self, Readiness};
 use crate::inbox_capture_route;
@@ -271,6 +272,7 @@ pub fn router(state: ApiState) -> Router {
                     inbox,
                 ))
                 .merge(linking_routes::routes(&access, readiness.clone(), linking))
+                .merge(chests_routes::routes(access.clone(), readiness.clone()))
                 .merge(sensitive_decks_routes::routes(
                     access.clone(),
                     readiness.clone(),
