@@ -45,6 +45,13 @@ name = "skip_zero_upload"
 path = "tests/skip_zero_upload.rs"
 edition = "2021"
 
+# SPEC-387 A7: the preset zero-upload test sets `TZ` in its own process for the same reason, so its
+# target is compiled at edition 2021 too. Its one test holds the target's lock and sets its zone.
+[[test]]
+name = "preset_zero_upload"
+path = "tests/preset_zero_upload.rs"
+edition = "2021"
+
 [dev-dependencies]
 # ADR-029: the parity oracle's golden reader, included by path.
 serde.workspace = true

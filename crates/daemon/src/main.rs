@@ -3,7 +3,10 @@
 //! Telegram bot's long poll), `job` (SPEC-027: `deckstreakd job <id>` runs one job of the table
 //! and exits), and `mcp` (SPEC-119: the MCP adapter's server on a loopback address). `data` is
 //! the owner's, run by hand on the host (SPEC-021 R8): `deckstreakd data export` writes the export
-//! to standard output, and `deckstreakd data erase --confirm ERASE` erases.
+//! to standard output, and `deckstreakd data erase --confirm ERASE` erases. `preset` is the
+//! owner's too (SPEC-387): `deckstreakd preset list` prints every preset, `deckstreakd preset
+//! propose <id>` records a proposal that moves one preset to the scheduler's defaults, and
+//! `deckstreakd preset verify <id>` settles it once the owner's change has synced.
 //!
 //! `main` installs the kernel's logging before anything else, so every line the process writes,
 //! even a refusal to start, is a JSON event with its journal priority (SPEC-031 R1); it is then the
@@ -26,7 +29,9 @@ use deck_streak_kernel::{Environment, Redactor, logging};
 
 mod role_data;
 mod role_job;
+mod role_preset;
 
+use deck_streak_ingest::preset::PresetCommand;
 use role_data::{CONFIRMATION, DataCommand};
 
 /// The exit code of a start with no role, an unknown one, or arguments the role does not take.
@@ -49,14 +54,16 @@ enum Role {
     Data(DataCommand),
     /// The MCP adapter's server (SPEC-119).
     Mcp,
+    /// The owner's preset read and proposal, run by hand (SPEC-387).
+    Preset(PresetCommand),
 }
 
 impl Role {
     /// Every role's name.
-    const NAMES: [&'static str; 5] = ["api", "bot", "job", "data", "mcp"];
+    const NAMES: [&'static str; 6] = ["api", "bot", "job", "data", "mcp", "preset"];
 
     /// The role `arguments` name: `api`, `bot` or `mcp` alone, `job` and the id of a job of the
-    /// table, or `data` and its command.
+    /// table, or `data` or `preset` and its command.
     fn from_arguments(arguments: &[OsString]) -> Option<Self> {
         match arguments {
             [name] if name == "api" => Some(Self::Api),
@@ -65,6 +72,9 @@ impl Role {
             [name, id] if name == "job" => id.to_str().and_then(jobs::job).map(Self::Job),
             [name, command @ ..] if name == "data" => {
                 DataCommand::from_arguments(command).map(Self::Data)
+            }
+            [name, command @ ..] if name == "preset" => {
+                role_preset::command(command).map(Self::Preset)
             }
             _ => None,
         }
@@ -91,7 +101,8 @@ fn main() -> ExitCode {
     let Some(role) = Role::from_arguments(&arguments) else {
         tracing::error!(
             "usage: deckstreakd <role>, or deckstreakd job <id>, or deckstreakd data export, or \
-             deckstreakd data erase --confirm {CONFIRMATION}; the roles are: {}; the jobs are: {}",
+             deckstreakd data erase --confirm {CONFIRMATION}, or deckstreakd preset \
+             list|propose <id>|verify <id>; the roles are: {}; the jobs are: {}",
             Role::names(),
             Role::jobs()
         );
@@ -144,14 +155,71 @@ async fn run(role: Role, environment: &Environment, redactor: &Redactor) -> anyh
             .await
             .context("the mcp role")
             .map(|()| 0),
+        Role::Preset(command) => role_preset::run(environment, command)
+            .await
+            .context("the preset role"),
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::ffi::OsString;
     use std::time::Duration;
 
-    use super::EXIT_GRACE;
+    use deck_streak_ingest::preset::PresetCommand;
+
+    use super::{EXIT_GRACE, Role};
+
+    /// The role a command line of space-separated arguments names.
+    fn parse(line: &str) -> Option<Role> {
+        let arguments: Vec<OsString> = line.split(' ').map(OsString::from).collect();
+        Role::from_arguments(&arguments)
+    }
+
+    #[test]
+    fn the_preset_role_parses_its_three_commands_and_refuses_every_other_shape() {
+        // SPEC-387 A11: the three commands of ADR-401 D10, each with the id it carries.
+        assert!(
+            matches!(
+                parse("preset list"),
+                Some(Role::Preset(PresetCommand::List))
+            ),
+            "preset list parsed to {:?}",
+            parse("preset list")
+        );
+        assert!(
+            matches!(
+                parse("preset propose 1001"),
+                Some(Role::Preset(PresetCommand::Propose(1001)))
+            ),
+            "preset propose 1001 parsed to {:?}",
+            parse("preset propose 1001")
+        );
+        assert!(
+            matches!(
+                parse("preset verify 7"),
+                Some(Role::Preset(PresetCommand::Verify(7)))
+            ),
+            "preset verify 7 parsed to {:?}",
+            parse("preset verify 7")
+        );
+        let refused = [
+            "preset",
+            "preset list extra",
+            "preset propose",
+            "preset propose x",
+            "preset propose 1 2",
+            "preset verify",
+            "preset verify 1.5",
+            "preset remove 1",
+            "presets list",
+        ];
+        for line in refused {
+            assert!(parse(line).is_none(), "{line} parsed to {:?}", parse(line));
+        }
+        println!("examined {} refused shape(s)", refused.len());
+        assert_eq!(Role::names(), "api, bot, job, data, mcp, preset");
+    }
 
     #[test]
     fn the_exit_grace_is_one_second() {

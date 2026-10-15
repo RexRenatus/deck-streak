@@ -110,7 +110,7 @@ const ANSWER_FIXTURE: &str =
 
 /// Each line outside the core that may name the engine or the gesture (SPEC-345 section 8): its
 /// file, its exact trimmed text, how many times the file holds it, and why.
-const HELD: [(&str, &str, usize, &str); 33] = [
+const HELD: [(&str, &str, usize, &str); 34] = [
     (
         "crates/ingest/src/engine.rs",
         "col.full_download(auth, engine_client())",
@@ -206,6 +206,12 @@ const HELD: [(&str, &str, usize, &str); 33] = [
         ".set_due_date(",
         1,
         "#600's test reaching the mirror's port",
+    ),
+    (
+        "crates/ingest/tests/preset_zero_upload.rs",
+        ".set_due_date(&scene.fixture.copy(), &[PRESET_CARDS[2].0], \"5\")",
+        1,
+        "the preset upload test reaching the mirror's port on its own scratch fixture copy",
     ),
     (
         "crates/ingest/tests/skip_census.rs",
