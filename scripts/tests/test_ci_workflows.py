@@ -2399,6 +2399,8 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
             "mutation-web",
             # SPEC-419 deals the web sweep into shards, a job ci needs beside the one that judges.
             "mutation-web-shard",
+            # SPEC-422 deals the release run's Python legs past one matrix into a second job.
+            "mutation-python-release",
         ]
         # SPEC-338 adds the web engine's job, which builds the module and holds it to its budget.
         self.assertEqual(
@@ -6588,6 +6590,18 @@ NOT_WORKFLOW_READS = {
         ),
         (
             "test_release_python_ceiling",
+            "TheReleaseRunIsNamedByAFailClosedPredicate.test_the_plan_records_release_only_when_the_predicate_holds",
+            "module.plan_diff(fixture.root, fixture.base, 'HEAD', fixture.out, ('diff', 'a diff'))",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunIsNamedByAFailClosedPredicate.test_the_plan_records_release_only_when_the_predicate_holds",
+            "verdict_module()",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
             "verb",
             "module",
             1,
@@ -6814,6 +6828,12 @@ NOT_WORKFLOW_READS = {
         (
             "test_release_python_ceiling",
             "TheReleaseRunIsNamedByAFailClosedPredicate.test_the_plan_records_release_only_when_the_predicate_holds",
+            "(fixture.out / 'plan.json').read_text(encoding='utf-8')",
+            2,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunIsNamedByAFailClosedPredicate.test_the_plan_records_release_only_when_the_predicate_holds",
             "fixture.head({LIB: LIB_TEXT.replace('x * 2', 'x + x')})",
             1,
         ),
@@ -6821,6 +6841,12 @@ NOT_WORKFLOW_READS = {
             "test_release_python_ceiling",
             "TheReleaseRunIsNamedByAFailClosedPredicate.test_the_plan_records_release_only_when_the_predicate_holds",
             "fixture.plan(*flags)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunIsNamedByAFailClosedPredicate.test_the_plan_records_release_only_when_the_predicate_holds",
+            "fixture.plan(*into_main, '--subject', 'chore: a run', flag, 'XX')",
             1,
         ),
     ),

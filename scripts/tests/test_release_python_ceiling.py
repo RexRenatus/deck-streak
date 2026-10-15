@@ -239,6 +239,21 @@ class TheReleaseRunIsNamedByAFailClosedPredicate(unittest.TestCase):
                 self.assertIs(plan.get("release"), True, where)
             else:
                 self.assertNotIn("release", plan, where)
+            text = (fixture.out / "plan.json").read_text(encoding="utf-8")
+            self.assertEqual(text, json.dumps(plan, indent=2) + "\n", where)
+        # A flag left out reads empty, so one side of the repository pair named alone is never the
+        # release run, even when it names `XX`, the text a mutated empty default would read.
+        into_main = ["--event", "pull_request", "--base-ref", "main", "--head-ref", "dev"]
+        alone = [("the head repository alone", "--head-repo"), ("the repository alone", "--repo")]
+        for where, flag in examined("repository flags given alone", alone):
+            plan = fixture.plan(*into_main, "--subject", "chore: a run", flag, "XX")
+            self.assertIn("classes", plan, where)
+            self.assertNotIn("release", plan, where)
+        module = verdict_module()
+        module.plan_diff(fixture.root, fixture.base, "HEAD", fixture.out, ("diff", "a diff"))
+        written = json.loads((fixture.out / "plan.json").read_text(encoding="utf-8"))
+        self.assertIn("classes", written)
+        self.assertNotIn("release", written, "plan_diff called with no release given")
 
     def test_a_release_mark_that_is_not_true_is_not_the_release_run(self):
         entries = mutants(40)
@@ -408,6 +423,14 @@ class EveryLegOfBothMatricesIsJudged(unittest.TestCase):
                 "mutation: legs: mutation-python-release: not started: the plan deals no python "
                 "leg past PYTHON_MATRIX_LEGS\n",
             ),
+            (
+                "no count and skipped",
+                None,
+                ("--python-release-leg", "skipped"),
+                0,
+                "mutation: legs: mutation-python-release: not started: the plan deals no python "
+                "leg past PYTHON_MATRIX_LEGS\n",
+            ),
         ]
         for where, count, given, exit_code, line in examined("release leg cases", cases):
             code, out = legs_of(self, count, *given)
@@ -570,10 +593,10 @@ class TheCeilingIsSignedAndTheRunbookSaysTheMethod(unittest.TestCase):
         root = scratch(self)
         (root / "docs" / "rulings").mkdir(parents=True)
         (root / "docs" / "rulings" / "signed.md").write_text(
-            "Signed: the release ceiling is 200.\n", encoding="utf-8"
+            "Signed: 200 is the release ceiling\n", encoding="utf-8"
         )
         (root / "docs" / "rulings" / "other.md").write_text(
-            "Signed: the release ceiling is 300.\n", encoding="utf-8"
+            "Signed: 300 is the release ceiling\n", encoding="utf-8"
         )
 
         def source(value, cites):

@@ -41,7 +41,8 @@
       "test_mutation_python_shard_binding",
       "test_mutation_verdict",
       "test_mutation_equivalent",
-      "test_memory_cap_verdict"
+      "test_memory_cap_verdict",
+      "test_release_python_ceiling"
     ]
   },
   "scripts/mutation_python.py": {
