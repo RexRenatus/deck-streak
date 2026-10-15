@@ -127,8 +127,8 @@ PYTHON_SHARD_MUTANTS = 20
 PYTHON_MAX_SHARDS = 32
 #: The ceiling no signed share may pass: a share outside 1 to it is refused before any deal.
 PYTHON_SHARE_CAP = 128
-#: The release run's most Python legs; at PYTHON_SHARE_CAP it is the pull request run (SPEC-422 R4).
-PYTHON_RELEASE_CEILING = 128
+#: Signed in docs/rulings/OWNER-RULING-2026-10-15-release-python-legs-303.md (SPEC-422 R4).
+PYTHON_RELEASE_CEILING = 303
 #: A Python leg's projected time may reach half its job's `timeout-minutes` of 60, the margin the
 #: Rust legs keep under theirs, since a projection is a price and not a measurement (SPEC-418 R1).
 PYTHON_LEG_BOUND_SECONDS = 1800
