@@ -54,7 +54,9 @@ R1. **The release run is named by a fail-closed predicate.** `release_run(event,
     `event == "pull_request"`, `base_ref == "main"`, `head_ref == "dev"`, `repo != ""` and
     `head_repo == repo`, and false for every other input, an empty or missing one included.
 R2. **The plan records it only when it holds.** The `plan` verb takes `--head-ref`, `--head-repo`
-    and `--repo`, each defaulting to `""`. `plan_diff` writes the top-level key `"release": true`
+    and `--repo`: `--head-repo` and `--repo` default to the empty string and `--head-ref` to no
+    value, which R1 reads as false exactly as it reads an empty one. `plan_diff` writes the
+    top-level key `"release": true`
     exactly when R1 holds, and writes no `release` key otherwise. `ci.yml`'s plan step passes the
     head ref, the head repository's full name and this repository's full name through `env:` as
     `HEAD_REF`, `HEAD_REPO` and `REPO`, and its command reads them as `"$HEAD_REF"`,

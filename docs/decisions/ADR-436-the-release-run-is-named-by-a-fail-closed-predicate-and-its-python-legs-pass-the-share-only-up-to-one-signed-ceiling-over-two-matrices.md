@@ -53,8 +53,10 @@ Two facts of the tree shape the answer:
 `main`, the head ref is `dev`, the repository's name is not empty and the head repository's name
 equals it: the condition `base-is-dev` holds a pull request into `main` to
 (`.github/workflows/ci.yml:944`). The plan step passes the head ref, the head repository's full
-name and the repository's full name by `env`, never into the command's text, as `--head-ref`, `--head-repo` and `--repo`, each
-defaulting to the empty string. `plan_diff` writes a top-level `"release": true` only when the
+name and the repository's full name by `env`, never into the command's text, as `--head-ref`,
+`--head-repo` and `--repo`: `--head-repo` and `--repo` default to the empty string and `--head-ref`
+to no value, which SPEC-422 R1 reads as false exactly as it reads an empty one. `plan_diff` writes a
+top-level `"release": true` only when the
 predicate holds, and writes no key otherwise, so every existing plan and fixture stays byte for
 byte. `shards` reads `plan.get("release") is True`: an absent key, `false`, a string or a number is
 not the release run.
