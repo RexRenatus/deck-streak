@@ -2274,8 +2274,8 @@ def rows_leg_owed(plan: dict) -> str | None:
 def release_leg_owed(plan: dict) -> str | None:
     """Why the plan owes `mutation-python-release` a run, or None when its Python legs fit the first
     matrix: the second matrix holds exactly the legs past PYTHON_MATRIX_LEGS (SPEC-422 R11)."""
-    count = (plan.get("python") or {}).get("count") or 0
-    if count > PYTHON_MATRIX_LEGS:
+    count = (plan.get("python") or {}).get("count")
+    if count and count > PYTHON_MATRIX_LEGS:
         return f"the plan deals {count} python leg(s), past PYTHON_MATRIX_LEGS"
     return None
 
@@ -3679,7 +3679,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--event", default="")
     parser.add_argument("--base-ref", default="")
     parser.add_argument("--subject", default="")
-    parser.add_argument("--head-ref", default="")
+    parser.add_argument("--head-ref")
     parser.add_argument("--head-repo", default="")
     parser.add_argument("--repo", default="")
     parser.add_argument("--shards", type=int)
