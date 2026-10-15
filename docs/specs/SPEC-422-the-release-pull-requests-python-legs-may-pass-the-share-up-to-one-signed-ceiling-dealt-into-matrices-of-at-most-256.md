@@ -217,6 +217,7 @@ first assertion: the base holds no `PYTHON_RELEASE_CEILING` assignment with its 
 | path | part | change |
 |---|---|---|
 | `scripts/mutation-verdict.py` | the plan and the verdict | `release_run`; `PYTHON_RELEASE_CEILING`, `PYTHON_MATRIX_LEGS`, `PYTHON_MATRICES` with their `#:` lines; the ceiling helper and the range refusal; `python_by_cost`'s `ceiling` argument, release refusal and release line; `plan_diff`'s `release` key; `shards`' two new outputs and its `python_matrix` bound; `legs`' optional arm; the `--head-ref`, `--head-repo`, `--repo` and `--python-release-leg` arguments and the usage text |
+| `scripts/mutation-python.json` | the map | the `scripts/mutation-verdict.py` entry gains `test_release_python_ceiling`, so the tests that observe the new lines judge their mutants; its six modules stay |
 | `.github/workflows/ci.yml` | the workflow | the plan step's `HEAD_REF`, `HEAD_REPO`, `REPO` and their flags; `mutation-plan`'s outputs `python_release_matrix` and `python_release_legs`; the new job `mutation-python-release`; the needs of `mutation-verdict` and `ci`; `ci`'s admission; the `legs` call's flag and its `PYTHON_RELEASE_LEG` |
 | `.github/workflows/matrix-limit.yml` | the measurement | added (R14) |
 | `scripts/tests/fixtures/matrix-limit-<run>/` | the measurement's record | added in the later push, after the dispatched run (R15) |
@@ -225,7 +226,8 @@ first assertion: the base holds no `PYTHON_RELEASE_CEILING` assignment with its 
 | `scripts/tests/test_not_started_legs.py` | the admitted legs | `LEGS` (`:27`) widened to three, every old member kept; a condition scenario set for the third |
 | `scripts/tests/test_mutation_python_workflows.py` | a pin | the verdict's needs pattern (`:83`) widened to name `mutation-python-release`, every old member kept |
 | `scripts/tests/test_mutation_workflows.py` | a pin | the verdict's needs pattern (`:410`) widened the same way |
-| `scripts/tests/test_ci_workflows.py` | a census | `NOT_WORKFLOW_READS` and `DYNAMIC_IMPORTS` gain one entry for each read and import site the new and edited test modules add, each with its exact count and reason; every old entry and every test kept |
+| `scripts/tests/test_ci_workflows.py` | a census and a pin | `NOT_WORKFLOW_READS` and `DYNAMIC_IMPORTS` gain one entry for each read and import site the new and edited test modules add, each with its exact count and reason; the gate test's `mutation` list of `ci`'s needs gains `mutation-python-release`, every old member kept; every old entry and every test kept |
+| `scripts/tests/test_verdict_folds.py` | a pin | the verdict step's driver gives `mutation-python-release` the result `skipped`, and `JOB_AT`'s needs gain `mutation-python-release`, every old member kept |
 | `scripts/tests/test_verdict_download.py` | a pin, read | unchanged: its `FAMILIES` pattern for `mutation-python-shard-*` already names the release legs' artifacts |
 | `scripts/tests/test_rulesets.py` | a pin, read | unchanged: its reading of `RELEASING.md` section 2 holds over the two inserts |
 | `scripts/mutation-rows.d/S42200-S42299.json` | the rows | added: S42200 to S42218 (section 9) |
