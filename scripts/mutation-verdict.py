@@ -5,12 +5,14 @@ R6, R10, R12; ADR-057).
 
     python3 scripts/mutation-verdict.py plan --base REF [--head REF] [--root DIR] --out DIR
                                             [--event E --base-ref B --subject S]
+                                            [--head-ref H --head-repo R --repo R]
     python3 scripts/mutation-verdict.py shards --plan FILE [--listed FILE]
     python3 scripts/mutation-verdict.py judge --plan FILE --class rust|web|oracle
                                              [--outcomes FILE] [--tool-exit N]
                                              [--shard-reports DIR]
                                              [--stryker FILE] [--rows FILE]
     python3 scripts/mutation-verdict.py legs --plan FILE --rust-leg RESULT --rows-leg RESULT
+                                            [--python-release-leg RESULT]
     python3 scripts/mutation-verdict.py survivors --reports DIR --out DIR [--open-titles FILE]
     python3 scripts/mutation-verdict.py battery --reports DIR --shards N
     python3 scripts/mutation-verdict.py configs [--root DIR]
@@ -125,9 +127,15 @@ PYTHON_SHARD_MUTANTS = 20
 PYTHON_MAX_SHARDS = 32
 #: The ceiling no signed share may pass: a share outside 1 to it is refused before any deal.
 PYTHON_SHARE_CAP = 128
+#: Signed in docs/rulings/OWNER-RULING-2026-10-15-release-python-legs-303.md (SPEC-422 R4).
+PYTHON_RELEASE_CEILING = 303
 #: A Python leg's projected time may reach half its job's `timeout-minutes` of 60, the margin the
 #: Rust legs keep under theirs, since a projection is a price and not a measurement (SPEC-418 R1).
 PYTHON_LEG_BOUND_SECONDS = 1800
+#: The most Python legs one matrix job deals: a matrix generates at most 256 jobs (SPEC-422 R8).
+PYTHON_MATRIX_LEGS = 256
+#: The Python matrix jobs of `ci.yml`, each reading one Python matrix output (SPEC-422 R9).
+PYTHON_MATRICES = 2
 #: Each Python file's price, whole seconds of its control run, by repository-relative path. Every
 #: line is the `prices` verb's output over one recorded run's `costs.jsonl`, committed under
 #: `scripts/tests/fixtures/`, and names the run, attempt and shard it came from. A test
@@ -217,6 +225,19 @@ def scope_of(event: str, base_ref: str, subject: str) -> tuple[str, str]:
             )
         return "diff", "this push names no pull request, so its first-parent diff is judged"
     return "diff", f"the {event or 'local'} run is judged on its diff"
+
+
+def release_run(event: str, base_ref: str, head_ref: str, head_repo: str, repo: str) -> bool:
+    """Whether this run is the release pull request's, `dev` into `main` from this repository
+    (SPEC-422 R1). It fails closed: every other event, base or head, an empty repository name and
+    a fork's head, whatever its branch is called, are not the release run."""
+    return (
+        event == "pull_request"
+        and base_ref == "main"
+        and head_ref == "dev"
+        and repo != ""
+        and head_repo == repo
+    )
 
 
 TITLE = "Mutation survivors: {}"
@@ -801,15 +822,30 @@ def class_case(files: list[dict], name: str) -> str:
 CLASSES = ("rust", "web", "oracle", "scripts")
 
 
+def plan_text(plan: Plan, release: bool) -> str:
+    """The plan as `plan.json` holds it: a top-level `"release": true` only when `release_run`
+    held, and no `release` key otherwise, so every other run's plan reads as before (SPEC-422
+    R2)."""
+    document = dict(plan.__dict__)
+    if release:
+        document["release"] = True
+    return json.dumps(document, indent=2) + "\n"
+
+
 def plan_diff(
-    root: pathlib.Path, base: str, head: str, out: pathlib.Path, scope: tuple[str, str]
+    root: pathlib.Path,
+    base: str,
+    head: str,
+    out: pathlib.Path,
+    scope: tuple[str, str],
+    release: bool = False,
 ) -> Plan:
     out.mkdir(parents=True, exist_ok=True)
     decision, reason = scope
     if decision == "not-applicable":
         plan = Plan(base="", head="", scope={"decision": decision, "reason": reason})
         plan.classes = {name: {"applies": False, "files": []} for name in CLASSES}
-        (out / "plan.json").write_text(json.dumps(plan.__dict__, indent=2) + "\n", "utf-8")
+        (out / "plan.json").write_text(plan_text(plan, release), "utf-8")
         return plan
     base_sha = git(root, "rev-parse", "--verify", f"{base}^{{commit}}").strip()
     head_sha = git(root, "rev-parse", "--verify", f"{head}^{{commit}}").strip()
@@ -853,7 +889,7 @@ def plan_diff(
         klass["case"] = class_case(plan.files, name)
     plan.classes = classes
     selected_rows(root, base_sha, head_sha, changed, plan)
-    document = json.dumps(plan.__dict__, indent=2) + "\n"
+    document = plan_text(plan, release)
     (out / "plan.json").write_text(document, encoding="utf-8")
     return plan
 
@@ -1043,6 +1079,29 @@ def python_share_refused() -> str | None:
     return None
 
 
+def python_ceiling_refused() -> str | None:
+    """The refusal a release ceiling that is not a whole number from `PYTHON_SHARE_CAP` to the legs
+    both Python matrices hold reads on every run, before any deal, or None (SPEC-422 R5)."""
+    ceiling = PYTHON_RELEASE_CEILING
+    most = PYTHON_MATRIX_LEGS * PYTHON_MATRICES
+    if type(ceiling) is not int or ceiling < PYTHON_SHARE_CAP or ceiling > most:
+        return (
+            "mutation: shards: REFUSED: the release ceiling PYTHON_RELEASE_CEILING = "
+            f"{ceiling} is outside {PYTHON_SHARE_CAP}..{most}; a ceiling outside it is never dealt"
+        )
+    return None
+
+
+def python_release_ceiling(plan: dict) -> int | None:
+    """The ceiling that holds the release run's Python legs in place of the share, for a plan
+    marked `"release": true` alone and only above `PYTHON_SHARE_CAP`; None otherwise, when
+    `shards` deals, refuses and prints as it does for a pull request into `dev` (SPEC-422 R3, R4).
+    """
+    if plan.get("release") is True and PYTHON_RELEASE_CEILING > PYTHON_SHARE_CAP:
+        return PYTHON_RELEASE_CEILING
+    return None
+
+
 def python_needed(listed: int) -> int:
     """The Python legs a listing of `listed` mutants needs at PYTHON_SHARD_MUTANTS a leg, one for
     none (SPEC-415 R1)."""
@@ -1115,11 +1174,14 @@ def python_by_cost(
     listing: list[dict],
     prices: dict[str, int],
     scoped: dict[str, tuple[int, int, int]] | None = None,
+    ceiling: int | None = None,
 ) -> dict | str | None:
     """The Python matrix dealt by each listed file's price (SPEC-418 R3): None when no listed
     file is priced, so the count rule stands; a refusal by name when a priced file's one mutant
     cannot fit a leg, or the legs exceed the run's Python share; else the fewest priced legs
-    within the bound, then the unpriced mutants at the count rule, each leg projected."""
+    within the bound, then the unpriced mutants at the count rule, each leg projected. Under a
+    release `ceiling` the legs are held to it in place of the share, and past it the listing is
+    refused whole, never capped (SPEC-422 R6)."""
     priced: dict[str, list[int]] = {}
     loose: list[int] = []
     for index, entry in enumerate(listing):
@@ -1158,12 +1220,21 @@ def python_by_cost(
             break
     loads, dealt = legs
     unpriced_legs = python_unpriced_legs(listing, prices, scoped)
-    if count + unpriced_legs > PYTHON_MAX_SHARDS:
+    if ceiling is None:
+        if count + unpriced_legs > PYTHON_MAX_SHARDS:
+            return (
+                f"mutation: shards: REFUSED: {len(listing)} python mutant(s) need {count} leg(s) "
+                f"priced at most {PYTHON_LEG_BOUND_SECONDS} s each and {unpriced_legs} unpriced "
+                f"leg(s) of at most {PYTHON_SHARD_MUTANTS}, more than the pull request run's "
+                f"{PYTHON_MAX_SHARDS} python legs: split the change, since a run is never capped"
+            )
+    elif count + unpriced_legs > ceiling:
         return (
             f"mutation: shards: REFUSED: {len(listing)} python mutant(s) need {count} leg(s) "
             f"priced at most {PYTHON_LEG_BOUND_SECONDS} s each and {unpriced_legs} unpriced "
-            f"leg(s) of at most {PYTHON_SHARD_MUTANTS}, more than the pull request run's "
-            f"{PYTHON_MAX_SHARDS} python legs: split the change, since a run is never capped"
+            f"leg(s) of at most {PYTHON_SHARD_MUTANTS}, more than the release run's {ceiling} "
+            "python legs (PYTHON_RELEASE_CEILING): a larger figure needs a new measurement and "
+            "a new owner-signed ruling, since a run is never capped"
         )
     members = [sorted(indices) for indices in dealt]
     members += [loose[leg::unpriced_legs] for leg in range(unpriced_legs)]
@@ -1201,6 +1272,9 @@ def shards(
     if not isinstance(plan, dict) or "classes" not in plan:
         print(f"mutation: shards: VOID {plan_path} is not a mutation plan")
         return EXIT_VOID
+    # The release run's Python legs are held to its ceiling in place of the share; every other
+    # plan's are held to the share, as before (SPEC-422 R3, R4).
+    ceiling = python_release_ceiling(plan)
     python = deal = None
     if python_listed is not None:
         listing = python_listing(python_listed)
@@ -1211,7 +1285,7 @@ def shards(
         # The legs trace exactly when a plan's selection does, so only then is a leg priced at
         # what it pays: its scoped triple (SPEC-421 R10).
         scoped = PYTHON_SCOPED_SECONDS if "plan" in mutation_python.SCOPED_SELECTIONS else None
-        deal = python_by_cost(listing, PYTHON_CONTROL_SECONDS, scoped)
+        deal = python_by_cost(listing, PYTHON_CONTROL_SECONDS, scoped, ceiling)
         if isinstance(deal, str):
             print(deal)
             return EXIT_FAIL
@@ -1297,6 +1371,14 @@ def shards(
                 f"their scoped price, {len(whole)} at their whole-suite price, "
                 f"{len(listed - scoped_files - whole)} unpriced"
             )
+        if ceiling is not None:
+            first = min(deal["count"], PYTHON_MATRIX_LEGS)
+            print(
+                f"mutation: shards: release run: {deal['count']} python leg(s) of ceiling "
+                f"{ceiling} (PYTHON_RELEASE_CEILING): {first} in mutation-python and "
+                f"{deal['count'] - first} in mutation-python-release, at most "
+                f"{PYTHON_MATRIX_LEGS} a matrix"
+            )
     print(
         f"mutation: shards: {count} shard(s) for {len(mutants)} listed mutant(s), projected at "
         f"{sum(costs)} s serially; the slowest at {max(times)} s of its {SHARD_BOUND_SECONDS} s "
@@ -1323,9 +1405,15 @@ def shards(
         with open(output, "a", encoding="utf-8") as sink:
             sink.write(f"listed={len(mutants)}\n")
     if output and python is not None:
+        # One matrix generates at most PYTHON_MATRIX_LEGS jobs, so the legs past it are the release
+        # job's axis, and each shard is in exactly one of the two lists (SPEC-422 R8).
+        first_axis = list(range(min(python["count"], PYTHON_MATRIX_LEGS)))
+        second_axis = list(range(PYTHON_MATRIX_LEGS, python["count"]))
         with open(output, "a", encoding="utf-8") as sink:
             sink.write(f"python_shards={python['count']}\n")
-            sink.write(f"python_matrix={json.dumps(list(range(python['count'])))}\n")
+            sink.write(f"python_matrix={json.dumps(first_axis)}\n")
+            sink.write(f"python_release_matrix={json.dumps(second_axis)}\n")
+            sink.write(f"python_release_legs={len(second_axis)}\n")
     return EXIT_OK
 
 
@@ -2183,16 +2271,27 @@ def rows_leg_owed(plan: dict) -> str | None:
     return None
 
 
+def release_leg_owed(plan: dict) -> str | None:
+    """Why the plan owes `mutation-python-release` a run, or None when its Python legs fit the first
+    matrix: the second matrix holds exactly the legs past PYTHON_MATRIX_LEGS (SPEC-422 R11)."""
+    count = (plan.get("python") or {}).get("count")
+    if count and count > PYTHON_MATRIX_LEGS:
+        return f"the plan deals {count} python leg(s), past PYTHON_MATRIX_LEGS"
+    return None
+
+
 def legs(args: argparse.Namespace) -> int:
     """Each leg's result against the plan (SPEC-290 R6): a leg is read as not started only when
     the plan's listing gave it nothing, and a skip the plan owed work is VOID by name. A leg that
-    started is judged by its own job, its reports and `ci`."""
+    started is judged by its own job, its reports and `ci`. `mutation-python-release` is judged
+    when its result is given, and a plan that owes it a run with no result given is VOID by name;
+    with neither, nothing is said of it, so every earlier output stays as it was (SPEC-422 R11)."""
     verdict = Verdict("legs")
     plan = read_json(args.plan)
     if not isinstance(plan, dict) or "classes" not in plan:
         verdict.void(f"no plan: {args.plan} is not a mutation plan")
         return verdict.close()
-    for leg, result, owed, nothing in (
+    arms = [
         ("mutation-rust", args.rust_leg, rust_leg_owed, "the plan lists no Rust mutant"),
         (
             "mutation-rows",
@@ -2200,7 +2299,17 @@ def legs(args: argparse.Namespace) -> int:
             rows_leg_owed,
             "the plan selects no row and no retirement check is due",
         ),
-    ):
+    ]
+    if args.python_release_leg is not None:
+        arms.append(
+            (
+                "mutation-python-release",
+                args.python_release_leg,
+                release_leg_owed,
+                "the plan deals no python leg past PYTHON_MATRIX_LEGS",
+            )
+        )
+    for leg, result, owed, nothing in arms:
         if result not in LEG_RESULTS:
             verdict.void(f"{leg}: {result!r} is not a job's result")
             continue
@@ -2213,6 +2322,10 @@ def legs(args: argparse.Namespace) -> int:
             verdict.say(f"{leg}: not started: {nothing}")
         else:
             verdict.void(f"{leg}: not started while {reason}")
+    if args.python_release_leg is None:
+        reason = release_leg_owed(plan)
+        if reason is not None:
+            verdict.void(f"mutation-python-release: no result was given while {reason}")
     return verdict.close()
 
 
@@ -3566,6 +3679,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--event", default="")
     parser.add_argument("--base-ref", default="")
     parser.add_argument("--subject", default="")
+    parser.add_argument("--head-ref")
+    parser.add_argument("--head-repo", default="")
+    parser.add_argument("--repo", default="")
     parser.add_argument("--shards", type=int)
     parser.add_argument("--python-shards", type=int, default=PYTHON_WEEKLY_SHARDS)
     parser.add_argument("--listed")
@@ -3574,6 +3690,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--package")
     parser.add_argument("--rust-leg")
     parser.add_argument("--rows-leg")
+    parser.add_argument("--python-release-leg")
     parser.add_argument("--costs")
     parser.add_argument("--scoped", action="store_true")
     args = parser.parse_args(argv)
@@ -3582,8 +3699,9 @@ def main(argv: list[str] | None = None) -> int:
         if not args.base or not args.out:
             parser.error("plan needs --base and --out")
         scope = scope_of(args.event, args.base_ref, args.subject)
+        release = release_run(args.event, args.base_ref, args.head_ref, args.head_repo, args.repo)
         try:
-            plan = plan_diff(root, args.base, args.head, pathlib.Path(args.out), scope)
+            plan = plan_diff(root, args.base, args.head, pathlib.Path(args.out), scope, release)
         except mutation_rows.PopulationRefused as refusal:
             print(f"mutation: plan: REFUSED: {refusal}", file=sys.stderr)
             return EXIT_FAIL
@@ -3595,6 +3713,10 @@ def main(argv: list[str] | None = None) -> int:
         refused = python_share_refused()
         if refused:
             print(refused)
+            return EXIT_FAIL
+        outside = python_ceiling_refused()
+        if outside:
+            print(outside)
             return EXIT_FAIL
         return shards(pathlib.Path(args.plan), args.listed, args.python_listed)
     if args.verb == "size":

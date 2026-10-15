@@ -407,7 +407,8 @@ class TheShardsAreThePlans(unittest.TestCase):
         # shards the plan promised rather than the ones that reported.
         self.assertRegex(
             verdict,
-            r"(?m)^    needs: \[mutation-plan, mutation-rust, mutation-python, mutation-rows\]$",
+            r"(?m)^    needs: \[mutation-plan, mutation-rust, mutation-python, "
+            r"mutation-python-release, mutation-rows\]$",
         )
         self.assertRegex(verdict, r"(?m)^    if: \$\{\{ always\(\) \}\}$")
         self.assertRegex(verdict, r"(?m)^\s+pattern: mutation-rust-shard-\*$")

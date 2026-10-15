@@ -24,7 +24,7 @@ VERDICT = REPO / "scripts" / "mutation-verdict.py"
 RECORDED = REPO / "scripts" / "tests" / "fixtures" / "not-started-legs"
 PLAN = "needs.mutation-plan.outputs"
 #: The two legs the plan's listing can leave with nothing to examine, and the only skips ci admits.
-LEGS = ("mutation-rust", "mutation-rows")
+LEGS = ("mutation-rust", "mutation-rows", "mutation-python-release")
 MERGED = "Merge pull request #7 from RexRenatus/feat/probe"
 
 
@@ -361,25 +361,30 @@ class ALegWithNothingToExamineIsNotStarted(unittest.TestCase):
             self.assertNotRegex(written[0], r"always\(\)|failure\(\)|cancelled\(\)|\.result\b")
         self.assertNotIn(f"{PLAN}.rust", conditions["mutation-rust"])
         scenarios = [
-            (listed, rust, rows, scope)
+            (listed, rust, rows, scope, release)
             for listed in ("0", "1", "12")
             for rust in ("true", "false")
             for rows in ("true", "false")
             for scope in ("diff", "not-applicable")
+            for release in ("0", "1", "44")
         ]
-        for listed, rust, rows, scope in examined("plan outputs", scenarios):
+        for listed, rust, rows, scope, release in examined("plan outputs", scenarios):
             context = {
                 f"{PLAN}.listed": listed,
                 f"{PLAN}.rust": rust,
                 f"{PLAN}.rows": rows,
                 f"{PLAN}.scope": scope,
+                f"{PLAN}.python_release_legs": release,
             }
-            where = f"listed {listed}, rust {rust}, rows {rows}, scope {scope}"
+            where = f"listed {listed}, rust {rust}, rows {rows}, scope {scope}, release {release}"
             self.assertEqual(condition(conditions["mutation-rust"], context), listed != "0", where)
             self.assertEqual(
                 condition(conditions["mutation-rows"], context),
                 rows == "true" or scope == "diff",
                 where,
+            )
+            self.assertEqual(
+                condition(conditions["mutation-python-release"], context), release != "0", where
             )
         # The matrix is the plan's, as before, and no other mutation job gains a condition.
         self.assertRegex(
@@ -567,6 +572,10 @@ class ALegWithNothingToExamineIsNotStarted(unittest.TestCase):
             ("a cancelled leg", {"mutation-rust": "cancelled"}, 1),
             ("a failed leg", {"mutation-rows": "failure"}, 1),
             ("a failed verdict", {"mutation-rust": "skipped", "mutation-verdict": "failure"}, 1),
+            ("mutation-python-release not started", {"mutation-python-release": "skipped"}, 0),
+            ("every leg not started", dict.fromkeys(LEGS, "skipped"), 0),
+            ("a cancelled release leg", {"mutation-python-release": "cancelled"}, 1),
+            ("a failed release leg", {"mutation-python-release": "failure"}, 1),
         ]
         for where, changed, expected in examined("need results", scenarios):
             results = dict(dict.fromkeys(needs, "success"), **changed)
@@ -586,11 +595,12 @@ class ALegWithNothingToExamineIsNotStarted(unittest.TestCase):
         aggregate = found.get("ci", "")
         needs = needs_of(aggregate)
         self.assertIn("mutation-python", needs)
+        self.assertEqual([leg for leg in LEGS if leg not in needs], [], "ci's needs")
         (step,) = steps(aggregate)
         script = step_script(step)
         beside = {
             "alone": {},
-            "beside both admitted skips": dict.fromkeys(LEGS, "skipped"),
+            "beside every admitted skip": dict.fromkeys(LEGS, "skipped"),
         }
         members = [
             (need, result, context)
@@ -625,6 +635,7 @@ class ALegWithNothingToExamineIsNotStarted(unittest.TestCase):
             "mutation-plan": "success",
             "mutation-rust": "skipped",
             "mutation-rows": "success",
+            "mutation-python-release": "skipped",
         }
         scenarios = [
             ("legs refuses, the judges passed", (0, 0, 3), 3),

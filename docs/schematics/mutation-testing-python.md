@@ -448,3 +448,123 @@ triple is (p, p, p), so every deal and every printed line is byte-identical to s
 | share | `PYTHON_MAX_SHARDS` 32 under `PYTHON_SHARE_CAP` 128 | unchanged |
 | refusal | by name above the share; by name at k < 1 | unchanged in text; k read as (1800 - setup) // each |
 | verdict | every listed mutant examined; each `void` read by name | unchanged; no mutant leaves the plan, and every shard is counted |
+
+## 9. The release run's Python legs past the share (SPEC-422, ADR-436)
+
+Every `path:line` in this section was read at dev `26ecc2ad`. Sections 6 to 8 stay as written.
+This section shows what changes for one run alone, the release pull request's: the plan names it
+by a predicate, deals its Python legs up to one ceiling constant in place of the share, and splits
+them over two matrix jobs of at most 256 legs each, and the verdict counts every leg of both. At the
+constant's placeholder value, the release run is the pull request run.
+
+### 9.1 Before: the release run's Python plan at dev `26ecc2ad`
+
+```mermaid
+flowchart TD
+  bStep["plan step: EVENT, BASE_REF and SUBJECT by env"] --> bPlan["mutation-verdict.py plan: scope_of"]
+  bPlan --> bShards["shards: python_shards, then python_by_cost"]
+  bShards --> bShare{"legs above PYTHON_MAX_SHARDS?"}
+  bShare -->|"yes"| bRefuse["REFUSED by name, exit 1, no leg starts"]
+  bShare -->|"no"| bOut["outputs python_shards n and python_matrix 0 to n-1"]
+  bOut --> bJob["mutation-python: one matrix"]
+  bJob --> bVerdict["mutation-verdict: python_reports 0 to n-1, legs judges rust and rows"]
+  bVerdict --> bCi["ci: admits a rust or rows skip, once each"]
+```
+
+The plan step passes the event, the base ref and the subject (`.github/workflows/ci.yml:399-403`),
+and `scope_of` reads the event and the base alone (`scripts/mutation-verdict.py:195`). Every run,
+the release's included, holds its Python legs to the share of 32 (`:125`): past it the cost deal
+refuses (`:1161`) or the count rule does (`:1220-1227`), and the run reads VOID. One matrix job
+reads the plan's axis (`.github/workflows/ci.yml:543-582`); the verdict counts the shards 0 to
+n - 1 (`scripts/mutation-verdict.py:1839`), `legs` judges two legs (`:2196-2203`), and `ci` admits
+two skips (`.github/workflows/ci.yml:982`).
+
+### 9.2 After: the plan names the release run and holds it to its ceiling
+
+```mermaid
+flowchart TD
+  aStep["plan step: EVENT, BASE_REF, SUBJECT, HEAD_REF, HEAD_REPO and REPO by env"] --> aPred{"release_run: pull_request, base main, head dev, repository set, head repository equal to it?"}
+  aPred -->|"no, or an input empty"| aNoMark["plan.json: no release key"]
+  aPred -->|"yes"| aMark["plan.json: release true"]
+  aNoMark --> aRange{"PYTHON_RELEASE_CEILING an int from PYTHON_SHARE_CAP to PYTHON_MATRIX_LEGS x PYTHON_MATRICES?"}
+  aMark --> aRange
+  aRange -->|"no, on every run"| aRangeRefuse["REFUSED by name before any deal, exit 1"]
+  aRange -->|"yes"| aHelper{"release is True and the ceiling above PYTHON_SHARE_CAP?"}
+  aHelper -->|"no: None"| aShare{"legs above PYTHON_MAX_SHARDS?"}
+  aShare -->|"yes"| aShareRefuse["REFUSED by name, the pull request text byte for byte"]
+  aShare -->|"no"| aSplit["outputs: python_shards, python_matrix, python_release_matrix, python_release_legs"]
+  aHelper -->|"yes: the ceiling"| aPriced{"a listed file priced?"}
+  aPriced -->|"no: the count rule"| aShare
+  aPriced -->|"yes: the cost deal"| aCeil{"legs above PYTHON_RELEASE_CEILING?"}
+  aCeil -->|"yes"| aCeilRefuse["REFUSED whole by name: a new measurement and a new owner-signed ruling, exit 1"]
+  aCeil -->|"no"| aLine["release line: n legs of the ceiling, first and second matrix"]
+  aLine --> aSplit
+```
+
+The predicate is `base-is-dev`'s own condition (`.github/workflows/ci.yml:944-962`), read in the
+plan and failing closed: any input that is empty or unread is not the release run. The ceiling is
+one constant after `PYTHON_SHARE_CAP` (`scripts/mutation-verdict.py:127`), and its `#:` line cites
+the owner-signed ruling file by path once a measurement sets it. The share's check and both of its
+refusal texts are reached unchanged whenever the helper returns None.
+
+### 9.3 After: two matrices and one verdict
+
+```mermaid
+flowchart LR
+  sOut["mutation-plan outputs"] --> sFirst["mutation-python: axis python_matrix, shards 0 to 255 at most"]
+  sOut --> sSecond["mutation-python-release: runs when python_release_legs is not 0, axis python_release_matrix"]
+  sFirst --> sArt["artifacts mutation-python-shard-k"]
+  sSecond --> sArt
+  sArt --> sVerdict["mutation-verdict: needs both, merged download, python_reports 0 to n-1"]
+  sSecond -.->|"skipped when python_release_legs is 0"| sLegs["legs --python-release-leg: not started, or VOID when the plan owed it"]
+  sLegs --> sVerdict
+  sVerdict --> sCi["ci: needs both, admits a rust, rows or release skip, once each"]
+```
+
+For n legs the first matrix holds the shards 0 to min(n, 256) - 1 and the second the shards 256 to
+n - 1. Each leg runs `--shard k/n` over the total and keeps its report under the one name family,
+so the verdict's merged download and its count of shards 0 to n - 1 read both matrices with no
+change. On every run but the release run the second job's axis is empty and its condition false:
+it generates no leg, the job-budget derivation counts it at 0, and `LEG_CEILING` is unchanged.
+
+### 9.4 The measurement that reads the limit per matrix
+
+```mermaid
+sequenceDiagram
+  participant D as dispatch at 256 legs
+  participant Z as size
+  participant F as first
+  participant T as second
+  participant E as empty
+  participant C as count
+  participant R as the fixture and its test
+  D->>Z: legs
+  Z->>F: axis of 256 shards
+  Z->>T: axis of 256 shards
+  Z->>E: an empty axis and a false condition
+  F->>C: 256 artifacts, each with its job total
+  T->>C: 256 artifacts, each with its job total
+  E-->>C: skipped
+  C->>R: matrix-limit.json, committed as the fixture
+  Note over R: each matrix 256 legs, both succeeded, empty skipped, more than 256 jobs in the run
+```
+
+`.github/workflows/matrix-limit.yml` is dispatched once, at 256 legs a matrix. Its `count` job runs
+whatever the other jobs read, and records each matrix's legs, each leg's `strategy.job-total`,
+every job's result and the run's job count. The record is committed as
+`scripts/tests/fixtures/matrix-limit-<run>/`, and SPEC-422 A19 reads it. A record that shows the
+limit counted per run fails A19, and the delivery does not land: the second matrix is admitted by
+this measurement or not at all.
+
+### 9.5 What crosses each step
+
+| step | before (dev `26ecc2ad`) | after (SPEC-422) |
+|---|---|---|
+| predicate | none: `scope_of` reads the event and the base | `release_run` over the event, the base, the head, the head repository and the repository; `"release": true` only when it holds |
+| ceiling | none | `PYTHON_RELEASE_CEILING`, at `PYTHON_SHARE_CAP` until a signed measurement sets it; range-checked on every run |
+| deal | the share 32 on every run | the share on every run but the release run under a set ceiling, whose cost deal is held to the ceiling; the count rule keeps the share |
+| refusal | by name above the share | unchanged for every other run; the release run's past its ceiling, whole, by name, naming the constant and a new signature |
+| matrices | one, `mutation-python` | two: `mutation-python` for the shards 0 to 255 and `mutation-python-release` from 256, at most `PYTHON_MATRIX_LEGS` each |
+| verdict | every listed mutant examined; reports 0 to n - 1 | unchanged; both matrices' reports, under one name family |
+| legs | rust and rows | rust, rows and the release leg, owed only past `PYTHON_MATRIX_LEGS` |
+| ci | admits two skips | admits three, once each |

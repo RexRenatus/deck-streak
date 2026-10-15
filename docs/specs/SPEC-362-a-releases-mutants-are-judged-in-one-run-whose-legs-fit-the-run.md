@@ -323,3 +323,22 @@ a pull request listing past 190 legs is refused whole by name, never capped. The
 request run recorded as planned, #822's release run at 192 legs, was planned under the ceiling of
 209. `fewest_shards` refuses a listing past the ceiling and never deals fewer, longer legs, so 190
 lengthens no leg.
+
+## Amendment: the release run's Python legs may fill a second matrix (SPEC-422)
+
+Insert-only; every earlier byte is kept. R3's rule is unchanged: for each workflow that runs legs,
+`LEG_CEILING` is 256 less the most jobs every other job of that workflow can generate, and a test
+derives it from the workflow's jobs and matrices. SPEC-422 adds one job to `ci.yml`,
+`mutation-python-release`, whose axis holds the Python shards from 256 up and whose condition reads
+the plan's `python_release_legs` output. It generates a leg only on the release pull request's run,
+under a set `PYTHON_RELEASE_CEILING`, when that run's Python legs pass `PYTHON_MATRIX_LEGS`. On
+every other run it generates none, so R3's derivation counts it at 0 and `LEG_CEILING` stays
+`{"ci": 190, "battery": 234}`. Each Python matrix of the release run holds at most `RUN_JOBS`, on
+the per-matrix reading ADR-373's amendment records (SPEC-422, ADR-436).
+
+Section 5's "It does not add a verdict across runs, or a second matrix" is narrowed for the release
+run alone. There is still no verdict across runs: the one `mutation-verdict` counts every leg of
+both matrices, shards 0 to n - 1, as it counts one matrix's. A release listing past its ceiling is
+refused whole, by name, never capped, as R3 refuses a Rust listing past its ceiling. Each leg of
+the second matrix is dealt under the same bound as the first, so the second matrix lengthens no
+leg.

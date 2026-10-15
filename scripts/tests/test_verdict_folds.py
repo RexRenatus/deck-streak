@@ -140,6 +140,7 @@ class Driver:
         results = {
             "mutation-plan": "success",
             "mutation-rust": "success",
+            "mutation-python-release": "skipped",
             "mutation-rows": "success",
         }
         self.runs += 1
@@ -245,7 +246,7 @@ class TheShellIsResolvedFromTheWorkflowText(unittest.TestCase):
 
 STEP_AT = "      - name: the verdict, from every shard's report and the rows' (the plan names a not-applicable case)\n"
 RUN_END = '          exit "$status"\n'
-JOB_AT = "  mutation-verdict:\n    needs: [mutation-plan, mutation-rust, mutation-python, mutation-rows]\n"
+JOB_AT = "  mutation-verdict:\n    needs: [mutation-plan, mutation-rust, mutation-python, mutation-python-release, mutation-rows]\n"
 WF_AT = "permissions:\n  contents: read\n"
 FIRST_JOB = "jobs:\n  rust:\n"
 EXPLICIT_BASH = ["bash", "--noprofile", "--norc", "-e", "-o", "pipefail"]

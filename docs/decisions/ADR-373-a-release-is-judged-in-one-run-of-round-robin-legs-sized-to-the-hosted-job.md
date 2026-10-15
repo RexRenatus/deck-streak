@@ -206,3 +206,31 @@ Insert-only; every earlier byte is kept. ADR-432 deals the Python legs by each f
 control cost within half their job, in fixed shares of the run's 225 legs, 32 Python and 193 Rust,
 so this decision's leg ceiling is unchanged. Chosen against: a floating split, in which the Python
 legs take what the Rust plan leaves, because it raises the Python ceiling above 32 (ADR-432 D2).
+
+## Amendment: D1, the job limit is read per matrix for the release run's Python legs (SPEC-422, ADR-436)
+
+Insert-only; every earlier byte is kept. D1 read the limit of 256 jobs per run, and the first
+option it rejected, several matrix jobs in one run, lost on that reading alone: a second matrix
+would share the first one's budget and add no leg. More Information names what would make that
+wrong: the limit counted per matrix, after which the ceiling is conservative and can be raised by
+measurement. SPEC-422 makes that measurement in public. `.github/workflows/matrix-limit.yml`,
+dispatched once at 256 legs a matrix, runs two matrices of 256 legs in one run beside its other
+jobs. Its `count` job records each matrix's legs, each leg's `strategy.job-total`, every job's
+result and the run's job count. The record is committed as
+`scripts/tests/fixtures/matrix-limit-<run>/`, and SPEC-422 A19 reads it.
+
+On that record, for the release pull request's run alone, the Python legs past
+`PYTHON_MATRIX_LEGS` run in a second matrix job, `mutation-python-release`, up to
+`PYTHON_RELEASE_CEILING` (ADR-436 D2 and D3). Every other run keeps D1 as written: the second job
+generates no leg there, `LEG_CEILING` stays `{"ci": 190, "battery": 234}`, and its derivation is
+unchanged. This amendment holds only while the record does: a record that shows the limit counted
+per run fails A19, and the delivery that adds this section does not land.
+
+Chosen against:
+
+- Keeping the per-run reading for the release run: rejected because a release whose legs pass the
+  run's job budget then fits no plan, and cannot be judged at all.
+- Reading the limit per matrix for every run: rejected because pull requests into `dev` keep the
+  share and the job budget, and only the release run has an owner-signed exception.
+- Resting the reading on a measurement this repository did not make: rejected because a public
+  decision rests on a committed record and the test that reads it.
