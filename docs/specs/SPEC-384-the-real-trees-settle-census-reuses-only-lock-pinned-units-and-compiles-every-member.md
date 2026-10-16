@@ -40,8 +40,8 @@ Every figure below was read at `e7ecf10d`, or from a CI job named by its id.
   every mutant. The census reads the messages of member units only (:940-944).
 - **Where the time goes.** Each census compiles the 615 pinned units cold under each of the four
   pairs, and again where a selection changes their features. The members alone are a small share:
-  `clippy` over every member and target, with the dependencies already built, took 45 s in job
-  113820846590. The split between pinned units and members inside the census is inferred from
+  `clippy` over every member and target, with the dependencies already built, took 45 s in job 113820846590.
+  The split between pinned units and members inside the census is inferred from
   that, not measured; section 8 measures the result.
 
 ## 2. Requirements
