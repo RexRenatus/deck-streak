@@ -19,15 +19,19 @@
 //!
 //! The census's verdict depends only on the tree it judges (SPEC-072 §12, round 8). Progression is
 //! found by its manifest's path, never by its package's name, and a graph where that cannot be told
-//! is refused by name. Each census compiles in an empty target of its own, and its cargo inherits
-//! only the variables it names; a cargo configuration in the tree, above it or in cargo's home is
-//! refused, and so is code of the tree that reads a file outside it or a variable the host sets.
+//! is refused by name. Each census of a planted tree compiles in an empty target of its own, and
+//! the real tree's in a store that keeps only the units the lock file pins and compiles every
+//! member itself (SPEC-384, ADR-398); its cargo inherits only the variables it names; a cargo
+//! configuration in the tree, above it or in cargo's home is refused, and so is code of the tree
+//! that reads a file outside it or a variable the host sets.
 
 // An integration test is test code: its helpers panic on an unreadable tree, and it prints the
 // examined count on purpose.
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
+use std::ffi::OsStr;
 use std::fmt::Write as _;
 use std::fs;
 use std::io::Read;
@@ -115,6 +119,14 @@ const OWNER_MANIFEST: &str = "crates/progression/Cargo.toml";
 /// The folder of the real tree's stores, under the test process's temporary directory and outside
 /// `target/`, so that no cache of `target/` carries one (SPEC-384 R1, ADR-398 D2 and D6).
 const STORE_DIRECTORY: &str = "deck-streak-settle-census-store";
+/// The cache directory tag cargo writes into a target directory it makes
+/// (<https://bford.info/cachedir/>), byte for byte. `cargo clean --target-dir` refuses a directory
+/// without it, and the store's folder exists before cargo first builds in it, so cargo never
+/// writes it there: [`hold`] does (SPEC-384 R2).
+const CACHEDIR_TAG: &str = "Signature: 8a477f597d28d172789f06886806bc55\n\
+                            # This file is a cache directory tag created by cargo.\n\
+                            # For information about cache directory tags see \
+                            https://bford.info/cachedir/\n";
 
 /// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
@@ -721,9 +733,16 @@ fn build_scripts(root: &Path, metadata: &Value) -> Result<Vec<String>, Vec<Strin
 /// Every use of `settle` in the code the workspace at `root` compiles, with the files outside the
 /// tree that the workspace's own code read (each a refusal that does not stop the census naming
 /// its uses), or the reasons the census cannot see them all. `target` is the census's own target
-/// directory, made empty for this census alone and apart from every other build.
+/// directory, made empty for this census alone and apart from every other build; while
+/// [`census_on_store`] holds a store for this thread, the census compiles in that store instead,
+/// after the removal of SPEC-384 R2.
 #[allow(clippy::too_many_lines)]
 fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), Vec<String>> {
+    let held = HELD.with_borrow(|held| {
+        held.as_ref()
+            .map(|held| (held.store.clone(), held.removing))
+    });
+    let target = held.as_ref().map_or(target, |(store, _)| store.as_path());
     let mut arguments: Vec<String> = ["metadata", "--format-version", "1", "--locked", "--offline"]
         .map(str::to_owned)
         .to_vec();
@@ -921,6 +940,19 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), 
             })
         })
         .collect();
+    // The store's census removes every unit of the tree's path packages before its first pass,
+    // and records them for the removal after its last (SPEC-384 R1, R2).
+    if let Some((store, removing)) = &held {
+        let paths = path_packages(&metadata);
+        if *removing {
+            removal(root, store, &paths).map_err(|reason| vec![reason])?;
+        }
+        HELD.with_borrow_mut(|held| {
+            if let Some(held) = held {
+                held.paths = paths;
+            }
+        });
+    }
     let mut uses = Vec::new();
     let mut read = BTreeMap::new();
     let mut units = Units::default();
@@ -1021,6 +1053,11 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), 
     }
     let mut refusals = outside_the_tree(&tree, &workspace, &canonical(target), &read);
     refusals.extend(units.refused.iter().cloned());
+    HELD.with_borrow_mut(|held| {
+        if let Some(held) = held {
+            held.units = units;
+        }
+    });
     Ok((uses, refusals))
 }
 
@@ -1102,8 +1139,19 @@ fn artifact_files(message: &Value) -> Vec<String> {
 /// so the verdict could read a tree it does not judge. `compiled` holds the files this census's
 /// passes have compiled so far.
 fn not_compiled_here(message: &Value, folder: &str, compiled: &BTreeSet<String>) -> Option<String> {
-    let _ = (message, folder, compiled);
-    None
+    if message["fresh"] != true {
+        return None;
+    }
+    let file = artifact_files(message)
+        .into_iter()
+        .find(|file| !compiled.contains(file))?;
+    Some(format!(
+        "{folder}'s unit {} ({}) was answered from the store, and this census did not compile it",
+        message["target"]["name"].as_str().unwrap_or_default(),
+        Path::new(&file)
+            .file_name()
+            .map_or(file.clone(), |name| name.to_string_lossy().into_owned())
+    ))
 }
 
 /// Every combination of `declared` (each `package/feature`), the empty one first, each joined by
@@ -1378,15 +1426,81 @@ fn store_of(root: &Path) -> PathBuf {
 /// and the canonical tree root (SPEC-384 R3). Each input is framed by its length, so that no two
 /// run together.
 fn store_key(lock: &[u8], toolchain: &[u8], command: &Command, root: &Path) -> String {
-    let _ = (lock, toolchain, command, root);
-    "0".repeat(64)
+    let variables: BTreeMap<&OsStr, Option<&OsStr>> = command.get_envs().collect();
+    let mut hasher = Sha256::new();
+    frame(&mut hasher, lock);
+    frame(&mut hasher, toolchain);
+    frame(&mut hasher, command.get_program().as_encoded_bytes());
+    // The flags and the arming: every variable the command sets that is not inherited.
+    for (name, value) in &variables {
+        if !INHERITED
+            .iter()
+            .any(|inherited| OsStr::new(inherited) == *name)
+        {
+            frame_variable(&mut hasher, name, *value);
+        }
+    }
+    for name in INHERITED {
+        let value = variables.get(OsStr::new(name)).copied().flatten();
+        frame_variable(&mut hasher, OsStr::new(name), value);
+    }
+    frame(&mut hasher, canonical(root).as_os_str().as_encoded_bytes());
+    hasher
+        .finalize()
+        .iter()
+        .fold(String::new(), |mut hex, byte| {
+            write!(hex, "{byte:02x}").expect("a string takes every write");
+            hex
+        })
+}
+
+/// Feeds `bytes` to `hasher` after its length, so that no two inputs of a key run together.
+fn frame(hasher: &mut Sha256, bytes: &[u8]) {
+    hasher.update(bytes.len().to_le_bytes());
+    hasher.update(bytes);
+}
+
+/// Feeds a variable to `hasher`: its name, whether it is set, and its value, so that a variable
+/// set to nothing and one that is absent name different stores.
+fn frame_variable(hasher: &mut Sha256, name: &OsStr, value: Option<&OsStr>) {
+    frame(hasher, name.as_encoded_bytes());
+    frame(hasher, &[u8::from(value.is_some())]);
+    frame(hasher, value.map_or(&[][..], OsStr::as_encoded_bytes));
+}
+
+/// The store a census of this thread compiles in while [`census_on_store`] holds it, which
+/// [`compiled_uses`] reads (SPEC-384 R1): whether the census removes the tree's path packages
+/// from it, the path packages its graph names, and what its passes compiled and read. Every other
+/// census compiles in the empty target `census_in` makes for it, so `census_in` stays the one
+/// census of every tree, planted or real.
+#[derive(Default)]
+struct Held {
+    store: PathBuf,
+    removing: bool,
+    paths: Vec<String>,
+    units: Units,
+}
+
+thread_local! {
+    /// This thread's held store, set and cleared by [`census_on_store`] alone.
+    static HELD: RefCell<Option<Held>> = const { RefCell::new(None) };
+}
+
+/// Clears this thread's [`HELD`] store when it is dropped, so that a census that panics leaves no
+/// store behind for the next census of its thread.
+struct Unheld;
+
+impl Drop for Unheld {
+    fn drop(&mut self) {
+        drop(HELD.take());
+    }
 }
 
 /// Opens `store`'s lock file and takes its exclusive lock, waiting while another census holds it,
 /// and answers the open file: the lock lasts until the file is dropped (SPEC-384 R4). This process
 /// alone opens it, so no cargo the census starts inherits the lock.
 fn hold(store: &Path) -> Result<fs::File, String> {
-    fs::create_dir_all(store)
+    let file = fs::create_dir_all(store)
         .and_then(|()| {
             fs::OpenOptions::new()
                 .create(true)
@@ -1400,7 +1514,28 @@ fn hold(store: &Path) -> Result<fs::File, String> {
                  change the store under it",
                 store.display()
             )
-        })
+        })?;
+    file.lock().map_err(|error| {
+        format!(
+            "the census cannot lock its store at {} ({error}), so another census could change \
+             the store under it",
+            store.display()
+        )
+    })?;
+    // Cargo tags only a target directory it makes itself, and refuses to clean a `--target-dir`
+    // without the tag. The store's folder is made here, for its lock file, before cargo first
+    // builds in it, so the census tags it as cargo would, under the lock (SPEC-384 R2).
+    let tag = store.join("CACHEDIR.TAG");
+    if !tag.exists() {
+        fs::write(&tag, CACHEDIR_TAG).map_err(|error| {
+            format!(
+                "the census cannot tag its store at {} as a cache directory ({error}), so cargo \
+                 cannot remove the tree's packages from it",
+                store.display()
+            )
+        })?;
+    }
+    Ok(file)
 }
 
 /// The id of every package of the graph `metadata` gives whose source is a path: every member,
@@ -1420,8 +1555,26 @@ fn path_packages(metadata: &Value) -> Vec<String> {
 /// `-p` for each under the census's own environment (SPEC-384 R2), so that the store keeps only
 /// the units of the packages the lock file pins from a registry or git.
 fn removal(root: &Path, store: &Path, paths: &[String]) -> Result<(), String> {
-    let _ = (root, paths);
-    fs::create_dir_all(store).map_err(|error| error.to_string())
+    // `cargo clean` with no package named removes the whole store, its lock file included.
+    if paths.is_empty() {
+        return Ok(());
+    }
+    let mut arguments: Vec<String> = ["clean", "--locked", "--offline", "--target-dir"]
+        .map(str::to_owned)
+        .to_vec();
+    arguments.push(store.to_string_lossy().into_owned());
+    for id in paths {
+        arguments.extend(["-p".to_owned(), id.clone()]);
+    }
+    let (ok, _, stderr) = cargo(root, &arguments, CARGO_LIMIT)?;
+    if !ok {
+        return Err(format!(
+            "cargo clean cannot remove the tree's packages from the store ({}), so the census \
+             cannot tell the units it compiles from another census's",
+            first_error(&stderr)
+        ));
+    }
+    Ok(())
 }
 
 /// The census of the workspace at `root` compiled in `store`, a target directory kept between
@@ -1447,10 +1600,22 @@ fn census_on_store(root: &Path, store: &Path, removing: bool) -> (Census, Units)
             return (refused, Units::default());
         }
     };
-    let _ = removing;
-    let census = census_in(root, store);
+    let _unheld = Unheld;
+    HELD.set(Some(Held {
+        store: store.to_path_buf(),
+        removing,
+        ..Held::default()
+    }));
+    let mut census = census_in(root, store);
+    let held = HELD.take().unwrap_or_default();
+    if removing {
+        census
+            .refused
+            .extend(removal(root, store, &held.paths).err());
+        census.refused.sort();
+    }
     drop(lock);
-    (census, Units::default())
+    (census, held.units)
 }
 
 /// `path` relative to `root`, with `/` separators.
