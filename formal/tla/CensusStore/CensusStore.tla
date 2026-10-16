@@ -56,11 +56,11 @@
 (*   Locked - a census holds the store's lock from Acquire to Release.     *)
 (*   Pruned - Remove and Finish take the path units out of the store.      *)
 (***************************************************************************)
-\* @phx covers crates/progression/tests/xp_census.rs anchor=census_on_store digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/progression/tests/xp_census.rs anchor=hold digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/progression/tests/xp_census.rs anchor=removal digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/progression/tests/xp_census.rs anchor=store_key digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/progression/tests/xp_census.rs anchor=not_compiled_here digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/progression/tests/xp_census.rs anchor=census_on_store digest=sha256:550a9ce01d8cd2e16df388c9679566ed4c8a11d6ef601574415e23f3a56fb395
+\* @phx covers crates/progression/tests/xp_census.rs anchor=hold digest=sha256:cde2d666ec7420d78e2834589d28d14b9af1ede33d3f396d36a28a396c261f76
+\* @phx covers crates/progression/tests/xp_census.rs anchor=removal digest=sha256:194aa005e3713b535e683b87353b01a15cc4caa707e94b2c6345cbc8885161f6
+\* @phx covers crates/progression/tests/xp_census.rs anchor=store_key digest=sha256:af5387b188f8ed4f12b0f70d5902ecd3c5f9090389a74e0464e1c3fc65203bdf
+\* @phx covers crates/progression/tests/xp_census.rs anchor=not_compiled_here digest=sha256:8e0990e58f82193b36572c41b1e4639fec1504f28325861dbc890ef5c6000302
 \* @phx cites #692
 \* @phx property AcceptedVerdictReadsItsOwnMembers ramp=report
 \* @phx property NoMemberSurvivesTheRemoval ramp=report
