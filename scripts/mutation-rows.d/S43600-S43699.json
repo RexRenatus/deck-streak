@@ -1,0 +1,825 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S43600-REQUIRED-LOCK",
+        "daemon",
+        "tests/await_lints.rs",
+        "const REQUIRED: &[&str] = &[\"await_holding_lock\", \"await_holding_refcell_ref\"];",
+        "const REQUIRED: &[&str] = &[\"await_holding_refcell_ref\"];",
+        "await_lints::the_workspace_denies_both_await_lints",
+        "await_holding_lock leaves the required lints, so the root manifest's levels lose its deny entry (SPEC-436 R1, A1)"
+      ],
+      [
+        "S43601-REQUIRED-REFCELL",
+        "daemon",
+        "tests/await_lints.rs",
+        "const REQUIRED: &[&str] = &[\"await_holding_lock\", \"await_holding_refcell_ref\"];",
+        "const REQUIRED: &[&str] = &[\"await_holding_lock\"];",
+        "await_lints::the_workspace_denies_both_await_lints",
+        "await_holding_refcell_ref leaves the required lints, so the root manifest's levels lose its deny entry (SPEC-436 R1, A1)"
+      ],
+      [
+        "S43602-ACCEPT-DENY",
+        "daemon",
+        "tests/await_lints.rs",
+        "const ACCEPTED: &[&str] = &[\"deny\", \"forbid\"];",
+        "const ACCEPTED: &[&str] = &[\"forbid\"];",
+        "await_lints::the_workspace_denies_both_await_lints",
+        "deny stops holding a required lint, so the workspace's own deny entries are refused (SPEC-436 R1, R2, A1)"
+      ],
+      [
+        "S43603-ACCEPT-FORBID",
+        "daemon",
+        "tests/await_lints.rs",
+        "const ACCEPTED: &[&str] = &[\"deny\", \"forbid\"];",
+        "const ACCEPTED: &[&str] = &[\"deny\"];",
+        "await_lints::a_missing_lowered_or_misplaced_await_lint_entry_is_refused",
+        "forbid stops holding a required lint, so a manifest that forbids both is refused (SPEC-436 R2, A2)"
+      ],
+      [
+        "S43604-ACCEPT-WARN",
+        "daemon",
+        "tests/await_lints.rs",
+        "const ACCEPTED: &[&str] = &[\"deny\", \"forbid\"];",
+        "const ACCEPTED: &[&str] = &[\"deny\", \"forbid\", \"warn\"];",
+        "await_lints::a_missing_lowered_or_misplaced_await_lint_entry_is_refused",
+        "warn is accepted as holding a required lint, so a lowered entry passes (SPEC-436 R2, A2)"
+      ],
+      [
+        "S43605-CLIPPY-TABLE",
+        "daemon",
+        "tests/await_lints.rs",
+        "const TABLE: &str = \"[workspace.lints.clippy]\";",
+        "const TABLE: &str = \"[workspace.lints.rust]\";",
+        "await_lints::a_missing_lowered_or_misplaced_await_lint_entry_is_refused",
+        "the reader reads the rust table, so an entry in another table passes and a clippy-table deny is refused (SPEC-436 R2, A2)"
+      ],
+      [
+        "S43606-COMMENT-STRIP",
+        "daemon",
+        "tests/await_lints.rs",
+        "} else if ch == '#' && !quoted {",
+        "} else if ch == '\\u{0}' && !quoted {",
+        "await_lints::a_missing_lowered_or_misplaced_await_lint_entry_is_refused",
+        "the comment is kept, so a level written only in a comment holds a lint (SPEC-436 R2, A2)"
+      ],
+      [
+        "S43607-INLINE-LEVEL",
+        "daemon",
+        "tests/await_lints.rs",
+        ".split_once(\"level\")",
+        ".split_once(\"levels\")",
+        "await_lints::a_missing_lowered_or_misplaced_await_lint_entry_is_refused",
+        "an inline table's level is never read, so an inline-table deny reads missing (SPEC-436 R2, A2)"
+      ],
+      [
+        "S43608-AUDIT-LOCK",
+        "daemon",
+        "tests/await_lints.rs",
+        "    \"await_holding_lock\",",
+        "    \"await_holding_lock_unaudited\",",
+        "await_lints::a_lowering_of_an_await_lint_or_its_group_is_refused_wherever_it_is_planted",
+        "a lowering of await_holding_lock is no longer refused (SPEC-436 R3, A3)"
+      ],
+      [
+        "S43609-AUDIT-REFCELL",
+        "daemon",
+        "tests/await_lints.rs",
+        "    \"await_holding_refcell_ref\",",
+        "    \"await_holding_refcell_ref_unaudited\",",
+        "await_lints::a_lowering_of_an_await_lint_or_its_group_is_refused_wherever_it_is_planted",
+        "a lowering of await_holding_refcell_ref is no longer refused (SPEC-436 R3, A3)"
+      ],
+      [
+        "S43610-AUDIT-SUSPICIOUS",
+        "daemon",
+        "tests/await_lints.rs",
+        "    \"suspicious\",",
+        "    \"suspicious_unaudited\",",
+        "await_lints::a_lowering_of_an_await_lint_or_its_group_is_refused_wherever_it_is_planted",
+        "a lowering of the suspicious group is no longer refused (SPEC-436 R3, A3)"
+      ],
+      [
+        "S43611-LOWER-ALLOW",
+        "daemon",
+        "tests/await_lints.rs",
+        "const LOWERING: &[&str] = &[\"allow\", \"expect\", \"warn\"];",
+        "const LOWERING: &[&str] = &[\"expect\", \"warn\"];",
+        "await_lints::a_lowering_of_an_await_lint_or_its_group_is_refused_wherever_it_is_planted",
+        "an allow attribute stops being a lowering (SPEC-436 R3, A3)"
+      ],
+      [
+        "S43612-LOWER-EXPECT",
+        "daemon",
+        "tests/await_lints.rs",
+        "const LOWERING: &[&str] = &[\"allow\", \"expect\", \"warn\"];",
+        "const LOWERING: &[&str] = &[\"allow\", \"warn\"];",
+        "await_lints::a_lowering_of_an_await_lint_or_its_group_is_refused_wherever_it_is_planted",
+        "an expect attribute stops being a lowering (SPEC-436 R3, A3)"
+      ],
+      [
+        "S43613-LOWER-WARN",
+        "daemon",
+        "tests/await_lints.rs",
+        "const LOWERING: &[&str] = &[\"allow\", \"expect\", \"warn\"];",
+        "const LOWERING: &[&str] = &[\"allow\", \"expect\"];",
+        "await_lints::a_lowering_of_an_await_lint_or_its_group_is_refused_wherever_it_is_planted",
+        "a warn attribute stops being a lowering (SPEC-436 R3, A3)"
+      ],
+      [
+        "S43614-CFG-ATTR-ARM",
+        "daemon",
+        "tests/await_lints.rs",
+        "if name == \"cfg_attr\" {",
+        "if name == \"cfg_attrs\" {",
+        "await_lints::a_lowering_of_an_await_lint_or_its_group_is_refused_wherever_it_is_planted",
+        "a lowering inside a cfg_attr is no longer read (SPEC-436 R3, A3)"
+      ],
+      [
+        "S43615-MEMBER-ARM",
+        "daemon",
+        "tests/await_lints.rs",
+        "audit.refused.extend(member_refusals(path, text));",
+        "audit.refused.extend(member_refusals(path, \"\"));",
+        "await_lints::a_lowering_of_an_await_lint_or_its_group_is_refused_wherever_it_is_planted",
+        "a member manifest's clippy table is read empty, so its lowerings pass (SPEC-436 R3, A3)"
+      ],
+      [
+        "S43616-FLAG-ARM",
+        "daemon",
+        "tests/await_lints.rs",
+        "audit.refused.extend(flag_refusals(path, text));",
+        "audit.refused.extend(flag_refusals(path, \"\"));",
+        "await_lints::a_lowering_of_an_await_lint_or_its_group_is_refused_wherever_it_is_planted",
+        "a flag file is read empty, so a lowering flag passes (SPEC-436 R3, A3)"
+      ],
+      [
+        "S43617-FLAG-WORKFLOWS",
+        "daemon",
+        "tests/await_lints.rs",
+        "    (\".github/workflows/\", \"yml\"),",
+        "    (\".github/workflows/\", \"yaml\"),",
+        "await_lints::the_repository_lowers_no_await_lint_anywhere",
+        "the workflows stop being flag files, so the repository audit examines no workflow (SPEC-436 R3, R4, A4)"
+      ],
+      [
+        "S43618-CFG-TEST-SKIP",
+        "daemon",
+        "tests/shipped_sources/mod.rs",
+        "name == \"cfg\"",
+        "name == \"cfgs\"",
+        "blocking_census::a_rail_a_nested_fn_test_code_and_the_async_equivalents_are_not_blocking_sites",
+        "an item under #[cfg(test)] and an out-of-line test module are read as shipped code (SPEC-436 R5, R6, A7)"
+      ],
+      [
+        "S43619-TEST-SKIP",
+        "daemon",
+        "tests/shipped_sources/mod.rs",
+        "[TokenTree::Ident(name)] => name == \"test\",",
+        "[TokenTree::Ident(name)] => name == \"tests\",",
+        "blocking_census::a_rail_a_nested_fn_test_code_and_the_async_equivalents_are_not_blocking_sites",
+        "a #[test] function is read as shipped code (SPEC-436 R6, A7)"
+      ],
+      [
+        "S43620-OUT-OF-LINE",
+        "daemon",
+        "tests/shipped_sources/mod.rs",
+        "        format!(\"{module}/{name}.rs\"),",
+        "        format!(\"{module}/{name}.rs.kept\"),",
+        "blocking_census::a_rail_a_nested_fn_test_code_and_the_async_equivalents_are_not_blocking_sites",
+        "an out-of-line test module read from <name>.rs stays in the population (SPEC-436 R5, A7)"
+      ],
+      [
+        "S43621-PATH-MODULE",
+        "daemon",
+        "tests/shipped_sources/mod.rs",
+        "return vec![normalised(&format!(\"{directory}/{target}\"))];",
+        "return vec![normalised(target)];",
+        "blocking_census::a_rail_a_nested_fn_test_code_and_the_async_equivalents_are_not_blocking_sites",
+        "a #[path] test module is looked for at the root, so it stays in the population (SPEC-436 R5, A7)"
+      ],
+      [
+        "S43622-WALK-DESCENT",
+        "daemon",
+        "tests/shipped_sources/mod.rs",
+        "                pending.push(path);",
+        "                drop(path);",
+        "blocking_census::the_repository_lists_exactly_todays_blocking_sites",
+        "the repository walk stops at each src directory, so a nested module such as recompute/mod.rs is never examined (SPEC-436 R5, A8)"
+      ],
+      [
+        "S43623-USE-SINGLE",
+        "daemon",
+        "tests/blocking_census.rs",
+        "if let Some(last) = path.last() {",
+        "if let Some(last) = path.last().filter(|_| path.len() > 9) {",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "a single use path binds nothing, so an imported blocking call is missed (SPEC-436 R9, A5)"
+      ],
+      [
+        "S43624-USE-GROUP",
+        "daemon",
+        "tests/blocking_census.rs",
+        "TokenTree::Group(group) if group.delimiter() == Delimiter::Brace => {",
+        "TokenTree::Group(group) if group.delimiter() == Delimiter::Bracket => {",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "a use group's members bind nothing, so a call through a group import is missed (SPEC-436 R9, A5)"
+      ],
+      [
+        "S43625-USE-SELF",
+        "daemon",
+        "tests/blocking_census.rs",
+        "TokenTree::Ident(ident) if ident != \"self\" => path.push(ident.to_string()),",
+        "TokenTree::Ident(ident) if ident != \"self!\" => path.push(ident.to_string()),",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "a self member binds the name self, so fs::write through use std::fs::{self} is missed (SPEC-436 R9, A5)"
+      ],
+      [
+        "S43626-USE-RENAME",
+        "daemon",
+        "tests/blocking_census.rs",
+        "TokenTree::Ident(ident) if ident == \"as\" => rename = true,",
+        "TokenTree::Ident(ident) if ident == \"as!\" => rename = true,",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "an as rename binds the wrong name, so a renamed blocking call is missed (SPEC-436 R9, A5)"
+      ],
+      [
+        "S43627-ASYNC-FN",
+        "daemon",
+        "tests/blocking_census.rs",
+        "walk(&inner, name, *is_async, census);",
+        "walk(&inner, name, false, census);",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "an async fn's body is walked as synchronous, so its blocking calls are missed (SPEC-436 R7, A5)"
+      ],
+      [
+        "S43628-ASYNC-BLOCK",
+        "daemon",
+        "tests/blocking_census.rs",
+        "let plain = is_ident(before(tokens, at, 1), \"async\");",
+        "let plain = is_ident(before(tokens, at, 1), \"async!\");",
+        "blocking_census::an_async_block_and_an_async_closure_are_async_bodies",
+        "an async { } block is not an async body (SPEC-436 R7, A6)"
+      ],
+      [
+        "S43629-ASYNC-MOVE-BLOCK",
+        "daemon",
+        "tests/blocking_census.rs",
+        "let moved = is_ident(before(tokens, at, 1), \"move\")",
+        "let moved = is_ident(before(tokens, at, 1), \"move!\")",
+        "blocking_census::an_async_block_and_an_async_closure_are_async_bodies",
+        "an async move { } block is not an async body, boxed or not (SPEC-436 R7, A6)"
+      ],
+      [
+        "S43630-ASYNC-CLOSURE",
+        "daemon",
+        "tests/blocking_census.rs",
+        "is_punct(tokens.get(next), '|')",
+        "is_punct(tokens.get(next), '!')",
+        "blocking_census::an_async_block_and_an_async_closure_are_async_bodies",
+        "an async closure's body is not an async body (SPEC-436 R7, A6)"
+      ],
+      [
+        "S43631-NESTED-FN",
+        "daemon",
+        "tests/blocking_census.rs",
+        "walk(&inner, name, *is_async, census);",
+        "walk(&inner, name, *is_async || in_async, census);",
+        "blocking_census::a_rail_a_nested_fn_test_code_and_the_async_equivalents_are_not_blocking_sites",
+        "a nested synchronous fn inherits its enclosing async body, so its calls are found (SPEC-436 R8, A7)"
+      ],
+      [
+        "S43632-RAIL-SPAWN",
+        "daemon",
+        "tests/blocking_census.rs",
+        "const RAILS: &[&str] = &[\"spawn_blocking\", \"block_in_place\"];",
+        "const RAILS: &[&str] = &[\"block_in_place\"];",
+        "blocking_census::a_rail_a_nested_fn_test_code_and_the_async_equivalents_are_not_blocking_sites",
+        "spawn_blocking stops being a rail, so the call in its closure is found (SPEC-436 R8, A7)"
+      ],
+      [
+        "S43633-RAIL-PLACE",
+        "daemon",
+        "tests/blocking_census.rs",
+        "const RAILS: &[&str] = &[\"spawn_blocking\", \"block_in_place\"];",
+        "const RAILS: &[&str] = &[\"spawn_blocking\"];",
+        "blocking_census::a_rail_a_nested_fn_test_code_and_the_async_equivalents_are_not_blocking_sites",
+        "block_in_place stops being a rail, so the calls in its closure, a nested async block's included, are found (SPEC-436 R8, A7)"
+      ],
+      [
+        "S43634-RAIL-OFFLOAD",
+        "daemon",
+        "tests/blocking_census.rs",
+        "const OFFLOAD: (&str, &str) = (\"offload\", \"run\");",
+        "const OFFLOAD: (&str, &str) = (\"offloads\", \"run\");",
+        "blocking_census::a_rail_a_nested_fn_test_code_and_the_async_equivalents_are_not_blocking_sites",
+        "offload's run stops being a rail, so the call in its closure is found (SPEC-436 R8, A7)"
+      ],
+      [
+        "S43635-CALL-REQUIRED",
+        "daemon",
+        "tests/blocking_census.rs",
+        "matches!(token, Some(TokenTree::Group(group)) if group.delimiter() == Delimiter::Parenthesis)",
+        "token.is_some()",
+        "blocking_census::a_rail_a_nested_fn_test_code_and_the_async_equivalents_are_not_blocking_sites",
+        "a blocking path named and not called counts as a site (SPEC-436 R11, A7)"
+      ],
+      [
+        "S43636-VERDICT-WARN",
+        "daemon",
+        "tests/shipped_sources/mod.rs",
+        "let fails = level == Level::Fail;",
+        "let fails = level == Level::Fail || level == Level::Warn;",
+        "blocking_census::the_level_decides_whether_an_unlisted_site_fails_and_a_stale_entry_always_does",
+        "an unlisted site fails at Warn instead of printing its WARN line and passing (SPEC-436 R21, A9)"
+      ],
+      [
+        "S43637-VERDICT-FAIL",
+        "daemon",
+        "tests/shipped_sources/mod.rs",
+        "let fails = level == Level::Fail;",
+        "let fails = level == Level::Fail && rule.is_empty();",
+        "blocking_census::the_level_decides_whether_an_unlisted_site_fails_and_a_stale_entry_always_does",
+        "an unlisted site passes at Fail (SPEC-436 R21, A9)"
+      ],
+      [
+        "S43638-VERDICT-STALE",
+        "daemon",
+        "tests/shipped_sources/mod.rs",
+        "            failed = true;",
+        "            failed |= lines.is_empty();",
+        "blocking_census::the_level_decides_whether_an_unlisted_site_fails_and_a_stale_entry_always_does",
+        "a stale listed entry prints and passes (SPEC-436 R21, A9)"
+      ],
+      [
+        "S43639-KEY-ORDINAL",
+        "daemon",
+        "tests/shipped_sources/mod.rs",
+        "                + 1,",
+        "                / 2 + 1,",
+        "blocking_census::the_repository_lists_exactly_todays_blocking_sites",
+        "a function's second site of one path keeps ordinal 1, so the keys stop equalling the listing (SPEC-436 R12, A8)"
+      ],
+      [
+        "S43640-KEY-FUNCTION",
+        "daemon",
+        "tests/shipped_sources/mod.rs",
+        "function: site.0.clone(),",
+        "function: String::new(),",
+        "blocking_census::the_repository_lists_exactly_todays_blocking_sites",
+        "a key loses its enclosing function's name, so the keys stop equalling the listing (SPEC-436 R12, A8)"
+      ],
+      [
+        "S43641-SET-FS-READ",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::read\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::read leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43642-SET-FS-READ-TO-STRING",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::read_to_string\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::read_to_string leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43643-SET-FS-READ-DIR",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::read_dir\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::read_dir leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43644-SET-FS-WRITE",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::write\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::write leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43645-SET-FS-COPY",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::copy\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::copy leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43646-SET-FS-RENAME",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::rename\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::rename leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43647-SET-FS-REMOVE-FILE",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::remove_file\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::remove_file leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43648-SET-FS-REMOVE-DIR",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::remove_dir\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::remove_dir leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43649-SET-FS-REMOVE-DIR-ALL",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::remove_dir_all\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::remove_dir_all leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43650-SET-FS-CREATE-DIR",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::create_dir\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::create_dir leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43651-SET-FS-CREATE-DIR-ALL",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::create_dir_all\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::create_dir_all leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43652-SET-FS-METADATA",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::metadata\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::metadata leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43653-SET-FS-SYMLINK-METADATA",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::symlink_metadata\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::symlink_metadata leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43654-SET-FS-SET-PERMISSIONS",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::set_permissions\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::set_permissions leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43655-SET-FS-CANONICALIZE",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::canonicalize\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::canonicalize leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43656-SET-FS-FILE-OPEN",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::File::open\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::File::open leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43657-SET-FS-FILE-CREATE",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::File::create\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::File::create leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43658-SET-FS-FILE-CREATE-NEW",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::File::create_new\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::File::create_new leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43659-SET-FS-OPENOPTIONS-NEW",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::fs::OpenOptions::new\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::fs::OpenOptions::new leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43660-SET-THREAD-SLEEP",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::thread::sleep\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::thread::sleep leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43661-SET-NET-TCPSTREAM-CONNECT",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::net::TcpStream::connect\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::net::TcpStream::connect leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43662-SET-NET-TCPLISTENER-BIND",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::net::TcpListener::bind\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::net::TcpListener::bind leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43663-SET-NET-UDPSOCKET-BIND",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::net::UdpSocket::bind\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::net::UdpSocket::bind leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43664-SET-PROCESS-COMMAND-NEW",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::process::Command::new\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::process::Command::new leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43665-SET-IO-STDIN",
+        "daemon",
+        "tests/blocking_census.rs",
+        "    \"std::io::stdin\",",
+        "    \"\",",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "std::io::stdin leaves the blocking set, so its call in an async fn is missed (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43666-SET-REQWEST-BLOCKING",
+        "daemon",
+        "tests/blocking_census.rs",
+        "const BLOCKING_CLIENT: &str = \"reqwest::blocking::\";",
+        "const BLOCKING_CLIENT: &str = \"reqwest::nonblocking::\";",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "a path under reqwest::blocking stops being blocking (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43667-SET-BLOCK-ON",
+        "daemon",
+        "tests/blocking_census.rs",
+        "const BLOCK_ON: &str = \"block_on\";",
+        "const BLOCK_ON: &str = \"block_off\";",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "a block_on path call and a .block_on method call stop being blocking (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43668-SET-RECV",
+        "daemon",
+        "tests/blocking_census.rs",
+        "const RECV: &str = \"recv\";",
+        "const RECV: &str = \"recv_timeout\";",
+        "blocking_census::every_blocking_call_is_found_in_an_async_fn_body_however_it_is_named",
+        "a .recv() call in a file that uses std::sync::mpsc stops being blocking (SPEC-436 R10, A5)"
+      ],
+      [
+        "S43669-BLOCKING-LEVEL",
+        "daemon",
+        "tests/blocking_census.rs",
+        "const LEVEL: Level = Level::Warn;",
+        "const LEVEL: Level = Level::Fail;",
+        "blocking_census::the_repository_lists_exactly_todays_blocking_sites",
+        "the blocking census starts at Fail, which is its own delivery (SPEC-436 R22, R24, A8)"
+      ],
+      [
+        "S43670-EMPTY-FILES",
+        "daemon",
+        "tests/blocking_census.rs",
+        "return Err(\"examined 0 shipped files\".to_owned());",
+        "eprintln!(\"examined 0 shipped files\");",
+        "blocking_census::the_blocking_census_refuses_an_empty_population",
+        "an empty population is no longer refused by name (SPEC-436 R12, A10)"
+      ],
+      [
+        "S43671-NO-ASYNC-BODY",
+        "daemon",
+        "tests/blocking_census.rs",
+        "return Err(\"examined 0 async bodies\".to_owned());",
+        "eprintln!(\"examined 0 async bodies\");",
+        "blocking_census::the_blocking_census_refuses_an_empty_population",
+        "a population with no async body is no longer refused (SPEC-436 R12, A10)"
+      ],
+      [
+        "S43672-MACRO-PANIC",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "    \"panic\",",
+        "    \"\",",
+        "handler_panic_census::every_panic_form_in_a_handler_crate_is_found",
+        "panic! leaves the panicking macros, so its invocation is missed (SPEC-436 R15, A11)"
+      ],
+      [
+        "S43673-MACRO-UNREACHABLE",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "    \"unreachable\",",
+        "    \"\",",
+        "handler_panic_census::every_panic_form_in_a_handler_crate_is_found",
+        "unreachable! leaves the panicking macros, so its invocation is missed (SPEC-436 R15, A11)"
+      ],
+      [
+        "S43674-MACRO-TODO",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "    \"todo\",",
+        "    \"\",",
+        "handler_panic_census::every_panic_form_in_a_handler_crate_is_found",
+        "todo! leaves the panicking macros, so its invocation is missed (SPEC-436 R15, A11)"
+      ],
+      [
+        "S43675-MACRO-UNIMPLEMENTED",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "    \"unimplemented\",",
+        "    \"\",",
+        "handler_panic_census::every_panic_form_in_a_handler_crate_is_found",
+        "unimplemented! leaves the panicking macros, so its invocation is missed (SPEC-436 R15, A11)"
+      ],
+      [
+        "S43676-MACRO-ASSERT",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "    \"assert\",",
+        "    \"\",",
+        "handler_panic_census::every_panic_form_in_a_handler_crate_is_found",
+        "assert! leaves the panicking macros, so its invocation is missed (SPEC-436 R15, A11)"
+      ],
+      [
+        "S43677-MACRO-ASSERT-EQ",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "    \"assert_eq\",",
+        "    \"\",",
+        "handler_panic_census::every_panic_form_in_a_handler_crate_is_found",
+        "assert_eq! leaves the panicking macros, so its invocation is missed (SPEC-436 R15, A11)"
+      ],
+      [
+        "S43678-MACRO-ASSERT-NE",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "    \"assert_ne\",",
+        "    \"\",",
+        "handler_panic_census::every_panic_form_in_a_handler_crate_is_found",
+        "assert_ne! leaves the panicking macros, so its invocation is missed (SPEC-436 R15, A11)"
+      ],
+      [
+        "S43679-MACRO-PREFIX",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "let prefixed = path.len() == 2",
+        "let prefixed = path.len() == 20",
+        "handler_panic_census::every_panic_form_in_a_handler_crate_is_found",
+        "a std:: or core:: prefixed macro is no longer a site (SPEC-436 R15, A11)"
+      ],
+      [
+        "S43680-METHOD-UNWRAP",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "const METHODS: &[&str] = &[\"unwrap\", \"expect\", \"unwrap_err\", \"expect_err\"];",
+        "const METHODS: &[&str] = &[\"expect\", \"unwrap_err\", \"expect_err\"];",
+        "handler_panic_census::every_panic_form_in_a_handler_crate_is_found",
+        ".unwrap() leaves the unwrapping methods, so its call is missed (SPEC-436 R15, A11)"
+      ],
+      [
+        "S43681-METHOD-EXPECT",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "const METHODS: &[&str] = &[\"unwrap\", \"expect\", \"unwrap_err\", \"expect_err\"];",
+        "const METHODS: &[&str] = &[\"unwrap\", \"unwrap_err\", \"expect_err\"];",
+        "handler_panic_census::every_panic_form_in_a_handler_crate_is_found",
+        ".expect() leaves the unwrapping methods, so its call is missed (SPEC-436 R15, A11)"
+      ],
+      [
+        "S43682-METHOD-UNWRAP-ERR",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "const METHODS: &[&str] = &[\"unwrap\", \"expect\", \"unwrap_err\", \"expect_err\"];",
+        "const METHODS: &[&str] = &[\"unwrap\", \"expect\", \"expect_err\"];",
+        "handler_panic_census::every_panic_form_in_a_handler_crate_is_found",
+        ".unwrap_err() leaves the unwrapping methods, so its call is missed (SPEC-436 R15, A11)"
+      ],
+      [
+        "S43683-METHOD-EXPECT-ERR",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "const METHODS: &[&str] = &[\"unwrap\", \"expect\", \"unwrap_err\", \"expect_err\"];",
+        "const METHODS: &[&str] = &[\"unwrap\", \"expect\", \"unwrap_err\"];",
+        "handler_panic_census::every_panic_form_in_a_handler_crate_is_found",
+        ".expect_err() leaves the unwrapping methods, so its call is missed (SPEC-436 R15, A11)"
+      ],
+      [
+        "S43684-CONST-SKIP",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "in_const = true;",
+        "in_const = false;",
+        "handler_panic_census::test_code_debug_assertions_const_contexts_and_lookalikes_are_not_handler_panics",
+        "a const item's body is walked, so an assertion in it is found (SPEC-436 R16, A12)"
+      ],
+      [
+        "S43685-CRATE-API",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "const HANDLER_CRATES: &[&str] = &[\"api\", \"bot\", \"daemon\", \"mcp\"];",
+        "const HANDLER_CRATES: &[&str] = &[\"bot\", \"daemon\", \"mcp\"];",
+        "handler_panic_census::the_handler_crates_hold_exactly_todays_listing",
+        "the api crate leaves the handler crates, so the census examines three (SPEC-436 R13, A13)"
+      ],
+      [
+        "S43686-CRATE-BOT",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "const HANDLER_CRATES: &[&str] = &[\"api\", \"bot\", \"daemon\", \"mcp\"];",
+        "const HANDLER_CRATES: &[&str] = &[\"api\", \"daemon\", \"mcp\"];",
+        "handler_panic_census::the_handler_crates_hold_exactly_todays_listing",
+        "the bot crate leaves the handler crates, so the census examines three (SPEC-436 R13, A13)"
+      ],
+      [
+        "S43687-CRATE-DAEMON",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "const HANDLER_CRATES: &[&str] = &[\"api\", \"bot\", \"daemon\", \"mcp\"];",
+        "const HANDLER_CRATES: &[&str] = &[\"api\", \"bot\", \"mcp\"];",
+        "handler_panic_census::the_handler_crates_hold_exactly_todays_listing",
+        "the daemon crate leaves the handler crates, so the census examines three (SPEC-436 R13, A13)"
+      ],
+      [
+        "S43688-CRATE-MCP",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "const HANDLER_CRATES: &[&str] = &[\"api\", \"bot\", \"daemon\", \"mcp\"];",
+        "const HANDLER_CRATES: &[&str] = &[\"api\", \"bot\", \"daemon\"];",
+        "handler_panic_census::the_handler_crates_hold_exactly_todays_listing",
+        "the mcp crate leaves the handler crates, so the census examines three (SPEC-436 R13, A13)"
+      ],
+      [
+        "S43689-PANIC-LEVEL",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "const LEVEL: Level = Level::Warn;",
+        "const LEVEL: Level = Level::Fail;",
+        "handler_panic_census::the_handler_crates_hold_exactly_todays_listing",
+        "the handler panic census starts at Fail, which is its own delivery (SPEC-436 R23, R24, A13)"
+      ],
+      [
+        "S43690-EMPTY-POPULATION",
+        "daemon",
+        "tests/handler_panic_census.rs",
+        "if census.files == 0 {",
+        "if census.files == usize::MAX {",
+        "handler_panic_census::the_panic_census_refuses_an_empty_population",
+        "an empty population is no longer refused by its own name (SPEC-436 R13, A14)"
+      ]
+    ]
+  }
+}
