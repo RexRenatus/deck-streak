@@ -32,6 +32,9 @@ jobs:
     timeout-minutes: 120
     env:
       REPORT: ${{ github.workspace }}/xcframework-report
+      # The Xcode the other three jobs pin, so every job of the body builds with one named
+      # toolchain rather than the image's default (SPEC-382 R5, ADR-396).
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       # The protobuf compiler the engine's build needs: the version ADR-022 pins, and the macOS
       # archive and digest Anki's own build pins for it (build/ninja_gen/src/protobuf.rs at the
       # engine's tag).
@@ -59,7 +62,9 @@ jobs:
           sysctl -n hw.ncpu > "$REPORT/runner-cpus"
           started=$(date +%s)
           for target in aarch64-apple-ios aarch64-apple-ios-sim; do
-            cargo rustc --locked --release -p deck-streak-ffi --lib --crate-type staticlib --target "$target"
+            target_started=$(date +%s)
+            cargo rustc --locked --release -p deck-streak-ffi --lib --crate-type staticlib --target "$target" --timings
+            echo "$(( $(date +%s) - target_started ))" > "$REPORT/build-seconds-$target"
           done
           echo "$(( $(date +%s) - started ))" > "$REPORT/build-seconds"
       - name: the Swift bindings, in library mode over the device library
@@ -147,6 +152,8 @@ jobs:
               ("the XCFramework holds one Rust library", read("one-library") or "not measured"),
               ("the harness's synthetic collection, host build", minutes("fixture-seconds")),
           ]
+          for target in ("aarch64-apple-ios", "aarch64-apple-ios-sim"):
+              rows.append((f"static library `{target}`, release", minutes(f"build-seconds-{target}")))
           for line in read("slices").splitlines():
               path, size = line.rsplit(" ", 1)
               rows.append((f"slice `{path.split('/')[1]}`", f"{int(size) / 1048576:.1f} MiB"))
@@ -173,6 +180,39 @@ jobs:
             xcframework-report/
             harness-fixture/
             review-fixture/
+          if-no-files-found: warn
+      - name: the timing record
+        # The job's own timing, written and uploaded whatever the outcome (SPEC-382 R6, ADR-393):
+        # every seconds file a step wrote and the toolchain; cargo's own report goes beside it.
+        if: ${{ always() }}
+        run: |
+          mkdir -p "$REPORT"
+          xcodebuild -version > "$REPORT/xcode-version"
+          sw_vers > "$REPORT/os-version"
+          python3 - <<'PY'
+          import json, os, pathlib
+          report = pathlib.Path(os.environ["REPORT"])
+          def read(name):
+              path = report / name
+              return path.read_text().strip() if path.is_file() else ""
+          seconds = {}
+          for path in sorted(report.glob("*-seconds*")):
+              if "." not in path.name:
+                  value = path.read_text().strip()
+                  seconds[path.name] = int(value) if value.isdigit() else None
+          record = {"schema": "ci-timing/1", "job": "xcframework", "seconds": seconds,
+                    "toolchain": {"xcode": read("xcode-version"), "os": read("os-version")}}
+          (report / "timing.json").write_text(json.dumps(record, indent=1) + "\n")
+          print(json.dumps(record, indent=1))
+          PY
+      - name: upload the timing record
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: timing-xcframework
+          path: |
+            xcframework-report/timing.json
+            target/cargo-timings/
           if-no-files-found: warn
 
   harness-wire:
@@ -394,11 +434,35 @@ jobs:
       - name: the project, generated
         run: |
           "$RUNNER_TEMP/xcodegen/bin/xcodegen" generate --spec ios/project.yml
+      - name: the iPhone simulator, booted
+        run: |
+          # The first simulator of the first test step, booted and waited for in a step of its own,
+          # so its boot is timed apart from the tests (SPEC-382 R4, ADR-395). The one available
+          # device of the pinned name and OS, or the step fails; the iPad boots in its test steps.
+          started=$(date +%s)
+          udid=$(xcrun simctl list devices available -j | python3 -c '
+          import json, os, sys
+          name, version = os.environ["IPHONE_SIM"], os.environ["SIM_OS"]
+          runtime = "SimRuntime.iOS-" + version.replace(".", "-")
+          found = [
+              device["udid"]
+              for key, devices in json.load(sys.stdin)["devices"].items()
+              if key.endswith(runtime)
+              for device in devices
+              if device.get("name") == name
+          ]
+          if len(found) != 1:
+              sys.exit(f"{len(found)} available devices named {name} on iOS {version}, not one")
+          print(found[0])
+          ')
+          xcrun simctl bootstatus "$udid" -b
+          echo "$(( $(date +%s) - started ))" > "$REPORT/boot-seconds"
       - name: the tests, Debug, on the iPhone and then the iPad
         run: |
           started=$(date +%s)
           # The measurement class runs in the Release step alone, where its figures are read.
           xcodebuild test -project ios/Harness.xcodeproj -scheme Harness -configuration Debug \
+            -showBuildTimingSummary \
             -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
             -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" \
             -disable-concurrent-destination-testing \
@@ -411,6 +475,7 @@ jobs:
         run: |
           # SPEC-349 A3 and A5 to A8: every planted card reaches from the reference view and
           # nothing from the card view the factory ships, on both simulators.
+          started=$(date +%s)
           xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -configuration Debug \
             -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
             -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" \
@@ -418,10 +483,12 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/debug" \
             -resultBundlePath "$RESULTS/card-probe.xcresult" \
             CODE_SIGNING_ALLOWED=NO
+          echo "$(( $(date +%s) - started ))" > "$REPORT/card-probe-seconds"
       - name: the measurements, Release, on the iPhone and then the iPad
         run: |
           started=$(date +%s)
           xcodebuild test -project ios/Harness.xcodeproj -scheme Harness -configuration Release \
+            -showBuildTimingSummary \
             -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
             -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" \
             -disable-concurrent-destination-testing \
@@ -436,6 +503,7 @@ jobs:
           # A test build copies the unit test bundle and XCTest's frameworks into the app it hosts,
           # so the size and the imports are read from an app built with no test action.
           xcodebuild build -project ios/Harness.xcodeproj -scheme Harness -configuration Release \
+            -showBuildTimingSummary \
             -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
             -derivedDataPath "$RUNNER_TEMP/release-app" \
             ONLY_ACTIVE_ARCH=YES \
@@ -484,6 +552,7 @@ jobs:
           "$RUNNER_TEMP/xcodegen/bin/xcodegen" generate --spec ios/app.yml
           started=$(date +%s)
           xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug \
+            -showBuildTimingSummary \
             -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
             -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" \
             -disable-concurrent-destination-testing \
@@ -505,6 +574,7 @@ jobs:
           cp -R engine-artifact/review-fixture "$RUNNER_TEMP/review-fixture"
           started=$(date +%s)
           TEST_RUNNER_DS_REVIEW_FIXTURE="$RUNNER_TEMP/review-fixture" xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug \
+            -showBuildTimingSummary \
             -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
             -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" \
             -disable-concurrent-destination-testing \
@@ -525,6 +595,7 @@ jobs:
           cp -R engine-artifact/review-fixture "$RUNNER_TEMP/review-actions-fixture"
           started=$(date +%s)
           TEST_RUNNER_DS_REVIEW_FIXTURE="$RUNNER_TEMP/review-actions-fixture" xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug \
+            -showBuildTimingSummary \
             -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
             -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" \
             -disable-concurrent-destination-testing \
@@ -539,6 +610,7 @@ jobs:
         if: ${{ !cancelled() && steps.app-tests.outcome != 'skipped' }}
         run: |
           xcodebuild archive -project ios/DeckStreak.xcodeproj -scheme DeckStreak \
+            -showBuildTimingSummary \
             -configuration Release \
             -destination generic/platform=iOS \
             -archivePath "$RUNNER_TEMP/DeckStreak.xcarchive" \
@@ -640,6 +712,7 @@ jobs:
           app_cases = cases_in("app")
           review_cases = cases_in("review")
           review_actions_cases = cases_in("review-actions")
+          card_probe_cases = cases_in("card-probe")
           release = results / "release.xcresult"
           metrics = tool("metrics", "--path", str(release)) if release.exists() else None
           found = []
@@ -656,7 +729,9 @@ jobs:
                lambda name: "memory" in name.lower() and "peak" in name.lower()),
           ]
           rows = [
+              ("the iPhone simulator, booted", minutes("boot-seconds")),
               ("tests, Debug, both simulators", minutes("debug-seconds")),
+              ("card view's planted suite, Debug, both simulators", minutes("card-probe-seconds")),
               ("measurements, Release, both simulators", minutes("release-seconds")),
               ("Release app bytes", read("app-bytes") or "not measured"),
               ("Release executable bytes", read("executable-bytes") or "not measured"),
@@ -684,6 +759,7 @@ jobs:
               ("Debug", debug_cases), ("Release", release_cases), ("App", app_cases),
               ("Review", review_cases),
               ("Review actions", review_actions_cases),
+              ("Card probe", card_probe_cases),
           ):
               lines += [f"| {label} `{c.get('nodeIdentifier')}` | {per_simulator(c)} |" for c in cases]
               if not cases:
@@ -713,4 +789,76 @@ jobs:
           path: |
             harness-report/
             harness-results/
+          if-no-files-found: warn
+      - name: the timing record
+        # The job's own timing, written and uploaded whatever the outcome (SPEC-382 R6, ADR-393):
+        # every seconds file a step wrote, each test's duration on each simulator, and the toolchain.
+        if: ${{ always() }}
+        run: |
+          mkdir -p "$REPORT"
+          xcodebuild -version > "$REPORT/xcode-version"
+          sw_vers > "$REPORT/os-version"
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess
+          report = pathlib.Path(os.environ["REPORT"])
+          results = pathlib.Path(os.environ["RESULTS"])
+          def read(name):
+              path = report / name
+              return path.read_text().strip() if path.is_file() else ""
+          def details(label, identifier):
+              """A test's details as the report read them from its result bundle, or read here."""
+              copy = report / f"details-{label}-{identifier.replace('/', '-')}.json"
+              if copy.is_file():
+                  return json.loads(copy.read_text())
+              done = subprocess.run(["xcrun", "xcresulttool", "get", "test-results", "test-details",
+                                     "--test-id", identifier, "--path", str(results / f"{label}.xcresult")],
+                                    capture_output=True, text=True)
+              return json.loads(done.stdout) if done.returncode == 0 and done.stdout.strip() else {}
+          def cases(node, found):
+              if node.get("nodeType") == "Test Case":
+                  found.append(node.get("nodeIdentifier", ""))
+              for child in node.get("children", []):
+                  cases(child, found)
+              return found
+          def destinations(node, found):
+              """Each simulator's run of a test and its seconds, read without trusting one schema."""
+              if isinstance(node, list):
+                  for item in node:
+                      destinations(item, found)
+              elif isinstance(node, dict):
+                  if node.get("nodeType") == "Device":
+                      found.append({"destination": node.get("name"),
+                                    "seconds": node.get("durationInSeconds")})
+                  for value in node.values():
+                      destinations(value, found)
+              return found
+          tests = []
+          for listing in sorted(report.glob("*-tests.json")):
+              if listing.name.startswith("details-"):
+                  continue
+              label = listing.name[: -len("-tests.json")]
+              found = []
+              for node in json.loads(listing.read_text()).get("testNodes", []):
+                  cases(node, found)
+              for identifier in found:
+                  test = details(label, identifier)
+                  tests.append({"bundle": label, "test": identifier,
+                                "seconds": test.get("durationInSeconds"),
+                                "destinations": destinations(test.get("testRuns", []), [])})
+          seconds = {}
+          for path in sorted(report.glob("*-seconds*")):
+              if "." not in path.name:
+                  value = path.read_text().strip()
+                  seconds[path.name] = int(value) if value.isdigit() else None
+          record = {"schema": "ci-timing/1", "job": "harness", "seconds": seconds, "tests": tests,
+                    "toolchain": {"xcode": read("xcode-version"), "os": read("os-version")}}
+          (report / "timing.json").write_text(json.dumps(record, indent=1) + "\n")
+          print(json.dumps({"seconds": seconds, "tests": len(tests)}, indent=1))
+          PY
+      - name: upload the timing record
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: timing-harness
+          path: harness-report/timing.json
           if-no-files-found: warn
