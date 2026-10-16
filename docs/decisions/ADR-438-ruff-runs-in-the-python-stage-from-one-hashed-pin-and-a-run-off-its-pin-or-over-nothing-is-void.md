@@ -33,14 +33,14 @@ Read at DeckStreak `dev` `ac7ebd75`.
     which starts no process);
   - and one file the formatter would change, `scripts/tests/test_sync_server_launcher.py:279-281`,
     a call it joins onto one line.
-- Eleven assignments compute the repository root from `Path(__file__)` by a count of parents, and
+- Nine assignments compute the repository root from `Path(__file__)` by a count of parents, and
   a count that is off by one reads a sibling directory without any error:
   `scripts/create-issues.py:31`, `scripts/dynamic-imports-check.py:27`,
   `scripts/public-scrub.py:59`, `scripts/threat_model.py:17`, `scripts/tests/_support.py:7`,
   `scripts/tests/test_bot_messages.py:19`,
-  `scripts/tests/test_mutation_rows.py:52` and `:467`, `scripts/tests/test_ship_profile.py:14`,
+  `scripts/tests/test_ship_profile.py:14`,
   `scripts/tests/test_threat_model.py:21` and `deploy/host-scrub/inventory.py:226`. Each resolves to
-  the repository root today.
+  the repository root today (`scripts/tests/test_mutation_rows.py:52` and `:467` sit inside the fixture strings `KILLERS` and `TOOL_KILLERS`, which R9 excludes, since a string literal is never a site, so neither is a site).
 - DeckStreak's history holds no commit that corrected such a count. Searched at `ac7ebd75`:
   `git log --grep` over the root-finding words (parents, `.parent.parent`, wrong root, repository
   root, computed root), `-S 'Path(__file__).resolve().parents['`, `-S '.parents['` and
@@ -49,8 +49,7 @@ Read at DeckStreak `dev` `ac7ebd75`.
   file, and never rewritten to another depth. The guard is therefore preventive: it holds a count
   that is right today and that nothing else checks.
 - At `a3a052b2`, the `hygiene` job's python stage took 853 s in job 116733923723 of run 38826135989.
-  In the same job, the checksum-verified gitleaks and protoc install steps took about 0.7 s and
-  0.3 s.
+  In the same job 116733923723, the checksum-verified gitleaks and protoc install steps took about 0.7 s and 0.3 s.
 
 ## Decision Drivers
 
@@ -190,7 +189,7 @@ the directory `LISTED_ROOTS` names for that site (`<path>::<name>` to a reposito
 directory and its reason). A site on such a name with any other chain fails as one the guard cannot
 resolve, and a file that does not parse fails by name. The guard prints how many files and sites it
 examined and fails at zero. `LISTED_ROOTS` is empty, and the guard lands with no violation: the
-eleven sites of the context all resolve. Its walk skips the names `FENCED` lists before any open
+nine sites of the context all resolve. Its walk skips the names `FENCED` lists before any open
 (the two deploy stand-in test modules and the `drill` and `readings_tree` named files), whose review
 is held apart.
 

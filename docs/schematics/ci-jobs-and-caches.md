@@ -358,4 +358,4 @@ flowchart TD
   counted --> examined["examined files and sites printed; zero of either fails"]
 ```
 
-At ac7ebd7 the guard counts eleven sites, all at the repository root, and `LISTED_ROOTS` is empty.
+At ac7ebd7 the guard counts nine sites, all at the repository root, and `LISTED_ROOTS` is empty.

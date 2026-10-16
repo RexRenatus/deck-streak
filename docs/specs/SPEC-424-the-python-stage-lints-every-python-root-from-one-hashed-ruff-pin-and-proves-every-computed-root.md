@@ -31,13 +31,13 @@ Read at DeckStreak `dev` `ac7ebd75`.
      `scripts/tests/test_dispatch_shards.py:1056`;
    - and the formatter changes one file, joining `scripts/tests/test_sync_server_launcher.py:279-281`
      onto one line.
-4. **Eleven computed repository roots, checked by nothing.** Each is `Path(__file__)` followed by a
+4. **Nine computed repository roots, checked by nothing.** Each is `Path(__file__)` followed by a
    count of parents, and a count off by one reads a sibling directory with no error:
    `scripts/create-issues.py:31`, `scripts/dynamic-imports-check.py:27`,
    `scripts/public-scrub.py:59`, `scripts/threat_model.py:17`, `scripts/tests/_support.py:7`,
-   `scripts/tests/test_bot_messages.py:19`, `scripts/tests/test_mutation_rows.py:52` and `:467`,
+   `scripts/tests/test_bot_messages.py:19`,
    `scripts/tests/test_ship_profile.py:14`, `scripts/tests/test_threat_model.py:21` and
-   `deploy/host-scrub/inventory.py:226`. All eleven resolve to the repository root. No commit of
+   `deploy/host-scrub/inventory.py:226`. All nine resolve to the repository root (`scripts/tests/test_mutation_rows.py:52` and `:467` sit inside the fixture strings `KILLERS` and `TOOL_KILLERS`, which R9 excludes, since a string literal is never a site, so neither is a site). No commit of
    DeckStreak's history rewrote such a count (ADR-438's context names the searches), so the guard
    is preventive.
 5. **The stage's cost.** At `a3a052b2`, the `hygiene` job's python stage took
@@ -217,7 +217,7 @@ occurs exactly once in its file at the head, and each killer is a test named in 
 | S42404 | `scripts/check.sh` | a listing of no file is admitted | A7 |
 | S42405 | `scripts/check.sh` | unequal counts are admitted | A7 |
 | S42406 | `scripts/check.sh` | a lint finding leaves the stage green | A8 |
-| S42407 | `scripts/check.sh` | the format arm drops `--check` | A8 |
+| S42407 | `scripts/check.sh` | the format arm drops `--check` | A9 |
 | S42408 | `scripts/check.sh` | `RUFF_ROOTS` drops `crates` | A9 |
 | S42409 | `scripts/check.sh` | a ruff call drops `--no-cache` | A9 |
 | S42410 | `ruff.toml` | `required-version` names another version | A1 |
@@ -243,5 +243,5 @@ population, and so is the guard's own module.
 the red commit, read in that push's `hygiene` check-run, for its criterion's reason (the stage has
 no ruff arm, `ruff.toml` selects nothing, the workflow installs no ruff, the guard's stub judges
 nothing). A12's fence is in the guard from its first commit, so its red is the stub's empty skip
-list. A13 is `not red`: it pins the tree's eleven computed roots, which resolve at the base, and
+list. A13 is `not red`: it pins the tree's nine computed roots, which resolve at the base, and
 arrives with the green commit.
