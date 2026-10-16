@@ -2549,3 +2549,575 @@ class TheDealAndTheScopedReaderArmsAreObserved(unittest.TestCase):
         )
         self.assertEqual(code, 0)
         examined("population files", population)
+
+
+class AStalePriceRowIsNamedAndNeverBlocks(unittest.TestCase):
+    """SPEC-429 A1 to A9 (R1 to R9, ADR-443): `mutation-verdict.py stale` names each priced file
+    whose suite now holds more tests than the run its pricing row names ran, with the refresh that
+    clears it; names each row the tree cannot read, with its reason, and never examines it; prints
+    the summary and the rows it examined, VOID when that is none; and returns 0 on every path.
+
+    Each root is literal: a verdict script holding only the two tables' opening lines, rows and
+    closing `}`, each row's comment naming its run; a population; the mapped modules, a number
+    being a module of that many tests; and the price runs' `costs.jsonl` records, a string being a
+    line that is not a record. No assertion reads a clock: a row is stale by its counts alone."""
+
+    #: Each table's record directory, one leg of it, as `PYTHON_PRICE_RECORDS` spells the run's.
+    LEGS = {
+        "whole": "scripts/tests/fixtures/mutation-prices-{run}/mutation-python-shard-{leg}",
+        "scoped": "scripts/tests/fixtures/mutation-scoped-prices-{run}/mutation-prices-{leg}",
+    }
+    #: A1: the structural fixture. Its scoped row's run ran 2 tests, and its module now defines 3.
+    GROWN = {
+        "scoped": [["scripts/a.py", "run 7 attempt 1 job 9: 0 scoped mutant record(s)"]],
+        "mapped": {"scripts/a.py": ["test_a"]},
+        "modules": {"test_a": 3},
+        "records": {("scoped", 7, 0): [{"kind": "control", "path": "scripts/a.py", "ran": 2}]},
+    }
+    #: A3: a file with a whole row and a scoped row, and a file with a whole row alone.
+    BOTH = {
+        "whole": [
+            ["scripts/a.py", "run 5 attempt 1 shard 1/16"],
+            ["scripts/b.py", "run 5 attempt 1 shard 1/16"],
+        ],
+        "scoped": [["scripts/a.py", "run 7 attempt 1 job 9: 0 scoped mutant record(s)"]],
+        "mapped": {"scripts/a.py": ["test_a"], "scripts/b.py": ["test_b"]},
+        "modules": {"test_a": 3, "test_b": 2},
+        "records": {
+            ("whole", 5, 1): [
+                {"kind": "control", "path": "scripts/a.py", "ran": 1},
+                {"kind": "control", "path": "scripts/b.py", "ran": 1},
+            ],
+            ("scoped", 7, 0): [{"kind": "control", "path": "scripts/a.py", "ran": 3}],
+        },
+    }
+    #: A4: rows out of path order; two control records of one file over two legs, after a blank
+    #: line, a torn line and other records; a file whose only record is `uncovered`; and a row
+    #: naming two runs.
+    RECORDED = {
+        "scoped": [
+            ["scripts/u.py", "run 7 attempt 1 job 9: 0 scoped mutant record(s)"],
+            [
+                "scripts/t.py",
+                "run 7 attempt 1 job 9: 0 scoped mutant record(s); run 8 attempt 1 job 4: 0 "
+                "scoped mutant record(s)",
+            ],
+            ["scripts/a.py", "run 7 attempt 1 job 9: 0 scoped mutant record(s)"],
+        ],
+        "mapped": {
+            "scripts/a.py": ["test_a"],
+            "scripts/t.py": ["test_t"],
+            "scripts/u.py": ["test_u"],
+        },
+        "modules": {"test_a": 5, "test_t": 4, "test_u": 1},
+        "records": {
+            ("scoped", 7, 0): [
+                "",
+                '{"kind": "control", "path": "scripts/a.py", "ran": ',
+                {"kind": "control", "path": "scripts/a.py", "ran": 2},
+                {"kind": "mutant", "path": "scripts/a.py", "seconds": 1},
+                {"kind": "control", "path": "scripts/t.py", "ran": 1},
+                {"kind": "uncovered", "path": "scripts/u.py"},
+            ],
+            ("scoped", 7, 1): [
+                {"kind": "sentinel", "path": "scripts/a.py", "seconds": 1},
+                {"kind": "control", "path": "scripts/a.py", "ran": 4},
+            ],
+            ("scoped", 8, 0): [{"kind": "control", "path": "scripts/t.py", "ran": 3}],
+        },
+    }
+    #: A6: a fresh file beside one row the tree cannot read, as each reason's case changes it. The
+    #: fresh file sorts after the unread one, so a row read after an unread row is still judged.
+    BESIDE = {
+        "scoped": [
+            ["scripts/plain.py", "run 7 attempt 1 job 9: 0 scoped mutant record(s)"],
+            ["scripts/odd.py", "run 7 attempt 1 job 9: 0 scoped mutant record(s)"],
+        ],
+        "mapped": {"scripts/plain.py": ["test_plain"], "scripts/odd.py": ["test_odd"]},
+        "modules": {"test_plain": 1, "test_odd": 1},
+        "records": {
+            ("scoped", 7, 0): [
+                {"kind": "control", "path": "scripts/plain.py", "ran": 1},
+                {"kind": "control", "path": "scripts/odd.py", "ran": 1},
+            ],
+        },
+    }
+    #: A6: each reason of R8, with what its case changes in BESIDE.
+    UNREAD = {
+        "its line names no run": {
+            "scoped": [
+                [
+                    "scripts/plain.py",
+                    "run 7 attempt 1 job 9: 0 scoped mutant record(s)",
+                ],
+                ["scripts/odd.py", "attempt 1 job 9: 0 scoped mutant record(s)"],
+            ],
+        },
+        "run 9 keeps no records under scripts/tests/fixtures/mutation-scoped-prices-9/": {
+            "scoped": [
+                [
+                    "scripts/plain.py",
+                    "run 7 attempt 1 job 9: 0 scoped mutant record(s)",
+                ],
+                ["scripts/odd.py", "run 9 attempt 1 job 9: 0 scoped mutant record(s)"],
+            ],
+        },
+        "run 7's records hold no control or uncovered record of it": {
+            "records": {
+                ("scoped", 7, 0): [
+                    {"kind": "control", "path": "scripts/plain.py", "ran": 1},
+                    {"kind": "mutant", "path": "scripts/odd.py", "seconds": 1},
+                ],
+            },
+        },
+        "run 7's control record of it carries no ran": {
+            "records": {
+                ("scoped", 7, 0): [
+                    {"kind": "control", "path": "scripts/plain.py", "ran": 1},
+                    {"kind": "control", "path": "scripts/odd.py", "seconds": 1},
+                ],
+            },
+        },
+        "scripts/mutation-python.json does not map it": {
+            "mapped": {"scripts/plain.py": ["test_plain"]},
+        },
+        "scripts/tests/test_gone.py is absent": {
+            "mapped": {
+                "scripts/plain.py": ["test_plain"],
+                "scripts/odd.py": ["test_gone"],
+            },
+        },
+        "scripts/tests/test_odd.py does not parse": {
+            "modules": {"test_plain": 1, "test_odd": "def broken(:\n"},
+        },
+        "scripts/tests/test_odd.py holds a test shape the syntax tree cannot count: load_tests": {
+            "modules": {
+                "test_plain": 1,
+                "test_odd": (
+                    "import unittest\n\n\nclass Odd(unittest.TestCase):\n"
+                    "    def test_odd(self):\n        pass\n\n\n"
+                    "def load_tests(loader, tests, pattern):\n    return tests\n"
+                ),
+            },
+        },
+        "scripts/tests/test_odd.py holds a test shape the syntax tree cannot count: a star import": {
+            "modules": {
+                "test_plain": 1,
+                "test_odd": (
+                    "import unittest\n\nfrom odd_helpers import *\n\n\n"
+                    "class Odd(unittest.TestCase):\n    def test_odd(self):\n        pass\n"
+                ),
+            },
+        },
+        "scripts/tests/test_odd.py holds a test shape the syntax tree cannot count: class Borrowed "
+        "has base Imported, which the module does not define": {
+            "modules": {
+                "test_plain": 1,
+                "test_odd": (
+                    "import unittest\n\nfrom odd_helpers import Imported\n\n\n"
+                    "class Borrowed(Imported, unittest.TestCase):\n"
+                    "    def test_borrowed(self):\n        pass\n"
+                ),
+            },
+        },
+        "scripts/tests/test_odd.py holds a test shape the syntax tree cannot count: class Guarded "
+        "under a top-level try": {
+            "modules": {
+                "test_plain": 1,
+                "test_odd": (
+                    "import unittest\n\ntry:\n\n    class Guarded(unittest.TestCase):\n"
+                    "        def test_guarded(self):\n            pass\n\n"
+                    "except ImportError:\n    pass\n"
+                ),
+            },
+        },
+        "scripts/tests/test_odd.py holds a test shape the syntax tree cannot count: it imports the "
+        "test class Lent from test_lender": {
+            "modules": {
+                "test_plain": 1,
+                "test_lender": (
+                    "import unittest\n\n\nclass Lent(unittest.TestCase):\n"
+                    "    def test_lent(self):\n        pass\n"
+                ),
+                "test_odd": "from test_lender import Lent\n",
+            },
+        },
+        "scripts/tests/odd_lender.py does not parse": {
+            "modules": {
+                "test_plain": 1,
+                "odd_lender": "class (:\n",
+                "test_odd": (
+                    "import unittest\n\nfrom odd_lender import lent\n\n\n"
+                    "class Odd(unittest.TestCase):\n    def test_odd(self):\n        pass\n"
+                ),
+            },
+        },
+    }
+    #: A7: tables that hold no row, and tables whose one row names no run.
+    EMPTY = {"mapped": {}}
+    NO_RUN = {
+        "scoped": [["scripts/odd.py", "attempt 1 job 9: 0 scoped mutant record(s)"]],
+        "mapped": {"scripts/odd.py": ["test_odd"]},
+        "modules": {"test_odd": 1},
+    }
+    #: A5: the loader's population, one shape a module: a plain class, a same-module base, a
+    #: same-module mixin, an async test, a skipped test, helper methods, a class inside a function
+    #: and inside a class, helpers with a standard-library base, two classes sharing a base, and
+    #: names imported from a module of the same directory that is no test module.
+    SHAPES = {
+        "test_stale_shape_plain": (
+            "import unittest\n\n\nclass Plain(unittest.TestCase):\n"
+            "    def test_one(self):\n        pass\n\n"
+            "    def test_two(self):\n        pass\n"
+        ),
+        "test_stale_shape_base": (
+            "import unittest\n\n\nclass Base(unittest.TestCase):\n"
+            "    def test_base(self):\n        pass\n\n\n"
+            "class Derived(Base):\n    def test_derived(self):\n        pass\n"
+        ),
+        "test_stale_shape_mixin": (
+            "import unittest\n\n\nclass Mixin:\n"
+            '    """A mixin of the module: its test is run by the class that mixes it in."""\n\n'
+            "    def test_mixed(self):\n        pass\n\n"
+            "    def helper(self):\n        return 1\n\n\n"
+            "class Mixed(Mixin, unittest.TestCase):\n    def test_own(self):\n        pass\n"
+        ),
+        "test_stale_shape_async": (
+            "import unittest\n\n\nclass Awaited(unittest.IsolatedAsyncioTestCase):\n"
+            "    async def asyncSetUp(self):\n        self.ready = True\n\n"
+            "    async def test_awaited(self):\n        pass\n"
+        ),
+        "test_stale_shape_skipped": (
+            "import unittest\nfrom unittest import TestCase\n\n\nclass Skipping(TestCase):\n"
+            '    @unittest.skip("a skipped test is loaded all the same")\n'
+            "    def test_skipped(self):\n        pass\n\n"
+            "    def test_run(self):\n        pass\n\n\n"
+            '@unittest.skip("a skipped class is loaded all the same")\n'
+            "class Skipped(TestCase):\n    def test_held(self):\n        pass\n"
+        ),
+        "test_stale_shape_helpers": (
+            "import unittest\n\n\nclass Helped(unittest.TestCase):\n"
+            "    ready = True\n\n"
+            "    def setUp(self):\n        self.value = 1\n\n"
+            "    def helper(self):\n        return self.value\n\n"
+            "    def tearDown(self):\n        self.value = 0\n\n"
+            "    def test_helped(self):\n        self.assertEqual(self.helper(), 1)\n"
+        ),
+        "test_stale_shape_inside": (
+            "import unittest\n\n\ndef factory():\n"
+            "    class Hidden(unittest.TestCase):\n        def test_hidden(self):\n"
+            "            pass\n\n    return Hidden\n\n\n"
+            "class Outer(unittest.TestCase):\n    class Inner(unittest.TestCase):\n"
+            "        def test_inner(self):\n            pass\n\n"
+            "    def test_outer(self):\n        self.assertTrue(factory())\n"
+        ),
+        "test_stale_shape_stdlib": (
+            "import json\nimport unittest\n\n\nclass Encoder(json.JSONEncoder):\n"
+            "    def test_shape(self):\n        return 1\n\n\n"
+            "class Lines(list):\n    def test_like(self):\n        return 2\n\n\n"
+            "class Uses(unittest.TestCase):\n    def test_uses(self):\n"
+            "        self.assertEqual(Lines([1]), [1])\n"
+        ),
+        "test_stale_shape_shared": (
+            "import unittest\n\n\nclass Shared(unittest.TestCase):\n"
+            "    def test_shared(self):\n        pass\n\n\n"
+            "class Left(Shared):\n    def test_left(self):\n        pass\n\n\n"
+            "class Right(Shared):\n    def test_shared(self):\n        pass\n"
+        ),
+        "test_stale_shape_imports": (
+            "import unittest\n\nfrom stale_shape_lender import Helper, helper\n\n\n"
+            "class Borrowing(unittest.TestCase):\n"
+            "    def test_borrowing(self):\n        self.assertEqual(helper(), Helper.value)\n"
+        ),
+    }
+    #: A5: the module of the same directory that the imports shape imports from, no test module.
+    LENDERS = {
+        "stale_shape_lender": (
+            "class Helper:\n    value = 1\n\n    def test_not_loaded(self):\n        pass\n\n\n"
+            "def helper():\n    return 1\n"
+        ),
+    }
+
+    def tree(self, scratch, spec):
+        """A root under `scratch` written from `spec`, in the shape the verb reads."""
+        root = Path(scratch)
+        lines = ["PYTHON_CONTROL_SECONDS: dict[str, int] = {"]
+        lines += [f'    "{path}": 1,  # {comment}' for path, comment in spec.get("whole", [])]
+        lines += ["}", "PYTHON_SCOPED_SECONDS: dict[str, tuple[int, int, int]] = {"]
+        lines += [
+            f'    "{path}": (1, 1, 1),  # {comment}' for path, comment in spec.get("scoped", [])
+        ]
+        lines += ["}"]
+        tests = root / "scripts" / "tests"
+        tests.mkdir(parents=True)
+        (root / "scripts" / "mutation-verdict.py").write_text(
+            "\n".join(lines) + "\n", encoding="utf-8"
+        )
+        population = {
+            path: {"dir": "scripts/tests", "modules": modules}
+            for path, modules in spec["mapped"].items()
+        }
+        (root / "scripts" / "mutation-python.json").write_text(
+            json.dumps(population), encoding="utf-8"
+        )
+        for name, module in spec.get("modules", {}).items():
+            source = module
+            if isinstance(module, int):
+                cases = "".join(f"    def test_{n}(self):\n        pass\n\n" for n in range(module))
+                source = f"import unittest\n\n\nclass Counted(unittest.TestCase):\n{cases}"
+            (tests / f"{name}.py").write_text(source, encoding="utf-8")
+        for (kind, run, leg), records in spec.get("records", {}).items():
+            folder = root / self.LEGS[kind].format(run=run, leg=leg)
+            folder.mkdir(parents=True)
+            text = "".join(
+                f"{record if isinstance(record, str) else json.dumps(record)}\n"
+                for record in records
+            )
+            (folder / "costs.jsonl").write_text(text, encoding="utf-8")
+        return root
+
+    def stale(self, spec, selections=frozenset({"plan"})):
+        """`stale` over a root written from `spec`, in process, with the runner's
+        `SCOPED_SELECTIONS` set to `selections`: (its exit, its lines, the root's bytes before and
+        after)."""
+        program = verdict_program()
+        with tempfile.TemporaryDirectory() as scratch:
+            root = self.tree(scratch, spec)
+            before = {path: path.read_bytes() for path in root.rglob("*") if path.is_file()}
+            out = io.StringIO()
+            with (
+                mock.patch.object(program.mutation_python, "SCOPED_SELECTIONS", selections),
+                contextlib.redirect_stdout(out),
+            ):
+                code = program.main(["stale", "--root", str(root)])
+            after = {path: path.read_bytes() for path in root.rglob("*") if path.is_file()}
+        return code, out.getvalue().splitlines(), before, after
+
+    def readings(self):
+        """Every root of A1 to A7, each with the selections it is read under and its lines."""
+        fix = "refresh its price by mutation-prices.yml before the release run"
+        clean = "mutation: stale: 0 file(s) stale of 1 priced; 0 stale row(s) the plan does not "
+        found = [
+            (
+                "a row whose run ran 2 and whose module now defines 3",
+                self.GROWN,
+                frozenset({"plan"}),
+                [
+                    "mutation: stale: scripts/a.py: its suite holds 3 test(s), 2 when run 7 priced "
+                    f"it (PYTHON_SCOPED_SECONDS); {fix}",
+                    "mutation: stale: 1 file(s) stale of 1 priced; 0 stale row(s) the plan does not "
+                    "price by; 0 row(s) unread",
+                    "examined 1",
+                ],
+            ),
+        ]
+        for count in (2, 1):
+            found.append(
+                (
+                    f"a module of {count} test(s) over a run of 2",
+                    {**self.GROWN, "modules": {"test_a": count}},
+                    frozenset({"plan"}),
+                    [clean + "price by; 0 row(s) unread", "examined 1"],
+                )
+            )
+        found += [
+            (
+                "a stale whole row beside a fresh scoped row, while the legs trace",
+                self.BOTH,
+                frozenset({"plan"}),
+                [
+                    "mutation: stale: scripts/b.py: its suite holds 2 test(s), 1 when run 5 priced "
+                    f"it (PYTHON_CONTROL_SECONDS); {fix}",
+                    "mutation: stale: 1 file(s) stale of 2 priced; 1 stale row(s) the plan does not "
+                    "price by; 0 row(s) unread",
+                    "examined 3",
+                ],
+            ),
+            (
+                "a stale whole row beside a fresh scoped row, while the legs do not trace",
+                self.BOTH,
+                frozenset(),
+                [
+                    "mutation: stale: scripts/a.py: its suite holds 3 test(s), 1 when run 5 priced "
+                    f"it (PYTHON_CONTROL_SECONDS); {fix}",
+                    "mutation: stale: scripts/b.py: its suite holds 2 test(s), 1 when run 5 priced "
+                    f"it (PYTHON_CONTROL_SECONDS); {fix}",
+                    "mutation: stale: 2 file(s) stale of 2 priced; 0 stale row(s) the plan does not "
+                    "price by; 0 row(s) unread",
+                    "examined 3",
+                ],
+            ),
+            (
+                "the largest ran, an uncovered record and two runs",
+                self.RECORDED,
+                frozenset({"plan"}),
+                [
+                    "mutation: stale: scripts/a.py: its suite holds 5 test(s), 4 when run 7 priced "
+                    f"it (PYTHON_SCOPED_SECONDS); {fix}",
+                    "mutation: stale: scripts/t.py: its suite holds 4 test(s), 3 when run 8 priced "
+                    f"it (PYTHON_SCOPED_SECONDS); {fix}",
+                    "mutation: stale: scripts/u.py: its suite holds 1 test(s), 0 when run 7 priced "
+                    f"it (PYTHON_SCOPED_SECONDS); {fix}",
+                    "mutation: stale: 3 file(s) stale of 3 priced; 0 stale row(s) the plan does not "
+                    "price by; 0 row(s) unread",
+                    "examined 3",
+                ],
+            ),
+        ]
+        for reason, change in self.UNREAD.items():
+            found.append(
+                (
+                    reason,
+                    {**self.BESIDE, **change},
+                    frozenset({"plan"}),
+                    [
+                        f"mutation: stale: unread: scripts/odd.py (PYTHON_SCOPED_SECONDS): {reason}",
+                        clean + "price by; 1 row(s) unread",
+                        "examined 1",
+                    ],
+                )
+            )
+        void = "mutation: stale: VOID: no price row was read, so this warning examined nothing"
+        found += [
+            (
+                "tables that hold no row",
+                self.EMPTY,
+                frozenset({"plan"}),
+                [
+                    "mutation: stale: 0 file(s) stale of 0 priced; 0 stale row(s) the plan does not "
+                    "price by; 0 row(s) unread",
+                    void,
+                    "examined 0",
+                ],
+            ),
+            (
+                "tables whose one row names no run",
+                self.NO_RUN,
+                frozenset({"plan"}),
+                [
+                    "mutation: stale: unread: scripts/odd.py (PYTHON_SCOPED_SECONDS): its line names "
+                    "no run",
+                    "mutation: stale: 0 file(s) stale of 0 priced; 0 stale row(s) the plan does not "
+                    "price by; 1 row(s) unread",
+                    void,
+                    "examined 0",
+                ],
+            ),
+        ]
+        return found
+
+    def read_as_stated(self, names):
+        """Each named root's lines, exactly as its reading states them."""
+        chosen = [each for each in self.readings() if each[0] in names]
+        self.assertEqual(len(chosen), len(names), "every named root is a reading")
+        for name, spec, selections, lines in examined("stale roots", chosen):
+            _code, out, _before, _after = self.stale(spec, selections)
+            self.assertEqual(out, lines, name)
+
+    def test_a_row_whose_suite_grew_since_its_run_is_named_with_its_fix(self):
+        """A1: the scoped row's run ran 2 tests and its module now defines 3, so its file is named
+        with 3, 2, the run, the table and `mutation-prices.yml`, then the summary and examined 1."""
+        self.read_as_stated(["a row whose run ran 2 and whose module now defines 3"])
+
+    def test_a_suite_no_larger_than_its_run_ran_reads_fresh(self):
+        """A2: the same root with a module of 2 tests, and of 1: no stale line, 0 stale."""
+        self.read_as_stated(
+            [
+                "a module of 2 test(s) over a run of 2",
+                "a module of 1 test(s) over a run of 2",
+            ]
+        )
+
+    def test_a_file_is_judged_by_the_row_the_plan_prices_it_by(self):
+        """A3: a stale whole row beside a fresh scoped row prints no line and counts 1 stale row
+        the plan does not price by; with `SCOPED_SELECTIONS` empty the whole row prices the file
+        and its line names `PYTHON_CONTROL_SECONDS`; a file with a whole row alone is judged by it
+        either way."""
+        self.read_as_stated(
+            [
+                "a stale whole row beside a fresh scoped row, while the legs trace",
+                "a stale whole row beside a fresh scoped row, while the legs do not trace",
+            ]
+        )
+
+    def test_the_suite_then_is_the_largest_ran_its_runs_records_hold(self):
+        """A4: the suite then is the largest `ran` of a file's control records over two legs (4,
+        not 2), 0 for a file whose only record is `uncovered`, and the larger over a row naming two
+        runs (3 by run 8, not 1 by run 7), each file in path order whatever the table's order."""
+        self.read_as_stated(["the largest ran, an uncovered record and two runs"])
+
+    def test_the_syntax_tree_counts_what_the_runners_loader_loads(self):
+        """A5: for each module of the population, the ids the syntax tree counts equal the ids the
+        runner's own loader loads, `loader.discover` per module then `flatten`. Each module is
+        named uniquely, and `sys.path` and every module the population loaded are restored after
+        each reading."""
+        program = verdict_program()
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = Path(scratch) / "scripts" / "tests"
+            directory.mkdir(parents=True)
+            for name, source in {**self.SHAPES, **self.LENDERS}.items():
+                (directory / f"{name}.py").write_text(source, encoding="utf-8")
+            for module in examined("loader population modules", sorted(self.SHAPES)):
+                counted = program.suite_tests(
+                    Path(scratch), {"dir": "scripts/tests", "modules": [module]}
+                )
+                path = list(sys.path)
+                try:
+                    loaded = sorted(
+                        test.id()
+                        for test in program.mutation_python.flatten(
+                            unittest.TestLoader().discover(str(directory), pattern=f"{module}.py")
+                        )
+                    )
+                finally:
+                    sys.path[:] = path
+                    for name in [module, *self.LENDERS]:
+                        sys.modules.pop(name, None)
+                self.assertTrue(loaded, f"{module} loads no test")
+                self.assertEqual(
+                    counted if isinstance(counted, str) else sorted(counted),
+                    loaded,
+                    module,
+                )
+
+    def test_each_unread_reason_is_named_and_not_examined(self):
+        """A6: each reason of R8 prints its unread line beside a fresh file, is not examined
+        (examined 1, the fresh row) and is counted in the summary."""
+        self.read_as_stated(list(self.UNREAD))
+
+    def test_no_row_read_prints_void_and_examined_zero(self):
+        """A7: tables that hold no row, and tables whose one row is unread, print the VOID line
+        and then examined 0."""
+        self.read_as_stated(["tables that hold no row", "tables whose one row names no run"])
+
+    def test_every_reading_exits_zero_and_leaves_the_root_unchanged(self):
+        """A8: over every root of A1 to A7 the verb returns 0, its last line is `examined <N>` for
+        the rows that root reads, and the root's bytes are the same after the reading."""
+        for name, spec, selections, lines in examined("stale roots", self.readings()):
+            code, out, before, after = self.stale(spec, selections)
+            self.assertEqual(code, 0, name)
+            self.assertEqual(out[-1:], lines[-1:], name)
+            self.assertEqual(after, before, name)
+
+    def test_the_trees_rows_are_every_row_of_both_tables(self):
+        """A9: over the repository's own tree, the verb's rows are exactly the keys of
+        `PYTHON_CONTROL_SECONDS` and of `PYTHON_SCOPED_SECONDS`, and each is examined or named
+        unread: the examined count and the unread lines add up to every row."""
+        program = verdict_program()
+        keys = [("PYTHON_CONTROL_SECONDS", path) for path in program.PYTHON_CONTROL_SECONDS]
+        keys += [("PYTHON_SCOPED_SECONDS", path) for path in program.PYTHON_SCOPED_SECONDS]
+        rows = program.price_rows(VERDICT.read_text(encoding="utf-8"))
+        self.assertEqual(sorted((table, path) for table, path, _runs in rows), sorted(keys))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = program.main(["stale", "--root", str(VERDICT.parents[1])])
+        lines = out.getvalue().splitlines()
+        unread = [line for line in lines if line.startswith("mutation: stale: unread: ")]
+        named = [
+            (line.split(" (")[1].split(")")[0], line.split(": ")[3].split(" (")[0])
+            for line in unread
+        ]
+        self.assertEqual(code, 0)
+        self.assertEqual([each for each in named if each not in keys], [])
+        examined("price rows", keys)
+        self.assertEqual(lines[-1:], [f"examined {len(keys) - len(unread)}"])

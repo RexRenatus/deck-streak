@@ -178,6 +178,12 @@ PYTHON_WEEKLY_SHARDS = 16
 #: The weekly dispatch's `package` value that sweeps the Python population alone (R14).
 PYTHON_CLASS = "python"
 PYTHON_POPULATION = "scripts/mutation-python.json"
+#: Each price table's record directory, `{run}` being a run its row's line names: a row's suite
+#: then is the largest `ran` of its file's control records under it (SPEC-429 R4).
+PYTHON_PRICE_RECORDS = {
+    "PYTHON_CONTROL_SECONDS": "scripts/tests/fixtures/mutation-prices-{run}/",
+    "PYTHON_SCOPED_SECONDS": "scripts/tests/fixtures/mutation-scoped-prices-{run}/",
+}
 WEB_ROOT = "web/app/"
 HUNK = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 #: cargo-mutants' exits after a run that tested every mutant it listed: all caught (0), some missed
@@ -3689,6 +3695,51 @@ def prices(directory: str) -> int:
     return EXIT_OK if records else EXIT_FAIL
 
 
+def price_rows(text: str) -> list[tuple[str, str, list[str]]]:
+    """Every line of the two price tables in `text`, from each table's opening line to its closing
+    `}`, as its table, its path and each run its comment names as `run <n>` (SPEC-429 R2). A stub
+    until the warning is built: it reads the text and holds no row."""
+    text.splitlines()
+    return []
+
+
+def suite_tests(root: pathlib.Path, entry: dict) -> list[str] | str:
+    """The id of each test a population entry's modules define, read from each module's syntax
+    tree, or why the tree cannot count them (SPEC-429 R3, R8). A stub until the warning is built:
+    it reads each module and counts no test."""
+    for module in entry["modules"]:
+        source = root / entry["dir"] / f"{module}.py"
+        if source.is_file():
+            source.read_text(encoding="utf-8")
+    return []
+
+
+def suite_then(root: pathlib.Path, table: str, runs: list[str], path: str) -> tuple[int, str] | str:
+    """The suite a row's run ran, the largest `ran` of `path`'s control records under each named
+    run's record directory, with the run that gave it, or why the records cannot say (SPEC-429 R4,
+    R8). A stub until the warning is built: it reads each record file and reads none."""
+    for run in runs:
+        for costs in sorted(
+            (root / PYTHON_PRICE_RECORDS[table].format(run=run)).rglob("costs.jsonl")
+        ):
+            costs.read_text(encoding="utf-8")
+    return "stub"
+
+
+def stale_prices(root: pathlib.Path) -> int:
+    """`stale`: each priced Python file whose suite grew since the run its pricing row names, then
+    each row the tree cannot read, the summary and the rows examined (SPEC-429 R5 to R9). A stub
+    until the warning is built: it reads every input and examines nothing."""
+    rows = price_rows((root / "scripts" / "mutation-verdict.py").read_text(encoding="utf-8"))
+    mapped = json.loads((root / PYTHON_POPULATION).read_text(encoding="utf-8"))
+    for table, path, runs in rows:
+        suite_then(root, table, runs, path)
+        if path in mapped:
+            suite_tests(root, mapped[path])
+    print("examined 0")
+    return EXIT_OK
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
@@ -3706,6 +3757,7 @@ def main(argv: list[str] | None = None) -> int:
             "census",
             "table",
             "prices",
+            "stale",
         ],
     )
     parser.add_argument("--root", default=str(pathlib.Path(__file__).resolve().parents[1]))
@@ -3802,6 +3854,8 @@ def main(argv: list[str] | None = None) -> int:
         if not args.costs:
             parser.error("prices needs --costs")
         return scoped_prices(root, args.costs) if args.scoped else prices(args.costs)
+    if args.verb == "stale":
+        return stale_prices(root)
     return exclusions(root)
 
 

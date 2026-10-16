@@ -568,3 +568,72 @@ this measurement or not at all.
 | verdict | every listed mutant examined; reports 0 to n - 1 | unchanged; both matrices' reports, under one name family |
 | legs | rust and rows | rust, rows and the release leg, owed only past `PYTHON_MATRIX_LEGS` |
 | ci | admits two skips | admits three, once each |
+
+## 10. The stale price-row warning (SPEC-429, ADR-443)
+
+Every `path:line` in this section was read at dev `ac7ebd75`. Sections 6 to 9 stay as written.
+This section shows a reading beside them: the plan job names each priced file whose suite now
+holds more tests than the run its row names ran, with the refresh that clears it, and its job's
+result never changes.
+
+### 10.1 Before: a row and its suite at dev `ac7ebd75`
+
+```mermaid
+flowchart TD
+  bRun["one recorded price run: control records carry ran, the suite it ran"] --> bFix["records committed under scripts/tests/fixtures"]
+  bFix --> bTable["PYTHON_CONTROL_SECONDS and PYTHON_SCOPED_SECONDS lines, each naming its run"]
+  bTests["later deliveries add tests to a file's mapped modules"] --> bSuite["the file's suite grows; the row does not"]
+  bTable --> bShards["mutation-verdict.py shards deals by the row"]
+  bSuite --> bLegs["each leg runs the larger suite: control, sentinel, mutants"]
+  bShards --> bLegs
+  bLegs --> bLate["a leg past its projection, first seen in the release run"]
+```
+
+`scripts/mutation-verdict.py`'s mapped modules define 157 tests at dev; its scoped row's run ran
+138 and its whole row's run 117. No line of the plan compares them
+(`scripts/mutation-verdict.py:143-174`, :1287-1288).
+
+### 10.2 After: the verb and its step
+
+```mermaid
+flowchart TD
+  aRows["every line of both tables: a row, its table, its path, the runs it names"] --> aRun{"names a run whose records the tree keeps?"}
+  aRun -->|"no"| aUnread["unread line by reason; not examined"]
+  aRun -->|"yes"| aThen["suite then: the largest ran of its file's control records, 0 for uncovered"]
+  aMap["scripts/mutation-python.json: the file's dir and modules"] --> aNow["suite now: the tests each module's syntax tree defines"]
+  aNow -->|"a shape the syntax tree cannot count"| aUnread
+  aThen --> aCmp{"now larger than then?"}
+  aNow --> aCmp
+  aCmp -->|"no"| aFresh["fresh; examined"]
+  aCmp -->|"yes"| aStale["stale; examined"]
+  aStale --> aPrice{"the row the plan prices the file by?"}
+  aPrice -->|"yes"| aLine["mutation: stale: path line, naming now, then, its run, its table and mutation-prices.yml"]
+  aPrice -->|"no"| aShadow["counted as a stale row the plan does not price by"]
+  aFresh --> aSum["summary line, then examined N"]
+  aLine --> aSum
+  aShadow --> aSum
+  aUnread --> aSum
+  aSum -->|"N is 0"| aVoid["VOID line before examined 0"]
+  aSum --> aExit["EXIT_OK on every path"]
+  aVoid --> aExit
+  aExit --> aStep["mutation-plan step after the rows legs: stale, or echo a VOID line"]
+```
+
+The step reads only committed files and writes only its own lines, so no later job reads anything
+it wrote, and the job's result is the one its other steps decide. The pricing row is the one
+`shards` prices by: the scoped row when `plan` is in `SCOPED_SELECTIONS` and the file has one, else
+the whole row.
+
+### 10.3 What crosses each step
+
+| step | before (dev `ac7ebd75`) | after (SPEC-429) |
+|---|---|---|
+| population | none read | every row of both tables, 23 at dev, each examined or named unread |
+| suite now | not read | the tests the file's mapped modules define, by syntax tree, no module imported |
+| suite then | kept in the records, read by nothing | the largest `ran` of the file's control records under its run's directory |
+| stale test | none | now larger than then; the pricing row decides the file's line |
+| printed | nothing | one line per stale file, one per unread row, the summary, `examined N` |
+| VOID | none | `examined 0` prints a VOID line, and a crash prints the step's VOID echo |
+| fix named | none | `mutation-prices.yml`, before the release run, also in `RELEASING.md` section 2 |
+| plan job | its result as its steps decide | unchanged; one step more, which cannot fail it |
+| deal, verdict, prices | as sections 6 to 9 | unchanged |

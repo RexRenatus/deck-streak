@@ -7642,6 +7642,21 @@ DYNAMIC_IMPORTS = {
         ),
     ),
     **allowed(
+        "the runner's own loader, the stale warning's oracle, over modules the test writes under a scratch directory, each named uniquely and dropped from the module table after its reading; never a module of this directory",
+        (
+            "test_mutation_python_shard_binding",
+            "AStalePriceRowIsNamedAndNeverBlocks.test_the_syntax_tree_counts_what_the_runners_loader_loads",
+            "unittest.TestLoader().discover(str(directory), pattern=f'{module}.py')",
+            1,
+        ),
+        (
+            "test_mutation_python_shard_binding",
+            "AStalePriceRowIsNamedAndNeverBlocks.test_the_syntax_tree_counts_what_the_runners_loader_loads",
+            "sys.modules.pop(name, None)",
+            1,
+        ),
+    ),
+    **allowed(
         "the missing-tool test's own site census, which parses the runner's source text as a syntax tree: it imports a module by the name a plant gives it, and reaches an attribute by a name a node holds, to decide whether the census would see that reach; it reads no workflow file and brings in no module of the test directory",
         (
             "test_mutation_rows_missing_tool",
