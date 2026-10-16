@@ -43,6 +43,11 @@ ENGINE_TESTS='binary_id(=deck-streak-ingest::sync) | binary_id(=deck-streak-inge
 # RustSec advisory an error. It is given on the command line, so no workspace setting raises it.
 AUDIT_WEB_LEVEL=low
 
+# The python stage's ruff (SPEC-424 R1, R5), defined here and nowhere else: the file that pins and
+# hashes it, and the roots both of its arms read from the repository root.
+RUFF_PIN_FILE=scripts/ruff-requirements.txt
+RUFF_ROOTS=(scripts tools deploy agent crates)
+
 failed=()
 
 need() {
@@ -78,6 +83,10 @@ need_python() {
     need python3 "Python 3.11 or later" || return 1
     python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' ||
         { echo "python3 is older than 3.11"; return 1; }
+}
+
+need_ruff() {
+    need ruff "pip install --require-hashes --only-binary :all: -r $RUFF_PIN_FILE, ruff on PATH"
 }
 
 stage_fmt() { need_cargo && cargo fmt --all --check; }
@@ -176,12 +185,64 @@ stage_audit_web() {
         <<<"$report"
 }
 
+ruff_arm() {
+    # The python stage's ruff (SPEC-424 R5 to R7): one verdict on stdout, every ruff output on
+    # stderr, which the stage log keeps. VOID, which fails the stage, unless the pinned ruff
+    # examined one population with both arms.
+    local pin version listing examined check fmt report last fexamined
+    pin=$(grep -Eo '^ruff==[0-9]+(\.[0-9]+)*' "$RUFF_PIN_FILE")
+    pin=${pin#ruff==}
+    if [ -z "$pin" ]; then
+        echo "ruff VOID: $RUFF_PIN_FILE pins no ruff"
+        return 1
+    fi
+    version=$(ruff --version 2>&1)
+    if [ "$version" != "ruff $pin" ]; then
+        echo "ruff VOID: '$version' is off its pin $pin"
+        return 1
+    fi
+    if ! listing=$(ruff check --no-cache --show-files "${RUFF_ROOTS[@]}"); then
+        echo "ruff VOID: the file listing exited non-zero"
+        return 1
+    fi
+    examined=$(printf '%s\n' "$listing" | grep -c .)
+    if [ "$examined" -eq 0 ]; then
+        echo "ruff VOID: examined 0 files"
+        return 1
+    fi
+    ruff check --no-cache --output-format concise "${RUFF_ROOTS[@]}" >&2
+    check=$?
+    report=$(ruff format --no-cache --check "${RUFF_ROOTS[@]}")
+    fmt=$?
+    printf '%s\n' "$report" >&2
+    if [ "$check" -gt 1 ] || [ "$fmt" -gt 1 ]; then
+        echo "ruff VOID: ruff check exited $check and ruff format $fmt"
+        return 1
+    fi
+    last=$(printf '%s\n' "$report" | tail -n 1)
+    if [[ "$last" =~ ^([0-9]+)\ files?\ would\ be\ reformatted(,\ ([0-9]+)\ files?\ already\ formatted)?$ ]]; then
+        fexamined=$((BASH_REMATCH[1] + ${BASH_REMATCH[3]:-0}))
+    elif [[ "$last" =~ ^([0-9]+)\ files?\ already\ formatted$ ]]; then
+        fexamined=${BASH_REMATCH[1]}
+    else
+        echo "ruff VOID: the format arm printed no count"
+        return 1
+    fi
+    if [ "$fexamined" -ne "$examined" ]; then
+        echo "ruff VOID: ruff check listed $examined file(s) and ruff format examined $fexamined"
+        return 1
+    fi
+    echo "ruff check examined $examined file(s), exit $check;" \
+        "ruff format examined $fexamined file(s), exit $fmt"
+    [ "$check" -eq 0 ] && [ "$fmt" -eq 0 ]
+}
+
 stage_python() {
     # cargo too: guard tests build and audit the workspace (SPEC-055's engine pin).
-    need_python && need_cargo || return 1
+    need_python && need_cargo && need_ruff || return 1
     # Both suites run whatever the first found, and the last line gives each one's tests and exit,
     # so a red suite never hides the other's result; a suite that ran no test fails (SPEC-054 R7).
-    local suite output code ran failed=0 verdicts=""
+    local suite output code ran failed=0 verdicts="" lint
     for suite in scripts/tests tools/parity-oracle agent/tests; do
         output=$(python3 -m unittest discover -s "$suite" -p 'test_*.py' 2>&1)
         code=$?
@@ -191,7 +252,9 @@ stage_python() {
         if [ "$code" -ne 0 ] || [ "${ran:-0}" -eq 0 ]; then failed=1; fi
         verdicts+="${verdicts:+; }$suite ran ${ran:-0} test(s), exit $code"
     done
-    echo "python: $verdicts"
+    # ruff, after every suite and whatever they found (SPEC-424 R5 to R7).
+    lint=$(ruff_arm) || failed=1
+    echo "python: $verdicts; $lint"
     return "$failed"
 }
 
