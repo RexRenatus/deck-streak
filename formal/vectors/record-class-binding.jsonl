@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"RecordClassBinding","covers":"scripts/mutation-verdict.py","anchor":"python_excuses","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":18}
+{"schema":"phx.formal.vectors.v1","entry":"RecordClassBinding","covers":"scripts/mutation-verdict.py","anchor":"python_excuses","digest":"sha256:81d78105ee97ba1584ecd9b67a9db46d2e7d2e53612e5d1c08acd57801a9302e","vectors":18}
 {"class":"scripts","records":[{"index":1,"class":"scripts","binds":0},{"index":2,"class":"oracle","binds":0}],"judged":[{"index":1,"verdict":"stale"}]}
 {"class":"scripts","records":[{"index":1,"class":"scripts","binds":0},{"index":2,"class":"oracle","binds":1}],"judged":[{"index":1,"verdict":"stale"}]}
 {"class":"scripts","records":[{"index":1,"class":"scripts","binds":0},{"index":2,"class":"oracle","binds":2}],"judged":[{"index":1,"verdict":"stale"}]}
