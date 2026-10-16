@@ -668,7 +668,7 @@
         "unreachable! leaves the panicking macros, so its invocation is missed (SPEC-436 R15, A11)"
       ],
       [
-        "S43674-MACRO-TODO",
+        "S43674-MACRO-UNFINISHED",
         "daemon",
         "tests/handler_panic_census.rs",
         "    \"todo\",",
