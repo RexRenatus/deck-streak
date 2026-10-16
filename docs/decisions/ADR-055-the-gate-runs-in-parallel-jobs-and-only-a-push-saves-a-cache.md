@@ -232,3 +232,18 @@ Chosen, and what each was chosen against:
 - Bad, because an advisory in a build or test tool fails every pull request until an update or an
   override fixes it, as #259 does for #254 and #255.
 - Bad, because a registry outage fails the stage, VOID, until a re-run.
+
+## Note: zizmor reads the `.github` directory, so the Dependabot configuration is audited too
+
+Recorded by SPEC-428 and ADR-442 D3. This decision is unchanged. The note moves the operand of the
+`workflow-lint` job's zizmor command from `.github/workflows` to `.github`, so this ADR's
+Confirmation line, "zizmor over `.github/workflows`, in the `workflow-lint` job", now reads as
+zizmor over `.github`, which collects `.github/dependabot.yml` beside every workflow file. The
+job's name, its place among `ci`'s needs and its timeout are unchanged, and zizmor is installed at
+an exact version (ADR-442 D4).
+
+### Consequences of the note
+
+- Good, because a change to the Dependabot configuration is audited on the pull request that
+  makes it.
+- Bad, because a finding on that file fails `workflow-lint`, and so `ci`, until the file is cured.

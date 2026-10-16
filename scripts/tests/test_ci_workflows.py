@@ -869,6 +869,471 @@ def watch_problems(paths, closure):
     return unwatched + unlinked
 
 
+# SPEC-428 (ADR-442): every install-action tool names an exact version, every job that runs steps
+# sets its own timeout, and zizmor reads the `.github` directory. The helpers and the one class that
+# holds the three rules live together in this block, so a later delivery's checks in this module
+# edit other lines.
+INSTALL_ACTION = "taiki-e/install-action"
+# An exact version: a tool name, `@` and three dot-separated numbers with nothing after them (R1).
+# A looser form names a moving target: the action installs the newest release inside it.
+EXACT_TOOL = re.compile(r"[a-z0-9][a-z0-9_.-]*@\d+\.\d+\.\d+")
+# The pin check's control (R2): each line of a file's text whose `uses:` value, after an optional
+# `- `, starts with the install action in any letter case. A comment line starts with `#`, so it
+# is never counted. The reader must find exactly as many sites as these lines name.
+INSTALL_USES = re.compile(r"(?im)^[ \t]*(?:- )?uses:[ \t]*taiki-e/install-action@")
+# zizmor's one command, word for word (R4): a new option could narrow its inputs or drop its exit
+# code, so any change to the command is a reviewed edit of this list.
+ZIZMOR_WORDS = ["zizmor", "--no-online-audits", "--persona", "regular", ".github"]
+DEPENDABOT = REPO / ".github" / "dependabot.yml"
+# The engine site's pin record (R7): `engine_job_problems` counts the engine job's test runner only
+# when an entry of its install equals this one exact string, so a re-pin of that site edits this
+# record in the same change, or the engine job's check reads red.
+ENGINE_NEXTEST_PIN = "cargo-nextest@0.9.146"
+
+
+def install_sites(value, path=()):
+    """Every mapping in a read workflow whose `uses` names the install action in any letter case,
+    each beside its path from the workflow's root, wherever it sits: a step, or any other mapping,
+    so a site outside `steps` is read too."""
+    found = []
+    if isinstance(value, dict):
+        if action(value).lower() == INSTALL_ACTION:
+            found.append((path, value))
+        for key, item in value.items():
+            found += install_sites(item, (*path, key))
+    elif isinstance(value, list):
+        for at, item in enumerate(value):
+            found += install_sites(item, (*path, at))
+    return found
+
+
+def site_place(path):
+    """Where a site sits, as a problem line names it: `<job>: step <n>` for a job's n-th step,
+    counted from 1 as a reader of the file counts them, else its path joined by dots."""
+    if len(path) == 4 and path[0] == "jobs" and path[2] == "steps":
+        return f"{path[1]}: step {path[3] + 1}"
+    return ".".join(str(part) for part in path)
+
+
+def tool_entries(site):
+    """The entries of a site's `tool` input, split on commas and white space as the action splits
+    them, empty entries dropped; none when the input is missing, empty or not a string."""
+    given = site.get("with")
+    value = given.get("tool") if isinstance(given, dict) else None
+    if not isinstance(value, str) or not value.strip():
+        return []
+    return [entry for entry in re.split(r"[,\s]+", value.strip()) if entry]
+
+
+def tool_pin_problems(texts):
+    """What the workflows get wrong about the install action's tools (SPEC-428 R1, R2), for
+    {workflow file name: its text}: a site with no tool, an entry that is not an exact version,
+    and a file whose `uses` lines and read sites differ in number. Returns the problems, the sites
+    as (file, place) and the entries as (file, place, entry)."""
+    problems, sites, entries = [], [], []
+    for name, text in sorted(texts.items()):
+        found = install_sites(read_workflow(text))
+        for path, site in found:
+            where = site_place(path)
+            sites.append((name, where))
+            named = tool_entries(site)
+            if not named:
+                problems.append(f"{name}: {where}: the install names no tool")
+            for entry in named:
+                entries.append((name, where, entry))
+                if not EXACT_TOOL.fullmatch(entry):
+                    problems.append(f"{name}: {where}: {entry} names no exact version")
+        spelled = len(INSTALL_USES.findall(text))
+        if spelled != len(found):
+            problems.append(
+                f"{name}: {spelled} uses lines name the install action, and the reader found "
+                f"{len(found)}"
+            )
+    return problems, sites, entries
+
+
+def job_timeout_problems(texts):
+    """What the workflows get wrong about job timeouts (SPEC-428 R3), for {workflow file name: its
+    text}: a job that runs steps with no `timeout-minutes` of its own, or one whose value is not a
+    whole number of minutes from 1. A job with its own `uses` calls a reusable workflow, takes no
+    timeout, and is counted apart; a step's timeout bounds only that step, so it is never read.
+    Returns the problems, the jobs checked and the call jobs, each as (file, job)."""
+    problems, checked, calls = [], [], []
+    for name, text in sorted(texts.items()):
+        for job_name, job in (read_workflow(text).get("jobs") or {}).items():
+            if "uses" in job:
+                calls.append((name, job_name))
+                continue
+            checked.append((name, job_name))
+            if "timeout-minutes" not in job:
+                problems.append(f"{name}: {job_name}: sets no timeout-minutes")
+                continue
+            minutes = str(job["timeout-minutes"])
+            if not re.fullmatch(r"[1-9]\d*", minutes):
+                problems.append(
+                    f"{name}: {job_name}: timeout-minutes is {minutes}, not a whole number of "
+                    "minutes from 1"
+                )
+    return problems, checked, calls
+
+
+def zizmor_problems(texts):
+    """What the workflows get wrong about zizmor (SPEC-428 R4), for {workflow file name: its text}:
+    other than one command in all of them, a command whose words are not `ZIZMOR_WORDS`, and a
+    command whose operand does not reach the Dependabot configuration. A command is a line of a
+    step's `run` whose first word is `zizmor`, read by splitting on white space, never by a shell
+    lexer, since a script elsewhere may not lex. The inputs a command reaches are the known inputs,
+    the workflow files and the Dependabot configuration, equal to or under its last word. Returns
+    the problems, the commands as (file, job, words) and the first command's inputs."""
+    commands = []
+    for name, text in sorted(texts.items()):
+        for job_name, job in (read_workflow(text).get("jobs") or {}).items():
+            for step in job.get("steps") or []:
+                run = step.get("run") if isinstance(step, dict) else None
+                if not isinstance(run, str):
+                    continue
+                for line in run.splitlines():
+                    words = line.split()
+                    if words[:1] == ["zizmor"]:
+                        commands.append((name, job_name, words))
+    problems = []
+    if len(commands) != 1:
+        problems.append(f"zizmor runs {len(commands)} times across the workflows, not once")
+    known = workflow_files(WORKFLOWS) + ([DEPENDABOT] if DEPENDABOT.is_file() else [])
+    reached = []
+    for name, job_name, words in commands:
+        if words != ZIZMOR_WORDS:
+            problems.append(
+                f"{name}: {job_name}: zizmor runs as {' '.join(words)}, not "
+                f"{' '.join(ZIZMOR_WORDS)}"
+            )
+        operand = REPO / words[-1]
+        inputs = [path for path in known if path.is_relative_to(operand)]
+        if DEPENDABOT not in inputs:
+            problems.append("zizmor's inputs miss .github/dependabot.yml")
+        reached.append(inputs)
+    return problems, commands, reached[0] if reached else []
+
+
+# The plants' anchors, each a line the cured workflows hold exactly once in the file it names.
+LINT_TOOL = "          tool: zizmor@1.30.1\n"
+RUST_TOOL = "          tool: cargo-nextest@0.9.146,cargo-deny@0.20.2\n"
+LINT_ZIZMOR = "        run: zizmor --no-online-audits --persona regular .github\n"
+BASE_IS_DEV = "  base-is-dev:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 5\n"
+NO_NEXTEST = "the engine job installs no cargo-nextest before its stage"
+
+
+class CiToolsArePinnedAndJobsBounded(unittest.TestCase):
+    """SPEC-428: every install-action tool names an exact version, every job that runs steps sets
+    its own timeout, and zizmor reads `.github`, so the Dependabot configuration is audited too."""
+
+    def setUp(self):
+        self.texts = {path.name: workflow_file_text(path) for path in workflow_files(WORKFLOWS)}
+
+    def plant_once(self, label, text, old, new):
+        """`text` with its one `old` replaced by `new`; a plant whose anchor is missing or repeated
+        changes nothing it can name, so it is refused before it is judged."""
+        self.assertEqual(text.count(old), 1, f"{label}: the plant's anchor is not in the text once")
+        return text.replace(old, new)
+
+    def test_every_install_action_tool_names_an_exact_version(self):
+        problems, sites, entries = tool_pin_problems(self.texts)
+        self.assertEqual(problems, [])
+        examined("install-action sites", sites)
+        examined("tool entries", entries)
+        spelled = sum(len(INSTALL_USES.findall(text)) for text in self.texts.values())
+        self.assertEqual(len(sites), spelled)
+        names = {entry.split("@")[0] for _name, _where, entry in entries}
+        for tool in ("cargo-deny", "cargo-nextest", "zizmor"):
+            self.assertIn(tool, names)
+
+    def test_each_planted_tool_pin_defect_is_refused_by_its_own_line(self):
+        control, _sites, _entries = tool_pin_problems(self.texts)
+        self.assertEqual(control, [], f"the control reads {control[:1]}")
+        ci = self.texts["ci.yml"]
+        lint = "ci.yml: workflow-lint: step 2:"
+        rust = "ci.yml: rust: step 3:"
+        plants = [
+            (
+                "a bare name",
+                LINT_TOOL,
+                "          tool: zizmor\n",
+                [f"{lint} zizmor names no exact version"],
+            ),
+            (
+                "latest",
+                LINT_TOOL,
+                "          tool: zizmor@latest\n",
+                [f"{lint} zizmor@latest names no exact version"],
+            ),
+            (
+                "one number",
+                LINT_TOOL,
+                "          tool: zizmor@1\n",
+                [f"{lint} zizmor@1 names no exact version"],
+            ),
+            (
+                "two numbers",
+                LINT_TOOL,
+                "          tool: zizmor@1.30\n",
+                [f"{lint} zizmor@1.30 names no exact version"],
+            ),
+            (
+                "a range",
+                LINT_TOOL,
+                "          tool: zizmor@^1.30.1\n",
+                [f"{lint} zizmor@^1.30.1 names no exact version"],
+            ),
+            (
+                "a v prefix",
+                LINT_TOOL,
+                "          tool: zizmor@v1.30.1\n",
+                [f"{lint} zizmor@v1.30.1 names no exact version"],
+            ),
+            (
+                "a pre-release",
+                LINT_TOOL,
+                "          tool: zizmor@1.30.1-rc.1\n",
+                [f"{lint} zizmor@1.30.1-rc.1 names no exact version"],
+            ),
+            (
+                "an expression",
+                LINT_TOOL,
+                "          tool: ${{ matrix.tool }}\n",
+                [
+                    lint + " ${{ names no exact version",
+                    lint + " matrix.tool names no exact version",
+                    lint + " }} names no exact version",
+                ],
+            ),
+            (
+                "no tool input",
+                LINT_TOOL,
+                "          fallback: none\n",
+                [f"{lint} the install names no tool"],
+            ),
+            (
+                "a floating second entry",
+                RUST_TOOL,
+                "          tool: cargo-nextest@0.9.146,cargo-deny\n",
+                [f"{rust} cargo-deny names no exact version"],
+            ),
+            (
+                "a floating whitespace entry",
+                RUST_TOOL,
+                "          tool: cargo-nextest@0.9.146 cargo-deny\n",
+                [f"{rust} cargo-deny names no exact version"],
+            ),
+            (
+                "an exact whitespace list",
+                RUST_TOOL,
+                "          tool: cargo-nextest@0.9.146 cargo-deny@0.20.2\n",
+                [],
+            ),
+        ]
+        for label, old, new, expected in examined("tool pin plants", plants):
+            plant = {**self.texts, "ci.yml": self.plant_once(label, ci, old, new)}
+            self.assertEqual(tool_pin_problems(plant)[0], expected, label)
+        cased, count = re.subn(
+            r"taiki-e/install-action(@[^\n]*\n[ \t]*with:\n[ \t]*tool: )zizmor@1\.30\.1\n",
+            r"Taiki-E/Install-Action\1zizmor\n",
+            ci,
+        )
+        self.assertEqual(count, 1, "the workflow-lint site is not in ci.yml once")
+        self.assertEqual(
+            tool_pin_problems({**self.texts, "ci.yml": cased})[0],
+            [f"{lint} zizmor names no exact version"],
+        )
+        copy = self.plant_once("a .yaml copy", ci, LINT_TOOL, "          tool: zizmor\n")
+        self.assertEqual(
+            tool_pin_problems({**self.texts, "copy.yaml": copy})[0],
+            ["copy.yaml: workflow-lint: step 2: zizmor names no exact version"],
+        )
+
+    def test_every_job_that_runs_steps_sets_its_own_timeout(self):
+        problems, checked, calls = job_timeout_problems(self.texts)
+        self.assertEqual(problems, [])
+        examined("jobs that run steps", checked)
+        examined("call jobs", calls)
+        self.assertIn(("changelog.yml", "fragment"), checked)
+        self.assertIn(("testflight-rerelease-check.yml", "rerelease"), checked)
+        for call in (
+            ("apple-on-change.yml", "apple"),
+            ("apple-on-tag.yml", "apple"),
+            ("testflight-internal.yml", "framework"),
+            ("testflight-release.yml", "framework"),
+        ):
+            self.assertIn(call, calls)
+
+    def test_each_planted_timeout_defect_is_refused_by_its_own_line(self):
+        control, _checked, calls = job_timeout_problems(self.texts)
+        self.assertEqual(control, [], f"the control reads {control[:1]}")
+        # The accepted form: the live call jobs set no timeout and raise nothing.
+        self.assertIn(("apple-on-change.yml", "apple"), calls)
+        ci = self.texts["ci.yml"]
+        bare = "  base-is-dev:\n    runs-on: ubuntu-24.04\n"
+        lint = "  workflow-lint:\n    runs-on: ubuntu-24.04\n"
+        whole = "not a whole number of minutes from 1"
+        plants = [
+            (
+                "a run job's timeout removed",
+                BASE_IS_DEV,
+                bare,
+                ["ci.yml: base-is-dev: sets no timeout-minutes"],
+            ),
+            (
+                "an action job's timeout removed",
+                f"{lint}    timeout-minutes: 10\n",
+                lint,
+                ["ci.yml: workflow-lint: sets no timeout-minutes"],
+            ),
+            (
+                "a timeout of 0",
+                BASE_IS_DEV,
+                f"{bare}    timeout-minutes: 0\n",
+                [f"ci.yml: base-is-dev: timeout-minutes is 0, {whole}"],
+            ),
+            (
+                "an expression",
+                BASE_IS_DEV,
+                bare + "    timeout-minutes: ${{ inputs.minutes }}\n",
+                ["ci.yml: base-is-dev: timeout-minutes is ${{ inputs.minutes }}, " + whole],
+            ),
+            (
+                "a word",
+                BASE_IS_DEV,
+                f"{bare}    timeout-minutes: ten\n",
+                [f"ci.yml: base-is-dev: timeout-minutes is ten, {whole}"],
+            ),
+            (
+                "a unit",
+                BASE_IS_DEV,
+                f"{bare}    timeout-minutes: 5m\n",
+                [f"ci.yml: base-is-dev: timeout-minutes is 5m, {whole}"],
+            ),
+            (
+                "a timeout moved onto a step",
+                f"{BASE_IS_DEV}    steps:\n      - name: a pull request into main",
+                f"{bare}    steps:\n      - timeout-minutes: 5\n"
+                "        name: a pull request into main",
+                ["ci.yml: base-is-dev: sets no timeout-minutes"],
+            ),
+        ]
+        for label, old, new, expected in examined("timeout plants", plants):
+            plant = {**self.texts, "ci.yml": self.plant_once(label, ci, old, new)}
+            self.assertEqual(job_timeout_problems(plant)[0], expected, label)
+        copy = self.plant_once(
+            "a .yaml copy",
+            self.texts["changelog.yml"],
+            "    runs-on: ubuntu-24.04\n    timeout-minutes: 5\n",
+            "    runs-on: ubuntu-24.04\n",
+        )
+        self.assertEqual(
+            job_timeout_problems({**self.texts, "changelog-copy.yaml": copy})[0],
+            ["changelog-copy.yaml: fragment: sets no timeout-minutes"],
+        )
+
+    def test_zizmor_audits_the_github_directory_and_its_dependabot_configuration(self):
+        problems, commands, inputs = zizmor_problems(self.texts)
+        self.assertIn(
+            ".github/dependabot.yml", [path.relative_to(REPO).as_posix() for path in inputs]
+        )
+        self.assertEqual(problems, [])
+        examined("zizmor commands", commands)
+        examined("zizmor inputs", inputs)
+        self.assertEqual(len(inputs), len(self.texts) + 1)
+
+    def test_each_planted_zizmor_defect_is_refused_by_its_own_line(self):
+        control, _commands, _inputs = zizmor_problems(self.texts)
+        self.assertEqual(control, [], f"the control reads {control[:1]}")
+        ci = self.texts["ci.yml"]
+        command = "zizmor --no-online-audits --persona regular"
+        runs = "ci.yml: workflow-lint: zizmor runs as"
+        want = "not zizmor --no-online-audits --persona regular .github"
+        miss = "zizmor's inputs miss .github/dependabot.yml"
+        plants = [
+            (
+                "the old operand",
+                f"        run: {command} .github/workflows\n",
+                [f"{runs} {command} .github/workflows, {want}", miss],
+            ),
+            (
+                "workflows collected alone",
+                f"        run: {command} --collect=workflows .github\n",
+                [f"{runs} {command} --collect=workflows .github, {want}"],
+            ),
+            (
+                "no exit codes",
+                f"        run: {command} --no-exit-codes .github\n",
+                [f"{runs} {command} --no-exit-codes .github, {want}"],
+            ),
+            (
+                "a SARIF report",
+                f"        run: {command} --format sarif .github\n",
+                [f"{runs} {command} --format sarif .github, {want}"],
+            ),
+            ("the repository root", f"        run: {command} .\n", [f"{runs} {command} ., {want}"]),
+            # The operand is the command's last word, so a swallowed exit also names no input.
+            (
+                "its exit swallowed",
+                f"        run: {command} .github || true\n",
+                [f"{runs} {command} .github || true, {want}", miss],
+            ),
+            (
+                "a second command",
+                f"        run: |\n          {command} .github\n          {command} .github\n",
+                ["zizmor runs 2 times across the workflows, not once"],
+            ),
+            (
+                "the command removed",
+                "        run: echo no lint\n",
+                ["zizmor runs 0 times across the workflows, not once"],
+            ),
+        ]
+        for label, new, expected in examined("zizmor plants", plants):
+            plant = {**self.texts, "ci.yml": self.plant_once(label, ci, LINT_ZIZMOR, new)}
+            self.assertEqual(zizmor_problems(plant)[0], expected, label)
+        lint = self.plant_once(
+            "a .yaml copy",
+            self.texts["changelog.yml"],
+            "        run: |\n",
+            f"        run: |\n          {command} .github\n",
+        )
+        self.assertEqual(
+            zizmor_problems({**self.texts, "lint.yaml": lint})[0],
+            ["zizmor runs 2 times across the workflows, not once"],
+        )
+
+    def test_the_engine_check_counts_only_the_pinned_nextest(self):
+        # The pin record first: the check reads it as the engine job's test runner. Then every
+        # other spelling, the bare name, another version and a longer string that starts with the
+        # pin, reads as no test runner at all.
+        for tool, expected in (
+            (ENGINE_NEXTEST_PIN, []),
+            ("cargo-nextest", [NO_NEXTEST]),
+            ("cargo-nextest@1.2.3", [NO_NEXTEST]),
+            (ENGINE_NEXTEST_PIN + ".0", [NO_NEXTEST]),
+        ):
+            workflow = read_workflow(workflow_file_text(WORKFLOWS / "ci.yml"))
+            steps = [
+                step
+                for step in workflow["jobs"][ENGINE_JOB]["steps"]
+                if action(step) == INSTALL_ACTION
+            ]
+            examined("engine install steps", steps)
+            self.assertEqual(len(steps), 1)
+            steps[0]["with"]["tool"] = tool
+            self.assertEqual(
+                [
+                    step["with"]["tool"]
+                    for step in workflow["jobs"][ENGINE_JOB]["steps"]
+                    if action(step) == INSTALL_ACTION
+                ],
+                [tool],
+            )
+            self.assertEqual(engine_job_problems(workflow), expected, tool)
+
+
 class TheAppleBuildRunsFromOneBody(unittest.TestCase):
     """SPEC-344: one job body, xcframework.yml, called by a change caller and a tag caller."""
 
