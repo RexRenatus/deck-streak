@@ -6,3 +6,6 @@ defaultTargets = ["Formal"]
 [[lean_lib]]
 name = "Formal"
 globs = ["Formal.*"]
+# ADR-440. Every warning Lean prints while it builds the library is an error, so a warning
+# fails the build and every formal check that runs it.
+leanOptions = { warningAsError = true }
