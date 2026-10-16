@@ -127,8 +127,8 @@ PYTHON_SHARD_MUTANTS = 20
 PYTHON_MAX_SHARDS = 32
 #: The ceiling no signed share may pass: a share outside 1 to it is refused before any deal.
 PYTHON_SHARE_CAP = 128
-#: Signed in docs/rulings/OWNER-RULING-2026-10-15-release-python-legs-303.md (SPEC-422 R4).
-PYTHON_RELEASE_CEILING = 303
+#: Signed in docs/rulings/OWNER-RULING-2026-10-16-release-legs-python-305-rust-192.md (SPEC-422 R4).
+PYTHON_RELEASE_CEILING = 305
 #: A Python leg's projected time may reach half its job's `timeout-minutes` of 60, the margin the
 #: Rust legs keep under theirs, since a projection is a price and not a measurement (SPEC-418 R1).
 PYTHON_LEG_BOUND_SECONDS = 1800
@@ -959,8 +959,8 @@ SHARD_BOUND_SECONDS = 10800
 #: The most legs each workflow's run holds: the 256 jobs of one run, less the most every other job
 #: of that workflow can generate, 66 in `ci.yml` and 22 in `mutation-weekly.yml` (SPEC-362 R3).
 LEG_CEILING = {"ci": 190, "battery": 234}
-#: The release run's Rust ceiling: at LEG_CEILING["ci"] it admits no leg past it (SPEC-423 R2).
-RUST_RELEASE_CEILING = 190
+#: Signed in docs/rulings/OWNER-RULING-2026-10-16-release-legs-python-305-rust-192.md (SPEC-423 R9).
+RUST_RELEASE_CEILING = 192
 #: The legs one matrix generates, the most a release Rust ceiling may reach (SPEC-423 R7).
 RUST_MATRIX_LEGS = 256
 #: The per-mutant `--timeout` every cargo-mutants command carries (SPEC-327 R2), and the margin a
