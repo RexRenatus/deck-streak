@@ -55,7 +55,7 @@ flowchart LR
 | entries | 40: 13 Lean (each with covers and one vectors line), 27 TLA+ (each with covers, no vectors) | `examined 40 formal entry(ies)` with the Lean and TLA+ counts |
 | vectors tests | 11, each naming its path once in a string literal | `examined 11 vectors test(s)` |
 | vectors files | 13, each declared by one Lean entry | `examined 13 vectors file(s)` |
-| rows | `owed`: `lean/SensitiveDeck`, `lean/TableCensusReach`; `unimplemented`: none | `examined 2 parity row(s)` |
+| rows | `owed`: `lean/SensitiveDeck`, `lean/TableCensusReach`; `unimplemented`: none | `listed 2 parity row(s)` |
 | matcher | the token is `formal/vectors/<slug>.jsonl` inside a string literal, never in a comment | the planted controls of A4 and A5 |
 
 ## 3. The clock-read allow-list: `scripts/tests/test_clock_reads.py`
