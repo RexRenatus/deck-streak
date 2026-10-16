@@ -1,0 +1,75 @@
+//! A planted source for the arithmetic census of SPEC-435: never compiled, read as text by
+//! `the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else`.
+
+/* A block comment the blanking removes: a - b, and /* a nested one: c + d */ e * f. */
+
+const LIMIT: u32 = 2 + 3;
+
+fn compound(mut a: u32, mut b: u32, mut c: u32) -> u32 {
+    a += 1;
+    b -= 1;
+    c *= 2;
+    a
+}
+
+fn binary(f: fn(u32) -> u32, x: u32, v: &[u32], i: usize, r: Option<u32>, a: u32, b: u32) -> Option<u32> {
+    let called = f(x) * 2;
+    let indexed = v[i] + 1;
+    let tried = r? - 1;
+    let worded = a + b;
+    let differed = a - b;
+    let numbered = 2 * b;
+    Some(called)
+}
+
+fn literals(d: u8) -> u8 {
+    let quoted = "a + b - c * d";
+    let bytes = b"a + b";
+    let c_string = c"a - b";
+    let raw = r#"a + "b" - c"#;
+    let character = '+';
+    let escaped = '\'';
+    let n = b'0' + d;
+    n
+}
+
+fn sums(values: &[u32]) -> u32 {
+    let total = values.iter().sum::<u32>();
+    let product: u32 = values.iter().product();
+    total
+}
+
+fn outer(x: u32) -> u32 {
+    fn inner(y: u32) -> u32 {
+        y + 1
+    }
+    inner(x) + 1
+}
+
+fn nothing(x: i32, p: &i32, q: &mut i32, v: u32) -> i32 {
+    // a + b in a line comment
+    /* a - b in a block comment */
+    let negated = -x;
+    let read = *p;
+    let borrowed = &mut *q;
+    let pointer = p as *const i32;
+    let closure = |y: u32| -> u32 { y };
+    let arm = match v {
+        0 => -1,
+        _ => 1,
+    };
+    let tiny = 1e-3;
+    let large = 2.5E+10;
+    let bounded = v.checked_add(1);
+    if x > 0 {
+        return -1;
+    }
+    negated
+}
+
+#[cfg(test)]
+mod tests {
+    fn helper(a: u32) -> u32 {
+        a + 1
+    }
+}
