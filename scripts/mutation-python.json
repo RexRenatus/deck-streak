@@ -101,7 +101,9 @@
   },
   "scripts/write-back-issues.py": {
     "dir": "scripts/tests",
-    "modules": []
+    "modules": [
+      "test_write_back_issues"
+    ]
   },
   "tools/parity-oracle/generate.py": {
     "dir": "tools/parity-oracle",

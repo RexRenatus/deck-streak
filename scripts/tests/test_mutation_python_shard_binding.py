@@ -348,8 +348,8 @@ class ThePythonLegsAreDealtByCost(unittest.TestCase):
             {
                 "count": 3,
                 "shards": [
-                    {"shard": 0, "mutants": names_of(a[:15]), "projected_seconds": 1700},
-                    {"shard": 1, "mutants": names_of(a[15:]), "projected_seconds": 1700},
+                    {"shard": 0, "mutants": names_of(a[0::2]), "projected_seconds": 1700},
+                    {"shard": 1, "mutants": names_of(a[1::2]), "projected_seconds": 1700},
                     {"shard": 2, "mutants": names_of(b), "projected_seconds": 520},
                 ],
             },
@@ -404,8 +404,8 @@ class ThePythonLegsAreDealtByCost(unittest.TestCase):
             {
                 "count": 5,
                 "shards": [
-                    {"shard": 0, "mutants": names_of(a[:15]), "projected_seconds": 1700},
-                    {"shard": 1, "mutants": names_of(a[15:]), "projected_seconds": 1700},
+                    {"shard": 0, "mutants": names_of(a[0::2]), "projected_seconds": 1700},
+                    {"shard": 1, "mutants": names_of(a[1::2]), "projected_seconds": 1700},
                     {"shard": 2, "mutants": names[0::3], "projected_seconds": 1800},
                     {"shard": 3, "mutants": names[1::3], "projected_seconds": 1800},
                     {"shard": 4, "mutants": names[2::3], "projected_seconds": 1800},
@@ -463,7 +463,7 @@ class ThePythonLegsAreDealtByCost(unittest.TestCase):
             written = json.loads(plan.read_text(encoding="utf-8"))
             self.assertEqual(
                 [shard["mutants"] for shard in written["python"]["shards"]],
-                [names_of(entries[:15]), names_of(entries[15:])],
+                [names_of(entries[0::2]), names_of(entries[1::2])],
             )
             self.assertIn("python_shards=2\n", sink.read_text(encoding="utf-8"))
             code, out = shards({"a.py": 601})
@@ -581,8 +581,8 @@ class EachArmOfTheCostDealIsObserved(unittest.TestCase):
         so its 7 are cut into runs of 3, 2 and 2: 1800 s, then 1440 s twice. Two legs would put
         the last run beside the second at 1440 + 2 x 360 = 2160 s, so three legs."""
         cases = (
-            ("q.py", 225, [([0, 1, 2, 3], 1350), ([4, 5, 6], 1125)]),
-            ("r.py", 360, [([0, 1, 2], 1800), ([3, 4], 1440), ([5, 6], 1440)]),
+            ("q.py", 225, [([0, 2, 4, 6], 1350), ([1, 3, 5], 1125)]),
+            ("r.py", 360, [([0, 3, 6], 1800), ([1, 4], 1440), ([2, 5], 1440)]),
         )
         for path, price, legs in examined("cut files", cases):
             with self.subTest(path=path):
@@ -621,7 +621,7 @@ class EachArmOfTheCostDealIsObserved(unittest.TestCase):
         whose floor, 1801 s, starts the search at two legs."""
         cases = (
             (1798, [(list(range(1798)), 1800)]),
-            (1799, [(list(range(900)), 902), (list(range(900, 1799)), 901)]),
+            (1799, [(list(range(0, 1799, 2)), 902), (list(range(1, 1799, 2)), 901)]),
         )
         for count, legs in examined("one-second files", cases):
             with self.subTest(count=count):
@@ -2334,7 +2334,7 @@ class AScopedLegIsPricedByItsTriple(unittest.TestCase):
         `plan` is among the runner's `SCOPED_SELECTIONS`, and only then."""
         entries = priced("a.py", 30)
         scoped = [(names_of(entries), 800)]
-        whole = [(names_of(entries[:15]), 1700), (names_of(entries[15:]), 1700)]
+        whole = [(names_of(entries[0::2]), 1700), (names_of(entries[1::2]), 1700)]
         cases = (
             (frozenset({"plan"}), scoped),
             (frozenset({"plan", "all"}), scoped),
@@ -2491,8 +2491,8 @@ class AScopedLegIsPricedByItsTriple(unittest.TestCase):
             {
                 "count": 2,
                 "shards": [
-                    {"shard": 0, "mutants": names_of(listing[:22]), "projected_seconds": 1768},
-                    {"shard": 1, "mutants": names_of(listing[22:]), "projected_seconds": 1768},
+                    {"shard": 0, "mutants": names_of(listing[0::2]), "projected_seconds": 1768},
+                    {"shard": 1, "mutants": names_of(listing[1::2]), "projected_seconds": 1768},
                 ],
             },
         )
@@ -2531,8 +2531,8 @@ class AScopedLegIsPricedByItsTriple(unittest.TestCase):
         dealt = {
             "count": 3,
             "shards": [
-                {"shard": 0, "mutants": names_of(a[:15]), "projected_seconds": 1700},
-                {"shard": 1, "mutants": names_of(a[15:]), "projected_seconds": 1700},
+                {"shard": 0, "mutants": names_of(a[0::2]), "projected_seconds": 1700},
+                {"shard": 1, "mutants": names_of(a[1::2]), "projected_seconds": 1700},
                 {"shard": 2, "mutants": names_of(b), "projected_seconds": 520},
             ],
         }
