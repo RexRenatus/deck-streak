@@ -85,24 +85,213 @@ struct Census {
     hits: Vec<Hit>,
 }
 
+/// The removal verb's two parts, joined at run time so the verb is spelled whole nowhere (R5).
+const REMOVAL_PARTS: [&str; 2] = ["DR", "OP"];
+
+/// The classes of R4, as the census names them.
+const REMOVES_TABLE: &str = "removes a table";
+const REMOVES_COLUMN: &str = "removes a column";
+const REMOVES_INDEX: &str = "removes an index";
+const REMOVES_VIEW: &str = "removes a view";
+const REMOVES_TRIGGER: &str = "removes a trigger";
+const RENAMES: &str = "renames";
+const DELETES_ROWS: &str = "deletes rows";
+
 /// The census of `migrations/` under `root` (R1 to R5, R7).
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "the red commit's stub: it lists and reads nothing, finds nothing and refuses nothing"
-)]
 fn census(root: &Path) -> Result<Census, String> {
-    let _ = root;
-    Ok(Census::default())
+    let dir = root.join("migrations");
+    let unreadable = |error: std::io::Error| format!("cannot read migrations/: {error}");
+    let mut names = Vec::new();
+    for entry in fs::read_dir(&dir).map_err(unreadable)? {
+        let entry = entry.map_err(unreadable)?;
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if entry.file_type().map_err(unreadable)?.is_file()
+            && Path::new(&name).extension().is_some_and(|ext| ext == "sql")
+        {
+            names.push(name);
+        }
+    }
+    names.sort();
+    println!("examined {} migration(s)", names.len());
+    if names.is_empty() {
+        return Err(
+            "examined 0 migration(s): the population is empty, which is VOID and never a pass"
+                .to_owned(),
+        );
+    }
+    let mut hits = Vec::new();
+    for name in &names {
+        let path = format!("migrations/{name}");
+        let text = fs::read_to_string(dir.join(name))
+            .map_err(|error| format!("cannot read {path}: {error}"))?;
+        for (line, class) in hits_of(&text) {
+            println!("{path}:{line} {class}");
+            hits.push(Hit {
+                path: path.clone(),
+                line,
+                class,
+            });
+        }
+    }
+    Ok(Census {
+        examined: names.len(),
+        hits,
+    })
+}
+
+/// Every destructive statement of one migration's text, as its line and its class (R2 to R4).
+fn hits_of(text: &str) -> Vec<(usize, &'static str)> {
+    let blanked = blank(text);
+    let verb = REMOVAL_PARTS.concat();
+    let mut hits = Vec::new();
+    let mut line = 1;
+    for statement in blanked.split(';') {
+        if let Some(offset) = statement.find(|c: char| !c.is_whitespace()) {
+            let at = line + statement[..offset].matches('\n').count();
+            let upper = statement.to_ascii_uppercase();
+            let words: Vec<&str> = upper
+                .split(|c: char| !(c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_'))
+                .filter(|word| !word.is_empty())
+                .collect();
+            hits.extend(classes(&words, &verb).into_iter().map(|class| (at, class)));
+        }
+        line += statement.matches('\n').count();
+    }
+    hits
+}
+
+/// The classes one statement's words hold, each at most once (R4).
+fn classes<'w>(words: &[&'w str], verb: &'w str) -> Vec<&'static str> {
+    let opens = |first: &str, second: &str| words.starts_with(&[first, second]);
+    let holds = |word| words.contains(&word);
+    let then = |first: &str, second: &str| {
+        words
+            .windows(2)
+            .any(|pair| pair[0] == first && pair[1] == second)
+    };
+    let mut found = Vec::new();
+    if then(verb, "TABLE") {
+        found.push(REMOVES_TABLE);
+    }
+    if opens("ALTER", "TABLE") && holds(verb) {
+        found.push(REMOVES_COLUMN);
+    }
+    if then(verb, "INDEX") {
+        found.push(REMOVES_INDEX);
+    }
+    if then(verb, "VIEW") {
+        found.push(REMOVES_VIEW);
+    }
+    if then(verb, "TRIGGER") {
+        found.push(REMOVES_TRIGGER);
+    }
+    if opens("ALTER", "TABLE") && holds("RENAME") {
+        found.push(RENAMES);
+    }
+    if then("DELETE", "FROM") || then("OR", "REPLACE") || opens("REPLACE", "INTO") {
+        found.push(DELETES_ROWS);
+    }
+    found
+}
+
+/// The text with `--` and `/* */` comments, single-quoted literals and double-quoted identifiers
+/// each replaced by spaces, every line break kept (R2). A doubled quote inside a literal closes it
+/// and opens the next, which blanks the same characters.
+fn blank(text: &str) -> String {
+    let chars: Vec<char> = text.chars().collect();
+    let mut blanked = String::with_capacity(text.len());
+    let mut at = 0;
+    while at < chars.len() {
+        let next = chars.get(at + 1).copied();
+        let end = if chars[at] == '-' && next == Some('-') {
+            position(&chars, at + 2, &['\n']).unwrap_or(chars.len())
+        } else if chars[at] == '/' && next == Some('*') {
+            position(&chars, at + 2, &['*', '/']).map_or(chars.len(), |close| close + 2)
+        } else if chars[at] == '\'' || chars[at] == '"' {
+            position(&chars, at + 1, &[chars[at]]).map_or(chars.len(), |close| close + 1)
+        } else {
+            blanked.push(chars[at]);
+            at += 1;
+            continue;
+        };
+        blanked.extend(
+            chars[at..end]
+                .iter()
+                .map(|&c| if c == '\n' { '\n' } else { ' ' }),
+        );
+        at = end;
+    }
+    blanked
+}
+
+/// Where `pattern` next starts in `chars`, at or after `from`.
+fn position(chars: &[char], from: usize, pattern: &[char]) -> Option<usize> {
+    (from..chars.len()).find(|&at| chars[at..].starts_with(pattern))
 }
 
 /// Holds the census's hits equal to `register`, and each row's one SPEC file to the migration it
 /// names (R6). A refusal names its reason on each of its lines.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "the red commit's stub: it accepts whatever it is given"
-)]
 fn judge(root: &Path, census: &Census, register: &[Admitted]) -> Result<(), String> {
-    let _ = (root, census, register);
+    let mut refusals = Vec::new();
+    for hit in &census.hits {
+        let listed = register.iter().any(|row| {
+            hit.path == format!("migrations/{}", row.migration) && hit.class == row.class
+        });
+        if !listed {
+            refusals.push(format!("unlisted: {}:{} {}", hit.path, hit.line, hit.class));
+        }
+    }
+    for row in register {
+        let path = format!("migrations/{}", row.migration);
+        let found = census
+            .hits
+            .iter()
+            .filter(|hit| hit.path == path && hit.class == row.class)
+            .count();
+        if found == 0 {
+            refusals.push(format!("stale: {path} {} {}", row.class, row.count));
+        } else if found != row.count {
+            refusals.push(format!(
+                "recounted: {path} {}: listed {}, found {found}",
+                row.class, row.count
+            ));
+        }
+        if let Err(why) = ruled(root, row) {
+            refusals.push(format!("unruled: {path} {}: {why}", row.class));
+        }
+    }
+    if refusals.is_empty() {
+        Ok(())
+    } else {
+        Err(refusals.join("\n"))
+    }
+}
+
+/// Whether the row's one SPEC file, `docs/specs/SPEC-<n>-*.md` found by name, names its
+/// migration's file name (R6).
+fn ruled(root: &Path, row: &Admitted) -> Result<(), String> {
+    let prefix = format!("{}-", row.spec);
+    let unreadable = |error: std::io::Error| format!("cannot read docs/specs/: {error}");
+    let mut files = Vec::new();
+    for entry in fs::read_dir(root.join("docs/specs")).map_err(unreadable)? {
+        let entry = entry.map_err(unreadable)?;
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if name.starts_with(&prefix) && Path::new(&name).extension().is_some_and(|ext| ext == "md")
+        {
+            files.push(entry.path());
+        }
+    }
+    let [file] = files.as_slice() else {
+        return Err(format!(
+            "docs/specs/{prefix}*.md matches {} files, not one",
+            files.len()
+        ));
+    };
+    let text =
+        fs::read_to_string(file).map_err(|error| format!("cannot read {prefix}*.md: {error}"))?;
+    if !text.contains(row.migration) {
+        return Err(format!("{} does not name {}", row.spec, row.migration));
+    }
     Ok(())
 }
 

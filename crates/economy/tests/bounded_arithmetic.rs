@@ -409,31 +409,528 @@ struct Census {
     sites: BTreeMap<(String, String), usize>,
 }
 
+/// The six crates whose sources compute coins, prices, XP, levels, streaks, freezes, chests, pity
+/// counters, tokens, sessions and the writing streak (R8).
+const CRATES: [&str; 6] = [
+    "economy",
+    "xp",
+    "progression",
+    "quests",
+    "streaks",
+    "habits",
+];
+
+/// The attribute whose item the census blanks before it reads a site (R9).
+const TEST_ATTRIBUTE: &str = "#[cfg(test)]";
+
+/// The two-character operators, read before one character (longest match), and whether each is a
+/// site (R10).
+const PAIRS: [(&str, bool); 5] = [
+    ("+=", true),
+    ("-=", true),
+    ("*=", true),
+    ("->", false),
+    ("=>", false),
+];
+
+/// The one-character operators (R10).
+const BINARY: [char; 3] = ['+', '-', '*'];
+
+/// The characters other than a word's that end an operand (R10).
+const OPERAND_ENDS: [char; 3] = [')', ']', '?'];
+
+/// The words after which a `+`, `-` or `*` is unary, a dereference or a pointer type (R10).
+const KEYWORDS: [&str; 22] = [
+    "return", "in", "if", "else", "match", "while", "let", "mut", "break", "move", "for", "loop",
+    "where", "impl", "dyn", "const", "static", "ref", "as", "yield", "box", "unsafe",
+];
+
+/// The calls that sum a sequence (R10).
+const SUMS: [&str; 2] = ["sum", "product"];
+
+/// The prefixes of the calls written in a bounded form (R11).
+const BOUNDED: [&str; 4] = ["checked_", "saturating_", "wrapping_", "overflowing_"];
+
+/// A function's body: its name, and the span from its `{` to the character after its `}`.
+struct Body {
+    /// The function's name.
+    name: String,
+    /// The index of its `{`.
+    start: usize,
+    /// The index after its `}`.
+    end: usize,
+}
+
 /// The sites of one source's text (R9 to R11).
 fn sites_of(text: &str) -> Sites {
-    let _ = text;
-    Sites::default()
+    let mut chars = blank(text);
+    let bounded = bounded_calls(&chars);
+    blank_test_items(&mut chars);
+    let bodies = bodies(&chars);
+    let mut sites = Sites {
+        bounded,
+        ..Sites::default()
+    };
+    for at in operator_sites(&chars) {
+        match innermost(&bodies, at) {
+            Some(body) => *sites.by_function.entry(body.name.clone()).or_default() += 1,
+            None => sites.item_level += 1,
+        }
+    }
+    sites
 }
 
 /// The census of the six crates' sources under `root` (R8, R13).
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "the red commit's stub: it lists and reads nothing, finds nothing and refuses nothing"
-)]
 fn census(root: &Path) -> Result<Census, String> {
-    let _ = root;
-    Ok(Census::default())
+    let mut sources = Vec::new();
+    for name in CRATES {
+        sources_under(&root.join("crates").join(name).join("src"), &mut sources)?;
+    }
+    sources.sort();
+    println!("examined {} source(s)", sources.len());
+    if sources.is_empty() {
+        return Err(
+            "examined 0 source(s): the population is empty, which is VOID and never a pass"
+                .to_owned(),
+        );
+    }
+    let mut census = Census {
+        examined: sources.len(),
+        sites: BTreeMap::new(),
+    };
+    let (mut item_level, mut bounded) = (0, 0);
+    for source in &sources {
+        let path = source
+            .strip_prefix(root)
+            .unwrap_or(source)
+            .display()
+            .to_string();
+        let text =
+            fs::read_to_string(source).map_err(|error| format!("cannot read {path}: {error}"))?;
+        let found = sites_of(&text);
+        item_level += found.item_level;
+        bounded += found.bounded;
+        for (function, count) in found.by_function {
+            *census.sites.entry((path.clone(), function)).or_default() += count;
+        }
+    }
+    println!(
+        "sites {} in {} function(s)",
+        census.sites.values().sum::<usize>(),
+        census.sites.len()
+    );
+    println!("item-level sites {item_level}, counted and never judged");
+    println!("bounded calls {bounded}, counted and never judged");
+    Ok(census)
+}
+
+/// Every `.rs` file under `dir`, at any depth; a directory that does not exist holds none.
+fn sources_under(dir: &Path, sources: &mut Vec<PathBuf>) -> Result<(), String> {
+    if !dir.is_dir() {
+        return Ok(());
+    }
+    let unreadable = |error: std::io::Error| format!("cannot read {}: {error}", dir.display());
+    for entry in fs::read_dir(dir).map_err(unreadable)? {
+        let path = entry.map_err(unreadable)?.path();
+        if path.is_dir() {
+            sources_under(&path, sources)?;
+        } else if path.extension().is_some_and(|extension| extension == "rs") {
+            sources.push(path);
+        }
+    }
+    Ok(())
 }
 
 /// Holds `sites` equal to `register`, function by function (R12). A refusal names its reason on
 /// each of its lines.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "the red commit's stub: it accepts whatever it is given"
-)]
 fn judge(sites: &BTreeMap<(String, String), usize>, register: &[Listed]) -> Result<(), String> {
-    let _ = (sites, register);
-    Ok(())
+    let mut refusals = Vec::new();
+    for ((source, function), &count) in sites {
+        let listed = register
+            .iter()
+            .any(|row| row.source == source.as_str() && row.function == function.as_str());
+        if !listed {
+            refusals.push(format!("unlisted: {source} {function} {count}"));
+        }
+    }
+    for row in register {
+        let key = (row.source.to_owned(), row.function.to_owned());
+        let found = sites.get(&key).copied().unwrap_or(0);
+        if found == 0 {
+            refusals.push(format!(
+                "stale: {} {} {}",
+                row.source, row.function, row.sites
+            ));
+        } else if found != row.sites {
+            refusals.push(format!(
+                "recounted: {} {} {found}, listed {}",
+                row.source, row.function, row.sites
+            ));
+        }
+    }
+    if refusals.is_empty() {
+        Ok(())
+    } else {
+        Err(refusals.join("\n"))
+    }
+}
+
+/// The text with comments and string literals blanked to spaces and each character literal turned
+/// into `0` and spaces, every line break kept (R9).
+fn blank(text: &str) -> Vec<char> {
+    let chars: Vec<char> = text.chars().collect();
+    let mut blanked = chars.clone();
+    let mut at = 0;
+    while at < chars.len() {
+        let next = chars.get(at + 1).copied();
+        let (end, literal) = if chars[at] == '/' && next == Some('/') {
+            (position(&chars, at, '\n').unwrap_or(chars.len()), false)
+        } else if chars[at] == '/' && next == Some('*') {
+            (comment_end(&chars, at), false)
+        } else if let Some(end) = string_end(&chars, at) {
+            (end, false)
+        } else if let Some(end) = char_end(&chars, at) {
+            (end, true)
+        } else {
+            at += 1;
+            continue;
+        };
+        for c in &mut blanked[at..end] {
+            if *c != '\n' {
+                *c = ' ';
+            }
+        }
+        if literal {
+            blanked[at] = '0';
+        }
+        at = end;
+    }
+    blanked
+}
+
+/// The index after the `*/` that closes the comment opening at `open`, nested comments counted.
+fn comment_end(chars: &[char], open: usize) -> usize {
+    let mut depth = 0_usize;
+    let mut at = open;
+    while at < chars.len() {
+        if starts_with(chars, at, "/*") {
+            depth += 1;
+            at += 2;
+        } else if starts_with(chars, at, "*/") {
+            depth -= 1;
+            at += 2;
+            if depth == 0 {
+                return at;
+            }
+        } else {
+            at += 1;
+        }
+    }
+    chars.len()
+}
+
+/// The index after the string literal (plain, byte, C or raw) that starts at `at`, if one does.
+fn string_end(chars: &[char], at: usize) -> Option<usize> {
+    let mut cursor = at;
+    if matches!(chars[at], 'b' | 'c' | 'r') && (at == 0 || !is_word(chars[at - 1])) {
+        cursor += 1;
+        if chars[at] != 'r' && chars.get(cursor) == Some(&'r') {
+            cursor += 1;
+        }
+    }
+    if cursor > at && chars[cursor - 1] == 'r' {
+        let mut hashes = 0;
+        while chars.get(cursor) == Some(&'#') {
+            hashes += 1;
+            cursor += 1;
+        }
+        if chars.get(cursor) != Some(&'"') {
+            return None;
+        }
+        let close: Vec<char> = std::iter::once('"')
+            .chain(std::iter::repeat_n('#', hashes))
+            .collect();
+        return Some(
+            (cursor + 1..chars.len())
+                .find(|&end| chars[end..].starts_with(&close))
+                .map_or(chars.len(), |end| end + close.len()),
+        );
+    }
+    if chars.get(cursor) != Some(&'"') {
+        return None;
+    }
+    let mut scan = cursor + 1;
+    while scan < chars.len() {
+        match chars[scan] {
+            '\\' => scan += 2,
+            '"' => return Some(scan + 1),
+            _ => scan += 1,
+        }
+    }
+    Some(chars.len())
+}
+
+/// The index after the character or byte-character literal that starts at `at`, if one does; a
+/// lifetime or a label is none.
+fn char_end(chars: &[char], at: usize) -> Option<usize> {
+    let mut quote = at;
+    if chars[at] == 'b' && (at == 0 || !is_word(chars[at - 1])) && chars.get(at + 1) == Some(&'\'')
+    {
+        quote += 1;
+    }
+    if chars[quote] != '\'' {
+        return None;
+    }
+    if chars.get(quote + 1) == Some(&'\\') {
+        return position(chars, quote + 3, '\'').map(|close| close + 1);
+    }
+    (chars.get(quote + 2) == Some(&'\'')).then_some(quote + 3)
+}
+
+/// Blanks every `#[cfg(test)]` item, from the attribute to the first `;` at bracket depth 0 or to
+/// the brace that matches the first `{`, whichever comes first (R9).
+fn blank_test_items(chars: &mut [char]) {
+    let attribute: Vec<char> = TEST_ATTRIBUTE.chars().collect();
+    let mut at = 0;
+    while at < chars.len() {
+        if !chars[at..].starts_with(&attribute) {
+            at += 1;
+            continue;
+        }
+        let end = item_end(chars, at + attribute.len());
+        for c in &mut chars[at..end] {
+            if *c != '\n' {
+                *c = ' ';
+            }
+        }
+        at = end;
+    }
+}
+
+/// The index after the item that follows an attribute ending at `from`.
+fn item_end(chars: &[char], from: usize) -> usize {
+    let mut depth = 0_i32;
+    for (at, &c) in chars.iter().enumerate().skip(from) {
+        match c {
+            '(' | '[' => depth += 1,
+            ')' | ']' => depth -= 1,
+            ';' if depth == 0 => return at + 1,
+            '{' => return matching(chars, at),
+            _ => {}
+        }
+    }
+    chars.len()
+}
+
+/// The index after the `}` that matches the `{` at `open`.
+fn matching(chars: &[char], open: usize) -> usize {
+    let mut depth = 0_usize;
+    for (at, &c) in chars.iter().enumerate().skip(open) {
+        if c == '{' {
+            depth += 1;
+        } else if c == '}' {
+            depth -= 1;
+            if depth == 0 {
+                return at + 1;
+            }
+        }
+    }
+    chars.len()
+}
+
+/// Every function body: the brace-matched block after `fn <name>`, its first `{` at parenthesis
+/// and bracket depth 0 before any `;` at that depth (R10).
+fn bodies(chars: &[char]) -> Vec<Body> {
+    let mut bodies = Vec::new();
+    for at in 0..chars.len() {
+        let keyword = starts_with(chars, at, "fn")
+            && (at == 0 || !is_word(chars[at - 1]))
+            && chars.get(at + 2).is_some_and(|c| c.is_whitespace());
+        if !keyword {
+            continue;
+        }
+        let name_at = skip_space(chars, at + 2);
+        let name = word_from(chars, name_at);
+        if name.is_empty() {
+            continue;
+        }
+        let mut depth = 0_i32;
+        for (cursor, &c) in chars.iter().enumerate().skip(name_at + name.len()) {
+            match c {
+                '(' | '[' => depth += 1,
+                ')' | ']' => depth -= 1,
+                ';' if depth == 0 => break,
+                '{' if depth == 0 => {
+                    bodies.push(Body {
+                        name,
+                        start: cursor,
+                        end: matching(chars, cursor),
+                    });
+                    break;
+                }
+                _ => {}
+            }
+        }
+    }
+    bodies
+}
+
+/// The innermost body that holds `at`, if any does.
+fn innermost(bodies: &[Body], at: usize) -> Option<&Body> {
+    bodies
+        .iter()
+        .filter(|body| body.start <= at && at < body.end)
+        .max_by_key(|body| body.start)
+}
+
+/// The index of every unchecked operator site, by longest match (R10).
+fn operator_sites(chars: &[char]) -> Vec<usize> {
+    let mut sites = Vec::new();
+    let mut at = 0;
+    while at < chars.len() {
+        if let Some(&(_, site)) = PAIRS.iter().find(|(pair, _)| starts_with(chars, at, pair)) {
+            if site {
+                sites.push(at);
+            }
+            at += 2;
+            continue;
+        }
+        let binary = BINARY.contains(&chars[at]) && ends_operand(chars, at) && !exponent(chars, at);
+        if binary || (chars[at] == '.' && sum_call(chars, at)) {
+            sites.push(at);
+        }
+        at += 1;
+    }
+    sites
+}
+
+/// Whether the character before `at` that is not white space ends an operand (R10).
+fn ends_operand(chars: &[char], at: usize) -> bool {
+    let Some(previous) = chars[..at].iter().rposition(|c| !c.is_whitespace()) else {
+        return false;
+    };
+    if is_word(chars[previous]) {
+        let word: String = chars[word_start(chars, previous)..=previous]
+            .iter()
+            .collect();
+        return !KEYWORDS.contains(&word.as_str());
+    }
+    OPERAND_ENDS.contains(&chars[previous])
+}
+
+/// Whether the `+` or `-` at `at` is the sign of a decimal literal's exponent (R10).
+fn exponent(chars: &[char], at: usize) -> bool {
+    if !matches!(chars[at], '+' | '-') || at == 0 || !matches!(chars[at - 1], 'e' | 'E') {
+        return false;
+    }
+    let word: String = chars[word_start(chars, at - 1)..at]
+        .iter()
+        .collect::<String>()
+        .to_ascii_lowercase();
+    word.starts_with(|c: char| c.is_ascii_digit())
+        && !["0x", "0o", "0b"]
+            .iter()
+            .any(|prefix| word.starts_with(prefix))
+}
+
+/// Whether the `.` at `dot` opens a `.sum(` or `.product(` call, with or without a turbofish
+/// (R10).
+fn sum_call(chars: &[char], dot: usize) -> bool {
+    let name = word_from(chars, dot + 1);
+    if !SUMS.contains(&name.as_str()) {
+        return false;
+    }
+    let mut cursor = skip_space(chars, dot + 1 + name.len());
+    if starts_with(chars, cursor, "::<") {
+        cursor = skip_space(chars, angle_end(chars, cursor + 2));
+    }
+    chars.get(cursor) == Some(&'(')
+}
+
+/// The index after the `>` that closes the `<` at `open`.
+fn angle_end(chars: &[char], open: usize) -> usize {
+    let mut depth = 0_usize;
+    for (at, &c) in chars.iter().enumerate().skip(open) {
+        if c == '<' {
+            depth += 1;
+        } else if c == '>' {
+            depth -= 1;
+            if depth == 0 {
+                return at + 1;
+            }
+        }
+    }
+    chars.len()
+}
+
+/// How many `checked_`, `saturating_`, `wrapping_` and `overflowing_` calls the text holds (R11).
+fn bounded_calls(chars: &[char]) -> usize {
+    let mut calls = 0;
+    let mut at = 0;
+    while at < chars.len() {
+        if !is_word(chars[at]) || (at > 0 && is_word(chars[at - 1])) {
+            at += 1;
+            continue;
+        }
+        let word = word_from(chars, at);
+        let after = skip_space(chars, at + word.len());
+        if BOUNDED.iter().any(|prefix| word.starts_with(prefix))
+            && matches!(chars.get(after), Some('(' | ':'))
+        {
+            calls += 1;
+        }
+        at += word.len();
+    }
+    calls
+}
+
+/// Whether `c` is a character of a word.
+fn is_word(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '_'
+}
+
+/// The index where the word ending at `end` starts.
+fn word_start(chars: &[char], end: usize) -> usize {
+    let mut start = end;
+    while start > 0 && is_word(chars[start - 1]) {
+        start -= 1;
+    }
+    start
+}
+
+/// The word that starts at `at`, empty when none does.
+fn word_from(chars: &[char], at: usize) -> String {
+    chars
+        .get(at..)
+        .unwrap_or_default()
+        .iter()
+        .take_while(|&&c| is_word(c))
+        .collect()
+}
+
+/// The first index at or after `at` that is not white space.
+fn skip_space(chars: &[char], at: usize) -> usize {
+    let mut cursor = at;
+    while chars.get(cursor).is_some_and(|c| c.is_whitespace()) {
+        cursor += 1;
+    }
+    cursor
+}
+
+/// Whether `text` starts at `at`.
+fn starts_with(chars: &[char], at: usize, text: &str) -> bool {
+    text.chars()
+        .enumerate()
+        .all(|(offset, c)| chars.get(at + offset) == Some(&c))
+}
+
+/// The next index at or after `from` that holds `c`.
+fn position(chars: &[char], from: usize, c: char) -> Option<usize> {
+    chars
+        .get(from..)?
+        .iter()
+        .position(|&found| found == c)
+        .map(|offset| from + offset)
 }
 
 /// The repository's root, two levels above this crate.
