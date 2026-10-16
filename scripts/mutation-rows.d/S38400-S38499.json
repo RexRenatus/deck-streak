@@ -1,0 +1,69 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S38400-THE-REMOVAL-TAKES-THE-PATH-UNITS-OUT",
+        "progression",
+        "tests/xp_census.rs",
+        "if paths.is_empty() {",
+        "if paths.is_empty() || true {",
+        "xp_census::the_removal_leaves_no_unit_of_a_path_package",
+        "the removal takes every unit of every path package out of the store and keeps the git package's (SPEC-384 R2, A3)"
+      ],
+      [
+        "S38401-A-MEMBER-UNIT-NOT-COMPILED-HERE-IS-REFUSED",
+        "progression",
+        "tests/xp_census.rs",
+        "if message[\"fresh\"] != true {",
+        "if message[\"fresh\"] == message[\"fresh\"] {",
+        "xp_census::a_member_unit_the_census_did_not_compile_is_refused_by_name",
+        "a member unit cargo answers fresh that this census did not compile is refused by name (SPEC-384 R2, A2)"
+      ],
+      [
+        "S38402-THE-KEY-READS-THE-LOCK-FILE",
+        "progression",
+        "tests/xp_census.rs",
+        "frame(&mut hasher, lock);",
+        "frame(&mut hasher, &lock[..0]);",
+        "xp_census::a_store_is_keyed_by_the_lock_the_toolchain_the_environment_and_the_root",
+        "the store's key changes with the bytes of the lock file (SPEC-384 R3, A4)"
+      ],
+      [
+        "S38403-THE-KEY-READS-THE-INHERITED-VALUES",
+        "progression",
+        "tests/xp_census.rs",
+        "let value = variables.get(OsStr::new(name)).copied().flatten();",
+        "let value = variables.get(OsStr::new(name)).copied().flatten().filter(|_| false);",
+        "xp_census::a_store_is_keyed_by_the_lock_the_toolchain_the_environment_and_the_root",
+        "the store's key changes with each inherited variable's value and its absence (SPEC-384 R3, A4)"
+      ],
+      [
+        "S38404-THE-KEY-READS-THE-TREE-ROOT",
+        "progression",
+        "tests/xp_census.rs",
+        "frame(&mut hasher, canonical(root).as_os_str().as_encoded_bytes());",
+        "frame(&mut hasher, &canonical(root).as_os_str().as_encoded_bytes()[..0]);",
+        "xp_census::a_store_is_keyed_by_the_lock_the_toolchain_the_environment_and_the_root",
+        "the store's key changes with the canonical tree root (SPEC-384 R3, A4)"
+      ],
+      [
+        "S38405-THE-CENSUS-LOCKS-ITS-STORE",
+        "progression",
+        "tests/xp_census.rs",
+        "file.lock().map_err(",
+        "file.sync_all().map_err(",
+        "xp_census::a_census_holds_its_store_locked_until_its_last_pass",
+        "a census holds its store's lock file locked until its last pass (SPEC-384 R4, A5)"
+      ],
+      [
+        "S38406-THE-COMPILED-MEMBER-UNITS-ARE-COUNTED",
+        "progression",
+        "tests/xp_census.rs",
+        "self.compiled += usize::from(member);",
+        "self.compiled += usize::from(member && fresh);",
+        "xp_census::a_second_census_on_one_store_reuses_only_pinned_units_and_compiles_every_member",
+        "every member unit a census compiles is counted from cargo's messages (SPEC-384 R7, A1)"
+      ]
+    ]
+  }
+}

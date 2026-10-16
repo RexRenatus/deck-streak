@@ -107,6 +107,9 @@ flowchart LR
   empty --> removed[removed when the census ends]
 ```
 
+The real tree's census is the one exception (SPEC-384): it compiles in a store under the test process's temporary directory,
+outside `target/`, that keeps only the units `Cargo.lock` pins, so no CI cache carries it and each job's first census is cold.
+
 ## One stage, in whichever job runs it
 
 ```mermaid

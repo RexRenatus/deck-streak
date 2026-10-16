@@ -380,3 +380,11 @@ progression's own code reading the census's cfg, doctests and compile tests, pro
 packages' build scripts, an `include!` of a recompute file, registry code and builds in mixed
 debug-assertion states. Rows S32422 to S32426 pin the rule, the aids' exemption, the import test,
 the admitted files and the byte the census reads.
+
+## Amendment: the real tree's census keeps lock-pinned units (ADR-398)
+
+Round 8's option (a) holds for every planted tree. For the real tree's census, ADR-398 keeps the units `Cargo.lock` pins between
+censuses, in a store keyed by the lock file, the toolchain pin, the census's environment and the tree root; it removes every path
+package's units before each census and refuses a member unit the census did not compile. SPEC-072 section 18 carries it. Option (b)
+stays rejected: the store strips nothing from the pinned units and keeps every member unit out instead (ADR-398 D2).
+The owner's signed ruling `docs/rulings/OWNER-RULING-2026-10-16-census-store.md` admits the store.
