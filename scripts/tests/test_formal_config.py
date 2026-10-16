@@ -1,5 +1,9 @@
 """SPEC-295: the repository declares its formal-check settings in `config/formal.json`, holding the
-fields the formal checker reads and no other, with each value and type as ADR-295 decided."""
+fields the formal checker reads and no other, with each value and type as ADR-295 decided.
+
+SPEC-426: `formal/lean/lakefile.toml` makes every warning the Formal library raises an error. The
+class `LakefileWarnings`, outside `FormalConfig` and so outside SPEC-295's presence harness, reads
+the lakefile as the tree stores it and holds it to the declared document `LAKEFILE` (ADR-440 D2)."""
 
 import ast
 import copy
@@ -824,13 +828,33 @@ ARGUMENT_ARRAYS = ("moreLeanArgs", "weakLeanArgs")
 def lakefile_text(root):
     """The committed lakefile's text, read as the tree stores it: a link at `formal`, at
     `formal/lean` or at the file is refused by assertion naming that component."""
+    refuse_link_components(root / LAKEFILE_PATH, root)
     return (root / LAKEFILE_PATH).read_text(encoding="utf-8")
 
 
 def warnings_are_errors(doc):
     """Every reason the Formal library's warnings would not be errors, as (arm, message), each
     message opening with the place it names; none for the declared document (SPEC-426 R2)."""
-    return []
+    problems = []
+    libraries = [lib for lib in doc.get("lean_lib", []) if lib.get("name") == LIBRARY]
+    holders = [("the package", doc)] + [(f"lean_lib {LIBRARY}", lib) for lib in libraries]
+    for place, table in holders:
+        for array in ARGUMENT_ARRAYS:
+            for argument in table.get(array, []):
+                if WARNING_KEY in str(argument):
+                    problems.append(("key-in-args", f"{place}'s {array}: {argument!r}"))
+    if not libraries:
+        problems.append(("no-formal-library", f"the package's lean_lib: none is {LIBRARY}"))
+    if len(libraries) > 1:
+        problems.append(("formal-library-twice", f"the package's lean_lib: {len(libraries)}"))
+    for library in libraries:
+        options = library.get("leanOptions", {})
+        where = f"lean_lib {LIBRARY}'s leanOptions"
+        if WARNING_KEY not in options:
+            problems.append(("key-absent", f"{where}: {WARNING_KEY} is not set"))
+        elif options[WARNING_KEY] is not True:
+            problems.append(("key-not-true", f"{where}: {WARNING_KEY} is {options[WARNING_KEY]!r}"))
+    return problems
 
 
 def lakefile_plants():

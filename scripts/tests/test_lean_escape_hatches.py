@@ -11,6 +11,7 @@ would switch the lakefile's key off for itself (ADR-440 D2). The lexing is held 
 Lean's own reading of `ORACLE_PLANTS`, recorded as `LEAN_WARNS` (SPEC-426 R8).
 """
 
+import collections
 import os
 import subprocess
 import tempfile
@@ -199,7 +200,10 @@ def refuse(path, text, start, out, problems, arm):
 def lean_code(path, text):
     """The code of one Lean file and the lexer's refusals, as (code, problems): comments and string
     text removed, each removed character a space and every newline kept (ADR-440 D4)."""
-    return text, []
+    out = list(text)
+    problems = []
+    lex(path, text, 0, out, problems, None)
+    return "".join(out), problems
 
 
 def lex(path, text, index, out, problems, opened):
@@ -382,18 +386,48 @@ def numeral_value(token):
 def hatch_hits(path, text):
     """Every escape hatch in one Lean file's code, as (path, line, arm), the lexer's refusals
     first (R5, R6)."""
-    return []
+    code, problems = lean_code(path, text)
+    found = tokens(code)
+    hits = list(problems)
+    for index, (token, line) in enumerate(found):
+        if token in HATCH_WORDS:
+            hits.append((path, line, token))
+        if token != OPTION_COMMAND or index + 2 >= len(found):
+            continue
+        name, value = found[index + 1][0], found[index + 2][0]
+        if name.startswith(LINTER_PREFIX) and value == "false":
+            hits.append((path, line, "linter-off"))
+        heartbeats = name == HEARTBEATS or name.endswith("." + HEARTBEATS)
+        if heartbeats and numeral_value(value) == 0:
+            hits.append((path, line, "heartbeats-zero"))
+    return hits
 
 
 def key_off_hits(path, text):
     """Every place one Lean file's code names `KEY`, as (path, line, `key-off`) (R9)."""
-    return []
+    code, _ = lean_code(path, text)
+    hits = []
+    for token, line in tokens(code):
+        if token == KEY:
+            hits.append((path, line, "key-off"))
+    return hits
 
 
 def reconcile(hits, allowed):
     """Split hits by the allow-list, as (left, stale): `left` holds every hit no entry admits, and
     `stale` every entry that admits no hit or names another count than its file's (R7)."""
-    return hits, []
+    counts = collections.Counter((path, arm) for path, _, arm in hits)
+    admitted = set()
+    stale = []
+    for entry in allowed:
+        path, arm, count, _reason = entry
+        found = counts[(path, arm)]
+        if found and found == count:
+            admitted.add((path, arm))
+        else:
+            stale.append(entry)
+    left = [hit for hit in hits if (hit[0], hit[2]) not in admitted]
+    return left, stale
 
 
 def census(sources, allowed):
