@@ -286,3 +286,76 @@ changes no line of `scripts/mutation-verdict.py`. The fetch step changes no test
 stays the only line of its kind, because the new step's line is the `rust` and `release` jobs' own. The
 weekly battery's `rust` leg and its rehearsal are not changed here; they stay open under the issue SPEC-416
 refers to.
+
+## The python stage's ruff arm and the computed-root guard (SPEC-424, ADR-438)
+
+Kind: state machine and data flow. Read at DeckStreak `dev` ac7ebd7 (`ruff.toml:6-15`,
+`scripts/check.sh:31`, `:77-81`, `:179-196`, `.github/workflows/ci.yml:298-358`,
+`scripts/tests/test_check_gate.py:22-43`). Decided by ADR-438; built by SPEC-424.
+
+Before this delivery, the python stage checks `python3` and `cargo`, runs its three suites and
+prints one line of their results; nothing lints. After it, the stage also checks `ruff`, and runs
+the ruff arm after the suites, whatever they found. The `hygiene` job installs that ruff from the
+hashed pin first.
+
+```mermaid
+stateDiagram-v2
+  [*] --> tools: check.sh names the python stage
+  tools --> failed: python3, cargo or ruff missing (FAILED, missing tool and its install hint)
+  tools --> suites: every tool present
+  suites --> arm: scripts/tests, tools/parity-oracle and agent/tests each ran, red or green
+  arm --> void: off its pin, no pin, an exit of 2, no file listed, or a count unread or unequal
+  arm --> red: a lint finding or a format change (exit 1, counts named)
+  arm --> clean: both arms exit 0 over the same count
+  void --> failed: last line ends with ruff VOID and the reason
+  red --> failed: last line ends with both arms' counts and exits
+  clean --> judged: last line ends with both arms' counts and exits
+  judged --> ok: every suite ran a test and exited 0
+  judged --> failed: a suite exited non-zero or ran no test
+  ok --> [*]
+  failed --> [*]
+```
+
+The install, in the `hygiene` job, before the gate step:
+
+```mermaid
+flowchart TD
+  pin["scripts/ruff-requirements.txt: ruff==version and a sha256 per wheel"] --> venv["a new virtual environment under the runner's temporary directory"]
+  venv --> pip["pip install --require-hashes --only-binary :all: -r scripts/ruff-requirements.txt"]
+  pip -->|"a digest the pin lacks, or a source archive"| refused["the step fails: the job is red before any stage"]
+  pip -->|"every digest matches"| onlyruff["a directory holding only that ruff, appended to the job's path"]
+  onlyruff --> gate["bash scripts/check.sh python scrub secrets"]
+  toml["ruff.toml: required-version equal to the pin"] --> gate
+```
+
+| reading | what the arm saw | the stage's last line ends with | the stage |
+|---|---|---|---|
+| missing | no `ruff` on the path | (the tool check fails first: `missing tool: ruff (<hint>)`) | FAILED |
+| off its pin | `ruff --version` is not `ruff <pin>`, or the pin file has no `ruff==` line | `ruff VOID: <reason>`; no lint or format call made | FAILED |
+| refused | the listing, `ruff check` or `ruff format --check` exits 2 | `ruff VOID: <reason>` | FAILED |
+| empty | the listing names no file, or the format summary names no count | `ruff VOID: <reason>` | FAILED |
+| two populations | the format count differs from the listing's | `ruff VOID: <reason>` | FAILED |
+| red | `ruff check` or `ruff format --check` exits 1 | `ruff check examined <n> file(s), exit <c>; ruff format examined <n> file(s), exit <c>` | FAILED |
+| clean | both exit 0, one count | the same two fields, each exit 0 | ok, if every suite is |
+
+Each listing, lint and format call passes `--no-cache` and `RUFF_ROOTS` (`scripts tools deploy agent crates`), so the
+stage writes no cache into the checkout that `scrub` and `secrets` read after it.
+
+The computed-root guard is a module of `scripts/tests`, which the stage's first suite discovers:
+
+```mermaid
+flowchart TD
+  walk["every .py file under scripts, tools, deploy, agent and crates"] --> fenced{"a name FENCED lists?"}
+  fenced -->|"yes"| skipped["skipped before any open, counted as skipped"]
+  fenced -->|"no"| parse{"ast.parse"}
+  parse -->|"fails"| unparsed["refused by name"]
+  parse -->|"parses"| sites["each assignment to a ROOT or REPO name from Path(__file__)"]
+  sites --> shape{"resolve() optional, then parents[N] or k times parent?"}
+  shape -->|"no"| unresolved["refused: a chain the guard cannot resolve"]
+  shape -->|"yes"| depth{"the repository root, or the directory LISTED_ROOTS names?"}
+  depth -->|"no"| wrong["refused by path, line, name and the directory it reaches"]
+  depth -->|"yes"| counted["counted"]
+  counted --> examined["examined files and sites printed; zero of either fails"]
+```
+
+At ac7ebd7 the guard counts eleven sites, all at the repository root, and `LISTED_ROOTS` is empty.

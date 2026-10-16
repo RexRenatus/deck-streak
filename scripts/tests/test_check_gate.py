@@ -3,7 +3,8 @@ toolchain, times every stage it runs, and makes the stages that compile Anki's e
 (SPEC-038 A5, A6, A12 and A15). Its python stage runs every suite, whatever an earlier one found,
 and names each one's result (SPEC-054 A13). Its two test stages split the workspace's tests by one
 engine set, defined once, and test-engine runs the slice of it CI hands over (SPEC-038 A16, A17 and
-A19)."""
+A19). The python stage checks ruff too, and its ruff arm reads VOID unless the pinned ruff examined
+one population with both its lint and its format arm (SPEC-424 A4 to A9)."""
 
 import os
 import re
@@ -36,8 +37,9 @@ TOOLS = {
     "web": ["node", "pnpm"],
     # The web audit's verdict reads pnpm's report in Python (SPEC-058 R4, A5).
     "audit-web": ["node", "pnpm", "python3"],
-    # A guard test builds the ingest crate twice (SPEC-055 A2), so the stage runs cargo too.
-    "python": ["python3", "cargo"],
+    # A guard test builds the ingest crate twice (SPEC-055 A2), so the stage runs cargo too, and
+    # its ruff arm lints every Python root with the pinned ruff (SPEC-424 R4).
+    "python": ["python3", "cargo", "ruff"],
     "scrub": ["python3"],
     "secrets": ["gitleaks"],
 }
@@ -70,6 +72,40 @@ PLANTED_ORACLE = (
 EMPTY_UNITTEST = (
     "case \"$*\" in *unittest*) printf 'Ran 0 tests in 0.000s\\n\\nOK\\n' ;; esac\nexit 0\n"
 )
+# A pin file of one requirement and one wheel's digest, the shape scripts/ruff-requirements.txt has
+# (SPEC-424 R1). The digest is built here, never written out whole.
+DEFAULT_PIN = "ruff==0.0.0 \\\n" + "    --hash=sha256:" + "0" * 64 + "\n"
+# A ruff stand-in, in sh builtins alone: it appends each call's arguments to the file RUFF_CALLS
+# names, answers --version with RUFF_VERSION, the file listing with RUFF_LISTING, and format with
+# RUFF_FORMAT_SUMMARY, and exits as RUFF_LIST_EXIT, RUFF_CHECK_EXIT and RUFF_FORMAT_EXIT say.
+RUFF_STANDIN = (
+    'printf \'%s\\n\' "$*" >> "$RUFF_CALLS"\n'
+    'case "$1" in\n'
+    "--version)\n"
+    "    printf '%s\\n' \"$RUFF_VERSION\"\n"
+    "    exit 0 ;;\n"
+    "check)\n"
+    '    case " $* " in\n'
+    '    *" --show-files "*)\n'
+    '        if [ -n "$RUFF_LISTING" ]; then printf \'%s\\n\' "$RUFF_LISTING"; fi\n'
+    '        exit "${RUFF_LIST_EXIT:-0}" ;;\n'
+    "    esac\n"
+    '    exit "${RUFF_CHECK_EXIT:-0}" ;;\n'
+    "format)\n"
+    "    printf '%s\\n' \"$RUFF_FORMAT_SUMMARY\"\n"
+    '    exit "${RUFF_FORMAT_EXIT:-0}" ;;\n'
+    "esac\n"
+    "exit 2\n"
+)
+# The three planted suites, each of two passing tests, as the python stage's line names them.
+GREEN_SUITES = (
+    "scripts/tests ran 2 test(s), exit 0; tools/parity-oracle ran 2 test(s), exit 0; "
+    "agent/tests ran 2 test(s), exit 0"
+)
+# Both arms of a clean ruff over the stand-in's two listed files (SPEC-424 R7).
+CLEAN_ARMS = "ruff check examined 2 file(s), exit 0; ruff format examined 2 file(s), exit 0"
+# The roots each listing, lint and format call names, in order (SPEC-424 R5).
+RUFF_ROOTS = "scripts tools deploy agent crates"
 
 
 def run_gate(scratch, stages, stubs, extra_env=None, check=CHECK, real=(), bodies=None):
@@ -101,10 +137,10 @@ def run_gate(scratch, stages, stubs, extra_env=None, check=CHECK, real=(), bodie
     return done, logs
 
 
-def python_tree(where, guard, oracle):
+def python_tree(where, guard, oracle, pin=DEFAULT_PIN):
     """A copy of check.sh in a tree with its three python suites: the guard and the oracle each
     hold the one test file given, or none for None, and the agent's holds the oracle's text so it
-    always runs. Returns the copy's path."""
+    always runs. The tree's scripts/ruff-requirements.txt holds `pin`. Returns the copy's path."""
     tree = where / "tree"
     suites = (
         ("scripts/tests", guard),
@@ -115,8 +151,28 @@ def python_tree(where, guard, oracle):
         (tree / suite).mkdir(parents=True)
         if text is not None:
             (tree / suite / "test_planted.py").write_text(text, encoding="utf-8")
+    (tree / "scripts" / "ruff-requirements.txt").write_text(pin, encoding="utf-8")
     shutil.copy(CHECK, tree / "scripts" / "check.sh")
     return tree / "scripts" / "check.sh"
+
+
+def ruff_env(where, **changes):
+    """The ruff stand-in's environment for a scratch directory: a clean ruff on its pin, listing two
+    files that are already formatted, with each of `changes` in place of its default."""
+    env = {
+        "RUFF_CALLS": str(where / "ruff-calls"),
+        "RUFF_VERSION": "ruff 0.0.0",
+        "RUFF_LISTING": "scripts/a.py\nscripts/b.py",
+        "RUFF_FORMAT_SUMMARY": "2 files already formatted",
+    }
+    env.update(changes)
+    return env
+
+
+def ruff_calls(where):
+    """The arguments of each call the ruff stand-in answered, in order; [] when it was never run."""
+    calls = where / "ruff-calls"
+    return calls.read_text(encoding="utf-8").splitlines() if calls.exists() else []
 
 
 def summary(done):
@@ -226,10 +282,15 @@ class TheLogDirectoryStaysOffStdout(unittest.TestCase):
 
 class ThePythonStageRunsEverySuite(unittest.TestCase):
     def test_a_red_guard_suite_leaves_the_oracle_suite_run_and_named(self):
+        # Each run has a clean ruff stand-in on PATH, so the stage reaches its suites (SPEC-424).
+        standin = {"ruff": RUFF_STANDIN}
         with tempfile.TemporaryDirectory() as scratch:
             where = Path(scratch)
             check = python_tree(where, PLANTED_GUARD, PLANTED_ORACLE)
-            done, logs = run_gate(where, ["python"], ["cargo"], check=check, real=["python3"])
+            env = ruff_env(where)
+            done, logs = run_gate(
+                where, ["python"], ["cargo", "ruff"], env, check, ["python3"], standin
+            )
             log = (logs / "python.log").read_text(encoding="utf-8")
         self.assertEqual(done.returncode, 1, done.stdout)
         # The oracle suite ran although the guard suite was red, and its result is in the log.
@@ -243,24 +304,147 @@ class ThePythonStageRunsEverySuite(unittest.TestCase):
         with tempfile.TemporaryDirectory() as scratch:
             where = Path(scratch)
             check = python_tree(where, PLANTED_ORACLE, None)
-            done, _ = run_gate(where, ["python"], ["cargo"], check=check, real=["python3"])
+            env = ruff_env(where)
+            done, _ = run_gate(
+                where, ["python"], ["cargo", "ruff"], env, check, ["python3"], standin
+            )
         self.assertRegex(summary(done), r"^FAILED +python .*tools/parity-oracle ran 0 test\(s\)")
         self.assertEqual(done.returncode, 1, done.stdout)
         # So does a suite whose unittest exits 0 having run nothing, as Python 3.11's does.
         with tempfile.TemporaryDirectory() as scratch:
             where = Path(scratch)
             check = python_tree(where, PLANTED_ORACLE, PLANTED_ORACLE)
-            bodies = {"python3": EMPTY_UNITTEST}
-            done, _ = run_gate(where, ["python"], ["cargo", "python3"], check=check, bodies=bodies)
+            bodies = {"python3": EMPTY_UNITTEST, **standin}
+            stubs = ["cargo", "python3", "ruff"]
+            done, _ = run_gate(where, ["python"], stubs, ruff_env(where), check, bodies=bodies)
         self.assertRegex(summary(done), r"^FAILED +python .*scripts/tests ran 0 test\(s\), exit 0;")
         self.assertEqual(done.returncode, 1, done.stdout)
         # Both suites green, the stage is green.
         with tempfile.TemporaryDirectory() as scratch:
             where = Path(scratch)
             check = python_tree(where, PLANTED_ORACLE, PLANTED_ORACLE)
-            done, _ = run_gate(where, ["python"], ["cargo"], check=check, real=["python3"])
+            env = ruff_env(where)
+            done, _ = run_gate(
+                where, ["python"], ["cargo", "ruff"], env, check, ["python3"], standin
+            )
         self.assertRegex(summary(done), r"^ok +python ")
         self.assertEqual(done.returncode, 0, done.stdout)
+
+
+class TheRuffArmIsVoidUnlessItExamined(unittest.TestCase):
+    """SPEC-424 R5 to R7: after the three suites, whatever they found, the python stage's ruff arm
+    reads the pin, checks the version, lists the files, then lints and checks the format, and its
+    verdict ends the stage's last line. A run that examined nothing, two populations or a refused
+    configuration, or ran a ruff off its pin, reads VOID and fails the stage; a finding fails it by
+    count. Each case reads python.log's last line and the stand-in's calls by exact value."""
+
+    def run_arm(self, guard=PLANTED_ORACLE, pin=DEFAULT_PIN, **changes):
+        """Run the python stage over a planted tree whose ruff is the stand-in, its clean
+        environment changed by `changes`. Returns the process, the stage log's last line and the
+        stand-in's calls."""
+        with tempfile.TemporaryDirectory() as scratch:
+            where = Path(scratch)
+            check = python_tree(where, guard, PLANTED_ORACLE, pin)
+            env = ruff_env(where, **changes)
+            standin = {"ruff": RUFF_STANDIN}
+            done, logs = run_gate(
+                where, ["python"], ["cargo", "ruff"], env, check, ["python3"], standin
+            )
+            last = (logs / "python.log").read_text(encoding="utf-8").splitlines()[-1]
+            return done, last, ruff_calls(where)
+
+    def assert_stage_failed(self, done):
+        self.assertRegex(summary(done), r"^FAILED +python ", done.stdout)
+        self.assertEqual(done.returncode, 1, done.stdout)
+
+    def test_a_ruff_off_its_pin_or_with_no_pin_reads_void_before_it_lints(self):
+        done, last, calls = self.run_arm(RUFF_VERSION="ruff 0.0.1")
+        self.assertEqual(
+            last, f"python: {GREEN_SUITES}; ruff VOID: 'ruff 0.0.1' is off its pin 0.0.0"
+        )
+        self.assertEqual(calls, ["--version"])
+        self.assert_stage_failed(done)
+        done, last, calls = self.run_arm(pin="ruff\n")
+        self.assertEqual(
+            last, f"python: {GREEN_SUITES}; ruff VOID: scripts/ruff-requirements.txt pins no ruff"
+        )
+        self.assertEqual(calls, [])
+        self.assert_stage_failed(done)
+
+    def test_a_ruff_that_refuses_its_configuration_reads_void(self):
+        cases = [
+            ({"RUFF_LIST_EXIT": "2"}, "ruff VOID: the file listing exited non-zero"),
+            ({"RUFF_CHECK_EXIT": "2"}, "ruff VOID: ruff check exited 2 and ruff format 0"),
+            ({"RUFF_FORMAT_EXIT": "2"}, "ruff VOID: ruff check exited 0 and ruff format 2"),
+        ]
+        for changes, verdict in examined("ruff calls that exit 2", cases):
+            with self.subTest(changes=changes):
+                done, last, _ = self.run_arm(**changes)
+                self.assertEqual(last, f"python: {GREEN_SUITES}; {verdict}")
+                self.assert_stage_failed(done)
+
+    def test_a_run_that_examined_nothing_or_two_populations_reads_void(self):
+        cases = [
+            ({"RUFF_LISTING": ""}, "ruff VOID: examined 0 files"),
+            (
+                {"RUFF_FORMAT_SUMMARY": "formatted everything"},
+                "ruff VOID: the format arm printed no count",
+            ),
+            (
+                {"RUFF_FORMAT_SUMMARY": "3 files already formatted"},
+                "ruff VOID: ruff check listed 2 file(s) and ruff format examined 3",
+            ),
+        ]
+        for changes, verdict in examined("runs over no file or two populations", cases):
+            with self.subTest(changes=changes):
+                done, last, _ = self.run_arm(**changes)
+                self.assertEqual(last, f"python: {GREEN_SUITES}; {verdict}")
+                self.assert_stage_failed(done)
+
+    def test_a_lint_finding_or_a_format_change_fails_the_stage_with_its_counts(self):
+        reformat = (
+            "Would reformat: scripts/a.py\n1 file would be reformatted, 1 file already formatted"
+        )
+        cases = [
+            (
+                {"RUFF_CHECK_EXIT": "1"},
+                "ruff check examined 2 file(s), exit 1; ruff format examined 2 file(s), exit 0",
+            ),
+            (
+                {"RUFF_FORMAT_EXIT": "1", "RUFF_FORMAT_SUMMARY": reformat},
+                "ruff check examined 2 file(s), exit 0; ruff format examined 2 file(s), exit 1",
+            ),
+        ]
+        for changes, arms in examined("runs with a finding", cases):
+            with self.subTest(changes=changes):
+                done, last, _ = self.run_arm(**changes)
+                self.assertEqual(last, f"python: {GREEN_SUITES}; {arms}")
+                self.assertNotIn("VOID", last)
+                self.assert_stage_failed(done)
+
+    def test_a_clean_run_passes_over_the_five_roots_beside_every_suite(self):
+        done, last, calls = self.run_arm()
+        self.assertEqual(last, f"python: {GREEN_SUITES}; {CLEAN_ARMS}")
+        self.assertEqual(
+            calls,
+            [
+                "--version",
+                f"check --no-cache --show-files {RUFF_ROOTS}",
+                f"check --no-cache --output-format concise {RUFF_ROOTS}",
+                f"format --no-cache --check {RUFF_ROOTS}",
+            ],
+        )
+        self.assertRegex(summary(done), r"^ok +python ", done.stdout)
+        self.assertEqual(done.returncode, 0, done.stdout)
+        # A red suite leaves both arms run and named.
+        done, last, calls = self.run_arm(guard=PLANTED_GUARD)
+        red_suites = (
+            "scripts/tests ran 1 test(s), exit 1; tools/parity-oracle ran 2 test(s), exit 0; "
+            "agent/tests ran 2 test(s), exit 0"
+        )
+        self.assertEqual(last, f"python: {red_suites}; {CLEAN_ARMS}")
+        self.assertEqual(len(calls), 4, calls)
+        self.assert_stage_failed(done)
 
 
 # --------------------------------------------------------- the engine set (SPEC-038 A16, A17)
