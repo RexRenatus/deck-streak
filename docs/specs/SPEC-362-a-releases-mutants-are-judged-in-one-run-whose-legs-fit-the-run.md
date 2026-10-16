@@ -342,3 +342,20 @@ both matrices, shards 0 to n - 1, as it counts one matrix's. A release listing p
 refused whole, by name, never capped, as R3 refuses a Rust listing past its ceiling. Each leg of
 the second matrix is dealt under the same bound as the first, so the second matrix lengthens no
 leg.
+
+## Amendment: the release run's Rust legs may pass the pull request ceiling, in one matrix (SPEC-423)
+
+Insert-only; every earlier byte is kept. R1 stands: the release pull request's Rust mutants run in
+`ci.yml`'s one `mutation-rust` matrix. R3's rule stands for every run: `LEG_CEILING` is 256 less
+the most jobs every other job of that workflow can generate, a test derives it, and it stays
+`{"ci": 190, "battery": 234}`. SPEC-423 narrows R3's refusal for the release pull request's run
+alone. On that run, under a set `RUST_RELEASE_CEILING`, `shards` sizes the fewest legs within
+`SHARD_BOUND_SECONDS` up to that ceiling in place of `LEG_CEILING["ci"]`, and refuses past it
+whole, by name, never capped. The ceiling is at most `RUST_MATRIX_LEGS`, the legs one matrix holds,
+on the per-matrix reading ADR-373's SPEC-422 amendment records; a ceiling above it is refused
+before any deal. R4 stands: the plan still prints `legs N of ceiling C`, and on that run C is the
+release ceiling (SPEC-423, ADR-437).
+
+Section 5's "It does not add a verdict across runs, or a second matrix" stands for the Rust legs:
+the release run's Rust legs are one matrix, and the one `mutation-verdict` counts every leg, 0 to
+N - 1, as it counts any plan's.

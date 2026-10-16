@@ -549,3 +549,88 @@ A shard cut at its bound reads `cancelled`, so the union reads VOID by name and 
 a shard the deal gave nothing still writes and uploads its record, so a missing record is always a
 defect, never an empty shard. The shards share no written object: each writes its own directory
 and artifact, and the verdict's job reads them only after every shard has ended.
+
+## 11. The release run's Rust legs, up to one signed ceiling in one matrix (SPEC-423, ADR-437)
+
+Schematic for SPEC-423 and ADR-437 (rows band S42300-S42399). It draws the Rust half of the plan
+before and after the delivery, read at dev `a3a052b2`: the release mark the plan already carries,
+the ceiling constant, the two refusals, the one `mutation-rust` matrix of at most 256 legs, and
+the verdict's count of every leg. Names are the jobs, outputs, constants and texts the scripts
+write. Where section 8.1 says one run holds every leg within `LEG_CEILING` for `ci.yml`, this
+section narrows it for the release pull request's run alone.
+
+### 11.1 Before: every run's Rust legs are held to the pull request ceiling
+
+```mermaid
+flowchart TD
+    MARK["plan.json: release true only when release_run holds<br/>(SPEC-422 R1, R2)"] --> RS
+    LIST["listed.json: the diff's Rust mutants"] --> RS
+    RS["shards: fewest_shards up to LEG_CEILING ci"] --> RC{"fits within 190 legs?"}
+    RC -- "no" --> RR["REFUSED, whole: the pull request run's ceiling<br/>exit 1, no shards, no outputs"]
+    RC -- "yes" --> RP["plan.json shards 0..N-1<br/>outputs shards and matrix<br/>prints legs N of ceiling 190"]
+    RP --> MR["job mutation-rust, matrix shard = 0..N-1"]
+```
+
+The release mark reaches the Python half only (`python_release_ceiling`, SPEC-422): on the release
+run a Rust listing that needs more than 190 legs reads the pull request refusal.
+
+### 11.2 After: the release run's Rust legs are held to RUST_RELEASE_CEILING
+
+```mermaid
+flowchart TD
+    MAIN["shards verb: python_share_refused, python_ceiling_refused,<br/>then rust_ceiling_refused, before any deal"] --> RANGE{"RUST_RELEASE_CEILING an int<br/>within LEG_CEILING ci .. RUST_MATRIX_LEGS?"}
+    RANGE -- "no" --> RANGEOUT["REFUSED by name: the release ceiling is outside its range<br/>exit 1, no deal, on every run"]
+    RANGE -- "yes" --> HELP{"rust_release_ceiling: release mark true<br/>and the constant above LEG_CEILING ci?"}
+    HELP -- "no: None" --> PRPATH["ceiling = LEG_CEILING ci<br/>sized, refused and printed as before, byte for byte"]
+    HELP -- "yes" --> RELPATH["ceiling = RUST_RELEASE_CEILING"]
+    PRPATH --> FIT{"fewest_shards within the ceiling?"}
+    RELPATH --> FIT
+    FIT -- "no, release" --> RELOUT["REFUSED, whole: the release run's ceiling (RUST_RELEASE_CEILING)<br/>a larger figure needs a new measurement and a new owner-signed ruling"]
+    FIT -- "no, pull request" --> PROUT["REFUSED, whole: the pull request run's ceiling<br/>(lines not edited)"]
+    FIT -- "yes" --> DEALT["plan.json shards 0..N-1, round robin i mod N<br/>outputs shards and matrix = 0..N-1"]
+    DEALT --> LINES["release run only: the Rust release line beside the Python one<br/>legs N of ceiling C, and the run-legs line, read the ceiling"]
+    LINES --> ONE["job mutation-rust, ONE matrix, shard = 0..N-1<br/>N at most RUST_MATRIX_LEGS"]
+```
+
+- The release mark is the one SPEC-422 writes; no second predicate reads the event.
+- At the placeholder, `RUST_RELEASE_CEILING` equals `LEG_CEILING["ci"]`, the helper returns None,
+  and the release run takes the pull request path byte for byte.
+- A figure above `RUST_MATRIX_LEGS` never reaches a deal: the range check refuses it on every run,
+  so a second matrix is a new decision, never a cap.
+- No job, output or check-run name is added: `mutation-rust` expands the plan's `matrix` output
+  whatever its count, and `LEG_CEILING`'s derivation sets that one job apart as before.
+
+### 11.3 The verdict counts every leg, whatever the count
+
+```mermaid
+flowchart LR
+    PLANS["plan.json shards 0..N-1"] --> WALK["whole_reports: one promised report per leg 0..N-1"]
+    ARTS[("mutation-rust-shard-k, merged download")] --> WALK
+    WALK -- "a leg with mutants and no report" --> VOIDLEG["VOID by the leg's name"]
+    WALK --> PART["partition: each listed mutant tested once"]
+    PART --> SUM["examined_sum: the reports count the listing exactly"]
+    SUM --> CIJOB{"job ci needs mutation-verdict"}
+```
+
+The walk reads the plan's own legs, never the artifacts that arrived, so a count past 190 is walked
+whole exactly as any count is (SPEC-290, SPEC-362 R8; SPEC-423 A9).
+
+### 11.4 Where each step lives
+
+Read at dev `a3a052b2`; the new lines are cited by name, and the build re-reads every line at its
+green commit.
+
+| step | where |
+|---|---|
+| the release mark: written by the plan, read as `is True` | `scripts/mutation-verdict.py:825-832`, `:1100` |
+| `LEG_CEILING`, the pull request and battery ceilings | `scripts/mutation-verdict.py:961` |
+| `RUST_RELEASE_CEILING` and `RUST_MATRIX_LEGS`, each with its `#:` line | directly after `:961` (new) |
+| `rust_ceiling_refused` and `rust_release_ceiling` | after `python_release_ceiling`, `:1095` (new) |
+| `fewest_shards`, the scan up to a ceiling | `scripts/mutation-verdict.py:993` |
+| the Rust sizing, its pull request refusal and its headroom line in `shards` | `scripts/mutation-verdict.py:1322`, `:1323-1329`, `:1382-1386` |
+| the run-legs line | `scripts/mutation-verdict.py:1387-1399` |
+| `announce`, the `shards` and `matrix` outputs | `scripts/mutation-verdict.py:1256` |
+| the range check in the `shards` verb | `scripts/mutation-verdict.py:3713-3721` |
+| `mutation-rust`'s axis on the plan's `matrix` output | `.github/workflows/ci.yml:468-469` |
+| the verdict's walk of every leg | `scripts/mutation-verdict.py:1542`, `:1588`, `:1617` |
+| `RUN_JOBS`, the limit one matrix holds | `scripts/tests/test_dispatch_shards.py:219` |

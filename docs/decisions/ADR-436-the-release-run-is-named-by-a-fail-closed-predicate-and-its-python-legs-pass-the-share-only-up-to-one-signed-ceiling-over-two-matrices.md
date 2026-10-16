@@ -281,3 +281,19 @@ SPEC-290 (a leg with nothing to examine is not started); SPEC-415 R2 and SPEC-41
 refusals past the share, narrowed for the release run by D2); SPEC-420 and ADR-434 (the share and
 its cap); ADR-034 (only `dev` reaches `main`). Issue #822 is the release; #825 tracks the Python
 legs' fit.
+
+## Amendment: D4's Rust ceiling, and the release run's Rust legs (ADR-437)
+
+Insert-only; every earlier byte is kept. D4 kept `LEG_CEILING` and the Rust ceiling byte for byte,
+and that still holds: `LEG_CEILING` stays `{"ci": 190, "battery": 234}` and every run but the
+release run reads it. ADR-437 meets the release run's Rust need apart from this decision: a
+constant of its own, `RUST_RELEASE_CEILING`, read from D1's `"release": true` mark with no second
+predicate, in the one `mutation-rust` matrix, refused past it whole and by name, and cited to an
+owner-signed ruling as D2 cites this decision's. D5's rule holds for both figures: the delivery
+that adds the Rust constant adds Python mutants, so both figures are read on the release's final
+union, and the one commit that sets them adds none.
+
+Chosen against:
+
+- Widening this decision's ceiling to hold the Rust legs too: rejected because the Python and Rust legs are dealt by different rules into different jobs, and one constant cannot carry two figures.
+- Leaving D4 unamended: rejected because a reader of D4 would find the Rust ceiling unchanged and no pointer to the release run's own Rust constant.

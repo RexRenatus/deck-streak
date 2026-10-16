@@ -959,6 +959,8 @@ SHARD_BOUND_SECONDS = 10800
 #: The most legs each workflow's run holds: the 256 jobs of one run, less the most every other job
 #: of that workflow can generate, 66 in `ci.yml` and 22 in `mutation-weekly.yml` (SPEC-362 R3).
 LEG_CEILING = {"ci": 190, "battery": 234}
+#: The legs one matrix generates, the most a release Rust ceiling may reach (SPEC-423 R7).
+RUST_MATRIX_LEGS = 256
 #: The per-mutant `--timeout` every cargo-mutants command carries (SPEC-327 R2), and the margin a
 #: leg's slowest baseline test must keep under it (SPEC-362 R7).
 MUTANT_TIMEOUT_SECONDS = 2300
@@ -1099,6 +1101,22 @@ def python_release_ceiling(plan: dict) -> int | None:
     """
     if plan.get("release") is True and PYTHON_RELEASE_CEILING > PYTHON_SHARE_CAP:
         return PYTHON_RELEASE_CEILING
+    return None
+
+
+def rust_ceiling_refused() -> str | None:
+    """The refusal a release Rust ceiling that is not a whole number from `LEG_CEILING["ci"]` to
+    the legs one matrix holds reads on every run, before any deal, or None: a figure below the pull
+    request ceiling would stop every plan, and one past the matrix needs a second matrix, which is
+    never a cap (SPEC-423 R5)."""
+    return None
+
+
+def rust_release_ceiling(plan: dict) -> int | None:
+    """The ceiling that holds the release run's Rust legs in place of `LEG_CEILING["ci"]`, for a
+    plan marked `"release": true` alone and only above that ceiling; None otherwise, when `shards`
+    sizes, refuses and prints the Rust legs as it does for a pull request into `dev`, so the
+    placeholder admits nothing by itself (SPEC-423 R3, R4)."""
     return None
 
 

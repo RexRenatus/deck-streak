@@ -334,3 +334,20 @@ The listing tool's own mutants of the new Python lines (the predicate's comparis
 bounds, the range check's three arms, the split's bounds and the `legs` arm) are judged by the
 delivery's own mutation run, and each operand of R1 and R5 has a test row in which it alone
 decides the result (A1, A6).
+
+## Amendment: the release run's Rust ceiling beside this SPEC's Python one (SPEC-423)
+
+Insert-only; every earlier byte is kept. SPEC-423 adds `RUST_RELEASE_CEILING`, which holds the
+release run's Rust legs as `PYTHON_RELEASE_CEILING` holds its Python legs, read from the same
+`"release": true` mark (R1 to R3). Three things follow for this SPEC:
+
+- R6's release line keeps every byte. On the release run under a set Rust ceiling, SPEC-423's Rust
+  release line is printed directly after it, so the run names both figures on two adjacent lines.
+- The criteria here judge the Python ceiling alone. `scripts/tests/test_release_python_ceiling.py`'s
+  `verb` holds `RUST_RELEASE_CEILING` at `LEG_CEILING["ci"]`, its placeholder, so A5's "placeholder
+  ceiling" and every golden line here read both ceilings unset but the one a test names, whatever
+  figure the tree's Rust constant carries.
+- R13's rule is the shape of SPEC-423's citation rule. If the release's final union moves the
+  Python figure, the commit that sets the Rust figure also sets `PYTHON_RELEASE_CEILING` and its
+  `#:` line, and both cite one new ruling, whose first line holds both figures; R13's test reads it
+  unchanged.
