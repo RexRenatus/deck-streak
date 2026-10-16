@@ -1,6 +1,6 @@
--- @phx covers scripts/mutation-verdict.py anchor=python_excuses digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers scripts/mutation-verdict.py anchor=Excuses digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers scripts/mutation-verdict.py anchor=judge_python digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers scripts/mutation-verdict.py anchor=python_excuses digest=sha256:81d78105ee97ba1584ecd9b67a9db46d2e7d2e53612e5d1c08acd57801a9302e
+-- @phx covers scripts/mutation-verdict.py anchor=Excuses digest=sha256:2b92816fa0ec9a189a4522849102ec6b16c94b9defa084439894fb8cca6c040b
+-- @phx covers scripts/mutation-verdict.py anchor=judge_python digest=sha256:52ce8581b4657774556f21fae735957a2a98bd729464198b40aa27ac70b38678
 -- @phx vectors formal/vectors/record-class-binding.jsonl
 -- @phx cites #822, #322
 -- @phx theorem each_record_is_judged_in_its_own_class_alone ramp=report
