@@ -7,6 +7,7 @@ import itertools
 import json
 import os
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -801,6 +802,175 @@ class FormalConfig(unittest.TestCase):
                 with mock.patch.dict(globals(), {"CONFIG": path, "ROOT": Path(scratch)}):
                     with self.assertRaises(AssertionError, msg=label):
                         globals()["load"]()
+
+
+# SPEC-426 R2: the Lean package's lakefile, read as the tree stores it.
+LAKEFILE_PATH = Path("formal") / "lean" / "lakefile.toml"
+# SPEC-426 R2: the declared lakefile, as data: one library, Formal, the package's one default
+# target, whose own options make every warning Lean raises an error (ADR-440 D1).
+LAKEFILE = {
+    "name": "formal",
+    "defaultTargets": ["Formal"],
+    "lean_lib": [
+        {"name": "Formal", "globs": ["Formal.*"], "leanOptions": {"warningAsError": True}},
+    ],
+}
+# The library the key is read on, the key, and the argument arrays that could carry it as text.
+LIBRARY = "Formal"
+WARNING_KEY = "warningAsError"
+ARGUMENT_ARRAYS = ("moreLeanArgs", "weakLeanArgs")
+
+
+def lakefile_text(root):
+    """The committed lakefile's text, read as the tree stores it: a link at `formal`, at
+    `formal/lean` or at the file is refused by assertion naming that component."""
+    return (root / LAKEFILE_PATH).read_text(encoding="utf-8")
+
+
+def warnings_are_errors(doc):
+    """Every reason the Formal library's warnings would not be errors, as (arm, message), each
+    message opening with the place it names; none for the declared document (SPEC-426 R2)."""
+    return []
+
+
+def lakefile_plants():
+    """SPEC-426 A2's planted faults, as (label, arm, doc): each doc is a deep copy of `LAKEFILE`
+    given one edit, and each label opens with the place its refusal names."""
+    plants = []
+
+    def plant(label, arm, edit):
+        doc = copy.deepcopy(LAKEFILE)
+        edit(doc)
+        plants.append((label, arm, doc))
+
+    def options(doc):
+        return doc["lean_lib"][0]["leanOptions"]
+
+    def argument(table, array):
+        table[array] = ["-DwarningAsError=false"]
+
+    where = "lean_lib Formal's leanOptions"
+    plant(f"{where}: the key absent", "key-absent", lambda doc: options(doc).clear())
+    plant(f"{where}: false", "key-not-true", lambda doc: options(doc).update(warningAsError=False))
+    plant(
+        f"{where}: the string",
+        "key-not-true",
+        lambda doc: options(doc).update(warningAsError="true"),
+    )
+    plant(
+        f"{where}: the integer", "key-not-true", lambda doc: options(doc).update(warningAsError=1)
+    )
+    plant(
+        f"{where}: set only in the package's own leanOptions",
+        "key-absent",
+        lambda doc: doc.update(leanOptions=doc["lean_lib"][0].pop("leanOptions")),
+    )
+    plant(
+        "the package's lean_lib: the library renamed",
+        "no-formal-library",
+        lambda doc: doc["lean_lib"][0].update(name="Other"),
+    )
+    plant(
+        "the package's lean_lib: no library", "no-formal-library", lambda doc: doc.pop("lean_lib")
+    )
+    plant(
+        "the package's lean_lib: a second Formal library",
+        "formal-library-twice",
+        lambda doc: doc["lean_lib"].append(copy.deepcopy(doc["lean_lib"][0])),
+    )
+    plant(
+        "the package's moreLeanArgs: an argument naming the key",
+        "key-in-args",
+        lambda doc: argument(doc, "moreLeanArgs"),
+    )
+    plant(
+        "lean_lib Formal's moreLeanArgs: an argument naming the key",
+        "key-in-args",
+        lambda doc: argument(doc["lean_lib"][0], "moreLeanArgs"),
+    )
+    plant(
+        "lean_lib Formal's weakLeanArgs: an argument naming the key",
+        "key-in-args",
+        lambda doc: argument(doc["lean_lib"][0], "weakLeanArgs"),
+    )
+    return plants
+
+
+def lakefile_arms():
+    """Every arm `warnings_are_errors` appends, found in its own source by its syntax tree."""
+    source = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+    reader = next(
+        node
+        for node in ast.walk(source)
+        if isinstance(node, ast.FunctionDef) and node.name == "warnings_are_errors"
+    )
+    return sorted(
+        {
+            node.args[0].elts[0].value
+            for node in ast.walk(reader)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "append"
+            and node.args
+            and isinstance(node.args[0], ast.Tuple)
+        }
+    )
+
+
+class LakefileWarnings(unittest.TestCase):
+    """SPEC-426 A1 to A3, outside `FormalConfig`, so SPEC-295's presence harness, which runs that
+    class's tests alone under planted settings files, never answers for the lakefile."""
+
+    def test_the_formal_library_makes_every_warning_an_error(self):
+        """A1: the committed lakefile, read as the tree stores it and parsed, equals `LAKEFILE`,
+        whose Formal library's `leanOptions` holds `warningAsError` as the boolean true, and the
+        reader answers no problem for it."""
+        doc = tomllib.loads(lakefile_text(ROOT))
+        examined("keys of the lakefile", sorted(doc))
+        self.assertTrue(same(doc, LAKEFILE), f"{doc!r} != {LAKEFILE!r}")
+        library = next(lib for lib in doc["lean_lib"] if lib["name"] == LIBRARY)
+        self.assertIs(library["leanOptions"][WARNING_KEY], True)
+        self.assertEqual(warnings_are_errors(doc), [])
+
+    def test_the_lakefile_reader_refuses_each_planted_fault_by_its_arm(self):
+        """A2: each planted lakefile fault, derived from `LAKEFILE` by one edit, is refused by its
+        arm naming its place and is unequal to `LAKEFILE`; the planted arms are exactly the arms
+        the reader's source names, found by its syntax tree."""
+        plants = examined("planted lakefile faults", lakefile_plants())
+        wrong = []
+        for label, arm, doc in plants:
+            place = label.split(": ", 1)[0]
+            problems = warnings_are_errors(doc)
+            if [found for found, _ in problems] != [arm] or not problems[0][1].startswith(place):
+                wrong.append(f"{label}: {problems}")
+            if same(doc, LAKEFILE):
+                wrong.append(f"{label}: equal to LAKEFILE")
+        self.assertEqual(wrong, [], "a planted fault the reader did not refuse by its arm")
+        self.assertEqual(sorted({arm for _, arm, _ in plants}), lakefile_arms())
+
+    def test_the_lakefile_is_read_as_the_tree_stores_it(self):
+        """A3: in a scratch tree, a link at each component of the lakefile's path is refused by
+        assertion naming that component, and the same tree with no link is read."""
+        components = examined(
+            "components of the lakefile's path",
+            [LAKEFILE_PATH.parent.parent, LAKEFILE_PATH.parent, LAKEFILE_PATH],
+        )
+        text = 'name = "formal"\n'
+        with tempfile.TemporaryDirectory() as scratch:
+            for index, component in enumerate(components):
+                root = Path(scratch) / f"linked-{index}"
+                held = Path(scratch) / f"held-{index}"
+                (held / LAKEFILE_PATH.parent).mkdir(parents=True)
+                (held / LAKEFILE_PATH).write_text(text, encoding="utf-8")
+                (root / component).parent.mkdir(parents=True, exist_ok=True)
+                os.symlink(held / component, root / component)
+                with self.assertRaises(AssertionError, msg=component.as_posix()) as caught:
+                    lakefile_text(root)
+                self.assertIn(f"{component.as_posix()} is a link", str(caught.exception))
+            plain = Path(scratch) / "plain"
+            (plain / LAKEFILE_PATH.parent).mkdir(parents=True)
+            (plain / LAKEFILE_PATH).write_text(text, encoding="utf-8")
+            self.assertEqual(lakefile_text(plain), text)
 
 
 if __name__ == "__main__":
