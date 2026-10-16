@@ -1,0 +1,126 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S42900-STALE-IS-A-SUITE-LARGER-THAN-ITS-RUN-RAN",
+        "scripts/mutation-verdict.py",
+        "stale = now > then",
+        "stale = now >= then",
+        "a row is stale when its suite now is larger than its suite then (SPEC-429 R5, A2)",
+        "test_mutation_python_shard_binding.AStalePriceRowIsNamedAndNeverBlocks.test_a_suite_no_larger_than_its_run_ran_reads_fresh"
+      ],
+      [
+        "S42901-THE-PRICING-ROW-FOLLOWS-THE-LEGS-TRACING",
+        "scripts/mutation-verdict.py",
+        "traced = \"plan\" in mutation_python.SCOPED_SELECTIONS",
+        "traced = False",
+        "a file's pricing row is its scoped row only when the legs trace (SPEC-429 R6, A3)",
+        "test_mutation_python_shard_binding.AStalePriceRowIsNamedAndNeverBlocks.test_a_file_is_judged_by_the_row_the_plan_prices_it_by"
+      ],
+      [
+        "S42902-A-SCOPED-ROW-PRICES-ONLY-A-FILE-ITS-TABLE-HOLDS",
+        "scripts/mutation-verdict.py",
+        "traced and (\"PYTHON_SCOPED_SECONDS\", path) in held",
+        "traced",
+        "the scoped row prices a file only when the scoped table holds it (SPEC-429 R6, A3)",
+        "test_mutation_python_shard_binding.AStalePriceRowIsNamedAndNeverBlocks.test_a_file_is_judged_by_the_row_the_plan_prices_it_by"
+      ],
+      [
+        "S42903-THE-SUITE-THEN-IS-THE-LARGEST-RAN",
+        "scripts/mutation-verdict.py",
+        "then = max(rans) if rans else 0",
+        "then = min(rans) if rans else 0",
+        "a row's suite then is the largest ran of its file's control records (SPEC-429 R4, A4)",
+        "test_mutation_python_shard_binding.AStalePriceRowIsNamedAndNeverBlocks.test_the_suite_then_is_the_largest_ran_its_runs_records_hold"
+      ],
+      [
+        "S42904-AN-UNCOVERED-RECORD-READS-ZERO",
+        "scripts/mutation-verdict.py",
+        "uncovered = True",
+        "uncovered = False",
+        "a file whose only records are uncovered reads a suite then of 0 (SPEC-429 R4, A4)",
+        "test_mutation_python_shard_binding.AStalePriceRowIsNamedAndNeverBlocks.test_the_suite_then_is_the_largest_ran_its_runs_records_hold"
+      ],
+      [
+        "S42905-A-SAME-MODULE-ANCESTOR-LENDS-ITS-TESTS",
+        "scripts/mutation-verdict.py",
+        "found += lineage(classes, base.id, (*seen, name))",
+        "found += []",
+        "a test class's tests include those of the same-module classes it inherits from (SPEC-429 R3, A5)",
+        "test_mutation_python_shard_binding.AStalePriceRowIsNamedAndNeverBlocks.test_the_syntax_tree_counts_what_the_runners_loader_loads"
+      ],
+      [
+        "S42906-A-TEST-CLASS-REACHES-A-NAME-ENDING-IN-TESTCASE",
+        "scripts/mutation-verdict.py",
+        "base.id.endswith(\"TestCase\")",
+        "base.id.endswith(\"TestCases\")",
+        "a test class is one whose bases reach a name ending in TestCase (SPEC-429 R3, A5)",
+        "test_mutation_python_shard_binding.AStalePriceRowIsNamedAndNeverBlocks.test_the_syntax_tree_counts_what_the_runners_loader_loads"
+      ],
+      [
+        "S42907-AN-UNREAD-ROW-IS-NOT-EXAMINED",
+        "scripts/mutation-verdict.py",
+        "sum(not isinstance(reading, str) for reading in readings)",
+        "len(readings)",
+        "the examined count holds the rows read, never an unread row (SPEC-429 R7, A6)",
+        "test_mutation_python_shard_binding.AStalePriceRowIsNamedAndNeverBlocks.test_each_unread_reason_is_named_and_not_examined"
+      ],
+      [
+        "S42908-A-TOP-LEVEL-LOAD-TESTS-READS-UNREAD",
+        "scripts/mutation-verdict.py",
+        "isinstance(node, ast.FunctionDef) and node.name == \"load_tests\"",
+        "False",
+        "a module holding a top-level load_tests reads unread (SPEC-429 R8, A6)",
+        "test_mutation_python_shard_binding.AStalePriceRowIsNamedAndNeverBlocks.test_each_unread_reason_is_named_and_not_examined"
+      ],
+      [
+        "S42909-A-FOREIGN-BASE-READS-UNREAD",
+        "scripts/mutation-verdict.py",
+        "not (suffixed(base) or isinstance(base, ast.Name) and base.id in classes)",
+        "False",
+        "a test class with a base the module does not define reads unread (SPEC-429 R8, A6)",
+        "test_mutation_python_shard_binding.AStalePriceRowIsNamedAndNeverBlocks.test_each_unread_reason_is_named_and_not_examined"
+      ],
+      [
+        "S42910-NO-ROW-READ-PRINTS-VOID",
+        "scripts/mutation-verdict.py",
+        "if not rows_read:",
+        "if False:",
+        "a reading that read no row prints the VOID line before examined 0 (SPEC-429 R9, A7)",
+        "test_mutation_python_shard_binding.AStalePriceRowIsNamedAndNeverBlocks.test_no_row_read_prints_void_and_examined_zero"
+      ],
+      [
+        "S42911-THE-VERB-RETURNS-EXIT-OK",
+        "scripts/mutation-verdict.py",
+        "return EXIT_OK  # a warning, never a block",
+        "return EXIT_FAIL if named else EXIT_OK  # a warning, never a block",
+        "the verb returns EXIT_OK on every path, a stale file included (SPEC-429 R9, A8)",
+        "test_mutation_python_shard_binding.AStalePriceRowIsNamedAndNeverBlocks.test_every_reading_exits_zero_and_leaves_the_root_unchanged"
+      ],
+      [
+        "S42912-THE-SCOPED-RECORD-DIRECTORY-TEMPLATE",
+        "scripts/mutation-verdict.py",
+        "mutation-scoped-prices-{run}/",
+        "mutation-scoped-price-{run}/",
+        "a scoped row's records are read under mutation-scoped-prices-<run>/ (SPEC-429 R4, A1)",
+        "test_mutation_python_shard_binding.AStalePriceRowIsNamedAndNeverBlocks.test_a_row_whose_suite_grew_since_its_run_is_named_with_its_fix"
+      ],
+      [
+        "S42913-THE-PLAN-STEP-CANNOT-FAIL",
+        ".github/workflows/ci.yml",
+        "stale || echo",
+        "stale && echo",
+        "the plan job's stale step echoes a VOID line when the verb exits non-zero (SPEC-429 R10, A11)",
+        "test_mutation_python_workflows.ThePlanJobNamesTheStalePriceRows.test_the_plan_job_runs_the_stale_verb_in_a_step_that_cannot_fail"
+      ],
+      [
+        "S42914-THE-RUNBOOK-NAMES-THE-STALE-VERB",
+        "RELEASING.md",
+        "`mutation-verdict.py stale`",
+        "`mutation-verdict.py stall`",
+        "the release runbook names mutation-verdict.py stale before the release (SPEC-429 R11, A10)",
+        "test_rulesets.TheReleaseRunbookReadsTheStalePriceRows.test_the_runbook_reads_the_stale_lines_before_the_release"
+      ]
+    ]
+  }
+}
