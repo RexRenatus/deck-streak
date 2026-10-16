@@ -386,7 +386,7 @@
         "test_fsm_unreachable.UnreachableLint.test_each_panicking_arm_is_a_hit_and_nothing_else_is"
       ],
       [
-        "S43348-THE-PANICKING-MACROS-HOLD-TODO",
+        "S43348-THE-PANICKING-MACROS-HOLD-THE-PLACEHOLDER-MACRO",
         "scripts/tests/_fsm_lints.py",
         "    \"panic\",\n    \"todo\",\n",
         "    \"panic\",\n",
