@@ -3697,47 +3697,213 @@ def prices(directory: str) -> int:
 
 def price_rows(text: str) -> list[tuple[str, str, list[str]]]:
     """Every line of the two price tables in `text`, from each table's opening line to its closing
-    `}`, as its table, its path and each run its comment names as `run <n>` (SPEC-429 R2). A stub
-    until the warning is built: it reads the text and holds no row."""
-    text.splitlines()
-    return []
+    `}`, as its table, its path and each run its comment names as `run <n>`, table by table in
+    line order. A line holding no quoted path is still a row, read by its whole text, so no line of
+    either table is dropped (SPEC-429 R2)."""
+    rows: list[tuple[str, str, list[str]]] = []
+    lines = text.splitlines()
+    for table in PYTHON_PRICE_RECORDS:
+        opening = [index for index, line in enumerate(lines) if line.startswith(f"{table}: ")]
+        for line in lines[opening[0] + 1 :] if opening else []:
+            if line == "}":
+                break
+            quoted = re.match(r'\s*"([^"]*)"', line)
+            runs = re.findall(r"\brun (\d+)\b", line.partition("#")[2])
+            path = quoted.group(1) if quoted else line.strip()
+            rows.append((table, path, list(dict.fromkeys(runs))))
+    return rows
 
 
 def suite_tests(root: pathlib.Path, entry: dict) -> list[str] | str:
-    """The id of each test a population entry's modules define, read from each module's syntax
-    tree, or why the tree cannot count them (SPEC-429 R3, R8). A stub until the warning is built:
-    it reads each module and counts no test."""
+    """The id of each test a population entry's modules define, `module.Class.test`, read from each
+    module's syntax tree by the runner's loader's rules, or why the tree cannot count them
+    (SPEC-429 R3, R8). A test class is a class at the module's top level whose bases reach a name
+    ending in `TestCase` through classes of the module; its tests are the `test` methods it and the
+    module's classes it inherits from define, each name once. No module is imported."""
+
+    def parsed(where: str) -> ast.Module | str:
+        try:
+            return ast.parse((root / where).read_text(encoding="utf-8"))
+        except (OSError, SyntaxError, ValueError):
+            return f"{where} does not parse"
+
+    def classes_of(tree: ast.Module) -> dict[str, ast.ClassDef]:
+        return {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
+
+    def suffixed(base: ast.expr) -> bool:
+        if isinstance(base, ast.Name):
+            return base.id.endswith("TestCase")
+        return isinstance(base, ast.Attribute) and base.attr.endswith("TestCase")
+
+    def lineage(classes: dict[str, ast.ClassDef], name: str, seen: tuple[str, ...]) -> list[str]:
+        found = [name]
+        for base in classes[name].bases:
+            if isinstance(base, ast.Name) and base.id in classes and base.id not in seen:
+                found += lineage(classes, base.id, (*seen, name))
+        return found
+
+    def reaches(classes: dict[str, ast.ClassDef], name: str) -> bool:
+        family = lineage(classes, name, ())
+        return any(suffixed(base) for each in family for base in classes[each].bases)
+
+    def counted(module: str) -> list[str] | str:
+        where = f"{entry['dir']}/{module}.py"
+        if not (root / where).is_file():
+            return f"{where} is absent"
+        tree = parsed(where)
+        if isinstance(tree, str):
+            return tree
+        classes = classes_of(tree)
+        # The module's own scope, each statement with the keyword of the top-level compound
+        # statement that holds it; a function's or a class's body is never entered.
+        scope = [(node, "") for node in tree.body]
+        for node, word in scope:
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                scope += [
+                    (child, word or ast.unparse(node).split()[0].rstrip(":"))
+                    for child in ast.iter_child_nodes(node)
+                ]
+        shapes: list[str] = []
+        for node, word in scope:
+            if isinstance(node, ast.FunctionDef) and node.name == "load_tests":
+                shapes.append("load_tests")
+            if isinstance(node, ast.alias) and node.name == "*":
+                shapes.append("a star import")
+            if isinstance(node, ast.ClassDef) and word:
+                shapes.append(f"class {node.name} under a top-level {word}")
+            if isinstance(node, ast.ImportFrom) and node.level == 0:
+                # A name imported from a module of the same directory is loaded from this module
+                # too when it is a test class there; any other module lends no test class here.
+                lender = f"{entry['dir']}/{node.module}.py"
+                theirs = parsed(lender) if (root / lender).is_file() else ast.Module([], [])
+                if isinstance(theirs, str):
+                    return theirs
+                lent = classes_of(theirs)
+                shapes += [
+                    f"it imports the test class {alias.name} from {node.module}"
+                    for alias in node.names
+                    if alias.name in lent and reaches(lent, alias.name)
+                ]
+        tests: list[str] = []
+        for name in classes:
+            if not reaches(classes, name):
+                continue
+            shapes += [
+                f"class {name} has base {ast.unparse(base)}, which the module does not define"
+                for base in classes[name].bases
+                if not (suffixed(base) or isinstance(base, ast.Name) and base.id in classes)
+            ]
+            tests += sorted(
+                {
+                    f"{module}.{name}.{each.name}"
+                    for ancestor in lineage(classes, name, ())
+                    for each in classes[ancestor].body
+                    if isinstance(each, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and each.name.startswith("test")
+                }
+            )
+        if shapes:
+            return f"{where} holds a test shape the syntax tree cannot count: {shapes[0]}"
+        return tests
+
+    tests: list[str] = []
     for module in entry["modules"]:
-        source = root / entry["dir"] / f"{module}.py"
-        if source.is_file():
-            source.read_text(encoding="utf-8")
-    return []
+        found = counted(module)
+        if isinstance(found, str):
+            return found
+        tests += found
+    return tests
 
 
 def suite_then(root: pathlib.Path, table: str, runs: list[str], path: str) -> tuple[int, str] | str:
-    """The suite a row's run ran, the largest `ran` of `path`'s control records under each named
-    run's record directory, with the run that gave it, or why the records cannot say (SPEC-429 R4,
-    R8). A stub until the warning is built: it reads each record file and reads none."""
+    """The suite a row's run ran: the largest `ran` of `path`'s control records in every
+    `costs.jsonl` under each named run's record directory, 0 where its only records are
+    `uncovered`, the largest over the runs, with the run that gave it; or why the records cannot
+    say (SPEC-429 R4, R8). A line that is not a record is passed over."""
+    best: tuple[int, str] | str = "its line names no run"
     for run in runs:
-        for costs in sorted(
-            (root / PYTHON_PRICE_RECORDS[table].format(run=run)).rglob("costs.jsonl")
-        ):
-            costs.read_text(encoding="utf-8")
-    return "stub"
+        directory = PYTHON_PRICE_RECORDS[table].format(run=run)
+        files = sorted((root / directory).rglob("costs.jsonl"))
+        if not files:
+            return f"run {run} keeps no records under {directory}"
+        rans: list[int] = []
+        uncovered = False
+        for costs in files:
+            for line in costs.read_text(encoding="utf-8").splitlines():
+                try:
+                    record = json.loads(line)
+                except ValueError:
+                    continue
+                if not isinstance(record, dict) or record.get("path") != path:
+                    continue
+                if record.get("kind") == "uncovered":
+                    uncovered = True
+                elif record.get("kind") == "control":
+                    ran = record.get("ran")
+                    if type(ran) is not int:
+                        return f"run {run}'s control record of it carries no ran"
+                    rans.append(ran)
+        if not rans and not uncovered:
+            return f"run {run}'s records hold no control or uncovered record of it"
+        then = max(rans) if rans else 0
+        if isinstance(best, str) or then > best[0]:
+            best = (then, run)
+    return best
 
 
 def stale_prices(root: pathlib.Path) -> int:
-    """`stale`: each priced Python file whose suite grew since the run its pricing row names, then
-    each row the tree cannot read, the summary and the rows examined (SPEC-429 R5 to R9). A stub
-    until the warning is built: it reads every input and examines nothing."""
+    """`stale`: one line for each Python file whose pricing row is stale, its suite now holding
+    more tests than the run the row names ran, with the refresh that clears it; then one line for
+    each row the tree cannot read; then the summary and the rows examined (SPEC-429 R5 to R9). The
+    pricing row is the one `shards` prices the file by. A warning: it writes nothing and exits 0."""
     rows = price_rows((root / "scripts" / "mutation-verdict.py").read_text(encoding="utf-8"))
     mapped = json.loads((root / PYTHON_POPULATION).read_text(encoding="utf-8"))
+    traced = "plan" in mutation_python.SCOPED_SELECTIONS
+    held = {(table, path) for table, path, _runs in rows}
+    readings: list[tuple[int, int, str] | str] = []
     for table, path, runs in rows:
-        suite_then(root, table, runs, path)
-        if path in mapped:
-            suite_tests(root, mapped[path])
-    print("examined 0")
-    return EXIT_OK
+        reading = suite_then(root, table, runs, path)
+        if isinstance(reading, tuple):
+            suite = (
+                suite_tests(root, mapped[path])
+                if path in mapped
+                else f"{PYTHON_POPULATION} does not map it"
+            )
+            reading = suite if isinstance(suite, str) else (len(suite), *reading)
+        readings.append(reading)
+    rows_read = sum(not isinstance(reading, str) for reading in readings)
+    named: list[str] = []
+    unread: list[str] = []
+    priced = shadow = 0
+    # A stable sort by path: each table's rows come in table order, so a file's whole row is first.
+    for index in sorted(range(len(rows)), key=lambda at: rows[at][1]):
+        table, path, _runs = rows[index]
+        reading = readings[index]
+        if isinstance(reading, str):
+            unread.append(f"mutation: stale: unread: {path} ({table}): {reading}")
+            continue
+        now, then, run = reading
+        scoped = traced and ("PYTHON_SCOPED_SECONDS", path) in held
+        pricing = table == ("PYTHON_SCOPED_SECONDS" if scoped else "PYTHON_CONTROL_SECONDS")
+        stale = now > then
+        priced += pricing
+        shadow += stale and not pricing
+        if stale and pricing:
+            named.append(
+                f"mutation: stale: {path}: its suite holds {now} test(s), {then} when run {run} "
+                f"priced it ({table}); refresh its price by mutation-prices.yml before the release "
+                "run"
+            )
+    for line in named + unread:
+        print(line)
+    print(
+        f"mutation: stale: {len(named)} file(s) stale of {priced} priced; {shadow} stale row(s) "
+        f"the plan does not price by; {len(unread)} row(s) unread"
+    )
+    if not rows_read:
+        print("mutation: stale: VOID: no price row was read, so this warning examined nothing")
+    print(f"examined {rows_read}")
+    return EXIT_OK  # a warning, never a block: every reading exits 0 (SPEC-429 R9)
 
 
 def main(argv: list[str] | None = None) -> int:

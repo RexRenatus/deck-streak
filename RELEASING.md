@@ -99,6 +99,13 @@ triple keeps its whole-suite price, else the count rule. A refresh is one dispat
 `mutation-verdict.py prices --scoped --costs <dir>` over that fixture, never by hand. The fixture
 and the table change together, in one delivery.
 
+**A price whose suite grew since its run is named before the release (SPEC-429, ADR-443).** Every
+plan job runs `mutation-verdict.py stale`, which prints one `mutation: stale:` line for each priced
+file whose mapped test modules now define more tests than the run its pricing row names ran, then
+each row it cannot read, a summary and its examined count; the step never fails the job. Before the
+release pull request, read the plan job's `mutation: stale:` lines, and when any names a file,
+refresh its price by `mutation-prices.yml` first, as the scoped prices above are refreshed.
+
 **The release run's Python legs pass the share only up to one signed ceiling (SPEC-422, ADR-436).**
 The release pull request, `dev` into `main` from this repository, may deal more Python legs than the
 share, up to `PYTHON_RELEASE_CEILING` in `scripts/mutation-verdict.py`, and every other run keeps
