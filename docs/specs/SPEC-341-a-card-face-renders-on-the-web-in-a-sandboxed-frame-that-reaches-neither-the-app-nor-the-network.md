@@ -217,3 +217,19 @@ Two more sentences say two engines, and SPEC-398 reads each as history: section 
 SPEC-398 adds `firefox`; and section 6's risk on the loopback interface, where A11's test now
 refuses an UNOBSERVABLE `webrtc` in every engine, so the peer connection is measured in at least
 one of the three (#652).
+
+## 8. Amendments by SPEC-425: the census holds six more shapes, over a walk that reads the page shell too
+
+SPEC-425 (ADR-439) extends R7's census, `web/app/src/lib/card/card-sinks.test.ts`, with six arms
+of its own, in a second arms table under a test of its own: code run from text (`eval(`, the
+`Function` constructor, and a string handed to `setTimeout` or `setInterval`), a `target` of
+`_blank` whose tag carries no `rel` naming both `noopener` and `noreferrer`, a `postMessage` to
+the origin `'*'`, and a `javascript:` URL literal. Each is held at none, with no admitted site, by
+SPEC-425's A1.
+
+A7's test keeps its name, its seven arms and its expected census. The walk both tests share now
+reads `.html` files beside `.ts`, `.js` and `.svelte`, so A7 also examines `src/app.html`, which
+holds none of its seven sinks, and prints one more examined file. Where R7 says "shipped code under
+`web/app/src`", read that walk: every `.ts`, `.js`, `.svelte` and `.html` file there, never a
+`.test.` or `.spec.` file and never the generated messages directory, which SPEC-425's A2 holds by
+its kinds and one anchor per kind. Nothing else in this SPEC changes.
