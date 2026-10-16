@@ -234,3 +234,22 @@ Chosen against:
   share and the job budget, and only the release run has an owner-signed exception.
 - Resting the reading on a measurement this repository did not make: rejected because a public
   decision rests on a committed record and the test that reads it.
+
+## Amendment: D1, the release run's Rust legs are sized up to one signed ceiling in one matrix (SPEC-423, ADR-437)
+
+Insert-only; every earlier byte is kept. D1 chose one run and one matrix of round-robin legs, with
+`LEG_CEILING` per workflow 256 less what its other jobs can generate, and a plan beyond it refused
+whole. Its More Information names what would make the ceiling conservative: the limit counted per
+matrix. SPEC-422's committed record reads it per matrix, and its amendment above read it so for the
+release run's Python legs. On that record, for the release pull request's run alone, the Rust legs
+are sized up to `RUST_RELEASE_CEILING` in place of `LEG_CEILING["ci"]`, still in the one
+`mutation-rust` matrix, and refused whole, by name, past it (ADR-437 D2, D3). The ceiling is at most
+`RUST_MATRIX_LEGS`, the legs one matrix holds, and a figure past it is refused before any deal.
+Every other run keeps D1 as written: `LEG_CEILING` stays `{"ci": 190, "battery": 234}` and its
+derivation is unchanged, since no job is added.
+
+Chosen against:
+
+- A second Rust matrix job for the legs past 190: rejected because one matrix holds the release run's legs on the per-matrix record, and a second job adds a job, its verdict wiring and mutants for no leg.
+- Reading the limit per matrix for every run's Rust legs: rejected because pull requests into `dev` keep 190, and only the release run has an owner-signed exception.
+- Raising `LEG_CEILING["ci"]`: rejected because it moves every run's ceiling to meet one run's need.

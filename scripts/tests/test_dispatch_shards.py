@@ -40,6 +40,7 @@ from test_mutation_workflows import (
     workflow,
 )
 from test_release_python_ceiling import deal, mutants
+from test_release_rust_ceiling import release_refusal, rust_deal
 
 WHOLE = 32
 COUNT = "${{ needs.size.outputs.shards }}"
@@ -360,6 +361,28 @@ class TheReleaseFitsOneRun(unittest.TestCase):
         for name, legs in examined("python matrices of the release run", matrices.items()):
             self.assertLessEqual(legs, RUN_JOBS, name)
         self.assertEqual(sum(matrices.values()), most)
+
+    def test_the_rust_matrix_of_the_release_run_fits_the_run_jobs(self):
+        """SPEC-423 A8 (R7): the release run's Rust legs are the one `mutation-rust` matrix, the one
+        job whose axis is the plan's `matrix`, and the range check's top is the jobs one matrix
+        generates: at that ceiling the release deal writes one matrix of exactly that many legs,
+        and one mutant more is refused whole."""
+        module = verdict_module()
+        self.assertEqual(module.RUST_MATRIX_LEGS, RUN_JOBS)
+        axis = "        shard: ${{ fromJSON(needs.mutation-plan.outputs.matrix) }}"
+        reading = [name for name, job in jobs(workflow(CI)).items() if axis in job.splitlines()]
+        self.assertEqual(examined("jobs on the plan's rust matrix", reading), ["mutation-rust"])
+        # 68 ingest mutants of 126 s fit a leg's 10800 s after its 2141 s baseline, so 256 legs
+        # hold 17408 of them.
+        fits = entries("deck-streak-ingest", 17408)
+        code, out, outputs, _plan = rust_deal(self, fits, None, True, 256, 128)
+        self.assertEqual((code, outputs.get("shards")), (0, "256"), out)
+        legs = json.loads(outputs["matrix"])
+        self.assertEqual(legs, list(range(256)))
+        self.assertLessEqual(len(legs), RUN_JOBS)
+        past = entries("deck-streak-ingest", 17409)
+        code, out, outputs, _plan = rust_deal(self, past, None, True, 256, 128)
+        self.assertEqual((code, out, outputs), (1, release_refusal(17409, 2193534, 256), {}))
 
     def test_a_listing_beyond_the_ceiling_is_refused_whole(self):
         # 68 ingest mutants of 126 s fit a leg's 10800 s after its 2141 s baseline, so the

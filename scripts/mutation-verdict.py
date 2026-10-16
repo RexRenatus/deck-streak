@@ -127,8 +127,8 @@ PYTHON_SHARD_MUTANTS = 20
 PYTHON_MAX_SHARDS = 32
 #: The ceiling no signed share may pass: a share outside 1 to it is refused before any deal.
 PYTHON_SHARE_CAP = 128
-#: Signed in docs/rulings/OWNER-RULING-2026-10-15-release-python-legs-303.md (SPEC-422 R4).
-PYTHON_RELEASE_CEILING = 303
+#: Signed in docs/rulings/OWNER-RULING-2026-10-16-release-legs-python-305-rust-192.md (SPEC-422 R4).
+PYTHON_RELEASE_CEILING = 305
 #: A Python leg's projected time may reach half its job's `timeout-minutes` of 60, the margin the
 #: Rust legs keep under theirs, since a projection is a price and not a measurement (SPEC-418 R1).
 PYTHON_LEG_BOUND_SECONDS = 1800
@@ -959,6 +959,10 @@ SHARD_BOUND_SECONDS = 10800
 #: The most legs each workflow's run holds: the 256 jobs of one run, less the most every other job
 #: of that workflow can generate, 66 in `ci.yml` and 22 in `mutation-weekly.yml` (SPEC-362 R3).
 LEG_CEILING = {"ci": 190, "battery": 234}
+#: Signed in docs/rulings/OWNER-RULING-2026-10-16-release-legs-python-305-rust-192.md (SPEC-423 R9).
+RUST_RELEASE_CEILING = 192
+#: The legs one matrix generates, the most a release Rust ceiling may reach (SPEC-423 R7).
+RUST_MATRIX_LEGS = 256
 #: The per-mutant `--timeout` every cargo-mutants command carries (SPEC-327 R2), and the margin a
 #: leg's slowest baseline test must keep under it (SPEC-362 R7).
 MUTANT_TIMEOUT_SECONDS = 2300
@@ -1099,6 +1103,31 @@ def python_release_ceiling(plan: dict) -> int | None:
     """
     if plan.get("release") is True and PYTHON_RELEASE_CEILING > PYTHON_SHARE_CAP:
         return PYTHON_RELEASE_CEILING
+    return None
+
+
+def rust_ceiling_refused() -> str | None:
+    """The refusal a release Rust ceiling that is not a whole number from `LEG_CEILING["ci"]` to
+    the legs one matrix holds reads on every run, before any deal, or None: a figure below the pull
+    request ceiling would stop every plan, and one past the matrix needs a second matrix, which is
+    never a cap (SPEC-423 R5)."""
+    ceiling = RUST_RELEASE_CEILING
+    if type(ceiling) is not int or ceiling < LEG_CEILING["ci"] or ceiling > RUST_MATRIX_LEGS:
+        return (
+            "mutation: shards: REFUSED: the release ceiling RUST_RELEASE_CEILING = "
+            f"{ceiling} is outside {LEG_CEILING['ci']}..{RUST_MATRIX_LEGS}; a ceiling outside it "
+            "is never dealt"
+        )
+    return None
+
+
+def rust_release_ceiling(plan: dict) -> int | None:
+    """The ceiling that holds the release run's Rust legs in place of `LEG_CEILING["ci"]`, for a
+    plan marked `"release": true` alone and only above that ceiling; None otherwise, when `shards`
+    sizes, refuses and prints the Rust legs as it does for a pull request into `dev`, so the
+    placeholder admits nothing by itself (SPEC-423 R3, R4)."""
+    if plan.get("release") is True and RUST_RELEASE_CEILING > LEG_CEILING["ci"]:
+        return RUST_RELEASE_CEILING
     return None
 
 
@@ -1319,7 +1348,19 @@ def shards(
         mutants = [(str(entry.get("name")), str(entry.get("package"))) for entry in listed]
     costs = mutant_costs([package for _, package in mutants])
     baseline = baseline_seconds([package for _, package in mutants])
-    count = fewest_shards(costs, baseline, LEG_CEILING["ci"])
+    # The release run's Rust legs are held to its ceiling; every other plan's are held to
+    # LEG_CEILING["ci"], as before (SPEC-423 R3, R4).
+    rust_release = rust_release_ceiling(plan)
+    rust_ceiling = rust_release or LEG_CEILING["ci"]
+    count = fewest_shards(costs, baseline, rust_ceiling)
+    if count is None and rust_release is not None:
+        print(
+            f"mutation: shards: REFUSED: {len(mutants)} mutant(s), projected at {sum(costs)} s "
+            f"serially, need more than {rust_release} legs within {SHARD_BOUND_SECONDS} s "
+            "each, the release run's ceiling (RUST_RELEASE_CEILING): a larger figure needs a "
+            "new measurement and a new owner-signed ruling, since a run is never capped"
+        )
+        return EXIT_FAIL
     if count is None:
         print(
             f"mutation: shards: REFUSED: {len(mutants)} mutant(s), projected at {sum(costs)} s "
@@ -1379,22 +1420,28 @@ def shards(
                 f"{deal['count'] - first} in mutation-python-release, at most "
                 f"{PYTHON_MATRIX_LEGS} a matrix"
             )
+    if rust_release is not None:
+        print(
+            f"mutation: shards: release run: {count} rust leg(s) of ceiling {rust_release} "
+            f"(RUST_RELEASE_CEILING): {count} in mutation-rust, at most {RUST_MATRIX_LEGS} "
+            "a matrix"
+        )
     print(
         f"mutation: shards: {count} shard(s) for {len(mutants)} listed mutant(s), projected at "
         f"{sum(costs)} s serially; the slowest at {max(times)} s of its {SHARD_BOUND_SECONDS} s "
-        f"bound; legs {count} of ceiling {LEG_CEILING['ci']}"
+        f"bound; legs {count} of ceiling {rust_ceiling}"
     )
     if deal is not None:
         # The run's two fixed shares and the runner-minutes they may take at their bounds
         # (SPEC-418 R4): the Python legs at half their job, the Rust legs at half theirs.
-        share = PYTHON_MAX_SHARDS + LEG_CEILING["ci"]
+        share = PYTHON_MAX_SHARDS + rust_ceiling
         budget = (
-            PYTHON_MAX_SHARDS * PYTHON_LEG_BOUND_SECONDS + LEG_CEILING["ci"] * SHARD_BOUND_SECONDS
+            PYTHON_MAX_SHARDS * PYTHON_LEG_BOUND_SECONDS + rust_ceiling * SHARD_BOUND_SECONDS
         ) // 60
         spent = sum(shard["projected_seconds"] for shard in deal["shards"]) + sum(times)
         print(
             f"mutation: shards: run legs {deal['count'] + count} of {share}: python "
-            f"{deal['count']} of {PYTHON_MAX_SHARDS}, rust {count} of {LEG_CEILING['ci']}; "
+            f"{deal['count']} of {PYTHON_MAX_SHARDS}, rust {count} of {rust_ceiling}; "
             f"projected {-(-spent // 60)} runner-minute(s) of {budget}"
         )
     announce(count)
@@ -3717,6 +3764,10 @@ def main(argv: list[str] | None = None) -> int:
         outside = python_ceiling_refused()
         if outside:
             print(outside)
+            return EXIT_FAIL
+        beyond = rust_ceiling_refused()
+        if beyond:
+            print(beyond)
             return EXIT_FAIL
         return shards(pathlib.Path(args.plan), args.listed, args.python_listed)
     if args.verb == "size":
