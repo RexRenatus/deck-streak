@@ -2758,12 +2758,470 @@ SHAPE_RUN_TIME_LOOKUPS = frozenset(
 )
 
 
+def shape_bare(script):
+    """A run script as the cargo reader reads it (SPEC-430 R2): backslash continuations joined
+    first, so a call split over lines reads whole, then comments removed, so a word in one is no
+    call."""
+    joined = re.sub(r"\\\n", " ", str(script))
+    return re.sub(r"(?m)(^|[ \t])#.*$", r"\1", joined)
+
+
+def shape_cargo(text):
+    """(subcommand, words) for each cargo call of a bare script (SPEC-430 R2): `cargo` at a command
+    position, its subcommand the first word past any options. A word that does not look like a
+    subcommand makes no call, so `cargo = x`, a Python line inside a script, is not read as one."""
+    position = r"(?:^|;|&&|\|\||\||\(|\$\(|`|[ \t]--[ \t])"
+    keywords = r"(?:(?:if|then|do|else|elif|while|until|!|exec|time)[ \t]+)*"
+    assigns = r"(?:[A-Za-z_]\w*=(?:\"[^\"]*\"|'[^']*'|[^\s;&|]*)[ \t]+)*"
+    found = []
+    for call in re.finditer(
+        rf"(?m){position}[ \t]*{keywords}{assigns}cargo((?:[ \t]+[^\s;&|)`]+)*)", text
+    ):
+        words = call.group(1).split()
+        while words and words[0].startswith(("-", "+")):
+            words = words[1:]
+        if not words or not SHAPE_SUBCOMMAND.match(words[0]):
+            continue
+        found.append((words[0], words[1:]))
+    return found
+
+
+def shape_kind(subcommand, words):
+    """What one cargo call builds (SPEC-430 R3): `nothing`, `other` (another profile or target,
+    which the shared entry does not hold) or `cache` (the cache's profile). A subcommand no rule
+    names builds the cache's profile, so a new one fails closed."""
+    if subcommand in ("fmt", "fetch", "deny", "clean", "metadata"):
+        return "nothing"
+    if subcommand == "mutants" and "--list" in words:
+        return "nothing"
+    if subcommand == "nextest" and list(words[:1]) == ["list"]:
+        return "nothing"
+    other = subcommand == "install"
+    for at, flag in enumerate(words):
+        profile = words[at + 1] if at + 1 < len(words) else ""
+        if flag in ("--release", "-r", "--target") or flag.startswith("--target="):
+            other = True
+        if flag == "--profile" and profile not in ("dev", "test"):
+            other = True
+        if flag.startswith("--profile=") and flag.split("=", 1)[1] not in (
+            "dev",
+            "test",
+        ):
+            other = True
+    return "other" if other else "cache"
+
+
+def shape_script(root, name, where, problems):
+    """A called script's text, read from the tree at `root` through the loader, or None, its absence
+    a problem by name: a step that calls a script the tree lacks reads as no call otherwise."""
+    path = Path(root) / name
+    if not path.is_file():
+        problems.append(f"{where}: calls {name}, which the tree lacks")
+        return None
+    return workflow_file_text(path)
+
+
+def shape_stage_body(check, stage):
+    """The body of check.sh's function for one stage, written on one line or several, or None."""
+    function = "stage_" + stage.replace("-", "_")
+    one = re.search(rf"(?m)^{function}\(\)\s*\{{(.*)\}}[ \t]*$", check)
+    if one:
+        return one.group(1)
+    many = re.search(rf"(?ms)^{function}\(\)\s*\{{[ \t]*\n(.*?)^\}}", check)
+    return many.group(1) if many else None
+
+
+def shape_dispatch(test):
+    """(subject, strings) for a dispatch test of a script's `main` (SPEC-430 R13): one expression
+    compared with a string by `==`, or with a tuple, list or set of strings by `in`; else None."""
+    if not isinstance(test, ast.Compare) or len(test.ops) != 1:
+        return None
+    op, right = test.ops[0], test.comparators[0]
+    if isinstance(op, ast.Eq) and isinstance(right, ast.Constant) and isinstance(right.value, str):
+        return ast.unparse(test.left), {right.value}
+    strings = isinstance(right, (ast.Tuple, ast.List, ast.Set)) and all(
+        isinstance(item, ast.Constant) and isinstance(item.value, str) for item in right.elts
+    )
+    if isinstance(op, ast.In) and strings and right.elts:
+        return ast.unparse(test.left), {item.value for item in right.elts}
+    return None
+
+
+def shape_prune(statements, word):
+    """The statements of `main` a run with the subcommand `word` can reach (SPEC-430 R13): a
+    dispatch `if` gives way to its body when its strings hold the subcommand and to its `else`
+    otherwise, at any `elif` depth, and every other statement is kept, the fall-through too."""
+    kept = []
+    for node in statements:
+        dispatch = shape_dispatch(node.test) if isinstance(node, ast.If) else None
+        if dispatch is None:
+            kept.append(node)
+            continue
+        words = dispatch[1]
+        taken = node.body if word in words else node.orelse
+        kept += shape_prune(taken, word)
+    return kept
+
+
+def shape_names(node):
+    """Every name and attribute name a node holds: what a body the walk reads can reach."""
+    return {
+        found.id if isinstance(found, ast.Name) else found.attr
+        for found in ast.walk(node)
+        if isinstance(found, (ast.Name, ast.Attribute))
+    }
+
+
+def shape_argv_lists(nodes):
+    """(line, subcommand, words) for each list literal among the nodes that starts `["cargo",
+    "<subcommand>"`, its words the string items after the subcommand."""
+    found = set()
+    for top in nodes:
+        for node in ast.walk(top):
+            if not isinstance(node, ast.List) or len(node.elts) < 2:
+                continue
+            first, second = node.elts[0], node.elts[1]
+            if not (isinstance(first, ast.Constant) and first.value == "cargo"):
+                continue
+            if not (isinstance(second, ast.Constant) and isinstance(second.value, str)):
+                continue
+            words = tuple(
+                item.value
+                for item in node.elts[2:]
+                if isinstance(item, ast.Constant) and isinstance(item.value, str)
+            )
+            found.add((node.lineno, second.value, words))
+    return sorted(found)
+
+
+def shape_python_read(text, word):
+    """(scope, lists, dropped) for a `python3 <script> [word]` call (SPEC-430 R13). The script's
+    text is parsed and walked, never run: from its top-level statements, which run on every call,
+    to each top-level function or class, and each method of a top-level class, that a body read
+    names, until no new name is reached. With a subcommand, and a dispatch over one expression,
+    `main` is read along that subcommand; with neither, every branch is kept. A script naming a
+    run-time lookup is read whole. `dropped` is the line of each list the whole script holds and
+    this read does not."""
+    tree = ast.parse(text)
+    whole = shape_argv_lists([tree])
+    if SHAPE_RUN_TIME_LOOKUPS & shape_names(tree):
+        return "whole", whole, []
+    defined = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+    defs = {}
+    for node in tree.body:
+        if isinstance(node, defined):
+            defs.setdefault(node.name, []).append(node)
+        if isinstance(node, ast.ClassDef):
+            for item in node.body:
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    defs.setdefault(item.name, []).append(item)
+    mains = [
+        node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "main"
+    ]
+    subjects = {
+        shape_dispatch(node.test)[0]
+        for node in (ast.walk(mains[-1]) if mains else [])
+        if isinstance(node, ast.If) and shape_dispatch(node.test)
+    }
+    scope = "unscoped"
+    if word is not None and len(subjects) == 1:
+        last = mains[-1]
+        kept = [last.args, *last.decorator_list, *shape_prune(last.body, word)]
+        defs["main"] = [node for node in defs["main"] if node is not last] + kept
+        scope = "scoped"
+    roots = [node for node in tree.body if not isinstance(node, defined)]
+    reached, todo = set(), list(roots)
+    while todo:
+        node = todo.pop()
+        for name in shape_names(node):
+            if name in defs and name not in reached:
+                reached.add(name)
+                todo.extend(defs[name])
+    lists = shape_argv_lists(roots + [node for name in sorted(reached) for node in defs[name]])
+    return (
+        scope,
+        lists,
+        sorted({line for line, _, _ in whole} - {line for line, _, _ in lists}),
+    )
+
+
+def shape_calls(script, root, where, problems, reads):
+    """The kind of every cargo call one step's run script makes (SPEC-430 R2): its own; each named
+    check.sh stage's, from the stage's body, every stage when it names none, a stage that calls
+    `need_cargo` and shows no cargo command counting as one build; each called shell script's;
+    and each called Python script's argument lists, along the subcommand the call names. One
+    script deep. Each Python call read is appended to `reads`."""
+    text = shape_bare(script)
+    calls = [shape_kind(sub, words) for sub, words in shape_cargo(text)]
+    for gate in GATE_CALL.finditer(text):
+        check = shape_script(root, "scripts/check.sh", where, problems)
+        if check is None:
+            continue
+        for stage in gate.group(1).split() or STAGES.search(check).group(1).split():
+            body = shape_stage_body(check, stage)
+            if body is None:
+                problems.append(f"{where}: check.sh has no stage {stage}")
+                continue
+            inner = [shape_kind(sub, words) for sub, words in shape_cargo(shape_bare(body))]
+            if not inner and re.search(r"\bneed_cargo\b", body):
+                inner = ["cache"]
+            calls += inner
+    for shell in SHAPE_SHELL_CALL.finditer(text):
+        name = shell.group(1)
+        called = None if name == "scripts/check.sh" else shape_script(root, name, where, problems)
+        if called is not None:
+            calls += [shape_kind(sub, words) for sub, words in shape_cargo(shape_bare(called))]
+    for python in SHAPE_PYTHON_CALL.finditer(text):
+        name, word = python.group(1), python.group(2)
+        source = shape_script(root, name, where, problems)
+        if source is None:
+            continue
+        scope, lists, dropped = shape_python_read(source, word)
+        reads.append((where, name, word, scope, dropped))
+        calls += [shape_kind(sub, list(words)) for _, sub, words in lists]
+    return calls
+
+
+def shape_release_files(workflows):
+    """The workflows whose jobs take the release class (SPEC-430 R4): each one a tag push or a
+    release event starts, and each one such a workflow calls, at any depth. A release build that
+    restores a cache built elsewhere is a cache-poisoning sink."""
+    release = set()
+    for name, workflow in workflows.items():
+        on = workflow.get("on")
+        events = (
+            on if isinstance(on, dict) else dict.fromkeys([on] if isinstance(on, str) else on or [])
+        )
+        push = events.get("push")
+        tagged = isinstance(push, dict) and ("tags" in push or "tags-ignore" in push)
+        if "release" in events or tagged:
+            release.add(name)
+    grew = True
+    while grew:
+        grew = False
+        for name in sorted(release):
+            for job in (workflows[name].get("jobs") or {}).values():
+                uses = str((job or {}).get("uses", ""))
+                call = LOCAL_CALL.search(uses) or re.match(
+                    r"\./\.github/workflows/([^/@\s]+)", uses
+                )
+                if call and call.group(1) in workflows and call.group(1) not in release:
+                    release.add(call.group(1))
+                    grew = True
+    return release
+
+
+def shape_reads_a_cache(step):
+    """Whether a step can restore a cache into a release build (SPEC-430 R5): a cache action, one
+    that caches by itself, setup-node or pnpm's setup with caching on, or any action naming one."""
+    uses, inputs = action(step), step.get("with") or {}
+    if uses == "actions/setup-node":
+        return "cache" in inputs or str(inputs.get("package-manager-cache", "true")) != "false"
+    if uses == "pnpm/action-setup":
+        return str(inputs.get("cache", "false")) != "false"
+    return uses in CACHE_BY_THEMSELVES or "cache" in uses.lower()
+
+
+def shape_shared_problems(where, steps, restores, calls):
+    """A shared job's restore (SPEC-430 R5): exactly one restore of the shared key that is not a
+    lookup, before the job's first build of the cache's profile, under that step's `if:` or none."""
+    shared = [
+        (at, step)
+        for at, step in restores
+        if str((step.get("with") or {}).get("key", "")) == SHAPE_KEY
+        and str((step.get("with") or {}).get("lookup-only", "")) != "true"
+    ]
+    first = min(at for at, kind in calls if kind == "cache")
+    if len(shared) != 1:
+        return [f"{where}: restores the shared Rust key {len(shared)} times, not once"]
+    at, restore = shared[0]
+    if at > first:
+        return [
+            f"{where}: restores the shared Rust key at step {at}, after its first build at {first}"
+        ]
+    if "if" in restore and restore.get("if") != steps[first].get("if"):
+        return [f"{where}: restores the shared Rust key under another if than its first build's"]
+    return []
+
+
+def shape_resolve(step, earlier):
+    """A cache step's key as GitHub resolves it (SPEC-430 R7): a `cache-primary-key` names an
+    earlier restore of the job with the same paths, whose key it is, or None when none does; any
+    other key is itself."""
+    key = str((step.get("with") or {}).get("key", ""))
+    primary = SHAPE_PRIMARY_KEY.fullmatch(key)
+    if not primary:
+        return key
+    for restore in earlier:
+        if (
+            restore.get("id") == primary.group(1)
+            and action(restore) == "actions/cache/restore"
+            and paths(restore) == paths(step)
+        ):
+            return str((restore.get("with") or {}).get("key", ""))
+    return None
+
+
+def shape_cache_of(step, earlier):
+    """The cache a step's paths name (SPEC-430 R7): `Rust`, `pnpm` (the one path an earlier step's
+    `pnpm store path` produced), `Playwright`, or `unknown`, which no key rule knows."""
+    named = paths(step)
+    if named == RUST_CACHE:
+        return "Rust"
+    if named == BROWSERS:
+        return "Playwright"
+    store = SHAPE_STORE_PATH.fullmatch(named[0]) if len(named) == 1 else None
+    producers = [s for s in earlier if store and s.get("id") == store.group(1)]
+    if any("pnpm store path" in str(s.get("run", "")) for s in producers):
+        return "pnpm"
+    return "unknown"
+
+
+def shape_key_problems(where, step, earlier):
+    """Whether a cache step's key hashes its inputs (SPEC-430 R7): the template its paths choose,
+    exactly, and a fallback that keeps what it must; a cache no template knows is a problem."""
+    key = shape_resolve(step, earlier)
+    fallbacks = lines_of((step.get("with") or {}).get("restore-keys"))
+    cache = shape_cache_of(step, earlier)
+    if key is None:
+        named = (step.get("with") or {}).get("key")
+        return [f"{where}: keys on {named}, which no earlier restore of its paths sets"]
+    problems = []
+    if cache == "Rust":
+        if key != SHAPE_KEY:
+            problems.append(f"{where}: the Rust key {key} is not the shared key")
+        for line in fallbacks:
+            if line != SHAPE_RUST_FALLBACK:
+                problems.append(f"{where}: the Rust fallback {line} is not the toolchain's prefix")
+    elif cache == "pnpm":
+        if key != SHAPE_PNPM_KEY:
+            problems.append(f"{where}: the pnpm key {key} is not the lockfile's")
+        for line in fallbacks:
+            if line != SHAPE_PNPM_FALLBACK:
+                problems.append(f"{where}: the pnpm fallback {line} is not the store's prefix")
+    elif cache == "Playwright":
+        version = SHAPE_BROWSER_KEY.fullmatch(key)
+        steps = [s for s in earlier if version and s.get("id") == version.group(1)]
+        if not version:
+            problems.append(f"{where}: the browser key {key} is not the locked version's")
+        elif not any("pnpm-lock.yaml" in str(s.get("run", "")) for s in steps):
+            problems.append(f"{where}: the browser key's version step reads no pnpm-lock.yaml")
+        if fallbacks:
+            problems.append(f"{where}: the browser cache falls back to {', '.join(fallbacks)}")
+    else:
+        problems.append(f"{where}: caches {', '.join(paths(step))}, which no key rule knows")
+    return problems
+
+
+def shape_unique_problems(where, text, envs, steps):
+    """Whether a key or fallback text carries a run-unique part (SPEC-430 R8): each `${{ }}` in it
+    is `runner.os`, `hashFiles` over literal paths, a step's output whose producing step reads no
+    run identity, clock or randomness, an `env` value judged the same way, or a `matrix` value;
+    `envs` are the step's, the job's and the workflow's `env:`, innermost first."""
+    problems = []
+    for expression in re.findall(r"\$\{\{\s*(.*?)\s*\}\}", text):
+        named = re.findall(r"\bgithub\.(run_id|run_number|run_attempt|sha)\b", expression)
+        output = re.fullmatch(r"steps\.([\w-]+)\.outputs\.[\w-]+", expression)
+        env = re.fullmatch(r"env\.(\w+)", expression)
+        if named:
+            for context in named:
+                problems.append(
+                    f"{where}: {text} carries github.{context}, which changes every run"
+                )
+        elif output:
+            producers = [step for step in steps if step.get("id") == output.group(1)]
+            if not producers:
+                problems.append(
+                    f"{where}: {text} reads steps.{output.group(1)}, which the job lacks"
+                )
+            for producer in producers:
+                run = str(producer.get("run", ""))
+                for word in dict.fromkeys(
+                    re.findall(
+                        r"\b(GITHUB_RUN_ID|GITHUB_RUN_NUMBER|GITHUB_RUN_ATTEMPT|GITHUB_SHA|date"
+                        r"|EPOCHSECONDS|EPOCHREALTIME|RANDOM|uuidgen)\b",
+                        run,
+                    )
+                ):
+                    problems.append(
+                        f"{where}: {text} reads steps.{output.group(1)}, whose run names {word}"
+                    )
+        elif env:
+            scopes = [at for at, scope in enumerate(envs) if env.group(1) in scope]
+            if not scopes:
+                problems.append(f"{where}: {text} reads env.{env.group(1)}, which no env sets")
+            else:
+                value = envs[scopes[0]][env.group(1)]
+                inner = f"{where} env.{env.group(1)}"
+                problems += shape_unique_problems(inner, str(value), envs[scopes[0] + 1 :], steps)
+        elif not re.fullmatch(
+            r"runner\.os|hashFiles\('[^']*'(?:\s*,\s*'[^']*')*\)|matrix\.[\w-]+",
+            expression,
+        ):
+            problems.append(
+                f"{where}: {text} carries an expression no key rule places: {expression}"
+            )
+    return problems
+
+
 def shape_cargo_census(directory, root, reads):
     """Every job of every workflow in `directory` that runs cargo, with its class, and every way a
     job breaks its class (SPEC-430 R2 to R5, R13): (problems, [(workflow, job, class)]). The
     scripts a step calls are read from the tree at `root`; each Python call read is appended to
     `reads` as (where, script, subcommand, scope, dropped lines), for A1's print."""
-    return [], []
+    workflows = {
+        path.name: read_workflow(workflow_file_text(path)) for path in workflow_files(directory)
+    }
+    release = shape_release_files(workflows)
+    problems, population = [], []
+    for name, workflow in workflows.items():
+        for job_id, job in (workflow.get("jobs") or {}).items():
+            job = job or {}
+            steps = job.get("steps") or []
+            calls = []
+            for at, step in enumerate(steps):
+                if "run" in step:
+                    where = f"{name}:{job_id}:{at}"
+                    kinds = shape_calls(step["run"], root, where, problems, reads)
+                    calls += [(at, kind) for kind in kinds]
+            if not calls:
+                continue
+            runs_on = job.get("runs-on")
+            if name in release:
+                cls = "release"
+            elif isinstance(runs_on, str) and runs_on.startswith(("macos-", "windows-")):
+                cls = "another runner"
+            elif any(kind == "cache" for _, kind in calls):
+                cls = "shared"
+            else:
+                cls = "cache-free"
+            population.append((name, job_id, cls))
+            where = f"{name}:{job_id}"
+            restores = [
+                (at, step)
+                for at, step in enumerate(steps)
+                if action(step) == "actions/cache/restore" and paths(step) == RUST_CACHE
+            ]
+            if cls == "shared":
+                problems += shape_shared_problems(where, steps, restores, calls)
+            elif cls == "cache-free":
+                problems += [
+                    f"{where}: a cache-free job restores the Rust cache under another key at {at}"
+                    for at, step in restores
+                    if str((step.get("with") or {}).get("key", "")) != SHAPE_KEY
+                ]
+            elif cls == "release":
+                problems += [
+                    f"{where}: a release job reads a cache at step {at}, through {action(step)}"
+                    for at, step in enumerate(steps)
+                    if shape_reads_a_cache(step)
+                ]
+            else:
+                problems += [
+                    f"{where}: a job on another runner restores the Rust cache at step {at}"
+                    for at, _ in restores
+                ]
+    return problems, population
 
 
 def shape_writer_census(directory):
@@ -2772,21 +3230,86 @@ def shape_writer_census(directory):
     writers are judged by the module's own save scenarios, and a Rust save keys on an earlier
     restore of the shared key in its job; an action that names a cache and that no rule describes
     is a problem by name."""
-    return [], []
+    problems, population = [], []
+    for path in workflow_files(directory):
+        workflow = read_workflow(workflow_file_text(path))
+        problems += cache_problems(path.name, workflow)[0]
+        for job_id, job in (workflow.get("jobs") or {}).items():
+            steps = (job or {}).get("steps") or []
+            for at, step in enumerate(steps):
+                uses = action(step)
+                known = uses in CACHE_BY_THEMSELVES or uses in (
+                    "actions/cache/save",
+                    "actions/cache",
+                    "actions/setup-node",
+                    "pnpm/action-setup",
+                )
+                named = "cache" in uses.lower() and uses != "actions/cache/restore"
+                if not known and not named:
+                    continue
+                where = f"{path.name}:{job_id}:{at}"
+                if not known:
+                    problems.append(
+                        f"{where}: {uses} names a cache, and no rule says when it saves"
+                    )
+                rust = uses == "actions/cache/save" and paths(step) == RUST_CACHE
+                key = str((step.get("with") or {}).get("key", ""))
+                keyed = SHAPE_PRIMARY_KEY.fullmatch(key) and shape_resolve(step, steps[:at])
+                if rust and keyed != SHAPE_KEY:
+                    problems.append(
+                        f"{where}: a Rust save keys on {key}, not an earlier shared restore's"
+                        " primary key"
+                    )
+                population.append((where, uses, rust))
+    return problems, population
 
 
 def shape_key_census(directory):
     """Every key of every cache step of every workflow in `directory`, a save's resolved through
     its restore, and every key that does not hash its inputs (SPEC-430 R7): (problems,
     [(where, cache, fallback lines)])."""
-    return [], []
+    problems, population = [], []
+    for path in workflow_files(directory):
+        workflow = read_workflow(workflow_file_text(path))
+        for job_id, job in (workflow.get("jobs") or {}).items():
+            steps = (job or {}).get("steps") or []
+            for at, step in enumerate(steps):
+                if action(step) not in SHAPE_CACHE_STEPS:
+                    continue
+                where = f"{path.name}:{job_id}:{at}"
+                fallbacks = lines_of((step.get("with") or {}).get("restore-keys"))
+                population.append((where, shape_cache_of(step, steps[:at]), fallbacks))
+                problems += shape_key_problems(where, step, steps[:at])
+    return problems, population
 
 
 def shape_run_unique_census(directory):
     """Every key and every fallback line of every cache step of every workflow in `directory`,
     resolved as the key census resolves them, and every one that carries a part that changes from
     run to run (SPEC-430 R8): (problems, [(where, text)])."""
-    return [], []
+    problems, population = [], []
+    for path in workflow_files(directory):
+        workflow = read_workflow(workflow_file_text(path))
+        for job_id, job in (workflow.get("jobs") or {}).items():
+            job = job or {}
+            steps = job.get("steps") or []
+            for at, step in enumerate(steps):
+                if action(step) not in SHAPE_CACHE_STEPS:
+                    continue
+                where = f"{path.name}:{job_id}:{at}"
+                inputs = step.get("with") or {}
+                key = shape_resolve(step, steps[:at])
+                texts = [str(inputs.get("key", "")) if key is None else key]
+                texts += lines_of(inputs.get("restore-keys"))
+                envs = [
+                    step.get("env") or {},
+                    job.get("env") or {},
+                    workflow.get("env") or {},
+                ]
+                for text in texts:
+                    population.append((where, text))
+                    problems += shape_unique_problems(where, text, envs, steps)
+    return problems, population
 
 
 class TheCachesHoldTheirShape(unittest.TestCase):
