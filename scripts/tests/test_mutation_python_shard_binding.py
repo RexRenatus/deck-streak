@@ -763,6 +763,105 @@ class EachArmOfTheCostDealIsObserved(unittest.TestCase):
         examined("refused invocations", [["prices"]])
 
 
+class EachFilesRunsAreInterleaved(unittest.TestCase):
+    """SPEC-437 R1 and R2 (A1 to A3): a priced file's n runs are interleaved, run j holding its
+    listing positions j, j + n, j + 2n and so on, while the count of legs and every projection
+    stay the contiguous cut's and every listed mutant is dealt exactly once. Every listing, price
+    and expected figure is a literal."""
+
+    def test_a_files_runs_are_interleaved_across_its_legs(self):
+        """A1: a.py at 100 s holds 16 a leg, so its 30 mutants are two runs of 15, each
+        (2 + 15) x 100 = 1700 s: run 0 holds the even positions and run 1 the odd ones."""
+        a = priced("a.py", 30)
+        evens = (0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28)
+        odds = (1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29)
+        self.assertEqual(
+            verdict_program().python_by_cost(a, {"a.py": 100}),
+            {
+                "count": 2,
+                "shards": [
+                    {
+                        "shard": 0,
+                        "mutants": [a[i]["name"] for i in evens],
+                        "projected_seconds": 1700,
+                    },
+                    {
+                        "shard": 1,
+                        "mutants": [a[i]["name"] for i in odds],
+                        "projected_seconds": 1700,
+                    },
+                ],
+            },
+        )
+        examined("interleaved positions", evens + odds)
+
+    def test_the_interleave_keeps_every_count_and_projection_of_the_contiguous_cut(self):
+        """A2: the count of legs and each leg's projected seconds, as the contiguous deal gives
+        them for SPEC-418's listings: a.py's two legs of 1700 s beside b.py's 520 s; q.py's runs of
+        4 and 3 at 225 s; r.py's runs of 3, 2 and 2 at 360 s; f.py's 1799 mutants at 1 s; v.py's
+        44 at (224, 224, 60); a.py beside u.py's 41 unpriced mutants; c.py's 32 legs at 600 s; and
+        t.py's run beside s.py's on one leg."""
+        program = verdict_program()
+        cases = (
+            (
+                priced("a.py", 30) + priced("b.py", 50),
+                {"a.py": 100, "b.py": 10},
+                None,
+                3,
+                [1700, 1700, 520],
+            ),
+            (priced("q.py", 7), {"q.py": 225}, None, 2, [1350, 1125]),
+            (priced("r.py", 7), {"r.py": 360}, None, 3, [1800, 1440, 1440]),
+            (priced("f.py", 1799), {"f.py": 1}, None, 2, [902, 901]),
+            (priced("v.py", 44), {}, {"v.py": (224, 224, 60)}, 2, [1768, 1768]),
+            (
+                priced("a.py", 30) + priced("u.py", 41),
+                {"a.py": 100},
+                None,
+                5,
+                [1700, 1700, 1800, 1800, 1800],
+            ),
+            (priced("c.py", 32), {"c.py": 600}, None, 32, [1800] * 32),
+            (priced("t.py", 4) + priced("s.py", 1), {"t.py": 200, "s.py": 200}, None, 1, [1800]),
+        )
+        for listing, prices, scoped, count, seconds in examined("contiguous deals", cases):
+            with self.subTest(files=sorted(prices or scoped), count=count):
+                dealt = program.python_by_cost(listing, prices, scoped)
+                self.assertEqual(
+                    (dealt["count"], [shard["projected_seconds"] for shard in dealt["shards"]]),
+                    (count, seconds),
+                )
+
+    def test_every_listed_mutant_is_dealt_exactly_once_when_runs_are_interleaved(self):
+        """A3: around each cut boundary, at 100 s (16 a leg) and at 360 s (3 a leg), every listed
+        mutant of the file is in exactly one leg, and no leg holds a mutant twice."""
+        program = verdict_program()
+        cases = (
+            (100, 15),
+            (100, 16),
+            (100, 17),
+            (100, 31),
+            (100, 32),
+            (100, 33),
+            (100, 47),
+            (100, 48),
+            (100, 49),
+            (360, 1),
+            (360, 2),
+            (360, 3),
+            (360, 4),
+            (360, 5),
+            (360, 6),
+            (360, 7),
+        )
+        for price, listed_count in examined("listing sizes", cases):
+            with self.subTest(price=price, listed=listed_count):
+                listing = priced("a.py", listed_count)
+                dealt = program.python_by_cost(listing, {"a.py": price})
+                held = [name for shard in dealt["shards"] for name in shard["mutants"]]
+                self.assertEqual(sorted(held), sorted(names_of(listing)))
+
+
 class TheReportIsBoundToItsSlotAndItsListing(unittest.TestCase):
     def population(self, name, members, expected):
         """Judge the correct layout, then every member of `members` over each plan; each member must

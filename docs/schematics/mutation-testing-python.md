@@ -568,3 +568,115 @@ this measurement or not at all.
 | verdict | every listed mutant examined; reports 0 to n - 1 | unchanged; both matrices' reports, under one name family |
 | legs | rust and rows | rust, rows and the release leg, owed only past `PYTHON_MATRIX_LEGS` |
 | ci | admits two skips | admits three, once each |
+
+## 10. The Python kill round (SPEC-437, ADR-451)
+
+Added after section 9; every earlier byte is kept. Kind: data flow. Every `path:line` in this
+section was read at dev `b25ed04a`. Decided by ADR-451; built by SPEC-437, the first of six parts,
+with SPEC-438 to SPEC-442 after it. This section shows where each survivor of the release run goes
+until a test kills it or a record explains it, how a priced file's runs move from contiguous to
+interleaved, and how a record is judged in its own class alone.
+
+### 10.1 From a survivor to its killer or its record
+
+```mermaid
+flowchart TD
+  kRun["the release run: 683 scripts survivors, 3 UNCOVERED, 20 oracle survivors, 1 STALE record"] --> kWhy{"why it survived, from each shard's costs.jsonl"}
+  kWhy -->|"no test is mapped"| kUncov["write-back-issues.py:33, three mutants"]
+  kWhy -->|"no behavioural test observes it"| kGroup["grouped by the function that holds it"]
+  kWhy -->|"bound in another class"| kStale["python.json record 1, read in the oracle class"]
+  kUncov --> kWb["part 1: test_write_back_issues mapped; the redundant arm removed"]
+  kGroup --> kPart{"its part, by file and function"}
+  kPart -->|"generate.py, 20"| kGen["part 1: test_generate, A9 to A16"]
+  kPart -->|"public-scrub.py and mutation_rows.py, 123"| kP2["part 2"]
+  kPart -->|"the verdict's readers, 88 and 130 more"| kP3["part 3"]
+  kPart -->|"the verdict's judges, 118 and 29 more"| kP4["part 4"]
+  kPart -->|"the verdict's tool readers and records, 223"| kP5["part 5"]
+  kPart -->|"the verdict's module constants, 131"| kP6["part 6"]
+  kStale --> kBind["part 1: each record bound only in its own class"]
+  kP2 --> kRec["one equivalence record each in parts 2 and 6, with its argument"]
+  kP6 --> kRec
+  kWb --> kRows["rows in the part's band, each mirroring one mutant"]
+  kGen --> kRows
+  kBind --> kRows
+  kP2 --> kRows
+  kP3 --> kRows
+  kP4 --> kRows
+  kP5 --> kRows
+  kP6 --> kRows
+  kRows --> kRead["mutation-rows reads each row KILLED by id"]
+  kRec --> kClose["the release's closing run: every Python class with zero unexplained survivors"]
+  kRead --> kClose
+```
+
+A killer never reads its target file's bytes: such a test fails under the runner's sentinel, is
+dropped from the file's mutant runs as a byte reader (`scripts/mutation_python.py:516-518`,
+`:901`), and kills nothing. So the two `CommittedGoldensAreCurrent` tests stay readers, and
+`generate.py`'s survivors die by behaviour. A part's new killer module sits first in its file's map
+list, because a `<module>` mutant runs every mapped module whole, in order, until one fails.
+
+### 10.2 Before: a priced file's runs at dev `b25ed04a`
+
+```mermaid
+flowchart LR
+  bList["listing: a priced file's m mutants, in listing order"] --> bK["k = (1800 - setup) // each"]
+  bK --> bCut["ceil(m / k) contiguous runs: indices[start:end]"]
+  bCut --> bDeal["runs dealt heaviest first onto the lightest leg"]
+  bDeal --> bLeg["a run holds one region of the file, whose mutants share one traced test set"]
+  bLeg --> bCost["a costly region lands whole on one leg, priced at the file's mean"]
+  bCost --> bCut60["the leg passes the job's 60 minutes and is cut before its upload"]
+  bCut60 --> bVoid["the verdict reads the leg VOID: no report"]
+```
+
+`python_by_cost` cuts each priced file's listing at `scripts/mutation-verdict.py:1235-1241`. The
+run measured 24 legs cut at the bound: 23 left no report, and one, leg 241, finished in time for
+its report to be read. Simulated over the run's measured costs, this deal puts 19 legs past 3600 s.
+
+### 10.3 After: the runs interleaved (SPEC-437 R1, R2)
+
+```mermaid
+flowchart LR
+  aList["listing: a priced file's m mutants, in listing order"] --> aK["k = (1800 - setup) // each, unchanged"]
+  aK --> aCut["n = ceil(m / k) runs: run j holds positions j, j + n, j + 2n"]
+  aCut --> aSame["each run's size, order, weight and projection: the contiguous cut's"]
+  aSame --> aDeal["runs dealt heaviest first onto the lightest leg, unchanged"]
+  aDeal --> aLeg["each leg holds every n-th mutant of every region of the file"]
+  aLeg --> aFit["every leg within its job: the slowest simulated 3187 s, 2654 s with the kill parts"]
+  aFit --> aReport["each leg uploads its report, and the verdict counts it"]
+```
+
+Only membership moves: the count of legs, every `projected_seconds`, every refusal and every
+printed line are the contiguous deal's. `formal/tla/EveryLegCounted`'s `Plan` already admits any
+deal of the listed mutants over the legs, so the model is re-read and not changed.
+
+### 10.4 One record, judged in its own class (SPEC-437 R3)
+
+```mermaid
+flowchart TD
+  rRecords[("scripts/mutation-equivalent.d/python.json: the Python records")] --> rClass{"classify of the record's file equals the judged class?"}
+  rJudge["judge_python: the scripts class or the oracle class"] --> rClass
+  rClass -->|"no"| rSkip["neither bound nor judged: no STALE and no AMBIGUOUS"]
+  rClass -->|"yes"| rBind["bound against the class's population"]
+  rBind -->|"one mutant"| rValid["valid: it excuses that mutant"]
+  rBind -->|"none"| rStale["STALE: binds no python mutant"]
+  rBind -->|"two or more"| rAmb["AMBIGUOUS: binds them all, excuses none"]
+```
+
+At the base, `judge_python` binds every record against the class's population
+(`scripts/mutation-verdict.py:2155`) and keeps the bound ones of its class only afterwards
+(`:2167-2169`), so the scripts record at `scripts/mutation_python.py:745:73` read STALE in the
+oracle class. After SPEC-437, the class is chosen before binding, and that filter is gone with the
+need for it. `formal/lean/Formal/RecordClassBinding.lean` proves the choice for every class, record
+list and binding count, and its vectors hold the code to the proof.
+
+### 10.5 What crosses each step
+
+| step | before (dev `b25ed04a`) | after (SPEC-437 and its five sibling parts) |
+|---|---|---|
+| deal | each priced file cut into contiguous runs | each priced file's run j holds every n-th mutant from j; every figure kept |
+| record binding | every Python record bound in every class, filtered by class after | each record bound only in its own class |
+| write-back | no mapped test; a fallback arm no test can reach | `test_write_back_issues` mapped; unknown keys refused before any substitution |
+| oracle survivors | 20, no behavioural test observes them | 20 killers in `test_generate.py`; both digest tests stay readers |
+| scripts survivors | 683 | parts 2 to 6, each its own SPEC, ADR and band; 681 killed, 2 recorded equivalent |
+| rows | none on these survivors | S43700-S43727 in part 1; each later part rows its own groups |
+| proof | the rows and the changed-line legs of each part's pull request | the release's closing run, every class read whole |
