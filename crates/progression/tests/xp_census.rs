@@ -112,6 +112,9 @@ const INHERITED: [&str; 5] = [
 /// The owner's manifest, by which the census finds the owner: never by its package's name, which
 /// any other package of the graph can carry (main's round-7 ruling, condition 1).
 const OWNER_MANIFEST: &str = "crates/progression/Cargo.toml";
+/// The folder of the real tree's stores, under the test process's temporary directory and outside
+/// `target/`, so that no cache of `target/` carries one (SPEC-384 R1, ADR-398 D2 and D6).
+const STORE_DIRECTORY: &str = "deck-streak-settle-census-store";
 
 /// Prints how many items a check examined and refuses zero (the tdd pack's examined contract).
 fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
@@ -301,6 +304,26 @@ fn inherited(name: &str) -> bool {
     INHERITED.contains(&name) && !scrubbed(name)
 }
 
+/// The command the census runs cargo by, before its arguments and its folder: the cargo that runs
+/// this test, started from an empty environment, inheriting only the names [`inherited`] admits,
+/// with the census's flags and its arming. [`cargo`] runs it, and [`store_key`] reads its program
+/// and its variables from it, so the store's key names what the census's cargo is given.
+fn census_command() -> Command {
+    let program = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+    let mut command = Command::new(program);
+    command.env_clear();
+    for (name, value) in std::env::vars_os() {
+        if inherited(&name.to_string_lossy()) {
+            command.env(&name, &value);
+        }
+    }
+    command
+        .env("CARGO_INCREMENTAL", "0")
+        .env("CARGO_ENCODED_RUSTFLAGS", RUSTFLAGS.join("\u{1f}"))
+        .env(ARMING, "1");
+    command
+}
+
 /// Runs the cargo that runs this test with `arguments` in `root`, with the census's flags and its
 /// arming, and answers whether it succeeded, its standard output and its standard error. Cargo
 /// starts from an empty environment and inherits only the names [`inherited`] admits, so the build
@@ -312,20 +335,9 @@ fn cargo(
     arguments: &[String],
     limit: Duration,
 ) -> Result<(bool, String, String), String> {
-    let program = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
-    let mut command = Command::new(program);
-    command.env_clear();
-    for (name, value) in std::env::vars_os() {
-        if inherited(&name.to_string_lossy()) {
-            command.env(&name, &value);
-        }
-    }
-    let mut child = command
+    let mut child = census_command()
         .args(arguments)
         .current_dir(root)
-        .env("CARGO_INCREMENTAL", "0")
-        .env("CARGO_ENCODED_RUSTFLAGS", RUSTFLAGS.join("\u{1f}"))
-        .env(ARMING, "1")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -911,6 +923,7 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), 
         .collect();
     let mut uses = Vec::new();
     let mut read = BTreeMap::new();
+    let mut units = Units::default();
     for selection in selections {
         for (on, abort) in [(true, false), (false, false), (true, true), (false, true)] {
             let mut arguments: Vec<String> = [
@@ -937,6 +950,16 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), 
                 let Ok(message) = serde_json::from_str::<Value>(line) else {
                     continue;
                 };
+                // Every unit cargo answers is counted, and a member's that this census did not
+                // compile is refused by name (SPEC-384 R2, R7).
+                let package = message["package_id"].as_str().unwrap_or_default();
+                if message["reason"] == "compiler-artifact" && member_ids.contains(package) {
+                    let folder = folders.get(package).map_or("", String::as_str);
+                    units
+                        .refused
+                        .extend(not_compiled_here(&message, folder, &units.built));
+                }
+                units.count(&message, member_ids.contains(package));
                 if message["reason"] == "compiler-artifact"
                     && message["package_id"]
                         .as_str()
@@ -996,10 +1019,91 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), 
             }
         }
     }
-    Ok((
-        uses,
-        outside_the_tree(&tree, &workspace, &canonical(target), &read),
-    ))
+    let mut refusals = outside_the_tree(&tree, &workspace, &canonical(target), &read);
+    refusals.extend(units.refused.iter().cloned());
+    Ok((uses, refusals))
+}
+
+/// What a census's passes compiled and read, each counted from cargo's own messages and never from
+/// the census's loop (SPEC-384 R7, ADR-398 D3): a pass is cargo's `build-finished` message, and a
+/// unit is one `compiler-artifact` message.
+#[derive(Debug, Default)]
+struct Units {
+    /// The member units each pass read, one entry for each pass cargo finished.
+    passes: Vec<usize>,
+    /// The member units this census compiled (`"fresh": false`).
+    compiled: usize,
+    /// The member units the passes read.
+    read: usize,
+    /// The member units read whose files this census compiled.
+    read_compiled: usize,
+    /// The package of each unit outside the members that cargo answered from the store: fresh,
+    /// and compiled by no earlier pass of this census.
+    reused: Vec<String>,
+    /// The refusals of SPEC-384 R2, one for each member unit cargo answered fresh that this census
+    /// did not compile.
+    refused: Vec<String>,
+    /// The files of every unit this census compiled.
+    built: BTreeSet<String>,
+    /// The files of every unit this census compiled or reused.
+    seen: BTreeSet<String>,
+    /// The member units the pass cargo is running has read so far.
+    pass_read: usize,
+}
+
+impl Units {
+    /// Counts one message of a pass, as cargo states it; `member` says whether its package is a
+    /// member of the workspace.
+    fn count(&mut self, message: &Value, member: bool) {
+        if message["reason"] == "build-finished" && message["success"] == true {
+            self.passes.push(std::mem::take(&mut self.pass_read));
+        }
+        if message["reason"] != "compiler-artifact" {
+            return;
+        }
+        let files = artifact_files(message);
+        let fresh = message["fresh"] == true;
+        if member && message["target"]["kind"] != serde_json::json!(["custom-build"]) {
+            self.read += 1;
+            self.pass_read += 1;
+            if !fresh || files.iter().all(|file| self.built.contains(file)) {
+                self.read_compiled += 1;
+            }
+        }
+        if !fresh {
+            self.compiled += usize::from(member);
+            self.built.extend(files.iter().cloned());
+            self.seen.extend(files);
+        } else if !member && files.iter().any(|file| !self.seen.contains(file)) {
+            self.reused.push(
+                message["package_id"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_owned(),
+            );
+            self.seen.extend(files);
+        }
+    }
+}
+
+/// The files a `compiler-artifact` message says its unit wrote.
+fn artifact_files(message: &Value) -> Vec<String> {
+    message["filenames"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(str::to_owned)
+        .collect()
+}
+
+/// The refusal of SPEC-384 R2 for one member's `compiler-artifact` message, if any: a unit cargo
+/// answered fresh whose files no earlier pass of this census compiled was built by another census,
+/// so the verdict could read a tree it does not judge. `compiled` holds the files this census's
+/// passes have compiled so far.
+fn not_compiled_here(message: &Value, folder: &str, compiled: &BTreeSet<String>) -> Option<String> {
+    let _ = (message, folder, compiled);
+    None
 }
 
 /// Every combination of `declared` (each `package/feature`), the empty one first, each joined by
@@ -1254,6 +1358,101 @@ fn census_in(root: &Path, target: &Path) -> Census {
     census
 }
 
+/// The store of the real tree at `root` (SPEC-384 R1, R3): a folder of [`STORE_DIRECTORY`] under
+/// the test process's temporary directory, named by [`store_key`] over the tree's lock file, its
+/// toolchain pin and the command the census runs cargo by.
+fn store_of(root: &Path) -> PathBuf {
+    let read =
+        |name: &str| fs::read(root.join(name)).expect("the tree's lock file and toolchain pin");
+    std::env::temp_dir().join(STORE_DIRECTORY).join(store_key(
+        &read("Cargo.lock"),
+        &read("rust-toolchain.toml"),
+        &census_command(),
+        root,
+    ))
+}
+
+/// The key of the store the census of the tree at `root` compiles in, in lowercase hex: the
+/// SHA-256 of the bytes of its `Cargo.lock` and its `rust-toolchain.toml`, the cargo program and
+/// the flags and arming `command` sets, each name of [`INHERITED`] with its value or its absence,
+/// and the canonical tree root (SPEC-384 R3). Each input is framed by its length, so that no two
+/// run together.
+fn store_key(lock: &[u8], toolchain: &[u8], command: &Command, root: &Path) -> String {
+    let _ = (lock, toolchain, command, root);
+    "0".repeat(64)
+}
+
+/// Opens `store`'s lock file and takes its exclusive lock, waiting while another census holds it,
+/// and answers the open file: the lock lasts until the file is dropped (SPEC-384 R4). This process
+/// alone opens it, so no cargo the census starts inherits the lock.
+fn hold(store: &Path) -> Result<fs::File, String> {
+    fs::create_dir_all(store)
+        .and_then(|()| {
+            fs::OpenOptions::new()
+                .create(true)
+                .truncate(false)
+                .write(true)
+                .open(store.join(".lock"))
+        })
+        .map_err(|error| {
+            format!(
+                "the census cannot open its store's lock at {} ({error}), so another census could \
+                 change the store under it",
+                store.display()
+            )
+        })
+}
+
+/// The id of every package of the graph `metadata` gives whose source is a path: every member,
+/// and any path package beside them, which the census refuses.
+fn path_packages(metadata: &Value) -> Vec<String> {
+    metadata["packages"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|package| package["source"].is_null())
+        .filter_map(|package| package["id"].as_str())
+        .map(str::to_owned)
+        .collect()
+}
+
+/// Removes from `store` every unit of the path packages `paths` names, by `cargo clean` with one
+/// `-p` for each under the census's own environment (SPEC-384 R2), so that the store keeps only
+/// the units of the packages the lock file pins from a registry or git.
+fn removal(root: &Path, store: &Path, paths: &[String]) -> Result<(), String> {
+    let _ = (root, paths);
+    fs::create_dir_all(store).map_err(|error| error.to_string())
+}
+
+/// The census of the workspace at `root` compiled in `store`, a target directory kept between
+/// censuses (SPEC-384 R1 to R4, ADR-398), with what its passes compiled and read.
+fn census_in_store(root: &Path, store: &Path) -> (Census, Units) {
+    census_on_store(root, store, true)
+}
+
+/// [`census_in_store`], with both removals of SPEC-384 R2 withheld when `removing` is false, which
+/// only the test of R2's refusal asks for. The census holds the store's lock from before its first
+/// removal to after its last, and its verdict carries every refusal of either removal.
+fn census_on_store(root: &Path, store: &Path, removing: bool) -> (Census, Units) {
+    let lock = match hold(store) {
+        Ok(lock) => lock,
+        Err(reason) => {
+            let refused = Census {
+                sources: Vec::new(),
+                migrations: Vec::new(),
+                naming: BTreeSet::new(),
+                calling: BTreeSet::new(),
+                refused: vec![reason],
+            };
+            return (refused, Units::default());
+        }
+    };
+    let _ = removing;
+    let census = census_in(root, store);
+    drop(lock);
+    (census, Units::default())
+}
+
 /// `path` relative to `root`, with `/` separators.
 fn relative(root: &Path, path: &Path) -> String {
     path.strip_prefix(root)
@@ -1315,13 +1514,32 @@ fn plant_member(root: &Path, name: &str, files: &[(&str, &str)]) {
 #[test]
 #[allow(clippy::too_many_lines)]
 fn only_progression_writes_xp_settlement_and_only_coordination_settles() {
-    let found = census_in(
-        &root(),
-        &Path::new(env!("CARGO_TARGET_TMPDIR")).join("settle-census"),
-    );
+    let (found, units) = census_in_store(&root(), &store_of(&root()));
     examined("crate source file(s)", found.sources.clone());
     examined("migration(s)", found.migrations.clone());
     assert_eq!(found.refused, Vec::<String>::new());
+    // The store's counts, each read from cargo's messages (SPEC-384 R7): every pass read member
+    // units, every member unit read is one this census compiled, and none was refused.
+    println!(
+        "census store: {} pass(es), reading {:?} member unit(s); {} member unit(s) compiled, {} \
+         read, {} of them compiled by this census; {} store unit(s) reused",
+        units.passes.len(),
+        units.passes,
+        units.compiled,
+        units.read,
+        units.read_compiled,
+        units.reused.len()
+    );
+    assert!(
+        !units.passes.is_empty() && units.passes.iter().all(|read| *read > 0),
+        "every pass of the census reads member units: {:?}",
+        units.passes
+    );
+    assert_eq!(
+        units.read_compiled, units.read,
+        "every member unit the census read is one it compiled"
+    );
+    assert_eq!(units.refused, Vec::<String>::new());
     // The positive artifacts: progression's `settle` module and its migration name the table, and
     // the fold's XP step calls the operation.
     let writers: BTreeSet<&str> = [
@@ -1438,6 +1656,348 @@ fn only_progression_writes_xp_settlement_and_only_coordination_settles() {
              migrations may",
         ]
     );
+}
+
+/// The verdict on [`store_tree`]: its member calls `settle`, and only coordination may.
+const STORE_TREE_VERDICT: [&str; 1] =
+    ["crates/m/src/lib.rs calls settle, and only coordination's code may"];
+
+/// The path packages [`store_tree`] plants, as cargo names them.
+const STORE_TREE_PATHS: [&str; 3] = [
+    "deck-streak-progression",
+    "deck-streak-other",
+    "deck-streak-m",
+];
+
+/// Plants the store's planted tree under `planted` and answers its workspace (SPEC-384 A1 to A3,
+/// A5): the killer's stub, a git package `g` committed beside the workspace, and a member `m` that
+/// depends on progression by its path and on `g` by its URL and calls both, with the lock file
+/// [`locked`] writes, which fetches `g`.
+fn store_tree(planted: &Path) -> PathBuf {
+    let root = planted.join("ws");
+    let git = planted.join("git");
+    for (path, text) in killer_stub() {
+        plant(&root, &path, &text);
+    }
+    plant(
+        &git,
+        "Cargo.toml",
+        "[package]\nname = \"g\"\nversion = \"0.1.0\"\nedition = \"2024\"\n",
+    );
+    plant(&git, "src/lib.rs", "pub fn g() -> usize {\n    0\n}\n");
+    committed(&git);
+    plant(
+        &root,
+        "crates/m/Cargo.toml",
+        &format!(
+            "{}\n[dependencies]\n{PROGRESSION_PACKAGE} = {{ path = \"../progression\" }}\n\
+             g = {{ git = \"file://{}\" }}\n",
+            killer_package("m"),
+            git.display()
+        ),
+    );
+    plant(
+        &root,
+        "crates/m/src/lib.rs",
+        "pub fn m() -> usize {\n    deck_streak_progression::settle() + g::g()\n}\n",
+    );
+    locked(&root);
+    root
+}
+
+/// The names of the entries of `store`'s fingerprint, deps and build folders.
+fn store_entries(store: &Path) -> Vec<String> {
+    let mut entries = Vec::new();
+    for folder in [".fingerprint", "deps", "build"] {
+        for entry in fs::read_dir(store.join("debug").join(folder))
+            .into_iter()
+            .flatten()
+        {
+            let name = entry.expect("an entry of the store").file_name();
+            entries.push(name.to_string_lossy().into_owned());
+        }
+    }
+    entries
+}
+
+/// The entries of `entries` that belong to the package `name`: its fingerprint and build folders
+/// carry its name, and its deps files its crate's name.
+fn entries_of<'a>(entries: &'a [String], name: &str) -> Vec<&'a String> {
+    let crate_name = name.replace('-', "_");
+    let prefixes = [
+        format!("{name}-"),
+        format!("{crate_name}-"),
+        format!("lib{crate_name}-"),
+    ];
+    entries
+        .iter()
+        .filter(|entry| prefixes.iter().any(|prefix| entry.starts_with(prefix)))
+        .collect()
+}
+
+#[test]
+fn a_second_census_on_one_store_reuses_only_pinned_units_and_compiles_every_member() {
+    // SPEC-384 A1 (R1, R2, R5): two censuses of one planted tree on one store. The second reuses
+    // the git package's units the first compiled, compiles every member unit it reads, and both
+    // reach the verdict `census_in` reaches in an empty target.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    let root = store_tree(planted.path());
+    let store = planted.path().join("store");
+    let alone = census_in(&root, &planted.path().join("alone")).refused;
+    let (first, cold) = census_in_store(&root, &store);
+    let (second, warm) = census_in_store(&root, &store);
+    println!(
+        "first census: {} pass(es), {} member unit(s) compiled, {} reused; second: {} pass(es), \
+         {} compiled, {} reused",
+        cold.passes.len(),
+        cold.compiled,
+        cold.reused.len(),
+        warm.passes.len(),
+        warm.compiled,
+        warm.reused.len()
+    );
+    assert!(
+        warm.reused
+            .iter()
+            .any(|package| package.starts_with("git+")),
+        "the second census reuses a unit of the git package from the store: {:?}",
+        warm.reused
+    );
+    assert!(
+        warm.reused
+            .iter()
+            .all(|package| package.starts_with("git+") || package.starts_with("registry+")),
+        "the store answers only units the lock file pins: {:?}",
+        warm.reused
+    );
+    assert_eq!(
+        cold.reused,
+        Vec::<String>::new(),
+        "a census on an empty store reuses nothing"
+    );
+    assert!(
+        warm.compiled > 0 && warm.compiled == cold.compiled,
+        "the second census compiles every member unit the first did: {} and {}",
+        warm.compiled,
+        cold.compiled
+    );
+    assert!(
+        warm.read > 0 && warm.read_compiled == warm.read,
+        "every member unit the second census read is one it compiled: {} of {}",
+        warm.read_compiled,
+        warm.read
+    );
+    assert_eq!(
+        alone, STORE_TREE_VERDICT,
+        "the tree alone, in an empty target"
+    );
+    assert_eq!(first.refused, alone, "the first census on the store");
+    assert_eq!(second.refused, alone, "the second census on the store");
+}
+
+#[test]
+fn a_member_unit_the_census_did_not_compile_is_refused_by_name() {
+    // SPEC-384 A2 (R2): with the removal withheld, a census leaves its members' units in the
+    // store and the next census, its removal withheld too, is answered them fresh: each is
+    // refused by name. With the removal, the census of the same store judges the tree alone.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    let root = store_tree(planted.path());
+    let store = planted.path().join("store");
+    let (kept, _) = census_on_store(&root, &store, false);
+    let (unremoved, _) = census_on_store(&root, &store, false);
+    let (removed, _) = census_in_store(&root, &store);
+    let named: Vec<&String> = unremoved
+        .refused
+        .iter()
+        .filter(|refusal| {
+            refusal.starts_with("crates/m's ")
+                && refusal
+                    .ends_with("was answered from the store, and this census did not compile it")
+        })
+        .collect();
+    assert!(
+        !named.is_empty(),
+        "the member's unit left in the store is refused by name: {:?}",
+        unremoved.refused
+    );
+    assert_eq!(
+        kept.refused, STORE_TREE_VERDICT,
+        "the census that filled the store"
+    );
+    assert_eq!(
+        removed.refused, STORE_TREE_VERDICT,
+        "with the removal, the census judges the tree alone"
+    );
+    examined("refusal(s) of the member's unit", named);
+}
+
+#[test]
+fn the_removal_leaves_no_unit_of_a_path_package() {
+    // SPEC-384 A3 (R1, R2): a planted census on a store, its removal withheld, leaves its path
+    // packages' units there; the removal then leaves none of them under the store's fingerprint,
+    // deps or build folders, and keeps the git package's.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    let root = store_tree(planted.path());
+    let store = planted.path().join("store");
+    let (census, _) = census_on_store(&root, &store, false);
+    let before = store_entries(&store);
+    let (ok, stdout, stderr) = cargo(
+        &root,
+        &["metadata", "--format-version", "1", "--locked", "--offline"].map(str::to_owned),
+        CARGO_LIMIT,
+    )
+    .expect("cargo metadata runs");
+    assert!(ok, "cargo metadata in {}: {stderr}", root.display());
+    let metadata: Value = serde_json::from_str(&stdout).expect("the graph");
+    removal(&root, &store, &path_packages(&metadata)).expect("the removal runs");
+    let after = store_entries(&store);
+    assert!(
+        !entries_of(&after, "g").is_empty(),
+        "the git package's units remain in the store: {after:?}"
+    );
+    for package in STORE_TREE_PATHS {
+        assert!(
+            !entries_of(&before, package).is_empty(),
+            "the census left {package}'s units in the store: {before:?}"
+        );
+        assert_eq!(
+            entries_of(&after, package),
+            Vec::<&String>::new(),
+            "the removal leaves no unit of {package}"
+        );
+    }
+    assert_eq!(census.refused, STORE_TREE_VERDICT);
+    examined("entry(ies) of the store after the removal", after);
+}
+
+#[test]
+fn a_store_is_keyed_by_the_lock_the_toolchain_the_environment_and_the_root() {
+    // SPEC-384 A4 (R3): equal inputs give one key, and a change to any one input alone gives
+    // another: the lock file, the toolchain pin, the cargo program, each flag and the arming, each
+    // inherited name's value and its absence, and the tree root.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    let (one, two) = (planted.path().join("one"), planted.path().join("two"));
+    fs::create_dir_all(&one).expect("a root");
+    fs::create_dir_all(&two).expect("another root");
+    let (lock, toolchain) = (b"[[package]]\n".as_slice(), b"[toolchain]\n".as_slice());
+    let key = store_key(lock, toolchain, &census_command(), &one);
+    assert_eq!(
+        key,
+        store_key(lock, toolchain, &census_command(), &one),
+        "equal inputs give one key"
+    );
+    // Each pair differs in one input alone, and must name two stores.
+    let mut pairs: Vec<(String, String, String)> = vec![
+        (
+            "the lock file".to_owned(),
+            key.clone(),
+            store_key(b"[[package]]\n\n", toolchain, &census_command(), &one),
+        ),
+        (
+            "the toolchain pin".to_owned(),
+            key.clone(),
+            store_key(lock, b"[toolchain]\n\n", &census_command(), &one),
+        ),
+        (
+            "the tree root".to_owned(),
+            key.clone(),
+            store_key(lock, toolchain, &census_command(), &two),
+        ),
+    ];
+    let mut program = Command::new("another-cargo");
+    for (name, value) in census_command().get_envs() {
+        match value {
+            Some(value) => program.env(name, value),
+            None => program.env_remove(name),
+        };
+    }
+    pairs.push((
+        "the cargo program".to_owned(),
+        key.clone(),
+        store_key(lock, toolchain, &program, &one),
+    ));
+    for name in ["CARGO_INCREMENTAL", "CARGO_ENCODED_RUSTFLAGS", ARMING] {
+        let mut command = census_command();
+        command.env(name, "another value");
+        pairs.push((
+            format!("the census's {name}"),
+            key.clone(),
+            store_key(lock, toolchain, &command, &one),
+        ));
+    }
+    for name in INHERITED {
+        let (mut set, mut other, mut absent) =
+            (census_command(), census_command(), census_command());
+        set.env(name, "a value");
+        other.env(name, "another value");
+        absent.env_remove(name);
+        let set = store_key(lock, toolchain, &set, &one);
+        pairs.push((
+            format!("{name}'s value"),
+            set.clone(),
+            store_key(lock, toolchain, &other, &one),
+        ));
+        pairs.push((
+            format!("{name}'s absence"),
+            set,
+            store_key(lock, toolchain, &absent, &one),
+        ));
+    }
+    let alike: Vec<&str> = pairs
+        .iter()
+        .filter(|(_, left, right)| left == right)
+        .map(|(input, _, _)| input.as_str())
+        .collect();
+    assert_eq!(
+        alike,
+        Vec::<&str>::new(),
+        "each input changed alone names a store of its own"
+    );
+    assert!(
+        key.len() == 64 && key.bytes().all(|byte| byte.is_ascii_hexdigit()),
+        "a SHA-256 in hex: {key}"
+    );
+    examined("input(s) changed alone", pairs);
+}
+
+#[test]
+fn a_census_holds_its_store_locked_until_its_last_pass() {
+    // SPEC-384 A5 (R4): while a census holds its store, another handle's `try_lock` on the store's
+    // lock file reads `WouldBlock`; once the census has ended, it succeeds.
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    let root = store_tree(planted.path());
+    let store = planted.path().join("store");
+    fs::create_dir_all(&store).expect("the store");
+    let other = fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(store.join(".lock"))
+        .expect("another handle on the store's lock file");
+    let mut blocked = 0_usize;
+    let (census, _) = std::thread::scope(|scope| {
+        let census = scope.spawn(|| census_in_store(&root, &store));
+        while !census.is_finished() {
+            match other.try_lock() {
+                Err(fs::TryLockError::WouldBlock) => blocked += 1,
+                Ok(()) => other.unlock().expect("the other handle unlocks"),
+                Err(fs::TryLockError::Error(error)) => panic!("try_lock on the store: {error}"),
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        census.join().expect("the census's thread")
+    });
+    println!("the other handle read WouldBlock {blocked} time(s) while the census ran");
+    assert!(
+        blocked > 0,
+        "another handle's try_lock reads WouldBlock while the census holds its store"
+    );
+    assert_eq!(
+        other.try_lock().map_err(|error| error.to_string()),
+        Ok(()),
+        "the store's lock is free once the census has ended"
+    );
+    assert_eq!(census.refused, STORE_TREE_VERDICT);
 }
 
 /// Plants progression's re-exports of `settle` under other names at `root` (one through another
