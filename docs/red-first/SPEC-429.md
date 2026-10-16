@@ -45,7 +45,11 @@ test_rulesets.TheReleaseRunbookReadsTheStalePriceRows.test_the_runbook_reads_the
 
 None of the eleven is red for another reason.
 
-Test edits after the red commit: none. The green commit,
+Test edits after the red commit: one, in the fix commit, which single-quotes the plan job step's
+`run:` value so that the workflow parses as YAML and edits A11's second `assertRegex` in
+`test_mutation_python_workflows.py` to match the quoted line, still exactly from its start to its
+end, a change of spelling only, ruled not a weakening, since the run's value is unchanged and no
+assertion, case or test is removed. The green commit,
 97f482454f1da67d5a0f68db2cd676aea36b7795, the rows commit and this record's commit edit no test
 module.
 

@@ -177,8 +177,8 @@ class ThePlanJobNamesTheStalePriceRows(unittest.TestCase):
         )
         self.assertRegex(
             step,
-            r'(?m)^        run: python3 scripts/mutation-verdict\.py stale \|\| echo "mutation: '
-            r'stale: VOID: the check exited \$\?"$',
+            r"""(?m)^        run: 'python3 scripts/mutation-verdict\.py stale \|\| echo "mutation: """
+            r"""stale: VOID: the check exited \$\?"'$""",
         )
         for word in examined("forbidden keys", ["id:", "continue-on-error:", "if:", "with:"]):
             self.assertNotIn(word, step, f"the stale step carries {word}")
