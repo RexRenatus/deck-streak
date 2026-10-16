@@ -295,10 +295,13 @@ class ThePythonStageRunsEverySuite(unittest.TestCase):
         self.assertEqual(done.returncode, 1, done.stdout)
         # The oracle suite ran although the guard suite was red, and its result is in the log.
         self.assertIn("Ran 2 tests", log)
+        # The summary cuts the stage's last line at 160 characters, which ends inside its ruff
+        # fields (SPEC-424 R7): the three suites' fields, then the lint arm's.
         self.assertRegex(
             summary(done),
             r"^FAILED +python .*: python: scripts/tests ran 1 test\(s\), exit 1; "
-            r"tools/parity-oracle ran 2 test\(s\), exit 0; agent/tests ran 2 test\(s\), exit 0$",
+            r"tools/parity-oracle ran 2 test\(s\), exit 0; agent/tests ran 2 test\(s\), exit 0; "
+            r"ruff check examined 2 file\(s\), exit 0$",
         )
         # A suite that runs no test fails the stage by name, whatever its exit.
         with tempfile.TemporaryDirectory() as scratch:

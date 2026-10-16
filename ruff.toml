@@ -10,6 +10,36 @@ extend-exclude = [
     "tools/parity-oracle/generate.py",
     "tools/parity-oracle/registry",
 ]
+# The one ruff the gate runs, pinned and hashed in scripts/ruff-requirements.txt (SPEC-424 R1).
+required-version = "==0.15.16"
 
 [lint]
 unfixable = ["F401", "F841"]
+# Added to ruff's default set, which stays enabled (SPEC-424 R2, ADR-438 D2).
+extend-select = ["S", "B", "ASYNC", "PGH", "PLE", "FIX", "T10", "DTZ", "RUF034", "TID251"]
+ignore = [
+    # Permanent: an argument-list subprocess is the house shape.
+    "S603", "S607",
+    # Permanent: gitleaks is the authority on secrets.
+    "S105", "S106", "S107",
+    # Not admitted (ADR-438 D2).
+    "S101", "S102", "S108", "S311", "B904", "B905", "B023", "B007", "B008", "DTZ001",
+]
+
+[lint.per-file-ignores]
+"scripts/tests/**" = ["S104", "S604"]
+"scripts/tests/test_mutation_rows_refusal.py" = ["TID251"]
+"crates/agent/tests/fixtures/fake-probe.py" = ["PLE2515"]
+
+[lint.flake8-tidy-imports.banned-api]
+"os.system".msg = "runs a shell command line; run an argument list with subprocess.run"
+"os.popen".msg = "runs a shell command line; run an argument list with subprocess.run"
+"subprocess.getoutput".msg = "runs through a shell; run an argument list with subprocess.run"
+"subprocess.getstatusoutput".msg = "runs through a shell; run an argument list with subprocess.run"
+"pickle".msg = "loading a pickle runs code; read and write JSON"
+"marshal".msg = "unsafe to load from outside; read and write JSON"
+"shelve".msg = "pickle underneath; read and write JSON"
+"tempfile.mktemp".msg = "another process can take the name first; use mkstemp or TemporaryDirectory"
+"telnetlib".msg = "a cleartext protocol"
+"ftplib".msg = "a cleartext protocol"
+"os.chdir".msg = "changes the whole process's directory; pass cwd= or an absolute path"

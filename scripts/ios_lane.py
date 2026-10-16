@@ -309,7 +309,10 @@ def sign():
     listed = IDENTITY.findall(
         tool("security", "find-identity", "-v", "-p", "codesigning", keychain)
     )
-    issued = {hashlib.sha1(der).hexdigest().upper() for der in profile["DeveloperCertificates"]}
+    issued = {
+        hashlib.sha1(der, usedforsecurity=False).hexdigest().upper()
+        for der in profile["DeveloperCertificates"]
+    }
     matched = [identity for identity in listed if identity in issued]
     if not matched:
         raise Refused("the profile was not issued for the imported certificate")

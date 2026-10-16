@@ -344,6 +344,12 @@ jobs:
           echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c -
           mkdir -p "$HOME/.local/protoc" && unzip -q /tmp/protoc.zip -d "$HOME/.local/protoc"
           echo "$HOME/.local/protoc/bin" >> "$GITHUB_PATH"
+      - name: ruff, from the hashed pin (scripts/ruff-requirements.txt), alone on the path
+        run: |
+          python3 -m venv "$RUNNER_TEMP/ruff-venv"
+          "$RUNNER_TEMP/ruff-venv/bin/python" -m pip install --no-input --disable-pip-version-check --require-hashes --only-binary :all: -r scripts/ruff-requirements.txt
+          mkdir -p "$RUNNER_TEMP/ruff-bin" && ln -s "$RUNNER_TEMP/ruff-venv/bin/ruff" "$RUNNER_TEMP/ruff-bin/ruff"
+          echo "$RUNNER_TEMP/ruff-bin" >> "$GITHUB_PATH"
       - name: python, scrub and secrets (the guard tests, among them cargo builds and a cargo deny audit; the public deny-list; gitleaks)
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs

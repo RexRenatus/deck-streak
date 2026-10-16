@@ -6,11 +6,14 @@ name holding `root` or `repo`, in any case, whose value is `Path(__file__)` (or
 reach the repository root, or the directory `LISTED_ROOTS` names for it. A count of parents that is
 off by one reads a sibling directory with no error, which is why nothing but this guard sees it."""
 
+import ast
+import fnmatch
+import os
 import pathlib
 import tempfile
 import unittest
 
-from _support import examined
+from _support import REPO, examined
 
 # The roots the gate lints (scripts/check.sh's RUFF_ROOTS), which the guard walks too.
 ROOTS = ("scripts", "tools", "deploy", "agent", "crates")
@@ -23,23 +26,142 @@ FENCED = ("*drill*", "*readings_tree*", "test_deploy_standin.py", "_standin_chec
 LISTED_ROOTS = {}
 
 
+def fenced_name(name, fenced):
+    """Whether a file's or a directory's own name matches a `fenced` pattern, case-blind."""
+    return any(fnmatch.fnmatchcase(name.lower(), pattern) for pattern in fenced)
+
+
 def walk(tree, fenced=FENCED):
     """([file, ...], [skipped, ...]): every `.py` file under the five roots of `tree`, and every
-    file or directory a `fenced` pattern skipped, each repository-relative and sorted."""
-    return [], []
+    file or directory a `fenced` pattern skipped, each repository-relative and sorted. A fenced
+    directory is pruned before it is entered, and a fenced file is held out before it is opened."""
+    tree = pathlib.Path(tree)
+    files, skipped = [], []
+    for root in ROOTS:
+        for here, dirs, names in os.walk(tree / root):
+            place = pathlib.Path(here).relative_to(tree)
+            held = sorted(name for name in dirs if fenced_name(name, fenced))
+            skipped += [(place / name).as_posix() for name in held]
+            dirs[:] = sorted(name for name in dirs if name not in held)
+            for name in sorted(names):
+                if not name.endswith(".py"):
+                    continue
+                path = (place / name).as_posix()
+                (skipped if fenced_name(name, fenced) else files).append(path)
+    return sorted(files), sorted(skipped)
+
+
+def path_of_file(node):
+    """Whether `node` is the call `Path(__file__)` or `pathlib.Path(__file__)`."""
+    if not isinstance(node, ast.Call):
+        return False
+    func = node.func
+    named = (isinstance(func, ast.Name) and func.id == "Path") or (
+        isinstance(func, ast.Attribute)
+        and func.attr == "Path"
+        and isinstance(func.value, ast.Name)
+        and func.value.id == "pathlib"
+    )
+    return (
+        named
+        and not node.keywords
+        and len(node.args) == 1
+        and isinstance(node.args[0], ast.Name)
+        and node.args[0].id == "__file__"
+    )
+
+
+def chain(value):
+    """(starts, index): whether `value`'s receiver chain starts at `Path(__file__)`, and the index
+    into the file's parents its tail reaches, or None for a tail the guard cannot resolve. The tail
+    it resolves is an optional `.resolve()`, then `.parents[N]` with an integer literal or `.parent`
+    repeated `k` times, which is index `k - 1`."""
+    tail, node = [], value
+    while not path_of_file(node):
+        if isinstance(node, ast.Attribute):
+            tail.append(node.attr)
+            node = node.value
+        elif isinstance(node, ast.Subscript):
+            tail.append(node.slice)
+            node = node.value
+        elif isinstance(node, ast.Call):
+            tail.append(node)
+            node = node.func
+        else:
+            return False, None
+    tail.reverse()
+    if (
+        len(tail) >= 2
+        and tail[0] == "resolve"
+        and isinstance(tail[1], ast.Call)
+        and not tail[1].args
+        and not tail[1].keywords
+    ):
+        tail = tail[2:]
+    if len(tail) == 2 and tail[0] == "parents" and isinstance(tail[1], ast.Constant):
+        depth = tail[1].value
+        if isinstance(depth, int) and not isinstance(depth, bool) and depth >= 0:
+            return True, depth
+        return True, None
+    if tail and all(step == "parent" for step in tail):
+        return True, len(tail) - 1
+    return True, None
+
+
+def root_named(name):
+    """Whether a name holds `root` or `repo`, in any case."""
+    return "root" in name.lower() or "repo" in name.lower()
 
 
 def sites(tree, files):
     """[(path, line, name, index), ...]: every computed root in `files`, each with the index into
     its path's parents that its chain reaches, or None for a chain the guard cannot resolve; a file
-    that does not parse is one entry, (path, None, None, None)."""
-    return []
+    that does not parse is one entry, (path, None, None, None). A site is an assignment, at any
+    scope, plain or annotated, whose one target is a root-named name and whose value's receiver
+    chain starts at `Path(__file__)`; a string, an expression statement and a tuple target are
+    not."""
+    found = []
+    for path in files:
+        source = (pathlib.Path(tree) / path).read_bytes()
+        try:
+            module = ast.parse(source, filename=path)
+        except (SyntaxError, ValueError):
+            found.append((path, None, None, None))
+            continue
+        here = []
+        for node in ast.walk(module):
+            if isinstance(node, ast.Assign) and len(node.targets) == 1:
+                target, value = node.targets[0], node.value
+            elif isinstance(node, ast.AnnAssign) and node.value is not None:
+                target, value = node.target, node.value
+            else:
+                continue
+            if not isinstance(target, ast.Name) or not root_named(target.id):
+                continue
+            starts, index = chain(value)
+            if starts:
+                here.append((path, node.lineno, target.id, index))
+        found += sorted(here)
+    return found
 
 
 def refusals(tree, found, listed=LISTED_ROOTS):
     """One line for each site of `found` that does not reach the repository root, or the directory
     `listed` names for it, and for each file that does not parse."""
-    return []
+    refused = []
+    for path, line, name, index in found:
+        if line is None:
+            refused.append(f"{path}: does not parse")
+            continue
+        if index is None:
+            refused.append(f"{path}:{line}: {name} is a chain the guard cannot resolve")
+            continue
+        parents = pathlib.PurePosixPath(path).parents
+        reached = parents[index].as_posix() if index < len(parents) else ".."
+        meant = listed.get(f"{path}::{name}", (".", "the repository root"))[0]
+        if reached != meant:
+            refused.append(f"{path}:{line}: {name} resolves to {reached}, not the repository root")
+    return refused
 
 
 def plant(tree, files):
@@ -148,6 +270,20 @@ class AComputedRootIsProvedByItsSyntaxTree(unittest.TestCase):
             FENCED, ("*drill*", "*readings_tree*", "test_deploy_standin.py", "_standin_checks.py")
         )
         examined("planted files outside the fence", files)
+
+
+class EveryComputedRootInTheTreeResolves(unittest.TestCase):
+    def test_every_computed_root_in_the_tree_resolves(self):
+        files, skipped = walk(REPO)
+        found = sites(REPO, files)
+        examined("python files under the five roots", files)
+        examined("computed repository roots", [site for site in found if site[1] is not None])
+        self.assertEqual(refusals(REPO, found), [])
+        self.assertEqual(LISTED_ROOTS, {})
+        print(f"skipped {len(skipped)} fenced name(s), none opened")
+        for name in skipped:
+            with self.subTest(skipped=name):
+                self.assertTrue(fenced_name(pathlib.PurePosixPath(name).name, FENCED), name)
 
 
 if __name__ == "__main__":
