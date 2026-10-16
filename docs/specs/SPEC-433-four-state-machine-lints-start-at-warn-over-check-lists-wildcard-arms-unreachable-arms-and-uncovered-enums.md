@@ -33,7 +33,7 @@ figure here, and the file counts read by name are exact.
 | catch-all arms among them | 2: `crates/readings/src/state.rs:302` and `:312` | the same ranges |
 | wildcard arms whose value is a state enum | 3, none a match on one | `git grep -n -E '(^\|[^A-Za-z0-9_])_\s*(if\s.*)?=>' D -- . X`, the arms whose value names a state enum |
 | `unreachable!`, `panic!`, `todo!`, `unimplemented!` under `crates/*/src` | 2, neither in product code | `git grep -n -E '\b(panic\|unimplemented\|todo\|unreachable)!' D -- . X` |
-| whole-body column-domain CHECK lists | 59 in 32 migrations, folding to 54 columns (42 text, 12 integer); 5 rewritten by `004102`'s rebuild | the `CHECK (<col> IN (...))` forms of each migration, comments stripped, renames applied |
+| whole-body column-domain CHECK lists | 59 in 32 migrations, folding to 54 columns (42 text, 12 integer); 5 rewritten by `004102`'s rebuild | the `CHECK (<column> IN (...))` forms of each migration, comments stripped, renames applied |
 | state columns among the 54 | 9: 7 paired, 2 with no enum | the text columns named `state`, `status`, `outcome`, `verdict`, `phase`, `stage`, `step` or `mode`, or ending in `_` and one |
 | state enums deriving `sqlx::Type` or carrying a serde rename | 0 | `git grep -n -E 'sqlx::Type\|#\[sqlx\(\|serde\(rename' D -- . X` |
 | enums marked `#[non_exhaustive]`; state-enum variants imported bare | 0; 0 | `git grep -n -E 'non_exhaustive\|use\s+[A-Za-z_:]*(State\|Status\|Phase\|Stage\|Step\|Lifecycle\|Mode)::(\*\|\{)' D -- . X` |
