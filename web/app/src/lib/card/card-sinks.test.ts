@@ -29,8 +29,31 @@ const SINKS: Readonly<Record<string, RegExp>> = {
 /** An arm is a pattern whose every match is a hit, or a counter for an arm a pattern cannot state. */
 type Arm = RegExp | ((text: string) => number);
 
+/** SPEC-425 R1, R3: a `target` of `_blank` whose own tag holds no `rel` naming both `noopener` and
+ * `noreferrer`. The tag is the text between the nearest `<` or `>` on each side, so a misread tag
+ * hides its `rel` and reads as a hit, never as a miss. */
+function blankTargetsWithoutRel(text: string): number {
+  const rel = /\brel\s*=\s*\{?\s*(["'`])(?=(?:(?!\1).)*\bnoopener\b)(?=(?:(?!\1).)*\bnoreferrer\b)/i;
+  let count = 0;
+  for (const found of text.matchAll(/\btarget\s*=\s*\{?\s*["'`]?_blank\b/gi)) {
+    const at = found.index;
+    const start = Math.max(text.lastIndexOf('<', at), text.lastIndexOf('>', at)) + 1;
+    const ends = [text.indexOf('<', at), text.indexOf('>', at)].filter((index) => index >= 0);
+    if (!rel.test(text.slice(start, ends.length > 0 ? Math.min(...ends) : text.length))) count += 1;
+  }
+  return count;
+}
+
 /** SPEC-425 R1: six shapes the page holds at none, each read from raw text, so a comment counts. */
-const ZERO_SHAPES: Readonly<Record<string, Arm>> = {};
+const ZERO_SHAPES: Readonly<Record<string, Arm>> = {
+  'eval(': /(?<![\w$])eval\s*\(/g,
+  'new Function(': /(?<![\w$])(?:new\s+)?Function\s*\(/g,
+  'string timer': /\bset(?:Timeout|Interval)\s*\(\s*["'`]/g,
+  'blank target without rel': blankTargetsWithoutRel,
+  "postMessage to '*'":
+    /\bpostMessage\s*\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*?,\s*(?:\{[^}]*\btargetOrigin\s*:\s*)?["'`]\*["'`]/g,
+  'javascript: URL': /(?:["'`]|=)\s*javascript:/gi
+};
 
 /** The arms of one table that one text holds, by name, with how many of each; an arm it does not
  * hold is absent. The table is SPEC-341's sinks unless a caller names another. */
@@ -52,13 +75,14 @@ function examined<T>(what: string, items: T[]): T[] {
   return items;
 }
 
-/** Every shipped source file under `dir`, relative to the app: never a test or the generated messages. */
+/** Every shipped source file under `dir`, relative to the app: each `.ts`, `.js`, `.svelte` and
+ * `.html` file, the page shell included, and never a test or the generated messages. */
 function sources(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true })
     .flatMap((entry) => {
       const path = join(dir, entry.name);
       if (entry.isDirectory()) return entry.name === 'paraglide' ? [] : sources(path);
-      if (!/\.(?:ts|js|svelte)$/.test(entry.name)) return [];
+      if (!/\.(?:ts|js|svelte|html)$/.test(entry.name)) return [];
       if (/\.(?:test|spec)\./.test(entry.name)) return [];
       return [relative(APP, path).split('\\').join('/')];
     })
