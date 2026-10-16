@@ -42,7 +42,8 @@
       "test_mutation_verdict",
       "test_mutation_equivalent",
       "test_memory_cap_verdict",
-      "test_release_python_ceiling"
+      "test_release_python_ceiling",
+      "test_release_rust_ceiling"
     ]
   },
   "scripts/mutation_python.py": {

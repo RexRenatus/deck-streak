@@ -437,6 +437,7 @@ class ThePythonLegsAreDealtByCost(unittest.TestCase):
                 with (
                     mock.patch.object(program, "PYTHON_MAX_SHARDS", 32),
                     mock.patch.dict(program.LEG_CEILING, {"ci": 193}),
+                    mock.patch.object(program, "RUST_RELEASE_CEILING", 193),
                     mock.patch.dict(program.PYTHON_CONTROL_SECONDS, prices, clear=True),
                     mock.patch.dict(os.environ, {"GITHUB_OUTPUT": str(sink)}),
                     contextlib.redirect_stdout(out),
@@ -665,6 +666,7 @@ class EachArmOfTheCostDealIsObserved(unittest.TestCase):
             with (
                 mock.patch.object(program, "PYTHON_MAX_SHARDS", 32),
                 mock.patch.dict(program.LEG_CEILING, {"ci": 193}),
+                mock.patch.object(program, "RUST_RELEASE_CEILING", 193),
                 mock.patch.dict(program.PYTHON_CONTROL_SECONDS, {"a.py": 100}, clear=True),
                 mock.patch.dict(os.environ, {"GITHUB_OUTPUT": str(sink)}),
                 contextlib.redirect_stdout(out),
@@ -2006,6 +2008,7 @@ class ThePythonShareIsOneCappedValue(unittest.TestCase):
             with (
                 mock.patch.object(program, "PYTHON_MAX_SHARDS", share),
                 mock.patch.dict(program.LEG_CEILING, {"ci": 193}),
+                mock.patch.object(program, "RUST_RELEASE_CEILING", 193),
                 mock.patch.dict(program.PYTHON_CONTROL_SECONDS, {"a.py": 100}, clear=True),
                 mock.patch.dict(os.environ, {"GITHUB_OUTPUT": str(sink)}),
                 contextlib.redirect_stdout(out),
@@ -2197,6 +2200,7 @@ def plan_shards(entries, whole, scoped, selections=frozenset({"plan"})):
         with (
             mock.patch.object(program, "PYTHON_MAX_SHARDS", 32),
             mock.patch.dict(program.LEG_CEILING, {"ci": 193}),
+            mock.patch.object(program, "RUST_RELEASE_CEILING", 193),
             mock.patch.dict(program.PYTHON_CONTROL_SECONDS, whole, clear=True),
             mock.patch.dict(program.PYTHON_SCOPED_SECONDS, scoped, clear=True),
             mock.patch.object(program.mutation_python, "SCOPED_SELECTIONS", selections),

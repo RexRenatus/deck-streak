@@ -95,6 +95,9 @@ def verb(argv, ceiling=None, prices=None):
                 stack.enter_context(
                     mock.patch.object(module, "PYTHON_RELEASE_CEILING", ceiling, create=True)
                 )
+            stack.enter_context(
+                mock.patch.object(module, "RUST_RELEASE_CEILING", module.LEG_CEILING["ci"])
+            )
             stack.enter_context(contextlib.redirect_stdout(out))
             code = module.main([str(each) for each in argv])
         written = sink.read_text(encoding="utf-8").splitlines()

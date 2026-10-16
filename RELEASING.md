@@ -61,6 +61,7 @@ keeps being cancelled never releases. Hold every merge into `dev` until the rele
 request's do, in legs sized from the tool's own listing (SPEC-362, ADR-373). `mutation-plan`
 prints `legs N of ceiling C`, where C is the most legs the run holds beside its other jobs, and a
 plan that needs more than C is refused whole, by name, never capped.
+Only the release pull request may size past C, up to `RUST_RELEASE_CEILING` (SPEC-423).
 
 **The Python plan prints its headroom too.** The release's Python mutants run in the same run, at
 most 20 to a leg (SPEC-362 R14). `mutation-plan` prints `python legs N of ceiling S`, where S is
@@ -114,6 +115,16 @@ mutant `dev` gained since the last release, so the range only grows until it shi
 the ceiling cannot be judged by any run. The scheduled battery's plan of the whole tree, the largest
 range a release can carry, prints the same line: when its N nears the pull request run's ceiling,
 cut a release.
+
+**The release run's Rust legs pass the pull request ceiling only up to one signed ceiling (SPEC-423, ADR-437).**
+The release pull request may size more Rust legs than C, up to `RUST_RELEASE_CEILING` in
+`scripts/mutation-verdict.py`, read from the same release mark as the Python ceiling, and every
+other run keeps C. Until its ruling is signed the ceiling stands at the pull request ceiling, where
+the release run sizes its Rust legs as any pull request's. The release run's Rust legs run in the
+one `mutation-rust` matrix, of at most `RUST_MATRIX_LEGS` legs, and a ceiling below the pull
+request ceiling or past `RUST_MATRIX_LEGS` is refused before any deal. A release listing past the
+ceiling is refused whole, by name, never capped. The ceiling is the one figure its signed ruling
+names, and a larger figure needs a new measurement and a new owner-signed ruling.
 
 ## 3. Tag it on main
 

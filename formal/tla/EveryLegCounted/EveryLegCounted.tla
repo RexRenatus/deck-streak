@@ -94,7 +94,17 @@
 \*   legs from PYTHON_MATRIX_LEGS on, which Legs holds with no bound below NLegs, and each uploads its report to
 \*   the store under the name a mutation-python leg uses. An owed leg it does not start leaves no report, which
 \*   the verdict reads as LegVoid; a leg the plan dealt no mutant is not owed.
-\* @phx covers scripts/mutation-verdict.py anchor=shards digest=sha256:5d169ffb0b126962dfa75ed36c100e226cc62677ea14b8117b6621930a83137d
+\* Re-read for SPEC-423 (ADR-437): every hunk of the shards span below implements Plan or follows its deal, and none moves a variable.
+\* mutation-verdict.py::shards reads the release run's Rust ceiling from the plan (rust_release_ceiling) and sizes
+\*   the count as the fewest legs within it for a release plan under a set ceiling, else within LEG_CEILING["ci"],
+\*   as at the base. This hunk implements Plan: which bound holds moves no mutant, the deal is still mutant i to
+\*   leg i mod count over legs 0..count-1, so Legs is the base's and dealt' is still Plan's free choice over it.
+\* mutation-verdict.py::shards refuses a release listing past that ceiling before any deal, as the pull request
+\*   refusal does: no plan is written and no verdict can pass, the stuttering step the abstractions above name.
+\* mutation-verdict.py::shards prints the Rust release line after the deal, and the Rust shards line and the
+\*   run-legs line read the ceiling that held: each line deals nothing, so store, attempt, done, verdict and pick
+\*   are untouched, and the legs of the one mutation-rust matrix are LegFinish's actors as before.
+\* @phx covers scripts/mutation-verdict.py anchor=shards digest=sha256:f02208bb1a049e3ca6ebc6812c981581d7d6d70d77a68505b2ba4e3511254f2c
 \* @phx covers scripts/mutation-verdict.py anchor=whole_reports digest=sha256:4c2a91086efb74a19dee70816f1f39aac90712652548599ce8befd94f2340983
 \* @phx covers scripts/mutation-verdict.py anchor=partition digest=sha256:9b2464deb33fb55acce4bade799fac1d1d5094a4526a528d634aeb1f78f57677
 \* @phx covers scripts/mutation-verdict.py anchor=examined_sum digest=sha256:072ec1b6768a7616f7cf7b1f0e03846367d35874bcce6493458c470c4f63966e

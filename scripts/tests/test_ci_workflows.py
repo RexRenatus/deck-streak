@@ -6604,6 +6604,12 @@ NOT_WORKFLOW_READS = {
             "test_release_python_ceiling",
             "verb",
             "module",
+            2,
+        ),
+        (
+            "test_release_python_ceiling",
+            "verb",
+            "module.LEG_CEILING",
             1,
         ),
         (
