@@ -2008,7 +2008,7 @@ fn the_removal_leaves_no_unit_of_a_path_package() {
     let before = store_entries(&store);
     let (ok, stdout, stderr) = cargo(
         &root,
-        &["metadata", "--format-version", "1", "--locked", "--offline"].map(str::to_owned),
+        &["metadata", "--locked", "--offline", "--format-version", "1"].map(str::to_owned),
         CARGO_LIMIT,
     )
     .expect("cargo metadata runs");
