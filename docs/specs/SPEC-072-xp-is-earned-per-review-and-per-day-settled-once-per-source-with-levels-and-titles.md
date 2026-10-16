@@ -876,3 +876,14 @@ SPEC-360 and ADR-371 move the per-review rule out of progression, unchanged.
   replaces, and take the crate cell `xp` and the killer
   `review_xp::the_xp_crates_review_xp_matches_the_parity_golden_for_every_case`. Section 9's two
   rows above stay as written, read with this section. No row id is retired.
+
+## 18. Amendment (SPEC-384): the real tree's census reuses only lock-pinned units
+
+The real tree's census, in `only_progression_writes_xp_settlement_and_only_coordination_settles`, compiles in a store named by its
+key rather than in an empty target (SPEC-384 R1 to R4, ADR-398). Between censuses the store keeps only units of the packages
+`Cargo.lock` pins from a registry or git; before its first pass the census removes every unit of every path package, and a member
+unit it did not compile is refused by name. Section 14's rule is unchanged: every input the verdict can read is part of the tree,
+pinned by the lock file or by the toolchain pin, made empty before each census compile, or refused by name. Its bullet "An empty
+target for each census" holds for every planted tree; for the real tree it reads as this section. Rows S07290 to S07301 keep their
+killers, and SPEC-384's rows S38400 to S38406 pin the store. The owner's signed ruling
+`docs/rulings/OWNER-RULING-2026-10-16-census-store.md` admits this exception as a bounded weakening.

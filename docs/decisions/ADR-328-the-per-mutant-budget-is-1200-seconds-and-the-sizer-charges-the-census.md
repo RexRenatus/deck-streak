@@ -98,3 +98,9 @@ baseline `ok`.
 
 SPEC-327; the owner's ruling `docs/rulings/OWNER-RULING-2026-10-03-mutation-timeout-1200.md`;
 ADR-199; ADR-197; SPEC-072 section 14; SPEC-039 R18; SPEC-129; #597.
+
+## Amendment: a reused build for the real tree's census (ADR-398)
+
+Option B lost here because SPEC-072 section 14 kept every census compile cold. ADR-398 admits a store of lock-pinned units for the
+real tree's census alone, with every member compiled by the census that reads it (SPEC-072 section 18). The budget and the sizer's
+terms this ADR decided are unchanged until a run measures the new census (#597).

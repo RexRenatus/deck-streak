@@ -634,3 +634,66 @@ green commit.
 | `mutation-rust`'s axis on the plan's `matrix` output | `.github/workflows/ci.yml:468-469` |
 | the verdict's walk of every leg | `scripts/mutation-verdict.py:1542`, `:1588`, `:1617` |
 | `RUN_JOBS`, the limit one matrix holds | `scripts/tests/test_dispatch_shards.py:219` |
+
+## 12. The real tree's census compiles in a store of lock-pinned units (SPEC-384, ADR-398)
+
+Read at `e7ecf10d`. A progression mutant's run carries the census tests of
+`crates/progression/tests/xp_census.rs` whole (SPEC-327 R7). One of them,
+`only_progression_writes_xp_settlement_and_only_coordination_settles` (:1315), judges the real
+tree; every other census in the file judges a planted tree and is unchanged by this section.
+
+### 12.1 Before: every census compile is cold
+
+```mermaid
+flowchart TD
+    mutant["cargo-mutants applies one progression mutant"] --> runner["nextest, profile mutants: every xp_census test"]
+    runner --> realtest["the real-tree test calls census_in on the tree root"]
+    runner --> planted["planted censuses, the killer's workers included, each in an empty target"]
+    realtest --> emptytarget["an empty target made for this census"]
+    emptytarget --> passes["16 cargo check passes: 2 selections x 2 feature sets x 4 debug-assertions and panic pairs"]
+    passes --> pinned["615 lock-pinned units compiled cold under each pair"]
+    passes --> members["31 members compiled under each pair"]
+    members --> verdict["member messages read: uses of settle, refusals"]
+    pinned --> verdict
+    verdict --> removed["the target is removed when the census ends"]
+```
+
+| step | where the time goes | what is examined |
+|---|---|---|
+| the empty target (`census_in`, :1191-1203) | nothing is reused from an earlier census | the tree, the lock file and the toolchain pin alone |
+| the passes (`compiled_uses`, :914-930) | the 615 pinned units, once per (debug-assertions, panic) pair and again where a selection changes their features | every member unit's messages, under every pair and selection |
+| the members (:940-944) | a small share: `clippy` over every member with the dependencies built took 45 s in job 113820846590 | each member's uses of `settle`, and every file it read |
+
+### 12.2 After: the pinned units are kept, every member is compiled by the census that reads it
+
+```mermaid
+flowchart TD
+    mutant2["cargo-mutants applies one progression mutant"] --> runner2["nextest, profile mutants: every xp_census test"]
+    runner2 --> realtest2["the real-tree test calls the store census on the tree root"]
+    runner2 --> planted2["planted censuses, unchanged: each in an empty target"]
+    realtest2 --> key["key: lock file, toolchain pin, flags, environment, tree root"]
+    key --> lockstore["the store's lock is taken"]
+    lockstore --> removal["every unit of every path package is removed from the store"]
+    removal --> passes2["the same 16 passes, in the store"]
+    passes2 --> pinned2["pinned units reused after the run's first census"]
+    passes2 --> members2["every member compiled by this census"]
+    members2 --> guard{"a member unit read fresh that this census did not compile?"}
+    guard -->|yes| refused["refused by name: the verdict fails"]
+    guard -->|no| verdict2["member messages read: uses of settle, refusals, counts"]
+    pinned2 --> verdict2
+    verdict2 --> unlock["the lock is released; the store keeps only pinned units"]
+```
+
+| step | what crosses | guard |
+|---|---|---|
+| the key | the bytes of `Cargo.lock` and `rust-toolchain.toml`, the census's flags, its inherited variables, the tree root | a change to any one names another store (SPEC-384 A4) |
+| the lock | one census at a time per store | a second census waits (A5; `formal/tla/CensusStore`) |
+| the removal | path packages' units leave the store | none remains in the fingerprint, deps or build directories (A3) |
+| the passes | pinned units reused; members compiled | a member unit this census did not compile is refused by name (A2) |
+| the verdict | the counts of SPEC-384 R7 beside the existing examined counts | every pass read members; every member read was compiled by this census (A6) |
+
+What stays examined: the same selections, feature sets and pairs, every member under each, the same
+messages and the same refusals. Rows S07274, S07275 and S07283, which only the real-tree test kills,
+and S07295, which a planted test kills, read KILLED at the delivery's head (SPEC-384 P2). Each CI
+job starts with an empty store, so the job's first census is as cold as before; the second and
+later censuses of a run compile the members alone.
