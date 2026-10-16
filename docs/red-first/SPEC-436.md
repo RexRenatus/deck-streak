@@ -34,9 +34,11 @@ A9 to A12 and A14 (three, five and three per binary), each on its first assertio
 test of the daemon's suite. The three repository tests read the tree, so their reds were read in
 CI: the rust job 117043344169, a job of 2545 s, failed exactly the fourteen tests of A1 to A14 and no other of the 1910 it ran, with its clippy stage passing, each repository test on its first assertion with an empty left side.
 
-Test edits after the red commit: none. The green commit replaces the stub bodies with the readers
-and adds R1's two entries; it changes no test function, planted text or expected value. The rows
-commit and this record's commit edit no test.
+Test edits after the red commit: one. The green commit d58bd844 edits the three test binaries
+because the readers live in them beside the tests: it replaces the stub bodies with the readers and
+adds R1's two entries; it changes no test function, planted text or expected value. The rows commit,
+this record's first commit and the two commits after it (a row-id rename and this disclosure) edit
+no test.
 
 No CI run reads the green commit or the rows commit alone: A4's, A8's and A13's greens are read at
 the second push's head, which carries the green commit, the rows and this record. The planted-text
