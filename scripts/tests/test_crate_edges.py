@@ -155,19 +155,105 @@ def edge_rows(root):
     return rows if isinstance(rows, list) else []
 
 
+def label(edge):
+    """An edge or a row's key as a finding names it: `<from> -> <to> [<table>, <target>]`."""
+    source, to, table, target = edge
+    where = table if target is None else f"{table}, {target}"
+    return f"{source} -> {to} [{where}]"
+
+
+def row_problems(row, number):
+    """A row's unknown and missing keys (R1)."""
+    if not isinstance(row, dict):
+        return [f"row {number}: not an object"]
+    unknown = [f"row {number}: unknown key {key}" for key in row if key not in ROW_KEYS]
+    return unknown + [f"row {number}: missing key {key}" for key in ROW_KEYS if key not in row]
+
+
+def complete(row):
+    """Whether a row holds every key, so it has an edge's key to compare."""
+    return isinstance(row, dict) and all(key in row for key in ROW_KEYS)
+
+
+def row_key(row):
+    """A complete row's `(from, to, table, target)`."""
+    return (row["from"], row["to"], row["table"], row["target"])
+
+
 def edge_findings(root):
     """Every way the members' manifests and `config/crate-edges.json` disagree (R1 to R4)."""
-    workspace(root)
-    member_directories(root)
-    manifest_edges(root)
-    read_list(root)
-    return []
+    table = workspace(root)
+    findings = [
+        f"members pattern {pattern}: matches no manifest"
+        for pattern in table.get("members", [])
+        if not pattern_members(root, pattern)
+    ]
+    read = manifests(root)
+    if not read:
+        return [*findings, "examined 0 member manifest(s): VOID"]
+    for directory, manifest in read.items():
+        if not package_name(manifest).startswith(PREFIX):
+            findings.append(
+                f"{directory}: package {package_name(manifest)} lacks the {PREFIX} prefix"
+            )
+        for target, scope in scopes(manifest):
+            for spelling in UNDERSCORED:
+                if spelling in scope:
+                    where = spelling if target is None else f"target.{target}.{spelling}"
+                    findings.append(
+                        f"{directory}/Cargo.toml: {where} is spelled with an underscore, "
+                        "so the census refuses it"
+                    )
+    edges = manifest_edges(root)
+    if not edges:
+        findings.append("examined 0 manifest edge(s): VOID")
+    data = read_list(root)
+    rows = data.get("edges") if isinstance(data, dict) else None
+    if not isinstance(rows, list):
+        return [*findings, f'{LIST}: the "edges" list is absent']
+    keys = []
+    for number, row in enumerate(rows, 1):
+        findings += row_problems(row, number)
+        if not complete(row):
+            continue
+        key = row_key(row)
+        if key in keys:
+            findings.append(f"{label(key)}: a row listed twice")
+        elif keys and order(key) < order(keys[-1]):
+            findings.append(
+                f"{label(key)}: a row out of order, sorted by from, to, table and target"
+            )
+        keys.append(key)
+    findings += [
+        f"{label(edge)}: an edge with no row in {LIST}" for edge in edges if edge not in keys
+    ]
+    stale = sorted(set(keys) - set(edges), key=order)
+    return findings + [f"{label(key)}: a row with no edge in any manifest" for key in stale]
 
 
 def admission_findings(root):
     """Each row whose `adr` names no single ADR file that holds its edge's token (R5)."""
-    edge_rows(root)
-    return []
+    texts, findings = {}, []
+    for row in edge_rows(root):
+        if not complete(row):
+            continue
+        edge, adr = row_key(row), row["adr"]
+        if not isinstance(adr, str) or not ADR_ID.fullmatch(adr):
+            findings.append(f"{label(edge)}: adr {adr!r} is not ADR-<n>")
+            continue
+        files = sorted((root / DECISIONS).glob(f"{adr}-*.md"))
+        if len(files) != 1:
+            findings.append(
+                f"{label(edge)}: {adr} is held by {len(files)} files in {DECISIONS}, not one"
+            )
+            continue
+        if files[0] not in texts:
+            texts[files[0]] = files[0].read_text(encoding="utf-8")
+        token = f"`{edge[0]} -> {edge[1]}`"
+        if token not in texts[files[0]]:
+            held = files[0].relative_to(root).as_posix()
+            findings.append(f"{label(edge)}: {held} does not hold {token}")
+    return findings
 
 
 def listed(what, rows):

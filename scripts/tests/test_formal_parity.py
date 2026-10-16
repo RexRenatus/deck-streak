@@ -165,25 +165,158 @@ def parity_rows(root):
     return rows
 
 
+def list_findings(data):
+    """The list's shape (R9): each absent list, unknown key, and malformed, repeated or misplaced
+    row; with `{kind: {entry: row}}` of its complete rows."""
+    data = data if isinstance(data, dict) else {}
+    findings = [f"{LIST}: unknown key {key}" for key in data if key not in KINDS]
+    rows, seen = {kind: {} for kind in KINDS}, set()
+    for kind in KINDS:
+        listing = data.get(kind)
+        if not isinstance(listing, list):
+            findings.append(f'{LIST}: the "{kind}" list is absent')
+            continue
+        previous = None
+        for number, row in enumerate(listing, 1):
+            if not isinstance(row, dict):
+                findings.append(f"{kind} row {number}: not an object")
+                continue
+            findings += [
+                f"{kind} row {number}: unknown key {key}" for key in row if key not in ROW_KEYS
+            ]
+            missing = [key for key in ROW_KEYS if key not in row]
+            findings += [f"{kind} row {number}: missing key {key}" for key in missing]
+            if missing:
+                continue
+            identity = row["entry"]
+            if identity in seen:
+                findings.append(f"{identity}: listed twice")
+                continue
+            if previous is not None and identity < previous:
+                findings.append(f"{identity}: a {kind} row out of order, sorted by entry")
+            previous = identity
+            seen.add(identity)
+            rows[kind][identity] = row
+    return findings, rows
+
+
+def admission(root, identity, adr, texts):
+    """The finding when a row's `adr` names no single ADR file that holds `lean/<E>`, else None."""
+    if not isinstance(adr, str) or not ADR_ID.fullmatch(adr):
+        return f"{identity}: adr {adr!r} is not ADR-<n>"
+    files = sorted((root / DECISIONS).glob(f"{adr}-*.md"))
+    if len(files) != 1:
+        return f"{identity}: {adr} is held by {len(files)} files in {DECISIONS}, not one"
+    if files[0] not in texts:
+        texts[files[0]] = files[0].read_text(encoding="utf-8")
+    if f"`{identity}`" not in texts[files[0]]:
+        return f"{identity}: {files[0].relative_to(root).as_posix()} does not hold `{identity}`"
+    return None
+
+
+def lacking(root, entry, naming):
+    """Why an implemented Lean entry has no vectors test, or None (R7)."""
+    paths = entry["vectors"]
+    if not paths:
+        return "implemented with no vectors path"
+    if len(paths) > 1:
+        return f"implemented with {len(paths)} vectors paths"
+    if not (root / paths[0]).is_file():
+        return f"declares {paths[0]}, which is absent"
+    tests = naming.get(paths[0], [])
+    if not tests:
+        return f"no vectors test names {paths[0]}"
+    if len(tests) > 1:
+        return f"{len(tests)} vectors tests name {paths[0]}"
+    return None
+
+
 def entry_findings(root):
     """Each implemented Lean entry with no vectors test and no `owed` row, each Lean entry with no
     covers and no `unimplemented` row, each stale or malformed row and each TLA+ entry that
     declares vectors (R6, R7, R9)."""
-    entries(root)
-    read_list(root)
+    found = entries(root)
+    if not found:
+        return ["examined 0 formal entry(ies): VOID"]
+    findings, rows = list_findings(read_list(root))
+    naming = {}
     for test in vectors_tests(root):
-        cited((root / test).read_text(encoding="utf-8"))
-    return []
+        for path in cited((root / test).read_text(encoding="utf-8")):
+            naming.setdefault(path, []).append(test)
+    lean = {}
+    for entry in found:
+        identity = entry["entry"]
+        if identity.startswith("tla/"):
+            if entry["vectors"]:
+                findings.append(f"{identity}: declares vectors, which only a Lean entry writes")
+            continue
+        lean[identity] = entry
+        owed, unimplemented = identity in rows["owed"], identity in rows["unimplemented"]
+        if not entry["covers"]:
+            if not unimplemented:
+                findings.append(f"{identity}: no @phx covers line, and no unimplemented row")
+            if owed:
+                findings.append(f"{identity}: a stale owed row: the entry has no @phx covers line")
+            continue
+        if unimplemented:
+            findings.append(
+                f"{identity}: a stale unimplemented row: the entry has a @phx covers line"
+            )
+        reason = lacking(root, entry, naming)
+        if reason and not owed:
+            findings.append(f"{identity}: {reason}, and no owed row")
+        elif owed and not reason:
+            findings.append(
+                f"{identity}: a stale owed row: one vectors test names {entry['vectors'][0]}"
+            )
+    texts = {}
+    for kind in KINDS:
+        for identity, row in rows[kind].items():
+            if identity not in lean:
+                findings.append(f"{identity}: a stale {kind} row: no such Lean entry")
+                continue
+            refused = admission(root, identity, row["adr"], texts)
+            if refused:
+                findings.append(refused)
+    return findings
 
 
 def vectors_findings(root):
     """Each vectors test that does not name exactly one declared path by its own slug, and each
     vectors file not declared by exactly one Lean entry (R8)."""
-    entries(root)
-    vectors_files(root)
-    for test in vectors_tests(root):
-        cited((root / test).read_text(encoding="utf-8"))
-    return []
+    tests = vectors_tests(root)
+    if not tests:
+        return ["examined 0 vectors test(s): VOID"]
+    declared = {}
+    for entry in lean_entries(root):
+        for path in entry["vectors"]:
+            declared.setdefault(path, []).append(entry["entry"])
+    findings = []
+    for test in tests:
+        paths = cited((root / test).read_text(encoding="utf-8"))
+        if not paths:
+            findings.append(f"{test}: names no {VECTORS}/<slug>.jsonl in a string literal")
+            continue
+        if len(paths) > 1:
+            findings.append(f"{test}: names {len(paths)} vectors paths, not one")
+            continue
+        owners = declared.get(paths[0], [])
+        if not owners:
+            findings.append(f"{test}: names {paths[0]}, which no Lean entry declares")
+        elif len(owners) > 1:
+            findings.append(f"{test}: names {paths[0]}, which {len(owners)} Lean entries declare")
+        expected = (
+            "formal_vectors_" + CITATION.fullmatch(paths[0]).group(1).replace("-", "_") + ".rs"
+        )
+        if Path(test).name != expected:
+            findings.append(f"{test}: names {paths[0]}, so its file name is {expected}")
+    for path in vectors_files(root):
+        owners = declared.get(path, [])
+        if not owners:
+            findings.append(f"{path}: a vectors file no Lean entry declares")
+        elif len(owners) > 1:
+            findings.append(f"{path}: declared by {len(owners)} Lean entries, not one")
+    return findings
 
 
 def listed(what, rows):

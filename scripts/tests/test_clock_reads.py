@@ -380,15 +380,62 @@ def row_problems(row, number):
 def clock_findings(root):
     """Each production file whose clock reads differ from its row's count, each row for a file with
     no read, and each malformed, repeated or misplaced row (R10, R13)."""
-    survey(root)
-    read_list(root)
-    return []
+    production, _aside, texts = survey(root)
+    if not production:
+        return ["examined 0 production Rust file(s): VOID"]
+    found = reads_in(root, texts)
+    data = read_list(root)
+    rows = data.get("sites") if isinstance(data, dict) else None
+    if not isinstance(rows, list):
+        return [f'{LIST}: the "sites" list is absent']
+    findings, counts, previous = [], {}, None
+    for number, row in enumerate(rows, 1):
+        findings += row_problems(row, number)
+        if not isinstance(row, dict) or any(key not in row for key in ROW_KEYS):
+            continue
+        path = row["path"]
+        if path in counts:
+            findings.append(f"{path}: a row listed twice")
+            continue
+        if previous is not None and path < previous:
+            findings.append(f"{path}: a row out of order, sorted by path")
+        previous = path
+        counts[path] = row["count"]
+    for path in sorted(set(found) | set(counts)):
+        reads = found.get(path, [])
+        sites = "; ".join(f"{path}:{line}: {spelling}" for line, spelling in reads)
+        if not reads:
+            findings.append(f"{path}: a row for a file with no clock read")
+        elif path not in counts:
+            findings.append(f"{path}: {len(reads)} clock read(s) and no row: {sites}")
+        elif counts[path] != len(reads):
+            findings.append(
+                f"{path}: {len(reads)} clock read(s), its row counts {counts[path]}: {sites}"
+            )
+    return findings
 
 
 def admission_findings(root):
     """Each row whose `adr` names no single ADR file that holds its path's token (R14)."""
-    clock_rows(root)
-    return []
+    texts, findings = {}, []
+    for row in clock_rows(root):
+        if not isinstance(row, dict) or any(key not in row for key in ROW_KEYS):
+            continue
+        path, adr = row["path"], row["adr"]
+        if not isinstance(adr, str) or not ADR_ID.fullmatch(adr):
+            findings.append(f"{path}: adr {adr!r} is not ADR-<n>")
+            continue
+        files = sorted((root / DECISIONS).glob(f"{adr}-*.md"))
+        if len(files) != 1:
+            findings.append(f"{path}: {adr} is held by {len(files)} files in {DECISIONS}, not one")
+            continue
+        if files[0] not in texts:
+            texts[files[0]] = files[0].read_text(encoding="utf-8")
+        if f"`{path}`" not in texts[files[0]]:
+            findings.append(
+                f"{path}: {files[0].relative_to(root).as_posix()} does not hold `{path}`"
+            )
+    return findings
 
 
 def listed(what, rows):
