@@ -7,10 +7,42 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use proc_macro2::{TokenStream, TokenTree};
+use proc_macro2::{Delimiter, TokenStream, TokenTree};
 
 /// The listed `expect` suppressions, each `(file, lint)` (R3): none.
 const SUPPRESSIONS: &[(&str, &str)] = &[];
+
+/// The root manifest's clippy table (R2).
+const TABLE: &str = "[workspace.lints.clippy]";
+
+/// A member manifest's clippy table (R3).
+const MEMBER_TABLE: &str = "[lints.clippy]";
+
+/// The lints the workspace denies by name (R1, R2).
+const REQUIRED: &[&str] = &["await_holding_lock", "await_holding_refcell_ref"];
+
+/// The levels that hold a required lint (R2).
+const ACCEPTED: &[&str] = &["deny", "forbid"];
+
+/// The names no attribute, member manifest or flag may lower (R3).
+const AUDITED: &[&str] = &[
+    "await_holding_lock",
+    "await_holding_refcell_ref",
+    "suspicious",
+];
+
+/// The levels that lower an audited name (R3).
+const LOWERING: &[&str] = &["allow", "expect", "warn"];
+
+/// The flags that lower a lint on a command line (R3), each also read attached when short.
+const FLAGS: &[&str] = &["-A", "--allow", "-W", "--warn"];
+
+/// The flag files: each directory's own files with the extension (R3).
+const FLAG_FAMILIES: &[(&str, &str)] = &[
+    ("scripts/", "sh"),
+    (".github/workflows/", "yml"),
+    (".cargo/", "toml"),
+];
 
 /// What the audit examined, and every lowering it refused.
 #[derive(Default)]
@@ -36,27 +68,265 @@ fn is_rust(path: &str) -> bool {
         .is_some_and(|extension| extension == "rs")
 }
 
+/// A TOML line with its `#` comment removed; a `#` inside a string stays.
+fn uncommented(line: &str) -> &str {
+    let mut quoted = false;
+    for (at, ch) in line.char_indices() {
+        if ch == '"' {
+            quoted = !quoted;
+        } else if ch == '#' && !quoted {
+            return &line[..at];
+        }
+    }
+    line
+}
+
+/// The level a lint entry's value sets, written plainly or as an inline table's `level`, or
+/// `missing` when it sets none.
+fn level_of(value: &str) -> String {
+    let value = value.strip_prefix('{').map_or(value, |table| {
+        table
+            .split_once("level")
+            .map_or("", |(_, rest)| rest.trim_start().trim_start_matches('='))
+    });
+    let level = value
+        .trim()
+        .trim_start_matches('"')
+        .split('"')
+        .next()
+        .unwrap_or_default();
+    if level.is_empty() {
+        "missing".to_owned()
+    } else {
+        level.to_owned()
+    }
+}
+
+/// Each `name = level` entry of one TOML table, with comments removed (R2, R3).
+fn table_entries(text: &str, table: &str) -> Vec<(String, String)> {
+    let mut entries = Vec::new();
+    let mut inside = false;
+    for line in text.lines() {
+        let line = uncommented(line).trim();
+        if line.starts_with('[') {
+            inside = line == table;
+        } else if inside && let Some((name, value)) = line.split_once('=') {
+            entries.push((name.trim().to_owned(), level_of(value.trim())));
+        }
+    }
+    entries
+}
+
 /// The level the root manifest's clippy table gives each required lint, or `missing` (R2).
-fn required_levels(_text: &str) -> Vec<(String, String)> {
-    Vec::new()
+fn required_levels(text: &str) -> Vec<(String, String)> {
+    let entries = table_entries(text, TABLE);
+    REQUIRED
+        .iter()
+        .map(|lint| {
+            let level = entries
+                .iter()
+                .rev()
+                .find(|(name, _)| name == lint)
+                .map_or_else(|| "missing".to_owned(), |(_, level)| level.clone());
+            ((*lint).to_owned(), level)
+        })
+        .collect()
 }
 
 /// The root manifest's refusals, each naming its lint (R2).
-fn manifest_refusals(_text: &str) -> Vec<String> {
-    Vec::new()
+fn manifest_refusals(text: &str) -> Vec<String> {
+    required_levels(text)
+        .into_iter()
+        .filter(|(_, level)| !ACCEPTED.contains(&level.as_str()))
+        .map(|(lint, level)| format!("Cargo.toml: {lint} is {level}"))
+        .collect()
 }
 
-/// The audit over a list of (path, text) (R3, R4).
-fn audit(files: &[(String, String)], _suppressions: &[(&str, &str)]) -> Result<Audit, String> {
-    let audit = Audit::default();
+/// A member manifest's refusals: an audited name below `deny` in its `[lints.clippy]` (R3).
+fn member_refusals(path: &str, text: &str) -> Vec<String> {
+    table_entries(text, MEMBER_TABLE)
+        .into_iter()
+        .filter(|(name, level)| {
+            AUDITED.contains(&name.as_str()) && !ACCEPTED.contains(&level.as_str())
+        })
+        .map(|(name, level)| format!("{path}: {name} = {level}"))
+        .collect()
+}
+
+/// Whether a token is the punctuation `ch`.
+fn is_char(token: Option<&TokenTree>, ch: char) -> bool {
+    matches!(token, Some(TokenTree::Punct(punct)) if punct.as_char() == ch)
+}
+
+/// A source's refusals: every attribute that lowers an audited name (R3).
+fn source_refusals(
+    path: &str,
+    text: &str,
+    suppressions: &[(&str, &str)],
+) -> Result<Vec<String>, String> {
+    let mut refused = Vec::new();
+    attributes(path, &lexed(path, text)?, suppressions, &mut refused);
+    Ok(refused)
+}
+
+/// Every outer and inner attribute in a token list, at any depth. A comment is no token and a
+/// string is one literal, so neither is ever an attribute (R3).
+fn attributes(
+    path: &str,
+    tokens: &[TokenTree],
+    suppressions: &[(&str, &str)],
+    refused: &mut Vec<String>,
+) {
+    for (at, token) in tokens.iter().enumerate() {
+        let TokenTree::Group(group) = token else {
+            continue;
+        };
+        let inner: Vec<TokenTree> = group.stream().into_iter().collect();
+        let mark = at.checked_sub(1).and_then(|place| tokens.get(place));
+        let outer = is_char(mark, '#');
+        let inner_mark = is_char(mark, '!')
+            && is_char(at.checked_sub(2).and_then(|place| tokens.get(place)), '#');
+        if group.delimiter() == Delimiter::Bracket && (outer || inner_mark) {
+            lowerings(path, &inner, suppressions, refused);
+        } else {
+            attributes(path, &inner, suppressions, refused);
+        }
+    }
+}
+
+/// The lowerings one attribute's inside sets (R3): `allow`, `expect` or `warn` naming an audited
+/// lint, or a `cfg_attr` holding one. An `expect` with a `reason` that `suppressions` lists by file
+/// and lint is not one.
+fn lowerings(
+    path: &str,
+    inner: &[TokenTree],
+    suppressions: &[(&str, &str)],
+    refused: &mut Vec<String>,
+) {
+    let [TokenTree::Ident(name), TokenTree::Group(arguments)] = inner else {
+        return;
+    };
+    let arguments: Vec<TokenTree> = arguments.stream().into_iter().collect();
+    if name == "cfg_attr" {
+        for (at, token) in arguments.iter().enumerate() {
+            if let (TokenTree::Ident(_), Some(TokenTree::Group(_))) = (token, arguments.get(at + 1))
+            {
+                lowerings(
+                    path,
+                    arguments.get(at..at + 2).unwrap_or_default(),
+                    suppressions,
+                    refused,
+                );
+            }
+        }
+        return;
+    }
+    let level = name.to_string();
+    if !LOWERING.contains(&level.as_str()) {
+        return;
+    }
+    let reason = arguments
+        .iter()
+        .any(|token| matches!(token, TokenTree::Ident(word) if word == "reason"));
+    for window in arguments.windows(4) {
+        if let [
+            TokenTree::Ident(tool),
+            first,
+            second,
+            TokenTree::Ident(lint),
+        ] = window
+            && tool == "clippy"
+            && is_char(Some(first), ':')
+            && is_char(Some(second), ':')
+        {
+            let lint = lint.to_string();
+            let listed = level == "expect"
+                && reason
+                && suppressions
+                    .iter()
+                    .any(|(file, name)| *file == path && *name == lint);
+            if AUDITED.contains(&lint.as_str()) && !listed {
+                refused.push(format!("{path}: {level}(clippy::{lint})"));
+            }
+        }
+    }
+}
+
+/// A flag file's refusals: a lowering flag beside an audited name, apart or attached (R3).
+fn flag_refusals(path: &str, text: &str) -> Vec<String> {
+    let words: Vec<&str> = text
+        .split(|c: char| c.is_whitespace() || matches!(c, '"' | '\'' | ',' | '[' | ']' | '='))
+        .filter(|word| !word.is_empty())
+        .collect();
+    let mut refused = Vec::new();
+    for (at, word) in words.iter().enumerate() {
+        for flag in FLAGS {
+            let named = if word == flag {
+                words.get(at + 1).copied()
+            } else {
+                word.strip_prefix(flag).filter(|_| flag.len() == 2)
+            };
+            if let Some(lint) = named.and_then(|name| name.strip_prefix("clippy::"))
+                && AUDITED.contains(&lint)
+            {
+                refused.push(format!("{path}: {flag} clippy::{lint}"));
+            }
+        }
+    }
+    refused
+}
+
+/// Whether a path is a member's manifest, `crates/<member>/Cargo.toml`.
+fn is_member_manifest(path: &str) -> bool {
+    let parts: Vec<&str> = path.split('/').collect();
+    parts.len() == 3 && parts.first() == Some(&"crates") && parts.get(2) == Some(&"Cargo.toml")
+}
+
+/// Whether a path is a flag file, directly in a flag family's directory with its extension (R3).
+fn is_flag_file(path: &str) -> bool {
+    FLAG_FAMILIES.iter().any(|(directory, extension)| {
+        path.strip_prefix(directory).is_some_and(|name| {
+            !name.contains('/')
+                && Path::new(name)
+                    .extension()
+                    .is_some_and(|found| found == *extension)
+        })
+    })
+}
+
+/// The audit over a list of (path, text) (R2 to R4): the root manifest, the member manifests,
+/// every Rust source under `crates/` and the flag files. It prints the three counts, then
+/// refuses any of them at 0.
+fn audit(files: &[(String, String)], suppressions: &[(&str, &str)]) -> Result<Audit, String> {
+    let mut audit = Audit::default();
     for (path, text) in files {
-        if is_rust(path) {
-            lexed(path, text)?;
+        if path == "Cargo.toml" {
+            audit.manifests.push(path.clone());
+            audit.refused.extend(manifest_refusals(text));
+        } else if is_member_manifest(path) {
+            audit.manifests.push(path.clone());
+            audit.refused.extend(member_refusals(path, text));
+        } else if path.starts_with("crates/") && is_rust(path) {
+            audit.sources += 1;
+            audit
+                .refused
+                .extend(source_refusals(path, text, suppressions)?);
+        } else if is_flag_file(path) {
+            audit.flags.push(path.clone());
+            audit.refused.extend(flag_refusals(path, text));
         }
     }
     eprintln!("examined {} manifests", audit.manifests.len());
     eprintln!("examined {} sources", audit.sources);
     eprintln!("examined {} flag files", audit.flags.len());
+    let counts = [
+        (audit.manifests.len(), "manifests"),
+        (audit.sources, "sources"),
+        (audit.flags.len(), "flag files"),
+    ];
+    if let Some((_, what)) = counts.iter().find(|(count, _)| *count == 0) {
+        return Err(format!("examined 0 {what}"));
+    }
     Ok(audit)
 }
 

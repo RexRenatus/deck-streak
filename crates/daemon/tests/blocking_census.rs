@@ -4,8 +4,11 @@
 
 mod shipped_sources;
 
-use proc_macro2::TokenTree;
-use shipped_sources::{Key, Level, keyed, planted, repository_sources, shipped, verdict};
+use proc_macro2::{Delimiter, TokenTree};
+use shipped_sources::{
+    Key, Level, before, fn_head, is_ident, is_punct, keyed, opens_const_item, path_ending_at,
+    planted, repository_sources, shipped, tokens_in, verdict,
+};
 
 /// The rule this census names in its lines.
 const RULE: &str = "blocking-in-async";
@@ -28,6 +31,53 @@ const LISTED: &[&str] = &[
     "crates/ingest/src/skip_write.rs restore_check std::fs::write #1",
 ];
 
+/// The blocking set's paths (R10), one per line.
+const BLOCKING: &[&str] = &[
+    "std::fs::read",
+    "std::fs::read_to_string",
+    "std::fs::read_dir",
+    "std::fs::write",
+    "std::fs::copy",
+    "std::fs::rename",
+    "std::fs::remove_file",
+    "std::fs::remove_dir",
+    "std::fs::remove_dir_all",
+    "std::fs::create_dir",
+    "std::fs::create_dir_all",
+    "std::fs::metadata",
+    "std::fs::symlink_metadata",
+    "std::fs::set_permissions",
+    "std::fs::canonicalize",
+    "std::fs::File::open",
+    "std::fs::File::create",
+    "std::fs::File::create_new",
+    "std::fs::OpenOptions::new",
+    "std::thread::sleep",
+    "std::net::TcpStream::connect",
+    "std::net::TcpListener::bind",
+    "std::net::UdpSocket::bind",
+    "std::process::Command::new",
+    "std::io::stdin",
+];
+
+/// Any call of a path under this prefix blocks (R10).
+const BLOCKING_CLIENT: &str = "reqwest::blocking::";
+
+/// A call whose path ends in this name, or a method call of it, blocks (R10).
+const BLOCK_ON: &str = "block_on";
+
+/// A method call of this name blocks in a file whose `use` declarations name `std::sync::mpsc`.
+const RECV: &str = "recv";
+
+/// The module whose `use` makes a `.recv()` call blocking (R10).
+const MPSC: [&str; 3] = ["std", "sync", "mpsc"];
+
+/// The rails: a call of either name, by any path, hands its closure to the blocking pool (R8).
+const RAILS: &[&str] = &["spawn_blocking", "block_in_place"];
+
+/// The offload rail (SPEC-020 R14): its receiver's last segment and its method (R8).
+const OFFLOAD: (&str, &str) = ("offload", "run");
+
 /// What the census found: the keys, the files it examined and the async bodies it walked.
 #[derive(Default)]
 struct Found {
@@ -36,19 +86,54 @@ struct Found {
     bodies: usize,
 }
 
-/// One file's walk: the sites it met, each `(function, form)`, and the async bodies it entered.
+/// The names a file's `use` declarations bind, each with its path, and every path they name (R9).
+#[derive(Default)]
+struct Uses {
+    bound: Vec<(String, Vec<String>)>,
+    named: Vec<Vec<String>>,
+}
+
+impl Uses {
+    /// A path resolved through the bound names: its first segment's binding, else as written.
+    fn resolve(&self, path: &[String]) -> Vec<String> {
+        let Some((first, rest)) = path.split_first() else {
+            return Vec::new();
+        };
+        self.bound
+            .iter()
+            .rev()
+            .find(|(name, _)| name == first)
+            .map_or_else(
+                || path.to_vec(),
+                |(_, full)| full.iter().chain(rest).cloned().collect(),
+            )
+    }
+
+    /// Whether any `use` declaration names `std::sync::mpsc`.
+    fn names_mpsc(&self) -> bool {
+        self.named
+            .iter()
+            .any(|path| path.iter().map(String::as_str).take(MPSC.len()).eq(MPSC))
+    }
+}
+
+/// One file's walk: its `use` bindings, the sites it met, each `(function, form)`, and the async
+/// bodies it entered.
 #[derive(Default)]
 struct Census {
+    uses: Uses,
     sites: Vec<(String, String)>,
     bodies: usize,
 }
 
-/// The census over a list of (path, text) (R19).
+/// The census over a list of (path, text) (R19). It refuses an empty population and a population
+/// with no async body, after printing both counts (R12).
 fn find(files: &[(String, String)]) -> Result<Found, String> {
     let sources = shipped(files)?;
     let mut found = Found::default();
     for source in &sources {
         let mut census = Census::default();
+        uses_of(&source.tokens, &mut census.uses);
         walk(&source.tokens, "", false, &mut census);
         found.keys.extend(keyed(&source.path, &census.sites));
         found.bodies += census.bodies;
@@ -56,11 +141,200 @@ fn find(files: &[(String, String)]) -> Result<Found, String> {
     }
     eprintln!("examined {} shipped files", found.files.len());
     eprintln!("examined {} async bodies", found.bodies);
+    if found.files.is_empty() {
+        return Err("examined 0 shipped files".to_owned());
+    }
+    if found.bodies == 0 {
+        return Err("examined 0 async bodies".to_owned());
+    }
     Ok(found)
 }
 
-/// Walks one token list.
-fn walk(_tokens: &[TokenTree], _function: &str, _in_async: bool, _census: &mut Census) {}
+/// Every `use` declaration in a token list, at any depth (R9).
+fn uses_of(tokens: &[TokenTree], uses: &mut Uses) {
+    let mut tree: Option<Vec<TokenTree>> = None;
+    for token in tokens {
+        if let Some(collected) = tree.as_mut() {
+            if is_punct(Some(token), ';') {
+                use_tree(collected, &[], uses);
+                tree = None;
+            } else {
+                collected.push(token.clone());
+            }
+        } else if is_ident(Some(token), "use") {
+            tree = Some(Vec::new());
+        } else if let TokenTree::Group(group) = token {
+            uses_of(&tokens_in(group), uses);
+        }
+    }
+}
+
+/// The names one `use` tree binds under `prefix` (R9): a single path, a `{ }` group's members, a
+/// `self` member and an `as` rename each bind their last name; a glob binds nothing.
+fn use_tree(tokens: &[TokenTree], prefix: &[String], uses: &mut Uses) {
+    let mut path = prefix.to_vec();
+    let mut rename = false;
+    for token in tokens {
+        match token {
+            TokenTree::Ident(ident) if ident == "as" => rename = true,
+            TokenTree::Ident(ident) if rename => {
+                if ident != "_" {
+                    uses.bound.push((ident.to_string(), path.clone()));
+                }
+                uses.named.push(path);
+                return;
+            }
+            TokenTree::Ident(ident) if ident != "self" => path.push(ident.to_string()),
+            TokenTree::Group(group) if group.delimiter() == Delimiter::Brace => {
+                for member in tokens_in(group).split(|token| is_punct(Some(token), ',')) {
+                    use_tree(member, &path, uses);
+                }
+                return;
+            }
+            TokenTree::Punct(punct) if punct.as_char() == '*' => {
+                uses.named.push(path);
+                return;
+            }
+            _ => {}
+        }
+    }
+    if let Some(last) = path.last() {
+        uses.bound.push((last.clone(), path.clone()));
+    }
+    uses.named.push(path);
+}
+
+/// Where a walk at one level stands.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Mode {
+    /// Reading code.
+    Code,
+    /// Inside a `const` item, until its `;` (R8).
+    Const,
+    /// Inside an async closure's head, counting its two `|` (R7).
+    Params(usize),
+    /// Inside an async closure's expression body, until a `,` or a `;` (R7).
+    Body,
+}
+
+/// Walks one token list inside `function`, in an async body when `in_async` (R7, R8, R11). Each
+/// position comes from the list's own index.
+fn walk(tokens: &[TokenTree], function: &str, in_async: bool, census: &mut Census) {
+    let mut mode = Mode::Code;
+    let mut head: Option<(String, bool)> = None;
+    let mut rail = None;
+    for (at, token) in tokens.iter().enumerate() {
+        match mode {
+            Mode::Const => {
+                if is_punct(Some(token), ';') {
+                    mode = Mode::Code;
+                }
+                continue;
+            }
+            Mode::Params(pipes) => {
+                if is_punct(Some(token), '|') {
+                    mode = if pipes == 1 {
+                        Mode::Body
+                    } else {
+                        Mode::Params(pipes + 1)
+                    };
+                }
+                continue;
+            }
+            Mode::Body if is_punct(Some(token), ',') || is_punct(Some(token), ';') => {
+                mode = Mode::Code;
+            }
+            Mode::Body | Mode::Code => {}
+        }
+        let here = in_async || mode == Mode::Body;
+        match token {
+            TokenTree::Group(group) => {
+                let inner = tokens_in(group);
+                let brace = group.delimiter() == Delimiter::Brace;
+                if rail == Some(at) {
+                    rail = None;
+                } else if let (Some((name, is_async)), true) = (&head, brace) {
+                    census.bodies += usize::from(*is_async);
+                    walk(&inner, name, *is_async, census);
+                    head = None;
+                } else if brace && opens_async_block(tokens, at) {
+                    census.bodies += 1;
+                    walk(&inner, function, true, census);
+                } else {
+                    walk(&inner, function, here, census);
+                }
+            }
+            TokenTree::Ident(ident) => {
+                if let Some(found) = fn_head(tokens, at) {
+                    head = Some(found);
+                } else if opens_const_item(tokens, at) {
+                    mode = Mode::Const;
+                } else if ident == "async" && opens_closure(tokens, at) {
+                    census.bodies += 1;
+                    mode = Mode::Params(0);
+                } else if is_rail(tokens, at) {
+                    rail = Some(at + 1);
+                } else if here && let Some(form) = site(tokens, at, &census.uses) {
+                    census.sites.push((function.to_owned(), form));
+                }
+            }
+            TokenTree::Punct(punct) if punct.as_char() == ';' => head = None,
+            _ => {}
+        }
+    }
+}
+
+/// Whether the brace group at `at` is an `async { }` or an `async move { }` block (R7).
+fn opens_async_block(tokens: &[TokenTree], at: usize) -> bool {
+    let plain = is_ident(before(tokens, at, 1), "async");
+    let moved = is_ident(before(tokens, at, 1), "move") && is_ident(before(tokens, at, 2), "async");
+    plain || moved
+}
+
+/// Whether the `async` at `at` opens an async closure, `async |..|` or `async move |..|` (R7).
+fn opens_closure(tokens: &[TokenTree], at: usize) -> bool {
+    let next = if is_ident(tokens.get(at + 1), "move") {
+        at + 2
+    } else {
+        at + 1
+    };
+    is_punct(tokens.get(next), '|')
+}
+
+/// Whether a token is a parenthesised group: what makes the name before it a call (R11).
+fn is_call(token: Option<&TokenTree>) -> bool {
+    matches!(token, Some(TokenTree::Group(group)) if group.delimiter() == Delimiter::Parenthesis)
+}
+
+/// Whether the identifier at `at` calls a rail (R8): `spawn_blocking` or `block_in_place` by any
+/// path or as a method, or the `run` method on a receiver whose last segment is `offload`.
+fn is_rail(tokens: &[TokenTree], at: usize) -> bool {
+    let named = RAILS.iter().any(|rail| is_ident(tokens.get(at), rail));
+    let offload = is_ident(tokens.get(at), OFFLOAD.1)
+        && is_punct(before(tokens, at, 1), '.')
+        && is_ident(before(tokens, at, 2), OFFLOAD.0);
+    is_call(tokens.get(at + 1)) && (named || offload)
+}
+
+/// The form the identifier at `at` calls when the call blocks (R10, R11): its resolved path, or
+/// `.block_on` or `.recv` for a method call.
+fn site(tokens: &[TokenTree], at: usize, uses: &Uses) -> Option<String> {
+    let Some(TokenTree::Ident(name)) = tokens.get(at) else {
+        return None;
+    };
+    if !is_call(tokens.get(at + 1)) {
+        return None;
+    }
+    if is_punct(before(tokens, at, 1), '.') {
+        let blocking = name == BLOCK_ON || (name == RECV && uses.names_mpsc());
+        return blocking.then(|| format!(".{name}"));
+    }
+    let path = uses.resolve(&path_ending_at(tokens, at)).join("::");
+    let blocking = BLOCKING.contains(&path.as_str())
+        || path.starts_with(BLOCKING_CLIENT)
+        || path.rsplit("::").next() == Some(BLOCK_ON);
+    blocking.then_some(path)
+}
 
 /// The found keys, as they print.
 fn printed(found: &Found) -> Vec<String> {

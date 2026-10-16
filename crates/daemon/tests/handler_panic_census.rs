@@ -5,8 +5,11 @@
 
 mod shipped_sources;
 
-use proc_macro2::TokenTree;
-use shipped_sources::{Key, Level, keyed, planted, repository_sources, shipped, verdict};
+use proc_macro2::{Delimiter, Ident, TokenTree};
+use shipped_sources::{
+    Key, Level, before, fn_head, is_ident, is_punct, keyed, opens_const_item, path_ending_at,
+    planted, repository_sources, shipped, tokens_in, verdict,
+};
 
 /// The rule this census names in its lines.
 const RULE: &str = "handler-panic";
@@ -17,6 +20,26 @@ const LEVEL: Level = Level::Warn;
 /// Today's sites: none (R23).
 const LISTED: &[&str] = &[];
 
+/// The request-handler crates, by name (R13).
+const HANDLER_CRATES: &[&str] = &["api", "bot", "daemon", "mcp"];
+
+/// The panicking macros (R15), one per line.
+const MACROS: &[&str] = &[
+    "panic",
+    "unreachable",
+    "todo",
+    "unimplemented",
+    "assert",
+    "assert_eq",
+    "assert_ne",
+];
+
+/// The prefixes a panicking macro may be invoked under (R15).
+const PREFIXES: [&str; 2] = ["std", "core"];
+
+/// The unwrapping methods (R15).
+const METHODS: &[&str] = &["unwrap", "expect", "unwrap_err", "expect_err"];
+
 /// What the census found: the keys, the handler crates it examined and its file count.
 #[derive(Default)]
 struct Census {
@@ -25,25 +48,119 @@ struct Census {
     files: usize,
 }
 
-/// The census over a list of (path, text) (R19).
+/// The census over a list of (path, text) (R19): the four crates' shipped sources (R14). It
+/// prints its count, then refuses an empty population and a named crate with no source (R13).
 fn census(files: &[(String, String)]) -> Result<Census, String> {
-    let sources = shipped(files)?;
+    let handler: Vec<(String, String)> = files
+        .iter()
+        .filter(|(path, _)| crate_of(path).is_some())
+        .cloned()
+        .collect();
+    let sources = shipped(&handler)?;
     let mut census = Census::default();
     for source in &sources {
         let mut sites = Vec::new();
         walk(&source.tokens, "", &mut sites);
         census.keys.extend(keyed(&source.path, &sites));
     }
+    census.files = sources.len();
+    census.crates = HANDLER_CRATES
+        .iter()
+        .filter(|name| {
+            sources
+                .iter()
+                .any(|source| crate_of(&source.path) == Some(**name))
+        })
+        .map(|name| (*name).to_owned())
+        .collect();
     eprintln!(
         "examined {} shipped files in {} handler crates",
         census.files,
         census.crates.len()
     );
+    if census.files == 0 {
+        return Err(format!(
+            "examined 0 shipped files in {} handler crates",
+            census.crates.len()
+        ));
+    }
+    if let Some(missing) = HANDLER_CRATES
+        .iter()
+        .find(|name| !census.crates.iter().any(|kept| kept.as_str() == **name))
+    {
+        return Err(format!("crates/{missing} has no src directory"));
+    }
     Ok(census)
 }
 
-/// Walks one token list.
-fn walk(_tokens: &[TokenTree], _function: &str, _sites: &mut Vec<(String, String)>) {}
+/// The handler crate whose `src` holds a path, if one does (R13, R14).
+fn crate_of(path: &str) -> Option<&'static str> {
+    HANDLER_CRATES.iter().copied().find(|name| {
+        path.strip_prefix("crates/")
+            .and_then(|rest| rest.strip_prefix(name))
+            .is_some_and(|rest| rest.starts_with("/src/"))
+    })
+}
+
+/// Walks one token list inside `function` (R15, R16): a `const` item's body and a `const { }`
+/// block are skipped. Each position comes from the list's own index.
+fn walk(tokens: &[TokenTree], function: &str, sites: &mut Vec<(String, String)>) {
+    let mut in_const = false;
+    let mut head: Option<String> = None;
+    for (at, token) in tokens.iter().enumerate() {
+        if in_const {
+            in_const = !is_punct(Some(token), ';');
+            continue;
+        }
+        match token {
+            TokenTree::Group(group) => {
+                let brace = group.delimiter() == Delimiter::Brace;
+                if brace && is_ident(before(tokens, at, 1), "const") {
+                    continue;
+                }
+                let inner = tokens_in(group);
+                if let (Some(name), true) = (&head, brace) {
+                    walk(&inner, name, sites);
+                    head = None;
+                } else {
+                    walk(&inner, function, sites);
+                }
+            }
+            TokenTree::Ident(ident) => {
+                if let Some((name, _)) = fn_head(tokens, at) {
+                    head = Some(name);
+                } else if opens_const_item(tokens, at) {
+                    in_const = true;
+                } else if let Some(form) = site(tokens, at, ident) {
+                    sites.push((function.to_owned(), form));
+                }
+            }
+            TokenTree::Punct(punct) if punct.as_char() == ';' => head = None,
+            _ => {}
+        }
+    }
+}
+
+/// The form the identifier `name` at `at` invokes when it panics (R15, R16): a listed macro,
+/// bare or under `std::` or `core::`, or a listed method called with parentheses.
+fn site(tokens: &[TokenTree], at: usize, name: &Ident) -> Option<String> {
+    let invoked = is_punct(tokens.get(at + 1), '!')
+        && matches!(tokens.get(at + 2), Some(TokenTree::Group(_)));
+    if invoked && MACROS.iter().any(|form| name == form) {
+        let path = path_ending_at(tokens, at);
+        let prefixed = path.len() == 2
+            && path
+                .first()
+                .is_some_and(|first| PREFIXES.contains(&first.as_str()));
+        return (path.len() == 1 || prefixed).then(|| format!("{name}!"));
+    }
+    let called = matches!(
+        tokens.get(at + 1),
+        Some(TokenTree::Group(group)) if group.delimiter() == Delimiter::Parenthesis
+    );
+    let method = called && is_punct(before(tokens, at, 1), '.');
+    (method && METHODS.iter().any(|form| name == form)).then(|| format!(".{name}"))
+}
 
 /// The found keys, as they print.
 fn printed(census: &Census) -> Vec<String> {
