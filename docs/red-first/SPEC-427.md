@@ -85,3 +85,13 @@ A8: green at 4a0894ec1417c0dd44492b024d4616a2f9ff1c24
 No CI run reads the green commit alone, so each green is read at the second push's head, which
 holds the green, rows and record commits and whose checks, read by name, confirm the greens, and
 A8's four `examined` lines are read in that run's `hygiene` log.
+
+The `hygiene` job over the second push's head, 698be1d922453300dc4c30bc34fe637b27e249c2, read every
+criterion green, and its `python` stage log holds A8's four `examined` lines:
+
+```text
+examined 337 shipped source files
+examined 40 query sites
+examined 202 log macro calls
+examined 369 shipped source files and manifests
+```
