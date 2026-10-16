@@ -3331,7 +3331,7 @@ def engine_job_problems(workflow):
         n
         for n, s in enumerate(steps)
         if action(s) == "taiki-e/install-action"
-        and "cargo-nextest"
+        and ENGINE_NEXTEST_PIN
         in [t.strip() for t in str((s.get("with") or {}).get("tool")).split(",")]
     ]
     if gate is None or not nextest or nextest[0] > gate:

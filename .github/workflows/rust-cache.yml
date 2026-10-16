@@ -55,7 +55,7 @@ jobs:
       - if: ${{ steps.lookup.outputs.cache-hit != 'true' }}
         uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
-          tool: cargo-nextest,cargo-deny
+          tool: cargo-nextest@0.9.146,cargo-deny@0.20.2
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
         if: ${{ steps.lookup.outputs.cache-hit != 'true' }}
         env:

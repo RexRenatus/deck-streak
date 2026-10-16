@@ -180,6 +180,6 @@ jobs:
         run: rustup show active-toolchain
       - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
-          tool: cargo-deny
+          tool: cargo-deny@0.20.2
       - name: the sync server's advisories, at the commit the engine's patch entry pins
         run: bash scripts/audit-sync-server.sh --work "$RUNNER_TEMP/sync-server-audit"
