@@ -352,22 +352,143 @@ fn statements(sql: &str) -> Vec<Vec<Sql>> {
         .collect()
 }
 
-/// The rewrites of a registered table one statement makes, each with its kind and its table.
-fn rewrites(statement: &[Sql], tables: &[&str]) -> Vec<(&'static str, String)> {
-    let _ = (statement, tables);
-    Vec::new()
+/// A name's parts, each with its quotes or brackets removed and lower-cased; a doubled quote
+/// inside a quoted part is one quote.
+fn parts(written: &str) -> Vec<String> {
+    let characters: Vec<char> = written.chars().collect();
+    let mut found = Vec::new();
+    let mut at = 0;
+    while at < characters.len() {
+        let end = part_end(&characters, at).unwrap_or(characters.len());
+        let part: String = characters[at..end].iter().collect();
+        let unquoted = match part.chars().next() {
+            Some(open @ ('"' | '`')) => {
+                let inner = part[1..].strip_suffix(open).unwrap_or(&part[1..]);
+                inner.replace(&format!("{open}{open}"), &open.to_string())
+            }
+            Some('[') => part[1..].strip_suffix(']').unwrap_or(&part[1..]).to_owned(),
+            _ => part,
+        };
+        found.push(unquoted.to_ascii_lowercase());
+        at = end + 1;
+    }
+    found
 }
 
-/// Why a literal holds a write the check cannot read, if it does.
+/// A table as a statement writes it, lower-cased, read through its quotes or brackets and a
+/// `main.` qualifier.
+fn table_named(written: &str) -> String {
+    let plain = !written.contains(['"', '`', '[', '.']);
+    if plain {
+        return written.to_ascii_lowercase();
+    }
+    match parts(written).as_slice() {
+        [name] => name.clone(),
+        [schema, name] if schema == "main" => name.clone(),
+        _ => written.to_ascii_lowercase(),
+    }
+}
+
+/// Whether a written name is the registered table: the whole name, never a longer one that
+/// holds it.
+fn is_table(name: &str, table: &str) -> bool {
+    let whole = name.len() == table.len();
+    name.contains(table) && whole
+}
+
+/// The rewrites of a registered table one statement makes (ADR-446 D2), each with its kind and
+/// its table: an `UPDATE` or `UPDATE OR <action>`, a `DELETE FROM`, a `REPLACE INTO` or `INSERT OR
+/// REPLACE INTO`, and an `INSERT ... INTO` whose statement holds `DO UPDATE`.
+fn rewrites(statement: &[Sql], tables: &[&str]) -> Vec<(&'static str, String)> {
+    let is = |at: usize, keyword: &str| matches!(statement.get(at), Some(Sql::Name(name)) if name.eq_ignore_ascii_case(keyword));
+    let upsert = (0..statement.len()).any(|at| is(at, "do") && is(at + 1, "update"));
+    let mut found = Vec::new();
+    for at in 0..statement.len() {
+        let target = if is(at, "update") {
+            let or_action = is(at + 1, "or");
+            if or_action {
+                Some((UPDATE_OR, at + 3))
+            } else {
+                Some((UPDATE, at + 1))
+            }
+        } else if is(at, "delete") && is(at + 1, "from") {
+            Some((DELETE, at + 2))
+        } else if is(at, "replace") && is(at + 1, "into") {
+            let insert_or = at >= 2 && is(at - 2, "insert") && is(at - 1, "or");
+            Some((
+                if insert_or {
+                    INSERT_OR_REPLACE
+                } else {
+                    REPLACE_INTO
+                },
+                at + 2,
+            ))
+        } else if is(at, "into") && upsert && !(at > 0 && is(at - 1, "replace")) {
+            Some((UPSERT, at + 1))
+        } else {
+            None
+        };
+        let Some((kind, name_at)) = target else {
+            continue;
+        };
+        let Some(Sql::Name(written)) = statement.get(name_at) else {
+            continue;
+        };
+        let name = table_named(written);
+        if let Some(table) = tables.iter().find(|table| is_table(&name, table)) {
+            found.push((kind, (*table).to_owned()));
+        }
+    }
+    found
+}
+
+/// The write keywords a placeholder may follow or a literal may end with, each as its words.
+const WRITE_KEYWORDS: [&[&str]; 3] = [&["update"], &["delete", "from"], &["into"]];
+
+/// Why a literal holds a write the check cannot read, if it does (ADR-446 D2): a write keyword
+/// joined to a `{` placeholder, or a write keyword ending the literal, a prefix joined to a table
+/// at run time. SQL in `src` writes its keywords in capitals, so the prefix arm reads capitals: a
+/// lone lower-case word such as `"update"` is a label, not a statement.
 fn unreadable(literal: &str) -> Option<&'static str> {
-    let _ = literal;
+    let tokens = sql_tokens(&without_comments(literal));
+    let spells = |at: usize, words: &[&str]| {
+        words.iter().enumerate().all(|(offset, word)| {
+            matches!(tokens.get(at + offset), Some(Sql::Name(name)) if name.eq_ignore_ascii_case(word))
+        })
+    };
+    for at in 0..tokens.len() {
+        for words in WRITE_KEYWORDS {
+            if !spells(at, words) {
+                continue;
+            }
+            let placeholder = match tokens.get(at + words.len()) {
+                Some(Sql::Mark('{')) => true,
+                Some(Sql::Name(name)) => name.contains('{'),
+                _ => false,
+            };
+            if placeholder {
+                return Some("a write keyword joined to a placeholder");
+            }
+        }
+    }
+    let ends_with = |words: &[&str]| {
+        tokens.len() >= words.len()
+            && words
+                .iter()
+                .zip(&tokens[tokens.len() - words.len()..])
+                .all(|(word, token)| *token == Sql::Name(word.to_ascii_uppercase()))
+    };
+    let join_prefix = WRITE_KEYWORDS.iter().any(|words| ends_with(words));
+    if join_prefix {
+        return Some("a write keyword ending the literal");
+    }
     None
 }
 
-/// Whether a word of Rust source is one of sqlx's macros that read their SQL from a file.
+/// Whether a word of Rust source is one of sqlx's macros that read their SQL from a file:
+/// `query_file!`, `query_file_as!`, `query_file_scalar!` and their unchecked forms.
 fn reads_sql_from_a_file(word: &str) -> bool {
-    let _ = word;
-    false
+    word.starts_with("query_file")
 }
 
 /// Reads every string literal of every `.rs` file under `crates/*/src/` of `root`.
@@ -458,8 +579,41 @@ fn census(root: &Path, tables: &[&str]) -> Census {
 
 /// The judge (SPEC-432 R5, R6): the found rewrites must equal the sanctioned ones.
 fn judge(census: &Census, sanctioned: &[(&str, &str, &str, &str, usize)]) -> Vec<String> {
-    let _ = (census, sanctioned);
-    Vec::new()
+    let mut refused: Vec<String> = census
+        .unreadable
+        .iter()
+        .map(|entry| format!("{entry}, a write the check cannot read"))
+        .collect();
+    for ((file, item, kind, table), count) in &census.found {
+        let listed = sanctioned
+            .iter()
+            .find(|(f, i, k, t, _)| file == f && item == i && kind == k && table == t);
+        match listed {
+            None => refused.push(format!(
+                "{file} {item} {kind} {table}: {count} rewrite(s) of an append-only table, and none \
+                 is sanctioned"
+            )),
+            Some((.., want)) if count != want => refused.push(format!(
+                "{file} {item} {kind} {table}: {count} rewrite(s), sanctioned {want}"
+            )),
+            Some(_) => {}
+        }
+    }
+    for (file, item, kind, table, want) in sanctioned {
+        let site = (
+            (*file).to_owned(),
+            (*item).to_owned(),
+            (*kind).to_owned(),
+            (*table).to_owned(),
+        );
+        let gone = !census.found.contains_key(&site);
+        if gone {
+            refused.push(format!(
+                "{file} {item} {kind} {table}: sanctioned {want}, and none is found"
+            ));
+        }
+    }
+    refused
 }
 
 /// Prints the census's examined counts, refusing any at zero.

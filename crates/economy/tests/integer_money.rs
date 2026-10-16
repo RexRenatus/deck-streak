@@ -144,9 +144,57 @@ fn items(tokens: &[Token]) -> Vec<Option<String>> {
     found
 }
 
-/// The float rule the token at `at` opens, with how many tokens the float spans.
+/// Whether a word starts with a digit, as every numeric literal does.
+fn digit_led(text: &str) -> bool {
+    text.starts_with(|first: char| first.is_ascii_digit())
+}
+
+/// The float rule the token at `at` opens, with how many tokens the float spans. The rules are
+/// tried in ADR-446 D1's order, so a token is counted once.
 fn float_rule(tokens: &[Token], at: usize) -> Option<(Rule, usize)> {
-    let _ = (tokens, at);
+    let word = |index: usize| match tokens.get(index) {
+        Some(Token::Word(text)) => Some(text.as_str()),
+        _ => None,
+    };
+    let dot = |index: usize| tokens.get(index) == Some(&Token::Punct('.'));
+    let current = word(at)?;
+    // F1: the type word, a cast `as f64` included.
+    if matches!(current, "f32" | "f64") {
+        return Some((Rule::F1, 1));
+    }
+    // F2: a float suffix on a word (`as_f64`, `to_f64`) or on a number (`5_f32`, `5f64`).
+    let suffixed = current.ends_with("_f32")
+        || current.ends_with("_f64")
+        || (digit_led(current) && (current.ends_with("f32") || current.ends_with("f64")));
+    if suffixed {
+        return Some((Rule::F2, 1));
+    }
+    if !digit_led(current) {
+        return None;
+    }
+    // F3: a decimal literal. A number after a dot is a field of a path (`t.0.1`), never a float.
+    let after_dot = at > 0 && dot(at - 1);
+    let decimal = dot(at + 1) && word(at + 2).is_some_and(digit_led);
+    if decimal && !after_dot {
+        return Some((Rule::F3, 3));
+    }
+    // F4: an exponent literal. `0x`, `0o` and `0b` open an integer whose digits may hold an `e`.
+    let radix = ["0x", "0o", "0b"]
+        .iter()
+        .any(|prefix| current.starts_with(prefix));
+    let exponent = current.char_indices().any(|(index, inside)| {
+        matches!(inside, 'e' | 'E')
+            && current[..index].ends_with(|before: char| before.is_ascii_digit())
+    });
+    if exponent && !radix {
+        return Some((Rule::F4, 1));
+    }
+    // F5: a trailing-dot literal. A dot before a second dot is a range (`0..10`).
+    let range = dot(at + 2);
+    let trailing = dot(at + 1) && word(at + 2).is_none();
+    if trailing && !range {
+        return Some((Rule::F5, 2));
+    }
     None
 }
 
@@ -186,13 +234,51 @@ fn census(root: &Path) -> Census {
     census
 }
 
-/// The judge (SPEC-432 R2): the found map must equal the listed one.
+/// An item's float rules, in the order its tokens hold them, as a refusal names them.
+fn named(rules: &[Rule]) -> String {
+    rules
+        .iter()
+        .map(|rule| format!("{rule:?}"))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// The judge (SPEC-432 R2): the found map must equal the listed one, so an unlisted item, a count
+/// that grew or shrank and a listed item gone are each refused by name.
 fn judge(
     found: &BTreeMap<(String, String), Vec<Rule>>,
     listed: &[(&str, &str, usize)],
 ) -> Vec<String> {
-    let _ = (found, listed);
-    Vec::new()
+    let mut refused = Vec::new();
+    for ((file, item), rules) in found {
+        let count = rules.len();
+        let by = named(rules);
+        let site = listed
+            .iter()
+            .find(|(listed_file, listed_item, _)| file == listed_file && item == listed_item);
+        match site {
+            None => refused.push(format!(
+                "{file} {item}: {count} float token(s) by {by}, and the item is not listed"
+            )),
+            Some((_, _, listed_count)) => {
+                let equal = count == *listed_count;
+                if !equal {
+                    refused.push(format!(
+                        "{file} {item}: {count} float token(s) by {by}, listed {listed_count}"
+                    ));
+                }
+            }
+        }
+    }
+    for (file, item, listed_count) in listed {
+        let gone = !found.contains_key(&((*file).to_owned(), (*item).to_owned()));
+        if gone {
+            refused.push(format!(
+                "{file} {item}: listed {listed_count} float token(s), and none is found"
+            ));
+        }
+    }
+    refused
 }
 
 /// A planted file holding one float per rule, each in its own item.

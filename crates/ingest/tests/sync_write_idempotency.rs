@@ -316,21 +316,197 @@ fn first_word(statement: &[Sql]) -> Option<String> {
     }
 }
 
-/// How a second application of the write is absorbed, by ADR-446 D3.
+/// Whether the token at `at` is the SQL word `keyword`, in any case.
+fn is_word(statement: &[Sql], at: usize, keyword: &str) -> bool {
+    matches!(statement.get(at), Some(Sql::Name(name)) if name.eq_ignore_ascii_case(keyword))
+}
+
+/// Whether the statement holds `words` one after another.
+fn holds(statement: &[Sql], words: &[&str]) -> bool {
+    (0..statement.len()).any(|at| {
+        words
+            .iter()
+            .enumerate()
+            .all(|(offset, word)| is_word(statement, at + offset, word))
+    })
+}
+
+/// How a second application of the write is absorbed, by ADR-446 D3: a `DELETE` finds nothing,
+/// an `UPDATE` sets the same values, an upsert or a replace sets the same row, a conflict clause
+/// that does nothing or an `INSERT OR IGNORE` is KEYED, and an `INSERT` with no clause is PLAIN.
 fn class_of(statement: &[Sql]) -> Option<Class> {
-    let _ = statement;
-    None
+    match first_word(statement)?.as_str() {
+        "delete" => Some(Class::Delete),
+        "update" => Some(Class::Set),
+        "replace" => Some(Class::Upsert),
+        "insert" => {
+            let or_action =
+                |action: &str| is_word(statement, 1, "or") && is_word(statement, 2, action);
+            let upsert = holds(statement, &["do", "update"]) || or_action("replace");
+            if upsert {
+                return Some(Class::Upsert);
+            }
+            let do_nothing = holds(statement, &["do", "nothing"]);
+            let or_ignore = or_action("ignore");
+            let keyed = do_nothing || or_ignore;
+            Some(if keyed { Class::Keyed } else { Class::Plain })
+        }
+        _ => None,
+    }
 }
 
-/// Each assignment of a `SET` list whose right side names its own column outside `excluded.`.
+/// The words that end a `SET` list at its own depth.
+const SET_LIST_ENDS: [&str; 6] = ["where", "returning", "from", "on", "order", "limit"];
+
+/// The tokens as text, one space between each, a string literal as `'...'`.
+fn render(tokens: &[Sql]) -> String {
+    tokens
+        .iter()
+        .map(|token| match token {
+            Sql::Name(name) => name.clone(),
+            Sql::Text => "'...'".to_owned(),
+            Sql::Mark(mark) => mark.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// A name's parts, each with its quotes or brackets removed and lower-cased.
+fn parts(written: &str) -> Vec<String> {
+    let characters: Vec<char> = written.chars().collect();
+    let mut found = Vec::new();
+    let mut at = 0;
+    while at < characters.len() {
+        let end = part_end(&characters, at).unwrap_or(characters.len());
+        let part: String = characters[at..end].iter().collect();
+        let unquoted = match part.chars().next() {
+            Some(open @ ('"' | '`')) => {
+                let inner = part[1..].strip_suffix(open).unwrap_or(&part[1..]);
+                inner.replace(&format!("{open}{open}"), &open.to_string())
+            }
+            Some('[') => part[1..].strip_suffix(']').unwrap_or(&part[1..]).to_owned(),
+            _ => part,
+        };
+        found.push(unquoted.to_ascii_lowercase());
+        at = end + 1;
+    }
+    found
+}
+
+/// Whether one assignment's right side names a column its left side sets, bare or qualified by
+/// its table, outside `excluded.`: inside `DO UPDATE` a column name is the row's old value and
+/// `excluded.` the value the insert would have written.
+fn names_its_own_column(assignment: &[Sql]) -> bool {
+    let Some(equals) = assignment.iter().position(|token| *token == Sql::Mark('=')) else {
+        return false;
+    };
+    let columns: Vec<String> = assignment[..equals]
+        .iter()
+        .filter_map(|token| match token {
+            Sql::Name(name) => parts(name).pop(),
+            _ => None,
+        })
+        .collect();
+    assignment[equals + 1..].iter().any(|token| {
+        let Sql::Name(written) = token else {
+            return false;
+        };
+        let mut named = parts(written);
+        let Some(column) = named.pop() else {
+            return false;
+        };
+        let from_excluded = named
+            .last()
+            .is_some_and(|qualifier| qualifier == "excluded");
+        columns.contains(&column) && !from_excluded
+    })
+}
+
+/// Each assignment of the `SET` list from `start` whose right side names its own column.
+fn self_references(statement: &[Sql], start: usize) -> Vec<String> {
+    let mut assignments: Vec<&[Sql]> = Vec::new();
+    let mut depth = 0_usize;
+    let mut begin = start;
+    let mut end = start;
+    while let Some(token) = statement.get(end) {
+        match token {
+            Sql::Mark('(') => depth += 1,
+            Sql::Mark(')') => depth = depth.saturating_sub(1),
+            Sql::Mark(',') if depth == 0 => {
+                assignments.push(&statement[begin..end]);
+                begin = end + 1;
+            }
+            Sql::Name(name)
+                if depth == 0
+                    && SET_LIST_ENDS
+                        .iter()
+                        .any(|word| name.eq_ignore_ascii_case(word)) =>
+            {
+                break;
+            }
+            _ => {}
+        }
+        end += 1;
+    }
+    assignments.push(&statement[begin..end]);
+    assignments
+        .into_iter()
+        .filter(|assignment| names_its_own_column(assignment))
+        .map(render)
+        .collect()
+}
+
+/// Each assignment of a `SET` list whose right side names its own column outside `excluded.`
+/// (ADR-446 D3): an INCREMENT, in an `UPDATE`'s list or in an upsert's `DO UPDATE SET` list.
 fn increments(statement: &[Sql]) -> Vec<String> {
-    let _ = statement;
-    Vec::new()
+    let mut found = Vec::new();
+    let in_update = is_word(statement, 0, "update");
+    if in_update && let Some(set) = (0..statement.len()).find(|&at| is_word(statement, at, "set")) {
+        found.extend(self_references(statement, set + 1));
+    }
+    for at in 0..statement.len() {
+        let upsert_set = is_word(statement, at, "do")
+            && is_word(statement, at + 1, "update")
+            && is_word(statement, at + 2, "set");
+        if upsert_set {
+            found.extend(self_references(statement, at + 3));
+        }
+    }
+    found
 }
 
-/// Why a literal holds a write the check cannot read, if it does.
+/// The write keywords a `{` placeholder may follow, each as its words.
+const WRITE_KEYWORDS: [&[&str]; 3] = [&["update"], &["delete", "from"], &["into"]];
+
+/// Why a literal holds a write the check cannot read, if it does (ADR-446 D3): a `WITH` that
+/// holds a write keyword, or a write keyword joined to a `{` placeholder.
 fn unreadable(statement: &[Sql]) -> Option<&'static str> {
-    let _ = statement;
+    let with_write = is_word(statement, 0, "with")
+        && statement.iter().any(|token| {
+            matches!(token, Sql::Name(name) if WRITE_WORDS.iter().any(|word| name.eq_ignore_ascii_case(word)))
+        });
+    let placeholder = (0..statement.len()).any(|at| {
+        WRITE_KEYWORDS.iter().any(|words| {
+            let spelled = words
+                .iter()
+                .enumerate()
+                .all(|(offset, word)| is_word(statement, at + offset, word));
+            spelled
+                && match statement.get(at + words.len()) {
+                    Some(Sql::Mark('{')) => true,
+                    Some(Sql::Name(name)) => name.contains('{'),
+                    _ => false,
+                }
+        })
+    });
+    let cannot_read = with_write || placeholder;
+    if cannot_read {
+        return Some(if with_write {
+            "a WITH that holds a write"
+        } else {
+            "a write keyword joined to a placeholder"
+        });
+    }
     None
 }
 
@@ -381,8 +557,77 @@ fn census(root: &Path) -> Census {
 /// The judge (SPEC-432 R7, R8): unreadable writes, unclassified modules, listed modules holding no
 /// write, INCREMENTs and PLAIN sites that are not the listed ones are each refused by name.
 fn judge(census: &Census) -> Vec<String> {
-    let _ = census;
-    Vec::new()
+    let mut refused: Vec<String> = census
+        .unreadable
+        .iter()
+        .map(|(module, item, why)| format!("{module} {item}: {why}, a write the check cannot read"))
+        .collect();
+    let mut holding: BTreeMap<&str, usize> = BTreeMap::new();
+    for write in &census.writes {
+        *holding.entry(write.module.as_str()).or_insert(0) += 1;
+    }
+    for (module, _, _) in &census.unreadable {
+        *holding.entry(module.as_str()).or_insert(0) += 1;
+    }
+    for (module, count) in &holding {
+        let classified = SYNC_MODULES.contains(module)
+            || EXEMPT_MODULES.iter().any(|(exempt, _)| exempt == module);
+        if !classified {
+            refused.push(format!(
+                "{module} holds {count} write(s) and is neither a sync module nor exempt"
+            ));
+        }
+    }
+    let listed_modules = SYNC_MODULES
+        .iter()
+        .copied()
+        .chain(EXEMPT_MODULES.iter().map(|(module, _)| *module));
+    for module in listed_modules {
+        let holds_none = !holding.contains_key(module);
+        if holds_none {
+            refused.push(format!("{module} is a listed module and holds no write"));
+        }
+    }
+    let mut plain: BTreeMap<(String, String), usize> = BTreeMap::new();
+    for write in sync_writes(census) {
+        let Some(class) = write.class else {
+            refused.push(format!(
+                "{} {}: a sync write with no class",
+                write.module, write.item
+            ));
+            continue;
+        };
+        if class == Class::Plain {
+            *plain
+                .entry((write.module.clone(), write.item.clone()))
+                .or_insert(0) += 1;
+        }
+        for assignment in &write.increments {
+            refused.push(format!(
+                "{} {} {} INCREMENT: `{assignment}` names its own column",
+                write.module,
+                write.item,
+                class.label()
+            ));
+        }
+    }
+    for ((module, item), count) in &plain {
+        let listed = PLAIN
+            .iter()
+            .any(|(listed_module, listed_item, _)| module == listed_module && item == listed_item);
+        if !listed {
+            refused.push(format!(
+                "{module} {item} PLAIN: {count} plain insert(s), and the site is not listed"
+            ));
+        }
+    }
+    for (module, item, _) in PLAIN {
+        let gone = !plain.contains_key(&(module.to_owned(), item.to_owned()));
+        if gone {
+            refused.push(format!("{module} {item} PLAIN: listed, and none is found"));
+        }
+    }
+    refused
 }
 
 /// The writes of the census that sit in a sync module.
