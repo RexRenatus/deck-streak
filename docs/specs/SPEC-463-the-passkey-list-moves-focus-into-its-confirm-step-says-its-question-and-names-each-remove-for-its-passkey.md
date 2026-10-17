@@ -166,3 +166,8 @@ and the lockfile do not change.
 - **Mutation:** StrykerJS over `web/app/src/lib/settings/SignInMethods.svelte`, with the
   repository's own configuration at a break of 100; each survivor is killed by a test or recorded
   as equivalent with its reason.
+
+## 8. Amendments
+
+- `scripts/mutation-equivalent.d/miniapp.json` is unchanged: the StrykerJS run over the component left
+  no survivor proved equivalent, so no record was added.
