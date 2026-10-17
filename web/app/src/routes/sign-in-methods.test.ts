@@ -519,4 +519,28 @@ describe('the sign-in methods screen, each state', () => {
     }
     expect(errors).toEqual([]);
   });
+
+  it('a removal whose list cannot be read again moves no focus and raises no error', async () => {
+    mocks.identities
+      .mockResolvedValueOnce({ kind: 'ok', value: [LISTED[0], LISTED[1]] })
+      .mockResolvedValueOnce({ kind: 'unavailable' });
+    server({ 'DELETE /api/identities/4': () => new Response(null, { status: 204 }) });
+    const rejections: unknown[] = [];
+    const collect = (reason: unknown) => rejections.push(reason);
+    process.on('unhandledRejection', collect);
+    try {
+      render(Methods);
+      await settle();
+      await confirm(rows()[1]);
+      await settle();
+    } finally {
+      process.off('unhandledRejection', collect);
+    }
+    expect(screen.getByRole('alert').textContent).toBe(
+      'DeckStreak could not reach its server. Try again in a moment.'
+    );
+    expect(screen.queryAllByRole('listitem')).toEqual([]);
+    expect(document.activeElement).toBe(document.body);
+    expect(rejections).toEqual([]);
+  });
 });
