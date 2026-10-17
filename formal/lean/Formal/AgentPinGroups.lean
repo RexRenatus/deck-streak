@@ -1,15 +1,15 @@
--- @phx covers crates/agent/tests/runs.rs anchor=prune_pin_problems digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/agent/tests/runs.rs anchor=opens_with_a_shebang digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/agent/tests/verdict.rs anchor=opens_with_a_shebang digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/agent/tests/runs.rs anchor=is_punct digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/agent/tests/runs.rs anchor=name_of digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/agent/tests/runs.rs anchor=tokens_in digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/agent/tests/runs.rs anchor=is_doc_attribute digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/agent/tests/runs.rs anchor=text_of digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/agent/tests/runs.rs anchor=ends_in_the_query_macro digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/agent/tests/runs.rs anchor=opens_with_the_statement digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/agent/tests/runs.rs anchor=statements_run_in digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/agent/tests/runs.rs anchor=code_texts digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/agent/tests/runs.rs anchor=prune_pin_problems digest=sha256:4b5a80d77c4115e497e9790c74a19375a5b55d7ac4be1f8b75f370c565c80c24
+-- @phx covers crates/agent/tests/runs.rs anchor=opens_with_a_shebang digest=sha256:f238fc966cb8b4040a517cc95beafd011d88fe9cd7cd10a54621f6da7b620d6c
+-- @phx covers crates/agent/tests/verdict.rs anchor=opens_with_a_shebang digest=sha256:f238fc966cb8b4040a517cc95beafd011d88fe9cd7cd10a54621f6da7b620d6c
+-- @phx covers crates/agent/tests/runs.rs anchor=is_punct digest=sha256:7a22888d9fd1fb9fb69338f12bdf698578760c0a244e3280c99f21b8a7734a68
+-- @phx covers crates/agent/tests/runs.rs anchor=name_of digest=sha256:0e7d1738b94eb411d75043240d37ae50a47f9c08f4b7e51b702515523f838bab
+-- @phx covers crates/agent/tests/runs.rs anchor=tokens_in digest=sha256:228315fb5f629c261f34e5f5d2dd41f0ad5f9699ba7ece5f7e2dd2c148b66eea
+-- @phx covers crates/agent/tests/runs.rs anchor=is_doc_attribute digest=sha256:e32a7b01cb1c1a8275b2aefc1c41b7decd9cfc097ec0e6ede54c65dc88d5fe3b
+-- @phx covers crates/agent/tests/runs.rs anchor=text_of digest=sha256:8bddc6598036470456382446cdfd99e9c8350be88439383bb1f443b15f84b19f
+-- @phx covers crates/agent/tests/runs.rs anchor=ends_in_the_query_macro digest=sha256:f97d3d8193607b8055f6e4ada911f2ac0e92a264eaac2563d458a40242f8b221
+-- @phx covers crates/agent/tests/runs.rs anchor=opens_with_the_statement digest=sha256:50141940a7087c4fd5e1ebdac2874961d81a99e11be62a315a17e6f624b3484a
+-- @phx covers crates/agent/tests/runs.rs anchor=statements_run_in digest=sha256:254e6192c4b2b15b4fd60aaf2e7bca9d235d84565371d94ffa056489000a2139
+-- @phx covers crates/agent/tests/runs.rs anchor=code_texts digest=sha256:61276193ac04b9f5bf14f3978596285a84fc78325f1d7edd62610efc6a006742
 -- @phx vectors formal/vectors/agent-pin-groups.jsonl
 -- @phx cites #474
 -- @phx theorem a_source_is_refused_as_a_shebang_exactly_when_it_opens_with_one ramp=report
