@@ -1,4 +1,4 @@
--- @phx covers scripts/mutation_rows.py anchor=retirement_records digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers scripts/mutation_rows.py anchor=retirement_records digest=sha256:cf08a5f88bded7fccc3e9402f0c6ec544fb39a2c6bb845225574f2eb25ef1ba4
 -- @phx vectors formal/vectors/retired-list-shape.jsonl
 -- @phx cites #421
 -- @phx theorem every_retired_list_is_refused_by_name_or_read_as_before ramp=report
