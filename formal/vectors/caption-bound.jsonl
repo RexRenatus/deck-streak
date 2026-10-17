@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"CaptionBound","covers":"crates/notifications/src/photo.rs","anchor":"check_caption","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":55}
+{"schema":"phx.formal.vectors.v1","entry":"CaptionBound","covers":"crates/notifications/src/photo.rs","anchor":"check_caption","digest":"sha256:c530f0a2abc6064204250253e049224649f06af8a8beaacfe00f8aa59414ba06","vectors":55}
 {"rule":"caption","runs":[],"units":0,"takes":true}
 {"rule":"caption","runs":[[97,1023]],"units":1023,"takes":true}
 {"rule":"caption","runs":[[97,1022],[97,1]],"units":1023,"takes":true}
