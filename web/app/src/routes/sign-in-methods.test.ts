@@ -481,4 +481,17 @@ describe('the sign-in methods screen, each state', () => {
     expect(screen.queryByRole('alert')).toBeNull();
     expect(mocks.identities).toHaveBeenCalledTimes(2);
   });
+
+  it('a key other than escape leaves the open question and the focus where they are', async () => {
+    mocks.identities.mockResolvedValue({ kind: 'ok', value: LISTED });
+    render(Methods);
+    await settle();
+
+    await open(rows()[1]);
+    const keep = within(rows()[1]).getByRole('button', { name: 'Keep' });
+    await fireEvent.keyDown(keep, { key: 'a' });
+    await settle();
+    expect(screen.queryByText(QUESTION)).not.toBeNull();
+    expect(document.activeElement).toBe(keep);
+  });
 });
