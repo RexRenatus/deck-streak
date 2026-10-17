@@ -266,3 +266,24 @@ ADR-336, ADR-348 and ADR-388, which this note leaves as they stand.
 | patch | commit | reason | removal condition |
 |---|---|---|---|
 | `browser-full-sync-files` | `bd4fe2f4e9aa6e37434678e7770e6934b6071fcb` | the browser gives the engine no file system on `wasm32`, so a full upload could not read the closed collection and a full download could not write a temporary file and rename it over the collection; an upload reads the collection through SQLite's serialize, a download is checked in memory and written by SQLite's backup in one step, and the full sync's progress monitor never ticks, because tokio has no time driver there | upstream reads and writes a full sync's collection without the file system on `wasm32`, and tokio drives timers there |
+
+## Note, appended for #931: the pin moves to the fork's next zip line
+
+This note leaves the body above as it was decided. The fork's branch `wasm32-26.09.3` gains one
+commit over `bd4fe2f4e9aa6e37434678e7770e6934b6071fcb`: the engine's `zip` requirement moves to its
+next major line, which clears the three advisories #931 names, and the commit takes only the API
+changes that line forces. No new tag names it; the earlier tags stay where they are. The root
+manifest's `[patch]` entry takes `anki` and `anki_proto` by `rev` from that commit. The patch is a
+dependency line both targets share and the call sites it forces, and the fork's own tests read as
+they did before it, so the native engine is the one this ADR pinned. Read with ADR-336 and ADR-348,
+which this note leaves as they stand.
+
+| record | measured |
+|---|---|
+| the pinned commit | `65e053b829825f534803b2b772c507a73ba936a3`, the head of branch `wasm32-26.09.3` (`git ls-remote`) |
+| its range | fifteen commits over `57382da`, one per patch; none adds a workflow file (`git diff --stat 57382da 65e053b -- .github` is empty) |
+| `git diff --stat 26.09.3 65e053b` on the fork | 30 files changed, 622 insertions(+), 117 deletions(-) |
+
+| patch | commit | reason | removal condition |
+|---|---|---|---|
+| `zip` | `65e053b829825f534803b2b772c507a73ba936a3` | the engine's `zip` requirement moves to its next major line, which clears the three advisories #931 names; the commit takes only the API changes that line forces | upstream requires that line or a later one |
