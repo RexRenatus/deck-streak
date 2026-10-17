@@ -1,4 +1,5 @@
 import Formal.ChestVectors
+import Formal.DeployEntryRefusalVectors
 import Formal.ExchangeVectors
 import Formal.HabitWritingVectors
 import Formal.NextMilestoneVectors
@@ -30,6 +31,7 @@ lists it as support.
 def main (args : List String) : IO UInt32 := do
   match args with
   | ["Chest"] => Formal.ChestVectors.run
+  | ["DeployEntryRefusal"] => Formal.DeployEntryRefusalVectors.run
   | ["Exchange"] => Formal.ExchangeVectors.run
   | ["HabitWriting"] => Formal.HabitWritingVectors.run
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run
