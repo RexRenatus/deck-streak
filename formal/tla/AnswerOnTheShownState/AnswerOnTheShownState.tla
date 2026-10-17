@@ -1,7 +1,7 @@
 ------------------------- MODULE AnswerOnTheShownState -------------------------
-\* @phx covers crates/engine-core/src/dispatch.rs anchor=run_answer digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/answer.rs anchor=checked digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/engine-core/src/answer.rs anchor=answer_request digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/engine-core/src/dispatch.rs anchor=run_answer digest=sha256:e6b7ab332fee33fec2200576fb150ffe2e10800f25ffee4a5c6091b04102c857
+\* @phx covers crates/engine-core/src/answer.rs anchor=checked digest=sha256:3e51786073908ab8ca69f25949b2f31f74c60357f8afbe31bbb4d448bd76f499
+\* @phx covers crates/engine-core/src/answer.rs anchor=answer_request digest=sha256:afa913d06fa456f1f5af0776a8d5a8f77e0643345182a6dd87835dce0b44575b
 \* @phx cites #760
 \* @phx property AnAnswerCarriesTheStateItWasShown ramp=report
 \* @phx property NoAnswerIsRecordedOnAChangedCard ramp=report
