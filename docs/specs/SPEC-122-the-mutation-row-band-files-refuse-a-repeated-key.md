@@ -231,3 +231,51 @@ no workflow (#385).
 ```acceptance
 A7: python3 -m unittest discover -s scripts/tests -p test_band_repeated_key.py -k test_a_retired_list_that_repeats_a_key_is_refused_naming_it -k test_a_well_formed_retired_list_still_admits_its_row
 ```
+
+## 13. Amendment: a wrongly shaped retired list is refused by name (#421)
+
+Issue #421, which follows #385. Section 11's R8 reads `scripts/mutation-rows.retired.json` through
+the one parser, so a repeated key is refused by name. A list that is valid JSON of another shape
+was not: a top-level array, a `retired` value that is not an array, an entry that is not an object
+and an entry with no string `id` each crashed `retired` with a traceback and exit 1, and a
+`retired` value of `{}` or `""` read as no record at all, silently.
+
+Made by SPEC-465's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order. It inserts sections 13 and 14 only.
+
+This amendment strengthens R8. Its sentence "A list without a repeated key reads exactly as it
+did" now holds for a list of the shape below; a list of any other shape is refused.
+
+- **R9. The retired list's shape is refused by name.** After the parser, `retired` reads the list
+  through `mutation_rows.retirement_records`. A document that is not an object, a `retired` value
+  that is not an array, an entry that is not an object and an entry whose `id` is not a string are
+  each a `PopulationRefused` naming the list and the shape it expected, the entry named by its
+  index, and the verb exits 2 with `mutation_rows: REFUSED: <the sentence>` on stderr and no
+  traceback, as R8 gives a repeated key. No row is retired by a refused list. A document with no
+  `retired` key still holds no record, and a well-formed list admits exactly what it admitted.
+  SPEC-465 R1 to R5 state each sentence.
+
+The rows join SPEC-465's band, `S46500-S46599` (`SCRIPT_MUTATIONS`), each with one killer that
+names one test:
+
+| row | mutant | killer |
+|---|---|---|
+| S46500 | the top-level object check removed | `test_a_top_level_list_is_refused_naming_the_shape` |
+| S46501 | the `retired` array check removed | `test_a_retired_value_that_is_not_an_array_is_refused_naming_the_shape` |
+| S46502 | the entry object check removed | `test_an_entry_that_is_not_an_object_is_refused_naming_its_place` |
+| S46503 | the entry id check removed | `test_an_entry_without_a_string_id_is_refused_naming_its_place` |
+
+Sections 3, 7 and 12 are left as they stand, so this amendment's criterion, A8, is defined in the
+criteria table and fence of section 14. Files added or changed by this amendment are SPEC-465's
+manifest; `docs/red-first/SPEC-122.md` takes an insert-only addendum for A8.
+
+## 14. Acceptance criteria of the amendment for #421 (A8)
+
+| id | criterion | decided by |
+|---|---|---|
+| A8 | a retired list that is a top-level array, one whose `retired` value is not an array, one with an entry that is not an object and one with an entry whose `id` is not a string are each refused by `retired` (exit 2) with the whole sentence naming the list and the shape, no `Traceback` and no row retired; A7's tests stay green | `test_mutation_rows.py` `TheRetiredListRefusesAWrongShape`; `test_band_repeated_key.py` A7's two tests |
+
+```acceptance
+A8: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k TheRetiredListRefusesAWrongShape
+A8: python3 -m unittest discover -s scripts/tests -p test_band_repeated_key.py -k test_a_retired_list_that_repeats_a_key_is_refused_naming_it -k test_a_well_formed_retired_list_still_admits_its_row
+```
