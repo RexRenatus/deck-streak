@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "<code>x&lt;y</code> is not one of your courses, so nothing was logged. Send /read alone to pick one."
+  },
+  "x-message": "read-unknown-course"
+}

@@ -1,0 +1,56 @@
+// A planted Rust test for scripts/tests/test_temp_hygiene.py (SPEC-030 A3). The `.fixture` suffix
+// keeps it out of cargo and every probe glob; the lint reads it as Rust by its inner extension.
+// Each line the lint must refuse ends with a `planted` comment, and each form it must accept ends
+// with an `accepted` comment. The comments themselves are never read as code.
+
+use std::fs;
+
+use tempfile::{NamedTempFile, TempDir};
+
+#[test]
+fn a_kept_directory_outlives_the_test() {
+    let dir = TempDir::new().unwrap();
+    let kept = dir.keep(); // planted: TempDir::keep
+    fs::write(kept.join("note.txt"), "x").unwrap();
+}
+
+#[test]
+fn a_directory_turned_into_a_path_outlives_the_test() {
+    let dir = TempDir::new().unwrap();
+    let kept = dir.into_path(); // planted: TempDir::into_path
+    fs::write(kept.join("note.txt"), "x").unwrap();
+}
+
+#[test]
+fn a_kept_file_outlives_the_test() {
+    let file = NamedTempFile::new().unwrap();
+    let (_file, _path) = file.keep().unwrap(); // planted: NamedTempFile::keep
+}
+
+#[test]
+fn a_temp_path_kept_outlives_the_test() {
+    let file = NamedTempFile::new().unwrap();
+    let _path = file.into_temp_path().keep().unwrap(); // planted: into_temp_path then keep
+}
+
+#[test]
+fn the_shared_temporary_directory_is_never_cleaned() {
+    let shared = std::env::temp_dir(); // planted: std::env::temp_dir
+    fs::write(shared.join("deckstreak-note.txt"), "x").unwrap();
+}
+
+#[test]
+fn a_fixed_path_under_tmp_is_never_cleaned() {
+    fs::write("/tmp/deckstreak-planted.txt", "x").unwrap(); // planted: a /tmp/ literal
+}
+
+#[test]
+fn a_directory_dropped_at_scope_end_is_removed() {
+    let dir = tempfile::tempdir().unwrap(); // accepted: removed on drop
+    fs::write(dir.path().join("note.txt"), "x").unwrap();
+    let file = NamedTempFile::new_in(dir.path()).unwrap(); // accepted: removed on drop
+    assert!(file.path().starts_with(dir.path()));
+    // A comment that says keep() or "/tmp/x" or std::env::temp_dir() is prose, not code.
+    let label = "a string that says .keep() and into_path() is not a call";
+    assert!(label.contains("keep"));
+}

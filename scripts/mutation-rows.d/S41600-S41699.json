@@ -1,0 +1,30 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S41600-THE-MUTANT-LEG-FETCHES-NOTHING",
+        ".github/workflows/ci.yml",
+        "        if: ${{ needs.mutation-plan.outputs.rust == 'true' }}\n        run: cargo fetch --locked --manifest-path Cargo.toml\n",
+        "        if: ${{ needs.mutation-plan.outputs.rust == 'true' }}\n        run: echo skipped\n",
+        "the mutant leg's fetch step runs cargo fetch --locked before the baseline, so a prefix-restored cache never leaves the offline census a package short (SPEC-416 R1)",
+        "test_rows_jobs_fetch_graph.EveryMutantsJobFetchesTheLockedGraph.test_each_baseline_job_fetches_after_its_cache_restore_and_before_cargo_mutants"
+      ],
+      [
+        "S41601-THE-MUTANT-LEG-SWALLOWS-ITS-FETCH",
+        ".github/workflows/ci.yml",
+        "        if: ${{ needs.mutation-plan.outputs.rust == 'true' }}\n        run: cargo fetch --locked --manifest-path Cargo.toml\n",
+        "        if: ${{ needs.mutation-plan.outputs.rust == 'true' }}\n        run: cargo fetch --locked --manifest-path Cargo.toml || true\n",
+        "the mutant leg's fetch step swallows nothing: a failed fetch fails the job at the fetch (SPEC-416 R2)",
+        "test_rows_jobs_fetch_graph.EveryMutantsJobFetchesTheLockedGraph.test_each_baseline_job_fetches_after_its_cache_restore_and_before_cargo_mutants"
+      ],
+      [
+        "S41602-THE-MUTANT-LEG-FETCHES-UNDER-ANOTHER-IF",
+        ".github/workflows/ci.yml",
+        "        if: ${{ needs.mutation-plan.outputs.rust == 'true' }}\n        run: cargo fetch --locked --manifest-path Cargo.toml\n",
+        "        if: ${{ needs.mutation-plan.outputs.rust == 'false' }}\n        run: cargo fetch --locked --manifest-path Cargo.toml\n",
+        "the mutant leg's fetch step carries the cargo-mutants step's if:, so a plan with Rust work runs both (SPEC-416 R3)",
+        "test_rows_jobs_fetch_graph.EveryMutantsJobFetchesTheLockedGraph.test_each_baseline_job_fetches_after_its_cache_restore_and_before_cargo_mutants"
+      ]
+    ]
+  }
+}

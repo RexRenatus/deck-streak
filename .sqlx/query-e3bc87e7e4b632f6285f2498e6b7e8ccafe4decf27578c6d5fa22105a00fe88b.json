@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT course AS \"course!: String\", current_band AS \"current_band!: String\"\n               FROM language_progress ORDER BY course",
+  "describe": {
+    "columns": [
+      {
+        "name": "course!: String",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "language_progress",
+            "name": "course"
+          }
+        }
+      },
+      {
+        "name": "current_band!: String",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "language_progress",
+            "name": "current_band"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "e3bc87e7e4b632f6285f2498e6b7e8ccafe4decf27578c6d5fa22105a00fe88b"
+}

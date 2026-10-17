@@ -14,6 +14,7 @@ stay quiet.
 - [Install](#install)
 - [Usage](#usage)
 - [Documentation](#documentation)
+- [Privacy](#privacy)
 - [Support](#support)
 - [Contributing](#contributing)
 - [Source code](#source-code)
@@ -47,8 +48,10 @@ Run one part while you work:
 cargo nextest run --workspace       # the Rust tests
 pnpm -r check                       # svelte-check, warnings fail
 pnpm -r test                        # the Mini App's unit tests
-python3 scripts/pack-rows.py        # every vendored pack's rows
 ```
+
+The packs are judged on the maintainer's box, not here: a pull request shows that verdict as its
+`box/packs` status (ADR-069).
 
 Deploying DeckStreak needs a Telegram bot, an Anki sync server you run yourself, and a host with
 HTTPS. [docs/OWNER-SETUP.md](docs/OWNER-SETUP.md) lists the steps. DeckStreak reads your own Anki
@@ -64,6 +67,12 @@ sync server; it does not log in to AnkiWeb.
 - [docs/decisions/](docs/decisions/): every architecture decision and what it was chosen against.
 - [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md): instructions for AI coding agents.
 - [docs/README.md](docs/README.md): the documentation index.
+
+## Privacy
+
+DeckStreak keeps what it needs to score its owner's study. [PRIVACY.md](PRIVACY.md) says what that
+is: each kind of data, why it is kept, on which lawful basis and for how long, how the owner
+exports or erases it, and what an erase does not reach.
 
 ## Support
 

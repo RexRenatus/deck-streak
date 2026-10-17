@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE settings_generation SET courses_digest = ?1 WHERE id = 1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "8527c1a40f149b5c2a1417943c3f6651afcd538d622c21d42b01a6fc8ac8dc90"
+}

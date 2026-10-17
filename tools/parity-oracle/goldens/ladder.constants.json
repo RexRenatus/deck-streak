@@ -1,0 +1,89 @@
+{
+  "cases": [
+    {
+      "input": {
+        "name": "gamification.ladder._RARITY_TIER"
+      },
+      "output": {
+        "common": 2,
+        "epic": 4,
+        "legendary": 5,
+        "rare": 3
+      }
+    },
+    {
+      "input": {
+        "name": "gamification.ladder._EVENT_TIER"
+      },
+      "output": {
+        "badge": 2,
+        "band_up": 5,
+        "ceremony": 5,
+        "ghost_win": 4,
+        "landmark_anniversary": 2,
+        "landmark_study_day": 2,
+        "level_up": 2,
+        "quest": 2,
+        "quest_all": 3,
+        "queue_zero": 4,
+        "record": 3,
+        "season_node": 2,
+        "season_node_final": 3,
+        "share_card": 5
+      }
+    },
+    {
+      "input": {
+        "name": "gamification.ladder._RARE_FLOOR_TIER"
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "name": "constants.CELEBRATION_BUDGETS"
+      },
+      "output": {
+        "loud": [
+          3,
+          2
+        ],
+        "quiet": [
+          1,
+          0
+        ],
+        "standard": [
+          2,
+          1
+        ]
+      }
+    },
+    {
+      "input": {
+        "name": "constants.CELEBRATION_SEND_RETRY_MAX"
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "name": "constants.CELEBRATION_OUTAGE_COOLDOWN_MS"
+      },
+      "output": 60000
+    },
+    {
+      "input": {
+        "name": "pipeline_layers.celebrations._REVEAL_SUSPENSE_SECS"
+      },
+      "output": 2.5
+    }
+  ],
+  "function": "ladder.constants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "constants",
+  "registry": "tools/parity-oracle/registry/spec_084.py",
+  "registry_sha256": "d94121fc9e1af11dff03656086884c0469daf7c5443f325a08a51ce9430f21bc",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO chests (study_day, origin, session_start, rarity, payout_xp, state, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "c7d37dfcb538d19d062d4adcda4073ab63d76e06b9e37e1accf7ae7308ce1187"
+}

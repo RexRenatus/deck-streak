@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "Minutes are a whole number from 1 to 600, so nothing was logged."
+  },
+  "x-message": "read-refused-minutes"
+}

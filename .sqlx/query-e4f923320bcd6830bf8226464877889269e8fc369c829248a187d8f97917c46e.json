@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT code, study_day, created_at FROM writing_log ORDER BY study_day, code",
+  "describe": {
+    "columns": [
+      {
+        "name": "code",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "writing_log",
+            "name": "code"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "writing_log",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "writing_log",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e4f923320bcd6830bf8226464877889269e8fc369c829248a187d8f97917c46e"
+}

@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO notification_deliveries\n               (kind, dedupe_key, scope, surface, study_day, lapse_id, created_at)\n           VALUES (?, ?, ?, ?, ?, ?, ?)\n           ON CONFLICT DO NOTHING\n           RETURNING id AS \"id!\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "notification_deliveries",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3399ff451abaa60f7bff12992bf4e4c795bb2535e7bacee0030a06cdf0e36023"
+}

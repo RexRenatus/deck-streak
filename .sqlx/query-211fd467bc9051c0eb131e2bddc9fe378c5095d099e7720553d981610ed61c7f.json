@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT current_days, longest_days, freezes, last_study_day, comeback_armed\n         FROM streak_state WHERE track = ?1",
+  "describe": {
+    "columns": [
+      {
+        "name": "current_days",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "streak_state",
+            "name": "current_days"
+          }
+        }
+      },
+      {
+        "name": "longest_days",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "streak_state",
+            "name": "longest_days"
+          }
+        }
+      },
+      {
+        "name": "freezes",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "streak_state",
+            "name": "freezes"
+          }
+        }
+      },
+      {
+        "name": "last_study_day",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "streak_state",
+            "name": "last_study_day"
+          }
+        }
+      },
+      {
+        "name": "comeback_armed",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "streak_state",
+            "name": "comeback_armed"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "211fd467bc9051c0eb131e2bddc9fe378c5095d099e7720553d981610ed61c7f"
+}

@@ -1,0 +1,115 @@
+{
+  "scripts/audit-web-verdict.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_audit_web"
+    ]
+  },
+  "scripts/create-issues.py": {
+    "dir": "scripts/tests",
+    "modules": []
+  },
+  "scripts/dynamic-imports-check.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_dynamic_imports_check"
+    ]
+  },
+  "scripts/ios_icon.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_ios_icon"
+    ]
+  },
+  "scripts/ios_lane.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_ios_lane"
+    ]
+  },
+  "scripts/memory_scope.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_memory_scope"
+    ]
+  },
+  "scripts/mutation-verdict.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_mutation_verdict_python_kills",
+      "test_mutation_python_verdict",
+      "test_mutation_python_shard_binding",
+      "test_mutation_verdict",
+      "test_mutation_equivalent",
+      "test_memory_cap_verdict",
+      "test_release_python_ceiling",
+      "test_release_rust_ceiling"
+    ]
+  },
+  "scripts/mutation_python.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_mutation_python",
+      "test_mutation_python_verdict",
+      "test_mutation_python_lister_kills",
+      "test_mutation_python_judge_kills",
+      "test_mutation_python_cli_kills"
+    ]
+  },
+  "scripts/mutation_rows.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_mutation_rows_refusal",
+      "test_mutation_rows",
+      "test_mutation_verdict",
+      "test_mutation_equivalent",
+      "test_bin_kind_census"
+    ]
+  },
+  "scripts/public-scrub.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_public_scrub",
+      "test_readings_taxonomy_scrub",
+      "test_rail_contract",
+      "test_deploy_templates"
+    ]
+  },
+  "scripts/testflight_age.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_testflight_age"
+    ]
+  },
+  "scripts/threat_model.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_threat_model"
+    ]
+  },
+  "scripts/web-engine-size.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_web_engine_size"
+    ]
+  },
+  "scripts/web_mutation_shards.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_web_mutation_shards"
+    ]
+  },
+  "scripts/write-back-issues.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_write_back_issues"
+    ]
+  },
+  "tools/parity-oracle/generate.py": {
+    "dir": "tools/parity-oracle",
+    "modules": [
+      "test_generate",
+      "test_goldens"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "<b>Your data</b>\nDeckStreak keeps only what it needs to run your study, in its own database. <a href=\"https://github.com/RexRenatus/deck-streak/blob/main/PRIVACY.md\">The privacy policy</a> says what that is, why, and for how long.\n\n/export sends you a copy of your data, and /delete erases it."
+  },
+  "x-message": "privacy"
+}

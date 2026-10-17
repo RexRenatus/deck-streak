@@ -1,0 +1,61 @@
+{
+  "cases": [
+    {
+      "input": {
+        "name": "scheduler.CATCHUP_MAX_LATE_MIN"
+      },
+      "output": 360
+    },
+    {
+      "input": {
+        "name": "database.CRON_FIRES_RETENTION_DAYS"
+      },
+      "output": 90
+    },
+    {
+      "input": {
+        "name": "database.CRON_OUTCOMES"
+      },
+      "output": [
+        "ok",
+        "error",
+        "catchup",
+        "missed"
+      ]
+    },
+    {
+      "input": {
+        "name": "constants.SYNC_TICK_OFFSET_MIN"
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "name": "constants.TICK_ALIGN_MIN_INTERVAL_MIN"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "name": "constants.LIVENESS_BOOT_GRACE_SECS"
+      },
+      "output": 900
+    },
+    {
+      "input": {
+        "name": "constants.ROLLOVER_DRIFT_TOLERANCE_MIN"
+      },
+      "output": 30
+    }
+  ],
+  "function": "scheduler.constants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "constants",
+  "registry": "tools/parity-oracle/registry/spec_027.py",
+  "registry_sha256": "ac5bdf68d64e1d17d9f6b93a5f237600e878d693b9d4c61f9655dbd37d8d6540",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

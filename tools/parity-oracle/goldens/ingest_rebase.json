@@ -1,0 +1,519 @@
+{
+  "adapter": "with_a_stub_store",
+  "cases": [
+    {
+      "class": "fresh",
+      "input": {
+        "base": null,
+        "now_ms": 1715420473449,
+        "recount": 44171
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1680860473449,
+          "count": 44171
+        },
+        "persisted": {
+          "before_id_ms": 1680860473449,
+          "count": 44171
+        },
+        "recount_floor": 1680860473449,
+        "self_check_warnings": 0
+      }
+    },
+    {
+      "class": "fresh",
+      "input": {
+        "base": null,
+        "now_ms": 1715420473449,
+        "recount": 0
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1680860473449,
+          "count": 0
+        },
+        "persisted": {
+          "before_id_ms": 1680860473449,
+          "count": 0
+        },
+        "recount_floor": 1680860473449,
+        "self_check_warnings": 0
+      }
+    },
+    {
+      "class": "kept",
+      "input": {
+        "base": {
+          "before_id_ms": 1680601273449,
+          "count": 4321
+        },
+        "now_ms": 1715420473449,
+        "recount": 9999
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1680601273449,
+          "count": 4321
+        },
+        "persisted": null,
+        "recount_floor": null,
+        "self_check_warnings": 0
+      }
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "base": {
+          "before_id_ms": 1680255673449,
+          "count": 700
+        },
+        "now_ms": 1715420473449,
+        "recount": 650
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1680255673449,
+          "count": 700
+        },
+        "persisted": null,
+        "recount_floor": null,
+        "self_check_warnings": 0
+      }
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "base": {
+          "before_id_ms": 1680255673448,
+          "count": 700
+        },
+        "now_ms": 1715420473449,
+        "recount": 650
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1680860473449,
+          "count": 650
+        },
+        "persisted": {
+          "before_id_ms": 1680860473449,
+          "count": 650
+        },
+        "recount_floor": 1680860473449,
+        "self_check_warnings": 1
+      }
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "base": {
+          "before_id_ms": 1680255673450,
+          "count": 700
+        },
+        "now_ms": 1715420473449,
+        "recount": 650
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1680255673450,
+          "count": 700
+        },
+        "persisted": null,
+        "recount_floor": null,
+        "self_check_warnings": 0
+      }
+    },
+    {
+      "class": "shrink",
+      "input": {
+        "base": {
+          "before_id_ms": 1677663673449,
+          "count": 12000
+        },
+        "now_ms": 1715420473449,
+        "recount": 11999
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1680860473449,
+          "count": 11999
+        },
+        "persisted": {
+          "before_id_ms": 1680860473449,
+          "count": 11999
+        },
+        "recount_floor": 1680860473449,
+        "self_check_warnings": 1
+      }
+    },
+    {
+      "class": "shrink",
+      "input": {
+        "base": {
+          "before_id_ms": 1677663673449,
+          "count": 12000
+        },
+        "now_ms": 1715420473449,
+        "recount": 0
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1680860473449,
+          "count": 0
+        },
+        "persisted": {
+          "before_id_ms": 1680860473449,
+          "count": 0
+        },
+        "recount_floor": 1680860473449,
+        "self_check_warnings": 1
+      }
+    },
+    {
+      "class": "equal",
+      "input": {
+        "base": {
+          "before_id_ms": 1677663673449,
+          "count": 12000
+        },
+        "now_ms": 1715420473449,
+        "recount": 12000
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1680860473449,
+          "count": 12000
+        },
+        "persisted": {
+          "before_id_ms": 1680860473449,
+          "count": 12000
+        },
+        "recount_floor": 1680860473449,
+        "self_check_warnings": 0
+      }
+    },
+    {
+      "class": "grow",
+      "input": {
+        "base": {
+          "before_id_ms": 1677663673449,
+          "count": 12000
+        },
+        "now_ms": 1715420473449,
+        "recount": 12001
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1680860473449,
+          "count": 12001
+        },
+        "persisted": {
+          "before_id_ms": 1680860473449,
+          "count": 12001
+        },
+        "recount_floor": 1680860473449,
+        "self_check_warnings": 0
+      }
+    },
+    {
+      "class": "young",
+      "input": {
+        "base": null,
+        "now_ms": 432001234,
+        "recount": 17
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 0,
+          "count": 17
+        },
+        "persisted": {
+          "before_id_ms": 0,
+          "count": 17
+        },
+        "recount_floor": 0,
+        "self_check_warnings": 0
+      }
+    },
+    {
+      "class": "young",
+      "input": {
+        "base": {
+          "before_id_ms": 0,
+          "count": 17
+        },
+        "now_ms": 432001234,
+        "recount": 3
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 0,
+          "count": 17
+        },
+        "persisted": null,
+        "recount_floor": null,
+        "self_check_warnings": 0
+      }
+    },
+    {
+      "class": "young",
+      "input": {
+        "base": null,
+        "now_ms": 34560000000,
+        "recount": 5
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 0,
+          "count": 5
+        },
+        "persisted": {
+          "before_id_ms": 0,
+          "count": 5
+        },
+        "recount_floor": 0,
+        "self_check_warnings": 0
+      }
+    },
+    {
+      "class": "young",
+      "input": {
+        "base": null,
+        "now_ms": 34560000001,
+        "recount": 5
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1,
+          "count": 5
+        },
+        "persisted": {
+          "before_id_ms": 1,
+          "count": 5
+        },
+        "recount_floor": 1,
+        "self_check_warnings": 0
+      }
+    },
+    {
+      "input": {
+        "base": {
+          "before_id_ms": 1674994346459,
+          "count": 26969
+        },
+        "now_ms": 1711023146464,
+        "recount": 26656
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1676463146464,
+          "count": 26656
+        },
+        "persisted": {
+          "before_id_ms": 1676463146464,
+          "count": 26656
+        },
+        "recount_floor": 1676463146464,
+        "self_check_warnings": 1
+      }
+    },
+    {
+      "input": {
+        "base": {
+          "before_id_ms": 1674359457689,
+          "count": 29451
+        },
+        "now_ms": 1708660257685,
+        "recount": 26999
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1674359457689,
+          "count": 29451
+        },
+        "persisted": null,
+        "recount_floor": null,
+        "self_check_warnings": 0
+      }
+    },
+    {
+      "input": {
+        "base": {
+          "before_id_ms": 1685431618870,
+          "count": 28008
+        },
+        "now_ms": 1720510018870,
+        "recount": 6076
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1685431618870,
+          "count": 28008
+        },
+        "persisted": null,
+        "recount_floor": null,
+        "self_check_warnings": 0
+      }
+    },
+    {
+      "input": {
+        "base": {
+          "before_id_ms": 1712168450371,
+          "count": 15901
+        },
+        "now_ms": 1747938050367,
+        "recount": 2300
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1713378050367,
+          "count": 2300
+        },
+        "persisted": {
+          "before_id_ms": 1713378050367,
+          "count": 2300
+        },
+        "recount_floor": 1713378050367,
+        "self_check_warnings": 1
+      }
+    },
+    {
+      "input": {
+        "base": {
+          "before_id_ms": 1684380686926,
+          "count": 19992
+        },
+        "now_ms": 1719891086927,
+        "recount": 45236
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1685331086927,
+          "count": 45236
+        },
+        "persisted": {
+          "before_id_ms": 1685331086927,
+          "count": 45236
+        },
+        "recount_floor": 1685331086927,
+        "self_check_warnings": 0
+      }
+    },
+    {
+      "input": {
+        "base": {
+          "before_id_ms": 1687932324390,
+          "count": 46254
+        },
+        "now_ms": 1724738724391,
+        "recount": 15332
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1690178724391,
+          "count": 15332
+        },
+        "persisted": {
+          "before_id_ms": 1690178724391,
+          "count": 15332
+        },
+        "recount_floor": 1690178724391,
+        "self_check_warnings": 1
+      }
+    },
+    {
+      "input": {
+        "base": {
+          "before_id_ms": 1684617831732,
+          "count": 19709
+        },
+        "now_ms": 1721510631728,
+        "recount": 18310
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1686950631728,
+          "count": 18310
+        },
+        "persisted": {
+          "before_id_ms": 1686950631728,
+          "count": 18310
+        },
+        "recount_floor": 1686950631728,
+        "self_check_warnings": 1
+      }
+    },
+    {
+      "input": {
+        "base": {
+          "before_id_ms": 1679747478073,
+          "count": 41855
+        },
+        "now_ms": 1714221078076,
+        "recount": 17943
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1679747478073,
+          "count": 41855
+        },
+        "persisted": null,
+        "recount_floor": null,
+        "self_check_warnings": 0
+      }
+    },
+    {
+      "input": {
+        "base": {
+          "before_id_ms": 1716566902987,
+          "count": 45206
+        },
+        "now_ms": 1751299702991,
+        "recount": 8204
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1716566902987,
+          "count": 45206
+        },
+        "persisted": null,
+        "recount_floor": null,
+        "self_check_warnings": 0
+      }
+    },
+    {
+      "input": {
+        "base": {
+          "before_id_ms": 1717171118966,
+          "count": 3396
+        },
+        "now_ms": 1753459118962,
+        "recount": 34045
+      },
+      "output": {
+        "base": {
+          "before_id_ms": 1718899118962,
+          "count": 34045
+        },
+        "persisted": {
+          "before_id_ms": 1718899118962,
+          "count": 34045
+        },
+        "recount_floor": 1718899118962,
+        "self_check_warnings": 0
+      }
+    }
+  ],
+  "function": "pipeline.GamifyPipeline._maybe_rebase_ingest",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Runs the rebase on a stand-in pipeline holding only a stub store; the recount's offload returns the case's count and records the floor it was asked for, and the self-check's warnings are counted instead of logged; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_023.py",
+  "registry_sha256": "026e22ff12807ce0338220a4afe850ec60178625e377995bb0d7b492b1f8fc67",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

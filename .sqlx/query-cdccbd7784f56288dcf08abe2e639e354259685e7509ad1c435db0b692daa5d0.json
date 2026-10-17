@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM streak_state",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "cdccbd7784f56288dcf08abe2e639e354259685e7509ad1c435db0b692daa5d0"
+}

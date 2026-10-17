@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT EXISTS(\n                       SELECT 1 FROM cron_fires WHERE job_id = ?1 AND fire_date = ?2\n                   ) AS \"answered!: bool\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "answered!: bool",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "efc242ef65dfd13f6629141398812b3976a962d3d970040dd7ecb6f0456d0963"
+}

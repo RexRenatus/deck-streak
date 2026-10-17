@@ -1,0 +1,67 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S36001-STUDY-EVENT-TYPES",
+        "xp",
+        "src/review_xp.rs",
+        "matches!(kind, 0..=3)",
+        "matches!(kind, 0..=4)",
+        "study_event::the_xp_crates_study_event_rule_matches_the_predecessors_golden",
+        "a type-4 answer is no study event: the golden holds type 4 at eases 1 to 3 as false, and cargo-mutants generates nothing inside matches! (SPEC-360 R3, A2)"
+      ],
+      [
+        "S36002-THE-T4-TIER-MAPS-TO-T4",
+        "progression",
+        "src/review_xp.rs",
+        "Tier::T4 => XpTier::T4,",
+        "Tier::T4 => XpTier::T3,",
+        "xp_review::review_xp_matches_the_parity_golden_for_every_combination",
+        "the translation keeps a T4 card's multiplier; cargo-mutants generates nothing for an exhaustive match returning an enum (SPEC-360 R7, A8)"
+      ],
+      [
+        "S36003-THE-NEW-INTERVAL-IS-READ",
+        "progression",
+        "src/review_xp.rs",
+        "interval: review.interval,",
+        "interval: review.last_interval,",
+        "xp_review::review_xp_matches_the_parity_golden_for_every_combination",
+        "maturity reads the review's new interval, not its last one (SPEC-360 R7, A8)"
+      ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S36004-NO-KERNEL-EDGE",
+        "crates/xp/Cargo.toml",
+        "[dependencies]\n",
+        "[dependencies]\ndeck-streak-kernel.workspace = true\n",
+        "the census reads the real manifest and refuses a kernel edge (SPEC-360 R5, A3)",
+        "test_xp_crate_graph.TheXpCrateDoesNoIo.test_the_xp_crate_takes_serde_json_alone_with_exact_floats"
+      ],
+      [
+        "S36005-EXACT-FLOATS",
+        "crates/xp/Cargo.toml",
+        "serde_json = { workspace = true, features = [\"float_roundtrip\"] }",
+        "serde_json.workspace = true",
+        "the census refuses a manifest whose floats may parse differently on a client (SPEC-360 R5, A3)",
+        "test_xp_crate_graph.TheXpCrateDoesNoIo.test_the_xp_crate_takes_serde_json_alone_with_exact_floats"
+      ],
+      [
+        "S36006-NO-FILESYSTEM",
+        "crates/xp/src/table.rs",
+        "use std::sync::LazyLock;",
+        "use std::fs;\nuse std::sync::LazyLock;",
+        "the census reads the real source and refuses a filesystem import (SPEC-360 R5, A5)",
+        "test_xp_crate_graph.TheXpCrateDoesNoIo.test_the_xp_crates_source_embeds_economy_json_once_and_names_no_io"
+      ],
+      [
+        "S36007-THE-MAP-DRAWS-THE-EDGE",
+        "docs/CONTEXT-MAP.md",
+        "seasons)  depends on: kernel, ingest, xp",
+        "seasons)  depends on: kernel, ingest",
+        "the census refuses a manifest edge the map does not draw (SPEC-360 R6, A6)",
+        "test_xp_crate_graph.TheXpCrateDoesNoIo.test_the_map_and_the_manifests_agree_that_progression_alone_depends_on_the_xp_crate"
+      ]
+    ]
+  }
+}

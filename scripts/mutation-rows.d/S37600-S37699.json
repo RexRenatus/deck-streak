@@ -1,0 +1,96 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S37600-LATE-DAY-NOT-STRICT",
+        "engine-core",
+        "src/late.rs",
+        "i64::from(due) < i64::from(day.days_elapsed)",
+        "i64::from(due) <= i64::from(day.days_elapsed)",
+        "late::a_review_card_due_today_is_not_past_its_due_day",
+        "a review card due on the engine's today is on time; with the day arm's comparison not strict, every card shown on its due day would be told its review cannot count (SPEC-376 A2)"
+      ],
+      [
+        "S37601-LATE-DAY-REVERSED",
+        "engine-core",
+        "src/late.rs",
+        "i64::from(due) < i64::from(day.days_elapsed)",
+        "i64::from(due) > i64::from(day.days_elapsed)",
+        "late::a_review_card_due_yesterday_is_past_its_due_day",
+        "a review card due on an earlier day is past its due day; with the comparison reversed, the line would show for cards due later and never for a late one (SPEC-376 A1)"
+      ],
+      [
+        "S37602-LATE-HOME-DUE-IGNORED",
+        "engine-core",
+        "src/late.rs",
+        "        card.original_due\n    } else {",
+        "        card.due\n    } else {",
+        "late::a_filtered_card_is_judged_by_its_home_due",
+        "a card in a filtered deck is judged by the due it keeps for its home deck; judged by its own due, its filtered position, which the engine numbers below zero, every filtered card would read late (SPEC-376 A4)"
+      ],
+      [
+        "S37603-LATE-HOME-DECK-INVERTED",
+        "engine-core",
+        "src/late.rs",
+        "card.original_deck_id != 0",
+        "card.original_deck_id == 0",
+        "late::a_filtered_card_is_judged_by_its_home_due",
+        "only a card in a filtered deck reads its home deck due; inverted, a filtered card is judged by its position and a card at home by a stale home due (SPEC-376 A4)"
+      ],
+      [
+        "S37604-LATE-DAY-LEARN-DROPPED",
+        "engine-core",
+        "src/late.rs",
+        "REVIEW | DAY_LEARN =>",
+        "REVIEW | DAY_LEARN if card.queue != DAY_LEARN =>",
+        "late::a_day_learning_card_is_judged_by_its_due_day",
+        "a day-learning card's due is a day, judged as a review card's is; dropped from the day arm, a day-learning card due on an earlier day would never read late, and the guard keeps the constant used so the mutant compiles (SPEC-376 A3)"
+      ],
+      [
+        "S37605-LATE-LEARN-NOT-STRICT",
+        "engine-core",
+        "src/late.rs",
+        "i64::from(due) < day.next_day_at - ONE_DAY",
+        "i64::from(due) <= day.next_day_at - ONE_DAY",
+        "late::an_intraday_learning_card_is_judged_by_the_days_start",
+        "an intraday learning card due at the instant the engine's day began is on time; with the comparison not strict, it would read late (SPEC-376 A5)"
+      ],
+      [
+        "S37606-LATE-ONE-DAY",
+        "engine-core",
+        "src/late.rs",
+        "const ONE_DAY: i64 = 86_400;",
+        "const ONE_DAY: i64 = 86_401;",
+        "late::an_intraday_learning_card_is_judged_by_the_days_start",
+        "the engine's day began one day of 86400 seconds before its next rollover; a day one second longer moves the start back, so a card due one second before it reads on time, and the tool never mutates this literal in a const, so the row is planted by hand (SPEC-376 A5)"
+      ],
+      [
+        "S37607-LATE-OTHER-ARM-TRUE",
+        "engine-core",
+        "src/late.rs",
+        "_ => false,",
+        "_ => true,",
+        "late::a_new_or_preview_card_is_never_past_its_due_day",
+        "a new, preview, suspended or buried card is never past its due day; with the other arm true, every such card would show the line (SPEC-376 A6)"
+      ],
+      [
+        "S37608-DAY-READ-METHOD",
+        "engine-core",
+        "src/dispatch.rs",
+        "const SCHED_TIMING_TODAY: (u32, u32) = (13, 5);",
+        "const SCHED_TIMING_TODAY: (u32, u32) = (13, 6);",
+        "late::the_core_reads_the_engines_own_day",
+        "the core's day read is the scheduler's timing of today, (13,5); as (13,6) it would run another scheduler call and never read the engine's day, and the tool never mutates this literal in a const, so the row is planted by hand (SPEC-376 A7)"
+      ],
+      [
+        "S37609-VIEW-LATE-FALSE",
+        "web-engine",
+        "src/wasm.rs",
+        "\"late\": late::past_due_day(&card, day),",
+        "\"late\": false,",
+        "late_view::the_shown_card_carries_the_cores_late_answer",
+        "the shown card's view takes late from the core's rule; set to false, no late card would ever show the line, and only the native census reads this module, which compiles only for wasm32 (SPEC-376 A8)"
+      ]
+    ]
+  }
+}

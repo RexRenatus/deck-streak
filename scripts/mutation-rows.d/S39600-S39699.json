@@ -1,0 +1,142 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S39600-KEYS-ARE-RECORDED-ONLY-AFTER-A-DELIVERED-REPORT",
+        "deploy/scripts/second-route.sh",
+        "  if [ -n \"$new\" ]; then\n    body=\"$HEADER\"\n",
+        "  if [ -n \"$new\" ]; then\n    printf '%s\\n' \"$keys\" >\"$state/reported\"\n    body=\"$HEADER\"\n",
+        "the keys of a read are recorded only after its report is delivered; recorded before the request, an undelivered report leaves its key marked reported and the failure is never told (SPEC-396 R6, A7)",
+        "test_alert_unit.ASecondRouteTellsTheOwner.test_an_undelivered_request_pages_once_per_episode_and_names_no_value"
+      ],
+      [
+        "S39601-A-KEY-CARRIES-THE-INVOCATION-ID",
+        "deploy/scripts/second-route.sh",
+        "          ????????????????????????????????) add_key \"failed $name $invocation\" ;;\n",
+        "          ????????????????????????????????) add_key \"failed $name\" ;;\n",
+        "a failed instance is keyed by its name and its invocation id; keyed by the name alone, a later failure under a reported name reads as told and is never reported (SPEC-396 R5, A6)",
+        "test_alert_unit.ASecondRouteTellsTheOwner.test_each_failed_invocation_is_reported_once"
+      ],
+      [
+        "S39602-AN-UNREADABLE-READ-WITHHOLDS-THE-CHECK-IN",
+        "deploy/scripts/second-route.sh",
+        "  if [ \"$unreadable\" -eq 1 ]; then\n    return 0\n",
+        "  if [ \"$unreadable\" -eq 2 ]; then\n    return 0\n",
+        "an unreadable read is reported and the check-in withheld, so the receiver hears the check-ins stop; with the check-in sent, an unreadable service manager looks like a whole alert path (SPEC-396 R7, A5)",
+        "test_alert_unit.ASecondRouteTellsTheOwner.test_a_broken_template_or_an_unreadable_manager_is_reported"
+      ],
+      [
+        "S39603-A-CHECK-IN-FOLLOWS-ONLY-A-DELIVERED-REPORT",
+        "deploy/scripts/second-route.sh",
+        "    if ! post \"$report_address\" \"$body\"; then\n",
+        "    if ! post \"$report_address\" \"$body\"; then\n      check_in\n",
+        "no check-in follows a report that was not delivered; a check-in after it would tell the receiver all is well while a failure is untold (SPEC-396 R7, A7)",
+        "test_alert_unit.ASecondRouteTellsTheOwner.test_an_undelivered_request_pages_once_per_episode_and_names_no_value"
+      ],
+      [
+        "S39604-A-LIST-LINE-OUT-OF-SHAPE-READS-AS-UNREADABLE",
+        "deploy/scripts/second-route.sh",
+        "        *)\n          unreadable=1\n          continue\n          ;;\n      esac\n      case $name in\n",
+        "        *)\n          continue\n          ;;\n      esac\n      case $name in\n",
+        "a failed-unit line that does not name an alert instance makes the read unreadable; skipped instead, an answer out of shape reads as a whole alert path and the check-in is sent (SPEC-396 R5, A5)",
+        "test_alert_unit.ASecondRouteTellsTheOwner.test_a_broken_template_or_an_unreadable_manager_is_reported"
+      ],
+      [
+        "S39605-ONLY-A-STATIC-TEMPLATE-READS-AS-WHOLE",
+        "deploy/scripts/second-route.sh",
+        "            elif [ \"$2\" != static ]; then\n",
+        "            elif [ \"$2\" != static ] && [ \"$2\" != enabled ]; then\n",
+        "only a static alert template reads as whole; with another state also read as whole, a template in that state is never reported (SPEC-396 R5, A5)",
+        "test_alert_unit.ASecondRouteTellsTheOwner.test_a_broken_template_or_an_unreadable_manager_is_reported"
+      ],
+      [
+        "S39606-AN-INVOCATION-ID-OUT-OF-SHAPE-READS-AS-UNREADABLE",
+        "deploy/scripts/second-route.sh",
+        "          *[!0-9a-f]*) unreadable=1 ;;\n",
+        "          *[!0-9a-f]*) add_key \"failed $name $invocation\" ;;\n",
+        "an invocation id that is not 32 hexadecimal digits makes the read unreadable; keyed instead, the check-in follows an answer the route cannot trust (SPEC-396 R5, A5)",
+        "test_alert_unit.ASecondRouteTellsTheOwner.test_a_broken_template_or_an_unreadable_manager_is_reported"
+      ],
+      [
+        "S39607-AN-ADDRESS-NOT-STARTING-HTTPS-IS-REFUSED",
+        "deploy/scripts/second-route.sh",
+        "    https://*) ;;\n",
+        "    http*) ;;\n",
+        "a credential that is not an https address fails the run by its id before anything is read or sent; accepted, a plain address would carry the report in the clear (SPEC-396 R9, A8)",
+        "test_alert_unit.ASecondRouteTellsTheOwner.test_an_empty_or_plain_address_fails_the_second_route_by_its_id"
+      ],
+      [
+        "S39608-AN-EMPTY-CREDENTIAL-IS-REFUSED",
+        "deploy/scripts/second-route.sh",
+        "    '') own_failure \"the credential $1 is empty in the credentials directory: no request is sent\" ;;\n",
+        "    '') ;;\n",
+        "an empty credential fails the run by its id before anything is read or sent; accepted, the run reads and sends to no address and its failure is silent (SPEC-396 R9, A8)",
+        "test_alert_unit.ASecondRouteTellsTheOwner.test_an_empty_or_plain_address_fails_the_second_route_by_its_id"
+      ],
+      [
+        "S39609-THE-FIRST-UNDELIVERED-RUN-OF-AN-EPISODE-EXITS-1",
+        "deploy/scripts/second-route.sh",
+        "  echo \"<3>$1\" >&2\n  exit 1\n",
+        "  echo \"<3>$1\" >&2\n  exit 0\n",
+        "the first run of an episode exits 1, so OnFailure= pages through the alert sender; exiting 0, the route's own failure pages nobody (SPEC-396 R9, A7)",
+        "test_alert_unit.ASecondRouteTellsTheOwner.test_an_undelivered_request_pages_once_per_episode_and_names_no_value"
+      ],
+      [
+        "S39610-A-LATER-UNDELIVERED-RUN-OF-THE-EPISODE-EXITS-0",
+        "deploy/scripts/second-route.sh",
+        "    echo \"<4>${2:-$1}\" >&2\n    exit 0\n",
+        "    echo \"<4>${2:-$1}\" >&2\n    exit 1\n",
+        "a later run of the same episode exits 0 at priority 4, so one episode pages once; exiting 1, every run of a long outage pages again (SPEC-396 R9, A7)",
+        "test_alert_unit.ASecondRouteTellsTheOwner.test_an_undelivered_request_pages_once_per_episode_and_names_no_value"
+      ],
+      [
+        "S39611-A-DELIVERED-RUN-ENDS-THE-EPISODE",
+        "deploy/scripts/second-route.sh",
+        "  : >\"$state/episode\"\n",
+        "  :\n",
+        "a run that delivers every request it makes ends the episode, so the next failure pages again; with the episode kept open, a later outage is never paged (SPEC-396 R9, A7)",
+        "test_alert_unit.ASecondRouteTellsTheOwner.test_an_undelivered_request_pages_once_per_episode_and_names_no_value"
+      ],
+      [
+        "S39612-THE-RECORD-DROPS-A-KEY-THAT-IS-GONE",
+        "deploy/scripts/second-route.sh",
+        "    printf '%s\\n' \"$keys\" >\"$state/reported.new\"\n",
+        "    { cat \"$state/reported\" 2>/dev/null || true; printf '%s\\n' \"$keys\"; } >\"$state/reported.new\"\n",
+        "the record holds the keys of this read only, so a key whose instance is gone is dropped; kept, a path whole again still holds every key once reported (SPEC-396 R6, A6)",
+        "test_alert_unit.ASecondRouteTellsTheOwner.test_each_failed_invocation_is_reported_once"
+      ],
+      [
+        "S39613-THE-REPORT-FITS-3500-BYTES-IN-WHOLE-LINES",
+        "deploy/scripts/second-route.sh",
+        "readonly REPORT_BYTES=3500\n",
+        "readonly REPORT_BYTES=4000\n",
+        "a report names its new keys in at most 3500 bytes of whole lines and counts the rest in one line; at 4000 a long read's report passes that bound (SPEC-396 R6, A6)",
+        "test_alert_unit.ASecondRouteTellsTheOwner.test_each_failed_invocation_is_reported_once"
+      ],
+      [
+        "S39614-THE-UNIT-LOADS-ITS-OWN-CREDENTIAL",
+        "deploy/systemd/deck-streak-second-route.service",
+        "LoadCredential=second-route-check-in:/run/deck-streak-credentials/socket\n",
+        "LoadCredential=owner-user-id:/run/deck-streak-credentials/socket\n",
+        "the second route's unit loads its own two credentials and none of the alert sender's; loading the alert's id, the two routes would share a credential (SPEC-396 R3, A3)",
+        "test_alert_unit.TheSecondRouteSharesNothingWithTheAlertSender.test_the_second_route_shares_no_credential_with_the_alert_sender"
+      ],
+      [
+        "S39615-THE-UNIT-RUNS-ITS-OWN-SCRIPT",
+        "deploy/systemd/deck-streak-second-route.service",
+        "ExecStart=/usr/local/lib/deck-streak/current/deploy/scripts/second-route.sh\n",
+        "ExecStart=/usr/local/lib/deck-streak/current/deploy/scripts/alert-telegram.sh %i\n",
+        "the second route's unit runs its own script; running the alert script, the two routes would share a process (SPEC-396 R4, A4)",
+        "test_alert_unit.TheSecondRouteSharesNothingWithTheAlertSender.test_the_second_route_shares_no_process_with_the_alert_sender"
+      ],
+      [
+        "S39616-THE-ADDRESS-STAYS-OFF-ARGV",
+        "deploy/scripts/second-route.sh",
+        "  } | curl --fail --silent --show-error --max-time 10 --retry 3 --retry-delay 2 --config - \\\n",
+        "  } | curl --fail --silent --show-error --max-time 10 --retry 3 --retry-delay 2 --url \"$1\" --config - \\\n",
+        "each request's address reaches curl on its standard input, never on a command line another process can read; on argv the address would show in the process table (SPEC-396 R8, A2)",
+        "test_alert_unit.ASecondRouteTellsTheOwner.test_a_whole_alert_path_sends_one_check_in_and_no_report"
+      ]
+    ]
+  }
+}

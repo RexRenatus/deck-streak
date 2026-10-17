@@ -1,0 +1,18 @@
+name: planted
+
+# A planted workflow (SPEC-034 A13): the hardened control. Each hardening test reads it and passes.
+# scripts/tests/test_ci_workflows.py judges it; nothing runs it.
+on:
+  pull_request:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+        with:
+          persist-credentials: false

@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COALESCE(SUM(delta), 0) AS \"total!: i64\" FROM coin_ledger\n               WHERE study_day < ?1",
+  "describe": {
+    "columns": [
+      {
+        "name": "total!: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "0363c46bb79fa6c3eb3e1624b6ea3864af50b890825b4269907b5409e8b1d649"
+}

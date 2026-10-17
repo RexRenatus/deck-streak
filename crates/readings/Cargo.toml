@@ -14,3 +14,31 @@ workspace = true
 [dependencies]
 deck-streak-kernel.workspace = true
 deck-streak-ingest.workspace = true
+# SPEC-045 R1: the private taxonomy file is JSON, read into this context's own types (ADR-029 admits
+# serde and serde_json); the data-rights port's rows and the day set's id lists are JSON values.
+serde.workspace = true
+serde_json.workspace = true
+# SPEC-045 R3: a topic's digest is SHA-256. sha2 entered the workspace for identity (ADR-006, on
+# ADR-024's 0.11 line); ADR-045 admits it to readings for the day-set digest.
+sha2.workspace = true
+# ADR-003: the topic days and runs are written through the kernel's Db, their queries checked into
+# .sqlx/, and every refusal is this context's own error type, as every library's (CLAUDE.md).
+sqlx.workspace = true
+thiserror.workspace = true
+# SPEC-045 R7: the resolution's 30-second budget.
+tokio = { workspace = true, features = ["time"] }
+# SPEC-045 R9: the decks that map to no topic are named in the service's journal only.
+tracing.workspace = true
+
+[dev-dependencies]
+# ADR-045, at acceptance: A1 and A5 build their synthetic collection with ingest's own builder,
+# included by path, which drives the engine (ADR-022). Test support only: this context's code names
+# no engine type.
+anki.workspace = true
+# ADR-029: the parity oracle's golden reader, compiled into the tests by path.
+serde.workspace = true
+serde_json.workspace = true
+# ADR-020's temporary database and collection, and the tests on tokio's runtime; test-util pauses
+# the clock for A10's budget.
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread", "sync", "test-util", "time"] }

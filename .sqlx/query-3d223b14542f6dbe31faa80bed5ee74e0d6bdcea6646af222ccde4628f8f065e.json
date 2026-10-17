@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT study_day AS \"study_day!: i64\", source, amount AS \"amount!: i64\"\n           FROM xp_settlement WHERE study_day BETWEEN ?1 AND ?2",
+  "describe": {
+    "columns": [
+      {
+        "name": "study_day!: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "source",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "name": "amount!: i64",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "amount"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3d223b14542f6dbe31faa80bed5ee74e0d6bdcea6646af222ccde4628f8f065e"
+}

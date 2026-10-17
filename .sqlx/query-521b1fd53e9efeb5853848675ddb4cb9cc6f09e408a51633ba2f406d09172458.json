@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO band_milestones (course, band, study_day, baseline, celebrated_at, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "521b1fd53e9efeb5853848675ddb4cb9cc6f09e408a51633ba2f406d09172458"
+}

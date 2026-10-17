@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM habit_strength",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "76e8a094f7dc51377f78d0fb9f5d35886739324ef2c10c06b10d96a0bbe721d6"
+}

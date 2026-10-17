@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "Today has no score yet: none of today's study has been recomputed. /sync recomputes it now."
+  },
+  "x-message": "score-none"
+}

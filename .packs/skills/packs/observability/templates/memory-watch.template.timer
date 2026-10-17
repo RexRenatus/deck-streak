@@ -1,8 +1,0 @@
-[Unit]
-Description=Watch memory every minute
-
-[Timer]
-OnCalendar=*:*:00
-
-[Install]
-WantedBy=timers.target

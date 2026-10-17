@@ -1,0 +1,23 @@
+name: planted
+
+# A planted workflow (SPEC-034 A11): fetches from origin with a refspec, whose colon names no host,
+# so git reads no scp-like URL in it. scripts/tests/test_ci_workflows.py judges it; nothing runs it.
+on:
+  pull_request:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+        with:
+          persist-credentials: false
+      - name: branches and tags from origin, each by a refspec
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          git fetch origin v1.0:refs/tags/v1.0
+          git fetch origin refs/tags/release.candidate:refs/tags/release.candidate

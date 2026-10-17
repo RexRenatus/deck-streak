@@ -1,0 +1,3811 @@
+#!/usr/bin/env python3
+"""mutation-verdict: a pull request's mutation plan and verdict, the weekly battery's survivors as
+issue drafts and its count of reports, and the tools' configurations and exclusions (SPEC-039 R2 to
+R6, R10, R12; ADR-057).
+
+    python3 scripts/mutation-verdict.py plan --base REF [--head REF] [--root DIR] --out DIR
+                                            [--event E --base-ref B --subject S]
+                                            [--head-ref H --head-repo R --repo R]
+    python3 scripts/mutation-verdict.py shards --plan FILE [--listed FILE]
+    python3 scripts/mutation-verdict.py judge --plan FILE --class rust|web|oracle
+                                             [--outcomes FILE] [--tool-exit N]
+                                             [--shard-reports DIR]
+                                             [--stryker FILE] [--rows FILE]
+    python3 scripts/mutation-verdict.py legs --plan FILE --rust-leg RESULT --rows-leg RESULT
+                                            [--python-release-leg RESULT]
+    python3 scripts/mutation-verdict.py survivors --reports DIR --out DIR [--open-titles FILE]
+    python3 scripts/mutation-verdict.py battery --reports DIR --shards N
+    python3 scripts/mutation-verdict.py configs [--root DIR]
+    python3 scripts/mutation-verdict.py exclusions [--root DIR]
+
+PLAN first decides the run's scope from the event that started it (R3), each case by name, because
+`ci` fails on any skipped need but two: `mutation-rust`, not started when the plan's shards list no
+mutant, and `mutation-rows`, not started when the plan selects no row and no retirement check is
+due, each of which LEGS judges against the plan (SPEC-290). A pull request into `dev` is
+judged on its diff, and a release pull request into `main` on its merge diff, every change `dev`
+carries since the last release; a push that merges a pull request (`Merge pull request #N`) is
+not-applicable, naming `#N`, whose jobs judged that same tree; a push that names none is judged on
+its first-parent diff. For a diff it reads `git diff BASE...HEAD` (on a pull request's merge
+ref, BASE is `HEAD^1`) and writes `plan.json` and `git.diff` into `--out`: every changed path with
+its class (R2), each production file's changed lines split into code lines, blank or comment lines
+and, in Rust, test-only lines, those inside an item cargo-mutants never mutates for a test attribute
+(SPEC-057 R22), the rows the diff selects (R10), and the web files Stryker mutates whole. It prints
+each class's case by name: why it applies, or why it is not-applicable. The `scripts` class does
+not apply when every changed script's syntax tree, read at the diff's merge-base and at its head, is
+equal once docstrings are set aside: its case reads `docstring-only` and names each file (ADR-307),
+and a script added or deleted, not UTF-8 or that does not parse leaves the class applying. Under
+GitHub Actions it writes the step outputs `scope`, `case`, `rust`, `web`, `oracle`, `scripts`,
+`rows` and `mutate`.
+
+SHARDS sizes the Rust run from cargo-mutants' own listing of the diff's mutants (`--list --json
+--in-diff`), so no shard reaches its job's timeout (R18). Each round-robin shard's time is projected
+as the unmutated baseline's plus its mutants' measured costs, mutant `i` in shard `i mod n` as the
+tool assigns them, and the fewest shards whose slowest is projected within the bound are written
+into the plan, with each shard's mutants, and as the step outputs `shards` and `matrix`, beside
+`listed`, the number of mutants the shards hold (SPEC-290 R1). A diff that needs more shards than
+a job matrix holds is refused with its projection, never capped. A listing file that holds nothing
+is the tool's own empty listing, since it prints nothing when no mutant overlaps the diff; a
+missing listing is VOID (SPEC-057 R22).
+
+JUDGE reads a tool's own report, never its exit alone (R4); under `--shard-reports`, every shard's
+the plan promised, from `0` to `n-1`, each missing or partial one VOID by name, and the reports
+together must hold every listed mutant once (R18) and count exactly as many mutants as the listing
+holds (SPEC-290 R5); a shard the listing gives no mutant and that left nothing was not started
+(SPEC-290 R4). Examined is caught plus missed plus timed out (Stryker: killed, survived, no
+coverage and timed out); an unviable mutant, a compile or runtime error, is not examined. A missed or uncovered mutant, or a selected row that was not
+KILLED, fails (exit 1). A class whose production files changed a code line and whose examined
+count, the tool's and the rows' on its changed lines, is zero is VOID (exit 3). So is a missing
+report, and a partial one: cargo-mutants writes its report as it goes, so a report is read only when
+the tool's exit is 0, 2 or 3 and its caught, missed, timed-out and unviable counts sum to its total.
+A class whose changed lines are all blank or comments, or only deletions, or in Rust test-only,
+reads `not-applicable` by name, with its count.
+
+LEGS judges the two legs a plan can give nothing to examine against that plan, from GitHub's result
+for each (SPEC-290 R6). `mutation-rust` is not started only when the plan's shards list no mutant,
+and `mutation-rows` only when the plan selects no row and no retirement check is due; any other
+skipped leg is VOID by name, and so is a result that is not a job's. The plan's step output
+`listed`, which SHARDS writes, is the count each leg's job-level condition reads.
+
+SURVIVORS turns the weekly battery's reports into one issue draft per file, titled
+`Mutation survivors: <path>`, and marks a draft whose title is already an open issue (R12). The
+workflow scrubs the drafts with `scripts/public-scrub.py` before it files any.
+
+BATTERY counts the reports the battery's jobs promise: each of N shards' `outcomes.json`, whole by
+the rule JUDGE applies, the rows' report and the Stryker sweep. It names each report that is missing
+or partial and fails (exit 1), so a runner shut down mid-run never reads as a shard with no
+survivor.
+
+CONFIGS judges `.cargo/mutants.toml` and `web/app/stryker.config.json` by what each tool itself
+refuses (cargo-mutants 27.1.0 denies an unknown key or a mistyped value; StrykerJS refuses a
+threshold out of 0 to 100, `high` below `low`, JSON it cannot parse, and `ignoreStatic` without
+per-test coverage), by what the verdict needs of Stryker's (the Vitest runner, the json report and
+R2's production code as its `mutate`), and refuses a second Stryker configuration it would read.
+
+EXCLUSIONS holds every exclusion to its reason and issue (R5): an `exclude_re`, `exclude_globs` or
+`skip_calls` entry in `.cargo/mutants.toml` needs `# EQUIVALENT: <reason> (#N)` on its line or the
+line above, a `Stryker disable` comment needs `EQUIVALENT: <reason> (#N)` on its own line, and a
+`mutants::skip` attribute is refused outright (ADR-057 D6). A tree may hold none.
+"""
+
+from __future__ import annotations
+
+import argparse
+import ast
+import bisect
+import io
+import json
+import math
+import os
+import pathlib
+import re
+import subprocess
+import sys
+import tokenize
+import tomllib
+from collections import Counter, defaultdict
+from dataclasses import dataclass, field
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+
+import mutation_python  # noqa: E402
+import mutation_rows  # noqa: E402
+
+EXIT_OK, EXIT_FAIL, EXIT_USAGE, EXIT_VOID = 0, 1, 2, 3
+RUST = re.compile(r"crates/[^/]+/src/.+\.rs")
+WEB = re.compile(r"web/app/src/.+\.(?:ts|js|svelte)")
+WEB_NOT_PRODUCTION = re.compile(r"\.(?:test|spec)\.[^/]+$|\.d\.ts$|^web/app/src/lib/paraglide/")
+ORACLE = frozenset({"tools/parity-oracle/generate.py"})
+#: A guard script: one path segment under `scripts/`, so nothing under `scripts/tests/` (SPEC-087 R1).
+SCRIPTS = re.compile(r"scripts/[^/]+\.py")
+#: The Python mutation runner's report schema, and its listing's (`mutation_python.py`).
+PYTHON_SCHEMA = "deckstreak.mutation-python.v1"
+#: The mutants one Python shard holds under the count rule (R9).
+PYTHON_SHARD_MUTANTS = 20
+#: The share: the most Python legs a pull request's run deals. It is the owner's one value,
+#: spelled on this line alone, and every reader reads it by name (SPEC-420 R1, R3).
+PYTHON_MAX_SHARDS = 32
+#: The ceiling no signed share may pass: a share outside 1 to it is refused before any deal.
+PYTHON_SHARE_CAP = 128
+#: Signed in docs/rulings/OWNER-RULING-2026-10-16-release-legs-python-305-rust-192.md (SPEC-422 R4).
+PYTHON_RELEASE_CEILING = 305
+#: A Python leg's projected time may reach half its job's `timeout-minutes` of 60, the margin the
+#: Rust legs keep under theirs, since a projection is a price and not a measurement (SPEC-418 R1).
+PYTHON_LEG_BOUND_SECONDS = 1800
+#: The most Python legs one matrix job deals: a matrix generates at most 256 jobs (SPEC-422 R8).
+PYTHON_MATRIX_LEGS = 256
+#: The Python matrix jobs of `ci.yml`, each reading one Python matrix output (SPEC-422 R9).
+PYTHON_MATRICES = 2
+#: Each Python file's price, whole seconds of its control run, by repository-relative path. Every
+#: line is the `prices` verb's output over one recorded run's `costs.jsonl`, committed under
+#: `scripts/tests/fixtures/`, and names the run, attempt and shard it came from. A test
+#: re-derives it byte for byte, and an unpriced file keeps the count rule (R2; SPEC-420 R4, R5).
+PYTHON_CONTROL_SECONDS: dict[str, int] = {
+    "scripts/audit-web-verdict.py": 3,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
+    "scripts/create-issues.py": 1,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
+    "scripts/dynamic-imports-check.py": 2,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
+    "scripts/ios_icon.py": 2,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
+    "scripts/ios_lane.py": 13,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
+    "scripts/memory_scope.py": 39,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
+    "scripts/mutation-verdict.py": 224,  # run 38242806596 attempt 1 shard 1/16; run 38242806596 attempt 1 shard 10/16; run 38242806596 attempt 1 shard 11/16; run 38242806596 attempt 1 shard 12/16; run 38242806596 attempt 1 shard 13/16; run 38242806596 attempt 1 shard 15/16; run 38242806596 attempt 1 shard 2/16; run 38242806596 attempt 1 shard 3/16; run 38242806596 attempt 1 shard 4/16; run 38242806596 attempt 1 shard 7/16; run 38242806596 attempt 1 shard 8/16; run 38242806596 attempt 1 shard 9/16
+}
+#: Each Python file's scoped price, whole seconds of its control, its traced sentinel and its
+#: mean scoped mutant, by repository-relative path, read only when the legs trace (SPEC-421 R6).
+#: Every line is `prices --scoped` output over one dispatched price run's records, committed
+#: under `scripts/tests/fixtures/`, and names the run, attempt and job its figures came from.
+# fmt: off
+PYTHON_SCOPED_SECONDS: dict[str, tuple[int, int, int]] = {
+    "scripts/audit-web-verdict.py": (3, 3, 1),  # run 38432909235 attempt 1 job 115419489219: 19 scoped mutant record(s)
+    "scripts/create-issues.py": (1, 1, 1),  # run 38432909235 attempt 1 job 115419489210: 0 scoped mutant record(s)
+    "scripts/dynamic-imports-check.py": (2, 2, 1),  # run 38432909235 attempt 1 job 115419489573: 18 scoped mutant record(s)
+    "scripts/ios_icon.py": (1, 2, 1),  # run 38432909235 attempt 1 job 115419489248: 14 scoped mutant record(s)
+    "scripts/ios_lane.py": (10, 11, 4),  # run 38432909235 attempt 1 job 115419489348: 20 scoped mutant record(s)
+    "scripts/memory_scope.py": (36, 52, 13),  # run 38432909235 attempt 1 job 115419489225: 20 scoped mutant record(s)
+    "scripts/mutation-verdict.py": (152, 158, 107),  # run 38432909235 attempt 1 job 115419489314: 20 scoped mutant record(s)
+    "scripts/mutation_python.py": (184, 204, 53),  # run 38432909235 attempt 1 job 115419489320: 20 scoped mutant record(s)
+    "scripts/mutation_rows.py": (172, 171, 58),  # run 38432909235 attempt 1 job 115419489293: 20 scoped mutant record(s)
+    "scripts/public-scrub.py": (53, 60, 17),  # run 38432909235 attempt 1 job 115419489252: 20 scoped mutant record(s)
+    "scripts/testflight_age.py": (6, 5, 2),  # run 38432909235 attempt 1 job 115419489382: 20 scoped mutant record(s)
+    "scripts/threat_model.py": (1, 1, 1),  # run 38432909235 attempt 1 job 115419489378: 20 scoped mutant record(s)
+    "scripts/web-engine-size.py": (13, 13, 5),  # run 38432909235 attempt 1 job 115419489199: 18 scoped mutant record(s)
+    "scripts/web_mutation_shards.py": (12, 14, 2),  # run 38432909235 attempt 1 job 115419489341: 20 scoped mutant record(s)
+    "scripts/write-back-issues.py": (1, 1, 1),  # run 38432909235 attempt 1 job 115419489261: 0 scoped mutant record(s)
+    "tools/parity-oracle/generate.py": (2, 2, 1),  # run 38432909235 attempt 1 job 115419489457: 19 scoped mutant record(s)
+}
+# fmt: on
+#: The weekly battery's Python shards, each `run --all --shard k/16` (R14).
+PYTHON_WEEKLY_SHARDS = 16
+#: The weekly dispatch's `package` value that sweeps the Python population alone (R14).
+PYTHON_CLASS = "python"
+PYTHON_POPULATION = "scripts/mutation-python.json"
+WEB_ROOT = "web/app/"
+HUNK = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
+#: cargo-mutants' exits after a run that tested every mutant it listed: all caught (0), some missed
+#: (2), some timed out (3). Any other exit, its own (1, 4, 5, 6, 70) or a signal's (137 is SIGKILL),
+#: means the run stopped early, and the report it writes as it goes is partial (its book's "Exit
+#: codes").
+WHOLE_EXITS = frozenset({0, 2, 3})
+TOOL_EXITS = {
+    1: "a usage error",
+    4: "a red baseline: the tests failed before any mutant",
+    5: "a diff that does not match the tree",
+    6: "a diff it could not read",
+    70: "an internal error",
+}
+#: The subject GitHub writes for a pull request's merge commit.
+MERGE_SUBJECT = re.compile(r"Merge pull request #(\d+) from ")
+#: The first line GitHub writes for a squash merge: the pull request's title, then ` (#N)`. A title
+#: that already ends with an issue's `(#M)` gains one more, so the last number names the pull
+#: request (SPEC-057 R18).
+SQUASH_SUBJECT = re.compile(r" \(#(\d+)\)$")
+
+
+def scope_of(event: str, base_ref: str, subject: str) -> tuple[str, str]:
+    """(`diff` or `not-applicable`, why) for the event that started the run (SPEC-039 R3). The
+    plan's own job is never skipped, and each case says why by name; a leg the plan's listing gives
+    nothing is not started, which `legs` judges against the plan (SPEC-290 R2, R3 and R6)."""
+    if event == "pull_request" and base_ref == "main":
+        return (
+            "diff",
+            "a release pull request into main is judged on its merge diff, every change dev "
+            "carries since the last release, in as many shards as fit their bound",
+        )
+    if event == "pull_request":
+        return "diff", f"the pull request into {base_ref or 'its base'} is judged on its diff"
+    if event == "push":
+        merged = MERGE_SUBJECT.match(subject)
+        squashed = SQUASH_SUBJECT.search(subject.splitlines()[0].rstrip() if subject else "")
+        if merged or squashed:
+            number, how = (merged.group(1), "") if merged else (squashed.group(1), " by squash")
+            return (
+                "not-applicable",
+                f"this push merges #{number}{how}, whose mutation jobs judged this tree on its "
+                "merge ref; dev and main accept a pull request only with an up-to-date head "
+                "(ADR-034)",
+            )
+        return "diff", "this push names no pull request, so its first-parent diff is judged"
+    return "diff", f"the {event or 'local'} run is judged on its diff"
+
+
+def release_run(event: str, base_ref: str, head_ref: str, head_repo: str, repo: str) -> bool:
+    """Whether this run is the release pull request's, `dev` into `main` from this repository
+    (SPEC-422 R1). It fails closed: every other event, base or head, an empty repository name and
+    a fork's head, whatever its branch is called, are not the release run."""
+    return (
+        event == "pull_request"
+        and base_ref == "main"
+        and head_ref == "dev"
+        and repo != ""
+        and head_repo == repo
+    )
+
+
+TITLE = "Mutation survivors: {}"
+
+
+def git(root: pathlib.Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", "-C", str(root), *args], capture_output=True, text=True, check=True
+    ).stdout
+
+
+def git_bytes(root: pathlib.Path, *args: str) -> bytes | None:
+    """A git command's output as it is, or None when it exits non-zero: a blob a revision does not
+    hold is no text, so the caller fails closed rather than stopping the plan."""
+    done = subprocess.run(["git", "-C", str(root), *args], capture_output=True, check=False)
+    return done.stdout if done.returncode == 0 else None
+
+
+def classify(path: str) -> str:
+    """A path's class under R2: `rust`, `web`, `oracle`, `scripts`, or `other`."""
+    if RUST.fullmatch(path):
+        return "rust"
+    if WEB.fullmatch(path) and not WEB_NOT_PRODUCTION.search(path):
+        return "web"
+    if path in ORACLE:
+        return "oracle"
+    if SCRIPTS.fullmatch(path):
+        return "scripts"
+    return "other"
+
+
+#: Python's tokens that carry no code: a line holding only these is blank or a comment.
+QUIET_TOKENS = frozenset(
+    {
+        tokenize.COMMENT,
+        tokenize.NL,
+        tokenize.NEWLINE,
+        tokenize.INDENT,
+        tokenize.DEDENT,
+        tokenize.ENDMARKER,
+    }
+)
+#: The characters after which a `/` begins a regular expression rather than a division.
+REGEX_AFTER = frozenset("(,=:[!&|?{};+-*%<>~^")
+REGEX_WORDS = frozenset(
+    {
+        "return",
+        "typeof",
+        "instanceof",
+        "case",
+        "do",
+        "else",
+        "in",
+        "of",
+        "new",
+        "delete",
+        "void",
+        "throw",
+        "yield",
+        "await",
+    }
+)
+
+
+def comment_or_blank(text: str, language: str) -> set[int]:
+    """The 1-based numbers of the lines of `text` that are blank or hold nothing but comments.
+
+    A line holding any code, or any part of a string or character literal, is code, so a comment
+    opener inside a literal opens nothing. Python is read by its own tokenizer, and a text it cannot
+    read is all code. Rust is read with its strings, raw strings (`r#"..."#`), byte and C strings,
+    character literals (a lifetime's quote is code) and nested block comments; TypeScript,
+    JavaScript and Svelte with their quoted strings, template literals and the code in their `${}`,
+    regular-expression literals where one may begin, and, in Svelte, `<!-- -->`. The lexer errs
+    toward calling a line code: a line it misreads as code makes a class apply, never pass.
+    """
+    lines = set(range(1, len(text.splitlines()) + 1))
+    if language == "python":
+        code = python_code_lines(text)
+        return set() if code is None else lines - code
+    return lines - c_code_lines(text, language)
+
+
+def python_code_lines(text: str) -> set[int] | None:
+    """The lines Python's tokenizer finds a token of code on, or None when it cannot read `text`."""
+    code: set[int] = set()
+    try:
+        for token in tokenize.generate_tokens(io.StringIO(text).readline):
+            if token.type not in QUIET_TOKENS:
+                code.update(range(token.start[0], token.end[0] + 1))
+    except (tokenize.TokenError, SyntaxError):
+        return None
+    return code
+
+
+def quoted_end(text: str, start: int, quote: str, multiline: bool) -> int:
+    """The end of the quoted literal that opens at `start`, past its escapes. A literal that may
+    not span lines ends at its line's end when it is not closed."""
+    at = start + 1
+    while at < len(text):
+        char = text[at]
+        if char == "\\":
+            at += 2
+            continue
+        if char == quote:
+            return at + 1
+        if char == "\n" and not multiline:
+            return at
+        at += 1
+    return len(text)
+
+
+def block_end(text: str, start: int, nested: bool) -> int:
+    """The end of the block comment that opens at `start`; Rust's nest, JavaScript's do not."""
+    depth, at = 0, start
+    while at < len(text):
+        if text.startswith("/*", at):
+            depth = depth + 1 if nested else 1
+            at += 2
+        elif text.startswith("*/", at):
+            depth, at = depth - 1, at + 2
+            if depth == 0:
+                return at
+        else:
+            at += 1
+    return len(text)
+
+
+def rust_literal(text: str, start: int) -> int | None:
+    """The end of the Rust string, raw string, byte or C string, or character literal that opens at
+    `start`, or None: an identifier, or a lifetime's or a label's quote, opens none."""
+    at = start
+    if text[at] in "bc" and text[at + 1 : at + 2] in ("r", '"', "'"):
+        at += 1
+    if text[at] == "r":
+        hashes = at + 1
+        while text[hashes : hashes + 1] == "#":
+            hashes += 1
+        if text[hashes : hashes + 1] != '"':
+            return None
+        closing = '"' + "#" * (hashes - at - 1)
+        end = text.find(closing, hashes + 1)
+        return len(text) if end < 0 else end + len(closing)
+    if text[at] == '"':
+        return quoted_end(text, at, '"', multiline=True)
+    if text[at] == "'":
+        if text[at + 1 : at + 2] == "\\":
+            end = text.find("'", at + 3)
+            return len(text) if end < 0 else end + 1
+        if text[at + 2 : at + 3] == "'" and text[at + 1 : at + 2] not in ("", "\n"):
+            return at + 3
+    return None
+
+
+def web_literal(text: str, start: int, regex_may_begin: bool) -> int | None:
+    """The end of the quoted string, or of the regular expression, that opens at `start`, or None."""
+    char = text[start]
+    if char in "\"'":
+        return quoted_end(text, start, char, multiline=False)
+    if char != "/" or not regex_may_begin:
+        return None
+    at, in_class = start + 1, False
+    while at < len(text) and text[at] != "\n":
+        if text[at] == "\\":
+            at += 2
+            continue
+        if text[at] == "[":
+            in_class = True
+        elif text[at] == "]":
+            in_class = False
+        elif text[at] == "/" and not in_class:
+            at += 1
+            while at < len(text) and text[at].isalpha():
+                at += 1
+            return at
+        at += 1
+    return None
+
+
+def template_part(text: str, start: int) -> tuple[int, bool]:
+    """(the end of a template literal's part from `start`, whether that part ends by opening a
+    `${` rather than by closing the template)."""
+    at = start
+    while at < len(text):
+        if text[at] == "\\":
+            at += 2
+        elif text[at] == "`":
+            return at + 1, False
+        elif text.startswith("${", at):
+            return at + 2, True
+        else:
+            at += 1
+    return len(text), False
+
+
+def c_code_lines(text: str, language: str) -> set[int]:
+    """The lines a character of code, or of a literal, stands on, in Rust or in the Mini App's
+    TypeScript, JavaScript and Svelte."""
+    rust = language == "rust"
+    breaks = [at for at, char in enumerate(text) if char == "\n"]
+    code: set[int] = set()
+
+    def mark(start: int, end: int) -> None:
+        first = bisect.bisect_left(breaks, start) + 1
+        code.update(range(first, bisect.bisect_left(breaks, max(start, end - 1)) + 2))
+
+    templates: list[int] = []
+    depth, at, last, word = 0, 0, "", ""
+    while at < len(text):
+        char = text[at]
+        if char.isspace():
+            at += 1
+        elif text.startswith("//", at):
+            end = text.find("\n", at)
+            at = len(text) if end < 0 else end
+        elif text.startswith("/*", at):
+            at = block_end(text, at, nested=rust)
+        elif language == "svelte" and text.startswith("<!--", at):
+            end = text.find("-->", at + 4)
+            at = len(text) if end < 0 else end + 3
+        elif not rust and (char == "`" or (char == "}" and templates and depth == templates[-1])):
+            if char == "}":
+                templates.pop()
+            end, opened = template_part(text, at + 1)
+            if opened:
+                templates.append(depth)
+            mark(at, end)
+            at, last = end, "value"
+        else:
+            if rust:
+                end = rust_literal(text, at)
+            else:
+                may_begin = last in ("", *REGEX_AFTER) or (last == "word" and word in REGEX_WORDS)
+                end = web_literal(text, at, may_begin)
+            if end is not None:
+                mark(at, end)
+                at, last = end, "value"
+            elif char.isalnum() or char == "_" or (char == "$" and not rust):
+                end = at
+                while end < len(text) and (
+                    text[end].isalnum() or text[end] == "_" or (text[end] == "$" and not rust)
+                ):
+                    end += 1
+                mark(at, end)
+                at, last, word = end, "word", text[at:end]
+            else:
+                mark(at, at + 1)
+                depth += {"{": 1, "}": -1}.get(char, 0)
+                at, last = at + 1, char
+    return code
+
+
+def language_of(path: str) -> str:
+    if path.endswith(".py"):
+        return "python"
+    if path.endswith(".rs"):
+        return "rust"
+    return "svelte" if path.endswith(".svelte") else "js"
+
+
+#: The items cargo-mutants 27.1.0 never mutates for an attribute (`attrs_excluded` in its
+#: `visit.rs`): a function, an `impl` or `trait` block, or a module (SPEC-057 R22). It checks no
+#: other item's attributes, so a `#[cfg(test)]` constant, statement or `use` stays production code.
+TEST_ITEMS = frozenset({"fn", "mod", "impl", "trait"})
+#: The words that may stand between an item's attributes and its keyword.
+QUALIFIERS = frozenset({"pub", "const", "async", "unsafe", "extern", "default", "auto"})
+BRACKETS = {"(": ")", "[": "]", "{": "}"}
+#: How a test-only line is named, in the plan's case and the verdict's lines.
+TEST_ONLY = (
+    "inside an item marked #[cfg(test)] or with a test attribute, which cargo-mutants never mutates"
+)
+
+
+def rust_tokens(text: str) -> list[tuple[int, int]]:
+    """(start, end) of each token of Rust code in `text`, read as `c_code_lines` reads Rust: a
+    word, a literal whole, or one other character. Whitespace and comments hold no token, so a
+    brace or an attribute inside a string, a raw string, a character or a comment is no token."""
+    tokens: list[tuple[int, int]] = []
+    at = 0
+    while at < len(text):
+        char = text[at]
+        if char.isspace():
+            at += 1
+            continue
+        if text.startswith("//", at):
+            stop = text.find("\n", at)
+            at = len(text) if stop < 0 else stop
+            continue
+        if text.startswith("/*", at):
+            at = block_end(text, at, nested=True)
+            continue
+        stop = rust_literal(text, at)
+        if stop is None and (char.isalnum() or char == "_"):
+            stop = at
+            while stop < len(text) and (text[stop].isalnum() or text[stop] == "_"):
+                stop += 1
+        stop = at + 1 if stop is None else stop
+        tokens.append((at, stop))
+        at = stop
+    return tokens
+
+
+def closing(words: list[str], at: int) -> int | None:
+    """The index of the bracket that closes the one at `at`, or None when none does."""
+    depth = 0
+    for index in range(at, len(words)):
+        if words[index] == words[at]:
+            depth += 1
+        elif words[index] == BRACKETS[words[at]]:
+            depth -= 1
+            if depth == 0:
+                return index
+    return None
+
+
+def is_test_mark(inner: list[str]) -> bool:
+    """Whether an attribute's inner tokens mark its item as test code the way cargo-mutants 27.1.0
+    reads them: exactly `cfg(test)`, or a path whose last segment is `test` (`test`,
+    `tokio::test(...)`). A `cfg` that joins `test` to another predicate marks nothing, since the
+    tool mutates such an item."""
+    if "".join(inner) == "cfg(test)":
+        return True
+    path = []
+    for word in inner:
+        if word in ("(", "[", "{", "="):
+            break
+        path.append(word)
+    return "".join(path).split("::")[-1] == "test"
+
+
+def item_keyword(words: list[str], at: int) -> int | None:
+    """The index of the keyword of the item whose attributes end before `at`, past its visibility
+    and qualifiers (`pub(crate)`, `async`, `unsafe`, `extern "C"`), when it is one of TEST_ITEMS."""
+    while at < len(words):
+        word = words[at]
+        if word in TEST_ITEMS:
+            return at
+        if word not in QUALIFIERS:
+            return None
+        at += 1
+        if word == "pub" and words[at : at + 1] == ["("]:
+            shut = closing(words, at)
+            if shut is None:
+                return None
+            at = shut + 1
+        elif word == "extern" and words[at : at + 1] and words[at].startswith('"'):
+            at += 1
+    return None
+
+
+def item_end(words: list[str], at: int) -> int | None:
+    """The index of the token that ends the item whose keyword is at `at`: the `}` that closes its
+    body, or the `;` of an item without one (`mod tests;`), or None when nothing ends it."""
+    depth = 0
+    for index in range(at, len(words)):
+        word = words[index]
+        if word in ("(", "["):
+            depth += 1
+        elif word in (")", "]"):
+            depth -= 1
+        elif depth == 0 and word == ";":
+            return index
+        elif depth == 0 and word == "{":
+            return closing(words, index)
+    return None
+
+
+def rust_test_spans(text: str, tokens: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """The character spans of the items cargo-mutants never mutates for an attribute, each from
+    its first outer attribute to the token that ends it (SPEC-057 R22). An attribute or an item
+    that nothing closes ends the reading: an unread item stays production code."""
+    words = [text[start:end] for start, end in tokens]
+    spans: list[tuple[int, int]] = []
+    at = 0
+    while at < len(words):
+        if words[at] != "#" or words[at + 1 : at + 2] != ["["]:
+            at += 1
+            continue
+        first, marked = at, False
+        while words[at : at + 1] == ["#"] and words[at + 1 : at + 2] == ["["]:
+            shut = closing(words, at + 1)
+            if shut is None:
+                return spans
+            marked = marked or is_test_mark(words[at + 2 : shut])
+            at = shut + 1
+        keyword = item_keyword(words, at) if marked else None
+        last = item_end(words, keyword) if keyword is not None else None
+        if last is not None:
+            spans.append((tokens[first][0], tokens[last][1]))
+            at = last + 1
+    return spans
+
+
+def rust_test_lines(text: str) -> set[int]:
+    """The 1-based lines of Rust `text` whose every token lies inside a test item (SPEC-057 R22).
+    A line that holds any token outside one, a brace that closes a test module before production
+    code, say, is production code: the reading errs toward applying, never toward passing."""
+    tokens = rust_tokens(text)
+    spans = rust_test_spans(text, tokens)
+    # The spans are disjoint and in order, since each reading resumes after the item it ended.
+    starts = [low for low, _ in spans]
+    breaks = [at for at, char in enumerate(text) if char == "\n"]
+    inside: set[int] = set()
+    outside: set[int] = set()
+    for start, stop in tokens:
+        lines = range(
+            bisect.bisect_left(breaks, start) + 1,
+            bisect.bisect_left(breaks, max(start, stop - 1)) + 2,
+        )
+        span = bisect.bisect_right(starts, start) - 1
+        within = span >= 0 and start < spans[span][1]
+        (inside if within else outside).update(lines)
+    return inside - outside
+
+
+def changed_lines(root: pathlib.Path, base: str, head: str) -> dict[str, dict]:
+    """{path: {added: [new-side line numbers], deleted: n}} for every path the diff changes."""
+    text = git(
+        root, "diff", "-U0", "--no-color", "--no-ext-diff", "--no-renames", f"{base}...{head}"
+    )
+    files: dict[str, dict] = {}
+    current = None
+    old_path = None
+    in_header = False
+    for line in text.splitlines():
+        if line.startswith("diff --git "):
+            current, old_path, in_header = None, None, True
+        elif in_header and line.startswith("--- "):
+            old_path = line[6:] if line.startswith("--- a/") else None
+        elif in_header and line.startswith("+++ "):
+            path = line[6:] if line.startswith("+++ b/") else old_path
+            current = files.setdefault(path, {"added": [], "deleted": 0})
+        elif current is not None and (match := HUNK.match(line)):
+            # A hunk's lines are content, never headers, until the next `diff --git`.
+            in_header = False
+            old_count = int(match.group(2)) if match.group(2) is not None else 1
+            new_start = int(match.group(3))
+            new_count = int(match.group(4)) if match.group(4) is not None else 1
+            current["deleted"] += old_count
+            current["added"].extend(range(new_start, new_start + new_count))
+    return files
+
+
+def row_span(text: str, find: str) -> range | None:
+    """The 1-based lines the anchor `find` covers in `text`, when it occurs exactly once."""
+    if text.count(find) != 1:
+        return None
+    start = text[: text.index(find)].count("\n") + 1
+    return range(start, start + find.rstrip("\n").count("\n") + 1)
+
+
+@dataclass
+class Plan:
+    base: str
+    head: str
+    files: list[dict] = field(default_factory=list)
+    classes: dict[str, dict] = field(default_factory=dict)
+    rows: list[str] = field(default_factory=list)
+    row_overlaps: dict[str, str] = field(default_factory=dict)
+    stryker_mutate: list[str] = field(default_factory=list)
+    scope: dict = field(default_factory=dict)
+
+
+def selected_rows(root, base, head, changed, plan):
+    """R10: the rows on a changed path, the rows added or changed, and the rows whose killer's
+    file changed; and for each, whether its anchor covers a changed line."""
+    try:
+        now = mutation_rows.rows_of(mutation_rows.load_tree(root))
+    except FileNotFoundError:
+        return
+    before = mutation_rows.load_revision(root, base)
+    earlier = {row.id: row for row in mutation_rows.rows_of(before)} if before else {}
+    paths = set(changed)
+    chosen = []
+    for row in now:
+        killer_file = None
+        try:
+            killer_file = mutation_rows.locate_killer(root, row).file
+        except mutation_rows.KillerUnresolved:
+            killer_file = None
+        touches_killer = killer_file is not None and (
+            killer_file in paths
+            or (
+                killer_file.endswith("/src") and any(p.startswith(killer_file + "/") for p in paths)
+            )
+        )
+        if row.target in paths or row.id not in earlier or earlier[row.id] != row or touches_killer:
+            chosen.append(row.id)
+        entry = changed.get(row.target)
+        if entry and entry["added"] and (root / row.target).is_file():
+            span = row_span((root / row.target).read_text(encoding="utf-8"), row.find)
+            if span and set(span) & set(entry["added"]):
+                plan.row_overlaps[row.id] = row.target
+    plan.rows = sorted(chosen)
+
+
+#: The case a plan names when every changed script's syntax tree equals its base's once docstrings
+#: are set aside (ADR-307): the runner never mutates a docstring, so the class examines nothing.
+DOCSTRING_ONLY = "docstring-only"
+#: The nodes whose body's first statement is a docstring when it is a bare string constant: the four
+#: `skipped_nodes` in `scripts/mutation_python.py` sets aside, so the plan and the runner agree.
+DOCSTRING_HOLDERS = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+
+
+def tree_without_docstrings(source: bytes | None) -> str | None:
+    """`source`'s syntax tree, positions excluded, with each docstring set aside (ADR-307), or None
+    when there is no source, it is not UTF-8 or it does not parse: the caller then fails closed."""
+    if source is None:
+        return None
+    try:
+        source.decode("utf-8")
+        tree = ast.parse(source)
+    except (SyntaxError, ValueError):
+        return None
+    for node in ast.walk(tree):
+        first = node.body[0] if isinstance(node, DOCSTRING_HOLDERS) and node.body else None
+        if (
+            isinstance(first, ast.Expr)
+            and isinstance(first.value, ast.Constant)
+            and isinstance(first.value.value, str)
+        ):
+            node.body = node.body[1:]
+    return ast.dump(tree)
+
+
+def docstring_only(root: pathlib.Path, base: str, head: str, files: list[dict]) -> list[str] | None:
+    """The scripts whose changed lines are docstrings alone, or None unless the diff has one
+    merge-base and every changed script's syntax tree there equals its tree at the head once
+    docstrings are set aside (ADR-307). A script added or deleted has no tree at one side, and the
+    plan reads a rename as both, so each fails closed."""
+    found = git_bytes(root, "merge-base", "--all", base, head)
+    bases = (found or b"").split()
+    if len(bases) != 1:
+        return None
+    merge_base = bases[0].decode("ascii")
+    named = []
+    for entry in files:
+        if entry["class"] != "scripts":
+            continue
+        path = entry["path"]
+        before = tree_without_docstrings(
+            git_bytes(root, "cat-file", "blob", f"{merge_base}:{path}")
+        )
+        after = tree_without_docstrings(git_bytes(root, "cat-file", "blob", f"{head}:{path}"))
+        if before is None or before != after:
+            return None
+        if entry["code"]:
+            named.append(path)
+    return named
+
+
+def class_case(files: list[dict], name: str) -> str:
+    """Why a class applies, or why it is not-applicable, by name, from its files' changed lines:
+    its production code lines, and in Rust the test-only lines set apart (SPEC-057 R22)."""
+    mine = [entry for entry in files if entry["class"] == name]
+    code = sum(len(entry["code"]) for entry in mine)
+    test = sum(len(entry["test"]) for entry in mine)
+    if code:
+        coded = sum(1 for entry in mine if entry["code"])
+        case = f"{code} production code line(s) in {coded} file(s)"
+        return case + (f"; {test} test-only line(s) set apart, {TEST_ONLY}" if test else "")
+    if not mine:
+        return f"not-applicable: the diff changes no {name} production file"
+    docstrings = [entry["path"] for entry in mine if entry.get("docstring")]
+    if docstrings:
+        return (
+            f"not-applicable: {DOCSTRING_ONLY}: every changed script's syntax tree equals its "
+            f"base's once docstrings are set aside: {', '.join(docstrings)}"
+        )
+    if test:
+        tested = sum(1 for entry in mine if entry["test"])
+        return (
+            f"not-applicable: no production code line changed; {test} test-only line(s) in "
+            f"{tested} file(s), {TEST_ONLY}"
+        )
+    return (
+        "not-applicable: no production code line changed; every changed line is blank or a "
+        "comment, or deleted"
+    )
+
+
+#: The classes a plan names, in the order its outputs and its summary give them.
+CLASSES = ("rust", "web", "oracle", "scripts")
+
+
+def plan_text(plan: Plan, release: bool) -> str:
+    """The plan as `plan.json` holds it: a top-level `"release": true` only when `release_run`
+    held, and no `release` key otherwise, so every other run's plan reads as before (SPEC-422
+    R2)."""
+    document = dict(plan.__dict__)
+    if release:
+        document["release"] = True
+    return json.dumps(document, indent=2) + "\n"
+
+
+def plan_diff(
+    root: pathlib.Path,
+    base: str,
+    head: str,
+    out: pathlib.Path,
+    scope: tuple[str, str],
+    release: bool = False,
+) -> Plan:
+    out.mkdir(parents=True, exist_ok=True)
+    decision, reason = scope
+    if decision == "not-applicable":
+        plan = Plan(base="", head="", scope={"decision": decision, "reason": reason})
+        plan.classes = {name: {"applies": False, "files": []} for name in CLASSES}
+        (out / "plan.json").write_text(plan_text(plan, release), "utf-8")
+        return plan
+    base_sha = git(root, "rev-parse", "--verify", f"{base}^{{commit}}").strip()
+    head_sha = git(root, "rev-parse", "--verify", f"{head}^{{commit}}").strip()
+    full = git(root, "diff", "--no-color", "--no-ext-diff", "--no-renames", f"{base}...{head}")
+    (out / "git.diff").write_text(full, encoding="utf-8")
+    changed = changed_lines(root, base, head)
+    plan = Plan(base=base_sha, head=head_sha, scope={"decision": decision, "reason": reason})
+    classes = {name: {"applies": False, "files": []} for name in CLASSES}
+    for path in sorted(changed):
+        entry = changed[path]
+        klass = classify(path)
+        record = {"path": path, "class": klass, "added": len(entry["added"])}
+        record["deleted"] = entry["deleted"]
+        if klass != "other" and entry["added"]:
+            text = git(root, "show", f"{head_sha}:{path}")
+            quiet = comment_or_blank(text, language_of(path))
+            # A Rust line inside a test item is test-only, never a code line (SPEC-057 R22).
+            test = rust_test_lines(text) if klass == "rust" else set()
+            record["code"] = [n for n in entry["added"] if n not in quiet and n not in test]
+            record["quiet"] = [n for n in entry["added"] if n in quiet]
+            record["test"] = [n for n in entry["added"] if n in test and n not in quiet]
+        else:
+            record["code"], record["quiet"] = [], list(entry["added"])
+            record["test"] = []
+        plan.files.append(record)
+        if klass != "other":
+            classes[klass]["files"].append(path)
+            if record["code"]:
+                classes[klass]["applies"] = True
+                if klass == "web":
+                    plan.stryker_mutate.append(path[len(WEB_ROOT) :])
+    scripts = classes["scripts"]
+    named = docstring_only(root, base_sha, head_sha, plan.files) if scripts["applies"] else None
+    if named:
+        # ADR-307: a docstring is never a mutant, so its lines are named apart from the code lines.
+        scripts["applies"] = False
+        for record in plan.files:
+            if record["path"] in named:
+                record["docstring"], record["code"] = record["code"], []
+    for name, klass in classes.items():
+        klass["case"] = class_case(plan.files, name)
+    plan.classes = classes
+    selected_rows(root, base_sha, head_sha, changed, plan)
+    document = plan_text(plan, release)
+    (out / "plan.json").write_text(document, encoding="utf-8")
+    return plan
+
+
+def say_plan(plan: Plan) -> None:
+    print(f"mutation: plan: {plan.scope['decision']}: {plan.scope['reason']}")
+    counts = defaultdict(int)
+    for entry in plan.files:
+        counts[entry["class"]] += 1
+    print(
+        f"mutation: plan: {len(plan.files)} changed path(s): rust {counts['rust']}, "
+        f"web {counts['web']}, oracle {counts['oracle']}, scripts {counts['scripts']}, "
+        f"other {counts['other']} "
+        f"(base {plan.base[:7]}, head {plan.head[:7]})"
+    )
+    for name, klass in plan.classes.items():
+        verb = "applies" if klass["applies"] else "does not apply"
+        case = klass.get("case")
+        print(f"mutation: plan: {name} {verb}" + (f": {case}" if case else ""))
+    print(f"mutation: plan: {len(plan.rows)} row(s) selected: {' '.join(plan.rows) or 'none'}")
+    output = os.environ.get("GITHUB_OUTPUT")
+    if output:
+        with open(output, "a", encoding="utf-8") as sink:
+            for name, klass in plan.classes.items():
+                sink.write(f"{name}={'true' if klass['applies'] else 'false'}\n")
+            sink.write(f"rows={'true' if plan.rows else 'false'}\n")
+            sink.write(f"scope={plan.scope['decision']}\n")
+            sink.write(f"case={plan.scope['decision']}: {plan.scope['reason']}\n")
+            sink.write(f"mutate={','.join(plan.stryker_mutate)}\n")
+
+
+# --------------------------------------------------------------------------- the shards
+
+#: Seconds one mutant costs, its build and its tests, by package: the mean over the weekly
+#: battery's 31 reported shards of run 36384080819 on GitHub's ubuntu-24.04 runners, rounded up
+#: (R18). `ffi`, `push`, `engine-core`, `web-engine` and `fsrs7` are the means over the 125 shard
+#: reports of 31 pull request runs, 37224975775 .. 37409647919, rounded up (SPEC-362 R10). A
+#: package the table does not name costs the table's highest.
+SECONDS_PER_MUTANT = {
+    "deck-streak-ingest": 126,
+    "deck-streak-daemon": 80,
+    "deck-streak-coordination": 64,
+    "deck-streak-api": 54,
+    "deck-streak-ffi": 18,
+    "deck-streak-kernel": 13,
+    "deck-streak-identity": 8,
+    "deck-streak-vault": 8,
+    "deck-streak-push": 6,
+    "deck-streak-engine-core": 4,
+    "deck-streak-web-engine": 3,
+    "deck-streak-fsrs7": 2,
+}
+#: The unmutated baseline each leg builds and tests before its first mutant. A leg over a whole
+#: listing tests the workspace, whose nextest run in run 37438835490's `rust` job read 2089.093 s,
+#: started up to 51 s into the job, so 2141 (SPEC-362 R5, the signed 2300 s ruling).
+BASELINE_SECONDS = 2141
+#: Seconds the settle census adds to a run of its package's tests, by package (SPEC-327): its
+#: slowest test passed at 1469.349 s in push run 37438835490, started up to 51 s into the run, so
+#: 1521 (SPEC-362 R6, the signed 2300 s ruling). It is paid by each mutant of the package and
+#: once by the baseline of a plan that lists one; a table apart from `SECONDS_PER_MUTANT`, whose
+#: highest is the cost of every package that table does not name.
+CENSUS_SECONDS = {"deck-streak-progression": 1521}
+#: A leg's projected time may reach half its job's `timeout-minutes` of 360, the most a hosted job
+#: runs: the shards of runs 36373915578 and 36384080819 took from 0.66 to 1.33 times this table's
+#: projection (SPEC-039 R18, SPEC-362 R2).
+SHARD_BOUND_SECONDS = 10800
+#: The most legs each workflow's run holds: the 256 jobs of one run, less the most every other job
+#: of that workflow can generate, 66 in `ci.yml` and 22 in `mutation-weekly.yml` (SPEC-362 R3).
+LEG_CEILING = {"ci": 190, "battery": 234}
+#: Signed in docs/rulings/OWNER-RULING-2026-10-16-release-legs-python-305-rust-192.md (SPEC-423 R9).
+RUST_RELEASE_CEILING = 192
+#: The legs one matrix generates, the most a release Rust ceiling may reach (SPEC-423 R7).
+RUST_MATRIX_LEGS = 256
+#: The per-mutant `--timeout` every cargo-mutants command carries (SPEC-327 R2), and the margin a
+#: leg's slowest baseline test must keep under it (SPEC-362 R7).
+MUTANT_TIMEOUT_SECONDS = 2300
+TIMEOUT_MARGIN = 1.5
+
+
+def projected(costs: list[int], count: int, baseline: int) -> list[int]:
+    """Each of `count` round-robin shards' projected seconds: the baseline, then mutant `i` in
+    shard `i mod count`, as cargo-mutants assigns them."""
+    totals = [baseline] * count
+    for index, cost in enumerate(costs):
+        totals[index % count] += cost
+    return totals
+
+
+def mutant_costs(packages: list[str]) -> list[int]:
+    """Each mutant's projected seconds, by its package; a package the table does not name costs
+    the table's highest, and a package that holds the settle census adds its term."""
+    highest = max(SECONDS_PER_MUTANT.values())
+    return [
+        SECONDS_PER_MUTANT.get(package, highest) + CENSUS_SECONDS.get(package, 0)
+        for package in packages
+    ]
+
+
+def baseline_seconds(packages: list[str]) -> int:
+    """The baseline each shard of a listing runs: its tests cover every package the listing
+    names, so each census package's term is paid once, however many of its mutants are listed."""
+    return BASELINE_SECONDS + sum(CENSUS_SECONDS.get(package, 0) for package in set(packages))
+
+
+def fewest_shards(
+    costs: list[int], baseline: int = BASELINE_SECONDS, ceiling: int = LEG_CEILING["ci"]
+) -> int | None:
+    """The fewest round-robin legs whose slowest is projected within the bound, or None when even
+    the run's `ceiling` of legs does not fit. The one function the per-pull-request plan and a
+    dispatch's sizing share (SPEC-129 R2, SPEC-362 R3)."""
+    fitting = (
+        n
+        for n in range(1, ceiling + 1)
+        if max(projected(costs, n, baseline)) <= SHARD_BOUND_SECONDS
+    )
+    return next(fitting, None)
+
+
+def size(listed_path: str | None, package: str | None) -> int:
+    """The legs a dispatch runs: one for the Mini App, which runs no Rust leg and reads no
+    listing; else the fewest that fit the bound for the listing, the whole tree's with no package
+    and the package's with one, within the battery run's ceiling (SPEC-129 R2 to R4, SPEC-362
+    R11). A projection past the ceiling is refused and never capped."""
+    ceiling = LEG_CEILING["battery"]
+    if package == MINIAPP:
+        count, note = 1, f"the Mini App ({MINIAPP}), which runs no Rust leg and reads no listing"
+    else:
+        listed = read_listing(listed_path)
+        if not isinstance(listed, list):
+            print(
+                f"mutation: size: VOID {listed_path or 'no --listed'} holds no cargo-mutants listing"
+            )
+            return EXIT_VOID
+        costs = mutant_costs([str(entry.get("package")) for entry in listed])
+        baseline = baseline_seconds([str(entry.get("package")) for entry in listed])
+        fewest = fewest_shards(costs, baseline, ceiling)
+        if fewest is None:
+            print(
+                f"mutation: size: REFUSED: {len(listed)} mutant(s), projected at {sum(costs)} s "
+                f"serially, need more than {ceiling} legs within {SHARD_BOUND_SECONDS} s each, "
+                f"the battery run's ceiling: never capped"
+            )
+            return EXIT_FAIL
+        count = fewest
+        times = projected(costs, count, baseline)
+        note = (
+            f"{len(listed)} listed mutant(s), projected at {sum(costs)} s serially, the slowest "
+            f"at {max(times)} s of its {SHARD_BOUND_SECONDS} s bound"
+        )
+    print(f"mutation: size: {count} shard(s) for {note}; legs {count} of ceiling {ceiling}")
+    announce(count)
+    return EXIT_OK
+
+
+def read_listing(path: str | None) -> object | None:
+    """A cargo-mutants listing, or None when `path` names no readable one. A file that holds
+    nothing is the empty listing: `--list --json --in-diff` prints nothing, not `[]`, when no
+    mutant overlaps the diff, since 27.1.0 exits 0 before it lists (SPEC-057 R22). A listing step
+    that fails stops its job before `shards` runs, so the empty file is the tool's own answer."""
+    try:
+        if path and not pathlib.Path(path).read_text(encoding="utf-8").strip():
+            return []
+    except (OSError, ValueError):
+        return None
+    return read_json(path)
+
+
+def python_listing(path: str | None) -> list[dict] | None:
+    """The mutants of a Python runner's listing (`mutation_python.py list --out`), or None when
+    `path` holds no listing of that schema (SPEC-087 R9)."""
+    document = read_json(path)
+    if (
+        not isinstance(document, dict)
+        or document.get("schema") != PYTHON_SCHEMA
+        or not isinstance(document.get("mutants"), list)
+    ):
+        return None
+    return [entry for entry in document["mutants"] if isinstance(entry, dict)]
+
+
+def python_share_refused() -> str | None:
+    """The refusal a share that is not a whole number from 1 to `PYTHON_SHARE_CAP` reads before
+    any deal, or None: a share above the cap never deals a leg, whoever signs it (SPEC-420 R2).
+    """
+    share = PYTHON_MAX_SHARDS
+    if type(share) is not int or share < 1 or share > PYTHON_SHARE_CAP:
+        return (
+            f"mutation: shards: REFUSED: the python share PYTHON_MAX_SHARDS = {share} is outside "
+            f"1..{PYTHON_SHARE_CAP} (PYTHON_SHARE_CAP); a share above the cap is never dealt"
+        )
+    return None
+
+
+def python_ceiling_refused() -> str | None:
+    """The refusal a release ceiling that is not a whole number from `PYTHON_SHARE_CAP` to the legs
+    both Python matrices hold reads on every run, before any deal, or None (SPEC-422 R5)."""
+    ceiling = PYTHON_RELEASE_CEILING
+    most = PYTHON_MATRIX_LEGS * PYTHON_MATRICES
+    if type(ceiling) is not int or ceiling < PYTHON_SHARE_CAP or ceiling > most:
+        return (
+            "mutation: shards: REFUSED: the release ceiling PYTHON_RELEASE_CEILING = "
+            f"{ceiling} is outside {PYTHON_SHARE_CAP}..{most}; a ceiling outside it is never dealt"
+        )
+    return None
+
+
+def python_release_ceiling(plan: dict) -> int | None:
+    """The ceiling that holds the release run's Python legs in place of the share, for a plan
+    marked `"release": true` alone and only above `PYTHON_SHARE_CAP`; None otherwise, when
+    `shards` deals, refuses and prints as it does for a pull request into `dev` (SPEC-422 R3, R4).
+    """
+    if plan.get("release") is True and PYTHON_RELEASE_CEILING > PYTHON_SHARE_CAP:
+        return PYTHON_RELEASE_CEILING
+    return None
+
+
+def rust_ceiling_refused() -> str | None:
+    """The refusal a release Rust ceiling that is not a whole number from `LEG_CEILING["ci"]` to
+    the legs one matrix holds reads on every run, before any deal, or None: a figure below the pull
+    request ceiling would stop every plan, and one past the matrix needs a second matrix, which is
+    never a cap (SPEC-423 R5)."""
+    ceiling = RUST_RELEASE_CEILING
+    if type(ceiling) is not int or ceiling < LEG_CEILING["ci"] or ceiling > RUST_MATRIX_LEGS:
+        return (
+            "mutation: shards: REFUSED: the release ceiling RUST_RELEASE_CEILING = "
+            f"{ceiling} is outside {LEG_CEILING['ci']}..{RUST_MATRIX_LEGS}; a ceiling outside it "
+            "is never dealt"
+        )
+    return None
+
+
+def rust_release_ceiling(plan: dict) -> int | None:
+    """The ceiling that holds the release run's Rust legs in place of `LEG_CEILING["ci"]`, for a
+    plan marked `"release": true` alone and only above that ceiling; None otherwise, when `shards`
+    sizes, refuses and prints the Rust legs as it does for a pull request into `dev`, so the
+    placeholder admits nothing by itself (SPEC-423 R3, R4)."""
+    if plan.get("release") is True and RUST_RELEASE_CEILING > LEG_CEILING["ci"]:
+        return RUST_RELEASE_CEILING
+    return None
+
+
+def python_needed(listed: int) -> int:
+    """The Python legs a listing of `listed` mutants needs at PYTHON_SHARD_MUTANTS a leg, one for
+    none (SPEC-415 R1)."""
+    return max(1, -(-listed // PYTHON_SHARD_MUTANTS))
+
+
+def python_shards(listing: list[dict]) -> dict | None:
+    """The Python matrix, sized by the diff's listing (R9): the ceiling of listed over 20, each
+    shard's mutants round-robin as the runner assigns them, `i mod count`; None when the listing
+    needs more than PYTHON_MAX_SHARDS legs, which the plan refuses whole and never caps
+    (SPEC-415 R2)."""
+    count = python_needed(len(listing))
+    if count > PYTHON_MAX_SHARDS:
+        return None
+    names = [str(entry.get("name")) for entry in listing]
+    return {
+        "count": count,
+        "shards": [{"shard": k, "mutants": names[k::count]} for k in range(count)],
+    }
+
+
+def python_price(
+    path: str, prices: dict[str, int], scoped: dict[str, tuple[int, int, int]] | None
+) -> tuple[int, int, int] | None:
+    """A listed file's (control, sentinel, mutant) price, or None when it has none and keeps the
+    count rule (SPEC-421 R9): its scoped triple when the legs trace and the table holds it, else
+    its whole-suite price thrice."""
+    if scoped and path in scoped:
+        return scoped[path]
+    price = prices.get(path)
+    return (price, price, price) if price else None
+
+
+def python_unpriced_legs(
+    listing: list[dict],
+    prices: dict[str, int],
+    scoped: dict[str, tuple[int, int, int]] | None = None,
+) -> int:
+    """The legs a listing's unpriced mutants take at PYTHON_SHARD_MUTANTS a leg, SPEC-415's count
+    rule, and none when every listed file is priced (SPEC-418 R3 (f), SPEC-421 R9)."""
+    unpriced = sum(
+        1 for entry in listing if not python_price(str(entry.get("file")), prices, scoped)
+    )
+    return python_needed(unpriced) if unpriced else 0
+
+
+def python_deal(
+    runs: list[tuple[str, int, int, list[int]]], count: int
+) -> tuple[list[int], list[list[int]]] | None:
+    """`runs`, heaviest first, each dealt onto the lightest of `count` legs (ties to the lowest
+    index): each leg's projected seconds and listing indices, or None once a leg passes the bound.
+    A run is its file, its setup (control and sentinel), its price a mutant and its listing
+    indices. A leg pays a file's setup once, so a run joining its own file's leg adds only its
+    mutants (SPEC-418 R3 (d), SPEC-421 R9)."""
+    loads = [0] * count
+    held: list[set[str]] = [set() for _ in range(count)]
+    dealt: list[list[int]] = [[] for _ in range(count)]
+    for path, setup, price, indices in runs:
+        leg = min(range(count), key=lambda each: (loads[each], each))
+        size = len(indices)
+        loads[leg] += size * price + (0 if path in held[leg] else setup)
+        if loads[leg] > PYTHON_LEG_BOUND_SECONDS:
+            return None
+        held[leg].add(path)
+        dealt[leg] += indices
+    return loads, dealt
+
+
+def python_by_cost(
+    listing: list[dict],
+    prices: dict[str, int],
+    scoped: dict[str, tuple[int, int, int]] | None = None,
+    ceiling: int | None = None,
+) -> dict | str | None:
+    """The Python matrix dealt by each listed file's price (SPEC-418 R3): None when no listed
+    file is priced, so the count rule stands; a refusal by name when a priced file's one mutant
+    cannot fit a leg, or the legs exceed the run's Python share; else the fewest priced legs
+    within the bound, then the unpriced mutants at the count rule, each leg projected. Under a
+    release `ceiling` the legs are held to it in place of the share, and past it the listing is
+    refused whole, never capped (SPEC-422 R6)."""
+    priced: dict[str, list[int]] = {}
+    loose: list[int] = []
+    for index, entry in enumerate(listing):
+        path = str(entry.get("file"))
+        if python_price(path, prices, scoped):
+            priced.setdefault(path, []).append(index)
+        else:
+            loose.append(index)
+    if not priced:
+        return None
+    runs: list[tuple[str, int, int, list[int]]] = []
+    for path, indices in priced.items():
+        control, sentinel, each = python_price(path, prices, scoped)
+        setup = control + sentinel
+        k = (PYTHON_LEG_BOUND_SECONDS - setup) // each
+        if k < 1:
+            return (
+                f"mutation: shards: REFUSED: {path}'s control is priced at {control} s, so a leg "
+                f"holding one of its mutants projects {setup + each} s, past its "
+                f"{PYTHON_LEG_BOUND_SECONDS} s bound"
+            )
+        cuts = -(-len(indices) // k)
+        for cut in range(cuts):
+            runs.append((path, setup, each, indices[cut::cuts]))
+    runs.sort(key=lambda run: (-(run[1] + len(run[3]) * run[2]), run[0], run[3][0]))
+    # The search starts at one leg and stops by one leg a run, which always fits: a run holds at
+    # most k mutants, so each run alone on its own leg is within the bound.
+    legs = None
+    for count, _ in enumerate(runs, 1):
+        legs = python_deal(runs, count)
+        if legs is not None:
+            break
+    loads, dealt = legs
+    unpriced_legs = python_unpriced_legs(listing, prices, scoped)
+    if ceiling is None:
+        if count + unpriced_legs > PYTHON_MAX_SHARDS:
+            return (
+                f"mutation: shards: REFUSED: {len(listing)} python mutant(s) need {count} leg(s) "
+                f"priced at most {PYTHON_LEG_BOUND_SECONDS} s each and {unpriced_legs} unpriced "
+                f"leg(s) of at most {PYTHON_SHARD_MUTANTS}, more than the pull request run's "
+                f"{PYTHON_MAX_SHARDS} python legs: split the change, since a run is never capped"
+            )
+    elif count + unpriced_legs > ceiling:
+        return (
+            f"mutation: shards: REFUSED: {len(listing)} python mutant(s) need {count} leg(s) "
+            f"priced at most {PYTHON_LEG_BOUND_SECONDS} s each and {unpriced_legs} unpriced "
+            f"leg(s) of at most {PYTHON_SHARD_MUTANTS}, more than the release run's {ceiling} "
+            "python legs (PYTHON_RELEASE_CEILING): a larger figure needs a new measurement and "
+            "a new owner-signed ruling, since a run is never capped"
+        )
+    members = [sorted(indices) for indices in dealt]
+    members += [loose[leg::unpriced_legs] for leg in range(unpriced_legs)]
+    seconds = loads + [PYTHON_LEG_BOUND_SECONDS] * unpriced_legs
+    called = [str(entry.get("name")) for entry in listing]
+    return {
+        "count": len(members),
+        "shards": [
+            {
+                "shard": shard,
+                "mutants": [called[index] for index in indices],
+                "projected_seconds": seconds[shard],
+            }
+            for shard, indices in enumerate(members)
+        ],
+    }
+
+
+def announce(count: int) -> None:
+    """Write the shard count and its matrix, 0 to count-1, as the step's outputs under GitHub
+    Actions: the one place both the plan's `shards` and a dispatch's `size` say them."""
+    output = os.environ.get("GITHUB_OUTPUT")
+    if output:
+        with open(output, "a", encoding="utf-8") as sink:
+            sink.write(f"shards={count}\n")
+            sink.write(f"matrix={json.dumps(list(range(count)))}\n")
+
+
+def shards(
+    plan_path: pathlib.Path, listed_path: str | None, python_listed: str | None = None
+) -> int:
+    """The fewest round-robin shards whose slowest is projected within the bound (R18), written
+    into the plan with each shard's mutants and, under GitHub Actions, as the matrix's outputs."""
+    plan = read_json(str(plan_path))
+    if not isinstance(plan, dict) or "classes" not in plan:
+        print(f"mutation: shards: VOID {plan_path} is not a mutation plan")
+        return EXIT_VOID
+    # The release run's Python legs are held to its ceiling in place of the share; every other
+    # plan's are held to the share, as before (SPEC-422 R3, R4).
+    ceiling = python_release_ceiling(plan)
+    python = deal = None
+    if python_listed is not None:
+        listing = python_listing(python_listed)
+        if listing is None:
+            print(f"mutation: shards: VOID {python_listed} holds no Python mutant listing")
+            return EXIT_VOID
+        python = python_shards(listing)
+        # The legs trace exactly when a plan's selection does, so only then is a leg priced at
+        # what it pays: its scoped triple (SPEC-421 R10).
+        scoped = PYTHON_SCOPED_SECONDS if "plan" in mutation_python.SCOPED_SELECTIONS else None
+        deal = python_by_cost(listing, PYTHON_CONTROL_SECONDS, scoped, ceiling)
+        if isinstance(deal, str):
+            print(deal)
+            return EXIT_FAIL
+        if deal is not None:
+            python = deal
+        if python is None:
+            print(
+                f"mutation: shards: REFUSED: {len(listing)} python mutant(s) need "
+                f"{python_needed(len(listing))} legs of at most {PYTHON_SHARD_MUTANTS}, more than "
+                f"the pull request run's {PYTHON_MAX_SHARDS} python legs: split the change, since "
+                f"a run is never capped"
+            )
+            return EXIT_FAIL
+    mutants: list[tuple[str, str]] = []
+    if plan["classes"]["rust"]["applies"]:
+        listed = read_listing(listed_path)
+        if not isinstance(listed, list):
+            print(
+                f"mutation: shards: VOID the rust class applies and {listed_path or 'no --listed'} "
+                "holds no cargo-mutants listing"
+            )
+            return EXIT_VOID
+        if not listed:
+            # An empty listing never makes the class not-applicable: a changed production line
+            # that no tool mutates, a constant's, still needs a row, or the verdict is VOID.
+            print(
+                "mutation: shards: the listing is empty, cargo-mutants' answer when no mutant "
+                "overlaps the diff: each changed production code line needs a row, or the verdict "
+                "reads VOID"
+            )
+        mutants = [(str(entry.get("name")), str(entry.get("package"))) for entry in listed]
+    costs = mutant_costs([package for _, package in mutants])
+    baseline = baseline_seconds([package for _, package in mutants])
+    # The release run's Rust legs are held to its ceiling; every other plan's are held to
+    # LEG_CEILING["ci"], as before (SPEC-423 R3, R4).
+    rust_release = rust_release_ceiling(plan)
+    rust_ceiling = rust_release or LEG_CEILING["ci"]
+    count = fewest_shards(costs, baseline, rust_ceiling)
+    if count is None and rust_release is not None:
+        print(
+            f"mutation: shards: REFUSED: {len(mutants)} mutant(s), projected at {sum(costs)} s "
+            f"serially, need more than {rust_release} legs within {SHARD_BOUND_SECONDS} s "
+            "each, the release run's ceiling (RUST_RELEASE_CEILING): a larger figure needs a "
+            "new measurement and a new owner-signed ruling, since a run is never capped"
+        )
+        return EXIT_FAIL
+    if count is None:
+        print(
+            f"mutation: shards: REFUSED: {len(mutants)} mutant(s), projected at {sum(costs)} s "
+            f"serially, need more than {LEG_CEILING['ci']} legs within {SHARD_BOUND_SECONDS} s "
+            f"each, the pull request run's ceiling: split the change, since a run is never capped"
+        )
+        return EXIT_FAIL
+    times = projected(costs, count, baseline)
+    plan["shards"] = {
+        "count": count,
+        "bound_seconds": SHARD_BOUND_SECONDS,
+        "baseline_seconds": baseline,
+        "serial_seconds": sum(costs),
+        "shards": [
+            {
+                "shard": shard,
+                "mutants": [
+                    name for index, (name, _) in enumerate(mutants) if index % count == shard
+                ],
+                "projected_seconds": times[shard],
+            }
+            for shard in range(count)
+        ],
+    }
+    if python is not None:
+        plan["python"] = python
+    plan_path.write_text(json.dumps(plan, indent=2) + "\n", encoding="utf-8")
+    if python is not None:
+        print(
+            f"mutation: shards: {python['count']} python shard(s) for "
+            f"{sum(len(shard['mutants']) for shard in python['shards'])} listed mutant(s); "
+            f"python legs {python['count']} of ceiling {PYTHON_MAX_SHARDS}"
+        )
+    if deal is not None:
+        unpriced_legs = python_unpriced_legs(listing, PYTHON_CONTROL_SECONDS, scoped)
+        priced_legs = deal["count"] - unpriced_legs
+        slowest = max(shard["projected_seconds"] for shard in deal["shards"][:priced_legs])
+        print(
+            f"mutation: shards: python legs dealt by cost: {priced_legs} priced leg(s), the "
+            f"slowest at {slowest} s of its {PYTHON_LEG_BOUND_SECONDS} s bound; {unpriced_legs} "
+            f"unpriced leg(s) of at most {PYTHON_SHARD_MUTANTS}"
+        )
+        listed = {str(entry.get("file")) for entry in listing}
+        scoped_files = listed & set(scoped or ())
+        if scoped_files:
+            whole = {path for path in listed - scoped_files if PYTHON_CONTROL_SECONDS.get(path)}
+            print(
+                f"mutation: shards: python legs priced scoped: {len(scoped_files)} file(s) at "
+                f"their scoped price, {len(whole)} at their whole-suite price, "
+                f"{len(listed - scoped_files - whole)} unpriced"
+            )
+        if ceiling is not None:
+            first = min(deal["count"], PYTHON_MATRIX_LEGS)
+            print(
+                f"mutation: shards: release run: {deal['count']} python leg(s) of ceiling "
+                f"{ceiling} (PYTHON_RELEASE_CEILING): {first} in mutation-python and "
+                f"{deal['count'] - first} in mutation-python-release, at most "
+                f"{PYTHON_MATRIX_LEGS} a matrix"
+            )
+    if rust_release is not None:
+        print(
+            f"mutation: shards: release run: {count} rust leg(s) of ceiling {rust_release} "
+            f"(RUST_RELEASE_CEILING): {count} in mutation-rust, at most {RUST_MATRIX_LEGS} "
+            "a matrix"
+        )
+    print(
+        f"mutation: shards: {count} shard(s) for {len(mutants)} listed mutant(s), projected at "
+        f"{sum(costs)} s serially; the slowest at {max(times)} s of its {SHARD_BOUND_SECONDS} s "
+        f"bound; legs {count} of ceiling {rust_ceiling}"
+    )
+    if deal is not None:
+        # The run's two fixed shares and the runner-minutes they may take at their bounds
+        # (SPEC-418 R4): the Python legs at half their job, the Rust legs at half theirs.
+        share = PYTHON_MAX_SHARDS + rust_ceiling
+        budget = (
+            PYTHON_MAX_SHARDS * PYTHON_LEG_BOUND_SECONDS + rust_ceiling * SHARD_BOUND_SECONDS
+        ) // 60
+        spent = sum(shard["projected_seconds"] for shard in deal["shards"]) + sum(times)
+        print(
+            f"mutation: shards: run legs {deal['count'] + count} of {share}: python "
+            f"{deal['count']} of {PYTHON_MAX_SHARDS}, rust {count} of {rust_ceiling}; "
+            f"projected {-(-spent // 60)} runner-minute(s) of {budget}"
+        )
+    announce(count)
+    output = os.environ.get("GITHUB_OUTPUT")
+    if output:
+        # The listing's own count, the one fact each leg's job-level condition reads: 0 when the
+        # class does not apply and when its listing is empty (SPEC-290 R1).
+        with open(output, "a", encoding="utf-8") as sink:
+            sink.write(f"listed={len(mutants)}\n")
+    if output and python is not None:
+        # One matrix generates at most PYTHON_MATRIX_LEGS jobs, so the legs past it are the release
+        # job's axis, and each shard is in exactly one of the two lists (SPEC-422 R8).
+        first_axis = list(range(min(python["count"], PYTHON_MATRIX_LEGS)))
+        second_axis = list(range(PYTHON_MATRIX_LEGS, python["count"]))
+        with open(output, "a", encoding="utf-8") as sink:
+            sink.write(f"python_shards={python['count']}\n")
+            sink.write(f"python_matrix={json.dumps(first_axis)}\n")
+            sink.write(f"python_release_matrix={json.dumps(second_axis)}\n")
+            sink.write(f"python_release_legs={len(second_axis)}\n")
+    return EXIT_OK
+
+
+# --------------------------------------------------------------------------- the verdict
+
+
+def read_json(path: str | None) -> object | None:
+    if not path:
+        return None
+    try:
+        return json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+class Verdict:
+    """What a class's judgement found: failures, VOIDs, and its report lines."""
+
+    def __init__(self, klass: str) -> None:
+        self.klass = klass
+        self.failures: list[str] = []
+        self.voids: list[str] = []
+        self.examined = 0
+
+    def say(self, text: str) -> None:
+        print(f"mutation: {self.klass}: {text}")
+
+    def fail(self, text: str) -> None:
+        self.failures.append(text)
+        self.say(text)
+
+    def void(self, text: str) -> None:
+        self.voids.append(text)
+        self.say(f"VOID {text}")
+
+    def close(self) -> int:
+        if self.failures:
+            self.say(f"verdict: FAIL: {len(self.failures)} finding(s)")
+            code = EXIT_FAIL
+        elif self.voids:
+            self.say(f"verdict: VOID: {len(self.voids)} measurement(s) the class needs are missing")
+            code = EXIT_VOID
+        else:
+            self.say("verdict: ok")
+            code = EXIT_OK
+        print(f"examined {self.examined}")
+        return code
+
+
+def not_applicable(verdict: Verdict, plan: dict, klass: str) -> None:
+    files = [entry for entry in plan["files"] if entry["class"] == klass]
+    if not files:
+        paths = [entry["path"] for entry in plan["files"]]
+        shown = ", ".join(paths[:20]) + (f", and {len(paths) - 20} more" if len(paths) > 20 else "")
+        verdict.say(
+            f"not-applicable: the diff changes no {klass} production file; it changes "
+            f"{shown or 'nothing'}"
+        )
+    for entry in files:
+        test, quiet = entry.get("test") or [], len(entry["quiet"])
+        if test:
+            # SPEC-057 R22: lines cargo-mutants never mutates are named, never VOID.
+            verdict.say(
+                f"not-applicable: {entry['path']}: {entry['added']} changed line(s): {len(test)} "
+                f"test-only, {TEST_ONLY}" + (f"; {quiet} blank or comments" if quiet else "")
+            )
+        elif entry.get("docstring"):
+            # ADR-307: every changed script's tree equals its base's once docstrings are set aside.
+            verdict.say(
+                f"not-applicable: {entry['path']}: {entry['added']} changed line(s): "
+                f"{DOCSTRING_ONLY}, its syntax tree equals its base's once docstrings are set aside"
+            )
+        elif entry["added"]:
+            verdict.say(
+                f"not-applicable: {entry['path']}: {entry['added']} changed line(s), all blank "
+                "or comments"
+            )
+        else:
+            verdict.say(
+                f"not-applicable: {entry['path']}: {entry['deleted']} line(s) deleted, none added"
+            )
+
+
+def judge_rows(verdict: Verdict, plan: dict, rows: object, klass: str) -> int:
+    """Every selected row must be KILLED; returns the rows that carry this class's changed lines."""
+    if not plan["rows"]:
+        return 0
+    if not isinstance(rows, list):
+        verdict.void(f"{len(plan['rows'])} row(s) selected and no rows report")
+        return 0
+    proved = {entry.get("id"): entry for entry in rows if isinstance(entry, dict)}
+    carried = 0
+    for identifier in plan["rows"]:
+        entry = proved.get(identifier)
+        if entry is None:
+            verdict.void(f"{identifier}: selected and never proved")
+        elif entry.get("verdict") != "KILLED":
+            verdict.fail(f"{identifier}: {entry.get('verdict')}: {entry.get('reason', '')}")
+        else:
+            path = plan["row_overlaps"].get(identifier)
+            if path is not None and classify(path) == klass:
+                carried += 1
+    return carried
+
+
+def partial_reason(report: object, code: int | None, source: str) -> str | None:
+    """Why a cargo-mutants report cannot be read whole, or None when it can (R4): no report, an
+    exit other than 0, 2 or 3, or counts short of its total."""
+    if not isinstance(report, dict) or "caught" not in report:
+        return f"no report: {source} holds no cargo-mutants outcomes"
+    if code not in WHOLE_EXITS:
+        if code is None:
+            return "no cargo-mutants exit recorded, so its report may be partial"
+        return f"cargo-mutants exit {code}: {TOOL_EXITS.get(code, 'a run that stopped early')}"
+    caught, missed = int(report.get("caught", 0)), int(report.get("missed", 0))
+    timeout, unviable = int(report.get("timeout", 0)), int(report.get("unviable", 0))
+    total = int(report.get("total_mutants", 0))
+    if caught + missed + timeout + unviable != total:
+        # The tool writes its report as it goes: counts short of its total are a partial run.
+        return (
+            f"the report counts {caught + missed + timeout + unviable} of {total} mutants reported"
+        )
+    return None
+
+
+def whole_reports(verdict: Verdict, plan: dict, args: argparse.Namespace) -> list[tuple[str, dict]]:
+    """(where, report) for each whole cargo-mutants report the run promised; each one missing or
+    partial is VOID, by name. Under --shard-reports it promised every shard's, from 0 to n-1 (R18),
+    but a shard the plan gave no mutant, which cargo-mutants leaves without a report and whose leg
+    is not started when no shard has one (SPEC-290 R4); else the one --outcomes names."""
+    if not args.shard_reports:
+        promised = [
+            ("", read_json(args.outcomes), args.tool_exit, args.outcomes or "no --outcomes")
+        ]
+        listed = [None]
+    else:
+        planned = (plan.get("shards") or {}).get("shards") or []
+        if not planned:
+            verdict.void("the plan names no shards, so no shard's report was promised")
+        root = pathlib.Path(args.shard_reports)
+        promised, listed = [], []
+        for shard in range(len(planned)):
+            name = root / f"mutation-rust-shard-{shard}"
+            promised.append(
+                (
+                    f"mutation-rust-shard-{shard}: ",
+                    read_json(str(name / "mutants.out" / "outcomes.json")),
+                    read_exit(name / "cargo-mutants.exit"),
+                    "its outcomes.json",
+                )
+            )
+            listed.append(len(planned[shard]["mutants"]))
+    whole = []
+    for (where, report, code, source), mutants in zip(promised, listed, strict=True):
+        if report is None and code is None and mutants == 0:
+            # A leg the listing gave nothing is not started, so it leaves no artifact; a shard
+            # that lists a mutant and left nothing is still VOID below (SPEC-290 R4).
+            verdict.say(f"{where}not started: the plan lists no mutant for it")
+            continue
+        if report is None and code == 0 and mutants == 0:
+            # cargo-mutants exits 0 and writes no report when it has no mutant to test.
+            verdict.say(f"{where}no mutant listed, and cargo-mutants reports none")
+            continue
+        reason = partial_reason(report, code, source)
+        if reason is None:
+            whole.append((where, report))
+        else:
+            verdict.void(f"{where}{reason}")
+    return whole
+
+
+def partition(verdict: Verdict, plan: dict, whole: list[tuple[str, dict]], complete: bool) -> None:
+    """The shards' reports hold every mutant the plan listed, each once (R18): one tested in more
+    shards than it was listed fails, and, when no shard was missing or partial, one in none is VOID.
+    A missing shard is named once, not once for each of its mutants."""
+    planned = (plan.get("shards") or {}).get("shards") or []
+    listed = Counter(name for shard in planned for name in shard["mutants"])
+    home = {
+        name: f"mutation-rust-shard-{shard['shard']}"
+        for shard in planned
+        for name in shard["mutants"]
+    }
+    tested: dict[str, list[str]] = defaultdict(list)
+    for where, report in whole:
+        for outcome in report.get("outcomes", []):
+            scenario = outcome.get("scenario")
+            if isinstance(scenario, dict) and isinstance(scenario.get("Mutant"), dict):
+                tested[scenario["Mutant"].get("name")].append(where.rstrip(": "))
+    for name, shards_of in sorted(tested.items()):
+        if len(shards_of) > listed[name]:
+            verdict.fail(
+                f"{name}: tested in {len(shards_of)} shard(s) ({', '.join(shards_of)}), "
+                f"listed {listed[name]} time(s)"
+            )
+    if complete:
+        for name, times in sorted(listed.items()):
+            if len(tested.get(name, [])) < times:
+                verdict.void(f"never tested: {name}, listed for {home[name]}")
+
+
+def examined_sum(verdict: Verdict, plan: dict, whole: list[tuple[str, dict]]) -> None:
+    """The mutants the whole reports count, caught, missed, timed out and unviable, are the ones
+    the plan's shards list, no more and no fewer (SPEC-290 R5): a leg is read as not started only
+    from the listing, so the reports must account for the listing exactly. It runs once every
+    promised report was whole and every listed mutant tested, so it names no gap twice."""
+    planned = (plan.get("shards") or {}).get("shards") or []
+    listed = sum(len(shard["mutants"]) for shard in planned)
+    counted = sum(
+        int(report.get(key, 0))
+        for _, report in whole
+        for key in ("caught", "missed", "timeout", "unviable")
+    )
+    if counted != listed:
+        verdict.void(
+            f"the shards' reports count {counted} mutant(s), and the plan's listing holds {listed}"
+        )
+
+
+#: A nextest status line, as a leg's baseline log holds one for each test: the seconds it ran.
+NEXTEST_STATUS = re.compile(r"^\s*[A-Z]+\s+\[\s*([\d.]+)s\]")
+
+
+def baseline_void(where: str, directory: pathlib.Path, report: dict) -> str | None:
+    """Why a leg cannot show that the per-mutant timeout covers its own tests, or None when it can
+    (SPEC-362 R7): its slowest baseline test, times the margin, must stay within the timeout, or a
+    mutant only that test kills could read as a timeout. A report with no baseline, a baseline
+    that names no log or an unreadable one, and a log that times no test prove nothing."""
+    baseline = next(
+        (
+            o
+            for o in report.get("outcomes", [])
+            if isinstance(o, dict)
+            if o.get("scenario") == "Baseline"
+        ),
+        None,
+    )
+    if baseline is None:
+        return (
+            f"{where}its report holds no baseline outcome, so it cannot show its timeout covers "
+            f"its tests"
+        )
+    log_path = baseline.get("log_path")
+    if not isinstance(log_path, str):
+        return (
+            f"{where}its baseline outcome names no log, so it cannot show its timeout covers its "
+            f"tests"
+        )
+    log = directory / "mutants.out" / "log" / pathlib.PurePosixPath(log_path).name
+    try:
+        text = log.read_bytes().decode("utf-8", "replace")
+    except OSError:
+        return (
+            f"{where}its baseline log {log_path} is unreadable, so it cannot show its timeout "
+            f"covers its tests"
+        )
+    times = [
+        float(found.group(1))
+        for found in (NEXTEST_STATUS.match(line) for line in text.splitlines())
+        if found is not None
+    ]
+    if not times:
+        return (
+            f"{where}times no test in its baseline log {log_path}, so it cannot show its timeout "
+            f"covers its tests"
+        )
+    slowest = max(times)
+    if TIMEOUT_MARGIN * slowest > MUTANT_TIMEOUT_SECONDS:
+        return (
+            f"{where}the baseline's slowest test ran {slowest} s, and {TIMEOUT_MARGIN} times it "
+            f"passes the {MUTANT_TIMEOUT_SECONDS} s per-mutant timeout, so a mutant only that "
+            f"test kills could read as a timeout"
+        )
+    return None
+
+
+def population_gaps(plan: dict, args: argparse.Namespace) -> list[str]:
+    """Each mutant the plan's legs hold a different number of times than the tool's own listing
+    does (SPEC-362 R8). The listing, uploaded beside the plan or named by --listed, is the
+    population, so a sizing defect that drops or doubles a mutant cannot shrink what is judged."""
+    path = args.listed or str(pathlib.Path(args.plan).parent / "listed.json")
+    listed = read_listing(path)
+    if not isinstance(listed, list):
+        return [
+            f"no listing: {path} holds no cargo-mutants listing, so the plan's legs cannot be "
+            f"held to the tool's population"
+        ]
+    planned = (plan.get("shards") or {}).get("shards") or []
+    dealt = Counter(name for leg in planned for name in leg["mutants"])
+    wanted = Counter(str(entry.get("name")) for entry in listed)
+    return [
+        f"the plan's legs hold {name} {dealt[name]} time(s), and the tool's listing {wanted[name]}"
+        for name in sorted(set(dealt) | set(wanted))
+        if dealt[name] != wanted[name]
+    ]
+
+
+def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
+    rows = read_json(args.rows)
+    applies = plan["classes"]["rust"]["applies"]
+    carried = judge_rows(verdict, plan, rows, "rust") if klass_rows(plan, args) else 0
+    if not applies:
+        not_applicable(verdict, plan, "rust")
+        return
+    for entry in plan["files"]:
+        if entry["class"] == "rust" and entry["code"]:
+            verdict.say(f"{entry['path']}: {len(entry['code'])} changed code line(s)")
+        if entry["class"] == "rust" and entry.get("test"):
+            verdict.say(
+                f"{entry['path']}: {len(entry['test'])} test-only line(s) set apart, {TEST_ONLY}"
+            )
+    excuses = rust_excuses(verdict, args)
+    voids = len(verdict.voids)
+    whole = whole_reports(verdict, plan, args)
+    deferred: list[str] = []
+    stopped: set[tuple[str, str]] = set()
+    if args.shard_reports:
+        held = dict(whole)
+        for shard in range(len((plan.get("shards") or {}).get("shards") or [])):
+            where = f"mutation-rust-shard-{shard}: "
+            directory = pathlib.Path(args.shard_reports) / f"mutation-rust-shard-{shard}"
+            stopped |= {
+                (where, name)
+                for name in memory_cap(
+                    verdict.fail, deferred.append, verdict.say, where, directory, held.get(where)
+                )
+            }
+            if where in held:
+                gap = baseline_void(where, directory, held[where])
+                if gap is not None:
+                    deferred.append(gap)
+        deferred.extend(population_gaps(plan, args))
+    caught, missed, timeout, unviable, total = (
+        sum(int(report.get(key, 0)) for _, report in whole)
+        for key in ("caught", "missed", "timeout", "unviable", "total_mutants")
+    )
+    tool = caught + missed + timeout
+    verdict.say(
+        f"cargo-mutants examined {tool} (caught {caught}, missed {missed}, timeout {timeout}), "
+        f"unviable {unviable}, of {total} on the diff"
+    )
+    named = equivalent = capped = 0
+    for where, report in whole:
+        for outcome in report.get("outcomes", []):
+            scenario = outcome.get("scenario")
+            if not isinstance(scenario, dict):
+                continue
+            name = scenario.get("Mutant", {}).get("name", "<unnamed mutant>")
+            if (where, name) in stopped:
+                # The cap stopped this mutant's tests: named by memory_cap, examined by nobody.
+                if outcome.get("summary") in ("CaughtMutant", "MissedMutant", "Timeout"):
+                    capped += 1
+                if outcome.get("summary") == "MissedMutant":
+                    named += 1
+                continue
+            excused = excuses.of(cargo_mutant(scenario.get("Mutant")))
+            if outcome.get("summary") == "MissedMutant":
+                named += 1
+                # R9: a missed mutant exactly one record binds is equivalent, counted apart.
+                if len(excused) == 1:
+                    equivalent += 1
+                    verdict.say(f"{where}EQUIVALENT {name}: {excuse_line(excused[0])}")
+                else:
+                    verdict.fail(f"{where}MISSED {name}{held_twice(excused)}")
+                continue
+            for record in excused:
+                refuted = refutation(record, name, outcome.get("summary"))
+                if refuted is not None:
+                    verdict.fail(f"{where}{refuted}")
+    if missed > named:
+        verdict.fail(f"MISSED {missed - named} mutant(s), unnamed in the report")
+    verdict.say(f"missed {missed}: equivalent {equivalent}, unexplained {missed - equivalent}")
+    if args.shard_reports:
+        partition(verdict, plan, whole, complete=len(verdict.voids) == voids)
+        # Checked once nothing the shards promised is missing, partial or never tested.
+        if len(verdict.voids) == voids:
+            examined_sum(verdict, plan, whole)
+    for text in deferred:
+        verdict.void(text)
+    verdict.examined = tool - capped + carried
+    verdict.say(f"examined {tool - capped} by cargo-mutants and {carried} by rows")
+    touched = {mutated_file(o) for _, report in whole for o in report.get("outcomes", [])} - {None}
+    for entry in plan["files"]:
+        path = entry["path"]
+        if entry["class"] == "rust" and entry["code"] and path not in touched:
+            if path not in plan["row_overlaps"].values():
+                verdict.say(f"unexamined: {path}: no mutant and no row covers its changed lines")
+    if verdict.examined == 0:
+        verdict.void("production code changed and nothing was examined")
+
+
+def klass_rows(plan: dict, args: argparse.Namespace) -> bool:
+    """The rust job proves the rows; the web job never does."""
+    return args.klass in ("rust", "oracle", "scripts")
+
+
+def mutated_file(outcome: dict) -> str | None:
+    scenario = outcome.get("scenario")
+    if isinstance(scenario, dict) and isinstance(scenario.get("Mutant"), dict):
+        return scenario["Mutant"].get("file")
+    return None
+
+
+KILL_STATUS = re.compile(r"^\s*SIGKILL\s+\[\s*[\d.]+s\]\s+(?:\(\s*\d+/\d+\)\s+)?(\S+)\s+(\S+)\s*$")
+BASELINE = "baseline"
+
+
+def read_scope_record(directory: pathlib.Path) -> tuple[dict | None, str | None]:
+    """The leg's memory-scope record and, when it cannot be used, why not (SPEC-196 R8)."""
+    path = directory / "memory-scope.json"
+    if not path.is_file():
+        return None, "no memory-scope.json: the leg left no record of its memory scope"
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        return None, f"memory-scope.json is unreadable: {error}"
+    if not isinstance(record, dict):
+        return None, "memory-scope.json is unreadable: it holds no object"
+    for key in ("oom", "oom_kill"):
+        value = record.get(key)
+        if isinstance(value, bool) or not isinstance(value, int):
+            return None, f"memory-scope.json is unreadable: {key} is no integer count"
+    if record.get("state") != "done":
+        return None, f"memory-scope.json is not done (state {record.get('state')})"
+    if record.get("in_force") is not True:
+        return None, f"the memory scope was not in force: {record.get('reason')}"
+    return record, None
+
+
+def placed_kills(mutants_out: pathlib.Path, report: dict | None) -> set[tuple[str, str, str]]:
+    """Each distinct (scenario, binary, test) a scenario log shows the kernel stopped: a nextest
+    status line whose first token is SIGKILL, and the summary repeat of it counts once. A scenario
+    is named by the outcome whose `log_path` names its log when the report is whole, else by the
+    `*** <scenario>` line the log opens with; cargo-mutants writes a blank line before it."""
+    named: dict[str, str] = {}
+    for outcome in (report or {}).get("outcomes", []):
+        if not isinstance(outcome, dict) or not isinstance(outcome.get("log_path"), str):
+            continue
+        scenario = outcome.get("scenario")
+        if scenario == "Baseline":
+            named[pathlib.PurePosixPath(outcome["log_path"]).name] = BASELINE
+        elif isinstance(scenario, dict) and isinstance(scenario.get("Mutant"), dict):
+            named[pathlib.PurePosixPath(outcome["log_path"]).name] = str(
+                scenario["Mutant"].get("name")
+            )
+    placed: set[tuple[str, str, str]] = set()
+    for log in sorted((mutants_out / "log").glob("*.log")):
+        try:
+            lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            continue
+        opening = next((line for line in lines if line.strip()), None)
+        if opening is None:
+            continue
+        first = opening.removeprefix("*** ").strip()
+        scenario = named.get(log.name) or first or log.stem
+        for line in lines[1:]:
+            status = KILL_STATUS.match(line)
+            if status is not None:
+                placed.add((scenario, status.group(1), status.group(2)))
+    return placed
+
+
+def score_memory_cap(fail, say, where: str, name: str) -> None:
+    """The one place a mutant the memory cap stopped is scored: a failure by name, and never
+    caught and never a timeout, so the mutant is not examined."""
+    fail(
+        f"{where}MEMORY-CAP {name}: the memory cap stopped its tests; neither caught nor a timeout"
+    )
+
+
+def memory_cap(
+    fail, void, say, where: str, directory: pathlib.Path, report: dict | None
+) -> set[str]:
+    """Read one leg's memory-scope record and name each mutant the cap stopped (SPEC-196 R8 to
+    R11). Returns the names NOT examined. A leg with no report and no exit was never run, so
+    nothing is read."""
+    mutants_out = directory / "mutants.out"
+    if (
+        not (mutants_out / "outcomes.json").is_file()
+        and not (directory / "cargo-mutants.exit").is_file()
+    ):
+        return set()
+    record, why = read_scope_record(directory)
+    if record is None:
+        void(f"{where}{why}")
+        return set()
+    oom, kills = record["oom"], record["oom_kill"]
+    if oom == 0 and kills == 0:
+        return set()
+    placed = placed_kills(mutants_out, report)
+    scenarios = sorted({scenario for scenario, _, _ in placed})
+    if kills == 0 or len(placed) != kills:
+        fail(
+            f"{where}MEMORY-CAP AMBIGUOUS: the scope counted {oom} out-of-memory event(s) and "
+            f"{kills} kill(s); the logs place {len(placed)}: {', '.join(scenarios)}"
+        )
+        return set()
+    stopped: set[str] = set()
+    for scenario in scenarios:
+        if scenario == BASELINE:
+            fail(
+                f"{where}MEMORY-CAP the unmutated baseline: the memory cap stopped its tests, "
+                "so no mutant of this leg was judged against a passing baseline"
+            )
+        else:
+            score_memory_cap(fail, say, where, scenario)
+            stopped.add(scenario)
+    return stopped
+
+
+def python_reports(verdict: Verdict, plan: dict, directory: str | None) -> list[tuple[str, dict]]:
+    """(where, report) for each Python shard report the plan promised, from 0 to n-1: one missing,
+    unreadable, not of the runner's schema, that records a failed restore, whose shard field is not
+    its slot's, that `read_python_shard` refuses, or that examined other mutants than the plan
+    lists for that shard is VOID by name (SPEC-087 R11; SPEC-126 A8 and A9)."""
+    planned = (plan.get("python") or {}).get("count") or 0
+    if not planned:
+        verdict.void("the plan names no python shards, so no shard's report was promised")
+        return []
+    whole = []
+    for shard in range(planned):
+        where = f"mutation-python-shard-{shard}"
+        if not directory or not (path := pathlib.Path(directory) / where / "report.json").is_file():
+            verdict.void(f"{where}: no report")
+            continue
+        try:
+            report = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            verdict.void(f"{where}: unreadable")
+            continue
+        refusal = None
+        if isinstance(report, dict):
+            entries, refusal = read_python_shard(plan, report)
+            report = {**report, "files": entries}
+        if not isinstance(report, dict) or report.get("schema") != PYTHON_SCHEMA:
+            verdict.void(f"{where}: not of the schema {PYTHON_SCHEMA}")
+        elif report.get("exit") == 4 or report.get("restore_failed"):
+            verdict.void(f"{where}: a restore failed: {report.get('restore_failed') or 'exit 4'}")
+        elif report.get("shard") != f"{shard}/{planned}":
+            verdict.void(
+                f"{where}: the report's shard field {report.get('shard')!r} is not this slot's "
+                f"{shard}/{planned}, so it is not this shard's work"
+            )
+        elif refusal is not None:
+            verdict.void(f"{where}: {refusal}")
+        elif (drift := shard_listing_drift(plan, shard, report)) is not None:
+            verdict.void(f"{where}: {drift}")
+        else:
+            whole.append((where, report))
+    return whole
+
+
+def read_python_shard(plan: dict, report: dict) -> tuple[list[dict], str | None]:
+    """The one reader of a shard's report: (the file entries the verdict will judge, None), or
+    ([], why the report is refused). Both the listing binding and the judge read this yield and
+    nothing else, so they cannot read a report differently. A container of another JSON type, a
+    mutant whose outcome is not the runner's, and a mutant filed under a path no applicable class
+    reads are all refused; a missing container reads as empty, as it always did."""
+    classes = plan.get("classes") or {}
+    served = {
+        name
+        for name in ("scripts", "oracle")
+        if isinstance(classes.get(name), dict) and classes[name].get("applies")
+    }
+    files = report.get("files", [])
+    if not isinstance(files, list):
+        return [], f"its files is a {type(files).__name__}, not a list"
+    read = []
+    for entry in files:
+        if not isinstance(entry, dict):
+            return [], f"an entry of its files is a {type(entry).__name__}, not an object"
+        path = str(entry.get("path"))
+        mutants = entry.get("mutants", [])
+        if not isinstance(mutants, list):
+            return [], f"the mutants of {path} is a {type(mutants).__name__}, not a list"
+        if classify(path) not in served:
+            if mutants:
+                return [], f"it files {len(mutants)} mutant(s) under {path}, which no class reads"
+            continue
+        readers = entry.get("byte_readers")
+        if readers and not isinstance(readers, list):
+            return [], f"the byte readers of {path} is a {type(readers).__name__}, not a list"
+        for mutant in mutants:
+            if not isinstance(mutant, dict):
+                return [], f"a mutant record of {path} is a {type(mutant).__name__}, not an object"
+            outcome = mutant.get("outcome")
+            if not isinstance(outcome, str) or outcome not in mutation_python.OUTCOMES:
+                return [], (
+                    f"a mutant of {path} has the outcome {outcome!r}, which is none of the "
+                    f"runner's {', '.join(mutation_python.OUTCOMES)}"
+                )
+        read.append(entry)
+    return read, None
+
+
+def shard_listing_drift(plan: dict, shard: int, report: dict) -> str | None:
+    """Why `report` (as `read_python_shard` yields it) did not examine exactly the mutants the plan
+    lists for `shard`, or None when it did. Each side is a multiset of names, so a duplicate, a missing mutant and an extra one all
+    differ, and a report that holds as many mutants as listed but not the same ones differs too."""
+    held = next(
+        (
+            entry
+            for entry in (plan.get("python") or {}).get("shards") or []
+            if isinstance(entry, dict) and entry.get("shard") == shard
+        ),
+        None,
+    )
+    if held is None or not isinstance(held.get("mutants"), list):
+        return "the plan lists no mutants for this shard"
+    listed = Counter(str(name) for name in held["mutants"])
+    examined = Counter(
+        str(mutant.get("name")) for entry in report["files"] for mutant in entry.get("mutants", [])
+    )
+    missing = sorted((listed - examined).elements())
+    extra = sorted((examined - listed).elements())
+    if not missing and not extra:
+        return None
+    return (
+        f"it did not examine the mutants the plan lists for it: {len(missing)} missing "
+        f"({', '.join(missing[:3])}) and {len(extra)} extra ({', '.join(extra[:3])})"
+    )
+
+
+def python_mutant(entry: object) -> Mutant | None:
+    """A mutant of the Python runner's listing or report, coordinates as `list_source` gives them:
+    the operator's line and column, and the end of the node that holds it."""
+    if not isinstance(entry, dict):
+        return None
+    try:
+        return Mutant(
+            str(entry["file"]),
+            str(entry["mutant"]),
+            (int(entry["line"]), int(entry["column"])),
+            (int(entry["end_line"]), int(entry["end_column"])),
+            str(entry["name"]),
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def python_population(entries: list[dict]) -> list[Mutant]:
+    """Each mutant once, by name: shards never repeat one, and a record binds exactly one."""
+    found: dict[str, Mutant] = {}
+    for entry in entries:
+        mutant = python_mutant(entry)
+        if mutant is not None:
+            found.setdefault(mutant.name, mutant)
+    return list(found.values())
+
+
+#: A Python outcome under the names `refutation` gives every tool's.
+PYTHON_OUTCOMES = {"killed": "Killed", "unviable": "Unviable", "uncovered": "NoCoverage"}
+
+
+def python_excuses(
+    verdict: Verdict | None,
+    root: pathlib.Path,
+    population: list[Mutant],
+    scope: set[str] | None,
+    *,
+    klass: str | None = None,
+) -> Excuses:
+    """The Python records bound against `population` (the whole tree's listing, else the mutants
+    the reports carry), each held to exactly one mutant (R12). `scope` holds the files a record
+    is judged against, or None for every record of the population. `klass` is the judged class:
+    only the records whose file `classify` places in it are bound, so a record of another class
+    is neither bound nor read stale (SPEC-437 R3); None binds every record in scope."""
+    records, problems = load_records(root)
+    fail = verdict.fail if verdict else (lambda _: None)
+    for problem in problems:
+        fail(f"the record: {problem}")
+    excuses = Excuses(root, records, "python")
+    mine = [record for record in excuses.records if scope is None or record.get("file") in scope]
+    if klass is not None:
+        mine = [record for record in mine if classify(str(record.get("file"))) == klass]
+    excuses.bind(population, fail, records=mine, noun="python mutant")
+    return excuses
+
+
+def judge_python(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
+    """`scripts` and `oracle`: the Python runner's shard reports for that class's files, and the
+    rows the diff selects on its changed lines (SPEC-087 R11)."""
+    klass = args.klass
+    carried = judge_rows(verdict, plan, read_json(args.rows), klass)
+    if not plan["classes"][klass]["applies"]:
+        not_applicable(verdict, plan, klass)
+        return
+    whole = python_reports(verdict, plan, args.python)
+    root = pathlib.Path(args.root)
+    seen = [
+        (where, entry)
+        for where, report in whole
+        for entry in report.get("files", [])
+        if isinstance(entry, dict) and classify(str(entry.get("path"))) == klass
+    ]
+    listing = python_listing(args.python_whole) if args.python_whole else None
+    if listing is not None:
+        population = python_population(
+            [entry for entry in listing if classify(str(entry.get("file"))) == klass]
+        )
+        scope = None
+    else:
+        population = python_population(
+            [
+                mutant
+                for _, entry in seen
+                for mutant in entry.get("mutants", [])
+                if isinstance(mutant, dict)
+            ]
+        )
+        scope = {str(entry.get("path")) for _, entry in seen}
+    excuses = python_excuses(verdict, root, population, scope, klass=klass)
+    counts: dict[str, int] = defaultdict(int)
+    equivalent = 0
+    for where, entry in seen:
+        path = str(entry.get("path"))
+        if entry.get("void"):
+            verdict.void(f"{path}: {entry['void']}")
+            continue
+        for reader in entry.get("byte_readers") or []:
+            verdict.say(f"byte reader: {path}: {reader}")
+        for mutant in entry.get("mutants", []):
+            bound = python_mutant(mutant)
+            outcome = str(mutant.get("outcome"))
+            name = str(mutant.get("name"))
+            counts[outcome] += 1
+            if outcome in ("timeout", "void"):
+                verdict.void(f"{outcome}: {name}")
+                continue
+            excused = excuses.of(bound)
+            if outcome == "survived":
+                if len(excused) == 1:
+                    equivalent += 1
+                    verdict.say(f"EQUIVALENT {name}: {excuse_line(excused[0])}")
+                else:
+                    verdict.fail(f"SURVIVED {name}{held_twice(excused)}")
+                continue
+            if outcome == "uncovered":
+                verdict.fail(f"UNCOVERED {name}: no test of the file's modules reaches it")
+            elif outcome == "unviable":
+                verdict.say(f"unviable: {name}")
+            for record in excused:
+                refuted = refutation(record, name, PYTHON_OUTCOMES.get(outcome, outcome))
+                if refuted is not None:
+                    verdict.fail(refuted)
+    generated = counts["killed"] + counts["survived"] + counts["uncovered"]
+    verdict.say(
+        f"survived {counts['survived']}: equivalent {equivalent}, unexplained "
+        f"{counts['survived'] - equivalent}"
+    )
+    verdict.examined = generated + carried
+    verdict.say(f"examined {verdict.examined}: generated {generated}, rows {carried}")
+    if verdict.examined == 0:
+        verdict.void(f"the {klass} class applies and nothing was examined")
+
+
+STRYKER_EXAMINED = ("Killed", "Survived", "NoCoverage", "Timeout")
+
+
+def judge_web(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
+    if not plan["classes"]["web"]["applies"]:
+        not_applicable(verdict, plan, "web")
+        return
+    report = read_json(args.stryker)
+    if not isinstance(report, dict) or not isinstance(report.get("files"), dict):
+        verdict.void(f"no report: {args.stryker or 'no --stryker'} holds no mutation report")
+        return
+    root = pathlib.Path(args.root)
+    records, problems = load_records(root)
+    for problem in problems:
+        verdict.fail(f"the record: {problem}")
+    excuses = Excuses(root, records, "web")
+    counts: dict[str, int] = defaultdict(int)
+    survived = equivalent = 0
+    for path, entry in sorted(report["files"].items()):
+        file = f"{WEB_ROOT}{path}"
+        if isinstance(entry.get("source"), str):
+            excuses.sources.put(file, entry["source"])
+        mutants = [(mutant, stryker_mutant(file, mutant)) for mutant in entry.get("mutants", [])]
+        # R10: a record of a file the run mutated binds exactly one of that file's mutants.
+        mine = [record for record in excuses.records if record.get("file") == file]
+        parsed = [mutant for _, mutant in mutants if mutant]
+        excuses.bind(parsed, verdict.fail, records=mine, noun=f"mutant of {file}")
+        for mutant, bound in mutants:
+            status = mutant.get("status", "Pending")
+            counts[status] += 1
+            where = f"{WEB_ROOT}{path}:{mutant.get('location', {}).get('start', {}).get('line')}"
+            what = f"{mutant.get('mutatorName')} -> {mutant.get('replacement')!r}"
+            excused = excuses.of(bound)
+            if status == "Survived":
+                survived += 1
+                if len(excused) == 1:
+                    equivalent += 1
+                    verdict.say(f"EQUIVALENT {where}: {what}: {excuse_line(excused[0])}")
+                else:
+                    verdict.fail(f"{status} {where}: {what}{held_twice(excused)}")
+                continue
+            if status == "NoCoverage":
+                verdict.fail(f"{status} {where}: {what}")
+            elif status == "Ignored":
+                verdict.fail(
+                    f"Ignored {where}: {what}: no mutant may be ignored, by a disable comment, an "
+                    "ignorer or an excluded mutator (SPEC-057 R10, R11)"
+                )
+            elif status == "Pending":
+                verdict.void(f"Pending {where}: never run")
+            for record in excused:
+                refuted = refutation(record, f"{where}: {what}", status)
+                if refuted is not None:
+                    verdict.fail(refuted)
+    verdict.examined = sum(counts[status] for status in STRYKER_EXAMINED)
+    summary = ", ".join(f"{status} {counts[status]}" for status in sorted(counts))
+    verdict.say(f"Stryker examined {verdict.examined} ({summary or 'no mutant'})")
+    verdict.say(
+        f"survived {survived}: equivalent {equivalent}, unexplained {survived - equivalent}"
+    )
+    if verdict.examined == 0:
+        verdict.void("production code changed and nothing was examined")
+
+
+def judge(args: argparse.Namespace) -> int:
+    plan = read_json(args.plan)
+    verdict = Verdict(args.klass)
+    if not isinstance(plan, dict) or "classes" not in plan:
+        verdict.void(f"no plan: {args.plan} is not a mutation plan")
+        return verdict.close()
+    scope = plan.get("scope") or {}
+    if scope.get("decision") == "not-applicable":
+        verdict.say(f"not-applicable: {scope.get('reason')}")
+        return verdict.close()
+    if args.klass in ("oracle", "scripts"):
+        judge_python(verdict, plan, args)
+    else:
+        {"rust": judge_rust, "web": judge_web}[args.klass](verdict, plan, args)
+    return verdict.close()
+
+
+#: What GitHub gives a needed job as its result: "success, failure, cancelled, or skipped" (the
+#: `needs` context).
+LEG_RESULTS = ("success", "failure", "cancelled", "skipped")
+
+
+def rust_leg_owed(plan: dict) -> str | None:
+    """Why the plan owes `mutation-rust` a run, or None when its listing gives the leg nothing."""
+    planned = (plan.get("shards") or {}).get("shards") or []
+    if not planned:
+        return "the plan names no shards, so no listing says it had nothing to examine"
+    listed = sum(len(shard["mutants"]) for shard in planned)
+    if listed:
+        return f"the plan lists {listed} mutant(s) across {len(planned)} shard(s)"
+    return None
+
+
+def rows_leg_owed(plan: dict) -> str | None:
+    """Why the plan owes `mutation-rows` a run, or None when it selects no row and no retirement
+    check is due: the retirement check runs on every diff (SPEC-039 R11)."""
+    if plan.get("rows"):
+        return f"the plan selects {len(plan['rows'])} row(s)"
+    if (plan.get("scope") or {}).get("decision") == "diff":
+        return "the scope is diff, whose retirement check is due"
+    return None
+
+
+def release_leg_owed(plan: dict) -> str | None:
+    """Why the plan owes `mutation-python-release` a run, or None when its Python legs fit the first
+    matrix: the second matrix holds exactly the legs past PYTHON_MATRIX_LEGS (SPEC-422 R11)."""
+    count = (plan.get("python") or {}).get("count")
+    if count and count > PYTHON_MATRIX_LEGS:
+        return f"the plan deals {count} python leg(s), past PYTHON_MATRIX_LEGS"
+    return None
+
+
+def legs(args: argparse.Namespace) -> int:
+    """Each leg's result against the plan (SPEC-290 R6): a leg is read as not started only when
+    the plan's listing gave it nothing, and a skip the plan owed work is VOID by name. A leg that
+    started is judged by its own job, its reports and `ci`. `mutation-python-release` is judged
+    when its result is given, and a plan that owes it a run with no result given is VOID by name;
+    with neither, nothing is said of it, so every earlier output stays as it was (SPEC-422 R11)."""
+    verdict = Verdict("legs")
+    plan = read_json(args.plan)
+    if not isinstance(plan, dict) or "classes" not in plan:
+        verdict.void(f"no plan: {args.plan} is not a mutation plan")
+        return verdict.close()
+    arms = [
+        ("mutation-rust", args.rust_leg, rust_leg_owed, "the plan lists no Rust mutant"),
+        (
+            "mutation-rows",
+            args.rows_leg,
+            rows_leg_owed,
+            "the plan selects no row and no retirement check is due",
+        ),
+    ]
+    if args.python_release_leg is not None:
+        arms.append(
+            (
+                "mutation-python-release",
+                args.python_release_leg,
+                release_leg_owed,
+                "the plan deals no python leg past PYTHON_MATRIX_LEGS",
+            )
+        )
+    for leg, result, owed, nothing in arms:
+        if result not in LEG_RESULTS:
+            verdict.void(f"{leg}: {result!r} is not a job's result")
+            continue
+        verdict.examined += 1
+        if result != "skipped":
+            verdict.say(f"{leg}: started, {result}")
+            continue
+        reason = owed(plan)
+        if reason is None:
+            verdict.say(f"{leg}: not started: {nothing}")
+        else:
+            verdict.void(f"{leg}: not started while {reason}")
+    if args.python_release_leg is None:
+        reason = release_leg_owed(plan)
+        if reason is not None:
+            verdict.void(f"mutation-python-release: no result was given while {reason}")
+    return verdict.close()
+
+
+# --------------------------------------------------------------------------- the weekly survivors
+
+
+def survivors_in(reports: pathlib.Path, root: pathlib.Path) -> tuple[dict[str, list[str]], int]:
+    """{file: [each survivor, one line]} across every report under `reports`, less each missed or
+    survived mutant that exactly one record binds, for which no issue is drafted (SPEC-057 R12);
+    and how many those were."""
+    found: dict[str, list[str]] = defaultdict(list)
+    records, _ = load_records(root)
+    excused = 0
+    rust = Excuses(root, records, "rust")
+    documents = [read_json(str(path)) for path in sorted(reports.rglob("outcomes.json"))]
+    outcomes = [
+        outcome
+        for document in documents
+        if isinstance(document, dict)
+        for outcome in document.get("outcomes", [])
+    ]
+    tested = [cargo_mutant(outcome_mutant(outcome)) for outcome in outcomes]
+    rust.bind([mutant for mutant in tested if mutant], lambda _: None)
+    for outcome, mutant in zip(outcomes, tested, strict=True):
+        if outcome.get("summary") == "MissedMutant" and mutated_file(outcome):
+            if len(rust.of(mutant)) == 1:
+                excused += 1
+                continue
+            found[mutated_file(outcome)].append(outcome["scenario"]["Mutant"]["name"])
+    web = Excuses(root, records, "web")
+    for path in sorted(reports.rglob("mutation.json")):
+        document = read_json(str(path)) or {}
+        for name, entry in sorted((document.get("files") or {}).items()):
+            file = f"{WEB_ROOT}{name}"
+            if isinstance(entry.get("source"), str):
+                web.sources.put(file, entry["source"])
+            parsed = [(mutant, stryker_mutant(file, mutant)) for mutant in entry.get("mutants", [])]
+            mine = [record for record in web.records if record.get("file") == file]
+            web.bind([bound for _, bound in parsed if bound], lambda _: None, records=mine)
+            for mutant, bound in parsed:
+                if mutant.get("status") == "Survived" and len(web.of(bound)) == 1:
+                    excused += 1
+                    continue
+                if mutant.get("status") in ("Survived", "NoCoverage"):
+                    line = mutant.get("location", {}).get("start", {}).get("line")
+                    found[file].append(
+                        f"{file}:{line}: {mutant.get('status')}: "
+                        f"{mutant.get('mutatorName')} -> {mutant.get('replacement')!r}"
+                    )
+    python = Excuses(root, records, "python")
+    reported = [
+        (entry, mutant)
+        for path in sorted(reports.rglob("mutation-python-shard-*/report.json"))
+        for entry in (read_json(str(path)) or {}).get("files", [])
+        if isinstance(entry, dict)
+        for mutant in entry.get("mutants", [])
+        if isinstance(mutant, dict)
+    ]
+    bound = {m.name: m for m in map(python_mutant, [mutant for _, mutant in reported]) if m}
+    python.bind(list(bound.values()), lambda _: None)
+    for entry, mutant in reported:
+        if mutant.get("outcome") not in ("survived", "uncovered"):
+            continue
+        if (
+            mutant.get("outcome") == "survived"
+            and len(python.of(bound.get(mutant.get("name")))) == 1
+        ):
+            excused += 1
+            continue
+        found[str(entry.get("path"))].append(str(mutant.get("name")))
+    for path in sorted(reports.rglob("rows.json")):
+        document = read_json(str(path)) or []
+        for entry in document if isinstance(document, list) else []:
+            if entry.get("verdict") in ("SURVIVED", "VOID"):
+                found[entry.get("target", "<no target>")].append(
+                    f"row {entry.get('id')}: {entry.get('verdict')}: {entry.get('reason', '')}"
+                )
+    return found, excused
+
+
+def draft_body(path: str, lines: list[str]) -> str:
+    run = ""
+    if os.environ.get("GITHUB_RUN_ID") and os.environ.get("GITHUB_REPOSITORY"):
+        server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
+        run = (
+            f"{server}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+        )
+    listed = "\n".join(f"- `{line}`" for line in lines)
+    source = f"The weekly mutation battery's run {run}" if run else "The weekly mutation battery"
+    return (
+        f"{source} found {len(lines)} mutant(s) of `{path}` that no test killed (SPEC-039 R12).\n\n"
+        f"{listed}\n\n"
+        "Triage each one (SPEC-057 R1): kill it with a test that asserts the behaviour the mutant "
+        "breaks, or, when no test can tell it apart, record it EQUIVALENT in "
+        "`scripts/mutation-equivalent.d/<package>.json`, `miniapp.json` for the Mini App "
+        "(ADR-070): its `file`, `mutant`, `anchor`, `reason`, `evidence`, a Rust mutant's "
+        "`reached_by`, and `issue`. An uncovered Mini App mutant first gains a test that reaches "
+        "it. A row that SURVIVED or is VOID is repaired in its band fragment under "
+        "`scripts/mutation-rows.d/`.\n"
+    )
+
+
+def survivors(args: argparse.Namespace) -> int:
+    reports, out = pathlib.Path(args.reports), pathlib.Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    open_titles = set(read_json(args.open_titles) or [])
+    manifest = []
+    found, excused = survivors_in(reports, pathlib.Path(args.root))
+    for number, (path, lines) in enumerate(sorted(found.items()), start=1):
+        name = f"draft-{number:03d}.md"
+        (out / name).write_text(draft_body(path, lines), encoding="utf-8")
+        title = TITLE.format(path)
+        manifest.append({"title": title, "body": name, "open": title in open_titles})
+        state = "already open, not filed again" if title in open_titles else "to file"
+        print(f"survivors: {title}: {len(lines)} mutant(s): {state}")
+    (out / "drafts.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    print(f"survivors: {excused} mutant(s) the equivalence record excuses, drafted as no issue")
+    print(f"examined {len(manifest)} file(s) with survivors")
+    return EXIT_OK
+
+
+def read_exit(path: pathlib.Path) -> int | None:
+    """The exit a job recorded beside its report, or None when it recorded none."""
+    try:
+        return int(path.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return None
+
+
+def battery(
+    reports: pathlib.Path,
+    shards: int,
+    package: str | None = None,
+    listed: str | None = None,
+    python_shards: int = PYTHON_WEEKLY_SHARDS,
+) -> int:
+    """Every report the weekly battery's jobs promise, counted whole (R12): each shard's
+    `outcomes.json` with an exit of 0, 2 or 3 and counts that sum to its total, the rows' report
+    with at least one row proved, and the Stryker sweep's `mutation.json`. A runner shut down
+    mid-run uploads nothing, and a shard stopped early leaves a partial report: either is named, and
+    fails the battery, rather than read as a shard with no survivor. A dispatch scoped to one
+    package (SPEC-057 R14) promises the shards its scope gave a mutant, which the whole tree's
+    listing counts, since shard k holds a mutant when the scope lists more than k; scoped to the
+    Mini App it promises the Stryker sweep alone. The weekly battery's python job runs
+    `PYTHON_WEEKLY_SHARDS` shards; its rehearsal runs fewer, and says how many."""
+    findings: list[str] = []
+
+    def findings_append(text: str) -> None:
+        findings.append(f"battery: {text}")
+
+    whole = promised = 0
+    owed = range(shards)
+    if package == PYTHON_CLASS:
+        owed = range(0)
+    elif listed is not None:
+        promised += 1
+        listing = read_json(listed)
+        if not isinstance(listing, list):
+            findings.append(f"battery: MISSING listing: {listed} holds no cargo-mutants listing")
+        else:
+            whole += 1
+            entries = [entry for entry in listing if isinstance(entry, dict)]
+            count = sum(1 for entry in entries if package in (None, entry.get("package")))
+            if package not in (None, MINIAPP) and not count:
+                packages = ", ".join(sorted({str(entry.get("package")) for entry in entries}))
+                findings.append(
+                    f"battery: the scope {package} lists no mutant; the listing's packages are "
+                    f"{packages or 'none'}, and the Mini App is {MINIAPP}"
+                )
+            owed = range(0 if package == MINIAPP else min(shards, count))
+    elif package == MINIAPP:
+        owed = range(0)
+    for shard in range(shards):
+        name = f"mutants-shard-{shard}"
+        if shard not in owed:
+            print(f"battery: {name}: the scope lists no mutant for it, so it owes no report")
+            continue
+        promised += 1
+        report = read_json(str(reports / name / "mutants.out" / "outcomes.json"))
+        code = read_exit(reports / name / "cargo-mutants.exit")
+        if not isinstance(report, dict) or "total_mutants" not in report:
+            findings.append(f"battery: MISSING {name}: no outcomes.json")
+        elif code is None:
+            findings.append(f"battery: PARTIAL {name}: no cargo-mutants exit recorded")
+        elif code not in WHOLE_EXITS:
+            findings.append(f"battery: PARTIAL {name}: cargo-mutants exit {code}")
+        else:
+            counted = sum(int(report.get(key, 0)) for key in ("caught", "missed", "timeout"))
+            counted += int(report.get("unviable", 0))
+            if counted != int(report["total_mutants"]):
+                findings.append(
+                    f"battery: PARTIAL {name}: {counted} of {report['total_mutants']} mutants "
+                    "reported"
+                )
+            else:
+                whole += 1
+        memory_cap(
+            findings_append,
+            findings_append,
+            lambda text: print(f"battery: {text}"),
+            f"{name}: ",
+            reports / name,
+            report if isinstance(report, dict) and code in WHOLE_EXITS else None,
+        )
+    if package in (None, PYTHON_CLASS):
+        for shard in range(python_shards):
+            name = f"mutation-python-shard-{shard}"
+            promised += 1
+            report = read_json(str(reports / name / "report.json"))
+            if not isinstance(report, dict):
+                findings.append(f"battery: MISSING {name}: no report.json")
+            elif report.get("schema") != PYTHON_SCHEMA:
+                findings.append(f"battery: PARTIAL {name}: not of the schema {PYTHON_SCHEMA}")
+            elif report.get("exit") == 4 or report.get("restore_failed"):
+                findings.append(f"battery: PARTIAL {name}: a restore failed")
+            else:
+                whole += 1
+    if package is None:
+        promised += 1
+        rows = read_json(str(reports / "rows" / "rows.json"))
+        if rows is None:
+            findings.append("battery: MISSING rows: no rows.json")
+        elif not isinstance(rows, list) or not rows:
+            findings.append("battery: PARTIAL rows: rows.json proves no row")
+        else:
+            whole += 1
+    if package in (None, MINIAPP):
+        promised += 1
+        sweep = reports / "stryker"
+        found = sorted(sweep.rglob("mutation.json")) if sweep.is_dir() else []
+        documents = [read_json(str(path)) for path in found]
+        if not found:
+            findings.append("battery: MISSING stryker: no mutation.json")
+        elif len(found) > 1 or not isinstance(documents[0], dict) or "files" not in documents[0]:
+            findings.append(f"battery: PARTIAL stryker: {len(found)} mutation.json, not one report")
+        else:
+            whole += 1
+    for foreign in sorted(reports.glob("mutants-shard-*")):
+        number = foreign.name.removeprefix("mutants-shard-")
+        if number.isdigit() and int(number) >= shards:
+            findings.append(
+                f"battery: FOREIGN {foreign.name}: the run was sized at {shards} shard(s)"
+            )
+    for finding in findings:
+        print(finding)
+    print(f"battery: counted {whole} of {promised} reports whole")
+    print(f"examined {promised} report(s)")
+    return EXIT_FAIL if findings else EXIT_OK
+
+
+# --------------------------------------------------------------------------- the configurations
+
+#: The keys `.cargo/mutants.toml` may hold, and what each takes: cargo-mutants 27.1.0's `Config`
+#: (`src/config.rs`, `#[serde(default, deny_unknown_fields)]`, so any other key refuses the file)
+#: and the `Common` options it flattens in (`src/options.rs`: `test_tool` and `sharding`; its
+#: `emit_diffs` is `#[serde(skip)]`, a command-line option only).
+CARGO_MUTANTS_KEYS: dict[str, object] = {
+    "additional_cargo_args": "strings",
+    "additional_cargo_test_args": "strings",
+    "all_features": "boolean",
+    "build_timeout_multiplier": "number",
+    "cap_lints": "boolean",
+    "copy_vcs": "boolean",
+    "copy_target": "boolean",
+    "error_values": "strings",
+    "examine_globs": "strings",
+    "examine_re": "strings",
+    "exclude_globs": "strings",
+    "exclude_re": "strings",
+    "gitignore": "boolean",
+    "features": "strings",
+    "minimum_test_timeout": "number",
+    "no_default_features": "boolean",
+    "output": "string",
+    "profile": "string",
+    "skip_calls": "strings",
+    "skip_calls_defaults": "boolean",
+    "test_package": "strings",
+    "test_workspace": "boolean",
+    "timeout_multiplier": "number",
+    "test_tool": ("cargo", "nextest"),
+    "sharding": ("slice", "round-robin"),
+}
+#: StrykerJS's `thresholds` (`packages/api/schema/stryker-core.json`, `mutationScoreThresholds`,
+#: `additionalProperties: false`): each a percentage from 0 to 100, `break` also null; the options
+#: validator refuses `high` below `low` once these defaults apply.
+STRYKER_THRESHOLDS = {"high": 80, "low": 60, "break": None}
+#: The names StrykerJS reads a configuration from in its working directory, the first it finds
+#: winning: `stryker.conf` or `stryker.config`, with or without a leading dot, in `.json`, `.js`,
+#: `.mjs` or `.cjs` (its config-file chapter).
+STRYKER_CONFIG_NAMES = tuple(
+    f"{dot}stryker.{stem}{extension}"
+    for dot in ("", ".")
+    for stem in ("conf", "config")
+    for extension in (".json", ".js", ".mjs", ".cjs")
+)
+#: R2's web production code as Stryker's `mutate` globs, from `web/app`.
+STRYKER_MUTATE = (
+    "src/**/*.ts",
+    "src/**/*.js",
+    "src/**/*.svelte",
+    "!src/**/*.test.*",
+    "!src/**/*.spec.*",
+    "!src/**/*.d.ts",
+    "!src/lib/paraglide/**",
+)
+
+
+def takes(value: object, kind: object) -> bool:
+    if isinstance(kind, tuple):
+        return value in kind
+    if kind == "strings":
+        return isinstance(value, list) and all(isinstance(item, str) for item in value)
+    if kind == "boolean":
+        return isinstance(value, bool)
+    if kind == "number":
+        return isinstance(value, int | float) and not isinstance(value, bool)
+    return isinstance(value, str)
+
+
+def cargo_mutants_findings(text: str) -> list[str]:
+    where = ".cargo/mutants.toml"
+    try:
+        document = tomllib.loads(text)
+    except tomllib.TOMLDecodeError as error:
+        return [f"configs: {where}: is not TOML: {error}"]
+    findings = []
+    for key, value in document.items():
+        kind = CARGO_MUTANTS_KEYS.get(key)
+        if kind is None:
+            findings.append(f"configs: {where}: {key} is not a cargo-mutants 27.1.0 key")
+        elif not takes(value, kind):
+            wanted = f"not one of {', '.join(kind)}" if isinstance(kind, tuple) else f"not a {kind}"
+            if kind == "strings":
+                wanted = "not a list of strings"
+            shown = f"{value!r}, " if isinstance(kind, tuple) else ""
+            findings.append(f"configs: {where}: {key} is {shown}{wanted}")
+    return findings
+
+
+def reject_constant(name: str) -> object:
+    raise ValueError(f"{name} is not JSON")
+
+
+def stryker_findings(text: str) -> list[str]:
+    where = "web/app/stryker.config.json"
+    try:
+        document = json.loads(text, parse_constant=reject_constant)
+    except ValueError:
+        return [f"configs: {where}: is not JSON (StrykerJS parses it strictly, with no comment)"]
+    if not isinstance(document, dict):
+        return [f"configs: {where}: is not an object"]
+    findings = []
+    if document.get("testRunner") != "vitest":
+        findings.append(f"configs: {where}: testRunner is not vitest (SPEC-039 R6)")
+    if "json" not in (document.get("reporters") or []):
+        findings.append(f"configs: {where}: no json reporter, so no verdict can read a report")
+    # StrykerJS finds a static mutant only by per-test coverage, and refuses ignoreStatic without it.
+    coverage = document.get("coverageAnalysis", "perTest")
+    if document.get("ignoreStatic") is True and coverage != "perTest":
+        findings.append(
+            f"configs: {where}: ignoreStatic needs coverageAnalysis perTest, not {coverage}"
+        )
+    if sorted(document.get("mutate") or []) != sorted(STRYKER_MUTATE):
+        findings.append(f"configs: {where}: mutate is not R2's web production code")
+    thresholds = document.get("thresholds", {})
+    if not isinstance(thresholds, dict):
+        return [*findings, f"configs: {where}: thresholds is not an object"]
+    values = dict(STRYKER_THRESHOLDS)
+    for key, value in thresholds.items():
+        if key not in STRYKER_THRESHOLDS:
+            findings.append(f"configs: {where}: thresholds.{key} is not a threshold")
+        elif value is None and key == "break":
+            values[key] = None
+        elif not takes(value, "number"):
+            findings.append(f"configs: {where}: thresholds.{key} is not a number")
+        elif not 0 <= value <= 100:
+            findings.append(f"configs: {where}: thresholds.{key} {value} is outside 0 to 100")
+        else:
+            values[key] = value
+    if takes(values["high"], "number") and values["high"] < values["low"]:
+        findings.append(
+            f"configs: {where}: thresholds.high {values['high']} is below thresholds.low "
+            f"{values['low']}"
+        )
+    return findings
+
+
+def configs(root: pathlib.Path) -> int:
+    """Each mutation tool's configuration, judged by what the tool itself refuses (R6), and by the
+    two things the verdict needs of Stryker's: the Vitest runner and its json report."""
+    findings: list[str] = []
+    examined = 0
+    for relative, judge_text in (
+        (".cargo/mutants.toml", cargo_mutants_findings),
+        ("web/app/stryker.config.json", stryker_findings),
+    ):
+        path = root / relative
+        if not path.is_file():
+            findings.append(f"configs: {relative}: is absent")
+            continue
+        examined += 1
+        findings += judge_text(path.read_text(encoding="utf-8"))
+    for name in STRYKER_CONFIG_NAMES:
+        if name != "stryker.config.json" and (root / "web" / "app" / name).is_file():
+            findings.append(
+                f"configs: web/app/{name}: a second Stryker configuration; StrykerJS reads the "
+                "first of its default names it finds, which may not be stryker.config.json"
+            )
+    for finding in findings:
+        print(finding)
+    print(f"examined {examined} configuration(s)")
+    if findings:
+        return EXIT_FAIL
+    return EXIT_OK if examined else EXIT_VOID
+
+
+# --------------------------------------------------------------------------- the exclusions
+
+#: What hides a mutant from cargo-mutants' listing or from StrykerJS's run (SPEC-057 R11, ADR-070 D1
+#: and D6): the keys that filter the listing, the attributes that skip an item's mutants, a disable
+#: comment, and the Stryker options that leave a mutant ignored.
+EXCLUDING_KEYS = ("exclude_re", "exclude_globs", "examine_re", "examine_globs", "skip_calls")
+EXCLUDING_ATTRIBUTE = re.compile(r"\bmutants::(?:skip|exclude_re)\b")
+WEB_SOURCES = frozenset({".ts", ".js", ".svelte", ".mts", ".cts", ".mjs", ".cjs", ".tsx", ".jsx"})
+
+
+def exclusions(root: pathlib.Path) -> int:
+    """No exclusion hides a mutant (R11): each form is refused by name, with a reason or without,
+    and a key even when it is empty. It counts the files it reads, and a tree of none is VOID."""
+    findings: list[str] = []
+    examined = 0
+    config = root / ".cargo" / "mutants.toml"
+    if config.is_file():
+        examined += 1
+        try:
+            document = tomllib.loads(config.read_text(encoding="utf-8"))
+        except tomllib.TOMLDecodeError as error:
+            document = {}
+            findings.append(
+                f"exclusions: .cargo/mutants.toml: not TOML, so no key is read: {error}"
+            )
+        for key in EXCLUDING_KEYS:
+            if key in document:
+                findings.append(
+                    f"exclusions: .cargo/mutants.toml: the {key} key hides mutants from "
+                    "cargo-mutants' listing (SPEC-057 R11)"
+                )
+    crates = root / "crates"
+    for path in sorted(crates.glob("*/src/**/*.rs")) if crates.is_dir() else []:
+        examined += 1
+        where = path.relative_to(root).as_posix()
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            attribute = EXCLUDING_ATTRIBUTE.search(line)
+            if attribute and not line.strip().startswith("//"):
+                findings.append(
+                    f"exclusions: {where}:{number}: {attribute.group(0)} hides its item's mutants "
+                    "from cargo-mutants' listing (SPEC-057 R11)"
+                )
+    web = root / "web" / "app" / "src"
+    for path in sorted(web.rglob("*")) if web.is_dir() else []:
+        if path.suffix not in WEB_SOURCES or not path.is_file():
+            continue
+        examined += 1
+        where = path.relative_to(root).as_posix()
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            if "Stryker disable" in line:
+                findings.append(
+                    f"exclusions: {where}:{number}: a Stryker disable comment leaves a mutant "
+                    "ignored, never run (SPEC-057 R11)"
+                )
+    stryker = root / "web" / "app" / "stryker.config.json"
+    if stryker.is_file():
+        examined += 1
+        document = read_json(str(stryker))
+        if not isinstance(document, dict):
+            document = {}
+            findings.append("exclusions: web/app/stryker.config.json: not JSON, so nothing is read")
+        mutator = document.get("mutator") if isinstance(document.get("mutator"), dict) else {}
+        for name in mutator.get("excludedMutations") or []:
+            findings.append(
+                f"exclusions: web/app/stryker.config.json: excludes the mutator {name} "
+                "(SPEC-057 R11)"
+            )
+        for name in document.get("ignorers") or []:
+            findings.append(
+                f"exclusions: web/app/stryker.config.json: the ignorer {name} leaves mutants "
+                "ignored (SPEC-057 R11)"
+            )
+        if document.get("ignoreStatic") is True:
+            findings.append(
+                "exclusions: web/app/stryker.config.json: ignoreStatic leaves every static "
+                "mutant ignored (SPEC-057 R11)"
+            )
+    for finding in findings:
+        print(finding)
+    print(f"examined {examined} file(s)")
+    if findings:
+        return EXIT_FAIL
+    return EXIT_OK if examined else EXIT_VOID
+
+
+# --------------------------------------------------------------------------- the equivalence record
+
+#: The equivalence record (SPEC-057 R4, ADR-070 D1): one fragment per Cargo package, named for it,
+#: and one for the Mini App, each `{"records": [...]}`.
+RECORDS = "scripts/mutation-equivalent.d"
+MINIAPP = "miniapp"
+#: What every record carries (R5). A Rust record also names `reached_by`; `span` is written only when
+#: two mutants of one description start at one position inside the anchor.
+RECORD_FIELDS = ("file", "mutant", "anchor", "reason", "evidence", "issue")
+ISSUE = re.compile(r"#[1-9][0-9]*")
+#: The one fragment of the Python population (SPEC-087 R12).
+PYTHON_RECORDS = "python.json"
+
+
+@dataclass(frozen=True)
+class Record:
+    """One equivalence claim, and where it is held."""
+
+    fragment: str
+    index: int
+    fields: dict
+
+    @property
+    def klass(self) -> str:
+        if self.fragment == PYTHON_RECORDS:
+            return "python"
+        return "web" if self.fragment == f"{MINIAPP}.json" else "rust"
+
+    @property
+    def package(self) -> str:
+        return self.fragment.removesuffix(".json")
+
+    def get(self, name: str) -> str | None:
+        """The field's text, or None when it is absent, not a text or blank."""
+        value = self.fields.get(name)
+        return value if isinstance(value, str) and value.strip() else None
+
+    @property
+    def named(self) -> str:
+        return f"record {self.index} ({self.get('file') or '?'}: {self.get('mutant') or '?'})"
+
+    def __str__(self) -> str:
+        return f"{self.fragment} {self.named}"
+
+
+def load_records(root: pathlib.Path) -> tuple[list[Record], list[str]]:
+    """Every record of every fragment, and each fragment that holds no records list, by name."""
+    records: list[Record] = []
+    problems: list[str] = []
+    directory = root / RECORDS
+    for path in sorted(directory.glob("*.json")) if directory.is_dir() else []:
+        try:
+            document = mutation_rows.parse_document(
+                f"{RECORDS}/{path.name}", path.read_text(encoding="utf-8")
+            )
+        except mutation_rows.PopulationRefused as refusal:
+            problems.append(str(refusal))
+            continue
+        except (OSError, UnicodeDecodeError):
+            document = None
+        entries = document.get("records") if isinstance(document, dict) else None
+        if not isinstance(entries, list):
+            problems.append(f'{path.name}: holds no records list, {{"records": [...]}}')
+            continue
+        for index, entry in enumerate(entries, start=1):
+            records.append(Record(path.name, index, entry if isinstance(entry, dict) else {}))
+    return records, problems
+
+
+class Sources:
+    """Each file a record or a mutant names: its text, and the offset where each line starts."""
+
+    def __init__(self, root: pathlib.Path) -> None:
+        self.root = root
+        self.texts: dict[str, str | None] = {}
+        self.starts: dict[str, list[int]] = {}
+
+    def put(self, file: str, text: str) -> None:
+        """Read `file` as `text`: the Stryker report's copy of what it mutated."""
+        self.texts[file] = text
+        self.starts.pop(file, None)
+
+    def text(self, file: str) -> str | None:
+        if file not in self.texts:
+            path = self.root / file
+            try:
+                self.texts[file] = path.read_text(encoding="utf-8") if path.is_file() else None
+            except (OSError, UnicodeDecodeError):
+                self.texts[file] = None
+        return self.texts[file]
+
+    def offset(self, file: str, line: int, column: int) -> int | None:
+        """The offset of a 1-based line and column, as cargo-mutants and StrykerJS report them."""
+        text = self.text(file)
+        if text is None:
+            return None
+        if file not in self.starts:
+            self.starts[file] = [0] + [at + 1 for at, char in enumerate(text) if char == "\n"]
+        starts = self.starts[file]
+        if not 1 <= line <= len(starts) or column < 1:
+            return None
+        return starts[line - 1] + column - 1
+
+    def window(self, file: str, anchor: str) -> tuple[int, int] | None:
+        """Where `anchor` lies in `file`, when it occurs there exactly once."""
+        text = self.text(file)
+        if text is None or not anchor or text.count(anchor) != 1:
+            return None
+        start = text.index(anchor)
+        return start, start + len(anchor)
+
+
+@dataclass(frozen=True)
+class Mutant:
+    """A mutant as a record binds it: its file, the tool's own description, and its span."""
+
+    file: str
+    description: str
+    start: tuple[int, int]
+    end: tuple[int, int]
+    name: str
+
+
+def span_of(location: object) -> tuple[tuple[int, int], tuple[int, int]] | None:
+    try:
+        start, end = location["start"], location["end"]
+        return (int(start["line"]), int(start["column"])), (
+            int(end["line"]),
+            int(end["column"]),
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def cargo_mutant(entry: object) -> Mutant | None:
+    """A mutant of cargo-mutants' listing (`--list --json`) or of an outcome's `scenario.Mutant`,
+    whose description is its name after `<file>:<line>:<column>: `."""
+    if not isinstance(entry, dict):
+        return None
+    span, file, name = span_of(entry.get("span")), entry.get("file"), entry.get("name")
+    if span is None or not isinstance(file, str) or not isinstance(name, str):
+        return None
+    prefix = f"{file}:{span[0][0]}:{span[0][1]}: "
+    if not name.startswith(prefix):
+        return None
+    return Mutant(file, name[len(prefix) :], span[0], span[1], name)
+
+
+def stryker_mutant(file: str, entry: object) -> Mutant | None:
+    """A mutant of a Stryker report, whose description is `<mutatorName>: <replacement>`."""
+    if not isinstance(entry, dict):
+        return None
+    span = span_of(entry.get("location"))
+    if span is None:
+        return None
+    description = f"{entry.get('mutatorName')}: {entry.get('replacement')}"
+    return Mutant(file, description, span[0], span[1], f"{file}:{span[0][0]}: {description}")
+
+
+def outcome_mutant(outcome: object) -> dict | None:
+    """The mutant a cargo-mutants outcome tested, or None for the baseline."""
+    scenario = outcome.get("scenario") if isinstance(outcome, dict) else None
+    mutant = scenario.get("Mutant") if isinstance(scenario, dict) else None
+    return mutant if isinstance(mutant, dict) else None
+
+
+def binds(record: Record, mutant: Mutant, sources: Sources) -> bool:
+    """R6: the record's file and description, a span that starts inside the anchor's one
+    occurrence, and, when the record names one, the mutated text."""
+    if record.get("file") != mutant.file or record.get("mutant") != mutant.description:
+        return False
+    window = sources.window(mutant.file, str(record.fields.get("anchor") or ""))
+    at = sources.offset(mutant.file, *mutant.start)
+    if window is None or at is None or not window[0] <= at < window[1]:
+        return False
+    if "span" not in record.fields:
+        return True
+    end = sources.offset(mutant.file, *mutant.end)
+    return end is not None and sources.text(mutant.file)[at:end] == record.fields["span"]
+
+
+class Excuses:
+    """One class's records, each held to exactly one mutant of the population it is bound against
+    (ADR-070 D4): the whole tree's listing (R8), or else the mutants the run reports. A record that
+    binds none is STALE and one that binds two AMBIGUOUS, and neither excuses a mutant."""
+
+    def __init__(self, root: pathlib.Path, records: list[Record], klass: str) -> None:
+        self.sources = Sources(root)
+        self.records = [record for record in records if record.klass == klass]
+        self.valid: list[Record] = []
+
+    def bind(self, population, fail, records=None, noun: str = "listed mutant") -> None:
+        for record in self.records if records is None else records:
+            bound = [mutant for mutant in population if binds(record, mutant, self.sources)]
+            if len(bound) == 1:
+                self.valid.append(record)
+            elif not bound:
+                fail(f"STALE {record}: binds no {noun}")
+            else:
+                named = "; ".join(mutant.name for mutant in bound)
+                fail(f"AMBIGUOUS {record}: binds {len(bound)} {noun}s: {named}")
+
+    def of(self, mutant: Mutant | None) -> list[Record]:
+        """The records that excuse `mutant`: more than one is a record held twice."""
+        if mutant is None:
+            return []
+        return [record for record in self.valid if binds(record, mutant, self.sources)]
+
+
+def held_twice(records: list[Record]) -> str:
+    if len(records) < 2:
+        return ""
+    return f": held twice, by {' and '.join(map(str, records))}, so neither excuses it"
+
+
+def refutation(record: Record, name: str, outcome: str) -> str | None:
+    """What an outcome other than missed or survived makes of the record bound to it (R9, R10)."""
+    if outcome in ("CaughtMutant", "Killed"):
+        return f"REFUTED {record}: its mutant {name} was caught"
+    if outcome == "Timeout":
+        return f"REFUTED {record}: its mutant {name} timed out"
+    if outcome == "Unviable":
+        return f"UNNEEDED {record}: its mutant {name} is unviable"
+    if outcome in ("CompileError", "RuntimeError"):
+        return f"UNNEEDED {record}: its mutant {name} is a {outcome}"
+    if outcome == "NoCoverage":
+        return (
+            f"UNCOVERED {record}: its mutant {name} is uncovered: no test reaches it, so it is "
+            "untested, not equivalent"
+        )
+    return None
+
+
+def excuse_line(record: Record) -> str:
+    return f"{record.get('reason')} ({record.get('issue')})"
+
+
+def rust_excuses(verdict: Verdict, args: argparse.Namespace) -> Excuses:
+    """The Rust records, bound against the whole tree's listing the plan made (R8)."""
+    root = pathlib.Path(args.root)
+    records, problems = load_records(root)
+    for problem in problems:
+        verdict.fail(f"the record: {problem}")
+    excuses = Excuses(root, records, "rust")
+    if not excuses.records:
+        return excuses
+    listing = read_json(args.whole)
+    if not isinstance(listing, list):
+        verdict.void(
+            f"{len(excuses.records)} Rust record(s) and no whole-tree listing to bind them "
+            f"against: {args.whole or 'no --whole'} holds none (SPEC-057 R8)"
+        )
+        return excuses
+    excuses.bind([mutant for mutant in map(cargo_mutant, listing) if mutant], verdict.fail)
+    return excuses
+
+
+def workspace_packages(root: pathlib.Path) -> dict[str, str]:
+    """{package name: its directory under crates/}."""
+    found = {}
+    for manifest in sorted((root / "crates").glob("*/Cargo.toml")):
+        try:
+            name = tomllib.loads(manifest.read_text(encoding="utf-8"))["package"]["name"]
+        except (OSError, KeyError, TypeError, tomllib.TOMLDecodeError):
+            continue
+        found[name] = manifest.parent.name
+    return found
+
+
+def same_words(one: str, other: str) -> bool:
+    return " ".join(one.split()).casefold() == " ".join(other.split()).casefold()
+
+
+def record_problems(
+    root: pathlib.Path, record: Record, crate: str | None, sources: Sources
+) -> list[str]:
+    """What the census refuses in one record (R7), each by name."""
+    fields = RECORD_FIELDS + (("reached_by",) if record.klass in ("rust", "python") else ())
+    problems = [f"lacks {name}" for name in fields if record.get(name) is None]
+    if "span" in record.fields and record.get("span") is None:
+        problems.append("its span is not a text: leave it out, or give the mutated text")
+    reason, evidence, issue = (
+        record.get("reason"),
+        record.get("evidence"),
+        record.get("issue"),
+    )
+    file, anchor = record.get("file"), record.get("anchor")
+    if reason and len(reason.strip().splitlines()) > 1:
+        problems.append(f"its reason spans {len(reason.strip().splitlines())} lines")
+    if reason and evidence and same_words(reason, evidence):
+        problems.append("its evidence repeats its reason")
+    if issue and not ISSUE.fullmatch(issue):
+        problems.append(f"its issue {issue!r} is not #N")
+    if file:
+        if record.klass == "web":
+            inside = classify(file) == "web"
+        elif record.klass == "python":
+            inside = classify(file) in ("scripts", "oracle")
+        else:
+            inside = classify(file) == "rust" and file.startswith(f"crates/{crate}/src/")
+        if not inside and record.klass == "python":
+            problems.append(f"its file {file} lies outside the population (SPEC-087 R12)")
+        elif not inside:
+            problems.append(
+                f"its file {file} lies outside {record.package}'s production code (SPEC-039 R2)"
+            )
+        text = sources.text(file)
+        if text is None:
+            problems.append(f"its file {file} does not exist")
+        elif anchor and text.count(record.fields["anchor"]) != 1:
+            problems.append(
+                f"its anchor occurs {text.count(record.fields['anchor'])} times in {file}"
+            )
+    reached = record.get("reached_by")
+    if record.klass == "rust" and reached:
+        row = mutation_rows.Row(
+            id=f"{record.fragment}:{record.index}",
+            table="MUTATIONS",
+            target=file or "",
+            find="",
+            replace="",
+            killer=reached,
+            crate=crate,
+            description="",
+        )
+        try:
+            mutation_rows.resolve_killer(root, row)
+        except mutation_rows.KillerUnresolved as refusal:
+            problems.append(f"reached_by: {refusal}")
+    if record.klass == "python" and reached:
+        problems.extend(python_reached(root, record, file or ""))
+    return problems
+
+
+def python_reached(root: pathlib.Path, record: Record, file: str) -> list[str]:
+    """A Python record's `reached_by`: one test method, of a module the population map gives the
+    file (SPEC-087 R12), so the runner's copy of that module is the one that could catch it."""
+    row = mutation_rows.Row(
+        id=f"{record.fragment}:{record.index}",
+        table="SCRIPT_MUTATIONS",
+        target=file,
+        find="",
+        replace="",
+        killer=record.get("reached_by") or "",
+        crate=None,
+        description="",
+    )
+    try:
+        mutation_rows.resolve_killer(root, row)
+    except mutation_rows.KillerUnresolved as refusal:
+        return [f"reached_by: {refusal}"]
+    mapped = read_json(str(root / PYTHON_POPULATION))
+    entry = mapped.get(file) if isinstance(mapped, dict) else None
+    modules = entry.get("modules") if isinstance(entry, dict) else None
+    if not isinstance(modules, list) or row.killer.partition(".")[0] not in modules:
+        return [f"reached_by: {row.killer} is no test of a module {PYTHON_POPULATION} gives {file}"]
+    return []
+
+
+def census(root: pathlib.Path) -> int:
+    """Every record held whole, with no mutation tool (R7): each field, a one-line reason, evidence
+    that is not the reason again, an issue, an anchor that occurs once in its file, a file of its
+    fragment's package, a `reached_by` that resolves to one test of that package, a fragment named
+    for a package, and no record held twice. A tree may hold none."""
+    records, problems = load_records(root)
+    findings = [f"census: {problem}" for problem in problems]
+    packages = workspace_packages(root)
+    sources = Sources(root)
+    unnamed: set[str] = set()
+    held: dict[str, Record] = {}
+    for record in records:
+        if record.klass == "rust" and record.package not in packages:
+            if record.fragment not in unnamed:
+                unnamed.add(record.fragment)
+                findings.append(
+                    f"census: {record.fragment}: named for no package of the workspace, nor "
+                    f"{MINIAPP}"
+                )
+            continue
+        crate = packages.get(record.package)
+        for problem in record_problems(root, record, crate, sources):
+            findings.append(f"census: {record.fragment}: {record.named}: {problem}")
+        key = json.dumps([record.fields.get(name) for name in ("file", "mutant", "anchor", "span")])
+        if key in held:
+            findings.append(
+                f"census: {record.fragment}: {record.named}: held twice, as record "
+                f"{held[key].index}"
+            )
+        else:
+            held[key] = record
+    for finding in findings:
+        print(finding)
+    print(f"examined {len(records)} record(s)")
+    return EXIT_FAIL if findings else EXIT_OK
+
+
+# --------------------------------------------------------------------------- the table
+
+
+@dataclass
+class Tally:
+    """One package's row of the campaign's table (SPEC-057 section 7)."""
+
+    listed: int | None = None
+    killed: int = 0
+    equivalent: int = 0
+    unexplained: int = 0
+    unviable: int = 0
+
+    def line(self, package: str) -> str:
+        counted = self.killed + self.equivalent + self.unexplained + self.unviable
+        listed = counted if self.listed is None else self.listed
+        return (
+            f"table: {package}: listed {listed}, killed {self.killed}, equivalent "
+            f"{self.equivalent}, unexplained {self.unexplained}, unviable {self.unviable}"
+        )
+
+
+def table(args: argparse.Namespace) -> int:
+    """R13: one line per package of a battery's reports, in section 7's columns."""
+    root, reports, scope = (
+        pathlib.Path(args.root),
+        pathlib.Path(args.reports),
+        args.package,
+    )
+    findings: list[str] = []
+    voids: list[str] = []
+
+    def fail(text: str) -> None:
+        findings.append(text)
+        print(f"table: {text}")
+
+    def void(text: str) -> None:
+        voids.append(text)
+        print(f"table: VOID {text}")
+
+    records, problems = load_records(root)
+    for problem in problems:
+        fail(f"the record: {problem}")
+    tallies: dict[str, Tally] = defaultdict(Tally)
+    read = 0
+    if scope not in (MINIAPP, PYTHON_CLASS):
+        read += table_rust(root, reports, scope, records, args.listed, tallies, fail, void)
+    if scope in (None, MINIAPP):
+        read += table_web(root, reports, records, tallies[MINIAPP], fail, void)
+    if scope in (None, PYTHON_CLASS):
+        read += table_python(root, reports, tallies, fail, void)
+    if scope is not None and scope not in tallies:
+        void(f"no listing or report holds a mutant of {scope}")
+    if voids:
+        print(f"table: verdict: VOID: {len(voids)} measurement(s) the table needs are missing")
+    elif findings:
+        print(f"table: verdict: FAIL: {len(findings)} finding(s)")
+    else:
+        print("table: verdict: ok")
+    counted = sum(
+        tally.killed + tally.equivalent + tally.unexplained + tally.unviable
+        for tally in tallies.values()
+    )
+    print(f"examined {counted} mutant(s) in {read} report(s)")
+    for package in sorted(tallies, key=lambda name: (name == MINIAPP, name)):
+        print(tallies[package].line(package))
+    if voids:
+        return EXIT_VOID
+    return EXIT_FAIL if findings else EXIT_OK
+
+
+def table_python(root, reports, tallies, fail, void) -> int:
+    """The Python population's row: each shard's report read, each one unreadable, of another
+    schema or restore-failed VOID by name, and each survivor or uncovered mutant no single record
+    binds UNEXPLAINED (R14). With no report the row is absent, and `table` voids a scope that
+    asked for it by name."""
+    found = sorted(reports.rglob("mutation-python-shard-*/report.json"))
+    if not found:
+        return 0
+    seen: list[tuple[str, dict]] = []
+    for path in found:
+        where = path.parent.name
+        report = read_json(str(path))
+        if not isinstance(report, dict):
+            void(f"{where}: unreadable")
+        elif report.get("schema") != PYTHON_SCHEMA:
+            void(f"{where}: not of the schema {PYTHON_SCHEMA}")
+        elif report.get("exit") == 4 or report.get("restore_failed"):
+            void(f"{where}: a restore failed")
+        else:
+            seen.append((where, report))
+    entries = [
+        (where, entry)
+        for where, report in seen
+        for entry in report.get("files", [])
+        if isinstance(entry, dict)
+    ]
+    population = python_population([m for _, e in entries for m in e.get("mutants", [])])
+    excuses = python_excuses(None, root, population, {str(e.get("path")) for _, e in entries})
+    tally = tallies[PYTHON_CLASS]
+    for where, entry in entries:
+        if entry.get("void"):
+            void(f"{where}: {entry.get('path')}: {entry['void']}")
+            continue
+        for mutant in entry.get("mutants", []):
+            outcome, name = str(mutant.get("outcome")), str(mutant.get("name"))
+            if outcome in ("timeout", "void"):
+                void(f"{where}: {outcome}: {name}")
+            elif outcome == "killed":
+                tally.killed += 1
+            elif outcome == "unviable":
+                tally.unviable += 1
+            elif outcome == "survived" and len(excuses.of(python_mutant(mutant))) == 1:
+                tally.equivalent += 1
+                print(f"table: python: EQUIVALENT {name}")
+            else:
+                tally.unexplained += 1
+                fail(f"python: UNEXPLAINED {name}")
+    return len(seen)
+
+
+def table_rust(root, reports, scope, records, listed_path, tallies, fail, void) -> int:
+    """The Rust packages' rows: every shard's report read, each one missing or partial VOID by
+    name, and with a listing, each listed mutant no report tested VOID by name. Returns the
+    reports read."""
+    shards = {path.parent for path in reports.rglob("cargo-mutants.exit")}
+    shards |= {path.parent.parent for path in reports.rglob("outcomes.json")}
+    outcomes: list[tuple[str, dict]] = []
+    stopped: set[tuple[str, str]] = set()
+    read = 0
+    for directory in sorted(shards):
+        where = directory.relative_to(reports).as_posix()
+        report = read_json(str(directory / "mutants.out" / "outcomes.json"))
+        code = read_exit(directory / "cargo-mutants.exit")
+        if report is None and code == 0:
+            continue
+        read += 1
+        reason = partial_reason(report, code, "its outcomes.json")
+        if reason is not None:
+            void(f"{where}: {reason}")
+        stopped |= {
+            (where, name)
+            for name in memory_cap(
+                fail,
+                void,
+                lambda text: print(f"table: {text}"),
+                f"{where}: ",
+                directory,
+                report if reason is None else None,
+            )
+        }
+        if isinstance(report, dict):
+            outcomes += [(where, outcome) for outcome in report.get("outcomes", [])]
+
+    def in_scope(package: object) -> bool:
+        return scope is None or package == scope
+
+    excuses = Excuses(root, records, "rust")
+    listing = read_json(listed_path) if listed_path else None
+    listed = (
+        [entry for entry in listing if isinstance(entry, dict)] if isinstance(listing, list) else []
+    )
+    if listed_path and not isinstance(listing, list):
+        void(f"{listed_path} holds no cargo-mutants listing")
+    if isinstance(listing, list):
+        # Every record, of every package, against the whole tree's listing (R8, R12).
+        excuses.bind([mutant for mutant in map(cargo_mutant, listed) if mutant], fail)
+    else:
+        tested = [cargo_mutant(outcome_mutant(outcome)) for _, outcome in outcomes]
+        mine = [record for record in excuses.records if in_scope(record.package)]
+        excuses.bind([mutant for mutant in tested if mutant], fail, records=mine)
+    for entry in listed:
+        if in_scope(entry.get("package")):
+            tally = tallies[str(entry.get("package"))]
+            tally.listed = (tally.listed or 0) + 1
+    seen: Counter = Counter()
+    for where, outcome in outcomes:
+        entry = outcome_mutant(outcome)
+        if entry is None or not in_scope(entry.get("package")):
+            continue
+        package, name, summary = (
+            str(entry.get("package")),
+            entry.get("name"),
+            outcome.get("summary"),
+        )
+        seen[name] += 1
+        if (where, name) in stopped:
+            continue
+        tally = tallies[package]
+        excused = excuses.of(cargo_mutant(entry))
+        if summary == "MissedMutant":
+            if len(excused) == 1:
+                tally.equivalent += 1
+                print(f"table: {package}: EQUIVALENT {name}: {excuse_line(excused[0])}")
+            else:
+                tally.unexplained += 1
+                fail(f"{package}: UNEXPLAINED {name}{held_twice(excused)}")
+            continue
+        if summary in ("CaughtMutant", "Timeout"):
+            tally.killed += 1
+        elif summary == "Unviable":
+            tally.unviable += 1
+        else:
+            void(f"{where}: {name}: an outcome this table does not know, {summary}")
+            continue
+        for record in excused:
+            fail(f"{package}: {refutation(record, name, summary)}")
+    if isinstance(listing, list):
+        times = Counter(entry.get("name") for entry in listed if in_scope(entry.get("package")))
+        for name in sorted(set(times) | set(seen), key=str):
+            if seen[name] < times[name]:
+                void(f"never tested: {name}")
+            elif seen[name] > times[name]:
+                fail(f"{name}: tested {seen[name]} time(s), listed {times[name]} time(s)")
+    return read
+
+
+def table_web(root, reports, records, tally, fail, void) -> int:
+    """The Mini App's row, from the sweep's one Stryker report: a survived mutant one record binds
+    is equivalent; a survived mutant with none, an uncovered one and an ignored one are unexplained
+    (R10). Returns the reports read."""
+    found = sorted(reports.rglob("mutation.json"))
+    document = read_json(str(found[0])) if len(found) == 1 else None
+    if not isinstance(document, dict) or not isinstance(document.get("files"), dict):
+        void(f"stryker: {len(found)} mutation.json, not one whole report")
+        return 0
+    excuses = Excuses(root, records, "web")
+    swept = set()
+    for path, entry in sorted(document["files"].items()):
+        file = f"{WEB_ROOT}{path}"
+        swept.add(file)
+        if isinstance(entry.get("source"), str):
+            excuses.sources.put(file, entry["source"])
+        mutants = [(mutant, stryker_mutant(file, mutant)) for mutant in entry.get("mutants", [])]
+        mine = [record for record in excuses.records if record.get("file") == file]
+        bound = [mutant for _, mutant in mutants if mutant]
+        excuses.bind(bound, fail, records=mine, noun=f"mutant of {file}")
+        for mutant, parsed in mutants:
+            status = mutant.get("status", "Pending")
+            where = f"{file}:{mutant.get('location', {}).get('start', {}).get('line')}"
+            what = f"{mutant.get('mutatorName')} -> {mutant.get('replacement')!r}"
+            excused = excuses.of(parsed)
+            if status == "Survived" and len(excused) == 1:
+                tally.equivalent += 1
+                print(f"table: {MINIAPP}: EQUIVALENT {where}: {what}: {excuse_line(excused[0])}")
+                continue
+            if status in ("Survived", "NoCoverage", "Ignored"):
+                tally.unexplained += 1
+                fail(f"{MINIAPP}: UNEXPLAINED {where}: {status}: {what}{held_twice(excused)}")
+            elif status in ("Killed", "Timeout"):
+                tally.killed += 1
+            elif status in ("CompileError", "RuntimeError"):
+                tally.unviable += 1
+            else:
+                void(f"{where}: {status}: never run")
+                continue
+            for record in excused if status != "Survived" else []:
+                refuted = refutation(record, f"{where}: {what}", status)
+                if refuted is not None:
+                    fail(f"{MINIAPP}: {refuted}")
+    for record in excuses.records:
+        if record.get("file") not in swept:
+            fail(f"STALE {record}: the sweep mutated no such file")
+    return 1
+
+
+# --------------------------------------------------------------------------- the command line
+
+
+#: The record kinds a scoped price run writes (SPEC-421 R5, R7); any other line is torn.
+SCOPED_KINDS = ("control", "uncovered", "sentinel", "mutant")
+
+
+def scoped_prices(root: pathlib.Path, directory: str) -> int:
+    """Each population file's scoped price from a price run's `costs.jsonl` records under
+    `directory`, printed as `PYTHON_SCOPED_SECONDS` lines in path order (SPEC-421 R7, R8): the
+    largest control, the largest traced sentinel and the mean scoped mutant, each rounded up and at
+    least one, or (1, 1, 1) for a file no test covers. A file it cannot price is named unpriced,
+    a record for a path outside the population prices nothing, and a VOID prints no figure."""
+    files = sorted(pathlib.Path(directory).rglob("costs.jsonl"))
+    found: dict[str, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
+    records = torn = 0
+    for path in files:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except ValueError:
+                record = None
+            if not (
+                isinstance(record, dict)
+                and record.get("kind") in SCOPED_KINDS
+                and isinstance(record.get("path"), str)
+                and isinstance(record.get("seconds"), (int, float))
+            ):
+                torn += 1
+                continue
+            records += 1
+            found[record["path"]][record["kind"]].append(record)
+    examined = (
+        f"mutation: prices: examined {records} record(s) in {len(files)} file(s); torn {torn}"
+    )
+    voids = scoped_voids(found)
+    if not found:
+        voids.append(f"{directory} holds no cost record")
+    if voids:
+        for reason in voids:
+            print(f"mutation: prices: VOID {reason}")
+        print(examined)
+        return EXIT_FAIL
+    lines: list[str] = []
+    unpriced: list[str] = []
+    for path in sorted(read_json(str(root / PYTHON_POPULATION))):
+        kinds = found.get(path, {})
+        mutants = kinds.get("mutant", [])
+        if kinds.get("uncovered"):
+            triple = (1, 1, 1)
+        else:
+            missing = [kind for kind in SCOPED_KINDS if kind != "uncovered" and not kinds.get(kind)]
+            if missing:
+                unpriced.append(f"mutation: prices: {path} unpriced: no {missing[0]} record")
+                continue
+            control = max(1, math.ceil(max(record["seconds"] for record in kinds["control"])))
+            sentinel = max(1, math.ceil(max(record["seconds"] for record in kinds["sentinel"])))
+            mean = sum(record["seconds"] for record in mutants) / len(mutants)
+            triple = (control, sentinel, max(1, math.ceil(mean)))
+        first = scoped_setup(kinds)[0]
+        lines.append(
+            f'    "{path}": ({triple[0]}, {triple[1]}, {triple[2]}),  # run {first.get("run")} '
+            f"attempt {first.get('attempt')} job {first.get('job')}: {len(mutants)} scoped "
+            "mutant record(s)"
+        )
+    for line in lines + unpriced:
+        print(line)
+    print(examined)
+    return EXIT_OK
+
+
+def scoped_setup(kinds: dict[str, list[dict]]) -> list[dict]:
+    """A path's setup records, the ones that name where they ran: its controls, its uncovered
+    record and its traced sentinels, in that order (SPEC-421 R5)."""
+    return [*kinds.get("control", []), *kinds.get("uncovered", []), *kinds.get("sentinel", [])]
+
+
+def scoped_voids(found: dict[str, dict[str, list[dict]]]) -> list[str]:
+    """Why a price run's records price nothing, path by path (SPEC-421 R8): a setup record that
+    names no run or no job, a mutant record a whole run wrote, or one path's setup records spread
+    over two jobs or two attempts, since each figure names the one job and attempt it came from."""
+    voids: list[str] = []
+    for path in sorted(found):
+        kinds = found[path]
+        setup = scoped_setup(kinds)
+        for record in setup:
+            if record.get("run") is None:
+                voids.append(f"{path}: its {record['kind']} record names no run")
+            if record.get("job") is None:
+                voids.append(f"{path}: its {record['kind']} record names no job")
+        for record in kinds.get("mutant", []):
+            if record.get("why") == "all":
+                name = record.get("name")
+                voids.append(f"{path}: mutant {name} ran the whole suite, a whole run's record")
+        jobs = {record.get("job") for record in setup}
+        if len(jobs) > 1:
+            voids.append(f"{path}: its records name {len(jobs)} jobs")
+        attempts = {record.get("attempt") for record in setup}
+        if len(attempts) > 1:
+            voids.append(f"{path}: its records name {len(attempts)} attempts")
+    return voids
+
+
+def prices(directory: str) -> int:
+    """Each Python file's price from the `costs.jsonl` records under `directory` (SPEC-418 R7):
+    the dearer of its largest control seconds and its mean mutant seconds, rounded up and at least
+    one, printed as `PYTHON_CONTROL_SECONDS` lines that name the run, attempt and shard of their
+    figures. A line that is not a record is torn, counted and never read; no record reads VOID."""
+    files = sorted(pathlib.Path(directory).rglob("costs.jsonl"))
+    controls: dict[str, list[float]] = defaultdict(list)
+    mutants: dict[str, list[float]] = defaultdict(list)
+    sources: dict[str, list[str]] = defaultdict(list)
+    records = torn = 0
+    for path in files:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except ValueError:
+                record = None
+            if not (
+                isinstance(record, dict)
+                and record.get("kind") in ("control", "uncovered", "mutant")
+                and isinstance(record.get("path"), str)
+                and isinstance(record.get("seconds"), (int, float))
+            ):
+                torn += 1
+                continue
+            records += 1
+            if record["kind"] == "mutant":
+                mutants[record["path"]].append(record["seconds"])
+                continue
+            controls[record["path"]].append(record["seconds"])
+            sources[record["path"]].append(
+                f"run {record.get('run')} attempt {record.get('attempt')} shard {record.get('shard')}"
+            )
+    for name in sorted(set(controls) | set(mutants)):
+        # Each name holds a control or a mutant record, so its figures are never empty.
+        if mutants[name]:
+            mean = sum(mutants[name]) / len(mutants[name])
+        figures = controls[name] + ([mean] if mutants[name] else [])
+        price = max(1, math.ceil(max(figures)))
+        print(f'    "{name}": {price},  # {"; ".join(sources[name]) or "no control recorded"}')
+    print(f"mutation: prices: examined {records} record(s) in {len(files)} file(s); torn {torn}")
+    if not records:
+        print(f"mutation: prices: VOID {directory} holds no cost record")
+    return EXIT_OK if records else EXIT_FAIL
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument(
+        "verb",
+        choices=[
+            "plan",
+            "shards",
+            "size",
+            "judge",
+            "legs",
+            "survivors",
+            "battery",
+            "configs",
+            "exclusions",
+            "census",
+            "table",
+            "prices",
+        ],
+    )
+    parser.add_argument("--root", default=str(pathlib.Path(__file__).resolve().parents[1]))
+    parser.add_argument("--base")
+    parser.add_argument("--head", default="HEAD")
+    parser.add_argument("--out")
+    parser.add_argument("--plan")
+    parser.add_argument("--class", dest="klass", choices=["rust", "web", "oracle", "scripts"])
+    parser.add_argument("--python")
+    parser.add_argument("--python-listed")
+    parser.add_argument("--python-whole")
+    parser.add_argument("--outcomes")
+    parser.add_argument("--tool-exit", type=int)
+    parser.add_argument("--stryker")
+    parser.add_argument("--rows")
+    parser.add_argument("--reports")
+    parser.add_argument("--open-titles")
+    parser.add_argument("--event", default="")
+    parser.add_argument("--base-ref", default="")
+    parser.add_argument("--subject", default="")
+    parser.add_argument("--head-ref")
+    parser.add_argument("--head-repo", default="")
+    parser.add_argument("--repo", default="")
+    parser.add_argument("--shards", type=int)
+    parser.add_argument("--python-shards", type=int, default=PYTHON_WEEKLY_SHARDS)
+    parser.add_argument("--listed")
+    parser.add_argument("--shard-reports")
+    parser.add_argument("--whole")
+    parser.add_argument("--package")
+    parser.add_argument("--rust-leg")
+    parser.add_argument("--rows-leg")
+    parser.add_argument("--python-release-leg")
+    parser.add_argument("--costs")
+    parser.add_argument("--scoped", action="store_true")
+    args = parser.parse_args(argv)
+    root = pathlib.Path(args.root).resolve()
+    if args.verb == "plan":
+        if not args.base or not args.out:
+            parser.error("plan needs --base and --out")
+        scope = scope_of(args.event, args.base_ref, args.subject)
+        release = release_run(args.event, args.base_ref, args.head_ref, args.head_repo, args.repo)
+        try:
+            plan = plan_diff(root, args.base, args.head, pathlib.Path(args.out), scope, release)
+        except mutation_rows.PopulationRefused as refusal:
+            print(f"mutation: plan: REFUSED: {refusal}", file=sys.stderr)
+            return EXIT_FAIL
+        say_plan(plan)
+        return EXIT_OK
+    if args.verb == "shards":
+        if not args.plan:
+            parser.error("shards needs --plan")
+        refused = python_share_refused()
+        if refused:
+            print(refused)
+            return EXIT_FAIL
+        outside = python_ceiling_refused()
+        if outside:
+            print(outside)
+            return EXIT_FAIL
+        beyond = rust_ceiling_refused()
+        if beyond:
+            print(beyond)
+            return EXIT_FAIL
+        return shards(pathlib.Path(args.plan), args.listed, args.python_listed)
+    if args.verb == "size":
+        return size(args.listed, args.package)
+    if args.verb == "judge":
+        if not args.plan or not args.klass:
+            parser.error("judge needs --plan and --class")
+        return judge(args)
+    if args.verb == "legs":
+        if not args.plan or args.rust_leg is None or args.rows_leg is None:
+            parser.error("legs needs --plan, --rust-leg and --rows-leg")
+        return legs(args)
+    if args.verb == "survivors":
+        if not args.reports or not args.out:
+            parser.error("survivors needs --reports and --out")
+        return survivors(args)
+    if args.verb == "battery":
+        if not args.reports or args.shards is None or args.shards < 1:
+            parser.error("battery needs --reports and --shards, at least 1")
+        return battery(
+            pathlib.Path(args.reports), args.shards, args.package, args.listed, args.python_shards
+        )
+    if args.verb == "configs":
+        return configs(root)
+    if args.verb == "census":
+        return census(root)
+    if args.verb == "table":
+        if not args.reports:
+            parser.error("table needs --reports")
+        return table(args)
+    if args.verb == "prices":
+        if not args.costs:
+            parser.error("prices needs --costs")
+        return scoped_prices(root, args.costs) if args.scoped else prices(args.costs)
+    return exclusions(root)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT study_day, celebrated_at FROM records WHERE kind = ?1",
+  "describe": {
+    "columns": [
+      {
+        "name": "study_day",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "records",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "celebrated_at",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "records",
+            "name": "celebrated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "b82f6bef4b4becf089bed19de3c230c1bc3855692a700f7af74da595b7e1369c"
+}

@@ -1,0 +1,33 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S05601-THE-ADAPTER-COMPILES-IN-THE-OWNED-RAILS",
+        "vault",
+        "src/rails.rs",
+        "include_str!(\"../data/rails.json\")",
+        "include_str!(\"../data/layout.json\")",
+        "owned_data::the_rails_parser_refuses_the_owned_rails_without_each_field_it_reads",
+        "the adapter enforces the rails DeckStreak owns, which the box run holds equal to the pack's (SPEC-056 R5, A6)"
+      ],
+      [
+        "S05602-THE-ADAPTER-COMPILES-IN-THE-OWNED-LAYOUT",
+        "vault",
+        "src/staged.rs",
+        "include_str!(\"../data/layout.json\")",
+        "include_str!(\"../data/rails.json\")",
+        "owned_data::the_layout_parser_refuses_the_owned_layout_without_each_field_it_requires",
+        "a duty run's default layout is the one DeckStreak owns (SPEC-056 R5, A7)"
+      ],
+      [
+        "S05603-THE-GATE-RUNS-THE-OWNED-CLASSES",
+        "vault",
+        "src/staged.rs",
+        "include_str!(\"../data/gate-classes.json\")",
+        "include_str!(\"../data/layout.json\")",
+        "lib::staged::tests::the_gate_class_parser_refuses_the_owned_classes_without_a_field_it_reads",
+        "the gate runs the blocking classes DeckStreak owns, with their timeouts (SPEC-056 R5, A8)"
+      ]
+    ]
+  }
+}

@@ -22,8 +22,8 @@ request into `dev`.
 
 1. `CLAUDE.md`, `CHARTER.md`, `docs/CONTEXT-MAP.md`, `docs/LEXICON.md`.
 2. Your SPEC, and every ADR it names.
-3. The packs your SPEC names, in `.packs/skills/packs/<pack>/SKILL.md`. Load a pack when your work
-   touches its subject, and run its rows over your change with `python3 scripts/pack-rows.py --pack <pack>`.
+3. The packs your SPEC names. They are box-run (ADR-069): your private environment notes say where
+   a pack's SKILL.md is, and `scripts/box-packs.sh` judges its rows over your change.
 4. Context7 (`resolve-library-id`, then `query-docs`) for every library API you call. Record the
    library ids that answered in your hand-back.
 
@@ -51,6 +51,61 @@ request into `dev`.
 - No `TODO`, `FIXME`, `HACK` or `XXX`.
 - Conventional commits (subject at most 72 characters), no attribution trailers, never `--no-verify`.
 
+## Mutation testing
+
+A test proves something only when it fails on code that is wrong (SPEC-039, ADR-057). Red first
+stays the rule; beyond it, every behaviour change proves that its tests kill mutants of the changed
+code.
+
+- **Six CI jobs judge every pull request,** a release into `main` included, each a need of `ci`.
+  `mutation-plan` reads the diff and sizes the shards from cargo-mutants' own listing;
+  `mutation-rust` runs cargo-mutants over the diff (`--in-diff`, `--in-place`), one job per shard;
+  `mutation-rows` proves the hand-proved rows the diff selects and checks that no row left while
+  its target stayed; `mutation-verdict` counts every shard's report, binds every equivalence record
+  against the whole tree's listing, and judges; `mutation-web` runs StrykerJS over every changed Mini
+  App file, whole; `mutation-python` runs `scripts/mutation_python.py` over the changed guard
+  scripts and the parity oracle's Python, one job per shard (ADR-073). Read the verdict's counts, never only its colour: a class of production code the
+  diff changed that examined nothing is VOID, a shard that never reported is VOID by name, and VOID
+  fails the job. A diff of comments and blank lines reads `not-applicable`, by name.
+- **A surviving mutant is yours.** Kill it with a test that asserts the behaviour: in the mutated
+  crate's own tests, since cargo-mutants runs a mutant against its own package's tests only, or a
+  Vitest test beside the Mini App file. When no test can tell it apart, record it EQUIVALENT in
+  `scripts/mutation-equivalent.d/<package>.json`, `miniapp.json` for the Mini App (SPEC-057,
+  ADR-070). A record holds its `file`; its `mutant`, the tool's own description without the
+  location (cargo-mutants' name after `<file>:<line>:<column>: `, or Stryker's
+  `<mutatorName>: <replacement>`); an `anchor`, a text that occurs once in the file, inside which
+  the mutant's span starts; a `span`, the mutated text, only when two mutants of that description
+  start at one position there; a one-line `reason`; the `evidence`, the code fact a reviewer checks
+  it against; for a Rust mutant, `reached_by`, a test of its package that runs the mutated code;
+  and the `issue`. `python3 scripts/mutation-verdict.py census` holds every record whole in the
+  gate. The mutant keeps running, so its claim is tested again: a record whose mutant a test
+  catches is REFUTED, one that binds no listed mutant STALE and one that binds two AMBIGUOUS, and
+  an uncovered Mini App mutant is UNCOVERED, never excused, until a test reaches it. Nothing is
+  excluded or skipped: `mutation-verdict.py exclusions` refuses every form that would hide a
+  mutant. A survivor or a VOID already on a file you touch is yours too.
+- **A surviving Python mutant is yours, and it is resolved one of two ways.** Either kill it with a
+  test that asserts the behaviour, in a module the runner runs for that file, or record it
+  EQUIVALENT in `scripts/mutation-equivalent.d/python.json` with the same fields as any record. There
+  is no third way: nothing in a Python file hides a mutant from the run. `mutation_python.py`
+  lists (`list`), runs (`run`) and checks (`census`) it; run one file locally, on a committed tree.
+- **What the tool cannot mutate takes a row.** cargo-mutants never mutates a constant, an attribute
+  or a string, and never looks inside a method named `new`. An invariant there (a security check, a
+  parity comparison, a bound, streak and economy maths) gets a hand-proved row in
+  `scripts/mutation-rows.d/`, in your SPEC's band, `S<NNN>00-S<NNN>99.json`: an anchor that occurs
+  exactly once, one mutant, and a killer that names exactly one test (`<target>::<test path>`, or
+  `<module>.<Class>.<method>`). Prove it on a committed tree with
+  `python3 scripts/mutation_rows.py prove --band S<NNN>00-S<NNN>99`: every row KILLED, the file
+  restored byte for byte.
+- **Never weaken.** A row or a killing test leaves only with its target. Retiring one whose target
+  stays needs an entry in `scripts/mutation-rows.retired.json` with the reason and the maintainer's
+  approval, which the orchestrator relays.
+- **Locally, stay targeted:** one file (`cargo mutants --in-place -f <file>`) or your diff
+  (`--in-diff`), on a committed tree, then `cargo clean`. `--in-place` runs one mutant at a time,
+  the rule's `-j 1`, and cargo-mutants refuses a `-j` flag beside it. Heavy runs belong in CI; the
+  weekly battery sweeps the whole repository and files each file's survivors as an issue, and a
+  dispatch of it with `package` set sweeps one crate, or `miniapp`, and ends with that scope's
+  `python3 scripts/mutation-verdict.py table` line (SPEC-057 R13, R14).
+
 ## Land it
 
 1. Add a changelog fragment under `changelog.d/` (see its README).
@@ -60,6 +115,15 @@ request into `dev`.
    gate's output.
 3. The orchestrator verifies by measurement (the gate on your head, the red-first record, the
    examined counts, the pack rows) and marks the pull request ready and merges it. Do not merge.
+4. `dev` requires an up-to-date head (ADR-034). When `dev` moves while you work, bring it into your
+   branch with `git fetch origin && git merge origin/dev`: a merge commit, never a rebase, so the
+   shas your red-first record cites survive. Then run the gate again.
+5. Scrub the pull request's body before you post it, because this repository is public:
+   `python3 scripts/public-scrub.py --root . --no-tree --subject <the directory holding the body>`,
+   with the body kept outside the repository.
+6. Never push to `dev` or `main`: every change reaches them by a pull request. Agents never approve
+   a workflow run from a fork, and never merge a pull request whose head repository is not
+   `RexRenatus/deck-streak` (ADR-035).
 
 ## Writing a DeckStreak skill pack (the pack-wave method)
 
@@ -85,18 +149,18 @@ When your issue creates or changes a pack (an agent duty, an engineering practic
   each check proved by a planted-defect fixture.
 - **R8 documents:** SKILL.md with the exhaustive catalog and exact counts; `checks.json`; a SPEC with
   the coverage matrix and References; an ADR naming what it was chosen against.
-- `python3 .packs/scripts/pack-lint.py` judges the pack's shape.
+- The pack-authoring pack, one of the box-run packs, judges the pack's shape.
 
 ## Hand back
 
 - The pull request number and its head sha.
 - The red-first record, and the acceptance commands' output.
-- The tail of `bash scripts/check.sh` (every stage line), and `python3 scripts/pack-rows.py`'s
+- The tail of `bash scripts/check.sh` (every stage line), and the box run's
   summary for the packs you touched.
 - The Context7 library ids that answered, and the external crates or packages you added.
 - `## SKILL FEEDBACK`: where a pack, the SPEC or this brief was unclear or wrong, with the evidence.
 
 ## Private environment notes (filled by the orchestrator, never committed)
 
-`<the tool environment to source, the machine's limits, the paths of the vendored phoenix-v2
-checkout, and anything else specific to where you run>`
+`<the tool environment to source, the machine's limits, the paths of the packs checkout, its runner
+and the private wiring file, and anything else specific to where you run>`

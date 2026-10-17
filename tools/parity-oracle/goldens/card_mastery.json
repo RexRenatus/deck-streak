@@ -1,0 +1,1506 @@
+{
+  "adapter": "mastery_of",
+  "cases": [
+    {
+      "class": "suspended_or_buried",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "ivl": 21,
+          "queue": -1
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "suspended_or_buried",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 21,
+          "queue": -1,
+          "stability": 30.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "suspended_or_buried",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "ivl": 21,
+          "queue": -2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 1.0
+    },
+    {
+      "class": "suspended_or_buried",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 21,
+          "queue": -2,
+          "stability": 30.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.7440731378420168
+    },
+    {
+      "class": "suspended_or_buried",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "ivl": 21,
+          "queue": -3
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 1.0
+    },
+    {
+      "class": "suspended_or_buried",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 21,
+          "queue": -3,
+          "stability": 30.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.7440731378420168
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 0,
+          "ivl": 0,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 1,
+          "ivl": 0,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "ivl": 0,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 3,
+          "ivl": 0,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 0,
+          "ivl": 1,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 1,
+          "ivl": 1,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "ivl": 1,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 3,
+          "ivl": 1,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 0,
+          "ivl": 20,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 1,
+          "ivl": 20,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "ivl": 20,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 3,
+          "ivl": 20,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 0,
+          "ivl": 21,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 1,
+          "ivl": 21,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "ivl": 21,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 1.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 3,
+          "ivl": 21,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 0,
+          "ivl": 22,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 1,
+          "ivl": 22,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "ivl": 22,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 1.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 3,
+          "ivl": 22,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 0,
+          "ivl": 365,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 1,
+          "ivl": 365,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "ivl": 365,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 1.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 3,
+          "ivl": 365,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "ivl": 21,
+          "queue": 2,
+          "stability": 0.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 1.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "ivl": 21,
+          "queue": 2,
+          "stability": -2.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 1.0
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "ivl": 21,
+          "queue": 2,
+          "stability": null
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 1.0
+    },
+    {
+      "class": "mature_interval",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "ivl": 20,
+          "queue": 2
+        },
+        "mature_ivl": 20,
+        "now_sec": 1700000000
+      },
+      "output": 1.0
+    },
+    {
+      "class": "mature_interval",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "ivl": 20,
+          "queue": 2
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.0
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1700000000,
+          "queue": 2,
+          "stability": 0.5
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.08785580065104737
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1699913600,
+          "queue": 2,
+          "stability": 0.5
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.07382429666902322
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1697408000,
+          "queue": 2,
+          "stability": 0.5
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.04148270424181742
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1665440000,
+          "queue": 2,
+          "stability": 0.5
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.024819077470135648
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1700000000,
+          "queue": 2,
+          "stability": 1.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.15019048322368794
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1699913600,
+          "queue": 2,
+          "stability": 1.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.13517143490131917
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1697408000,
+          "queue": 2,
+          "stability": 1.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.08108306314743004
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1665440000,
+          "queue": 2,
+          "stability": 1.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.04872002164725766
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1700000000,
+          "queue": 2,
+          "stability": 10.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.5195737064824407
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1699913600,
+          "queue": 2,
+          "stability": 10.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.5126525465131245
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1697408000,
+          "queue": 2,
+          "stability": 10.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.41487969455707285
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1665440000,
+          "queue": 2,
+          "stability": 10.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.26542923220974474
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1700000000,
+          "queue": 2,
+          "stability": 99.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9978439716109563
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1699913600,
+          "queue": 2,
+          "stability": 99.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9964518103504878
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1697408000,
+          "queue": 2,
+          "stability": 99.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9604936481118281
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1665440000,
+          "queue": 2,
+          "stability": 99.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.7639394600328075
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1700000000,
+          "queue": 2,
+          "stability": 100.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 1.0
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1699913600,
+          "queue": 2,
+          "stability": 100.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.998618724701309
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1697408000,
+          "queue": 2,
+          "stability": 100.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9629036404842515
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1665440000,
+          "queue": 2,
+          "stability": 100.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.7667235669588573
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1700000000,
+          "queue": 2,
+          "stability": 101.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 1.0
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1699913600,
+          "queue": 2,
+          "stability": 101.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9986323446849579
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1697408000,
+          "queue": 2,
+          "stability": 101.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9632323584701671
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1665440000,
+          "queue": 2,
+          "stability": 101.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.7678444384340183
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1700000000,
+          "queue": 2,
+          "stability": 250.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 1.0
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1699913600,
+          "queue": 2,
+          "stability": 250.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9994461145334569
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1697408000,
+          "queue": 2,
+          "stability": 250.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9841393147578028
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1665440000,
+          "queue": 2,
+          "stability": 250.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.8613098189067345
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1700000000,
+          "queue": 2,
+          "stability": 5000.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 1.0
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1699913600,
+          "queue": 2,
+          "stability": 5000.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9999722619571128
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1697408000,
+          "queue": 2,
+          "stability": 5000.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.999169860867109
+    },
+    {
+      "class": "stability_target",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1665440000,
+          "queue": 2,
+          "stability": 5000.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9892588416155347
+    },
+    {
+      "class": "decay_clamp",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 1e-06,
+          "ivl": 30,
+          "last_review_sec": 1696544000,
+          "queue": 2,
+          "stability": 20.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.5933044587059093
+    },
+    {
+      "class": "decay_clamp",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.001,
+          "ivl": 30,
+          "last_review_sec": 1696544000,
+          "queue": 2,
+          "stability": 20.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.5933044587059093
+    },
+    {
+      "class": "decay_clamp",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.0005,
+          "ivl": 30,
+          "last_review_sec": 1696544000,
+          "queue": 2,
+          "stability": 20.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.5933044587059093
+    },
+    {
+      "class": "decay_clamp",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.01,
+          "ivl": 30,
+          "last_review_sec": 1696544000,
+          "queue": 2,
+          "stability": 20.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.5896148319513936
+    },
+    {
+      "class": "decay_clamp",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.126,
+          "ivl": 30,
+          "last_review_sec": 1696544000,
+          "queue": 2,
+          "stability": 20.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.561063994287172
+    },
+    {
+      "class": "decay_clamp",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1696544000,
+          "queue": 2,
+          "stability": 20.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.5543256945256889
+    },
+    {
+      "class": "decay_clamp",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 1.0,
+          "ivl": 30,
+          "last_review_sec": 1696544000,
+          "queue": 2,
+          "stability": 20.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.5397416805264265
+    },
+    {
+      "class": "decay_clamp",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 10.0,
+          "ivl": 30,
+          "last_review_sec": 1696544000,
+          "queue": 2,
+          "stability": 20.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.5349315740127992
+    },
+    {
+      "class": "decay_clamp",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 11.0,
+          "ivl": 30,
+          "last_review_sec": 1696544000,
+          "queue": 2,
+          "stability": 20.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.5349315740127992
+    },
+    {
+      "class": "decay_clamp",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 50.0,
+          "ivl": 30,
+          "last_review_sec": 1696544000,
+          "queue": 2,
+          "stability": 20.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.5349315740127992
+    },
+    {
+      "class": "last_review",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": null,
+          "queue": 2,
+          "stability": 20.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.6596842761989657
+    },
+    {
+      "class": "last_review",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 0,
+          "queue": 2,
+          "stability": 20.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.6596842761989657
+    },
+    {
+      "class": "last_review",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1700000000,
+          "queue": 2,
+          "stability": 20.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.6596842761989657
+    },
+    {
+      "class": "last_review",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1700432000,
+          "queue": 2,
+          "stability": 20.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.6596842761989657
+    },
+    {
+      "class": "last_review",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 30,
+          "last_review_sec": 1699999999,
+          "queue": 2,
+          "stability": 20.0
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.6596842232479556
+    },
+    {
+      "class": "other_queue",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.126,
+          "ivl": 371,
+          "last_review_sec": 1688425475,
+          "queue": 0,
+          "stability": 205.939
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9253780494854753
+    },
+    {
+      "class": "other_queue",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 1.0,
+          "ivl": 52,
+          "last_review_sec": 1692566064,
+          "queue": 1,
+          "stability": 261.665
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9647521458039044
+    },
+    {
+      "class": "other_queue",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.1,
+          "ivl": 211,
+          "last_review_sec": 1695490806,
+          "queue": 3,
+          "stability": 122.141
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9430114901158333
+    },
+    {
+      "class": "other_queue",
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 1.0,
+          "ivl": 164,
+          "last_review_sec": 1680074001,
+          "queue": 4,
+          "stability": 142.427
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.8475174415651965
+    },
+    {
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 107,
+          "last_review_sec": 1685428784,
+          "queue": 2,
+          "stability": 60.105
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.7179410337362504
+    },
+    {
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.5,
+          "ivl": 48,
+          "last_review_sec": 1682104523,
+          "queue": 2,
+          "stability": 188.38
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.8916116058698276
+    },
+    {
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.1,
+          "ivl": 106,
+          "last_review_sec": 1691088411,
+          "queue": 2,
+          "stability": 172.048
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9276184248265829
+    },
+    {
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 43,
+          "last_review_sec": 1686487943,
+          "queue": 2,
+          "stability": 57.263
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.7121534179896833
+    },
+    {
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.1,
+          "ivl": 84,
+          "last_review_sec": 1688218935,
+          "queue": 2,
+          "stability": 187.262
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9177106426342548
+    },
+    {
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.1,
+          "ivl": 113,
+          "last_review_sec": 1699397078,
+          "queue": 2,
+          "stability": 172.265
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9927322158255854
+    },
+    {
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.126,
+          "ivl": 317,
+          "last_review_sec": 1685146992,
+          "queue": 2,
+          "stability": 90.364
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.8358012761415713
+    },
+    {
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.126,
+          "ivl": 370,
+          "last_review_sec": 1687831165,
+          "queue": 2,
+          "stability": 134.327
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.8969302896426133
+    },
+    {
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.5,
+          "ivl": 222,
+          "last_review_sec": 1694713192,
+          "queue": 2,
+          "stability": 47.188
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.7352479776581285
+    },
+    {
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.126,
+          "ivl": 298,
+          "last_review_sec": 1694822750,
+          "queue": 2,
+          "stability": 128.679
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9418408303172967
+    },
+    {
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.5,
+          "ivl": 27,
+          "last_review_sec": 1692374213,
+          "queue": 2,
+          "stability": 155.943
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9395733146187022
+    },
+    {
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.2,
+          "ivl": 42,
+          "last_review_sec": 1699828212,
+          "queue": 2,
+          "stability": 34.626
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.7681876631999662
+    },
+    {
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.5,
+          "ivl": 162,
+          "last_review_sec": 1679712887,
+          "queue": 2,
+          "stability": 201.746
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.8863086607065961
+    },
+    {
+      "input": {
+        "card": {
+          "ctype": 2,
+          "decay": 0.1,
+          "ivl": 388,
+          "last_review_sec": 1692726994,
+          "queue": 2,
+          "stability": 228.923
+        },
+        "mature_ivl": 21,
+        "now_sec": 1700000000
+      },
+      "output": 0.9490554125684532
+    }
+  ],
+  "function": "progress.card_mastery",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds a types.Card from the case's queue, type, interval, stability, decay and last review, and passes the case's clock and mature interval; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_077.py",
+  "registry_sha256": "a4df214341b4c7fb76da5699faf932c96faac65eef67d5945590c876aaf92946",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

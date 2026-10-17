@@ -1,0 +1,503 @@
+name: mutation-weekly
+
+# The weekly full-repository mutation battery (SPEC-039 R12, ADR-057 D7): cargo-mutants over the
+# whole workspace in the round-robin shards its own listing sizes (SPEC-362), StrykerJS over the
+# whole Mini App, the repository's own Python whole in 16 round-robin shards (SPEC-087), and every
+# hand-proved row, over dev, on GitHub-hosted runners. Each file with a surviving mutant becomes one
+# issue, deduplicated by title against the open issues and scrubbed before it is filed; a mutant the
+# equivalence record excuses is drafted as none (SPEC-057 R12).
+#
+# A dispatch may name one `package` (SPEC-057 R14): a package of the workspace, whose mutants alone
+# the rust shards sweep, `miniapp`, which runs the Stryker sweep alone, or `python`, which runs the
+# Python shards alone. The survivors job then
+# counts only the reports that scope promises, and ends with its `table` line. With no package, the
+# battery sweeps everything. The `listing` job lists the whole tree, building nothing: the table
+# binds every record against it, and counts from it the shards a scope gave a mutant.
+#
+# GitHub runs `schedule` only for a workflow on the default branch, main, so the weekly run goes
+# live when a release carries this file there (SPEC-039 section 7). A `workflow_dispatch` runs this
+# file at any ref that holds it once GitHub has registered the workflow: run 36384080819 was a
+# dispatch at a feature branch while main held no copy of it (SPEC-039 section 10). A pull request
+# that changes this file runs `rehearsal`: the same tools on one file, one row and one Stryker
+# file, and the survivors' drafting and scrub, filing nothing.
+#
+# No secret is used, the default token is read-only (the survivors job alone may write issues),
+# every action is pinned by its full commit SHA, and a cache is restored, never saved.
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      file_issues:
+        description: "File each file with a surviving mutant as an issue"
+        type: boolean
+        default: true
+      package:
+        description: "Sweep one package of the workspace, miniapp, or python; empty sweeps everything"
+        type: string
+        default: ""
+        required: false
+  pull_request:
+    branches: [dev]
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/mutation-weekly.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-weekly-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # The number of legs the rust job runs (SPEC-129, SPEC-362 R11): every run but the Mini App's
+  # lists its mutants with the listing job's command, the whole workspace or the one package a
+  # dispatch names, builds nothing, and takes the fewest round-robin shards whose slowest the
+  # per-pull-request plan's projection puts within its bound, at most the battery run's ceiling; a
+  # listing that needs more is refused whole, never capped. A Mini App dispatch takes 1 and lists
+  # nothing. The legs and the survivors' battery read this one count, so the mutants, the timeouts
+  # and the test tool are the sized sweep's.
+  size:
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      shards: ${{ steps.size.outputs.shards }}
+      matrix: ${{ steps.size.outputs.matrix }}
+    env:
+      PACKAGE: ${{ inputs.package }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'dev' || github.ref }}
+          persist-credentials: false
+      - name: the pinned Rust toolchain (rust-toolchain.toml)
+        if: ${{ inputs.package != 'miniapp' }}
+        run: rustup show
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        if: ${{ inputs.package != 'miniapp' }}
+        with:
+          tool: cargo-mutants@27.1.0
+          fallback: none
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        if: ${{ inputs.package != 'miniapp' }}
+        with:
+          tool: cargo-nextest@0.9.146
+          fallback: none
+      - name: the package's mutants, in the order the shards take them
+        if: ${{ inputs.package != 'miniapp' }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/size"
+          if [ -n "$PACKAGE" ]; then
+            cargo mutants --no-shuffle --list --json --in-place --package="$PACKAGE" --timeout 2300 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"
+          else
+            cargo mutants --no-shuffle --list --json --in-place --timeout 2300 --build-timeout 600 > "$RUNNER_TEMP/size/package.json"
+          fi
+      - name: the shards, the fewest whose slowest is projected within its bound
+        id: size
+        run: python3 scripts/mutation-verdict.py size ${PACKAGE:+--package "$PACKAGE"} --listed "$RUNNER_TEMP/size/package.json"
+      - name: keep the package's listing
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sizing
+          path: ${{ runner.temp }}/size/
+          if-no-files-found: ignore
+
+  rust:
+    needs: size
+    if: ${{ github.event_name != 'pull_request' && inputs.package != 'miniapp' && inputs.package != 'python' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.size.outputs.matrix) }}
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # A scheduled run's ref is main; the battery sweeps dev.
+          ref: ${{ github.event_name == 'schedule' && 'dev' || github.ref }}
+          persist-credentials: false
+      - name: the pinned Rust toolchain (rust-toolchain.toml)
+        run: rustup show
+      - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
+        env:
+          PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
+        run: |
+          curl -fsSL -o /tmp/protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v31.1/protoc-31.1-linux-x86_64.zip
+          echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c -
+          mkdir -p "$HOME/.local/protoc" && unzip -q /tmp/protoc.zip -d "$HOME/.local/protoc"
+          echo "$HOME/.local/protoc/bin" >> "$GITHUB_PATH"
+      - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        with:
+          tool: cargo-mutants@27.1.0
+          fallback: none
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        with:
+          tool: cargo-nextest@0.9.146
+          fallback: none
+      # Round-robin spreads the engine's crates, whose mutants cost minutes each, across every
+      # shard. In place, cargo-mutants applies no multiplier and bounds no build unless told:
+      # --timeout bounds each mutant's tests and the unmutated baseline's, and --build-timeout each
+      # mutant's build (the tool's timeouts chapter); the baseline's build is never bounded. The
+      # 2300 s covers the settle census's 1521 s with a 1.5 margin (SPEC-327, SPEC-362 R6), and the
+      # verdict holds each leg's slowest baseline test to the same margin (R7). A dispatch that
+      # names a package sweeps its mutants alone, and any other run the whole workspace, round-robin
+      # over the shards its own listing sized (SPEC-129, SPEC-362 R11); the input reaches the shell
+      # through the environment, never interpolated into it.
+      - name: cargo-mutants, one shard of the workspace, or of the one package a dispatch names
+        env:
+          PACKAGE: ${{ inputs.package }}
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ needs.size.outputs.shards }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/mutation"
+          rc=0
+          if [ -n "$PACKAGE" ]; then
+            python3 scripts/memory_scope.py --report "$RUNNER_TEMP/mutation" -- cargo mutants --no-shuffle -vV --in-place --package="$PACKAGE" --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2300 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
+          else
+            python3 scripts/memory_scope.py --report "$RUNNER_TEMP/mutation" -- cargo mutants --no-shuffle -vV --in-place --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2300 --build-timeout 600 --output "$RUNNER_TEMP/mutation" || rc=$?
+          fi
+          echo "$rc" > "$RUNNER_TEMP/mutation/cargo-mutants.exit"
+          echo "cargo-mutants exited $rc"
+          exit "$rc"
+      - name: keep the shard's report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutants-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/mutation/
+          if-no-files-found: warn
+
+  web:
+    if: ${{ github.event_name != 'pull_request' && (!inputs.package || inputs.package == 'miniapp') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'dev' || github.ref }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: the Mini App's dependencies
+        run: pnpm install --frozen-lockfile
+      - name: the sources the app generates (paraglide-js, svelte-kit sync)
+        run: |
+          pnpm --dir web/app exec paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations --silent
+          pnpm --dir web/app exec svelte-kit sync
+      - name: StrykerJS over the whole Mini App
+        working-directory: web/app
+        run: |
+          mkdir -p "$RUNNER_TEMP/mutation"
+          rc=0
+          pnpm exec stryker run || rc=$?
+          cp -r reports/mutation "$RUNNER_TEMP/mutation/stryker" || true
+          echo "StrykerJS exited $rc"
+          exit "$rc"
+      - name: keep the report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: stryker
+          path: ${{ runner.temp }}/mutation/
+          if-no-files-found: warn
+
+  # The repository's own Python, whole (SPEC-087, ADR-073): the runner over every mutant of the
+  # population in 16 round-robin shards, none stopping at a first survivor, each report kept. A
+  # crate's or the Mini App's scope sweeps no Python; `python` sweeps this and nothing else.
+  python:
+    if: ${{ github.event_name != 'pull_request' && (!inputs.package || inputs.package == 'python') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'dev' || github.ref }}
+          persist-credentials: false
+      - name: the runner, one shard of the whole population (its exit is recorded; the verdict reads its report)
+        run: |
+          out="$RUNNER_TEMP/python-shard"
+          mkdir -p "$out"
+          rc=0
+          python3 scripts/mutation_python.py run --all --shard ${{ matrix.shard }}/16 --report "$out/report.json" || rc=$?
+          echo "mutation-python exited $rc"
+      - name: keep the shard's report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-python-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/python-shard/
+          if-no-files-found: warn
+
+  rows:
+    if: ${{ github.event_name != 'pull_request' && !inputs.package }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'dev' || github.ref }}
+          persist-credentials: false
+      - name: the pinned Rust toolchain (rust-toolchain.toml)
+        run: rustup show
+      - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
+        env:
+          PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
+        run: |
+          curl -fsSL -o /tmp/protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v31.1/protoc-31.1-linux-x86_64.zip
+          echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c -
+          mkdir -p "$HOME/.local/protoc" && unzip -q /tmp/protoc.zip -d "$HOME/.local/protoc"
+          echo "$HOME/.local/protoc/bin" >> "$GITHUB_PATH"
+      - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - name: fetch the locked dependency graph, so the offline census finds every package
+        run: cargo fetch --locked
+      - name: every hand-proved row
+        run: |
+          mkdir -p "$RUNNER_TEMP/mutation"
+          python3 scripts/mutation_rows.py prove --all --report "$RUNNER_TEMP/mutation/rows.json"
+      - name: keep the report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rows
+          path: ${{ runner.temp }}/mutation/
+          if-no-files-found: warn
+
+  # The whole tree's mutants, as cargo-mutants itself lists them, building nothing: the survivors
+  # job's table binds every equivalence record against this listing, and counts from it the shards
+  # a scoped dispatch gave a mutant (SPEC-057 R8, R12, R14).
+  listing:
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'dev' || github.ref }}
+          persist-credentials: false
+      - name: the pinned Rust toolchain (rust-toolchain.toml)
+        run: rustup show
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        with:
+          tool: cargo-mutants@27.1.0
+          fallback: none
+      # cargo-mutants reads .cargo/mutants.toml, whose test tool is nextest; the listing runs no
+      # test and builds nothing, but it carries the same tool and bounds as every other command.
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        with:
+          tool: cargo-nextest@0.9.146
+          fallback: none
+      - name: the whole tree's mutants, in the order the shards take them
+        run: |
+          mkdir -p "$RUNNER_TEMP/listing"
+          cargo mutants --no-shuffle --list --json --in-place --timeout 2300 --build-timeout 600 > "$RUNNER_TEMP/listing/whole.json"
+      - name: the whole Python population's mutants, which every Python record is bound against
+        run: python3 scripts/mutation_python.py list --all --out "$RUNNER_TEMP/listing/python-whole.json"
+      - name: keep the listing
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: listing
+          path: ${{ runner.temp }}/listing/
+          if-no-files-found: warn
+
+  survivors:
+    needs: [size, rust, python, web, rows, listing]
+    if: ${{ always() && github.event_name != 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'dev' || github.ref }}
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: ${{ runner.temp }}/reports
+      - name: the open issues' titles, so a file already filed is not filed twice
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: gh issue list --repo "$REPO" --state open --limit 1000 --json title --jq '[.[].title]' > "$RUNNER_TEMP/open-titles.json"
+      - name: one draft per file with a surviving mutant
+        run: python3 scripts/mutation-verdict.py survivors --reports "$RUNNER_TEMP/reports" --out "$RUNNER_TEMP/drafts" --open-titles "$RUNNER_TEMP/open-titles.json"
+      - name: scrub every draft before anything is posted (SPEC-033)
+        run: python3 scripts/public-scrub.py --root . --no-tree --subject "$RUNNER_TEMP/drafts"
+      - name: file each new draft as an issue (a dispatch may draft without filing)
+        if: ${{ github.event_name == 'schedule' || inputs.file_issues }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 - > "$RUNNER_TEMP/to-file.tsv" <<'PY'
+          import json, os
+          drafts = os.path.join(os.environ["RUNNER_TEMP"], "drafts")
+          for entry in json.load(open(os.path.join(drafts, "drafts.json"), encoding="utf-8")):
+              if not entry["open"]:
+                  print(f"{entry['body']}\t{entry['title']}")
+          PY
+          while IFS=$'\t' read -r body title; do
+            gh issue create --repo "$REPO" --title "$title" --body-file "$RUNNER_TEMP/drafts/$body"
+          done < "$RUNNER_TEMP/to-file.tsv"
+      - name: keep the drafts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: survivor-drafts
+          path: ${{ runner.temp }}/drafts/
+          if-no-files-found: warn
+      - name: every report the scope promises, counted whole, then the scope's table (SPEC-057 R13, R14)
+        if: ${{ always() }}
+        env:
+          PACKAGE: ${{ inputs.package }}
+          SHARDS: ${{ needs.size.outputs.shards }}
+        run: |
+          reports="$RUNNER_TEMP/reports"
+          rc=0
+          python3 scripts/mutation-verdict.py battery --reports "$reports" --shards "$SHARDS" ${PACKAGE:+--package "$PACKAGE"} --listed "$reports/listing/whole.json" || rc=$?
+          python3 scripts/mutation-verdict.py table --reports "$reports" ${PACKAGE:+--package "$PACKAGE"} --listed "$reports/listing/whole.json" || rc=$?
+          exit "$rc"
+
+  rehearsal:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: the pinned Rust toolchain (rust-toolchain.toml)
+        run: rustup show
+      - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
+        env:
+          PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
+        run: |
+          curl -fsSL -o /tmp/protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v31.1/protoc-31.1-linux-x86_64.zip
+          echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c -
+          mkdir -p "$HOME/.local/protoc" && unzip -q /tmp/protoc.zip -d "$HOME/.local/protoc"
+          echo "$HOME/.local/protoc/bin" >> "$GITHUB_PATH"
+      - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        with:
+          tool: cargo-mutants@27.1.0
+          fallback: none
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+        with:
+          tool: cargo-nextest@0.9.146
+          fallback: none
+      - name: cargo-mutants over one file, as a shard runs it (laid out as a shard's artifact lands)
+        run: |
+          shard="$RUNNER_TEMP/reports/mutants-shard-0"
+          mkdir -p "$shard"
+          rc=0
+          python3 scripts/memory_scope.py --report "$shard" -- cargo mutants --no-shuffle -vV --in-place -f crates/kernel/src/clock.rs --timeout 2300 --build-timeout 600 --output "$shard" || rc=$?
+          echo "$rc" > "$shard/cargo-mutants.exit"
+          echo "cargo-mutants exited $rc"
+      - name: fetch the locked dependency graph, so the offline census finds every package
+        run: cargo fetch --locked
+      - name: one row, as the rows job proves it
+        run: |
+          mkdir -p "$RUNNER_TEMP/reports/rows"
+          python3 scripts/mutation_rows.py prove --row S02001-ROLLOVER-HOUR-IS-FOUR --report "$RUNNER_TEMP/reports/rows/rows.json"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: StrykerJS over one file, as the web job runs it
+        working-directory: web/app
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations --silent
+          pnpm exec svelte-kit sync
+          rc=0
+          pnpm exec stryker run --mutate src/lib/startapp.ts || rc=$?
+          mkdir -p "$RUNNER_TEMP/reports/stryker"
+          cp -r reports/mutation "$RUNNER_TEMP/reports/stryker/stryker"
+          echo "StrykerJS exited $rc"
+      - name: the Python runner on one guard script, one shard, as the weekly job runs it
+        run: |
+          out="$RUNNER_TEMP/reports/mutation-python-shard-0"
+          mkdir -p "$out"
+          rc=0
+          python3 scripts/mutation_python.py run --file scripts/audit-web-verdict.py --shard 0/1 --report "$out/report.json" || rc=$?
+          echo "mutation-python exited $rc"
+      - name: each tool measured something, and the drafts pass the scrub; nothing is filed
+        run: |
+          python3 - <<'PY'
+          import json, os
+          out = os.path.join(os.environ["RUNNER_TEMP"], "reports")
+          cargo = json.load(open(os.path.join(out, "mutants-shard-0", "mutants.out", "outcomes.json"), encoding="utf-8"))
+          examined = cargo["caught"] + cargo["missed"] + cargo["timeout"]
+          rows = json.load(open(os.path.join(out, "rows", "rows.json"), encoding="utf-8"))
+          stryker = json.load(open(os.path.join(out, "stryker", "stryker", "mutation.json"), encoding="utf-8"))
+          mutants = [m for f in stryker["files"].values() for m in f["mutants"]]
+          print(f"rehearsal: cargo-mutants examined {examined}; rows {[r['verdict'] for r in rows]}; Stryker ran {len(mutants)}")
+          assert examined > 0, "cargo-mutants examined nothing"
+          assert [r["verdict"] for r in rows] == ["KILLED"], "the row was not killed"
+          assert mutants, "Stryker ran nothing"
+          PY
+          python3 scripts/mutation-verdict.py survivors --reports "$RUNNER_TEMP/reports" --out "$RUNNER_TEMP/drafts"
+          python3 scripts/public-scrub.py --root . --no-tree --subject "$RUNNER_TEMP/drafts"
+      - name: keep the rehearsal's reports and drafts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rehearsal
+          path: |
+            ${{ runner.temp }}/reports/
+            ${{ runner.temp }}/drafts/
+          if-no-files-found: warn
+      - name: the one shard, the row and the Stryker file reported whole, as the battery counts them
+        if: ${{ always() }}
+        run: python3 scripts/mutation-verdict.py battery --reports "$RUNNER_TEMP/reports" --shards 1 --python-shards 1

@@ -1,0 +1,24 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "reply_markup": {
+      "inline_keyboard": [
+        [
+          {
+            "text": "Open Road to C2",
+            "web_app": {
+              "url": "https://deckstreak.example/app/progress"
+            }
+          }
+        ]
+      ]
+    },
+    "text": "Road to C2 has no course yet: it appears after your next sync."
+  },
+  "x-message": "progress-none"
+}

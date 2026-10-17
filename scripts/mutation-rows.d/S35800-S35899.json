@@ -1,0 +1,70 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S35801-BURY-IS-NATIVE",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"SchedulerService.BuryOrSuspendCards\",\n        native: true,",
+        "        name: \"SchedulerService.BuryOrSuspendCards\",\n        native: false,",
+        "table::the_review_pairs_are_ordinary_on_the_web",
+        "SchedulerService.BuryOrSuspendCards is admitted on the native transport; with its native column off, the core would refuse the native adapter's bury and the iPhone and iPad review could not bury a card (SPEC-358 A1)"
+      ],
+      [
+        "S35802-SET-FLAG-IS-NATIVE",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"CardsService.SetFlag\",\n        native: true,",
+        "        name: \"CardsService.SetFlag\",\n        native: false,",
+        "table::the_review_pairs_are_ordinary_on_the_web",
+        "CardsService.SetFlag is admitted on the native transport; with its native column off, the core would refuse the native adapter's flag and the iPhone and iPad review could not flag a card (SPEC-358 A1)"
+      ],
+      [
+        "S35804-BURY-IS-ON-THE-ALLOW-LIST",
+        "ffi",
+        "src/allow_list.rs",
+        "        method: 14,\n        name: \"SchedulerService.BuryOrSuspendCards\",",
+        "        method: 15,\n        name: \"SchedulerService.BuryOrSuspendCards\",",
+        "review_pairs::the_allow_list_carries_the_review_pairs",
+        "BuryOrSuspendCards is the pair (13,14); renumbered to (13,15), the allow-list no longer carries the native bury and admits a method the review never named (SPEC-358 R1, A2)"
+      ],
+      [
+        "S35805-SET-FLAG-IS-ON-THE-ALLOW-LIST",
+        "ffi",
+        "src/allow_list.rs",
+        "        method: 4,\n        name: \"CardsService.SetFlag\",",
+        "        method: 5,\n        name: \"CardsService.SetFlag\",",
+        "review_pairs::the_allow_list_carries_the_review_pairs",
+        "SetFlag is the pair (5,4); renumbered to (5,5), the allow-list no longer carries the native flag and admits a method the review never named (SPEC-358 R1, A2)"
+      ],
+      [
+        "S35806-NATIVE-BURY-USES-THE-CORES-BURY",
+        "ffi",
+        "src/engine.rs",
+        "bury_request(bury_of(card_id))",
+        "bury_request(review::BuryOf { card_ids: Vec::new(), ..bury_of(card_id) })",
+        "review_actions::a_bury_buries_the_card_as_the_users_bury",
+        "the native bury sends the core's bury of the shown card; with no card in it, the engine buries nothing and the review shows the same card again (SPEC-358 A5)"
+      ],
+      [
+        "S35807-NATIVE-FLAG-TOGGLES",
+        "ffi",
+        "src/engine.rs",
+        "let flag = toggled_red(flag);",
+        "let flag = { let _ = toggled_red; flag };",
+        "review_actions::a_flag_toggles_red_and_answers_the_new_flag",
+        "the native flag sets the core's toggled flag; sending the card's own flag back would leave a card with no flag unflagged and a red card red (SPEC-358 A6)"
+      ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S35808-RED-LIVES-ONCE-IN-THE-CORE",
+        "crates/web-engine/src/study.rs",
+        "/// The languages the engine's `init` receives: the page's list, or English when it sends none\n",
+        "/// The engine's number for the red flag.\npub const RED: u32 = 1;\n\n/// The languages the engine's `init` receives: the page's list, or English when it sends none\n",
+        "a second RED planted back in the web engine's study rule, where the five lived before the move; the census must refuse it by name, or the two clients could drift apart on the flag (SPEC-358 A3)",
+        "test_one_review_rule.TheFlagAndBuryRulesLiveOnceInTheCore.test_the_flag_and_bury_rules_live_once_in_the_core"
+      ]
+    ]
+  }
+}

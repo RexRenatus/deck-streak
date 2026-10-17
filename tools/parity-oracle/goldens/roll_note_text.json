@@ -1,0 +1,538 @@
+{
+  "adapter": "with_days_as_numbers",
+  "cases": [
+    {
+      "class": "fresh",
+      "input": {
+        "text": "---\ntype: reading\ntopic: lsat\ndate: {day:20810}\nfirst_generated: {day:20810}\nlast_rolled: {day:20810}\nrolls: 0\ndigest: 483a50dd234afed66aaad2fc267163268998530877710984ae48d55c34db7316\ntags: [reading, lsat]\nai_generated: true\n---\nCausation declarant duty primer hearsay.\nRule issue pleading exception causation duty pleading rule hearsay.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 20811
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: lsat\ndate: {day:20810}\nfirst_generated: {day:20810}\nlast_rolled: {day:20811}\nrolls: 1\ndigest: 483a50dd234afed66aaad2fc267163268998530877710984ae48d55c34db7316\ntags: [reading, lsat]\nai_generated: true\n---\nCausation declarant duty primer hearsay.\nRule issue pleading exception causation duty pleading rule hearsay.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "fresh",
+      "input": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:21060}\nfirst_generated: {day:21060}\nlast_rolled: {day:21060}\nrolls: 0\ndigest: 32a8291067050494d83c36767394c42ef0569c396b943081cb9ce32f602a0589\ntags: [reading, language/fr]\nai_generated: true\n---\nHearsay exception remedy remedy.\nIssue declarant element primer pleading exception breach issue.\nIssue issue kanji hearsay pleading declarant motion rule.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 21061
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:21060}\nfirst_generated: {day:21060}\nlast_rolled: {day:21061}\nrolls: 1\ndigest: 32a8291067050494d83c36767394c42ef0569c396b943081cb9ce32f602a0589\ntags: [reading, language/fr]\nai_generated: true\n---\nHearsay exception remedy remedy.\nIssue declarant element primer pleading exception breach issue.\nIssue issue kanji hearsay pleading declarant motion rule.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "fresh",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/torts\ndate: {day:19199}\nfirst_generated: {day:19199}\nlast_rolled: {day:19199}\nrolls: 0\ndigest: eac61b42b03f74904bb407de7cc992f8b4e7f4ba43816bc69f5448025a87a248\ntags: [reading, law/torts]\nai_generated: true\n---\nBreach primer declarant motion.\nException motion motion issue.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 19202
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/torts\ndate: {day:19199}\nfirst_generated: {day:19199}\nlast_rolled: {day:19202}\nrolls: 1\ndigest: eac61b42b03f74904bb407de7cc992f8b4e7f4ba43816bc69f5448025a87a248\ntags: [reading, law/torts]\nai_generated: true\n---\nBreach primer declarant motion.\nException motion motion issue.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "fresh",
+      "input": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:21029}\nfirst_generated: {day:21029}\nlast_rolled: {day:21029}\nrolls: 0\ndigest: 349d5eef4566936ece29366969df3b75b940ac49425138d26eed1553f9578733\ntags: [reading, language/fr]\nai_generated: true\n---\nPleading analysis rule particle causation exception pleading declarant hearsay.\nHearsay kanji element kanji primer issue.\nDeclarant element hearsay exception causation causation particle declarant pleading.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 21031
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:21029}\nfirst_generated: {day:21029}\nlast_rolled: {day:21031}\nrolls: 1\ndigest: 349d5eef4566936ece29366969df3b75b940ac49425138d26eed1553f9578733\ntags: [reading, language/fr]\nai_generated: true\n---\nPleading analysis rule particle causation exception pleading declarant hearsay.\nHearsay kanji element kanji primer issue.\nDeclarant element hearsay exception causation causation particle declarant pleading.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "rolled",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/evidence\ndate: {day:20464}\nfirst_generated: {day:20464}\nlast_rolled: {day:20465}\nrolls: 1\ndigest: 6ce29e9a3e6431b565790317dc8a4a102f546b449359e623404b9b080e0a9fe9\ntags: [reading, law/evidence]\nai_generated: true\n---\nHearsay exception declarant hearsay.\nPrimer analysis kanji pleading kanji declarant analysis declarant.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 20466
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/evidence\ndate: {day:20464}\nfirst_generated: {day:20464}\nlast_rolled: {day:20466}\nrolls: 2\ndigest: 6ce29e9a3e6431b565790317dc8a4a102f546b449359e623404b9b080e0a9fe9\ntags: [reading, law/evidence]\nai_generated: true\n---\nHearsay exception declarant hearsay.\nPrimer analysis kanji pleading kanji declarant analysis declarant.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "rolled",
+      "input": {
+        "text": "---\ntype: reading\ntopic: language/ja\ndate: {day:21118}\nfirst_generated: {day:21118}\nlast_rolled: {day:21119}\nrolls: 1\ndigest: 08020a3fd3a00317e7bb23278eef11e2556767914beaef093b6945178510363f\ntags: [reading, language/ja]\nai_generated: true\n---\nKanji particle exception analysis particle primer rule.\nParticle element motion analysis declarant remedy.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 21120
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: language/ja\ndate: {day:21118}\nfirst_generated: {day:21118}\nlast_rolled: {day:21120}\nrolls: 2\ndigest: 08020a3fd3a00317e7bb23278eef11e2556767914beaef093b6945178510363f\ntags: [reading, language/ja]\nai_generated: true\n---\nKanji particle exception analysis particle primer rule.\nParticle element motion analysis declarant remedy.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "crlf",
+      "input": {
+        "text": "---\r\ntype: reading\r\ntopic: law/torts\r\ndate: {day:21630}\r\nfirst_generated: {day:21630}\r\nlast_rolled: {day:21630}\r\nrolls: 0\r\ndigest: 6fea4ec204f61f803e1730427c0a688a67d1807eadab22cf584241473062a71f\r\ntags: [reading, law/torts]\r\nai_generated: true\r\n---\r\nBreach issue duty pleading kanji.\r\nRemedy exception rule issue declarant analysis pleading analysis.\r\n\r\n\r\n- [ ] Studied\r\n- [x] I read it\r\n",
+        "today": 21631
+      },
+      "output": {
+        "text": "---\r\ntype: reading\r\ntopic: law/torts\r\ndate: {day:21630}\r\nfirst_generated: {day:21630}\r\nlast_rolled: {day:21631}\r\nrolls: 1\r\ndigest: 6fea4ec204f61f803e1730427c0a688a67d1807eadab22cf584241473062a71f\r\ntags: [reading, law/torts]\r\nai_generated: true\r\n---\r\nBreach issue duty pleading kanji.\r\nRemedy exception rule issue declarant analysis pleading analysis.\r\n\r\n\r\n- [ ] Studied\r\n- [x] I read it\r\n"
+      }
+    },
+    {
+      "class": "crlf",
+      "input": {
+        "text": "---\r\ntype: reading\r\ntopic: law/evidence\r\ndate: {day:21805}\r\nfirst_generated: {day:21805}\r\nlast_rolled: {day:21805}\r\nrolls: 0\r\ndigest: 77a30601a5da17489f93a27e7906c362ecfd6424cf1e72ca22b4611740348fd8\r\ntags: [reading, law/evidence]\r\nai_generated: true\r\n---\r\nPleading causation breach exception remedy.\r\nElement pleading motion rule.\r\n\r\n\r\n- [ ] Studied\r\n- [ ] I read it\r\n",
+        "today": 21806
+      },
+      "output": {
+        "text": "---\r\ntype: reading\r\ntopic: law/evidence\r\ndate: {day:21805}\r\nfirst_generated: {day:21805}\r\nlast_rolled: {day:21806}\r\nrolls: 1\r\ndigest: 77a30601a5da17489f93a27e7906c362ecfd6424cf1e72ca22b4611740348fd8\r\ntags: [reading, law/evidence]\r\nai_generated: true\r\n---\r\nPleading causation breach exception remedy.\r\nElement pleading motion rule.\r\n\r\n\r\n- [ ] Studied\r\n- [ ] I read it\r\n"
+      }
+    },
+    {
+      "class": "crlf",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/evidence\ndate: {day:19309}\nfirst_generated: {day:19309}\nlast_rolled: {day:19309}\nrolls: 0\ndigest: ac30e52e46ad65b149b827cf100fb7c2fa6e3c235dc49499b5dba867a309f4af\ntags: [reading, law/evidence]\nai_generated: true\n---\nElement primer particle rule primer.\r\nDeclarant breach kanji duty primer remedy motion.\r\nKanji motion breach issue.\r\n\r\n\r\n- [ ] Studied\r\n- [ ] I read it\r\n",
+        "today": 19310
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/evidence\ndate: {day:19309}\nfirst_generated: {day:19309}\nlast_rolled: {day:19310}\nrolls: 1\ndigest: ac30e52e46ad65b149b827cf100fb7c2fa6e3c235dc49499b5dba867a309f4af\ntags: [reading, law/evidence]\nai_generated: true\n---\nElement primer particle rule primer.\r\nDeclarant breach kanji duty primer remedy motion.\r\nKanji motion breach issue.\r\n\r\n\r\n- [ ] Studied\r\n- [ ] I read it\r\n"
+      }
+    },
+    {
+      "class": "crlf",
+      "input": {
+        "text": "---\r\ntype: reading\ntopic: law/evidence\ndate: {day:21777}\nfirst_generated: {day:21777}\nlast_rolled: {day:21777}\nrolls: 0\ndigest: 1198415a1808df1141450c837151389439d373251dc01cbc5408a09fe8973358\ntags: [reading, law/evidence]\nai_generated: true\n---\nParticle kanji pleading primer.\nPrimer particle declarant kanji exception primer declarant primer causation.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 21779
+      },
+      "output": {
+        "text": "---\r\ntype: reading\ntopic: law/evidence\ndate: {day:21777}\nfirst_generated: {day:21777}\nlast_rolled: {day:21779}\r\nrolls: 1\r\ndigest: 1198415a1808df1141450c837151389439d373251dc01cbc5408a09fe8973358\ntags: [reading, law/evidence]\nai_generated: true\n---\r\nParticle kanji pleading primer.\nPrimer particle declarant kanji exception primer declarant primer causation.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "crlf",
+      "input": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:19919}\nfirst_generated: {day:19919}\nlast_rolled: {day:19919}\nrolls: 0\ndigest: 8d22bf724f9b28c6eda9c0bf5b0eefeefab913a02fb4e54430f8989446fa52fd\ntags: [reading, language/fr]\nai_generated: true\n---\r\nParticle analysis hearsay exception kanji issue element.\nDeclarant pleading causation duty.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 19920
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:19919}\nfirst_generated: {day:19919}\nlast_rolled: {day:19920}\nrolls: 1\ndigest: 8d22bf724f9b28c6eda9c0bf5b0eefeefab913a02fb4e54430f8989446fa52fd\ntags: [reading, language/fr]\nai_generated: true\n---\nParticle analysis hearsay exception kanji issue element.\nDeclarant pleading causation duty.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "cr",
+      "input": {
+        "text": "---\rtype: reading\rtopic: language/ja\rdate: {day:19032}\rfirst_generated: {day:19032}\rlast_rolled: {day:19032}\rrolls: 0\rdigest: 9a6106a21fa407efd029ec296a7e39b9c8deb1a22fca5bd98dec611d18153740\rtags: [reading, language/ja]\rai_generated: true\r---\rDuty hearsay breach element causation remedy exception.\rKanji pleading kanji hearsay issue duty pleading breach.\r\r\r- [ ] Studied\r- [ ] I read it\r",
+        "today": 19033
+      },
+      "output": {
+        "text": "---\ntype: reading\rtopic: language/ja\rdate: {day:19032}\rfirst_generated: {day:19032}\rlast_rolled: {day:19033}\nrolls: 1\ndigest: 9a6106a21fa407efd029ec296a7e39b9c8deb1a22fca5bd98dec611d18153740\rtags: [reading, language/ja]\rai_generated: true\r---\nDuty hearsay breach element causation remedy exception.\rKanji pleading kanji hearsay issue duty pleading breach.\r\r\r- [ ] Studied\r- [ ] I read it\r"
+      }
+    },
+    {
+      "class": "missing-key",
+      "input": {
+        "text": "---\ntype: reading\ntopic: language/ja\ndate: {day:21538}\nlast_rolled: {day:21538}\nrolls: 0\ndigest: b53bb9be9f7dfd922052bdb136c5d3848b37966cffdd15e31676c7557c269073\ntags: [reading, language/ja]\nai_generated: true\n---\nMotion breach rule causation analysis breach.\nHearsay rule motion element.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 21539
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: language/ja\ndate: {day:21538}\nlast_rolled: {day:21539}\nrolls: 1\ndigest: b53bb9be9f7dfd922052bdb136c5d3848b37966cffdd15e31676c7557c269073\ntags: [reading, language/ja]\nai_generated: true\nfirst_generated: {day:21539}\n---\nMotion breach rule causation analysis breach.\nHearsay rule motion element.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "missing-key",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/torts\ndate: {day:19984}\nlast_rolled: {day:19984}\nrolls: 0\ndigest: 2db032839669107579d7dad45932b123cc920f8c45547ee9cc1f3c231777ca1c\ntags: [reading, law/torts]\nai_generated: true\n---\nParticle motion rule remedy.\nHearsay element particle causation primer particle.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 19985
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/torts\ndate: {day:19984}\nlast_rolled: {day:19985}\nrolls: 1\ndigest: 2db032839669107579d7dad45932b123cc920f8c45547ee9cc1f3c231777ca1c\ntags: [reading, law/torts]\nai_generated: true\nfirst_generated: {day:19985}\n---\nParticle motion rule remedy.\nHearsay element particle causation primer particle.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "missing-key",
+      "input": {
+        "text": "---\ntype: reading\ntopic: lsat\ndate: {day:18185}\nfirst_generated: {day:18185}\nlast_rolled: {day:18185}\ndigest: ebfdb6c8cb39585d42748bbb05ce4249dcaa315bba76d66907c321cc849d3e5c\ntags: [reading, lsat]\nai_generated: true\n---\nPleading particle kanji duty kanji causation kanji.\nHearsay remedy primer breach duty exception breach.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 18187
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: lsat\ndate: {day:18185}\nfirst_generated: {day:18185}\nlast_rolled: {day:18187}\ndigest: ebfdb6c8cb39585d42748bbb05ce4249dcaa315bba76d66907c321cc849d3e5c\ntags: [reading, lsat]\nai_generated: true\nrolls: 1\n---\nPleading particle kanji duty kanji causation kanji.\nHearsay remedy primer breach duty exception breach.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "missing-key",
+      "input": {
+        "text": "---\ntype: reading\ntopic: lsat\ndate: {day:18056}\nfirst_generated: {day:18056}\nrolls: 0\ndigest: b90f685fe5b070081708193424f7df3f2176661c3f86cfd3bc50dab87cad71b5\ntags: [reading, lsat]\nai_generated: true\n---\nRule duty hearsay rule.\nDuty pleading hearsay rule motion kanji pleading element.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 18057
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: lsat\ndate: {day:18056}\nfirst_generated: {day:18056}\nrolls: 1\ndigest: b90f685fe5b070081708193424f7df3f2176661c3f86cfd3bc50dab87cad71b5\ntags: [reading, lsat]\nai_generated: true\nlast_rolled: {day:18057}\n---\nRule duty hearsay rule.\nDuty pleading hearsay rule motion kanji pleading element.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "owner-tick",
+      "input": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:21349}\nfirst_generated: {day:21349}\nlast_rolled: {day:21349}\nrolls: 0\ndigest: ad98e69335fee840a0329bda963f475ded92960755f29f22a02446ecf7ffe530\ntags: [reading, language/fr]\nai_generated: true\n---\nAnalysis particle pleading motion motion duty causation.\nBreach motion remedy pleading exception.\n\n\n- [ ] Studied\n- [x] I read it\n",
+        "today": 21350
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:21349}\nfirst_generated: {day:21349}\nlast_rolled: {day:21350}\nrolls: 1\ndigest: ad98e69335fee840a0329bda963f475ded92960755f29f22a02446ecf7ffe530\ntags: [reading, language/fr]\nai_generated: true\n---\nAnalysis particle pleading motion motion duty causation.\nBreach motion remedy pleading exception.\n\n\n- [ ] Studied\n- [x] I read it\n"
+      }
+    },
+    {
+      "class": "owner-tick",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/civil-procedure\ndate: {day:20017}\nfirst_generated: {day:20017}\nlast_rolled: {day:20017}\nrolls: 0\ndigest: 773b3fa30540d4490052948032875d0ce74205d468b312b4b9958764f4da12cb\ntags: [reading, law/civil-procedure]\nai_generated: true\n---\nRule causation remedy breach exception breach.\nPrimer particle causation motion primer primer.\n\n\n- [x] Studied\n- [ ] I read it\n",
+        "today": 20018
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/civil-procedure\ndate: {day:20017}\nfirst_generated: {day:20017}\nlast_rolled: {day:20018}\nrolls: 1\ndigest: 773b3fa30540d4490052948032875d0ce74205d468b312b4b9958764f4da12cb\ntags: [reading, law/civil-procedure]\nai_generated: true\n---\nRule causation remedy breach exception breach.\nPrimer particle causation motion primer primer.\n\n\n- [x] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "owner-tick",
+      "input": {
+        "text": "---\r\ntype: reading\r\ntopic: language/ja\r\ndate: {day:21797}\r\nfirst_generated: {day:21797}\r\nlast_rolled: {day:21797}\r\nrolls: 0\r\ndigest: 62bc014495e6a33d3cee2d6ea3d16d4c8c1982bf83d95df15cf0200d2a47c0b3\r\ntags: [reading, language/ja]\r\nai_generated: true\r\n---\r\nPleading pleading analysis motion kanji particle primer analysis.\r\nKanji hearsay element rule analysis.\r\n\r\n\r\n- [x] Studied\r\n- [x] I read it\r\n",
+        "today": 21798
+      },
+      "output": {
+        "text": "---\r\ntype: reading\r\ntopic: language/ja\r\ndate: {day:21797}\r\nfirst_generated: {day:21797}\r\nlast_rolled: {day:21798}\r\nrolls: 1\r\ndigest: 62bc014495e6a33d3cee2d6ea3d16d4c8c1982bf83d95df15cf0200d2a47c0b3\r\ntags: [reading, language/ja]\r\nai_generated: true\r\n---\r\nPleading pleading analysis motion kanji particle primer analysis.\r\nKanji hearsay element rule analysis.\r\n\r\n\r\n- [x] Studied\r\n- [x] I read it\r\n"
+      }
+    },
+    {
+      "class": "nested-key",
+      "input": {
+        "text": "---\ntype: reading\ntopic: lsat\ndate: {day:20830}\nfirst_generated: {day:20830}\nlast_rolled: {day:20830}\nrolls: 0\ndigest: 5e2f073a09025a5c0653550e4d4a1c0d7b845ae21304adfa3ef8af278095e082\ntags: [reading, lsat]\nai_generated: true\nmeta:\n  rolls: 9\n\trolls: 8\n- rolls: 5\n---\nKanji primer hearsay motion remedy causation.\nDuty rule exception element causation declarant.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 20831
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: lsat\ndate: {day:20830}\nfirst_generated: {day:20830}\nlast_rolled: {day:20831}\nrolls: 1\ndigest: 5e2f073a09025a5c0653550e4d4a1c0d7b845ae21304adfa3ef8af278095e082\ntags: [reading, lsat]\nai_generated: true\nmeta:\n  rolls: 9\n\trolls: 8\n- rolls: 5\n---\nKanji primer hearsay motion remedy causation.\nDuty rule exception element causation declarant.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "nested-key",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/civil-procedure\ndate: {day:18897}\nfirst_generated: {day:18897}\nlast_rolled: {day:18897}\ndigest: 61a1e1188e400a3d7d8646e1b91a4b4360b133d9fef71791085b186682f578ba\ntags: [reading, law/civil-procedure]\nai_generated: true\nmeta:\n  rolls: 9\n  last_rolled: {day:18894}\n---\nKanji pleading kanji primer hearsay.\nDuty exception primer primer particle causation remedy remedy duty.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 18898
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/civil-procedure\ndate: {day:18897}\nfirst_generated: {day:18897}\nlast_rolled: {day:18898}\ndigest: 61a1e1188e400a3d7d8646e1b91a4b4360b133d9fef71791085b186682f578ba\ntags: [reading, law/civil-procedure]\nai_generated: true\nmeta:\n  rolls: 9\n  last_rolled: {day:18894}\nrolls: 1\n---\nKanji pleading kanji primer hearsay.\nDuty exception primer primer particle causation remedy remedy duty.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "repeated-key",
+      "input": {
+        "text": "---\ntype: reading\ntopic: language/ja\ndate: {day:18984}\nfirst_generated: {day:18984}\nlast_rolled: {day:18984}\nrolls: 0\ndigest: 6c354c52c9c69b5fe88f4c6c4751373d086390733fb530eb636ad6dc497fcbae\ntags: [reading, language/ja]\nai_generated: true\nrolls: 7\n---\nMotion motion rule breach hearsay kanji.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 18985
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: language/ja\ndate: {day:18984}\nfirst_generated: {day:18984}\nlast_rolled: {day:18985}\nrolls: 1\ndigest: 6c354c52c9c69b5fe88f4c6c4751373d086390733fb530eb636ad6dc497fcbae\ntags: [reading, language/ja]\nai_generated: true\nrolls: 7\n---\nMotion motion rule breach hearsay kanji.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "body-rule",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/torts\ndate: {day:19130}\nfirst_generated: {day:19130}\nlast_rolled: {day:19130}\nrolls: 0\ndigest: 0211cea85adda8de944e0483c4183b1000a55ffaa538afe905482e064108f42f\ntags: [reading, law/torts]\nai_generated: true\n---\nDuty element exception exception element kanji declarant motion remedy.\n---\nrolls: 99\n---\nDeclarant particle pleading pleading exception declarant causation issue remedy.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 19131
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/torts\ndate: {day:19130}\nfirst_generated: {day:19130}\nlast_rolled: {day:19131}\nrolls: 1\ndigest: 0211cea85adda8de944e0483c4183b1000a55ffaa538afe905482e064108f42f\ntags: [reading, law/torts]\nai_generated: true\n---\nDuty element exception exception element kanji declarant motion remedy.\n---\nrolls: 99\n---\nDeclarant particle pleading pleading exception declarant causation issue remedy.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "no-final-newline",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/torts\ndate: {day:21156}\nfirst_generated: {day:21156}\nlast_rolled: {day:21156}\nrolls: 0\ndigest: 00bac1630ad5fd42d98828ba05040d48ea0f702f13a076f8c4ce0aeb215eee25\ntags: [reading, law/torts]\nai_generated: true\n---\nRemedy remedy exception pleading particle kanji hearsay duty hearsay.",
+        "today": 21157
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/torts\ndate: {day:21156}\nfirst_generated: {day:21156}\nlast_rolled: {day:21157}\nrolls: 1\ndigest: 00bac1630ad5fd42d98828ba05040d48ea0f702f13a076f8c4ce0aeb215eee25\ntags: [reading, law/torts]\nai_generated: true\n---\nRemedy remedy exception pleading particle kanji hearsay duty hearsay."
+      }
+    },
+    {
+      "class": "no-final-newline",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/civil-procedure\ndate: {day:19129}\nfirst_generated: {day:19129}\nlast_rolled: {day:19129}\nrolls: 0\ndigest: 9eda95605cf044d602b5b4813a03e7440c1fea7e838a43821f4a18110ec921a6\ntags: [reading, law/civil-procedure]\nai_generated: true\n---",
+        "today": 19130
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/civil-procedure\ndate: {day:19129}\nfirst_generated: {day:19129}\nlast_rolled: {day:19130}\nrolls: 1\ndigest: 9eda95605cf044d602b5b4813a03e7440c1fea7e838a43821f4a18110ec921a6\ntags: [reading, law/civil-procedure]\nai_generated: true\n---\n"
+      }
+    },
+    {
+      "class": "separator",
+      "input": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:19171}\nfirst_generated: {day:19171}\nlast_rolled: {day:19171}\ndigest: f4fad19c834fcdd9f29ffc79b930cd79d7949b5a381a32f1de36c17c0a185747\u2028rolls: 7\ntags: [reading, language/fr]\nai_generated: true\n---\nRule exception issue hearsay motion.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 19172
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:19171}\nfirst_generated: {day:19171}\nlast_rolled: {day:19172}\ndigest: f4fad19c834fcdd9f29ffc79b930cd79d7949b5a381a32f1de36c17c0a185747\u2028rolls: 8\ntags: [reading, language/fr]\nai_generated: true\n---\nRule exception issue hearsay motion.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "separator",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/evidence\ndate: {day:21989}\nfirst_generated: {day:21989}\nlast_rolled: {day:21989}\nrolls: 2\f\ndigest: 07a4ce7c3d3a9e2446a7c9a70eeda77a1baa771ead36362b1a44c0cf11ece817\ntags: [reading, law/evidence]\nai_generated: true\n---\nKanji issue rule hearsay hearsay declarant.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 21990
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/evidence\ndate: {day:21989}\nfirst_generated: {day:21989}\nlast_rolled: {day:21990}\nrolls: 3\n\ndigest: 07a4ce7c3d3a9e2446a7c9a70eeda77a1baa771ead36362b1a44c0cf11ece817\ntags: [reading, law/evidence]\nai_generated: true\n---\nKanji issue rule hearsay hearsay declarant.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "separator",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/evidence\ndate: {day:19174}\nfirst_generated: {day:19174}\nlast_rolled: {day:19174}\nrolls: 3\u001e\ndigest: d2ccfcc98ee4212c7596c5b632cba3236dd304ed0601e597c51f7ae5edc07ff6\ntags: [reading, law/evidence]\nai_generated: true\n---\nCausation exception hearsay exception exception hearsay issue.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 19175
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/evidence\ndate: {day:19174}\nfirst_generated: {day:19174}\nlast_rolled: {day:19175}\nrolls: 4\n\ndigest: d2ccfcc98ee4212c7596c5b632cba3236dd304ed0601e597c51f7ae5edc07ff6\ntags: [reading, law/evidence]\nai_generated: true\n---\nCausation exception hearsay exception exception hearsay issue.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "separator",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/evidence\ndate: {day:21465}\nfirst_generated: {day:21465}\nlast_rolled: {day:21465}\nrolls: 0\ndigest: 28d2e66786361020b424f06908502a3896a52378870c2fcc7e973cd5dde43eb8\ntags: [reading, law/evidence]\nai_generated: true\n---\nPleading declarant issue primer.\u2029Breach causation remedy kanji rule.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 21466
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/evidence\ndate: {day:21465}\nfirst_generated: {day:21465}\nlast_rolled: {day:21466}\nrolls: 1\ndigest: 28d2e66786361020b424f06908502a3896a52378870c2fcc7e973cd5dde43eb8\ntags: [reading, law/evidence]\nai_generated: true\n---\nPleading declarant issue primer.\u2029Breach causation remedy kanji rule.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "spelling",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/civil-procedure\ndate: {day:18797}\nfirst_generated: {day:18797}\nlast_rolled: {day:18797}\nrolls: 007\ndigest: b6460d980a7fc71111a2eae3afc3b4f31cce1ef254e9e6bdfd7409fd6d84a3fc\ntags: [reading, law/civil-procedure]\nai_generated: true\n---\nElement kanji element motion exception kanji.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 18798
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/civil-procedure\ndate: {day:18797}\nfirst_generated: {day:18797}\nlast_rolled: {day:18798}\nrolls: 8\ndigest: b6460d980a7fc71111a2eae3afc3b4f31cce1ef254e9e6bdfd7409fd6d84a3fc\ntags: [reading, law/civil-procedure]\nai_generated: true\n---\nElement kanji element motion exception kanji.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "spelling",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/civil-procedure\ndate: {day:19312}\nfirst_generated: {day:19312}\nlast_rolled: {day:19312}\nrolls: +2\ndigest: 65f21200af775fc6bbacdd7dfc44bf19ec929feb90108fdbb784b2cf55854832\ntags: [reading, law/civil-procedure]\nai_generated: true\n---\nKanji declarant issue kanji.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 19313
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/civil-procedure\ndate: {day:19312}\nfirst_generated: {day:19312}\nlast_rolled: {day:19313}\nrolls: 3\ndigest: 65f21200af775fc6bbacdd7dfc44bf19ec929feb90108fdbb784b2cf55854832\ntags: [reading, law/civil-procedure]\nai_generated: true\n---\nKanji declarant issue kanji.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "spelling",
+      "input": {
+        "text": "---\ntype: reading\ntopic: language/ja\ndate: {day:18772}\nfirst_generated: {day:18772}\nlast_rolled: {day:18772}\nrolls: -1\ndigest: db1bacaead6724dce324cf0d8b26e9a62c6e04aa1632dd1b63ed2ae2b1e32778\ntags: [reading, language/ja]\nai_generated: true\n---\nDeclarant exception particle hearsay issue primer hearsay declarant kanji.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 18773
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: language/ja\ndate: {day:18772}\nfirst_generated: {day:18772}\nlast_rolled: {day:18773}\nrolls: 0\ndigest: db1bacaead6724dce324cf0d8b26e9a62c6e04aa1632dd1b63ed2ae2b1e32778\ntags: [reading, language/ja]\nai_generated: true\n---\nDeclarant exception particle hearsay issue primer hearsay declarant kanji.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "spelling",
+      "input": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:19544}\nfirst_generated: {day:19544}\nlast_rolled: {day:19544}\nrolls: -7\ndigest: bd3501b3edb336b0e6c39bf12963c9cc7554382132db63d6a2ac6fec7267b790\ntags: [reading, language/fr]\nai_generated: true\n---\nIssue declarant primer pleading issue remedy.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 19545
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:19544}\nfirst_generated: {day:19544}\nlast_rolled: {day:19545}\nrolls: -6\ndigest: bd3501b3edb336b0e6c39bf12963c9cc7554382132db63d6a2ac6fec7267b790\ntags: [reading, language/fr]\nai_generated: true\n---\nIssue declarant primer pleading issue remedy.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "spelling",
+      "input": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:18738}\nfirst_generated: {day:18738}\nlast_rolled: {day:18738}\nrolls:   4  \ndigest: f067ef61a3c03e902167eba3e878f00ce9f5aee61ed0560be5fa2c003f88cb28\ntags: [reading, language/fr]\nai_generated: true\n---\nDuty remedy breach issue declarant particle breach pleading.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 18739
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:18738}\nfirst_generated: {day:18738}\nlast_rolled: {day:18739}\nrolls: 5\ndigest: f067ef61a3c03e902167eba3e878f00ce9f5aee61ed0560be5fa2c003f88cb28\ntags: [reading, language/fr]\nai_generated: true\n---\nDuty remedy breach issue declarant particle breach pleading.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "spelling",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/civil-procedure\ndate: {day:19882}\nfirst_generated: {day:19882}\nlast_rolled: {day:19882}\nrolls: \t3\ndigest: e0f8c0faa85fc856e85503915f2f22c128f88010700595efd7cc3a2a84f97e07\ntags: [reading, law/civil-procedure]\nai_generated: true\n---\nDeclarant declarant duty duty rule causation.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 19883
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/civil-procedure\ndate: {day:19882}\nfirst_generated: {day:19882}\nlast_rolled: {day:19883}\nrolls: 4\ndigest: e0f8c0faa85fc856e85503915f2f22c128f88010700595efd7cc3a2a84f97e07\ntags: [reading, law/civil-procedure]\nai_generated: true\n---\nDeclarant declarant duty duty rule causation.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "spelling",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/evidence\ndate: {day:19699}\nfirst_generated: {day:19699}\nlast_rolled: {day:19699}\nrolls: 12345678901234567890\ndigest: 1ec67b11d027319a7f5fc8df628256952b312145c32dbab4a620079a3390052f\ntags: [reading, law/evidence]\nai_generated: true\n---\nRemedy duty breach rule causation motion motion.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 19700
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/evidence\ndate: {day:19699}\nfirst_generated: {day:19699}\nlast_rolled: {day:19700}\nrolls: 12345678901234567891\ndigest: 1ec67b11d027319a7f5fc8df628256952b312145c32dbab4a620079a3390052f\ntags: [reading, law/evidence]\nai_generated: true\n---\nRemedy duty breach rule causation motion motion.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "python-only",
+      "input": {
+        "text": "---\ntype: reading\ntopic: language/ja\ndate: {day:19508}\nfirst_generated: {day:19508}\nlast_rolled: {day:19508}\nrolls: 1_0\ndigest: d0d5699dcf5bcce3ae073f5b6b24e738b29a629b1db6b627846c94bc0fedc1d5\ntags: [reading, language/ja]\nai_generated: true\n---\nElement primer issue kanji pleading.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 19509
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: language/ja\ndate: {day:19508}\nfirst_generated: {day:19508}\nlast_rolled: {day:19509}\nrolls: 11\ndigest: d0d5699dcf5bcce3ae073f5b6b24e738b29a629b1db6b627846c94bc0fedc1d5\ntags: [reading, language/ja]\nai_generated: true\n---\nElement primer issue kanji pleading.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "python-only",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/torts\ndate: {day:19064}\nfirst_generated: {day:19064}\nlast_rolled: {day:19064}\nrolls: \u0663\ndigest: 66dc0db6c82ca981d8637eae869708f624ab57f655be7a6055dfdf6fca0200d0\ntags: [reading, law/torts]\nai_generated: true\n---\nRule motion pleading duty element kanji.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 19065
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/torts\ndate: {day:19064}\nfirst_generated: {day:19064}\nlast_rolled: {day:19065}\nrolls: 4\ndigest: 66dc0db6c82ca981d8637eae869708f624ab57f655be7a6055dfdf6fca0200d0\ntags: [reading, law/torts]\nai_generated: true\n---\nRule motion pleading duty element kanji.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "python-only",
+      "input": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:18490}\nfirst_generated: {day:18490}\nlast_rolled: {day:18490}\nrolls: 9999999999999999999999999999999999999999\ndigest: ff7ead89a53d229e4c5a67b2085a2717b6064b78be0370fa31d7a2e385a8a746\ntags: [reading, language/fr]\nai_generated: true\n---\nParticle duty kanji hearsay pleading primer.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 18491
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:18490}\nfirst_generated: {day:18490}\nlast_rolled: {day:18491}\nrolls: 10000000000000000000000000000000000000000\ndigest: ff7ead89a53d229e4c5a67b2085a2717b6064b78be0370fa31d7a2e385a8a746\ntags: [reading, language/fr]\nai_generated: true\n---\nParticle duty kanji hearsay pleading primer.\n\n\n- [ ] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "class": "refused",
+      "input": {
+        "text": "# Analysis duty pleading rule causation breach exception causation.\n---\ntype: reading\ntopic: law/civil-procedure\ndate: {day:21757}\nfirst_generated: {day:21757}\nlast_rolled: {day:21757}\nrolls: 0\ndigest: 07025730ae6006ba0ca98572223bced4f03cce30a3911caa5f98ebc592fd6940\ntags: [reading, law/civil-procedure]\nai_generated: true\n---\nDeclarant primer breach exception remedy remedy remedy particle rule.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 21758
+      },
+      "output": {
+        "refused": "MalformedReadingNoteError"
+      }
+    },
+    {
+      "class": "refused",
+      "input": {
+        "text": "\n---\ntype: reading\ntopic: law/civil-procedure\ndate: {day:21757}\nfirst_generated: {day:21757}\nlast_rolled: {day:21757}\nrolls: 0\ndigest: 07025730ae6006ba0ca98572223bced4f03cce30a3911caa5f98ebc592fd6940\ntags: [reading, law/civil-procedure]\nai_generated: true\n---\nDeclarant primer breach exception remedy remedy remedy particle rule.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 21758
+      },
+      "output": {
+        "refused": "MalformedReadingNoteError"
+      }
+    },
+    {
+      "class": "refused",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/civil-procedure\ndate: {day:21757}\nfirst_generated: {day:21757}\nlast_rolled: {day:21757}\nrolls: 0\ndigest: 07025730ae6006ba0ca98572223bced4f03cce30a3911caa5f98ebc592fd6940\ntags: [reading, law/civil-procedure]\nai_generated: true\nDeclarant primer breach exception remedy remedy remedy particle rule.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 21758
+      },
+      "output": {
+        "refused": "MalformedReadingNoteError"
+      }
+    },
+    {
+      "class": "refused",
+      "input": {
+        "text": "---\ntype: reading\ntopic: lsat\ndate: {day:19007}\nfirst_generated: {day:19007}\nlast_rolled: {day:19007}\nrolls: two\ndigest: c321cafa354d86d16c9949af89a7b5de734f2edf738a53cd5f00ee3d2b475a29\ntags: [reading, lsat]\nai_generated: true\n---\nException causation breach hearsay declarant motion duty hearsay.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 19008
+      },
+      "output": {
+        "refused": "ValueError"
+      }
+    },
+    {
+      "class": "refused",
+      "input": {
+        "text": "---\ntype: reading\ntopic: lsat\ndate: {day:20415}\nfirst_generated: {day:20415}\nlast_rolled: {day:20415}\nrolls: 3.0\ndigest: ca38bd982a1097238b05189e7e6199a4afd7fe50a2780b5ce70103da0233e68b\ntags: [reading, lsat]\nai_generated: true\n---\nPrimer pleading declarant issue causation.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 20416
+      },
+      "output": {
+        "refused": "ValueError"
+      }
+    },
+    {
+      "class": "refused",
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/torts\ndate: {day:21810}\nfirst_generated: {day:21810}\nlast_rolled: {day:21810}\nrolls: \ndigest: b2f96a579983801db2c3089358ed7fc1bb294c9062ce353014f8ee0672eef75d\ntags: [reading, law/torts]\nai_generated: true\n---\nPrimer element analysis declarant breach breach.\n\n\n- [ ] Studied\n- [ ] I read it\n",
+        "today": 21811
+      },
+      "output": {
+        "refused": "ValueError"
+      }
+    },
+    {
+      "input": {
+        "text": "---\r\ntype: reading\r\ntopic: law/evidence\r\ndate: {day:21595}\r\nfirst_generated: {day:21595}\r\nlast_rolled: {day:21595}\r\nrolls: 6\r\ndigest: 6f688ff10bc623cb4270fac94225cf58af2ffcc24fd9d35f29389db429ca54a8\r\ntags: [reading, law/evidence]\r\nai_generated: true\r\n---\r\nElement remedy remedy analysis particle primer.\r\nCausation hearsay hearsay particle primer.\r\nKanji element hearsay rule pleading issue remedy.\r\nRule element particle causation analysis.\r\n\r\n\r\n- [ ] Studied\r\n- [ ] I read it\r\n",
+        "today": 21602
+      },
+      "output": {
+        "text": "---\r\ntype: reading\r\ntopic: law/evidence\r\ndate: {day:21595}\r\nfirst_generated: {day:21595}\r\nlast_rolled: {day:21602}\r\nrolls: 7\r\ndigest: 6f688ff10bc623cb4270fac94225cf58af2ffcc24fd9d35f29389db429ca54a8\r\ntags: [reading, law/evidence]\r\nai_generated: true\r\n---\r\nElement remedy remedy analysis particle primer.\r\nCausation hearsay hearsay particle primer.\r\nKanji element hearsay rule pleading issue remedy.\r\nRule element particle causation analysis.\r\n\r\n\r\n- [ ] Studied\r\n- [ ] I read it\r\n"
+      }
+    },
+    {
+      "input": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:19916}\nfirst_generated: {day:19916}\nlast_rolled: {day:19916}\nrolls: 10\ndigest: 4ed751281a471a6e97aa651b9f3f7b86fd43dd89eada9112f14a9aba0ddd7985\ntags: [reading, language/fr]\nai_generated: true\n---\nAnalysis hearsay exception analysis rule element causation.\nKanji declarant exception motion rule rule primer duty.\nHearsay breach issue breach issue element declarant exception primer.\nElement pleading remedy analysis primer primer issue primer.\n\n\n- [x] Studied\n- [ ] I read it\n",
+        "today": 19927
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: language/fr\ndate: {day:19916}\nfirst_generated: {day:19916}\nlast_rolled: {day:19927}\nrolls: 11\ndigest: 4ed751281a471a6e97aa651b9f3f7b86fd43dd89eada9112f14a9aba0ddd7985\ntags: [reading, language/fr]\nai_generated: true\n---\nAnalysis hearsay exception analysis rule element causation.\nKanji declarant exception motion rule rule primer duty.\nHearsay breach issue breach issue element declarant exception primer.\nElement pleading remedy analysis primer primer issue primer.\n\n\n- [x] Studied\n- [ ] I read it\n"
+      }
+    },
+    {
+      "input": {
+        "text": "---\r\ntype: reading\r\ntopic: law/evidence\r\ndate: {day:19785}\r\nfirst_generated: {day:19785}\r\nlast_rolled: {day:19785}\r\nrolls: 6\r\ndigest: 5b225373966ce9c1593ccf48386b3071234ed454204f27dce13175d1e95a71e0\r\ntags: [reading, law/evidence]\r\nai_generated: true\r\n---\r\nHearsay element rule pleading rule particle duty pleading kanji.\r\nElement pleading rule pleading hearsay primer rule motion.\r\nBreach exception duty kanji exception hearsay.\r\nRemedy hearsay hearsay remedy primer primer.\r\n\r\n\r\n- [ ] Studied\r\n- [x] I read it\r\n",
+        "today": 19792
+      },
+      "output": {
+        "text": "---\r\ntype: reading\r\ntopic: law/evidence\r\ndate: {day:19785}\r\nfirst_generated: {day:19785}\r\nlast_rolled: {day:19792}\r\nrolls: 7\r\ndigest: 5b225373966ce9c1593ccf48386b3071234ed454204f27dce13175d1e95a71e0\r\ntags: [reading, law/evidence]\r\nai_generated: true\r\n---\r\nHearsay element rule pleading rule particle duty pleading kanji.\r\nElement pleading rule pleading hearsay primer rule motion.\r\nBreach exception duty kanji exception hearsay.\r\nRemedy hearsay hearsay remedy primer primer.\r\n\r\n\r\n- [ ] Studied\r\n- [x] I read it\r\n"
+      }
+    },
+    {
+      "input": {
+        "text": "---\r\ntype: reading\r\ntopic: law/torts\r\ndate: {day:18921}\r\nfirst_generated: {day:18921}\r\nlast_rolled: {day:18921}\r\nrolls: 2\r\ndigest: da34926827fbe7b6a49015e8aa2f871353b641c264ccd9d475969dd12dd9f503\r\ntags: [reading, law/torts]\r\nai_generated: true\r\n---\r\nKanji issue analysis exception element particle declarant.\r\n\r\n\r\n- [ ] Studied\r\n- [x] I read it\r\n",
+        "today": 18924
+      },
+      "output": {
+        "text": "---\r\ntype: reading\r\ntopic: law/torts\r\ndate: {day:18921}\r\nfirst_generated: {day:18921}\r\nlast_rolled: {day:18924}\r\nrolls: 3\r\ndigest: da34926827fbe7b6a49015e8aa2f871353b641c264ccd9d475969dd12dd9f503\r\ntags: [reading, law/torts]\r\nai_generated: true\r\n---\r\nKanji issue analysis exception element particle declarant.\r\n\r\n\r\n- [ ] Studied\r\n- [x] I read it\r\n"
+      }
+    },
+    {
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/evidence\ndate: {day:20054}\nfirst_generated: {day:20054}\nlast_rolled: {day:20054}\nrolls: 3\ndigest: e4a3726c688f7594d69d29e2d819ece2f5534d2f75c3099c1504248d821ea7a8\ntags: [reading, law/evidence]\nai_generated: true\n---\nParticle exception exception motion remedy kanji breach issue issue.\nPleading particle particle pleading causation primer remedy.\nElement declarant particle kanji causation declarant element issue rule.\n\n\n- [x] Studied\n- [x] I read it\n",
+        "today": 20058
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/evidence\ndate: {day:20054}\nfirst_generated: {day:20054}\nlast_rolled: {day:20058}\nrolls: 4\ndigest: e4a3726c688f7594d69d29e2d819ece2f5534d2f75c3099c1504248d821ea7a8\ntags: [reading, law/evidence]\nai_generated: true\n---\nParticle exception exception motion remedy kanji breach issue issue.\nPleading particle particle pleading causation primer remedy.\nElement declarant particle kanji causation declarant element issue rule.\n\n\n- [x] Studied\n- [x] I read it\n"
+      }
+    },
+    {
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/evidence\ndate: {day:19884}\nfirst_generated: {day:19884}\nlast_rolled: {day:19884}\nrolls: 3\ndigest: 10abc65e70995accb1c5d84624b47a85f4995485fd4c9cf145f0d21a67699403\ntags: [reading, law/evidence]\nai_generated: true\n---\nMotion duty pleading declarant causation analysis element.\nPleading kanji duty breach remedy pleading breach element.\nRule exception kanji analysis breach declarant.\nBreach pleading element causation analysis primer analysis.\n\n\n- [ ] Studied\n- [x] I read it\n",
+        "today": 19888
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/evidence\ndate: {day:19884}\nfirst_generated: {day:19884}\nlast_rolled: {day:19888}\nrolls: 4\ndigest: 10abc65e70995accb1c5d84624b47a85f4995485fd4c9cf145f0d21a67699403\ntags: [reading, law/evidence]\nai_generated: true\n---\nMotion duty pleading declarant causation analysis element.\nPleading kanji duty breach remedy pleading breach element.\nRule exception kanji analysis breach declarant.\nBreach pleading element causation analysis primer analysis.\n\n\n- [ ] Studied\n- [x] I read it\n"
+      }
+    },
+    {
+      "input": {
+        "text": "---\ntype: reading\ntopic: law/civil-procedure\ndate: {day:20653}\nfirst_generated: {day:20653}\nlast_rolled: {day:20653}\nrolls: 4\ndigest: 67b7b49ebdd459ad002b9ec2ad82c0dab4a4c6726e34e5815776489113c4e712\ntags: [reading, law/civil-procedure]\nai_generated: true\n---\nDuty exception primer analysis element rule duty.\n\n\n- [ ] Studied\n- [x] I read it\n",
+        "today": 20658
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: law/civil-procedure\ndate: {day:20653}\nfirst_generated: {day:20653}\nlast_rolled: {day:20658}\nrolls: 5\ndigest: 67b7b49ebdd459ad002b9ec2ad82c0dab4a4c6726e34e5815776489113c4e712\ntags: [reading, law/civil-procedure]\nai_generated: true\n---\nDuty exception primer analysis element rule duty.\n\n\n- [ ] Studied\n- [x] I read it\n"
+      }
+    },
+    {
+      "input": {
+        "text": "---\ntype: reading\ntopic: language/ja\ndate: {day:20378}\nfirst_generated: {day:20378}\nlast_rolled: {day:20378}\nrolls: 6\ndigest: 259b407d73b2ac7704834c64e7e2289b430a238f5e41d34c96db065f43a48628\ntags: [reading, language/ja]\nai_generated: true\n---\nPleading breach breach remedy hearsay primer duty hearsay kanji.\nElement remedy analysis exception kanji element kanji declarant exception.\n\n\n- [x] Studied\n- [ ] I read it\n",
+        "today": 20385
+      },
+      "output": {
+        "text": "---\ntype: reading\ntopic: language/ja\ndate: {day:20378}\nfirst_generated: {day:20378}\nlast_rolled: {day:20385}\nrolls: 7\ndigest: 259b407d73b2ac7704834c64e7e2289b430a238f5e41d34c96db065f43a48628\ntags: [reading, language/ja]\nai_generated: true\n---\nPleading breach breach remedy hearsay primer duty hearsay kanji.\nElement remedy analysis exception kanji element kanji declarant exception.\n\n\n- [x] Studied\n- [ ] I read it\n"
+      }
+    }
+  ],
+  "function": "reading_notes._roll_note_text",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Expands each {day:N} token of text into the ISO date of epoch day N, calls the function with today as the date of epoch day today, and writes each ISO date of the returned text back as its token; a refused note is recorded as the class of the exception the function raised; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_042.py",
+  "registry_sha256": "ca19c4147531f86d6b4d1b483f65143b4d8b21a4ff2855713d34f254cacadcd8",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

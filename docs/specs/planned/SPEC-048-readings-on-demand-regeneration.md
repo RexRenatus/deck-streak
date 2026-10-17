@@ -1,7 +1,7 @@
 # SPEC-048: the owner regenerates a listed topic with one tap, and one lock keeps each topic to a single writer
 
 - **Wave:** W1. **Issue:** #34 (epic #2). **Context(s):** `deck-streak-readings` (the pick token, the topic lock, the regeneration's outcome rules); `deck-streak-coordination` (the use case, and the lock on the nightly path); `deck-streak-api` and `deck-streak-bot` (the two taps).
-- **Decided by:** ADR-006 (owner-only requests and updates), ADR-010 (the API, the bot and each job
+- **Decided by:** ADR-054 (an absent AI route is `not_enabled`), ADR-006 (owner-only requests and updates), ADR-010 (the API, the bot and each job
   run as separate units), ADR-019 (the owner's on-demand ruling: tap to pick), and ADR-048 (the lock's
   mechanism and the pick token).
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
@@ -58,6 +58,10 @@ R9. `POST /api/readings/pick/{token}/regenerate` and the bot's callback `rg:<tok
 R10. No identifier this delivery declares in the readings context says `lane`, `preread` or
     `prestudy` (the lexicon's locks for `topic` and `reading`).
 
+R11. With the AI route `Absent` (ADR-054, SPEC-043), a regeneration answers `409` with
+    `not_enabled` at once and starts nothing: it takes no lock, records no attempt and raises no
+    alert. The bot's `rg:` callback answers the same state in words (SPEC-052's text).
+
 ## 3. Acceptance criteria
 
 | id | criterion | decided by |
@@ -72,6 +76,7 @@ R10. No identifier this delivery declares in the readings context says `lane`, `
 | A8 | a regeneration that fails its repair leaves the standing reading and its vault bytes unchanged | `a_failed_regeneration_leaves_the_standing_reading` |
 | A9 | a changed day set gives a new reading and archives the previous note with its ticks | `a_changed_day_set_archives_the_old_note_with_its_ticks` |
 | A10 | the nightly run waits for a held lock at most 620 seconds and then leaves the topic to its holder (paused test time) | `the_nightly_run_leaves_a_held_topic_to_its_holder` |
+| A11 | with the AI route absent, a regeneration answers `not_enabled` and starts nothing | `an_absent_route_answers_not_enabled_and_starts_nothing` |
 
 ```acceptance
 A1: cargo test -p deck-streak-api --test readings_regenerate -- --exact only_a_listed_topic_regenerates_from_the_mini_app
@@ -84,6 +89,7 @@ A7: cargo test -p deck-streak-coordination --test readings_regenerate -- --exact
 A8: cargo test -p deck-streak-coordination --test readings_regenerate -- --exact a_failed_regeneration_leaves_the_standing_reading
 A9: cargo test -p deck-streak-coordination --test readings_regenerate -- --exact a_changed_day_set_archives_the_old_note_with_its_ticks
 A10: cargo test -p deck-streak-coordination --test readings_regenerate -- --exact the_nightly_run_leaves_a_held_topic_to_its_holder
+A11: cargo test -p deck-streak-coordination --test readings_regenerate -- --exact an_absent_route_answers_not_enabled_and_starts_nothing
 ```
 
 ## 4. File manifest

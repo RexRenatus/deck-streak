@@ -1,0 +1,7580 @@
+{
+  "adapter": "with_a_recording_notifier",
+  "cases": [
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "level_up",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "level_up",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "level_up",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "level_up",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "level_up",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "level_up",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "record",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "record",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "record",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "record",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "record",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "record",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "season_node",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "season_node",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "season_node",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "season_node",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "season_node",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "season_node",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "season_node_final",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "season_node_final",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "season_node_final",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "season_node_final",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "season_node_final",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "season_node_final",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "ghost_win",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "ghost_win",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "ghost_win",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "ghost_win",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "ghost_win",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "ghost_win",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": true,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": true,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": true,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": true,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": true,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": true,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "ceremony",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "ceremony",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "ceremony",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "ceremony",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "ceremony",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "ceremony",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "share_card",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "share_card",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "share_card",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "share_card",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "share_card",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "share_card",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "landmark_anniversary",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "landmark_anniversary",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "landmark_anniversary",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "landmark_anniversary",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "landmark_anniversary",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "landmark_anniversary",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "landmark_study_day",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "landmark_study_day",
+        "fail": [],
+        "intensity": null,
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "landmark_study_day",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "landmark_study_day",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "landmark_study_day",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 3,
+        "at_or_above_5": 1,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "landmark_study_day",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "common",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "at_or_above_4": 9,
+        "at_or_above_5": 4,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "common",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "common",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "at_or_above_4": 9,
+        "at_or_above_5": 4,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "common",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "rare",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "at_or_above_4": 9,
+        "at_or_above_5": 4,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "rare",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "rare",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "at_or_above_4": 9,
+        "at_or_above_5": 4,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "rare",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "epic",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "at_or_above_4": 9,
+        "at_or_above_5": 4,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "epic",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "epic",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "at_or_above_4": 9,
+        "at_or_above_5": 4,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "epic",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": "qaa-dice",
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "legendary",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "qaa-dice"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "at_or_above_4": 9,
+        "at_or_above_5": 4,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": "qaa-dice",
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "quiet",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "legendary",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": "qaa-dice",
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "legendary",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "qaa-dice"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "at_or_above_4": 9,
+        "at_or_above_5": 4,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": "qaa-dice",
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "loud",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "legendary",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-badge",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "set_reaction"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-badge",
+            1,
+            "send",
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "set_reaction"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-badge",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "send_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "send_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-badge",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "send_html_id"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "send_html_id"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-badge",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "edit_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "edit_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-badge",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "send_dice"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "send_dice"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-badge",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "pin_message"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "pin_message"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-badge",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "set_reaction"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "set_reaction"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "send_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-badge",
+            2,
+            "send",
+            1
+          ]
+        ],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "send_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-badge",
+            2,
+            "send",
+            1
+          ]
+        ],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "send_html_id"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "send_html_id"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "edit_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "edit_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "send_dice"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "send_dice"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "pin_message"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [
+          "pin_message"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 2
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-quest_all",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "set_reaction"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-quest_all",
+            1,
+            "send",
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "set_reaction"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-quest_all",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "send_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "send_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-quest_all",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "send_html_id"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "send_html_id"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-quest_all",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "edit_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "edit_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-quest_all",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "send_dice"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "send_dice"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-quest_all",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "pin_message"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "pin_message"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-quest_all",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "set_reaction"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "set_reaction"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "send_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "send_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "send_html_id"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "send_html_id"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "edit_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ],
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "edit_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ],
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "send_dice"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "send_dice"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "pin_message"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "quest_all",
+        "fail": [
+          "pin_message"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "sleep",
+            2.5
+          ],
+          [
+            "edit_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 3
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-queue_zero",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "set_reaction"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-queue_zero",
+            1,
+            "send",
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "set_reaction"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-queue_zero",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "send_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "send_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-queue_zero",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "send_html_id"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "send_html_id"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-queue_zero",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "edit_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "edit_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-queue_zero",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "send_dice"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "send_dice"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-queue_zero",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "pin_message"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "pin_message"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-queue_zero",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "set_reaction"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "set_reaction"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "send_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "send_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "send_html_id"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "send_html_id"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "edit_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "edit_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "send_dice"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "send_dice"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "pin_message"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [
+          "pin_message"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 4
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-band_up",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "set_reaction"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-band_up",
+            1,
+            "send",
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "set_reaction"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-band_up",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "send_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "send_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-band_up",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "send_html_id"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "send_html_id"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-band_up",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "edit_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "edit_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-band_up",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "send_dice"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "send_dice"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-band_up",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "pin_message"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "set_reaction",
+            "\ud83c\udf89"
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "outcome",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "pin_message"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-band_up",
+            1,
+            null,
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "set_reaction"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "set_reaction"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "send_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "send_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "send_html_id"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "send_html_id"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "send_html",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "edit_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "edit_html"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "send_dice"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "send_dice"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "pin_message"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": false,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "band_up",
+        "fail": [
+          "pin_message"
+        ],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 1500,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": false
+      },
+      "output": {
+        "calls": [
+          [
+            "send_dice",
+            "\ud83c\udfb0"
+          ],
+          [
+            "send_html_id",
+            null
+          ],
+          [
+            "pin_message",
+            null
+          ]
+        ],
+        "delivered": true,
+        "latched": [],
+        "pending": null,
+        "rendered": 5
+      }
+    },
+    {
+      "class": "breaker",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": true
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-badge",
+            1,
+            "send",
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "breaker",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [],
+        "intensity": "standard",
+        "owner": {
+          "age_minutes": 60,
+          "id": 7
+        },
+        "rarity": "",
+        "reaction_open": true
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-queue_zero",
+            1,
+            "send",
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "breaker",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "badge",
+        "fail": [],
+        "intensity": "standard",
+        "owner": null,
+        "rarity": "",
+        "reaction_open": true
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-badge",
+            1,
+            "send",
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    },
+    {
+      "class": "breaker",
+      "input": {
+        "at_or_above_4": 0,
+        "at_or_above_5": 0,
+        "broke": true,
+        "budget_exempt": false,
+        "dice": null,
+        "event_type": "queue_zero",
+        "fail": [],
+        "intensity": "standard",
+        "owner": null,
+        "rarity": "",
+        "reaction_open": true
+      },
+      "output": {
+        "calls": [],
+        "delivered": false,
+        "latched": [
+          [
+            "qaa-queue_zero",
+            1,
+            "send",
+            null
+          ]
+        ],
+        "pending": null,
+        "rendered": 1
+      }
+    }
+  ],
+  "function": "pipeline_layers.celebrations.CelebrationsLayer.celebrate",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds a stand-in layer with a stub store answering the case's intensity and week counts, the streak-break check patched to the case's answer, quiet hours and the payload breaker closed, the reaction breaker as the case says, the reveal's sleep patched to record its seconds and the module's clock fixed, and a recording notifier that accepts every call it is not told to refuse; returns the rendered tier and the ordered calls with their emoji and pause, and never a text; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_084.py",
+  "registry_sha256": "d94121fc9e1af11dff03656086884c0469daf7c5443f325a08a51ce9430f21bc",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

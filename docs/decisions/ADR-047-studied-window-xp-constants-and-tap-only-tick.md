@@ -30,7 +30,7 @@ the vault is unreachable at the moment of the tap.
 - Close the verdict for good when the window ends — rejected because a review made inside the window but synced after it would be lost, the false verdict constraint 6 forbids.
 - Put the amounts in `economy.json` under the XP bonuses — rejected because the game-economy probe's `economy-declared` row refuses a key its reference lacks, and changing the reference is a delivery of that pack on the owner's decision.
 - Retry a failed vault tick in the background — rejected because the line would then be written by code rather than by the owner's tap.
-- Settle the studied measure only in the nightly run, as the predecessor did — rejected because the Mini App's chip would lag the owner's study by up to a day.
+- Settle the studied measure only in the nightly run, as the predecessor did — rejected because a sync the owner triggers would bring reviews that the Mini App's chip then shows only the next night.
 
 ## Decision Outcome
 
@@ -43,7 +43,8 @@ a failed tick waits for the owner's next tap.
 ### Consequences
 
 - Good, because a studied reading is never missed for want of a sync, and never paid twice.
-- Good, because the chip moves within one sync interval of the owner's study.
+- Good, because the chip moves with every sync that brings the owner's reviews: the study day's
+  scheduled sync, or the owner's trigger (ADR-037).
 - Bad, because the game-economy pack cannot see the reading amounts; if the owner wants them
   audited with the rest of the economy, the pack's reference must learn a readings section first.
 - Bad, because a vault tick that failed stays pending until the owner taps again; the Mini App
@@ -61,4 +62,4 @@ SPEC-047's tests and the golden of `preread_tracking.py:is_studied`.
 
 ## More Information
 
-SPEC-047; ADR-019; SPEC-040's `once` scope; the game-economy pack's `economy-declared` row.
+SPEC-047; ADR-019; ADR-037; SPEC-040's `once` scope; the game-economy pack's `economy-declared` row.

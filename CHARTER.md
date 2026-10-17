@@ -27,10 +27,9 @@ ADR before the code, never a builder's call.
    reason "inert" until the owner revives it.
 2. **Two surfaces, one policy.** The Mini App and the bot are two views of one service. Every
    celebration and nudge passes through ONE router, so an event can never celebrate twice.
-3. **One small host.** The backend runs as systemd units behind Caddy on one small VM (two vCPU,
-   under 2 GiB of RAM), beside the services already there, within a stated memory budget. The VM
-   never compiles: binaries are built elsewhere and deployed as artifacts, from a SemVer tag on
-   `main` only.
+3. **One small host.** The backend runs as systemd units behind Caddy on one small host shared
+   with other services, within a stated budget (ADR-032). The host never compiles: binaries are
+   built elsewhere and deployed as artifacts, from a SemVer tag on `main` only.
 4. **Pull, then read.** DeckStreak syncs a private copy of the collection and reads it read-only.
    The skip day is the ONLY write back to Anki.
 
@@ -81,12 +80,14 @@ ADR before the code, never a builder's call.
 
 ### The AI agent
 
-16. **Claude Code through the owner's subscription proxy, fail closed.** The agent runs on the VM
-    with its own device key, reaches the proxy over a reverse tunnel opened from the maintainer's
-    machine, and never uses an `apiKeyHelper`. Each run is capped in turns and time. When the
-    proxy, the tunnel or the gate fails, the AI step says so and changes nothing: the digest goes
-    out in its deterministic form with a line saying coaching was unavailable, and the vault is
-    untouched. A silent skip is a defect.
+16. **An optional AI route, fail closed (ADR-015, ADR-054).** The AI route is off unless the owner
+    enables one, and DeckStreak is whole without it: every AI duty then records `ai_route_absent`,
+    the surfaces say readings are not enabled, and nothing alerts. When enabled through the owner's
+    subscription proxy, the agent runs on the VM with its own device key, reaches the proxy over a
+    reverse tunnel opened from the maintainer's machine, and never uses an `apiKeyHelper`. Each run
+    is capped in turns and time. When an enabled route, the tunnel or the gate fails, the AI step
+    says so and changes nothing: the digest goes out in its deterministic form with a line saying
+    coaching was unavailable, and the vault is untouched. A silent skip is a defect.
 17. **Every AI output is gated before delivery** by the packs' blocking checks (no dates, the
     scrubber, memory scope, no human claim, the output contract; citations for law). Untrusted
     text (cards, vault notes, the learner's writing) is fenced as data, and an agent reading it
@@ -113,3 +114,46 @@ ADR before the code, never a builder's call.
     DeckStreak consumes is wired into its gate or CI.
 21. **`main` changes only by a release pull request from `dev`.** Builders open pull requests into
     `dev`; required checks are the bar; nobody force-pushes or deletes a protected branch.
+
+## Amendments
+
+Amendment (2026-09-28): one passage of constraint 3, which described the host's size and its other
+services, was redacted under the public-prose rule (ADR-059).
+
+Amendment (2026-10-01): constraint 4 is amended by ADR-301, the owner's decision at #514, which
+the owner's signed ruling records. Its earlier sentence, "The skip day is the ONLY write back to
+Anki.", is kept above as it was, and no longer stands alone: DeckStreak writes to the collection
+only through declared write classes, each with its own ADR in ADR-089's form. The skip day is the
+first such class, and ADR-089 is its ADR.
+
+Amendment (the app-surfaces ruling): constraint 2 is amended by the owner's signed ruling
+`docs/rulings/OWNER-RULING-2026-10-04-app-surfaces.md`, and ADR-341 carries it. Constraint 2's text
+above is kept as it was. The ruling words what replaces it:
+
+> **Charter 2: one router, one policy.** DeckStreak's surfaces are a web client, a universal iPhone
+> and iPad client and native push (APNs and web push). Every celebration and nudge still passes
+> through ONE router, so an event can never celebrate twice. The Mini App and the bot remain until
+> the new surfaces carry the router, and the v9 cutover runs on today's surfaces. Native nudges are
+> opt-in, at most one a day (NOTIF-01).
+
+Amendment (the app-surfaces ruling): constraint 4 is amended again by the same ruling,
+`docs/rulings/OWNER-RULING-2026-10-04-app-surfaces.md`. ADR-337 carries the owner's own answers and
+gestures, and ADR-338 and ADR-339 carry its scheduler sentence. Constraint 4's text above, and the
+note on ADR-301 before this one, are kept as they were. The ruling words what replaces it:
+
+> **Charter 4: pull, then read, and the owner's own study.** The private copy stays read-only for
+> the game. The study client writes the owner's own answers, and the owner's own gestures under
+> `docs/rulings/OWNER-RULING-2026-10-04-owner-taps.md`. Every other write goes through a declared
+> write class (ADR-301). An experimental model only reorders cards the stock scheduler already made
+> due (OQ4), except FSRS-7 on the one preset the owner switches (OQ1).
+
+Amendment (the app-surfaces ruling): constraint 14 is amended by the same ruling,
+`docs/rulings/OWNER-RULING-2026-10-04-app-surfaces.md`, and ADR-335 carries it with the sign-in on
+the iPhone and iPad. Constraint 14's text above is kept as it was. The ruling words what replaces
+it:
+
+> **Charter 14: one owner, on every surface.** "The service answers one owner" is unchanged. Sign-in
+> on the web and on the iPhone and iPad pins to the one owner account, which is configuration held
+> in a secret, by the methods ADR-131 and ADR-132 specify (AUTH-01). The Telegram `initData` gate
+> stays while the Mini App and the bot exist. Commands with stakes or destructive effects carry the
+> same gate on every surface. No surface opens a session before its gate is built.

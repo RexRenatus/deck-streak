@@ -1,0 +1,50 @@
+// A planted Mini App test for scripts/tests/test_temp_hygiene.py (SPEC-030 A5). The `.fixture`
+// suffix keeps it out of Vitest, Playwright and every probe glob; the lint reads it as TypeScript
+// by its inner extension. Each line the lint must refuse ends with a `planted` comment, and each
+// form it must accept ends with an `accepted` comment.
+import { mkdtempDisposableSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { expect, test } from 'vitest';
+
+test('a made directory is never removed', () => {
+  const kept = mkdtempSync(join(tmpdir(), 'deckstreak-')); // planted: mkdtempSync with no rmSync
+  writeFileSync(join(kept, 'note.txt'), 'x');
+  expect(kept).toContain('deckstreak-');
+});
+
+test('an awaited directory is never removed', async () => {
+  const kept = await mkdtemp(join(tmpdir(), 'deckstreak-')); // planted: mkdtemp with no rm
+  expect(kept).toContain('deckstreak-');
+});
+
+test('a directory made inline has no name to remove', () => {
+  writeFileSync(join(mkdtempSync(join(tmpdir(), 'deckstreak-')), 'note.txt'), 'x'); // planted: unbound
+});
+
+test('a fixed path under tmp is never removed', () => {
+  writeFileSync('/tmp/deckstreak-planted.txt', 'x'); // planted: a /tmp/ literal
+});
+
+test('a made directory removed at the end is accepted', () => {
+  const scratch = mkdtempSync(join(tmpdir(), 'deckstreak-')); // accepted: rmSync removes it
+  try {
+    writeFileSync(join(scratch, 'note.txt'), 'x');
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+  expect(scratch).toContain('deckstreak-');
+});
+
+test('an awaited directory removed at the end is accepted', async () => {
+  const scratch = await mkdtemp(join(tmpdir(), 'deckstreak-')); // accepted: rm removes it
+  await rm(scratch, { recursive: true, force: true });
+  expect(scratch).toContain('deckstreak-');
+});
+
+test('a disposable directory is accepted', () => {
+  using scratch = mkdtempDisposableSync(join(tmpdir(), 'deckstreak-')); // accepted: disposed
+  // A comment that says mkdtempSync( or '/tmp/x' is prose, not code.
+  expect(scratch.path).toContain('deckstreak-');
+});

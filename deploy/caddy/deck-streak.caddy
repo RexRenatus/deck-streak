@@ -1,0 +1,94 @@
+# DeckStreak's site block (SPEC-032 R6; ADR-007, ADR-025, ADR-032): the Mini App's static build
+# with its SPA fallback, /api/* proxied to the API's loopback listener, the sync server under
+# /anki-sync/ proxied to its own (SPEC-337 R4; ADR-347 D4), the health routes closed at the edge, a
+# robots.txt that disallows everything, the security headers on every response, and one access log
+# of the sync route alone, with no request header and no key in it (SPEC-340 R6). Its four
+# environment placeholders are Caddy's own syntax, and the private rail supplies their values when
+# it installs the block (deploy/README.md); nothing in it is one host's value.
+{$DECKSTREAK_HOST} {
+	# Every response, the API's included. The operations are deferred until the response is
+	# written, so they also replace what the upstream sent.
+	header {
+		defer
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+		X-Robots-Tag "noindex"
+		# The framing policy, which a meta element cannot carry. The page's own meta policy carries
+		# the script sources with its build's hashes (SPEC-028 R14), so none is set here.
+		Content-Security-Policy "frame-ancestors https://web.telegram.org; object-src 'none'; base-uri 'self'"
+		-Server
+	}
+
+	# The edge's one access log, of the sync route alone (SPEC-340 R6; ADR-351 D4): the client's
+	# address, the method, the path and the status. No request header is written, and the `k`
+	# parameter is removed from the path. It names no output, so it reaches the journal.
+	log {
+		format filter {
+			request>headers delete
+			request>uri query {
+				delete k
+			}
+			wrap json
+		}
+	}
+	@not_sync not path /anki-sync/*
+	log_skip @not_sync
+
+	# Answered here, before the build's own file is reached.
+	handle /robots.txt {
+		respond <<ROBOTS
+			User-agent: *
+			Disallow: /
+			ROBOTS 200
+	}
+
+	handle /api/* {
+		# The health routes answer on loopback only, never from outside (ADR-025): respond runs
+		# before reverse_proxy in Caddy's directive order.
+		@health path /api/livez /api/readyz
+		respond @health 404
+		reverse_proxy {$DECKSTREAK_API_UPSTREAM}
+	}
+
+	# The sync server, on this origin because a browser's sync is same-origin (ADR-347 D4). The bare
+	# path goes to the slash form; `*` is the matcher, so the target is not read as one.
+	handle /anki-sync {
+		redir * /anki-sync/ 308
+	}
+
+	handle /anki-sync/* {
+		# The server's own routes begin /sync/ and /msync/. uri runs before respond and
+		# reverse_proxy in Caddy's directive order, so both see the server's own path.
+		uri strip_prefix /anki-sync
+		# The route answers under its one spelling alone (SPEC-351 R1, R2; ADR-362 D1). The
+		# request-target as the edge received it, which the strip above does not change and which
+		# the access log records, must be the prefix as written, then segments of letters and
+		# digits, then any query; every other spelling is answered 404 here and never proxied.
+		@sync_respelled expression !{http.request.orig_uri}.matches('^(?:https?://[A-Za-z0-9.:-]+)?/anki-sync(?:/[A-Za-z0-9]+)+(?:[?].*)?$')
+		respond @sync_respelled 404
+		# The server's health route answers on loopback only, as the API's do (ADR-025).
+		@sync_health path /health
+		respond @sync_health 404
+		# The server's own payload limit, 100 MiB, so the edge refuses only what the server would.
+		request_body {
+			max_size 100MiB
+		}
+		reverse_proxy {$DECKSTREAK_SYNC_UPSTREAM} {
+			# The sync server needs no web cookie and sets none on this origin (SPEC-340 R9;
+			# ADR-351 D7): the edge drops it in both directions.
+			header_up -Cookie
+			header_down -Set-Cookie
+			transport http {
+				read_buffer 512KiB
+			}
+		}
+	}
+
+	# Every other route is the SPA's: a file of the build, or the fallback page the client routes.
+	handle {
+		root * {$DECKSTREAK_WEB_ROOT}
+		try_files {path} {path}.html /index.html
+		file_server
+	}
+}

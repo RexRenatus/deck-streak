@@ -29,7 +29,7 @@ not a delivery.
 ## Boundaries (the ddd pack): the compiler is the boundary
 
 - One crate per bounded context under `crates/`, named `deck-streak-<context>`. The crate graph IS
-  the context map, and `scripts/ddd-probe.py` holds them equal in both directions.
+  the context map, and the box-run ddd probe holds them equal in both directions (ADR-069).
 - **Never add a dependency edge to a `Cargo.toml` to make code compile.** The edge is the design.
   If your work needs an edge the map lacks, you have put the code in the wrong crate, or found a
   real design question: write it up and stop.
@@ -54,12 +54,13 @@ not a delivery.
 ## The gate
 
 ```sh
-bash scripts/check.sh      # fmt · clippy -D warnings · nextest · doctests · web · oracle · packs · secrets
+bash scripts/check.sh      # fmt · clippy -D warnings · nextest · doctests · web · oracle · scrub · secrets
 ```
 
-All stages, no exceptions, and never `--no-verify`. The same script runs in CI. `scripts/pack-rows.py`
-runs every row of every vendored pack (`.packs/`); `.packs/wiring.json` says which packs are
-enforced and which wait for a named issue.
+All stages, no exceptions, and never `--no-verify`. The same script runs in CI. The packs, and the
+sdd, ddd and tdd probes, are judged on the maintainer's box: `scripts/box-packs.sh` runs them from a
+private checkout, reads their wiring from a private file, and posts its verdict on the pull request
+as the `box/packs` status (ADR-069).
 
 ## Conventions
 
@@ -111,4 +112,4 @@ so is every future one:
   with the coverage matrix and References, and an ADR naming what it was chosen against.
 - **Hand-back**: the coverage numbers and SKILL FEEDBACK.
 
-`.packs/scripts/pack-lint.py` (the pack-authoring pack) judges a pack's shape.
+The pack-authoring pack, one of the box-run packs, judges a pack's shape.

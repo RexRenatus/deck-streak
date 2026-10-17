@@ -1,0 +1,12 @@
+{
+  "schema": "deckstreak.readings.taxonomy.v1",
+  "law": {
+    "roots": ["Casebook"],
+    "bands": ["Year One", "Year Two", "Year Three"]
+  },
+  "languages": [
+    {"deck": "Tongue Alpha", "code": "qaa", "display": "Alpha", "term_field": "Headword"},
+    {"deck": "Tongue Beta", "code": "qab", "display": "Beta", "term_field": "Headword"}
+  ],
+  "writing_roots": ["Composition"]
+}

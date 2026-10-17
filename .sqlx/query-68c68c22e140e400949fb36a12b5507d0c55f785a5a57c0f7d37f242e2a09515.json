@@ -1,0 +1,110 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id!\", kind, dedupe_key, scope, surface, study_day, lapse_id, created_at\n           FROM notification_deliveries ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "notification_deliveries",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "kind",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_deliveries",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "name": "dedupe_key",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_deliveries",
+            "name": "dedupe_key"
+          }
+        }
+      },
+      {
+        "name": "scope",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_deliveries",
+            "name": "scope"
+          }
+        }
+      },
+      {
+        "name": "surface",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_deliveries",
+            "name": "surface"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "notification_deliveries",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "lapse_id",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "notification_deliveries",
+            "name": "lapse_id"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "notification_deliveries",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "68c68c22e140e400949fb36a12b5507d0c55f785a5a57c0f7d37f242e2a09515"
+}

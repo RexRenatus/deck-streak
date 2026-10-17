@@ -9,9 +9,9 @@ and the rules that hold everywhere. The binding record of contexts and edges is
 DeckStreak syncs a private copy of its owner's Anki collection from the owner's own sync server,
 reads it read-only, and recomputes each study day: the score, XP and levels, streaks, quests and
 chests, coins, curriculum progress. It speaks through one notification router to two surfaces, a
-Telegram bot and a Telegram Mini App, and runs an AI agent (Claude Code through the owner's
-subscription proxy) for the daily pre-study readings, the digest's coaching and the second-brain
-duties. It is one Rust binary, `deckstreakd`, run as systemd units behind Caddy on one small VM,
+Telegram bot and a Telegram Mini App, and, when the owner enables an AI route, runs an AI agent
+(Claude Code through the owner's subscription proxy, ADR-054) for the daily pre-study readings, the
+digest's coaching and the second-brain duties. It is one Rust binary, `deckstreakd`, run as systemd units behind Caddy on one small VM,
 with a SQLite database replicated by Litestream.
 
 ```mermaid
@@ -20,7 +20,7 @@ flowchart LR
   ingest --> coordination
   coordination --> domain[domain contexts]
   coordination --> agent
-  agent --> proxy[subscription proxy]
+  agent -.->|when enabled| proxy[subscription proxy]
   coordination --> vault[(second-brain vault)]
   api --> coordination
   bot --> coordination
@@ -49,8 +49,7 @@ flowchart LR
 | `agent/` | the agent's public duty skills, prompts, settings template and runner |
 | `deploy/` | systemd unit and Caddy templates, the host budget, deploy and rollback scripts |
 | `tools/parity-oracle/` | the golden generator and the committed goldens |
-| `.packs/` | the vendored packs and their probes (ADR-004) |
-| `scripts/` | the gate: `check.sh`, the methodology probes, `pack-rows.py` |
+| `scripts/` | the gate (`check.sh`), the public scrub, and the box run's driver (ADR-069) |
 | `docs/` | the charter's companions: context map, lexicon, SPECs, ADRs, schematics, red-first records |
 
 ## Invariants

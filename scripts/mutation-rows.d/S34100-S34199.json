@@ -1,0 +1,30 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S34101-THE-CARD-JOB-RUNS-THE-PLANTED-SUITE",
+        ".github/workflows/ci.yml",
+        "        run: pnpm --dir web/app test:card\n",
+        "        run: 'true'\n",
+        "the card-sandbox job stops running the planted suite (SPEC-341 R12, A13)",
+        "test_ci_workflows.TheCardSandboxRunsInBothEngines.test_the_card_sandbox_job_runs_the_planted_suite_in_both_engines"
+      ],
+      [
+        "S34102-THE-CARD-JOB-INSTALLS-WEBKIT",
+        ".github/workflows/ci.yml",
+        "--only-shell chromium webkit\n      - name: the planted cards",
+        "--only-shell chromium\n      - name: the planted cards",
+        "the card-sandbox job stops installing WebKit, so the suite runs in one engine (SPEC-341 R12, A13)",
+        "test_ci_workflows.TheCardSandboxRunsInBothEngines.test_the_card_sandbox_job_runs_the_planted_suite_in_both_engines"
+      ],
+      [
+        "S34103-THE-AGGREGATE-NEEDS-THE-CARD-JOB",
+        ".github/workflows/ci.yml",
+        "web, card-sandbox, hygiene",
+        "web, hygiene",
+        "the aggregate check stops needing the card-sandbox job (SPEC-341 R12)",
+        "test_ci_workflows.WorkflowsAreHardened.test_the_aggregate_check_needs_every_job_and_always_runs"
+      ]
+    ]
+  }
+}

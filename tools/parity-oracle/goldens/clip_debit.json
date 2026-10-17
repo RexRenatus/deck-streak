@@ -1,0 +1,662 @@
+{
+  "cases": [
+    {
+      "class": "request_zero",
+      "input": {
+        "cap_remaining": 30,
+        "requested": 0,
+        "wallet": 50
+      },
+      "output": [
+        0,
+        false
+      ]
+    },
+    {
+      "class": "request_negative",
+      "input": {
+        "cap_remaining": 30,
+        "requested": -4,
+        "wallet": 50
+      },
+      "output": [
+        0,
+        false
+      ]
+    },
+    {
+      "class": "exact",
+      "input": {
+        "cap_remaining": 30,
+        "requested": 30,
+        "wallet": 50
+      },
+      "output": [
+        30,
+        false
+      ]
+    },
+    {
+      "class": "exact",
+      "input": {
+        "cap_remaining": 60,
+        "requested": 50,
+        "wallet": 50
+      },
+      "output": [
+        50,
+        false
+      ]
+    },
+    {
+      "class": "floor",
+      "input": {
+        "cap_remaining": 30,
+        "requested": 20,
+        "wallet": 0
+      },
+      "output": [
+        0,
+        true
+      ]
+    },
+    {
+      "class": "floor",
+      "input": {
+        "cap_remaining": 30,
+        "requested": 20,
+        "wallet": -3
+      },
+      "output": [
+        0,
+        true
+      ]
+    },
+    {
+      "class": "cap_spent",
+      "input": {
+        "cap_remaining": 0,
+        "requested": 20,
+        "wallet": 80
+      },
+      "output": [
+        0,
+        true
+      ]
+    },
+    {
+      "class": "cap_spent",
+      "input": {
+        "cap_remaining": -5,
+        "requested": 20,
+        "wallet": 80
+      },
+      "output": [
+        0,
+        true
+      ]
+    },
+    {
+      "class": "forgiven_by_cap",
+      "input": {
+        "cap_remaining": 12,
+        "requested": 20,
+        "wallet": 80
+      },
+      "output": [
+        12,
+        true
+      ]
+    },
+    {
+      "class": "forgiven_by_wallet",
+      "input": {
+        "cap_remaining": 30,
+        "requested": 20,
+        "wallet": 7
+      },
+      "output": [
+        7,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 9,
+        "requested": 1,
+        "wallet": 9
+      },
+      "output": [
+        1,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 10,
+        "requested": 1,
+        "wallet": 9
+      },
+      "output": [
+        1,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 11,
+        "requested": 1,
+        "wallet": 9
+      },
+      "output": [
+        1,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 9,
+        "requested": 1,
+        "wallet": 10
+      },
+      "output": [
+        1,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 10,
+        "requested": 1,
+        "wallet": 10
+      },
+      "output": [
+        1,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 11,
+        "requested": 1,
+        "wallet": 10
+      },
+      "output": [
+        1,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 9,
+        "requested": 1,
+        "wallet": 11
+      },
+      "output": [
+        1,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 10,
+        "requested": 1,
+        "wallet": 11
+      },
+      "output": [
+        1,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 11,
+        "requested": 1,
+        "wallet": 11
+      },
+      "output": [
+        1,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 9,
+        "requested": 9,
+        "wallet": 9
+      },
+      "output": [
+        9,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 10,
+        "requested": 9,
+        "wallet": 9
+      },
+      "output": [
+        9,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 11,
+        "requested": 9,
+        "wallet": 9
+      },
+      "output": [
+        9,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 9,
+        "requested": 9,
+        "wallet": 10
+      },
+      "output": [
+        9,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 10,
+        "requested": 9,
+        "wallet": 10
+      },
+      "output": [
+        9,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 11,
+        "requested": 9,
+        "wallet": 10
+      },
+      "output": [
+        9,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 9,
+        "requested": 9,
+        "wallet": 11
+      },
+      "output": [
+        9,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 10,
+        "requested": 9,
+        "wallet": 11
+      },
+      "output": [
+        9,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 11,
+        "requested": 9,
+        "wallet": 11
+      },
+      "output": [
+        9,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 9,
+        "requested": 10,
+        "wallet": 9
+      },
+      "output": [
+        9,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 10,
+        "requested": 10,
+        "wallet": 9
+      },
+      "output": [
+        9,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 11,
+        "requested": 10,
+        "wallet": 9
+      },
+      "output": [
+        9,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 9,
+        "requested": 10,
+        "wallet": 10
+      },
+      "output": [
+        9,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 10,
+        "requested": 10,
+        "wallet": 10
+      },
+      "output": [
+        10,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 11,
+        "requested": 10,
+        "wallet": 10
+      },
+      "output": [
+        10,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 9,
+        "requested": 10,
+        "wallet": 11
+      },
+      "output": [
+        9,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 10,
+        "requested": 10,
+        "wallet": 11
+      },
+      "output": [
+        10,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 11,
+        "requested": 10,
+        "wallet": 11
+      },
+      "output": [
+        10,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 9,
+        "requested": 11,
+        "wallet": 9
+      },
+      "output": [
+        9,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 10,
+        "requested": 11,
+        "wallet": 9
+      },
+      "output": [
+        9,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 11,
+        "requested": 11,
+        "wallet": 9
+      },
+      "output": [
+        9,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 9,
+        "requested": 11,
+        "wallet": 10
+      },
+      "output": [
+        9,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 10,
+        "requested": 11,
+        "wallet": 10
+      },
+      "output": [
+        10,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 11,
+        "requested": 11,
+        "wallet": 10
+      },
+      "output": [
+        10,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 9,
+        "requested": 11,
+        "wallet": 11
+      },
+      "output": [
+        9,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 10,
+        "requested": 11,
+        "wallet": 11
+      },
+      "output": [
+        10,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 11,
+        "requested": 11,
+        "wallet": 11
+      },
+      "output": [
+        11,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 56,
+        "requested": 180,
+        "wallet": 67
+      },
+      "output": [
+        56,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 73,
+        "requested": 167,
+        "wallet": 41
+      },
+      "output": [
+        41,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": -4,
+        "requested": 141,
+        "wallet": 76
+      },
+      "output": [
+        0,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 9,
+        "requested": 100,
+        "wallet": 198
+      },
+      "output": [
+        9,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 71,
+        "requested": 21,
+        "wallet": 54
+      },
+      "output": [
+        21,
+        false
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 105,
+        "requested": 116,
+        "wallet": 287
+      },
+      "output": [
+        105,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 41,
+        "requested": 100,
+        "wallet": 96
+      },
+      "output": [
+        41,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 74,
+        "requested": 76,
+        "wallet": 161
+      },
+      "output": [
+        74,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 115,
+        "requested": 104,
+        "wallet": 37
+      },
+      "output": [
+        37,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 42,
+        "requested": 98,
+        "wallet": 31
+      },
+      "output": [
+        31,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": -2,
+        "requested": 141,
+        "wallet": 114
+      },
+      "output": [
+        0,
+        true
+      ]
+    },
+    {
+      "input": {
+        "cap_remaining": 11,
+        "requested": 46,
+        "wallet": 38
+      },
+      "output": [
+        11,
+        true
+      ]
+    }
+  ],
+  "function": "gamification.economy.clip_debit",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_082.py",
+  "registry_sha256": "a69a0d3ef28d4d443743ee93fd7a1541597ecbfc742b280cff28d41faea8a8d8",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

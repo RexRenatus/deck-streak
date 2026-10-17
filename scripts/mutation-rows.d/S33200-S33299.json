@@ -1,0 +1,30 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S33200-THE-ROWS-JOB-FETCHES-THE-LOCKED-GRAPH",
+        ".github/workflows/ci.yml",
+        "        run: cargo fetch --locked\n",
+        "        run: echo skipped\n",
+        "the pull request's rows job runs cargo fetch --locked before it proves, so a prefix-restored cache never leaves the offline census a package short (SPEC-332 R1)",
+        "test_rows_jobs_fetch_graph.EveryRowsJobFetchesTheLockedGraph.test_each_proving_job_fetches_after_its_cache_restore_and_before_prove"
+      ],
+      [
+        "S33201-THE-FETCH-STEP-FAILS-ITS-JOB",
+        ".github/workflows/ci.yml",
+        "        run: cargo fetch --locked\n",
+        "        run: cargo fetch --locked || true\n",
+        "the fetch step's exit code is the step's: a failed fetch fails the job at the fetch and is not swallowed (SPEC-332 R2)",
+        "test_rows_jobs_fetch_graph.EveryRowsJobFetchesTheLockedGraph.test_the_fetch_step_fails_its_job_when_the_fetch_fails"
+      ],
+      [
+        "S33202-THE-WEEKLY-ROWS-JOB-FETCHES-THE-LOCKED-GRAPH",
+        ".github/workflows/mutation-weekly.yml",
+        "        run: cargo fetch --locked\n      - name: every hand-proved row\n",
+        "        run: echo skipped\n      - name: every hand-proved row\n",
+        "the weekly sweep's rows job fetches the locked graph before it proves every row (SPEC-332 R1)",
+        "test_rows_jobs_fetch_graph.EveryRowsJobFetchesTheLockedGraph.test_each_proving_job_fetches_after_its_cache_restore_and_before_prove"
+      ]
+    ]
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S40500-THE-LANE-TAKES-A-DISPATCH",
+        ".github/workflows/testflight-release.yml",
+        "  workflow_dispatch:\n",
+        "\n",
+        "the release lane declares a manual dispatch beside the tag push, so a tag whose push started no lane run can still be built (SPEC-405 R1, A1)",
+        "test_testflight_workflows.TheReleaseLaneHasASecondPath.test_the_release_lane_runs_on_a_tag_push_or_an_input_free_dispatch_and_nothing_skips_either"
+      ],
+      [
+        "S40501-THE-DISPATCH-TAKES-NO-INPUT",
+        ".github/workflows/testflight-release.yml",
+        "  workflow_dispatch:\n",
+        "  workflow_dispatch:\n    inputs:\n      tag:\n        type: string\n        required: true\n",
+        "the lane's dispatch declares no input, so the tag a run builds is the ref it was dispatched at (SPEC-405 R1, A1)",
+        "test_testflight_workflows.TheReleaseLaneHasASecondPath.test_the_release_lane_runs_on_a_tag_push_or_an_input_free_dispatch_and_nothing_skips_either"
+      ],
+      [
+        "S40502-NO-PATH-SKIPS-THE-GUARD-STEP",
+        ".github/workflows/testflight-release.yml",
+        "      - name: the tag is SemVer, annotated, and its commit is on main\n",
+        "      - name: the tag is SemVer, annotated, and its commit is on main\n        if: ${{ github.event_name == 'push' }}\n",
+        "the guard step carries no if, so a dispatched run checks the tag exactly as a pushed run does (SPEC-405 R2, A1)",
+        "test_testflight_workflows.TheReleaseLaneHasASecondPath.test_the_release_lane_runs_on_a_tag_push_or_an_input_free_dispatch_and_nothing_skips_either"
+      ],
+      [
+        "S40503-NO-PATH-SKIPS-THE-PLAN-JOB",
+        ".github/workflows/testflight-release.yml",
+        "  plan:\n",
+        "  plan:\n    if: ${{ github.event_name == 'push' }}\n",
+        "the plan job carries no if, so neither path skips the guard and the plan, and no refused run reads as a success (SPEC-405 R2, A1)",
+        "test_testflight_workflows.TheReleaseLaneHasASecondPath.test_the_release_lane_runs_on_a_tag_push_or_an_input_free_dispatch_and_nothing_skips_either"
+      ],
+      [
+        "S40504-NO-PATH-SKIPS-THE-FRAMEWORK-JOB",
+        ".github/workflows/testflight-release.yml",
+        "  framework:\n",
+        "  framework:\n    if: ${{ github.event_name == 'push' }}\n",
+        "the framework job carries no if, so a dispatched run builds the same framework at the tag's ref as a pushed run (SPEC-405 R2, A1)",
+        "test_testflight_workflows.TheReleaseLaneHasASecondPath.test_the_release_lane_runs_on_a_tag_push_or_an_input_free_dispatch_and_nothing_skips_either"
+      ],
+      [
+        "S40505-NO-PATH-SKIPS-THE-APP-JOB",
+        ".github/workflows/testflight-release.yml",
+        "  app:\n",
+        "  app:\n    if: ${{ github.event_name == 'push' }}\n",
+        "the app job carries no if, so a dispatched run reaches the same review and upload as a pushed run (SPEC-405 R2, A1)",
+        "test_testflight_workflows.TheReleaseLaneHasASecondPath.test_the_release_lane_runs_on_a_tag_push_or_an_input_free_dispatch_and_nothing_skips_either"
+      ],
+      [
+        "S40506-ONE-GROUP-FOR-BOTH-PATHS",
+        ".github/workflows/testflight-release.yml",
+        "  group: testflight-release-${{ github.ref }}\n",
+        "  group: testflight-release-${{ github.event_name }}-${{ github.ref }}\n",
+        "a pushed and a dispatched run of one tag share one group, so they take turns and none is cancelled (SPEC-405 R5, A3)",
+        "test_testflight_workflows.TheReleaseLaneHasASecondPath.test_a_push_and_a_dispatch_of_one_tag_render_one_lane_group"
+      ],
+      [
+        "S40507-THE-PLAN-ADMITS-THE-DISPATCH",
+        "scripts/ios_lane.py",
+        "    elif event not in (\"push\", \"workflow_dispatch\") or os.environ.get(\"GITHUB_REF_TYPE\") != \"tag\":\n",
+        "    elif event not in (\"push\",) or os.environ.get(\"GITHUB_REF_TYPE\") != \"tag\":\n",
+        "the release plan admits a dispatch at a tag's own ref exactly as it admits the tag's push (SPEC-405 R3, A2)",
+        "test_ios_lane.LanePlan.test_the_release_plan_admits_a_dispatch_at_the_tags_ref_as_its_push_and_refuses_a_branch"
+      ],
+      [
+        "S40508-THE-PLAN-REFUSES-A-BRANCH",
+        "scripts/ios_lane.py",
+        "    elif event not in (\"push\", \"workflow_dispatch\") or os.environ.get(\"GITHUB_REF_TYPE\") != \"tag\":\n",
+        "    elif event not in (\"push\", \"workflow_dispatch\"):\n",
+        "the release plan refuses a dispatch at a branch, a branch named like the tag included, by its event and ref (SPEC-405 R3, A2)",
+        "test_ios_lane.LanePlan.test_the_release_plan_admits_a_dispatch_at_the_tags_ref_as_its_push_and_refuses_a_branch"
+      ],
+      [
+        "S40509-THE-PLAN-REFUSES-ANOTHER-EVENT",
+        "scripts/ios_lane.py",
+        "    elif event not in (\"push\", \"workflow_dispatch\") or os.environ.get(\"GITHUB_REF_TYPE\") != \"tag\":\n",
+        "    elif os.environ.get(\"GITHUB_REF_TYPE\") != \"tag\":\n",
+        "the release plan refuses an event that is neither a push nor a dispatch, a scheduled run at the tag included (SPEC-405 R3, A2)",
+        "test_ios_lane.LanePlan.test_the_release_plan_admits_a_dispatch_at_the_tags_ref_as_its_push_and_refuses_a_branch"
+      ],
+      [
+        "S40510-THE-PLAN-READS-THE-RUNS-ACTOR",
+        "scripts/ios_lane.py",
+        "    elif os.environ.get(\"GITHUB_ACTOR\") == WORKFLOW_TOKEN:\n",
+        "    elif os.environ.get(\"GITHUB_TRIGGERING_ACTOR\") == WORKFLOW_TOKEN:\n",
+        "the release plan reads the actor of the run's first attempt, so a run the workflow token started is refused on either event (SPEC-405 R4, A5)",
+        "test_ios_lane.LanePlan.test_the_release_plan_refuses_a_run_the_workflow_token_started"
+      ],
+      [
+        "S40511-THE-TOKENS-ACTOR-IS-PINNED",
+        "scripts/ios_lane.py",
+        "WORKFLOW_TOKEN = \"github-actions[bot]\"\n",
+        "WORKFLOW_TOKEN = \"github-actions\"\n",
+        "the workflow token's actor is pinned to its exact name, so the plan's refusal matches the run that token starts (SPEC-405 R4, A5)",
+        "test_ios_lane.LanePlan.test_the_release_plan_refuses_a_run_the_workflow_token_started"
+      ],
+      [
+        "S40512-THE-RUNBOOK-DETECTS-NO-LANE-RUN",
+        "RELEASING.md",
+        "gh run list --workflow testflight-release.yml --commit",
+        "gh run list --workflow testflight-release.yml",
+        "the runbook's detection lists the lane runs of the tag's own commit, so a tag whose push started none is seen (SPEC-405 R7, A4)",
+        "test_rulesets.TheLaneRunbookRecoversATagWithNoLaneRun.test_the_runbook_builds_a_tag_with_no_lane_run_by_a_dispatch_at_its_own_ref"
+      ],
+      [
+        "S40513-THE-RUNBOOK-DISPATCHES-THE-LANE",
+        "RELEASING.md",
+        "gh workflow run testflight-release.yml --ref vX.Y.Z\n",
+        "git push origin vX.Y.Z\n",
+        "the runbook's recovery is a dispatch of the lane at the tag's own ref, never a push of the tag again (SPEC-405 R7, A4)",
+        "test_rulesets.TheLaneRunbookRecoversATagWithNoLaneRun.test_the_runbook_builds_a_tag_with_no_lane_run_by_a_dispatch_at_its_own_ref"
+      ],
+      [
+        "S40514-THE-RUNBOOK-SAYS-WHY-NO-APPLE-DISPATCH",
+        "RELEASING.md",
+        "`apple-on-tag.yml` takes no dispatch",
+        "`apple-on-tag.yml` takes a dispatch",
+        "the runbook says that apple-on-tag.yml takes no dispatch, because the lane's framework job runs the same build at the tag's ref (SPEC-405 R7, A4)",
+        "test_rulesets.TheLaneRunbookRecoversATagWithNoLaneRun.test_the_runbook_builds_a_tag_with_no_lane_run_by_a_dispatch_at_its_own_ref"
+      ],
+      [
+        "S40515-THE-LANE-GUARD-CHECKS-THE-REF",
+        ".github/workflows/testflight-release.yml",
+        "          if [ \"$GITHUB_REF\" != \"refs/tags/$tag\" ]; then\n",
+        "          if false; then\n",
+        "the lane's guard binds the ref a dispatch can set: a run whose ref is not refs/tags/ and the tag it names is refused (SPEC-405 R2, SPEC-352 A18)",
+        "test_testflight_workflows.TheTestflightLanes.test_the_two_app_jobs_differ_only_in_environment_and_lane"
+      ]
+    ]
+  }
+}

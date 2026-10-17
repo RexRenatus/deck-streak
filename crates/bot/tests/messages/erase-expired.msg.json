@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "That confirmation is no longer valid, so nothing was erased. Send /delete to start again."
+  },
+  "x-message": "erase-expired"
+}

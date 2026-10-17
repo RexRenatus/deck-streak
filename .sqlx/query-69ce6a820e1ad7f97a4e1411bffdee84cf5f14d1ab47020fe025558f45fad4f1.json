@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO drill_answers (drill_id, study_day, surface, created_at)\n         VALUES (?1, ?2, ?3, ?4) ON CONFLICT (drill_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "69ce6a820e1ad7f97a4e1411bffdee84cf5f14d1ab47020fe025558f45fad4f1"
+}

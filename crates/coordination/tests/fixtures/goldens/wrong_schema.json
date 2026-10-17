@@ -1,0 +1,20 @@
+{
+  "cases": [
+    {
+      "input": {
+        "instant_ms": 0
+      },
+      "output": 0
+    }
+  ],
+  "function": "planted.another_schema",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_000.py",
+  "registry_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "schema": "phx.parity-golden.v0",
+  "seed": 20,
+  "source_commit": "0000000000000000000000000000000000000000"
+}

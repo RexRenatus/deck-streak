@@ -1,0 +1,488 @@
+{
+  "adapter": "through_stub_responses",
+  "cases": [
+    {
+      "class": "delivered",
+      "input": {
+        "responses": [
+          {
+            "status": 200
+          }
+        ]
+      },
+      "output": {
+        "delivered": true,
+        "requests": 1,
+        "send_marker": [
+          1,
+          1
+        ],
+        "waits_seconds": []
+      }
+    },
+    {
+      "class": "then-delivered",
+      "input": {
+        "responses": [
+          {
+            "retry_after": 29,
+            "status": 429
+          },
+          {
+            "status": 200
+          }
+        ]
+      },
+      "output": {
+        "delivered": true,
+        "requests": 2,
+        "send_marker": [
+          1,
+          1
+        ],
+        "waits_seconds": [
+          29.0
+        ]
+      }
+    },
+    {
+      "class": "exhausted",
+      "input": {
+        "responses": [
+          {
+            "retry_after": 24,
+            "status": 429
+          },
+          {
+            "retry_after": 22,
+            "status": 429
+          },
+          {
+            "retry_after": 26,
+            "status": 429
+          }
+        ]
+      },
+      "output": {
+        "delivered": false,
+        "requests": 3,
+        "send_marker": [
+          1,
+          0
+        ],
+        "waits_seconds": [
+          24.0,
+          22.0
+        ]
+      }
+    },
+    {
+      "class": "then-delivered",
+      "input": {
+        "responses": [
+          {
+            "status": 429
+          },
+          {
+            "status": 200
+          }
+        ]
+      },
+      "output": {
+        "delivered": true,
+        "requests": 2,
+        "send_marker": [
+          1,
+          1
+        ],
+        "waits_seconds": [
+          1.0
+        ]
+      }
+    },
+    {
+      "class": "exhausted",
+      "input": {
+        "responses": [
+          {
+            "status": 429
+          },
+          {
+            "status": 429
+          },
+          {
+            "status": 429
+          }
+        ]
+      },
+      "output": {
+        "delivered": false,
+        "requests": 3,
+        "send_marker": [
+          1,
+          0
+        ],
+        "waits_seconds": [
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "class": "then-delivered",
+      "input": {
+        "responses": [
+          {
+            "status": 502
+          },
+          {
+            "status": 200
+          }
+        ]
+      },
+      "output": {
+        "delivered": true,
+        "requests": 2,
+        "send_marker": [
+          1,
+          1
+        ],
+        "waits_seconds": []
+      }
+    },
+    {
+      "class": "exhausted",
+      "input": {
+        "responses": [
+          {
+            "status": 503
+          },
+          {
+            "status": 500
+          },
+          {
+            "status": 503
+          }
+        ]
+      },
+      "output": {
+        "delivered": false,
+        "requests": 3,
+        "send_marker": [
+          1,
+          0
+        ],
+        "waits_seconds": []
+      }
+    },
+    {
+      "class": "then-delivered",
+      "input": {
+        "responses": [
+          {
+            "status": 400
+          },
+          {
+            "status": 200
+          }
+        ]
+      },
+      "output": {
+        "delivered": true,
+        "requests": 2,
+        "send_marker": [
+          1,
+          1
+        ],
+        "waits_seconds": []
+      }
+    },
+    {
+      "class": "exhausted",
+      "input": {
+        "responses": [
+          {
+            "status": 400
+          },
+          {
+            "status": 400
+          },
+          {
+            "status": 400
+          }
+        ]
+      },
+      "output": {
+        "delivered": false,
+        "requests": 3,
+        "send_marker": [
+          1,
+          0
+        ],
+        "waits_seconds": []
+      }
+    },
+    {
+      "class": "then-delivered",
+      "input": {
+        "responses": [
+          {
+            "network_error": true
+          },
+          {
+            "status": 200
+          }
+        ]
+      },
+      "output": {
+        "delivered": true,
+        "requests": 2,
+        "send_marker": [
+          1,
+          1
+        ],
+        "waits_seconds": []
+      }
+    },
+    {
+      "class": "exhausted",
+      "input": {
+        "responses": [
+          {
+            "network_error": true
+          },
+          {
+            "network_error": true
+          },
+          {
+            "network_error": true
+          }
+        ]
+      },
+      "output": {
+        "delivered": false,
+        "requests": 3,
+        "send_marker": [
+          1,
+          0
+        ],
+        "waits_seconds": []
+      }
+    },
+    {
+      "class": "third-attempt",
+      "input": {
+        "responses": [
+          {
+            "retry_after": 19,
+            "status": 429
+          },
+          {
+            "status": 502
+          },
+          {
+            "status": 200
+          }
+        ]
+      },
+      "output": {
+        "delivered": true,
+        "requests": 3,
+        "send_marker": [
+          1,
+          1
+        ],
+        "waits_seconds": [
+          19.0
+        ]
+      }
+    },
+    {
+      "class": "zero-wait",
+      "input": {
+        "responses": [
+          {
+            "retry_after": 0,
+            "status": 429
+          },
+          {
+            "status": 200
+          }
+        ]
+      },
+      "output": {
+        "delivered": true,
+        "requests": 2,
+        "send_marker": [
+          1,
+          1
+        ],
+        "waits_seconds": [
+          0.0
+        ]
+      }
+    },
+    {
+      "input": {
+        "responses": [
+          {
+            "status": 200
+          },
+          {
+            "status": 504
+          },
+          {
+            "status": 200
+          }
+        ]
+      },
+      "output": {
+        "delivered": true,
+        "requests": 1,
+        "send_marker": [
+          1,
+          1
+        ],
+        "waits_seconds": []
+      }
+    },
+    {
+      "input": {
+        "responses": [
+          {
+            "status": 200
+          },
+          {
+            "retry_after": 11,
+            "status": 429
+          },
+          {
+            "status": 504
+          }
+        ]
+      },
+      "output": {
+        "delivered": true,
+        "requests": 1,
+        "send_marker": [
+          1,
+          1
+        ],
+        "waits_seconds": []
+      }
+    },
+    {
+      "input": {
+        "responses": [
+          {
+            "status": 502
+          },
+          {
+            "retry_after": 11,
+            "status": 429
+          },
+          {
+            "network_error": true
+          }
+        ]
+      },
+      "output": {
+        "delivered": false,
+        "requests": 3,
+        "send_marker": [
+          1,
+          0
+        ],
+        "waits_seconds": [
+          11.0
+        ]
+      }
+    },
+    {
+      "input": {
+        "responses": [
+          {
+            "network_error": true
+          },
+          {
+            "status": 429
+          },
+          {
+            "status": 429
+          }
+        ]
+      },
+      "output": {
+        "delivered": false,
+        "requests": 3,
+        "send_marker": [
+          1,
+          0
+        ],
+        "waits_seconds": [
+          1.0
+        ]
+      }
+    },
+    {
+      "input": {
+        "responses": [
+          {
+            "status": 500
+          },
+          {
+            "network_error": true
+          },
+          {
+            "status": 400
+          }
+        ]
+      },
+      "output": {
+        "delivered": false,
+        "requests": 3,
+        "send_marker": [
+          1,
+          0
+        ],
+        "waits_seconds": []
+      }
+    },
+    {
+      "input": {
+        "responses": [
+          {
+            "status": 504
+          },
+          {
+            "status": 200
+          },
+          {
+            "retry_after": 19,
+            "status": 429
+          }
+        ]
+      },
+      "output": {
+        "delivered": true,
+        "requests": 2,
+        "send_marker": [
+          1,
+          1
+        ],
+        "waits_seconds": []
+      }
+    }
+  ],
+  "function": "telegram.TelegramNotifier.send_html",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Sends one short message through a notifier built with a synthetic token and chat id whose HTTP client is a stub answering the case's responses; records each wait instead of sleeping, with the notifier's logs silenced; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_026.py",
+  "registry_sha256": "0d992c558eeed01b5c8da6a91225e5eae98fbb63b7bf247f77bf797d548aa1df",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

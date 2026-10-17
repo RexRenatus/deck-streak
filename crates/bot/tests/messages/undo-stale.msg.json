@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "That entry is no longer the newest, so nothing was removed. Send /undo to remove the newest entry."
+  },
+  "x-message": "undo-stale"
+}
