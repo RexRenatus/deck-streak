@@ -114,7 +114,7 @@ named `the price rows whose suite grew since their run, a warning that never fai
 `python3 scripts/mutation-verdict.py stale || echo "mutation: stale: VOID: the check exited $?"`.
 No other step, output or artifact of any job changes.
 
-R11. `RELEASING.md` section 2 gains one paragraph after SPEC-421's: before the release pull request,
+R11. `RELEASING.md` section 2 gains one paragraph before SPEC-421's: before the release pull request,
 read the plan job's `mutation: stale:` lines from `mutation-verdict.py stale`, and when any names a
 file, refresh its price by `mutation-prices.yml` first.
 
@@ -164,7 +164,7 @@ A11: python3 -m unittest discover -s scripts/tests -p test_mutation_python_workf
 |---|---|---|
 | `scripts/mutation-verdict.py` | mutation scripts | changed: `PYTHON_PRICE_RECORDS` after `PYTHON_POPULATION`; the `stale` verb's function after `prices`; `"stale"` after `"prices"` in `main`'s verb list; its arm after the `prices` arm |
 | `.github/workflows/ci.yml` | CI | changed: one step in `mutation-plan` after the rows legs step |
-| `RELEASING.md` | release runbook | changed: one paragraph in section 2, after SPEC-421's |
+| `RELEASING.md` | release runbook | changed: one paragraph in section 2, before SPEC-421's |
 | `scripts/tests/test_mutation_python_shard_binding.py` | mutation tests | changed: A1-A9, one class at the module's end |
 | `scripts/tests/test_mutation_python_workflows.py` | workflow tests | changed: A11 |
 | `scripts/tests/test_rulesets.py` | runbook tests | changed: A10 |

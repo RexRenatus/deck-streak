@@ -53,6 +53,12 @@ assertion, case or test is removed. The green commit,
 97f482454f1da67d5a0f68db2cd676aea36b7795, the rows commit and this record's commit edit no test
 module.
 
+SPEC edits after the red commit: one, in the paragraph-move commit. It moves R11's runbook
+paragraph in `RELEASING.md` section 2 from after SPEC-421's paragraph to before it, because the
+release ceiling's runbook reader takes the paragraph two lines below SPEC-421's last line as its
+own, and it amends R11 and its manifest row in SPEC-429 to match. It removes no assertion and
+edits no test module.
+
 The green commit was read at the second push's head, whose other two commits add the rows and this
 record. No CI run read the green commit alone.
 
