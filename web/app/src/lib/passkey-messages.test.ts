@@ -73,3 +73,28 @@ describe('the passkey wording', () => {
     expect(files).toEqual([...LOCALES].sort());
   });
 });
+
+describe('the passkey remove name', () => {
+  it("every locale names a passkey's remove with its place, its day and its own remove word", () => {
+    let judged = 0;
+    for (const locale of LOCALES) {
+      const messages = JSON.parse(readFileSync(join(MESSAGES, `${locale}.json`), 'utf8')) as Record<
+        string,
+        unknown
+      >;
+      const text = messages.methods_remove_passkey;
+      const word = messages.methods_remove;
+      expect([
+        locale,
+        typeof text === 'string' && text.trim() !== '',
+        String(text).includes('{position}'),
+        String(text).includes('{date}'),
+        typeof word === 'string' && String(text).includes(word)
+      ]).toEqual([locale, true, true, true, true]);
+      if (locale === 'en') expect(text).toBe('Remove passkey {position}, added {date}');
+      judged += 1;
+    }
+    console.log(`examined ${judged} of ${LOCALES.length} locales`);
+    expect(judged).toBe(7);
+  });
+});
