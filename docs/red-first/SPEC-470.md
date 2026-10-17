@@ -48,3 +48,36 @@ A4, A5 and A6 call `Held::hold_to_end`, which the base does not have, so they ca
 base and are not red first. Their reds are the hand-proved rows of
 `scripts/mutation-rows.d/S47000-S47099.json`, each a mutant of `crates/ingest/src/lock.rs` that the
 named test kills.
+
+## The rows' hand proofs
+
+Each row of `scripts/mutation-rows.d/S47000-S47099.json` was proved by hand on the committed cure:
+its target's sha256 was recorded, its one mutant installed by script (each `find` occurs once in
+its target), the file touched and rebuilt, and its killer run by its exact name, each run reading
+`running 1 test` and failing by the assertion below; the saved bytes were then written back, the
+sha256 compared equal, the file touched and rebuilt before the next measurement.
+`crates/ingest/src/lock.rs` read sha256
+`a9ad604e69227a06d4e9979bc8c1d6ed0f24176a87b251dfd61d5535ec7bf0d0` before and after each of its four
+proofs, and `crates/coordination/src/instruments.rs` read
+`d92399566ec990ea8b09b309d41ce1f07d150197f99a78032e5adfc195496fd2` before and after its one.
+
+- `S47001-A-PANIC-RELEASES-THE-INSTRUMENT-LOCK` (`if false {`): A5 failed with
+  `left: (true, false) right: (true, true)`: the caller saw the panic, and the lock stayed held.
+- `S47002-A-STOPPED-TASK-KEEPS-THE-LOCK` (`drop(held);`): A6 failed with
+  `the lock read free after the runtime dropped the task: Ok(())`.
+- `S47003-THE-HELD-LOCK-RUNS-IN-ITS-OWN-TASK` (the work awaited in the caller): A4 failed with
+  `left: (true, true, None, false) right: (true, true, Some(7), true)`: the dropped caller took the
+  work with it, so it never ended, and the lock was never freed.
+- `S47004-THE-CALLER-SEES-THE-WORKS-PANIC` (the panic answered as an error): A5 failed with
+  `left: (false, true) right: (true, true)`.
+- `S47005-AN-INSTRUMENT-RUN-HOLDS-THE-LOCK-TO-ITS-END` (the run awaited in the caller, then
+  released): A1 failed with `left: (false, true, ["alpha"], 1) right: (true, true, ["alpha"], 1)`,
+  its red at the base, and A2 failed under it too with `left: (None, true) right: (Some("alpha"), true)`.
+
+After the last restore, A1 was rebuilt and read `1 passed`.
+
+`cargo mutants --no-shuffle --list --json --in-diff` over this branch's diff lists 7 mutants and
+builds nothing: `Instruments::step`, `Instruments::run_on_demand` and `Instruments::run_held` (two)
+in `crates/coordination/src/instruments.rs`, and `Held::hold_to_end`, `ToEnd::release` and
+`<impl Drop for ToEnd>::drop` in `crates/ingest/src/lock.rs`. None was run here; the pull
+request's mutation stage judges them.
