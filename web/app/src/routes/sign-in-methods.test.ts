@@ -128,7 +128,7 @@ describe('the sign-in methods screen', () => {
       expect(row.textContent).toContain('Passkey');
       expect(row.textContent).toContain(`Added `);
       expect(row.textContent).toContain(String(day.getDate()));
-      expect(within(row).getByRole('button', { name: 'Remove' })).toBeTruthy();
+      expect(within(row).getByRole('button', { name: removeName(listed.indexOf(row), day.getTime()) })).toBeTruthy();
     }
 
     // and Today links to the screen
@@ -179,7 +179,7 @@ describe('the sign-in methods screen', () => {
     await settle();
 
     // the first tap asks, and sends nothing
-    await fireEvent.click(within(rows()[1]).getByRole('button', { name: 'Remove' }));
+    await fireEvent.click(within(rows()[1]).getByRole('button', { name: removeName(1, LISTED[1].createdAt ?? 0) }));
     await settle();
     expect(lines(sent)).toEqual([]);
     expect(
@@ -191,9 +191,9 @@ describe('the sign-in methods screen', () => {
     expect(lines(sent)).toEqual([]);
     expect(screen.queryByText('Remove this passkey? You can still sign in with Telegram.')).toBeNull();
     // Remove, then Remove again, sends one delete, and the list is read again
-    await fireEvent.click(within(rows()[1]).getByRole('button', { name: 'Remove' }));
+    await fireEvent.click(within(rows()[1]).getByRole('button', { name: removeName(1, LISTED[1].createdAt ?? 0) }));
     await settle();
-    await fireEvent.click(within(rows()[1]).getByRole('button', { name: 'Remove' }));
+    await fireEvent.click(within(rows()[1]).getByRole('button', { name: removeName(1, LISTED[1].createdAt ?? 0) }));
     await settle();
     expect(lines(sent)).toEqual(['DELETE /api/identities/4']);
     expect(mocks.identities).toHaveBeenCalledTimes(2);
@@ -422,7 +422,7 @@ describe('the sign-in methods screen, each state', () => {
     const held = () =>
       [
         screen.getByRole('button', { name: 'Link a passkey' }),
-        within(rows()[1]).getByRole('button', { name: 'Remove' })
+        within(rows()[1]).getByRole('button', { name: removeName(1, LISTED[1].createdAt ?? 0) })
       ].map((button) => (button as HTMLButtonElement).disabled);
 
     expect(held()).toEqual([false, false]);
@@ -449,9 +449,9 @@ describe('the sign-in methods screen, each state', () => {
     render(Methods);
     await settle();
     const confirm = async () => {
-      await fireEvent.click(within(rows()[1]).getByRole('button', { name: 'Remove' }));
+      await fireEvent.click(within(rows()[1]).getByRole('button', { name: removeName(1, LISTED[1].createdAt ?? 0) }));
       await settle();
-      await fireEvent.click(within(rows()[1]).getByRole('button', { name: 'Remove' }));
+      await fireEvent.click(within(rows()[1]).getByRole('button', { name: removeName(1, LISTED[1].createdAt ?? 0) }));
       await settle();
     };
 
@@ -471,7 +471,7 @@ describe('the sign-in methods screen, each state', () => {
       'Too many attempts. Wait a minute, then start again.'
     );
     expect(mocks.identities).toHaveBeenCalledOnce();
-    const remove = within(rows()[1]).getByRole('button', { name: 'Remove' }) as HTMLButtonElement;
+    const remove = within(rows()[1]).getByRole('button', { name: removeName(1, LISTED[1].createdAt ?? 0) }) as HTMLButtonElement;
     expect(remove.disabled).toBe(false);
 
     // a passkey already gone answers no wording: nothing is shown, and the list is read again

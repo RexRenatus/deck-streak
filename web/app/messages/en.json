@@ -314,5 +314,6 @@
   "methods_remove": "Remove",
   "methods_remove_confirm": "Remove this passkey? You can still sign in with Telegram.",
   "methods_remove_keep": "Keep",
+  "methods_remove_passkey": "Remove passkey {position}, added {date}",
   "methods_reopen": "Reopen DeckStreak from Telegram, then try again."
 }

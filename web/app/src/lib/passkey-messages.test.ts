@@ -35,6 +35,7 @@ const ENGLISH: Readonly<Record<string, string>> = {
   methods_remove: 'Remove',
   methods_remove_confirm: 'Remove this passkey? You can still sign in with Telegram.',
   methods_remove_keep: 'Keep',
+  methods_remove_passkey: 'Remove passkey {position}, added {date}',
   methods_reopen: 'Reopen DeckStreak from Telegram, then try again.'
 };
 
@@ -64,7 +65,7 @@ describe('the passkey wording', () => {
       }
     }
     console.log(`examined ${judged} of ${total} locale keys`);
-    expect([keys.length, judged]).toEqual([25, total]);
+    expect([keys.length, judged]).toEqual([26, total]);
     // the fixed list is every locale the project has a file for
     const files = readdirSync(MESSAGES)
       .filter((name) => name.endsWith('.json'))
