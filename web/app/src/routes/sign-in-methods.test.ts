@@ -559,4 +559,18 @@ describe('the sign-in methods screen, each state', () => {
     expect(rows()[1].textContent).toContain(day(FIVE.createdAt));
     expect(document.activeElement).toBe(within(rows()[1]).getByRole('button'));
   });
+
+  it('a passkey row shows the word remove, and the open step shows remove and keep', async () => {
+    mocks.identities.mockResolvedValue({ kind: 'ok', value: LISTED });
+    render(Methods);
+    await settle();
+
+    const shown = (row: HTMLElement) =>
+      within(row)
+        .getAllByRole('button')
+        .map((button) => button.textContent?.trim());
+    expect([shown(rows()[1]), shown(rows()[2])]).toEqual([['Remove'], ['Remove']]);
+    await open(rows()[1]);
+    expect(shown(rows()[1])).toEqual(['Remove', 'Keep']);
+  });
 });
