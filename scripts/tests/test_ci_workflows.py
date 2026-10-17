@@ -5173,6 +5173,10 @@ NOT_WORKFLOW_READS = {
         ("test_mutation_workflows", "rows_constant", "ROWS_RUNNER.read_text(encoding='utf-8')", 1),
     ),
     **allowed(
+        "the verdict's own Python source, read for one module constant and never imported; never a workflow file",
+        ("test_mutation_workflows", "verdict_constant", "VERDICT.read_text(encoding='utf-8')", 1),
+    ),
+    **allowed(
         "calls the bash oracle, which runs planted scripts with cargo stubbed and reads the stubs' logs",
         (
             "test_dispatch_shards",
