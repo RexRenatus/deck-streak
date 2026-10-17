@@ -240,11 +240,12 @@ def run(args: argparse.Namespace, root: Path, sha: str) -> list[Verdict]:
         lint = entry.get("advisory_waivers", {}).get("lint")
         if lint and not (checkout / lint).is_file():
             raise Refusal(f"packs.{pack}'s advisory lint {lint} is not in the checkout")
-    out = cards_directory()
     # Only a directory this run made is this run's to remove; a BOX_PACKS_OUT directory is the
     # caller's, and BOX_PACKS_KEEP keeps the one made here. The removal names exactly this path.
+    # Both are read before the make, so no statement runs between the make and the try below.
     made = not os.environ.get("BOX_PACKS_OUT")
     keep = bool(os.environ.get("BOX_PACKS_KEEP"))
+    out = cards_directory()
     try:
         env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
         for name in wiring["unset_env"]:
@@ -259,12 +260,18 @@ def run(args: argparse.Namespace, root: Path, sha: str) -> list[Verdict]:
         verdicts: list[Verdict] = []
         with tempfile.TemporaryDirectory(prefix="deckstreak-box-packs.") as name:
             scratch = Path(name).resolve()
-            for repository, what in ((root, "the DeckStreak repository"), (checkout, "the checkout")):
+            for repository, what in (
+                (root, "the DeckStreak repository"),
+                (checkout, "the checkout"),
+            ):
                 if scratch.is_relative_to(repository):
-                    raise Refusal(f"the scratch directory is inside {what}; set TMPDIR outside both")
+                    raise Refusal(
+                        f"the scratch directory is inside {what}; set TMPDIR outside both"
+                    )
             tree = export(root, sha, scratch / "tree")
             print(
-                f"box-packs: judging {sha[:12]} ({args.rev}) with the packs checkout at {have[:12]}",
+                f"box-packs: judging {sha[:12]} ({args.rev}) with the packs checkout "
+                f"at {have[:12]}",
                 flush=True,
             )
             driver = Runner(runner, scratch, tree, checkout / wiring["skills"], env)
