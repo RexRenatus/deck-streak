@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"AgentPinGroups","covers":"crates/agent/tests/runs.rs","anchor":"prune_pin_problems","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":672}
+{"schema":"phx.formal.vectors.v1","entry":"AgentPinGroups","covers":"crates/agent/tests/runs.rs","anchor":"prune_pin_problems","digest":"sha256:4b5a80d77c4115e497e9790c74a19375a5b55d7ac4be1f8b75f370c565c80c24","vectors":672}
 {"rule":"opens_with_a_shebang","source":"","refused":false}
 {"rule":"opens_with_a_shebang","source":"\nfn prune_before() {}\n","refused":false}
 {"rule":"opens_with_a_shebang","source":"#","refused":false}
