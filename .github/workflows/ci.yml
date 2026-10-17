@@ -533,6 +533,7 @@ jobs:
           python3 scripts/memory_scope.py --report "$out" -- cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2300 --build-timeout 600 --output "$out" || rc=$?
           echo "$rc" > "$out/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
+          case "$rc" in 0|2|3) ;; *) echo "mutation-rust: shard $SHARD left no whole report (cargo-mutants exited $rc); the verdict reads it VOID"; exit "$rc" ;; esac
       - name: keep the shard's report
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
