@@ -4,7 +4,8 @@
 //! The test drives the adapter as a native client does: each request encoded as protobuf bytes by
 //! the adapter's shared wire helpers, and the queue read back from the engine's own reply. Every
 //! tap goes through one helper, whose one line is the containment census's held line for this
-//! file (SPEC-345 section 8).
+//! file (SPEC-345 section 8). The Forget tap test also runs on each side of a cutoff, and the
+//! fixture's cutoff is held twelve hours after its clock's instant (SPEC-443 A3, A5, A6).
 
 #![allow(
     clippy::expect_used,
@@ -14,6 +15,14 @@
 
 mod support;
 
+#[path = "support/clock.rs"]
+mod clock;
+
+use std::path::Path;
+use std::sync::Arc;
+
+use anki::collection::CollectionBuilder;
+use clock::Clock;
 use deck_streak_ffi::engine::{Engine, ExemptRefusal, ExemptTap, ExemptTarget, PressedGrade};
 use support::{Synthetic, open_request, synthetic, wire};
 
@@ -75,10 +84,9 @@ fn queue(engine: &Engine) -> Head {
     }
 }
 
-/// Opens the synthetic collection and answers its one card Good, through an owner's press on the
-/// states the queue gave it (SPEC-365 R6), so the card leaves the new queue.
-fn answered(synthetic: &Synthetic) -> std::sync::Arc<Engine> {
-    let engine = Engine::new(Vec::new()).expect("the engine starts from the default init message");
+/// Opens the synthetic collection through `engine` and answers its one card Good, through an
+/// owner's press on the states the queue gave it (SPEC-365 R6), so the card leaves the new queue.
+fn answered(synthetic: &Synthetic, engine: Arc<Engine>) -> Arc<Engine> {
     let (service, method) = OPEN_COLLECTION;
     engine
         .run(service, method, open_request(synthetic))
@@ -115,10 +123,37 @@ fn forget(cards: &[i64]) -> Vec<u8> {
     out
 }
 
-#[test]
-fn a_native_forget_tap_resets_its_one_card() {
-    let synthetic = synthetic("exempt-forget");
-    let engine = answered(&synthetic);
+/// An engine started from the default init message, whose every answer records the clock's
+/// instant as its time (SPEC-443 R4).
+fn on_the_clock(clock: Clock) -> Arc<Engine> {
+    Engine::at_answer_time(&[], clock.at_millis())
+        .expect("the engine starts from the default init message")
+}
+
+/// The synthetic collection for `test`, its cutoff first placed `start` after the clock's instant,
+/// then pinned before the adapter opens it (SPEC-443 R5), with the pin's clock.
+fn placed(test: &str, start: i64) -> (Synthetic, Clock) {
+    let synthetic = synthetic(test);
+    clock::place(&synthetic.collection, start);
+    let clock = clock::pin(&synthetic.collection);
+    (synthetic, clock)
+}
+
+/// The engine's own timing of today on a closed collection, read through the engine's own
+/// interface: its day count and its next cutoff.
+fn engine_day(collection: &Path) -> (u32, i64) {
+    let mut col = CollectionBuilder::new(collection)
+        .build()
+        .expect("the engine opens the collection");
+    let timing = col.timing_today().expect("the engine reads its timing");
+    col.close(None).expect("the engine closes the collection");
+    (timing.days_elapsed, timing.next_day_at.0)
+}
+
+/// The Forget tap test's own body (SPEC-345 A17): `engine` answers the synthetic collection's one
+/// card, and the tap returns it to the new queue; three taps naming other than it are refused.
+fn forget_tap_resets_its_one_card(synthetic: &Synthetic, engine: Arc<Engine>) {
+    let engine = answered(synthetic, engine);
     let learning = queue(&engine);
     let card = synthetic.card_id;
     let ran = tap(
@@ -183,6 +218,67 @@ fn a_native_forget_tap_resets_its_one_card() {
         "a tap on another kind, a request naming more, and bytes of no message are each refused"
     );
     examined("refused tap(s)", refused);
+}
+
+#[test]
+fn a_native_forget_tap_resets_its_one_card() {
+    let synthetic = synthetic("exempt-forget");
+    let engine = Engine::new(Vec::new()).expect("the engine starts from the default init message");
+    forget_tap_resets_its_one_card(&synthetic, engine);
+}
+
+/// SPEC-443 A3 (R4, R5): the Forget tap test's own body, on a collection first placed five minutes
+/// before its cutoff, then on one first placed five minutes after it, each then pinned.
+#[test]
+fn a_native_forget_tap_resets_its_one_card_on_each_side_of_the_cutoff() {
+    let (synthetic, _) = placed("exempt-forget-just-before", clock::JUST_BEFORE_SECS);
+    let engine = Engine::new(Vec::new()).expect("the engine starts from the default init message");
+    forget_tap_resets_its_one_card(&synthetic, engine);
+    let (synthetic, _) = placed("exempt-forget-just-after", clock::JUST_AFTER_SECS);
+    let engine = Engine::new(Vec::new()).expect("the engine starts from the default init message");
+    forget_tap_resets_its_one_card(&synthetic, engine);
+}
+
+/// SPEC-443 A5 (R1, R2): the adapter's fixture holds the engine's next cutoff twelve hours after
+/// its clock's instant, at day 0, as the engine's own timing reads it.
+#[test]
+fn the_adapter_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock() {
+    let synthetic = synthetic("exempt-fixture-cutoff");
+    let clock = clock::pin(&synthetic.collection);
+    assert_eq!(
+        engine_day(&synthetic.collection),
+        (0, clock.at_secs() + clock::LEAD_SECS),
+        "the engine's day count and next cutoff on the adapter's fixture: day 0, the cutoff 43 200 s \
+         after the clock's instant"
+    );
+}
+
+/// SPEC-443 A6 (R6): five minutes before a cutoff the fixture has not pinned, a Good press takes
+/// the new card past its ten-minute step into the day-learning queue, due on day 1.
+#[test]
+fn an_adapter_good_press_just_before_the_cutoff_moves_the_card_to_tomorrow() {
+    let synthetic = synthetic("exempt-good-press-just-before");
+    let just_before = clock::place(&synthetic.collection, clock::JUST_BEFORE_SECS);
+    drop(answered(&synthetic, on_the_clock(just_before)));
+    let col = CollectionBuilder::new(&synthetic.collection)
+        .build()
+        .expect("the engine opens the collection the adapter let go");
+    let stored: (i64, i64) = col
+        .storage
+        .db()
+        .query_row(
+            "select queue, due from cards where id = ?",
+            [synthetic.card_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .expect("the engine stores the card");
+    col.close(None).expect("the engine closes the collection");
+    assert_eq!(
+        stored,
+        (3, 1),
+        "the Good press five minutes before the cutoff left the card in the day-learning queue, due \
+         on day 1"
+    );
 }
 
 #[test]
