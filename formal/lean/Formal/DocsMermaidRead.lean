@@ -1,5 +1,8 @@
 -- @phx vectors formal/vectors/docs-mermaid-read.jsonl
 -- @phx cites #493, #383
+-- @phx theorem every_line_that_may_open_a_mermaid_fence_is_read_or_refused_by_name ramp=report
+-- @phx witness the_reader_without_its_opener_rule_leaves_a_mermaid_line_unnamed kills=every_line_that_may_open_a_mermaid_fence_is_read_or_refused_by_name
+-- @phx witness the_reader_without_its_info_rule_leaves_a_mermaid_fence_unnamed kills=every_line_that_may_open_a_mermaid_fence_is_read_or_refused_by_name
 
 /-!
 # Formal.DocsMermaidRead
@@ -12,8 +15,7 @@ its fence rules, over text read as characters. A bare `:n` below is a line of th
 (`MERMAID_INFO`, `:66`); the word alone with blanks around it (`MERMAID_WORD`, `:69`); the
 not-blank test (`:291`); the classification of each fence the parse opened (`:286-294`); the rule
 that names every line that may open a `mermaid` fence and was not read (`:295-301`); and the sort
-by line that keeps the order of equal lines (`:302`). At this commit the port lacks the opener
-rule.
+by line that keeps the order of equal lines (`:302`).
 
 **What is an argument.** The parse's fences (each its first line, its info string as the line holds
 it, and its text) and the refusals of the reader's other rules (characters, depth and raw HTML).
@@ -28,8 +30,9 @@ string is the word alone and whose text is not blank; every refusal is one of th
 carries a name whose fact holds at its line; every refusal of the other rules is kept; and the
 refusals are in line order.
 
-**The red reading.** The port without its opener rule leaves a `mermaid` opener inside a tilde
-fence's body unnamed, and the one theorem here proves the claim false of it at that text.
+**The witnesses** are the port with one rule removed, each at one text the reader meets: without
+the opener rule, at a `mermaid` opener inside a tilde fence's body; without the info rule, at a
+fence whose info string is `Mermaid`.
 -/
 
 namespace Formal.DocsMermaidRead
@@ -210,6 +213,23 @@ def classify : List Fence → List Block × List Refusal
       else (⟨f.line, f.literal⟩ :: rest.1, rest.2)
     else rest
 
+/-- The opener rule (`:295-301`) from line index `n`: each line `OPENER` matches whose info string
+may hold the word, and which is not the first line of a block read, is refused by
+`openerForm`. -/
+def openerRuleFrom (bs : List Block) : Nat → List (List Char) → List Refusal
+  | _, [] => []
+  | n, l :: ls =>
+    match opener l with
+    | some info =>
+      if mermaidInfo info && !(bs.any fun b => b.line == n + 1) then
+        ⟨n + 1, openerForm⟩ :: openerRuleFrom bs (n + 1) ls
+      else openerRuleFrom bs (n + 1) ls
+    | none => openerRuleFrom bs (n + 1) ls
+
+/-- The opener rule over every line of the text (`:295-301`). -/
+def openerRule (lines : List (List Char)) (bs : List Block) : List Refusal :=
+  openerRuleFrom bs 0 lines
+
 /-- One refusal put before the first of a sorted list whose line is not below its own. -/
 def insertByLine (x : Refusal) : List Refusal → List Refusal
   | [] => [x]
@@ -220,11 +240,33 @@ def byLine : List Refusal → List Refusal
   | [] => []
   | x :: xs => insertByLine x (byLine xs)
 
-/-- The reader (`:192-303`), given the other rules' refusals `others` and the parse's `fences`,
-without its opener rule. -/
-def readMermaid (others : List Refusal) (_text : List Char) (fences : List Fence) : Reading :=
+/-- The reader (`:192-303`), given the other rules' refusals `others` and the parse's `fences`. -/
+def readMermaid (others : List Refusal) (text : List Char) (fences : List Fence) : Reading :=
+  let (bs, rs) := classify fences
+  { blocks := bs, refused := byLine (others ++ rs ++ openerRule (splitLines text) bs) }
+
+/-- The first witness's port: the reader with lines 295-301 removed. -/
+def readMermaidWithoutOpenerRule (others : List Refusal) (_text : List Char)
+    (fences : List Fence) : Reading :=
   let (bs, rs) := classify fences
   { blocks := bs, refused := byLine (others ++ rs) }
+
+/-- The classification with the refusal at line 289 removed. -/
+def classifyWithoutInfoRule : List Fence → List Block × List Refusal
+  | [] => ([], [])
+  | f :: fs =>
+    let rest := classifyWithoutInfoRule fs
+    if mermaidInfo f.info && !mermaidWord f.info then rest
+    else if mermaidWord f.info then
+      if !notBlank f.literal then (rest.1, ⟨f.line, emptyForm⟩ :: rest.2)
+      else (⟨f.line, f.literal⟩ :: rest.1, rest.2)
+    else rest
+
+/-- The second witness's port: the reader with the refusal at line 289 removed. -/
+def readMermaidWithoutInfoRule (others : List Refusal) (text : List Char) (fences : List Fence) :
+    Reading :=
+  let (bs, rs) := classifyWithoutInfoRule fences
+  { blocks := bs, refused := byLine (others ++ rs ++ openerRule (splitLines text) bs) }
 
 /-- The claim, stated once, of a reading function. -/
 def NamedReading (read : List Refusal → List Char → List Fence → Reading) : Prop :=
@@ -250,13 +292,219 @@ def NamedReading (read : List Refusal → List Char → List Fence → Reading) 
       (∀ x ∈ others, x ∈ r.refused) ∧
       (r.refused.map (·.line)).Pairwise (· ≤ ·)
 
+theorem readMermaid_blocks (others : List Refusal) (text : List Char) (fences : List Fence) :
+    (readMermaid others text fences).blocks = (classify fences).1 := rfl
+
+theorem readMermaid_refused (others : List Refusal) (text : List Char) (fences : List Fence) :
+    (readMermaid others text fences).refused =
+      byLine (others ++ (classify fences).2 ++ openerRule (splitLines text) (classify fences).1) :=
+  rfl
+
+theorem classify_cons (f : Fence) (fs : List Fence) :
+    classify (f :: fs) =
+      ((classify [f]).1 ++ (classify fs).1, (classify [f]).2 ++ (classify fs).2) := by
+  cases hI : mermaidInfo f.info <;> cases hW : mermaidWord f.info <;>
+    cases hN : notBlank f.literal <;> simp [classify, hI, hW, hN]
+
+theorem classify_eq (fs : List Fence) :
+    classify fs = (fs.flatMap fun f => (classify [f]).1, fs.flatMap fun f => (classify [f]).2) := by
+  induction fs with
+  | nil => rfl
+  | cons f fs ih => rw [classify_cons, ih]; simp
+
+theorem classify_one_blocks (f : Fence) (b : Block) (h : b ∈ (classify [f]).1) :
+    f.line = b.line ∧ f.literal = b.source ∧ mermaidWord f.info = true ∧
+      notBlank f.literal = true := by
+  cases hI : mermaidInfo f.info <;> cases hW : mermaidWord f.info <;>
+    cases hN : notBlank f.literal <;> simp [classify, hI, hW, hN] at h ⊢ <;> subst h <;> simp_all
+
+theorem classify_one_refused (f : Fence) (x : Refusal) (h : x ∈ (classify [f]).2) :
+    (x.form = infoForm ∧ f.line = x.line ∧ mermaidInfo f.info = true ∧
+        mermaidWord f.info = false) ∨
+      (x.form = emptyForm ∧ f.line = x.line ∧ mermaidWord f.info = true ∧
+        notBlank f.literal = false) := by
+  cases hI : mermaidInfo f.info <;> cases hW : mermaidWord f.info <;>
+    cases hN : notBlank f.literal <;> simp [classify, hI, hW, hN] at h ⊢ <;> subst h <;> simp
+
+theorem classify_one_named (f : Fence) (h : mermaidInfo f.info = true) :
+    (⟨f.line, f.literal⟩ : Block) ∈ (classify [f]).1 ∨
+      (⟨f.line, infoForm⟩ : Refusal) ∈ (classify [f]).2 ∨
+        (⟨f.line, emptyForm⟩ : Refusal) ∈ (classify [f]).2 := by
+  cases hW : mermaidWord f.info <;> cases hN : notBlank f.literal <;>
+    simp [classify, h, hW, hN]
+
+theorem mem_insertByLine {x y : Refusal} {l : List Refusal} :
+    y ∈ insertByLine x l ↔ y = x ∨ y ∈ l := by
+  induction l with
+  | nil => simp [insertByLine]
+  | cons z zs ih =>
+    unfold insertByLine
+    split
+    · simp
+    · simp only [List.mem_cons, ih]
+      constructor
+      · intro h; rcases h with h | h | h <;> simp [h]
+      · intro h; rcases h with h | h | h <;> simp [h]
+
+theorem mem_byLine {y : Refusal} {l : List Refusal} : y ∈ byLine l ↔ y ∈ l := by
+  induction l with
+  | nil => simp [byLine]
+  | cons x xs ih => simp [byLine, mem_insertByLine, ih]
+
+theorem insertByLine_sorted (x : Refusal) (l : List Refusal)
+    (h : l.Pairwise (fun a b => a.line ≤ b.line)) :
+    (insertByLine x l).Pairwise (fun a b => a.line ≤ b.line) := by
+  induction l with
+  | nil => simp [insertByLine]
+  | cons y ys ih =>
+    rw [List.pairwise_cons] at h
+    unfold insertByLine
+    split
+    · next hxy =>
+      refine List.pairwise_cons.2 ⟨?_, List.pairwise_cons.2 h⟩
+      intro z hz
+      rcases List.mem_cons.1 hz with hz | hz
+      · subst hz; exact hxy
+      · exact Nat.le_trans hxy (h.1 z hz)
+    · next hxy =>
+      refine List.pairwise_cons.2 ⟨?_, ih h.2⟩
+      intro z hz
+      rcases mem_insertByLine.1 hz with hz | hz
+      · subst hz; omega
+      · exact h.1 z hz
+
+theorem byLine_sorted (l : List Refusal) :
+    (byLine l).Pairwise (fun a b => a.line ≤ b.line) := by
+  induction l with
+  | nil => simp [byLine]
+  | cons x xs ih => exact insertByLine_sorted x _ ih
+
+theorem openerRuleFrom_tail (bs : List Block) (n : Nat) (l : List Char) (ls : List (List Char))
+    (x : Refusal) (h : x ∈ openerRuleFrom bs (n + 1) ls) : x ∈ openerRuleFrom bs n (l :: ls) := by
+  unfold openerRuleFrom
+  split
+  · split
+    · exact List.mem_cons_of_mem _ h
+    · exact h
+  · exact h
+
+theorem openerRuleFrom_sound (bs : List Block) (ls : List (List Char)) :
+    ∀ (n : Nat) (x : Refusal), x ∈ openerRuleFrom bs n ls →
+      ∃ i l info, ls[i]? = some l ∧ opener l = some info ∧ mermaidInfo info = true ∧
+        (∀ b ∈ bs, b.line ≠ n + i + 1) ∧ x = ⟨n + i + 1, openerForm⟩ := by
+  induction ls with
+  | nil => intro n x h; simp [openerRuleFrom] at h
+  | cons l ls ih =>
+    intro n x h
+    have tail : ∀ y, y ∈ openerRuleFrom bs (n + 1) ls →
+        ∃ i l' info, (l :: ls)[i]? = some l' ∧ opener l' = some info ∧
+          mermaidInfo info = true ∧ (∀ b ∈ bs, b.line ≠ n + i + 1) ∧
+            y = ⟨n + i + 1, openerForm⟩ := by
+      intro y hy
+      obtain ⟨i, l', info, h1, h2, h3, h4, h5⟩ := ih (n + 1) y hy
+      refine ⟨i + 1, l', info, by simpa using h1, h2, h3, ?_, ?_⟩
+      · intro b hb; have := h4 b hb; omega
+      · rw [h5]; congr 1; omega
+    unfold openerRuleFrom at h
+    split at h
+    · next info ho =>
+      split at h
+      · next hc =>
+        rcases List.mem_cons.1 h with h | h
+        · simp only [Bool.and_eq_true, Bool.not_eq_true', List.any_eq_false, beq_iff_eq] at hc
+          exact ⟨0, l, info, rfl, ho, hc.1, fun b hb => by simpa using hc.2 b hb, by simpa using h⟩
+        · exact tail x h
+      · exact tail x h
+    · exact tail x h
+
+theorem openerRuleFrom_complete (bs : List Block) (ls : List (List Char)) :
+    ∀ (n i : Nat) (l info : List Char), ls[i]? = some l → opener l = some info →
+      mermaidInfo info = true → (∀ b ∈ bs, b.line ≠ n + i + 1) →
+        (⟨n + i + 1, openerForm⟩ : Refusal) ∈ openerRuleFrom bs n ls := by
+  induction ls with
+  | nil => intro n i l info h; simp at h
+  | cons l' ls ih =>
+    intro n i l info hl ho hm hb
+    cases i with
+    | zero =>
+      simp only [List.getElem?_cons_zero, Option.some.injEq] at hl
+      subst hl
+      have hc : (mermaidInfo info && !(bs.any fun b => b.line == n + 1)) = true := by
+        simp only [Bool.and_eq_true, Bool.not_eq_true', List.any_eq_false, beq_iff_eq]
+        exact ⟨hm, fun b hb' => by simpa using hb b hb'⟩
+      simp [openerRuleFrom, ho, hc]
+    | succ i =>
+      apply openerRuleFrom_tail
+      have := ih (n + 1) i l info (by simpa using hl) ho hm
+        (fun b hb' => by have := hb b hb'; omega)
+      have e : n + 1 + i + 1 = n + (i + 1) + 1 := by omega
+      rw [e] at this
+      exact this
+
+theorem every_line_that_may_open_a_mermaid_fence_is_read_or_refused_by_name :
+    NamedReading readMermaid := by
+  intro others text fences
+  dsimp only
+  rw [readMermaid_blocks, readMermaid_refused]
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro i l info hl ho hm
+    by_cases hb : ∃ b ∈ (classify fences).1, b.line = i + 1
+    · exact Or.inl hb
+    · right
+      rw [mem_byLine, List.mem_append]
+      right
+      have := openerRuleFrom_complete (classify fences).1 (splitLines text) 0 i l info hl ho hm
+        (fun b hb' he => hb ⟨b, hb', by omega⟩)
+      simpa [openerRule] using this
+  · intro f hf hm
+    rw [mem_byLine, mem_byLine, classify_eq]
+    simp only [List.mem_append, List.mem_flatMap]
+    rcases classify_one_named f hm with h | h | h
+    · exact Or.inl ⟨f, hf, h⟩
+    · exact Or.inr (Or.inl (Or.inl (Or.inr ⟨f, hf, h⟩)))
+    · exact Or.inr (Or.inr (Or.inl (Or.inr ⟨f, hf, h⟩)))
+  · intro b hb
+    rw [classify_eq] at hb
+    obtain ⟨f, hf, hb⟩ := List.mem_flatMap.1 hb
+    obtain ⟨h1, h2, h3, h4⟩ := classify_one_blocks f b hb
+    exact ⟨f, hf, h1, h2, h3, h4⟩
+  · intro x hx
+    rw [mem_byLine, List.mem_append, List.mem_append] at hx
+    rcases hx with (hx | hx) | hx
+    · exact Or.inl hx
+    · rw [classify_eq] at hx
+      obtain ⟨f, hf, hx⟩ := List.mem_flatMap.1 hx
+      rcases classify_one_refused f x hx with ⟨h1, h2, h3, h4⟩ | ⟨h1, h2, h3, h4⟩
+      · exact Or.inr (Or.inl ⟨h1, f, hf, h2, h3, h4⟩)
+      · exact Or.inr (Or.inr (Or.inl ⟨h1, f, hf, h2, h3, h4⟩))
+    · obtain ⟨i, l, info, hl, ho, hm, hb, hx⟩ :=
+        openerRuleFrom_sound (classify fences).1 (splitLines text) 0 x hx
+      subst hx
+      refine Or.inr (Or.inr (Or.inr ⟨rfl, by simp, ⟨l, info, by simpa using hl, ho, hm⟩, ?_⟩))
+      intro b hb'
+      simpa using hb b hb'
+  · intro x hx
+    rw [mem_byLine]
+    simp [hx]
+  · rw [List.pairwise_map]
+    exact byLine_sorted _
+
 theorem the_reader_without_its_opener_rule_leaves_a_mermaid_line_unnamed :
-    ¬ NamedReading readMermaid := by
+    ¬ NamedReading readMermaidWithoutOpenerRule := by
   intro h
   have h1 := (h [] "~~~\n```mermaid\nflowchart TD\n```\n~~~\n".toList
     [⟨1, "".toList, "```mermaid\nflowchart TD\n```\n".toList⟩]).1 1 "```mermaid".toList
     "mermaid".toList (by decide +kernel) (by decide +kernel) (by decide +kernel)
   revert h1
+  decide +kernel
+
+theorem the_reader_without_its_info_rule_leaves_a_mermaid_fence_unnamed :
+    ¬ NamedReading readMermaidWithoutInfoRule := by
+  intro h
+  have h2 := (h [] "```Mermaid\nflowchart TD\n```\n".toList
+    [⟨1, "Mermaid".toList, "flowchart TD\n".toList⟩]).2.1 ⟨1, "Mermaid".toList,
+      "flowchart TD\n".toList⟩ (by decide +kernel) (by decide +kernel)
+  revert h2
   decide +kernel
 
 end Formal.DocsMermaidRead
