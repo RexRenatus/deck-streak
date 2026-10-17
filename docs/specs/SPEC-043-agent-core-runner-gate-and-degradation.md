@@ -711,3 +711,34 @@ of section 10.
 A24: cargo test -p deck-streak-agent --test runs -- --exact a_first_line_rustc_removes_as_a_shebang_is_refused a_query_written_inside_a_doc_attribute_is_neither_a_run_nor_a_word each_count_names_the_number_it_read
 A25: cargo test -p deck-streak-agent --test verdict -- --exact a_first_line_rustc_removes_as_a_shebang_is_refused a_copy_of_the_enum_compiled_out_beside_it_is_refused_as_a_second_declaration
 ```
+
+## 13. Amendment: R16c's claim is proved in Lean, and its two counts are the prune pin's
+
+Issue #474. Sections 1 to 12 stand as written and this section only adds to them. It changes no
+requirement, no criterion and no test of this SPEC; what it adds is SPEC-469's, decided by ADR-486.
+
+**What is proved.** R16c says both pins remove one byte order mark and refuse a source that then
+opens with `#!` and not `#![`, and that every count reads one token set and skips the same groups.
+The Lean entry `lean/AgentPinGroups` (`formal/lean/Formal/AgentPinGroups.lean`) ports the prune
+pin's reader in `crates/agent/tests/runs.rs`, branch for branch, with the lexer taken as any
+function from text to tokens, and proves two theorems: for every lexer and every source text, the
+pin refuses the source as a shebang exactly when, after one byte order mark is removed, it opens
+with `#!` and not `#![`; and for every token list, the run count and the word count descend into
+exactly the same groups. The generated populations of section 11 still stand beside the proof.
+
+**Which counts R16c's "every count" names.** The two counts that skip a `doc` attribute group are
+the prune pin's run count and word count. The verdict pin's one count that descends,
+`declarations`, reads every group, a doc attribute included: a copy of the enum written in a doc
+attribute is a second declaration and is refused, which fails closed, as R12b and R12c say. The
+proof's second theorem is about the prune pin's two counts.
+
+**What is tied.** Both copies of the shebang check, `runs.rs` and `verdict.rs`, are tied to the one
+port by its vectors, `formal/vectors/agent-pin-groups.jsonl`, written by the entry's writer and
+never by hand. The tests that read them, `runs::the_prune_pin_answers_every_vector_of_its_lean_port`
+and `verdict::the_verdict_pins_shebang_check_answers_every_vector_of_its_lean_port`, are SPEC-469's
+A1 and A2, and rows S46901 to S46904 in `scripts/mutation-rows.d/S46900-S46999.json` are their
+reds. The entry's theorems enter at `ramp=report`.
+
+**Not changed.** No line of `runs.rs` or `verdict.rs` that exists before SPEC-469 changes, no
+examined population of section 11 moves, and no row of `scripts/mutation-rows.d/S04300-S04399.json`
+changes. What rustc does after it lexes stays issue #444's.
