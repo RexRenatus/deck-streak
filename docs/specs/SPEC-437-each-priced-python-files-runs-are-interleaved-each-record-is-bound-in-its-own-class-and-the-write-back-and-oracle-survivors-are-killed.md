@@ -16,7 +16,7 @@
 
 ## 1. The problem, measured
 
-The release pull request's run failed both Python classes. Its verdict job, 117095483593, ran 24 s:
+The release pull request's run failed both Python classes. Its verdict job 117095483593 ran 24 s:
 
 - the scripts class read `examined 6317: generated 5944, rows 373`, `survived 684: equivalent 1,
   unexplained 683` and `verdict: FAIL: 686 finding(s)`; three of the 686 are UNCOVERED mutants of

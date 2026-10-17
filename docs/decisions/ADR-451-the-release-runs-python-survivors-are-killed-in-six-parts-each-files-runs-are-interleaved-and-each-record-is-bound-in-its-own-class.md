@@ -9,8 +9,8 @@ its own ADR, ADR-452 to ADR-456.
 
 ## Context and Problem Statement
 
-The release pull request (#822) was judged by one run whose Python classes failed. Its verdict job,
-117095483593, ran 24 s and printed these class lines:
+The release pull request (#822) was judged by one run whose Python classes failed. Its verdict
+job 117095483593 ran 24 s and printed these class lines:
 
 - `mutation: scripts: examined 6317: generated 5944, rows 373`, then `survived 684: equivalent 1,
   unexplained 683` and `verdict: FAIL: 686 finding(s)`: the 683 survivors and three UNCOVERED
