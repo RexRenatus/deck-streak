@@ -10,7 +10,7 @@
   have landed. **Mutation band:** `S47200-S47299`.
 - **Status:** in build, as one delivery that carries `docs/red-first/SPEC-472.md`.
 
-## The problem, measured
+## 1. The problem, measured
 
 Read at DeckStreak `dev` `36c4783a`.
 
@@ -36,7 +36,7 @@ Read at DeckStreak `dev` `36c4783a`.
   prints 14: each Lean entry's writer is one import and one arm of `main` there, and each Rust reader
   is a `crates/<crate>/tests/formal_vectors_<entry>.rs` target.
 
-## Requirements
+## 2. Requirements
 
 - **R1.** The Lean entry `lean/CaptionBound`, `formal/lean/Formal/CaptionBound.lean`, ports
   `check_caption` and `MAX_CAPTION_UTF16` (`crates/notifications/src/photo.rs`) and
@@ -72,7 +72,7 @@ Read at DeckStreak `dev` `36c4783a`.
   every byte. The entry runs inside the formal settings' default budget.
 - **R7.** Seven mutation rows, `S47200` to `S47206`, mutate the vectors file, each killed by A1 or A2.
 
-## Acceptance criteria of SPEC-472
+## 3. Acceptance criteria of SPEC-472
 
 | id | criterion | decided by |
 |---|---|---|
@@ -84,7 +84,7 @@ A1: cargo test -p deck-streak-notifications --test formal_vectors_caption_bound 
 A2: cargo test -p deck-streak-notifications --test formal_vectors_caption_bound -- --exact the_lean_vectors_hold_each_caption_a_broken_count_misjudges
 ```
 
-## What the formal check judges
+## 4. What the formal check judges
 
 DeckStreak CI runs no formal job. The formal checker judges these by hand, on the committed head,
 before the pull request is marked ready and again when it lands; the readings are quoted in the
@@ -96,7 +96,7 @@ pull request and in `docs/red-first/SPEC-472.md`'s prose.
 | F2 | R3's theorem is clean and its witness builds | `formal check --entry lean/CaptionBound` |
 | F3 | every cover is stamped (no `STALE`), the vectors equal the writer's output byte for byte (no `DERIVED_DRIFT`), each theorem and witness uses only the settings' allowed axioms, and the ratchet reads no weakening | `formal check --entry lean/CaptionBound --gate`, then `formal check --ratchet-only` |
 
-## File manifest
+## 5. File manifest
 
 | path | part | change |
 |---|---|---|
@@ -112,7 +112,7 @@ pull request and in `docs/red-first/SPEC-472.md`'s prose.
 | `docs/red-first/SPEC-472.md` | repo | added |
 | `changelog.d/photo-caption-bound-472.md` | repo | added |
 
-## What this does NOT cover
+## 6. What this does NOT cover
 
 - It proves nothing about the bot's own caption bound or its message limits: the bot bounds a
   document's caption by its visible units and leaves an over-long one off
@@ -126,7 +126,7 @@ pull request and in `docs/red-first/SPEC-472.md`'s prose.
 - It adds no CI job that checks a Lean entry, and flips neither theorem from `ramp=report`: a flip
   waits for its streak of clean landings, in a delivery of its own (#806).
 
-## Risks
+## 7. Risks
 
 - **A covered span moves.** An edit to `check_caption`, `MAX_CAPTION_UTF16` or `prepare_share`
   stales the entry until its port is re-read and re-stamped. An open change to `router.rs` that
@@ -144,7 +144,7 @@ pull request and in `docs/red-first/SPEC-472.md`'s prose.
 - **A census of formal vectors.** A tree test that counts Lean entries, writers or vectors readers
   reads this entry as one more; it is run before the push.
 
-## Mutation rows
+## 8. Mutation rows
 
 In `scripts/mutation-rows.d/S47200-S47299.json`, table `CARGO_KILLED_SCRIPT_MUTATIONS`, each on
 `formal/vectors/caption-bound.jsonl`, killer crate `notifications`:
@@ -159,16 +159,16 @@ In `scripts/mutation-rows.d/S47200-S47299.json`, table `CARGO_KILLED_SCRIPT_MUTA
 | `S47205-THE-HEADER-COUNTS-EVERY-VECTOR` | the header's count equals the vectors read | `formal_vectors_caption_bound::the_caption_bound_answers_every_lean_vector` |
 | `S47206-THE-VECTORS-HOLD-A-CAPTION-A-CHARACTER-COUNT-TAKES` | the vectors keep 1,023 letters and U+1F600, which a count by characters takes | `formal_vectors_caption_bound::the_lean_vectors_hold_each_caption_a_broken_count_misjudges` |
 
-## Parity goldens
+## 9. Parity goldens
 
 None. The bound has no predecessor number to prove: the vectors are the port's, and the code
 answers them.
 
-## Tables and the v9 import
+## 10. Tables and the v9 import
 
 None. Nothing is stored.
 
-## References
+## 11. References
 
 Issue #480; ADR-489; SPEC-132 and its red-first record; SPEC-295 and ADR-295;
 `docs/schematics/the-photo-caption-bound-and-its-lean-proof.md`.
