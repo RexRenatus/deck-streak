@@ -68,6 +68,20 @@ describe('the card frame', () => {
     expect(inner[0].getAttribute('srcdoc')?.startsWith(OPENING)).toBe(true);
     expect(cardDocument(frame)).toBe(inner[0].getAttribute('srcdoc'));
   });
+
+  // SPEC-462 R4; ADR-479 D2. A field's carriage return reference renders through the host: the card
+  // document carries the carriage return, and the frame reads it as a line feed.
+  it('a card whose field holds a carriage return reference renders through the host', () => {
+    const shown = render(CardFrame, { html: '<p>Der&#13;Hund</p>', css: CSS, title: 'The card' });
+    const [frame] = [...shown.container.querySelectorAll('iframe')];
+
+    expect(frame.getAttribute('data-card-refused')).toBeNull();
+    expect(frame.getAttributeNames().sort()).toEqual(['sandbox', 'srcdoc', 'title']);
+    const card = cardDocument(frame);
+    expect(card).toContain('<p>Der\rHund</p>');
+    const text = new DOMParser().parseFromString(card ?? '', 'text/html').querySelector('p')?.textContent;
+    expect(text).toBe('Der\nHund');
+  });
 });
 
 /** The card document a card frame carries: the host's one frame's `srcdoc`, or null. */

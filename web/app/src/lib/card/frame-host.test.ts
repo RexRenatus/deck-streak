@@ -4,6 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { frameDocument } from './frame-document';
 import { frameHost, hosted } from './frame-host';
 
 // SPEC-407 R1 to R3, R7; ADR-421 D2 to D4. The card frame's host: a head carrying the host policy
@@ -14,6 +15,7 @@ import { frameHost, hosted } from './frame-host';
 const POLICY = "img-src data:; script-src 'none'; object-src 'none'; base-uri 'none'";
 const STYLE =
   '<style>html,body{margin:0;height:100%;overflow:hidden}iframe{display:block;border:0;width:100%;height:100%}</style>';
+const IMAGE = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
 const APP = join(import.meta.dirname, '..', '..', '..');
 
 /** The host's document, parsed as the frame will parse it. */
@@ -46,8 +48,8 @@ describe('the card frame host', () => {
   });
 
   it('a host that cannot carry the card document or its title byte for byte is refused', () => {
-    expect(frameHost('<p>a\rb</p>', 'The card')).toEqual({ refused: 'escaped' });
-    expect(frameHost('<p>ab</p>', 'The\rcard')).toEqual({ refused: 'escaped' });
+    expect(frameHost('<p>a\u0000b</p>', 'The card')).toEqual({ refused: 'escaped' });
+    expect(frameHost('<p>ab</p>', 'The\u0000card')).toEqual({ refused: 'escaped' });
     expect(frameHost('<p>ab</p>', 'The card', 'img-src "data:"')).toEqual({ refused: 'escaped' });
     expect(frameHost('<p>ab</p>', 'The card').refused).toBeUndefined();
   });
@@ -94,5 +96,61 @@ describe('the card frame host', () => {
     expect(harness).toContain("import { frameHost } from '../../src/lib/card/frame-host'");
     expect(harness).toContain("off === 'W3meta'");
     expect(harness).toContain('hostOf(composed(');
+  });
+
+  // SPEC-462 R1, R2; ADR-479 D2. A carriage return in the card document or the title is carried: the
+  // parser reads a raw one back as a line feed, and the reference back as the carriage return.
+  it('a carriage return in the card document or the title is carried byte for byte', () => {
+    for (const card of ['<p>a\rb</p>', '<p>a\r\nb</p>', '<p>a\n\rb</p>', '<p title="x\ry">z</p>', '\r', 'a & \r "b"']) {
+      const kept = frameHost(card, 'The card');
+      expect(kept.refused, JSON.stringify(card)).toBeUndefined();
+      expect(kept.srcdoc).toContain('&#13;');
+      expect(parsed(kept.srcdoc).body.children[0].getAttribute('srcdoc')).toBe(card);
+    }
+    for (const title of ['The\rcard', 'The\r\ncard']) {
+      const kept = frameHost('<p>a</p>', title);
+      expect(kept.refused, JSON.stringify(title)).toBeUndefined();
+      expect(parsed(kept.srcdoc).body.children[0].getAttribute('title')).toBe(title);
+    }
+  });
+
+  // SPEC-462 R3; ADR-479 D1. A field's reference becomes a carriage return in the frame document,
+  // and the host carries that document whole.
+  it('a carriage return reference in a card field reaches the nested frame as the frame document wrote it', () => {
+    const fields = ['<p>a&#13;b</p>', '<p>a&#xD;b</p>', '<p>a&#13;&#10;b</p>', `<img alt="a&#xD;b" src="${IMAGE}">`];
+    for (const field of fields) {
+      const doc = frameDocument(field, '.card { color: navy; }');
+      expect(doc.refused, field).toBeUndefined();
+      expect(doc.srcdoc).toContain('\r');
+      const host = frameHost(doc.srcdoc ?? '', 'The card');
+      expect(host.refused, field).toBeUndefined();
+      expect(parsed(host.srcdoc).body.children[0].getAttribute('srcdoc')).toBe(doc.srcdoc);
+    }
+  });
+
+  // SPEC-462 R5; ADR-479 D5. The read-back's population, counted: of the first 256 code points the
+  // host refuses a NUL alone, in the card document and in the title.
+  it('among the first 256 code points the host refuses exactly a NUL, in the card document and in the title', () => {
+    const refusedCards: number[] = [];
+    const refusedTitles: number[] = [];
+    const changed: string[] = [];
+    let examined = 0;
+    for (let code = 0; code < 256; code += 1) {
+      const c = String.fromCharCode(code);
+      const card = `<p>a${c}b</p>`;
+      const cardHost = frameHost(card, 'The card');
+      if (cardHost.refused !== undefined) refusedCards.push(code);
+      else if (parsed(cardHost.srcdoc).body.children[0].getAttribute('srcdoc') !== card) changed.push(`card ${code}`);
+      const title = `T${c}t`;
+      const titleHost = frameHost('<p>a</p>', title);
+      if (titleHost.refused !== undefined) refusedTitles.push(code);
+      else if (parsed(titleHost.srcdoc).body.children[0].getAttribute('title') !== title) changed.push(`title ${code}`);
+      examined += 1;
+    }
+    console.log(`examined ${examined} of 256 code points`);
+    expect(examined).toBe(256);
+    expect(refusedCards).toEqual([0]);
+    expect(refusedTitles).toEqual([0]);
+    expect(changed).toEqual([]);
   });
 });
