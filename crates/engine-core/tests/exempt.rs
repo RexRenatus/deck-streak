@@ -16,7 +16,6 @@
 mod support;
 
 use std::path::Path;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use anki::collection::CollectionBuilder;
 use anki_proto::cards::RemoveCardsRequest;
@@ -121,14 +120,6 @@ fn note_count(dispatcher: &Dispatcher) -> Value {
         .pointer("/0/0")
         .cloned()
         .unwrap_or(Value::Null)
-}
-
-fn now_millis() -> i64 {
-    let millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_millis();
-    i64::try_from(millis).expect("the clock's milliseconds fit an i64")
 }
 
 /// The engine's own timing of today on a closed collection, read through the engine's own
@@ -342,8 +333,8 @@ fn outcome(result: Result<Vec<u8>, GestureRefusal>) -> String {
 /// learning, and the gesture returns its one card to the new queue and leaves the other.
 fn forget_resets_its_one_card_and_no_other(synthetic: &support::Synthetic) {
     let dispatcher = opened(synthetic);
-    let card = answer_next(&dispatcher, now_millis());
-    let other = answer_next(&dispatcher, now_millis());
+    let card = answer_next(&dispatcher, synthetic.clock.at_millis());
+    let other = answer_next(&dispatcher, synthetic.clock.at_millis());
     assert_ne!(
         card, other,
         "the two answers took the collection's two cards"

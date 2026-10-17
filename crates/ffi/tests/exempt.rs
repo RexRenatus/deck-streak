@@ -223,20 +223,18 @@ fn forget_tap_resets_its_one_card(synthetic: &Synthetic, engine: Arc<Engine>) {
 #[test]
 fn a_native_forget_tap_resets_its_one_card() {
     let synthetic = synthetic("exempt-forget");
-    let engine = Engine::new(Vec::new()).expect("the engine starts from the default init message");
-    forget_tap_resets_its_one_card(&synthetic, engine);
+    let clock = clock::pin(&synthetic.collection);
+    forget_tap_resets_its_one_card(&synthetic, on_the_clock(clock));
 }
 
 /// SPEC-443 A3 (R4, R5): the Forget tap test's own body, on a collection first placed five minutes
 /// before its cutoff, then on one first placed five minutes after it, each then pinned.
 #[test]
 fn a_native_forget_tap_resets_its_one_card_on_each_side_of_the_cutoff() {
-    let (synthetic, _) = placed("exempt-forget-just-before", clock::JUST_BEFORE_SECS);
-    let engine = Engine::new(Vec::new()).expect("the engine starts from the default init message");
-    forget_tap_resets_its_one_card(&synthetic, engine);
-    let (synthetic, _) = placed("exempt-forget-just-after", clock::JUST_AFTER_SECS);
-    let engine = Engine::new(Vec::new()).expect("the engine starts from the default init message");
-    forget_tap_resets_its_one_card(&synthetic, engine);
+    let (synthetic, clock) = placed("exempt-forget-just-before", clock::JUST_BEFORE_SECS);
+    forget_tap_resets_its_one_card(&synthetic, on_the_clock(clock));
+    let (synthetic, clock) = placed("exempt-forget-just-after", clock::JUST_AFTER_SECS);
+    forget_tap_resets_its_one_card(&synthetic, on_the_clock(clock));
 }
 
 /// SPEC-443 A5 (R1, R2): the adapter's fixture, first placed five minutes before its cutoff and

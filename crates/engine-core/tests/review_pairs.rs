@@ -16,8 +16,6 @@
 
 mod support;
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use anki::collection::CollectionBuilder;
 use anki_proto::decks::{DeckId, DeckTreeNode, DeckTreeRequest};
 use anki_proto::generic::StringList;
@@ -151,14 +149,6 @@ fn built(test: &str) -> (std::path::PathBuf, std::path::PathBuf, [i64; 2]) {
     (dir, path, cards)
 }
 
-fn now_secs() -> i64 {
-    let secs = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_secs();
-    i64::try_from(secs).expect("the clock's seconds fit an i64")
-}
-
 fn run(
     dispatcher: &Dispatcher,
     (service, method): (u32, u32),
@@ -182,7 +172,10 @@ fn review_pairs_run_natively_and_no_other_pair_joins(synthetic: &support::Synthe
     let tree = run(
         &dispatcher,
         DECK_TREE,
-        &DeckTreeRequest { now: now_secs() }.encode_to_vec(),
+        &DeckTreeRequest {
+            now: synthetic.clock.at_secs(),
+        }
+        .encode_to_vec(),
     )
     .expect("the native dispatcher answers DecksService.DeckTree (7,4)");
     let tree = DeckTreeNode::decode(tree.as_slice()).expect("the tree decodes");

@@ -20,7 +20,6 @@ mod support;
 mod clock;
 
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use anki::collection::CollectionBuilder;
 use anki::decks::DeckId;
@@ -146,10 +145,14 @@ fn untouched(synthetic: &Synthetic) -> Queued {
     }
 }
 
-/// A `CardAnswer` rating the first queued card Good, with the states the queue gave it. A queue
-/// that gave none (a refused call) yields an answer with empty states, which the adapter must
-/// still route by its pair alone.
-fn good_answer(synthetic: &Synthetic, queued: &Result<Vec<u8>, EngineRefusal>) -> Vec<u8> {
+/// A `CardAnswer` rating the first queued card Good, with the states the queue gave it, answered at
+/// `clock`'s instant. A queue that gave none (a refused call) yields an answer with empty states,
+/// which the adapter must still route by its pair alone.
+fn good_answer(
+    synthetic: &Synthetic,
+    clock: Clock,
+    queued: &Result<Vec<u8>, EngineRefusal>,
+) -> Vec<u8> {
     let states = queued
         .as_ref()
         .map(|bytes| {
@@ -160,10 +163,6 @@ fn good_answer(synthetic: &Synthetic, queued: &Result<Vec<u8>, EngineRefusal>) -
             wire::bytes(&head, 3)
         })
         .unwrap_or_default();
-    let answered_at = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_millis();
     let mut out = Vec::new();
     wire::put_varint_field(
         &mut out,
@@ -176,7 +175,7 @@ fn good_answer(synthetic: &Synthetic, queued: &Result<Vec<u8>, EngineRefusal>) -
     wire::put_varint_field(
         &mut out,
         5,
-        u64::try_from(answered_at).expect("the time fits 64 bits"),
+        u64::try_from(clock.at_millis()).expect("the time fits 64 bits"),
     );
     wire::put_varint_field(&mut out, 6, 4_000);
     out
@@ -432,10 +431,15 @@ fn a_native_run_refuses_an_answer_and_leaves_the_card() {
     // SPEC-365 A12: the native `run` holds no answer. AnswerCard is not allowed, so a valid
     // answer with the states the queue gave never reaches the engine, and the card stays new.
     let synthetic = synthetic("native-run-answer");
+    let clock = clock::pin(&synthetic.collection);
     let engine = engine();
     let opened = call(&engine, OPEN_COLLECTION, open_request(&synthetic));
     let queued = call(&engine, GET_QUEUED_CARDS, queue_request());
-    let answered = call(&engine, ANSWER_CARD, good_answer(&synthetic, &queued));
+    let answered = call(
+        &engine,
+        ANSWER_CARD,
+        good_answer(&synthetic, clock, &queued),
+    );
     let (rows, reviews) = written(&synthetic, engine, &[synthetic.card_id]);
     assert_eq!(
         (opened, answered, rows, reviews),
@@ -516,7 +520,7 @@ fn a_native_press_answers_only_its_card_with_its_grade() {
     // refused before the engine sees them.
     let synthetic = synthetic("native-press");
     let clock = clock::pin(&synthetic.collection);
-    native_press_answers_only_its_card_with_its_grade(&synthetic, clock, engine());
+    native_press_answers_only_its_card_with_its_grade(&synthetic, clock, on_the_clock(clock));
 }
 
 /// SPEC-443 A4 (R4, R5, R7): the native press test's own body, through an engine started at the

@@ -97,10 +97,54 @@ pub fn place(collection: &Path, start: i64) -> Clock {
 
 /// Reads the engine's instant once and pins the closed `collection`'s next cutoff, on the engine's
 /// version-2 timing, to the last local hour boundary at or before [`LEAD_SECS`] after the clock's
-/// instant, at day 0.
+/// instant, at day 0: from one reading of the engine's next cutoff and rollover hour, it predicts
+/// the cutoff in whole [`HOUR_SECS`], moves the rollover hour by as many hours, writes the creation
+/// stamp at the cutoff before the predicted one, then reads both back through the engine's own
+/// timing of today and asserts them.
 pub fn pin(collection: &Path) -> Clock {
-    let _ = collection;
-    Clock {
+    let clock = Clock {
         instant_millis: TimestampMillis::now().0 - 1,
-    }
+    };
+    let mut col = CollectionBuilder::new(collection)
+        .build()
+        .expect("the engine opens the collection to pin its cutoff");
+    col.set_config_json("schedVer", &2_u8, false)
+        .expect("the engine accepts schedVer 2, its version-2 timing");
+    let first = col
+        .timing_today()
+        .expect("the engine reads its timing of today");
+    let rollover = i64::from(
+        col.rollover_for_current_scheduler()
+            .expect("the engine reads its rollover hour"),
+    );
+    let hours = (clock.at_secs() + LEAD_SECS - first.next_day_at.0).div_euclid(HOUR_SECS);
+    let predicted = first.next_day_at.0 + hours * HOUR_SECS;
+    let hour = u32::try_from((rollover + hours).rem_euclid(24)).expect("an hour of the day");
+    col.set_config_json("rollover", &hour, false)
+        .expect("the engine accepts the rollover hour");
+    let written = col
+        .storage
+        .db()
+        .execute("update col set crt = ?1", [predicted - DAY_SECS])
+        .expect("the collection's creation stamp is written");
+    assert_eq!(written, 1, "the collection holds its one row");
+    col.close(None).expect("the engine closes the collection");
+    let mut col = CollectionBuilder::new(collection)
+        .build()
+        .expect("the engine reopens the pinned collection");
+    let timing = col
+        .timing_today()
+        .expect("the engine reads its timing of today");
+    assert_eq!(
+        (timing.days_elapsed, timing.next_day_at.0),
+        (0, predicted),
+        "the engine's day count and next cutoff on the pinned collection: day 0, the cutoff \
+         predicted from the cutoff {} under rollover hour {rollover}, moved {hours} hours to hour \
+         {hour}, {} s after the clock's instant",
+        first.next_day_at.0,
+        predicted - clock.at_secs()
+    );
+    col.close(None)
+        .expect("the engine closes the pinned collection");
+    clock
 }

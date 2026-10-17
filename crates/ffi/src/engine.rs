@@ -254,12 +254,11 @@ impl Engine {
         message: &[u8],
         answered_at_millis: i64,
     ) -> Result<Arc<Self>, EngineRefusal> {
-        let _ = answered_at_millis;
         Dispatcher::start(Transport::Native, message)
             .map(|dispatcher| {
                 Arc::new(Self {
                     dispatcher,
-                    answered_at_millis: None,
+                    answered_at_millis: Some(answered_at_millis),
                 })
             })
             .map_err(|reason| EngineRefusal::Start { reason })
