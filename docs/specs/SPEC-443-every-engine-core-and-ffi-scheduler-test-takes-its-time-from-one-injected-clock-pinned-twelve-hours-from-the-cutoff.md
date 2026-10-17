@@ -1,4 +1,4 @@
-# SPEC-443: every engine-core and ffi scheduler test takes its time from one injected clock, with its collection's cutoff pinned twelve hours away
+# SPEC-443: every engine-core and ffi scheduler test takes its time from one injected clock, with its collection's next cutoff pinned eleven to twelve hours away
 
 - **Wave:** none; a test-reliability fix for the review path's scheduler tests.
   **Issue:** #747 (this is its first part; the pull request says `Refs #747`). **Context(s):**
@@ -24,8 +24,17 @@ Read at `83846ea3`. Every `git grep` below passes the positive `.` with the excl
   review's id between two reads of the test's own clock (`round_trip.rs:455`, `:463`, `:470-472`).
 - The engine schedules from its own clock: a learning interval that reaches the next cutoff reads
   in days (`crates/ffi/tests/review_pairs.rs:114-120`, which pins one file's rollover hour for it,
-  `:123-141`). A collection that sets no scheduler version runs the engine's version-1 timing
-  (`:117-119`), whose next cutoff is its creation stamp plus whole days.
+  `:123-141`). The collections these tests build run the engine's version-2 timing: the engine's
+  default configuration for a new collection sets `schedVer` 2, `sched2021` and its creation
+  offset, and its first timing read writes `rollover` 4, so the next cutoff is the next 04:00 in
+  the zone the engine reads and the creation stamp `crt` moves only the day count
+  (`review_pairs.rs:117-119` states a version-1 default these collections do not have). A probe
+  over the fixtures' own collections, in both crates, under `TZ=UTC` and `TZ=Pacific/Auckland`,
+  measured each lever the cutoff has (ADR-457 D1): `rollover` places it on a local hour boundary
+  only; `schedVer` 1 selects the engine's version-1 timing, whose next cutoff is `crt` plus whole
+  days to the second, and under which the engine answers and refuses the review's bury; clearing
+  the creation offset keeps the cutoff on the rollover hour; and a time a test hands the engine
+  reaches the review's id only, never the queue.
 - `crates/ffi/tests/exempt.rs` reads no clock. Its press (`exempt.rs:97-99`) enters
   `crates/ffi/src/engine.rs:184` `Engine::answer`, which stamps `now_millis()` (`:199`;
   `SystemTime::now()` at `:243-249`) and runs the answer through the core (`:202-204`).
@@ -47,14 +56,20 @@ Read at `83846ea3`. Every `git grep` below passes the positive `.` with the excl
 
 R1. **One clock per test crate.** `crates/engine-core/tests/support/clock.rs` and
     `crates/ffi/tests/support/clock.rs` each hold `Clock` (`at_millis`, `at_secs`), `place` and
-    `pin`, and the constants `DAY_SECS = 86_400`, `LEAD_SECS = 43_200`, `JUST_BEFORE_SECS = 300`
-    and `JUST_AFTER_SECS = 86_100`. `place(collection, lead)` reads the engine's own instant once,
-    `TimestampMillis::now()`, fixes the clock's instant one millisecond before it, writes the closed
-    collection's creation stamp as `instant_secs + lead - DAY_SECS`, closes it, reopens it, asserts
-    through the engine's own timing of today that the day count is 0 and the next cutoff is
-    `instant_secs + lead`, closes it, and answers the clock. `pin(collection)` is
-    `place(collection, LEAD_SECS)`. Each module is the one reader of time in its crate's scheduler
-    tests.
+    `pin`, and the constants `DAY_SECS = 86_400`, `HOUR_SECS = 3_600`, `LEAD_SECS = 43_200`,
+    `JUST_BEFORE_SECS = 300` and `JUST_AFTER_SECS = 86_100`. Each operation reads the engine's own
+    instant once, `TimestampMillis::now()`, and fixes the clock's instant one millisecond before
+    it. `place(collection, start)` selects the engine's version-1 timing on the closed collection
+    (`schedVer` 1), writes its creation stamp as `instant_secs + start - DAY_SECS`, closes it,
+    reopens it, asserts through the engine's own timing of today that the day count is 0 and the
+    next cutoff is `instant_secs + start`, closes it, and answers the clock. `pin(collection)`
+    keeps the engine's version-2 timing on the closed collection (`schedVer` 2), reads the engine's
+    next cutoff and rollover hour once, sets the rollover hour that makes the next cutoff the last
+    local hour boundary at or before `instant_secs + LEAD_SECS`, predicted from that reading in
+    whole `HOUR_SECS`, writes the creation stamp as the predicted cutoff less `DAY_SECS`, closes
+    it, reopens it, asserts through the engine's own timing of today that the day count is 0 and
+    the next cutoff is the predicted one, closes it, and answers the clock. Each module is the one
+    reader of time in its crate's scheduler tests.
 R2. **Every scheduler collection is pinned.** Engine-core's `support::synthetic` pins the
     collection it builds and carries its `Clock` as `Synthetic::clock`; every engine-core and ffi
     test that builds its own collection for the engine to schedule pins it before an engine opens
@@ -78,7 +93,9 @@ R5. **The cutoff proof.** Each named test gains `<name>_on_each_side_of_the_cuto
     the injected instant, the engine keeping the second id unique, in place of the bracket.
 R6. **The engine's rule at the placed start.** In each crate, a collection placed
     `JUST_BEFORE_SECS` before its cutoff and not pinned, after a Good press on its new card, holds
-    that card in the day-learning queue due on day 1: `(queue, due) = (3, 1)`, a literal.
+    that card in the day-learning queue due on day 1: `(queue, due) = (3, 1)`, a literal. A placed
+    collection that is not pinned serves this case alone: under version-1 timing the engine answers
+    but refuses the review's bury.
 R7. **No wait and no wall-clock assertion.** No test changed or added here sleeps, waits for a
     time, or asserts on the wall clock or the time of day.
 R8. **Production unchanged.** No production file but `crates/ffi/src/engine.rs` changes, and in it
@@ -92,7 +109,7 @@ R8. **Production unchanged.** No production file but `crates/ffi/src/engine.rs` 
 | A2 | The core's review-pairs test passes on each side of the cutoff (R2, R3, R5) | ADR-457 D1, D2 |
 | A3 | The adapter's Forget tap test passes on each side of the cutoff, its press on the injected instant (R4, R5) | ADR-457 D1, D3 |
 | A4 | The native press stamps each review at the injected instant, the second made unique by the engine, on each side of the cutoff (R4, R5, R7) | ADR-457 D1, D3 |
-| A5 | Each crate's fixture holds the engine's next cutoff 43 200 s after its clock's instant, at day 0 (R1, R2) | ADR-457 D1, D2 |
+| A5 | Each crate's fixture, first placed `JUST_BEFORE_SECS` before its cutoff and then pinned, holds the engine's next cutoff more than 39 600 s and at most 43 200 s after its clock's instant, at day 0 (R1, R2) | ADR-457 D1, D2 |
 | A6 | Just before an unpinned cutoff, a Good press moves its new card to the day-learning queue due on day 1, in each crate (R6) | ADR-457 D2 |
 
 ```acceptance
@@ -106,18 +123,19 @@ A6: cargo test -p deck-streak-engine-core --test exempt -- --exact a_core_good_p
 A6: cargo test -p deck-streak-ffi --test exempt -- --exact an_adapter_good_press_just_before_the_cutoff_moves_the_card_to_tomorrow
 ```
 
-A1 to A5 are red at the base for a reason that does not depend on the time of day: A1 to A3 by the
-start placed 300 s before the cutoff, which the base's fixture leaves in place; A4 over a
-constructor stub that keeps its instant and stamps the adapter's own clock; A5 because the base's
-fixture leaves the engine's natural cutoff. A6 pins the engine's rule and is green at the base.
+A1 to A5 are red at the base for a reason that depends on neither the time of day nor the zone:
+A1 to A3 by the start placed 300 s before the cutoff by version-1 timing, which the base's fixture
+leaves in place; A4 over a constructor stub that keeps its instant and stamps the adapter's own
+clock; A5 because the base's fixture leaves its placement, so the engine's next cutoff lies 300 s
+after the clock's instant. A6 pins the engine's rule and is green at the base.
 
 ## 4. File manifest
 
 | path | part | change |
 |---|---|---|
-| `crates/engine-core/tests/support/clock.rs` | 1 | added: the core tests' clock (R1) |
+| `crates/engine-core/tests/support/clock.rs` | 1 | added: the core tests' clock, its version-1 placement and its version-2 pin (R1) |
 | `crates/engine-core/tests/support/mod.rs` | 1 | changed: `synthetic` pins and carries its clock (R2) |
-| `crates/engine-core/tests/exempt.rs` | 1 | changed: A1, A5, A6; the press on the clock |
+| `crates/engine-core/tests/exempt.rs` | 1 | changed: A1, A5 (placed, then pinned), A6; the press on the clock |
 | `crates/engine-core/tests/review_pairs.rs` | 1 | changed: A2; its own collection pinned; the tree's `now` on the clock |
 | `crates/engine-core/tests/answer.rs` | 1 | changed: answered times on the clock (R3) |
 | `crates/engine-core/tests/dispatch.rs` | 1 | changed: answered times on the clock (R3) |
@@ -127,8 +145,8 @@ fixture leaves the engine's natural cutoff. A6 pins the engine's rule and is gre
 | `crates/engine-core/tests/undo_answer.rs` | 1 | changed: answered time on the clock (R3) |
 | `crates/engine-core/tests/undo_change.rs` | 1 | changed: answered time on the clock (R3) |
 | `crates/ffi/src/engine.rs` | 1 | changed: the adapter's optional answer instant and its unexported constructor (R4) |
-| `crates/ffi/tests/support/clock.rs` | 1 | added: the adapter tests' clock (R1) |
-| `crates/ffi/tests/exempt.rs` | 1 | changed: A3, A5, A6; pinned, its engine on the clock's instant |
+| `crates/ffi/tests/support/clock.rs` | 1 | added: the adapter tests' clock, its version-1 placement and its version-2 pin (R1) |
+| `crates/ffi/tests/exempt.rs` | 1 | changed: A3, A5 (placed, then pinned), A6; pinned, its engine on the clock's instant |
 | `crates/ffi/tests/round_trip.rs` | 1 | changed: A4; the native press on the injected instant; the refused answer's time on the clock |
 | `crates/ffi/tests/review_actions.rs` | 1 | changed: pinned; the tree's `now` on the clock |
 | `crates/ffi/tests/review_pairs.rs` | 1 | changed: the shared pin in place of its own rollover pin; the tree's `now` on the clock |
@@ -154,7 +172,19 @@ fixture leaves the engine's natural cutoff. A6 pins the engine's rule and is gre
 ## 6. Risks
 
 - The engine's timing could read more than the creation stamp for these collections: R1's own
-  assertion fails at the first run, naming the day count and the cutoff it read.
+  assertion fails at the first run, naming the day count and the cutoff it read. This fired at the
+  build's first run: the collections run version-2 timing, and the assertion read day 1 and the
+  next 04:00 cutoff, 85 355 to 85 364 s after the instant, where it asserted day 0 and 300 s. R1
+  now places by version-1 timing and pins on version-2 timing, each measured (ADR-457 D1).
+- The engine's version-2 cutoff could read more than the rollover hour and the zone's offset at
+  the reading, or the zone's offset could change during a run: the pin's own assertion fails at
+  that run, naming the cutoff it read and the one it predicted.
+- A side case's body could meet an engine refusal under version-1 timing before its pin, at the
+  base: a red for the wrong reason, which the build reads at its red commit. The four named bodies
+  answer, forget, queue, describe and read the deck tree; the measured refusal is the bury.
+- The pin's rollover write is a config row: a test that asserts on the config table sees it, as it
+  sees the `rollover` 4 the engine's first timing read writes at the base. Detected by the whole
+  suites.
 - A collection a test builds and the engine schedules might escape its pin: the guard of part two
   sees no clock read there, so the risk is the base's flake returning in that one test. Detected by
   R5's pattern applied to it, and by the whole suite at a run near a natural cutoff.
@@ -163,25 +193,38 @@ fixture leaves the engine's natural cutoff. A6 pins the engine's rule and is gre
 - No test asserts the value the adapter's real clock stamps (R7 forbids reading the wall clock). The
   read stays in `now_millis`, which the production census lists, and every press through
   `Engine::new` still runs it.
-- The engine's instant stays the wall clock's; only its distance from the cutoff is fixed.
+- The engine's instant stays the wall clock's; only its distance from the cutoff is fixed, to
+  within one hour.
 
 ## 7. Mutation rows (S44300-S44399)
 
 | id | target | mutant | killer |
 |---|---|---|---|
-| S44300-CORE-PIN-WRITES-NOTHING | `crates/engine-core/tests/support/clock.rs` | the creation-stamp write writes the stamp the collection already holds | `the_core_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock` |
-| S44301-CORE-LEAD-SHORTENED | `crates/engine-core/tests/support/clock.rs` | `LEAD_SECS` 43_200 to 300 | `a_forget_gesture_resets_its_one_card_and_no_other` |
+| S44300-CORE-PIN-STAMPS-A-DAY-EARLY | `crates/engine-core/tests/support/clock.rs` | the pin writes the creation stamp two days before its predicted cutoff, not one | `the_core_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock` |
+| S44301-CORE-LEAD-SHORTENED | `crates/engine-core/tests/support/clock.rs` | `LEAD_SECS` 43_200 to 39_600 | `the_core_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock` |
 | S44302-CORE-JUST-BEFORE-WIDENED | `crates/engine-core/tests/support/clock.rs` | `JUST_BEFORE_SECS` 300 to 900 | `a_core_good_press_just_before_the_cutoff_moves_the_card_to_tomorrow` |
-| S44303-ADAPTER-PIN-WRITES-NOTHING | `crates/ffi/tests/support/clock.rs` | the creation-stamp write writes the stamp the collection already holds | `the_adapter_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock` |
-| S44304-ADAPTER-LEAD-SHORTENED | `crates/ffi/tests/support/clock.rs` | `LEAD_SECS` 43_200 to 300 | `a_native_forget_tap_resets_its_one_card` |
+| S44303-ADAPTER-PIN-STAMPS-A-DAY-EARLY | `crates/ffi/tests/support/clock.rs` | the pin writes the creation stamp two days before its predicted cutoff, not one | `the_adapter_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock` |
+| S44304-ADAPTER-LEAD-SHORTENED | `crates/ffi/tests/support/clock.rs` | `LEAD_SECS` 43_200 to 39_600 | `the_adapter_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock` |
 | S44305-ADAPTER-JUST-BEFORE-WIDENED | `crates/ffi/tests/support/clock.rs` | `JUST_BEFORE_SECS` 300 to 900 | `an_adapter_good_press_just_before_the_cutoff_moves_the_card_to_tomorrow` |
 | S44306-ADAPTER-STAMPS-ITS-OWN-CLOCK | `crates/ffi/src/engine.rs` | `answer` ignores the set instant (`filter(\|_\| false)`, every item kept used) | `a_native_press_answers_only_its_card_with_its_grade` |
 | S44307-CONSTRUCTOR-DROPS-ITS-INSTANT | `crates/ffi/src/engine.rs` | `at_answer_time` stores no instant (`filter(\|_\| false)`) | `a_native_press_stamps_each_review_at_the_injected_instant_on_each_side_of_the_cutoff` |
 | S44308-CORE-DAY-LENGTHENED | `crates/engine-core/tests/support/clock.rs` | `DAY_SECS` 86_400 to 86_401 | `the_core_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock` |
 | S44309-ADAPTER-DAY-LENGTHENED | `crates/ffi/tests/support/clock.rs` | `DAY_SECS` 86_400 to 86_401 | `the_adapter_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock` |
+| S44310-CORE-PIN-HOUR-ONE-LATE | `crates/engine-core/tests/support/clock.rs` | the pin sets the rollover hour one after the hour it predicted from | `the_core_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock` |
+| S44311-ADAPTER-PIN-HOUR-ONE-LATE | `crates/ffi/tests/support/clock.rs` | the pin sets the rollover hour one after the hour it predicted from | `the_adapter_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock` |
+
+Each killer observes its mutant at every hour of the day and in every zone: a creation stamp two
+days back reads day 1 (measured in both zones, on each branch of the engine's day count); a lead
+of 39 600 s puts the cutoff at most 39 600 s after the instant, outside the fixture test's literal
+window; a rollover hour one late moves the cutoff one hour past the pin's prediction; a side start
+of 900 s leaves the Good step short of the cutoff; a day of 86 401 s moves the placement's cutoff
+one second before its assertion. Each fixture test places its collection before it pins it, so
+the day-lengthened rows fail at the placement's own assertion.
 
 `JUST_AFTER_SECS` takes no row: once the fixture pins, the start it places changes no outcome, and
-its role is the regression guard of R5.
+its role is the regression guard of R5. `HOUR_SECS` takes no row: a mutant of it meets the pin's
+own assertion in every hour but the one in which the pin moves the rollover hour by none, so no
+killer observes it at every hour.
 
 ## 8. Formal model
 

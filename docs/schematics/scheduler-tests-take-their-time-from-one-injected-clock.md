@@ -1,7 +1,9 @@
 # Scheduler tests take their time from one injected clock
 
 - **Kinds:** data flow and sequence, drawn in mermaid.
-- **Read at:** commit `83846ea3`; every `path:line` below is a line at that commit.
+- **Read at:** commit `83846ea3`; every `path:line` below is a line at that commit. The engine's
+  timing on the fixtures' collections was measured by a probe over those collections, in both
+  crates, under `TZ=UTC` and `TZ=Pacific/Auckland`.
 - **Decided by:** ADR-457. **Specified by:** SPEC-443, the first part of #747.
 
 ## 1. Two clocks reach every scheduler test
@@ -10,10 +12,11 @@ A scheduler test reaches two clocks. The test's own clock supplies the times it 
 an answer's time, a deck tree's `now`, a collection's modified time. The engine's own clock decides
 the schedule: the engine compares its own reading of now with the collection's next cutoff, and a
 learning interval that reaches the cutoff reads in days (`crates/ffi/tests/review_pairs.rs:114-120`).
-At the base both are the wall clock and the cutoff sits wherever the collection's creation put it,
-so the four tests #747 names pass or fail by the time of day they run. After this delivery every
-time a test hands the engine comes from one `Clock`, and the collection's next cutoff is pinned
-43 200 s (12 hours) after the clock's instant, whatever the wall clock reads.
+At the base both are the wall clock and the cutoff sits at the engine's default rollover, the next
+04:00 in the zone the engine reads, so the four tests #747 names pass or fail by the time of day
+they run. After this delivery every time a test hands the engine comes from one `Clock`, and the
+collection's next cutoff is pinned on the last local hour boundary at or before 43 200 s after the
+clock's instant, so more than 39 600 s away, whatever the wall clock reads.
 
 In every flowchart below, solid edges are the base's path and dotted edges are what replaces it.
 
@@ -22,8 +25,8 @@ flowchart LR
   wall["the wall clock"]
   testread["base: the test reads SystemTime::now"]
   clk["after: Clock, the engine's TimestampMillis::now read once, minus 1 ms"]
-  natural["base: the cutoff where the collection's creation stamp put it"]
-  pinned["after: the cutoff pinned 43 200 s after the instant, day count 0"]
+  natural["base: the cutoff at the default rollover, the next 04:00 local"]
+  pinned["after: the pin moves the rollover hour, the cutoff 39 600 to 43 200 s after the instant, day count 0"]
   sched["the engine's scheduler: its own now against the next cutoff"]
   asserted["the queue, due day and interval words the test asserts"]
   wall --> testread
@@ -48,7 +51,7 @@ flowchart TD
   coreanswer["answer_next, exempt.rs:131-163, CardAnswer.answered_at_millis at :157"]
   corerun["Dispatcher::run_answer, src/dispatch.rs:496"]
   coresched["the engine schedules from its own clock"]
-  corepin["after: support::synthetic pins the cutoff 43 200 s away"]
+  corepin["after: support::synthetic pins the cutoff 39 600 to 43 200 s away"]
   coreassert["queue 1 for each answered card, exempt.rs:354-358"]
   coreread --> coreanswer
   coreclock -.-> coreanswer
@@ -63,7 +66,7 @@ flowchart TD
 | time read | `now_millis` (`crates/engine-core/tests/exempt.rs:121-127`), `SystemTime::now()` at `:122` | `synthetic.clock.at_millis()` |
 | handed to the engine | `answer_next` (`:131-163`) builds `CardAnswer.answered_at_millis: now_millis()` (`:157`) | the same field, from the clock |
 | scheduled by | `Dispatcher::run_answer` (`crates/engine-core/src/dispatch.rs:496`), the engine on its own clock | the same, on the collection `support::synthetic` pinned |
-| near the cutoff | the Good step reaches the cutoff: queue 3 | the cutoff is 43 200 s away: queue 1 |
+| near the cutoff | the Good step reaches the cutoff: queue 3 | the cutoff is 39 600 to 43 200 s away: queue 1 |
 | asserted | queue 1 for each answered card (`exempt.rs:354-358`) | unchanged |
 
 ### 2.2 engine-core `review_pairs.rs` `the_review_pairs_run_natively_and_no_other_pair_joins`
@@ -118,7 +121,7 @@ sequenceDiagram
   A->>D: the one OwnerAnswer, with its stamp
   D->>G: the core runs the answer
   G-->>T: the queue, from the engine's own clock against the collection's cutoff
-  Note over T,G: asserted LEARNING_QUEUE, exempt.rs:144-152. After, clock::pin has placed the cutoff 43 200 s away
+  Note over T,G: asserted LEARNING_QUEUE, exempt.rs:144-152. After, clock::pin has placed the cutoff 39 600 to 43 200 s away
 ```
 
 | step | at `83846ea3` | after |
@@ -174,10 +177,35 @@ holds `Clock` (`at_millis`, `at_secs`), `place` and `pin`, and these constants (
 
 | constant | value | what it places |
 |---|---|---|
-| `DAY_SECS` | `86_400` | one day of the engine's version-1 timing |
-| `LEAD_SECS` | `43_200` | the pin: the next cutoff 12 hours after the instant, the previous one 12 hours before it |
-| `JUST_BEFORE_SECS` | `300` | a side start: the next cutoff five minutes after the instant |
-| `JUST_AFTER_SECS` | `86_100` | a side start: the previous cutoff five minutes before the instant |
+| `DAY_SECS` | `86_400` | one day: the placement's creation stamp a day before its cutoff, and the pin's creation stamp at the cutoff before its predicted one |
+| `HOUR_SECS` | `3_600` | one step of the rollover hour, the grain of the engine's version-2 cutoff |
+| `LEAD_SECS` | `43_200` | the pin: the next cutoff the last local hour boundary at or before 12 hours after the instant, so 39 600 to 43 200 s after it, and the previous one 43 200 to 46 800 s before it |
+| `JUST_BEFORE_SECS` | `300` | a side start, placed to the second: the next cutoff five minutes after the instant |
+| `JUST_AFTER_SECS` | `86_100` | a side start, placed to the second: the previous cutoff five minutes before the instant |
+
+`place` sets a start to the second on the engine's version-1 timing:
+
+```mermaid
+sequenceDiagram
+  participant S as a side case, a rule case or a fixture test
+  participant C as the clock module, tests/support/clock.rs
+  participant K as the engine's clock
+  participant F as the closed collection
+  participant E as the engine's timing of today
+  S->>C: place(collection, start)
+  C->>K: TimestampMillis::now(), read once
+  K-->>C: the reading
+  C->>C: the instant is the reading minus 1 ms
+  C->>F: schedVer 1, the engine's version-1 timing
+  C->>F: write crt = instant_secs + start - DAY_SECS, the collection closed
+  C->>E: reopen the collection, timing_today()
+  E-->>C: the day count and the next cutoff
+  C->>C: assert the day count is 0 and the next cutoff is instant_secs + start
+  C->>F: close the collection
+  C-->>S: the Clock, at_millis and at_secs
+```
+
+`pin` keeps the engine's version-2 timing, the one production runs, and moves its rollover hour:
 
 ```mermaid
 sequenceDiagram
@@ -186,26 +214,40 @@ sequenceDiagram
   participant K as the engine's clock
   participant F as the closed collection
   participant E as the engine's timing of today
-  S->>C: place(collection, lead), or pin(collection), which is place(collection, LEAD_SECS)
+  S->>C: pin(collection)
   C->>K: TimestampMillis::now(), read once
   K-->>C: the reading
   C->>C: the instant is the reading minus 1 ms
-  C->>F: write crt = instant_secs + lead - DAY_SECS, the collection closed
+  C->>F: schedVer 2, the engine's version-2 timing, which undoes a placement
+  C->>E: timing_today() and the rollover hour r, read once
+  E-->>C: the next cutoff c under r
+  C->>C: j = floor((instant_secs + LEAD_SECS - c) / HOUR_SECS), predicted = c + j * HOUR_SECS
+  C->>F: rollover = (r + j) mod 24, crt = predicted - DAY_SECS, the collection closed
   C->>E: reopen the collection, timing_today()
   E-->>C: the day count and the next cutoff
-  C->>C: assert the day count is 0 and the next cutoff is instant_secs + lead
+  C->>C: assert the day count is 0 and the next cutoff is the predicted one
   C->>F: close the collection
   C-->>S: the Clock, at_millis and at_secs
 ```
 
-Why the creation stamp: a collection that sets no scheduler version runs the engine's version-1
-timing (`crates/ffi/tests/review_pairs.rs:117-119`), whose next cutoff is its creation stamp `crt`
-plus whole days, and tests already move `crt` (`crates/engine-core/tests/late.rs:182-186`). With
-`crt = instant_secs + lead - 86400`, the engine's now falls in the first day after `crt`, so the day
-count is 0 and the next cutoff is `crt + 86400`, which is `instant_secs + lead`. The module reads
-both back through the engine's own `timing_today()` at every run, so its arithmetic is checked by
-the engine itself and is never a transcription of it. The instant sits one millisecond before the
-engine's reading, so no later read of any clock in the run equals it.
+Why two timings. The collections these tests build run the engine's version-2 timing: the engine's
+default configuration for a new collection sets `schedVer` 2, `sched2021` and its creation offset,
+and its first timing read writes `rollover` 4. Their next cutoff is the next rollover hour in the
+zone the engine reads, and the creation stamp `crt` moves only the day count (measured: the old
+placement read day 1 and the next 04:00 where it asserted day 0 and 300 s). The rollover hour puts
+the cutoff only on a local hour boundary (measured: rollover 0, 12 and 23 read 00:00, 12:00 and
+23:00 UTC under `TZ=UTC`, and 11:00, 23:00 and 10:00 UTC under `TZ=Pacific/Auckland`), so the pin
+holds its lead to within one hour and cannot place a start five minutes from a cutoff. The
+engine's version-1 timing, selected by `schedVer` 1, puts the next cutoff at `crt` plus whole days,
+to the second in every zone (measured), so `place` uses it for the starts; the engine answers under
+it (measured: a Good press 300 s before the cutoff left the card at queue 3, due 1) and refuses the
+review's bury (measured), so a placed collection is a start only, and every body runs on a pinned
+one. `crt` at the cutoff before the predicted one keeps the day count 0 on both branches of the
+engine's day count (measured in both zones). Each module reads its own result back through the
+engine's `timing_today()` at every run, so its arithmetic is checked by the engine itself and is
+never a transcription of it. The instant sits one millisecond before the engine's reading, so no
+later read of any clock in the run equals it; on the pin the engine's own now lay 0 to 1 s after
+it (measured).
 
 Where the pin is applied: engine-core's `support::synthetic` (`crates/engine-core/tests/support/mod.rs`,
 `pub struct Synthetic` at `:54`) pins the collection it builds and carries its clock as
@@ -245,15 +287,16 @@ flowchart TD
 
 | start | next cutoff after the instant | previous cutoff before the instant | a Good step on a new card |
 |---|---|---|---|
-| placed `JUST_BEFORE_SECS` (300 s) | 300 s | 86 100 s | reaches the cutoff: the day-learning queue, due on day 1 |
-| placed `JUST_AFTER_SECS` (86 100 s) | 86 100 s | 300 s | stays within the day |
-| pinned `LEAD_SECS` (43 200 s) | 43 200 s | 43 200 s | stays within the day, with 12 hours of margin on each side |
+| placed `JUST_BEFORE_SECS` (300 s), version-1 timing | 300 s | 86 100 s | reaches the cutoff: the day-learning queue, due on day 1 |
+| placed `JUST_AFTER_SECS` (86 100 s), version-1 timing | 86 100 s | 300 s | stays within the day |
+| pinned, `LEAD_SECS` (43 200 s) to the hour, version-2 timing | 39 600 to 43 200 s | 43 200 to 46 800 s | stays within the day, with 11 hours of margin or more on each side |
 
 Each named test gains `<name>_on_each_side_of_the_cutoff`, which runs the named test's own body
 twice: on a collection first placed `JUST_BEFORE_SECS` before its cutoff and on one first placed
-`JUST_AFTER_SECS`, each then pinned by the test's own fixture. It asserts the named test's exact
-values on both sides. Red at the base: the base's fixture pins nothing, so the start placed 300 s
-before the cutoff stays, the Good step reaches it, and the test fails whatever the time of day.
+`JUST_AFTER_SECS`, each placed by version-1 timing and then pinned by the test's own fixture. It
+asserts the named test's exact values on both sides. Red at the base: the base's fixture pins
+nothing, so the start placed 300 s before the cutoff stays, the Good step reaches it, and the test
+fails whatever the time of day or the zone.
 
 ```mermaid
 sequenceDiagram
@@ -265,21 +308,24 @@ sequenceDiagram
     N->>P: build the collection at this start
     P->>C: place(collection, start)
     P->>C: pin(collection)
-    C-->>P: the Clock, the next cutoff at the instant plus 43 200 s
+    C-->>P: the Clock, the next cutoff 39 600 to 43 200 s after the instant, day 0
     N->>B: run the body on this collection and clock
     B-->>N: the named test's exact values
   end
 ```
 
 A rule case per crate pins what the engine does at the placed start, as a literal, so the side
-cases cannot pass over a placement that did nothing.
+cases cannot pass over a placement that did nothing. Each crate's fixture test places its
+collection at `JUST_BEFORE_SECS` and then pins it, and asserts day 0 and a next cutoff more than
+39 600 s and at most 43 200 s after the instant, against literals: at the base the placement stays,
+so the cutoff lies 300 s after the instant at every hour.
 
 ```mermaid
 sequenceDiagram
   participant R as the rule case, one per crate
   participant C as the clock module
   participant G as the engine's scheduler
-  R->>C: place(collection, JUST_BEFORE_SECS), not pinned
+  R->>C: place(collection, JUST_BEFORE_SECS), version-1 timing, not pinned
   R->>G: a Good press on its new card
   G-->>R: queue 3, due 1, the day-learning queue due on day 1
 ```
