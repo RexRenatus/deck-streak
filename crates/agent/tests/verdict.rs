@@ -660,3 +660,77 @@ fn a_copy_of_the_enum_compiled_out_beside_it_is_refused_as_a_second_declaration(
         ["the verdict enum is declared 2 times, not once"]
     );
 }
+
+/// SPEC-469 A2 (R5; ADR-486 D3): the verdict pin's `opens_with_a_shebang`, and the shebang
+/// sentence of `verdict_pin_problems`, answer every shebang vector the prune pin's Lean port
+/// `lean/AgentPinGroups` wrote to `formal/vectors/agent-pin-groups.jsonl`, read at run time; the
+/// count vectors are counted by their rule and not read.
+/// MUTATION COVERAGE, not red first: the check already answers every vector on dev; rows S46901 and S46903 are its reds.
+#[test]
+fn the_verdict_pins_shebang_check_answers_every_vector_of_its_lean_port() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../formal/vectors/agent-pin-groups.jsonl");
+    let text = std::fs::read_to_string(&path).expect("the Lean port's vectors are readable");
+    let mut lines = text.lines();
+    let header: serde_json::Value =
+        serde_json::from_str(lines.next().expect("the vectors open with a header"))
+            .expect("the header is JSON");
+    let vectors: Vec<serde_json::Value> = lines
+        .map(|line| serde_json::from_str(line).expect("each vector is JSON"))
+        .collect();
+    assert_eq!(
+        (
+            header["schema"].as_str(),
+            header["entry"].as_str(),
+            header["covers"].as_str(),
+            header["anchor"].as_str(),
+        ),
+        (
+            Some("phx.formal.vectors.v1"),
+            Some("AgentPinGroups"),
+            Some("crates/agent/tests/runs.rs"),
+            Some("prune_pin_problems"),
+        )
+    );
+    assert_eq!(header["vectors"], serde_json::Value::from(vectors.len()));
+    let (mut shebangs, mut counts, mut refused_count) = (0, 0, 0);
+    for vector in &vectors {
+        match vector["rule"].as_str() {
+            Some("opens_with_a_shebang") => {
+                let source = vector["source"]
+                    .as_str()
+                    .expect("each vector names its source");
+                let refused = vector["refused"]
+                    .as_bool()
+                    .expect("a shebang vector says whether the port refuses it");
+                assert_eq!(
+                    opens_with_a_shebang(source),
+                    refused,
+                    "the shebang check parted from its port: {source:?}"
+                );
+                let problems = verdict_pin_problems(source);
+                if refused {
+                    assert_eq!(
+                        problems,
+                        [
+                            "the source opens with a first line rustc removes as a shebang before it lexes"
+                        ],
+                        "a source the port refuses was read: {source:?}"
+                    );
+                    refused_count += 1;
+                } else {
+                    assert!(
+                        !problems.iter().any(|problem| problem.contains("shebang")),
+                        "a source the port reads was refused as a shebang: {source:?}: {problems:?}"
+                    );
+                }
+                shebangs += 1;
+            }
+            Some("counts") => counts += 1,
+            other => panic!("a vector of an unknown rule: {other:?}"),
+        }
+    }
+    assert_eq!((shebangs, counts), (96, 576), "the population changed");
+    assert_eq!(refused_count, 32, "the refused population changed");
+    eprintln!("examined {shebangs} shebang vectors");
+}
