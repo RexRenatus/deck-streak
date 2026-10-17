@@ -172,3 +172,22 @@ SPEC-365's A1 to A16, the census's plants, and the mutation rows `S36501` to `S3
   rejected option) and accepts the interleaving model that comes with it.
 - If the owner-taps ruling's containment is found to govern the census's lists, D9's second census
   file replaces the additive form.
+
+## Amendment: D3's reliance on the engine's refusal of a stale current state is held (SPEC-460, ADR-477)
+
+D3's second bullet gives as a reason that "The engine already refuses a stale current state".
+ADR-477 decides how that reliance is held; no line above is changed.
+
+- The refusal: the engine compares the card's scheduling state, as it computes it from the card's
+  row at answer time, with the request's current state, and refuses a difference before it writes
+  anything, as an invalid-input error whose message opens with `card was modified`; the core's
+  `run_answer` hands it back as `AnswerRefusal::Engine` (ADR-477 D1).
+- The tests: `crates/engine-core/tests/stale_answer.rs` records, through `run_answer`, an answer on
+  the states a card was shown with after the card changed, once by another answer and once by a due
+  date set through the owner's gesture, and asserts that refusal and an unchanged collection
+  (SPEC-460 A1 and A2).
+- The reds: the rows `S46001`, the core sending the engine's own current state read at answer time
+  (this record's rejected option), and `S46002`, the refusal read as a recorded answer, are each
+  killed by those tests.
+- The model: `formal/tla/AnswerOnTheShownState` holds that a recorded answer carries the state its
+  card was shown with and that no answer is recorded on a changed card.

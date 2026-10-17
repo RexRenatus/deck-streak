@@ -82,3 +82,48 @@ outside the core to four fixture lines in `crates/ingest/tests`.
   stored.
 - The states a native press passes: written by the codec from the queue's reply, held by the app
   while the card shows, and consumed by `Engine::answer` in one call. The adapter never stores them.
+
+## 6. The engine's refusal of a stale current state (SPEC-460)
+
+Kind: **data flow**. Every `path:line` was read at DeckStreak `dev` `83846ea3`; engine paths are
+in the engine, the workspace's pinned git dependency, at the rev `Cargo.lock` pins. It
+draws the answer's path from the shown state to the engine's comparison and its refusal, each
+DeckStreak call path, the test's seam and the two rows (dashed).
+
+```mermaid
+flowchart TD
+  queue["the queue shows the card: GetQueuedCards (13,3), with its states"] --> webkeep["web: SHOWN keeps the card and its states (wasm.rs:821-824)"]
+  queue --> nativekeep["native: the app holds the encoded states; Engine::answer decodes them (engine.rs:192)"]
+  queue --> testkeep["stale_answer.rs: the test keeps the states (its seam)"]
+  other["another caller in between: an answer of the card (A1) or a due date set by the owner's gesture (A2)"] --> cardrow["the card's row in the collection"]
+  webkeep --> webreq["wasm.rs:826-833: CardAnswer, current_state from the kept states"]
+  nativekeep --> nativereq["answer.rs:149-166: answer_request, current_state from the shown states"]
+  testkeep --> nativereq
+  webreq --> door["dispatch.rs:496-502: run_answer"]
+  nativereq --> door
+  door --> checked["answer.rs:116-132: checked, card id and rating; encoded again, current state as sent"]
+  checked -.-> rowone["row S46001: the engine's own state read here, at answer time"]
+  checked --> answercard["engine: AnswerCard (13,4), one transact (answering/mod.rs:317-319)"]
+  cardrow --> computed["engine: the card's current state from its row (current.rs:19-60)"]
+  answercard --> computed
+  computed --> compare{"answering/mod.rs:335-339: equal to the request's current state?"}
+  compare -->|"yes"| recorded["apply_study_state (mod.rs:341): the grade is recorded"]
+  compare -->|"no"| refused["invalid input, card was modified: a BackendError of kind INVALID_INPUT"]
+  refused --> mapped["dispatch.rs:501: AnswerRefusal::Engine with the engine's bytes"]
+  mapped -.-> rowtwo["row S46002: the refusal read as a recorded answer"]
+  mapped --> nativeout["engine.rs:266: PressRefusal::Engine"]
+  mapped --> webout["wasm.rs:837: refuse, its sentence"]
+  mapped --> asserted["A1 and A2 assert: INVALID_INPUT, head card was modified; snapshot and newest review unchanged"]
+```
+
+| who reaches the refusal | through | held by |
+|---|---|---|
+| the web `rate` (`wasm.rs:818-856`) | `run_answer`, on the kept states | the core's door, run by A1 and A2; the adapter's own lines are not run here |
+| the native `Engine::answer` (`engine.rs:184-206`) | `answer_request`, then `run_answer` | the core's door and codec, run by A1 and A2; the adapter's own lines are not run here |
+| `crates/engine-core/tests/stale_answer.rs` | `answer_request`, then `run_answer`, as the native adapter calls them | A1 and A2 themselves |
+| the core's `run` | none: the table holds (13,4) as `NeedsAnswer` (`table.rs:355-356`) | the existing table tests |
+
+The engine compares the card's computed scheduling state, not its row: a bury or a flag between
+show and answer leaves a new or review card's state equal, and is not refused (ADR-477 D1).
+`formal/tla/AnswerOnTheShownState` models this section's two presses, the other caller and the
+comparison as one action.
