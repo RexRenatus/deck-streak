@@ -543,4 +543,20 @@ describe('the sign-in methods screen, each state', () => {
     expect(document.activeElement).toBe(document.body);
     expect(rejections).toEqual([]);
   });
+
+  it('removing the first of three passkeys puts the focus on the one that took its place', async () => {
+    const FOUR = { id: 4, kind: 'passkey', createdAt: Date.UTC(2001, 1, 3, 12) };
+    const FIVE = { id: 5, kind: 'passkey', createdAt: Date.UTC(2001, 1, 4, 12) };
+    const SIX = { id: 6, kind: 'passkey', createdAt: Date.UTC(2001, 1, 5, 12) };
+    mocks.identities
+      .mockResolvedValueOnce({ kind: 'ok', value: [LISTED[0], FOUR, FIVE, SIX] })
+      .mockResolvedValueOnce({ kind: 'ok', value: [LISTED[0], FIVE, SIX] });
+    server({ 'DELETE /api/identities/4': () => new Response(null, { status: 204 }) });
+    render(Methods);
+    await settle();
+
+    await confirm(rows()[1]);
+    expect(rows()[1].textContent).toContain(day(FIVE.createdAt));
+    expect(document.activeElement).toBe(within(rows()[1]).getByRole('button'));
+  });
 });
