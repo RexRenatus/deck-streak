@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"RetiredListShape","covers":"scripts/mutation_rows.py","anchor":"retirement_records","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":33}
+{"schema":"phx.formal.vectors.v1","entry":"RetiredListShape","covers":"scripts/mutation_rows.py","anchor":"retirement_records","digest":"sha256:cf08a5f88bded7fccc3e9402f0c6ec544fb39a2c6bb845225574f2eb25ef1ba4","vectors":33}
 {"document":[{"id":"S00030-DOUBLE","reason":"moved","approval":"the maintainer, in #1"}],"refused":"scripts/mutation-rows.retired.json must hold a top-level object"}
 {"document":[],"refused":"scripts/mutation-rows.retired.json must hold a top-level object"}
 {"document":"x","refused":"scripts/mutation-rows.retired.json must hold a top-level object"}
