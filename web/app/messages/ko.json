@@ -214,5 +214,6 @@
   "methods_remove": "삭제",
   "methods_remove_confirm": "이 패스키를 삭제할까요? Telegram으로는 계속 로그인할 수 있습니다.",
   "methods_remove_keep": "유지",
+  "methods_remove_passkey": "패스키 {position}({date}에 추가됨) 삭제",
   "methods_reopen": "Telegram에서 DeckStreak을 다시 연 후 다시 시도하세요."
 }
