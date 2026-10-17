@@ -2482,8 +2482,11 @@ class AScopedLegIsPricedByItsTriple(unittest.TestCase):
     def test_a_triple_deals_by_its_setup_and_its_mutant_figure(self):
         """A10 (R9): at (224, 224, 60) setup is 448 s and a leg holds (1800 - 448) // 60 = 22
         mutants, so v.py's 44 are two legs of 448 + 22 x 60 = 1768 s; dividing by the control
-        would hold six. At (900, 900, 1) setup is the whole bound, k is 0, and the refusal reads
-        the control, 900 s, and setup + each, 1801 s."""
+        would hold six, and its eight interleaved runs deal onto the same two legs. At (620, 620,
+        60) setup is 1240 s and a leg holds (1800 - 1240) // 60 = 9 mutants, so 18 are two legs
+        of 1240 + 9 x 60 = 1780 s; dividing by the control, 620 s, would hold none and refuse. At
+        (900, 900, 1) setup is the whole bound, k is 0, and the refusal reads the control, 900 s,
+        and setup + each, 1801 s."""
         program = verdict_program()
         listing = priced("v.py", 44)
         self.assertEqual(
@@ -2496,12 +2499,23 @@ class AScopedLegIsPricedByItsTriple(unittest.TestCase):
                 ],
             },
         )
+        heavy = priced("v.py", 18)
+        self.assertEqual(
+            program.python_by_cost(heavy, {}, {"v.py": (620, 620, 60)}),
+            {
+                "count": 2,
+                "shards": [
+                    {"shard": 0, "mutants": names_of(heavy[0::2]), "projected_seconds": 1780},
+                    {"shard": 1, "mutants": names_of(heavy[1::2]), "projected_seconds": 1780},
+                ],
+            },
+        )
         self.assertEqual(
             program.python_by_cost(listing, {}, {"v.py": (900, 900, 1)}),
             "mutation: shards: REFUSED: v.py's control is priced at 900 s, so a leg holding one "
             "of its mutants projects 1801 s, past its 1800 s bound",
         )
-        examined("dealt mutants", listing)
+        examined("dealt mutants", listing + heavy)
 
     def test_a_file_is_priced_scoped_then_whole_then_by_the_count_rule(self):
         """A11 (R9): a file the scoped table holds reads its triple even beside a whole price; a
