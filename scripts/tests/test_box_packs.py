@@ -6,6 +6,9 @@ section, runs the methodology probes and the proxy-client scan from the checkout
 owned data for drift, and posts one verdict-only status (SPEC-056 A11 to A15, ADR-069). It runs the
 apiKeyHelper scan from the checkout with the removed gate step's refusals (SPEC-056 A17), and holds
 each advisory departure an advisory lint reports to a waiver in its unit or an open issue (A19).
+It removes only the cards directory a run made, reads BOX_PACKS_OUT and BOX_PACKS_KEEP by their
+values, and keeps the runner's lines to 100 columns with its make just before the try that
+removes it (SPEC-476).
 
 `scripts/box-packs.sh` is driven here with a fake runner, a synthetic checkout, a private file in a
 temporary directory and a fake gh (`scripts/tests/fixtures/box-packs/`), so these tests need neither
@@ -14,6 +17,7 @@ the fake runner the census of every tree it was asked to judge, before the drive
 The real run stays on the maintainer's box (ADR-069).
 """
 
+import ast
 import hashlib
 import json
 import os
@@ -246,6 +250,10 @@ class Box:
         self.cards = self.tmp / "cards"
         self.temp_root = self.tmp / "temp"
         self.temp_root.mkdir()
+        # Every run starts here, so a path the driver resolves against its working directory lands
+        # inside this test's own directory, never in the tree the tests run from (SPEC-476 R7).
+        self.cwd = self.tmp / "cwd"
+        self.cwd.mkdir()
         shutil.copytree(FIXTURES / "checkout", self.checkout)
         git("init", "-q", str(self.checkout))
         self.repo.mkdir()
@@ -331,12 +339,14 @@ class Box:
         unset=(),
         cards=True,
         keep=False,
+        environ=None,
     ):
         """Run the real driver with the fake runner; (the finished process, the runner's calls).
 
         The fake gh answers CLOSED for each issue `closed` names and OPEN for any other. `gh` set
         to `auth`, `offline` or `garbled` makes it fail the way gh does, and None runs with no gh on
-        the path at all. `unset` names the driver's variables to leave out."""
+        the path at all. `unset` names the driver's variables to leave out, and `environ` sets
+        variables over every other, such as an empty `BOX_PACKS_OUT`."""
         for log in (self.log, self.gh_log, self.probe_log):
             log.write_text("", encoding="utf-8")
         env = dict(
@@ -361,6 +371,7 @@ class Box:
             env.pop("BOX_PACKS_OUT")
         if keep:
             env["BOX_PACKS_KEEP"] = "1"
+        env.update(environ or {})
         if gh is None:
             env["PATH"] = str(self.tools_without_gh())
         else:
@@ -370,6 +381,7 @@ class Box:
         done = subprocess.run(
             ["bash", str(DRIVER), *args, str(self.repo)],
             env=env,
+            cwd=self.cwd,
             capture_output=True,
             text=True,
             check=False,
@@ -997,7 +1009,8 @@ class OwnedDataCannotDrift(unittest.TestCase):
 
 
 class TheRunnerCleansUpItsCards(unittest.TestCase):
-    """The cards directory a run creates is removed when the run ends (issue 531)."""
+    """The cards directory a run creates is removed when the run ends (issue 531), and nothing
+    else is: not its parent, not a sibling (issue 542)."""
 
     def test_the_created_cards_directory_is_gone_after_every_end(self):
         ends = {
@@ -1031,6 +1044,126 @@ class TheRunnerCleansUpItsCards(unittest.TestCase):
         path = box.temp_root / kept[0]
         self.assertTrue(any(path.iterdir()), "the kept cards are missing")
         self.assertIn(f"cards: {path}", done.stderr)
+
+    def test_a_decoy_sibling_and_the_parent_survive_every_end(self):
+        ends = {
+            "pass": {},
+            "fail": {"red": ["alpha.second"]},
+            "error": {"gh": "offline"},
+        }
+        codes = {"pass": 0, "fail": 1, "error": 2}
+        card = b"a sibling's card, never this run's\n"
+        for end, options in examined("ends", list(ends.items())):
+            with self.subTest(end=end):
+                box = Box(self)
+                decoy = box.temp_root / "deckstreak-box-cards.decoy"
+                decoy.mkdir()
+                (decoy / "card.json").write_bytes(card)
+                done, _ = box.run(cards=False, **options)
+                self.assertEqual(done.returncode, codes[end], done.stdout + done.stderr)
+                self.assertTrue(box.temp_root.is_dir(), "the run removed the parent")
+                self.assertTrue(decoy.is_dir(), "the run removed a sibling cards directory")
+                self.assertEqual([entry.name for entry in decoy.iterdir()], ["card.json"])
+                self.assertEqual((decoy / "card.json").read_bytes(), card)
+                left = sorted(entry.name for entry in box.temp_root.iterdir())
+                self.assertEqual(left, [decoy.name], "the run left its own cards directory")
+
+    def test_an_empty_out_is_read_as_unset(self):
+        cells = {"alone": {}, "kept": {"BOX_PACKS_KEEP": "1"}}
+        for cell, extra in examined("empty BOX_PACKS_OUT cells", list(cells.items())):
+            with self.subTest(cell=cell):
+                box = Box(self)
+                done, _ = box.run(environ={"BOX_PACKS_OUT": "", **extra})
+                self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+                self.assertIn("BOX PACKS OK", done.stdout)
+                wrote = list(box.cwd.iterdir())
+                self.assertEqual(wrote, [], "the run wrote into its working directory")
+                made = [entry.name for entry in box.temp_root.iterdir()]
+                if cell == "alone":
+                    self.assertEqual(made, [], "the run left the directory it made")
+                    self.assertNotIn("cards: ", done.stderr)
+                else:
+                    kept = [name for name in made if name.startswith("deckstreak-box-cards.")]
+                    self.assertEqual(len(kept), 1, made)
+                    path = box.temp_root / kept[0]
+                    self.assertTrue(any(path.iterdir()), "the kept cards are missing")
+                    self.assertIn(f"cards: {path}", done.stderr)
+
+    def test_a_keep_of_0_keeps_the_made_directory(self):
+        box = Box(self)
+        done, _ = box.run(cards=False, environ={"BOX_PACKS_KEEP": "0"})
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        made = [entry.name for entry in box.temp_root.iterdir()]
+        kept = [name for name in made if name.startswith("deckstreak-box-cards.")]
+        self.assertEqual(len(kept), 1, made)
+        path = box.temp_root / kept[0]
+        self.assertTrue(any(path.iterdir()), "the kept cards are missing")
+        self.assertIn(f"cards: {path}", done.stderr)
+
+    def test_an_empty_keep_removes_the_made_directory(self):
+        box = Box(self)
+        done, _ = box.run(cards=False, environ={"BOX_PACKS_KEEP": ""})
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("BOX PACKS OK", done.stdout)
+        made = [entry.name for entry in box.temp_root.iterdir()]
+        self.assertEqual(made, [], "an empty BOX_PACKS_KEEP kept the directory the run made")
+        self.assertNotIn("cards: ", done.stderr)
+
+
+class TheRunnerSourceHoldsItsCures(unittest.TestCase):
+    """The runner's own text: every line fits 100 columns, and the cards directory is made by the
+    statement just before the `try` whose `finally` removes it (SPEC-476 R5, R6)."""
+
+    def test_every_runner_line_fits_100_columns(self):
+        lines = DRIVER.read_text(encoding="utf-8").splitlines()
+        numbered = examined("runner lines", list(enumerate(lines, 1)))
+        wide = [(number, len(line)) for number, line in numbered if len(line) > 100]
+        self.assertEqual(wide, [], "a line of the runner runs past 100 columns")
+
+    def test_the_cards_directory_is_made_just_before_its_try(self):
+        text = DRIVER.read_text(encoding="utf-8")
+        body = text.split("<<'PY'\n", 1)[1].rsplit("\nPY\n", 1)[0]
+        runs = [
+            node
+            for node in ast.parse(body).body
+            if isinstance(node, ast.FunctionDef) and node.name == "run"
+        ]
+        self.assertEqual(len(runs), 1, "the driver's body holds no single run()")
+        statements = runs[0].body
+
+        def makes(statement):
+            value = getattr(statement, "value", None)
+            return (
+                isinstance(statement, ast.Assign)
+                and isinstance(value, ast.Call)
+                and isinstance(value.func, ast.Name)
+                and value.func.id == "cards_directory"
+            )
+
+        made_at = [index for index, statement in enumerate(statements) if makes(statement)]
+        self.assertEqual(len(made_at), 1, "run() does not make its cards directory once")
+        at = made_at[0]
+        later = [i for i in range(at + 1, len(statements)) if isinstance(statements[i], ast.Try)]
+        self.assertTrue(later, "no try follows the make")
+        between = later[0] - at - 1
+        self.assertEqual(between, 0, f"{between} statement(s) run between the make and the try")
+        final = ast.Module(body=statements[later[0]].finalbody, type_ignores=[])
+        removes = [
+            node
+            for node in ast.walk(final)
+            if isinstance(node, ast.Call)
+            and ast.unparse(node.func) == "shutil.rmtree"
+            and [ast.unparse(argument) for argument in node.args] == ["out"]
+        ]
+        self.assertEqual(len(removes), 1, "the try's finally does not remove the made directory")
+        before = {
+            target.id
+            for statement in statements[:at]
+            if isinstance(statement, ast.Assign)
+            for target in statement.targets
+            if isinstance(target, ast.Name)
+        }
+        self.assertLessEqual({"made", "keep"}, before, "a reading is assigned after the make")
 
 
 class TheRunPostsOneVerdict(unittest.TestCase):
