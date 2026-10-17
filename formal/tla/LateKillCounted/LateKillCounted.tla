@@ -21,12 +21,12 @@
 \* joins the scope from outside the command's tree; the kernel raises oom_kill in the same step as
 \* its victim leaves the scope, an order this tree does not measure (ADR-484 D1); a pause between
 \* two reads is a step any other action may interleave with.
-\* @phx covers scripts/memory_scope.py anchor=run digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers scripts/memory_scope.py anchor=counts_after digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers scripts/memory_scope.py anchor=alone_after digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers scripts/memory_scope.py anchor=others_after digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers scripts/mutation-verdict.py anchor=read_scope_record digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers scripts/mutation-verdict.py anchor=memory_cap digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers scripts/memory_scope.py anchor=run digest=sha256:7fe4abb45f1e2f9bcf066eeea0d109e072e782442c2ab6f226be64a29b5060b6
+\* @phx covers scripts/memory_scope.py anchor=counts_after digest=sha256:6b2368c7f7966568eb416197846b729693bb21ba5f21a0b7e9125498327f4184
+\* @phx covers scripts/memory_scope.py anchor=alone_after digest=sha256:007a6002e5213e5f28bfd9d1156524b75b85c52251871050074fd3a7fece10fa
+\* @phx covers scripts/memory_scope.py anchor=others_after digest=sha256:941277b21e9ae8a7a3eb732002b85d2f4d7efb020b04a0d0baf0dacdc0da84ca
+\* @phx covers scripts/mutation-verdict.py anchor=read_scope_record digest=sha256:f6c70e15d2610ba0714ea2e698db113cad97cb47ffccd1a679735dceb23dda7d
+\* @phx covers scripts/mutation-verdict.py anchor=memory_cap digest=sha256:4d7528d1149bf8b58fbd5c62280f8bd41b7c0ba4d145546780f2ea874e0348b6
 \* @phx cites #469, #439
 \* @phx property EveryKillIsCountedOrTheRecordIsVoid ramp=report
 \* @phx property NoKillIsReadAsACleanRun ramp=report
