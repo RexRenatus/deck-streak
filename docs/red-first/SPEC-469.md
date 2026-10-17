@@ -36,3 +36,30 @@ source U+FEFF then `#!`) and `a_word_count_that_reads_doc_attributes_parts_from_
 vectors drift; its only findings were the twelve unstamped covers, read `STALE` on both theorems.
 The theorems' proofs were read clean only after the stamp. No CI job checks a Lean entry in this
 repository, so this reading is the build's own and is not a fence line.
+
+## The rows' proofs
+
+Rows S46901 to S46904 (`scripts/mutation-rows.d/S46900-S46999.json`) were proved by hand over the
+tree that adds the two tests, one row at a time: the target's sha256 recorded, the row's
+replacement installed once by script (its find occurring once), the killer run by `--exact`
+(`running 1 test`) and its failing assertion read, the other new test run under the same mutant,
+then the saved bytes written back, the sha256 compared equal, the file touched, and the test
+targets rebuilt before the next row. Each killer failed on the assertion its row names, never on
+a count assertion.
+
+- S46901, `tests/verdict.rs` (sha256 `ab894b60814ffa6e5b465efb77a465b3ff67de1bd778f2e97a9f157440dad5e6`
+  before and after): A2 failed at the first one-mark `#!` vector, on the check's own assertion:
+  `assertion 'left == right' failed: the shebang check parted from its port: "\u{feff}#!"`,
+  `left: false`, `right: true`. A1, which does not read `tests/verdict.rs`, passed under it.
+- S46902, `tests/runs.rs` (sha256 `ce83ab9005b252fd0a685fad11b98f873895c045f56e03fd52e79a52579a032f`
+  before and after): A1 failed at a skipped doc group with no call beside it, on the sentences
+  `prune_pin_problems` names: `the counts parted from their port: # [ doc = sqlx : : query ! (
+  "DELETE FROM agent_runs WHERE created_at < ?1" ) ]`, the word count reading the group's word
+  where the port reads none. A2 passed under it.
+- S46903, `tests/verdict.rs` (same sha256 before and after): A2 failed at the first `#![` vector,
+  no mark and no tail: `the shebang check parted from its port: "#!["`, `left: true`,
+  `right: false`. A1 passed under it.
+- S46904, `tests/runs.rs` (same sha256 before and after): A1 failed at the first count vector, no
+  prefix, a parenthesis group, no head, depth 1 and no call beside, on the run count's own
+  assertion: `the run count parted from its port: ( sqlx : : query ! (
+  "DELETE FROM agent_runs WHERE created_at < ?1" ) )`, `left: 0`, `right: 1`. A2 passed under it.
