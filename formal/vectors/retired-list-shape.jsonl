@@ -1,0 +1,34 @@
+{"schema":"phx.formal.vectors.v1","entry":"RetiredListShape","covers":"scripts/mutation_rows.py","anchor":"retirement_records","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":33}
+{"document":[{"id":"S00030-DOUBLE","reason":"moved","approval":"the maintainer, in #1"}],"refused":"scripts/mutation-rows.retired.json must hold a top-level object"}
+{"document":[],"refused":"scripts/mutation-rows.retired.json must hold a top-level object"}
+{"document":"x","refused":"scripts/mutation-rows.retired.json must hold a top-level object"}
+{"document":1,"refused":"scripts/mutation-rows.retired.json must hold a top-level object"}
+{"document":null,"refused":"scripts/mutation-rows.retired.json must hold a top-level object"}
+{"document":true,"refused":"scripts/mutation-rows.retired.json must hold a top-level object"}
+{"document":{"retired":1},"refused":"scripts/mutation-rows.retired.json: `retired` is not an array of records"}
+{"document":{"retired":null},"refused":"scripts/mutation-rows.retired.json: `retired` is not an array of records"}
+{"document":{"retired":{}},"refused":"scripts/mutation-rows.retired.json: `retired` is not an array of records"}
+{"document":{"retired":""},"refused":"scripts/mutation-rows.retired.json: `retired` is not an array of records"}
+{"document":{"retired":"x"},"refused":"scripts/mutation-rows.retired.json: `retired` is not an array of records"}
+{"document":{"retired":true},"refused":"scripts/mutation-rows.retired.json: `retired` is not an array of records"}
+{"document":{"retired":[{"id":"S00031-OTHER","reason":"moved","approval":"the maintainer, in #1"},1]},"refused":"scripts/mutation-rows.retired.json: retired[1] is not an object"}
+{"document":{"retired":["S00030-DOUBLE"]},"refused":"scripts/mutation-rows.retired.json: retired[0] is not an object"}
+{"document":{"retired":[{"id":"S00031-OTHER","reason":"moved","approval":"the maintainer, in #1"},{"reason":"moved","approval":"the maintainer, in #1"}]},"refused":"scripts/mutation-rows.retired.json: retired[1] has no string id"}
+{"document":{"retired":[{"id":"S00031-OTHER","reason":"moved","approval":"the maintainer, in #1"},{"id":["S00030-DOUBLE"],"reason":"moved","approval":"the maintainer, in #1"}]},"refused":"scripts/mutation-rows.retired.json: retired[1] has no string id"}
+{"document":{"retired":[{"id":{"row":"S00030-DOUBLE"},"reason":"moved","approval":"the maintainer, in #1"}]},"refused":"scripts/mutation-rows.retired.json: retired[0] has no string id"}
+{"document":{"retired":[{"id":30,"reason":"moved","approval":"the maintainer, in #1"}]},"refused":"scripts/mutation-rows.retired.json: retired[0] has no string id"}
+{"document":{"retired":[{"id":"S00030-DOUBLE","reason":"moved","approval":"the maintainer, in #1"},1]},"refused":"scripts/mutation-rows.retired.json: retired[1] is not an object"}
+{"document":{},"approves":false}
+{"document":{"_":["a note"]},"approves":false}
+{"document":{"_":["a note"],"retired":[{"id":"S00030-DOUBLE","reason":"moved","approval":"the maintainer, in #1"}]},"approves":true}
+{"document":{"retired":[]},"approves":false}
+{"document":{"retired":[{"id":"S00030-DOUBLE","reason":"moved","approval":"the maintainer, in #1"}]},"approves":true}
+{"document":{"retired":[{"id":"S00031-OTHER","reason":"moved","approval":""},{"id":"S00030-DOUBLE","reason":"moved","approval":"the maintainer, in #1"}]},"approves":true}
+{"document":{"retired":[{"id":"S00030-DOUBLE","reason":"moved","approval":"   "}]},"approves":false}
+{"document":{"retired":[{"id":"S00030-DOUBLE","reason":"moved","approval":"\u0009 \u000a\u00a0\u3000"}]},"approves":false}
+{"document":{"retired":[{"id":"S00030-DOUBLE","reason":"","approval":"the maintainer, in #1"}]},"approves":false}
+{"document":{"retired":[{"id":"S00030-DOUBLE","reason":"moved"}]},"approves":false}
+{"document":{"retired":[{"id":"S00030-DOUBLE","approval":"the maintainer, in #1"}]},"approves":false}
+{"document":{"retired":[{"id":"S00030-DOUBLE","reason":7,"approval":true}]},"approves":true}
+{"document":{"retired":[{"id":"S00030-DOUBLE","reason":null,"approval":"the maintainer, in #1"}]},"approves":true}
+{"document":{"retired":[{"id":"S00030-DOUBLE","reason":[],"approval":{}}]},"approves":true}
