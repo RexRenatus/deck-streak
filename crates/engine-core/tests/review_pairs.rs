@@ -16,8 +16,6 @@
 
 mod support;
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use anki::collection::CollectionBuilder;
 use anki_proto::decks::{DeckId, DeckTreeNode, DeckTreeRequest};
 use anki_proto::generic::StringList;
@@ -79,9 +77,36 @@ const CARD_IDS: [i64; 2] = [1_000_001, 1_000_002];
 /// once, and pinned here).
 const NEW_CARD_INTERVALS: [&str; 4] = ["<1m", "<6m", "<10m", "4d"];
 
-/// Builds a Basic note in the default deck and one in `Review`, closed, and returns the collection
-/// with the two cards, their ids fixed, in that order.
+/// Builds a Basic note in the default deck and one in `Review`, closed, pins its cutoff before any
+/// engine opens it (SPEC-443 R2), and returns the collection with the two cards, their ids fixed,
+/// in that order.
 fn collection(test: &str) -> support::Synthetic {
+    let (dir, path, cards) = built(test);
+    let clock = support::clock::pin(&path);
+    support::Synthetic {
+        dir,
+        collection: path,
+        cards,
+        clock,
+    }
+}
+
+/// The same collection, its cutoff first placed `start` after the clock's instant, then pinned
+/// (SPEC-443 R5).
+fn collection_placed(test: &str, start: i64) -> support::Synthetic {
+    let (dir, path, cards) = built(test);
+    support::clock::place(&path, start);
+    let clock = support::clock::pin(&path);
+    support::Synthetic {
+        dir,
+        collection: path,
+        cards,
+        clock,
+    }
+}
+
+/// The two-deck collection's directory, file and two cards, built and closed.
+fn built(test: &str) -> (std::path::PathBuf, std::path::PathBuf, [i64; 2]) {
     let dir = support::scratch("engine-core-review-pairs", test);
     std::fs::create_dir_all(dir.join("collection.media")).expect("a media directory");
     let path = dir.join("collection.anki2");
@@ -121,19 +146,7 @@ fn collection(test: &str) -> support::Synthetic {
         *card = CARD_IDS[index];
     }
     col.close(None).expect("the engine closes the collection");
-    support::Synthetic {
-        dir,
-        collection: path,
-        cards,
-    }
-}
-
-fn now_secs() -> i64 {
-    let secs = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_secs();
-    i64::try_from(secs).expect("the clock's seconds fit an i64")
+    (dir, path, cards)
 }
 
 fn run(
@@ -144,15 +157,14 @@ fn run(
     dispatcher.run(service, method, input)
 }
 
-#[test]
-fn the_review_pairs_run_natively_and_no_other_pair_joins() {
-    let synthetic = collection("review-pairs");
+/// The review-pairs test's own body (SPEC-348 A1), on `synthetic`.
+fn review_pairs_run_natively_and_no_other_pair_joins(synthetic: &support::Synthetic) {
     let dispatcher =
         Dispatcher::start(Transport::Native, &[]).expect("the engine starts from the default init");
     run(
         &dispatcher,
         OPEN_COLLECTION,
-        &support::open_request(&synthetic),
+        &support::open_request(synthetic),
     )
     .expect("the native dispatcher opens the collection");
 
@@ -160,7 +172,10 @@ fn the_review_pairs_run_natively_and_no_other_pair_joins() {
     let tree = run(
         &dispatcher,
         DECK_TREE,
-        &DeckTreeRequest { now: now_secs() }.encode_to_vec(),
+        &DeckTreeRequest {
+            now: synthetic.clock.at_secs(),
+        }
+        .encode_to_vec(),
     )
     .expect("the native dispatcher answers DecksService.DeckTree (7,4)");
     let tree = DeckTreeNode::decode(tree.as_slice()).expect("the tree decodes");
@@ -236,4 +251,23 @@ fn the_review_pairs_run_natively_and_no_other_pair_joins() {
         "the pairs outside the native column: held for a gesture, held for a press, refused, and \
          reaching the engine"
     );
+}
+
+#[test]
+fn the_review_pairs_run_natively_and_no_other_pair_joins() {
+    review_pairs_run_natively_and_no_other_pair_joins(&collection("review-pairs"));
+}
+
+/// SPEC-443 A2 (R5): the review-pairs test's own body, on a collection first placed five minutes
+/// before its cutoff, then on one first placed five minutes after it, each then pinned.
+#[test]
+fn the_review_pairs_run_natively_and_no_other_pair_joins_on_each_side_of_the_cutoff() {
+    review_pairs_run_natively_and_no_other_pair_joins(&collection_placed(
+        "review-pairs-just-before",
+        support::clock::JUST_BEFORE_SECS,
+    ));
+    review_pairs_run_natively_and_no_other_pair_joins(&collection_placed(
+        "review-pairs-just-after",
+        support::clock::JUST_AFTER_SECS,
+    ));
 }

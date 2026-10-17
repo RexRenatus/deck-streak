@@ -8,18 +8,22 @@
 //! them. The pairs below are read from the engine's generated dispatch, not from the adapter's
 //! table, so a wrong entry in the table fails here. The builder and the wire helpers are the
 //! adapter's shared test support (`support/`), which encodes and decodes only what its tests send
-//! and read.
+//! and read. The native press stamps each review at the instant its engine was started with, on
+//! each side of a cutoff (SPEC-443 A4).
 
 // A failed setup step fails the test, as clippy.toml allows inside a test function.
 #![allow(clippy::expect_used)]
 
 mod support;
 
+#[path = "support/clock.rs"]
+mod clock;
+
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use anki::collection::CollectionBuilder;
 use anki::decks::DeckId;
+use clock::Clock;
 use deck_streak_ffi::engine::{Engine, EngineRefusal, PressRefusal, PressedGrade};
 use support::synthetic::SECOND_DECK;
 use support::{Synthetic, open_request, synthetic, wire};
@@ -51,6 +55,22 @@ const NO_MESSAGE: [u8; 3] = [0x0a, 0x05, 0x01];
 
 fn engine() -> Arc<Engine> {
     Engine::new(Vec::new()).expect("the engine starts from the default init message")
+}
+
+/// An engine started from the default init message, whose every answer records the clock's
+/// instant as its time (SPEC-443 R4).
+fn on_the_clock(clock: Clock) -> Arc<Engine> {
+    Engine::at_answer_time(&[], clock.at_millis())
+        .expect("the engine starts from the default init message")
+}
+
+/// The synthetic collection for `test`, its cutoff first placed `start` after the clock's instant,
+/// then pinned before the adapter opens it (SPEC-443 R5), with the pin's clock.
+fn placed(test: &str, start: i64) -> (Synthetic, Clock) {
+    let synthetic = synthetic(test);
+    clock::place(&synthetic.collection, start);
+    let clock = clock::pin(&synthetic.collection);
+    (synthetic, clock)
 }
 
 fn call(
@@ -125,10 +145,14 @@ fn untouched(synthetic: &Synthetic) -> Queued {
     }
 }
 
-/// A `CardAnswer` rating the first queued card Good, with the states the queue gave it. A queue
-/// that gave none (a refused call) yields an answer with empty states, which the adapter must
-/// still route by its pair alone.
-fn good_answer(synthetic: &Synthetic, queued: &Result<Vec<u8>, EngineRefusal>) -> Vec<u8> {
+/// A `CardAnswer` rating the first queued card Good, with the states the queue gave it, answered at
+/// `clock`'s instant. A queue that gave none (a refused call) yields an answer with empty states,
+/// which the adapter must still route by its pair alone.
+fn good_answer(
+    synthetic: &Synthetic,
+    clock: Clock,
+    queued: &Result<Vec<u8>, EngineRefusal>,
+) -> Vec<u8> {
     let states = queued
         .as_ref()
         .map(|bytes| {
@@ -139,10 +163,6 @@ fn good_answer(synthetic: &Synthetic, queued: &Result<Vec<u8>, EngineRefusal>) -
             wire::bytes(&head, 3)
         })
         .unwrap_or_default();
-    let answered_at = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_millis();
     let mut out = Vec::new();
     wire::put_varint_field(
         &mut out,
@@ -155,18 +175,10 @@ fn good_answer(synthetic: &Synthetic, queued: &Result<Vec<u8>, EngineRefusal>) -
     wire::put_varint_field(
         &mut out,
         5,
-        u64::try_from(answered_at).expect("the time fits 64 bits"),
+        u64::try_from(clock.at_millis()).expect("the time fits 64 bits"),
     );
     wire::put_varint_field(&mut out, 6, 4_000);
     out
-}
-
-/// The milliseconds since the epoch, as the test's own clock reads them.
-fn now_millis() -> i64 {
-    let since = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch");
-    i64::try_from(since.as_millis()).expect("the time fits 64 bits")
 }
 
 /// Adds a second Basic note to the synthetic collection, before any engine opens it, and answers
@@ -419,10 +431,15 @@ fn a_native_run_refuses_an_answer_and_leaves_the_card() {
     // SPEC-365 A12: the native `run` holds no answer. AnswerCard is not allowed, so a valid
     // answer with the states the queue gave never reaches the engine, and the card stays new.
     let synthetic = synthetic("native-run-answer");
+    let clock = clock::pin(&synthetic.collection);
     let engine = engine();
     let opened = call(&engine, OPEN_COLLECTION, open_request(&synthetic));
     let queued = call(&engine, GET_QUEUED_CARDS, queue_request());
-    let answered = call(&engine, ANSWER_CARD, good_answer(&synthetic, &queued));
+    let answered = call(
+        &engine,
+        ANSWER_CARD,
+        good_answer(&synthetic, clock, &queued),
+    );
     let (rows, reviews) = written(&synthetic, engine, &[synthetic.card_id]);
     assert_eq!(
         (opened, answered, rows, reviews),
@@ -439,20 +456,22 @@ fn a_native_run_refuses_an_answer_and_leaves_the_card() {
     );
 }
 
-#[test]
-fn a_native_press_answers_only_its_card_with_its_grade() {
-    // SPEC-365 A13: a press answers its card with its grade's own next state, the one the engine
-    // gave for that grade, and leaves the other card; states that are no `SchedulingStates` are
-    // refused before the engine sees them.
-    let synthetic = synthetic("native-press");
-    let second = second_card(&synthetic);
-    let engine = engine();
-    let opened = call(&engine, OPEN_COLLECTION, open_request(&synthetic));
+/// The native press test's own body (SPEC-365 A13), on `synthetic` and through `engine`: a press
+/// answers its card with its grade's own next state, the one the engine gave for that grade, and
+/// leaves the other card; states that are no `SchedulingStates` are refused before the engine sees
+/// them. Each review's id is held to `clock`'s instant, the second made unique by the engine
+/// (SPEC-443 R5).
+fn native_press_answers_only_its_card_with_its_grade(
+    synthetic: &Synthetic,
+    clock: Clock,
+    engine: Arc<Engine>,
+) {
+    let second = second_card(synthetic);
+    let opened = call(&engine, OPEN_COLLECTION, open_request(synthetic));
     let queued = call(&engine, GET_QUEUED_CARDS, two_queued()).expect("the queue answers");
     let [(first, first_states), (next, second_states)]: [(i64, Vec<u8>); 2] = shown(&queued)
         .try_into()
         .expect("the queue shows the two new cards");
-    let before = now_millis();
     let again = engine
         .answer(first, PressedGrade::Again, first_states.clone(), 3_000)
         .map(|_| ());
@@ -460,22 +479,22 @@ fn a_native_press_answers_only_its_card_with_its_grade() {
     let good = engine
         .answer(second, PressedGrade::Good, second_states.clone(), 4_000)
         .map(|_| ());
-    let after = now_millis();
     let undecodable = engine.answer(first, PressedGrade::Good, NO_MESSAGE.to_vec(), 0);
-    let (rows, reviews) = written(&synthetic, engine, &[first, second]);
+    let (rows, reviews) = written(synthetic, engine, &[first, second]);
     let logged: Vec<[i64; 3]> = reviews
         .iter()
         .map(|&[card, ease, time, _]| [card, ease, time])
         .collect();
-    let timed = reviews
+    let stamped: Vec<i64> = reviews
         .iter()
-        .all(|&[.., id]| (before..=after).contains(&id));
+        .map(|&[.., id]| id - clock.at_millis())
+        .collect();
     assert_eq!(
         (
             (opened, next, again, good),
             rows,
             logged,
-            timed,
+            stamped,
             left_new.map(|queued| (queued.card_id, queued.new)),
             undecodable
         ),
@@ -486,10 +505,31 @@ fn a_native_press_answers_only_its_card_with_its_grade() {
                 [LEARNING, remaining_steps(&second_states, 4), 1],
             ],
             vec![[first, AGAIN_EASE, 3_000], [second, GOOD_EASE, 4_000]],
-            true,
+            vec![0, 1],
             Ok((second, 1)),
             Err(PressRefusal::Undecodable)
         ),
-        "A13: Again and Good each answer their own card once, into the engine's own next state for the grade, at the adapter's time; Again's press leaves the other card new at the queue's head; undecodable states are refused before the engine"
+        "A13: Again and Good each answer their own card once, into the engine's own next state for the grade, each review's id the injected instant and the second made unique by the engine; Again's press leaves the other card new at the queue's head; undecodable states are refused before the engine"
     );
+}
+
+#[test]
+fn a_native_press_answers_only_its_card_with_its_grade() {
+    // SPEC-365 A13: a press answers its card with its grade's own next state, the one the engine
+    // gave for that grade, and leaves the other card; states that are no `SchedulingStates` are
+    // refused before the engine sees them.
+    let synthetic = synthetic("native-press");
+    let clock = clock::pin(&synthetic.collection);
+    native_press_answers_only_its_card_with_its_grade(&synthetic, clock, on_the_clock(clock));
+}
+
+/// SPEC-443 A4 (R4, R5, R7): the native press test's own body, through an engine started at the
+/// clock's instant, on a collection first placed five minutes before its cutoff, then on one first
+/// placed five minutes after it, each then pinned.
+#[test]
+fn a_native_press_stamps_each_review_at_the_injected_instant_on_each_side_of_the_cutoff() {
+    let (synthetic, clock) = placed("native-press-just-before", clock::JUST_BEFORE_SECS);
+    native_press_answers_only_its_card_with_its_grade(&synthetic, clock, on_the_clock(clock));
+    let (synthetic, clock) = placed("native-press-just-after", clock::JUST_AFTER_SECS);
+    native_press_answers_only_its_card_with_its_grade(&synthetic, clock, on_the_clock(clock));
 }
