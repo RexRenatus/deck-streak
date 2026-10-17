@@ -494,4 +494,29 @@ describe('the sign-in methods screen, each state', () => {
     expect(screen.queryByText(QUESTION)).not.toBeNull();
     expect(document.activeElement).toBe(keep);
   });
+
+  it('escape with no step open changes nothing and raises no error', async () => {
+    mocks.identities.mockResolvedValue({ kind: 'ok', value: LISTED });
+    const errors: unknown[] = [];
+    const collect = (event: ErrorEvent) => errors.push(event.error);
+    window.addEventListener('error', collect);
+    try {
+      render(Methods);
+      await settle();
+      // before any step was opened
+      await fireEvent.keyDown(window, { key: 'Escape' });
+      await settle();
+      expect(rows()).toHaveLength(3);
+      // and after one was put away
+      await open(rows()[1]);
+      await fireEvent.click(within(rows()[1]).getByRole('button', { name: 'Keep' }));
+      await settle();
+      await fireEvent.keyDown(window, { key: 'Escape' });
+      await settle();
+      expect(screen.queryByText(QUESTION)).toBeNull();
+    } finally {
+      window.removeEventListener('error', collect);
+    }
+    expect(errors).toEqual([]);
+  });
 });
