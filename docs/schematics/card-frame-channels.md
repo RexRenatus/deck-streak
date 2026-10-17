@@ -834,3 +834,76 @@ line 42 (cited as `:38`, in the prose and in the diagram's node), the strip at l
 `:39`) with the `srcset` removal at line 45, the composed document at line 51 (cited as `:45`), the
 re-parse at line 52 (cited as `:46`), the kept check at lines 53 to 57 with its `srcset` conjunct
 at line 56 (cited as `:47-50`), and the refusal at line 58 (cited as `:51`).
+
+## 13. The web's followed links, read at the connection (SPEC-461, ADR-478)
+
+Read at `83846ea3`. Every planted card that acts on a click (`nav-self`, `nav-top`, `nav-blank`,
+`download`, `ping`, `form`, `external-scheme` and `javascript-url`, built by `clicks()` in
+`web/app/tests-card/planted.ts`) points its link, form action or ping at the TCP listener, and
+expects `tcp` and its own path key. Before SPEC-461 they pointed at the HTTP listener, which counts
+requests by path only (`web/app/tests-card/listeners.ts:45-51`), so a connection that carried no
+request reached no count the suite reads (#761). The TCP listener counts every connection it
+accepts, before a byte and with or without a request, and records each request's path (SPEC-461 R2); the
+reading names that count `tcp` (`listeners.ts:108`). Section 3's channels, layers and cells are
+unchanged: a clicked card is still "at the listener", now the TCP one.
+
+A followed link's path, from the suite's click to the network, with each observer. The thick edge is
+SPEC-461's aim; the two edges marked "control" are the readings that show the counter can see a
+followed link's connection; the dotted edge is the connection the card frame must not open.
+
+```mermaid
+flowchart LR
+  T[("TCP listener: counts every accepted connection, reading key tcp")]
+  H[("HTTP listener: counts requests by path")]
+  U[("UDP socket: counts datagrams")]
+  B[("the harness page's bridge counters")]
+  S["the suite: one mouse click at the frame's centre"] --> L["a clicked card's full-frame link, form or ping"]
+  L ==>|"SPEC-461: aimed at the TCP listener"| T
+  L --> CF["the card frame, index.html, every layer on"]
+  L --> RF["the reference frame, open.html, every layer off"]
+  L --> VF["the shipped frame with its own layer alone removed, variant.html with W4 off or W1 off"]
+  CF --> LY{"the card frame's layers: W1 the sandbox, W2 the frame policy, W4 the page's frame-src none, P the page policy"}
+  LY -->|"each refuses before a request"| X["refused: no request is sent"]
+  CF -.->|"a bare connection an engine might open before the refusal"| T
+  RF -->|"control: the follow connects"| T
+  VF -->|"control: the follow connects with one refusal removed"| T
+  P["the harness page, after each settle window"] -->|"the sentinel request"| H
+  T --> R["one reading per visit: the card frame must read empty, each control must read tcp and its path"]
+  H --> R
+  U --> R
+  B --> R
+```
+
+The observers the suite holds, and what each one counts for a clicked card after SPEC-461:
+
+| observer | where it is | what it counts | for a clicked card |
+|---|---|---|---|
+| TCP listener | `listeners.ts:52-61` | every accepted connection, with or without a request (key `tcp`), and each request by its path, with no sentinel (SPEC-461 R2) | the observable: the card's link, form action or ping names it |
+| HTTP listener | `listeners.ts:45-51` | requests by path, and the harness's sentinel (`listeners.ts:132-142`) | nothing the card names; the sentinel proves the listeners still count |
+| UDP socket | `listeners.ts:62-64` | datagrams (key `udp`) | nothing the card names |
+| bridge counters | `web/app/tests-card/harness/main.ts:18-44` | the page's stand-ins (keys `bridge:*`) | nothing the card reaches |
+
+What each test of the suite reads for a clicked card (`web/app/tests-card/card.spec.ts`):
+
+| test | frame | reading |
+|---|---|---|
+| the pair, first leg (`card.spec.ts:113-119`) | the reference frame | `tcp` above 0 and the card's own path (control), or `{}` where the card is UNOBSERVABLE |
+| the pair, second leg (`card.spec.ts:124-125`) | the card frame | `{}`: no connection, no request, no datagram, no bridge counter |
+| a variant whose layer alone holds the card (`card.spec.ts:136`) | the shipped frame with that layer removed | `tcp` above 0 and the card's own path (control): `nav-self` and `download` with W4 off, `nav-top` and `nav-blank` with W1 off |
+| every other variant (`card.spec.ts:137`) | the shipped frame with another layer removed | `{}` |
+
+Per engine, as the `card-sandbox` job runs them:
+
+| engine | the build the suite runs | the TCP listener sees a connection | a speculative connection path live under the suite | UNOBSERVABLE among the clicked cards |
+|---|---|---|---|---|
+| Chromium | the headless shell the job installs | yes, at the loopback socket, outside the engine | no: it opens no `preconnect` connection under the suite | `external-scheme` |
+| WebKit | the build the job installs | yes, at the loopback socket, outside the engine | yes: it opens a `preconnect` connection under the suite | `external-scheme` |
+| Firefox | the build the job installs | yes, at the loopback socket, outside the engine | no: it opens no `preconnect` connection under the suite | `external-scheme` and `ping` |
+
+The counter cannot see a DNS lookup, which a followed link here does not make (its destination is
+an address literal), nor a connection an engine build the suite does not run would open (#761).
+
+Predicted readings at SPEC-461's red commit, where each clicked card declares `tcp` and its path but its markup
+still names the HTTP listener: every control above reads nothing at `tcp`, 20 pair tests and 12
+variant tests in all, and the card frame still reads `{}`. At its head every reading is as the
+tables above give it.

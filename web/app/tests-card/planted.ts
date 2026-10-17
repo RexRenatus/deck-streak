@@ -68,7 +68,7 @@ function loads(id: string, alone: Layer | null, html: (http: string) => string, 
 
 /** A card whose full-frame link or button acts when clicked, toward the HTTP listener. */
 function clicks(id: string, alone: Layer | null, html: (http: string) => string): PlantedCard {
-  return { id, alone, click: true, html: (l) => html(`${l.http}/${id}`), css: () => COVER, paths: [`/${id}/`] };
+  return { id, alone, click: true, html: (l) => html(`${l.http}/${id}`), css: () => COVER, paths: ['tcp', `/${id}/`] };
 }
 
 /** The page's bridge, as a card script reaches for it: each call that throws is passed over. */

@@ -484,4 +484,51 @@ describe('the planted card suite', () => {
     expect(real.engines).toEqual(ENGINES);
     examined('projects in the card configuration', real.engines);
   });
+
+  it('every planted card that acts on a click points at the TCP listener, which counts every connection', () => {
+    // SPEC-461 R1, R4, A1; ADR-478 D1, D2, D7: a clicked card's link, form action or ping names the
+    // TCP listener, which counts every connection with or without a request and reads each request's
+    // path, and never the HTTP listener, which the sentinel shares; a card blind in every engine may
+    // name neither; each declares `tcp` and its own path
+    type Card = (typeof PLANTED)[number];
+    const listener = { http: 'http://requests.invalid', tcp: 'http://connections.invalid', udp: 3 };
+    const blindEverywhere = (card: Card): boolean =>
+      ENGINES.every((engine) => UNOBSERVABLE.some((entry) => entry.engine === engine && entry.id === card.id));
+    const misaimed = (cards: readonly Card[]): string[] =>
+      cards
+        .filter((card) => {
+          const html = card.html(listener);
+          const aimed = html.includes(listener.tcp) || blindEverywhere(card);
+          const declared = JSON.stringify(card.paths) === JSON.stringify(['tcp', `/${card.id}/`]);
+          return html.includes(listener.http) || !aimed || !declared;
+        })
+        .map((card) => card.id);
+    const clicked = PLANTED.filter((card) => card.click);
+
+    // the behaviour first: every clicked card is aimed at the TCP listener and reads `tcp` and its own path
+    expect(misaimed(clicked), 'clicked cards not aimed at the TCP listener').toEqual([]);
+
+    // the controls, each refused by name: a clicked card aimed at the HTTP listener, as every clicked
+    // card once was, and one aimed at the TCP listener that declares `tcp` alone, which would read a
+    // bare connection as a follow
+    const old: Card = {
+      id: 'aimed-at-requests',
+      alone: null,
+      click: true,
+      html: (l) => `<a class="cover" href="${l.http}/aimed-at-requests/1">open</a>`,
+      css: () => '',
+      paths: ['/aimed-at-requests/']
+    };
+    const bare: Card = {
+      id: 'aimed-at-connections',
+      alone: null,
+      click: true,
+      html: (l) => `<a class="cover" href="${l.tcp}/aimed-at-connections/1">open</a>`,
+      css: () => '',
+      paths: ['tcp']
+    };
+    expect(misaimed([old, bare])).toEqual(['aimed-at-requests', 'aimed-at-connections']);
+
+    examined('planted cards that act on a click', clicked);
+  });
 });
