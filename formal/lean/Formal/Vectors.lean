@@ -1,3 +1,4 @@
+import Formal.CaptionBoundVectors
 import Formal.ChestVectors
 import Formal.ExchangeVectors
 import Formal.HabitWritingVectors
@@ -29,6 +30,7 @@ lists it as support.
 
 def main (args : List String) : IO UInt32 := do
   match args with
+  | ["CaptionBound"] => Formal.CaptionBoundVectors.run
   | ["Chest"] => Formal.ChestVectors.run
   | ["Exchange"] => Formal.ExchangeVectors.run
   | ["HabitWriting"] => Formal.HabitWritingVectors.run
