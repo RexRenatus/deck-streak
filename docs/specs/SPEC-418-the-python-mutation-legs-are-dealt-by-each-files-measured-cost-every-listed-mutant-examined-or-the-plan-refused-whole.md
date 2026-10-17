@@ -298,3 +298,26 @@ PYTHON_CONTROL_SECONDS, scoped)`, where `scoped` is `PYTHON_SCOPED_SECONDS` when
 the plan prints `mutation: shards: python legs priced scoped: <s> file(s) at their scoped price,
 <w> at their whole-suite price, <u> unpriced` after the `python legs dealt by cost` line. When no
 file is priced scoped, every line R4 names is byte-identical, and nothing new prints.
+
+## Amendment: each file's runs are interleaved (SPEC-437, ADR-451)
+
+Insert-only; every earlier byte is kept. SPEC-437 changes which of a priced file's mutants each of
+its runs holds, and nothing else of the deal. From SPEC-437 on, R3 (c) above reads as follows.
+Every other requirement stands as written, and the SPEC-421 amendment above still reads R3 (b),
+R3 (d) and R4.
+
+**R3 (c), read interleaved.** F's m listed mutants, in listing order, are dealt into
+n = ceil(m / k) runs, run j holding F's listing positions j, j + n, j + 2n and so on, for each j
+from 0 to n - 1. Each run's size is therefore the contiguous cut's: the sizes differ by at most
+one, the larger first. The runs keep their order, since run j's first listing index is the j-th of
+F's. A run's weight, the leg it goes onto, the count of legs and every leg's `projected_seconds`
+are byte-identical to the contiguous cut's; only which of F's mutants a run holds moves.
+
+**The criteria above, read interleaved.** A1 and A4 hold their legs' membership by this rule:
+a.py's 30 mutants at 100 s are the two runs of positions `0, 2, ..., 28` and `1, 3, ..., 29`, still
+projected at 1700 s each, and the count of legs is unchanged. Every refusal, the count rule and
+every line the plan prints are unchanged.
+
+ADR-451 D4 records why: a file's mutant cost is correlated by region, since one region's mutants
+share one traced test set, so a contiguous run put a costly region whole on one leg while the price
+is the file's mean.

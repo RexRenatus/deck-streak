@@ -104,12 +104,19 @@
 \* mutation-verdict.py::shards prints the Rust release line after the deal, and the Rust shards line and the
 \*   run-legs line read the ceiling that held: each line deals nothing, so store, attempt, done, verdict and pick
 \*   are untouched, and the legs of the one mutation-rust matrix are LegFinish's actors as before.
+\* Re-read for SPEC-437 (ADR-451): the python_by_cost hunk below implements Plan, and none moves a variable.
+\* mutation-verdict.py::python_by_cost appends each priced file's runs as indices[cut::cuts] for cut in
+\*   range(cuts), in place of contiguous slices: run j holds the file's listing positions j, j + cuts, j + 2 cuts
+\*   and so on. The runs keep the base's count and sizes, the larger first, and their order, since run j still
+\*   starts at the file's j-th position; so the legs, their projections and every refusal are the base's, each
+\*   listed mutant is still in exactly one run, and only which mutant a leg holds moves: one deal Plan already
+\*   chooses freely (dealt').
 \* @phx covers scripts/mutation-verdict.py anchor=shards digest=sha256:f02208bb1a049e3ca6ebc6812c981581d7d6d70d77a68505b2ba4e3511254f2c
 \* @phx covers scripts/mutation-verdict.py anchor=whole_reports digest=sha256:4c2a91086efb74a19dee70816f1f39aac90712652548599ce8befd94f2340983
 \* @phx covers scripts/mutation-verdict.py anchor=partition digest=sha256:9b2464deb33fb55acce4bade799fac1d1d5094a4526a528d634aeb1f78f57677
 \* @phx covers scripts/mutation-verdict.py anchor=examined_sum digest=sha256:072ec1b6768a7616f7cf7b1f0e03846367d35874bcce6493458c470c4f63966e
 \* @phx covers scripts/mutation-verdict.py anchor=population_gaps digest=sha256:7c6d3867026cb32da3c8997757c7884886cbaa523a1af2b29bd260d9ca68b03f
-\* @phx covers scripts/mutation-verdict.py anchor=python_by_cost digest=sha256:bf6e1ba6f27f3879a9076109d70f2c753c0f51e2fc0f72eef7cb3a40974965eb
+\* @phx covers scripts/mutation-verdict.py anchor=python_by_cost digest=sha256:ea6382a543a257a98c1ab8d48191de38b90f838eee1499aaeb53d50c869a6738
 \* @phx covers scripts/mutation_python.py anchor=planned_leg digest=sha256:6c7d8c820d1f1217cf16d187766c2cbaeb6c89aeaa60cb721f5922eb86d6ae6d
 \* @phx cites #220, #691
 \* @phx property PassMeansEveryLegCounted ramp=report

@@ -171,8 +171,8 @@ aes-gcm = "0.10.3"
 # SPEC-377 moved it to the fork's tag `deckstreak-pin-26.09.3-wasm32-full-sync`: that commit plus
 # the browser's full sync files patch, one commit (ADR-058's note).
 [patch."https://github.com/ankitects/anki.git"]
-anki = { git = "https://github.com/RexRenatus/anki.git", rev = "bd4fe2f4e9aa6e37434678e7770e6934b6071fcb" }
-anki_proto = { git = "https://github.com/RexRenatus/anki.git", rev = "bd4fe2f4e9aa6e37434678e7770e6934b6071fcb" }
+anki = { git = "https://github.com/RexRenatus/anki.git", rev = "65e053b829825f534803b2b772c507a73ba936a3" }
+anki_proto = { git = "https://github.com/RexRenatus/anki.git", rev = "65e053b829825f534803b2b772c507a73ba936a3" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

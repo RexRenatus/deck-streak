@@ -348,8 +348,8 @@ class ThePythonLegsAreDealtByCost(unittest.TestCase):
             {
                 "count": 3,
                 "shards": [
-                    {"shard": 0, "mutants": names_of(a[:15]), "projected_seconds": 1700},
-                    {"shard": 1, "mutants": names_of(a[15:]), "projected_seconds": 1700},
+                    {"shard": 0, "mutants": names_of(a[0::2]), "projected_seconds": 1700},
+                    {"shard": 1, "mutants": names_of(a[1::2]), "projected_seconds": 1700},
                     {"shard": 2, "mutants": names_of(b), "projected_seconds": 520},
                 ],
             },
@@ -404,8 +404,8 @@ class ThePythonLegsAreDealtByCost(unittest.TestCase):
             {
                 "count": 5,
                 "shards": [
-                    {"shard": 0, "mutants": names_of(a[:15]), "projected_seconds": 1700},
-                    {"shard": 1, "mutants": names_of(a[15:]), "projected_seconds": 1700},
+                    {"shard": 0, "mutants": names_of(a[0::2]), "projected_seconds": 1700},
+                    {"shard": 1, "mutants": names_of(a[1::2]), "projected_seconds": 1700},
                     {"shard": 2, "mutants": names[0::3], "projected_seconds": 1800},
                     {"shard": 3, "mutants": names[1::3], "projected_seconds": 1800},
                     {"shard": 4, "mutants": names[2::3], "projected_seconds": 1800},
@@ -463,7 +463,7 @@ class ThePythonLegsAreDealtByCost(unittest.TestCase):
             written = json.loads(plan.read_text(encoding="utf-8"))
             self.assertEqual(
                 [shard["mutants"] for shard in written["python"]["shards"]],
-                [names_of(entries[:15]), names_of(entries[15:])],
+                [names_of(entries[0::2]), names_of(entries[1::2])],
             )
             self.assertIn("python_shards=2\n", sink.read_text(encoding="utf-8"))
             code, out = shards({"a.py": 601})
@@ -581,8 +581,8 @@ class EachArmOfTheCostDealIsObserved(unittest.TestCase):
         so its 7 are cut into runs of 3, 2 and 2: 1800 s, then 1440 s twice. Two legs would put
         the last run beside the second at 1440 + 2 x 360 = 2160 s, so three legs."""
         cases = (
-            ("q.py", 225, [([0, 1, 2, 3], 1350), ([4, 5, 6], 1125)]),
-            ("r.py", 360, [([0, 1, 2], 1800), ([3, 4], 1440), ([5, 6], 1440)]),
+            ("q.py", 225, [([0, 2, 4, 6], 1350), ([1, 3, 5], 1125)]),
+            ("r.py", 360, [([0, 3, 6], 1800), ([1, 4], 1440), ([2, 5], 1440)]),
         )
         for path, price, legs in examined("cut files", cases):
             with self.subTest(path=path):
@@ -621,7 +621,7 @@ class EachArmOfTheCostDealIsObserved(unittest.TestCase):
         whose floor, 1801 s, starts the search at two legs."""
         cases = (
             (1798, [(list(range(1798)), 1800)]),
-            (1799, [(list(range(900)), 902), (list(range(900, 1799)), 901)]),
+            (1799, [(list(range(0, 1799, 2)), 902), (list(range(1, 1799, 2)), 901)]),
         )
         for count, legs in examined("one-second files", cases):
             with self.subTest(count=count):
@@ -761,6 +761,105 @@ class EachArmOfTheCostDealIsObserved(unittest.TestCase):
         self.assertEqual(refused.exception.code, 2)
         self.assertTrue(err.getvalue().endswith(": error: prices needs --costs\n"), err.getvalue())
         examined("refused invocations", [["prices"]])
+
+
+class EachFilesRunsAreInterleaved(unittest.TestCase):
+    """SPEC-437 R1 and R2 (A1 to A3): a priced file's n runs are interleaved, run j holding its
+    listing positions j, j + n, j + 2n and so on, while the count of legs and every projection
+    stay the contiguous cut's and every listed mutant is dealt exactly once. Every listing, price
+    and expected figure is a literal."""
+
+    def test_a_files_runs_are_interleaved_across_its_legs(self):
+        """A1: a.py at 100 s holds 16 a leg, so its 30 mutants are two runs of 15, each
+        (2 + 15) x 100 = 1700 s: run 0 holds the even positions and run 1 the odd ones."""
+        a = priced("a.py", 30)
+        evens = (0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28)
+        odds = (1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29)
+        self.assertEqual(
+            verdict_program().python_by_cost(a, {"a.py": 100}),
+            {
+                "count": 2,
+                "shards": [
+                    {
+                        "shard": 0,
+                        "mutants": [a[i]["name"] for i in evens],
+                        "projected_seconds": 1700,
+                    },
+                    {
+                        "shard": 1,
+                        "mutants": [a[i]["name"] for i in odds],
+                        "projected_seconds": 1700,
+                    },
+                ],
+            },
+        )
+        examined("interleaved positions", evens + odds)
+
+    def test_the_interleave_keeps_every_count_and_projection_of_the_contiguous_cut(self):
+        """A2: the count of legs and each leg's projected seconds, as the contiguous deal gives
+        them for SPEC-418's listings: a.py's two legs of 1700 s beside b.py's 520 s; q.py's runs of
+        4 and 3 at 225 s; r.py's runs of 3, 2 and 2 at 360 s; f.py's 1799 mutants at 1 s; v.py's
+        44 at (224, 224, 60); a.py beside u.py's 41 unpriced mutants; c.py's 32 legs at 600 s; and
+        t.py's run beside s.py's on one leg."""
+        program = verdict_program()
+        cases = (
+            (
+                priced("a.py", 30) + priced("b.py", 50),
+                {"a.py": 100, "b.py": 10},
+                None,
+                3,
+                [1700, 1700, 520],
+            ),
+            (priced("q.py", 7), {"q.py": 225}, None, 2, [1350, 1125]),
+            (priced("r.py", 7), {"r.py": 360}, None, 3, [1800, 1440, 1440]),
+            (priced("f.py", 1799), {"f.py": 1}, None, 2, [902, 901]),
+            (priced("v.py", 44), {}, {"v.py": (224, 224, 60)}, 2, [1768, 1768]),
+            (
+                priced("a.py", 30) + priced("u.py", 41),
+                {"a.py": 100},
+                None,
+                5,
+                [1700, 1700, 1800, 1800, 1800],
+            ),
+            (priced("c.py", 32), {"c.py": 600}, None, 32, [1800] * 32),
+            (priced("t.py", 4) + priced("s.py", 1), {"t.py": 200, "s.py": 200}, None, 1, [1800]),
+        )
+        for listing, prices, scoped, count, seconds in examined("contiguous deals", cases):
+            with self.subTest(files=sorted(prices or scoped), count=count):
+                dealt = program.python_by_cost(listing, prices, scoped)
+                self.assertEqual(
+                    (dealt["count"], [shard["projected_seconds"] for shard in dealt["shards"]]),
+                    (count, seconds),
+                )
+
+    def test_every_listed_mutant_is_dealt_exactly_once_when_runs_are_interleaved(self):
+        """A3: around each cut boundary, at 100 s (16 a leg) and at 360 s (3 a leg), every listed
+        mutant of the file is in exactly one leg, and no leg holds a mutant twice."""
+        program = verdict_program()
+        cases = (
+            (100, 15),
+            (100, 16),
+            (100, 17),
+            (100, 31),
+            (100, 32),
+            (100, 33),
+            (100, 47),
+            (100, 48),
+            (100, 49),
+            (360, 1),
+            (360, 2),
+            (360, 3),
+            (360, 4),
+            (360, 5),
+            (360, 6),
+            (360, 7),
+        )
+        for price, listed_count in examined("listing sizes", cases):
+            with self.subTest(price=price, listed=listed_count):
+                listing = priced("a.py", listed_count)
+                dealt = program.python_by_cost(listing, {"a.py": price})
+                held = [name for shard in dealt["shards"] for name in shard["mutants"]]
+                self.assertEqual(sorted(held), sorted(names_of(listing)))
 
 
 class TheReportIsBoundToItsSlotAndItsListing(unittest.TestCase):
@@ -2235,7 +2334,7 @@ class AScopedLegIsPricedByItsTriple(unittest.TestCase):
         `plan` is among the runner's `SCOPED_SELECTIONS`, and only then."""
         entries = priced("a.py", 30)
         scoped = [(names_of(entries), 800)]
-        whole = [(names_of(entries[:15]), 1700), (names_of(entries[15:]), 1700)]
+        whole = [(names_of(entries[0::2]), 1700), (names_of(entries[1::2]), 1700)]
         cases = (
             (frozenset({"plan"}), scoped),
             (frozenset({"plan", "all"}), scoped),
@@ -2383,8 +2482,11 @@ class AScopedLegIsPricedByItsTriple(unittest.TestCase):
     def test_a_triple_deals_by_its_setup_and_its_mutant_figure(self):
         """A10 (R9): at (224, 224, 60) setup is 448 s and a leg holds (1800 - 448) // 60 = 22
         mutants, so v.py's 44 are two legs of 448 + 22 x 60 = 1768 s; dividing by the control
-        would hold six. At (900, 900, 1) setup is the whole bound, k is 0, and the refusal reads
-        the control, 900 s, and setup + each, 1801 s."""
+        would hold six, and its eight interleaved runs deal onto the same two legs. At (620, 620,
+        60) setup is 1240 s and a leg holds (1800 - 1240) // 60 = 9 mutants, so 18 are two legs
+        of 1240 + 9 x 60 = 1780 s; dividing by the control, 620 s, would hold none and refuse. At
+        (900, 900, 1) setup is the whole bound, k is 0, and the refusal reads the control, 900 s,
+        and setup + each, 1801 s."""
         program = verdict_program()
         listing = priced("v.py", 44)
         self.assertEqual(
@@ -2392,8 +2494,19 @@ class AScopedLegIsPricedByItsTriple(unittest.TestCase):
             {
                 "count": 2,
                 "shards": [
-                    {"shard": 0, "mutants": names_of(listing[:22]), "projected_seconds": 1768},
-                    {"shard": 1, "mutants": names_of(listing[22:]), "projected_seconds": 1768},
+                    {"shard": 0, "mutants": names_of(listing[0::2]), "projected_seconds": 1768},
+                    {"shard": 1, "mutants": names_of(listing[1::2]), "projected_seconds": 1768},
+                ],
+            },
+        )
+        heavy = priced("v.py", 18)
+        self.assertEqual(
+            program.python_by_cost(heavy, {}, {"v.py": (620, 620, 60)}),
+            {
+                "count": 2,
+                "shards": [
+                    {"shard": 0, "mutants": names_of(heavy[0::2]), "projected_seconds": 1780},
+                    {"shard": 1, "mutants": names_of(heavy[1::2]), "projected_seconds": 1780},
                 ],
             },
         )
@@ -2402,7 +2515,7 @@ class AScopedLegIsPricedByItsTriple(unittest.TestCase):
             "mutation: shards: REFUSED: v.py's control is priced at 900 s, so a leg holding one "
             "of its mutants projects 1801 s, past its 1800 s bound",
         )
-        examined("dealt mutants", listing)
+        examined("dealt mutants", listing + heavy)
 
     def test_a_file_is_priced_scoped_then_whole_then_by_the_count_rule(self):
         """A11 (R9): a file the scoped table holds reads its triple even beside a whole price; a
@@ -2432,8 +2545,8 @@ class AScopedLegIsPricedByItsTriple(unittest.TestCase):
         dealt = {
             "count": 3,
             "shards": [
-                {"shard": 0, "mutants": names_of(a[:15]), "projected_seconds": 1700},
-                {"shard": 1, "mutants": names_of(a[15:]), "projected_seconds": 1700},
+                {"shard": 0, "mutants": names_of(a[0::2]), "projected_seconds": 1700},
+                {"shard": 1, "mutants": names_of(a[1::2]), "projected_seconds": 1700},
                 {"shard": 2, "mutants": names_of(b), "projected_seconds": 520},
             ],
         }
