@@ -239,17 +239,21 @@ fn a_native_forget_tap_resets_its_one_card_on_each_side_of_the_cutoff() {
     forget_tap_resets_its_one_card(&synthetic, engine);
 }
 
-/// SPEC-443 A5 (R1, R2): the adapter's fixture holds the engine's next cutoff twelve hours after
-/// its clock's instant, at day 0, as the engine's own timing reads it.
+/// SPEC-443 A5 (R1, R2): the adapter's fixture, first placed five minutes before its cutoff and
+/// then pinned, holds the engine's next cutoff more than 11 and at most 12 hours after its clock's
+/// instant, at day 0, as the engine's own timing reads it.
 #[test]
 fn the_adapter_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock() {
-    let synthetic = synthetic("exempt-fixture-cutoff");
-    let clock = clock::pin(&synthetic.collection);
+    let (synthetic, clock) = placed("exempt-fixture-cutoff", clock::JUST_BEFORE_SECS);
+    let (days, cutoff) = engine_day(&synthetic.collection);
+    let at_secs = clock.at_secs();
     assert_eq!(
-        engine_day(&synthetic.collection),
-        (0, clock.at_secs() + clock::LEAD_SECS),
-        "the engine's day count and next cutoff on the adapter's fixture: day 0, the cutoff 43 200 s \
-         after the clock's instant"
+        (days, cutoff - at_secs > 39_600, cutoff - at_secs <= 43_200),
+        (0, true, true),
+        "the engine's day count and next cutoff on the adapter's fixture: day 0, the cutoff more \
+         than 39 600 s and at most 43 200 s after the clock's instant; read day {days}, the cutoff \
+         {cutoff}, {} s after the instant {at_secs}",
+        cutoff - at_secs
     );
 }
 
