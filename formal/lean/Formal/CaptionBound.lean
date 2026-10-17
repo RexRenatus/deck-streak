@@ -1,6 +1,6 @@
--- @phx covers crates/notifications/src/photo.rs anchor=check_caption digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/notifications/src/photo.rs anchor=MAX_CAPTION_UTF16 digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/notifications/src/router.rs anchor=prepare_share digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/notifications/src/photo.rs anchor=check_caption digest=sha256:c530f0a2abc6064204250253e049224649f06af8a8beaacfe00f8aa59414ba06
+-- @phx covers crates/notifications/src/photo.rs anchor=MAX_CAPTION_UTF16 digest=sha256:e819493a6ea780adb17d3a47e76de1eadf8ea1385424a12bfb058b61bc819c76
+-- @phx covers crates/notifications/src/router.rs anchor=prepare_share digest=sha256:4cd521f9b97a9992a38f25bf7169e138918dcaad8b087c7581f4d44af02c86d4
 -- @phx vectors formal/vectors/caption-bound.jsonl
 -- @phx cites #480
 -- @phx theorem the_check_takes_a_caption_exactly_when_its_utf16_units_fit ramp=report
