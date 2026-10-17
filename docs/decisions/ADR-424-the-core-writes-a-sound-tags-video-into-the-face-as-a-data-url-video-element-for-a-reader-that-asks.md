@@ -104,6 +104,12 @@ written) -> Option<String>` is `take(written, &VIDEO_TYPES, "video/")` mapped to
 `clips(tags, budget, videos: &mut Vec<String>)` routes a video's name there and yields no clip; and
 `complete` appends `videos.concat()` to the text.
 
+Amended by ADR-481 D2 (SPEC-464, #820): the decision reads the extension of the name `admit` reads.
+`Budget::shows_video` binds `written` to the sound tag's name decoded by `decoded_name`, the decoder `admit`
+runs, before the shape's `media_type(written, &VIDEO_TYPES)` line, which stays as written; a name that does
+not decode is bound to the empty name, which has no type, so it stays a sound tag and `admit` refuses it
+before any read. ADR-481 D2 names the options it was chosen against.
+
 **Chosen against:**
 
 - a `video/` row in the shared `TYPES`: `TYPES` is both clients' table (ADR-359 D1), so the web's
