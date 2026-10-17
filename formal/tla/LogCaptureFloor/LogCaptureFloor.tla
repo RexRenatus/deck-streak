@@ -1,10 +1,10 @@
 ------------------------------ MODULE LogCaptureFloor ------------------------------
-\* @phx covers tools/log-capture/capture.rs anchor=register_floor digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers tools/log-capture/capture.rs anchor=with_capture digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers tools/log-capture/capture.rs anchor=hold_capture digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers tools/log-capture/capture.rs anchor=refuse_nested_capture digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers tools/log-capture/capture.rs anchor=register_callsite digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers tools/log-capture/capture.rs anchor=max_level_hint digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers tools/log-capture/capture.rs anchor=register_floor digest=sha256:87bf7a9cb911a16288017df429512cca94839bfb7ec9405434792c652ceba323
+\* @phx covers tools/log-capture/capture.rs anchor=with_capture digest=sha256:72895a5ee1ab794c82d60071ca4600494679c132dc0c08898dba3ccbdbf79a5f
+\* @phx covers tools/log-capture/capture.rs anchor=hold_capture digest=sha256:36c30fe31d90ebd71c992a20b53b18995d8838e7a711d4caecda4aa9138faf76
+\* @phx covers tools/log-capture/capture.rs anchor=refuse_nested_capture digest=sha256:4f62fdd7d993b0cb1bb19e52e402b4d8117cd138313943ff8ab3bce12f3db736
+\* @phx covers tools/log-capture/capture.rs anchor=register_callsite digest=sha256:0ec0912b0e07367ee5b73c40436d6bc5b8b31f730c1117afc56fbc5a387f98a3
+\* @phx covers tools/log-capture/capture.rs anchor=max_level_hint digest=sha256:c55d1f2c8f091f67e464b0e94d58a622543a79705fe76b70b3854f1c8848f157
 \* @phx cites #499, #461
 \* @phx property NoCachedNeverWhileACaptureIsLive ramp=report
 \* @phx property ALineUnderACaptureReachesIt ramp=report
