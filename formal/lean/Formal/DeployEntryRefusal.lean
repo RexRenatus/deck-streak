@@ -1,4 +1,4 @@
--- @phx covers deploy/deploy.sh anchor=refuse_unlisted_settings digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers deploy/deploy.sh anchor=refuse_unlisted_settings digest=sha256:253c766344f7d7bfcb5a4a133b173090770847f84b7e46bcdb973fe364088a3d
 -- @phx vectors formal/vectors/deploy-entry-refusal.jsonl
 -- @phx cites #484, #428, #423
 -- @phx theorem a_caddy_step_proceeds_exactly_on_listed_settings_each_given_once_with_a_value ramp=report
