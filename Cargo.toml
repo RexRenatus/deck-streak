@@ -133,7 +133,7 @@ trybuild = "1.0.121"
 # the lines that break a simulator XCFramework's consumers (ADR-345 records the measurement).
 # Default features off: the adapter's `bindgen` feature turns the generator on for the XCFramework
 # workflow alone.
-uniffi = { version = "=0.29.1", default-features = false }
+uniffi = { version = "=0.29.5", default-features = false }
 # ADR-338 and ADR-353 D1: the upstream scheduler's FSRS-7, for the isolated scheduler crate alone,
 # taken from fsrs-rs at one full commit of its main branch, never a branch name or a short id. The
 # released crate carries no FSRS-7, and this package shares its name, so cargo tells the two apart
