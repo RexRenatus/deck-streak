@@ -43,14 +43,14 @@
 (* apart from its read.                                                    *)
 (***************************************************************************)
 
-\* @phx covers crates/coordination/src/instruments.rs anchor=run_held digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/instruments.rs anchor=step digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/instruments.rs anchor=run_on_demand digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/coordination/src/sync_cycle.rs anchor=run_instruments digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/api/src/insights_routes.rs anchor=run digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/ingest/src/lock.rs anchor=try_exclusive digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/ingest/src/lock.rs anchor=hold_to_end digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/ingest/src/reader.rs anchor=with_copy digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/coordination/src/instruments.rs anchor=run_held digest=sha256:13532b5a28cc11049e5b4a6d25d8b07399a15ed0b726e9bf80d2ab8bbd6d2a96
+\* @phx covers crates/coordination/src/instruments.rs anchor=step digest=sha256:b69adee38416d30b5c0a82d05858ccb84c2aed8ff32f2a5443a1852311fedc3d
+\* @phx covers crates/coordination/src/instruments.rs anchor=run_on_demand digest=sha256:91128da80a52be6b7a2b6ff4b5c7b6ea4ba83a0c4ccf2bc40a3db8efc4d88f85
+\* @phx covers crates/coordination/src/sync_cycle.rs anchor=run_instruments digest=sha256:fccb325886e7d903a9d81ff3268d3e1deefdb959020aa1968b43091c3625838c
+\* @phx covers crates/api/src/insights_routes.rs anchor=run digest=sha256:5bb86aa9e35cae2d1a3f471913c014075a1f820ab68bc63ce5ceb90c3e2f42f8
+\* @phx covers crates/ingest/src/lock.rs anchor=try_exclusive digest=sha256:b1da026e6f5852c4ace61f2de705f7991c9401c15aa9e9d1a52dad8b929e6787
+\* @phx covers crates/ingest/src/lock.rs anchor=hold_to_end digest=sha256:899a64a80497994057fbeb497e43159d4f44d4834224a2884761ac88f038cbd6
+\* @phx covers crates/ingest/src/reader.rs anchor=with_copy digest=sha256:e7e2caa8e9b7ace8be00389872e81cc227e8e78f1ea549ed9a6ec02332dc63fc
 \* @phx cites #476
 \* @phx cites #142
 \* @phx property AtMostOneReader ramp=report
