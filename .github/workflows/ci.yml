@@ -446,6 +446,11 @@ jobs:
       - name: the rows legs, the fewest whose largest is projected within its bound
         id: legs
         run: python3 scripts/mutation_rows.py legs --rows-from "$RUNNER_TEMP/mutation/plan.json"
+      # A warning, never a gate: each priced file whose suite now holds more tests than the run its
+      # row names ran, with its refresh (SPEC-429, ADR-443). Its verb exits 0 on every path, and a
+      # crash prints a VOID line, so the job's result is its other steps'.
+      - name: the price rows whose suite grew since their run, a warning that never fails the plan
+        run: 'python3 scripts/mutation-verdict.py stale || echo "mutation: stale: VOID: the check exited $?"'
       - name: keep the plan, the diff and the listing for every job after it
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

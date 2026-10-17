@@ -227,5 +227,30 @@ class TheReleaseRunbookNamesTheScopedPrices(unittest.TestCase):
         examined("scoped price names", names)
 
 
+class TheReleaseRunbookReadsTheStalePriceRows(unittest.TestCase):
+    """SPEC-429 A10 (R11, ADR-443 D3): section 2 of the release runbook says to read the plan job's
+    `mutation: stale:` lines, printed by `mutation-verdict.py stale`, before the release pull
+    request, and to refresh a named file's price by `mutation-prices.yml` first."""
+
+    def test_the_runbook_reads_the_stale_lines_before_the_release(self):
+        lines = (REPO / "RELEASING.md").read_text(encoding="utf-8").splitlines()
+        start, end = "## 2. The release pull request", "## 3. Tag it on main"
+        self.assertIn(start, lines)
+        self.assertIn(end, lines)
+        section = " ".join(" ".join(lines[lines.index(start) : lines.index(end)]).split())
+        phrases = [
+            "`mutation-verdict.py stale`",
+            "Before the release pull request, read the plan job's `mutation: stale:` lines",
+            "refresh its price by `mutation-prices.yml` first",
+            "SPEC-429",
+        ]
+        self.assertEqual(
+            [phrase for phrase in phrases if phrase not in section],
+            [],
+            "section 2 reads the stale price rows before the release",
+        )
+        examined("stale price phrases", phrases)
+
+
 if __name__ == "__main__":
     unittest.main()

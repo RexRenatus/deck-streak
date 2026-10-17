@@ -314,3 +314,16 @@ target.
 The table's rows are written at the fill, one per line of `PYTHON_SCOPED_SECONDS`, from S42120
 upward, then the two rows on `scripts/mutation-verdict.py`'s line. With sixteen lines they are
 S42120-S42135, then S42136 and S42137.
+
+## Amendment: the price run's records gain a reader (SPEC-429, ADR-443)
+
+Insert-only; every earlier byte is kept. From SPEC-429 on, R12 above reads with one more sentence,
+and every other requirement stands as written.
+
+**R12, read with its reader.** The committed records are also read by
+`mutation-verdict.py stale` (SPEC-429): for each line of `PYTHON_SCOPED_SECONDS`, the largest `ran`
+of its file's `control` records under `scripts/tests/fixtures/mutation-scoped-prices-<run>/`, or 0
+for a file whose only record is `uncovered`, is the suite that run ran, and a file whose mapped
+modules now define more tests is named in the plan job's lines with this refresh as its fix. A
+refresh keeps each control record's `ran`, and a record without it reads that file's row unread
+by name.
