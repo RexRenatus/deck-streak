@@ -1,18 +1,18 @@
 //! The adapter tests' one clock (SPEC-443 R1; ADR-457 D1, D2).
 //!
-//! The engine schedules an answer from its own reading of now against the collection's next
-//! cutoff, and no seam fixes that reading, so the clock fixes the cutoff against it. Each operation
-//! reads the engine's own instant once, `TimestampMillis::now()`, and fixes the clock's instant one
-//! millisecond before it. The collections these tests build run the engine's version-2 timing:
-//! their next cutoff falls on the rollover hour in the zone the engine reads, and their creation
-//! stamp moves only the day count. `place` sets a start to the second by selecting the engine's
-//! version-1 timing (`schedVer` 1), whose next cutoff is the creation stamp plus whole days; the
-//! engine refuses the review's bury under it, so a placed collection is a start only. `pin` keeps
-//! the version-2 timing production runs and moves the rollover hour, so the next cutoff is the last
-//! local hour boundary at or before twelve hours after the instant, at day 0. Each operation reads
-//! the day count and the next cutoff back through the engine's own timing of today and asserts
-//! both, so its arithmetic is checked by the engine at every run. Every time a scheduler test hands
-//! the engine is the clock's instant, or a stated offset from it.
+//! The engine schedules an answer from its own reading of now against the collection's next cutoff,
+//! and no seam fixes that reading, so the clock fixes the cutoff against it. Each operation reads
+//! the engine's own instant once, through [`read`], the module's one read of time, and fixes the
+//! clock's instant one millisecond before it. The collections these tests build run the engine's
+//! version-2 timing: their next cutoff falls on the rollover hour in the zone the engine reads, and
+//! their creation stamp moves only the day count. `place` sets a start to the second by selecting
+//! the engine's version-1 timing (`schedVer` 1), whose next cutoff is the creation stamp plus whole
+//! days; the engine refuses the review's bury under it, so a placed collection is a start only.
+//! `pin` keeps the version-2 timing production runs and moves the rollover hour, so the next cutoff
+//! is the last local hour boundary at or before twelve hours after the instant, at day 0. Each
+//! operation reads the day count and the next cutoff back through the engine's own timing of today
+//! and asserts both, so its arithmetic is checked by the engine at every run. Every time a
+//! scheduler test hands the engine is the clock's instant, or a stated offset from it.
 
 #![allow(
     dead_code,
@@ -56,13 +56,19 @@ impl Clock {
     }
 }
 
+/// The engine's own instant, read once from the clock its scheduler reads, as a [`Clock`] one
+/// millisecond before it: the module's one read of time.
+fn read() -> Clock {
+    Clock {
+        instant_millis: TimestampMillis::now().0 - 1,
+    }
+}
+
 /// Reads the engine's instant once, selects the engine's version-1 timing on the closed
 /// `collection` and places its next cutoff `start` seconds after the clock's instant, at day 0,
 /// then reads both back through the engine's own timing of today and asserts them.
 pub fn place(collection: &Path, start: i64) -> Clock {
-    let clock = Clock {
-        instant_millis: TimestampMillis::now().0 - 1,
-    };
+    let clock = read();
     let mut col = CollectionBuilder::new(collection)
         .build()
         .expect("the engine opens the collection to place its cutoff");
@@ -102,9 +108,7 @@ pub fn place(collection: &Path, start: i64) -> Clock {
 /// stamp at the cutoff before the predicted one, then reads both back through the engine's own
 /// timing of today and asserts them.
 pub fn pin(collection: &Path) -> Clock {
-    let clock = Clock {
-        instant_millis: TimestampMillis::now().0 - 1,
-    };
+    let clock = read();
     let mut col = CollectionBuilder::new(collection)
         .build()
         .expect("the engine opens the collection to pin its cutoff");
