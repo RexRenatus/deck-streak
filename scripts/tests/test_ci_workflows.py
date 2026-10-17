@@ -7326,6 +7326,19 @@ DYNAMIC_IMPORTS = {
             1,
         ),
         ("test_threat_model", "load", "spec.loader.exec_module(module)", 1),
+        (
+            "test_write_back_issues",
+            "write_back_module",
+            "importlib.util.module_from_spec(spec)",
+            1,
+        ),
+        (
+            "test_write_back_issues",
+            "write_back_module",
+            "importlib.util.spec_from_file_location('write_back_issues', SCRIPT)",
+            1,
+        ),
+        ("test_write_back_issues", "write_back_module", "spec.loader.exec_module(module)", 1),
     ),
     **allowed(
         "imports a production module from scripts/, which the test puts on sys.path; never a module of the test directory",

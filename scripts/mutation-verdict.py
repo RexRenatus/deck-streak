@@ -1233,12 +1233,8 @@ def python_by_cost(
                 f"{PYTHON_LEG_BOUND_SECONDS} s bound"
             )
         cuts = -(-len(indices) // k)
-        size, larger = divmod(len(indices), cuts)
-        start = 0
         for cut in range(cuts):
-            end = start + size + (1 if cut < larger else 0)
-            runs.append((path, setup, each, indices[start:end]))
-            start = end
+            runs.append((path, setup, each, indices[cut::cuts]))
     runs.sort(key=lambda run: (-(run[1] + len(run[3]) * run[2]), run[0], run[3][0]))
     # The search starts at one leg and stops by one leg a run, which always fits: a run holds at
     # most k mutants, so each run alone on its own leg is within the bound.
@@ -2116,17 +2112,26 @@ PYTHON_OUTCOMES = {"killed": "Killed", "unviable": "Unviable", "uncovered": "NoC
 
 
 def python_excuses(
-    verdict: Verdict | None, root: pathlib.Path, population: list[Mutant], scope: set[str] | None
+    verdict: Verdict | None,
+    root: pathlib.Path,
+    population: list[Mutant],
+    scope: set[str] | None,
+    *,
+    klass: str | None = None,
 ) -> Excuses:
     """The Python records bound against `population` (the whole tree's listing, else the mutants
     the reports carry), each held to exactly one mutant (R12). `scope` holds the files a record
-    is judged against, or None for every record of the population."""
+    is judged against, or None for every record of the population. `klass` is the judged class:
+    only the records whose file `classify` places in it are bound, so a record of another class
+    is neither bound nor read stale (SPEC-437 R3); None binds every record in scope."""
     records, problems = load_records(root)
     fail = verdict.fail if verdict else (lambda _: None)
     for problem in problems:
         fail(f"the record: {problem}")
     excuses = Excuses(root, records, "python")
     mine = [record for record in excuses.records if scope is None or record.get("file") in scope]
+    if klass is not None:
+        mine = [record for record in mine if classify(str(record.get("file"))) == klass]
     excuses.bind(population, fail, records=mine, noun="python mutant")
     return excuses
 
@@ -2163,10 +2168,7 @@ def judge_python(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None
             ]
         )
         scope = {str(entry.get("path")) for _, entry in seen}
-    excuses = python_excuses(verdict, root, population, scope)
-    excuses.valid = [
-        record for record in excuses.valid if classify(str(record.get("file"))) == klass
-    ]
+    excuses = python_excuses(verdict, root, population, scope, klass=klass)
     counts: dict[str, int] = defaultdict(int)
     equivalent = 0
     for where, entry in seen:

@@ -8,6 +8,7 @@ examines, the problems a record draws. A mutant of one of those tokens changes t
 import contextlib
 import io
 import json
+import re
 import tempfile
 import unittest
 from unittest import mock
@@ -15,6 +16,7 @@ from argparse import Namespace
 from collections import defaultdict
 from pathlib import Path
 
+from _support import REPO, examined
 from test_mutation_python_verdict import (
     FILES,
     GENERATOR,
@@ -397,6 +399,138 @@ class TheRecordsAreHeldToTheirPopulation(unittest.TestCase):
                 f"reached_by: {REACHED} is no test of a module {V.PYTHON_POPULATION} gives ",
             ],
         )
+
+
+#: The fixture's two files, each holding two mutants of one description in one return line, so a
+#: record's anchor binds none, one or both of them.
+BOUND_TEXTS = {
+    SCRIPT: "def guard(x):\n    return x + 2 + 3\n",
+    GENERATOR: "def gen(n):\n    return n * 3 * 4\n",
+}
+#: For each file: the description its records name, and the anchor that binds 0, 1 or 2 mutants.
+ANCHORS = {
+    SCRIPT: ("replace + with - in guard", {0: "def guard(x):", 1: "x + 2", 2: "x + 2 + 3"}),
+    GENERATOR: ("replace * with / in gen", {0: "def gen(n):", 1: "n * 3", 2: "n * 3 * 4"}),
+}
+FILE_OF = {"scripts": SCRIPT, "oracle": GENERATOR}
+VECTORS = REPO / "formal" / "vectors" / "record-class-binding.jsonl"
+FINDING = re.compile(r"(STALE|AMBIGUOUS) python\.json record (\d+) ")
+
+
+class EachRecordIsJudgedInItsOwnClass(unittest.TestCase):
+    """SPEC-437 R3 (A4, A5 and A17): the Python records are bound only in the class of their own
+    file, through `judge_python` over a whole listing, so a record of the other class is neither
+    bound nor read STALE, and a record of the judged class is judged by how many mutants it
+    binds, as the Lean entry's vectors read it."""
+
+    def judged(self, klass, records, files=()):
+        """`judge_python` for `klass` over the whole listing of both fixture files, with
+        `records` as the Python records and `files` as the one shard's report entries: the
+        verdict, what it said, and every `Excuses` the judge bound."""
+        root = tree(
+            self,
+            {
+                **BOUND_TEXTS,
+                "scripts/mutation-equivalent.d/python.json": json.dumps({"records": records}),
+            },
+        )
+        home = scratch(self)
+        listing = home / "python-listed.json"
+        every = [entry for path, text in BOUND_TEXTS.items() for entry in listed(path, text)]
+        listing.write_text(
+            json.dumps({"schema": V.PYTHON_SCHEMA, "mutants": every}), encoding="utf-8"
+        )
+        write_shard(home / "reports", 0, report_of(list(files)))
+        plan = {
+            "rows": [],
+            "classes": {klass: {"applies": True}},
+            "files": [],
+            "python": {
+                "count": 1,
+                "shards": [
+                    {
+                        "shard": 0,
+                        "mutants": [m["name"] for entry in files for m in entry["mutants"]],
+                    }
+                ],
+            },
+        }
+        args = Namespace(
+            klass=klass,
+            rows=None,
+            python=str(home / "reports"),
+            python_whole=str(listing),
+            root=str(root),
+        )
+        verdict = V.Verdict(klass)
+        bound = []
+        real = V.python_excuses
+
+        def spy(*given, **named):
+            excuses = real(*given, **named)
+            bound.append(excuses)
+            return excuses
+
+        with mock.patch.object(V, "python_excuses", spy):
+            _, said = quiet(V.judge_python, verdict, plan, args)
+        return verdict, said, bound
+
+    def test_a_record_of_another_class_is_neither_bound_nor_stale(self):
+        """A4: the oracle class, judged over the whole listing and a shard of every generator
+        mutant killed, beside a scripts record that binds one scripts mutant, reads no record
+        finding, as the release run should have read it."""
+        fields = a_record(ANCHORS[SCRIPT][0], ANCHORS[SCRIPT][1][1])
+        report = file_entry(GENERATOR, BOUND_TEXTS[GENERATOR], {})
+        verdict, said, _ = self.judged("oracle", [fields], [report])
+        self.assertEqual((verdict.failures, verdict.voids, verdict.examined), ([], [], 5))
+        self.assertEqual(said.splitlines()[-1], "mutation: oracle: examined 5: generated 5, rows 0")
+
+    def test_a_record_of_the_judged_class_that_binds_nothing_stays_stale(self):
+        """A5: in the scripts class, a scripts record whose anchor holds no mutant of its
+        description reads STALE by the Python noun, as at the base."""
+        fields = a_record(ANCHORS[SCRIPT][0], ANCHORS[SCRIPT][1][0])
+        report = file_entry(SCRIPT, BOUND_TEXTS[SCRIPT], {})
+        verdict, _, _ = self.judged("scripts", [fields], [report])
+        self.assertEqual(
+            verdict.failures,
+            [
+                "STALE python.json record 1 (scripts/guard.py: replace + with - in guard): "
+                "binds no python mutant"
+            ],
+        )
+
+    def test_the_record_binding_agrees_with_every_vector_of_its_proof(self):
+        """A17: each vector of `lean/RecordClassBinding` names a judged class and records, each
+        of a class and binding that many mutants; the binding judges exactly the records the
+        vector judges, each with the vector's verdict. The header is read for its entry and its
+        count, never its digest."""
+        header, *lines = VECTORS.read_text(encoding="utf-8").splitlines()
+        head = json.loads(header)
+        vectors = [json.loads(line) for line in lines]
+        self.assertEqual(
+            (head["schema"], head["entry"], head["vectors"]),
+            ("phx.formal.vectors.v1", "RecordClassBinding", len(vectors)),
+        )
+        for vector in examined("record binding vectors", vectors):
+            with self.subTest(vector=vector):
+                records = []
+                for record in vector["records"]:
+                    path = FILE_OF[record["class"]]
+                    description, anchors = ANCHORS[path]
+                    records.append(a_record(description, anchors[record["binds"]], file=path))
+                verdict, _, bound = self.judged(vector["class"], records)
+                found, other = {}, []
+                for failure in verdict.failures:
+                    match = FINDING.match(failure)
+                    if match:
+                        found[int(match.group(2))] = match.group(1).lower()
+                    else:
+                        other.append(failure)
+                for excuses in bound:
+                    for record in excuses.valid:
+                        found[record.index] = "valid"
+                expected = {entry["index"]: entry["verdict"] for entry in vector["judged"]}
+                self.assertEqual((found, other), (expected, []))
 
 
 if __name__ == "__main__":
