@@ -533,5 +533,87 @@ class EachRecordIsJudgedInItsOwnClass(unittest.TestCase):
                 self.assertEqual((found, other), (expected, []))
 
 
+#: A1's stand-in's own limit, a sentinel that ends a loop that never advances by a named failure.
+READINGS = 64
+PROGRESS_VECTORS = REPO / "formal" / "vectors" / "token-progress.jsonl"
+
+
+class RustTokensEndOnEveryInput(unittest.TestCase):
+    """SPEC-480 R1, R3, R4 and R7 (A1 to A5 and A8; ADR-497 D2): `rust_tokens` refuses a reading
+    that does not advance, naming its position, and reads each punctuation character, each word
+    and each word that opens with an underscore as one whole token, so each runaway mutant of its
+    token starts raises at its first stalled token. A1 is RED-FIRST: at the base the stand-in's
+    reading repeats until the stand-in's own limit fails it. A2 to A5 and A8 are MUTATION
+    COVERAGE: they pin what the base already reads, and A2 to A4 kill rows S48001 to S48006."""
+
+    def test_a_reading_that_does_not_advance_is_refused_at_its_start(self):
+        """A1 (RED-FIRST): a stand-in literal reader that returns its start, bounded by its own
+        limit, meets the guard once, at position 1 of `" {"`, and `rust_tokens` raises there."""
+        calls = []
+
+        def stays(text, start):
+            calls.append(start)
+            if len(calls) >= READINGS:
+                raise AssertionError(
+                    f"rust_tokens read position {start} {READINGS} times: its loop does not end"
+                )
+            return start
+
+        with (
+            mock.patch.object(V, "rust_literal", stays),
+            self.assertRaises(RuntimeError) as raised,
+        ):
+            V.rust_tokens(" {")
+        self.assertEqual((raised.exception.args, calls), ((1,), [1]))
+
+    def test_a_punctuation_character_is_one_token(self):
+        """A2 (MUTATION COVERAGE): each punctuation character is one token of one character. It
+        kills rows S48001 and S48002, under which a punctuation reading stays at its start."""
+        self.assertEqual(V.rust_tokens("{};"), [(0, 1), (1, 2), (2, 3)])
+
+    def test_a_word_is_one_token_to_its_end(self):
+        """A3 (MUTATION COVERAGE): a word is one token to its end. It kills rows S48003 and
+        S48004, under which a word's reading stays at its first character, and the guard's own
+        listed mutant, `<=` to `>`, under which the guard raises at the first advancing token."""
+        self.assertEqual(V.rust_tokens("ab c1"), [(0, 2), (3, 5)])
+
+    def test_a_word_that_opens_with_an_underscore_is_one_token(self):
+        """A4 (MUTATION COVERAGE): a word that opens with an underscore is one token to its end.
+        It kills rows S48005 and S48006, under which such a word's reading stays at its start."""
+        self.assertEqual(V.rust_tokens("_a b_"), [(0, 2), (3, 5)])
+
+    def test_each_token_of_the_word_text_meets_the_guard_once(self):
+        """A5 (MUTATION COVERAGE, A3's non-vacuity control): a spy wrapping the real
+        `rust_literal` counts one reading per token of A3's text, and every token ends past its
+        start, so each reading reaches the guard with its stop past its start."""
+        real = V.rust_literal
+        with mock.patch.object(V, "rust_literal", wraps=real) as spy:
+            tokens = V.rust_tokens("ab c1")
+        self.assertEqual(
+            (tokens, spy.call_count, [stop > start for start, stop in tokens]),
+            ([(0, 2), (3, 5)], 2, [True, True]),
+        )
+
+    def test_the_tokens_agree_with_every_vector_of_their_proof(self):
+        """A8 (MUTATION COVERAGE): each vector of `lean/TokenProgress` names a text and the
+        tokens the guarded loop reads there; `rust_tokens` reads exactly those tokens, no more of
+        them than the text's length. The header is read for its entry and its count, never its
+        digest."""
+        header, *lines = PROGRESS_VECTORS.read_text(encoding="utf-8").splitlines()
+        head = json.loads(header)
+        vectors = [json.loads(line) for line in lines]
+        self.assertEqual(
+            (head["schema"], head["entry"], head["vectors"]),
+            ("phx.formal.vectors.v1", "TokenProgress", len(vectors)),
+        )
+        for vector in examined("token progress vectors", vectors):
+            with self.subTest(text=vector["text"]):
+                tokens = V.rust_tokens(vector["text"])
+                self.assertEqual(
+                    ([list(t) for t in tokens], len(tokens) <= len(vector["text"])),
+                    (vector["tokens"], True),
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

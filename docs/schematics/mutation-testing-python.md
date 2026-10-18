@@ -680,3 +680,103 @@ list and binding count, and its vectors hold the code to the proof.
 | scripts survivors | 683 | parts 2 to 6, each its own SPEC, ADR and band; 681 killed, 2 recorded equivalent |
 | rows | none on these survivors | S43700-S43727 in part 1; each later part rows its own groups |
 | proof | the rows and the changed-line legs of each part's pull request | the release's closing run, every class read whole |
+
+## 11. Amendment (SPEC-480): a mutant that never advances its loop
+
+Added after section 10; every earlier byte is kept. Kind: state machine. Every `path:line` in this
+section was read at dev `36c4783a`. Decided by ADR-497; built by SPEC-480. This section shows one
+dealt mutant's leg before and after the progress guard in `rust_tokens`, and the pass bound of the
+ingest crate's lenient reader that ends the Rust mutant the memory scope stopped.
+
+### 11.1 Before: one runaway mutant in a Python leg
+
+```mermaid
+stateDiagram-v2
+  [*] --> bDealt
+  bDealt: the leg runs its third dealt mutant, in rust_tokens
+  bDealt --> bRead: a test tokenizes a Rust text
+  bRead: the reading at a token start
+  bRead --> bStay: the mutant leaves the stop at the start
+  bStay: the token ends where it starts
+  bStay --> bStay: one more token appended, the position unchanged
+  bStay --> bStopped: the child's memory runs out before its wall-clock bound
+  bStopped: the runner stops the leg, exit 143
+  bStopped --> bVoid: no report and no artifact
+  bVoid: the verdict reads the leg VOID, under the scripts FAIL
+  bVoid --> [*]
+```
+
+`rust_tokens` (`scripts/mutation-verdict.py:513-539`) appends `(at, stop)` and moves `at` to
+`stop` on every pass (`:537-538`). Under each of the six mutants of lines 532 and 534 a token
+start leaves `stop == at`, so the loop appends without end. The harness bounds a mutant's wall
+clock only (`scripts/mutation_python.py:1138`), never its memory, so the runner stops first and the
+leg leaves no report.
+
+### 11.2 After: the progress guard (SPEC-480 R1, ADR-497 D2)
+
+```mermaid
+stateDiagram-v2
+  [*] --> aDealt
+  aDealt: the leg runs the same mutant
+  aDealt --> aRead: a test tokenizes a Rust text
+  aRead: the reading at a token start
+  aRead --> aGuard: the stop is set, a literal's end, a word's end or one past the start
+  aGuard: the progress guard, after stop = at + 1 if stop is None else stop
+  aGuard --> aNext: the stop lies past the start, as on every admitted text
+  aNext: the token is appended and the position moves to its stop
+  aNext --> aRead: more text
+  aNext --> aDone: the end of the text
+  aDone: the tokens, the same the base reads
+  aGuard --> aRaise: the stop lies at or before the start, as under each of the six mutants
+  aRaise: RuntimeError naming the position
+  aRaise --> aKilled: the test that read the text fails
+  aKilled: the harness reads the mutant killed, and the leg reports
+  aDone --> [*]
+  aKilled --> [*]
+```
+
+Under each of the six mutants (rows S48001 to S48006) the guard raises at the first stalled
+token; under the guard's own listed mutant, `<=` to `>`, it raises at the first advancing one.
+Both read killed by the tests of SPEC-480. The differential census that proves the guard the
+identity holds a verbatim copy of the base function, since a test that reads its target file's
+bytes is dropped from that file's mutant runs, and it sits outside the verdict file's map in
+`scripts/mutation-python.json`, so no mutant run pays for it. `formal/lean/Formal/TokenProgress.lean`
+proves that the guarded loop ends within the text's length plus one passes, with at most the
+text's length of tokens.
+
+### 11.3 The lenient reader's pass bound (SPEC-480 R5, ADR-497 D4)
+
+```mermaid
+stateDiagram-v2
+  [*] --> rPass
+  rPass: one pass of leniently, at most the text's length of them
+  rPass --> rEnd: the position reached the text's end
+  rPass --> rAdvance: a correct pass moves at least one byte
+  rAdvance: the next byte
+  rAdvance --> rPass
+  rPass --> rStall: under the shard's mutant, the position stays at 0 on an opening brace
+  rStall: one more brace pushed, the position unchanged
+  rStall --> rBound: the passes reach the text's length
+  rBound: the reading ends with a wrong text
+  rBound --> rNone: parse answers none
+  rNone: the existing test fails at its expect, and the mutant reads caught
+  rEnd --> [*]
+  rNone --> [*]
+```
+
+`leniently` (`crates/ingest/src/memory_state.rs:41-89`) looped `while at < bytes.len()`. Under
+`at *= width` (`:85`) the stalled state had no way out but the memory scope's stop, which the rust
+class reads as a memory finding, neither caught nor timed out. With at most `bytes.len()` passes,
+the same mutant ends, and `a_bare_word_outside_a_string_drops_only_its_field` catches it.
+
+### 11.4 What crosses each step
+
+| step | before (dev `36c4783a`) | after (SPEC-480) |
+|---|---|---|
+| a reading that stays, in `rust_tokens` | one token appended per pass, without end | `RuntimeError` naming the position |
+| the six legs of the release run | stopped by the runner, no report, VOID | each runaway mutant read killed, each leg reporting |
+| the verdict file's dealt mutants | 2843 | 2844, the guard's own `<=` to `>` added |
+| a pass of `leniently` | a `while` over the position | at most the text's length of passes |
+| the Rust mutant at `memory_state.rs:85:16` | stopped by the memory scope | caught by `a_bare_word_outside_a_string_drops_only_its_field` |
+| rows | none on these mutants | S48001 to S48007 |
+| proof | none | the differential census, the seeded differential, `lean/TokenProgress` and the release run's next reading |

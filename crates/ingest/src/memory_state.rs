@@ -43,7 +43,11 @@ fn leniently(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut at = 0;
     let mut in_string = false;
-    while at < bytes.len() {
+    // Each pass advances a byte or more: bytes.len() passes read all, a stall ends (SPEC-480 R5).
+    for _ in 0..bytes.len() {
+        if at >= bytes.len() {
+            break;
+        }
         let byte = bytes[at];
         if in_string {
             let first = text[at..].chars().next().map_or(1, char::len_utf8);
