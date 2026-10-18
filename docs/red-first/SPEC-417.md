@@ -61,3 +61,18 @@ A11: green at f579a71396392635321ea469ae3327b9fa235147
 A12: red at 7cd75c03fa926259b80a9d2384c549613fce2a54: AssertionError: 0 != 1 : mutation: shards: 200 shard(s) for 8367 listed mutant(s), projected at 1253460 s serially; the slowest at 10175 s of its 10800 s bound; legs 200 of ceiling 209
 A12: green at f579a71396392635321ea469ae3327b9fa235147
 ```
+
+## Amendments: the signed rows legs (`docs/rulings/OWNER-RULING-2026-10-18-rows-legs-822.md`)
+
+SPEC-417's section 11 moves A2, A10 and A12 and adds A13. The amendment sections of SPEC-417 and
+ADR-431 were committed first, and the red commit holds the tests and their pins at 18 legs and a
+`ci` ceiling of 189, over a `scripts/mutation_rows.py` whose `ROWS_MAX_LEGS` is still 17 and a
+`scripts/mutation-verdict.py` whose `LEG_CEILING["ci"]` is still 190. The test modules run only in
+CI, so every red is quoted from the pull request's checks over the red commit, from the job that
+runs `scripts/tests`. A2, A10 and A12 are changed criteria, so their new reds are recorded in this
+section's prose when seen, and their lines above stand. A13 is new: its red and green lines join
+this section in a `red-first` fence, in the commit after the constants.
+
+```text
+A13: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k test_the_release_runs_2688_rows_are_dealt_into_18_legs
+```

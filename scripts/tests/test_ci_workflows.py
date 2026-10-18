@@ -5340,7 +5340,7 @@ NOT_WORKFLOW_READS = {
         (
             "test_dispatch_shards",
             "TheReleaseFitsOneRun.test_a_listing_beyond_the_ceiling_is_refused_whole",
-            "plan_shards(entries('deck-streak-ingest', 12921))",
+            "plan_shards(entries('deck-streak-ingest', 12853))",
             1,
         ),
         (
@@ -7008,7 +7008,7 @@ NOT_WORKFLOW_READS = {
         (
             "test_release_rust_ceiling",
             "TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_placeholder_ceiling_sizes_the_release_run_as_a_pull_request_run",
-            "rust_deal(self, listed, scripts, release, 190, 128)",
+            "rust_deal(self, listed, scripts, release, 189, 128)",
             1,
         ),
         (
@@ -7098,7 +7098,7 @@ NOT_WORKFLOW_READS = {
         (
             "test_release_rust_ceiling",
             "TheRustCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_rust_ceiling_cites_the_signed_ruling_only_above_the_pull_request_ceiling",
-            "rust_ceiling_problems(source(190, ''), root)",
+            "rust_ceiling_problems(source(189, ''), root)",
             1,
         ),
         (

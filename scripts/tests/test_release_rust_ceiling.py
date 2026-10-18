@@ -58,9 +58,9 @@ RUST_GOLDEN_LINES = (
     "mutation: shards: python legs dealt by cost: 3 priced leg(s), the slowest at 1800 s of its "
     "1800 s bound; 0 unpriced leg(s) of at most 20\n"
     "mutation: shards: 2 shard(s) for 113 listed mutant(s), projected at 9040 s serially; the "
-    "slowest at 6701 s of its 10800 s bound; legs 2 of ceiling 190\n"
-    "mutation: shards: run legs 5 of 222: python 3 of 32, rust 2 of 190; projected 313 "
-    "runner-minute(s) of 35160\n"
+    "slowest at 6701 s of its 10800 s bound; legs 2 of ceiling 189\n"
+    "mutation: shards: run legs 5 of 221: python 3 of 32, rust 2 of 189; projected 313 "
+    "runner-minute(s) of 34980\n"
 )
 RUST_GOLDEN_OUTPUTS = {
     "shards": "2",
@@ -117,7 +117,7 @@ def pull_request_refusal(listed, serial):
     """The pull request run's refusal past its ceiling, byte for byte as before (SPEC-362 R3)."""
     return (
         f"mutation: shards: REFUSED: {listed} mutant(s), projected at {serial} s serially, need "
-        "more than 190 legs within 10800 s each, the pull request run's ceiling: split the "
+        "more than 189 legs within 10800 s each, the pull request run's ceiling: split the "
         "change, since a run is never capped\n"
     )
 
@@ -126,7 +126,7 @@ def range_refusal(shown):
     """R5's refusal of a Rust ceiling outside its range, spelled here."""
     return (
         f"mutation: shards: REFUSED: the release ceiling RUST_RELEASE_CEILING = {shown} is "
-        "outside 190..256; a ceiling outside it is never dealt\n"
+        "outside 189..256; a ceiling outside it is never dealt\n"
     )
 
 
@@ -232,13 +232,13 @@ class TheReleaseRunSizesItsRustLegsToItsCeiling(unittest.TestCase):
         module = verdict_module()
         cases = [
             ("a true mark under a set ceiling", {"release": True}, 200, 200),
-            ("a true mark one past the placeholder", {"release": True}, 191, 191),
+            ("a true mark one past the placeholder", {"release": True}, 190, 190),
             ("no mark", {}, 200, None),
             ("a false mark", {"release": False}, 200, None),
             ("a string mark", {"release": "true"}, 200, None),
             ("a mark of one", {"release": 1}, 200, None),
             ("a null mark", {"release": None}, 200, None),
-            ("a true mark at the placeholder", {"release": True}, 190, None),
+            ("a true mark at the placeholder", {"release": True}, 189, None),
         ]
         for where, plan, ceiling, expected in examined("release marks and ceilings", cases):
             with mock.patch.object(module, "RUST_RELEASE_CEILING", ceiling, create=True):
@@ -252,7 +252,7 @@ class TheReleaseRunSizesItsRustLegsToItsCeiling(unittest.TestCase):
         self.assertNotEqual(out, RUST_GOLDEN_LINES)
         cases = [("the pull request plan", ABSENT), ("the release plan", True)]
         for where, release in examined("plans at the placeholder ceiling", cases):
-            code, out, outputs, _plan = rust_deal(self, listed, scripts, release, 190, 128)
+            code, out, outputs, _plan = rust_deal(self, listed, scripts, release, 189, 128)
             self.assertEqual((code, out), (0, RUST_GOLDEN_LINES), where)
             self.assertEqual(outputs, RUST_GOLDEN_OUTPUTS, where)
 
@@ -281,13 +281,13 @@ class TheReleaseRunSizesItsRustLegsToItsCeiling(unittest.TestCase):
         self.assertNotIn("shards", plan)
 
     def test_a_run_that_is_not_the_release_keeps_the_pull_request_ceiling_at_any_rust_ceiling(self):
-        crowded = rust_listing(INGEST, 12921)
+        crowded = rust_listing(INGEST, 12853)
         code, out, outputs, _plan = rust_deal(self, crowded, None, True, 200, 128)
-        self.assertEqual((code, outputs.get("shards")), (0, "191"), out)
+        self.assertEqual((code, outputs.get("shards")), (0, "190"), out)
         listed, scripts = rust_listing(DAEMON, 113), mutants(3)
-        for ceiling in examined("rust ceilings on a plan that is not the release", [191, 200, 256]):
+        for ceiling in examined("rust ceilings on a plan that is not the release", [190, 200, 256]):
             code, out, outputs, plan = rust_deal(self, crowded, None, ABSENT, ceiling, 128)
-            refused = (1, pull_request_refusal(12921, 1628046), {})
+            refused = (1, pull_request_refusal(12853, 1619478), {})
             self.assertEqual((code, out, outputs), refused, ceiling)
             self.assertNotIn("shards", plan, ceiling)
             code, out, outputs, _plan = rust_deal(self, listed, scripts, ABSENT, ceiling, 128)
@@ -300,7 +300,7 @@ class TheReleaseRunSizesItsRustLegsToItsCeiling(unittest.TestCase):
             ("a string", "200", "200"),
             ("a float", 200.0, "200.0"),
             ("a bool", True, "True"),
-            ("one below the pull request ceiling", 189, "189"),
+            ("one below the pull request ceiling", 188, "188"),
             ("one past the matrix", 257, "257"),
         ]
         for where, ceiling, shown in examined("rust ceilings outside the range", cases):
@@ -308,7 +308,7 @@ class TheReleaseRunSizesItsRustLegsToItsCeiling(unittest.TestCase):
             self.assertEqual((code, out), (1, range_refusal(shown)), where)
             self.assertEqual(outputs, {}, where)
             self.assertEqual(plan, {"classes": {"rust": {"applies": True}}, "release": True}, where)
-        for ceiling in examined("rust ceilings at the range's ends", [190, 256]):
+        for ceiling in examined("rust ceilings at the range's ends", [189, 256]):
             code, out, outputs, _plan = rust_deal(self, listed, scripts, True, ceiling, 128)
             self.assertEqual((code, outputs.get("shards")), (0, "2"), out)
 
@@ -340,12 +340,12 @@ class TheReleaseRunSizesItsRustLegsToItsCeiling(unittest.TestCase):
         self.assertEqual((code, out), (0, rust_release_line(2, 200) + DAEMON_LINE_200))
         cases = [
             ("a plan that is not the release", ABSENT, 200),
-            ("the release plan at the placeholder", True, 190),
+            ("the release plan at the placeholder", True, 189),
         ]
         for where, release, ceiling in examined("runs that print no rust release line", cases):
             code, out, _outputs, _plan = rust_deal(self, listed, scripts, release, ceiling, 300)
             self.assertEqual(code, 0, out)
-            self.assertIn("; legs 2 of ceiling 190\n", out, where)
+            self.assertIn("; legs 2 of ceiling 189\n", out, where)
             self.assertNotIn("rust leg(s) of ceiling", out, where)
 
 
@@ -402,13 +402,13 @@ class TheRustCeilingIsSignedAndTheRunbookSaysTheMethod(unittest.TestCase):
 
         def source(value, cites):
             return (
-                'LEG_CEILING = {"ci": 190, "battery": 234}\n'
+                'LEG_CEILING = {"ci": 189, "battery": 234}\n'
                 f"#: The release run's Rust ceiling{cites}.\n"
                 f"RUST_RELEASE_CEILING = {value}\n"
             )
 
         self.assertEqual(rust_ceiling_problems(source(200, ", docs/rulings/signed.md"), root), [])
-        self.assertEqual(rust_ceiling_problems(source(190, ""), root), [])
+        self.assertEqual(rust_ceiling_problems(source(189, ""), root), [])
         both = ", docs/rulings/signed.md and docs/rulings/other.md"
         planted = [
             ("above it, no ruling cited", source(200, "")),
@@ -491,7 +491,7 @@ class WhatTheReleaseRunKeeps(unittest.TestCase):
             node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in reached
         ]
         self.assertEqual(sorted(node.name for node in functions), sorted(reached))
-        restated = {190, 234, 256, 10800}
+        restated = {189, 234, 256, 10800}
         for function in examined("functions the release run's Rust legs reach", functions):
             literals = {
                 node.value

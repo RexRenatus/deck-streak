@@ -861,7 +861,7 @@ class TheShardsFitTheirBound(unittest.TestCase):
         module = verdict_module()
         # One mutant per leg fits (2141 + 6000 <= 10800); two to a leg do not, so the fewest is the
         # ceiling itself, and a search that stops short of it would refuse the listing.
-        for key, ceiling in examined("ceilings", [("ci", 190), ("battery", 234)]):
+        for key, ceiling in examined("ceilings", [("ci", 189), ("battery", 234)]):
             costs = [6000] * ceiling
             sized = module.fewest_shards(costs, 2141, module.LEG_CEILING[key])
             self.assertEqual(sized, ceiling, key)
@@ -869,8 +869,8 @@ class TheShardsFitTheirBound(unittest.TestCase):
             beyond = module.fewest_shards([*costs, 6000], 2141, module.LEG_CEILING[key])
             self.assertIsNone(beyond, key)
         # With no ceiling named, the pull request's.
-        self.assertEqual(module.fewest_shards([6000] * 190, 2141), 190)
-        self.assertIsNone(module.fewest_shards([6000] * 191, 2141))
+        self.assertEqual(module.fewest_shards([6000] * 189, 2141), 189)
+        self.assertIsNone(module.fewest_shards([6000] * 190, 2141))
 
 
 def sharded(test):
@@ -1081,12 +1081,12 @@ class TheLegsAreSizedToTheRun(unittest.TestCase):
         self.assertEqual(module.BASELINE_SECONDS, 2141)
         self.assertEqual(module.CENSUS_SECONDS, {"deck-streak-progression": 1521})
         self.assertEqual(module.SHARD_BOUND_SECONDS, 10800)
-        self.assertEqual(module.LEG_CEILING, {"ci": 190, "battery": 234})
+        self.assertEqual(module.LEG_CEILING, {"ci": 189, "battery": 234})
         self.assertEqual((module.MUTANT_TIMEOUT_SECONDS, module.TIMEOUT_MARGIN), (2300, 1.5))
 
     def test_the_whole_tree_is_sized_at_the_batterys_ceiling(self):
         # 68 ingest mutants of 126 s fit a leg's 10800 s after its 2141 s baseline: 14213 need
-        # 210 legs, past the pull request's 190 and within the battery's 234.
+        # 210 legs, past the pull request's 189 and within the battery's 234.
         many = listing(["deck-streak-ingest"] * 14213)
         for package in examined("battery scopes", [None, "deck-streak-ingest"]):
             done, written = dispatch_size(many, package)
@@ -1109,7 +1109,7 @@ class TheLegsAreSizedToTheRun(unittest.TestCase):
         fixture.plan()
         planned, _, _ = run_shards(fixture, listing(["deck-streak-daemon"] * 113))
         self.assertEqual(planned.returncode, 0, planned.stdout + planned.stderr)
-        self.assertIn("legs 2 of ceiling 190", planned.stdout)
+        self.assertIn("legs 2 of ceiling 189", planned.stdout)
 
 
 class ALegProvesItsTimeoutCoversItsTests(unittest.TestCase):

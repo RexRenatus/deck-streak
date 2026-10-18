@@ -1035,9 +1035,9 @@ class TheBinKillerFollowsRustcAndRefusesAShadow(unittest.TestCase):
         self.assertRegex(done.stdout, r"(?m)^examined 1 row")
 
 
-#: The rows legs' population: one row past the 2686 that 17 legs of 158 rows hold (SPEC-417 R1,
+#: The rows legs' population: one row past the 2844 that 18 legs of 158 rows hold (SPEC-417 R1,
 #: R2, R4). Every row's find is absent from the target, so no row of these tests runs a killer.
-LEG_ROWS = 2687
+LEG_ROWS = 2845
 LEG_KILLER = "test_fixmod.Double.test_two_doubles_to_four"
 LEGS_LINE = re.compile(r"(?m)^legs: (\d+) leg\(s\) for (\d+) row\(s\)")
 
@@ -1093,7 +1093,7 @@ class TheRowsLegsFitTheirBound(unittest.TestCase):
         sink = self.fixture.write("refused-output", "")
         done = self.legs(LEG_ROWS, output=sink)
         self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
-        self.assertRegex(done.stdout, r"(?m)^legs: REFUSED: 2687 row\(s\) need more than 17 legs\b")
+        self.assertRegex(done.stdout, r"(?m)^legs: REFUSED: 2845 row\(s\) need more than 18 legs\b")
         self.assertIsNone(LEGS_LINE.search(done.stdout), done.stdout)
         self.assertEqual(outputs(sink), {}, "a refused count wrote outputs")
 
@@ -1106,6 +1106,21 @@ class TheRowsLegsFitTheirBound(unittest.TestCase):
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertIn(
             "legs: 16 leg(s) for 2512 row(s), the largest 157 row(s), projected at 2669 s",
+            done.stdout,
+        )
+
+    def test_the_release_runs_2688_rows_are_dealt_into_18_legs(self):
+        """SPEC-417 A13 (R1, R3, R4 as section 11 amends it): the release pull request's 2688
+        selected rows, two past the 2686 that 17 legs hold, are dealt into 18 legs within the
+        bound, never refused."""
+        sink = self.fixture.write("release-output", "")
+        done = self.legs(2688, output=sink)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        written = outputs(sink)
+        self.assertEqual(written.get("rows_legs"), "18", done.stdout)
+        self.assertEqual(json.loads(written.get("rows_matrix", "null")), list(range(18)))
+        self.assertIn(
+            "legs: 18 leg(s) for 2688 row(s), the largest 150 row(s), projected at 2550 s",
             done.stdout,
         )
 
