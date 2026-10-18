@@ -1539,18 +1539,6 @@ libc.execve(
 )
 sys.exit(f"execve failed: errno {ctypes.get_errno()}")
 """
-    # EXEC_ENTRIES with the entries read as a JSON list of hex strings, so an empty entry survives.
-    EXEC_BLOCK = r"""import ctypes, json, shutil, sys
-entries = [bytes.fromhex(entry) for entry in json.loads(sys.argv[1])]
-argv = [shutil.which("bash").encode(), *(arg.encode() for arg in sys.argv[2:])]
-libc = ctypes.CDLL(None, use_errno=True)
-libc.execve(
-    argv[0],
-    (ctypes.c_char_p * (len(argv) + 1))(*argv, None),
-    (ctypes.c_char_p * (len(entries) + 1))(*entries, None),
-)
-sys.exit(f"execve failed: errno {ctypes.get_errno()}")
-"""
     # The function each Caddy step calls before anything else, which a Lean entry covers
     # (SPEC-473), and the line the install prints when it is given no tag: a step reaches it only
     # past that function, before it reads a setting or touches a file.
@@ -1817,8 +1805,8 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
     def test_a_caddy_step_agrees_with_every_vector_of_its_lean_proof(self):
         # The Lean entry that proves the settings check writes one vector per block: its entries,
         # the names a start-up file makes as variables, and the port's answer (SPEC-473 A2). Each
-        # block reaches the step exactly, through execve, so the environment it reads holds the
-        # vector's entries and nothing else.
+        # block that holds no empty entry reaches the step exactly, through execve, so the
+        # environment it reads holds the vector's entries and nothing else.
         first, *lines = self.VECTORS.read_text(encoding="utf-8").splitlines()
         header = json.loads(first)
         self.assertEqual(
@@ -1851,15 +1839,43 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
                 )
         if not collation_locale_available("en_US.UTF-8"):
             self.fail("the en_US.UTF-8 locale every non-empty block also runs under is installed")
+        # EXEC_ENTRIES, the route that hands a step its entries exactly, reads them as hex words
+        # split at spaces, so an empty entry never reaches the step by it. The vectors whose block
+        # holds one are these 3, each by its number in the file and its block: they are named here
+        # and not run, and every other vector is.
+        not_run = [
+            (1, [b""]),
+            (2, [b"", b""]),
+            (27, [b"DECKSTREAK_DEPLOY_CADDY_DIR=/x", b"", b"A=1", b"NOEQ"]),
+        ]
+        self.assertEqual(
+            [
+                (i, block)
+                for i, vector in enumerate(vectors, 1)
+                for block in [[bytes.fromhex(entry) for entry in vector["entries"]]]
+                if b"" in block
+            ],
+            not_run,
+            "the vectors whose block holds an empty entry are not the 3 named",
+        )
+        to_run = [(i, vector) for i, vector in enumerate(vectors, 1) if i not in dict(not_run)]
+        self.assertEqual(
+            (len(to_run), len(vectors)),
+            (60, 63),
+            "examined 60 of 63 deploy entry vectors: every vector runs but the 3 named",
+        )
         with tempfile.TemporaryDirectory() as tmp:
             work = Path(tmp) / "work"
             work.mkdir()
             made = Path(tmp) / "made.bash"
             lead = ["-c", 'set -a; . "$1"; set +a; shift; . "$@"', "bash", str(made)]
-            for i, vector in enumerate(examined("deploy entry vectors", vectors), 1):
+            for i, vector in examined(f"of {len(vectors)} deploy entry vectors", to_run):
                 block = [bytes.fromhex(entry) for entry in vector["entries"]]
+                # The elevation setting as the world gives every other step, written as each
+                # setting of a held file is.
                 made.write_text(
-                    f"{ELEVATE}=\n" + "".join(f"{name}=made\n" for name in vector["made"]),
+                    f"{ELEVATE}={shlex.quote(self.world.env[ELEVATE])}\n"
+                    + "".join(f"{name}=made\n" for name in vector["made"]),
                     encoding="utf-8",
                 )
                 said = (
@@ -1874,8 +1890,8 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
                         [
                             sys.executable,
                             "-c",
-                            self.EXEC_BLOCK,
-                            json.dumps([entry.hex() for entry in entries]),
+                            self.EXEC_ENTRIES,
+                            " ".join(entry.hex() for entry in entries),
                             *lead,
                             str(DEPLOY),
                             "caddy-install",
