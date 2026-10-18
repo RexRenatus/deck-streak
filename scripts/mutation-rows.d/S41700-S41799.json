@@ -20,9 +20,9 @@
       [
         "S41702-THE-MOST-ROWS-LEGS-IS-SEVENTEEN",
         "scripts/mutation_rows.py",
-        "ROWS_MAX_LEGS = 17",
         "ROWS_MAX_LEGS = 18",
-        "the plan deals the rows into at most 17 legs, and refuses a count that needs more (SPEC-417 R2, R4)",
+        "ROWS_MAX_LEGS = 19",
+        "the plan deals the rows into at most 18 legs, and refuses a count that needs more (SPEC-417 R2, R4 as section 11 amends it)",
         "test_mutation_rows.TheRowsLegsFitTheirBound.test_a_population_past_the_most_legs_is_refused_by_name"
       ],
       [
@@ -128,6 +128,14 @@
         "      - name: the rows legs' reports, merged into the one the verdict reads\n        if: ${{ needs.mutation-plan.outputs.rows == 'false' }}\n",
         "the verdict merges the legs' reports whenever the plan selected rows (SPEC-417 R9)",
         "test_mutation_workflows.TheRowsLegsRunAsPlanned.test_the_rows_legs_run_as_planned_and_the_verdict_merges_them_first"
+      ],
+      [
+        "S41716-THE-MOST-ROWS-LEGS-HOLD-THE-RELEASE",
+        "scripts/mutation_rows.py",
+        "ROWS_MAX_LEGS = 18",
+        "ROWS_MAX_LEGS = 17",
+        "the plan deals the release's 2688 rows into 18 legs, which 17 legs cannot hold (SPEC-417 R4 as section 11 amends it, A13)",
+        "test_mutation_rows.TheRowsLegsFitTheirBound.test_the_release_runs_2688_rows_are_dealt_into_18_legs"
       ]
     ]
   }
