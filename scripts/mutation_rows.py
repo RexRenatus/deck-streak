@@ -112,8 +112,8 @@ ROW_SECONDS = 17
 #: runner or a costlier row than measured does not cut it (SPEC-417 R10).
 ROWS_BOUND_SECONDS = 2700
 #: The most legs the rows are dealt into; the run's ceiling for Rust legs counts the rows job at
-#: this many (SPEC-417 R11, ADR-431 D2).
-ROWS_MAX_LEGS = 17
+#: this many (SPEC-417 R11, ADR-431 D2). Signed in docs/rulings/OWNER-RULING-2026-10-18-rows-legs-822.md.
+ROWS_MAX_LEGS = 18
 
 EXIT_OK, EXIT_SURVIVED, EXIT_REFUSED, EXIT_VOID, EXIT_RESTORE = 0, 1, 2, 3, 4
 
