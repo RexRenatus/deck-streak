@@ -10,6 +10,7 @@ import Formal.SensitiveDeckVectors
 import Formal.SkipTariffVectors
 import Formal.TableCensusReachVectors
 import Formal.TokenBonusVectors
+import Formal.TokenProgressVectors
 import Formal.WalletVectors
 import Formal.XpReconciliationVectors
 
@@ -41,6 +42,7 @@ def main (args : List String) : IO UInt32 := do
   | ["SkipTariff"] => Formal.SkipTariffVectors.run
   | ["TableCensusReach"] => Formal.TableCensusReachVectors.run
   | ["TokenBonus"] => Formal.TokenBonusVectors.run
+  | ["TokenProgress"] => Formal.TokenProgressVectors.run
   | ["Wallet"] => Formal.WalletVectors.run
   | ["XpReconciliation"] => Formal.XpReconciliationVectors.run
   | _ =>

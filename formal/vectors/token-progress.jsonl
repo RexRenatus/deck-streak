@@ -1,0 +1,13 @@
+{"schema":"phx.formal.vectors.v1","entry":"TokenProgress","covers":"scripts/mutation-verdict.py","anchor":"rust_tokens","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":12}
+{"text":"","tokens":[]}
+{"text":" ","tokens":[]}
+{"text":"{","tokens":[[0,1]]}
+{"text":"a","tokens":[[0,1]]}
+{"text":"_","tokens":[[0,1]]}
+{"text":"{};","tokens":[[0,1],[1,2],[2,3]]}
+{"text":"ab c1","tokens":[[0,2],[3,5]]}
+{"text":"_a b_","tokens":[[0,2],[3,5]]}
+{"text":"x // c\ny","tokens":[[0,1],[7,8]]}
+{"text":"a\n//\n","tokens":[[0,1]]}
+{"text":"1_2 {x}","tokens":[[0,3],[4,5],[5,6],[6,7]]}
+{"text":"br x","tokens":[[0,2],[3,4]]}

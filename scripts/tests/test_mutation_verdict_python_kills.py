@@ -594,6 +594,26 @@ class RustTokensEndOnEveryInput(unittest.TestCase):
             ([(0, 2), (3, 5)], 2, [True, True]),
         )
 
+    def test_the_tokens_agree_with_every_vector_of_their_proof(self):
+        """A8 (MUTATION COVERAGE): each vector of `lean/TokenProgress` names a text and the
+        tokens the guarded loop reads there; `rust_tokens` reads exactly those tokens, no more of
+        them than the text's length. The header is read for its entry and its count, never its
+        digest."""
+        header, *lines = PROGRESS_VECTORS.read_text(encoding="utf-8").splitlines()
+        head = json.loads(header)
+        vectors = [json.loads(line) for line in lines]
+        self.assertEqual(
+            (head["schema"], head["entry"], head["vectors"]),
+            ("phx.formal.vectors.v1", "TokenProgress", len(vectors)),
+        )
+        for vector in examined("token progress vectors", vectors):
+            with self.subTest(text=vector["text"]):
+                tokens = V.rust_tokens(vector["text"])
+                self.assertEqual(
+                    ([list(t) for t in tokens], len(tokens) <= len(vector["text"])),
+                    (vector["tokens"], True),
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
