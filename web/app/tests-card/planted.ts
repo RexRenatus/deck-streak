@@ -47,6 +47,17 @@ export interface Unobservable {
   why: string;
 }
 
+/**
+ * An engine, card and layer whose single-layer variant reads one bare connection at the TCP
+ * listener and nothing else, and why (SPEC-402 R10; ADR-498 D7).
+ */
+export interface Bare {
+  engine: Engine;
+  id: string;
+  layer: Layer;
+  why: string;
+}
+
 /** The render-proof card: text, a `data:` image and a table, and no channel. */
 export interface RenderCard {
   html: string;
@@ -218,6 +229,8 @@ export const UNOBSERVABLE: readonly Unobservable[] = [
   { engine: 'firefox', id: 'webrtc', why: 'measured: Firefox under the suite sends no datagram from a peer connection to the UDP listener' },
   { engine: 'webkit', id: 'external-scheme', why: 'no listener sees a mail handler launch' }
 ];
+
+export const BARE: readonly Bare[] = [];
 
 /** The render-proof card: it points nowhere, so the frame shows it whole or not at all. */
 export const RENDER: RenderCard | null = {

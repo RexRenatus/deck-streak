@@ -16,6 +16,12 @@ A3: red at 2861585538f59fb0a6277583fe12264e4561ad1c: AssertionError: expected [ 
 A3: green at c70ad382e8a68913da545f8c7d717e3ce7007155
 A4: red at c70ad382e8a68913da545f8c7d717e3ce7007155: Error: srcset opened with W2 off in chromium; Error: srcset opened with W2 off in webkit (card-sandbox, W2 off: srcset stays closed, paths /srcset/1 and /srcset/2 both reached)
 A4: green at e69e27cd46a8c7a7721583e0000deab0a4b646b0
+A5: red at <sha>: <the failure line>
+A6: red at <sha>: <the failure line>
+A7: red at <sha>: <the failure line>
+A8: red at <sha>: <the failure line>
+A9: red at <sha>: <the failure line>
+A10: red at <sha>: <the failure line>
 ```
 
 The red of A3 above was read from the planted suite's existing assertion over the channel set: 28

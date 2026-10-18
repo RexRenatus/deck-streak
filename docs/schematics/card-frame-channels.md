@@ -35,7 +35,7 @@ suite that plants a different set.
 flowchart LR
   subgraph page["the Mini App page (origin: the app), page policy from svelte.config.js"]
     app["app code: study screen (row 1.4)"]
-    fd["frameDocument(html, css)<br/>parse inert, strip link meta base template<br/>and every srcset attribute,<br/>prepend frame policy, re-parse check"]
+    fd["frameDocument(html, css)<br/>parse inert, strip link meta base template<br/>and every srcset and target attribute,<br/>prepend frame policy, re-parse check"]
     fh["frameHost(frame document, title)<br/>host policy meta, one srcdoc frame,<br/>re-parse check"]
     cf["CardFrame.svelte<br/>iframe sandbox empty, srcdoc"]
     bridge["app channels: engine Worker port,<br/>Telegram object, storage, API session"]
@@ -53,7 +53,7 @@ flowchart LR
   card -. "fetch: closed by the frame policy (W2), inherited from the host and in its own meta" .-> net
   card -. "navigate itself: closed by the page's frame-src none (W4), which the host inherits" .-> net
   card -. "navigate the page, open a window: closed by the sandbox (W1)" .-> page
-  card -. "preconnect, dns-prefetch, refresh, base, image-set candidates: removed by the strip (W3)" .-> net
+  card -. "preconnect, dns-prefetch, refresh, base, image-set candidates, a link's target: removed by the strip (W3)" .-> net
   card -. "script: none runs (W1, W2, the inherited page policy)" .-> bridge
 ```
 
@@ -85,7 +85,7 @@ The card frame is `<iframe sandbox="" srcdoc="...">`, and its document is the ho
 |---|---|---|
 | W1 | the sandbox with no token: an opaque origin, no script, no forms, no popups, no top navigation, no downloads, no plugins | `CardFrame.svelte` |
 | W2 | the frame policy, at two points: the host policy `img-src data:; script-src 'none'; object-src 'none'; base-uri 'none'`, which the card document inherits from its host, so it is in force from the card document's creation, before its first byte is parsed; and a `Content-Security-Policy` meta element placed first in the card document's head: `default-src 'none'; img-src data:; media-src data:; font-src data:; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'` | `policy.js` `HOST_POLICY`, written by `frameHost`, and `FRAME_POLICY`, written by `frameDocument` |
-| W3 | the strip: the card's `link`, `meta`, `base` and `template` elements removed (a `template` can declare a shadow root whose `link` the inert parse never sees, and with no script a card has no use for one), the `srcset` attribute removed from every element that carries one (an image-set candidate is fetched from what that attribute lists, and the element's `src` still shows its image), `x-dns-prefetch-control` off, and a re-parse of the composed document that refuses the card if any of those elements came back or any element, the root included, carries a `srcset` | `frame-document.ts` |
+| W3 | the strip: the card's `link`, `meta`, `base` and `template` elements removed (a `template` can declare a shadow root whose `link` the inert parse never sees, and with no script a card has no use for one), the `srcset` attribute removed from every element that carries one (an image-set candidate is fetched from what that attribute lists, and the element's `src` still shows its image), the `target` attribute removed from every element that carries one (a link's follow is then the frame's own navigation, for which WebKit's click handler starts no preconnect), `x-dns-prefetch-control` off, and a re-parse of the composed document that refuses the card if any of those elements came back or any element, the root included, carries a `srcset` or a `target` | `frame-document.ts` |
 | W4 | the page's `frame-src 'none'`: a frame's own navigation, including one the frame starts itself, is checked against the embedding page's `frame-src`. A `srcdoc` document is not fetched, so the card frame itself still renders | `svelte.config.js`, from `policy.js` `PAGE_FRAME_SRC` |
 | P | the page policy the srcdoc document inherits: hash-mode `script-src`, `object-src 'none'`, `base-uri 'self'`, `connect-src 'self'` | `svelte.config.js` (not this work's layer; listed because it closes channels too) |
 
@@ -109,8 +109,11 @@ dash means at least two layers hold it, so no single-layer variant opens it.
 | `meta-refresh` | `meta http-equiv=refresh` to the listener | W3, W4, W1 in some engines | - |
 | `base` | `base href` at the listener, then a relative `img` | W3, W2, P | - |
 | `nav-self` | a full-frame link at the listener, clicked | W4 | W4 (SEC01-F13) |
-| `nav-top` | a full-frame link with `target=_top`, clicked | W1 | W1 |
-| `nav-blank` | a full-frame link with `target=_blank`, clicked | W1 | W1 |
+| `nav-top` | a full-frame link with `target=_top`, clicked | W4, W3 (the target removed, the follow is the frame's own navigation); W1 refuses the top navigation if the target returns | W4 |
+| `nav-blank` | a full-frame link with `target=_blank`, clicked | W4, W3 (the target removed, the follow is the frame's own navigation); W1 refuses the popup if the target returns | W4 |
+| `nav-blank-area` | a full-frame image map whose `area` has `target=_blank`, at the TCP listener, clicked | W4, W3 (the target removed); W1 refuses the popup if the target returns | W4 (BARE in WebKit with W3 off: its click handler preconnects to the area's host when the sandbox refuses the popup) |
+| `nav-blank-svg` | a full-frame SVG `a` with `target=_blank`, at the TCP listener, clicked (the control: SVG `a`'s handler starts no preconnect) | W4, W3 (the target removed); W1 refuses the popup if the target returns | W4 |
+| `nav-show-new` | a full-frame SVG `a` whose `xlink:show` is `new`, with no `target`, at the TCP listener, clicked (W1's own channel: the link asks for a new window, which the strip leaves and the sandbox refuses) | W1 | W1 |
 | `download` | a full-frame link with `download`, clicked | W4 (measured in Chromium: a `download` link to another origin is followed as a navigation of the frame, which the sandbox allows); W1 stops a download itself | W4 |
 | `ping` | a same-document link with `ping` at the listener, clicked | W2, P | - (UNOBSERVABLE in Firefox, measured: it sends no hyperlink audit under the suite) |
 | `form` | a full-frame submit button in a form whose action is the listener, clicked | W1, W2, W4 | - |
@@ -150,6 +153,71 @@ forms arrived whenever the fetch came first. A policy the card document inherits
 policy from its creation, so the host policy holds the forms in every engine. The card frame's own
 navigation is checked against its embedder, now the host, which inherits the page's `frame-src`, so
 W4 holds it as before.
+
+### A clicked link's target, from the author's HTML to the frame (SPEC-402, ADR-498)
+
+Read at DeckStreak `dev` `36c4783a`. Measured: in WebKit, before this ward, a card's clicked
+`target=_blank` link opened one TCP connection to the host the card names from the shipped card
+frame, with W1 to W4 on; Chromium and Firefox opened none (#942's planted run). The engine path is
+read from WebKit's source. The reach to Apple platforms is INFERRED, not measured. How an `a` or
+`area` href holding a line feed or a tab and a `<` could become a blank target with no `target`
+attribute is NOT MEASURED.
+
+```mermaid
+flowchart TD
+  author["the card's markup: a link, an area or an SVG a<br/>with target=_blank"]
+  inert["frameDocument: the inert parse<br/>(frame-document.ts:42)"]
+  strip["W3 strip: link, meta, base, template removed;<br/>every srcset removed;<br/>NEW: every target removed (R7, A5)"]
+  compose["the composed document:<br/>frame policy, prefetch off, the card's style and body"]
+  check{"W3 re-parse check (kept):<br/>head as written, no stripped element,<br/>no srcset, body attributes as written;<br/>NEW: no target (R8, A6)"}
+  refused["refused as escaped:<br/>the frame shows no document,<br/>data-card-refused, the review screen's message"]
+  host["frameHost: the host policy (W2) and one srcdoc frame"]
+  frame["CardFrame: sandbox with no token (W1),<br/>the page's frame-src none (W4)"]
+  tap["a click on the link: no target, no base,<br/>so its effective target is empty"]
+  self["the frame's own navigation:<br/>refused by W4 before a request, every engine<br/>(A9: W4 off opens, W1 off stays closed)"]
+  author --> inert --> strip --> compose --> check
+  check -->|fails| refused
+  check -->|kept| host --> frame --> tap --> self
+```
+
+The follow of a `target=_blank` link with W3 off (no strip), per engine:
+
+```mermaid
+sequenceDiagram
+  participant L as the card's link (target=_blank)
+  participant H as the engine's click handler
+  participant P as the popup policy (W1)
+  participant N as the card-named host
+  L->>H: click or tap
+  H->>P: hand the navigation off
+  P-->>H: refused: the sandbox has no allow-popups, before any load
+  Note over H,N: WebKit: handleClick then preconnects to the link's URL,<br/>whatever the navigation's fate: no sandbox check,<br/>and no policy directive governs it (W1, W2, W4 all on)
+  H->>N: WebKit only: one TCP connection, no request (the measured channel)
+  Note over H,N: Chromium and Firefox, as the suite runs them: no connection
+  Note over L,N: with the cure, W3 removes the target, so the handler's<br/>preconnect condition is false in a frame that is never the main frame#59;<br/>the suite reads it as nav-blank-area's WebKit card frame (A10),<br/>and as BARE in WebKit with W3 off, the control that W3 holds it alone
+```
+
+Where each ward stands on WebKit's bare connection, and what the suite reads:
+
+| ward | holds the bare connection | the suite's reading |
+|---|---|---|
+| W1, the sandbox | no: it refuses the popup after the handler has started the preconnect | `nav-blank-area`'s W1-off variant (`{}` at the head) |
+| W2, the policies | no: no directive governs a preconnect | its W2-off variant (`{}` at the head; red in WebKit at the base) |
+| W3, the strip | yes, alone: with no target, the handler starts no preconnect | its W3-off variant (BARE in WebKit) and its card frame (`{}`) |
+| W4, `frame-src 'none'` | no: it refuses the frame's own navigation, never the preconnect | its W4-off variant (the navigation, `tcp`) |
+
+**W1's own channel.** With every target removed, `nav-top` and `nav-blank` follow as `nav-self`
+does, so W4 holds each alone, and W1 would hold no planted channel alone. `nav-show-new` keeps
+one for it (ADR-498 D9): an SVG `a` whose `xlink:show` is `new` asks for a new window with no
+`target`, the strip leaves it, and the sandbox refuses the window. So of its single-layer variants
+only the W1-off one reaches the TCP listener, and SPEC-341's census still reads every layer holding
+a channel alone.
+Each engine's handling of `xlink:show` is predicted and NOT MEASURED; push 1 reads it.
+
+**Apple platforms (INFERRED).** The handler is cross-platform WebCore code, and Cocoa builds enable
+server preconnect by default, so the WebKit view an iPhone, iPad or Mac reviewer runs the web app
+in is inferred to open the connection without this ward; no reading on that hardware is made.
+The iPhone and iPad native card view already holds it with L10 (section 10).
 
 ### The image forms, from the author's HTML to the frame document (SPEC-402, ADR-416)
 
