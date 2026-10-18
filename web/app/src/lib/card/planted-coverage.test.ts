@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { LAYERS, PLANTED, RENDER, UNOBSERVABLE } from '../../../tests-card/planted';
+import { BARE, LAYERS, PLANTED, RENDER, UNOBSERVABLE } from '../../../tests-card/planted';
 
 // SPEC-341 R8 to R12, A8 to A12. The planted suite (tests-card/card.spec.ts) runs in Playwright,
 // which the tdd probe does not resolve, so this test proves its coverage instead, as
@@ -130,6 +130,41 @@ function unobservableCells(
           for (const engine of engines) pairs.push(`${engine} ${id}`);
         } else if (engines.includes(token[1].toLowerCase())) {
           pairs.push(`${token[1].toLowerCase()} ${id}`);
+        } else {
+          refused.push(`${id}: no configured engine is named ${token[1]}`);
+        }
+      }
+    }
+  }
+  return { cells, pairs, refused };
+}
+
+/** Section 3's bare-connection cells and the `<engine> <id> <layer>` triples they name, over
+ * `engines` (SPEC-402 R9, R10; ADR-498 D7). A token read in no form the check knows is refused
+ * with its row's id. */
+function bareCells(
+  section: string,
+  engines: readonly string[]
+): { cells: string[]; pairs: string[]; refused: string[] } {
+  const cells: string[] = [];
+  const pairs: string[] = [];
+  const refused: string[] = [];
+  for (const line of section.split('\n')) {
+    const row = /^\|\s*`([a-z0-9-]+)`\s*\|(.*)\|\s*$/.exec(line);
+    if (row === null) continue;
+    const id = row[1];
+    for (const cell of row[2].split('|')) {
+      const seen = cell.match(/\bbare\b/gi)?.length ?? 0;
+      if (seen === 0) continue;
+      const tokens = [...cell.matchAll(/\bBARE in ([A-Za-z]+) with (W[0-9]+) off\b/g)];
+      if (tokens.length !== seen) {
+        refused.push(`${id}: ${seen} BARE tokens in a cell, ${tokens.length} in a form the check reads`);
+        continue;
+      }
+      cells.push(id);
+      for (const token of tokens) {
+        if (engines.includes(token[1].toLowerCase())) {
+          pairs.push(`${token[1].toLowerCase()} ${id} ${token[2]}`);
         } else {
           refused.push(`${id}: no configured engine is named ${token[1]}`);
         }
@@ -357,6 +392,28 @@ describe('the planted card suite', () => {
     examined('unobservable cells in section 3', cells);
     examined('unobservable pairs section 3 names', pairs);
     examined('unobservable pairs planted.ts declares', declared);
+  });
+
+  it("the schematic's bare connections equal the declared bare connections both ways", () => {
+    // SPEC-402 R9, R10, A8; ADR-498 D7: every `BARE in <Engine> with <Wn> off` cell, over the
+    // configured engines, against the bare connections planted.ts declares
+    const { cells, pairs, refused } = bareCells(webSection(), ENGINES);
+    const declared = BARE.map((entry) => `${entry.engine} ${entry.id} ${entry.layer}`);
+
+    examined('bare-connection cells in section 3', cells);
+    expect(refused, 'a BARE token section 3 spells in a form the check does not read').toEqual([]);
+    expect(pairDifference(pairs, declared)).toEqual({ missing: [], extra: [] });
+    expect([...pairs].sort()).toEqual([...declared].sort());
+
+    // and every declared entry names a configured engine, a planted card, a layer and its reason, once
+    examined('bare connections planted.ts declares', declared);
+    for (const entry of BARE) {
+      expect(ENGINES).toContain(entry.engine);
+      expect(PLANTED.map((card) => card.id)).toContain(entry.id);
+      expect(LAYERS).toContain(entry.layer);
+      expect(entry.why.trim(), `${entry.engine} ${entry.id} ${entry.layer}`).not.toBe('');
+    }
+    expect(new Set(declared).size).toBe(declared.length);
   });
 
   it('a planted mismatch between the cells and the declared pairs is refused', () => {

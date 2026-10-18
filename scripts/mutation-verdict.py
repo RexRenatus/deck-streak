@@ -534,6 +534,8 @@ def rust_tokens(text: str) -> list[tuple[int, int]]:
             while stop < len(text) and (text[stop].isalnum() or text[stop] == "_"):
                 stop += 1
         stop = at + 1 if stop is None else stop
+        if stop <= at:
+            raise RuntimeError(at)
         tokens.append((at, stop))
         at = stop
     return tokens
