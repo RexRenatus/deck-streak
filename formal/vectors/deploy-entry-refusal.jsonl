@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"DeployEntryRefusal","covers":"deploy/deploy.sh","anchor":"refuse_unlisted_settings","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":63}
+{"schema":"phx.formal.vectors.v1","entry":"DeployEntryRefusal","covers":"deploy/deploy.sh","anchor":"refuse_unlisted_settings","digest":"sha256:253c766344f7d7bfcb5a4a133b173090770847f84b7e46bcdb973fe364088a3d","vectors":63}
 {"entries":[""],"made":[],"verdict":"proceed"}
 {"entries":["",""],"made":[],"verdict":"proceed"}
 {"entries":["413d31"],"made":[],"verdict":"proceed"}
