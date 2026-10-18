@@ -192,16 +192,16 @@ cover names a function.
 
 **Test, two changes in `scripts/tests/test_deploy_scripts.py`:**
 - A new test, `test_a_caddy_step_agrees_with_every_vector_of_its_lean_proof`, in
-  `TheCaddyInstall`, reads every vector against the step as D2 states, checks the header's entry,
+  `TheCaddyInstall`, reads every vector whose block holds no empty entry (60 of 63; it names the other 3, not measured) against the step as D2 states, checks the header's entry,
   cover, anchor and count (never its digest), checks that the names of the single-entry blocks
   that proceed are exactly `SETTINGS`' words, checks that the runs wrote nothing in their working
   directory, and last checks that `deploy.sh` defines `refuse_unlisted_settings` once and that the
-  Caddy arm's only command calls it. It pins the step's verdict on every vector and the tie between
+  Caddy arm's only command calls it. It pins the step's verdict on each of those 60 vectors and the tie between
   the cover and the code the steps run. Rows S47301 to S47303 guard it.
 - A39's declared opening (`:1770`) gains the call, between the case line and the refusal's first
-  command, because bash's DEBUG trap under `set -T` records the call before the function's first
+  command, which bash's DEBUG trap under `set -T` records twice before the function's first
   command. The opening still names every command run before the refusal, exactly; it now names one
-  more. Its examined count of script runs does not move.
+  more, the call, which the trap records twice. Its examined count of script runs does not move.
 
 No existing pin's examined figure moves, and no pin is weakened.
 
@@ -266,7 +266,7 @@ flip to `ramp=block` (#468).
 ## Consequences
 
 - Good, because the step's settings check is proved over every block of entries the kernel can
-  hold, and every vector is run against the step itself.
+  hold, and every vector whose block holds no empty entry (60 of 63) is run against the step itself.
 - Good, because the cover makes the entry `STALE` whenever the function's lines change.
 - Bad, because `SETTINGS` lies outside the covered function: a change to it moves no digest, and
   only the vectors test's comparison of `SETTINGS`' words with the vectors' single-name blocks

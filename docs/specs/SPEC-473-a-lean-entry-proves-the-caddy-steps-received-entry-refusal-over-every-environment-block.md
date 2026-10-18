@@ -58,7 +58,7 @@ Read at dev `36c4783a`:
   start-up file makes as variables, and the port's answer (`proceed`, or the refusal's whole stderr
   line as hex). The inputs are the classes ADR-490 D2 lists, the empty block, an entry with no `=`,
   every listed name given twice and keys no shell name can hold among them.
-- **R7.** A test runs `deploy.sh caddy-install` with no tag on each vector's block exactly, under
+- **R7.** A test runs `deploy.sh caddy-install` with no tag on each vector's block exactly, save the 3 whose block holds an empty entry, under
   the C locale and again with `LC_ALL` set to `C.UTF-8` and `en_US.UTF-8` for every non-empty
   block, and compares the exit status and the whole stderr with the vector: the caddy-install usage
   line when the vector proceeds, the vector's line when it refuses. It reads the header's entry,
@@ -74,7 +74,7 @@ Read at dev `36c4783a`:
 
 | id | criterion | decided by |
 |---|---|---|
-| A2 | every vector's block, run through `deploy.sh caddy-install` with no tag under each locale R7 names, exits 1 with exactly the vector's stderr; the header, the `SETTINGS` tie and the empty working directory hold; `deploy.sh` defines `refuse_unlisted_settings` once and the Caddy arm calls it (R1, R2, R6, R7) | `test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_agrees_with_every_vector_of_its_lean_proof`, in CI only |
+| A2 | every vector's block that holds no empty entry (60 of 63; the test names the other 3, which are not measured), run through `deploy.sh caddy-install` with no tag under each locale R7 names, exits 1 with exactly the vector's stderr; the header, the `SETTINGS` tie and the empty working directory hold; `deploy.sh` defines `refuse_unlisted_settings` once and the Caddy arm calls it (R1, R2, R6, R7) | `test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_agrees_with_every_vector_of_its_lean_proof`, in CI only |
 | A3 | the commands bash records before each Caddy step's refusal are the declared opening, the call included, exactly (R8) | `test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other`, in CI only |
 
 A2 and A3 run in CI only, because `test_deploy_scripts.py` executes the deploy scripts. The

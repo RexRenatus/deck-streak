@@ -448,8 +448,8 @@ edited, so every verdict and every refusal line A39 reads is unchanged, and the 
 before the step reads or writes anything else.
 
 A39's declared opening gains one command: the call, between the `case` line and the refusal's
-first command, because bash's DEBUG trap under `set -T` records the call before the function's
-first command. Nothing else runs before the refusal, and A39 still compares every recorded command
+first command, which bash's DEBUG trap under `set -T` records twice before the function's first
+command. Nothing else runs before the refusal, and A39 still compares every recorded command
 before it with the declared opening, exactly. A39's criterion, its fence line and its rows stand.
 
 A Lean entry, `formal/lean/Formal/DeployEntryRefusal.lean`, covers the function, ports it and
