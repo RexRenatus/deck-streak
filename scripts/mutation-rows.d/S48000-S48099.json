@@ -1,0 +1,65 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S48007-A-LENIENT-PASS-ADVANCES-BY-ITS-WIDTH",
+        "ingest",
+        "src/memory_state.rs",
+        "at += width;",
+        "at *= width;",
+        "memory_state_boundaries::a_bare_word_outside_a_string_drops_only_its_field",
+        "a pass over any other character advances by its width; under the pass bound a stalled pass ends with a wrong text and parse answers none (SPEC-480 R6)"
+      ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S48001-A-PUNCTUATION-READING-ADVANCES",
+        "scripts/mutation-verdict.py",
+        "if stop is None and (char.isalnum() or char == \"_\"):",
+        "if stop is None or (char.isalnum() or char == \"_\"):",
+        "a character that opens no literal and no word is one token, so its reading advances (SPEC-480 R3, A2)",
+        "test_mutation_verdict_python_kills.RustTokensEndOnEveryInput.test_a_punctuation_character_is_one_token"
+      ],
+      [
+        "S48002-ONLY-AN-UNDERSCORE-OPENS-A-WORD-BESIDE-ALNUM",
+        "scripts/mutation-verdict.py",
+        "if stop is None and (char.isalnum() or char == \"_\"):",
+        "if stop is None and (char.isalnum() or char != \"_\"):",
+        "only a letter, a digit or an underscore opens a word, so a punctuation reading advances (SPEC-480 R3, A2)",
+        "test_mutation_verdict_python_kills.RustTokensEndOnEveryInput.test_a_punctuation_character_is_one_token"
+      ],
+      [
+        "S48003-A-WORD-IS-READ-WHILE-TEXT-REMAINS",
+        "scripts/mutation-verdict.py",
+        "while stop < len(text) and (text[stop].isalnum() or text[stop] == \"_\"):",
+        "while stop >= len(text) and (text[stop].isalnum() or text[stop] == \"_\"):",
+        "a word is read while text remains, so its reading passes its first character (SPEC-480 R3, A3)",
+        "test_mutation_verdict_python_kills.RustTokensEndOnEveryInput.test_a_word_is_one_token_to_its_end"
+      ],
+      [
+        "S48004-A-WORD-CHARACTER-IS-ALNUM-OR-UNDERSCORE",
+        "scripts/mutation-verdict.py",
+        "while stop < len(text) and (text[stop].isalnum() or text[stop] == \"_\"):",
+        "while stop < len(text) and (text[stop].isalnum() and text[stop] == \"_\"):",
+        "a word character is a letter, a digit or an underscore, any one of them, so a word's reading advances (SPEC-480 R3, A3)",
+        "test_mutation_verdict_python_kills.RustTokensEndOnEveryInput.test_a_word_is_one_token_to_its_end"
+      ],
+      [
+        "S48005-AN-UNDERSCORE-CONTINUES-A-WORD",
+        "scripts/mutation-verdict.py",
+        "while stop < len(text) and (text[stop].isalnum() or text[stop] == \"_\"):",
+        "while stop < len(text) and (text[stop].isalnum() or text[stop] != \"_\"):",
+        "an underscore continues a word, so a word that opens with one advances (SPEC-480 R3, A4)",
+        "test_mutation_verdict_python_kills.RustTokensEndOnEveryInput.test_a_word_that_opens_with_an_underscore_is_one_token"
+      ],
+      [
+        "S48006-THE-UNDERSCORE-IS-A-WORD-CHARACTER",
+        "scripts/mutation-verdict.py",
+        "while stop < len(text) and (text[stop].isalnum() or text[stop] == \"_\"):",
+        "while stop < len(text) and (text[stop].isalnum() or text[stop] == \"\"):",
+        "the underscore is the word character the reading tests for, so a word that opens with one advances (SPEC-480 R3, A4)",
+        "test_mutation_verdict_python_kills.RustTokensEndOnEveryInput.test_a_word_that_opens_with_an_underscore_is_one_token"
+      ]
+    ]
+  }
+}
