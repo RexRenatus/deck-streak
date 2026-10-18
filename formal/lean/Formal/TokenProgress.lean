@@ -1,5 +1,5 @@
--- @phx covers scripts/mutation-verdict.py anchor=rust_tokens digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers scripts/mutation-verdict.py anchor=block_end digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers scripts/mutation-verdict.py anchor=rust_tokens digest=sha256:402e606903db2f602309a4fe64c00927ea6a7d5c34eabf99ab889916a3d835af
+-- @phx covers scripts/mutation-verdict.py anchor=block_end digest=sha256:9eda12254cef70bcfc46219601508a7150a0402ef69e9a3d7b70d777c995f1d2
 -- @phx vectors formal/vectors/token-progress.jsonl
 -- @phx cites #822, #322
 -- @phx theorem every_reading_ends_within_its_text ramp=report
