@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"TokenProgress","covers":"scripts/mutation-verdict.py","anchor":"rust_tokens","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":12}
+{"schema":"phx.formal.vectors.v1","entry":"TokenProgress","covers":"scripts/mutation-verdict.py","anchor":"rust_tokens","digest":"sha256:402e606903db2f602309a4fe64c00927ea6a7d5c34eabf99ab889916a3d835af","vectors":12}
 {"text":"","tokens":[]}
 {"text":" ","tokens":[]}
 {"text":"{","tokens":[[0,1]]}
