@@ -7,7 +7,7 @@
 // frame renders the card. Arrivals are read from listeners.ts, never from the browser's own events.
 import { expect, test, type Browser, type BrowserContext, type Page, type TestInfo } from '@playwright/test';
 import { Listeners, type Reading } from './listeners';
-import { LAYERS, PLANTED, RENDER, UNOBSERVABLE, type Engine } from './planted';
+import { BARE, LAYERS, PLANTED, RENDER, UNOBSERVABLE, type Engine } from './planted';
 
 /** A settle window is never shorter than this, in milliseconds. */
 const SETTLE_FLOOR = 1500;
@@ -130,10 +130,18 @@ for (const card of PLANTED) {
 for (const layer of LAYERS) {
   for (const card of PLANTED) {
     const opens = card.alone === layer;
-    test(`${layer} off: ${card.id} ${opens ? 'opens' : 'stays closed'}`, async ({ browser }, info) => {
+    // SPEC-402 R10, A10; ADR-498 D7: the engines whose variant with this layer off reads one bare
+    // connection at the TCP listener and nothing else, named in the test's title
+    const bare = BARE.filter((entry) => entry.id === card.id && entry.layer === layer).map((entry) => entry.engine);
+    const named = bare.length === 0 ? '' : `, a bare connection in ${bare.join(' and ')}`;
+    test(`${layer} off: ${card.id} ${opens ? 'opens' : 'stays closed'}${named}`, async ({ browser }, info) => {
       const engine = engineOf(info);
       const variant = await visit(browser, `variant.html?off=${layer}`, card.id, card.click);
-      if (opens && !blind(engine, card.id)) await reaches(variant, card.paths);
+      if (bare.includes(engine)) {
+        await reaches(variant, ['tcp']);
+        const reading = await arrivals(variant, card.id);
+        expect(Object.keys(reading), `${card.id} reached more than a bare connection with ${layer} off in ${engine}`).toEqual(['tcp']);
+      } else if (opens && !blind(engine, card.id)) await reaches(variant, card.paths);
       else expect(await arrivals(variant, card.id), `${card.id} opened with ${layer} off in ${engine}`).toEqual({});
       await variant.context.close();
     });

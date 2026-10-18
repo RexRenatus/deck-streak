@@ -110,6 +110,51 @@ describe('the frame document', () => {
     examined('srcsets the re-parse brings back', returns);
   });
 
+  // SPEC-402 R7, A5; ADR-498 D2. A link's target is what lets an engine's click handler start a
+  // connection the frame's own navigation does not, so the strip removes every target, on an a,
+  // an area, an SVG a, a form or any other element, whatever its value, and keeps each element
+  // with its href
+  it('the frame document removes every target and keeps each element and its href', () => {
+    const planted = [
+      `<a target="_blank" href="${ELSEWHERE}1">a</a>`,
+      `<map name="m"><area target="_blank" href="${ELSEWHERE}2" alt="b"></map>`,
+      `<svg><a target="_blank" href="${ELSEWHERE}3"><text>c</text></a></svg>`,
+      `<form target="_blank" action="${ELSEWHERE}4"><button>d</button></form>`,
+      '<span target="_blank">e</span>',
+      // a target whose value holds a line feed and a `<`, removed like any other
+      `<a target="_blank\n<b" href="${ELSEWHERE}6">f</a>`
+    ];
+    const body = read(frameDocument(planted.join(''), CSS).srcdoc).body;
+
+    // no target reaches the frame's body
+    expect([...body.querySelectorAll('[target]')].map((element) => element.outerHTML)).toEqual([]);
+    // and every element is kept, each link and area with its href
+    expect(body.innerHTML).toBe(
+      `<a href="${ELSEWHERE}1">a</a><map name="m"><area href="${ELSEWHERE}2" alt="b"></map>` +
+        `<svg><a href="${ELSEWHERE}3"><text>c</text></a></svg>` +
+        `<form action="${ELSEWHERE}4"><button>d</button></form><span>e</span><a href="${ELSEWHERE}6">f</a>`
+    );
+    // each plant carries a target the frame would read, one per plant
+    const inert = new DOMParser().parseFromString(`<!doctype html><body>${planted.join('')}`, 'text/html');
+    expect(examined('planted target carriers', [...inert.body.querySelectorAll('[target]')])).toHaveLength(planted.length);
+  });
+
+  // SPEC-402 R8, A6; ADR-498 D2. Markup the first parse reads as a style's text, and the frame's
+  // parse as an element carrying a target: on an a, an area, or the root element, which an html
+  // start tag inside the body gives its attributes to
+  it('a card whose re-parse brings a target back is refused', () => {
+    const mutation = '<form><math><mtext></form><form><mglyph><style></math>';
+    const returns = [
+      `<a target="_blank" href="${ELSEWHERE}a">a</a>`,
+      `<area target="_blank" href="${ELSEWHERE}b" alt="">`,
+      '<html target="_blank">'
+    ];
+    for (const element of returns) {
+      expect(frameDocument(mutation + element, CSS), element).toStrictEqual({ refused: 'escaped' });
+    }
+    examined('targets the re-parse brings back', returns);
+  });
+
   it('a card whose markup escapes the frame document is refused', () => {
     const escapes: [html: string, css: string][] = [
       // CSS that ends the style element and opens a link, then a refresh, in either case
