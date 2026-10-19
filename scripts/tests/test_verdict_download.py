@@ -300,7 +300,13 @@ FAMILIES = {
     "rust": (
         "mutation-rust",
         "mutation-rust-shard-",
-        ("mutants.out/outcomes.json", "cargo-mutants.exit"),
+        # The leg's own baseline record sits beside its report (SPEC-480 R11).
+        (
+            "mutants.out/outcomes.json",
+            "cargo-mutants.exit",
+            "baseline/baseline.exit",
+            "baseline/baseline.log",
+        ),
     ),
     "python": ("mutation-python", "mutation-python-shard-", ("report.json",)),
 }
