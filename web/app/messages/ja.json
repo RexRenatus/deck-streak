@@ -214,5 +214,6 @@
   "methods_remove": "削除",
   "methods_remove_confirm": "このパスキーを削除しますか？Telegramでは引き続きサインインできます。",
   "methods_remove_keep": "残す",
+  "methods_remove_passkey": "パスキー{position}（{date}に追加）を削除",
   "methods_reopen": "TelegramからDeckStreakを開き直して、もう一度お試しください。"
 }

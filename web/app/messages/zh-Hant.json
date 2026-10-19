@@ -214,5 +214,6 @@
   "methods_remove": "移除",
   "methods_remove_confirm": "要移除此密碼金鑰嗎？你仍可以使用Telegram登入。",
   "methods_remove_keep": "保留",
+  "methods_remove_passkey": "移除密碼金鑰 {position}（新增於{date}）",
   "methods_reopen": "請從Telegram重新開啟DeckStreak，然後再試一次。"
 }

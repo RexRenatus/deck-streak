@@ -214,5 +214,6 @@
   "methods_remove": "Quitar",
   "methods_remove_confirm": "¿Quitar esta llave de acceso? Puedes seguir iniciando sesión con Telegram.",
   "methods_remove_keep": "Conservar",
+  "methods_remove_passkey": "Quitar la llave de acceso {position}, añadida el {date}",
   "methods_reopen": "Vuelve a abrir DeckStreak desde Telegram e inténtalo de nuevo."
 }
