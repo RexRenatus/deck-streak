@@ -1,0 +1,69 @@
+{
+  "tables": {
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S47200-THE-LIMIT-TAKES-A-CAPTION-ENDING-OUTSIDE-THE-PLANE",
+        "formal/vectors/caption-bound.jsonl",
+        "\"runs\":[[97,1022],[128512,1]],\"units\":1024,\"takes\":true}",
+        "\"runs\":[[97,1022],[128512,1]],\"units\":1024,\"takes\":false}",
+        "notifications",
+        "formal_vectors_caption_bound::the_caption_bound_answers_every_lean_vector",
+        "a caption of 1,022 letters and one character past the basic plane is 1,024 UTF-16 units and is taken by the check, the photo and the share alike (SPEC-472 A1)"
+      ],
+      [
+        "S47201-ONE-UNIT-OVER-IS-REFUSED",
+        "formal/vectors/caption-bound.jsonl",
+        "\"runs\":[[97,1023],[1114111,1]],\"units\":1025,\"takes\":false}",
+        "\"runs\":[[97,1023],[1114111,1]],\"units\":1025,\"takes\":true}",
+        "notifications",
+        "formal_vectors_caption_bound::the_caption_bound_answers_every_lean_vector",
+        "a caption of 1,023 letters and the last scalar value is 1,025 UTF-16 units and is refused before any transport call (SPEC-472 A1)"
+      ],
+      [
+        "S47202-A-CHARACTER-OUTSIDE-THE-PLANE-COUNTS-TWO",
+        "formal/vectors/caption-bound.jsonl",
+        "\"runs\":[[128512,512],[97,1]],\"units\":1025,",
+        "\"runs\":[[128512,512],[97,1]],\"units\":513,",
+        "notifications",
+        "formal_vectors_caption_bound::the_caption_bound_answers_every_lean_vector",
+        "each character past the basic plane counts two UTF-16 units, so 512 of them and a letter are 1,025 units, never the 513 a count of characters gives (SPEC-472 A1)"
+      ],
+      [
+        "S47203-THE-LAST-CHARACTER-OF-THE-PLANE-COUNTS-ONE",
+        "formal/vectors/caption-bound.jsonl",
+        "\"runs\":[[65535,1024]],\"units\":1024,",
+        "\"runs\":[[65535,1024]],\"units\":2048,",
+        "notifications",
+        "formal_vectors_caption_bound::the_caption_bound_answers_every_lean_vector",
+        "U+FFFF is the last character of the basic plane and counts one UTF-16 unit (SPEC-472 A1)"
+      ],
+      [
+        "S47204-THE-FIRST-CHARACTER-PAST-THE-PLANE-COUNTS-TWO",
+        "formal/vectors/caption-bound.jsonl",
+        "\"runs\":[[65536,512]],\"units\":1024,",
+        "\"runs\":[[65536,512]],\"units\":512,",
+        "notifications",
+        "formal_vectors_caption_bound::the_caption_bound_answers_every_lean_vector",
+        "U+10000 is the first character past the basic plane and counts two UTF-16 units (SPEC-472 A1)"
+      ],
+      [
+        "S47205-THE-HEADER-COUNTS-EVERY-VECTOR",
+        "formal/vectors/caption-bound.jsonl",
+        "\"vectors\":55}",
+        "\"vectors\":54}",
+        "notifications",
+        "formal_vectors_caption_bound::the_caption_bound_answers_every_lean_vector",
+        "the header counts every caption the writer prints, so a dropped or added line fails the reader (SPEC-472 A1)"
+      ],
+      [
+        "S47206-THE-VECTORS-HOLD-A-CAPTION-A-CHARACTER-COUNT-TAKES",
+        "formal/vectors/caption-bound.jsonl",
+        "\"runs\":[[97,1023],[128512,1]],\"units\":1025,",
+        "\"runs\":[[97,1025]],\"units\":1025,",
+        "notifications",
+        "formal_vectors_caption_bound::the_lean_vectors_hold_each_caption_a_broken_count_misjudges",
+        "the vectors keep 1,023 letters and one character past the basic plane, 1,024 characters and 1,025 units, which a count of characters would take (SPEC-472 A2)"
+      ]
+    ]
+  }
+}
