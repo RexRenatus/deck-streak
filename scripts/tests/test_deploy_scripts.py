@@ -1539,6 +1539,25 @@ libc.execve(
 )
 sys.exit(f"execve failed: errno {ctypes.get_errno()}")
 """
+    # The function each Caddy step calls before anything else, which a Lean entry covers
+    # (SPEC-473), and the line the install prints when it is given no tag: a step reaches it only
+    # past that function, before it reads a setting or touches a file.
+    CALL = "refuse_unlisted_settings"
+    USAGE = b"deploy: usage: deploy.sh caddy-install TAG\n"
+    # Every unprefixed key the Lean entry's vectors hold. None is a name bash reads as code when it
+    # starts, so the settings check alone decides each vector.
+    INERT = {
+        b"",
+        b"A",
+        b"NOEQ",
+        b"a b",
+        b"\xff",
+        b"DECKSTREAK_DEPLOYX",
+        b"deckstreak_deploy_repo",
+        b"XDECKSTREAK_DEPLOY_REPO",
+        b"DECKSTREAK_DEPLOY",
+    }
+    VECTORS = REPO / "formal" / "vectors" / "deploy-entry-refusal.jsonl"
 
     @staticmethod
     def tree(root):
@@ -1767,7 +1786,13 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
                 runs.setdefault((run, source), []).append(command)
         settings = re.search(r"^SETTINGS='[^']*'", DEPLOY.read_text(encoding="utf-8"), re.M)
         opening = ("set -euo pipefail", settings.group(0) if settings else "", 'case "${1:-}" in ')
-        declared = {str(ROLLBACK): self.ROLLBACK_RUN, str(DEPLOY): (*opening, self.REFUSAL)}
+        # The Caddy arm calls the refusal's function, and bash's DEBUG trap under `set -T` records
+        # that call twice before the function's first command: as the arm runs it, and again as
+        # the function is entered.
+        declared = {
+            str(ROLLBACK): self.ROLLBACK_RUN,
+            str(DEPLOY): (*opening, self.CALL, self.CALL, self.REFUSAL),
+        }
         self.assertEqual({source for _, source in runs}, set(declared), "a script never ran")
         for (_, source), commands in examined("script run(s)", sorted(runs.items())):
             first = declared[source]
@@ -1776,6 +1801,137 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
                 first,
                 f"{Path(source).name} runs something before the refusal",
             )
+
+    def test_a_caddy_step_agrees_with_every_vector_of_its_lean_proof(self):
+        # The Lean entry that proves the settings check writes one vector per block: its entries,
+        # the names a start-up file makes as variables, and the port's answer (SPEC-473 A2). Each
+        # block that holds no empty entry reaches the step exactly, through execve, so the
+        # environment it reads holds the vector's entries and nothing else.
+        first, *lines = self.VECTORS.read_text(encoding="utf-8").splitlines()
+        header = json.loads(first)
+        self.assertEqual(
+            tuple(header[key] for key in ("schema", "entry", "covers", "anchor", "vectors")),
+            (
+                "phx.formal.vectors.v1",
+                "DeployEntryRefusal",
+                "deploy/deploy.sh",
+                "refuse_unlisted_settings",
+                len(lines),
+            ),
+        )
+        vectors = [json.loads(line) for line in lines]
+        prefix = os.fsencode(self.PREFIX)
+        shell_name = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+        # A vector holds no NUL, no unprefixed key outside the inert set, and no host setting with
+        # a value, and each name it makes is a deploy setting's shell name.
+        for i, vector in enumerate(vectors, 1):
+            for entry in (bytes.fromhex(entry) for entry in vector["entries"]):
+                key, has, value = entry.partition(b"=")
+                self.assertNotIn(b"\0", entry, f"vector {i} holds NUL")
+                if not key.startswith(prefix):
+                    self.assertIn(key, self.INERT, f"vector {i}: {key!r} is not an inert key")
+                if key == prefix + b"HOST" and has:
+                    self.assertEqual(value, b"", f"vector {i} gives the host setting a value")
+            for name in vector["made"]:
+                self.assertTrue(
+                    name.startswith(self.PREFIX) and shell_name.fullmatch(name),
+                    f"vector {i} makes {name!r}",
+                )
+        if not collation_locale_available("en_US.UTF-8"):
+            self.fail("the en_US.UTF-8 locale every non-empty block also runs under is installed")
+        # EXEC_ENTRIES, the route that hands a step its entries exactly, reads them as hex words
+        # split at spaces, so an empty entry never reaches the step by it. The vectors whose block
+        # holds one are these 3, each by its number in the file and its block: they are named here
+        # and not run, and every other vector is.
+        not_run = [
+            (1, [b""]),
+            (2, [b"", b""]),
+            (27, [b"DECKSTREAK_DEPLOY_CADDY_DIR=/x", b"", b"A=1", b"NOEQ"]),
+        ]
+        self.assertEqual(
+            [
+                (i, block)
+                for i, vector in enumerate(vectors, 1)
+                for block in [[bytes.fromhex(entry) for entry in vector["entries"]]]
+                if b"" in block
+            ],
+            not_run,
+            "the vectors whose block holds an empty entry are not the 3 named",
+        )
+        to_run = [(i, vector) for i, vector in enumerate(vectors, 1) if i not in dict(not_run)]
+        self.assertEqual(
+            (len(to_run), len(vectors)),
+            (60, 63),
+            "examined 60 of 63 deploy entry vectors: every vector runs but the 3 named",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp) / "work"
+            work.mkdir()
+            made = Path(tmp) / "made.bash"
+            lead = ["-c", 'set -a; . "$1"; set +a; shift; . "$@"', "bash", str(made)]
+            for i, vector in examined(f"of {len(vectors)} deploy entry vectors", to_run):
+                block = [bytes.fromhex(entry) for entry in vector["entries"]]
+                # The elevation setting as the world gives every other step, written as each
+                # setting of a held file is.
+                made.write_text(
+                    f"{ELEVATE}={shlex.quote(self.world.env[ELEVATE])}\n"
+                    + "".join(f"{name}=made\n" for name in vector["made"]),
+                    encoding="utf-8",
+                )
+                said = (
+                    self.USAGE if vector["verdict"] == "proceed" else bytes.fromhex(vector["said"])
+                )
+                # Under the C locale, and again under two UTF-8 locales, each named by an entry
+                # appended to a block that holds one: an unprefixed entry moves no verdict there.
+                locales = [[], [b"LC_ALL=C.UTF-8"], [b"LC_ALL=en_US.UTF-8"]] if block else [[]]
+                for locale_entry in locales:
+                    entries = [*block, *locale_entry]
+                    done = launch(
+                        [
+                            sys.executable,
+                            "-c",
+                            self.EXEC_ENTRIES,
+                            " ".join(entry.hex() for entry in entries),
+                            *lead,
+                            str(DEPLOY),
+                            "caddy-install",
+                        ],
+                        entries,
+                        sourced=made,
+                        cwd=work,
+                        env=dict(entry.split(b"=", 1) for entry in entries if b"=" in entry),
+                    )
+                    self.assertEqual(
+                        (done.returncode, done.stderr),
+                        (1, said),
+                        f"vector {i}, {locale_entry}: the step departs from the Lean entry",
+                    )
+                    self.assertEqual(
+                        list(work.iterdir()), [], f"vector {i}: a step wrote where it ran"
+                    )
+        # The single-entry blocks that proceed name exactly SETTINGS' words, so the entry's listed
+        # settings are the ones the script lists.
+        proceeding = {
+            os.fsdecode(key)
+            for vector in vectors
+            if vector["verdict"] == "proceed" and len(vector["entries"]) == 1
+            for key in [bytes.fromhex(vector["entries"][0]).partition(b"=")[0]]
+            if key.startswith(prefix)
+        }
+        self.assertEqual(
+            proceeding, set(self.settings()), "the vectors' settings are not SETTINGS'"
+        )
+        # The covered function is the one the steps run: defined once, and called by the Caddy arm
+        # as its only command.
+        text = DEPLOY.read_text(encoding="utf-8")
+        self.assertEqual(
+            (
+                len(re.findall(r"^refuse_unlisted_settings\(\) \{$", text, re.MULTILINE)),
+                text.count("caddy-install | caddy-remove)\n    refuse_unlisted_settings\n    ;;\n"),
+            ),
+            (1, 1),
+            "deploy.sh does not define refuse_unlisted_settings once and call it from the Caddy arm",
+        )
 
     @staticmethod
     def listing(*directories):
