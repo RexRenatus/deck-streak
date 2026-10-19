@@ -143,6 +143,8 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - name: the locked dependency graph, every target's packages (the census reads it offline at the baseline)
+        run: cargo fetch --locked --manifest-path Cargo.toml
       - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: cargo-mutants@27.1.0
@@ -427,6 +429,8 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - name: the locked dependency graph, every target's packages (the rehearsal's baseline reads it as a shard's does)
+        run: cargo fetch --locked --manifest-path Cargo.toml
       - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: cargo-mutants@27.1.0
@@ -443,8 +447,6 @@ jobs:
           python3 scripts/memory_scope.py --report "$shard" -- cargo mutants --no-shuffle -vV --in-place -f crates/kernel/src/clock.rs --timeout 2300 --build-timeout 600 --output "$shard" || rc=$?
           echo "$rc" > "$shard/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
-      - name: fetch the locked dependency graph, so the offline census finds every package
-        run: cargo fetch --locked
       - name: one row, as the rows job proves it
         run: |
           mkdir -p "$RUNNER_TEMP/reports/rows"
