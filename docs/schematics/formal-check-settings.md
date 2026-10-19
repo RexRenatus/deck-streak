@@ -91,3 +91,86 @@ flowchart TD
 The formal check is a local check: a search of `.github/workflows/` at `32f6217` for `formal` finds
 no line. So the checker's half of this flow is read only by a local check, and its reading is recorded
 in `docs/red-first/SPEC-404.md`.
+
+## The ramp: from a property's header line to the run that fails on it
+
+- **Kind:** data flow.
+- **Read at:** dev `36c4783a`; every `path:line` in this section is at that commit.
+- **Decided by:** ADR-500 (SPEC-483, issue #549). It amends nothing above: the settings flow, its
+  agree and disagree table and its step table stand as written.
+
+`config/formal.json`'s `k` (`:2`) is the setting this section follows: the length of the streak of
+clean landings a property needs before it may block. The entry is `tla/WalletFloor`, the model of the
+coin wallet's ports (#106), and the property is `RefundWritesItsOwnMovement`. Solid edges are the
+path a reading takes; dotted edges are what does not read it.
+
+```mermaid
+flowchart TD
+    HDR["WalletFloor.tla:17<br/>@phx property RefundWritesItsOwnMovement ramp=block"]
+    KSET["config/formal.json:2<br/>k, the streak's length"]
+    INPUTS["the entry's inputs<br/>its files, the toolchain identity, the covered spans of WalletFloor.tla:2-11"]
+
+    subgraph CHECKER["the formal checker (outside this repository)"]
+        REG["the registry<br/>each property line and its ramp"]
+        STREAK["the streak<br/>first-parent landings with the inputs unchanged"]
+        FLIP["the ramp reading<br/>admitted, or a premature promotion"]
+        MC["MCWalletFloor.cfg:15<br/>TypeOK and the five properties, every fix on"]
+        WIT["five witness configurations, one defect each<br/>the refund's: RefundKeyedPerDay = FALSE"]
+        CARD["the card<br/>each property: its ramp, streak and clean state"]
+        REPORTED["at report: printed, the exit unmoved"]
+        FAILED["at block: the gate check fails"]
+    end
+
+    subgraph RUNS["the runs"]
+        HAND["the formal check at the head and at landing, against live dev"]
+        NOCI["CI: no formal job"]
+    end
+
+    subgraph PIN["the pin, in the Python tests CI runs"]
+        A1["A1: one line declares the property, at ramp=block"]
+        A2["A2: a fixture tree's report, missing and doubled lines refused"]
+    end
+
+    PORT["wallet_ports.rs:215<br/>the later-day refund: K-009, K-021, K-033"]
+    OUTSIDE["outside the model<br/>a refund that shares a deposit's key: K-009, K-021"]
+
+    HDR --> REG
+    KSET --> STREAK
+    INPUTS --> STREAK
+    REG --> FLIP
+    STREAK --> FLIP
+    REG --> MC
+    REG --> WIT
+    HAND --> MC
+    HAND --> WIT
+    HAND --> FLIP
+    MC -->|each invariant holds| CARD
+    WIT -->|violated, so caught| CARD
+    FLIP --> CARD
+    CARD -.->|a violation at report| REPORTED
+    CARD -->|a violation at block| FAILED
+    NOCI -.->|reads no ramp| CARD
+    HDR --> A1
+    A2 -.->|guards the reader A1 uses| A1
+    PORT --> OUTSIDE
+```
+
+### Where each step of the ramp lives, and what reads it red
+
+| step | where, at `36c4783a` | what reads it red | row |
+|---|---|---|---|
+| the ramp line | `formal/tla/WalletFloor/WalletFloor.tla:17` | A1, red at the commit that adds the pin, where the line reads `ramp=report` | `S48301` |
+| one line per property | the pin's reader, `scripts/tests/test_wallet_refund_ramp.py` | A2's doubled-line plant | `S48302` |
+| a line that is not `block` | the pin's reader | A2's `report` plant | `S48303` |
+| the streak and the flip | the checker's ramp reading, with `config/formal.json:2` | F1 of SPEC-483: any reading but admitted stops the delivery | none: a checker reading |
+| the invariants | `formal/tla/WalletFloor/MCWalletFloor.cfg:15` | F2: the head's gate check | none: unchanged |
+| the refund witness | `formal/tla/WalletFloor/witness/a-refund-guarded-once-ever-over-every-day.cfg:6`, `:12` | F2: caught | none: unchanged |
+| the other four witnesses | `witness/a-floor-read-outside-the-write.cfg`, `witness/a-once-ever-guard-read-on-its-own-day.cfg`, `witness/a-ledger-with-no-unique-key.cfg` and `witness/a-closed-day-mint-that-follows-its-base.cfg`, each checking its own property at `:12` | F2: each caught | none: unchanged |
+| a violation at block | `MCWalletFloor.cfg:9` in a scratch clone only, never committed | F3: fails at `block`, passes reported at `report` | none: a scratch plant |
+| the later-day refund | `crates/economy/tests/wallet_ports.rs:215` | the plant of `docs/red-first/SPEC-082.md:86-95` | none in this band |
+
+The model gives a refund its own source (`WalletFloor.tla:56`, `:80`), so its witness reaches a refund
+followed by a refund (K-033) and never a refund that shares a deposit's key (K-009, K-021): those two
+cases are held by the port test alone. No CI job runs the formal checker (#806), so the checker's half of
+this flow is read by hand at a delivery's head and at its landing, and recorded in
+`docs/red-first/SPEC-483.md`; the pin's half is read in CI.
