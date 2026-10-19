@@ -1013,22 +1013,28 @@ def baseline_log(seconds):
     ).encode("utf-8") + b"a stray \xff byte\n        PASS [   1.250s] (3/3) fix tests::triples\n"
 
 
-def shard_reports(root, reports, scopes=None, logs=None):
+def shard_reports(root, reports, scopes=None, logs=None, baselines=None):
     """Each shard's artifact, as the verdict's job downloads it: {shard: (exit, outcomes or None)}.
     A shard left out uploaded nothing. `scopes` maps a shard to its memory-scope record; a shard
     left out gets the zero record. `logs` maps a shard to its baseline log's bytes, or None for no
-    log; a shard left out gets a baseline whose slowest test took 12.345 s."""
+    log; a shard left out gets a baseline whose slowest test took 12.345 s. `baselines` maps a
+    shard to the exit its own baseline recorded, a string, or None for no `baseline/` record; a
+    shard left out gets a green one, "0" (SPEC-480 R11)."""
     for shard, (code, report) in reports.items():
         directory = root / f"mutation-rust-shard-{shard}"
         directory.mkdir(parents=True)
         write_scope(directory, (scopes or {}).get(shard))
         (directory / "cargo-mutants.exit").write_text(f"{code}\n", encoding="utf-8")
-        if report is not None:
-            (directory / "mutants.out" / "log").mkdir(parents=True)
-            (directory / "mutants.out" / "outcomes.json").write_text(json.dumps(report), "utf-8")
-            log = (logs or {}).get(shard, baseline_log("12.345"))
+        log = (logs or {}).get(shard, baseline_log("12.345"))
+        recorded = (baselines or {}).get(shard, "0")
+        if recorded is not None:
+            (directory / "baseline").mkdir()
+            (directory / "baseline" / "baseline.exit").write_text(f"{recorded}\n", "utf-8")
             if log is not None:
-                (directory / "mutants.out" / "log" / "baseline.log").write_bytes(log)
+                (directory / "baseline" / "baseline.log").write_bytes(log)
+        if report is not None:
+            (directory / "mutants.out").mkdir(parents=True)
+            (directory / "mutants.out" / "outcomes.json").write_text(json.dumps(report), "utf-8")
     return str(root)
 
 
@@ -1138,32 +1144,98 @@ class ALegProvesItsTimeoutCoversItsTests(unittest.TestCase):
             )
             control = fixture.judge("rust", "--shard-reports", within)
             self.assertEqual(control.returncode, 0, control.stdout + control.stderr)
-        # A baseline that names no log, a named log that is gone, a log that times no test and a
-        # report with no baseline each prove nothing: VOID by name.
-        unnamed = shard_outcomes(planned[2])
-        del unnamed["outcomes"][0]["log_path"]
-        headless = shard_outcomes(planned[2])
-        del headless["outcomes"][0]
+        # A named log that is gone and a log that times no test each prove nothing: VOID by name.
         cases = [
-            ("unnamed", {2: ("0", unnamed)}, {}, "its baseline outcome names no log"),
-            ("gone", {}, {2: None}, "its baseline log log/baseline.log is unreadable"),
+            ("gone", {}, {2: None}, "its baseline log is unreadable"),
             ("untimed", {}, {2: b"\n*** baseline\n\n   Compiling fix\n"}, "times no test"),
-            ("headless", {2: ("0", headless)}, {}, "its report holds no baseline outcome"),
         ]
         for name, bent, logs, finding in examined("baselines that prove nothing", cases):
             root = shard_reports(fixture.out / name, {**reports, **bent}, logs=logs)
             void = fixture.judge("rust", "--shard-reports", root)
             self.assertEqual(void.returncode, 3, void.stdout + void.stderr)
             self.assertIn(f"VOID mutation-rust-shard-2: {finding}", void.stdout)
-        self.assertIn(
-            "VOID mutation-rust-shard-2: its report holds no baseline outcome, so it cannot show "
-            "its timeout covers its tests",
-            void.stdout,
-        )
         # The timeout R7 holds a leg to is the one every cargo-mutants command carries.
         words = BOUNDS.split()
         module = verdict_module()
         self.assertEqual(module.MUTANT_TIMEOUT_SECONDS, int(words[words.index("--timeout") + 1]))
+
+
+class ALegIsJudgedAgainstItsOwnBoundedBaseline(unittest.TestCase):
+    """SPEC-480 A9 to A12 (R13): each leg the plan deals a mutant is judged against its own
+    baseline record, `baseline/baseline.exit` and `baseline/baseline.log`, which the leg writes
+    before cargo-mutants skips its own baseline. A leg with no record, a baseline that reached its
+    budget and a failed one each read VOID by name, and a report that holds no `Baseline` outcome,
+    as `--baseline=skip` writes it, is read whole."""
+
+    def legs(self):
+        """(the fixture, each leg's planned mutants, each leg's whole report)."""
+        fixture, planned = sharded(self)
+        reports = {shard: ("0", shard_outcomes(names)) for shard, names in enumerate(planned)}
+        return fixture, planned, reports
+
+    def unjudged(self, name, baseline):
+        """The verdict over the legs with leg 1's report gone and its baseline record `baseline`."""
+        fixture, _, reports = self.legs()
+        root = shard_reports(
+            fixture.out / name, {**reports, 1: ("0", None)}, baselines={1: baseline}
+        )
+        return fixture, reports, fixture.judge("rust", "--shard-reports", root)
+
+    def test_a_leg_whose_baseline_reached_its_budget_is_void(self):
+        _, _, done = self.unjudged("budget", "124")
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertIn(
+            "VOID mutation-rust-shard-1: its unmutated baseline reached its 3845 s budget, so no "
+            "mutant of it was judged",
+            done.stdout,
+        )
+        self.assertNotIn("VOID mutation-rust-shard-0", done.stdout)
+
+    def test_a_leg_whose_baseline_failed_is_void_with_its_exit(self):
+        _, _, done = self.unjudged("failed", "100")
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertIn(
+            "VOID mutation-rust-shard-1: its unmutated baseline failed (exit 100), so no mutant of "
+            "it was judged",
+            done.stdout,
+        )
+
+    def test_a_dealt_leg_that_left_no_baseline_record_is_void(self):
+        fixture, reports, done = self.unjudged("unrecorded", None)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertIn(
+            "VOID mutation-rust-shard-1: it left no record of its unmutated baseline, so no "
+            "mutant of it was judged",
+            done.stdout,
+        )
+        # The control: a fourth leg the deal gives no mutant, written as the deal writes an empty
+        # leg, leaves no directory and no record, and is not read for one.
+        path = fixture.out / "plan.json"
+        plan = json.loads(path.read_text(encoding="utf-8"))
+        legs = plan["shards"]["shards"]
+        self.assertEqual(len(legs), 3)
+        legs.append(
+            {"shard": 3, "mutants": [], "projected_seconds": plan["shards"]["baseline_seconds"]}
+        )
+        plan["shards"]["count"] = len(legs)
+        path.write_text(json.dumps(plan, indent=2) + "\n", encoding="utf-8")
+        whole = shard_reports(fixture.out / "whole", reports)
+        control = fixture.judge("rust", "--shard-reports", whole)
+        self.assertNotIn("mutation-rust-shard-3: it left no record", control.stdout)
+
+    def test_legs_with_a_green_bounded_baseline_and_no_baseline_outcome_are_whole(self):
+        fixture, planned, reports = self.legs()
+        skipped = {}
+        for shard, (code, report) in reports.items():
+            # As `--baseline=skip` writes it: the report less its first outcome, the Baseline one.
+            self.assertEqual(report["outcomes"][0]["scenario"], "Baseline")
+            skipped[shard] = (code, {**report, "outcomes": report["outcomes"][1:]})
+        root = shard_reports(fixture.out / "skipped", skipped)
+        done = fixture.judge("rust", "--shard-reports", root)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertNotIn("VOID", done.stdout)
+        count = sum(len(names) for names in planned)
+        self.assertIn(f"mutation: rust: cargo-mutants examined {count} (", done.stdout)
 
 
 class TheListingIsThePopulation(unittest.TestCase):

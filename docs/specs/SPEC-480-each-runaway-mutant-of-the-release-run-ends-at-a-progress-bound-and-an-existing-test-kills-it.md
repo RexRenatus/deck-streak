@@ -4,12 +4,17 @@
   mutant stopped by the memory scope; refers, closes nothing. Refers #322 (every survivor killed or
   recorded equivalent) and #825 (the Python legs' fit).
   **Context(s):** the mutation scripts (`scripts/`), the ingest crate's memory-state reader
-  (`crates/ingest`) and `formal/`; no workflow and no file of the mutation harness changes.
+  (`crates/ingest`) and `formal/`; section 9 adds the Rust legs' own bounded baseline, which
+  changes the `mutation-rust` and `mutation-verdict` jobs of `.github/workflows/ci.yml`, adds two
+  shell scripts and `tools/rust-baseline-budget/`. No file of the mutation harness changes.
 - **Decided by:** ADR-497 (a runaway mutant of the release run is killed by a progress bound that is
-  the identity on every admitted input).
-- **Schematic:** `docs/schematics/mutation-testing-python.md` section 11, added insert-only.
+  the identity on every admitted input); ADR-509 for section 9 (a Rust leg runs its own unmutated
+  baseline under a time budget, and cargo-mutants skips its own).
+- **Schematic:** `docs/schematics/mutation-testing-python.md` section 11, added insert-only;
+  section 9 is drawn in `docs/schematics/mutation-testing.md` section 12, added insert-only.
 - **Status:** delivered by the pull request that adds this file, with its tests and
-  `docs/red-first/SPEC-480.md`. **Mutation band:** S48000-S48099. **Models:** the new Lean entry
+  `docs/red-first/SPEC-480.md`; sections 9 to 11 by the pull request that amends this file and
+  that record. **Mutation band:** S48000-S48099. **Models:** the new Lean entry
   `lean/TokenProgress`.
 
 ## 1. The problem, measured
@@ -115,6 +120,20 @@ and no criterion of the pull request that lands it.
 | A6 | every Rust source of the release population reads byte-equal tokens with the guard and with the base copy, its examined count printed and 0 refused (R2) | `python3 -m unittest discover -s scripts/tests -p test_rust_tokens_identity.py -k test_every_rust_source_reads_the_same_tokens_with_the_guard` |
 | A7 | the bounded reader parses every seeded text as the base reader does, its examined and parsed counts printed and 0 refused (R5) | `cargo test -p deck-streak-ingest --test memory_state_lenient_bound -- --exact the_bounded_reader_parses_every_seeded_text_as_the_base_reader_does` |
 | A8 | `rust_tokens` agrees with every vector of `lean/TokenProgress`, each vector's tokens no more than its text's length (R7) | `python3 -m unittest discover -s scripts/tests -p test_mutation_verdict_python_kills.py -k test_the_tokens_agree_with_every_vector_of_their_proof` |
+| A9 | a dealt leg whose baseline record reads exit 124 is VOID by name, "its unmutated baseline reached its 3845 s budget, so no mutant of it was judged", the verdict exits 3, and a green sibling leg reads no VOID (R13) | `python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k test_a_leg_whose_baseline_reached_its_budget_is_void` |
+| A10 | a dealt leg whose baseline exited 100 is VOID by name, "its unmutated baseline failed (exit 100), so no mutant of it was judged" (R13) | `python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k test_a_leg_whose_baseline_failed_is_void_with_its_exit` |
+| A11 | a dealt leg that left no `baseline/baseline.exit` is VOID by name, "it left no record of its unmutated baseline, so no mutant of it was judged", and a leg the plan deals no mutant is not read for one (R13) | `python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k test_a_dealt_leg_that_left_no_baseline_record_is_void` |
+| A12 | legs whose reports hold no `Baseline` outcome, as `--baseline=skip` writes them, each with a green baseline record and a log that times its slowest test at 12.345 s, are read whole: the verdict exits 0 with no VOID line (R12, R13) | `python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k test_legs_with_a_green_bounded_baseline_and_no_baseline_outcome_are_whole` |
+| A13 | the budget is one figure: section 9's `BUDGET 3845 s` line, the baseline script's `budget=3845` and the verdict's `BASELINE_BUDGET_SECONDS` each read 3845; and the Timeouts script's `timeout=2300` and `margin=1.5` equal the verdict's `MUTANT_TIMEOUT_SECONDS` and `TIMEOUT_MARGIN` (R10, R16) | `python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_the_budget_and_the_timeout_are_one_figure_each` |
+| A14 | over a seven-mutant listing dealt to three legs, the baseline script runs `cargo nextest run --verbose --package=a --package=c --profile mutants` for leg 0, `--package=b` for leg 1 and `--package=a --package=d` for leg 2, each under `timeout --kill-after=60 3845` with `INSTA_UPDATE=no` and `INSTA_FORCE_PASS=0`, and a leg dealt no package exits 2 with no test run (R11) | `python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_the_packages_are_dealt_as_cargo_mutants_deals_them` |
+| A15 | a green baseline exits 0, keeps its run's output in its log, and prints one line naming exit 0, its whole seconds and its 3845 s budget (R11) | `python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_a_green_baseline_exits_0_and_keeps_its_log` |
+| A16 | a baseline whose run exits 100 before its budget exits 100 (R11) | `python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_a_failed_baseline_exits_its_own_code` |
+| A17 | a copy of the baseline script at a 1 s budget and a 1 s kill delay exits 124 both when its run ends at the budget's signal and when it must be killed after it (R11) | `python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_a_baseline_that_reaches_its_budget_exits_124` |
+| A18 | over a fixed four-shard fixture the committed derive prints its five lines exactly, the last `BUDGET 1951 s = ceil(1300.300 x 1.5)` (R15) | `python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_the_derive_prints_its_lines_over_a_fixed_fixture` |
+| A19 | the `mutation-rust` job's step `id: baseline` comes before the cargo-mutants step, wraps `bash scripts/mutation-baseline.sh` in the memory scope, records `baseline/baseline.exit` and sets `green=true` only on exit 0; the cargo-mutants step's `if:` requires that output, and its command's words are the base's with `--baseline=skip` before `--sharding` (R11, R12) | `python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_bounded_baseline_runs_before_cargo_mutants_which_skips_its_own` |
+| A20 | over a fixed three-leg fixture the Timeouts script prints its lines exactly: the package over the margin and the untimed package READ BY NAME, each Timeout by leg and name, and the package under the margin and the packages with no Timeout by their counts alone (R16) | `python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_each_package_prints_its_timeouts_and_an_over_margin_one_is_read_by_name` |
+| A21 | the `mutation-verdict` job runs `bash scripts/mutation-timeouts.sh "$RUNNER_TEMP/reports"` in a step after the verdict's, under `if: ${{ always() }}` (R16) | `python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_verdict_job_prints_the_timeouts_by_package` |
+| A22 | the plan's charge stays the measured one: `BASELINE_SECONDS` 2141, `CENSUS_SECONDS`, `SHARD_BOUND_SECONDS` 10800 and the timeout pair, as at the base (R14) | `python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k test_the_sizing_constants_are_the_measured_ones` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict_python_kills.py -k test_a_reading_that_does_not_advance_is_refused_at_its_start
@@ -125,6 +144,20 @@ A5: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict_pytho
 A6: python3 -m unittest discover -s scripts/tests -p test_rust_tokens_identity.py -k test_every_rust_source_reads_the_same_tokens_with_the_guard
 A7: cargo test -p deck-streak-ingest --test memory_state_lenient_bound -- --exact the_bounded_reader_parses_every_seeded_text_as_the_base_reader_does
 A8: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict_python_kills.py -k test_the_tokens_agree_with_every_vector_of_their_proof
+A9: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k test_a_leg_whose_baseline_reached_its_budget_is_void
+A10: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k test_a_leg_whose_baseline_failed_is_void_with_its_exit
+A11: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k test_a_dealt_leg_that_left_no_baseline_record_is_void
+A12: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k test_legs_with_a_green_bounded_baseline_and_no_baseline_outcome_are_whole
+A13: python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_the_budget_and_the_timeout_are_one_figure_each
+A14: python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_the_packages_are_dealt_as_cargo_mutants_deals_them
+A15: python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_a_green_baseline_exits_0_and_keeps_its_log
+A16: python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_a_failed_baseline_exits_its_own_code
+A17: python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_a_baseline_that_reaches_its_budget_exits_124
+A18: python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_the_derive_prints_its_lines_over_a_fixed_fixture
+A19: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_bounded_baseline_runs_before_cargo_mutants_which_skips_its_own
+A20: python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_each_package_prints_its_timeouts_and_an_over_margin_one_is_read_by_name
+A21: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_verdict_job_prints_the_timeouts_by_package
+A22: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k test_the_sizing_constants_are_the_measured_ones
 ```
 
 A1 is red first: at the base `rust_tokens` holds no guard, so the stand-in's reading at position 1
@@ -135,6 +168,18 @@ S48001 to S48006 (A3 also of the guard's own mutant), whose mutants the base can
 A5 is A3's non-vacuity control; A6 and A7 are the identity proofs, equal at the base by
 construction, the second with row S48007 as its red; and A8 holds the code to the Lean entry's
 vectors. A6, A7 and A8 enumerate what they read, print the count they examined and refuse zero.
+
+A9 to A12, A19 and A21 are red first at the base, each by assertion: the base's verdict reads
+the report's own `Baseline` outcome, so A9 to A11 find no line naming a budget, a failure or a
+missing record and A12 reads its legs VOID; and the base's workflow holds no baseline step and
+no Timeouts step. A14 to A17 and A20 are red over a stub of each new script, committed with
+them, that keeps every input and runs the base's test command unbounded, in the default
+environment, with no deal, and prints no package: each fails by assertion, never by a missing
+file. A13, A18 and A22 are recorded `not red`, each with its reason: A13 pins three figures the
+build writes together, its red row S48008 and the verdict's own constant mutants killed by A9;
+A18 pins the committed derive, whose code lines are proved equal to those the budget was sized
+by, its red row S48028; and A22 pins the charge the base already holds. Every criterion of
+section 9 is read in the pull request's checks, and the reds on its red push.
 
 ## 4. File manifest
 
@@ -155,13 +200,38 @@ vectors. A6, A7 and A8 enumerate what they read, print the count they examined a
 | `docs/schematics/mutation-testing-python.md` | docs | section 11 appended, insert-only |
 | `docs/red-first/SPEC-480.md` | docs | new: the red-first record |
 | `changelog.d/release-mutation-legs-480.md` | docs | new: the changelog fragment |
+| `.github/workflows/ci.yml` | CI | section 9: in `mutation-rust`, the step `id: baseline` before cargo-mutants, the cargo-mutants step's `if:` gate and `--baseline=skip` (R11, R12); in `mutation-verdict`, the Timeouts step after the verdict's (R16) |
+| `scripts/mutation-baseline.sh` | CI scripts | new: the leg's own bounded baseline (R11) |
+| `scripts/mutation-timeouts.sh` | CI scripts | new: the Timeouts by package (R16) |
+| `scripts/mutation-verdict.py` | the verdict | section 9: `BASELINE_BUDGET_SECONDS` and `BASELINE_BUDGET_EXIT`, and `baseline_void` over the leg's own record, called for every dealt leg in `judge_rust` (R13) |
+| `scripts/tests/test_mutation_verdict.py` | tests | section 9: class `ALegIsJudgedAgainstItsOwnBoundedBaseline` (A9 to A12); `shard_reports` writes each leg's baseline record; SPEC-362 A6's test reads the leg's own log, its two report-outcome cases removed |
+| `scripts/tests/test_memory_cap_verdict.py` | tests | its shard fixtures write a green baseline record |
+| `scripts/tests/test_not_started_legs.py` | tests | its listed legs read their baseline record |
+| `scripts/tests/fixtures/not-started-legs/listed/mutation-rust-shard-0/baseline/baseline.exit` | tests | new: the listed leg's green baseline exit |
+| `scripts/tests/fixtures/not-started-legs/listed/mutation-rust-shard-0/baseline/baseline.log` | tests | new: the listed leg's baseline log |
+| `scripts/tests/test_release_rust_ceiling.py` | tests | its shard fixtures write a green baseline record |
+| `scripts/tests/test_verdict_download.py` | tests | its shard fixtures write a green baseline record |
+| `scripts/tests/test_mutation_workflows.py` | tests | class `TheRustLegRunsItsBoundedBaselineFirst` (A19, A21) |
+| `scripts/tests/test_mutation_baseline.py` | tests | new: A13 to A18 and A20, with stand-in `cargo` and `timeout` first on `PATH` |
+| `scripts/tests/test_memory_scope.py` | tests | `CI_LEG` gains `--baseline=skip` |
+| `tools/rust-baseline-budget/size_budget.py` | tools | new: the committed derive (R15) |
+| `scripts/mutation-rows.d/S48000-S48099.json` | rows | S48008 to S48038 in `SCRIPT_MUTATIONS` |
+| `docs/schematics/mutation-testing.md` | docs | section 12 appended, insert-only |
+| `docs/decisions/ADR-509-a-rust-leg-runs-its-own-unmutated-baseline-under-a-time-budget-and-cargo-mutants-skips-its-own.md` | docs | new: the decision of section 9 |
+| `docs/red-first/SPEC-480.md` | docs | section 9's criteria, A9 to A22 |
+| `changelog.d/rust-baseline-budget-822.md` | docs | new: section 9's changelog fragment |
 
 ## 5. What this does NOT cover
 
 - The per-mutant memory bound in `scripts/mutation_python.py` (ADR-497 D7), held until the release pull request merges (#822).
 - The scripts class's unexplained survivors: ADR-451's kill parts 2 to 6 (SPEC-438 to SPEC-442), each re-derived from the cure's measure after this land and never from an earlier part's build (#822).
 - The 107 survivors in `scripts/mutation_rows.py`, which an open change to that file and its test may move before part 2 reads them (#954).
-- The rust shards' red baselines read VOID under the class FAIL (#822).
+- The rust shards' red baselines, which section 9 now bounds by each leg's own baseline budget
+  and reads VOID with their reasons; its closing run is read in section 11 (#822).
+- A package the closing run's Timeouts lines mark READ BY NAME, which becomes a follow-up item
+  read by its Timeouts' names, never a change to section 9 (#822).
+- A skipped baseline that no leg runs, and a raised per-mutant timeout: each narrows the gate,
+  and the owner's ruling refuses both (#822).
 - The open change to the verdict script and the Python schematic, which shares two of this manifest's files; whichever lands second re-reads the other's lines (#873).
 - Every survivor killed or recorded equivalent, which is the closing run's (#322), and the Python legs' fit to their job (#825).
 
@@ -179,6 +249,17 @@ vectors. A6, A7 and A8 enumerate what they read, print the count they examined a
   runs `scripts/tests` reads it.
 - `lean/TokenProgress` covers `rust_tokens` and `block_end`, so an edit of either, #873's included,
   reads the entry STALE until it is re-ported and stamped.
+- Section 9's baseline deals its packages from the plan's listing as cargo-mutants deals its
+  shards; a pinned cargo-mutants that dealt otherwise would test a mutant whose package no
+  baseline ran. A14 pins the deal, and the tool's pin in the workflow moves only by a change
+  that reads A14 again.
+- A nextest status line of another shape times no test: R13 then reads the leg VOID and R16
+  reads its packages untimed, READ BY NAME, so a format change fails closed.
+- A leg's whole baseline may now take its 3845 s budget where the plan charges 3662 s (run 39151539183's plan),
+  and the release deal's slowest leg then projects at 10690 s of 10800 (run 39151539183's plan); the
+  verdict's legs line reads any leg the job's bound stops.
+- The two shell scripts are outside the Python mutant population, so rows S48008 to S48038 are
+  their only mutants, each mutant checked by `bash -n` before its row ships.
 
 ## 7. The cure's measure after the land
 
@@ -205,3 +286,137 @@ Each find occurs once in its target at `36c4783a`, and each killer is one test.
 The six Python rows mirror the release run's six runaway mutants. Under the guard each ends at its
 first stalled token; without it each runs until memory ends it, so none of them is installed where
 the guard is absent. S48007 is installed only where the bound of R5 holds.
+
+## 9. Requirements of the Rust legs' baseline budget
+
+Run 39033655190 of #822 measured why its rust class read VOID. cargo-mutants has one `--timeout`,
+which bounds a baseline's tests as well as each mutant's (ADR-328), and 107 of the run's 192 Rust
+legs' baselines read Timeout at 2300.0 s to 2300.1 s of test (run 39033655190), so no mutant of those
+legs was judged. The owner's ruling bounds each leg's own unmutated baseline by a time budget sized
+from that run's whole legs, and keeps every mutant at the 2300 s timeout (ADR-509).
+
+R10. The budget is 3845 s, the largest whole baseline of run 39033655190 (build and test together)
+times SPEC-362 R7's margin 1.5, rounded up:
+`BUDGET 3845 s = ceil(2562.744 x 1.5)` (run 39033655190).
+The derive of R15 examined 192 shards of run 39033655190: 85 whole, 107 whose baseline read Timeout, 0 other.
+Its largest whole baseline was mutation-rust-shard-121 of run 39033655190: build 300.8 s, test 2261.9 s.
+The figure is written three times, each equal: the `BUDGET` line above, `budget=3845` in
+`scripts/mutation-baseline.sh`, and `BASELINE_BUDGET_SECONDS` in `scripts/mutation-verdict.py`.
+
+R11. Each `mutation-rust` leg runs its own unmutated baseline before cargo-mutants, in a step
+`id: baseline` of `.github/workflows/ci.yml` that runs `bash scripts/mutation-baseline.sh` inside
+the memory scope (SPEC-196). The script deals the packages of the leg's mutants from the plan's
+listing, `listed.json`, as cargo-mutants deals its round-robin shards (mutant `i` of the listing
+to leg `i mod n`), sorted and unique, and runs one
+`cargo nextest run --verbose --package=<each> --profile mutants` with `INSTA_UPDATE=no` and
+`INSTA_FORCE_PASS=0`, as cargo-mutants' own baseline does, under `timeout --kill-after=60 3845`.
+It exits 124 when its run ended at or past the budget, whether `timeout` exited 124 or 137, else
+its run's own exit, and 2, with no test run, when the leg is dealt no package or the listing
+cannot be read; it prints one line naming its exit, its whole seconds and its budget. The step
+records that exit in `baseline/baseline.exit` and the run's output in `baseline/baseline.log`
+under the leg's report directory, which the leg's artifact uploads, and sets its output `green`
+only on exit 0. The step itself always succeeds.
+
+R12. The cargo-mutants step runs only when the baseline step's `green` output is `true`, and its
+command is the base's with `--baseline=skip` before `--sharding`. Every other word,
+`--timeout 2300 --build-timeout 600` included, is unchanged, so each mutant keeps the per-mutant
+timeout of SPEC-327 R2, and no mutant is filtered or skipped. A leg whose baseline is not green
+runs no mutant.
+
+R13. The verdict's rust class judges each leg the plan deals a mutant against that leg's own
+baseline record: `baseline_void` is called for every dealt leg, not only for one with a whole
+report. A leg with no `baseline/baseline.exit` reads VOID "it left no record of its unmutated
+baseline, so no mutant of it was judged"; exit 124 reads VOID "its unmutated baseline reached
+its 3845 s budget, so no mutant of it was judged"; any other non-zero exit reads VOID "its
+unmutated baseline failed (exit <code>), so no mutant of it was judged". A green baseline is then
+held to SPEC-362 R7 over `baseline/baseline.log`: an unreadable log, a log that times no test,
+and a slowest test whose time times 1.5 passes 2300 s each read VOID, as before. A VOID is never
+a pass, and a report that holds no `Baseline` outcome, as `--baseline=skip` writes it, is read
+whole.
+
+R14. The plan's charge does not change. `BASELINE_SECONDS` 2141, plus the census term of each
+listed census package (`CENSUS_SECONDS`, 1521 for `deck-streak-progression`),
+`SHARD_BOUND_SECONDS` 10800 and `RUST_RELEASE_CEILING` 192 stay as at the base.
+Over the release plan's Rust listing of 9383 mutants, that charge, 3662 s, deals 192 legs of 192, the slowest projected at 10507 s of 10800 (run 39151539183's plan).
+The same deal with each leg's baseline at its whole 3845 s budget projects its slowest leg at 10690 s of 10800 (run 39151539183's plan).
+A charge that dealt more than 192 Rust legs would refuse the plan whole, as at the base.
+
+R15. The derive is committed. `tools/rust-baseline-budget/size_budget.py` holds the derive the
+owner's ruling sized the budget by, its code lines byte for byte under a header that names its
+inputs and its command. From a checkout of the repository, its derive command is
+`gh run download 39033655190 -p 'mutation-rust-shard-*' -D <dir>`, then
+`python3 -I -B tools/rust-baseline-budget/size_budget.py <dir>`, and over run 39033655190's
+artifacts it prints the figures of R10,
+its last line `BUDGET 3845 s = ceil(2562.744 x 1.5)` (run 39033655190).
+Over a fixed four-shard fixture it prints the lines A18 states.
+
+R16. The verdict job prints each Rust package's Timeouts, and adds no Python leg: a step of the
+`mutation-verdict` job, after the verdict's and under `if: ${{ always() }}`, runs
+`bash scripts/mutation-timeouts.sh` over the job's reports directory. For each package a leg's
+`outcomes.json` names, it prints one line: the package, how many of its mutants read Timeout, how
+many it has, and its baseline test time, the sum of the seconds nextest gives that package's
+tests in a leg's green `baseline/baseline.log`, the largest over the legs whose baseline tested
+it, or `untimed` when no log times it. A package with a Timeout whose baseline test time, times
+1.5, passes 2300 s (a time over 2300/1.5 s), or that is untimed, is marked READ BY NAME, and each
+of its Timeouts is printed by leg and mutant name, so that the closing run's reader reads those
+Timeouts by name before ruling the run complete and none counts silently as a kill. The script
+first prints how many leg reports and green baseline logs it read, and exits 0 unless a report
+cannot be read, which fails the job.
+
+R17. After the land, the next push-triggered run of #822 is the closing run, read by name
+(section 11). It is no criterion of the pull request that lands section 9.
+
+## 10. Mutation rows S48008 to S48038
+
+Each find occurs once in its target at the head that lands section 9: `\n` in a find is its
+line break, and `\|` in a cell is its `|`. Each killer is the one test its criterion names.
+Each shell row's mutant is checked by `bash -n` before the row ships, since the rows' viability
+check parses no shell.
+
+| id | table | target | find | replace | killer |
+|---|---|---|---|---|---|
+| S48008 | `SCRIPT_MUTATIONS` | `scripts/mutation-baseline.sh` | `budget=3845` | `budget=3844` | A13 |
+| S48009 | `SCRIPT_MUTATIONS` | `scripts/mutation-baseline.sh` | `select(.key % $n == $k)` | `select(.key % $n != $k)` | A14 |
+| S48010 | `SCRIPT_MUTATIONS` | `scripts/mutation-baseline.sh` | `\| unique \| .[] \|` | `\| .[] \|` | A14 |
+| S48011 | `SCRIPT_MUTATIONS` | `scripts/mutation-baseline.sh` | `--profile mutants >` | `--profile default >` | A14 |
+| S48012 | `SCRIPT_MUTATIONS` | `scripts/mutation-baseline.sh` | `INSTA_UPDATE=no INSTA_FORCE_PASS=0` | `INSTA_UPDATE=always INSTA_FORCE_PASS=0` | A14 |
+| S48013 | `SCRIPT_MUTATIONS` | `scripts/mutation-baseline.sh` | `dealt no package by $listed"\n    exit 2` | `dealt no package by $listed"\n    exit 0` | A14 |
+| S48014 | `SCRIPT_MUTATIONS` | `scripts/mutation-baseline.sh` | `--kill-after=60 "$budget"` | `--kill-after=60 "$((budget + 1))"` | A14 |
+| S48015 | `SCRIPT_MUTATIONS` | `scripts/mutation-baseline.sh` | `--kill-after=60` | `--kill-after=600` | A14 |
+| S48016 | `SCRIPT_MUTATIONS` | `scripts/mutation-baseline.sh` | `[ "$rc" -ne 0 ] && [ "$elapsed"` | `[ "$rc" -eq 0 ] && [ "$elapsed"` | A17 |
+| S48017 | `SCRIPT_MUTATIONS` | `scripts/mutation-baseline.sh` | `-ge "$budget" ]; then rc=124` | `-lt "$budget" ]; then rc=124` | A16 |
+| S48018 | `SCRIPT_MUTATIONS` | `scripts/mutation-baseline.sh` | `then rc=124; fi` | `then rc=125; fi` | A17 |
+| S48019 | `SCRIPT_MUTATIONS` | `scripts/mutation-baseline.sh` | `exit "$rc"` | `exit 0` | A16 |
+| S48020 | `SCRIPT_MUTATIONS` | `.github/workflows/ci.yml` | `steps.baseline.outputs.green == 'true'` | `steps.baseline.outputs.green != 'true'` | A19 |
+| S48021 | `SCRIPT_MUTATIONS` | `.github/workflows/ci.yml` | `git.diff" --baseline=skip --sharding` | `git.diff" --sharding` | A19 |
+| S48022 | `SCRIPT_MUTATIONS` | `.github/workflows/ci.yml` | `if [ "$rc" -eq 0 ]; then echo "green=true"` | `if [ "$rc" -ne 0 ]; then echo "green=true"` | A19 |
+| S48023 | `SCRIPT_MUTATIONS` | `.github/workflows/ci.yml` | `echo "$rc" > "$out/baseline/baseline.exit"` | `echo "$rc" > "$out/baseline.exit"` | A19 |
+| S48024 | `SCRIPT_MUTATIONS` | `.github/workflows/ci.yml` | `each over-margin package by name\n        if: ${{ always() }}` | `each over-margin package by name\n        if: ${{ success() }}` | A21 |
+| S48025 | `SCRIPT_MUTATIONS` | `scripts/mutation-verdict.py` | `reached its {BASELINE_BUDGET_SECONDS} s budget` | `reached its {MUTANT_TIMEOUT_SECONDS} s budget` | A9 |
+| S48026 | `SCRIPT_MUTATIONS` | `scripts/mutation-verdict.py` | `failed (exit {code})` | `failed (exit {BASELINE_BUDGET_EXIT})` | A10 |
+| S48027 | `SCRIPT_MUTATIONS` | `scripts/mutation-verdict.py` | `it left no record of its unmutated baseline` | `it left a record of its unmutated baseline` | A11 |
+| S48028 | `SCRIPT_MUTATIONS` | `tools/rust-baseline-budget/size_budget.py` | `MARGIN = 1.5` | `MARGIN = 1.4` | A18 |
+| S48029 | `SCRIPT_MUTATIONS` | `scripts/mutation-timeouts.sh` | `$3 == "Timeout"` | `$3 != "Timeout"` | A20 |
+| S48030 | `SCRIPT_MUTATIONS` | `scripts/mutation-timeouts.sh` | `timeouts[package] > 0 &&` | `timeouts[package] >= 0 &&` | A20 |
+| S48031 | `SCRIPT_MUTATIONS` | `scripts/mutation-timeouts.sh` | `(!(package in most) \|\| most[package] * margin > timeout)` | `(most[package] * margin > timeout)` | A20 |
+| S48032 | `SCRIPT_MUTATIONS` | `scripts/mutation-timeouts.sh` | `most[package] * margin > timeout)` | `most[package] * margin < timeout)` | A20 |
+| S48033 | `SCRIPT_MUTATIONS` | `scripts/mutation-timeouts.sh` | `timeout=2300` | `timeout=2200` | A20 |
+| S48034 | `SCRIPT_MUTATIONS` | `scripts/mutation-timeouts.sh` | `margin=1.5` | `margin=1.4` | A20 |
+| S48035 | `SCRIPT_MUTATIONS` | `scripts/mutation-timeouts.sh` | `sum[package] += head` | `sum[package] = head` | A20 |
+| S48036 | `SCRIPT_MUTATIONS` | `scripts/mutation-timeouts.sh` | `$3 + 0 > most[$2]` | `$3 + 0 < most[$2]` | A20 |
+| S48037 | `SCRIPT_MUTATIONS` | `scripts/mutation-timeouts.sh` | `sub(/::.*/, "", package)` | `sub(/::$/, "", package)` | A20 |
+| S48038 | `SCRIPT_MUTATIONS` | `scripts/mutation-timeouts.sh` | `sub(/^\([[:space:]]*[0-9]+\/[0-9]+\)[[:space:]]+/, "", rest)` | `sub(/^\(\)/, "", rest)` | A20 |
+
+The verdict rows S48025 to S48027 sit in f-strings, which the Python mutation run does not
+mutate; the verdict's other new lines are its own listed mutants, killed by A9 to A12. A row
+on a figure (S48008, S48028, S48033, S48034) pins the value its criterion reads.
+
+## 11. The closing run after the land
+
+Who: the next push-triggered run of #822 after the pull request that lands section 9, read by
+name by the release's reviewer. When: once that run completes. Record: each Rust leg's baseline
+line, the rust class's VOID lines by their reasons, and the Timeouts-by-package lines of the
+verdict job. Each package those lines mark READ BY NAME has its Timeouts read by name before the
+run is ruled complete, and none counts silently as a kill; such a package becomes a follow-up
+item, never a change to section 9. It is no acceptance criterion: the pull request's own checks
+cannot run it, and it is read after the land.

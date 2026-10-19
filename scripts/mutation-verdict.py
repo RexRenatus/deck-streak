@@ -969,6 +969,12 @@ RUST_MATRIX_LEGS = 256
 #: leg's slowest baseline test must keep under it (SPEC-362 R7).
 MUTANT_TIMEOUT_SECONDS = 2300
 TIMEOUT_MARGIN = 1.5
+#: The budget of a Rust leg's own unmutated baseline, its build and its tests together, which
+#: the leg runs before cargo-mutants skips its own (SPEC-480 R10, R13): the figure SPEC-480
+#: section 9 records with its derive command, which `scripts/mutation-baseline.sh` holds.
+BASELINE_BUDGET_SECONDS = 3845
+#: The exit `scripts/mutation-baseline.sh` records for a baseline that reached its budget.
+BASELINE_BUDGET_EXIT = 124
 
 
 def projected(costs: list[int], count: int, baseline: int) -> list[int]:
@@ -1681,38 +1687,29 @@ def examined_sum(verdict: Verdict, plan: dict, whole: list[tuple[str, dict]]) ->
 NEXTEST_STATUS = re.compile(r"^\s*[A-Z]+\s+\[\s*([\d.]+)s\]")
 
 
-def baseline_void(where: str, directory: pathlib.Path, report: dict) -> str | None:
-    """Why a leg cannot show that the per-mutant timeout covers its own tests, or None when it can
-    (SPEC-362 R7): its slowest baseline test, times the margin, must stay within the timeout, or a
-    mutant only that test kills could read as a timeout. A report with no baseline, a baseline
-    that names no log or an unreadable one, and a log that times no test prove nothing."""
-    baseline = next(
-        (
-            o
-            for o in report.get("outcomes", [])
-            if isinstance(o, dict)
-            if o.get("scenario") == "Baseline"
-        ),
-        None,
-    )
-    if baseline is None:
+def baseline_void(where: str, directory: pathlib.Path) -> str | None:
+    """Why a leg's mutants cannot be judged against its own unmutated baseline, or None when they
+    can (SPEC-480 R13, SPEC-362 R7). The leg runs its baseline before cargo-mutants, which skips
+    its own, and records its exit and its log under `baseline/`: a leg with no record, a baseline
+    that reached its budget or failed, and a log that times no test prove nothing; and its slowest
+    test, times the margin, must stay within the per-mutant timeout, or a mutant only that test
+    kills could read as a timeout."""
+    here = directory / "baseline"
+    code = read_exit(here / "baseline.exit")
+    if code is None:
+        return f"{where}it left no record of its unmutated baseline, so no mutant of it was judged"
+    if code == BASELINE_BUDGET_EXIT:
         return (
-            f"{where}its report holds no baseline outcome, so it cannot show its timeout covers "
-            f"its tests"
+            f"{where}its unmutated baseline reached its {BASELINE_BUDGET_SECONDS} s budget, so no "
+            f"mutant of it was judged"
         )
-    log_path = baseline.get("log_path")
-    if not isinstance(log_path, str):
-        return (
-            f"{where}its baseline outcome names no log, so it cannot show its timeout covers its "
-            f"tests"
-        )
-    log = directory / "mutants.out" / "log" / pathlib.PurePosixPath(log_path).name
+    if code != 0:
+        return f"{where}its unmutated baseline failed (exit {code}), so no mutant of it was judged"
     try:
-        text = log.read_bytes().decode("utf-8", "replace")
+        text = (here / "baseline.log").read_bytes().decode("utf-8", "replace")
     except OSError:
         return (
-            f"{where}its baseline log {log_path} is unreadable, so it cannot show its timeout "
-            f"covers its tests"
+            f"{where}its baseline log is unreadable, so it cannot show its timeout covers its tests"
         )
     times = [
         float(found.group(1))
@@ -1721,8 +1718,8 @@ def baseline_void(where: str, directory: pathlib.Path, report: dict) -> str | No
     ]
     if not times:
         return (
-            f"{where}times no test in its baseline log {log_path}, so it cannot show its timeout "
-            f"covers its tests"
+            f"{where}times no test in its baseline log, so it cannot show its timeout covers its "
+            f"tests"
         )
     slowest = max(times)
     if TIMEOUT_MARGIN * slowest > MUTANT_TIMEOUT_SECONDS:
@@ -1776,7 +1773,7 @@ def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
     stopped: set[tuple[str, str]] = set()
     if args.shard_reports:
         held = dict(whole)
-        for shard in range(len((plan.get("shards") or {}).get("shards") or [])):
+        for shard, leg in enumerate((plan.get("shards") or {}).get("shards") or []):
             where = f"mutation-rust-shard-{shard}: "
             directory = pathlib.Path(args.shard_reports) / f"mutation-rust-shard-{shard}"
             stopped |= {
@@ -1785,8 +1782,9 @@ def judge_rust(verdict: Verdict, plan: dict, args: argparse.Namespace) -> None:
                     verdict.fail, deferred.append, verdict.say, where, directory, held.get(where)
                 )
             }
-            if where in held:
-                gap = baseline_void(where, directory, held[where])
+            # A leg the plan gives no mutant is not started and leaves no baseline (SPEC-290).
+            if leg["mutants"]:
+                gap = baseline_void(where, directory)
                 if gap is not None:
                     deferred.append(gap)
         deferred.extend(population_gaps(plan, args))

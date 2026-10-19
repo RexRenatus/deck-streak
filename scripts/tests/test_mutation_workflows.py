@@ -1336,5 +1336,64 @@ class TheBriefTeachesTheRecord(unittest.TestCase):
                 self.assertNotIn(form, words, f"{name} teaches {form}")
 
 
+#: A `mutation-rust` leg's cargo-mutants command before SPEC-480 section 9, spelled out so that
+#: the leg's command is held to it word for word.
+BASE_LEG_COMMAND = (
+    'python3 scripts/memory_scope.py --report "$out" -- cargo mutants --no-shuffle -vV --in-place '
+    '--in-diff "$RUNNER_TEMP/mutation/git.diff" --sharding round-robin --shard "$SHARD/$SHARDS" '
+    '--timeout 2300 --build-timeout 600 --output "$out" || rc=$?'
+)
+BASELINE_STEP_ID = re.compile(r"(?m)^        id: baseline$")
+
+
+class TheRustLegRunsItsBoundedBaselineFirst(unittest.TestCase):
+    """SPEC-480 A19 and A21 (R11, R12, R16): each `mutation-rust` leg runs its own unmutated
+    baseline in the memory scope and records it before cargo-mutants, which runs only after a
+    green one and skips its own; and the verdict job prints each Rust package's Timeouts after
+    the verdict, whatever the verdict read."""
+
+    def test_the_bounded_baseline_runs_before_cargo_mutants_which_skips_its_own(self):
+        rust = steps(jobs(workflow(CI)).get("mutation-rust", ""))
+        baseline = next((at for at, step in enumerate(rust) if BASELINE_STEP_ID.search(step)), None)
+        mutants = next((at for at, step in enumerate(rust) if "cargo mutants " in step), None)
+        self.assertIsNotNone(baseline, "mutation-rust has no step whose id is baseline")
+        self.assertIsNotNone(mutants, "mutation-rust runs no cargo-mutants")
+        self.assertLess(baseline, mutants)
+        lines = [
+            'python3 scripts/memory_scope.py --report "$out/baseline" -- bash '
+            'scripts/mutation-baseline.sh "$RUNNER_TEMP/mutation/listed.json" "$SHARD" "$SHARDS" '
+            '"$out/baseline/baseline.log" || rc=$?',
+            'echo "$rc" > "$out/baseline/baseline.exit"',
+            'if [ "$rc" -eq 0 ]; then echo "green=true" >> "$GITHUB_OUTPUT"; fi',
+        ]
+        for line in examined("lines of the baseline step", lines):
+            self.assertIn(line, rust[baseline])
+        condition = STEP_IF.search(rust[mutants])
+        self.assertIsNotNone(condition, "the cargo-mutants step has no if:")
+        self.assertEqual(
+            condition.group(1),
+            "${{ needs.mutation-plan.outputs.rust == 'true' && "
+            "steps.baseline.outputs.green == 'true' }}",
+        )
+        command = next((x for x in rust[mutants].splitlines() if "cargo mutants " in x), "")
+        words = BASE_LEG_COMMAND.split()
+        words.insert(words.index("--sharding"), "--baseline=skip")
+        self.assertEqual(command.split(), words)
+        self.assertIn("--timeout 2300 --build-timeout 600", command)
+
+    def test_the_verdict_job_prints_the_timeouts_by_package(self):
+        verdict = steps(jobs(workflow(CI)).get("mutation-verdict", ""))
+        judge = next(
+            (at for at, step in enumerate(verdict) if "mutation-verdict.py judge" in step), None
+        )
+        self.assertIsNotNone(judge, "mutation-verdict runs no judge")
+        last = verdict[-1]
+        self.assertIn('run: bash scripts/mutation-timeouts.sh "$RUNNER_TEMP/reports"', last)
+        condition = STEP_IF.search(last)
+        self.assertIsNotNone(condition, "the Timeouts step has no if:")
+        self.assertEqual(condition.group(1), "${{ always() }}")
+        self.assertLess(judge, len(verdict) - 1)
+
+
 if __name__ == "__main__":
     unittest.main()
