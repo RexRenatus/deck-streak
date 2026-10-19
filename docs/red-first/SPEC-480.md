@@ -110,3 +110,41 @@ A13: not red: pins three figures the build writes together; its red is row S4800
 A18: not red: pins the committed derive, whose code lines are proved equal to those the budget was sized by; its red is row S48028
 A22: not red: pins the charge the base already holds
 ```
+
+The reds were read in job 117884587210, the job that runs `scripts/tests` over the red commit 16b8763c: 11 failures, each a
+test of A9 to A12, A14 to A17 or A19 to A21, and no other. The commits between the red and the greens that change a test file
+are fb01db13 (SPEC-362 A6's two report-outcome cases, the old log copy of `shard_reports` and A13's class) and e6f02d15
+(`CI_LEG`): neither changes an assertion of a criterion recorded red here. Each green names the commit that completes its
+criterion's code, and CI reads every green over this push's tip, the one head it runs. `git diff --quiet fb01db13 HEAD --
+scripts/tests/test_mutation_verdict.py scripts/mutation-verdict.py` and `git diff --quiet e6f02d15 HEAD --
+scripts/tests/test_mutation_workflows.py .github/workflows/ci.yml` each exit 0 at that tip, for A9 to A12 and for A19 and A21.
+For A14 to A17 and A20 the same command cannot, since fb01db13 and daa6eabd add A13's and A18's classes, imports and constants
+to `scripts/tests/test_mutation_baseline.py`. There each top-level statement of that module at 7b5d68d5 and at 1be56629, its
+docstring alone excepted, is byte-equal at that tip, the classes `ALegRunsItsOwnBoundedBaseline` and
+`EachPackagesTimeoutsArePrinted` among them, and `git diff --quiet 7b5d68d5 HEAD -- scripts/mutation-baseline.sh` and `git
+diff --quiet 1be56629 HEAD -- scripts/mutation-timeouts.sh` each exit 0.
+
+```red-first
+A9: red at 16b8763c4845b6462d9f449c1c43e305deffefc2: AssertionError: 'VOID mutation-rust-shard-1: its unmutated baseline reached its 3845 s budget, so no mutant of it was judged' not found in 'mutation: rust: crates/fix/src/lib.rs: 1 changed code line(s)\nmutation: rust: VOID mutation-rust-shard-1: no report: its outcomes.json holds no cargo-mutants outcomes\nmutation: rust: cargo-mutants examined 91 (caught 91, missed 0, timeout 0), unviable 0, of 91 on the diff\nmutation: rust: missed 0: equivalent 0, unexplained 0\nmutation: rust: examined 91 by cargo-mutants and 0 by rows\nmutation: rust: verdict: VOID: 1 measurement(s) the class needs are missing\nexamined 91\n'
+A9: green at fb01db13ecf2958ddcd7e1dfd22655637abe9e8b
+A10: red at 16b8763c4845b6462d9f449c1c43e305deffefc2: AssertionError: 'VOID mutation-rust-shard-1: its unmutated baseline failed (exit 100), so no mutant of it was judged' not found in 'mutation: rust: crates/fix/src/lib.rs: 1 changed code line(s)\nmutation: rust: VOID mutation-rust-shard-1: no report: its outcomes.json holds no cargo-mutants outcomes\nmutation: rust: cargo-mutants examined 91 (caught 91, missed 0, timeout 0), unviable 0, of 91 on the diff\nmutation: rust: missed 0: equivalent 0, unexplained 0\nmutation: rust: examined 91 by cargo-mutants and 0 by rows\nmutation: rust: verdict: VOID: 1 measurement(s) the class needs are missing\nexamined 91\n'
+A10: green at fb01db13ecf2958ddcd7e1dfd22655637abe9e8b
+A11: red at 16b8763c4845b6462d9f449c1c43e305deffefc2: AssertionError: 'VOID mutation-rust-shard-1: it left no record of its unmutated baseline, so no mutant of it was judged' not found in 'mutation: rust: crates/fix/src/lib.rs: 1 changed code line(s)\nmutation: rust: VOID mutation-rust-shard-1: no report: its outcomes.json holds no cargo-mutants outcomes\nmutation: rust: cargo-mutants examined 91 (caught 91, missed 0, timeout 0), unviable 0, of 91 on the diff\nmutation: rust: missed 0: equivalent 0, unexplained 0\nmutation: rust: examined 91 by cargo-mutants and 0 by rows\nmutation: rust: verdict: VOID: 1 measurement(s) the class needs are missing\nexamined 91\n'
+A11: green at fb01db13ecf2958ddcd7e1dfd22655637abe9e8b
+A12: red at 16b8763c4845b6462d9f449c1c43e305deffefc2: AssertionError: 3 != 0 : mutation: rust: crates/fix/src/lib.rs: 1 changed code line(s)
+A12: green at fb01db13ecf2958ddcd7e1dfd22655637abe9e8b
+A14: red at 16b8763c4845b6462d9f449c1c43e305deffefc2: AssertionError: Lists differ: ['nex[26 chars] '--profile', 'mutants', 'INSTA_UPDATE=always [15 chars]S=1'] != ['nex[26 chars] '--package=a', '--package=c', '--profile', 'm[41 chars]S=0']
+A14: green at 7b5d68d58c2b83efec480c92ee11b9b791472466
+A15: red at 16b8763c4845b6462d9f449c1c43e305deffefc2: AssertionError: None != '        PASS [   0.004s] (1/1) a tests::one\n'
+A15: green at 7b5d68d58c2b83efec480c92ee11b9b791472466
+A16: red at 16b8763c4845b6462d9f449c1c43e305deffefc2: AssertionError: 0 != 100 :         PASS [   0.004s] (1/1) a tests::one
+A16: green at 7b5d68d58c2b83efec480c92ee11b9b791472466
+A17: red at 16b8763c4845b6462d9f449c1c43e305deffefc2: AssertionError: 0 != 124 : ends at the signal:         PASS [   0.004s] (1/1) a tests::one
+A17: green at 7b5d68d58c2b83efec480c92ee11b9b791472466
+A20: red at 16b8763c4845b6462d9f449c1c43e305deffefc2: AssertionError: 'Time[17 chars]over the leg reports under /tmp/tmpuxl68345/reports\n' != 'Time[17 chars]over 3 leg report(s) and 3 green baseline log([941 chars] s\n'
+A20: green at 1be5662979d00fe001a6e827493293a2d8c43211
+A19: red at 16b8763c4845b6462d9f449c1c43e305deffefc2: AssertionError: unexpectedly None : mutation-rust has no step whose id is baseline
+A19: green at e6f02d150a54915bbdc4feb36dbd6d85b7924d2d
+A21: red at 16b8763c4845b6462d9f449c1c43e305deffefc2: AssertionError: 'run: bash scripts/mutation-timeouts.sh "$RUNNER_TEMP/reports"' not found in '      - name: the verdict, from every shard\'s report and the rows\' (the plan names a not-applicable case)\n        env:\n          RUST_LEG: ${{ needs.mutation-rust.result }}\n          ROWS_LEG: ${{ needs.mutation-rows.result }}\n          PYTHON_RELEASE_LEG: ${{ needs.mutation-python-release.result }}\n        run: |\n          reports="$RUNNER_TEMP/reports"\n          status=0\n          python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class rust --shard-reports "$reports" --rows "$reports/mutation-rows/rows.json" --whole "$reports/mutation-plan/whole.json" || status=$?\n          oracle=0\n          python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class oracle --python "$reports" --rows "$reports/mutation-rows/rows.json" --python-whole "$reports/mutation-plan/python-whole.json" || oracle=$?\n          if [ "$status" -eq 0 ]; then status=$oracle; fi\n          scripts=0\n          python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class scripts --python "$reports" --rows "$reports/mutation-rows/rows.json" --python-whole "$reports/mutation-plan/python-whole.json" || scripts=$?\n          if [ "$status" -eq 0 ]; then status=$scripts; fi\n          legs=0\n          python3 scripts/mutation-verdict.py legs --plan "$reports/mutation-plan/plan.json" --rust-leg "$RUST_LEG" --rows-leg "$ROWS_LEG" --python-release-leg "$PYTHON_RELEASE_LEG" || legs=$?\n          if [ "$status" -eq 0 ]; then status=$legs; fi\n          exit "$status"\n\n  # StrykerJS over every web production file the diff changes, whole, so a survivor already on a\n  # touched file is the pull request\'s own (SPEC-039 R3, ADR-057 D3), dealt into three shards\n  # (SPEC-419, ADR-433). Each shard plans as the leg always has, asks StrykerJS\'s own mutation\n  # server how many mutants each planned file holds, takes its share of the files dealt whole by\n  # that count, largest first onto the lightest shard, and runs StrykerJS over its share. It keeps\n  # its record and its report under its own index whatever its outcome, and one shard\'s failure\n  # cancels no other. It restores the pnpm store and saves none.\n'
+A21: green at e6f02d150a54915bbdc4feb36dbd6d85b7924d2d
+```
