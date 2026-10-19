@@ -258,3 +258,102 @@ most legs moves the value R3 derives, and the release SPEC-362 holds inside it:
 No bound rises: the ceiling falls by 16, and no other bound moves. The value is re-derived at this
 delivery's cut, after the Python plan's refusal lands, and written in SPEC-362's amendment section
 with the count it was derived from.
+
+## 11. Amendments: the rows are dealt into at most 18 legs, and the `ci` ceiling is 189 (`docs/rulings/OWNER-RULING-2026-10-18-rows-legs-822.md`)
+
+The release pull request's plan selected 2688 rows, two more than the 2686 that 17 legs hold, and
+`legs` refused them whole by name (run 39151539183, job 117746024485), as section 6's third risk
+foresaw. The signed ruling `docs/rulings/OWNER-RULING-2026-10-18-rows-legs-822.md` admits the two figures
+that ADR-431 D2 re-derives together: the most legs and the run's ceiling for Rust legs. This
+section amends R4, R11 and R14, section 6's third risk and section 9's rows; it moves A2, A10 and
+A12, adds A13, and amends section 10's SPEC-362 pins. Every other requirement and criterion stands
+as written above.
+
+- **R4, as amended.** `ROW_SECONDS = 17`, `ROWS_BOUND_SECONDS = 2700` and `ROWS_MAX_LEGS = 18`
+  (ADR-431 D2 as amended). 18 legs of at most 158 rows hold 2844 rows; 2845 rows are refused (R2).
+- **R11, as amended.** `LEG_CEILING["ci"]` is 189: the run's budget less every other `ci.yml` job,
+  67, with the rows job counted at `ROWS_MAX_LEGS`, 18. The ceiling test's derivation still reads
+  `ROWS_MAX_LEGS` from `scripts/mutation_rows.py`'s text, never imported, and the comment above
+  `LEG_CEILING` names 67 other `ci.yml` jobs in place of 66. `LEG_CEILING["battery"]` stays 234,
+  and `RUST_RELEASE_CEILING` stays 192, which lies inside `LEG_CEILING["ci"]` to `RUST_MATRIX_LEGS`.
+- **R14, as amended.** Every test pin of the `ci` ceiling, or of a figure derived from it, follows
+  189 and keeps its relation to the ceiling:
+  - each refusal that names the pull request run's ceiling names 189, and each
+    `legs 1 of ceiling 190` and `legs 2 of ceiling 190` reads 189;
+  - `test_a_listing_beyond_the_ceiling_is_refused_whole`: the pull request's case is one ingest
+    mutant past 189 legs of 68, 12853 mutants, refused naming 189, and its comment says 189 legs
+    hold 12852; the battery's 15913 and 15912 stay;
+  - `test_a_listing_that_needs_exactly_the_shard_cap_is_sized_at_the_cap`: `("ci", 189)`, and with
+    no ceiling named, 189 mutants of one leg each size at 189 legs and 190 are refused;
+  - `test_the_sizing_constants_are_the_measured_ones` and `test_the_ceiling_is_the_runs_job_budget`:
+    `LEG_CEILING` and the derived ceilings equal `{"ci": 189, "battery": 234}`;
+  - SPEC-423's tests: the placeholder release ceiling, equal to `LEG_CEILING["ci"]`, is 189, the
+    figure one past it is 190, the range's ends are 189 and 256, and the range's refusal reads
+    `outside 189..256`; a release ceiling of 200 or 256 keeps its figures;
+  - the pull request run's joint line, in SPEC-422's and SPEC-423's tests, shares 221 legs, 32
+    Python and 189 Rust, and its runner-minutes are `(32 x 1800 + 189 x 10800) // 60`, 34980;
+  - `scripts/tests/test_ci_workflows.py`'s register entries name each call these pins change, with
+    its count.
+- **Section 6's third risk, as amended.** 18 legs hold 2844 rows, 156 more than the 2688 the
+  release read (run 39151539183). A population past 2844 is refused whole by name on its plan job,
+  never cut, and the most legs is then re-derived with the ceiling, under a new signed ruling.
+
+The criteria this section moves and adds:
+
+| id | criterion | red it must show first | decided by |
+|---|---|---|---|
+| A2 | 2845 rows are refused with exit 2, a line naming 2845 and 18, and no output written (R2) | red at a commit whose `ROWS_MAX_LEGS` is 17: the refusal names 17 | `TheRowsLegsFitTheirBound.test_a_population_past_the_most_legs_is_refused_by_name` |
+| A10 | the derived ceilings, the rows axis counted at `ROWS_MAX_LEGS`, equal `{"ci": 189, "battery": 234}` and `LEG_CEILING` (R11) | red at that commit: the rows job counts at 17 legs, so `ci` derives 190 | `TheReleaseFitsOneRun.test_the_ceiling_is_the_runs_job_budget` |
+| A12 | every pin of the `ci` ceiling follows 189 and keeps its relation (R14) | red at a commit whose `LEG_CEILING["ci"]` is 190 | A12's tests, and SPEC-422's and SPEC-423's tests whose pins R14 names |
+| A13 | `legs` deals 2688 rows, the release's selection, into 18 legs: `rows_legs=18`, `rows_matrix` the JSON list 0 to 17, and a line naming 18 legs, 2688 rows and 150 rows in the largest (R1, R3, R4) | red at a commit whose `ROWS_MAX_LEGS` is 17: `legs` refuses 2688 rows with exit 2 | `TheRowsLegsFitTheirBound.test_the_release_runs_2688_rows_are_dealt_into_18_legs` |
+
+```acceptance
+A13: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k test_the_release_runs_2688_rows_are_dealt_into_18_legs
+```
+
+A2, A10 and A12 keep their commands in section 3's fence. Every red and green is read in CI by
+test name, from the job that runs `scripts/tests`, and recorded in `docs/red-first/SPEC-417.md`.
+
+- **Section 9's rows, as amended.** `S41702-THE-MOST-ROWS-LEGS-IS-SEVENTEEN` keeps its id, stem and
+  killer and is re-anchored with the same mutant, one leg more: its find becomes
+  `ROWS_MAX_LEGS = 18` and its replacement `ROWS_MAX_LEGS = 19`. A new row,
+  `S41716-THE-MOST-ROWS-LEGS-HOLD-THE-RELEASE`, holds the figure from below: its find is
+  `ROWS_MAX_LEGS = 18`, its replacement `ROWS_MAX_LEGS = 17`, and its killer is A13's test.
+  `S36201` is re-anchored with its mutant unchanged: its find `"ci": 190` becomes `"ci": 189`, and
+  its replacement stays `"ci": 194`. No row is retired.
+- **Section 10's SPEC-362 pins, as amended (a tightening).**
+
+| SPEC-362 pin | old | new | derivation |
+|---|---|---|---|
+| R3's value, `LEG_CEILING["ci"]` (`scripts/mutation-verdict.py:963`) | 190 | 189 | 256 less 67: the rows job's 18 legs in place of 17 |
+| the joint line's share of legs, 32 Python and the Rust ceiling | 222 | 221 | 32 plus 189 |
+| the joint line's runner-minutes, `(32 x 1800 + ceiling x 10800) // 60` | 35160 | 34980 | 32 x 1800 + 189 x 10800 |
+| the refused pull request listing of ingest mutants | 12921 | 12853 | 189 legs of 68 mutants hold 12852; one more is refused |
+
+No bound rises: the pull request run's ceiling falls by 1, and the release run's 192 Rust legs,
+held to `RUST_RELEASE_CEILING`, do not move.
+
+Section 4's manifest, for this part (insert-only; the table above is unchanged):
+
+- `.github/workflows/ci.yml`: unchanged in this part
+- `scripts/mutation_rows.py`: changed in this part: `ROWS_MAX_LEGS` 18, and its comment cites the signed ruling
+- `scripts/mutation-verdict.py`: changed in this part: `LEG_CEILING["ci"]` 189, and its comment's count of other `ci.yml` jobs, 67
+- `scripts/tests/test_mutation_rows.py`: changed in this part: A2's population and A13
+- `scripts/tests/test_mutation_rows_group.py`: unchanged in this part
+- `scripts/tests/test_mutation_workflows.py`: unchanged in this part
+- `scripts/tests/test_dispatch_shards.py`: changed in this part: A10's and A12's pins (R14)
+- `scripts/tests/test_verdict_download.py`: unchanged in this part
+- `scripts/tests/test_mutation_verdict.py`: changed in this part: A12's pins (R14)
+- `scripts/tests/test_ci_workflows.py`: changed in this part: the register entries of the calls R14's pins change
+- `scripts/tests/test_release_rust_ceiling.py`: changed in this part: SPEC-423's pins of the `ci` ceiling (R14)
+- `scripts/tests/test_release_python_ceiling.py`: changed in this part: SPEC-422's pins of the joint line (R14)
+- `scripts/mutation-rows.d/S41700-S41799.json`: changed in this part: S41702 re-anchored and S41716 added
+- `scripts/mutation-rows.d/S36200-S36299.json`: changed in this part: S36201 re-anchored
+- `docs/specs/SPEC-417-the-rows-leg-is-dealt-into-legs-that-fit-their-bound.md`: changed in this part: this section
+- `docs/decisions/ADR-431-the-rows-are-dealt-by-measured-cost-into-legs-within-their-kept-bound.md`: changed in this part: its amendments section
+- `docs/specs/SPEC-039-every-change-proves-its-tests-kill-its-mutants.md`: unchanged in this part
+- `docs/specs/SPEC-362-a-releases-mutants-are-judged-in-one-run-whose-legs-fit-the-run.md`: unchanged in this part; its pins are amended by this section
+- `docs/schematics/mutation-testing.md`: unchanged in this part, since no shape changes
+- `docs/red-first/SPEC-417.md`: changed in this part: its amendments section, A13
+- `changelog.d/mutation-rows-417.md`: unchanged in this part
+- `changelog.d/mutation-rows-legs-822.md`: added in this part: the changelog fragment

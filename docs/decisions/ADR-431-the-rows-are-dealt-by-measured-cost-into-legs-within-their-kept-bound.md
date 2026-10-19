@@ -194,3 +194,56 @@ leg says the deal balances.
   leg; R18's 90 minutes stands, now each leg's); SPEC-362 R3's ceiling and A1, amended by SPEC-417
   section 10 and by a section naming SPEC-417; SPEC-332, the rows job's fetch, unchanged; SPEC-290
   R3, the job's start condition, unchanged.
+
+## Amendments: D2's most legs is 18 and D6's ceiling is 189, read from the release's plan (`docs/rulings/OWNER-RULING-2026-10-18-rows-legs-822.md`)
+
+The release pull request's plan selected 2688 rows, two more than the 2686 that 17 legs hold, and
+`legs` refused them whole by name (run 39151539183, job 117746024485; the same at run 39141497433,
+job 117717787744). This is the case "What would make this wrong" names: the most legs is
+re-derived together with the run's ceiling. The signed ruling
+`docs/rulings/OWNER-RULING-2026-10-18-rows-legs-822.md` admits both figures, and SPEC-417's section 11
+carries them.
+
+D2, the most legs, as amended:
+
+- Chosen: `ROWS_MAX_LEGS = 18`, because 18 is the fewest most legs that deal the 2688 rows read
+  within the kept bound, and 18 legs of at most 158 rows hold 2844. `ROW_SECONDS = 17` and
+  `ROWS_BOUND_SECONDS = 2700` stand.
+- The largest of 18 legs holds 150 rows, projected at 2550 s of the 2700 s half (job 114529704482's price).
+- Eighteen legs at most was rejected at the base because the eighteenth cost one of the release's
+  192 Rust legs, with none to spare. That reason no longer holds: the release run's Rust legs are
+  held to `RUST_RELEASE_CEILING` in a matrix of their own (SPEC-423), not to `LEG_CEILING["ci"]`,
+  so the eighteenth costs one leg of the pull request run's ceiling only.
+- Keeping 17: rejected because the release's plan refuses its 2688 rows whole, so the release
+  cannot be judged at all.
+- Re-measuring `ROW_SECONDS` so that 2688 rows fit 17 legs: rejected because it narrows the margin
+  each leg keeps under its bound, and the owner named the most legs as the figure to sign.
+- Nineteen legs or more: rejected because 18 is the fewest that deal the population read, and
+  headroom above it admits legs no plan read.
+
+D6, the run's ceiling for Rust legs, as amended:
+
+- Chosen: `LEG_CEILING["ci"]` falls from 190 to 189, the rows job counted at `ROWS_MAX_LEGS`, 18,
+  because the ceiling is fixed before a plan exists and must fit the most rows legs a plan can make.
+  `LEG_CEILING["battery"]` stays 234, since the weekly workflow deals no rows legs.
+- Keeping 190 by counting the rows legs outside the pull request run's jobs: rejected because the
+  ceiling would no longer hold every job a pull request's run can generate (SPEC-417 R11).
+- Raising the rows job's `timeout-minutes` so that 17 legs hold more rows: rejected for D1's reason,
+  because raising a job's bound is the maintainer's own decision, and the kept bound proves every
+  row at 18 legs.
+
+Consequences, as amended:
+
+- Good: the release's 2688 rows are all dealt and proved, each leg projected within its half bound.
+- Bad: a release's rows pay up to 18 cold starts in place of 17.
+- Bad: the pull request run's Rust ceiling falls by 1, to 189, and a pull request whose Rust mutants
+  need 190 legs is refused whole by name, where it was dealt before.
+
+Confirmation, as amended: SPEC-417's A13, red at a commit whose `ROWS_MAX_LEGS` is 17 and green at
+18, with A2, A10 and A12 as section 11 moves them, and rows S41702, S41716 and S36201. The
+release's next run shows 18 rows legs, each read by job id.
+
+What would make this wrong, as amended:
+
+- A population past 2844 rows: `legs` refuses by name, and the most legs is re-derived together
+  with the run's ceiling, under a new signed ruling.

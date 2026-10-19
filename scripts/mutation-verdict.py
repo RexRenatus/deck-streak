@@ -959,8 +959,8 @@ CENSUS_SECONDS = {"deck-streak-progression": 1521}
 #: projection (SPEC-039 R18, SPEC-362 R2).
 SHARD_BOUND_SECONDS = 10800
 #: The most legs each workflow's run holds: the 256 jobs of one run, less the most every other job
-#: of that workflow can generate, 66 in `ci.yml` and 22 in `mutation-weekly.yml` (SPEC-362 R3).
-LEG_CEILING = {"ci": 190, "battery": 234}
+#: of that workflow can generate, 67 in `ci.yml` and 22 in `mutation-weekly.yml` (SPEC-362 R3).
+LEG_CEILING = {"ci": 189, "battery": 234}
 #: Signed in docs/rulings/OWNER-RULING-2026-10-16-release-legs-python-305-rust-192.md (SPEC-423 R9).
 RUST_RELEASE_CEILING = 192
 #: The legs one matrix generates, the most a release Rust ceiling may reach (SPEC-423 R7).
