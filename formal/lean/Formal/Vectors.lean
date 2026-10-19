@@ -5,6 +5,7 @@ import Formal.NextMilestoneVectors
 import Formal.OpenLapseVectors
 import Formal.RecordClassBindingVectors
 import Formal.ReplayHistoryVectors
+import Formal.RetiredListShapeVectors
 import Formal.RoadToC2Vectors
 import Formal.SensitiveDeckVectors
 import Formal.SkipTariffVectors
@@ -37,6 +38,7 @@ def main (args : List String) : IO UInt32 := do
   | ["OpenLapse"] => Formal.OpenLapseVectors.run
   | ["RecordClassBinding"] => Formal.RecordClassBindingVectors.run
   | ["ReplayHistory"] => Formal.ReplayHistoryVectors.run
+  | ["RetiredListShape"] => Formal.RetiredListShapeVectors.run
   | ["RoadToC2"] => Formal.RoadToC2Vectors.run
   | ["SensitiveDeck"] => Formal.SensitiveDeckVectors.run
   | ["SkipTariff"] => Formal.SkipTariffVectors.run
