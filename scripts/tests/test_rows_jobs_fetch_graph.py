@@ -238,6 +238,18 @@ BASELINE_IF = "        if: ${{ needs.plan.outputs.rust == 'true' }}\n"
 BASELINE_RUN = (
     "      - name: baseline\n" + BASELINE_IF + "        run: cargo mutants --in-place --in-diff d\n"
 )
+LEG_BASELINE_RUN = (
+    "      - name: baseline\n"
+    "        id: baseline\n"
+    + BASELINE_IF
+    + "        run: bash scripts/mutation-baseline.sh listed.json 0 1 baseline.log\n"
+)
+SKIP_IF = "        if: ${{ needs.plan.outputs.rust == 'true' && steps.baseline.outputs.green == 'true' }}\n"
+SKIP_RUN = (
+    "      - name: mutants\n"
+    + SKIP_IF
+    + "        run: cargo mutants --in-place --in-diff d --baseline=skip\n"
+)
 
 
 def fetch_step(run="cargo fetch --locked --manifest-path Cargo.toml", extra="", cond=BASELINE_IF):
@@ -308,6 +320,16 @@ class TheJudgeRefusesEachPlantedBaselineShape(unittest.TestCase):
                 ),
                 [f"{where}: the fetch step's `if:` is not the cargo-mutants baseline step's `if:`"],
             ),
+            (
+                "the ADR-509 shape: the leg's own baseline, then cargo-mutants skipping its own",
+                (BASELINE_RESTORE, fetch_step(), LEG_BASELINE_RUN, SKIP_RUN),
+                [],
+            ),
+            (
+                "a fetch after the leg's own baseline",
+                (BASELINE_RESTORE, LEG_BASELINE_RUN, fetch_step(), SKIP_RUN),
+                [f"{where}: the fetch (step 2) is not before the first cargo-mutants baseline"],
+            ),
         ]
         for name, blocks, expected in examined("planted baseline shapes", planted_shapes):
             with self.subTest(shape=name):
@@ -317,6 +339,10 @@ class TheJudgeRefusesEachPlantedBaselineShape(unittest.TestCase):
         listing = "      - name: list\n        run: cargo mutants --no-shuffle --list --json\n"
         job = jobs("\njobs:\n  j:\n    steps:\n" + listing)["j"]
         self.assertEqual([], [s for s in steps(job) if runs_a_baseline(s)])
+
+    def test_the_legs_own_baseline_script_is_a_baseline(self):
+        job = jobs("\njobs:\n  j:\n    steps:\n" + LEG_BASELINE_RUN)["j"]
+        self.assertEqual(1, len([s for s in steps(job) if runs_a_baseline(s)]))
 
 
 if __name__ == "__main__":
