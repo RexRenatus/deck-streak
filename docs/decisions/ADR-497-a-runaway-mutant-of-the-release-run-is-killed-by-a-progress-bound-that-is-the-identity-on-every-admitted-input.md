@@ -173,6 +173,7 @@ One pull request into dev carries the guard and its tests in
 `crates/ingest/tests/memory_state_lenient_bound.rs`, rows S48001 to S48007, the Lean entry and the
 documents, in one push. It carries no harness bound, no kill part and nothing for the rust shards'
 red baselines.
+ADR-509 now bounds those baselines: each Rust leg runs its own unmutated baseline under a time budget before cargo-mutants, which skips its own.
 
 - Chosen: one pull request with one push, because each push starts a run on the pull request, the one red-first criterion reads its red from a bounded stand-in, and the two cures share one measure.
 - Two pushes, a red one and a green one: rejected because the red is measured without a push, and a second push starts a second run.
@@ -204,6 +205,7 @@ the work after it.
   on other legs after the cure.
 - The rust class still reads its shards' red baselines as VOID under the class line; this decision
   does not change them (#822).
+- ADR-509 now bounds those red baselines: a Rust leg whose own baseline is red, past its time budget or unrecorded runs no mutant and reads VOID with its reason, and cargo-mutants skips its own baseline.
 
 ### Confirmation
 

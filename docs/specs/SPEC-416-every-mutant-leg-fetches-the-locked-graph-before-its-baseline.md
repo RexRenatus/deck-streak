@@ -3,6 +3,7 @@
 - **Issue:** #827, which records the release run's red baselines and the weekly legs' same
   gap; this delivery refers to it and closes nothing. **Context(s):** CI (`.github/workflows/`)
   and its tests (`scripts/tests/`); no crate, no test under `crates/` and no verdict code changes.
+- **Since ADR-509:** the red baselines #827 records are cargo-mutants' own; each `mutation-rust` leg of `ci.yml` now runs its own unmutated baseline under a time budget before cargo-mutants, which skips its own, and a leg whose baseline is red, past its time budget or unrecorded reads VOID with its reason.
 - **Decided by:** ADR-430 (one fetch step in each job that runs a cargo-mutants baseline, judged
   by SPEC-332's judge; the verdict already reads a red baseline as VOID and is unchanged).
 - **Schematic:** `docs/schematics/ci-jobs-and-caches.md`, a section appended for SPEC-416: the
