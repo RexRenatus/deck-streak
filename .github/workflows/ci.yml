@@ -521,8 +521,25 @@ jobs:
         with:
           tool: cargo-nextest@0.9.146
           fallback: none
-      - name: cargo-mutants, one shard of the diff, in place (its exit is recorded; the verdict reads its report)
+      # The leg's own unmutated baseline, inside the memory scope and bounded by SPEC-480 section 9's
+      # budget, before cargo-mutants, which then skips its own. Its exit and its log are recorded under
+      # `baseline/` for the verdict, and only a green one lets the next step run; the step itself always
+      # succeeds, so a red or unbounded baseline reads VOID with its reason in the verdict (ADR-509).
+      - name: this leg's unmutated baseline, bounded by its budget (the verdict reads its record)
+        id: baseline
         if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ needs.mutation-plan.outputs.shards }}
+        run: |
+          out="$RUNNER_TEMP/shards/mutation-rust-shard-$SHARD"
+          mkdir -p "$out/baseline"
+          rc=0
+          python3 scripts/memory_scope.py --report "$out/baseline" -- bash scripts/mutation-baseline.sh "$RUNNER_TEMP/mutation/listed.json" "$SHARD" "$SHARDS" "$out/baseline/baseline.log" || rc=$?
+          echo "$rc" > "$out/baseline/baseline.exit"
+          if [ "$rc" -eq 0 ]; then echo "green=true" >> "$GITHUB_OUTPUT"; fi
+      - name: cargo-mutants, one shard of the diff, in place (its exit is recorded; the verdict reads its report)
+        if: ${{ needs.mutation-plan.outputs.rust == 'true' && steps.baseline.outputs.green == 'true' }}
         env:
           SHARD: ${{ matrix.shard }}
           SHARDS: ${{ needs.mutation-plan.outputs.shards }}
@@ -530,7 +547,7 @@ jobs:
           out="$RUNNER_TEMP/shards/mutation-rust-shard-$SHARD"
           mkdir -p "$out"
           rc=0
-          python3 scripts/memory_scope.py --report "$out" -- cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2300 --build-timeout 600 --output "$out" || rc=$?
+          python3 scripts/memory_scope.py --report "$out" -- cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" --baseline=skip --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2300 --build-timeout 600 --output "$out" || rc=$?
           echo "$rc" > "$out/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
       - name: keep the shard's report
@@ -783,6 +800,13 @@ jobs:
           python3 scripts/mutation-verdict.py legs --plan "$reports/mutation-plan/plan.json" --rust-leg "$RUST_LEG" --rows-leg "$ROWS_LEG" --python-release-leg "$PYTHON_RELEASE_LEG" || legs=$?
           if [ "$status" -eq 0 ]; then status=$legs; fi
           exit "$status"
+      # Each Rust package's Timeouts over the legs' reports, beside its baseline tests' seconds: a
+      # package whose mutants timed out and whose baseline tests, times 1.5, pass the 2300 s
+      # per-mutant timeout, or that no log times, is printed READ BY NAME with each such mutant, so
+      # that no Timeout counts silently as a kill (SPEC-480 R16). It runs whatever the verdict read.
+      - name: the Rust legs' Timeouts by package, each over-margin package by name
+        if: ${{ always() }}
+        run: bash scripts/mutation-timeouts.sh "$RUNNER_TEMP/reports"
 
   # StrykerJS over every web production file the diff changes, whole, so a survivor already on a
   # touched file is the pull request's own (SPEC-039 R3, ADR-057 D3), dealt into three shards

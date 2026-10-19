@@ -36,6 +36,7 @@ OUTPUT = re.compile(r"--output (\S+)")
 # listing are each two lines since SPEC-129's literal package words, one per branch; each is pinned.
 CI_LEG = (
     'cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" '
+    "--baseline=skip "
     '--sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2300 --build-timeout 600 '
     '--output "$out" || rc=$?'
 )
