@@ -1,10 +1,13 @@
-"""SPEC-480 section 9 (R11, R16): each Rust leg's own bounded baseline and each Rust package's
-Timeouts. `scripts/mutation-baseline.sh` runs with a stand-in `cargo` and a stand-in `timeout`
-first on `PATH`, each logging the argv it was given, and `scripts/mutation-timeouts.sh` runs over
-a fixed three-leg reports directory; both run from the repository's root, as the workflow runs
-them."""
+"""SPEC-480 section 9 (R10, R11, R16): each Rust leg's own bounded baseline, each Rust package's
+Timeouts, and the one budget figure. `scripts/mutation-baseline.sh` runs with a stand-in `cargo`
+and a stand-in `timeout` first on `PATH`, each logging the argv it was given, and
+`scripts/mutation-timeouts.sh` runs over a fixed three-leg reports directory; both run from the
+repository's root, as the workflow runs them."""
 
+import ast
+import math
 import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -14,6 +17,12 @@ from _support import REPO, examined
 
 BASELINE = "scripts/mutation-baseline.sh"
 TIMEOUTS = "scripts/mutation-timeouts.sh"
+SPEC_NAME = (
+    "SPEC-480-each-runaway-mutant-of-the-release-run-ends-at-a-progress-bound-and-an-existing-"
+    "test-kills-it.md"
+)
+SPEC = REPO / "docs" / "specs" / SPEC_NAME
+VERDICT = REPO / "scripts" / "mutation-verdict.py"
 
 #: The stand-in `cargo`: it logs its argv and the snapshot pair it was given into
 #: `$FAKE_LOG.cargo`, prints one timed status line, and then sleeps, ignores the budget's signal
@@ -269,6 +278,48 @@ class EachPackagesTimeoutsArePrinted(unittest.TestCase):
             )
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertEqual(done.stdout, PRINTED)
+
+
+#: A budget line as SPEC-480 section 9 writes it, with the derive's own figures.
+BUDGET_LINE = re.compile(r"BUDGET (\d+) s = ceil\(([\d.]+) x ([\d.]+)\)")
+#: The verdict's constants the figures are held to, read from its text and never imported.
+HELD = ("BASELINE_BUDGET_SECONDS", "MUTANT_TIMEOUT_SECONDS", "TIMEOUT_MARGIN")
+
+
+class TheBaselineBudgetIsOneFigure(unittest.TestCase):
+    """SPEC-480 A13 (R10, R16): the budget is one figure, the one section 9 records, the baseline
+    script holds and the verdict reads; and the Timeouts script's timeout and margin are the
+    verdict's own. Each file is read, and none is imported."""
+
+    def test_the_budget_and_the_timeout_are_one_figure_each(self):
+        section = re.search(r"(?ms)^## 9\. .*?(?=^## 10\. )", SPEC.read_text(encoding="utf-8"))
+        self.assertIsNotNone(section, "SPEC-480 has no section 9")
+        budgets = examined("BUDGET lines in section 9", BUDGET_LINE.findall(section.group(0)))
+        for budget, whole, margin in budgets:
+            self.assertEqual(int(budget), math.ceil(float(whole) * float(margin)), budget)
+        script = (REPO / BASELINE).read_text(encoding="utf-8")
+        figures = re.findall(r"(?m)^budget=(\d+)$", script)
+        self.assertEqual(len(figures), 1, figures)
+        printer = (REPO / TIMEOUTS).read_text(encoding="utf-8")
+        timeouts = re.findall(r"(?m)^timeout=(\d+)$", printer)
+        margins = re.findall(r"(?m)^margin=([\d.]+)$", printer)
+        self.assertEqual((len(timeouts), len(margins)), (1, 1), (timeouts, margins))
+        constants = {
+            target.id: ast.literal_eval(node.value)
+            for node in ast.parse(VERDICT.read_text(encoding="utf-8")).body
+            if isinstance(node, ast.Assign)
+            for target in node.targets
+            if isinstance(target, ast.Name) and target.id in HELD
+        }
+        self.assertEqual(sorted(constants), sorted(HELD))
+        named = {int(budget) for budget, _, _ in budgets}
+        named |= {int(figures[0]), constants["BASELINE_BUDGET_SECONDS"]}
+        self.assertEqual(named, {3845})
+        widened = {float(margin) for _, _, margin in budgets} | {float(margins[0])}
+        self.assertEqual(widened, {constants["TIMEOUT_MARGIN"]})
+        self.assertEqual(constants["TIMEOUT_MARGIN"], 1.5)
+        self.assertEqual(int(timeouts[0]), constants["MUTANT_TIMEOUT_SECONDS"])
+        self.assertEqual(constants["MUTANT_TIMEOUT_SECONDS"], 2300)
 
 
 if __name__ == "__main__":

@@ -1033,10 +1033,8 @@ def shard_reports(root, reports, scopes=None, logs=None, baselines=None):
             if log is not None:
                 (directory / "baseline" / "baseline.log").write_bytes(log)
         if report is not None:
-            (directory / "mutants.out" / "log").mkdir(parents=True)
+            (directory / "mutants.out").mkdir(parents=True)
             (directory / "mutants.out" / "outcomes.json").write_text(json.dumps(report), "utf-8")
-            if log is not None:
-                (directory / "mutants.out" / "log" / "baseline.log").write_bytes(log)
     return str(root)
 
 
@@ -1146,28 +1144,16 @@ class ALegProvesItsTimeoutCoversItsTests(unittest.TestCase):
             )
             control = fixture.judge("rust", "--shard-reports", within)
             self.assertEqual(control.returncode, 0, control.stdout + control.stderr)
-        # A baseline that names no log, a named log that is gone, a log that times no test and a
-        # report with no baseline each prove nothing: VOID by name.
-        unnamed = shard_outcomes(planned[2])
-        del unnamed["outcomes"][0]["log_path"]
-        headless = shard_outcomes(planned[2])
-        del headless["outcomes"][0]
+        # A named log that is gone and a log that times no test each prove nothing: VOID by name.
         cases = [
-            ("unnamed", {2: ("0", unnamed)}, {}, "its baseline outcome names no log"),
-            ("gone", {}, {2: None}, "its baseline log log/baseline.log is unreadable"),
+            ("gone", {}, {2: None}, "its baseline log is unreadable"),
             ("untimed", {}, {2: b"\n*** baseline\n\n   Compiling fix\n"}, "times no test"),
-            ("headless", {2: ("0", headless)}, {}, "its report holds no baseline outcome"),
         ]
         for name, bent, logs, finding in examined("baselines that prove nothing", cases):
             root = shard_reports(fixture.out / name, {**reports, **bent}, logs=logs)
             void = fixture.judge("rust", "--shard-reports", root)
             self.assertEqual(void.returncode, 3, void.stdout + void.stderr)
             self.assertIn(f"VOID mutation-rust-shard-2: {finding}", void.stdout)
-        self.assertIn(
-            "VOID mutation-rust-shard-2: its report holds no baseline outcome, so it cannot show "
-            "its timeout covers its tests",
-            void.stdout,
-        )
         # The timeout R7 holds a leg to is the one every cargo-mutants command carries.
         words = BOUNDS.split()
         module = verdict_module()
