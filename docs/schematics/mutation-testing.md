@@ -634,3 +634,77 @@ green commit.
 | `mutation-rust`'s axis on the plan's `matrix` output | `.github/workflows/ci.yml:468-469` |
 | the verdict's walk of every leg | `scripts/mutation-verdict.py:1542`, `:1588`, `:1617` |
 | `RUN_JOBS`, the limit one matrix holds | `scripts/tests/test_dispatch_shards.py:219` |
+
+## 12. Each Rust leg's own bounded baseline, then cargo-mutants without its own (SPEC-480 section 9, ADR-509)
+
+Schematic for SPEC-480 section 9 and ADR-509 (rows S48008 to S48038 of band S48000-S48099). It
+draws one leg of the `mutation-rust` matrix before and after the delivery, read at dev `3bdfccd6`,
+and the verdict job's reads of every leg's artifact. Names are the steps, files, constants and
+texts the workflow and the scripts write. Where section 11 draws how many legs one run holds, this
+section draws what each leg runs and how the verdict reads it.
+
+### 12.1 Before: cargo-mutants' one timeout bounds the leg's own baseline too
+
+```mermaid
+flowchart TD
+    LISTB["listed.json and git.diff, from the plan job"] --> CMB["cargo-mutants, one shard, in the memory scope<br/>--timeout 2300 --build-timeout 600"]
+    CMB --> BASEB{"its own baseline: the shard's packages,<br/>each test within the 2300 s timeout?"}
+    BASEB -- "no: Timeout" --> NONEB["no mutant of the leg is run<br/>outcomes.json holds the Baseline outcome alone"]
+    BASEB -- "yes" --> MUTB["each mutant within --timeout 2300"]
+    NONEB --> VERB["verdict: baseline_void reads the report's Baseline outcome<br/>VOID by the leg's name"]
+    MUTB --> VERB
+```
+
+A leg whose tests together take longer than the per-mutant timeout can judge no mutant: its
+baseline is cut at the same timeout that bounds each mutant (ADR-328).
+
+### 12.2 After: the leg's own baseline under its budget, then cargo-mutants with --baseline=skip
+
+```mermaid
+flowchart TD
+    LISTA["listed.json, from the plan job"] --> STEP["step id baseline: mutation-baseline.sh in the memory scope<br/>the shard's packages, mutant i to leg i mod n, under timeout 3845"]
+    STEP --> REC["baseline/baseline.exit and baseline/baseline.log<br/>under the leg's report directory"]
+    REC --> GREEN{"exit 0?"}
+    GREEN -- "yes: green=true" --> CMA["cargo-mutants --baseline=skip --timeout 2300<br/>--build-timeout 600, in the memory scope"]
+    GREEN -- "no" --> NOTRUN["cargo-mutants does not run<br/>no mutant of the leg is run"]
+    CMA --> OUTA["mutants.out/outcomes.json, with no Baseline outcome"]
+    OUTA --> ARTA[("artifact mutation-rust-shard-k")]
+    REC --> ARTA
+    NOTRUN --> ARTA
+    ARTA --> BVA["verdict: baseline_void for every leg the plan deals a mutant"]
+    BVA -- "no record" --> VNONE["VOID: it left no record of its unmutated baseline"]
+    BVA -- "exit 124" --> VBUDGET["VOID: its unmutated baseline reached its 3845 s budget"]
+    BVA -- "another non-zero exit" --> VFAIL["VOID: its unmutated baseline failed, with its exit"]
+    BVA -- "exit 0" --> SLOW{"its log's slowest test, times 1.5,<br/>within the 2300 s timeout?"}
+    SLOW -- "no, or no test timed" --> VSLOW["VOID by the leg's name, as SPEC-362 R7 reads it"]
+    SLOW -- "yes" --> JUDGED["the leg's mutants are judged"]
+    ARTA --> TMO["step after the verdict's, if always: mutation-timeouts.sh<br/>each package's Timeouts beside its baseline tests' seconds"]
+    TMO --> NAMED["READ BY NAME: each Timeout of a package over the margin, or untimed"]
+```
+
+- A leg's mutants are judged only against that leg's own baseline record; the plan's charge of a
+  baseline, `BASELINE_SECONDS`, does not change (SPEC-480 R14).
+- `--timeout 2300 --build-timeout 600` and every other word of the cargo-mutants command are
+  unchanged: no mutant is filtered or skipped, and a leg whose baseline is not green runs none.
+- A VOID is never a pass; a report that holds no `Baseline` outcome, as `--baseline=skip` writes
+  it, is read whole.
+
+### 12.3 Where each step lives
+
+Read at dev `3bdfccd6`; the new lines are cited by name, and the build re-reads every line at its
+green commit.
+
+| step | where |
+|---|---|
+| the plan job's listing, `listed.json` | `.github/workflows/ci.yml:426` |
+| the leg's plan download | `.github/workflows/ci.yml:476-479` |
+| the step `id: baseline` and `scripts/mutation-baseline.sh` | before the cargo-mutants step, `.github/workflows/ci.yml:524` (new) |
+| the cargo-mutants command, its `if:` and `--baseline=skip` | `.github/workflows/ci.yml:533` |
+| the leg's upload of its report directory | `.github/workflows/ci.yml:536-542` |
+| `BASELINE_BUDGET_SECONDS` and `BASELINE_BUDGET_EXIT` | after `TIMEOUT_MARGIN`, `scripts/mutation-verdict.py:971` (new) |
+| `baseline_void`, over the leg's own record | `scripts/mutation-verdict.py:1684` |
+| the shard loop of `judge_rust`, every dealt leg | `scripts/mutation-verdict.py:1779` |
+| `read_exit` | `scripts/mutation-verdict.py:2501` |
+| the verdict step | `.github/workflows/ci.yml:767` |
+| the Timeouts step and `scripts/mutation-timeouts.sh` | after the verdict step, `.github/workflows/ci.yml:785` (new) |
+| the derive of the budget | `tools/rust-baseline-budget/size_budget.py` (new) |

@@ -75,3 +75,38 @@ A1's green names the commit that adds the guard, and HEAD agrees with it for A1:
 `git diff --quiet 390a800d HEAD -- scripts/mutation-verdict.py` exits 0, and
 `git diff --numstat 390a800d HEAD -- scripts/tests/test_mutation_verdict_python_kills.py` reads
 `20 0`, the 20 added lines being A8 alone. No commit between the red and the green changes a test.
+
+## Section 9: each Rust leg's own bounded baseline (A9 to A22)
+
+SPEC-480 section 9 (R10 to R17) adds A9 to A22. Section 9, ADR-509, section 12 of the mutation
+testing schematic and the changelog fragment were committed first. The red commit holds the tests
+of A9 to A12, A14 to A17 and A19 to A21 alone on top of them, with a stub of each new script that
+keeps every input and runs the base's test command unbounded, in the default environment, with no
+deal, and prints no package, over a `scripts/mutation-verdict.py` that still reads each report's own
+`Baseline` outcome and a `.github/workflows/ci.yml` that holds no baseline step and no Timeouts
+step. The test modules run only in CI, so every red is quoted from the pull request's checks over
+the red commit, from the job that runs `scripts/tests`, and each red and green line joins this
+section in the round after that push. A13, A18 and A22 are recorded `not red`, each with its reason.
+
+```text
+A9: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k test_a_leg_whose_baseline_reached_its_budget_is_void
+A10: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k test_a_leg_whose_baseline_failed_is_void_with_its_exit
+A11: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k test_a_dealt_leg_that_left_no_baseline_record_is_void
+A12: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k test_legs_with_a_green_bounded_baseline_and_no_baseline_outcome_are_whole
+A13: python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_the_budget_and_the_timeout_are_one_figure_each
+A14: python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_the_packages_are_dealt_as_cargo_mutants_deals_them
+A15: python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_a_green_baseline_exits_0_and_keeps_its_log
+A16: python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_a_failed_baseline_exits_its_own_code
+A17: python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_a_baseline_that_reaches_its_budget_exits_124
+A18: python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_the_derive_prints_its_lines_over_a_fixed_fixture
+A19: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_bounded_baseline_runs_before_cargo_mutants_which_skips_its_own
+A20: python3 -m unittest discover -s scripts/tests -p test_mutation_baseline.py -k test_each_package_prints_its_timeouts_and_an_over_margin_one_is_read_by_name
+A21: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_verdict_job_prints_the_timeouts_by_package
+A22: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k test_the_sizing_constants_are_the_measured_ones
+```
+
+```red-first
+A13: not red: pins three figures the build writes together; its red is row S48008, and the verdict's own constant mutants are killed by A9
+A18: not red: pins the committed derive, whose code lines are proved equal to those the budget was sized by; its red is row S48028
+A22: not red: pins the charge the base already holds
+```
