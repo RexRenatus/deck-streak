@@ -1,14 +1,15 @@
-"""SPEC-480 section 9 (R10, R11, R16): each Rust leg's own bounded baseline, each Rust package's
-Timeouts, and the one budget figure. `scripts/mutation-baseline.sh` runs with a stand-in `cargo`
-and a stand-in `timeout` first on `PATH`, each logging the argv it was given, and
-`scripts/mutation-timeouts.sh` runs over a fixed three-leg reports directory; both run from the
-repository's root, as the workflow runs them."""
+"""SPEC-480 section 9 (R10, R11, R15, R16): each Rust leg's own bounded baseline, each Rust
+package's Timeouts, the one budget figure and its committed derive. `scripts/mutation-baseline.sh`
+runs with a stand-in `cargo` and a stand-in `timeout` first on `PATH`, each logging the argv it
+was given, `scripts/mutation-timeouts.sh` runs over a fixed three-leg reports directory, and the
+derive over a fixed four-shard fixture; each runs from the repository's root."""
 
 import ast
 import math
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,6 +18,7 @@ from _support import REPO, examined
 
 BASELINE = "scripts/mutation-baseline.sh"
 TIMEOUTS = "scripts/mutation-timeouts.sh"
+DERIVE = "tools/rust-baseline-budget/size_budget.py"
 SPEC_NAME = (
     "SPEC-480-each-runaway-mutant-of-the-release-run-ends-at-a-progress-bound-and-an-existing-"
     "test-kills-it.md"
@@ -320,6 +322,86 @@ class TheBaselineBudgetIsOneFigure(unittest.TestCase):
         self.assertEqual(constants["TIMEOUT_MARGIN"], 1.5)
         self.assertEqual(int(timeouts[0]), constants["MUTANT_TIMEOUT_SECONDS"])
         self.assertEqual(constants["MUTANT_TIMEOUT_SECONDS"], 2300)
+
+
+#: Four shards of a run in `gh run download`'s layout, each artifact under its own name twice:
+#: two whole, one whose baseline read Timeout and one whose baseline failed. {path: text}.
+SHARDS = {
+    "mutation-rust-shard-0/mutation-rust-shard-0/mutants.out/mutants.json": (
+        '[{"name": "crates/a/src/lib.rs:1:5: replace f -> u32 with 0", "package": '
+        '"deck-streak-a"}, {"name": "crates/a/src/lib.rs:2:5: replace f -> u32 with 0", '
+        '"package": "deck-streak-a"}]'
+    ),
+    "mutation-rust-shard-0/mutation-rust-shard-0/mutants.out/outcomes.json": (
+        '{"outcomes": [{"scenario": "Baseline", "summary": "Success", "phase_results": '
+        '[{"phase": "Build", "duration": {"secs": 120, "nanos": 300000000}}, {"phase": "Test", '
+        '"duration": 900.4}]}, {"scenario": {"Mutant": {"name": "crates/a/src/lib.rs:1:5: '
+        'replace f -> u32 with 0", "package": "deck-streak-a"}}, "summary": "CaughtMutant", '
+        '"phase_results": []}, {"scenario": {"Mutant": {"name": "crates/a/src/lib.rs:2:5: '
+        'replace f -> u32 with 0", "package": "deck-streak-a"}}, "summary": "CaughtMutant", '
+        '"phase_results": []}]}'
+    ),
+    "mutation-rust-shard-1/mutation-rust-shard-1/mutants.out/mutants.json": (
+        '[{"name": "crates/a/src/lib.rs:1:5: replace f -> u32 with 0", "package": "deck-streak-a"}]'
+    ),
+    "mutation-rust-shard-1/mutation-rust-shard-1/mutants.out/outcomes.json": (
+        '{"outcomes": [{"scenario": "Baseline", "summary": "Success", "phase_results": '
+        '[{"phase": "Build", "duration": 200.2}, {"phase": "Test", "duration": {"secs": 1100, '
+        '"nanos": 100000000}}]}, {"scenario": {"Mutant": {"name": "crates/a/src/lib.rs:1:5: '
+        'replace f -> u32 with 0", "package": "deck-streak-a"}}, "summary": "CaughtMutant", '
+        '"phase_results": []}]}'
+    ),
+    "mutation-rust-shard-2/mutation-rust-shard-2/mutants.out/mutants.json": (
+        '[{"name": "crates/a/src/lib.rs:1:5: replace f -> u32 with 0", "package": '
+        '"deck-streak-a"}, {"name": "crates/a/src/lib.rs:2:5: replace f -> u32 with 0", '
+        '"package": "deck-streak-a"}]'
+    ),
+    "mutation-rust-shard-2/mutation-rust-shard-2/mutants.out/outcomes.json": (
+        '{"outcomes": [{"scenario": "Baseline", "summary": "Timeout", "phase_results": '
+        '[{"phase": "Build", "duration": 50.0}, {"phase": "Test", "duration": 2300.04}]}]}'
+    ),
+    "mutation-rust-shard-3/mutation-rust-shard-3/mutants.out/mutants.json": (
+        '[{"name": "crates/a/src/lib.rs:1:5: replace f -> u32 with 0", "package": "deck-streak-a"}]'
+    ),
+    "mutation-rust-shard-3/mutation-rust-shard-3/mutants.out/outcomes.json": (
+        '{"outcomes": [{"scenario": "Baseline", "summary": "Failure", "phase_results": '
+        '[{"phase": "Build", "duration": 75.0}, {"phase": "Test", "duration": 10.0}]}]}'
+    ),
+}
+
+#: The derive's stdout over SHARDS: shard 1's 200.2 s build and 1100.1 s test are the largest
+#: whole baseline, and 1.5 times its 1300.3 s, rounded up, is 1951.
+DERIVED = (
+    "examined 4 shards: whole 2, baseline Timeout 1, other 1\n"
+    "whole baselines (Build + Test) s: max 1300.3 (mutation-rust-shard-1: build 200.2, test "
+    "1100.1), median 1160.5, min 1020.7\n"
+    "whole Test phase s: max 1100.1, median 1000.2; whole Build phase s: max 200.2\n"
+    "Timeout baselines: Test phase min 2300.0 max 2300.0 (the 2300 s --timeout cut them), Build "
+    "max 50.0\n"
+    "BUDGET 1951 s = ceil(1300.300 x 1.5)\n"
+)
+
+
+class TheBudgetIsDerivedFromThePublicTree(unittest.TestCase):
+    """SPEC-480 A18 (R15): the committed derive, run from the repository's root as its header
+    says, prints its five lines exactly over a fixed four-shard fixture."""
+
+    def test_the_derive_prints_its_lines_over_a_fixed_fixture(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            for relative, text in examined("files of the four shards", list(SHARDS.items())):
+                path = Path(scratch) / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text, encoding="utf-8")
+            done = subprocess.run(
+                [sys.executable, "-I", "-B", DERIVE, scratch],
+                cwd=REPO,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=False,
+            )
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(done.stdout, DERIVED)
 
 
 if __name__ == "__main__":
