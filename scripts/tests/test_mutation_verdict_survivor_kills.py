@@ -955,5 +955,1032 @@ class TheSelectedRows(unittest.TestCase):
         )
 
 
+#: The Python files a diff changes when it changes no Rust production file: one more than the
+#: twenty `not_applicable` names.
+TWENTY_ONE = list("abcdefghijklmnopqrstu")
+NO_RUST = "mutation: rust: not-applicable: the diff changes no rust production file; it changes "
+TEST_ONLY_LINE = (
+    "mutation: rust: not-applicable: crates/c/src/lib.rs: 2 changed line(s): 1 test-only, inside "
+    "an item marked #[cfg(test)] or with a test attribute, which cargo-mutants never mutates\n"
+)
+
+
+class TheNotApplicable(unittest.TestCase):
+    def said(self, files):
+        """What `not_applicable` says of a plan whose files are `files`, for the Rust class."""
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            V.not_applicable(V.Verdict("rust"), {"files": files}, "rust")
+        return out.getvalue()
+
+    def changes(self, paths):
+        """What `not_applicable` says of a diff that changes only the Python files `paths`."""
+        return self.said([{"path": path, "class": "python"} for path in paths])
+
+    def test_each_integer_of_not_applicable_is_observed(self):
+        self.assertEqual(
+            self.changes(TWENTY_ONE),
+            f"{NO_RUST}a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, and 1 more\n",
+        )
+
+    def test_each_comparison_of_not_applicable_is_observed(self):
+        self.assertEqual(
+            self.changes(TWENTY_ONE),
+            f"{NO_RUST}a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, and 1 more\n",
+        )
+        self.assertEqual(self.changes(["a"]), f"{NO_RUST}a\n")
+
+    def test_each_string_of_not_applicable_is_observed(self):
+        self.assertEqual(self.changes(["a"]), f"{NO_RUST}a\n")
+        self.assertEqual(self.changes([]), f"{NO_RUST}nothing\n")
+        test_only = {"path": LIB, "class": "rust", "added": 2, "test": [3], "quiet": []}
+        self.assertEqual(self.said([test_only]), TEST_ONLY_LINE)
+
+
+def actions(test, **variables):
+    """(the step-outputs file, a patch of `os.environ` to a run under GitHub Actions that sets only
+    `variables`): its outputs land in the test's own scratch, so no test writes CI's own step
+    outputs or reads CI's run identity."""
+    outputs = scratch(test) / "github-output"
+    environment = dict(variables, GITHUB_OUTPUT=str(outputs))
+    return outputs, mock.patch.dict(os.environ, environment, clear=True)
+
+
+class TheSize(unittest.TestCase):
+    def test_each_return_value_of_size_is_observed(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = V.size(None, None)
+        self.assertEqual(
+            (code, out.getvalue()),
+            (3, "mutation: size: VOID no --listed holds no cargo-mutants listing\n"),
+        )
+        outputs, environment = actions(self)
+        out = io.StringIO()
+        with environment, contextlib.redirect_stdout(out):
+            code = V.size(None, "miniapp")
+        self.assertEqual(
+            (code, out.getvalue(), outputs.read_text(encoding="utf-8")),
+            (
+                0,
+                "mutation: size: 1 shard(s) for the Mini App (miniapp), which runs no Rust leg and "
+                "reads no listing; legs 1 of ceiling 234\n",
+                "shards=1\nmatrix=[0]\n",
+            ),
+        )
+
+
+class TheCargoMutant(unittest.TestCase):
+    def test_each_operand_of_cargo_mutant_is_observed(self):
+        span = cargo_mutant("replace + with -")["span"]
+        self.assertIsNone(V.cargo_mutant({"file": 5, "name": "5:2:7: x", "span": span}))
+        self.assertIsNone(V.cargo_mutant({"file": LIB, "name": 5, "span": span}))
+        self.assertEqual(
+            V.cargo_mutant(cargo_mutant("replace + with -")),
+            V.Mutant(LIB, "replace + with -", (2, 7), (2, 8), f"{LIB}:2:7: replace + with -"),
+        )
+
+
+#: What every survivor draft says after its list of survivors.
+TRIAGE = (
+    "Triage each one (SPEC-057 R1): kill it with a test that asserts the behaviour the mutant "
+    "breaks, or, when no test can tell it apart, record it EQUIVALENT in "
+    "`scripts/mutation-equivalent.d/<package>.json`, `miniapp.json` for the Mini App "
+    "(ADR-070): its `file`, `mutant`, `anchor`, `reason`, `evidence`, a Rust mutant's "
+    "`reached_by`, and `issue`. An uncovered Mini App mutant first gains a test that reaches "
+    "it. A row that SURVIVED or is VOID is repaired in its band fragment under "
+    "`scripts/mutation-rows.d/`.\n"
+)
+BATTERY = "The weekly mutation battery"
+
+
+def drafted(source):
+    """The draft of `m1` and `m2` on `scripts/a.py`, as `source` found them."""
+    return (
+        f"{source} found 2 mutant(s) of `scripts/a.py` that no test killed (SPEC-039 R12).\n\n"
+        f"- `m1`\n- `m2`\n\n{TRIAGE}"
+    )
+
+
+class TheDraftBody(unittest.TestCase):
+    def body(self, **variables):
+        _, environment = actions(self, **variables)
+        with environment:
+            return V.draft_body("scripts/a.py", ["m1", "m2"])
+
+    def test_each_string_of_draft_body_is_observed(self):
+        self.assertEqual(self.body(), drafted(BATTERY))
+        self.assertEqual(
+            self.body(GITHUB_RUN_ID="7", GITHUB_REPOSITORY="o/r"),
+            drafted(f"{BATTERY}'s run https://github.com/o/r/actions/runs/7"),
+        )
+        self.assertEqual(
+            self.body(
+                GITHUB_RUN_ID="7",
+                GITHUB_REPOSITORY="o/r",
+                GITHUB_SERVER_URL="https://ghe.test",
+            ),
+            drafted(f"{BATTERY}'s run https://ghe.test/o/r/actions/runs/7"),
+        )
+
+    def test_each_operand_of_draft_body_is_observed(self):
+        self.assertEqual(self.body(GITHUB_RUN_ID="7"), drafted(BATTERY))
+        self.assertEqual(self.body(GITHUB_REPOSITORY="o/r"), drafted(BATTERY))
+
+
+class TheRustTokens(unittest.TestCase):
+    def test_each_flag_of_rust_tokens_is_observed(self):
+        self.assertEqual(V.rust_tokens("/* /* */ */a"), [(11, 12)])
+
+
+#: A rows report of a survived row on `scripts/a.py` and a void row with no target.
+ROW_SURVIVORS = {
+    "rows/rows.json": json.dumps(
+        [
+            {
+                "id": "S1-A",
+                "target": "scripts/a.py",
+                "verdict": "SURVIVED",
+                "reason": "s",
+            },
+            {"id": "S2-B", "verdict": "VOID", "reason": "v"},
+        ]
+    )
+}
+DRAFTED = (
+    "survivors: Mutation survivors: <no target>: 1 mutant(s): to file\n"
+    "survivors: Mutation survivors: scripts/a.py: 1 mutant(s): already open, not filed again\n"
+    "survivors: 0 mutant(s) the equivalence record excuses, drafted as no issue\n"
+    "examined 2 file(s) with survivors\n"
+)
+MANIFEST = (
+    '[\n  {\n    "title": "Mutation survivors: <no target>",\n    "body": "draft-001.md",\n'
+    '    "open": false\n  },\n  {\n    "title": "Mutation survivors: scripts/a.py",\n'
+    '    "body": "draft-002.md",\n    "open": true\n  }\n]\n'
+)
+
+
+class TheSurvivors(unittest.TestCase):
+    def check(self, out):
+        """`survivors` into `out`, with `scripts/a.py`'s issue already open: its exit, what it
+        printed, the files it wrote and its manifest."""
+        titles = scratch(self) / "titles.json"
+        titles.write_text(json.dumps(["Mutation survivors: scripts/a.py"]), encoding="utf-8")
+        args = Namespace(
+            reports=str(tree(self, ROW_SURVIVORS)),
+            out=str(out),
+            open_titles=str(titles),
+            root=str(scratch(self)),
+        )
+        printed = io.StringIO()
+        _, environment = actions(self)
+        with environment, contextlib.redirect_stdout(printed):
+            code = V.survivors(args)
+        self.assertEqual(
+            (
+                code,
+                printed.getvalue(),
+                sorted(path.name for path in out.iterdir()),
+                (out / "drafts.json").read_text(encoding="utf-8"),
+            ),
+            (0, DRAFTED, ["draft-001.md", "draft-002.md", "drafts.json"], MANIFEST),
+        )
+
+    def test_each_flag_of_survivors_is_observed(self):
+        out = scratch(self) / "made" / "drafts"
+        self.check(out)
+        self.check(out)
+
+    def test_each_integer_of_survivors_is_observed(self):
+        self.check(scratch(self) / "drafts")
+
+    def test_each_string_of_survivors_is_observed(self):
+        self.check(scratch(self) / "drafts")
+
+    def test_each_return_value_of_survivors_is_observed(self):
+        self.check(scratch(self) / "drafts")
+
+
+NO_EXIT = "no cargo-mutants exit recorded, so its report may be partial"
+
+
+class ThePartialReason(unittest.TestCase):
+    def test_each_string_of_partial_reason_is_observed(self):
+        self.assertEqual(V.partial_reason({"caught": 0}, None, "s"), NO_EXIT)
+
+    def test_each_return_value_of_partial_reason_is_observed(self):
+        self.assertEqual(V.partial_reason({"caught": 0}, None, "s"), NO_EXIT)
+
+    def test_each_integer_of_partial_reason_is_observed(self):
+        cases = [
+            ({"caught": 1, "total_mutants": 1}, None),
+            ({"caught": 0}, None),
+            (
+                {"caught": 2, "total_mutants": 3},
+                "the report counts 2 of 3 mutants reported",
+            ),
+        ]
+        for report, reason in examined("reports that leave counts out", cases):
+            self.assertEqual(V.partial_reason(report, 0, "s"), reason, report)
+
+
+class TheBinds(unittest.TestCase):
+    def setUp(self):
+        self.sources = V.Sources(scratch(self))
+        self.sources.put("f.rs", "a + b\nXX\n")
+
+    def binds(self, mutant, **fields):
+        """`binds` of a record of `- for +` in `f.rs`, with `fields` set, to `mutant`."""
+        record = V.Record(
+            "c.json", 1, dict({"file": "f.rs", "mutant": "replace + with -"}, **fields)
+        )
+        return V.binds(record, mutant, self.sources)
+
+    def test_each_return_value_of_binds_is_observed(self):
+        plus = V.Mutant("f.rs", "replace + with -", (1, 3), (1, 4), "f.rs:1:3: replace + with -")
+        self.assertIs(self.binds(plus, anchor="a + b"), True)
+        self.assertIs(self.binds(plus, file="g.rs", anchor="a + b"), False)
+        self.assertIs(self.binds(plus, anchor="nope"), False)
+
+    def test_each_string_of_binds_is_observed(self):
+        second = V.Mutant("f.rs", "replace + with -", (2, 1), (2, 2), "f.rs:2:1: replace + with -")
+        self.assertIs(self.binds(second), False)
+
+
+#: The verdict's command line's description: the first paragraph of its docstring.
+DESCRIPTION = (
+    "mutation-verdict: a pull request's mutation plan and verdict, the weekly battery's "
+    "survivors as\nissue drafts and its count of reports, and the tools' configurations and "
+    "exclusions (SPEC-039 R2 to\nR6, R10, R12; ADR-057)."
+)
+#: Each verb's usage check, (its command line, the error it gives).
+USAGE_ERRORS = (
+    (("plan", "--base", "b"), "plan needs --base and --out"),
+    (("shards",), "shards needs --plan"),
+    (("judge", "--plan", "p"), "judge needs --plan and --class"),
+    (("legs", "--plan", "p"), "legs needs --plan, --rust-leg and --rows-leg"),
+    (("survivors", "--reports", "r"), "survivors needs --reports and --out"),
+    (("battery", "--reports", "r"), "battery needs --reports and --shards, at least 1"),
+    (("table",), "table needs --reports"),
+)
+#: Each usage check's operands, each alone false, the others true: (its command line, the error).
+USAGE_OPERANDS = (
+    (("plan", "--base", "b"), "plan needs --base and --out"),
+    (("plan", "--out", "o"), "plan needs --base and --out"),
+    (("judge", "--plan", "p"), "judge needs --plan and --class"),
+    (("judge", "--class", "rust"), "judge needs --plan and --class"),
+    (
+        ("legs", "--rust-leg", "s", "--rows-leg", "s"),
+        "legs needs --plan, --rust-leg and --rows-leg",
+    ),
+    (
+        ("legs", "--plan", "p", "--rows-leg", "s"),
+        "legs needs --plan, --rust-leg and --rows-leg",
+    ),
+    (
+        ("legs", "--plan", "p", "--rust-leg", "s"),
+        "legs needs --plan, --rust-leg and --rows-leg",
+    ),
+    (("survivors", "--reports", "r"), "survivors needs --reports and --out"),
+    (("survivors", "--out", "o"), "survivors needs --reports and --out"),
+    (("battery", "--shards", "2"), "battery needs --reports and --shards, at least 1"),
+    (("battery", "--reports", "r"), "battery needs --reports and --shards, at least 1"),
+    (
+        ("battery", "--reports", "r", "--shards", "0"),
+        "battery needs --reports and --shards, at least 1",
+    ),
+)
+
+
+class TheMain(unittest.TestCase):
+    """`main` with each verb's own work stood in for, so a mutant that lets a verb past its usage
+    check returns the stand-in's 77, or the plan's 0, and reads no tree."""
+
+    def stubs(self, calls):
+        """Stand-ins for the plan's steps and for the checked verbs; each plan step logs its
+        arguments to `calls`."""
+
+        def scope_of(*cells):
+            calls.append(("scope_of", cells))
+            return "diff", "r"
+
+        def release_run(*cells):
+            calls.append(("release_run", cells))
+            return False
+
+        def plan_diff(_root, base, head, _out, *rest):
+            calls.append(("plan_diff", base, head, rest))
+            return "the plan"
+
+        def say_plan(plan):
+            calls.append(("say_plan", plan))
+
+        def verb(*_cells):
+            return 77
+
+        return {
+            "scope_of": scope_of,
+            "release_run": release_run,
+            "plan_diff": plan_diff,
+            "say_plan": say_plan,
+            "judge": verb,
+            "legs": verb,
+            "survivors": verb,
+            "battery": verb,
+        }
+
+    def main(self, argv, stubs):
+        """(what `main(argv)` returned or exited with, what it wrote to stderr)."""
+        err = io.StringIO()
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(contextlib.redirect_stderr(err))
+            for name, stub in stubs.items():
+                stack.enter_context(mock.patch.object(V, name, stub))
+            try:
+                code = V.main(list(argv))
+            except SystemExit as stop:
+                code = stop.code
+        return code, err.getvalue()
+
+    def refused(self, argv):
+        """(the exit, the usage error after its program's name) of `main(argv)` over a scratch
+        root, every verb stood in for."""
+        code, err = self.main([*argv, "--root", str(scratch(self))], self.stubs([]))
+        lines = err.splitlines()
+        return code, lines[-1].partition(": error: ")[2] if lines else ""
+
+    def planned(self, stubs):
+        root = scratch(self)
+        return self.main(
+            ["plan", "--base", "b", "--out", str(root / "o"), "--root", str(root)],
+            stubs,
+        )
+
+    def test_each_integer_of_main_is_observed(self):
+        described = []
+
+        def parse_args(parser, _argv):
+            described.append(parser.description)
+            raise SystemExit(2)
+
+        with mock.patch.object(V.argparse.ArgumentParser, "parse_args", parse_args):
+            self.assertEqual(self.main(["census"], {}), (2, ""))
+        self.assertEqual(described, [DESCRIPTION])
+
+    def test_each_string_of_main_is_observed(self):
+        calls = []
+        self.assertEqual(self.planned(self.stubs(calls)), (0, ""))
+        self.assertEqual(
+            calls,
+            [
+                ("scope_of", ("", "", "")),
+                ("release_run", ("", "", None, "", "")),
+                ("plan_diff", "b", "HEAD", (("diff", "r"), False)),
+                ("say_plan", "the plan"),
+            ],
+        )
+        for argv, error in examined("usage checks", USAGE_ERRORS):
+            self.assertEqual(self.refused(argv), (2, error), argv)
+
+    def test_each_operand_of_main_is_observed(self):
+        for argv, error in examined("usage checks' operands", USAGE_OPERANDS):
+            self.assertEqual(self.refused(argv), (2, error), argv)
+
+    def test_each_return_value_of_main_is_observed(self):
+        stubs = self.stubs([])
+        self.assertEqual(self.planned(stubs), (0, ""))
+
+        def refuse(*_cells):
+            raise V.mutation_rows.PopulationRefused("refused")
+
+        stubs["plan_diff"] = refuse
+        self.assertEqual(self.planned(stubs), (1, "mutation: plan: REFUSED: refused\n"))
+
+
+#: A leg's memory-scope record: in force, done, and with no out-of-memory event.
+SCOPED = json.dumps({"state": "done", "in_force": True, "oom": 0, "oom_kill": 0})
+#: A whole cargo-mutants report of one caught mutant.
+COUNTED = {
+    "caught": 1,
+    "missed": 0,
+    "timeout": 0,
+    "unviable": 0,
+    "total_mutants": 1,
+    "outcomes": [],
+}
+
+
+def a_leg(name, code, report=None):
+    """A leg's files under `name`: its exit, its memory-scope record and, given one, its report."""
+    files = {
+        f"{name}/cargo-mutants.exit": f"{code}\n",
+        f"{name}/memory-scope.json": SCOPED,
+    }
+    if report is not None:
+        files[f"{name}/mutants.out/outcomes.json"] = json.dumps(report)
+    return files
+
+
+def core_outcome(summary, name):
+    return {
+        "summary": summary,
+        "scenario": {"Mutant": {"package": "core", "name": name}},
+    }
+
+
+NO_OUTCOMES = "no report: its outcomes.json holds no cargo-mutants outcomes"
+
+
+class TheTableRust(unittest.TestCase):
+    def tabled(self, files):
+        """`table_rust` over the shards' reports `files`: (the reports it read, the core
+        package's tally, its failures, its voids, what it printed)."""
+        core = V.Tally()
+        failures, voids = [], []
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            read = V.table_rust(
+                scratch(self),
+                tree(self, files),
+                None,
+                [],
+                None,
+                {"core": core},
+                failures.append,
+                voids.append,
+            )
+        return read, dataclasses.astuple(core), failures, voids, out.getvalue()
+
+    def skipped_then_read(self):
+        legs = dict(a_leg("a", 0), **a_leg("b", 0, COUNTED))
+        self.assertEqual(self.tabled(legs), (1, (None, 0, 0, 0, 0), [], [], ""))
+
+    def failed_without_report(self):
+        found = self.tabled(a_leg("a", 1))
+        self.assertEqual(found, (1, (None, 0, 0, 0, 0), [], [f"a: {NO_OUTCOMES}"], ""))
+
+    def test_each_integer_of_table_rust_is_observed(self):
+        self.skipped_then_read()
+
+    def test_each_comparison_of_table_rust_is_observed(self):
+        self.skipped_then_read()
+        self.failed_without_report()
+
+    def test_each_loop_step_of_table_rust_is_observed(self):
+        self.skipped_then_read()
+        report = dict(
+            COUNTED,
+            timeout=1,
+            total_mutants=2,
+            outcomes=[core_outcome("Weird", "m1"), core_outcome("CaughtMutant", "m2")],
+        )
+        self.assertEqual(
+            self.tabled(a_leg("a", 0, report)),
+            (
+                1,
+                (None, 1, 0, 0, 0),
+                [],
+                ["a: m1: an outcome this table does not know, Weird"],
+                "",
+            ),
+        )
+
+    def test_each_string_of_table_rust_is_observed(self):
+        self.failed_without_report()
+
+
+class TheIsTestMark(unittest.TestCase):
+    def test_each_string_of_is_test_mark_is_observed(self):
+        marks = [["test", "[", "x", "]"], ["test", "{", "}"], ["test", "=", '"x"']]
+        for inner in examined("test marks a bracket or an equals sign ends", marks):
+            self.assertIs(V.is_test_mark(inner), True, inner)
+
+
+class TheClassCase(unittest.TestCase):
+    def test_each_return_value_of_class_case_is_observed(self):
+        self.assertEqual(
+            V.class_case([], "rust"),
+            "not-applicable: the diff changes no rust production file",
+        )
+
+
+class TheWholeReports(unittest.TestCase):
+    def judged(self, plan, **cells):
+        """(the whole reports `whole_reports` returns, what it said, its voids)."""
+        out = io.StringIO()
+        verdict = V.Verdict("rust")
+        args = judge_args(scratch(self), **dict({"outcomes": None, "tool_exit": None}, **cells))
+        with contextlib.redirect_stdout(out):
+            whole = V.whole_reports(verdict, plan, args)
+        return whole, out.getvalue(), verdict.voids
+
+    def legs(self, files, *mutants):
+        """`judged` over the shards' reports `files`, shard k listing `mutants[k]` mutants."""
+        shards = [{"shard": k, "mutants": ["m"] * count} for k, count in enumerate(mutants)]
+        return self.judged({"shards": {"shards": shards}}, shard_reports=str(tree(self, files)))
+
+    def no_outcomes(self):
+        why = "no report: no --outcomes holds no cargo-mutants outcomes"
+        self.assertEqual(self.judged({}), ([], f"mutation: rust: VOID {why}\n", [why]))
+
+    def test_each_operand_of_whole_reports_is_observed(self):
+        self.no_outcomes()
+        missing = scratch(self) / "missing.json"
+        why = f"no report: {missing} holds no cargo-mutants outcomes"
+        self.assertEqual(
+            self.judged({}, outcomes=str(missing)),
+            ([], f"mutation: rust: VOID {why}\n", [why]),
+        )
+
+    def test_each_string_of_whole_reports_is_observed(self):
+        self.no_outcomes()
+        why = f"mutation-rust-shard-0: {NO_OUTCOMES}"
+        self.assertEqual(self.legs({}, 1), ([], f"mutation: rust: VOID {why}\n", [why]))
+
+    def test_each_comparison_of_whole_reports_is_observed(self):
+        self.assertEqual(
+            self.legs({}, 0),
+            (
+                [],
+                "mutation: rust: mutation-rust-shard-0: not started: the plan lists no mutant "
+                "for it\n",
+                [],
+            ),
+        )
+        report = {"mutation-rust-shard-0/mutants.out/outcomes.json": json.dumps(COUNTED)}
+        why = f"mutation-rust-shard-0: {NO_EXIT}"
+        self.assertEqual(self.legs(report, 0), ([], f"mutation: rust: VOID {why}\n", [why]))
+
+    def test_each_loop_step_of_whole_reports_is_observed(self):
+        second = {
+            "mutation-rust-shard-1/mutants.out/outcomes.json": json.dumps(COUNTED),
+            "mutation-rust-shard-1/cargo-mutants.exit": "0\n",
+        }
+        whole = [("mutation-rust-shard-1: ", COUNTED)]
+        self.assertEqual(
+            self.legs(second, 0, 1),
+            (
+                whole,
+                "mutation: rust: mutation-rust-shard-0: not started: the plan lists no mutant "
+                "for it\n",
+                [],
+            ),
+        )
+        listed_none = dict(second, **{"mutation-rust-shard-0/cargo-mutants.exit": "0\n"})
+        self.assertEqual(
+            self.legs(listed_none, 0, 1),
+            (
+                whole,
+                "mutation: rust: mutation-rust-shard-0: no mutant listed, and cargo-mutants "
+                "reports none\n",
+                [],
+            ),
+        )
+
+
+#: A Stryker sweep's one whole report.
+SWEPT = json.dumps({"files": {}})
+OWES_NONE = "battery: mutants-shard-{}: the scope lists no mutant for it, so it owes no report\n"
+#: {case: ((the reports' files, shards, package, the listing or None), (exit, what it printed))}.
+BATTERIES = {
+    "a scope that lists one shard of two": (
+        (
+            a_leg("mutants-shard-0", 0, {"caught": 1, "total_mutants": 1}),
+            2,
+            "core",
+            [{"package": "core"}],
+        ),
+        (
+            0,
+            f"{OWES_NONE.format(1)}battery: counted 2 of 2 reports whole\nexamined 2 report(s)\n",
+        ),
+    ),
+    "the Mini App's scope with a listing": (
+        ({"stryker/mutation.json": SWEPT}, 1, "miniapp", []),
+        (
+            0,
+            f"{OWES_NONE.format(0)}battery: counted 2 of 2 reports whole\nexamined 2 report(s)\n",
+        ),
+    ),
+    "two sweeps": (
+        (
+            {"stryker/a/mutation.json": SWEPT, "stryker/b/mutation.json": SWEPT},
+            0,
+            "miniapp",
+            None,
+        ),
+        (
+            1,
+            "battery: PARTIAL stryker: 2 mutation.json, not one report\n"
+            "battery: counted 0 of 1 reports whole\nexamined 1 report(s)\n",
+        ),
+    ),
+    "a scope the listing does not name": (
+        ({}, 0, "core", [{"package": "web"}, {"package": "a"}]),
+        (
+            1,
+            "battery: the scope core lists no mutant; the listing's packages are a, web, and the "
+            "Mini App is miniapp\nbattery: counted 1 of 1 reports whole\nexamined 1 report(s)\n",
+        ),
+    ),
+    "the whole tree with no row and no sweep": (
+        (
+            dict(
+                a_leg("mutants-shard-0", 0, dict(COUNTED, caught=0, timeout=1)),
+                **a_leg("mutants-shard-1", 0, dict(COUNTED, caught=0, unviable=1)),
+                **{
+                    "rows/rows.json": "[]",
+                    "web/mutation.json": SWEPT,
+                    "mutants-shard-5/x": "",
+                },
+            ),
+            2,
+            None,
+            None,
+        ),
+        (
+            1,
+            "battery: PARTIAL rows: rows.json proves no row\n"
+            "battery: MISSING stryker: no mutation.json\n"
+            "battery: FOREIGN mutants-shard-5: the run was sized at 2 shard(s)\n"
+            "battery: counted 2 of 4 reports whole\nexamined 4 report(s)\n",
+        ),
+    ),
+    "rows that are no list and a sweep that is no object": (
+        (
+            {
+                "rows/rows.json": json.dumps({"a": 1}),
+                "stryker/mutation.json": '["files"]',
+            },
+            0,
+            None,
+            None,
+        ),
+        (
+            1,
+            "battery: PARTIAL rows: rows.json proves no row\n"
+            "battery: PARTIAL stryker: 1 mutation.json, not one report\n"
+            "battery: counted 0 of 2 reports whole\nexamined 2 report(s)\n",
+        ),
+    ),
+    "the Mini App's scope with a sweep of no files": (
+        ({"stryker/mutation.json": "{}"}, 2, "miniapp", None),
+        (
+            1,
+            f"{OWES_NONE.format(0)}{OWES_NONE.format(1)}"
+            "battery: PARTIAL stryker: 1 mutation.json, not one report\n"
+            "battery: counted 0 of 1 reports whole\nexamined 1 report(s)\n",
+        ),
+    ),
+}
+
+
+class TheBattery(unittest.TestCase):
+    def check(self, names):
+        for name in examined("battery runs", names):
+            (files, shards, package, listing), expected = BATTERIES[name]
+            if listing is not None:
+                files = dict(files, **{"listing.json": json.dumps(listing)})
+            reports = tree(self, files)
+            listed = None if listing is None else str(reports / "listing.json")
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = V.battery(reports, shards, package, listed, 0)
+            self.assertEqual((code, out.getvalue()), expected, name)
+
+    def test_each_integer_of_battery_is_observed(self):
+        self.check(
+            [
+                "a scope that lists one shard of two",
+                "the Mini App's scope with a listing",
+                "two sweeps",
+            ]
+        )
+
+    def test_each_comparison_of_battery_is_observed(self):
+        self.check(["a scope the listing does not name", "the Mini App's scope with a listing"])
+
+    def test_each_string_of_battery_is_observed(self):
+        self.check(
+            [
+                "a scope the listing does not name",
+                "the whole tree with no row and no sweep",
+            ]
+        )
+
+    def test_each_loop_step_of_battery_is_observed(self):
+        self.check(["the Mini App's scope with a sweep of no files"])
+
+    def test_each_operand_of_battery_is_observed(self):
+        self.check(
+            [
+                "the whole tree with no row and no sweep",
+                "rows that are no list and a sweep that is no object",
+                "two sweeps",
+                "the Mini App's scope with a sweep of no files",
+            ]
+        )
+
+
+#: {case: ((text, start, regex_may_begin), the end `web_literal` gives)}.
+WEB_LITERALS = {
+    "a one-line string left open": (('"ab\ncd"', 0, False), 3),
+    "a class holding a slash": (("/[/]/", 0, True), 5),
+    "a regex": (("/a/", 0, True), 3),
+    "a regex left open": (("/ab", 0, True), None),
+    "a regex a line break ends": (("/a\n/", 0, True), None),
+    "an escaped slash": (("/\\//", 0, True), 4),
+    "a regex before a semicolon": (("/a/;", 0, True), 3),
+    "a regex with a flag": (("/a/g", 0, True), 4),
+    "a regex with three flags": (("/a/gim", 0, True), 6),
+}
+
+
+class TheWebLiteral(unittest.TestCase):
+    def check(self, names):
+        for name in examined("web literals", names):
+            arguments, end = WEB_LITERALS[name]
+            self.assertEqual(V.web_literal(*arguments), end, name)
+
+    def test_each_flag_of_web_literal_is_observed(self):
+        self.check(["a one-line string left open", "a regex", "a class holding a slash"])
+
+    def test_each_integer_of_web_literal_is_observed(self):
+        self.check(
+            [
+                "a class holding a slash",
+                "an escaped slash",
+                "a regex before a semicolon",
+                "a regex",
+                "a regex with three flags",
+            ]
+        )
+
+    def test_each_operand_of_web_literal_is_observed(self):
+        self.check(["a regex left open", "a regex a line break ends", "a regex"])
+        self.check(["a class holding a slash"])
+
+    def test_each_string_of_web_literal_is_observed(self):
+        self.check(["a regex a line break ends", "an escaped slash", "a class holding a slash"])
+
+    def test_each_loop_step_of_web_literal_is_observed(self):
+        self.check(["an escaped slash"])
+
+    def test_each_comparison_of_web_literal_is_observed(self):
+        self.check(["a regex", "a regex with a flag", "a class holding a slash"])
+
+    def test_each_negation_of_web_literal_is_observed(self):
+        self.check(["a regex", "a class holding a slash"])
+
+
+class TheExcusesBind(unittest.TestCase):
+    def test_each_string_of_excuses_bind_is_observed(self):
+        record = V.Record("c.json", 1, a_record(LIB, "replace + with -"))
+        excuses = V.Excuses(tree(self, {LIB: LIB_TEXT}), [record], "rust")
+        both = [
+            V.Mutant(LIB, "replace + with -", (2, 7), (2, 8), f"{LIB}:2:7: replace + with -"),
+            V.Mutant(LIB, "replace + with -", (2, 5), (2, 6), f"{LIB}:2:5: replace + with -"),
+        ]
+        failures = []
+        excuses.bind(both, failures.append)
+        self.assertEqual(
+            failures,
+            [
+                f"AMBIGUOUS c.json record 1 ({LIB}: replace + with -): binds 2 listed mutants: "
+                f"{LIB}:2:7: replace + with -; {LIB}:2:5: replace + with -"
+            ],
+        )
+        self.assertEqual(excuses.valid, [])
+
+
+#: {case: (words, the index `item_keyword` gives from 0)}.
+ITEMS = {
+    "a restricted visibility": (["pub", "(", "crate", ")", "fn"], 4),
+    "a visibility left open": (["pub", "(", "crate"], None),
+    "a plain visibility": (["pub", "fn"], 1),
+    "a qualifier before brackets": (["async", "(", ")", "fn"], None),
+    "an extern ABI": (["extern", '"C"', "fn"], 2),
+    "an extern without an ABI": (["extern", "fn"], 1),
+    "an extern at the end": (["extern"], None),
+    "a qualifier before a string": (["unsafe", '"x"', "fn"], None),
+}
+
+
+class TheItemKeyword(unittest.TestCase):
+    def check(self, names):
+        for name in examined("items", names):
+            words, index = ITEMS[name]
+            self.assertEqual(V.item_keyword(words, 0), index, name)
+
+    def test_each_comparison_of_item_keyword_is_observed(self):
+        self.check(
+            [
+                "a restricted visibility",
+                "a plain visibility",
+                "a visibility left open",
+                "an extern ABI",
+            ]
+        )
+
+    def test_each_string_of_item_keyword_is_observed(self):
+        self.check(["a restricted visibility", "an extern ABI", "an extern without an ABI"])
+
+    def test_each_operand_of_item_keyword_is_observed(self):
+        self.check(
+            [
+                "a qualifier before brackets",
+                "a plain visibility",
+                "a qualifier before a string",
+                "an extern without an ABI",
+                "an extern at the end",
+            ]
+        )
+
+    def test_each_arithmetic_of_item_keyword_is_observed(self):
+        self.check(["a restricted visibility", "an extern ABI"])
+
+    def test_each_integer_of_item_keyword_is_observed(self):
+        self.check(["a restricted visibility", "an extern ABI", "an extern at the end"])
+
+
+#: A Mini App mutant with no status, which Stryker leaves Pending.
+PENDING = {
+    "mutatorName": "BlockStatement",
+    "replacement": "{}",
+    "location": {"start": {"line": 1, "column": 1}, "end": {"line": 1, "column": 3}},
+}
+
+
+class TheJudgeWeb(unittest.TestCase):
+    def judged(self, files, records=None):
+        """`judge_web` over a Stryker report of `files`, with `records` in its root: (what it
+        said, its failures, its voids, what it examined)."""
+        root = tree(self, dict(records or {}, **{"stryker.json": json.dumps({"files": files})}))
+        plan = {"row_overlaps": {}, "classes": {"web": {"applies": True}}, "files": []}
+        out = io.StringIO()
+        verdict = V.Verdict("web")
+        with contextlib.redirect_stdout(out):
+            V.judge_web(verdict, plan, judge_args(root, stryker=str(root / "stryker.json")))
+        return out.getvalue(), verdict.failures, verdict.voids, verdict.examined
+
+    def excused(self):
+        """A survivor the Mini App record binds in the report's own copy of the source."""
+        mutants = [
+            stryker("ArithmeticOperator", "a - b", "Survived", 28),
+            stryker("ArithmeticOperator", "a / b", "Killed", 28),
+        ]
+        source = "export const f = (a, b) => a + b;\n"
+        found = self.judged({"src/x.ts": {"source": source, "mutants": mutants}}, RECORDS)
+        said = (
+            "mutation: web: EQUIVALENT web/app/src/x.ts:1: ArithmeticOperator -> 'a - b': r (#1)\n"
+            "mutation: web: Stryker examined 2 (Killed 1, NoCoverage 0, Survived 1, Timeout 0)\n"
+            "mutation: web: survived 1: equivalent 1, unexplained 0\n"
+        )
+        self.assertEqual(found, (said, [], [], 2))
+
+    def pending(self):
+        never_run = "Pending web/app/src/x.ts:1: never run"
+        said = (
+            f"mutation: web: VOID {never_run}\n"
+            "mutation: web: Stryker examined 0 (Killed 0, NoCoverage 0, Pending 1, Survived 0, "
+            "Timeout 0)\n"
+            "mutation: web: survived 0: equivalent 0, unexplained 0\n"
+            f"mutation: web: VOID {NOTHING}\n"
+        )
+        self.assertEqual(
+            self.judged({"src/x.ts": {"mutants": [PENDING]}}),
+            (said, [], [never_run, NOTHING], 0),
+        )
+
+    def test_each_string_of_judge_web_is_observed(self):
+        self.excused()
+        self.pending()
+
+    def test_each_integer_of_judge_web_is_observed(self):
+        self.excused()
+        self.pending()
+        killed = [stryker("ArithmeticOperator", "a / b", "Killed", 28)]
+        said = (
+            "mutation: web: Stryker examined 1 (Killed 1, NoCoverage 0, Survived 0, Timeout 0)\n"
+            "mutation: web: survived 0: equivalent 0, unexplained 0\n"
+        )
+        self.assertEqual(self.judged({"src/x.ts": {"mutants": killed}}), (said, [], [], 1))
+
+
+class TheHeldTwice(unittest.TestCase):
+    TWICE = [
+        V.Record("c.json", 1, {"file": "f", "mutant": "m"}),
+        V.Record("d.json", 2, {"file": "f", "mutant": "m"}),
+    ]
+    HELD = (
+        ": held twice, by c.json record 1 (f: m) and d.json record 2 (f: m), so neither excuses it"
+    )
+
+    def test_each_integer_of_held_twice_is_observed(self):
+        self.assertEqual(V.held_twice(self.TWICE), self.HELD)
+        self.assertEqual(V.held_twice(self.TWICE[:1]), "")
+
+    def test_each_return_value_of_held_twice_is_observed(self):
+        self.assertEqual(V.held_twice(self.TWICE), self.HELD)
+
+
+#: The plan.json of a not-applicable run.
+NOT_APPLICABLE_PLAN = (
+    json.dumps(
+        {
+            "base": "",
+            "head": "",
+            "files": [],
+            "classes": {
+                name: {"applies": False, "files": []}
+                for name in ("rust", "web", "oracle", "scripts")
+            },
+            "rows": [],
+            "row_overlaps": {},
+            "stryker_mutate": [],
+            "scope": {"decision": "not-applicable", "reason": "r"},
+        },
+        indent=2,
+    )
+    + "\n"
+)
+#: A diff that adds a line to a file of no class, changes a Rust line and adds a Mini App line.
+PLAN_DIFF = (
+    "diff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -0,0 +1 @@\n+x\n"
+    f"diff --git a/{LIB} b/{LIB}\n--- a/{LIB}\n+++ b/{LIB}\n@@ -2 +2 @@\n-    a - b\n+    a + b\n"
+    f"diff --git a/{WEB_FILE} b/{WEB_FILE}\n--- a/{WEB_FILE}\n+++ b/{WEB_FILE}\n@@ -0,0 +1 @@\n"
+    "+export const a = 1;\n"
+)
+PLAN_TEXTS = {"README.md": "x\n", LIB: LIB_TEXT, WEB_FILE: "export const a = 1;\n"}
+PLANNED = (
+    [
+        {
+            "path": "README.md",
+            "class": "other",
+            "added": 1,
+            "deleted": 0,
+            "code": [],
+            "quiet": [1],
+            "test": [],
+        },
+        {
+            "path": LIB,
+            "class": "rust",
+            "added": 1,
+            "deleted": 1,
+            "code": [2],
+            "quiet": [],
+            "test": [],
+        },
+        {
+            "path": WEB_FILE,
+            "class": "web",
+            "added": 1,
+            "deleted": 0,
+            "code": [1],
+            "quiet": [],
+            "test": [],
+        },
+    ],
+    ["src/x.ts"],
+)
+
+
+class ThePlanDiff(unittest.TestCase):
+    def not_applicable(self, out):
+        """(the plan's base, its head, the plan.json it wrote into `out`) of a not-applicable
+        run."""
+        plan = V.plan_diff(scratch(self), "b", "h", out, ("not-applicable", "r"))
+        return plan.base, plan.head, (out / "plan.json").read_text(encoding="utf-8")
+
+    def planned(self):
+        """(the files, the Mini App files Stryker mutates) of `plan_diff` over `PLAN_DIFF`, git's
+        answers stood in for and no rows file in the root."""
+
+        def git(_root, *args):
+            if args[0] == "rev-parse":
+                return {"b^{commit}": "1111\n", "h^{commit}": "2222\n"}[args[-1]]
+            if args[0] == "diff":
+                return PLAN_DIFF
+            self.assertEqual(args[0], "show")
+            return PLAN_TEXTS[args[1].removeprefix("2222:")]
+
+        with mock.patch.object(V, "git", git):
+            plan = V.plan_diff(scratch(self), "b", "h", scratch(self) / "plan", ("diff", "r"))
+        return plan.files, plan.stryker_mutate
+
+    def test_each_flag_of_plan_diff_is_observed(self):
+        out = scratch(self) / "a" / "b"
+        self.assertEqual(self.not_applicable(out), ("", "", NOT_APPLICABLE_PLAN))
+
+    def test_each_string_of_plan_diff_is_observed(self):
+        out = scratch(self) / "plan"
+        self.assertEqual(self.not_applicable(out), ("", "", NOT_APPLICABLE_PLAN))
+        self.assertEqual(self.planned(), PLANNED)
+
+    def test_each_comparison_of_plan_diff_is_observed(self):
+        self.assertEqual(self.planned(), PLANNED)
+
+
 if __name__ == "__main__":
     unittest.main()
