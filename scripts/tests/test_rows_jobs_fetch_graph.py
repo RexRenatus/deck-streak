@@ -21,6 +21,7 @@ PROVE = "mutation_rows.py prove"
 FETCH = "cargo fetch --locked"
 RESTORE = re.compile(r"uses:\s*actions/cache(/restore)?@")
 MUTANTS = "cargo mutants"
+BASELINE_SCRIPT = "scripts/mutation-baseline.sh"
 IF = re.compile(r"(?m)^        if:\s*(.+?)\s*$")
 
 
@@ -61,8 +62,12 @@ def runs(step, needle):
 
 
 def runs_a_baseline(step):
-    """True when a step's code runs `cargo mutants` and not only to list (`--list`)."""
-    return any(MUTANTS in line and "--list" not in line for line in code_lines(step))
+    """True when a step's code runs `cargo mutants` and not only to list (`--list`), or runs the
+    leg's own unmutated baseline script (ADR-509), which comes before cargo-mutants skips its own."""
+    return any(
+        (MUTANTS in line and "--list" not in line) or BASELINE_SCRIPT in line
+        for line in code_lines(step)
+    )
 
 
 def step_if(step):

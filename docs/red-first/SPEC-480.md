@@ -148,3 +148,18 @@ A19: green at e6f02d150a54915bbdc4feb36dbd6d85b7924d2d
 A21: red at 16b8763c4845b6462d9f449c1c43e305deffefc2: AssertionError: 'run: bash scripts/mutation-timeouts.sh "$RUNNER_TEMP/reports"' not found in '      - name: the verdict, from every shard\'s report and the rows\' (the plan names a not-applicable case)\n        env:\n          RUST_LEG: ${{ needs.mutation-rust.result }}\n          ROWS_LEG: ${{ needs.mutation-rows.result }}\n          PYTHON_RELEASE_LEG: ${{ needs.mutation-python-release.result }}\n        run: |\n          reports="$RUNNER_TEMP/reports"\n          status=0\n          python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class rust --shard-reports "$reports" --rows "$reports/mutation-rows/rows.json" --whole "$reports/mutation-plan/whole.json" || status=$?\n          oracle=0\n          python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class oracle --python "$reports" --rows "$reports/mutation-rows/rows.json" --python-whole "$reports/mutation-plan/python-whole.json" || oracle=$?\n          if [ "$status" -eq 0 ]; then status=$oracle; fi\n          scripts=0\n          python3 scripts/mutation-verdict.py judge --plan "$reports/mutation-plan/plan.json" --class scripts --python "$reports" --rows "$reports/mutation-rows/rows.json" --python-whole "$reports/mutation-plan/python-whole.json" || scripts=$?\n          if [ "$status" -eq 0 ]; then status=$scripts; fi\n          legs=0\n          python3 scripts/mutation-verdict.py legs --plan "$reports/mutation-plan/plan.json" --rust-leg "$RUST_LEG" --rows-leg "$ROWS_LEG" --python-release-leg "$PYTHON_RELEASE_LEG" || legs=$?\n          if [ "$status" -eq 0 ]; then status=$legs; fi\n          exit "$status"\n\n  # StrykerJS over every web production file the diff changes, whole, so a survivor already on a\n  # touched file is the pull request\'s own (SPEC-039 R3, ADR-057 D3), dealt into three shards\n  # (SPEC-419, ADR-433). Each shard plans as the leg always has, asks StrykerJS\'s own mutation\n  # server how many mutants each planned file holds, takes its share of the files dealt whole by\n  # that count, largest first onto the lightest shard, and runs StrykerJS over its share. It keeps\n  # its record and its report under its own index whatever its outcome, and one shard\'s failure\n  # cancels no other. It restores the pnpm store and saves none.\n'
 A21: green at e6f02d150a54915bbdc4feb36dbd6d85b7924d2d
 ```
+
+SPEC-416 A1 after this delivery's baseline step. At push 2's tip `027905e9`, CI job 117988929169
+read SPEC-416 A1 (`test_each_baseline_job_fetches_after_its_cache_restore_and_before_cargo_mutants`)
+red, with the finding that in `ci.yml` job `mutation-rust` the fetch step's `if:` is not the
+cargo-mutants baseline step's `if:`. Its judge, `runs_a_baseline`, took the first `cargo mutants`
+step that does more than list as the leg's baseline. Since ADR-509 that is the step that skips its
+own baseline, under the added condition that the leg's own baseline read green, while the fetch and
+the leg's own baseline step share the plain condition.
+
+The commit `test(ci): SPEC-416 A2 plants the leg's own baseline shapes, red` adds two planted shapes
+to SPEC-416 A2 (the ADR-509 shape, and a fetch after the leg's own baseline) and one control (the
+leg's own baseline script is a baseline). Each reads red against that judge, beside A1. The commit
+that carries this note adds the leg's own baseline script to the steps `runs_a_baseline` counts as a
+baseline, so A1 judges the fetch against the step that runs the baseline. It removes no test,
+planted case or member and adds no filter. Its greens are read in CI by name at this push's tip.
