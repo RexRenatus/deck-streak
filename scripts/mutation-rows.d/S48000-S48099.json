@@ -59,6 +59,254 @@
         "while stop < len(text) and (text[stop].isalnum() or text[stop] == \"\"):",
         "the underscore is the word character the reading tests for, so a word that opens with one advances (SPEC-480 R3, A4)",
         "test_mutation_verdict_python_kills.RustTokensEndOnEveryInput.test_a_word_that_opens_with_an_underscore_is_one_token"
+      ],
+      [
+        "S48008-THE-BASELINE-BUDGET-IS-3845-SECONDS",
+        "scripts/mutation-baseline.sh",
+        "budget=3845",
+        "budget=3844",
+        "a leg's own baseline is bounded by the one budget section 9 records (SPEC-480 R10, A13)",
+        "test_mutation_baseline.TheBaselineBudgetIsOneFigure.test_the_budget_and_the_timeout_are_one_figure_each"
+      ],
+      [
+        "S48009-A-LEG-TESTS-THE-PACKAGES-OF-ITS-OWN-MUTANTS",
+        "scripts/mutation-baseline.sh",
+        "select(.key % $n == $k)",
+        "select(.key % $n != $k)",
+        "the baseline tests the packages of the mutants cargo-mutants deals to this leg (SPEC-480 R11, A14)",
+        "test_mutation_baseline.ALegRunsItsOwnBoundedBaseline.test_the_packages_are_dealt_as_cargo_mutants_deals_them"
+      ],
+      [
+        "S48010-EACH-PACKAGE-IS-TESTED-ONCE",
+        "scripts/mutation-baseline.sh",
+        "| unique | .[] |",
+        "| .[] |",
+        "the dealt packages are sorted and unique, as cargo-mutants' own baseline names them (SPEC-480 R11, A14)",
+        "test_mutation_baseline.ALegRunsItsOwnBoundedBaseline.test_the_packages_are_dealt_as_cargo_mutants_deals_them"
+      ],
+      [
+        "S48011-THE-BASELINE-RUNS-THE-MUTANTS-PROFILE",
+        "scripts/mutation-baseline.sh",
+        "--profile mutants >",
+        "--profile default >",
+        "the baseline runs the nextest profile each mutant runs (SPEC-480 R11, A14)",
+        "test_mutation_baseline.ALegRunsItsOwnBoundedBaseline.test_the_packages_are_dealt_as_cargo_mutants_deals_them"
+      ],
+      [
+        "S48012-THE-BASELINE-NEVER-UPDATES-A-SNAPSHOT",
+        "scripts/mutation-baseline.sh",
+        "INSTA_UPDATE=no INSTA_FORCE_PASS=0",
+        "INSTA_UPDATE=always INSTA_FORCE_PASS=0",
+        "the baseline runs in cargo-mutants' own environment, no snapshot written (SPEC-480 R11, A14)",
+        "test_mutation_baseline.ALegRunsItsOwnBoundedBaseline.test_the_packages_are_dealt_as_cargo_mutants_deals_them"
+      ],
+      [
+        "S48013-A-LEG-DEALT-NO-PACKAGE-IS-REFUSED",
+        "scripts/mutation-baseline.sh",
+        "dealt no package by $listed\"\n    exit 2",
+        "dealt no package by $listed\"\n    exit 0",
+        "a leg dealt no package exits 2 with no test run, never green over nothing (SPEC-480 R11, A14)",
+        "test_mutation_baseline.ALegRunsItsOwnBoundedBaseline.test_the_packages_are_dealt_as_cargo_mutants_deals_them"
+      ],
+      [
+        "S48014-THE-BOUND-IS-THE-BUDGET-ITSELF",
+        "scripts/mutation-baseline.sh",
+        "--kill-after=60 \"$budget\"",
+        "--kill-after=60 \"$((budget + 1))\"",
+        "the time bound the run is given is the budget itself (SPEC-480 R11, A14)",
+        "test_mutation_baseline.ALegRunsItsOwnBoundedBaseline.test_the_packages_are_dealt_as_cargo_mutants_deals_them"
+      ],
+      [
+        "S48015-A-RUN-PAST-ITS-SIGNAL-IS-KILLED-A-MINUTE-LATER",
+        "scripts/mutation-baseline.sh",
+        "--kill-after=60",
+        "--kill-after=600",
+        "a run that ignores the budget's signal is killed sixty seconds after it (SPEC-480 R11, A14)",
+        "test_mutation_baseline.ALegRunsItsOwnBoundedBaseline.test_the_packages_are_dealt_as_cargo_mutants_deals_them"
+      ],
+      [
+        "S48016-ONLY-A-FAILED-RUN-READS-THE-BUDGET",
+        "scripts/mutation-baseline.sh",
+        "[ \"$rc\" -ne 0 ] && [ \"$elapsed\"",
+        "[ \"$rc\" -eq 0 ] && [ \"$elapsed\"",
+        "a run that failed at the budget reads the budget's exit (SPEC-480 R11, A17)",
+        "test_mutation_baseline.ALegRunsItsOwnBoundedBaseline.test_a_baseline_that_reaches_its_budget_exits_124"
+      ],
+      [
+        "S48017-A-FAST-FAILURE-KEEPS-ITS-OWN-EXIT",
+        "scripts/mutation-baseline.sh",
+        "-ge \"$budget\" ]; then rc=124",
+        "-lt \"$budget\" ]; then rc=124",
+        "a run that failed before its budget keeps its own exit (SPEC-480 R11, A16)",
+        "test_mutation_baseline.ALegRunsItsOwnBoundedBaseline.test_a_failed_baseline_exits_its_own_code"
+      ],
+      [
+        "S48018-THE-BUDGETS-EXIT-IS-124",
+        "scripts/mutation-baseline.sh",
+        "then rc=124; fi",
+        "then rc=125; fi",
+        "a baseline that reached its budget exits 124, the code the verdict reads (SPEC-480 R11, A17)",
+        "test_mutation_baseline.ALegRunsItsOwnBoundedBaseline.test_a_baseline_that_reaches_its_budget_exits_124"
+      ],
+      [
+        "S48019-THE-SCRIPT-EXITS-ITS-RUNS-EXIT",
+        "scripts/mutation-baseline.sh",
+        "exit \"$rc\"",
+        "exit 0",
+        "the script's exit is its run's, never a pass over a red baseline (SPEC-480 R11, A16)",
+        "test_mutation_baseline.ALegRunsItsOwnBoundedBaseline.test_a_failed_baseline_exits_its_own_code"
+      ],
+      [
+        "S48020-ONLY-A-GREEN-BASELINE-RUNS-THE-MUTANTS",
+        ".github/workflows/ci.yml",
+        "steps.baseline.outputs.green == 'true'",
+        "steps.baseline.outputs.green != 'true'",
+        "cargo-mutants runs only after the leg's own green baseline (SPEC-480 R12, A19)",
+        "test_mutation_workflows.TheRustLegRunsItsBoundedBaselineFirst.test_the_bounded_baseline_runs_before_cargo_mutants_which_skips_its_own"
+      ],
+      [
+        "S48021-CARGO-MUTANTS-SKIPS-ITS-OWN-BASELINE",
+        ".github/workflows/ci.yml",
+        "git.diff\" --baseline=skip --sharding",
+        "git.diff\" --sharding",
+        "cargo-mutants skips its own baseline, the leg having run its own (SPEC-480 R12, A19)",
+        "test_mutation_workflows.TheRustLegRunsItsBoundedBaselineFirst.test_the_bounded_baseline_runs_before_cargo_mutants_which_skips_its_own"
+      ],
+      [
+        "S48022-THE-STEP-IS-GREEN-ONLY-ON-EXIT-0",
+        ".github/workflows/ci.yml",
+        "if [ \"$rc\" -eq 0 ]; then echo \"green=true\"",
+        "if [ \"$rc\" -ne 0 ]; then echo \"green=true\"",
+        "the baseline step marks a leg green only on its script's exit 0 (SPEC-480 R11, A19)",
+        "test_mutation_workflows.TheRustLegRunsItsBoundedBaselineFirst.test_the_bounded_baseline_runs_before_cargo_mutants_which_skips_its_own"
+      ],
+      [
+        "S48023-THE-RECORD-LIVES-UNDER-BASELINE",
+        ".github/workflows/ci.yml",
+        "echo \"$rc\" > \"$out/baseline/baseline.exit\"",
+        "echo \"$rc\" > \"$out/baseline.exit\"",
+        "the baseline's exit is recorded where the verdict reads it (SPEC-480 R11, A19)",
+        "test_mutation_workflows.TheRustLegRunsItsBoundedBaselineFirst.test_the_bounded_baseline_runs_before_cargo_mutants_which_skips_its_own"
+      ],
+      [
+        "S48024-THE-TIMEOUTS-PRINT-WHATEVER-THE-VERDICT-READ",
+        ".github/workflows/ci.yml",
+        "each over-margin package by name\n        if: ${{ always() }}",
+        "each over-margin package by name\n        if: ${{ success() }}",
+        "the Timeouts by package print whatever the verdict read (SPEC-480 R16, A21)",
+        "test_mutation_workflows.TheRustLegRunsItsBoundedBaselineFirst.test_the_verdict_job_prints_the_timeouts_by_package"
+      ],
+      [
+        "S48025-THE-BUDGET-VOID-NAMES-THE-BUDGET",
+        "scripts/mutation-verdict.py",
+        "reached its {BASELINE_BUDGET_SECONDS} s budget",
+        "reached its {MUTANT_TIMEOUT_SECONDS} s budget",
+        "a leg past its budget is VOID naming the baseline budget (SPEC-480 R13, A9)",
+        "test_mutation_verdict.ALegIsJudgedAgainstItsOwnBoundedBaseline.test_a_leg_whose_baseline_reached_its_budget_is_void"
+      ],
+      [
+        "S48026-THE-FAILED-VOID-NAMES-ITS-EXIT",
+        "scripts/mutation-verdict.py",
+        "failed (exit {code})",
+        "failed (exit {BASELINE_BUDGET_EXIT})",
+        "a leg whose baseline failed is VOID naming its own exit (SPEC-480 R13, A10)",
+        "test_mutation_verdict.ALegIsJudgedAgainstItsOwnBoundedBaseline.test_a_leg_whose_baseline_failed_is_void_with_its_exit"
+      ],
+      [
+        "S48027-THE-NO-RECORD-VOID-SAYS-NO-RECORD",
+        "scripts/mutation-verdict.py",
+        "it left no record of its unmutated baseline",
+        "it left a record of its unmutated baseline",
+        "a dealt leg with no baseline record is VOID saying so (SPEC-480 R13, A11)",
+        "test_mutation_verdict.ALegIsJudgedAgainstItsOwnBoundedBaseline.test_a_dealt_leg_that_left_no_baseline_record_is_void"
+      ],
+      [
+        "S48028-THE-DERIVES-MARGIN-IS-SPEC-362S",
+        "tools/rust-baseline-budget/size_budget.py",
+        "MARGIN = 1.5",
+        "MARGIN = 1.4",
+        "the derive's margin is SPEC-362 R7's 1.5 (SPEC-480 R15, A18)",
+        "test_mutation_baseline.TheBudgetIsDerivedFromThePublicTree.test_the_derive_prints_its_lines_over_a_fixed_fixture"
+      ],
+      [
+        "S48029-A-TIMEOUT-IS-COUNTED-BY-ITS-WORD",
+        "scripts/mutation-timeouts.sh",
+        "$3 == \"Timeout\"",
+        "$3 != \"Timeout\"",
+        "each package counts the outcomes that read Timeout (SPEC-480 R16, A20)",
+        "test_mutation_baseline.EachPackagesTimeoutsArePrinted.test_each_package_prints_its_timeouts_and_an_over_margin_one_is_read_by_name"
+      ],
+      [
+        "S48030-ONLY-A-PACKAGE-WITH-A-TIMEOUT-IS-READ-BY-NAME",
+        "scripts/mutation-timeouts.sh",
+        "timeouts[package] > 0 &&",
+        "timeouts[package] >= 0 &&",
+        "a package with no Timeout is printed by its count alone (SPEC-480 R16, A20)",
+        "test_mutation_baseline.EachPackagesTimeoutsArePrinted.test_each_package_prints_its_timeouts_and_an_over_margin_one_is_read_by_name"
+      ],
+      [
+        "S48031-AN-UNTIMED-PACKAGE-IS-READ-BY-NAME",
+        "scripts/mutation-timeouts.sh",
+        "(!(package in most) || most[package] * margin > timeout)",
+        "(most[package] * margin > timeout)",
+        "a package with a Timeout that no log times is read by name (SPEC-480 R16, A20)",
+        "test_mutation_baseline.EachPackagesTimeoutsArePrinted.test_each_package_prints_its_timeouts_and_an_over_margin_one_is_read_by_name"
+      ],
+      [
+        "S48032-A-PACKAGE-PAST-THE-MARGIN-IS-READ-BY-NAME",
+        "scripts/mutation-timeouts.sh",
+        "most[package] * margin > timeout)",
+        "most[package] * margin < timeout)",
+        "a package whose baseline tests pass the timeout over its margin is read by name (SPEC-480 R16, A20)",
+        "test_mutation_baseline.EachPackagesTimeoutsArePrinted.test_each_package_prints_its_timeouts_and_an_over_margin_one_is_read_by_name"
+      ],
+      [
+        "S48033-THE-TIMEOUTS-PRINT-READS-THE-2300-SECOND-TIMEOUT",
+        "scripts/mutation-timeouts.sh",
+        "timeout=2300",
+        "timeout=2200",
+        "the print holds packages to the per-mutant timeout every leg carries (SPEC-480 R16, A20)",
+        "test_mutation_baseline.EachPackagesTimeoutsArePrinted.test_each_package_prints_its_timeouts_and_an_over_margin_one_is_read_by_name"
+      ],
+      [
+        "S48034-THE-TIMEOUTS-PRINT-READS-THE-MARGIN",
+        "scripts/mutation-timeouts.sh",
+        "margin=1.5",
+        "margin=1.4",
+        "the print's margin is SPEC-362 R7's 1.5 (SPEC-480 R16, A20)",
+        "test_mutation_baseline.EachPackagesTimeoutsArePrinted.test_each_package_prints_its_timeouts_and_an_over_margin_one_is_read_by_name"
+      ],
+      [
+        "S48035-A-PACKAGES-TIME-IS-THE-SUM-OF-ITS-TESTS",
+        "scripts/mutation-timeouts.sh",
+        "sum[package] += head",
+        "sum[package] = head",
+        "a package's baseline test time sums its tests' times in a leg's log (SPEC-480 R16, A20)",
+        "test_mutation_baseline.EachPackagesTimeoutsArePrinted.test_each_package_prints_its_timeouts_and_an_over_margin_one_is_read_by_name"
+      ],
+      [
+        "S48036-A-PACKAGES-TIME-IS-ITS-LARGEST-OVER-LEGS",
+        "scripts/mutation-timeouts.sh",
+        "$3 + 0 > most[$2]",
+        "$3 + 0 < most[$2]",
+        "a package's baseline test time is the largest over the legs that tested it (SPEC-480 R16, A20)",
+        "test_mutation_baseline.EachPackagesTimeoutsArePrinted.test_each_package_prints_its_timeouts_and_an_over_margin_one_is_read_by_name"
+      ],
+      [
+        "S48037-A-TEST-BINARY-BELONGS-TO-ITS-PACKAGE",
+        "scripts/mutation-timeouts.sh",
+        "sub(/::.*/, \"\", package)",
+        "sub(/::$/, \"\", package)",
+        "an integration test binary's time counts to its package (SPEC-480 R16, A20)",
+        "test_mutation_baseline.EachPackagesTimeoutsArePrinted.test_each_package_prints_its_timeouts_and_an_over_margin_one_is_read_by_name"
+      ],
+      [
+        "S48038-A-COUNTED-STATUS-LINE-NAMES-ITS-PACKAGE",
+        "scripts/mutation-timeouts.sh",
+        "sub(/^\\([[:space:]]*[0-9]+\\/[0-9]+\\)[[:space:]]+/, \"\", rest)",
+        "sub(/^\\(\\)/, \"\", rest)",
+        "a status line's run counter is skipped before its binary is read (SPEC-480 R16, A20)",
+        "test_mutation_baseline.EachPackagesTimeoutsArePrinted.test_each_package_prints_its_timeouts_and_an_over_margin_one_is_read_by_name"
       ]
     ]
   }
