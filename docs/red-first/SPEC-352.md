@@ -93,3 +93,9 @@ A25: green at 85c644d7
   amended block, and green at 85c644d7. A25's planted control, the live workflow with
   `crates/engine-core/**` dropped, was red by name: `crates/engine-core/**: the XCFramework links
   it, and the internal lane's push filter does not watch it`.
+- The first certificate read's amendment (SPEC-352 section 8, R9 and R13 as amended). Its three
+  criteria, A26 to A28, are new, so each takes one red and one green line in the fence above. Their
+  tests and the shim's refused-read setting were committed alone, before the lane script changed;
+  each red and green is read locally by running `test_ios_lane.py` at the named commit, where the
+  module's other tests pass. A26 is red when no second read is recorded, A27 when a failed read
+  prints no class line, and A28 when the refusal names no class.

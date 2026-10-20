@@ -1,5 +1,5 @@
 """The TestFlight lane's steps, run as child processes over fixture repositories and recording
-shims (SPEC-352 A1 to A13, ADR-363 D2 to D7).
+shims (SPEC-352 A1 to A13 and A26 to A28, ADR-363 D2 to D7 and its amendment).
 
 `scripts/ios_lane.py` is never imported: each test runs it with `sys.executable`, in a fixture
 checkout, with an environment the test builds from `PATH`, a scratch `HOME` and the GitHub
@@ -25,7 +25,9 @@ much of the step's own output had been written when it ran, and what it found on
 credential parts and the identifiers a profile carries are random sentinels made at run time; the
 certificate is random bytes and the profile a synthetic property list inside random bytes, so no
 signing material exists anywhere. The parts are keyed by their role in the lane, never by the name
-of the secret that holds them.
+of the secret that holds them. A test makes the next certificate reads fail through the fixture's
+`refused reads`, each read taking the next text as openssl's standard error and exiting 1; the
+re-wrap and every other tool behave as before.
 """
 
 import datetime
@@ -106,12 +108,20 @@ entry = {
     "profiles": sorted(p.name for p in Path(os.environ["HOME"]).rglob("*.mobileprovision")),
 }
 out = ""
+err = ""
 if tool == "openssl" and "-export" in args:
     Path(value("-out")).write_bytes(b"rewrapped")
 elif tool == "openssl":
     entry["read"] = hashlib.sha256(Path(value("-in")).read_bytes()).hexdigest()
-    pem = "ENCRYPTED " + "PRIVATE KEY"
-    out = f"-----BEGIN {pem}-----\\nfixture\\n-----END {pem}-----\\n"
+    entry["stdin"] = hashlib.sha256(stdin.encode("utf-8")).hexdigest()
+    # The fixture's refused reads: each read takes the next one's text as its standard error and
+    # exits 1, until none is left.
+    if fixture.get("refused reads"):
+        err = fixture["refused reads"].pop(0)
+        (shims / "fixture.json").write_text(json.dumps(fixture))
+    else:
+        pem = "ENCRYPTED " + "PRIVATE KEY"
+        out = f"-----BEGIN {pem}-----\\nfixture\\n-----END {pem}-----\\n"
 elif tool == "security" and args[0] == "create-keychain":
     Path(args[-1]).write_bytes(b"keychain")
 elif tool == "security" and args[0] == "delete-keychain":
@@ -138,6 +148,9 @@ elif tool == "xcodebuild":
 with open(shims / "record.jsonl", "a", encoding="utf-8") as record:
     record.write(json.dumps(entry) + "\\n")
 sys.stdout.write(out)
+if err:
+    sys.stderr.write(err)
+    sys.exit(1)
 if (shims / f"fail-{tool}").exists():
     sys.exit(1)
 """
@@ -601,6 +614,17 @@ class LaneCredential(unittest.TestCase):
         self.assertEqual(code, 0, errors)
         return printed, records
 
+    def refuse_reads(self, *errors):
+        """Make the next `len(errors)` certificate reads exit 1, each with its text from `errors`
+        as openssl's standard error; the re-wrap and every other tool behave as before."""
+        fixture = json.loads((self.shims / "fixture.json").read_text(encoding="utf-8"))
+        fixture["refused reads"] = list(errors)
+        (self.shims / "fixture.json").write_text(json.dumps(fixture), encoding="utf-8")
+
+    def reads(self, records):
+        """The records of the certificate reads, every `openssl` call but the re-wrap."""
+        return [r for r in records if r["tool"] == "openssl" and "-export" not in r["args"]]
+
     def test_the_preflight_uploads_on_all_stops_on_none_and_fails_on_some(self):
         sets = [
             [role for bit, (role, _) in enumerate(ROLES) if mask >> bit & 1] for mask in range(64)
@@ -1003,6 +1027,100 @@ class LaneCredential(unittest.TestCase):
             self.assertEqual(
                 [line[:12] for line in lines[:-2]], ["::add-mask::"] * (len(lines) - 2)
             )
+
+    def test_a_failed_certificate_read_is_read_once_more_under_legacy(self):
+        self.refuse_reads("Error: Unsupported algorithm RC2-40-CBC\n")
+        code, printed, errors, records, _ = self.step(
+            "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+        )
+        reads = self.reads(records)
+        self.assertEqual(len(reads), 2, f"the certificate was read {len(reads)} time(s), not twice")
+        _, passphrase = self.masks(printed)[5:]
+        first = [
+            "pkcs12",
+            "-in",
+            str(self.lane / "original.p12"),
+            "-passin",
+            "stdin",
+            "-passout",
+            f"pass:{passphrase}",
+        ]
+        self.assertEqual([r["args"] for r in reads], [first, ["pkcs12", "-legacy", *first[1:]]])
+        certificate = hashlib.sha256(self.certificate).hexdigest()
+        password = hashlib.sha256(f"{self.values['PASSWORD']}\n".encode("utf-8")).hexdigest()
+        for read in examined("certificate reads", reads):
+            with self.subTest(read=read["args"][1]):
+                self.assertEqual((read["read"], read["stdin"]), (certificate, password))
+                self.assertEqual((read["on_stdin"], read["in_env"]), (["PASSWORD"], []))
+        self.assertEqual(code, 0, errors)
+        self.assertEqual(
+            [line for line in printed.splitlines() if line.startswith("pkcs12 read")],
+            [
+                "pkcs12 read failed: class legacy-algorithm; reading once more with -legacy",
+                "pkcs12 read under -legacy: ok",
+            ],
+        )
+        rewraps = [r for r in records if r["tool"] == "openssl" and "-export" in r["args"]]
+        self.assertEqual(len(rewraps), 1)
+        self.assertTrue(self.one(records, "security", "import")["imported"])
+        archive = self.one(records, "xcodebuild", "archive")
+        self.assertEqual([n for n in archive["lane_files"] if n.endswith(".p12")], [])
+
+    def test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl(self):
+        marker = uuid.uuid4().hex
+        # Each text also holds the words of every class after its own, so the order of the tests
+        # is what picks its class; the first three match only when case is ignored.
+        cases = [
+            (
+                "wrong-password",
+                f"Mac verify failure\n{marker}: unsupported, unknown option\n",
+            ),
+            (
+                "legacy-algorithm",
+                f"Error outputting keys and certificates\n{marker}: Unsupported; bad option\n",
+            ),
+            ("option-refused", f"pkcs12: Unrecognized flag legacy\n{marker}\n"),
+            ("unrecognised", f"pkcs12: {marker}: the input could not be read\n"),
+        ]
+        for name, text in examined("refused reads", cases):
+            with self.subTest(name=name):
+                self.step("clean")
+                self.refuse_reads(text, text)
+                code, printed, errors, _, _ = self.step(
+                    "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+                )
+                self.assertEqual(
+                    [line for line in printed.splitlines() if not line.startswith("::add-mask::")],
+                    [f"pkcs12 read failed: class {name}; reading once more with -legacy"],
+                )
+                self.assertEqual(
+                    errors.splitlines(),
+                    [f"openssl pkcs12 read failed: first class {name}, -legacy class {name}"],
+                )
+                self.assertEqual(code, 1)
+                self.assertNotIn(marker, printed)
+                self.assertNotIn(marker, errors)
+
+    def test_a_failed_legacy_read_refuses_naming_both_classes_and_runs_no_further_tool(self):
+        self.refuse_reads("Error: invalid password\n", "pkcs12: Unknown option: -legacy\n")
+        code, printed, errors, records, _ = self.step(
+            "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+        )
+        refusal = (
+            "openssl pkcs12 read failed: first class wrong-password, -legacy class option-refused"
+        )
+        self.assertIn(refusal, errors.splitlines())
+        self.assertEqual((code, errors.splitlines()), (1, [refusal]))
+        self.assertEqual(
+            [[r["tool"], *r["args"][:2]] for r in records],
+            [["openssl", "pkcs12", "-in"], ["openssl", "pkcs12", "-legacy"]],
+        )
+        self.assertEqual([r for r in records if r["tool"] == "security"], [])
+        self.assertEqual(
+            [line for line in printed.splitlines() if not line.startswith("::add-mask::")],
+            ["pkcs12 read failed: class wrong-password; reading once more with -legacy"],
+        )
+        self.assertFalse((self.checkout / INCLUDE).exists())
 
 
 if __name__ == "__main__":
