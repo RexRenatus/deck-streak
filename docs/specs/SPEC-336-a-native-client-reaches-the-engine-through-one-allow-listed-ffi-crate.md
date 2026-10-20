@@ -210,3 +210,7 @@ Amendment (SPEC-339): The figures below are run 37188070120's, at commit 0e7c507
 | slice `ios-arm64` | 81.0 MiB (84,957,000 bytes) |
 | slice `ios-arm64-simulator` | 81.0 MiB (84,899,224 bytes) |
 | runner CPUs | 3 |
+
+## 8. Amendments
+
+- Advisory exception: `deny.toml` carries RUSTSEC-2026-0374 for `basic-toml` (unmaintained, not vulnerable) because the pinned `uniffi` bindings generator depends on it through `rinja`; issue #1001 tracks the move that drops it.

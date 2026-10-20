@@ -12,6 +12,7 @@ all-features = true
 # them, and scripts/tests/test_engine_pin.py refuses an exception cargo deny no longer encounters.
 # The seventh, paste, is the same kind of notice on a direct dependency of frankenstein, the Bot API
 # client (SPEC-026, ADR-026); a frankenstein upgrade re-reads it.
+# The eighth, basic-toml, is the same kind of notice; it reaches this workspace only through the pinned uniffi's bindings generator (ADR-345), and a uniffi upgrade re-reads it.
 ignore = [
     { id = "RUSTSEC-2025-0075", reason = "unic-char-range: unmaintained, not vulnerable; the engine's unic-ucd-category (ADR-022)" },
     { id = "RUSTSEC-2025-0080", reason = "unic-common: unmaintained, not vulnerable; the engine's unic-ucd-category (ADR-022)" },
@@ -20,6 +21,7 @@ ignore = [
     { id = "RUSTSEC-2025-0098", reason = "unic-ucd-version: unmaintained, not vulnerable; the engine's unic-ucd-category (ADR-022)" },
     { id = "RUSTSEC-2025-0134", reason = "rustls-pemfile: unmaintained, not vulnerable; a direct dependency of the engine (ADR-022)" },
     { id = "RUSTSEC-2024-0436", reason = "paste: unmaintained, not vulnerable; a direct dependency of frankenstein, the Bot API client (SPEC-026)" },
+    { id = "RUSTSEC-2026-0374", reason = "basic-toml: unmaintained, not vulnerable; reaches the workspace only through uniffi's bindgen (rinja) (ADR-345)" },
 ]
 
 [licenses]
