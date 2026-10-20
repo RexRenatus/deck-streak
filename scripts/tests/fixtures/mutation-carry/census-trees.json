@@ -1,0 +1,41 @@
+{
+  "bounded": {
+    "file": "scripts/m.py",
+    "map": {
+      "scripts/m.py": {
+        "dir": "scripts/tests",
+        "modules": [
+          "test_m"
+        ]
+      },
+      "scripts/helper.py": {
+        "dir": "scripts/tests",
+        "modules": []
+      }
+    },
+    "files": {
+      "scripts/m.py": "\"\"\"A fixture module that reads through a helper.\"\"\"\n\nimport json\n\nfrom helper import load\n\n\ndef read(name):\n    return json.loads(load(name))\n",
+      "scripts/helper.py": "\"\"\"A fixture helper that reads one constant path.\"\"\"\n\nfrom pathlib import Path\n\nDATA = Path(__file__).resolve().parent / \"data\"\n\n\ndef load(name):\n    return (DATA / \"table.json\").read_text(encoding=\"utf-8\")\n",
+      "scripts/data/table.json": "{}\n",
+      "scripts/tests/test_m.py": "\"\"\"A fixture test module whose every read is a constant path.\"\"\"\n\nimport sys\nimport unittest\nfrom pathlib import Path\n\nHERE = Path(__file__).resolve().parent\nFIXTURE = HERE / \"fixtures\" / \"m\"\nOPTIONAL = HERE / \"fixtures\" / \"absent.json\"\nsys.path.insert(0, str(HERE.parent))\n\nimport m  # noqa: E402\n\n\nclass Reads(unittest.TestCase):\n    def test_reads(self):\n        names = sorted(path.name for path in FIXTURE.iterdir())\n        if OPTIONAL.exists():\n            names.append(OPTIONAL.name)\n        self.assertEqual(m.read(\"x\"), {})\n        self.assertIn(\"one.txt\", names)\n",
+      "scripts/tests/fixtures/m/one.txt": "one\n",
+      "docs/other.md": "# Other\n"
+    }
+  },
+  "root-reader": {
+    "file": "scripts/t.py",
+    "map": {
+      "scripts/t.py": {
+        "dir": "scripts/tests",
+        "modules": [
+          "test_t"
+        ]
+      }
+    },
+    "files": {
+      "scripts/t.py": "\"\"\"A fixture reader of every schematic under a root it is given.\"\"\"\n\nSCHEMATICS = \"docs/schematics\"\n\n\ndef judge(root):\n    return sorted(path.name for path in (root / SCHEMATICS).glob(\"*.md\"))\n",
+      "scripts/tests/test_t.py": "\"\"\"A fixture test that hands the repository root to its module.\"\"\"\n\nimport sys\nimport unittest\nfrom pathlib import Path\n\nROOT = Path(__file__).resolve().parents[2]\nsys.path.insert(0, str(ROOT / \"scripts\"))\n\nimport t  # noqa: E402\n\n\nclass Judges(unittest.TestCase):\n    def test_judges(self):\n        self.assertIn(\"a.md\", t.judge(ROOT))\n",
+      "docs/schematics/a.md": "# A\n"
+    }
+  }
+}
