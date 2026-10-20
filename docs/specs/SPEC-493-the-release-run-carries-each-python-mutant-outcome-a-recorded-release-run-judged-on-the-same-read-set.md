@@ -188,6 +188,9 @@ Each test prints the population it examined as `examined N`, and N is above 0.
 | `scripts/tests/test_mutation_carry.py` | 1 | new: A1, A3, A4, A5 |
 | `scripts/tests/test_mutation_carry_census.py` | 1 | new: A2 |
 | `scripts/tests/fixtures/mutation-carry/**` | 1 | new: fixture trees, diffs, run listings and leg reports |
+| `scripts/tests/fixtures/mutation-scoped-prices-38432909235/` | 1 | removed: the earlier price run's records, replaced whole by the run below (section 5) |
+| `scripts/tests/fixtures/mutation-scoped-prices-39439842824/` | 1 | new: one `costs.jsonl` per price leg of the one price run dispatched at this delivery's head (section 5) |
+| `scripts/mutation-rows.d/S42100-S42199.json` | 1 | changed: the scoped-table rows whose figures that price run moved are re-pinned to the new figures (section 5) |
 | `scripts/mutation-rows.d/S49300-S49399.json` | 1 | new: the band's rows (section 9) |
 | `formal/lean/Formal/ReleaseCarry.lean` | 1 | new: the entry (section 8) |
 | `formal/lean/Formal/ReleaseCarryVectors.lean` | 1 | new: its vectors writer |
@@ -210,7 +213,9 @@ Each test prints the population it examined as `examined N`, and N is above 0.
   every later release pull request.
 - It admits no release pull request but #822; the text that would admit a later one, for SPEC-422
   and the release-legs ruling, is drafted for the owner's signature and not installed (#822).
-- It changes no bound, price, timeout, ceiling, share or per-mutant budget, and no listing (#822).
+- It changes no bound, timeout, ceiling, share or per-mutant budget, and no listing (#822). It
+  refreshes the scoped price table and its recorded-run fixture whole, from one dispatched price
+  run at this delivery's head, because the carry module joins the Python population unpriced.
 - It waives no VOID and no FAIL: a carried survivor stays a FAIL until it is killed or recorded
   (#822).
 

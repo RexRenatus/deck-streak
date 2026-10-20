@@ -40,7 +40,9 @@ passed to a call, or a dynamic import. Rust tests read outside their crates
 ## Decision Drivers
 
 - No VOID and no FAIL is waived: a carried survivor fails until it is killed or recorded.
-- Every bound, price, timeout, ceiling and per-mutant budget stays as `dev` holds it.
+- Every bound, timeout, ceiling and per-mutant budget stays as `dev` holds it. The scoped price
+  table and its recorded-run fixture are refreshed whole from one dispatched price run at this
+  delivery's head, because the carry module joins the Python population unpriced.
 - Over the merged outcomes the verdict is the one a run of every listed mutant gives, whenever
   each carried outcome equals the one a re-run would give.
 - Nothing that picks a base reads an outcome.
