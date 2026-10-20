@@ -60,8 +60,11 @@ A24: green at edf2fa57
 A25: red at 7124d3ce: AssertionError: Lists differ: ["crates/engine-core/**: the XCFramework l[157 chars] it"] != []
 A25: green at 85c644d7
 A26: red at 6cd59182: AssertionError: 1 != 2 : the certificate was read 1 time(s), not twice
+A26: green at 5071e917
 A27: red at 6cd59182: AssertionError: Lists differ: [] != ['pkcs12 read failed: class wrong-password; reading once more with -legacy']
+A27: green at 5071e917
 A28: red at 6cd59182: AssertionError: 'openssl pkcs12 read failed: first class wrong-password, -legacy class option-refused' not found in ['openssl pkcs12 failed with exit 1']
+A28: green at 5071e917
 ```
 
 - Three red lines are shortened where the failure printed more than a criterion needs: A8's set
