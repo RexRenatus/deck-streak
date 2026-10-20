@@ -1,0 +1,238 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S42800-THE-RUST-SITE-PINS-NEXTEST",
+        ".github/workflows/ci.yml",
+        "tool: cargo-nextest@0.9.146,",
+        "tool: cargo-nextest,",
+        "the rust job's install names cargo-nextest at its exact version (SPEC-428 R5, A1)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_install_action_tool_names_an_exact_version"
+      ],
+      [
+        "S42801-THE-RUST-SITE-PINS-DENY",
+        ".github/workflows/ci.yml",
+        ",cargo-deny@0.20.2\n",
+        ",cargo-deny\n",
+        "the rust job's install names cargo-deny at its exact version (SPEC-428 R5, A1)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_install_action_tool_names_an_exact_version"
+      ],
+      [
+        "S42802-THE-ENGINE-SITE-PINS-NEXTEST",
+        ".github/workflows/ci.yml",
+        "        slice: [1, 2]\n    env:\n      CARGO_INCREMENTAL: \"0\"\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n      - name: the pinned Rust toolchain (rust-toolchain.toml)\n        run: rustup show\n      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21\n        with:\n          tool: cargo-nextest@0.9.146\n",
+        "        slice: [1, 2]\n    env:\n      CARGO_INCREMENTAL: \"0\"\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n      - name: the pinned Rust toolchain (rust-toolchain.toml)\n        run: rustup show\n      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21\n        with:\n          tool: cargo-nextest\n",
+        "the engine job's install names cargo-nextest at its exact version (SPEC-428 R5, A1)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_install_action_tool_names_an_exact_version"
+      ],
+      [
+        "S42803-THE-RELEASE-SITE-PINS-NEXTEST",
+        ".github/workflows/ci.yml",
+        "  release:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 100\n    env:\n      CARGO_INCREMENTAL: \"0\"\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n      - name: the pinned Rust toolchain (rust-toolchain.toml)\n        run: rustup show\n      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21\n        with:\n          tool: cargo-nextest@0.9.146\n",
+        "  release:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 100\n    env:\n      CARGO_INCREMENTAL: \"0\"\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n      - name: the pinned Rust toolchain (rust-toolchain.toml)\n        run: rustup show\n      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21\n        with:\n          tool: cargo-nextest\n",
+        "the release job's install names cargo-nextest at its exact version (SPEC-428 R5, A1)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_install_action_tool_names_an_exact_version"
+      ],
+      [
+        "S42804-THE-HYGIENE-SITE-PINS-DENY",
+        ".github/workflows/ci.yml",
+        "tool: cargo-deny@0.20.2\n",
+        "tool: cargo-deny\n",
+        "the hygiene job's install names cargo-deny at its exact version (SPEC-428 R5, A1)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_install_action_tool_names_an_exact_version"
+      ],
+      [
+        "S42805-THE-WORKFLOW-LINT-SITE-PINS-ZIZMOR",
+        ".github/workflows/ci.yml",
+        "tool: zizmor@1.30.1\n",
+        "tool: zizmor\n",
+        "the workflow-lint job's install names zizmor at its exact version (SPEC-428 R5, A1)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_install_action_tool_names_an_exact_version"
+      ],
+      [
+        "S42806-THE-ENGINE-MEASURE-SITE-PINS-DENY",
+        ".github/workflows/engine-measure.yml",
+        "tool: cargo-deny@0.20.2\n",
+        "tool: cargo-deny\n",
+        "engine-measure.yml's install names cargo-deny at its exact version (SPEC-428 R5, A1)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_install_action_tool_names_an_exact_version"
+      ],
+      [
+        "S42807-THE-SERVER-AUDIT-SITE-PINS-DENY",
+        ".github/workflows/release.yml",
+        "tool: cargo-deny@0.20.2\n",
+        "tool: cargo-deny\n",
+        "release.yml's audit job's install names cargo-deny at its exact version (SPEC-428 R5, A1)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_install_action_tool_names_an_exact_version"
+      ],
+      [
+        "S42808-THE-WARM-SITE-PINS-NEXTEST",
+        ".github/workflows/rust-cache.yml",
+        "tool: cargo-nextest@0.9.146,",
+        "tool: cargo-nextest,",
+        "rust-cache.yml's install names cargo-nextest at its exact version (SPEC-428 R5, A1)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_install_action_tool_names_an_exact_version"
+      ],
+      [
+        "S42809-THE-WARM-SITE-PINS-DENY",
+        ".github/workflows/rust-cache.yml",
+        ",cargo-deny@0.20.2\n",
+        ",cargo-deny\n",
+        "rust-cache.yml's install names cargo-deny at its exact version (SPEC-428 R5, A1)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_install_action_tool_names_an_exact_version"
+      ],
+      [
+        "S42810-THE-FRAGMENT-JOB-SETS-ITS-TIMEOUT",
+        ".github/workflows/changelog.yml",
+        "    runs-on: ubuntu-24.04\n    timeout-minutes: 5\n",
+        "    runs-on: ubuntu-24.04\n",
+        "changelog.yml's fragment job sets its own timeout (SPEC-428 R3, R5, A3)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_job_that_runs_steps_sets_its_own_timeout"
+      ],
+      [
+        "S42811-THE-RERELEASE-JOB-SETS-ITS-TIMEOUT",
+        ".github/workflows/testflight-rerelease-check.yml",
+        "    runs-on: ubuntu-24.04\n    timeout-minutes: 10\n",
+        "    runs-on: ubuntu-24.04\n",
+        "testflight-rerelease-check.yml's rerelease job sets its own timeout (SPEC-428 R3, R5, A3)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_job_that_runs_steps_sets_its_own_timeout"
+      ],
+      [
+        "S42812-ZIZMOR-READS-THE-GITHUB-DIRECTORY",
+        ".github/workflows/ci.yml",
+        "--persona regular .github\n",
+        "--persona regular .github/workflows\n",
+        "zizmor's operand is .github, so the Dependabot configuration is an input (SPEC-428 R4, A5)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_zizmor_audits_the_github_directory_and_its_dependabot_configuration"
+      ],
+      [
+        "S42813-ZIZMOR-COLLECTS-EVERY-INPUT-KIND",
+        ".github/workflows/ci.yml",
+        "--persona regular .github\n",
+        "--persona regular --collect=workflows .github\n",
+        "zizmor runs with no option that narrows what it collects (SPEC-428 R4, A5)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_zizmor_audits_the_github_directory_and_its_dependabot_configuration"
+      ],
+      [
+        "S42814-AN-EXACT-VERSION-HAS-THREE-NUMBERS",
+        "scripts/tests/test_ci_workflows.py",
+        "@\\d+\\.\\d+\\.\\d+\")",
+        "@\\d+(?:\\.\\d+)*\")",
+        "an exact version has three numbers, so one or two are refused (SPEC-428 R1, A2)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_each_planted_tool_pin_defect_is_refused_by_its_own_line"
+      ],
+      [
+        "S42815-AN-EXACT-VERSION-HAS-NO-V-PREFIX",
+        "scripts/tests/test_ci_workflows.py",
+        "@\\d+",
+        "@v?\\d+",
+        "an exact version starts with a digit, so a v prefix is refused (SPEC-428 R1, A2)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_each_planted_tool_pin_defect_is_refused_by_its_own_line"
+      ],
+      [
+        "S42816-AN-EXACT-VERSION-ENDS-AT-ITS-THIRD-NUMBER",
+        "scripts/tests/test_ci_workflows.py",
+        "EXACT_TOOL.fullmatch(",
+        "EXACT_TOOL.match(",
+        "an entry is matched whole, so a pre-release suffix is refused (SPEC-428 R1, A2)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_each_planted_tool_pin_defect_is_refused_by_its_own_line"
+      ],
+      [
+        "S42817-ENTRIES-SPLIT-ON-COMMAS-AND-WHITE-SPACE",
+        "scripts/tests/test_ci_workflows.py",
+        "r\"[,\\s]+\"",
+        "r\",\"",
+        "a tool input splits on commas and white space, as the action reads it (SPEC-428 R1, A2)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_each_planted_tool_pin_defect_is_refused_by_its_own_line"
+      ],
+      [
+        "S42818-THE-ACTION-IS-MATCHED-IN-ANY-CASE",
+        "scripts/tests/test_ci_workflows.py",
+        "action(value).lower() == INSTALL_ACTION",
+        "action(value) == INSTALL_ACTION",
+        "the install action is found in any letter case (SPEC-428 R1, A2)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_each_planted_tool_pin_defect_is_refused_by_its_own_line"
+      ],
+      [
+        "S42819-A-SITE-WITH-NO-TOOL-IS-REFUSED",
+        "scripts/tests/test_ci_workflows.py",
+        "if not named:",
+        "if False:",
+        "a site with no tool input is refused by its own line (SPEC-428 R1, A2)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_each_planted_tool_pin_defect_is_refused_by_its_own_line"
+      ],
+      [
+        "S42820-A-CALL-JOB-IS-COUNTED-APART",
+        "scripts/tests/test_ci_workflows.py",
+        "if \"uses\" in job:",
+        "if False:",
+        "a job that calls a reusable workflow is counted apart and never checked (SPEC-428 R3, A3)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_job_that_runs_steps_sets_its_own_timeout"
+      ],
+      [
+        "S42821-ONLY-A-JOBS-OWN-USES-MAKES-A-CALL-JOB",
+        "scripts/tests/test_ci_workflows.py",
+        "if \"uses\" in job:",
+        "if \"uses\" in str(job):",
+        "only a job's own uses key makes it a call job, never a step's (SPEC-428 R3, A4)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_each_planted_timeout_defect_is_refused_by_its_own_line"
+      ],
+      [
+        "S42822-A-TIMEOUT-OF-ZERO-IS-REFUSED",
+        "scripts/tests/test_ci_workflows.py",
+        "r\"[1-9]\\d*\"",
+        "r\"[0-9]\\d*\"",
+        "a timeout of 0 minutes is refused (SPEC-428 R3, A4)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_each_planted_timeout_defect_is_refused_by_its_own_line"
+      ],
+      [
+        "S42823-A-TIMEOUT-IS-MATCHED-WHOLE",
+        "scripts/tests/test_ci_workflows.py",
+        "re.fullmatch(r\"[1-9]\\d*\"",
+        "re.match(r\"[1-9]\\d*\"",
+        "a timeout with anything after its digits is refused (SPEC-428 R3, A4)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_each_planted_timeout_defect_is_refused_by_its_own_line"
+      ],
+      [
+        "S42824-THE-DEPENDABOT-FILE-IS-A-KNOWN-INPUT",
+        "scripts/tests/test_ci_workflows.py",
+        "([DEPENDABOT] if DEPENDABOT.is_file() else [])",
+        "([])",
+        "the Dependabot configuration is among zizmor's known inputs (SPEC-428 R4, A5)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_zizmor_audits_the_github_directory_and_its_dependabot_configuration"
+      ],
+      [
+        "S42825-ZIZMOR-RUNS-EXACTLY-ONCE",
+        "scripts/tests/test_ci_workflows.py",
+        "if len(commands) != 1:",
+        "if len(commands) > 1:",
+        "exactly one zizmor command runs, so none is refused too (SPEC-428 R4, A6)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_each_planted_zizmor_defect_is_refused_by_its_own_line"
+      ],
+      [
+        "S42826-THE-ENGINE-CHECK-COMPARES-WITH-THE-PIN-RECORD",
+        "scripts/tests/test_ci_workflows.py",
+        "        and ENGINE_NEXTEST_PIN",
+        "        and \"cargo-nextest\"",
+        "the engine check compares the install's entries with the pin record (SPEC-428 R7, A7)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_the_engine_check_counts_only_the_pinned_nextest"
+      ],
+      [
+        "S42827-THE-ENGINE-CHECK-COMPARES-WHOLE-ENTRIES",
+        "scripts/tests/test_ci_workflows.py",
+        "and ENGINE_NEXTEST_PIN\n        in [t.strip() for t",
+        "and \"cargo-nextest\"\n        in [t.strip().split(\"@\")[0] for t",
+        "the engine check compares whole entries, the version included (SPEC-428 R7, A7)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_the_engine_check_counts_only_the_pinned_nextest"
+      ],
+      [
+        "S42828-THE-PIN-RECORD-HOLDS-THE-EXACT-VERSION",
+        "scripts/tests/test_ci_workflows.py",
+        "ENGINE_NEXTEST_PIN = \"cargo-nextest@0.9.146\"",
+        "ENGINE_NEXTEST_PIN = \"cargo-nextest\"",
+        "the pin record holds cargo-nextest at its exact version (SPEC-428 R7, A7)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_the_engine_check_counts_only_the_pinned_nextest"
+      ]
+    ]
+  }
+}
