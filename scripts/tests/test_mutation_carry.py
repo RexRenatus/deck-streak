@@ -749,7 +749,8 @@ class Workflow(unittest.TestCase):
             self.assertIn(needed, lines)
         timeouts = block.index("      - name: the Rust legs' Timeouts by package, each over-margin "
                                "package by name")  # fmt: skip
-        self.assertLess(timeouts, block.index(manifest[0][0]))
+        self.assertLess(block.index(manifest[0][0]), at)
+        self.assertLess(at, timeouts)
         examined("manifest steps", [manifest, upload])
 
     def test_the_leg_jobs_are_the_cuts_byte_for_byte(self):

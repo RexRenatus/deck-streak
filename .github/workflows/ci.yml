@@ -861,13 +861,6 @@ jobs:
           python3 scripts/mutation-verdict.py legs --plan "$reports/mutation-plan/plan.json" --rust-leg "$RUST_LEG" --rows-leg "$ROWS_LEG" --python-release-leg "$PYTHON_RELEASE_LEG" || legs=$?
           if [ "$status" -eq 0 ]; then status=$legs; fi
           exit "$status"
-      # Each Rust package's Timeouts over the legs' reports, beside its baseline tests' seconds: a
-      # package whose mutants timed out and whose baseline tests, times 1.5, pass the 2300 s
-      # per-mutant timeout, or that no log times, is printed READ BY NAME with each such mutant, so
-      # that no Timeout counts silently as a kill (SPEC-480 R16). It runs whatever the verdict read.
-      - name: the Rust legs' Timeouts by package, each over-margin package by name
-        if: ${{ always() }}
-        run: bash scripts/mutation-timeouts.sh "$RUNNER_TEMP/reports"
       # Every whole and carried Python outcome of this run, its tree identity and each Python
       # class's key, kept whatever the legs returned, as a later release run's base (SPEC-493 R12).
       - name: the run's Python outcomes, whole and carried, for a later release run's carry
@@ -880,6 +873,13 @@ jobs:
           name: mutation-outcomes
           path: ${{ runner.temp }}/outcomes/
           if-no-files-found: warn
+      # Each Rust package's Timeouts over the legs' reports, beside its baseline tests' seconds: a
+      # package whose mutants timed out and whose baseline tests, times 1.5, pass the 2300 s
+      # per-mutant timeout, or that no log times, is printed READ BY NAME with each such mutant, so
+      # that no Timeout counts silently as a kill (SPEC-480 R16). It runs whatever the verdict read.
+      - name: the Rust legs' Timeouts by package, each over-margin package by name
+        if: ${{ always() }}
+        run: bash scripts/mutation-timeouts.sh "$RUNNER_TEMP/reports"
 
   # StrykerJS over every web production file the diff changes, whole, so a survivor already on a
   # touched file is the pull request's own (SPEC-039 R3, ADR-057 D3), dealt into three shards
