@@ -5,6 +5,7 @@
 //! The module names no other crate of this workspace, and reads no clock and no timezone: a
 //! producer computes each event's study day and hands it in.
 
+use std::collections::BTreeSet;
 use std::fmt;
 
 /// One review, as an implementation of the port folds it.
@@ -222,7 +223,17 @@ pub trait SchedulerPort {
 ///
 /// A [`FoldError`] naming the first check the event fails.
 pub fn check_event(last: Option<EventKey>, ev: &ReviewEvent) -> Result<(), FoldError> {
-    let _ = (last, ev);
+    if let Some(last) = last.filter(|last| ev.key <= *last) {
+        return Err(FoldError::KeyNotAfter { last, key: ev.key });
+    }
+    if !(1..=4).contains(&ev.grade) {
+        return Err(FoldError::GradeOutOfRange { grade: ev.grade });
+    }
+    if ev.answer_ms > ANSWER_MS_CAP {
+        return Err(FoldError::AnswerTooLong {
+            answer_ms: ev.answer_ms,
+        });
+    }
     Ok(())
 }
 
@@ -263,14 +274,24 @@ impl DayQueue {
 /// the next day, and a card with no note id enters the queue and is counted.
 #[must_use]
 pub fn day_queue(cards: &[QueueCard], day: i32) -> DayQueue {
-    DayQueue {
+    let mut candidates: Vec<&QueueCard> = cards.iter().filter(|card| card.due <= day).collect();
+    candidates.sort_by_key(|card| (card.due, card.card));
+    let mut queue = DayQueue {
         day,
-        cards: cards
-            .iter()
-            .filter(|card| card.due <= day)
-            .map(|card| card.card)
-            .collect(),
+        cards: Vec::new(),
         moved: Vec::new(),
         unlinked: 0,
+    };
+    let mut seen = BTreeSet::new();
+    for card in candidates {
+        if card.note <= NO_NOTE {
+            queue.cards.push(card.card);
+            queue.unlinked = queue.unlinked.saturating_add(1);
+        } else if seen.insert(card.note) {
+            queue.cards.push(card.card);
+        } else {
+            queue.moved.push(card.card);
+        }
     }
+    queue
 }
