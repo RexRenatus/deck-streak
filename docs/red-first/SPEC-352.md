@@ -59,6 +59,9 @@ A24: red at 83b2734a: AssertionError: False is not true : the script wrote no ic
 A24: green at edf2fa57
 A25: red at 7124d3ce: AssertionError: Lists differ: ["crates/engine-core/**: the XCFramework l[157 chars] it"] != []
 A25: green at 85c644d7
+A26: red at 6cd59182: AssertionError: 1 != 2 : the certificate was read 1 time(s), not twice
+A27: red at 6cd59182: AssertionError: Lists differ: [] != ['pkcs12 read failed: class wrong-password; reading once more with -legacy']
+A28: red at 6cd59182: AssertionError: 'openssl pkcs12 read failed: first class wrong-password, -legacy class option-refused' not found in ['openssl pkcs12 failed with exit 1']
 ```
 
 - Three red lines are shortened where the failure printed more than a criterion needs: A8's set
@@ -99,3 +102,7 @@ A25: green at 85c644d7
   each red and green is read locally by running `test_ios_lane.py` at the named commit, where the
   module's other tests pass. A26 is red when no second read is recorded, A27 when a failed read
   prints no class line, and A28 when the refusal names no class.
+- A27's control is an exact mutation of the fixed script: only the class line's print changed, to
+  print openssl's standard error after the class. A27 run alone failed by name in each of its four
+  cases (`FAILED (failures=4)`), the shim's planted marker text appearing in the step's output;
+  the script was then restored by copy, its sha256 equal before and after.
