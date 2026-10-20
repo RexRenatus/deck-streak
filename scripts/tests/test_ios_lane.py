@@ -1122,6 +1122,68 @@ class LaneCredential(unittest.TestCase):
         )
         self.assertFalse((self.checkout / INCLUDE).exists())
 
+    def hand_off(self):
+        """Make the openssl stand-in also write, to `handoff.jsonl` beside the record, what each
+        read that succeeds wrote out and what the re-wrap was given on its standard input; return
+        that file. A read that fails exits before this write, so it writes nothing there."""
+        suffix = (
+            'if tool == "openssl":\n'
+            '    side = "re-wrap input" if "-export" in args else "read output"\n'
+            '    given = stdin if "-export" in args else out\n'
+            '    with open(shims / "handoff.jsonl", "a", encoding="utf-8") as handoff:\n'
+            '        handoff.write(json.dumps({side: given}) + "\\n")\n'
+        )
+        shim = self.bin / "openssl"
+        shim.write_text(f"#!{sys.executable}\n{SHIM}{suffix}", encoding="utf-8")
+        return self.shims / "handoff.jsonl"
+
+    def test_the_re_wrap_is_given_exactly_what_the_certificate_read_wrote(self):
+        # The re-wrap's standard input is the output of the read that succeeded, whether that is
+        # the first read or the read under -legacy.
+        handoff = self.hand_off()
+        paths = [
+            ("the first read", []),
+            ("the read under -legacy", ["Error: Unsupported algorithm RC2-40-CBC\n"]),
+        ]
+        for path, refused in examined("certificate read paths", paths):
+            with self.subTest(path=path):
+                self.step("clean")
+                handoff.write_text("", encoding="utf-8")
+                self.refuse_reads(*refused)
+                code, _, errors, records, _ = self.step(
+                    "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+                )
+                self.assertEqual(code, 0, errors)
+                self.assertEqual(len(self.reads(records)), 1 + len(refused))
+                lines = handoff.read_text(encoding="utf-8").splitlines()
+                given = [json.loads(line) for line in lines]
+                wrote = [entry["read output"] for entry in given if "read output" in entry]
+                rewrap = [entry["re-wrap input"] for entry in given if "re-wrap input" in entry]
+                self.assertEqual([text.splitlines()[1] for text in wrote], ["fixture"])
+                self.assertEqual(rewrap, wrote)
+
+    def test_each_certificate_read_line_is_written_out_before_the_next_tool_runs(self):
+        # The class line reaches the step's output before the read under -legacy runs, and the ok
+        # line before the re-wrap runs, so a log shows each line beside the tool it is about.
+        self.refuse_reads("Error: Unsupported algorithm RC2-40-CBC\n")
+        code, printed, errors, records, _ = self.step(
+            "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+        )
+        self.assertEqual(code, 0, errors)
+        written = printed.encode("utf-8")
+        failed = b"pkcs12 read failed: class legacy-algorithm; reading once more with -legacy\n"
+        legacy = b"pkcs12 read under -legacy: ok\n"
+        first, second = self.reads(records)
+        (rewrap,) = [r for r in records if r["tool"] == "openssl" and "-export" in r["args"]]
+        self.assertEqual(
+            [first["stdout_size"], second["stdout_size"], rewrap["stdout_size"]],
+            [
+                written.index(failed),
+                written.index(failed) + len(failed),
+                written.index(legacy) + len(legacy),
+            ],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
