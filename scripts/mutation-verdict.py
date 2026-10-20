@@ -214,7 +214,7 @@ def scope_of(event: str, base_ref: str, subject: str) -> tuple[str, str]:
         return "diff", f"the pull request into {base_ref or 'its base'} is judged on its diff"
     if event == "push":
         merged = MERGE_SUBJECT.match(subject)
-        squashed = SQUASH_SUBJECT.search(subject.splitlines()[0].rstrip() if subject else "")
+        squashed = SQUASH_SUBJECT.search(subject.splitlines()[0].rstrip()) if subject else None
         if merged or squashed:
             number, how = (merged.group(1), "") if merged else (squashed.group(1), " by squash")
             return (
@@ -379,13 +379,13 @@ def rust_literal(text: str, start: int) -> int | None:
             return None
         closing = '"' + "#" * (hashes - at - 1)
         end = text.find(closing, hashes + 1)
-        return len(text) if end < 0 else end + len(closing)
+        return len(text) if end == -1 else end + len(closing)
     if text[at] == '"':
         return quoted_end(text, at, '"', multiline=True)
     if text[at] == "'":
         if text[at + 1 : at + 2] == "\\":
             end = text.find("'", at + 3)
-            return len(text) if end < 0 else end + 1
+            return len(text) if end == -1 else end + 1
         if text[at + 2 : at + 3] == "'" and text[at + 1 : at + 2] not in ("", "\n"):
             return at + 3
     return None
@@ -451,12 +451,12 @@ def c_code_lines(text: str, language: str) -> set[int]:
             at += 1
         elif text.startswith("//", at):
             end = text.find("\n", at)
-            at = len(text) if end < 0 else end
+            at = len(text) if end == -1 else end
         elif text.startswith("/*", at):
             at = block_end(text, at, nested=rust)
         elif language == "svelte" and text.startswith("<!--", at):
             end = text.find("-->", at + 4)
-            at = len(text) if end < 0 else end + 3
+            at = len(text) if end == -1 else end + 3
         elif not rust and (char == "`" or (char == "}" and templates and depth == templates[-1])):
             if char == "}":
                 templates.pop()
@@ -523,7 +523,7 @@ def rust_tokens(text: str) -> list[tuple[int, int]]:
             continue
         if text.startswith("//", at):
             stop = text.find("\n", at)
-            at = len(text) if stop < 0 else stop
+            at = len(text) if stop == -1 else stop
             continue
         if text.startswith("/*", at):
             at = block_end(text, at, nested=True)
@@ -1597,15 +1597,14 @@ def whole_reports(verdict: Verdict, plan: dict, args: argparse.Namespace) -> lis
     is not started when no shard has one (SPEC-290 R4); else the one --outcomes names."""
     if not args.shard_reports:
         promised = [
-            ("", read_json(args.outcomes), args.tool_exit, args.outcomes or "no --outcomes")
+            ("", read_json(args.outcomes), args.tool_exit, args.outcomes or "no --outcomes", None)
         ]
-        listed = [None]
     else:
         planned = (plan.get("shards") or {}).get("shards") or []
         if not planned:
             verdict.void("the plan names no shards, so no shard's report was promised")
         root = pathlib.Path(args.shard_reports)
-        promised, listed = [], []
+        promised = []
         for shard in range(len(planned)):
             name = root / f"mutation-rust-shard-{shard}"
             promised.append(
@@ -1614,11 +1613,11 @@ def whole_reports(verdict: Verdict, plan: dict, args: argparse.Namespace) -> lis
                     read_json(str(name / "mutants.out" / "outcomes.json")),
                     read_exit(name / "cargo-mutants.exit"),
                     "its outcomes.json",
+                    len(planned[shard]["mutants"]),
                 )
             )
-            listed.append(len(planned[shard]["mutants"]))
     whole = []
-    for (where, report, code, source), mutants in zip(promised, listed, strict=True):
+    for where, report, code, source, mutants in promised:
         if report is None and code is None and mutants == 0:
             # A leg the listing gave nothing is not started, so it leaves no artifact; a shard
             # that lists a mutant and left nothing is still VOID below (SPEC-290 R4).
@@ -2396,9 +2395,9 @@ def survivors_in(reports: pathlib.Path, root: pathlib.Path) -> tuple[dict[str, l
         if isinstance(document, dict)
         for outcome in document.get("outcomes", [])
     ]
-    tested = [cargo_mutant(outcome_mutant(outcome)) for outcome in outcomes]
-    rust.bind([mutant for mutant in tested if mutant], lambda _: None)
-    for outcome, mutant in zip(outcomes, tested, strict=True):
+    tested = [(outcome, cargo_mutant(outcome_mutant(outcome))) for outcome in outcomes]
+    rust.bind([mutant for _, mutant in tested if mutant], lambda _: None)
+    for outcome, mutant in tested:
         if outcome.get("summary") == "MissedMutant" and mutated_file(outcome):
             if len(rust.of(mutant)) == 1:
                 excused += 1
@@ -3192,18 +3191,8 @@ def record_problems(
             )
     reached = record.get("reached_by")
     if record.klass == "rust" and reached:
-        row = mutation_rows.Row(
-            id=f"{record.fragment}:{record.index}",
-            table="MUTATIONS",
-            target=file or "",
-            find="",
-            replace="",
-            killer=reached,
-            crate=crate,
-            description="",
-        )
         try:
-            mutation_rows.resolve_killer(root, row)
+            mutation_rows.resolve_test(root, crate, reached)
         except mutation_rows.KillerUnresolved as refusal:
             problems.append(f"reached_by: {refusal}")
     if record.klass == "python" and reached:

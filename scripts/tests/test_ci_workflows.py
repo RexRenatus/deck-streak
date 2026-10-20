@@ -7165,6 +7165,138 @@ NOT_WORKFLOW_READS = {
             1,
         ),
     ),
+    **allowed(
+        "calls run, which runs the verdict script over a fixture tree it writes to a scratch directory and reads its output; never a workflow file",
+        (
+            "test_mutation_workflows",
+            "NoExclusionHidesAMutant.test_a_stryker_disable_comment_is_refused_in_every_web_source",
+            "run(str(VERDICT), 'exclusions', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "NoExclusionHidesAMutant.test_a_stryker_file_that_is_not_an_object_is_refused_by_name",
+            "run(str(VERDICT), 'exclusions', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "NoExclusionHidesAMutant.test_an_ignorer_is_refused_by_name",
+            "run(str(VERDICT), 'exclusions', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "NoExclusionHidesAMutant.test_ignore_static_is_refused_by_name",
+            "run(str(VERDICT), 'exclusions', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_a_boolean_key_holding_a_boolean_passes",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_a_cargo_mutants_file_that_is_not_toml_is_refused_by_name",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_a_coverage_analysis_without_ignore_static_passes",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_a_list_key_holding_a_non_string_is_refused_as_a_list_of_strings",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_a_null_break_threshold_passes",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_a_string_key_holding_a_string_passes",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_a_stryker_file_that_is_not_an_object_is_refused_by_name",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_a_zero_threshold_is_inside_its_range",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_an_absent_cargo_file_still_judges_the_stryker_file",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_every_cargo_mutants_key_takes_its_own_kind",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            2,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_every_default_stryker_name_is_a_second_configuration",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_ignore_static_under_per_test_coverage_passes",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_ignore_static_under_the_default_coverage_passes",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_the_default_high_threshold_is_80",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_thresholds_that_are_not_an_object_are_refused_by_name",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls run, which runs a child that loads the verdict script by its constant path and prints what one verb returns over a fixture tree in a scratch directory; never a workflow file",
+        (
+            "test_mutation_workflows",
+            "NoExclusionHidesAMutant.test_the_verb_returns_ok_in_process",
+            "run('-c', VERB_IN_PROCESS, str(VERDICT), 'exclusions', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_the_verb_returns_ok_in_process",
+            "run('-c', VERB_IN_PROCESS, str(VERDICT), 'configs', str(root))",
+            1,
+        ),
+    ),
 }
 
 # Every site in the test directory that imports, runs code or reaches a namespace by a name held
@@ -7791,6 +7923,36 @@ DYNAMIC_IMPORTS = {
             "base64.urlsafe_b64decode(head + '=' * (-len(head) % 4))",
             1,
         ),
+    ),
+    **allowed(
+        "loads the production verdict script by its constant path under the kill module's own name and registers it, so its dataclasses resolve; never a module of the test directory",
+        (
+            "test_mutation_verdict_survivor_kills",
+            "verdict",
+            "importlib.util.module_from_spec(spec)",
+            1,
+        ),
+        (
+            "test_mutation_verdict_survivor_kills",
+            "verdict",
+            "importlib.util.spec_from_file_location('mutation_verdict_survivor_kills', VERDICT)",
+            1,
+        ),
+        ("test_mutation_verdict_survivor_kills", "verdict", "spec.loader.exec_module(module)", 1),
+        ("test_mutation_verdict_survivor_kills", "verdict", "sys.modules", 1),
+    ),
+    **allowed(
+        "stands in for the loaded verdict script's own verbs, each by a name the test lists in its own literal table; it imports nothing and reads no workflow file",
+        (
+            "test_mutation_verdict_survivor_kills",
+            "TheMain.main",
+            "mock.patch.object(V, name, stub)",
+            1,
+        ),
+    ),
+    **allowed(
+        "an import of this repository's own script module by its constant name, `import mutation_rows`, after a sys.path insert of the constant scripts directory; it reads no workflow file",
+        ("test_mutation_rows_survivor_kills", "<module>", "import mutation_rows as runner", 1),
     ),
 }
 

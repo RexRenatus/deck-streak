@@ -591,6 +591,175 @@ class TheScrubOwnsItsShapes(unittest.TestCase):
             self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
             self.assertIn("schema is not phx.persona.deny.v1", done.stdout)
 
+    def test_the_flags_default_is_excused_by_one_whole_record(self):
+        # SPEC-492 A2 (R3): the scrub's mapped suite runs no record census, so its one equivalent
+        # survivor, the flags default, is excused by a record that binds it alone.
+        path = REPO / "scripts" / "mutation-equivalent.d" / "python.json"
+        records = json.loads(path.read_text(encoding="utf-8"))["records"]
+        mine = [
+            record
+            for record in examined("Python equivalence records", records)
+            if record.get("file") == "scripts/public-scrub.py"
+        ]
+        self.assertEqual(len(mine), 1, "exactly one record names scripts/public-scrub.py")
+        record = mine[0]
+        self.assertEqual(
+            sorted(record),
+            ["anchor", "evidence", "file", "issue", "mutant", "reached_by", "reason"],
+        )
+        self.assertEqual(record["mutant"], 'replace "" with "XX" in compiled')
+        self.assertEqual(record["anchor"], 'str(row.get("flags", ""))')
+        self.assertEqual(
+            record["reached_by"],
+            "test_public_scrub.TheScrubOwnsItsShapes."
+            "test_the_loader_reads_a_synthetic_private_list_in_its_schema",
+        )
+        self.assertEqual(SCRUB.read_text(encoding="utf-8").count('str(row.get("flags", ""))'), 1)
+
+
+def deny_list(directory, name="deny.json", **fields):
+    """A deny list in the scrub's schema holding `fields`, written to `directory` as `name`."""
+    path = Path(directory) / name
+    path.write_text(json.dumps({"schema": "phx.persona.deny.v1", **fields}), encoding="utf-8")
+    return path
+
+
+def scrub_help():
+    """(the exit, the words) of the scrub's --help, its words joined by single spaces, so neither
+    the terminal's width nor colour decides what the words are."""
+    env = {key: value for key, value in os.environ.items() if key != "PERSONA_CORE_DENY_LIST"}
+    done = subprocess.run(
+        [sys.executable, str(SCRUB), "--help"],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=dict(env, COLUMNS="200", NO_COLOR="1", PYTHON_COLORS="0"),
+    )
+    return done.returncode, " ".join(done.stdout.split())
+
+
+class TheLoaderRefusesEveryMalformedList(unittest.TestCase):
+    """The scrub's own loader, read in process over literal rows and scratch lists: a malformed
+    list or row is refused by name, and a row's flags and id are read as the schema says."""
+
+    def test_a_row_with_no_i_flag_matches_case(self):
+        module = scrub_module()
+        rule, pattern = module.compiled({"id": "a", "regex": "ABC"}, "w")
+        self.assertEqual(rule, "a")
+        self.assertEqual(pattern.search("xABCx").group(0), "ABC")
+        self.assertIsNone(pattern.search("abc"))
+
+    def test_key_markers_that_are_not_a_list_are_refused(self):
+        module = scrub_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = deny_list(tmp, key_markers="x")
+            with self.assertRaises(module.DenyListError) as refused:
+                module.load_deny(path, "private")
+        self.assertEqual(str(refused.exception), "private deny-list: key_markers is not a list")
+
+    def test_a_public_list_tags_its_literals_public(self):
+        module = scrub_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            deny_list(tmp, "persona-core.json", literals=["x"])
+            deny_list(tmp, "privacy-gdpr.json", literals=["y"])
+            module.RULES = Path(tmp)
+            scan = module.rules(None)
+        self.assertEqual(scan.literals, [("public", "x"), ("public", "y")])
+        self.assertEqual(scan.rows, [])
+
+    def test_a_pattern_row_without_a_regex_is_refused_by_name(self):
+        module = scrub_module()
+        # Each operand alone: a dict with no regex, and a row that is no dict.
+        for row in examined("rows without a regex", [{"id": "x"}, "x"]):
+            with self.subTest(row=row):
+                with self.assertRaises(module.DenyListError) as refused:
+                    module.compiled(row, "w")
+                self.assertEqual(str(refused.exception), "w: a row has no regex")
+
+    def test_a_row_with_no_id_is_named_by_a_question_mark(self):
+        module = scrub_module()
+        rule, pattern = module.compiled({"regex": "x"}, "w")
+        self.assertEqual(rule, "?")
+        self.assertEqual(pattern.pattern, "x")
+
+    def test_journal_paths_that_are_not_a_list_are_refused(self):
+        module = scrub_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = deny_list(tmp, journal_paths="x")
+            with self.assertRaises(module.DenyListError) as refused:
+                module.load_deny(path, "private")
+        self.assertEqual(str(refused.exception), "private deny-list: journal_paths is not a list")
+
+    def test_a_literal_that_is_not_a_string_is_refused_by_name(self):
+        module = scrub_module()
+        # Each operand alone: a literal that is no string, and an empty one.
+        for literal in examined("malformed literals", [5, ""]):
+            with self.subTest(literal=literal), tempfile.TemporaryDirectory() as tmp:
+                path = deny_list(tmp, literals=[literal])
+                with self.assertRaises(module.DenyListError) as refused:
+                    module.load_deny(path, "private")
+                self.assertEqual(
+                    str(refused.exception), "private deny-list: literals holds a non-string"
+                )
+
+
+class TheCommandLineSaysWhatItDoes(unittest.TestCase):
+    """The scrub run as a script: its help names each option and opens with its docstring's first
+    paragraph, its private list is read from its environment variable, and a run that examines
+    nothing is VOID."""
+
+    def test_help_names_each_option_by_its_help_text(self):
+        code, said = scrub_help()
+        self.assertEqual(code, 0, said)
+        for text in examined(
+            "option help texts",
+            [
+                "a file, or every file under a directory",
+                "scan only the --subject paths",
+                "also read every blob reachable from --rev",
+                "the revision whose history --history reads",
+            ],
+        ):
+            with self.subTest(text=text):
+                self.assertIn(text, said)
+
+    def test_help_opens_with_the_docstrings_first_paragraph(self):
+        code, said = scrub_help()
+        self.assertEqual(code, 0, said)
+        self.assertIn(
+            "public-scrub: refuse any file, blob or issue body that would disclose what a public "
+            "repository must not.",
+            said,
+        )
+
+    def test_the_private_list_is_read_from_its_environment_variable(self):
+        env = {key: value for key, value in os.environ.items() if key != "PERSONA_CORE_DENY_LIST"}
+        with tempfile.TemporaryDirectory() as tmp:
+            note = Path(tmp) / "note.md"
+            note.write_text("a clean note\n", encoding="utf-8")
+            private = private_list(tmp, ["zebra" + "-canary"])
+            done = subprocess.run(
+                [sys.executable, str(SCRUB), "--root", tmp, "--no-tree", "--subject", str(note)],
+                capture_output=True,
+                text=True,
+                check=False,
+                env=dict(env, PERSONA_CORE_DENY_LIST=str(private)),
+            )
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(
+            done.stdout.splitlines(),
+            ["examined 1 file(s) against public shapes and the private list; 0 finding(s)"],
+        )
+
+    def test_a_run_that_examines_nothing_is_void(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            done = public_scrub(Path(tmp), "--no-tree")
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(
+            done.stdout.splitlines(),
+            ["examined 0 file(s) against public shapes only; 0 finding(s)"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
