@@ -1,0 +1,582 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S43300-THE-DOMAIN-FORM-ENDS-AT-THE-LIST",
+        "scripts/tests/_fsm_lints.py",
+        "if at != len(body) - 1:",
+        "if at >= len(body):",
+        "the domain form accepts text after the IN list's closing parenthesis (SPEC-433 R3, A4)",
+        "test_fsm_check_list.CheckListLint.test_only_a_whole_body_check_is_a_column_domain"
+      ],
+      [
+        "S43301-THE-DOMAIN-FORM-STARTS-AT-THE-COLUMN",
+        "scripts/tests/_fsm_lints.py",
+        "if keyword != 1:",
+        "if keyword is None or keyword < 1:",
+        "the domain form accepts text before the column's name (SPEC-433 R3, A4)",
+        "test_fsm_check_list.CheckListLint.test_only_a_whole_body_check_is_a_column_domain"
+      ],
+      [
+        "S43302-AN-INTEGER-LIST-IS-NO-STATE-COLUMN",
+        "scripts/tests/_fsm_lints.py",
+        "kind == \"text\" and (name in STATE_NAMES",
+        "(name in STATE_NAMES",
+        "an integer list counts as a state column (SPEC-433 R5, A4)",
+        "test_fsm_check_list.CheckListLint.test_only_a_whole_body_check_is_a_column_domain"
+      ],
+      [
+        "S43303-THE-STATE-NAMES-HOLD-STATE",
+        "scripts/tests/_fsm_lints.py",
+        "STATE_NAMES = (\n    \"state\",\n",
+        "STATE_NAMES = (\n",
+        "`state` leaves the state-column names (SPEC-433 R5, A5)",
+        "test_fsm_check_list.CheckListLint.test_a_state_column_neither_paired_nor_listed_is_a_new_hit"
+      ],
+      [
+        "S43304-THE-STATE-NAMES-HOLD-STATUS",
+        "scripts/tests/_fsm_lints.py",
+        "    \"state\",\n    \"status\",\n",
+        "    \"state\",\n",
+        "`status` leaves the state-column names (SPEC-433 R5, A5)",
+        "test_fsm_check_list.CheckListLint.test_a_state_column_neither_paired_nor_listed_is_a_new_hit"
+      ],
+      [
+        "S43305-THE-STATE-NAMES-HOLD-OUTCOME",
+        "scripts/tests/_fsm_lints.py",
+        "    \"status\",\n    \"outcome\",\n",
+        "    \"status\",\n",
+        "`outcome` leaves the state-column names (SPEC-433 R5, A5)",
+        "test_fsm_check_list.CheckListLint.test_a_state_column_neither_paired_nor_listed_is_a_new_hit"
+      ],
+      [
+        "S43306-THE-STATE-NAMES-HOLD-VERDICT",
+        "scripts/tests/_fsm_lints.py",
+        "    \"outcome\",\n    \"verdict\",\n",
+        "    \"outcome\",\n",
+        "`verdict` leaves the state-column names (SPEC-433 R5, A5)",
+        "test_fsm_check_list.CheckListLint.test_a_state_column_neither_paired_nor_listed_is_a_new_hit"
+      ],
+      [
+        "S43307-THE-STATE-NAMES-HOLD-PHASE",
+        "scripts/tests/_fsm_lints.py",
+        "    \"verdict\",\n    \"phase\",\n",
+        "    \"verdict\",\n",
+        "`phase` leaves the state-column names (SPEC-433 R5, A5)",
+        "test_fsm_check_list.CheckListLint.test_a_state_column_neither_paired_nor_listed_is_a_new_hit"
+      ],
+      [
+        "S43308-THE-STATE-NAMES-HOLD-STAGE",
+        "scripts/tests/_fsm_lints.py",
+        "    \"phase\",\n    \"stage\",\n",
+        "    \"phase\",\n",
+        "`stage` leaves the state-column names (SPEC-433 R5, A5)",
+        "test_fsm_check_list.CheckListLint.test_a_state_column_neither_paired_nor_listed_is_a_new_hit"
+      ],
+      [
+        "S43309-THE-STATE-NAMES-HOLD-STEP",
+        "scripts/tests/_fsm_lints.py",
+        "    \"stage\",\n    \"step\",\n",
+        "    \"stage\",\n",
+        "`step` leaves the state-column names (SPEC-433 R5, A5)",
+        "test_fsm_check_list.CheckListLint.test_a_state_column_neither_paired_nor_listed_is_a_new_hit"
+      ],
+      [
+        "S43310-THE-STATE-NAMES-HOLD-MODE",
+        "scripts/tests/_fsm_lints.py",
+        "    \"step\",\n    \"mode\",\n",
+        "    \"step\",\n",
+        "`mode` leaves the state-column names (SPEC-433 R5, A5)",
+        "test_fsm_check_list.CheckListLint.test_a_state_column_neither_paired_nor_listed_is_a_new_hit"
+      ],
+      [
+        "S43311-THE-UNDERSCORE-ENDING-MARKS-A-STATE-COLUMN",
+        "scripts/tests/_fsm_lints.py",
+        "(name in STATE_NAMES or name.endswith(STATE_ENDINGS))",
+        "(name in STATE_NAMES)",
+        "the `_<name>` ending no longer marks a state column (SPEC-433 R5, A5)",
+        "test_fsm_check_list.CheckListLint.test_a_state_column_neither_paired_nor_listed_is_a_new_hit"
+      ],
+      [
+        "S43312-A-SPELLING-THE-LIST-LACKS-IS-NAMED",
+        "scripts/tests/_fsm_lints.py",
+        "lacks = sorted(spellings - stored)",
+        "lacks = []",
+        "a spelling the list lacks goes unreported (SPEC-433 R5, A2)",
+        "test_fsm_check_list.CheckListLint.test_a_planted_drift_names_its_column_and_each_missing_and_extra_spelling"
+      ],
+      [
+        "S43313-A-LIST-ENTRY-NO-VARIANT-SPELLS-IS-NAMED",
+        "scripts/tests/_fsm_lints.py",
+        "unspelled = sorted(stored - spellings)",
+        "unspelled = []",
+        "a list entry no variant spells goes unreported (SPEC-433 R5, A2)",
+        "test_fsm_check_list.CheckListLint.test_a_planted_drift_names_its_column_and_each_missing_and_extra_spelling"
+      ],
+      [
+        "S43314-THE-MIGRATIONS-RUN-IN-FILENAME-ORDER",
+        "scripts/tests/_fsm_lints.py",
+        "for path in files:\n            try:\n                database.executescript(",
+        "for path in reversed(files):\n            try:\n                database.executescript(",
+        "the migrations run in reverse filename order (SPEC-433 R3, A3)",
+        "test_fsm_check_list.CheckListLint.test_a_rebuilt_and_renamed_table_is_read_as_the_last_migration_leaves_it"
+      ],
+      [
+        "S43315-THE-SCHEMA-IS-READ-AFTER-THE-LAST-MIGRATION",
+        "scripts/tests/_fsm_lints.py",
+        "for path in files:\n            try:\n                database.executescript(",
+        "for path in files[:-1]:\n            try:\n                database.executescript(",
+        "the schema is read before the last migration runs (SPEC-433 R3, A3)",
+        "test_fsm_check_list.CheckListLint.test_a_rebuilt_and_renamed_table_is_read_as_the_last_migration_leaves_it"
+      ],
+      [
+        "S43316-THE-SQL-LINE-COMMENT-IS-MASKED",
+        "scripts/tests/_fsm_lints.py",
+        "r\"|(?P<line>--[^\\n]*)\"",
+        "r\"\"",
+        "the `--` comment mask is dropped (SPEC-433 R3, A4)",
+        "test_fsm_check_list.CheckListLint.test_only_a_whole_body_check_is_a_column_domain"
+      ],
+      [
+        "S43317-THE-SQL-BLOCK-COMMENT-IS-MASKED",
+        "scripts/tests/_fsm_lints.py",
+        "r\"|(?P<block>/\\*.*?(?:\\*/|\\Z))\"",
+        "r\"\"",
+        "the `/* */` comment mask is dropped (SPEC-433 R3, A4)",
+        "test_fsm_check_list.CheckListLint.test_only_a_whole_body_check_is_a_column_domain"
+      ],
+      [
+        "S43318-A-DOUBLED-QUOTE-STAYS-IN-THE-LITERAL",
+        "scripts/tests/_fsm_lints.py",
+        "(?P<text>'(?:[^']|'')*'?)",
+        "(?P<text>'[^']*'?)",
+        "a doubled `''` ends the literal (SPEC-433 R3, A2)",
+        "test_fsm_check_list.CheckListLint.test_a_planted_drift_names_its_column_and_each_missing_and_extra_spelling"
+      ],
+      [
+        "S43319-A-LITERAL-HOLDING-A-COMMA-IS-ONE-SPELLING",
+        "scripts/tests/_fsm_lints.py",
+        "listed_values.append(token_text)",
+        "listed_values.extend(token_text.split(\",\"))",
+        "a literal holding a comma splits in two (SPEC-433 R3, A2)",
+        "test_fsm_check_list.CheckListLint.test_a_planted_drift_names_its_column_and_each_missing_and_extra_spelling"
+      ],
+      [
+        "S43320-A-PAIR-NAMING-AN-ABSENT-COLUMN-IS-VOID",
+        "scripts/tests/_fsm_lints.py",
+        "if stored_domain is None:\n            void(",
+        "if stored_domain is None:\n            continue\n            void(",
+        "a pair naming an absent column reads equal, not VOID (SPEC-433 R11, A6)",
+        "test_fsm_check_list.CheckListLint.test_a_pair_naming_what_is_absent_is_void"
+      ],
+      [
+        "S43321-A-PAIR-NAMING-AN-ABSENT-ENUM-IS-VOID",
+        "scripts/tests/_fsm_lints.py",
+        "if paired_enum is None:\n            void(",
+        "if paired_enum is None:\n            continue\n            void(",
+        "a pair naming an absent enum reads equal, not VOID (SPEC-433 R11, A6)",
+        "test_fsm_check_list.CheckListLint.test_a_pair_naming_what_is_absent_is_void"
+      ],
+      [
+        "S43322-A-SPELLING-ARM-THAT-IS-NO-LITERAL-IS-VOID",
+        "scripts/tests/_fsm_lints.py",
+        "if literal is None:\n                void(",
+        "if literal is None:\n                continue\n                void(",
+        "a spelling arm that is not a literal is skipped, not VOID (SPEC-433 R11, A6)",
+        "test_fsm_check_list.CheckListLint.test_a_pair_naming_what_is_absent_is_void"
+      ],
+      [
+        "S43323-SNAKE-CASE-KEEPS-ITS-UNDERSCORES",
+        "scripts/tests/_fsm_lints.py",
+        "INNER_CAPITAL.sub(\"_\", name)",
+        "INNER_CAPITAL.sub(\"\", name)",
+        "snake case drops its underscores (SPEC-433 R4, A2)",
+        "test_fsm_check_list.CheckListLint.test_a_planted_drift_names_its_column_and_each_missing_and_extra_spelling"
+      ],
+      [
+        "S43324-A-COLUMN-LISTED-UNPAIRED-READS-LISTED",
+        "scripts/tests/_fsm_lints.py",
+        "state_kind = \"listed\" if (table, column) in unpaired else \"new\"",
+        "state_kind = \"new\"",
+        "a column listed `unpaired` reads `new` (SPEC-433 R5, A5)",
+        "test_fsm_check_list.CheckListLint.test_a_state_column_neither_paired_nor_listed_is_a_new_hit"
+      ],
+      [
+        "S43325-AN-UNSTORED-VARIANT-LEAVES-THE-SPELLINGS",
+        "scripts/tests/_fsm_lints.py",
+        "variants = [variant for variant in spelled_enum.variants if variant not in unstored]",
+        "variants = list(spelled_enum.variants)",
+        "an `unstored` variant stays in the spelling set (SPEC-433 R4, A2)",
+        "test_fsm_check_list.CheckListLint.test_a_planted_drift_names_its_column_and_each_missing_and_extra_spelling"
+      ],
+      [
+        "S43326-A-SQLITE-WITHOUT-STRICT-IS-REFUSED",
+        "scripts/tests/_fsm_lints.py",
+        "if not strict_supported():",
+        "if strict_supported() is None:",
+        "a SQLite that cannot create a `STRICT` table is not refused (SPEC-433 R11, A14)",
+        "test_fsm_lints.SharedBehaviour.test_every_rule_is_void_with_nothing_to_examine"
+      ],
+      [
+        "S43327-A-BARE-WILDCARD-ARM-IS-A-HIT",
+        "scripts/tests/_fsm_lints.py",
+        "WILDCARD_PATTERN.fullmatch(head)",
+        "False",
+        "a `_` arm is not a hit (SPEC-433 R7, A8)",
+        "test_fsm_wildcard.WildcardLint.test_each_catch_all_arm_over_a_state_enum_is_a_hit"
+      ],
+      [
+        "S43328-A-GUARDED-WILDCARD-ARM-IS-A-HIT",
+        "scripts/tests/_fsm_lints.py",
+        "head = GUARD.split(pattern, maxsplit=1)[0].strip()",
+        "head = pattern.strip()",
+        "a `_ if <guard>` arm is not a hit (SPEC-433 R7, A8)",
+        "test_fsm_wildcard.WildcardLint.test_each_catch_all_arm_over_a_state_enum_is_a_hit"
+      ],
+      [
+        "S43329-A-LONE-BINDING-ARM-IS-A-HIT",
+        "scripts/tests/_fsm_lints.py",
+        "BINDING.fullmatch(head)",
+        "False",
+        "a lone binding arm is not a hit (SPEC-433 R7, A8)",
+        "test_fsm_wildcard.WildcardLint.test_each_catch_all_arm_over_a_state_enum_is_a_hit"
+      ],
+      [
+        "S43330-A-BINDING-AT-WILDCARD-ARM-IS-A-HIT",
+        "scripts/tests/_fsm_lints.py",
+        "AT_WILDCARD.fullmatch(head)",
+        "False",
+        "a `<binding> @ _` arm is not a hit (SPEC-433 R7, A8)",
+        "test_fsm_wildcard.WildcardLint.test_each_catch_all_arm_over_a_state_enum_is_a_hit"
+      ],
+      [
+        "S43331-SELF-RESOLVES-INSIDE-AN-IMPL-OF-THE-ENUM",
+        "scripts/tests/_fsm_lints.py",
+        "target = split[0]",
+        "target = \"\"",
+        "`Self::` inside `impl <Enum>` is not resolved (SPEC-433 R6, A8)",
+        "test_fsm_wildcard.WildcardLint.test_each_catch_all_arm_over_a_state_enum_is_a_hit"
+      ],
+      [
+        "S43332-SELF-RESOLVES-INSIDE-A-TRAIT-IMPL-FOR-THE-ENUM",
+        "scripts/tests/_fsm_lints.py",
+        "target = split[1]",
+        "target = \"\"",
+        "`Self::` inside `impl <Trait> for <Enum>` is not resolved (SPEC-433 R6, A8)",
+        "test_fsm_wildcard.WildcardLint.test_each_catch_all_arm_over_a_state_enum_is_a_hit"
+      ],
+      [
+        "S43333-A-VARIANT-INSIDE-SOME-IS-SEEN",
+        "scripts/tests/_fsm_lints.py",
+        "VARIANT_PATH.findall(head)",
+        "VARIANT_PATH.findall(head.split(\"(\")[0])",
+        "a variant inside `Some(...)` is not seen (SPEC-433 R6, A8)",
+        "test_fsm_wildcard.WildcardLint.test_each_catch_all_arm_over_a_state_enum_is_a_hit"
+      ],
+      [
+        "S43334-THE-ENUM-SUFFIXES-HOLD-STATE",
+        "scripts/tests/_fsm_lints.py",
+        "ENUM_SUFFIXES = (\n    \"State\",\n",
+        "ENUM_SUFFIXES = (\n",
+        "`State` leaves the enum suffixes (SPEC-433 R6, A8)",
+        "test_fsm_wildcard.WildcardLint.test_each_catch_all_arm_over_a_state_enum_is_a_hit"
+      ],
+      [
+        "S43335-THE-ENUM-SUFFIXES-HOLD-STATUS",
+        "scripts/tests/_fsm_lints.py",
+        "    \"State\",\n    \"Status\",\n",
+        "    \"State\",\n",
+        "`Status` leaves the enum suffixes (SPEC-433 R6, A8)",
+        "test_fsm_wildcard.WildcardLint.test_each_catch_all_arm_over_a_state_enum_is_a_hit"
+      ],
+      [
+        "S43336-THE-ENUM-SUFFIXES-HOLD-PHASE",
+        "scripts/tests/_fsm_lints.py",
+        "    \"Status\",\n    \"Phase\",\n",
+        "    \"Status\",\n",
+        "`Phase` leaves the enum suffixes (SPEC-433 R6, A8)",
+        "test_fsm_wildcard.WildcardLint.test_each_catch_all_arm_over_a_state_enum_is_a_hit"
+      ],
+      [
+        "S43337-THE-ENUM-SUFFIXES-HOLD-STAGE",
+        "scripts/tests/_fsm_lints.py",
+        "    \"Phase\",\n    \"Stage\",\n",
+        "    \"Phase\",\n",
+        "`Stage` leaves the enum suffixes (SPEC-433 R6, A8)",
+        "test_fsm_wildcard.WildcardLint.test_each_catch_all_arm_over_a_state_enum_is_a_hit"
+      ],
+      [
+        "S43338-THE-ENUM-SUFFIXES-HOLD-STEP",
+        "scripts/tests/_fsm_lints.py",
+        "    \"Stage\",\n    \"Step\",\n",
+        "    \"Stage\",\n",
+        "`Step` leaves the enum suffixes (SPEC-433 R6, A8)",
+        "test_fsm_wildcard.WildcardLint.test_each_catch_all_arm_over_a_state_enum_is_a_hit"
+      ],
+      [
+        "S43339-THE-ENUM-SUFFIXES-HOLD-LIFECYCLE",
+        "scripts/tests/_fsm_lints.py",
+        "    \"Step\",\n    \"Lifecycle\",\n",
+        "    \"Step\",\n",
+        "`Lifecycle` leaves the enum suffixes (SPEC-433 R6, A8)",
+        "test_fsm_wildcard.WildcardLint.test_each_catch_all_arm_over_a_state_enum_is_a_hit"
+      ],
+      [
+        "S43340-THE-ENUM-SUFFIXES-HOLD-MODE",
+        "scripts/tests/_fsm_lints.py",
+        "    \"Lifecycle\",\n    \"Mode\",\n",
+        "    \"Lifecycle\",\n",
+        "`Mode` leaves the enum suffixes (SPEC-433 R6, A8)",
+        "test_fsm_wildcard.WildcardLint.test_each_catch_all_arm_over_a_state_enum_is_a_hit"
+      ],
+      [
+        "S43341-A-WILDCARD-IN-A-TUPLE-IS-NO-HIT",
+        "scripts/tests/_fsm_lints.py",
+        "WILDCARD_PATTERN.fullmatch(head)",
+        "WILDCARD_PATTERN.search(head)",
+        "a `_` in a tuple position is a hit (SPEC-433 R7, A9)",
+        "test_fsm_wildcard.WildcardLint.test_only_the_planted_catch_all_is_a_hit"
+      ],
+      [
+        "S43342-CFG-TEST-ITEMS-ARE-MASKED",
+        "scripts/tests/_fsm_lints.py",
+        "return blank_test_items(masked), strings",
+        "return masked, strings",
+        "the `#[cfg(test)]` mask is dropped (SPEC-433 R6, A9)",
+        "test_fsm_wildcard.WildcardLint.test_only_the_planted_catch_all_is_a_hit"
+      ],
+      [
+        "S43343-RUST-LINE-COMMENTS-ARE-MASKED",
+        "scripts/tests/_fsm_lints.py",
+        "end = len(text) if end < 0 else end\n            out.append(blank(text[start:end]))",
+        "end = len(text) if end < 0 else end\n            out.append(text[start:end])",
+        "the Rust comment mask is dropped (SPEC-433 R6, A9)",
+        "test_fsm_wildcard.WildcardLint.test_only_the_planted_catch_all_is_a_hit"
+      ],
+      [
+        "S43344-RUST-STRINGS-ARE-MASKED",
+        "scripts/tests/_fsm_lints.py",
+        "out.append('\"' + blank(text[start + 1 : end - 1]) + '\"')",
+        "out.append(text[start:end])",
+        "the Rust string mask is dropped (SPEC-433 R6, A9)",
+        "test_fsm_wildcard.WildcardLint.test_only_the_planted_catch_all_is_a_hit"
+      ],
+      [
+        "S43345-MATCHES-MACRO-IS-NO-MATCH",
+        "scripts/tests/_fsm_lints.py",
+        " if not match.macro]",
+        "]",
+        "`matches!` is read as a match (SPEC-433 R7, A9)",
+        "test_fsm_wildcard.WildcardLint.test_only_the_planted_catch_all_is_a_hit"
+      ],
+      [
+        "S43346-THE-PANICKING-MACROS-HOLD-UNREACHABLE",
+        "scripts/tests/_fsm_lints.py",
+        "MACROS = (\n    \"unreachable\",\n",
+        "MACROS = (\n",
+        "an `unreachable!` arm is not a hit (SPEC-433 R8, A11)",
+        "test_fsm_unreachable.UnreachableLint.test_each_panicking_arm_is_a_hit_and_nothing_else_is"
+      ],
+      [
+        "S43347-THE-PANICKING-MACROS-HOLD-PANIC",
+        "scripts/tests/_fsm_lints.py",
+        "    \"unreachable\",\n    \"panic\",\n",
+        "    \"unreachable\",\n",
+        "a `panic!` arm is not a hit (SPEC-433 R8, A11)",
+        "test_fsm_unreachable.UnreachableLint.test_each_panicking_arm_is_a_hit_and_nothing_else_is"
+      ],
+      [
+        "S43348-THE-PANICKING-MACROS-HOLD-THE-PLACEHOLDER-MACRO",
+        "scripts/tests/_fsm_lints.py",
+        "    \"panic\",\n    \"todo\",\n",
+        "    \"panic\",\n",
+        "a `todo!` arm is not a hit (SPEC-433 R8, A11)",
+        "test_fsm_unreachable.UnreachableLint.test_each_panicking_arm_is_a_hit_and_nothing_else_is"
+      ],
+      [
+        "S43349-THE-PANICKING-MACROS-HOLD-UNIMPLEMENTED",
+        "scripts/tests/_fsm_lints.py",
+        "    \"todo\",\n    \"unimplemented\",\n",
+        "    \"todo\",\n",
+        "an `unimplemented!` arm is not a hit (SPEC-433 R8, A11)",
+        "test_fsm_unreachable.UnreachableLint.test_each_panicking_arm_is_a_hit_and_nothing_else_is"
+      ],
+      [
+        "S43350-A-BLOCK-ARMS-FIRST-STATEMENT-IS-READ",
+        "scripts/tests/_fsm_lints.py",
+        "if masked.startswith(\"{\", at):",
+        "if masked.startswith(\"{{\", at):",
+        "a block arm's first statement is not read (SPEC-433 R8, A11)",
+        "test_fsm_unreachable.UnreachableLint.test_each_panicking_arm_is_a_hit_and_nothing_else_is"
+      ],
+      [
+        "S43351-A-MACRO-OUTSIDE-ANY-ARM-IS-NO-HIT",
+        "scripts/tests/_fsm_lints.py",
+        "if arm is None:\n                continue",
+        "if arm is None:\n                pass",
+        "a macro outside any arm is a hit (SPEC-433 R8, A11)",
+        "test_fsm_unreachable.UnreachableLint.test_each_panicking_arm_is_a_hit_and_nothing_else_is"
+      ],
+      [
+        "S43352-ONLY-THE-ENUMS-OWN-ANCHOR-COVERS-IT",
+        "scripts/tests/_fsm_lints.py",
+        "cover_path == path and anchor == name",
+        "cover_path == path",
+        "any anchor in the enum's file covers it (SPEC-433 R9, A13)",
+        "test_fsm_uncovered.UncoveredLint.test_only_an_anchor_on_the_enum_covers_it"
+      ],
+      [
+        "S43353-ONLY-THE-ENUMS-OWN-FILE-COVERS-IT",
+        "scripts/tests/_fsm_lints.py",
+        "cover_path == path and anchor",
+        "anchor",
+        "the enum's name anchored in another file covers it (SPEC-433 R9, A13)",
+        "test_fsm_uncovered.UncoveredLint.test_only_an_anchor_on_the_enum_covers_it"
+      ],
+      [
+        "S43354-A-LISTED-ENUM-NOW-COVERED-IS-STALE",
+        "scripts/tests/_fsm_lints.py",
+        "enum_kind = \"stale\" if covered else \"listed\"",
+        "enum_kind = \"listed\"",
+        "a listed enum now covered is not `stale` (SPEC-433 R9, A13)",
+        "test_fsm_uncovered.UncoveredLint.test_only_an_anchor_on_the_enum_covers_it"
+      ],
+      [
+        "S43355-AN-UNLISTED-UNCOVERED-ENUM-IS-NEW",
+        "scripts/tests/_fsm_lints.py",
+        "enum_kind = \"new\"",
+        "continue",
+        "an unlisted uncovered enum is not `new` (SPEC-433 R9, A13)",
+        "test_fsm_uncovered.UncoveredLint.test_only_an_anchor_on_the_enum_covers_it"
+      ],
+      [
+        "S43356-EXAMINED-ZERO-IS-VOID",
+        "scripts/tests/_fsm_lints.py",
+        "reading.examined == 0 or ",
+        "",
+        "`examined=0` is not refused (SPEC-433 R11, A14)",
+        "test_fsm_lints.SharedBehaviour.test_every_rule_is_void_with_nothing_to_examine"
+      ],
+      [
+        "S43357-AN-UNSEEDED-ENTRY-NEEDS-A-RULING",
+        "scripts/tests/_fsm_lints.py",
+        "if key not in seeded:",
+        "if key not in seeded | {key}:",
+        "an entry outside the seed is admitted with no `ruling` (SPEC-433 R2, A15)",
+        "test_fsm_lints.SharedBehaviour.test_an_entry_outside_the_seed_needs_a_ruling_that_exists"
+      ],
+      [
+        "S43358-A-RULING-MUST-NAME-A-FILE",
+        "scripts/tests/_fsm_lints.py",
+        "elif not ruled(root, ruling):",
+        "elif ruled(root, ruling) is None:",
+        "a `ruling` naming no file is admitted (SPEC-433 R2, A15)",
+        "test_fsm_lints.SharedBehaviour.test_an_entry_outside_the_seed_needs_a_ruling_that_exists"
+      ],
+      [
+        "S43359-AT-FAIL-A-NEW-HIT-FAILS",
+        "scripts/tests/_fsm_lints.py",
+        "hit.kind in (\"new\", \"stale\")",
+        "hit.kind in (\"stale\",)",
+        "at `fail` a `new` hit does not fail (SPEC-433 R10, A16)",
+        "test_fsm_lints.SharedBehaviour.test_a_rule_at_fail_fails_on_new_and_stale_and_at_warn_prints_them"
+      ],
+      [
+        "S43360-AT-WARN-NO-HIT-FAILS",
+        "scripts/tests/_fsm_lints.py",
+        "if reading.level == \"fail\" and failing:",
+        "if failing:",
+        "at `warn` a `new` hit fails (SPEC-433 R10, A16)",
+        "test_fsm_lints.SharedBehaviour.test_a_rule_at_fail_fails_on_new_and_stale_and_at_warn_prints_them"
+      ],
+      [
+        "S43361-AT-FAIL-A-STALE-HIT-FAILS",
+        "scripts/tests/_fsm_lints.py",
+        "hit.kind in (\"new\", \"stale\")",
+        "hit.kind in (\"new\",)",
+        "at `fail` a `stale` hit does not fail (SPEC-433 R10, A16)",
+        "test_fsm_lints.SharedBehaviour.test_a_rule_at_fail_fails_on_new_and_stale_and_at_warn_prints_them"
+      ],
+      [
+        "S43362-A-HIT-LINE-CARRIES-NO-SOURCE-TEXT",
+        "scripts/tests/_fsm_lints.py",
+        "return text.count(\"\\n\", 0, at) + 1",
+        "return text.splitlines()[text.count(\"\\n\", 0, at)].strip()",
+        "a hit line carries the text of the line it names (SPEC-433 R10, A17)",
+        "test_fsm_lints.SharedBehaviour.test_a_hit_line_names_its_site_and_never_its_source"
+      ],
+      [
+        "S43363-THE-PRODUCT-WALK-SKIPS-CRATE-TESTS",
+        "scripts/tests/_fsm_lints.py",
+        "folder.glob(\"*/src/**/*.rs\")",
+        "folder.glob(\"*/**/*.rs\")",
+        "the product walk also reads `crates/*/tests` (SPEC-433 R6, A7)",
+        "test_fsm_wildcard.WildcardLint.test_the_tree_reading_reads_every_product_file_and_its_matches"
+      ],
+      [
+        "S43364-THE-PRODUCT-WALK-READS-EVERY-DEPTH",
+        "scripts/tests/_fsm_lints.py",
+        "folder.glob(\"*/src/**/*.rs\")",
+        "folder.glob(\"*/src/*.rs\")",
+        "the product walk reads only the top level of `src` (SPEC-433 R6, A7)",
+        "test_fsm_wildcard.WildcardLint.test_the_tree_reading_reads_every_product_file_and_its_matches"
+      ],
+      [
+        "S43365-AN-UNKNOWN-LEVEL-IS-REFUSED",
+        "scripts/tests/_fsm_lints.py",
+        "if level not in LEVELS:",
+        "if level not in LEVELS + (level,):",
+        "an unknown level is read as `warn` (SPEC-433 R1, A18)",
+        "test_fsm_lints.SharedBehaviour.test_the_register_names_four_rules_at_warn_and_refuses_the_unknown"
+      ],
+      [
+        "S43366-AN-UNKNOWN-RULE-KEY-IS-REFUSED",
+        "scripts/tests/_fsm_lints.py",
+        "stray = sorted(set(body) - set(keys))",
+        "stray = []",
+        "an unknown rule key is accepted (SPEC-433 R1, A18)",
+        "test_fsm_lints.SharedBehaviour.test_the_register_names_four_rules_at_warn_and_refuses_the_unknown"
+      ],
+      [
+        "S43367-CHECK-LIST-STARTS-AT-WARN",
+        "config/fsm-lints.json",
+        "\"FSM-CHECK-LIST\": {\n      \"level\": \"warn\"",
+        "\"FSM-CHECK-LIST\": {\n      \"level\": \"fail\"",
+        "FSM-CHECK-LIST's level reads `fail` (SPEC-433 R1, A18)",
+        "test_fsm_lints.SharedBehaviour.test_the_register_names_four_rules_at_warn_and_refuses_the_unknown"
+      ],
+      [
+        "S43368-WILDCARD-STARTS-AT-WARN",
+        "config/fsm-lints.json",
+        "\"FSM-WILDCARD\": {\n      \"level\": \"warn\"",
+        "\"FSM-WILDCARD\": {\n      \"level\": \"fail\"",
+        "FSM-WILDCARD's level reads `fail` (SPEC-433 R1, A18)",
+        "test_fsm_lints.SharedBehaviour.test_the_register_names_four_rules_at_warn_and_refuses_the_unknown"
+      ],
+      [
+        "S43369-UNREACHABLE-STARTS-AT-WARN",
+        "config/fsm-lints.json",
+        "\"FSM-UNREACHABLE\": {\n      \"level\": \"warn\"",
+        "\"FSM-UNREACHABLE\": {\n      \"level\": \"fail\"",
+        "FSM-UNREACHABLE's level reads `fail` (SPEC-433 R1, A18)",
+        "test_fsm_lints.SharedBehaviour.test_the_register_names_four_rules_at_warn_and_refuses_the_unknown"
+      ],
+      [
+        "S43370-UNCOVERED-STARTS-AT-WARN",
+        "config/fsm-lints.json",
+        "\"FSM-UNCOVERED\": {\n      \"level\": \"warn\"",
+        "\"FSM-UNCOVERED\": {\n      \"level\": \"fail\"",
+        "FSM-UNCOVERED's level reads `fail` (SPEC-433 R1, A18)",
+        "test_fsm_lints.SharedBehaviour.test_the_register_names_four_rules_at_warn_and_refuses_the_unknown"
+      ],
+      [
+        "S43371-RUN-STATUS-IS-SPELLED-BY-AS-STR",
+        "config/fsm-lints.json",
+        "\"enum\": \"RunStatus\", \"file\": \"crates/ingest/src/sync_runs.rs\", \"spelling\": {\"fn\": \"as_str\"}",
+        "\"enum\": \"RunStatus\", \"file\": \"crates/ingest/src/sync_runs.rs\", \"spelling\": {\"fn\": \"as_text\"}",
+        "`RunStatus`'s spelling fn reads a name its `impl` lacks (SPEC-433 R4, R11, A1)",
+        "test_fsm_check_list.CheckListLint.test_the_tree_reading_reads_every_migration_and_every_pair"
+      ]
+    ]
+  }
+}
