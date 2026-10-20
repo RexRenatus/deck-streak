@@ -317,3 +317,24 @@ the number ADR-344 names.
   `testflight-release.yml` and its sentence "the release lane keeps its one trigger" are superseded
   by ADR-419, the plan refuses a run that a workflow's own token started (ADR-419 D3), and D7's
   review is unchanged.
+
+### The first certificate read retries once under -legacy
+
+A lane run's first read of the placed certificate failed, and its log said only that
+`openssl pkcs12` exited 1, so the cause stayed one of two: the password does not open the bundle,
+or the runner's openssl refuses the legacy algorithms a keychain export uses. SPEC-352 section 8
+amends R9 and R13; D3's signing path and D6's private log otherwise stand.
+
+- One more read with `-legacy` after a failed first read, never more, and one fixed line per failed
+  read naming one class of a closed vocabulary, `wrong-password`, `legacy-algorithm`,
+  `option-refused` or `unrecognised`, chosen from openssl's standard error read in memory and never
+  printed — chosen, because the class names the cause without publishing anything the tool wrote,
+  and the one retry bounds the step: a read that fails twice refuses naming both classes and runs
+  no further tool.
+- Printing openssl's own error lines — rejected, because they could carry the file's metadata into
+  a public log, which D6 keeps closed.
+- `-legacy` on every read — rejected, because it hides which openssl the runner has: a first read
+  that fails and a `-legacy` read that succeeds is itself what the log needs to show.
+- Consequence: an `option-refused` class on the `-legacy` read means the runner's openssl takes no
+  `-legacy`, which the next run shows; the owner then re-exports the bundle in a form that openssl
+  reads, as "What would make this wrong" already says, with no design change.
