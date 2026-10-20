@@ -487,13 +487,21 @@ fn kept_events(
         card.sort_by_key(|row| row.id);
         let reviews = &history.item.reviews;
         let selected = &card[card.len().saturating_sub(reviews.len())..];
-        let agrees = selected.len() == reviews.len()
-            && selected.last().map(|row| row.id) == Some(history.last_id)
-            && selected
+        let read = (
+            selected.last().map(|row| row.id),
+            selected
                 .iter()
-                .zip(reviews)
-                .all(|(row, review)| u32::from(row.ease) == review.rating);
-        if !agrees {
+                .map(|row| u32::from(row.ease))
+                .collect::<Vec<_>>(),
+        );
+        let chosen = (
+            Some(history.last_id),
+            reviews
+                .iter()
+                .map(|review| review.rating)
+                .collect::<Vec<_>>(),
+        );
+        if read != chosen {
             return Err(failed(
                 "the replay's events disagree with the history selection",
             ));

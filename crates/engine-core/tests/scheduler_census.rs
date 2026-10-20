@@ -85,13 +85,9 @@ const CLOCK_READS: [&str; 10] = [
 ];
 
 /// Every `.rs` file under the census trees of `root`, as `/`-separated paths relative to `root`,
-/// sorted.
+/// sorted. A census tree that does not read refuses the walk: no tree leaves the population.
 fn sources(root: &Path) -> Vec<String> {
-    let mut pending: Vec<PathBuf> = TREES
-        .iter()
-        .map(|tree| root.join(tree))
-        .filter(|tree| tree.is_dir())
-        .collect();
+    let mut pending: Vec<PathBuf> = TREES.iter().map(|tree| root.join(tree)).collect();
     let mut found = Vec::new();
     while let Some(next) = pending.pop() {
         for entry in fs::read_dir(&next).expect("a source directory reads") {
@@ -205,9 +201,13 @@ fn purity_refusals(root: &Path, walked: &[String]) -> (Vec<String>, usize) {
     (refusals, judged_lines)
 }
 
-/// Writes `files` (path, text) under a fresh scratch directory and returns it.
+/// Writes `files` (path, text) under a fresh scratch directory, beside every census tree made
+/// empty, and returns it.
 fn plant(test: &str, files: &[(&str, &str)]) -> PathBuf {
     let root = support::scratch("engine-core-scheduler-census", test);
+    for tree in TREES {
+        fs::create_dir_all(root.join(tree)).expect("a planted census tree");
+    }
     for (path, text) in files {
         let path = root.join(path);
         fs::create_dir_all(path.parent().expect("a planted file has a directory"))

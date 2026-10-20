@@ -1111,3 +1111,111 @@ fn predict_is_a_pure_probe_and_the_version_names_the_model() {
         "the identifier's 8-hex prefix begins the root manifest's FSRS-7 revision"
     );
 }
+
+#[test]
+fn an_empty_state_round_trips_and_a_refused_event_is_its_load_errors_source() {
+    let port = Fsrs7::new(&[]).expect("the pinned defaults make a port");
+    let empty = port.checkpoint(&port.new_state());
+    assert_eq!(empty.len(), 45, "an empty state's checkpoint is its header");
+    assert_eq!(
+        port.restore(&empty).map(|state| port.checkpoint(&state)),
+        Ok(empty.clone()),
+        "an empty state's checkpoint restores to equal bytes"
+    );
+    assert_eq!(
+        port.restore(&empty[..44]).map(|_| ()),
+        Err(LoadError::Truncated),
+        "a header one byte short is truncated"
+    );
+    let (_, state) = folded(&six_events());
+    let mut refused = port.checkpoint(&state);
+    // The first event's grade: the 45 header bytes, then its card, note, deck and preset.
+    refused[45 + 32] = 0;
+    assert_eq!(
+        port.restore(&refused).map(|_| ()),
+        Err(LoadError::Refused(FoldError::GradeOutOfRange { grade: 0 })),
+        "a checkpoint holding an event the fold refuses is refused with the fold's refusal"
+    );
+    let sources: Vec<Option<String>> = [
+        LoadError::Refused(FoldError::ModelRefused),
+        LoadError::Truncated,
+        LoadError::NotACheckpoint,
+        LoadError::OtherModel,
+    ]
+    .iter()
+    .map(|error| std::error::Error::source(error).map(ToString::to_string))
+    .collect();
+    assert_eq!(
+        sources,
+        vec![
+            Some("the scheduler refuses the model's parameters or a card's history".to_owned()),
+            None,
+            None,
+            None
+        ],
+        "a refused event is its load error's source, and no other load error has one"
+    );
+}
+
+#[test]
+fn rows_the_selection_drops_after_the_last_review_leave_the_replay_on_the_direct_path() {
+    let planted = built("seam-dropped-rows", 1);
+    let card = planted.cards[0];
+    let mut col = engine(&planted.collection);
+    let at = now_millis() - 2 * DAY_MS;
+    answer(&mut col, card, Rating::Good, at);
+    // After the review: a row with no rating of a kind the selection keeps, and a rated row of a
+    // kind it drops. The selection keeps neither, so the history stays the one review.
+    for (offset, ease, kind) in [(60_000_i64, 0_i64, 1_i64), (120_000, 3, 5)] {
+        col.storage
+            .db()
+            .execute(
+                "insert into revlog (id, cid, usn, ease, ivl, lastIvl, factor, time, type) \
+                 values (?, ?, -1, ?, 0, 0, 2500, 0, ?)",
+                [at + offset, card, ease, kind],
+            )
+            .expect("a planted review-log row");
+    }
+    col.close(None).expect("the engine closes the collection");
+    let rows = statement_rows(&planted.collection);
+    assert_eq!(
+        rows.len(),
+        3,
+        "the review and the two planted rows are read"
+    );
+    let dispatcher = opened(&planted);
+    let today = dispatcher
+        .engine_day()
+        .expect("the engine reads its day before the replay");
+    let expected = control(&rows, today, MAX_IVL);
+    let replayed = dispatcher
+        .replay(&[HOME], &[], RETENTION, MAX_IVL, today)
+        .map(|entries| {
+            entries
+                .into_iter()
+                .map(|entry| {
+                    (
+                        entry.card,
+                        (
+                            (entry.stability.to_bits(), entry.difficulty.to_bits()),
+                            entry.schedule,
+                        ),
+                    )
+                })
+                .collect::<BTreeMap<_, _>>()
+        });
+    close(&dispatcher);
+    assert_eq!(
+        replayed,
+        Ok(expected
+            .iter()
+            .map(|(&card, value)| (card, (value.stock, value.schedule)))
+            .collect()),
+        "the replay keeps the direct path's values when the selection drops rows after the review"
+    );
+    assert_eq!(
+        expected.keys().copied().collect::<Vec<_>>(),
+        vec![card],
+        "the card is replayed from its one kept review"
+    );
+}
