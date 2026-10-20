@@ -2624,5 +2624,46 @@ class TheEquivalentShapesAreGone(unittest.TestCase):
         self.assertEqual(found, [])
 
 
+class TheNotFoundBranchesAreReached(unittest.TestCase):
+    """Each scan whose `find` the cure compares `== -1` meets a text that holds no end for it, so a
+    mutant of that `-1` reads a value the text does not hold (SPEC-492 R2). A scan such a mutant
+    turns into an endless loop fails at the 64th read of `rust_literal` instead of holding its leg.
+    """
+
+    #: The reads of `rust_literal` a bounded scan may make before it fails.
+    BOUND = 64
+
+    def bounded(self):
+        """A stand-in for the verdict's `rust_literal` that calls the real one and counts each call,
+        and the list of the positions it read. Its 64th call fails, naming that call's position."""
+        real, reads = V.rust_literal, []
+
+        def counted(text, start):
+            reads.append(start)
+            if len(reads) == self.BOUND:
+                raise AssertionError(f"rust_literal read position {start} at call {self.BOUND}")
+            return real(text, start)
+
+        return counted, reads
+
+    def test_an_unclosed_raw_string_runs_to_the_text_end(self):
+        self.assertEqual(V.rust_literal('r#"ab', 0), 5)
+
+    def test_an_unclosed_escaped_character_runs_to_the_text_end(self):
+        self.assertEqual(V.rust_literal("'\\n", 0), 3)
+
+    def test_a_last_line_comment_ends_the_code_lines(self):
+        counted, reads = self.bounded()
+        with mock.patch.object(V, "rust_literal", counted):
+            self.assertEqual(V.c_code_lines("x //", "rust"), {1})
+        self.assertEqual(len(reads), 1)
+
+    def test_a_last_line_comment_ends_the_rust_tokens(self):
+        counted, reads = self.bounded()
+        with mock.patch.object(V, "rust_literal", counted):
+            self.assertEqual(V.rust_tokens("x //"), [(0, 1)])
+        self.assertEqual(len(reads), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
