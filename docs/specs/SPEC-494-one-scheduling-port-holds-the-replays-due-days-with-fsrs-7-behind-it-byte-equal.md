@@ -134,6 +134,7 @@ run unchanged and stay green: they hold today's pins through the port.
 | `docs/specs/SPEC-494-one-scheduling-port-holds-the-replays-due-days-with-fsrs-7-behind-it-byte-equal.md` | docs | new: this file |
 | `docs/decisions/ADR-512-the-scheduling-port-is-one-engine-core-trait-and-fsrs-7-implements-it-in-the-replay-module.md` | docs | new: the decisions |
 | `docs/schematics/the-scheduling-port-and-its-fsrs-7-implementation.md` | docs | new: the paths before and after |
+| `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | docs | changed: the engine-core forbid citation follows its moved line |
 | `docs/red-first/SPEC-494.md` | docs | new: the red-first record |
 | `scripts/mutation-rows.d/S49400-S49499.json` | rows | new: rows S49400 to S49428 |
 | `changelog.d/scheduler-seam-494.md` | changelog | new: the fragment |
