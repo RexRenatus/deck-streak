@@ -32,6 +32,7 @@ function view(id: number, extra: Partial<CardView> = {}): CardView {
     labels: ['<1m', '<6m', '<10m', '4d'],
     undo: null,
     late: false,
+    withheld: false,
     ...extra
   };
 }

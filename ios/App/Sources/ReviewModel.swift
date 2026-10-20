@@ -83,13 +83,13 @@ final class ReviewModel {
                 answered += 1
                 try await next()
             }
-        case (.bury, .question), (.bury, .answer):
+        case (.bury, .question), (.bury, .answer), (.bury, .withheld):
             phase = .marking
             await run {
                 try await session.bury()
                 try await next()
             }
-        case (.flag, .question), (.flag, .answer):
+        case (.flag, .question), (.flag, .answer), (.flag, .withheld):
             let side = phase
             phase = .marking
             await run {

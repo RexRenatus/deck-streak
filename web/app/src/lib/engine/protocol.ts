@@ -133,7 +133,9 @@ export interface Counts {
  * can be undone: `answer` when it can, `synced` when it has synced, `null` when there is none to
  * undo (SPEC-371 R7); or its last bury or flag: `bury` or `flag` when it can, `change-synced` when
  * it has synced (SPEC-383 R9); and whether the engine's day is past the card's due day, so this
- * review cannot count toward the streak for that day (SPEC-376 R4). */
+ * review cannot count toward the streak for that day (SPEC-376 R4);
+ * and whether its question is an image occlusion question whose masks this app does not draw, so
+ * the engine emptied both sides and its CSS and the review withholds it (SPEC-380 R3). */
 export interface CardView {
   id: bigint;
   ordinal: number;
@@ -144,6 +146,7 @@ export interface CardView {
   labels: string[];
   undo: 'answer' | 'synced' | 'bury' | 'flag' | 'change-synced' | null;
   late: boolean;
+  withheld: boolean;
 }
 
 /** The grade an offered answer gave, as the review names it. */

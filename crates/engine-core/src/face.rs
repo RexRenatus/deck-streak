@@ -22,6 +22,7 @@ use prost::Message;
 
 use crate::dispatch::Refusal;
 use crate::media::{Budget, Reader};
+use crate::occlusion;
 
 /// `CardRenderingService.RenderExistingCard`, the engine's render of a stored card.
 const RENDER_EXISTING_CARD: (u32, u32) = (27, 6);
@@ -91,6 +92,9 @@ pub struct Face {
     pub replay: Vec<Clip>,
     /// The media names left out, each once.
     pub omitted: Vec<String>,
+    /// Whether the card's question is an image occlusion question whose masks this app does not
+    /// draw, so neither side is shown (SPEC-380 R2).
+    pub withheld: bool,
 }
 
 fn engine_error(error: Vec<u8>) -> Refusal {
@@ -177,7 +181,8 @@ fn clips(tags: &[AvTag], budget: &mut Budget<'_>, videos: &mut Vec<String>) -> V
         .collect()
 }
 
-/// Completes `card`'s face for `side` as the engine's own reviewer does (SPEC-348 R2 to R4).
+/// Completes `card`'s face for `side` as the engine's own reviewer does (SPEC-348 R2 to R4), or
+/// withholds it on both sides when its question is one whose masks are not drawn (SPEC-380 R2).
 pub(crate) fn complete(
     backend: &Backend,
     card: i64,
@@ -239,6 +244,19 @@ pub(crate) fn complete(
     } else {
         Vec::new()
     };
+    if occlusion::masks_not_drawn(&question_raw) {
+        // A question whose masks are not drawn would show its hidden parts, so neither side shows
+        // anything of the note: no text, no style, no clip (SPEC-380 R2).
+        return Ok(Face {
+            text: String::new(),
+            css: String::new(),
+            ordinal,
+            autoplay: Vec::new(),
+            replay: Vec::new(),
+            omitted: Vec::new(),
+            withheld: true,
+        });
+    }
     Ok(Face {
         text,
         css: rendered.css,
@@ -246,5 +264,6 @@ pub(crate) fn complete(
         autoplay,
         replay,
         omitted: budget.into_omitted(),
+        withheld: false,
     })
 }
