@@ -34,6 +34,7 @@
 
 pub mod analytics_routes;
 pub mod badges_routes;
+pub mod chests_routes;
 pub mod drill_routes;
 pub mod health;
 pub mod inbox_capture_route;

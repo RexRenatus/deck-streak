@@ -30,7 +30,7 @@ use std::cmp::Reverse;
 use std::fmt;
 use std::sync::{Arc, Mutex, PoisonError};
 
-use deck_streak_kernel::{Clock, Db, KernelError, StudyDay, StudyDayRule, UtcMillis};
+use deck_streak_kernel::{Clock, Db, KernelError, StudyDay, StudyDayRule, UtcMillis, UtcOffset};
 use sqlx::{Sqlite, SqliteConnection, Transaction};
 
 use crate::ladder::{self, DICE_EMOJI, REACTION_EMOJI, REVEAL_PAUSE, REVEAL_PLACEHOLDER};
@@ -1199,20 +1199,14 @@ impl Router {
         }
     }
 
-    /// Whether `now` falls in the owner's quiet window, or the policy's where the owner set none.
+    /// Whether `now` falls in the owner's quiet window, or the policy's where the owner set none:
+    /// [`in_quiet_window_on`], the one check the fold's chest step reads too (SPEC-411 R12).
     async fn in_quiet_window(
         &self,
         write: &mut SqliteConnection,
         now: UtcMillis,
     ) -> Result<bool, KernelError> {
-        let quiet = &self.policy.quiet_hours;
-        let start = minutes_setting(write, QUIET_START_SETTING, quiet.start.minutes()).await?;
-        let end = minutes_setting(write, QUIET_END_SETTING, quiet.end.minutes()).await?;
-        Ok(in_quiet_hours(
-            local_minute(now, self.rule.utc_offset()),
-            start,
-            end,
-        ))
+        in_quiet_window_on(write, &self.policy, self.rule.utc_offset(), now).await
     }
 
     /// Whether the outage breaker is open: a bot send failed less than the cooldown before `now`.
@@ -1317,6 +1311,24 @@ async fn minutes_setting(
         .await?
         .and_then(|value| value.parse().ok())
         .unwrap_or(default))
+}
+
+/// Whether `now`, read at `offset`, falls in the owner's quiet window, or in `policy`'s where the
+/// owner set none (SPEC-411 R12): the one quiet check the router and the fold's chest step share.
+///
+/// # Errors
+///
+/// [`KernelError`] when the owner's settings cannot be read.
+pub async fn in_quiet_window_on(
+    write: &mut SqliteConnection,
+    policy: &Policy,
+    offset: UtcOffset,
+    now: UtcMillis,
+) -> Result<bool, KernelError> {
+    let quiet = &policy.quiet_hours;
+    let start = minutes_setting(write, QUIET_START_SETTING, quiet.start.minutes()).await?;
+    let end = minutes_setting(write, QUIET_END_SETTING, quiet.end.minutes()).await?;
+    Ok(in_quiet_hours(local_minute(now, offset), start, end))
 }
 
 /// The tier a nudge, a digest or an alert renders at: nothing at T0, and a line at every other tier.

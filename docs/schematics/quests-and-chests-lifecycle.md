@@ -131,3 +131,71 @@ stateDiagram-v2
 A win is a `ghost_win` celebration, or a quieter `record` after more than three wins in a row; a
 loss is told only when the owner studied that week, and names a photo finish only when the gap is
 at most 5 cards or 5 percent. A change of the week's leader is told at most once a study day.
+
+## A chest's grants, from the fold and from the owner's routes (E2b)
+
+Kind: data flow. Read at DeckStreak `dev` `ef4d9077`. Added by SPEC-411 (ADR-425), the first part
+of SPEC-081's E2b. Each grant below is made in the write that resolves its chest, its choice or its
+window, or not at all, and `xp_ledger`'s once scope turns a replay into a write of nothing.
+
+The fold. The chest step and the sweep step run in phase 4's `DaySteps`, the token-bonus step in
+phase 5's `DerivedBonuses` (`crates/coordination/src/recompute/chests.rs`, registered by
+`crates/daemon/src/wiring.rs`). The chest step rolls only on a `Settle` or a `Current` evaluation,
+and on `Current` only for sessions ended at least `SESSION_GAP_MS` before now, because an open
+session's partial base XP would cap its payout. The sweep runs on `Current` only and pays each stale
+chest on the chest's own study day.
+
+```mermaid
+flowchart TD
+  fold["the recompute's fold: one write per study day"] --> phaseFour{"phase 4, DaySteps: which evaluation?"}
+  phaseFour -- "a backfill or a revisit" --> rollNone["no roll and no grant"]
+  phaseFour -- "Settle or Current" --> chestStep["chest step: sessions ended at least SESSION_GAP_MS before now"]
+  chestStep --> grantChests["quests: grant_session_chests_on"]
+  grantChests --> chestRows[("the chest rows and the pity counters")]
+  grantChests -- "a draw error" --> keepDay["one warning naming the day and the session; the day's other writes stay"]
+  phaseFour -- "Current only" --> sweepStep["sweep step"]
+  sweepStep --> sweepChests["quests: sweep_stale_chests_on"]
+  sweepChests --> grantSwept["progression: grant_on, source chest:id, once, on the chest's own day and track"]
+  grantSwept --> ledgerRows[("xp_ledger")]
+  fold --> phaseFive["phase 5, DerivedBonuses: every evaluation"]
+  phaseFive --> bonusStep["token-bonus step"]
+  bonusStep --> bonusRule["quests: settle_token_bonuses_on"]
+  bonusRule --> settleBonus["progression: settle, source 2x:id, replaced while open, raised only once closed"]
+  settleBonus --> ledgerRows
+```
+
+The owner's routes. Each route takes the owner's session first (401), and each POST the state-change
+guard (403); the API calls coordination's use case, which holds the one write
+(`crates/coordination/src/chests.rs`). The API depends on coordination only, so its answers are
+coordination's types. The bot's callbacks (E2b-3) and the Mini App (E2b-2) are dashed: they arrive
+later and call the same use cases, the bot directly and the Mini App through the routes.
+
+```mermaid
+flowchart LR
+  theOwner["the owner"] --> apiRoute["API route: owner session, then the state-change guard on a POST"]
+  apiRoute --> useCase["coordination use case: one write"]
+  useCase --> openPort["quests: open_chest_on"]
+  useCase --> pickPort["quests: settle_epic_choice_on"]
+  useCase --> activatePort["quests: activate_token_on"]
+  useCase --> inventoryRead["quests: the chest store and the holdings read"]
+  openPort --> grantOpened["progression: grant_on, source chest:id, once"]
+  grantOpened --> ledgerOwner[("xp_ledger")]
+  pickPort -- "freeze, below the cap" --> freezeOn["coordination: grant_freeze_on"]
+  freezeOn --> freezeRows[("the freeze rows")]
+  pickPort -- "token, or a capped freeze" --> tokenRows[("xp_tokens")]
+  activatePort --> tokenRows
+  inventoryRead -- "no rarity and no payout for a sealed or vaulted chest" --> apiRoute
+  botLater["bot callbacks, E2b-3"] -.-> useCase
+  appLater["Mini App, E2b-2"] -.-> apiRoute
+```
+
+The odds. `economy.json`'s `chests` is the one source: the quests constants the roll draws from are
+pinned to it by `crates/quests/tests/chests_roll.rs:88` (SPEC-411 A20), and the odds page E2b-2
+delivers reads the same file, pinned by SPEC-081 A16. No route restates the odds.
+
+```mermaid
+flowchart LR
+  economyFile[("economy.json: chests")] --> chestConstants["quests: the chest constants, pinned by A20"]
+  chestConstants --> theRoll["the roll"]
+  economyFile -.-> pageOdds["the odds page, E2b-2, pinned by SPEC-081 A16"]
+```

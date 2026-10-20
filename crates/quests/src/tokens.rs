@@ -163,6 +163,44 @@ pub async fn activate_token_on(
     }
 }
 
+/// The owner's tokens as the inventory shows them (SPEC-411 R11).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Holdings {
+    /// The unspent tokens: granted, never activated and never consumed.
+    pub held: i64,
+    /// The open window's end, none when no window is open.
+    pub window_ends_at: Option<UtcMillis>,
+}
+
+/// Reads the unspent tokens and the window open at `now` (SPEC-411 R11), in the caller's
+/// connection. The open window is the one [`activate_token_on`] refuses a second activation for.
+///
+/// # Errors
+///
+/// [`ChestError::Database`] when a read fails.
+pub async fn holdings_on(
+    connection: &mut SqliteConnection,
+    now: UtcMillis,
+) -> Result<Holdings, ChestError> {
+    let held = sqlx::query_scalar!(
+        r#"SELECT COUNT(*) AS "held!: i64" FROM xp_tokens WHERE consumed = 0 AND activated_at = 0"#
+    )
+    .fetch_one(&mut *connection)
+    .await?;
+    let now_ms = now.epoch_millis();
+    let window_ends_at = sqlx::query_scalar!(
+        "SELECT window_ends_at FROM xp_tokens WHERE consumed = 0 AND activated_at > 0 \
+         AND window_ends_at > ?1 ORDER BY id DESC LIMIT 1",
+        now_ms
+    )
+    .fetch_optional(&mut *connection)
+    .await?;
+    Ok(Holdings {
+        held,
+        window_ends_at: window_ends_at.map(UtcMillis::from_epoch_millis),
+    })
+}
+
 /// A token's bonus on `study_day` (R13): its window's study reviews of that study day, each at
 /// its XP at the base rate, summed and capped at [`TOKEN_BONUS_CAP_XP`]; none when no study
 /// review falls in the window on that day. The bonus is its own source and never part of the
