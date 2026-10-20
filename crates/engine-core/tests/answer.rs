@@ -21,8 +21,6 @@
 
 mod support;
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use anki::collection::CollectionBuilder;
 use anki_proto::scheduler::card_answer::Rating;
 use anki_proto::scheduler::scheduling_state::{Kind, normal};
@@ -107,14 +105,6 @@ fn reps(dispatcher: &Dispatcher, card: i64) -> Option<i64> {
         .and_then(Value::as_i64)
 }
 
-fn now_millis() -> i64 {
-    let millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_millis();
-    i64::try_from(millis).expect("the clock's milliseconds fit an i64")
-}
-
 /// An owner's press of `grade` on `card`, recorded with `request` through the one door.
 fn press(
     dispatcher: &Dispatcher,
@@ -128,21 +118,22 @@ fn press(
 }
 
 /// The request an adapter writes for a press of `grade` on `card`, shown with `states`: the
-/// grade's pick of the next state and the grade's own rating.
-fn request(card: i64, states: &SchedulingStates, grade: Grade) -> Vec<u8> {
+/// grade's pick of the next state and the grade's own rating, answered at `at`, the clock's
+/// instant (SPEC-443 R3).
+fn request(card: i64, states: &SchedulingStates, grade: Grade, at: i64) -> Vec<u8> {
     answer_request(
         card,
         states.current.clone(),
         grade.pick(states.again.clone(), states.good.clone()),
         grade,
-        now_millis(),
+        at,
         1000,
     )
 }
 
 /// A `CardAnswer` for `card`, shown with `states`, naming `rating` and the engine's own next state
-/// for that rating, so the engine itself would record it.
-fn rated(card: i64, states: &SchedulingStates, rating: Rating) -> Vec<u8> {
+/// for that rating, so the engine itself would record it, answered at `at`, the clock's instant.
+fn rated(card: i64, states: &SchedulingStates, rating: Rating, at: i64) -> Vec<u8> {
     let next = match rating {
         Rating::Again => states.again.clone(),
         Rating::Hard => states.hard.clone(),
@@ -154,7 +145,7 @@ fn rated(card: i64, states: &SchedulingStates, rating: Rating) -> Vec<u8> {
         current_state: states.current.clone(),
         new_state: next,
         rating: rating as i32,
-        answered_at_millis: now_millis(),
+        answered_at_millis: at,
         milliseconds_taken: 1000,
     }
     .encode_to_vec()
@@ -209,13 +200,23 @@ fn a_press_answers_its_one_card_with_its_grade() {
             &dispatcher,
             first,
             Grade::Again,
-            &request(first, &first_states, Grade::Again),
+            &request(
+                first,
+                &first_states,
+                Grade::Again,
+                synthetic.clock.at_millis(),
+            ),
         ),
         press(
             &dispatcher,
             second,
             Grade::Good,
-            &request(second, &second_states, Grade::Good),
+            &request(
+                second,
+                &second_states,
+                Grade::Good,
+                synthetic.clock.at_millis(),
+            ),
         ),
     ];
     let after = rows(&synthetic, dispatcher, &[first, second]);
@@ -252,7 +253,12 @@ fn a_press_for_one_card_cannot_answer_another() {
         &dispatcher,
         second,
         Grade::Good,
-        &request(first, &first_states, Grade::Good),
+        &request(
+            first,
+            &first_states,
+            Grade::Good,
+            synthetic.clock.at_millis(),
+        ),
     );
     assert_eq!(
         (pressed, reps(&dispatcher, first), reps(&dispatcher, second)),
@@ -278,7 +284,12 @@ fn a_press_records_only_its_own_grade() {
             .into_iter()
             .next()
             .expect("the queue shows a new card");
-        let pressed = press(&dispatcher, card, grade, &rated(card, &states, rating));
+        let pressed = press(
+            &dispatcher,
+            card,
+            grade,
+            &rated(card, &states, rating, synthetic.clock.at_millis()),
+        );
         judged.push((grade, rating as i32, pressed, reps(&dispatcher, card)));
     }
     let refused: Vec<_> = OTHER_RATINGS

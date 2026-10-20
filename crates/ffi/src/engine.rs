@@ -68,6 +68,9 @@ impl std::error::Error for EngineRefusal {}
 #[derive(uniffi::Object)]
 pub struct Engine {
     dispatcher: Dispatcher,
+    /// The instant every answer records as its time, in milliseconds since the epoch, when the
+    /// engine was started with one; unset, an answer records the adapter's clock (SPEC-443 R4).
+    answered_at_millis: Option<i64>,
 }
 
 #[uniffi::export]
@@ -84,7 +87,12 @@ impl Engine {
     )]
     pub fn new(message: Vec<u8>) -> Result<Arc<Self>, EngineRefusal> {
         Dispatcher::start(Transport::Native, &message)
-            .map(|dispatcher| Arc::new(Self { dispatcher }))
+            .map(|dispatcher| {
+                Arc::new(Self {
+                    dispatcher,
+                    answered_at_millis: None,
+                })
+            })
             .map_err(|reason| EngineRefusal::Start { reason })
     }
 
@@ -171,7 +179,8 @@ impl Engine {
     /// encoded `SchedulingStates` in `states`, after `milliseconds_taken` (SPEC-365 R6). This is
     /// the adapter's one answer entry, and the only place it builds an owner's answer: the request
     /// names the press's card, its grade's rating and the next state its grade picks out of the
-    /// states the card was shown with, at the time the adapter's clock reads.
+    /// states the card was shown with, at the instant the engine was started with, or else at the
+    /// time the adapter's clock reads.
     ///
     /// # Errors
     ///
@@ -196,7 +205,7 @@ impl Engine {
             states.current,
             next,
             grade,
-            now_millis(),
+            self.answered_at_millis.unwrap_or_else(now_millis),
             milliseconds_taken,
         );
         let answer = OwnerAnswer::from_press(card, grade);
@@ -228,6 +237,31 @@ impl Engine {
         // `CardsService.SetFlag`, through the allow-list as every call goes.
         self.run(5, 4, flag_request(card_id, flag))?;
         Ok(flag)
+    }
+}
+
+/// The adapter's tests' constructor, which the bindings do not export: no native client can call
+/// it, so the answer's time stays the adapter's own for every client.
+impl Engine {
+    /// Starts an engine from its encoded `BackendInit` message, as [`Engine::new`] does, whose
+    /// every answer records `answered_at_millis`, in milliseconds since the epoch, as its time in
+    /// place of the adapter's clock (SPEC-443 R4). [`Engine::answer`] stays the one answer entry.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Start`] when the engine cannot decode the message.
+    pub fn at_answer_time(
+        message: &[u8],
+        answered_at_millis: i64,
+    ) -> Result<Arc<Self>, EngineRefusal> {
+        Dispatcher::start(Transport::Native, message)
+            .map(|dispatcher| {
+                Arc::new(Self {
+                    dispatcher,
+                    answered_at_millis: Some(answered_at_millis),
+                })
+            })
+            .map_err(|reason| EngineRefusal::Start { reason })
     }
 }
 
