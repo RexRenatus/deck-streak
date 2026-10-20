@@ -1203,6 +1203,7 @@ dependencies = [
  "deck-streak-readings",
  "deck-streak-streaks",
  "deck-streak-vault",
+ "proc-macro2",
  "serde",
  "serde_json",
  "sqlx",
