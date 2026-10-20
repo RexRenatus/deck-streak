@@ -8,7 +8,8 @@
 \* @phx covers crates/engine-core/src/dispatch.rs anchor=run_restore digest=sha256:55e9a0dfa787cbad789a8631d7d50926166dc8c984cc920c81ac301e13f5630e
 \* @phx covers crates/web-engine/src/wasm.rs anchor=bury digest=sha256:92b201917eaa8281e924399340f1551030f8fa659352f3ae951f9b16ed960ed6
 \* @phx covers crates/web-engine/src/wasm.rs anchor=flag digest=sha256:21ef36f04c73eb7704a55eb933c52b2c81860793018cbaac4cb4aae62cc73429
-\* @phx covers crates/web-engine/src/wasm.rs anchor=current_card digest=sha256:605adfade6242520ebc39f34b2852dc699ed1dcb1029ca71522fdef82edf8118
+\* @phx covers crates/web-engine/src/wasm.rs anchor=current_card digest=sha256:ce539242310a9f83a76eba0e7f7f0aebf92af165b11c2721ca48f2118b4f582f
+\* current_card's read of the shown card's note tags for its view (SPEC-388) reaches no variable.
 \* @phx cites #714
 \* @phx cites #753
 \* @phx property AnUndoRevertsOnlyTheOfferedAnswer ramp=report

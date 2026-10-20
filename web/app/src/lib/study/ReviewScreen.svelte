@@ -224,6 +224,9 @@
       {#if face.view.late}
         <p class="text-sm">{m.study_late_review()}</p>
       {/if}
+      {#if face.view.assisted}
+        <p class="text-sm">{m.study_ai_assisted()}</p>
+      {/if}
       <div class="h-[55dvh] *:size-full *:border-0">
         <CardFrame
           html={face.side === 'answer' ? face.view.answer : face.view.question}

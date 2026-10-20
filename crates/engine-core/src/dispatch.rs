@@ -37,6 +37,9 @@ const REVIEW_SQL: &str = "select cid, usn from revlog where id = ?";
 /// One card's queue, flags and sync mark, by its id: what an undo of a bury or a flag is judged
 /// against (SPEC-383 R4).
 const CARD_MARK_SQL: &str = "select queue, flags, usn from cards where id = ?";
+/// One note's tags, by its id: the engine's one text of tags separated by blanks, which the core
+/// reads the AI-assisted marker from (SPEC-388 R3).
+const NOTE_TAGS_SQL: &str = "select tags from notes where id = ?";
 /// The engine's undo status, `CollectionService.GetUndoStatus`: its label and its last step, which
 /// an undo of the review's own last answer compares with its record (SPEC-371 R5).
 const GET_UNDO_STATUS: (u32, u32) = (3, 7);
@@ -161,6 +164,8 @@ pub enum Read {
     Review(i64),
     /// One card's queue, flags and sync mark, by its id (SPEC-383 R4).
     CardMark(i64),
+    /// One note's tags, by its id (SPEC-388 R3).
+    NoteTags(i64),
 }
 
 impl Dispatcher {
@@ -519,6 +524,7 @@ impl Dispatcher {
             Read::NewestReview => (NEWEST_REVIEW_SQL, Vec::new()),
             Read::Review(review) => (REVIEW_SQL, vec![serde_json::Value::from(review)]),
             Read::CardMark(card) => (CARD_MARK_SQL, vec![serde_json::Value::from(card)]),
+            Read::NoteTags(note) => (NOTE_TAGS_SQL, vec![serde_json::Value::from(note)]),
         };
         let request = serde_json::json!({
             "kind": "query",
@@ -528,6 +534,25 @@ impl Dispatcher {
         });
         self.backend
             .run_db_command_bytes(request.to_string().as_bytes())
+    }
+
+    /// Whether `note` was made with AI assistance: the core's one fixed read of its tags, judged by
+    /// the core's rule, [`crate::ai_assisted::carries`] (SPEC-388 R3). A note the collection lacks
+    /// reads unmarked. No adapter passes SQL for it or judges the tags itself.
+    ///
+    /// # Errors
+    ///
+    /// [`Refusal::Engine`] when the engine cannot run the read, a closed collection among them, or
+    /// answers it with a reply that is not the one text of tags it selects.
+    pub fn ai_assisted(&self, note: i64) -> Result<bool, Refusal> {
+        let reply = self.read(Read::NoteTags(note))?;
+        let rows: Vec<[String; 1]> =
+            serde_json::from_slice(&reply).map_err(|_| unreadable(NOTE_TAGS_SQL))?;
+        match rows.as_slice() {
+            [] => Ok(false),
+            [[tags]] => Ok(crate::ai_assisted::carries(tags)),
+            _ => Err(unreadable(NOTE_TAGS_SQL)),
+        }
     }
 
     /// The review rows of every card whose home deck is in `decks`, each as `[card, id, ease,

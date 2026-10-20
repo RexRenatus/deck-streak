@@ -716,9 +716,11 @@ fn joined(nodes: &[RenderedTemplateNode]) -> String {
 /// type's CSS, the four interval labels for the states read with it, and the engine's undo label.
 /// The card is kept with those states and its flag for `rate`, `bury` and `flag` (SPEC-350 R2, R3).
 /// It carries `late`, the core's answer whether the card is past its due day in the engine's day,
-/// so its review cannot count toward the streak for that day (SPEC-376 R4). Its `undo` names what
-/// the slot offers: `answer` or `synced` for the review's own last answer, and `bury`, `flag` or
-/// `change-synced` for its last bury or flag (SPEC-371 R7, SPEC-383 R9).
+/// so its review cannot count toward the streak for that day (SPEC-376 R4), and `assisted`, the
+/// core's answer whether the card's note carries the marker of a card made with AI assistance, read
+/// by the core alone (SPEC-388 R5). Its `undo` names what the slot offers: `answer` or `synced` for
+/// the review's own last answer, and `bury`, `flag` or `change-synced` for its last bury or flag
+/// (SPEC-371 R7, SPEC-383 R9).
 #[wasm_bindgen]
 pub fn current_card() -> Result<String, JsValue> {
     SHOWN.with(|kept| *kept.borrow_mut() = None);
@@ -782,6 +784,9 @@ pub fn current_card() -> Result<String, JsValue> {
     let day = dispatcher()?
         .engine_day()
         .map_err(|_| refuse("the engine's day was not read"))?;
+    let assisted = dispatcher()?
+        .ai_assisted(card.note_id)
+        .map_err(|_| refuse("the card's note was not read"))?;
     let mut view = serde_json::json!({
         "counts": counts,
         "card": {
@@ -794,6 +799,7 @@ pub fn current_card() -> Result<String, JsValue> {
             "labels": labels.vals,
             "undo": undo_view(judged),
             "late": late::past_due_day(&card, day),
+            "assisted": assisted,
         },
     });
     if let (Some(marked), Some(undo)) = (mark_view(marked), view.pointer_mut("/card/undo")) {

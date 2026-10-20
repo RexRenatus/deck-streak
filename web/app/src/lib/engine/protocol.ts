@@ -133,7 +133,8 @@ export interface Counts {
  * can be undone: `answer` when it can, `synced` when it has synced, `null` when there is none to
  * undo (SPEC-371 R7); or its last bury or flag: `bury` or `flag` when it can, `change-synced` when
  * it has synced (SPEC-383 R9); and whether the engine's day is past the card's due day, so this
- * review cannot count toward the streak for that day (SPEC-376 R4). */
+ * review cannot count toward the streak for that day (SPEC-376 R4); and whether the card's note
+ * carries the tag a card made with AI assistance carries, as the engine core reads it (SPEC-388 R5). */
 export interface CardView {
   id: bigint;
   ordinal: number;
@@ -144,6 +145,7 @@ export interface CardView {
   labels: string[];
   undo: 'answer' | 'synced' | 'bury' | 'flag' | 'change-synced' | null;
   late: boolean;
+  assisted: boolean;
 }
 
 /** The grade an offered answer gave, as the review names it. */
