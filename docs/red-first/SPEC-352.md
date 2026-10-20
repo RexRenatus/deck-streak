@@ -109,3 +109,12 @@ A28: green at 5071e917
   print openssl's standard error after the class. A27 run alone failed by name in each of its four
   cases (`FAILED (failures=4)`), the shim's planted marker text appearing in the step's output;
   the script was then restored by copy, its sha256 equal before and after.
+- The certificate read's killers. d246c585 adds the four survivors' killers, two tests after
+  A28's, committed after the greens at 5071e917 and changing no test before them.
+  `test_the_re_wrap_is_given_exactly_what_the_certificate_read_wrote` kills the two mutants that
+  make the read hand nothing to the re-wrap, on the first read's path and on the `-legacy` path;
+  `test_each_certificate_read_line_is_written_out_before_the_next_tool_runs` kills the two that
+  leave the class line or the `-legacy` ok line unflushed when the next tool runs. Each kill was
+  proved by an exact mutation of the script, its killer run alone failing by name and the script
+  restored by copy, its sha256 equal before and after. The script is unchanged since the green:
+  `git -C <wt> diff --quiet 5071e917 HEAD -- scripts/ios_lane.py` reads rc 0.
