@@ -67,6 +67,10 @@ def Accepts (listed rerun carried : List Name) : Prop :=
   (∀ n ∈ relevant listed rerun carried, cnt n listed = cnt n rerun + cnt n carried) ∧
     (∀ n ∈ rerun, cnt n carried = 0)
 
+/-- `Accepts` is decided by its two bounded quantifiers over finite lists of names. -/
+instance (listed rerun carried : List Name) : Decidable (Accepts listed rerun carried) := by
+  unfold Accepts; infer_instance
+
 /-- The union rule that ships. -/
 def accepts (listed rerun carried : List Name) : Bool :=
   decide (Accepts listed rerun carried)
@@ -75,6 +79,10 @@ def accepts (listed rerun carried : List Name) : Bool :=
 re-run and carried. -/
 def AcceptsOverlap (listed rerun carried : List Name) : Prop :=
   ∀ n ∈ relevant listed rerun carried, cnt n listed = cnt n rerun + cnt n carried
+
+/-- `AcceptsOverlap` is decided by its one bounded quantifier over the names present. -/
+instance (listed rerun carried : List Name) : Decidable (AcceptsOverlap listed rerun carried) := by
+  unfold AcceptsOverlap; infer_instance
 
 /-- The weakened rule that ignores names in both. -/
 def acceptsOverlap (listed rerun carried : List Name) : Bool :=
@@ -149,6 +157,10 @@ def Carries (rs : ReadSet) (ch : Changes) : Prop :=
     (rs.whole = true ∨
       ((∀ p ∈ ch.binary, hit rs p = false) ∧
         ∀ l ∈ ch.listings, rs.listings.contains l = false ∧ hit rs l = false))
+
+/-- `Carries` is decided by its equalities, its bounded quantifiers and its disjunction. -/
+instance (rs : ReadSet) (ch : Changes) : Decidable (Carries rs ch) := by
+  unfold Carries; infer_instance
 
 /-- The carry predicate that ships. -/
 def holds (rs : ReadSet) (ch : Changes) : Bool :=
