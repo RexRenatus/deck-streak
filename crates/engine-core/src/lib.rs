@@ -41,6 +41,9 @@
 //!   engine's day, and the rule that judges a card past its due day in it (SPEC-376 R1, R2).
 //! - [`replay`]: the replay of a deck set's review history into stock-field values, and their
 //!   mapping onto the engine's card; it writes nothing (SPEC-386 R7 to R13).
+//! - [`scheduler`]: the scheduling port the replay's due days come through, its review event,
+//!   key, recall and refusals, the event check and the day queue with its sibling rule (SPEC-494
+//!   R1, R5 to R8).
 //!
 //! The core depends on the engine and on one crate of this workspace, the isolated FSRS-7
 //! scheduler, which [`replay`] alone names; only the two client adapters depend on it (ADR-356 D4
@@ -63,6 +66,7 @@ pub mod one_way;
 pub mod replay;
 pub mod retention;
 pub mod review;
+pub mod scheduler;
 pub mod table;
 pub mod undo_answer;
 pub mod undo_change;

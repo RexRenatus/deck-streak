@@ -17,6 +17,8 @@ use deck_streak_fsrs7::stock::{self, FSRS};
 use crate::dispatch::{Dispatcher, Refusal, failed};
 use crate::late::EngineDay;
 
+pub use fsrs7_port::{FSRS7_VERSION, Fsrs7, Fsrs7State};
+
 /// The length of a preset's fitted FSRS-7 parameter vector. An empty vector names the pinned
 /// revision's defaults, and the scheduler would read most other lengths as an older model's, so
 /// no other length is replayed (SPEC-386 R8).
@@ -73,6 +75,136 @@ impl CardReplay {
         if let Some(schedule) = self.schedule {
             card.interval = schedule.ivl;
             card.due = schedule.due;
+        }
+    }
+}
+
+/// The scheduling port's FSRS-7 implementation (SPEC-494 R2, ADR-512 D2), a stub at this commit:
+/// it keeps every input and lacks the behaviour.
+#[allow(
+    dead_code,
+    reason = "the stub port reads none of its state or constants; the port's own commit reads each"
+)]
+mod fsrs7_port {
+    use deck_streak_fsrs7::stock::FSRS;
+
+    use crate::scheduler as port;
+    use port::SchedulerPort;
+
+    /// The implementation's fixed identifier: the crate's name and the pin's 8-hex prefix, then
+    /// two zero bytes.
+    pub const FSRS7_VERSION: [u8; 32] = *b"deck-streak-fsrs7 rev 4bc0a097\0\0";
+
+    /// The bytes a checkpoint starts with.
+    const CHECKPOINT_MAGIC: [u8; 4] = *b"DSSP";
+
+    /// The checkpoint's format.
+    const CHECKPOINT_FORMAT: u8 = 1;
+
+    /// A checkpoint's header: the magic, the format, the identifier and the event count as a u64,
+    /// little-endian.
+    const HEADER_LEN: usize = 45;
+
+    /// One event in a checkpoint: card, note, deck and preset as i64, the grade as a u8, the
+    /// answer time as a u32, the key as an i64 and the study day as an i32, all little-endian.
+    const EVENT_LEN: usize = 49;
+
+    /// FSRS-7 at the pinned revision, under one parameter vector.
+    #[derive(Debug, Clone)]
+    pub struct Fsrs7 {
+        /// The model.
+        model: FSRS,
+        /// The bits of the parameters the model was made under.
+        parameters: Vec<u32>,
+    }
+
+    /// The folded state: the events in key order, the last key and the bits of the parameters it
+    /// was made under.
+    #[derive(Debug, Clone)]
+    pub struct Fsrs7State {
+        /// The folded events, in key order.
+        events: Vec<port::ReviewEvent>,
+        /// The last folded key.
+        last: Option<port::EventKey>,
+        /// The bits of the parameters the state was made under.
+        parameters: Vec<u32>,
+    }
+
+    impl Fsrs7 {
+        /// FSRS-7 under `parameters`, empty for the pinned revision's defaults.
+        ///
+        /// # Errors
+        ///
+        /// [`port::FoldError::ModelRefused`] when the model refuses the vector.
+        pub fn new(parameters: &[f32]) -> Result<Self, port::FoldError> {
+            let model = FSRS::new(parameters).map_err(|_| port::FoldError::ModelRefused)?;
+            Ok(Self {
+                model,
+                parameters: parameters.iter().copied().map(f32::to_bits).collect(),
+            })
+        }
+
+        /// The card's stock stability and difficulty: the stub's are 0.
+        ///
+        /// # Errors
+        ///
+        /// None at the stub.
+        pub fn stock_values(
+            &self,
+            _st: &Fsrs7State,
+            _card: i64,
+            _target: port::Recall,
+        ) -> Result<(f32, f32), port::FoldError> {
+            Ok((0.0, 0.0))
+        }
+    }
+
+    impl SchedulerPort for Fsrs7 {
+        type State = Fsrs7State;
+
+        fn version_id(&self) -> [u8; 32] {
+            [0; 32]
+        }
+
+        fn new_state(&self) -> Fsrs7State {
+            Fsrs7State {
+                events: Vec::new(),
+                last: None,
+                parameters: self.parameters.clone(),
+            }
+        }
+
+        fn fold(&self, st: &mut Fsrs7State, ev: &port::ReviewEvent) -> Result<(), port::FoldError> {
+            let _planted = std::time::SystemTime::now();
+            st.events.push(*ev);
+            st.last = Some(ev.key);
+            Ok(())
+        }
+
+        fn predict(
+            &self,
+            _st: &Fsrs7State,
+            card: i64,
+            _at_day: i32,
+        ) -> Result<port::Recall, port::FoldError> {
+            port::Recall::clamped(0.5).ok_or(port::FoldError::NotFinite { card })
+        }
+
+        fn interval_days(
+            &self,
+            _st: &Fsrs7State,
+            _card: i64,
+            _target: port::Recall,
+        ) -> Result<u32, port::FoldError> {
+            Ok(0)
+        }
+
+        fn checkpoint(&self, _st: &Fsrs7State) -> Vec<u8> {
+            Vec::new()
+        }
+
+        fn restore(&self, _bytes: &[u8]) -> Result<Fsrs7State, port::LoadError> {
+            Ok(self.new_state())
         }
     }
 }
