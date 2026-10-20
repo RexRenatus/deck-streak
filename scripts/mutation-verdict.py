@@ -108,6 +108,7 @@ from dataclasses import dataclass, field
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
+import mutation_carry  # noqa: E402
 import mutation_python  # noqa: E402
 import mutation_rows  # noqa: E402
 
@@ -1970,7 +1971,8 @@ def python_reports(verdict: Verdict, plan: dict, directory: str | None) -> list[
     """(where, report) for each Python shard report the plan promised, from 0 to n-1: one missing,
     unreadable, not of the runner's schema, that records a failed restore, whose shard field is not
     its slot's, that `read_python_shard` refuses, or that examined other mutants than the plan
-    lists for that shard is VOID by name (SPEC-087 R11; SPEC-126 A8 and A9)."""
+    lists for that shard is VOID by name (SPEC-087 R11; SPEC-126 A8 and A9). The whole legs are
+    then held to the plan's listing with the carried outcomes beside them (SPEC-493 R10)."""
     planned = (plan.get("python") or {}).get("count") or 0
     if not planned:
         verdict.void("the plan names no python shards, so no shard's report was promised")
@@ -2005,7 +2007,7 @@ def python_reports(verdict: Verdict, plan: dict, directory: str | None) -> list[
             verdict.void(f"{where}: {drift}")
         else:
             whole.append((where, report))
-    return whole
+    return mutation_carry.held_to_listing(verdict, plan, directory, whole, classify)
 
 
 def read_python_shard(plan: dict, report: dict) -> tuple[list[dict], str | None]:
@@ -3681,6 +3683,7 @@ def prices(directory: str) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    mutation_carry.verbs(argv, python_reports, classify, mutation_python.census_problems)
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
         "verb",

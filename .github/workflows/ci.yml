@@ -376,6 +376,11 @@ jobs:
   mutation-plan:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    # The carry's base steps read one earlier run's artifacts, which `actions: read` allows
+    # (SPEC-493 R2); the workflow's default stays `contents: read`.
+    permissions:
+      contents: read
+      actions: read
     outputs:
       case: ${{ steps.plan.outputs.case }}
       scope: ${{ steps.plan.outputs.scope }}
@@ -436,9 +441,65 @@ jobs:
         run: python3 scripts/mutation_python.py list --plan "$RUNNER_TEMP/mutation/plan.json" --out "$RUNNER_TEMP/mutation/python-listed.json"
       - name: the whole Python population's mutants, which every Python record is bound against
         run: python3 scripts/mutation_python.py list --all --out "$RUNNER_TEMP/mutation/python-whole.json"
+      # The release run of a release pull request SPEC-493 admits carries a Python outcome from one
+      # recorded release run of this repository, for a file whose whole read set is byte-identical
+      # there and here. The base is one run chosen by run id alone, and each base step and download
+      # is bounded and continues on error, so a missing base runs every listed mutant (R2, R3).
+      - name: the carry's base, one run of this repository chosen by run id alone (SPEC-493 R2)
+        id: base
+        continue-on-error: true
+        if: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && github.head_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository }}
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PULL_REQUEST: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: python3 scripts/mutation_carry.py base --plan "$RUNNER_TEMP/mutation/plan.json" --pull-request "$PULL_REQUEST" --run-id "$RUN_ID" --repository "$REPO" --head-sha "$HEAD_SHA" --out "$RUNNER_TEMP/carry-base" --github-output "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        if: ${{ steps.base.outputs.base_run != '' }}
+        continue-on-error: true
+        timeout-minutes: 5
+        with:
+          name: mutation-plan
+          path: ${{ runner.temp }}/carry-base/mutation-plan
+          run-id: ${{ steps.base.outputs.base_run }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        if: ${{ steps.base.outputs.base_run != '' && steps.base.outputs.base_manifest == 'true' }}
+        continue-on-error: true
+        timeout-minutes: 5
+        with:
+          name: mutation-outcomes
+          path: ${{ runner.temp }}/carry-base/mutation-outcomes
+          run-id: ${{ steps.base.outputs.base_run }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        if: ${{ steps.base.outputs.base_run != '' && steps.base.outputs.base_manifest != 'true' }}
+        continue-on-error: true
+        timeout-minutes: 5
+        with:
+          pattern: mutation-python-shard-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/carry-base/legs
+          run-id: ${{ steps.base.outputs.base_run }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+      # On every event: `carry` writes carry.json, then moves each carried file's code lines to
+      # carried_code in plan.json, and the runner lists the re-run set from that plan (R9).
+      - name: the carry, which writes carry.json and then the legs' view of the plan
+        env:
+          BASE_RUN: ${{ steps.base.outputs.base_run }}
+          PULL_REQUEST: ${{ github.event.pull_request.number }}
+        run: python3 scripts/mutation-verdict.py carry --plan "$RUNNER_TEMP/mutation/plan.json" --python-listed "$RUNNER_TEMP/mutation/python-listed.json" --base-dir "$RUNNER_TEMP/carry-base" --base-run "$BASE_RUN" --pull-request "$PULL_REQUEST"
+      - name: the re-run set, the listing less every carried file's mutants
+        run: python3 scripts/mutation_python.py list --plan "$RUNNER_TEMP/mutation/plan.json" --out "$RUNNER_TEMP/mutation/python-rerun.json"
       - name: the shards, the fewest whose slowest is projected within its bound
         id: shards
-        run: python3 scripts/mutation-verdict.py shards --plan "$RUNNER_TEMP/mutation/plan.json" --listed "$RUNNER_TEMP/mutation/listed.json" --python-listed "$RUNNER_TEMP/mutation/python-listed.json"
+        run: python3 scripts/mutation-verdict.py shards --plan "$RUNNER_TEMP/mutation/plan.json" --listed "$RUNNER_TEMP/mutation/listed.json" --python-listed "$RUNNER_TEMP/mutation/python-rerun.json"
       # The plan's rows are dealt into the fewest legs whose largest is projected within half of
       # the rows job's 90 minutes, at the measured cost of a row; a count past the most legs is
       # refused whole, by name, and fails this job (SPEC-417, ADR-431). It runs whether or not the
@@ -807,6 +868,18 @@ jobs:
       - name: the Rust legs' Timeouts by package, each over-margin package by name
         if: ${{ always() }}
         run: bash scripts/mutation-timeouts.sh "$RUNNER_TEMP/reports"
+      # Every whole and carried Python outcome of this run, its tree identity and each Python
+      # class's key, kept whatever the legs returned, as a later release run's base (SPEC-493 R12).
+      - name: the run's Python outcomes, whole and carried, for a later release run's carry
+        if: ${{ always() }}
+        run: python3 scripts/mutation-verdict.py manifest --plan "$RUNNER_TEMP/reports/mutation-plan/plan.json" --python "$RUNNER_TEMP/reports" --out "$RUNNER_TEMP/outcomes/mutation-outcomes.json" --run-id "$GITHUB_RUN_ID"
+      - name: keep the run's outcomes for a later release run's carry
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-outcomes
+          path: ${{ runner.temp }}/outcomes/
+          if-no-files-found: warn
 
   # StrykerJS over every web production file the diff changes, whole, so a survivor already on a
   # touched file is the pull request's own (SPEC-039 R3, ADR-057 D3), dealt into three shards

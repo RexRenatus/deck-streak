@@ -615,6 +615,11 @@ def steps(block):
     return [step for step in found if step]
 
 
+def action(line):
+    """The action a `uses:` line pins, its comment included."""
+    return line.removeprefix("- ").removeprefix("uses: ")
+
+
 def step_named(block, needle):
     hits = [step for step in steps(block) if any(needle in line for line in step)]
     return hits
@@ -679,7 +684,8 @@ class Workflow(unittest.TestCase):
             if path not in targets:
                 continue
             seen.append(path)
-            self.assertIn(lines[0].removeprefix("- "), pinned)
+            used = next(line for line in lines if DOWNLOAD in line)
+            self.assertIn(action(used), {action(line) for line in pinned})
             for needed in (
                 targets[path],
                 "continue-on-error: true",
@@ -1017,7 +1023,7 @@ class Manifest(Scratch):
             "scripts/c.py": [judged(c1, "killed")],
         })  # fmt: skip
         whole["files"][2]["void"] = "the sentinel left no test that does not read the file"
-        partial = report(1, 2, {"scripts/d.py": [judged(d1, "killed")]}, shard="0/2")
+        partial = {**report(1, 2, {"scripts/d.py": [judged(d1, "killed")]}), "shard": "0/2"}
         listed = [n for f in whole["files"] for n in names(*f["mutants"])]
         document = plan(
             {"scripts/a.py": [8, 9], "scripts/b.py": [8, 9]},

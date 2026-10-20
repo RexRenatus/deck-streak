@@ -48,6 +48,13 @@
       "test_mutation_verdict_survivor_kills"
     ]
   },
+  "scripts/mutation_carry.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_mutation_carry",
+      "test_mutation_carry_census"
+    ]
+  },
   "scripts/mutation_python.py": {
     "dir": "scripts/tests",
     "modules": [
