@@ -36,8 +36,8 @@
       [
         "S05705-REACHED-BY-NAMES-EXACTLY-ONE-TEST",
         "scripts/mutation-verdict.py",
-        "            mutation_rows.resolve_killer(root, row)\n",
-        "            mutation_rows.locate_killer(root, row)\n",
+        "            mutation_rows.resolve_test(root, crate, reached)\n",
+        "            mutation_rows.locate_test(root, crate, reached)\n",
         "a Rust record's reached_by resolves to exactly one test of its package, as a row's killer does, not merely to a test target (SPEC-057 R7)",
         "test_mutation_equivalent.TheCensusHoldsEveryRecordWhole.test_every_record_carries_its_mutant_anchor_reason_evidence_and_issue"
       ],

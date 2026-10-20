@@ -8,6 +8,15 @@
       "evidence": "pathlib.Path('') == pathlib.Path('.') is True and both resolve to the working directory, so an empty sys.path entry is kept or dropped exactly as before.",
       "issue": "#340",
       "reached_by": "test_mutation_python_lister_kills.TheChildReportsWhatFailed.test_the_child_keeps_its_own_main_module_and_reports_a_pass"
+    },
+    {
+      "file": "scripts/public-scrub.py",
+      "mutant": "replace \"\" with \"XX\" in compiled",
+      "anchor": "str(row.get(\"flags\", \"\"))",
+      "reason": "A default flags text that holds no i sets no flag, and XX holds none.",
+      "evidence": "With flags absent the test reads 'i' in 'XX', which is False exactly as 'i' in '' is, so IGNORECASE is set only by a row whose own flags holds i, before and after.",
+      "issue": "#993",
+      "reached_by": "test_public_scrub.TheScrubOwnsItsShapes.test_the_loader_reads_a_synthetic_private_list_in_its_schema"
     }
   ]
 }

@@ -43,7 +43,9 @@
       "test_mutation_equivalent",
       "test_memory_cap_verdict",
       "test_release_python_ceiling",
-      "test_release_rust_ceiling"
+      "test_release_rust_ceiling",
+      "test_mutation_workflows",
+      "test_mutation_verdict_survivor_kills"
     ]
   },
   "scripts/mutation_python.py": {
@@ -63,7 +65,8 @@
       "test_mutation_rows",
       "test_mutation_verdict",
       "test_mutation_equivalent",
-      "test_bin_kind_census"
+      "test_bin_kind_census",
+      "test_mutation_rows_survivor_kills"
     ]
   },
   "scripts/public-scrub.py": {

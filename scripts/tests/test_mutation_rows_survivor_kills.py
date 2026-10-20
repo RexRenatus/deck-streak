@@ -359,6 +359,42 @@ class TheResolveKiller(unittest.TestCase):
             runner.resolve_killer(root, absent)
 
 
+class TheResolveTest(unittest.TestCase):
+    """`resolve_test` and `locate_test` over a row's crate and killer cells answer as
+    `resolve_killer` and `locate_killer` answer over the row (SPEC-492 R5)."""
+
+    def test_resolve_test_answers_as_resolve_killer_over_the_same_cells(self):
+        root = killer_tree(self)
+        cargo = {"table": "MUTATIONS", "target": "crates/c/src/lib.rs", "crate": "c"}
+        integration = runner.Killer(
+            "cargo", "t", "crates/c/tests/it/main.rs", package="p", target="it"
+        )
+        resolved = (
+            (a_row(), SCRIPT_KILLER),
+            (a_row(**cargo, killer="lib::t"), LIB_KILLER),
+            (a_row(**cargo, killer="it::t"), integration),
+        )
+        for row, expected in examined("rows both resolvers resolve", resolved):
+            with self.subTest(killer=row.killer):
+                self.assertEqual(runner.resolve_killer(root, row), expected)
+                self.assertEqual(runner.resolve_test(root, row.crate, row.killer), expected)
+                self.assertEqual(runner.locate_killer(root, row), expected)
+                self.assertEqual(runner.locate_test(root, row.crate, row.killer), expected)
+        refused = (
+            (a_row(**cargo, killer="lib::u"), "names no test: crates/c/src declares u 0 times"),
+            (a_row(killer="m.C.test_u"), "names no test: scripts/tests/m.py has no C.test_u"),
+        )
+        for row, expected in examined("rows both resolvers refuse", refused):
+            with self.subTest(killer=row.killer):
+                with self.assertRaises(runner.KillerUnresolved) as by_row:
+                    runner.resolve_killer(root, row)
+                with self.assertRaises(runner.KillerUnresolved) as by_cells:
+                    runner.resolve_test(root, row.crate, row.killer)
+                self.assertEqual(
+                    [str(by_row.exception), str(by_cells.exception)], [expected, expected]
+                )
+
+
 class TheCensus(unittest.TestCase):
     def test_each_integer_of_census_is_observed(self):
         findings, rows = runner.census(scratch(self) / "nothing")

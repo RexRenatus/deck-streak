@@ -404,7 +404,7 @@
       [
         "S03951-A-BIN-KILLER-BESIDE-A-TESTS-BIN-RS-IS-REFUSED",
         "scripts/mutation_rows.py",
-        "            if \"bin\" in cargo_targets(root, row.crate)[1]:\n",
+        "            if \"bin\" in cargo_targets(root, row_crate)[1]:\n",
         "            if False:\n",
         "a crate holding `tests/bin.rs` or `tests/bin/main.rs` is refused for a `bin::` killer by name, so a killer written for that file never runs the binary's own test of the same path (SPEC-039 section 15, A45)",
         "test_mutation_rows.TheBinKillerFollowsRustcAndRefusesAShadow.test_a_bin_killer_beside_a_tests_bin_rs_is_refused"
