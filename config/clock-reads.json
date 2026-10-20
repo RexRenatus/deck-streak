@@ -1,0 +1,10 @@
+{
+  "sites": [
+    {"path": "crates/agent/src/runner.rs", "count": 1, "adr": "ADR-445", "why": "the agent runner's elapsed time: a monotonic tokio::time::Instant"},
+    {"path": "crates/daemon/src/snapshot_lister.rs", "count": 1, "adr": "ADR-445", "why": "the snapshot lister's time budget: a monotonic Instant"},
+    {"path": "crates/ffi/src/engine.rs", "count": 1, "adr": "ADR-445", "why": "the native adapter's answer time; the adapter depends on no DeckStreak crate but the engine core (ADR-345 D1)"},
+    {"path": "crates/ingest/src/skip_write.rs", "count": 2, "adr": "ADR-445", "why": "the skip write's instant now, read beside the kernel's Clock; listed as found, its cure is its own delivery's"},
+    {"path": "crates/kernel/src/clock.rs", "count": 1, "adr": "ADR-445", "why": "SystemClock, the one reader of the system time (SPEC-020 R6)"},
+    {"path": "crates/web-engine/src/wasm.rs", "count": 1, "adr": "ADR-445", "why": "the web engine's wall clock from the browser's Date, on wasm32 only (ADR-348)"}
+  ]
+}
