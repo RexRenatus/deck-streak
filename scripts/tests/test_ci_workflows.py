@@ -2375,6 +2375,69 @@ jobs:
           key: build
 """
 
+# The one step that installs the gate's ruff (SPEC-424 R3): a new virtual environment under the
+# runner's temporary directory, the hashed pin installed there from wheels alone, and a directory
+# holding only that ruff appended to the job's path, so the stage's python3 stays the runner's own.
+RUFF_INSTALL = [
+    'python3 -m venv "$RUNNER_TEMP/ruff-venv"',
+    '"$RUNNER_TEMP/ruff-venv/bin/python" -m pip install --no-input --disable-pip-version-check'
+    " --require-hashes --only-binary :all: -r scripts/ruff-requirements.txt",
+    'mkdir -p "$RUNNER_TEMP/ruff-bin" && ln -s "$RUNNER_TEMP/ruff-venv/bin/ruff"'
+    ' "$RUNNER_TEMP/ruff-bin/ruff"',
+    'echo "$RUNNER_TEMP/ruff-bin" >> "$GITHUB_PATH"',
+]
+
+
+def runs_the_python_stage(step):
+    """Whether a step's script calls check.sh for the python stage, by name or as every stage."""
+    return any(
+        not call.group(1).split() or "python" in call.group(1).split()
+        for call in GATE_CALL.finditer(str(step.get("run", "")))
+    )
+
+
+class TheHygieneJobInstallsThePinnedRuff(unittest.TestCase):
+    def test_each_job_that_runs_the_python_stage_installs_ruff_from_the_hashed_pin_first(self):
+        workflows = {path.name: load(path.name) for path in workflow_files(WORKFLOWS)}
+        jobs = examined(
+            "jobs that run the python stage",
+            [
+                (name, job)
+                for name, workflow in workflows.items()
+                for job, named in stage_calls(workflow)
+                if not named or "python" in named
+            ],
+        )
+        installs = []
+        for name, job in jobs:
+            steps = workflows[name]["jobs"][job].get("steps") or []
+            gate = next(n for n, step in enumerate(steps) if runs_the_python_stage(step))
+            found = [
+                (name, job, n)
+                for n, step in enumerate(steps[:gate])
+                if lines_of(step.get("run")) == RUFF_INSTALL
+            ]
+            self.assertEqual(
+                len(found), 1, f"{name}: {job} installs no ruff from the hashed pin before its gate"
+            )
+            installs += found
+        # No other step of any workflow installs or runs ruff, by its script or by an action.
+        steps = examined(
+            "workflow steps",
+            [
+                (name, job, n, step)
+                for name, workflow in workflows.items()
+                for job, body in (workflow.get("jobs") or {}).items()
+                for n, step in enumerate((body or {}).get("steps") or [])
+            ],
+        )
+        naming = [
+            (name, job, n)
+            for name, job, n, step in steps
+            if "ruff" in f"{step.get('run', '')} {step.get('uses', '')}".lower()
+        ]
+        self.assertEqual(naming, installs)
+
 
 class TheGateRunsInParallelJobs(unittest.TestCase):
     def test_the_gate_runs_in_four_parallel_jobs(self):

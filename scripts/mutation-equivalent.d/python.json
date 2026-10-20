@@ -8,6 +8,15 @@
       "evidence": "pathlib.Path('') == pathlib.Path('.') is True and both resolve to the working directory, so an empty sys.path entry is kept or dropped exactly as before.",
       "issue": "#340",
       "reached_by": "test_mutation_python_lister_kills.TheChildReportsWhatFailed.test_the_child_keeps_its_own_main_module_and_reports_a_pass"
+    },
+    {
+      "file": "scripts/ios_lane.py",
+      "mutant": "replace False with True in sign",
+      "anchor": "usedforsecurity=False",
+      "reason": "the keyword changes no byte of the fingerprint; S324 in the python stage holds it",
+      "evidence": "hashlib.sha1(der, usedforsecurity=True) returns the digest the False spelling returns for every input, since the flag only tells a restricted hash backend whether the hash guards a secret, so the identity the lane matches is the same; ruff's S324 refuses the True spelling and passes the False one.",
+      "issue": "#872",
+      "reached_by": "test_ios_lane.LaneCredential.test_signing_imports_the_certificate_non_extractable_into_a_job_keychain"
     }
   ]
 }
