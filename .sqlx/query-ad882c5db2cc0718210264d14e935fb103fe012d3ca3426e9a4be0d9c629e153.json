@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO preset_proposals (preset_id, preset_name, prior_vector, prior_field,\n                   proposed_vector, desired_retention, non_new_cards, state, created_at)\n               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'open', ?8) RETURNING id AS \"id!\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "preset_proposals",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ad882c5db2cc0718210264d14e935fb103fe012d3ca3426e9a4be0d9c629e153"
+}

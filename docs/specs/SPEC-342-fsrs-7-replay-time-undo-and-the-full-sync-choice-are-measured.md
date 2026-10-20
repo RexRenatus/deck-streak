@@ -340,3 +340,13 @@ web target (`wasm32-unknown-unknown`) check: fail (getrandom)
 
 #641 reads M1 and M2's cost per review against the review-log row count that SPEC-334 row 1.2's
 collection-size measurement records. This delivery reads no figure from any real collection.
+
+## 8. Amendments
+
+### SPEC-387: the ingest crate reads the released scheduler's defaults
+
+R2 gains no user. The ingest crate reads the released scheduler package's default parameters
+through the engine it already depends on (SPEC-387 R11), so it names no scheduler package, and
+`RELEASED_USERS` in `scripts/tests/test_fsrs7_pin.py` still names only the engine and the
+FSRS-7 crate. An engine upgrade that moves the released package moves the defaults SPEC-387
+proposes with it. `PINNED_USERS` is unchanged, and so is every other line of this SPEC.

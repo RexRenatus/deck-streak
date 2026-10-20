@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM preset_proposals",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "24bc098d6d8a9ede07d1284dbcf47b06cda5aebb175be5dcd3cb0dc4cc1bd580"
+}

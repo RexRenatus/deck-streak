@@ -1203,3 +1203,230 @@ pub fn as_served(path: &Path) {
         }
     });
 }
+
+/// The engine's own default preset: every collection holds it, and the `Default` deck names it.
+pub const PRESET_DEFAULT: i64 = 1;
+/// The main preset (SPEC-387 section 3): an FSRS-6 fit beside an older FSRS-5 one, at a desired
+/// retention other than the default, named by two decks.
+pub const PRESET_MAIN: i64 = 1001;
+/// A preset whose newest field is FSRS-5, beside an older FSRS-4 vector.
+pub const PRESET_FIVE: i64 = 1002;
+/// A preset with an FSRS-4 vector alone, which no deck names.
+pub const PRESET_FOUR: i64 = 1003;
+/// A preset already on the engine's defaults.
+pub const PRESET_ON_DEFAULTS: i64 = 1004;
+/// The main preset's desired retention.
+pub const PRESET_MAIN_RETENTION: f32 = 0.85;
+/// The main preset's FSRS-6 fit: synthetic values of five decimal places, so a value printed to
+/// four places does not parse back to it.
+pub const PRESET_MAIN_FSRS6: [f32; 21] = [
+    0.402_55, 1.183_85, 3.173_05, 15.691_05, 7.197_35, 0.533_45, 1.460_45, 0.004_65, 1.545_75,
+    0.119_25, 1.019_25, 1.939_55, 0.110_05, 0.296_05, 2.269_85, 0.231_55, 2.989_85, 0.516_55,
+    0.662_15, 0.060_05, 0.200_05,
+];
+/// The main preset's older FSRS-5 vector, which the FSRS-6 one takes precedence over.
+pub const PRESET_MAIN_FSRS5: [f32; 19] = [
+    0.41, 1.18, 3.17, 15.69, 7.19, 0.53, 1.46, 0.0046, 1.54, 0.11, 1.01, 1.93, 0.11, 0.29, 2.26,
+    0.23, 2.98, 0.51, 0.66,
+];
+/// The FSRS-5 preset's vector.
+pub const PRESET_FIVE_FSRS5: [f32; 19] = [
+    0.5, 1.3, 2.4, 9.1, 6.9, 0.7, 2.5, 0.002, 1.6, 0.15, 0.95, 1.8, 0.07, 0.3, 1.9, 0.5, 1.7, 0.6,
+    0.1,
+];
+/// The FSRS-5 preset's older FSRS-4 vector, which the FSRS-5 one takes precedence over.
+pub const PRESET_FIVE_FSRS4: [f32; 17] = [
+    0.45, 1.2, 3.3, 10.5, 5.1, 1.2, 0.8, 0.01, 1.5, 0.1, 1.0, 2.1, 0.09, 0.3, 2.2, 0.2, 2.9,
+];
+/// The FSRS-4 preset's vector.
+pub const PRESET_FOUR_FSRS4: [f32; 17] = [
+    0.6, 1.4, 3.8, 11.2, 5.0, 1.1, 0.9, 0.03, 1.6, 0.12, 1.05, 2.2, 0.08, 0.32, 2.1, 0.22, 3.0,
+];
+/// The decks the fixture creates, each with the preset it names.
+pub const PRESET_DECKS: [(&str, i64); 4] = [
+    ("Main", PRESET_MAIN),
+    ("Main::Sub", PRESET_MAIN),
+    ("Five", PRESET_FIVE),
+    ("Fresh", PRESET_ON_DEFAULTS),
+];
+/// The first card id of the preset fixture.
+pub const PRESET_FLOOR: i64 = 1_700_300_000_000;
+/// The preset fixture's cards, each with its home deck: one card of each class in the main
+/// preset's decks (new, learning, review, relearning, and a review card a filtered deck borrows),
+/// and cards outside them. The main preset counts five non-new cards and the FSRS-5 one counts one.
+pub const PRESET_CARDS: [(i64, SkipCard, &str); 9] = [
+    (PRESET_FLOOR + 1, SkipCard::New, "Main"),
+    (PRESET_FLOOR + 2, SkipCard::Learning, "Main"),
+    (PRESET_FLOOR + 3, SkipCard::DueReview, "Main"),
+    (PRESET_FLOOR + 4, SkipCard::Relearning, "Main"),
+    (PRESET_FLOOR + 5, SkipCard::DueReview, "Main::Sub"),
+    (PRESET_FLOOR + 6, SkipCard::FilteredReview, "Main"),
+    (PRESET_FLOOR + 7, SkipCard::DueReview, "Five"),
+    (PRESET_FLOOR + 8, SkipCard::New, "Five"),
+    (PRESET_FLOOR + 9, SkipCard::New, "Main::Sub"),
+];
+
+/// The settings a preset collection is built with (SPEC-387 R8, A7).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PresetSetup {
+    /// The configured UTC offset in minutes WEST of UTC, as the engine stores it, or `None` for a
+    /// collection that holds none.
+    pub utc_offset_west: Option<i32>,
+    /// The rollover hour, or `None` for a collection that holds none.
+    pub rollover: Option<u8>,
+}
+
+/// What a preset collection was built with: its decks by name, its filtered deck, and the engine's
+/// own defaults, read through the engine's deck-options read and never through the preset module.
+pub struct PresetPlan {
+    /// Every deck's id, by its human name.
+    pub decks: std::collections::BTreeMap<String, i64>,
+    /// The filtered deck's id.
+    pub filtered: Option<i64>,
+    /// The engine's defaults, as its deck-options read reports them.
+    pub defaults: Vec<f32>,
+}
+
+/// Saves the preset `id` named `name` through the engine's legacy deck-config service, which keeps
+/// each parameter field as given (the engine's own update clears the older fields when the newest
+/// is empty).
+fn add_preset(col: &mut Collection, id: i64, name: &str, retention: f32, fields: [&[f32]; 3]) {
+    use anki::services::DeckConfigService;
+    let widened = |values: &[f32]| {
+        values
+            .iter()
+            .map(|value| f64::from(*value))
+            .collect::<Vec<_>>()
+    };
+    let legacy = DeckConfigService::new_deck_config_legacy(col).expect("the engine's new preset");
+    let mut preset: serde_json::Value =
+        serde_json::from_slice(&legacy.json).expect("the engine's preset is JSON");
+    preset["id"] = id.into();
+    preset["name"] = name.into();
+    preset["desiredRetention"] = f64::from(retention).into();
+    preset["fsrsParams6"] = widened(fields[0]).into();
+    preset["fsrsParams5"] = widened(fields[1]).into();
+    preset["fsrsWeights"] = widened(fields[2]).into();
+    let json = serde_json::to_vec(&preset).expect("the preset is written");
+    let saved = DeckConfigService::add_or_update_deck_config_legacy(col, json.into())
+        .expect("the engine saves the preset");
+    assert_eq!(saved.dcid, id, "the engine keeps the preset's own id");
+}
+
+/// Builds a preset collection at `path` (SPEC-387 section 3): the presets and decks above, every
+/// card of [`PRESET_CARDS`] on its own Basic note, and the filtered deck borrowing the
+/// [`SkipCard::FilteredReview`] card; then `setup`'s rollover hour, and its configured UTC offset
+/// last, because the engine rewrites that offset whenever it reads the day as a client.
+///
+/// # Panics
+///
+/// When the engine or a statement fails: a fixture that cannot be built stops the test.
+#[allow(clippy::too_many_lines)]
+pub fn build_presets(path: &Path, setup: PresetSetup) -> PresetPlan {
+    with_engine(path, |col| {
+        for (deck, _) in PRESET_DECKS {
+            col.get_or_create_normal_deck(deck)
+                .expect("the engine creates the deck");
+        }
+        col.set_config_json("rollover", &4_u32, false)
+            .expect("the rollover hour is set");
+        let timing = col.timing_today().expect("the engine reads its day");
+        let today = i64::from(timing.days_elapsed);
+        let ids: std::collections::BTreeMap<String, i64> = col
+            .get_all_deck_names(false)
+            .expect("the deck names are read")
+            .into_iter()
+            .map(|(id, human)| (human, id.0))
+            .collect();
+        let defaults = col
+            .get_deck_configs_for_update(anki::decks::DeckId(ids["Main"]))
+            .expect("the engine's deck-options read")
+            .defaults
+            .and_then(|defaults| defaults.config)
+            .map(|config| config.fsrs_params_6)
+            .expect("the engine reports its defaults");
+        add_preset(
+            col,
+            PRESET_MAIN,
+            "Main",
+            PRESET_MAIN_RETENTION,
+            [&PRESET_MAIN_FSRS6, &PRESET_MAIN_FSRS5, &[]],
+        );
+        add_preset(
+            col,
+            PRESET_FIVE,
+            "Five",
+            0.9,
+            [&[], &PRESET_FIVE_FSRS5, &PRESET_FIVE_FSRS4],
+        );
+        add_preset(
+            col,
+            PRESET_FOUR,
+            "Four",
+            0.9,
+            [&[], &[], &PRESET_FOUR_FSRS4],
+        );
+        add_preset(
+            col,
+            PRESET_ON_DEFAULTS,
+            "On defaults",
+            0.9,
+            [&defaults, &[], &[]],
+        );
+        for (name, preset) in PRESET_DECKS {
+            let mut deck = (*col
+                .get_deck(anki::decks::DeckId(ids[name]))
+                .expect("the deck is read")
+                .expect("the deck exists"))
+            .clone();
+            if let anki::decks::DeckKind::Normal(normal) = &mut deck.kind {
+                normal.config_id = preset;
+            }
+            col.update_deck(&mut deck)
+                .expect("the deck names its preset");
+        }
+        let basic = col
+            .get_notetype_by_name("Basic")
+            .expect("the note types are read")
+            .expect("the engine creates its stock Basic note type")
+            .id
+            .0;
+        let db = col.storage.db();
+        db.execute_batch("begin").expect("a transaction opens");
+        for (position, (id, card, deck)) in PRESET_CARDS.iter().enumerate() {
+            let position = i64::try_from(position).unwrap() + 1;
+            let columns = card.columns(today, timing.now.0, position);
+            insert_planned_note(col, basic, *id, ids[*deck], columns);
+        }
+        db.execute_batch("commit").expect("the transaction commits");
+        let borrowed: Vec<i64> = PRESET_CARDS
+            .iter()
+            .filter(|(_, card, _)| *card == SkipCard::FilteredReview)
+            .map(|(id, _, _)| *id)
+            .collect();
+        let filtered = build_filtered(col, &borrowed);
+        match setup.rollover {
+            Some(hour) => col
+                .set_config_json("rollover", &u32::from(hour), false)
+                .map(|_| ()),
+            None => col.remove_config("rollover").map(|_| ()),
+        }
+        .expect("the rollover hour is set");
+        match setup.utc_offset_west {
+            Some(minutes) => col
+                .set_config_json("localOffset", &minutes, false)
+                .map(|_| ()),
+            None => col.remove_config("localOffset").map(|_| ()),
+        }
+        .expect("the configured UTC offset is set");
+        let mut decks = ids;
+        if let Some(id) = filtered {
+            decks.insert(FILTERED_DECK.to_owned(), id);
+        }
+        PresetPlan {
+            decks,
+            filtered,
+            defaults,
+        }
+    })
+}
