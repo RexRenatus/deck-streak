@@ -9,7 +9,6 @@ requests go to a fake forge on the loopback address, which logs each path it is 
 
 import collections
 import hashlib
-import http.server
 import json
 import os
 import re
@@ -19,6 +18,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from _support import REPO, examined
@@ -420,7 +420,7 @@ class Forge:
         self.paths = []
         forge = self
 
-        class Answer(http.server.BaseHTTPRequestHandler):
+        class Answer(BaseHTTPRequestHandler):
             def do_GET(self):
                 forge.paths.append(self.path)
                 body = next((v for k, v in answers.items() if k in self.path), None)
@@ -432,9 +432,9 @@ class Forge:
                 self.wfile.write(data)
 
             def log_message(self, *args):
-                return None
+                del args
 
-        self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Answer)
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Answer)
         self.url = f"http://127.0.0.1:{self.server.server_address[1]}"
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -629,10 +629,9 @@ class Workflow(unittest.TestCase):
     """A3: `ci.yml` as text: the plan job's permissions, base steps and deal, and the kept
     manifest (R2, R3, R9, R12)."""
 
-    @classmethod
-    def setUpClass(cls):
-        cls.text = CI.read_text(encoding="utf-8")
-        cls.jobs = jobs(cls.text)
+    def setUp(self):
+        self.text = CI.read_text(encoding="utf-8")
+        self.jobs = jobs(self.text)
 
     def test_the_plan_job_reads_contents_and_actions_only(self):
         block = self.jobs["mutation-plan"]
