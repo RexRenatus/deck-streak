@@ -845,5 +845,219 @@ class CarryDocument(Base):
         examined("K10 cases", table)
 
 
+# Each member of the allowlists the kill table lists, by its line and column.
+FS_METHOD_MEMBERS = [
+    ("463:9", "read_bytes"),
+    ("464:9", "write_text"),
+    ("465:9", "write_bytes"),
+    ("466:9", "open"),
+    ("467:9", "exists"),
+    ("468:9", "is_file"),
+    ("469:9", "is_dir"),
+    ("470:9", "is_symlink"),
+    ("471:9", "stat"),
+    ("472:9", "lstat"),
+    ("474:9", "glob"),
+    ("475:9", "rglob"),
+    ("476:9", "walk"),
+    ("477:9", "mkdir"),
+    ("478:9", "rmdir"),
+    ("479:9", "unlink"),
+    ("480:9", "touch"),
+    ("481:9", "chmod"),
+    ("482:9", "samefile"),
+    ("483:9", "readlink"),
+    ("484:9", "symlink_to"),
+    ("485:9", "hardlink_to"),
+    ("486:9", "owner"),
+    ("487:9", "group"),
+]
+OS_FS_MEMBERS = [
+    ("492:9", "listdir"),
+    ("493:9", "scandir"),
+    ("494:9", "walk"),
+    ("495:9", "fwalk"),
+    ("496:9", "stat"),
+    ("497:9", "lstat"),
+    ("498:9", "remove"),
+    ("499:9", "unlink"),
+    ("500:9", "rmdir"),
+    ("501:9", "removedirs"),
+    ("502:9", "mkdir"),
+    ("503:9", "makedirs"),
+    ("504:9", "rename"),
+    ("505:9", "renames"),
+    ("506:9", "replace"),
+    ("507:9", "chdir"),
+    ("508:9", "chmod"),
+    ("509:9", "chown"),
+    ("510:9", "link"),
+    ("511:9", "symlink"),
+    ("512:9", "readlink"),
+    ("513:9", "access"),
+    ("514:9", "open"),
+    ("515:9", "truncate"),
+    ("516:9", "utime"),
+]
+OS_PATH_MEMBERS = [
+    ("520:6", "exists"),
+    ("520:16", "lexists"),
+    ("520:27", "isfile"),
+    ("520:37", "isdir"),
+    ("520:46", "islink"),
+    ("520:56", "ismount"),
+    ("520:67", "getsize"),
+    ("520:78", "samefile"),
+    ("521:8", "getmtime"),
+    ("521:20", "getatime"),
+    ("521:32", "getctime"),
+]
+READ_X = ({"scripts/x"}, [])
+
+
+class CensusAllowlists(Base):
+    """K11 to K13: each allowlisted name is read as the census reads it."""
+
+    def census(self, text):
+        """(the paths, the refusals) the census finds in `text` as scripts/a.py."""
+        member = self.mc.Member("scripts/a.py", text, "scripts")
+        return member.reads, member.whole
+
+    def test_each_path_method_member_is_a_read(self):
+        table = [
+            (
+                f'{place} replace "{name}" with ""',
+                lambda name=name: self.census(f"from pathlib import Path\nPath('x').{name}()\n"),
+                READ_X,
+            )
+            for place, name in FS_METHOD_MEMBERS
+        ]
+        self.judge(table)
+        examined("K11 cases", table)
+
+    def test_each_os_call_member_is_a_read(self):
+        table = [
+            (
+                f'{place} replace "{name}" with ""',
+                lambda name=name: self.census(f"import os\nos.{name}('x')\n"),
+                READ_X,
+            )
+            for place, name in OS_FS_MEMBERS
+        ]
+        table += [
+            (
+                f'{place} replace "{name}" with ""',
+                lambda name=name: self.census(f"import os\nos.path.{name}('x')\n"),
+                READ_X,
+            )
+            for place, name in OS_PATH_MEMBERS
+        ]
+        table.append(
+            (
+                "521:5 replace | with &",
+                lambda: self.census("import os\nos.path.getmtime('x')\n"),
+                READ_X,
+            )
+        )
+        self.judge(table)
+        examined("K12 cases", table)
+
+    def test_each_process_import_type_join_and_same_member(self):
+        def started(name):
+            return set(), [f"scripts/a.py:2: it starts a process by os.{name}"]
+
+        def imports(name):
+            return set(), [f"scripts/a.py:1: it imports {name}"]
+
+        path = "from pathlib import Path\n"
+        table = [
+            (
+                '524:34 replace "popen" with ""',
+                lambda: self.census("import os\nos.popen('ls')\n"),
+                started("popen"),
+            ),
+            (
+                '524:43 replace "fork" with ""',
+                lambda: self.census("import os\nos.fork()\n"),
+                started("fork"),
+            ),
+            (
+                '524:51 replace "forkpty" with ""',
+                lambda: self.census("import os\nos.forkpty()\n"),
+                started("forkpty"),
+            ),
+            (
+                '524:62 replace "posix_spawn" with ""',
+                lambda: self.census("import os\nos.posix_spawn('a', [], {})\n"),
+                started("posix_spawn"),
+            ),
+            (
+                '524:77 replace "posix_spawnp" with ""',
+                lambda: self.census("import os\nos.posix_spawnp('a', [], {})\n"),
+                started("posix_spawnp"),
+            ),
+            (
+                '525:42 replace "mmap" with ""',
+                lambda: self.census("import mmap\n"),
+                imports("mmap"),
+            ),
+            (
+                '525:61 replace "posix" with ""',
+                lambda: self.census("import posix\n"),
+                imports("posix"),
+            ),
+            ('525:70 replace "_os" with ""', lambda: self.census("import _os\n"), imports("_os")),
+            (
+                '526:33 replace "PurePath" with ""',
+                lambda: self.census("from pathlib import PurePath\nPurePath('x').read_text()\n"),
+                READ_X,
+            ),
+            (
+                '526:45 replace "PosixPath" with ""',
+                lambda: self.census("from pathlib import PosixPath\nPosixPath('x').read_text()\n"),
+                READ_X,
+            ),
+            (
+                '526:58 replace "PurePosixPath" with ""',
+                lambda: self.census(
+                    "from pathlib import PurePosixPath\nPurePosixPath('x').read_text()\n"
+                ),
+                READ_X,
+            ),
+            (
+                '529:20 replace "joinpath" with ""',
+                lambda: self.census(path + "Path('a/b').joinpath(name).read_text()\n"),
+                ({"scripts/a"}, []),
+            ),
+            (
+                '529:32 replace "with_name" with ""',
+                lambda: self.census(path + "Path('a/b').with_name('c').read_text()\n"),
+                ({"scripts/a"}, []),
+            ),
+            (
+                '529:45 replace "with_suffix" with ""',
+                lambda: self.census(path + "Path('a/b').with_suffix('.x').read_text()\n"),
+                ({"scripts/a"}, []),
+            ),
+            (
+                '529:60 replace "with_stem" with ""',
+                lambda: self.census(path + "Path('a/b').with_stem('c').read_text()\n"),
+                ({"scripts/a"}, []),
+            ),
+            (
+                '538:30 replace "absolute" with ""',
+                lambda: self.census(path + "Path('x').absolute().read_text()\n"),
+                READ_X,
+            ),
+            (
+                '538:42 replace "expanduser" with ""',
+                lambda: self.census(path + "Path('x').expanduser().read_text()\n"),
+                READ_X,
+            ),
+        ]
+        self.judge(table)
+        examined("K13 cases", table)
+
+
 if __name__ == "__main__":
     unittest.main()
