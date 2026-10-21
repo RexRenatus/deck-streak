@@ -2064,5 +2064,160 @@ class OutcomesKept(Base):
         examined("K28 cases", table)
 
 
+class ReadSetsAndHolds(Base):
+    """K29 and K30: a file's read set over a scratch tree, and whether it holds."""
+
+    def test_read_sets_resolve_their_closure_exactly(self):
+        root = self.scratch / "tree"
+        for path in ("scripts/a.py", "scripts/tests/m1.py", "scripts/tests/m2.py"):
+            written(root / path, "")
+        (root / "scripts" / "tests" / "bad.py").write_bytes(b"\xff")
+        written(root / "scripts" / "pkg" / "__init__.py", "")
+        written(root / "scripts" / "pkg" / "b.py", "")
+
+        def document(mapping):
+            return self.mc.read_set(root, "scripts/a.py", mapping).document()
+
+        def mapped(*modules):
+            entry = {"dir": "scripts/tests", "modules": list(modules)}
+            return {"scripts/a.py": entry}, entry
+
+        def expected(entry, members, whole=(), listings=(".", "scripts", "scripts/tests")):
+            return {
+                "file": "scripts/a.py",
+                "whole": bool(whole),
+                "why": "; ".join(whole),
+                "entry": entry,
+                "members": members,
+                "paths": [],
+                "trees": [],
+                "globs": [],
+                "listings": list(listings),
+            }
+
+        def closure(*modules):
+            return document(mapped(*modules)[0])
+
+        unmapped = expected(None, [], ["scripts/a.py: its map entry names no dir and modules"], ())
+        twice, twice_entry = mapped("m1", "m1", "m2")
+        three = ["scripts/a.py", "scripts/tests/m1.py", "scripts/tests/m2.py"]
+        gone = "a member of the closure is not in the tree"
+        bad = (
+            "scripts/tests/bad.py: cannot be read: 'utf-8' codec can't decode byte 0xff in "
+            "position 0: invalid start byte"
+        )
+        lost, lost_entry = mapped("gone", "lost")
+        package = ["scripts/pkg/__init__.py", "scripts/pkg/b.py"]
+        table = [
+            ('888:13 replace "file" with ""', lambda: document({}), unmapped),
+            (
+                '890:20 replace "; " with ""',
+                lambda: document(lost),
+                expected(
+                    lost_entry,
+                    ["scripts/a.py"],
+                    [f"scripts/tests/gone.py: {gone}", f"scripts/tests/lost.py: {gone}"],
+                    (".", "scripts"),
+                ),
+            ),
+            (
+                "906:36 replace or with and",
+                lambda: document({"scripts/a.py": None}),
+                unmapped,
+            ),
+            ("908:16 replace return value with return None", lambda: document({}), unmapped),
+            (
+                "916:13 replace continue with break",
+                lambda: document(twice),
+                expected(twice_entry, three),
+            ),
+            (
+                "920:13 replace continue with break",
+                lambda: closure("gone", "m2"),
+                expected(
+                    {"dir": "scripts/tests", "modules": ["gone", "m2"]},
+                    ["scripts/a.py", "scripts/tests/m2.py"],
+                    [f"scripts/tests/gone.py: {gone}"],
+                ),
+            ),
+            (
+                "925:13 replace continue with break",
+                lambda: closure("bad", "m2"),
+                expected(
+                    {"dir": "scripts/tests", "modules": ["bad", "m2"]},
+                    ["scripts/a.py", "scripts/tests/m2.py"],
+                    [bad],
+                ),
+            ),
+            ("947:31 replace | with &", lambda: document(twice), expected(twice_entry, three)),
+            (
+                "958:42 replace 1 with 2",
+                lambda: self.mc.resolved(root, "pkg.b", {"scripts"}),
+                package,
+            ),
+            (
+                '962:33 replace "__init__.py" with ""',
+                lambda: self.mc.resolved(root, "pkg.b", {"scripts"}),
+                package,
+            ),
+        ]
+        self.judge(table)
+        examined("K29 cases", table)
+
+    def test_holds_names_each_reason_exactly(self):
+        mc = self.mc
+
+        def holds(changed=(), moved=(), unread=(), whole=(), **found):
+            diff = mc.Changes(changed=set(changed), listings=set(moved), unread=list(unread))
+            return mc.holds(mc.ReadSet(file="scripts/a.py", whole=list(whole), **found), diff)
+
+        member = {"members": {"scripts/a.py"}}
+        nothing = (True, "no path, probe or listing of the read set changed")
+        table = [
+            (
+                "970:16 replace return value with return None",
+                lambda: holds(unread=["diff --git a/x"]),
+                (False, "a section of a diff names no path this reader can read: diff --git a/x"),
+            ),
+            (
+                "970:16 replace False with True",
+                lambda: holds(unread=["diff --git a/x"]),
+                (False, "a section of a diff names no path this reader can read: diff --git a/x"),
+            ),
+            (
+                '975:22 replace "the read set is the whole tree, and ... with ""',
+                lambda: holds(whole=["a reason"]),
+                (True, "the read set is the whole tree, and no path changed"),
+            ),
+            (
+                "980:13 replace or with and",
+                lambda: holds(changed=["scripts/a.py"], **member),
+                (False, "scripts/a.py, a path of the read set, changed"),
+            ),
+            (
+                '982:41 replace "." with ""',
+                lambda: holds(changed=["docs/x.md"], trees={"."}),
+                (False, "docs/x.md, a path of the read set, changed"),
+            ),
+            (
+                "992:20 replace return value with return None",
+                lambda: holds(changed=["scripts/a.py"], **member),
+                (False, "scripts/a.py, a path of the read set, changed"),
+            ),
+            (
+                "994:20 replace in with not in",
+                lambda: holds(moved=["scripts"], listings={"scripts"}),
+                (False, "the listing of scripts, which the read set holds, changed"),
+            ),
+            (
+                '996:18 replace "no path, probe or listing of the rea... with ""',
+                lambda: holds(changed=["docs/x.md"], **member),
+                nothing,
+            ),
+        ]
+        self.judge(table)
+        examined("K30 cases", table)
+
+
 if __name__ == "__main__":
     unittest.main()
