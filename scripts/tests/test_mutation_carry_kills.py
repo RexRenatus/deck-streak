@@ -1787,5 +1787,168 @@ class ClassDigests(Base):
         examined("K24 cases", table)
 
 
+HEADER = "diff --git a/x b/x\n"
+ADDED_ID = hashlib.sha1(b"blob 4\0new\n").hexdigest()[:7]
+ADDED = f"{HEADER}new file mode 100644\nindex 0000000..{ADDED_ID}\n@@ -0,0 +1 @@\n+new\n"
+
+
+class DiffSections(Base):
+    """K25 to K27: a diff's sections, a hunk's application and the base's file rebuilt."""
+
+    def section(self, text, path="x", **flags):
+        fields = {"added": False, "deleted": False, "binary": False, "new_id": None, **flags}
+        return self.mc.Section(path=path, text=text, **fields)
+
+    def test_sections_changes_and_presence(self):
+        sections = self.mc.sections
+        renamed = "diff --git a/x b/y\nsimilarity index 90%\n"
+        unread = "diff --git a/x\n"
+        readable = HEADER + "@@ -1 +1 @@\n-a\n+b\n"
+        fourth = HEADER + "l1\nl2\nl3\nnew file mode 100644\n"
+        first = HEADER + "deleted file mode 100644\n"
+        fifth = HEADER + "l1\nl2\nl3\ndeleted file mode 100644\n"
+        binary = HEADER + "Binary files a/x and b/x differ\n"
+
+        def changed(base, head):
+            found = self.mc.changes(base, head)
+            return found.changed, found.binary, found.listings, found.unread
+
+        table = [
+            (
+                "205:27 replace or with and",
+                lambda: sections(unread + readable),
+                ({"x": self.section(readable)}, ["diff --git a/x"]),
+            ),
+            ("205:43 replace 1 with 2", lambda: sections(renamed), ({}, ["diff --git a/x b/y"])),
+            ("206:33 replace 0 with 1", lambda: sections(renamed), ({}, ["diff --git a/x b/y"])),
+            (
+                '206:43 replace "\\n" with ""',
+                lambda: sections(renamed),
+                ({}, ["diff --git a/x b/y"]),
+            ),
+            (
+                "207:13 replace continue with break",
+                lambda: sections(unread + readable),
+                ({"x": self.section(readable)}, ["diff --git a/x"]),
+            ),
+            (
+                "213:76 replace 4 with 5",
+                lambda: sections(fourth),
+                ({"x": self.section(fourth)}, []),
+            ),
+            (
+                "214:80 replace 1 with 2",
+                lambda: sections(first),
+                ({"x": self.section(first, deleted=True)}, []),
+            ),
+            ("214:82 replace 4 with 5", lambda: sections(fifth), ({"x": self.section(fifth)}, [])),
+            (
+                "249:33 replace or with and",
+                lambda: changed(binary, ""),
+                ({"x"}, {"x"}, set(), []),
+            ),
+            ("264:23 replace is not with is", lambda: self.mc.present(None, None), True),
+        ]
+        self.judge(table)
+        examined("K25 cases", table)
+
+    def test_each_hunk_applies_or_is_refused_by_name(self):
+        def apply(old, text):
+            return self.mc.applied(old, self.section(text))
+
+        simple = "@@ -1 +1 @@\n-a\n+b\n"
+        no_hunk = ("raised", "NoBase", "x: a hunk of the base's section does not apply")
+        no_apply = ("raised", "NoBase", "x: the base's section does not apply")
+        marker = "\\ No newline at end of file\n"
+        table = [
+            ("277:13 replace 0 with 1", lambda: apply("a\n", simple), "b\n"),
+            (
+                "284:59 replace 2 with 3",
+                lambda: apply("a\nb\n", "@@ -2,0 +3 @@\n+c\n"),
+                "a\nb\nc\n",
+            ),
+            ("284:62 replace or with and", lambda: apply("a\n", simple), "b\n"),
+            ('284:65 replace "1" with ""', lambda: apply("a\n", simple), "b\n"),
+            ("286:23 replace or with and", lambda: apply("a\n", "@@ -5 +5 @@\n-a\n+b\n"), no_hunk),
+            ("290:38 replace not with nothing", lambda: apply("a\n", simple), "b\n"),
+            (
+                '295:29 replace " " with ""',
+                lambda: apply("a\nb\n", f"@@ -1,2 +1,2 @@\n-a\n+c\n b\n{marker}"),
+                "c\nb",
+            ),
+            (
+                "295:39 replace and with or",
+                lambda: apply("a\nb\n", f"@@ -1,2 +1,2 @@\n+c\n-a\n{marker} b\n"),
+                "c\nb\n",
+            ),
+            (
+                "297:17 replace continue with break",
+                lambda: apply("a\nb\n", f"@@ -1,2 +1,2 @@\n-a\n{marker}+c\n b\n"),
+                "c\nb\n",
+            ),
+            ("299:41 replace or with and", lambda: apply("a\n", "@@ -1 +1 @@\n a\n b\n"), no_apply),
+            ('299:86 replace "\\n" with ""', lambda: apply("a\n", simple), "b\n"),
+            (
+                "307:17 replace break with continue",
+                lambda: apply("a\nb\n", "@@ -1,2 +1,2 @@\n-a\nx stray\n+c\n b\n"),
+                "b\n",
+            ),
+        ]
+        self.judge(table)
+        examined("K26 cases", table)
+
+    def test_the_base_tree_is_rebuilt_or_refused_by_name(self):
+        written(self.scratch / "x", "here\n")
+        show = ["git", "-C", str(self.scratch), "show", "mb:x"]
+        head_only = HEADER + "@@ -1 +1 @@\n-a\n+b\n"
+
+        def rebuilt(base, head, shown=None):
+            calls = []
+
+            def run(argv, **options):
+                calls.append(argv)
+                out = (shown or {}).get(argv[-1])
+                if out is None:
+                    if options.get("check"):
+                        raise subprocess.CalledProcessError(128, argv)
+                    return subprocess.CompletedProcess(argv, 128, b"", b"fatal")
+                return subprocess.CompletedProcess(argv, 0, out, b"")
+
+            trees = self.mc.Trees(self.scratch, "mb", base, head)
+            with mock.patch.object(self.mc.subprocess, "run", run):
+                found = attempt(lambda: trees.at_base("x"))
+            return found, calls
+
+        binary = HEADER + "Binary files a/x and b/x differ\n"
+        deleted = HEADER + "deleted file mode 100644\n@@ -1 +0,0 @@\n-a\n"
+        table = [
+            ("330:75 replace not with nothing", lambda: rebuilt("", ""), ("here\n", [])),
+            (
+                "332:16 replace is not with is",
+                lambda: rebuilt(binary, ""),
+                (
+                    (
+                        "raised",
+                        "NoBase",
+                        "x: the base's section is binary, so its file cannot be rebuilt",
+                    ),
+                    [],
+                ),
+            ),
+            ("334:16 replace is not with is", lambda: rebuilt(deleted, ""), (None, [])),
+            ("336:16 replace is with is not", lambda: rebuilt(ADDED, ""), ("new\n", [])),
+            ("340:23 replace False with True", lambda: rebuilt("", head_only), (None, [show])),
+            ("343:24 replace is with is not", lambda: rebuilt("", head_only), (None, [show])),
+            (
+                "348:24 replace return value with return None",
+                lambda: rebuilt("", head_only, {"mb:x": b"old\n"}),
+                ("old\n", [show]),
+            ),
+            ('350:19 replace "" with "XX"', lambda: rebuilt(ADDED, ""), ("new\n", [])),
+        ]
+        self.judge(table)
+        examined("K27 cases", table)
+
+
 if __name__ == "__main__":
     unittest.main()
