@@ -57,3 +57,11 @@ A4: green at d3f0951a
 A5: red at cd1827d3: read by name on CI run 39394179900, 5 failure lines (scripts/mutation_carry.py and the mutation-verdict.py carry hook absent, so JudgedAtHead and Manifest fail)
 A5: green at d3f0951a
 ```
+
+## Mutation coverage
+
+`scripts/tests/test_mutation_carry_kills.py` is mutation coverage, not red first: each of its tests
+passes at its own parent commit, since it pins behaviour `scripts/mutation_carry.py` already has.
+The pull request's Python legs are its proof, reading each mutant it names as killed, and the
+seven mutants that no input can tell apart are recorded with their reasons in
+`scripts/mutation-equivalent.d/python.json`. No criterion gains a fence line.
