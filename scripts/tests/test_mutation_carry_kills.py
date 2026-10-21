@@ -11,6 +11,7 @@ through `attempt`, so the case fails by assertion and not by an exception.
 
 import collections
 import contextlib
+import dataclasses
 import importlib.util
 import io
 import json
@@ -459,6 +460,69 @@ class BaseJudgement(Base):
         ]
         self.judge(table)
         examined("K06 cases", table)
+
+
+def frozen_section(section):
+    """The refusal of an assignment to a Section's path, or "assigned"."""
+    try:
+        section.path = "q"
+    except dataclasses.FrozenInstanceError as error:
+        return str(error)
+    return "assigned"
+
+
+def frozen_value(value):
+    """The refusal of an assignment to a Value's kind, or "assigned"."""
+    try:
+        value.kind = "q"
+    except dataclasses.FrozenInstanceError as error:
+        return str(error)
+    return "assigned"
+
+
+class CarryConstants(Base):
+    """K07: the module's values, as spelt, each read from a fresh load."""
+
+    def test_each_module_value_is_as_spelt(self):
+        def bytecode():
+            with mock.patch.object(sys, "dont_write_bytecode", False):
+                load()
+                return sys.dont_write_bytecode
+
+        table = [
+            ("36:27 replace True with False", bytecode, True),
+            (
+                '44:17 replace "deckstreak.mutation-python.v1" with ""',
+                lambda: self.mc.PYTHON_SCHEMA,
+                "deckstreak.mutation-python.v1",
+            ),
+            (
+                '46:47 replace "unviable" with ""',
+                lambda: self.mc.CARRIED,
+                ("killed", "survived", "uncovered", "unviable"),
+            ),
+            (
+                '47:30 replace "oracle" with ""',
+                lambda: self.mc.PYTHON_CLASSES,
+                ("scripts", "oracle"),
+            ),
+            ("55:49 replace 1 with 2", lambda: self.mc.ROOT == REPO, True),
+            (
+                "181:19 replace True with False",
+                lambda: frozen_section(self.mc.Section("p", "t", False, False, False, None)),
+                "cannot assign to field 'path'",
+            ),
+            ('539:7 replace "<cwd>" with ""', lambda: self.mc.CWD, "<cwd>"),
+            (
+                "542:19 replace True with False",
+                lambda: frozen_value(self.mc.Value("path", "a")),
+                "cannot assign to field 'kind'",
+            ),
+            ('548:17 replace "" with "XX"', lambda: self.mc.Value("temp").text, ""),
+            ("1009:25 replace 0 with 1", lambda: self.mc.Scratch("scripts", "x").examined, 0),
+        ]
+        self.judge(table)
+        examined("K07 cases", table)
 
 
 if __name__ == "__main__":
