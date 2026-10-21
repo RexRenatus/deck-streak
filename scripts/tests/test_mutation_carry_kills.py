@@ -16,6 +16,7 @@ import importlib.util
 import io
 import json
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -523,6 +524,325 @@ class CarryConstants(Base):
         ]
         self.judge(table)
         examined("K07 cases", table)
+
+
+CARRY_SCHEMA = "deckstreak.mutation-carry.v1"
+ENTRY = {
+    "rule": "closure",
+    "workflow": "w.yml",
+    "leg_jobs": ["j"],
+    "runner": ["r.py"],
+    "runner_digest": {"file": "d.py", "named_by": "n.py", "module": "m"},
+}
+INPUTS_TEXT = json.dumps(
+    {"schema": "deckstreak.mutation-inputs.v1", "classes": {"scripts": ENTRY, "oracle": ENTRY}}
+)
+KEPT = json.dumps(
+    {
+        "schema": "deckstreak.mutation-outcomes.v1",
+        "mutants": [{"name": "m1", "outcome": "killed", "killers": ["k1"], "run": "7"}],
+    }
+)
+HEAD_ONLY = (
+    "diff --git a/docs/x.md b/docs/x.md\n"
+    "index 1111111..2222222 100644\n"
+    "--- a/docs/x.md\n"
+    "+++ b/docs/x.md\n"
+    "@@ -1 +1 @@\n"
+    "-a\n"
+    "+b\n"
+)
+PLAN_TEXT = (
+    '{"files": [{"path": "scripts/a.py", "code": ["c1"]}, '
+    '{"path": "scripts/b.py", "code": ["c2"]}]}'
+)
+MOVED_PLAN = (
+    "{\n"
+    '  "files": [\n'
+    "    {\n"
+    '      "path": "scripts/a.py",\n'
+    '      "code": [],\n'
+    '      "carried_code": [\n'
+    '        "c1"\n'
+    "      ]\n"
+    "    },\n"
+    "    {\n"
+    '      "path": "scripts/b.py",\n'
+    '      "code": [\n'
+    '        "c2"\n'
+    "      ]\n"
+    "    }\n"
+    "  ]\n"
+    "}\n"
+)
+
+
+def written(path, text):
+    """Write `text` at `path`, its directories made."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def refused_carry(why):
+    """The carry document of a run that carries nothing, for `why`."""
+    return {"schema": CARRY_SCHEMA, "base_run": "", "why": why, "files": {}, "carried": []}
+
+
+class CarryDocument(Base):
+    """K08 to K10: the carry document, each file's refusal and the verb that writes them."""
+
+    def carried(self, release=True, base_run="300", on="m1", diff="", beside=True, inputs=True):
+        """carry over a scratch tree, plan and base, with every child process refused and
+        recorded: (the document, the recorded calls)."""
+        place = Path(tempfile.mkdtemp(dir=self.scratch))
+        root = place / "root"
+        root.mkdir()
+        if inputs:
+            written(root / "scripts" / "mutation-inputs.json", INPUTS_TEXT)
+        plan = place / "plan" / "plan.json"
+        written(plan, json.dumps({"release": release, "base": "m1", "files": []}))
+        if beside:
+            written(place / "plan" / "git.diff", diff)
+        base = place / "base"
+        written(
+            base / "mutation-plan" / "plan.json",
+            json.dumps({"classes": {}, "release": True, "base": on}),
+        )
+        written(base / "mutation-plan" / "git.diff", "")
+        written(base / "mutation-outcomes" / "mutation-outcomes.json", KEPT)
+        listed = place / "listed.json"
+        written(listed, json.dumps({"mutants": [{"file": "scripts/a.py", "name": "m1"}]}))
+        args = self.mc.argparse.Namespace(
+            root=str(root),
+            plan=str(plan),
+            pull_request="822",
+            base_run=base_run,
+            base_dir=str(base),
+            python_listed=str(listed),
+        )
+        calls = []
+
+        def run(argv, **options):
+            calls.append(argv)
+            return subprocess.CompletedProcess(argv, 1, b"", b"")
+
+        with mock.patch.object(self.mc.subprocess, "run", run):
+            document = self.mc.carry(
+                args, lambda *given: [], lambda file: "scripts", lambda tree: ({}, [])
+            )
+        return document, calls
+
+    def test_carry_writes_each_refusal_and_carry_exactly(self):
+        whole = {
+            "schema": CARRY_SCHEMA,
+            "base_run": "300",
+            "why": "carried 1 from run 300",
+            "files": {
+                "scripts/a.py": {"carried": True, "why": "carried 1 from run 300, by its manifest"}
+            },
+            "carried": [
+                {
+                    "file": "scripts/a.py",
+                    "name": "m1",
+                    "outcome": "killed",
+                    "killers": ["k1"],
+                    "run": "7",
+                }
+            ],
+            "moved": ["scripts/a.py"],
+        }
+        changed = {
+            "schema": CARRY_SCHEMA,
+            "base_run": "300",
+            "why": "run 300 carries nothing",
+            "files": {
+                "scripts/a.py": {
+                    "carried": False,
+                    "why": "the read set is the whole tree, and docs/x.md changed",
+                }
+            },
+            "carried": [],
+            "moved": [],
+        }
+        table = [
+            (
+                '1172:41 replace "base_run" with ""',
+                lambda: self.carried(release=False),
+                (
+                    refused_carry(
+                        "not admitted: this run is not the release run, so nothing carries"
+                    ),
+                    [],
+                ),
+            ),
+            (
+                '1172:53 replace "" with "XX"',
+                lambda: self.carried(base_run=""),
+                (refused_carry("no base: the base step chose no run"), []),
+            ),
+            (
+                '1172:57 replace "why" with ""',
+                lambda: self.carried(on="m0"),
+                (
+                    refused_carry("no base: main moved: the base's plan is on m0, this plan on m1"),
+                    [],
+                ),
+            ),
+            (
+                '1187:26 replace "base" with ""',
+                lambda: self.carried(beside=False),
+                (refused_carry("no base: git.diff cannot be read beside a plan"), []),
+            ),
+            ('1206:43 replace "{}" with ""', self.carried, (whole, [])),
+            ('1207:46 replace "{}" with ""', self.carried, (whole, [])),
+            (
+                '1212:65 replace "no base" with ""',
+                lambda: self.carried(inputs=False),
+                (
+                    refused_carry(
+                        "no base: scripts/mutation-inputs.json cannot be read: "
+                        "Expecting value: line 1 column 1 (char 0)"
+                    ),
+                    [],
+                ),
+            ),
+            ("1216:36 replace 0 with 1", lambda: self.carried(diff=HEAD_ONLY), (changed, [])),
+            ('1235:14 replace "why" with ""', self.carried, (whole, [])),
+        ]
+        self.judge(table)
+        examined("K08 cases", table)
+
+    def test_file_refusal_names_each_reason_exactly(self):
+        def refusal(klass="scripts", here=None, there=None, problems=(), judged=None):
+            same = {"scripts": {"jobs": "1", "runner": "2"}}
+            return self.mc.file_refusal(
+                "scripts/a.py",
+                [{"name": "m1"}],
+                klass,
+                here or same,
+                there or same,
+                {},
+                {},
+                list(problems),
+                {"scripts": {"rule": "closure"}},
+                judged or {},
+                self.scratch,
+                self.mc.Changes(),
+            )
+
+        table = [
+            (
+                "1248:16 replace return value with return None",
+                lambda: refusal(klass="rust"),
+                "its class rust is never carried",
+            ),
+            (
+                "1251:73 replace != with ==",
+                lambda: refusal(
+                    here={"scripts": {"jobs": "1", "runner": "2"}},
+                    there={"scripts": {"jobs": "1", "runner": "3"}},
+                ),
+                "the key of the scripts class differs at the base: runner",
+            ),
+            (
+                "1255:16 replace return value with return None",
+                lambda: refusal(problems=["p1"]),
+                "the map's census at the head finds a problem: p1",
+            ),
+            (
+                "1267:20 replace return value with return None",
+                lambda: refusal(judged={"m1": [("killed", [], "7"), ("killed", [], "8")]}),
+                "m1 was judged 2 times at the base",
+            ),
+        ]
+        self.judge(table)
+        examined("K09 cases", table)
+
+    def test_carry_verb_writes_the_document_and_the_plan_exactly(self):
+        def moving():
+            return {
+                "schema": CARRY_SCHEMA,
+                "base_run": "7",
+                "why": "carried 1 from run 7",
+                "files": {
+                    "scripts/a.py": {
+                        "carried": True,
+                        "why": "carried 1 from run 7, by its manifest",
+                    },
+                    "scripts/b.py": {"carried": False, "why": "its map entry differs at the base"},
+                },
+                "carried": [],
+                "moved": ["scripts/a.py"],
+            }
+
+        def verb(outcome, blocked=False):
+            place = Path(tempfile.mkdtemp(dir=self.scratch))
+            plan = place / "plan.json"
+            written(plan, PLAN_TEXT)
+            if blocked:
+                (place / "carry.json").mkdir()
+
+            def stand_in(args, reader, classify, census):
+                if outcome is None:
+                    raise ValueError("boom")
+                return outcome()
+
+            args = self.mc.argparse.Namespace(plan=str(plan))
+            with mock.patch.object(self.mc, "carry", stand_in):
+                code, lines = printed(lambda: self.mc.carry_verb(args, None, None, None))
+            out = place / "carry.json"
+            kept = json.loads(out.read_text(encoding="utf-8")) if out.is_file() else None
+            return code, lines, kept, plan.read_text(encoding="utf-8"), str(out)
+
+        def failed():
+            code, lines, kept, plan, _out = verb(None)
+            return code, lines, kept, plan
+
+        def blocked():
+            code, lines, kept, plan, out = verb(moving, blocked=True)
+            return (
+                code,
+                lines
+                == [
+                    "carry: carry.json cannot be written, so the plan is left whole: "
+                    f"[Errno 21] Is a directory: '{out}'"
+                ],
+                kept,
+                plan,
+            )
+
+        def moved():
+            code, lines, kept, plan, _out = verb(moving)
+            return code, lines, kept, plan
+
+        error = "an error inside carry: ValueError: boom"
+        raised = (0, [f"carry: {error}"], refused_carry(error), PLAN_TEXT)
+        left = (0, True, None, PLAN_TEXT)
+        kept = moving()
+        kept.pop("moved")
+        rewritten = (
+            0,
+            [
+                "carry: carried 1 from run 7",
+                "carry: scripts/a.py: carried 1 from run 7, by its manifest",
+                "carry: scripts/b.py: runs whole: its map entry differs at the base",
+            ],
+            kept,
+            MOVED_PLAN,
+        )
+        table = [
+            ('1284:13 replace "schema" with ""', failed, raised),
+            ('1285:13 replace "base_run" with ""', failed, raised),
+            ('1285:25 replace "" with "XX"', failed, raised),
+            ('1288:13 replace "carried" with ""', failed, raised),
+            ("1295:16 replace 0 with 1", blocked, left),
+            ("1295:16 replace return value with return None", blocked, left),
+            ("1306:68 replace 2 with 3", moved, rewritten),
+            ('1306:73 replace "\\n" with ""', moved, rewritten),
+            ("1307:12 replace return value with return None", moved, rewritten),
+        ]
+        self.judge(table)
+        examined("K10 cases", table)
 
 
 if __name__ == "__main__":
