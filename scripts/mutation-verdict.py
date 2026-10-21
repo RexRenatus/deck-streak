@@ -108,6 +108,7 @@ from dataclasses import dataclass, field
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
+import mutation_carry  # noqa: E402
 import mutation_python  # noqa: E402
 import mutation_rows  # noqa: E402
 
@@ -155,22 +156,23 @@ PYTHON_CONTROL_SECONDS: dict[str, int] = {
 #: under `scripts/tests/fixtures/`, and names the run, attempt and job its figures came from.
 # fmt: off
 PYTHON_SCOPED_SECONDS: dict[str, tuple[int, int, int]] = {
-    "scripts/audit-web-verdict.py": (3, 3, 1),  # run 38432909235 attempt 1 job 115419489219: 19 scoped mutant record(s)
-    "scripts/create-issues.py": (1, 1, 1),  # run 38432909235 attempt 1 job 115419489210: 0 scoped mutant record(s)
-    "scripts/dynamic-imports-check.py": (2, 2, 1),  # run 38432909235 attempt 1 job 115419489573: 18 scoped mutant record(s)
-    "scripts/ios_icon.py": (1, 2, 1),  # run 38432909235 attempt 1 job 115419489248: 14 scoped mutant record(s)
-    "scripts/ios_lane.py": (10, 11, 4),  # run 38432909235 attempt 1 job 115419489348: 20 scoped mutant record(s)
-    "scripts/memory_scope.py": (36, 52, 13),  # run 38432909235 attempt 1 job 115419489225: 20 scoped mutant record(s)
-    "scripts/mutation-verdict.py": (152, 158, 107),  # run 38432909235 attempt 1 job 115419489314: 20 scoped mutant record(s)
-    "scripts/mutation_python.py": (184, 204, 53),  # run 38432909235 attempt 1 job 115419489320: 20 scoped mutant record(s)
-    "scripts/mutation_rows.py": (172, 171, 58),  # run 38432909235 attempt 1 job 115419489293: 20 scoped mutant record(s)
-    "scripts/public-scrub.py": (53, 60, 17),  # run 38432909235 attempt 1 job 115419489252: 20 scoped mutant record(s)
-    "scripts/testflight_age.py": (6, 5, 2),  # run 38432909235 attempt 1 job 115419489382: 20 scoped mutant record(s)
-    "scripts/threat_model.py": (1, 1, 1),  # run 38432909235 attempt 1 job 115419489378: 20 scoped mutant record(s)
-    "scripts/web-engine-size.py": (13, 13, 5),  # run 38432909235 attempt 1 job 115419489199: 18 scoped mutant record(s)
-    "scripts/web_mutation_shards.py": (12, 14, 2),  # run 38432909235 attempt 1 job 115419489341: 20 scoped mutant record(s)
-    "scripts/write-back-issues.py": (1, 1, 1),  # run 38432909235 attempt 1 job 115419489261: 0 scoped mutant record(s)
-    "tools/parity-oracle/generate.py": (2, 2, 1),  # run 38432909235 attempt 1 job 115419489457: 19 scoped mutant record(s)
+    "scripts/audit-web-verdict.py": (2, 3, 1),  # run 39439842824 attempt 1 job 118838808221: 19 scoped mutant record(s)
+    "scripts/create-issues.py": (1, 1, 1),  # run 39439842824 attempt 1 job 118838808341: 0 scoped mutant record(s)
+    "scripts/dynamic-imports-check.py": (2, 2, 1),  # run 39439842824 attempt 1 job 118838808178: 18 scoped mutant record(s)
+    "scripts/ios_icon.py": (1, 1, 1),  # run 39439842824 attempt 1 job 118838808299: 14 scoped mutant record(s)
+    "scripts/ios_lane.py": (12, 12, 5),  # run 39439842824 attempt 1 job 118838808226: 20 scoped mutant record(s)
+    "scripts/memory_scope.py": (39, 58, 14),  # run 39439842824 attempt 1 job 118838808294: 20 scoped mutant record(s)
+    "scripts/mutation-verdict.py": (311, 351, 128),  # run 39439842824 attempt 1 job 118838808329: 20 scoped mutant record(s)
+    "scripts/mutation_carry.py": (52, 55, 28),  # run 39439842824 attempt 1 job 118838808195: 20 scoped mutant record(s)
+    "scripts/mutation_python.py": (269, 287, 79),  # run 39439842824 attempt 1 job 118838808284: 20 scoped mutant record(s)
+    "scripts/mutation_rows.py": (167, 167, 55),  # run 39439842824 attempt 1 job 118838808212: 20 scoped mutant record(s)
+    "scripts/public-scrub.py": (55, 63, 13),  # run 39439842824 attempt 1 job 118838808300: 20 scoped mutant record(s)
+    "scripts/testflight_age.py": (5, 5, 2),  # run 39439842824 attempt 1 job 118838808188: 20 scoped mutant record(s)
+    "scripts/threat_model.py": (1, 1, 1),  # run 39439842824 attempt 1 job 118838808387: 20 scoped mutant record(s)
+    "scripts/web-engine-size.py": (18, 17, 6),  # run 39439842824 attempt 1 job 118838808262: 18 scoped mutant record(s)
+    "scripts/web_mutation_shards.py": (13, 15, 2),  # run 39439842824 attempt 1 job 118838808370: 20 scoped mutant record(s)
+    "scripts/write-back-issues.py": (1, 1, 1),  # run 39439842824 attempt 1 job 118838808332: 18 scoped mutant record(s)
+    "tools/parity-oracle/generate.py": (3, 2, 1),  # run 39439842824 attempt 1 job 118838808289: 19 scoped mutant record(s)
 }
 # fmt: on
 #: The weekly battery's Python shards, each `run --all --shard k/16` (R14).
@@ -1970,7 +1972,8 @@ def python_reports(verdict: Verdict, plan: dict, directory: str | None) -> list[
     """(where, report) for each Python shard report the plan promised, from 0 to n-1: one missing,
     unreadable, not of the runner's schema, that records a failed restore, whose shard field is not
     its slot's, that `read_python_shard` refuses, or that examined other mutants than the plan
-    lists for that shard is VOID by name (SPEC-087 R11; SPEC-126 A8 and A9)."""
+    lists for that shard is VOID by name (SPEC-087 R11; SPEC-126 A8 and A9). The whole legs are
+    then held to the plan's listing with the carried outcomes beside them (SPEC-493 R10)."""
     planned = (plan.get("python") or {}).get("count") or 0
     if not planned:
         verdict.void("the plan names no python shards, so no shard's report was promised")
@@ -2005,7 +2008,7 @@ def python_reports(verdict: Verdict, plan: dict, directory: str | None) -> list[
             verdict.void(f"{where}: {drift}")
         else:
             whole.append((where, report))
-    return whole
+    return mutation_carry.held_to_listing(verdict, plan, directory, whole, classify)
 
 
 def read_python_shard(plan: dict, report: dict) -> tuple[list[dict], str | None]:
@@ -3681,6 +3684,7 @@ def prices(directory: str) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    mutation_carry.verbs(argv, python_reports, classify, mutation_python.census_problems)
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
         "verb",

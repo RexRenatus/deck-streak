@@ -7394,6 +7394,14 @@ DYNAMIC_IMPORTS = {
             1,
         ),
         ("test_mutation_python_lister_kills", "load", "spec.loader.exec_module(module)", 1),
+        ("test_mutation_carry_kills", "load", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_mutation_carry_kills",
+            "load",
+            "importlib.util.spec_from_file_location('mutation_carry_under_kill', CARRY)",
+            1,
+        ),
+        ("test_mutation_carry_kills", "load", "spec.loader.exec_module(module)", 1),
         ("test_mutation_python_verdict", "runner", "importlib.util.module_from_spec(spec)", 1),
         (
             "test_mutation_python_verdict",
@@ -7623,6 +7631,7 @@ DYNAMIC_IMPORTS = {
         ("test_mutation_python_cli_kills", "runner", "sys.modules", 1),
         ("test_mutation_python_judge_kills", "load", "sys.modules", 1),
         ("test_mutation_python_lister_kills", "load", "sys.modules", 1),
+        ("test_mutation_carry_kills", "load", "sys.modules", 1),
         ("test_mutation_python_verdict", "runner", "sys.modules", 1),
         ("test_mutation_rows", "load_runner", "sys.modules", 1),
         ("test_mutation_rows_group", "<module>", "sys.modules", 1),
@@ -7947,6 +7956,15 @@ DYNAMIC_IMPORTS = {
             "test_mutation_verdict_survivor_kills",
             "TheMain.main",
             "mock.patch.object(V, name, stub)",
+            1,
+        ),
+    ),
+    **allowed(
+        "stands in for the loaded carry module's one URL opener by its constant attribute name, so the test opens no URL; it imports nothing and reads no workflow file",
+        (
+            "test_mutation_carry_kills",
+            "BaseChoice.test_choose_base_requests_and_answers_exactly.<locals>.fetched",
+            "mock.patch.object(self.mc.urllib.request, 'urlopen', urlopen)",
             1,
         ),
     ),
