@@ -183,10 +183,13 @@ Each test prints the population it examined as `examined N`, and N is above 0.
 | `scripts/mutation_carry.py` | 1 | new: the selector, tree identity, key, census, carry and union rule, and the manifest's entries; standard library only |
 | `scripts/mutation-inputs.json` | 1 | new: the read-set map, each class's rule (`closure` or `whole-tree`), the leg jobs of its key and the runner files, by rule or glob |
 | `scripts/mutation-verdict.py` | 1 | the `carry` and `manifest` verbs; `python_reports` reads the carry and holds the union rule; no covered span changes |
-| `scripts/mutation-python.json` | 1 | one entry: `scripts/mutation_carry.py` and its two test modules |
+| `scripts/mutation-python.json` | 1 | one entry: `scripts/mutation_carry.py` and its three test modules, the kill module first |
 | `.github/workflows/ci.yml` | 1 | `mutation-plan`: job-level permissions, the base and download steps, `carry`, the re-run listing, and `shards` reading it; `mutation-verdict`: the manifest step and its upload |
 | `scripts/tests/test_mutation_carry.py` | 1 | new: A1, A3, A4, A5 |
 | `scripts/tests/test_mutation_carry_census.py` | 1 | new: A2 |
+| `scripts/tests/test_mutation_carry_kills.py` | 1 | new: the killers of the carry module's listed mutants, loaded in process, one table-driven test per class (section 10) |
+| `scripts/tests/test_ci_workflows.py` | 1 | three dynamic-imports register entries, the kill module's in-process load |
+| `scripts/mutation-equivalent.d/python.json` | 1 | seven records, each a mutant of `scripts/mutation_carry.py` that no input can tell apart, with its reason (section 10) |
 | `scripts/tests/fixtures/mutation-carry/**` | 1 | new: fixture trees, diffs, run listings and leg reports |
 | `scripts/tests/fixtures/mutation-scoped-prices-38432909235/` | 1 | removed: the earlier price run's records, replaced whole by the run below (section 5) |
 | `scripts/tests/fixtures/mutation-scoped-prices-39439842824/` | 1 | new: one `costs.jsonl` per price leg of the one price run dispatched at this delivery's head (section 5) |
@@ -264,3 +267,18 @@ no generated mutant reaches, each killed by a test of `test_mutation_carry.py` `
 | S49302 | `ci.yml`, the base step's `continue-on-error: true` | `false` | a base step may fail the plan |
 | S49303 | `ci.yml`, the `shards` step's `python-rerun.json` | `python-listed.json` | `shards` deals the listing, not the re-run set |
 | S49304 | `ci.yml`, the manifest upload's `if: ${{ always() }}` | the line deleted | the manifest is not kept when a leg fails |
+
+## 10. The kill round
+
+Every mutant the runner lists in `scripts/mutation_carry.py` is killed or recorded.
+`scripts/tests/test_mutation_carry_kills.py` loads the module in process and holds one
+table-driven test per class of mutant: each case names its mutant and asserts the exact value
+that mutant changes, a text, a document, a tuple or a set, never a shape. It is mapped first
+among the module's test modules, so under the failfast legs a kill ends a mutant's run before
+the child-process tests start, and a walk that a mutant makes endless is stopped at a fixed
+count by a stand-in that raises. Seven mutants that no input can tell apart are recorded with
+their reasons in `scripts/mutation-equivalent.d/python.json`; the record census does not run
+in this module's mapped suite, so no record's own mutant is killed by that census.
+These tests are mutation coverage of behaviour the module already has, so none is red first,
+and the pull request's Python legs are their proof. No bound, price, timeout or per-mutant
+budget changes, and no line of `scripts/mutation_carry.py` changes.
