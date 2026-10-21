@@ -188,7 +188,7 @@ Each test prints the population it examined as `examined N`, and N is above 0.
 | `scripts/tests/test_mutation_carry.py` | 1 | new: A1, A3, A4, A5 |
 | `scripts/tests/test_mutation_carry_census.py` | 1 | new: A2 |
 | `scripts/tests/test_mutation_carry_kills.py` | 1 | new: the killers of the carry module's listed mutants, loaded in process, one table-driven test per class (section 10) |
-| `scripts/tests/test_ci_workflows.py` | 1 | three dynamic-imports register entries, the kill module's in-process load |
+| `scripts/tests/test_ci_workflows.py` | 1 | the kill module's dynamic-imports register entries: its in-process load, its `sys.modules` entry and its URL-opener stand-in |
 | `scripts/mutation-equivalent.d/python.json` | 1 | seven records, each a mutant of `scripts/mutation_carry.py` that no input can tell apart, with its reason (section 10) |
 | `scripts/tests/fixtures/mutation-carry/**` | 1 | new: fixture trees, diffs, run listings and leg reports |
 | `scripts/tests/fixtures/mutation-scoped-prices-38432909235/` | 1 | removed: the earlier price run's records, replaced whole by the run below (section 5) |
