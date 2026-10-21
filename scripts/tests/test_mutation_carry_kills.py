@@ -2531,5 +2531,202 @@ class ScriptVerbs(Base):
         examined("K33 cases", table)
 
 
+WHOLE = [("leg 1", {"files": [{"path": "scripts/a.py", "mutants": [{"name": "m1"}]}]})]
+
+
+class Verdict:
+    """A verdict stand-in for one class that records each VOID and each line it says."""
+
+    def __init__(self, klass):
+        self.klass = klass
+        self.lines = []
+
+    def void(self, text):
+        self.lines.append(("void", text))
+
+    def say(self, text):
+        self.lines.append(("say", text))
+
+
+def classified(path):
+    """The class of a path: `scripts` for the scripts directory, else `oracle`."""
+    return "scripts" if path.startswith("scripts/") else "oracle"
+
+
+class UnionAndListing(Base):
+    """K34 to K36: the union rule, the JSON helpers and the legs held to the listing."""
+
+    def test_the_union_rule_and_the_json_helpers(self):
+        mc = self.mc
+        rule = (
+            "the union rule: {} listed, {} re-run and 0 carried: {} missing, {} extra and 0 in "
+            "both, so the listing is not the re-run names plus the carried ones (first {})"
+        )
+        target = self.scratch / "a" / "b" / "c.json"
+
+        def wrote():
+            mc.write_json(target, {"k": [1]})
+            return target.read_bytes()
+
+        no_list = ("raised", "ValueError", "the listing holds no list of mutants")
+        table = [
+            (
+                "1029:16 replace return value with return None",
+                lambda: mc.read_json(None) is mc.MISSING,
+                True,
+            ),
+            ("1040:31 replace True with False", wrote, b'{\n  "k": [\n    1\n  ]\n}\n'),
+            ("1041:49 replace 2 with 3", wrote, b'{\n  "k": [\n    1\n  ]\n}\n'),
+            ('1041:54 replace "\\n" with ""', wrote, b'{\n  "k": [\n    1\n  ]\n}\n'),
+            (
+                "1046:8 replace not with nothing",
+                lambda: mc.listed_mutants({"mutants": [{"name": "m"}]}),
+                [{"name": "m"}],
+            ),
+            ("1046:38 replace or with and", lambda: mc.listed_mutants({"mutants": [1]}), no_list),
+            (
+                '1047:26 replace "the listing holds no list of mutants" with ""',
+                lambda: mc.listed_mutants({"mutants": [1]}),
+                no_list,
+            ),
+            (
+                "1059:39 replace or with and",
+                lambda: mc.union_rule(
+                    collections.Counter({"a": 1}), collections.Counter(), collections.Counter()
+                ),
+                rule.format(1, 0, 1, 0, "a"),
+            ),
+            (
+                "1059:56 replace or with and",
+                lambda: mc.union_rule(
+                    collections.Counter(), collections.Counter({"b": 1}), collections.Counter()
+                ),
+                rule.format(0, 1, 0, 1, "b"),
+            ),
+        ]
+        self.judge(table)
+        examined("K34 cases", table)
+
+    def held(self, plan, carry=None, listing=None, whole=None):
+        """held_to_listing over a scratch directory holding `carry` and `listing` as text (none
+        when None): (what it returns, what the verdict recorded)."""
+        place = Path(tempfile.mkdtemp(dir=self.scratch))
+        if carry is not None:
+            written(place / "mutation-plan" / "carry.json", carry)
+        if listing is not None:
+            written(place / "mutation-plan" / "python-listed.json", listing)
+        verdict = Verdict("scripts")
+        legs = whole if whole is not None else WHOLE
+        found = self.mc.held_to_listing(verdict, plan, str(place), legs, classified)
+        return found, verdict.lines
+
+    def test_held_to_listing_reads_the_carry_and_the_listing(self):
+        held = self.held
+        listing = json.dumps({"mutants": [{"file": "scripts/a.py", "name": "m1"}]})
+
+        def carrying(base_run):
+            return json.dumps({"schema": CARRY_SCHEMA, "base_run": base_run, "carried": []})
+
+        moved = {"files": [{"path": "scripts/a.py", "carried_code": []}]}
+        unlisted = (
+            WHOLE,
+            [
+                (
+                    "void",
+                    "the union rule: no readable python-listed.json beside the plan, so the "
+                    "listing cannot hold the legs and the carry",
+                )
+            ],
+        )
+        not_carry = (
+            WHOLE,
+            [("void", "the union rule: carry.json is not of the schema " + CARRY_SCHEMA)],
+        )
+        table = [
+            (
+                '1076:33 replace "python-listed.json" with ""',
+                lambda: held({}, listing=listing),
+                (WHOLE, [("say", "carried 0 from run none")]),
+            ),
+            ('1077:22 replace "files" with ""', lambda: held(moved), unlisted),
+            (
+                "1078:41 replace and with or",
+                lambda: held({"files": [{"path": "scripts/a.py"}]}),
+                (WHOLE, []),
+            ),
+            ('1078:45 replace "carried_code" with ""', lambda: held(moved), unlisted),
+            ("1078:60 replace in with not in", lambda: held(moved), unlisted),
+            ("1078:88 replace or with and", lambda: held(moved), unlisted),
+            ("1079:14 replace is with is not", lambda: held({}), (WHOLE, [])),
+            ("1079:52 replace not with nothing", lambda: held({}), (WHOLE, [])),
+            ("1089:16 replace return value with return None", lambda: held(moved), unlisted),
+            (
+                "1092:38 replace or with and",
+                lambda: held({}, carry="[1]", listing=listing),
+                not_carry,
+            ),
+            (
+                "1094:16 replace return value with return None",
+                lambda: held({}, carry="[1]", listing=listing),
+                not_carry,
+            ),
+            (
+                '1097:34 replace "base_run" with ""',
+                lambda: held({}, carry=carrying("300"), listing=listing),
+                (WHOLE, [("say", "carried 0 from run 300")]),
+            ),
+            (
+                '1097:49 replace "none" with ""',
+                lambda: held({}, carry=carrying(""), listing=listing),
+                (WHOLE, [("say", "carried 0 from run none")]),
+            ),
+        ]
+        self.judge(table)
+        examined("K35 cases", table)
+
+    def test_held_to_listing_returns_the_carried_entries_exactly(self):
+        record = {
+            "file": "scripts/b.py",
+            "name": "m2",
+            "outcome": "killed",
+            "killers": ["k"],
+            "run": "300",
+        }
+        carry = json.dumps({"schema": CARRY_SCHEMA, "base_run": "300", "carried": [record]})
+        listing = json.dumps(
+            {
+                "mutants": [
+                    {"file": "scripts/a.py", "name": "m1"},
+                    {"file": "scripts/b.py", "name": "m2"},
+                ]
+            }
+        )
+        legs = [("leg 1", {"files": ["x", {"path": "scripts/a.py", "mutants": [{"name": "m1"}]}]})]
+        entry = {
+            "path": "scripts/b.py",
+            "modules": [],
+            "byte_readers": [],
+            "void": None,
+            "mutants": [record],
+        }
+        returned = (
+            [*legs, ("carried from run 300", {"files": [entry]})],
+            [("say", "carried 1 from run 300")],
+        )
+
+        def carried():
+            return self.held({}, carry=carry, listing=listing, whole=legs)
+
+        table = [
+            ("1111:36 replace and with or", carried, returned),
+            ('1127:10 replace "path" with ""', carried, returned),
+            ('1127:24 replace "modules" with ""', carried, returned),
+            ('1127:39 replace "byte_readers" with ""', carried, returned),
+            ('1127:59 replace "void" with ""', carried, returned),
+        ]
+        self.judge(table)
+        examined("K36 cases", table)
+
+
 if __name__ == "__main__":
     unittest.main()
