@@ -1,0 +1,98 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT badge_key, tier, name, emoji, study_day, celebrated_at, created_at FROM badges_earned ORDER BY badge_key, tier",
+  "describe": {
+    "columns": [
+      {
+        "name": "badge_key",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "badges_earned",
+            "name": "badge_key"
+          }
+        }
+      },
+      {
+        "name": "tier",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "badges_earned",
+            "name": "tier"
+          }
+        }
+      },
+      {
+        "name": "name",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "badges_earned",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "emoji",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "badges_earned",
+            "name": "emoji"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "badges_earned",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "celebrated_at",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "badges_earned",
+            "name": "celebrated_at"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "badges_earned",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "73fa27045f850d818d0068586db09f1d73f017bf8e96e9351758d61888b60a76"
+}

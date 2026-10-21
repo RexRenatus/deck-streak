@@ -1,0 +1,23 @@
+# cargo-mutants 27.1.0 (SPEC-039 R5 to R7, ADR-057). The pull request's `mutation-rust` job and the
+# weekly battery run it in place, on a committed tree, and a local run is targeted the same way:
+#
+#   cargo mutants --in-place -f crates/<crate>/src/<file>.rs    then cargo clean
+#
+# `--in-place` runs one mutant at a time, the rule's `-j 1`, and refuses a `-j` flag beside it
+# (exit 1, measured on 27.1.0).
+#
+# Nothing is excluded, so every mutant is listed, run and reported (SPEC-057 R11, ADR-070). A mutant
+# no test can tell apart is recorded equivalent in scripts/mutation-equivalent.d/<package>.json, and
+# `python3 scripts/mutation-verdict.py exclusions` refuses every key here that would filter the
+# listing.
+
+# Each mutant's tests run under cargo-nextest, the gate's own runner, a process per test. Under
+# cargo test, one process per binary, identity's log test failed the unmutated baseline on two of
+# thirty-two CI runners, so cargo-mutants refused the shard (exit 4, SPEC-039 section 8).
+test_tool = "nextest"
+
+# The tests run under nextest's `mutants` profile (.config/nextest.toml, SPEC-362 R9), which stops a
+# mutant's run at its first failing test. cargo-mutants passes these to the test phase only, after
+# any `--cargo-test-arg` and any arguments after `--`, so every command gets the profile from here
+# and none spells it.
+additional_cargo_test_args = ["--profile", "mutants"]

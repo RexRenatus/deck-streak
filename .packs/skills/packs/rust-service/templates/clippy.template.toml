@@ -1,5 +1,0 @@
-# clippy.toml at the repository root (skills/packs/rust-service). Tests may unwrap and expect:
-# a failed test should panic.
-allow-unwrap-in-tests = true
-allow-expect-in-tests = true
-allow-dbg-in-tests = true

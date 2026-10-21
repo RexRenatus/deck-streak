@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, per_day_max, vault_hour, created_at FROM chest_settings ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chest_settings",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "per_day_max",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chest_settings",
+            "name": "per_day_max"
+          }
+        }
+      },
+      {
+        "name": "vault_hour",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chest_settings",
+            "name": "vault_hour"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chest_settings",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e8b19eb7e269f3aabfa396c93f84e0f0bee84c07b93064820e2e6cb4ec7f1ba6"
+}

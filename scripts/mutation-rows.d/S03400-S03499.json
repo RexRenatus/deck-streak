@@ -1,0 +1,30 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S03401-THE-AGGREGATE-JOB-ALWAYS-REPORTS-AS-CI",
+        ".github/workflows/ci.yml",
+        "    name: ${{ github.event_name == 'pull_request' && 'ci' || 'ci (push)' }}\n",
+        "    name: ci\n",
+        "the aggregate job reports as ci for a push as well, so the required name is no longer the pull request's own run (SPEC-034 R8)",
+        "test_ci_workflows.TheRequiredCiCheckIsThePullRequestsOwn.test_the_required_ci_check_is_always_the_pull_requests_own_run"
+      ],
+      [
+        "S03402-THE-AGGREGATE-JOB-HAS-A-NAME-FOR-EACH-EVENT",
+        ".github/workflows/ci.yml",
+        "    name: ${{ github.event_name == 'pull_request' && 'ci' || 'ci (push)' }}\n    if: ${{ always() }}\n",
+        "    if: ${{ always() }}\n",
+        "the aggregate job carries no name, so a push reports as ci too (SPEC-034 R8)",
+        "test_ci_workflows.TheRequiredCiCheckIsThePullRequestsOwn.test_the_required_ci_check_is_always_the_pull_requests_own_run"
+      ],
+      [
+        "S03403-THE-PULL-REQUEST-RUN-IS-THE-ONE-NAMED-CI",
+        ".github/workflows/ci.yml",
+        "== 'pull_request' && 'ci' ||",
+        "== 'push' && 'ci' ||",
+        "the push run takes the required name and the pull request's run the other (SPEC-034 R8)",
+        "test_ci_workflows.TheRequiredCiCheckIsThePullRequestsOwn.test_the_required_ci_check_is_always_the_pull_requests_own_run"
+      ]
+    ]
+  }
+}

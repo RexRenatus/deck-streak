@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM xp_ledger",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "709a82c01d5022d1610171279140f73e447d6f4d7ba8b5c24bfdb1af40b2a51d"
+}

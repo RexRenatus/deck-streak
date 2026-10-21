@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO notification_decisions (dedupe_key, kind, surface, arm, reason, tier_requested, tier_rendered, study_day, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 9
+    },
+    "nullable": []
+  },
+  "hash": "79eb9e3db104a578f621dca8dbc7daaf754af7d71fcf34491d78b1a0fda30c05"
+}

@@ -1,0 +1,296 @@
+{
+  "adapter": "with_a_stub_week",
+  "cases": [
+    {
+      "class": "weekly",
+      "input": {
+        "draws": [
+          0.30241055708705966,
+          0.20303340194020225
+        ],
+        "existing": [],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "weekly",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "draws_used": 0,
+        "since_epic": 0,
+        "since_legendary": 0
+      }
+    },
+    {
+      "class": "weekly",
+      "input": {
+        "draws": [
+          0.654853759827793,
+          0.05395992726234955
+        ],
+        "existing": [],
+        "since_epic": 13,
+        "since_legendary": 39,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "weekly",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "draws_used": 0,
+        "since_epic": 13,
+        "since_legendary": 39
+      }
+    },
+    {
+      "class": "weekly",
+      "input": {
+        "draws": [
+          0.8134805734267538,
+          0.15001678172970434
+        ],
+        "existing": [],
+        "since_epic": 7,
+        "since_legendary": 12,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "weekly",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "draws_used": 0,
+        "since_epic": 7,
+        "since_legendary": 12
+      }
+    },
+    {
+      "class": "weekly",
+      "input": {
+        "draws": [
+          0.25015406763448944,
+          0.9488107295699826
+        ],
+        "existing": [],
+        "since_epic": 12,
+        "since_legendary": 38,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "weekly",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "draws_used": 0,
+        "since_epic": 12,
+        "since_legendary": 38
+      }
+    },
+    {
+      "class": "weekly",
+      "input": {
+        "draws": [
+          0.8239638564113423,
+          0.39963207657459976
+        ],
+        "existing": [
+          {
+            "origin": "weekly",
+            "session_start_ms": 0
+          }
+        ],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [],
+        "draws_used": 0,
+        "since_epic": 0,
+        "since_legendary": 0
+      }
+    },
+    {
+      "class": "weekly",
+      "input": {
+        "draws": [
+          0.657482307228477,
+          0.18544837349500565
+        ],
+        "existing": [
+          {
+            "origin": "challenge",
+            "session_start_ms": 0
+          },
+          {
+            "origin": "session",
+            "session_start_ms": 1700024400000
+          },
+          {
+            "origin": "session",
+            "session_start_ms": 1700028000000
+          },
+          {
+            "origin": "session",
+            "session_start_ms": 1700031600000
+          }
+        ],
+        "since_epic": 0,
+        "since_legendary": 0,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "weekly",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "draws_used": 0,
+        "since_epic": 0,
+        "since_legendary": 0
+      }
+    },
+    {
+      "input": {
+        "draws": [
+          0.8098661861961292,
+          0.41268638680743386
+        ],
+        "existing": [],
+        "since_epic": 10,
+        "since_legendary": 33,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "weekly",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "draws_used": 0,
+        "since_epic": 10,
+        "since_legendary": 33
+      }
+    },
+    {
+      "input": {
+        "draws": [
+          0.4036321807370912,
+          0.16750292516945486
+        ],
+        "existing": [],
+        "since_epic": 9,
+        "since_legendary": 15,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "weekly",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "draws_used": 0,
+        "since_epic": 9,
+        "since_legendary": 15
+      }
+    },
+    {
+      "input": {
+        "draws": [
+          0.6101266305315137,
+          0.5135658694504792
+        ],
+        "existing": [],
+        "since_epic": 3,
+        "since_legendary": 16,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "weekly",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "draws_used": 0,
+        "since_epic": 3,
+        "since_legendary": 16
+      }
+    },
+    {
+      "input": {
+        "draws": [
+          0.5351066700671802,
+          0.4679192093771526
+        ],
+        "existing": [],
+        "since_epic": 2,
+        "since_legendary": 39,
+        "study_day": 19676
+      },
+      "output": {
+        "chests": [
+          {
+            "origin": "weekly",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "session_start_ms": 0,
+            "state": "sealed"
+          }
+        ],
+        "draws_used": 0,
+        "since_epic": 2,
+        "since_legendary": 39
+      }
+    }
+  ],
+  "function": "pipeline_layers.loot.LootLayer._update_weekly_quest",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Folds the week once on a stand-in layer over the same stub store, the week's quest complete, its reward unclaimed, nothing suppressed and the month's freeze drops at their cap, with random.SystemRandom patched to the case's draws; returns the chest inserted, the counters after it and the draws it took; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_081.py",
+  "registry_sha256": "67257e9dfbf5070946f9cabbe897df72d7f71fa60cd8414cf384b5c83d530274",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

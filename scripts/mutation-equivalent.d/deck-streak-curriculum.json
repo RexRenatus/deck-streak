@@ -1,0 +1,13 @@
+{
+  "records": [
+    {
+      "file": "crates/curriculum/src/progress.rs",
+      "mutant": "replace > with >= in course_progress",
+      "anchor": "let achieved = count > 0 && pct >= CEFR_BAND_ACHIEVED_PCT;",
+      "reason": "count is unsigned and pct is 0.0 whenever count is 0, so `count >= 0 && pct >= 80.0` and `count > 0 && pct >= 80.0` agree on every input.",
+      "evidence": "count is a u32; when it is 0 the line above sets pct to 0.0, which is below CEFR_BAND_ACHIEVED_PCT (80.0), so the second operand is false and the band is not achieved under both comparisons; when count is above 0 the two comparisons are the same. The only input the mutant changes is count == 0, and there the second operand already decides the result the same way.",
+      "reached_by": "progress_goldens::course_progress_matches_the_predecessors_golden",
+      "issue": "#85"
+    }
+  ]
+}

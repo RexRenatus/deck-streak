@@ -10,6 +10,12 @@ on:
 permissions:
   contents: read
 
+# A pull request's runs share its ref's group, and a newer push to it cancels the run it supersedes
+# (SPEC-190). Any other event has a group of its own, its run id, so it is never cancelled.
+concurrency:
+  group: changelog-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   fragment:
     runs-on: ubuntu-24.04

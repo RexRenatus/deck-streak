@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE daily_rollup SET score = ?2, consistency = ?3, retention = ?4, workload = ?5, volume = ?6, mastery = ?7 WHERE study_day = ?1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "52aaf768892a8a75becda31965078f6febc04a99e84d5b53bc842066679eed63"
+}

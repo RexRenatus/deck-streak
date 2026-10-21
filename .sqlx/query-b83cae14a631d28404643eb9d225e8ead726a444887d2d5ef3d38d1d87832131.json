@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM relight_due WHERE study_day = ?1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "b83cae14a631d28404643eb9d225e8ead726a444887d2d5ef3d38d1d87832131"
+}

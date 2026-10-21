@@ -1,0 +1,142 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S29001-THE-RUST-LEG-STARTS-ONLY-ON-A-LISTED-MUTANT",
+        ".github/workflows/ci.yml",
+        "    if: ${{ needs.mutation-plan.outputs.listed != '0' }}\n",
+        "",
+        "without its job-level condition the Rust leg starts on every event, the placeholder leg that examines nothing (SPEC-290 R2)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_each_legs_job_condition_reads_the_plans_listing_alone"
+      ],
+      [
+        "S29002-THE-ROWS-LEG-STARTS-ON-EVERY-DIFF",
+        ".github/workflows/ci.yml",
+        "needs.mutation-plan.outputs.rows == 'true' || needs.mutation-plan.outputs.scope == 'diff' }}",
+        "needs.mutation-plan.outputs.rows == 'true' }}",
+        "the rows leg starts on every diff, whose retirement check is due whether or not a row is selected (SPEC-290 R3)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_each_legs_job_condition_reads_the_plans_listing_alone"
+      ],
+      [
+        "S29003-THE-PLAN-JOB-MAPS-ITS-LISTED-OUTPUT",
+        ".github/workflows/ci.yml",
+        "      listed: ${{ steps.shards.outputs.listed }}\n",
+        "",
+        "the plan job maps the shards step's listed count, the one output the Rust leg's condition reads (SPEC-290 R1)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_the_plan_writes_how_many_rust_mutants_its_listing_holds"
+      ],
+      [
+        "S29004-NOT-STARTED-IS-READ-FROM-THE-LISTING",
+        "scripts/mutation-verdict.py",
+        "if report is None and code is None and mutants == 0:",
+        "if report is None and code is None:",
+        "a shard is read as not started only when the listing gives it no mutant, never from its artifact's absence alone (SPEC-290 R4)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name"
+      ],
+      [
+        "S29005-A-SHARD-WITH-A-REPORT-WAS-STARTED",
+        "scripts/mutation-verdict.py",
+        "if report is None and code is None and mutants == 0:",
+        "if code is None and mutants == 0:",
+        "a shard that left a report and no recorded exit is partial, never a leg that was not started (SPEC-290 R4)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_an_examined_sum_that_differs_from_the_listing_is_refused"
+      ],
+      [
+        "S29006-A-SUM-ABOVE-THE-LISTING-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "    if counted != listed:\n",
+        "    if counted < listed:\n",
+        "reports that count more mutants than the plan's listing holds are VOID, a leg's count the listing does not account for (SPEC-290 R5)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_an_examined_sum_that_differs_from_the_listing_is_refused"
+      ],
+      [
+        "S29007-THE-RUST-LEG-IS-OWED-BY-ITS-LISTING",
+        "scripts/mutation-verdict.py",
+        "    if listed:\n        return f\"the plan lists",
+        "    if plan[\"classes\"][\"rust\"][\"applies\"]:\n        return f\"the plan lists",
+        "legs reads what the Rust leg is owed from the listing, never from the Rust class, which applies to a diff whose listing is empty (SPEC-290 R6)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_a_leg_the_listing_gives_nothing_reads_not_started"
+      ],
+      [
+        "S29008-THE-ROWS-LEG-IS-OWED-THE-RETIREMENT-CHECK",
+        "scripts/mutation-verdict.py",
+        "    if (plan.get(\"scope\") or {}).get(\"decision\") == \"diff\":\n        return \"the scope is diff, whose retirement check is due\"\n",
+        "",
+        "a skipped rows leg on a diff is VOID, because the retirement check is due on every diff (SPEC-290 R6)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name"
+      ],
+      [
+        "S29009-CI-ADMITS-ONLY-A-LEGS-OWN-SKIP",
+        ".github/workflows/ci.yml",
+        "if [ \"$result\" = skipped ] && [ \"$admitted\" -gt 0 ]; then",
+        "if [ \"$result\" = skipped ]; then",
+        "ci admits a skip only as many times as a leg's own result is skipped, so no other skipped need reads as passing (SPEC-290 R8)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_ci_admits_a_not_started_leg_and_no_other_skip"
+      ],
+      [
+        "S29010-THE-VERDICT-STEP-EXITS-ON-LEGS",
+        ".github/workflows/ci.yml",
+        "if [ \"$status\" -eq 0 ]; then status=$legs; fi",
+        "if [ \"$status\" -eq 0 ]; then status=0; fi",
+        "the verdict step exits with legs' status when both judges passed, so a skip the listing owed fails the verdict (SPEC-290 R7)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_the_verdict_step_fails_on_the_legs_check"
+      ],
+      [
+        "S29011-THE-LISTED-OUTPUT-IS-THE-LISTINGS-COUNT",
+        "scripts/mutation-verdict.py",
+        "sink.write(f\"listed={len(mutants)}\\n\")",
+        "sink.write(\"listed=0\\n\")",
+        "the listed output is the number of mutants the shards hold, so a listing that is not empty starts the Rust leg (SPEC-290 R1)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_the_plan_writes_how_many_rust_mutants_its_listing_holds"
+      ],
+      [
+        "S29012-A-SUM-BELOW-THE-LISTING-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "    if counted != listed:\n",
+        "    if counted > listed:\n",
+        "reports that count fewer mutants than the plan's listing holds are VOID, whatever else reads them whole (SPEC-290 R5)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_an_examined_sum_that_differs_from_the_listing_is_refused"
+      ],
+      [
+        "S29013-THE-VERDICT-CHECKS-THE-EXAMINED-SUM",
+        "scripts/mutation-verdict.py",
+        "            examined_sum(verdict, plan, whole)\n",
+        "            pass\n",
+        "the verdict checks the reports' sum against the listing whenever every promised shard's report was whole (SPEC-290 R5)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_an_examined_sum_that_differs_from_the_listing_is_refused"
+      ],
+      [
+        "S29014-A-RESULT-THAT-IS-NOT-A-JOBS-IS-VOID",
+        "scripts/mutation-verdict.py",
+        "        if result not in LEG_RESULTS:\n",
+        "        if result is None:\n",
+        "a leg's result other than success, failure, cancelled or skipped, an unset one included, is VOID (SPEC-290 R6)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name"
+      ],
+      [
+        "S29015-AN-UNSHARDED-PLAN-OWES-THE-RUST-LEG",
+        "scripts/mutation-verdict.py",
+        "    if not planned:\n        return \"the plan names no shards",
+        "    if False:\n        return \"the plan names no shards",
+        "a skipped Rust leg beside a plan whose listing was never written into it is VOID (SPEC-290 R6)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_a_listed_leg_that_is_missing_or_not_started_is_refused_by_name"
+      ],
+      [
+        "S29016-ONE-ADMISSION-FOR-EACH-SKIPPED-LEG",
+        ".github/workflows/ci.yml",
+        "admitted=$((admitted + 1))",
+        "admitted=$((admitted + 2))",
+        "ci admits one skip for each leg that was not started, never a second for another need (SPEC-290 R8)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_ci_admits_a_not_started_leg_and_no_other_skip"
+      ],
+      [
+        "S29017-THE-VERDICT-STEP-PASSES-EACH-LEGS-RESULT",
+        ".github/workflows/ci.yml",
+        "--rust-leg \"$RUST_LEG\" --rows-leg \"$ROWS_LEG\"",
+        "--rust-leg \"$ROWS_LEG\" --rows-leg \"$RUST_LEG\"",
+        "legs judges each leg by its own job's result (SPEC-290 R7)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_the_verdict_step_fails_on_the_legs_check"
+      ]
+    ]
+  }
+}

@@ -14,3 +14,26 @@ workspace = true
 [dependencies]
 deck-streak-kernel.workspace = true
 deck-streak-ingest.workspace = true
+# ADR-371 D3: the per-review XP rule and its table; progression translates an ingest review into
+# it at its edge.
+deck-streak-xp.workspace = true
+# SPEC-040: the data-rights port's rows are JSON values (ADR-029).
+serde_json.workspace = true
+# ADR-003: the XP ledger's queries run through the kernel's Db, checked into .sqlx/, and a refused
+# grant source is this context's own error type, as every library's (CLAUDE.md).
+sqlx.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+# ADR-029: the parity oracle's golden reader, compiled into the level test by path.
+serde.workspace = true
+# The goldens' floats are compared bit for bit, so the reader parses them exactly: serde_json's
+# default parser is best-effort and can land one unit in the last place away (SPEC-071 section 7).
+serde_json = { workspace = true, features = ["float_roundtrip"] }
+# SPEC-072 A12: the census pins progression's build script by its SHA-256.
+sha2.workspace = true
+# ADR-020's temporary database, and two concurrent grants on tokio's multi-thread runtime (A3).
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread", "sync"] }
+# ADR-040: the compile-fail fixture that proves a signed amount does not compile (A6).
+trybuild.workspace = true

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO in_app_feed (dedupe_key, kind, tier, text, seen_at, created_at) VALUES (?, ?, ?, ?, NULL, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "15649185fba418ded122d6482a6ee76974358c89d1418a685e86f107fa1d50d1"
+}

@@ -1,0 +1,18 @@
+# The held flush's timer (SPEC-041 R7, amended for #291): once a day, at 07:36, six minutes after the
+# default quiet window ends. The job table in crates/coordination/src/jobs.rs is the one schedule,
+# and crates/coordination/tests/job_table.rs holds this calendar equal to it;
+# crates/coordination/tests/held_flush_calendar.rs holds it outside the quiet window. The calendar
+# is written in UTC, the neutral zone; the private rail renders the deployment's own zone
+# (deploy/README.md). With no Unit=, the timer starts the job instance of its own name.
+[Unit]
+Description=DeckStreak's daily flush of the held notifications, at 07:36
+X-DurableServices-Waive=randomized-delay-missing the job table places each job on its own minute (ADR-027), and a random delay would move each fire off its minute
+
+[Timer]
+OnCalendar=*-*-* 07:36:00 UTC
+# A flush missed while the host was down runs once when the timer next activates, and the runner
+# records a fire more than six hours late as missed (ADR-027): 13:36 is still outside the window.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

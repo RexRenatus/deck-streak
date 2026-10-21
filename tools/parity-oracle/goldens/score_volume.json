@@ -1,0 +1,116 @@
+{
+  "cases": [
+    {
+      "class": "floor",
+      "input": {
+        "base_minutes": 0.5,
+        "base_reviews": 0.0,
+        "minutes": 2.0,
+        "reviews": 5
+      },
+      "output": 100.0
+    },
+    {
+      "class": "cap",
+      "input": {
+        "base_minutes": 5.0,
+        "base_reviews": 10.0,
+        "minutes": 300.0,
+        "reviews": 500
+      },
+      "output": 100.0
+    },
+    {
+      "class": "none",
+      "input": {
+        "base_minutes": 5.0,
+        "base_reviews": 10.0,
+        "minutes": 0.0,
+        "reviews": 0
+      },
+      "output": 0.0
+    },
+    {
+      "input": {
+        "base_minutes": 9.5,
+        "base_reviews": 14,
+        "minutes": 61.7629,
+        "reviews": 185
+      },
+      "output": 100.0
+    },
+    {
+      "input": {
+        "base_minutes": 9.5,
+        "base_reviews": 10.0,
+        "minutes": 57.2153,
+        "reviews": 172
+      },
+      "output": 100.0
+    },
+    {
+      "input": {
+        "base_minutes": 9.5,
+        "base_reviews": 10.0,
+        "minutes": 81.4887,
+        "reviews": 146
+      },
+      "output": 100.0
+    },
+    {
+      "input": {
+        "base_minutes": 5.0,
+        "base_reviews": 10.0,
+        "minutes": 89.4454,
+        "reviews": 104
+      },
+      "output": 100.0
+    },
+    {
+      "input": {
+        "base_minutes": 9.5,
+        "base_reviews": 60.0,
+        "minutes": 42.6965,
+        "reviews": 81
+      },
+      "output": 100.0
+    },
+    {
+      "input": {
+        "base_minutes": 9.5,
+        "base_reviews": 22.5,
+        "minutes": 17.9835,
+        "reviews": 53
+      },
+      "output": 100.0
+    },
+    {
+      "input": {
+        "base_minutes": 9.5,
+        "base_reviews": 60.0,
+        "minutes": 8.3452,
+        "reviews": 109
+      },
+      "output": 100.0
+    },
+    {
+      "input": {
+        "base_minutes": 5.0,
+        "base_reviews": 14,
+        "minutes": 18.5709,
+        "reviews": 20
+      },
+      "output": 100.0
+    }
+  ],
+  "function": "scoring._volume",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_071.py",
+  "registry_sha256": "f1c7ec842fede7f22e07a58b4c7043d57049f0b0c78a9419b6c7d77f2cdf2402",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

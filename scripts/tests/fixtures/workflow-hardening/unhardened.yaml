@@ -1,0 +1,17 @@
+name: planted
+
+# A planted workflow (SPEC-034 A13): a `.yaml` file, which GitHub reads as a workflow too, that
+# breaks each hardening rule: a token that can write, an action pinned by a tag rather than a
+# commit, a privileged trigger and a self-hosted runner. scripts/tests/test_ci_workflows.py judges
+# it; nothing runs it.
+on:
+  pull_request_target:
+    branches: [dev]
+
+permissions: write-all
+
+jobs:
+  build:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4

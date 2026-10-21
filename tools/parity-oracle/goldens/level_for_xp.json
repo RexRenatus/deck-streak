@@ -1,0 +1,1526 @@
+{
+  "cases": [
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 0
+      },
+      "output": 1
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 100
+      },
+      "output": 2
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 99
+      },
+      "output": 1
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 300
+      },
+      "output": 3
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 299
+      },
+      "output": 2
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 600
+      },
+      "output": 4
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 599
+      },
+      "output": 3
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 1000
+      },
+      "output": 5
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 999
+      },
+      "output": 4
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 1500
+      },
+      "output": 6
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 1499
+      },
+      "output": 5
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 2100
+      },
+      "output": 7
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 2099
+      },
+      "output": 6
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 2800
+      },
+      "output": 8
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 2799
+      },
+      "output": 7
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 3600
+      },
+      "output": 9
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 3599
+      },
+      "output": 8
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 4500
+      },
+      "output": 10
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 4499
+      },
+      "output": 9
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 5500
+      },
+      "output": 11
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 5499
+      },
+      "output": 10
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 6600
+      },
+      "output": 12
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 6599
+      },
+      "output": 11
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 7800
+      },
+      "output": 13
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 7799
+      },
+      "output": 12
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 9100
+      },
+      "output": 14
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 9099
+      },
+      "output": 13
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 10500
+      },
+      "output": 15
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 10499
+      },
+      "output": 14
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 12000
+      },
+      "output": 16
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 11999
+      },
+      "output": 15
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 13600
+      },
+      "output": 17
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 13599
+      },
+      "output": 16
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 15300
+      },
+      "output": 18
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 15299
+      },
+      "output": 17
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 17100
+      },
+      "output": 19
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 17099
+      },
+      "output": 18
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 19000
+      },
+      "output": 20
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 18999
+      },
+      "output": 19
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 21000
+      },
+      "output": 21
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 20999
+      },
+      "output": 20
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 23100
+      },
+      "output": 22
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 23099
+      },
+      "output": 21
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 25300
+      },
+      "output": 23
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 25299
+      },
+      "output": 22
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 27600
+      },
+      "output": 24
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 27599
+      },
+      "output": 23
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 30000
+      },
+      "output": 25
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 29999
+      },
+      "output": 24
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 32500
+      },
+      "output": 26
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 32499
+      },
+      "output": 25
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 35100
+      },
+      "output": 27
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 35099
+      },
+      "output": 26
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 37800
+      },
+      "output": 28
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 37799
+      },
+      "output": 27
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 40600
+      },
+      "output": 29
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 40599
+      },
+      "output": 28
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 43500
+      },
+      "output": 30
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 43499
+      },
+      "output": 29
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 46500
+      },
+      "output": 31
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 46499
+      },
+      "output": 30
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 49600
+      },
+      "output": 32
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 49599
+      },
+      "output": 31
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 52800
+      },
+      "output": 33
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 52799
+      },
+      "output": 32
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 56100
+      },
+      "output": 34
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 56099
+      },
+      "output": 33
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 59500
+      },
+      "output": 35
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 59499
+      },
+      "output": 34
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 63000
+      },
+      "output": 36
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 62999
+      },
+      "output": 35
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 66600
+      },
+      "output": 37
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 66599
+      },
+      "output": 36
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 70300
+      },
+      "output": 38
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 70299
+      },
+      "output": 37
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 74100
+      },
+      "output": 39
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 74099
+      },
+      "output": 38
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 78000
+      },
+      "output": 40
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 77999
+      },
+      "output": 39
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 82000
+      },
+      "output": 41
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 81999
+      },
+      "output": 40
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 86100
+      },
+      "output": 42
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 86099
+      },
+      "output": 41
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 90300
+      },
+      "output": 43
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 90299
+      },
+      "output": 42
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 94600
+      },
+      "output": 44
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 94599
+      },
+      "output": 43
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 99000
+      },
+      "output": 45
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 98999
+      },
+      "output": 44
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 103500
+      },
+      "output": 46
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 103499
+      },
+      "output": 45
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 108100
+      },
+      "output": 47
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 108099
+      },
+      "output": 46
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 112800
+      },
+      "output": 48
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 112799
+      },
+      "output": 47
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 117600
+      },
+      "output": 49
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 117599
+      },
+      "output": 48
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 122500
+      },
+      "output": 50
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 122499
+      },
+      "output": 49
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 127500
+      },
+      "output": 51
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 127499
+      },
+      "output": 50
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 132600
+      },
+      "output": 52
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 132599
+      },
+      "output": 51
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 137800
+      },
+      "output": 53
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 137799
+      },
+      "output": 52
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 143100
+      },
+      "output": 54
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 143099
+      },
+      "output": 53
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 148500
+      },
+      "output": 55
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 148499
+      },
+      "output": 54
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 154000
+      },
+      "output": 56
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 153999
+      },
+      "output": 55
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 159600
+      },
+      "output": 57
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 159599
+      },
+      "output": 56
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 165300
+      },
+      "output": 58
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 165299
+      },
+      "output": 57
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 171100
+      },
+      "output": 59
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 171099
+      },
+      "output": 58
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 177000
+      },
+      "output": 60
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 176999
+      },
+      "output": 59
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 183000
+      },
+      "output": 61
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 182999
+      },
+      "output": 60
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 189100
+      },
+      "output": 62
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 189099
+      },
+      "output": 61
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 195300
+      },
+      "output": 63
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 195299
+      },
+      "output": 62
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 201600
+      },
+      "output": 64
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 201599
+      },
+      "output": 63
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 208000
+      },
+      "output": 65
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 207999
+      },
+      "output": 64
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 214500
+      },
+      "output": 66
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 214499
+      },
+      "output": 65
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 221100
+      },
+      "output": 67
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 221099
+      },
+      "output": 66
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 227800
+      },
+      "output": 68
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 227799
+      },
+      "output": 67
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 234600
+      },
+      "output": 69
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 234599
+      },
+      "output": 68
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 241500
+      },
+      "output": 70
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 241499
+      },
+      "output": 69
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 248500
+      },
+      "output": 71
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 248499
+      },
+      "output": 70
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 255600
+      },
+      "output": 72
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 255599
+      },
+      "output": 71
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 262800
+      },
+      "output": 73
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 262799
+      },
+      "output": 72
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 270100
+      },
+      "output": 74
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 270099
+      },
+      "output": 73
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 277500
+      },
+      "output": 75
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 277499
+      },
+      "output": 74
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 285000
+      },
+      "output": 76
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 284999
+      },
+      "output": 75
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 292600
+      },
+      "output": 77
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 292599
+      },
+      "output": 76
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 300300
+      },
+      "output": 78
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 300299
+      },
+      "output": 77
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 308100
+      },
+      "output": 79
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 308099
+      },
+      "output": 78
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 316000
+      },
+      "output": 80
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 315999
+      },
+      "output": 79
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 324000
+      },
+      "output": 81
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 323999
+      },
+      "output": 80
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 332100
+      },
+      "output": 82
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 332099
+      },
+      "output": 81
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 340300
+      },
+      "output": 83
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 340299
+      },
+      "output": 82
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 348600
+      },
+      "output": 84
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 348599
+      },
+      "output": 83
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 357000
+      },
+      "output": 85
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 356999
+      },
+      "output": 84
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 365500
+      },
+      "output": 86
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 365499
+      },
+      "output": 85
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 374100
+      },
+      "output": 87
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 374099
+      },
+      "output": 86
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 382800
+      },
+      "output": 88
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 382799
+      },
+      "output": 87
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 391600
+      },
+      "output": 89
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 391599
+      },
+      "output": 88
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 400500
+      },
+      "output": 90
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 400499
+      },
+      "output": 89
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 409500
+      },
+      "output": 91
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 409499
+      },
+      "output": 90
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 418600
+      },
+      "output": 92
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 418599
+      },
+      "output": 91
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 427800
+      },
+      "output": 93
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 427799
+      },
+      "output": 92
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 437100
+      },
+      "output": 94
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 437099
+      },
+      "output": 93
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 446500
+      },
+      "output": 95
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 446499
+      },
+      "output": 94
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 456000
+      },
+      "output": 96
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 455999
+      },
+      "output": 95
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 465600
+      },
+      "output": 97
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 465599
+      },
+      "output": 96
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 475300
+      },
+      "output": 98
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 475299
+      },
+      "output": 97
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 485100
+      },
+      "output": 99
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 485099
+      },
+      "output": 98
+    },
+    {
+      "class": "threshold",
+      "input": {
+        "total_xp": 495000
+      },
+      "output": 100
+    },
+    {
+      "class": "below",
+      "input": {
+        "total_xp": 494999
+      },
+      "output": 99
+    },
+    {
+      "class": "large-threshold",
+      "input": {
+        "total_xp": 119901083759520000
+      },
+      "output": 48969600
+    },
+    {
+      "class": "large-below",
+      "input": {
+        "total_xp": 119901083759519999
+      },
+      "output": 48969599
+    },
+    {
+      "class": "large-threshold",
+      "input": {
+        "total_xp": 832082514767646000
+      },
+      "output": 129002521
+    },
+    {
+      "class": "large-below",
+      "input": {
+        "total_xp": 832082514767645999
+      },
+      "output": 129002520
+    },
+    {
+      "class": "large-threshold",
+      "input": {
+        "total_xp": 1662675242819733000
+      },
+      "output": 182355436
+    },
+    {
+      "class": "large-below",
+      "input": {
+        "total_xp": 1662675242819732999
+      },
+      "output": 182355435
+    },
+    {
+      "class": "large-threshold",
+      "input": {
+        "total_xp": 2037541324624363000
+      },
+      "output": 201868340
+    },
+    {
+      "class": "large-below",
+      "input": {
+        "total_xp": 2037541324624362999
+      },
+      "output": 201868339
+    },
+    {
+      "class": "large-threshold",
+      "input": {
+        "total_xp": 4469679053346062100
+      },
+      "output": 298987594
+    },
+    {
+      "class": "large-below",
+      "input": {
+        "total_xp": 4469679053346062099
+      },
+      "output": 298987593
+    },
+    {
+      "class": "large-threshold",
+      "input": {
+        "total_xp": 6903276913666304100
+      },
+      "output": 371571714
+    },
+    {
+      "class": "large-below",
+      "input": {
+        "total_xp": 6903276913666304099
+      },
+      "output": 371571713
+    },
+    {
+      "class": "large-threshold",
+      "input": {
+        "total_xp": 10430298548145135100
+      },
+      "output": 456734027
+    },
+    {
+      "class": "large-below",
+      "input": {
+        "total_xp": 10430298548145135099
+      },
+      "output": 456734026
+    },
+    {
+      "class": "large-threshold",
+      "input": {
+        "total_xp": 10666172883092805000
+      },
+      "output": 461869525
+    },
+    {
+      "class": "large-below",
+      "input": {
+        "total_xp": 10666172883092804999
+      },
+      "output": 461869524
+    },
+    {
+      "class": "widest",
+      "input": {
+        "total_xp": 18446744073709551615
+      },
+      "output": 607400100
+    }
+  ],
+  "function": "gamification.xp.level_for_xp",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_040.py",
+  "registry_sha256": "2fd38d6db9b86627395e14ef5f99e5576be2aeb3eaa6b5bd2cd71ec8dd39f72d",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

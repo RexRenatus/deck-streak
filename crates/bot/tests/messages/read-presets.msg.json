@@ -1,0 +1,44 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "reply_markup": {
+      "inline_keyboard": [
+        [
+          {
+            "callback_data": "hb:m:qab:10",
+            "text": "10 min"
+          },
+          {
+            "callback_data": "hb:m:qab:15",
+            "text": "15 min"
+          },
+          {
+            "callback_data": "hb:m:qab:20",
+            "text": "20 min"
+          }
+        ],
+        [
+          {
+            "callback_data": "hb:m:qab:30",
+            "text": "30 min"
+          },
+          {
+            "callback_data": "hb:m:qab:45",
+            "text": "45 min"
+          },
+          {
+            "callback_data": "hb:m:qab:60",
+            "text": "60 min"
+          }
+        ]
+      ]
+    },
+    "text": "How many minutes did you read for <b>Course Qab</b>?"
+  },
+  "x-message": "read-presets"
+}

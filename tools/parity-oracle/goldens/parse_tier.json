@@ -1,0 +1,107 @@
+{
+  "cases": [
+    {
+      "class": "none",
+      "input": {
+        "tags": ""
+      },
+      "output": null
+    },
+    {
+      "class": "none",
+      "input": {
+        "tags": " Subject::Topic "
+      },
+      "output": null
+    },
+    {
+      "class": "each",
+      "input": {
+        "tags": " T1 Subject::Topic "
+      },
+      "output": "T1"
+    },
+    {
+      "class": "each",
+      "input": {
+        "tags": "t2"
+      },
+      "output": "T2"
+    },
+    {
+      "class": "each",
+      "input": {
+        "tags": "Contracts T3"
+      },
+      "output": "T3"
+    },
+    {
+      "class": "each",
+      "input": {
+        "tags": "\tT4\n"
+      },
+      "output": "T4"
+    },
+    {
+      "class": "inside",
+      "input": {
+        "tags": "Subject::T4Something"
+      },
+      "output": null
+    },
+    {
+      "class": "inside",
+      "input": {
+        "tags": "T1x xT2 T-3"
+      },
+      "output": null
+    },
+    {
+      "class": "two",
+      "input": {
+        "tags": "T3 T1"
+      },
+      "output": "T3"
+    },
+    {
+      "class": "two",
+      "input": {
+        "tags": "T5 t4 T2"
+      },
+      "output": "T4"
+    },
+    {
+      "class": "not-text",
+      "input": {
+        "tags": null
+      },
+      "output": null
+    },
+    {
+      "class": "not-text",
+      "input": {
+        "tags": 4
+      },
+      "output": null
+    },
+    {
+      "class": "not-text",
+      "input": {
+        "tags": [
+          "T1"
+        ]
+      },
+      "output": null
+    }
+  ],
+  "function": "anki_reader._parse_tier",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_072.py",
+  "registry_sha256": "d25c88fa142d319489e7334677aebdbcf5b9e0aca3dfb751f221140bead5b54f",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO xp_tokens (chest_id, granted_at, created_at) VALUES (?1, ?2, ?2) ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "8c2a63e44b8d477c62daa9ba7483be5dc16fdb53444e6dc49302352c5022078b"
+}

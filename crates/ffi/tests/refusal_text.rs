@@ -1,0 +1,82 @@
+//! The text a native client reads for each refusal (SPEC-336 R3).
+//!
+//! MUTATION COVERAGE, not red first: the refusal's text was green before this test, which was added
+//! after the code to kill the mutant that answers every refusal with empty text (S33600). A refusal
+//! carries its fields as data for a client that branches on them, and its text for a person who
+//! reads the error a client shows; each variant's text names what refused the call and why.
+
+use deck_streak_ffi::engine::{CollectionDirectoryRefusal, Engine, EngineRefusal, PressRefusal};
+
+/// `BackendCollectionService.CloseCollection`: a real engine call the allow-list leaves out.
+const CLOSE_COLLECTION: (u32, u32) = (3, 1);
+
+/// MUTATION COVERAGE (R3; S33600): each refusal reads as its own sentence, the one an unlisted call
+/// gets from the entry point included, and none of them is empty.
+#[test]
+fn each_refusal_reads_as_its_own_sentence() {
+    let unlisted = match Engine::new(Vec::new()) {
+        Ok(engine) => engine
+            .run(CLOSE_COLLECTION.0, CLOSE_COLLECTION.1, Vec::new())
+            .map_err(|refusal| refusal.to_string()),
+        Err(refusal) => Err(format!(
+            "the engine did not start from its defaults: {refusal:?}"
+        )),
+    };
+    let engine = EngineRefusal::Engine {
+        error: vec![8, 1, 18, 3],
+    };
+    let start = EngineRefusal::Start {
+        reason: String::from("a synthetic reason"),
+    };
+    assert_eq!(
+        (unlisted, engine.to_string(), start.to_string()),
+        (
+            Err(String::from("service 3 method 1 is not on the allow-list")),
+            String::from("the engine refused the call (4 bytes)"),
+            String::from("the engine could not start: a synthetic reason"),
+        )
+    );
+}
+
+/// MUTATION COVERAGE (SPEC-348 R7): each collection directory refusal reads as its own sentence
+/// and none is empty.
+#[test]
+fn each_collection_directory_refusal_reads_as_its_own_sentence() {
+    assert_eq!(
+        [
+            CollectionDirectoryRefusal::NoValue.to_string(),
+            CollectionDirectoryRefusal::NotAbsolute.to_string(),
+            CollectionDirectoryRefusal::Missing.to_string(),
+            CollectionDirectoryRefusal::NotADirectory.to_string(),
+        ],
+        [
+            "the collection directory argument has no value",
+            "the collection directory is not an absolute path",
+            "the collection directory does not exist",
+            "the collection directory is not a directory",
+        ]
+    );
+}
+
+/// MUTATION COVERAGE (SPEC-365 R6): each press refusal reads as its own sentence and none is
+/// empty.
+#[test]
+fn each_press_refusal_reads_as_its_own_sentence() {
+    assert_eq!(
+        [
+            PressRefusal::Undecodable.to_string(),
+            PressRefusal::NotTheCard.to_string(),
+            PressRefusal::NotTheGrade.to_string(),
+            PressRefusal::Engine {
+                error: vec![8, 1, 18],
+            }
+            .to_string(),
+        ],
+        [
+            "the states the card was shown with are not the engine's states",
+            "the answer names another card than the press",
+            "the answer names another grade than the press",
+            "the engine refused the answer (3 bytes)",
+        ]
+    );
+}

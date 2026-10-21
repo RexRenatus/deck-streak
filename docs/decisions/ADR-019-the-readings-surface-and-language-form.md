@@ -8,8 +8,8 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 
 ## Context and Problem Statement
 
-No daily reading has ever reached the owner: the predecessor's lane refused every night on a
-stale-snapshot gate and never wrote a note. The owner answered the open reading decisions
+The predecessor's lane gated each reading on the collection file's age, so it refused whenever the
+owner had not studied, even after a successful sync. The owner answered the open reading decisions
 (staleness, the read tap, XP, length, surface, drafts). The predecessor deferred the language form,
 whose "hook sheet" existed only as a specification; the owner since chose language mentors whose
 daily reading carries glosses of the day's new words, a grammar spotlight, pronunciation and
@@ -26,7 +26,7 @@ script notes, and a culture note.
 - The Mini App is the primary reading surface and the vault keeps an archive copy; a law reading is its professor's IRAC primer of 800 to 1500 words scaled to the topic's new cards; a language reading is its mentor's daily reading (i+1 text with glosses of today's new words, grammar, pronunciation, culture) — chosen: the owner's surface decision and persona decisions, and one output contract for every reading.
 - The predecessor's language hook sheet — rejected because the owner's language-mentor decision covers its intent (card-anchored new words with glosses) inside one persona contract, and the hook sheet was never built.
 - Keep the vault note as the primary surface — rejected by the owner ("Mini app first, vault copy").
-- Port the predecessor's lane as it was — rejected because it never produced a reading, and its freshness gate refused every night the owner did not study.
+- Port the predecessor's lane as it was — rejected because its freshness gate judges the collection file's age, so it refuses on every day the owner did not study, however healthy the sync.
 
 ## Decision Outcome
 
@@ -53,3 +53,6 @@ The W1 SPECs' acceptance tests; the persona, study-duties, learning-science and 
 ## More Information
 
 The second-brain inventory's readings analysis (private input); the language-mentors, law-professors, study-duties and learning-science packs.
+
+Amendment (2026-09-28): passages describing another service's operations were restated as the
+product rule behind them, under the public-text rule (ADR-059).

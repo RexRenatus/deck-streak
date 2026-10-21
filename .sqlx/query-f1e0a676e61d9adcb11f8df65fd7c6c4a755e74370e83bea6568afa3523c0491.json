@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM notification_deliveries",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "f1e0a676e61d9adcb11f8df65fd7c6c4a755e74370e83bea6568afa3523c0491"
+}

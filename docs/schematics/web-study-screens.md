@@ -1,0 +1,474 @@
+# The web study screens: components, the review loop and its states
+
+Read at: the base `ac4fbdaeb02f682991a9b26db539dbc20c8ff559` (`dev`), #662's head
+`af6da34688467f8866167c4affbb53a45cca9d8b`, #663's head `d13f28f47c7088a22abf76ac7eeb5de86b1c92a7`,
+and the engine fork's pinned revision `c538de55a23e695234e794029fce0dafff2d36a9`. Every `path:line`
+below is at one of them, as SPEC-350 section 1 names. Decided by ADR-361.
+
+## 1. Components
+
+The page owns the screens, the input, the players and the frame's host element. The Worker owns the
+engine and storage. The card frame is a sealed document the page writes once per side and never
+hears from. Part 2's units are marked.
+
+```mermaid
+flowchart LR
+  subgraph inputs["input sources"]
+    keys["keyboard and the remote's keyboard mode"]
+    pad["Gamepad API: the remote's gamepad mode"]
+    touch["pointer and touch"]
+  end
+
+  subgraph page["the page (main thread, page policy)"]
+    routes["routes: the deck list and the review"]
+    input["study/input.ts: readKey, GamepadReader, resolve (from remote/)"]
+    machine["study/review.ts: the review's machine"]
+    buttons["AnswerButtons: two grades, Again and Good, each with its interval"]
+    host["CardFrame: the frame's host element"]
+    lock["WakeLockHolder (remote/wake-lock.ts)"]
+    audio["one audio element (part 2)"]
+    speech["speechSynthesis and the voice picker (part 2)"]
+    client["EngineClient"]
+  end
+
+  subgraph worker["the Worker (one per tab, Web Lock held)"]
+    session["Session: parseRequest, the operation switch"]
+    engine["engine module: study.rs shown card, STUDY_CALLS, the core's Dispatcher on the web column"]
+    opfs["OPFS: the collection, and the media directory the sync screens fill (part 2)"]
+  end
+
+  frame["card frame: srcdoc, empty sandbox, frame policy, no script"]
+
+  subgraph ci["CI gates"]
+    cargo["cargo tests: the tables, the shown-card rule"]
+    vitest["Vitest and StrykerJS: protocol, machine, input, buttons"]
+    guards["census, page policy and frame policy tests, unchanged"]
+    size["size gate: 8000000 bytes gzip -9"]
+    suite["study suite: Chromium and WebKit, axe on both screens"]
+  end
+
+  keys --> input
+  pad --> input
+  touch --> buttons
+  touch --> routes
+  input --> machine
+  buttons --> machine
+  routes --> machine
+  machine --> client
+  machine --> host
+  machine --> lock
+  machine --> audio
+  machine --> speech
+  client -- "request by id" --> session
+  session -- "answer or refusal" --> client
+  session --> engine
+  engine --> opfs
+  session --> opfs
+  host -- "srcdoc, one way" --> frame
+
+  cargo -.-> engine
+  vitest -.-> machine
+  guards -.-> frame
+  size -.-> engine
+  suite -.-> routes
+```
+
+### What crosses each edge
+
+| edge | carries | never carries |
+|---|---|---|
+| input to the machine | an intent (`confirm`, a grade, `undo`, `bury`, `flag`, `replay`), read against the side | a key or button the map does not name; a key typed into a control; a repeat |
+| the machine to `EngineClient` | `decks`, `study`, `card`, `rate`, `bury`, `flag`, `undoOffer`, `undo` with the card and step the offer named (SPEC-371 R9, R12) and `open` with the languages | `next`, `answer`, `seed`, `snapshot` (the harness's) or any pair |
+| `EngineClient` to the Session | a numbered request; the reply settles it by id | a message from any origin but the page's own |
+| the Session to the engine | one named export per operation, each crossing the Dispatcher on the web column | `run_method`, `run_exempt`, SQL |
+| the host to the frame | the composed `srcdoc`: the frame policy, the card's CSS, the card's body with its classes, and (part 2) `data:` URLs in `src` | a script, a `blob:` or network URL, a token, a message channel |
+| the frame to anything | nothing | everything: no listener exists, and the frame runs no script |
+
+## 2. The review loop
+
+Deck, next card, show, reveal, rate, next. The page keeps only which side is shown; the engine side
+keeps the shown card.
+
+```mermaid
+sequenceDiagram
+  participant L as learner
+  participant P as page
+  participant W as Worker
+  participant E as engine
+
+  P->>W: open with the app's languages
+  W->>E: init, open the collection
+  P->>W: decks
+  W->>E: DeckTree (7,4) with now
+  E-->>W: the tree with new, learning and review counts
+  W-->>P: decks
+  L->>P: choose a deck
+  P->>W: study with the deck id
+  W->>E: SetCurrentDeck (7,22)
+  loop each card
+    P->>W: card
+    W->>E: GetQueuedCards (13,3), the head
+    W->>E: RenderExistingCard (27,6), full render
+    W->>E: StripAvTags (27,9), each side
+    W->>E: DescribeNextStates (13,24) for the head's states
+    W->>E: GetUndoStatus (3,7)
+    Note over W,E: the engine side keeps the card id, its states and its flag
+    W-->>P: the view, or none when the deck is done
+    P->>P: question side into the card frame
+    L->>P: show answer (Space, Enter, a face button, a tap)
+    P->>P: answer side into the card frame, intervals on the buttons
+    L->>P: a grade (Again or Good: a key, the d-pad, the stick, a tap)
+    P->>W: rate with the card id, the rating and the milliseconds
+    W->>E: is this the kept card
+    alt the kept card
+      W->>E: AnswerCard (13,4) with the kept states
+      W-->>P: done, the kept card cleared
+    else another card
+      W-->>P: refused, not-shown
+    end
+  end
+  opt undo, the review's last answer, bury or flag (SPEC-371 R9, R10, SPEC-383 R10)
+    L->>P: u, the remote's undo, or the bar's Undo answer, Undo bury or Undo flag button
+    P->>W: undoOffer
+    W->>E: GetUndoStatus (3,7) and the newest review or the card's CardMark read, judged against the Worker's record
+    W-->>P: the offer with the card as text, the answer and the state it returns to, or none and why
+    P->>P: confirming, the dialog with focus on Keep it
+    alt the Undo action again, or the dialog's Undo answer, Undo bury or Undo flag button
+      P->>W: undo with the offer's card and step
+      W->>E: the owner's gesture for Undo, checked at the write, then Undo (3,8)
+      Note over P,W: the record and the kept card cleared, and the next card request shows the undone card again
+    else Keep it, Escape or any other action
+      P->>P: back to the side, nothing sent, the other action not carried out
+    end
+  end
+  opt bury or flag
+    L->>P: minus, Control or Command with 1, or the remote
+    P->>W: bury or flag with the card id
+    W->>E: BuryOrSuspendCards (13,14) user bury, or SetFlag (5,4) red toggled
+  end
+```
+
+## 3. The review's states
+
+`review.ts` is a table, as #663's wake lock is: every event passes through one step function, and a
+gesture while a request is in flight fires nothing.
+
+```mermaid
+stateDiagram-v2
+  [*] --> loading
+  loading --> question: a view
+  loading --> done: no view
+  loading --> refused: a refusal
+  question --> answer: show answer
+  answer --> busy: a grade
+  question --> busy: bury, or undo asking for the offer
+  answer --> busy: bury, or undo asking for the offer
+  busy --> confirming: offered
+  busy --> question: not-offered from the question, with its notice
+  busy --> answer: not-offered from the answer, with its notice
+  confirming --> busy: undo, or the Undo answer button
+  confirming --> question: keep, Escape or another action, from the question
+  confirming --> answer: keep, Escape or another action, from the answer
+  busy --> loading: undo-refused, with its notice
+  answer --> answer: flag settled
+  question --> question: flag settled
+  busy --> loading: settled
+  busy --> loading: not-shown
+  busy --> busy: any gesture, dropped
+  refused --> loading: retry
+  done --> [*]
+```
+
+A card the frame refuses (`escaped`) stays in `question` or `answer` with a message in place of the
+frame: its controls stay usable, so the learner can still rate, bury or flag it.
+
+## 4. Media, sound and speech (part 2)
+
+```mermaid
+flowchart TD
+  view["the card view: each side's text"] --> names["ExtractMediaFiles (41,8): the names"]
+  names --> read["Worker reads each name from the OPFS media directory"]
+  read --> allow{"type on the allow-list, within the per-file and per-card bounds"}
+  allow -- "yes" --> url["data: URL"]
+  allow -- "no" --> skip["left as named: the frame policy loads nothing"]
+  url --> doc["frameDocument replaces the matching src in its inert parse"]
+  doc --> frame["card frame"]
+  view --> tags["ExtractAvTags (27,3): sound and speech tags"]
+  tags --> sound["sound: the page's audio element, after user activation"]
+  tags --> tts["speech: speechSynthesis, BCP 47, stored voice, named voice, default"]
+```
+
+The seams the web sync screens (#631) need: the OPFS media directory's name and layout, which their
+media transport fills; the deck list's empty state, whose one action opens their entry; and the
+Worker, whose lock their sync must hold while it writes the collection.
+
+## 5. Media, sound and speech through the core's face (part 2)
+
+Section 4's Worker-built `data:` URLs are superseded (ADR-361 D12). The Worker asks the engine for
+the shown card's two faces twice, inside the one queued operation, so no second actor appears: the
+first ask answers the media names the core wanted, and the second carries their bytes. The page
+plays the face's clips; the frame receives only the face's text. The install surface and the
+mapping screen sit beside the review.
+
+```mermaid
+flowchart TD
+  review["Review: the card is shown"] -->|"faces of the shown card"| worker["Worker: one queued operation"]
+  worker -->|"first ask, no files"| engine["Engine: the core's face call over a reader"]
+  engine -->|"both faces and the wanted names with limits"| worker
+  worker -->|"each wanted name, first limit bytes"| media["OPFS directory deck-streak-media"]
+  media -->|"bytes, or absent"| worker
+  worker -->|"second ask, with the files"| engine
+  engine -->|"both faces: text with data URLs, clips, omitted"| worker
+  worker -->|"the second answer"| review
+  review -->|"face text"| frame["Card frame: policy and sandbox unchanged"]
+  review -->|"autoplay on show and reveal, replay on demand"| player["Clip player: one page audio element"]
+  player -->|"sound: a page URL from bytes and type, revoked after"| audio["Page audio element"]
+  player -->|"speech: language and rate over 0.5"| speaker["speechSynthesis with the stored voice"]
+  voices["Voice picker: one key, per language"] --> speaker
+  mapping["Mapping screen at /study/mapping: one key, per mode"] -->|"keys and buttons"| input["Study input: readKey and GamepadReader"]
+  input -->|"one handler"| review
+  install["manifest.webmanifest and icons, linked from app.html"] --> app["The app, installable, no service worker"]
+```
+
+## 6. The late line: the due day from the engine to the review (SPEC-376)
+
+Read at the base `5fe4a48a09bc72700f434e7747ad64916af76902` (`dev`). Decided by ADR-387. This
+section is appended to `docs/schematics/web-study-screens.md`; no line above it changes.
+
+The due day has one source, the shown card's own fields in the engine's day, and one rule, the
+engine core's `past_due_day`. The web engine carries the rule's answer to the page as the card
+view's `late`; the page draws one line from it. The native review reads nothing yet (`#738`).
+
+### 6a. Data flow, per client
+
+```mermaid
+flowchart LR
+  subgraph engine["the engine (Worker, or the native process)"]
+    queued["GetQueuedCards (13,3): the head card, with its queue, due, home deck due and home deck"]
+    timing["the scheduler's timing of today: the day count and the next rollover"]
+  end
+  subgraph core["the engine core"]
+    dayread["Dispatcher: the core's own read of the engine's day, behind no adapter pair"]
+    rule["late::past_due_day(card, day)"]
+  end
+  subgraph web["web engine (wasm32)"]
+    view["current_card: the view, with late"]
+  end
+  subgraph page["page"]
+    proto["CardView.late"]
+    screen["ReviewScreen: one line above the card when late"]
+    msgs["study_late_review, in each of the 7 locales"]
+  end
+  subgraph native["native review"]
+    none["no line: its own issue"]
+  end
+  timing --> dayread
+  dayread --> rule
+  queued --> rule
+  rule --> view
+  view --> proto
+  proto --> screen
+  msgs --> screen
+  rule -. "the same rule, when its issue lands" .-> none
+```
+
+### 6b. The rule
+
+| the card's queue | its due day | past its due day when |
+|---|---|---|
+| review, or day learning | its home deck due when it sits in a filtered deck and that due is set, else its own due | that day is earlier than the engine's day count |
+| intraday learning | its due instant | that instant is earlier than the engine's next rollover less one day |
+| new, preview, or any other | none | never |
+
+### 6c. What crosses each new edge
+
+| edge | carries | never carries |
+|---|---|---|
+| the engine to the core's day read | the day count and the next rollover, decoded from the engine's own reply | a clock read by the core itself; an adapter's request |
+| the core's rule to the web engine | one boolean for the card the view shows | the due day, the day count or a date |
+| the web engine to the page | `late` on the card view, built when the card is shown | a number, a date or a count of days |
+| the page to the learner | one line in the app's locale, on both sides of the card | the due date, the days overdue, a word of blame |
+
+### 6d. When the day turns
+
+The view is built when the card is shown. A card shown before the rollover and answered after it
+keeps the view it was shown with: a card due today shows no line and is then answered past its due
+day (the line is absent, never false); a card past its due day when shown is still past it when
+answered (the line stays true).
+
+## 7. AI and your decks: the mark from the server to every AI duty (SPEC-381)
+
+Read at the base `e7ecf10d6b796eb1f86fe6544e04a96a0583c791` (`dev`). Every `path:line` in this
+section is at that base; a name this section adds (`sensitive_decks`, `admits`, `DeckGate`,
+`hold_back_sensitive`, `/study/ai-decks`) is SPEC-381's and has no line yet. Decided by ADR-392.
+
+### 7a. Data flow: where the mark lives and who reads it
+
+The mark is a row on the server. The collection sync never carries it, so every client, and every
+duty, reads the same set, and a client that does not know the setting cannot weaken it.
+
+```mermaid
+flowchart LR
+    learner["learner"] --> screen["/study/ai-decks: one switch per deck"]
+    decklist["deck list"] -->|link| screen
+    screen -->|"api.ts: GET and PUT"| routes["sensitive_decks_routes: owner session, same-origin change"]
+    routes --> usecase["coordination::sensitive_decks"]
+    usecase --> store[("sensitive_decks: one row per marked deck")]
+    store -->|read_marked| rule["ingest::sensitive::admits: the one rule"]
+    tree[("collection deck tree, reader.rs:35")] --> rule
+    rule --> selection["readings: hold_back_sensitive"]
+    rule --> wiring["daemon wiring: judge_deck_scope"]
+    wiring --> gate["agent: DeckGate in decide"]
+    native["native clients: no setting"] -.->|"collection sync carries no mark"| tree
+```
+
+### 7b. The gate in front of every AI duty, and the fail-closed path
+
+`decide` (`crates/agent/src/duty.rs:165`) asks the gate after the route check (`:166-168`) and before
+the input gate (`:169-173`), `compose` (`:175`) and the runner (`:178`). Every arm but one ends the
+run before the runner starts.
+
+```mermaid
+flowchart TD
+    start["decide"] --> route{"AI route present?"}
+    route -->|no| absent["ai_route_absent, recorded"]
+    route -->|yes| scope{"cards present and scope empty?"}
+    scope -->|yes| unread["withheld, class deck-unreadable, one alert"]
+    scope -->|no| ask["DeckGate: read the set, resolve each deck"]
+    ask -->|"set unreadable or a deck unresolved"| unread
+    ask -->|"a home deck, current deck or ancestor is marked"| kept["withheld, class deck-sensitive, one alert"]
+    ask -->|admitted| input["input gate"]
+    input --> compose["compose"]
+    compose --> runner["runner: the one launch"]
+    runner --> output["output gate, then the vault"]
+```
+
+The day set's selection reads the same rule first, so a reading skips the kept-away decks and goes
+on with the rest. A failed read of the set there ends the resolution with its named error and
+records no day, as `ResolveError::Ledger` does (`crates/coordination/src/readings/resolve.rs:90`).
+
+### 7c. What crosses each new edge
+
+| edge | carries | never carries |
+|---|---|---|
+| the screen to the routes | a deck id as a decimal string and one boolean | a deck name or a card |
+| the routes to the learner | the marked ids, ascending | another learner's data, a name |
+| the store to the rule | the marked ids | a name or a card |
+| the selection to the duty | the cards it kept, each with its home and current deck ids | a kept-away card |
+| the gate to the run record | the class and counts | a deck name, an id or a card's text |
+
+### 7d. A mark while a run is in flight
+
+A mark holds for every run whose gate reads the set after the mark commits. A run whose gate read
+the set before it may send that deck's cards once. The gate reads the set again in `decide`, after
+the selection, so a mark made between a day's selection and its run holds. The formal entry
+`SensitiveDeckGate` states both, and its witness `a-gate-that-trusts-the-selection` is the design
+that would let such a mark through.
+
+## 8. The one-tap sync after a late review (SPEC-409)
+
+Read at the base `6e256acb925d5f6b4da908974e698a696bc651d8` (`dev`). Decided by ADR-423. This
+section is appended to `docs/schematics/web-study-screens.md`; no line above it changes.
+
+A late review has one source, section 6's rule, carried to the review as the card view's `late`.
+The review machine counts each rate of a late view the engine answers; the screen raises the offer
+at the first, below the control bar. One tap runs the client's own sync through the Worker's one
+queue and then reads the unsynced count, exactly as the Sync page's "Sync now" does. The session's
+two syncs and the server's daily sync are untouched. The native app raises nothing yet: it has no
+late line (`#738`) and no sync (`#633`).
+
+### 8a. Data flow, from the late review to the sync
+
+```mermaid
+flowchart LR
+  subgraph core["the engine core"]
+    lateRule["late::past_due_day, section 6"]
+  end
+  subgraph webengine["web engine"]
+    cardView["the card view, with late"]
+  end
+  subgraph machine["review machine, review.ts"]
+    lateRate["a rate of a late view, answered"]
+    lateCount["lateReviews rises by one"]
+  end
+  subgraph page["review screen"]
+    offerBlock["the offer, below the control bar"]
+    tapSync["Sync now, one tap"]
+    offerLine["the offer's status line"]
+  end
+  subgraph worker["the Worker's one queue"]
+    queueRun["sync, then unsynced"]
+  end
+  subgraph kept["unchanged by this section"]
+    sessionSyncs["the session's two syncs, at the open and the close"]
+    dailySync["the server's daily sync, once a study day"]
+    ownerRequest["the owner's sync request, through the bot"]
+  end
+  syncStore["the sync server"]
+  nativeApp["native app: no offer, its own issues"]
+  lateRule --> cardView --> lateRate --> lateCount --> offerBlock --> tapSync --> queueRun
+  queueRun --> offerLine
+  queueRun --> syncStore
+  sessionSyncs --> queueRun
+  dailySync --> syncStore
+  ownerRequest --> dailySync
+  lateRule -. "when the native late line and sync land" .-> nativeApp
+```
+
+### 8b. The offer's states
+
+```mermaid
+stateDiagram-v2
+  [*] --> hidden
+  hidden --> shown: the first late review of the screen settles, and the screen has an update client
+  shown --> working: Sync now
+  working --> outcome: the sync and the count answer, or one throws
+  outcome --> working: Sync now again
+  shown --> dismissed: Not now
+  outcome --> dismissed: Not now
+  working --> dismissed: Not now, and the running sync ends with no line
+  dismissed --> [*]
+```
+
+A screen given no update client stays `hidden` for its life. Neither `hidden`, `shown` nor
+`dismissed` calls the client; `working` makes one `sync` call and then one `unsynced` call.
+
+### 8c. One tap, in order
+
+```mermaid
+sequenceDiagram
+  participant L as learner
+  participant S as ReviewScreen
+  participant U as UpdateNow
+  participant W as Worker queue
+  L->>S: presses Sync now
+  S->>U: tap
+  U-->>S: working, the button disabled
+  U->>W: sync
+  W-->>U: the status word and the required kind
+  U->>W: unsynced
+  W-->>U: the reviews still waiting
+  U-->>S: the outcome line, then the count
+```
+
+### 8d. The line after each answer
+
+| the sync's answer | the line | then |
+|---|---|---|
+| status `held`, a required kind `choosing` does not name | `study_update_done` "Sync finished." | `sync_unsynced` with the count |
+| a required kind `choosing` names | `sync_full_required` | the link to the Sync page (`study_update_open_sync`), then the count |
+| status `absent` or `needs-sign-in` | the Sync page's line for that word | the link to the Sync page, then the count |
+| any other status word | the Sync page's line for that word | the count |
+| `sync` or `unsynced` throws | `study_refused_engine` | no count |
+
+After every row, "Sync now" is enabled again and "Not now" stays.
+
+### 8e. What stays as it is
+
+| sync | its trigger | its timing | changed here |
+|---|---|---|---|
+| the server's daily sync | the job table, claimed once per study day (ADR-037) | once a study day | no |
+| the owner's sync request | the bot's `/sync` | when the owner asks | no |
+| the session's syncs | the study engine's open and close (ADR-388 D12) | once after the open, once before the close | no |
+| the Sync page's "Sync now" | the learner, on the Sync page | when pressed | no |
+| the offer's "Sync now" | the learner, after a late review | when pressed | added |

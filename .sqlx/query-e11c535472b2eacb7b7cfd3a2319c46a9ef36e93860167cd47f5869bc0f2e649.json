@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT amount AS \"amount!: u32\" FROM xp_ledger\n                   WHERE source = ?1 AND track = ?2\n                     AND (study_day = ?3 OR (?4 = 'once' AND scope = 'once'))\n                   ORDER BY id LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "amount!: u32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_ledger",
+            "name": "amount"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e11c535472b2eacb7b7cfd3a2319c46a9ef36e93860167cd47f5869bc0f2e649"
+}

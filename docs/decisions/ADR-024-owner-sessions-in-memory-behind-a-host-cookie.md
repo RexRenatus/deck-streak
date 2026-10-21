@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: "2026-09-27"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -38,11 +38,44 @@ Chosen option as above. The session id is drawn from the operating system's gene
 (`getrandom`), hex-encoded in the cookie, and only its SHA-256 is kept, so a memory dump holds no
 usable id. The oldest session is evicted when a ninth is opened. `DECKSTREAK_INIT_DATA_MAX_AGE_SECONDS`
 overrides the freshness bound; a future `auth_date` more than 60 seconds ahead is refused as clock
-skew beyond tolerance. `getrandom` and `form_urlencoded` are admitted to
-`[workspace.dependencies]` (`hmac`, `sha2` and `subtle` are ADR-006's); `tower` for tests is
-ADR-025's. Handshakes are bounded at 30 a minute per process (web-security's `ws.rate-limit`): an owner opens
+skew beyond tolerance. `getrandom` is admitted to `[workspace.dependencies]` (`hmac`, `sha2` and
+`subtle` are ADR-006's); `tower` for tests is ADR-025's. `form_urlencoded`, which this record first
+admitted too, is not: see "Decided at delivery". Handshakes are bounded at 30 a minute per process (web-security's `ws.rate-limit`): an owner opens
 the Mini App a few times an hour, so the bound never touches real use, and it caps the HMAC work a
 flood of forged payloads can buy.
+
+### Decided at delivery (SPEC-024 §7)
+
+The delivery measured what this record had assumed, and decided each of the following against its
+alternatives:
+
+- **The launch data is decoded by one strict decoder, and `form_urlencoded` is not admitted.**
+  `form_urlencoded` 1.2.2's `parse` decodes bytes that are not UTF-8 lossily and keeps a malformed
+  escape as text, so it cannot refuse a field that does not decode (SPEC-024 R1). Chosen against:
+  - `form_urlencoded` alone, which would accept a payload whose hash covers the lossy reading;
+  - `form_urlencoded` with a strict pre-check, which is two decoders of one input: a disagreement
+    between the check and the reading the hash is verified against is a parser differential, the
+    class of flaw a validator must not have.
+  The decoder is twenty lines, and the malformed-payload test signs each case over what a lenient
+  decoder reads, so only the strict reading refuses it.
+- **The handshake's body limit is 16 KiB,** on the handler, inside the shell's 2 MiB (web-security's
+  `ws.request-body-limit`). Chosen against the shell's limit alone, which lets each of 30 handshakes
+  a minute buffer and parse up to 2 MiB of JSON for launch data of a few kilobytes, and against 4
+  KiB, which a user object with long names and a photo address and a long start parameter can
+  approach: a refused handshake locks the owner out until the next launch.
+- **A handshake ends the session its request carried,** then opens a new one. Chosen against
+  leaving the carried session live until it idles out: its id would keep working after a sign-in,
+  which rotation exists to prevent (the auth pack's `auth.session-rotated-on-login`), and it would
+  hold one of the eight places, so a device signing in again could evict another device's session.
+- **The session store compares digests in constant time** (`subtle`, ADR-006) in a list of at most
+  eight. Chosen against a map keyed by the digest, whose lookup compares the digest bytes in
+  variable time; that leaks only a SHA-256 of a random id, but the constant-time compare costs
+  nothing at eight entries and leaves no comparison to argue about.
+- **hmac 0.13.0 and sha2 0.11.0,** RustCrypto's current generation (digest 0.11.3), whose
+  `verify_slice` compares through `ctutils`. Chosen against hmac 0.12 and sha2 0.10, the generation
+  sqlx-core 0.9 still compiles: sharing it would save compiling a second digest generation, and
+  would pin the validator to the older line; cargo-deny reports the two generations as duplicate
+  versions, which `deny.toml` warns on and does not refuse.
 
 ### Consequences
 

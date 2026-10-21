@@ -1,0 +1,98 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT study_day, course, reviews, seconds, answered, passed, created_at FROM daily_lang_stats ORDER BY study_day, course",
+  "describe": {
+    "columns": [
+      {
+        "name": "study_day",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_lang_stats",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "course",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "daily_lang_stats",
+            "name": "course"
+          }
+        }
+      },
+      {
+        "name": "reviews",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_lang_stats",
+            "name": "reviews"
+          }
+        }
+      },
+      {
+        "name": "seconds",
+        "ordinal": 3,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "daily_lang_stats",
+            "name": "seconds"
+          }
+        }
+      },
+      {
+        "name": "answered",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_lang_stats",
+            "name": "answered"
+          }
+        }
+      },
+      {
+        "name": "passed",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_lang_stats",
+            "name": "passed"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_lang_stats",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4b6944e693caf5def5b6836a1b7ff7f7374f86aa13cda538acf9bea86329a4ee"
+}

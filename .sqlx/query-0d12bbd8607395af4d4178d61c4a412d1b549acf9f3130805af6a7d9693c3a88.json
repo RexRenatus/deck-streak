@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO sync_runs (trigger, study_day, started_at, finished_at, status, reason, attempts, full_download, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": []
+  },
+  "hash": "0d12bbd8607395af4d4178d61c4a412d1b549acf9f3130805af6a7d9693c3a88"
+}

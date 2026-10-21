@@ -1,0 +1,17 @@
+# The sync job's timer (SPEC-027, SPEC-032; ADR-027, ADR-037): once a study day, at the rollover
+# hour, minute 7. The job table in crates/coordination/src/jobs.rs is the one schedule, and
+# crates/coordination/tests/job_table.rs holds this calendar equal to it. The calendar is written in
+# UTC, the neutral zone, at the default rollover hour; the private rail renders the deployment's own
+# zone and hour (deploy/README.md). With no Unit=, the timer starts the job instance of its own name.
+[Unit]
+Description=DeckStreak's daily sync, at the rollover hour, minute 7
+X-DurableServices-Waive=randomized-delay-missing the job table places each job on its own minute (ADR-027), and a random delay would move each fire off its minute
+
+[Timer]
+OnCalendar=*-*-* 04:07:00 UTC
+# The job table's one catch-up job: a sync missed while the host was down runs once when the timer
+# next activates, and the runner records a fire more than six hours late as missed (ADR-027).
+Persistent=true
+
+[Install]
+WantedBy=timers.target

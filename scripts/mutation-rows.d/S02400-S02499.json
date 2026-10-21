@@ -1,0 +1,98 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S02401-THE-HASH-IS-COMPARED-IN-CONSTANT-TIME",
+        "identity",
+        "src/init_data.rs",
+        "    mac.verify_slice(&hash)\n        .map_err(|_| Refusal::InitDataInvalid)?;",
+        "    if mac.finalize().into_bytes().as_slice() != hash.as_slice() {\n        return Err(Refusal::InitDataInvalid);\n    }",
+        "boundary::the_hash_is_compared_only_through_verify_slice",
+        "launch data's hash is compared only through verify_slice, in constant time; a plain comparison accepts and refuses the same payloads, so only the boundary scan can tell"
+      ],
+      [
+        "S02402-THE-FRESHNESS-BOUND-IS-AT-MOST-A-DAY",
+        "identity",
+        "src/settings.rs",
+        "        if max_age.subsec_nanos() == 0 && seconds >= 1 && seconds <= LONGEST_MAX_AGE.as_secs() {",
+        "        if max_age.subsec_nanos() == 0 && seconds >= 1 && seconds <= LONGEST_MAX_AGE.as_secs() + 1 {",
+        "init_data::the_freshness_bound_is_read_from_its_setting",
+        "the auth_date bound is at most 86400 seconds; cargo-mutants never looks inside Freshness::new"
+      ],
+      [
+        "S02403-LAUNCH-DATA-IS-FRESH-FOR-AN-HOUR",
+        "identity",
+        "src/settings.rs",
+        "pub const DEFAULT_MAX_AGE: Duration = Duration::from_hours(1);",
+        "pub const DEFAULT_MAX_AGE: Duration = Duration::from_hours(2);",
+        "init_data::a_stale_or_future_auth_date_is_refused_with_401",
+        "launch data older than the default hour is stale"
+      ],
+      [
+        "S02404-THE-CALLER-IS-PINNED-TO-THE-OWNER",
+        "identity",
+        "src/owner.rs",
+        "            if self.owner.is(caller.user()) {",
+        "            if self.owner.is(self.owner.user()) {",
+        "owner::a_valid_payload_for_another_user_is_refused_with_403",
+        "the gate compares the caller with the owner, not the owner with itself (CHARTER 14)"
+      ],
+      [
+        "S02406-THE-FUTURE-SKEW-IS-SIXTY-SECONDS",
+        "identity",
+        "src/settings.rs",
+        "pub const FUTURE_SKEW: Duration = Duration::from_mins(1);",
+        "pub const FUTURE_SKEW: Duration = Duration::from_secs(61);",
+        "init_data::an_auth_date_60_seconds_ahead_is_fresh_and_61_is_refused_with_401",
+        "launch data dated more than 60 seconds ahead of the server's clock is stale; the killer spells 60 and 61 literally, since dates built from FUTURE_SKEW move with its mutant, and cargo-mutants never mutates a constant"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S02405-THE-SESSION-COOKIE-IS-HTTPONLY",
+        "crates/identity/src/session.rs",
+        "            \"__Host-deckstreak_session={}; Path=/; Max-Age={}; Secure; HttpOnly; SameSite=Strict\",",
+        "            \"__Host-deckstreak_session={}; Path=/; Max-Age={}; Secure; SameSite=Strict\",",
+        "api",
+        "session_routes::the_session_cookie_is_host_prefixed_secure_httponly_and_strict",
+        "the session cookie a handshake sets is HttpOnly, so no script can read it; cargo-mutants never mutates a string"
+      ],
+      [
+        "S02407-THE-NESTING-ARM-READS-THE-COUNT",
+        "tools/log-capture/capture.rs",
+        "        held == 0,\n",
+        "        true,\n",
+        "kernel",
+        "log_capture_class::a_capture_nested_inside_a_capture_on_one_thread_is_refused",
+        "a capture nested inside another on one thread is refused by the helper's own count, so it is named as nested and not as a missing floor; cargo-mutants lists no mutant in tools/"
+      ],
+      [
+        "S02408-A-MISSING-FLOOR-HAS-ITS-OWN-MESSAGE",
+        "tools/log-capture/capture.rs",
+        "        \"a capture is refused: the floor is not this thread's default\"\n",
+        "        \"a capture nested inside another capture on one thread is refused\"\n",
+        "kernel",
+        "log_capture_class::a_capture_where_the_floor_is_not_the_default_names_the_missing_floor",
+        "a capture where the floor is not this thread's default, while the thread holds none, is refused by a message naming the missing floor, never the nesting message; cargo-mutants never mutates a string"
+      ],
+      [
+        "S02409-A-DROPPED-HELD-CAPTURE-LOWERS-THE-COUNT",
+        "tools/log-capture/capture.rs",
+        "impl Drop for CaptureGuard {\n    fn drop(&mut self) {\n        HELD.with(lower);\n    }\n}\n",
+        "impl Drop for CaptureGuard {\n    fn drop(&mut self) {}\n}\n",
+        "kernel",
+        "log_capture_class::a_capture_after_a_held_capture_dropped_is_admitted",
+        "a held capture's guard lowers the helper's count when it drops, so a later capture on the thread is admitted and not refused as nested; cargo-mutants lists no mutant in tools/"
+      ],
+      [
+        "S02410-A-PANICKING-BODY-LOWERS-THE-COUNT",
+        "tools/log-capture/capture.rs",
+        "    HELD.with(raise);\n    let _scoped = Scoped;\n    tracing::subscriber::with_default(subscriber, body)\n",
+        "    HELD.with(raise);\n    let out = tracing::subscriber::with_default(subscriber, body);\n    HELD.with(lower);\n    out\n",
+        "kernel",
+        "log_capture_class::a_capture_after_a_panicking_body_is_admitted",
+        "a capture whose body panics lowers the helper's count as it unwinds, through with_capture's drop guard, so a later capture on the thread is admitted and not refused as nested; cargo-mutants lists no mutant in tools/"
+      ]
+    ]
+  }
+}

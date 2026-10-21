@@ -1,0 +1,144 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S34700-THE-LOGIN-PAIR-IS-THE-ENGINES-LOGIN-CALL",
+        "ffi",
+        "src/allow_list.rs",
+        "        method: 3,\n        name: \"BackendSyncService.SyncLogin\",",
+        "        method: 4,\n        name: \"BackendSyncService.SyncLogin\",",
+        "login::a1_a_login_through_the_adapter_returns_the_servers_host_key",
+        "SyncLogin is the pair (1,3); renumbered to (1,4), the adapter would refuse a native client's login before the engine sees it (SPEC-347 R1, A1)"
+      ],
+      [
+        "S34701-THE-CORE-ADMITS-THE-LOGIN-PAIR",
+        "engine-core",
+        "src/table.rs",
+        "        method: 3,\n        name: \"BackendSyncService.SyncLogin\",",
+        "        method: 4,\n        name: \"BackendSyncService.SyncLogin\",",
+        "parity::each_adapter_table_equals_its_transport_column",
+        "the core's native column holds the login as (1,3); renumbered to (1,4), it would admit a pair the adapter's allow-list never named and refuse the login (SPEC-347 R1, A5)"
+      ],
+      [
+        "S34702-AN-ABSENT-ENDPOINT-IS-REFUSED",
+        "engine-core",
+        "src/login_guard.rs",
+        "        return Some(ABSENT);",
+        "        return Some(ABSENT).filter(|_| false);",
+        "login_guard::a3_the_guard_admits_https_and_loopback_http_alone",
+        "a login that names no endpoint is refused; admitted, the engine would send the password to its own built-in server (SPEC-347 R2, A3)"
+      ],
+      [
+        "S34703-ONLY-HTTPS-IS-ADMITTED",
+        "engine-core",
+        "src/login_guard.rs",
+        "url.scheme() == \"https\"",
+        "url.scheme() != \"https\"",
+        "login_guard::a3_the_guard_admits_https_and_loopback_http_alone",
+        "only an https endpoint, or plain http to a loopback address, is admitted; inverted, every https server is refused and every other scheme admitted (SPEC-347 R2, A3)"
+      ],
+      [
+        "S34704-PLAIN-HTTP-ONLY-TO-LOOPBACK",
+        "engine-core",
+        "src/login_guard.rs",
+        "is_loopback(&url)",
+        "(is_loopback(&url) || true)",
+        "login_guard::a3_the_guard_admits_https_and_loopback_http_alone",
+        "plain http is admitted only to a loopback IP literal; forced true, the password would cross the network in the clear to any http host (SPEC-347 R2, A3)"
+      ],
+      [
+        "S34705-NO-CREDENTIALS-IN-THE-URL",
+        "engine-core",
+        "src/login_guard.rs",
+        "!url.username().is_empty() || url.password().is_some()",
+        "false",
+        "login_guard::a3_the_guard_admits_https_and_loopback_http_alone",
+        "an endpoint carrying a username or a password is refused; with the check deleted, an https URL's userinfo would reach the engine beside the login (SPEC-347 R2, A3)"
+      ],
+      [
+        "S34706-THE-LOGIN-PASSES-THE-GUARD",
+        "engine-core",
+        "src/dispatch.rs",
+        "                    login_guard::check(input).map_err(|error| Refusal::Engine { error })?;",
+        "                    let _ = login_guard::check;",
+        "login_guard::a4_a_refused_login_never_reaches_the_engine_and_names_no_secret",
+        "the dispatcher runs the guard on the login before the engine sees it; with the call removed, a refused endpoint reaches the engine's own HTTP client (SPEC-347 R2, A4)"
+      ],
+      [
+        "S34707-THE-GUARD-REFUSES-AS-INVALID-INPUT",
+        "engine-core",
+        "src/login_guard.rs",
+        "            kind: Kind::InvalidInput.into(),",
+        "            kind: Kind::SyncOtherError.into(),",
+        "login_guard::a4_a_refused_login_never_reaches_the_engine_and_names_no_secret",
+        "the guard refuses in the engine's own shape, kind INVALID_INPUT; as SYNC_OTHER_ERROR, a client would read a refused endpoint as a failed sync (SPEC-347 R2, A4)"
+      ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S34710-THE-REGISTER-IS-CLOSED",
+        "scripts/tests/test_ios_thin_swift.py",
+        "            problems.append(f\"{path}: the register: not listed\")",
+        "            pass",
+        "a tracked Swift file the register does not list is refused by the register's name; with the refusal gone, an unlisted file is judged by no role at all (SPEC-347 R11, A12)",
+        "test_ios_thin_swift.EverySwiftFileKeepsItsRole.test_every_swift_file_keeps_its_role_its_doors_and_its_budget"
+      ],
+      [
+        "S34711-ONLY-THE-CREDENTIAL-FILE-NAMES-SECURITY",
+        "scripts/tests/test_ios_thin_swift.py",
+        "    \"imports Security\": (imports(\"Security\"), {\"credential\"}),",
+        "    \"imports Security\": (imports(\"Security\"), COUNTED),",
+        "only the credential file may import Security; opened to every counted role, the model could reach the Keychain itself (SPEC-347 R11, A12)",
+        "test_ios_thin_swift.EverySwiftFileKeepsItsRole.test_every_swift_file_keeps_its_role_its_doors_and_its_budget"
+      ],
+      [
+        "S34712-A-BUDGET-IS-EXACT",
+        "scripts/tests/test_ios_thin_swift.py",
+        "        exact = count == recorded",
+        "        exact = count <= recorded",
+        "a file's decision count equals the register's; as an upper bound, a register recording more decisions than the file holds would let logic grow unseen (SPEC-347 R11, A12)",
+        "test_ios_thin_swift.EverySwiftFileKeepsItsRole.test_every_swift_file_keeps_its_role_its_doors_and_its_budget"
+      ],
+      [
+        "S34713-NO-FILE-NAMES-USER-DEFAULTS",
+        "scripts/tests/test_ios_thin_swift.py",
+        "    \"UserDefaults\": re.compile(r\"UserDefaults\"),",
+        "",
+        "no Swift file names UserDefaults; dropped from the forbidden names, a setting could outlive the engine's collection in a second store (SPEC-347 R11, A12)",
+        "test_ios_thin_swift.EverySwiftFileKeepsItsRole.test_every_swift_file_keeps_its_role_its_doors_and_its_budget"
+      ],
+      [
+        "S34714-THE-ENDPOINT-PLACEHOLDER-IS-INVALID",
+        "scripts/tests/test_ios_app_tree.py",
+        "        if not host.endswith(\".invalid\"):",
+        "        if False:",
+        "the committed sync endpoint is on a host under .invalid; without the test, a real host could be committed as the placeholder (SPEC-347 R5, A13)",
+        "test_ios_app_tree.TheAppTreeCarriesTheSeam.test_the_app_tree_carries_the_seam_and_keeps_the_credential_in_the_keychain"
+      ],
+      [
+        "S34715-THE-ITEM-STAYS-ON-THIS-DEVICE",
+        "scripts/tests/test_ios_app_tree.py",
+        "        if token != ACCESSIBLE:",
+        "        if False:",
+        "the store names no accessibility but the device-only one; without the test, an accessibility that lets the item leave the device is admitted beside it (SPEC-347 R9, A13)",
+        "test_ios_app_tree.TheAppTreeCarriesTheSeam.test_the_app_tree_carries_the_seam_and_keeps_the_credential_in_the_keychain"
+      ],
+      [
+        "S34716-APP-TRANSPORT-SECURITY-IS-UNTOUCHED",
+        "scripts/tests/test_ios_app_tree.py",
+        "    if \"NSAppTransportSecurity\" in info:",
+        "    if False:",
+        "the property list holds no NSAppTransportSecurity key; without the test, the app could relax transport security unseen (SPEC-347 R5, A13)",
+        "test_ios_app_tree.TheAppTreeCarriesTheSeam.test_the_app_tree_carries_the_seam_and_keeps_the_credential_in_the_keychain"
+      ],
+      [
+        "S34717-THE-ARCHIVE-IS-UNSIGNED",
+        "scripts/tests/test_ci_workflows.py",
+        "        if \"CODE_SIGNING_ALLOWED=NO\" not in run:",
+        "        if False:",
+        "the device archive turns code signing off on its command line; without the test, an archive step that signs is admitted (SPEC-347 R13, A14)",
+        "test_ci_workflows.TheAppIsGeneratedTestedAndArchived.test_the_app_is_generated_tested_and_archived_in_the_harness_job"
+      ]
+    ]
+  }
+}

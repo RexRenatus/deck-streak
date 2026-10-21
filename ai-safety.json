@@ -1,0 +1,115 @@
+{
+  "schema": "phx.ai.safety.v1",
+  "tasks": [
+    {
+      "id": "daily-reading-law",
+      "format": "persona",
+      "kind": "law",
+      "system": [
+        "agent/prompts/system/rules.md",
+        "agent/prompts/system/untrusted-policy.md"
+      ],
+      "prompt": "agent/prompts/daily-reading.prompt.md",
+      "inputs": [
+        {
+          "slot": "persona",
+          "source": "template"
+        },
+        {
+          "slot": "duty_rules",
+          "source": "duty"
+        },
+        {
+          "slot": "memory",
+          "source": "memory"
+        },
+        {
+          "slot": "cards",
+          "source": "cards"
+        }
+      ],
+      "tools": [],
+      "outputs": [
+        "agent/golden/daily-reading/law/*.output.md"
+      ],
+      "gate": [
+        "ai-content-safety:output-links",
+        "ai-content-safety:output-invisible",
+        "ai-content-safety:output-marked",
+        "persona-core:output-contract",
+        "persona-core:no-dates",
+        "persona-core:scrubber",
+        "persona-core:no-human-claim",
+        "persona-core:memory-scope",
+        "law-professors:rule-cites-corpus",
+        "law-professors:citations-resolve",
+        "law-professors:quotes-grounded",
+        "law-professors:authority-grounded"
+      ],
+      "on_invalid": "withhold"
+    },
+    {
+      "id": "daily-reading-language",
+      "format": "persona",
+      "kind": "language",
+      "system": [
+        "agent/prompts/system/rules.md",
+        "agent/prompts/system/untrusted-policy.md"
+      ],
+      "prompt": "agent/prompts/daily-reading.prompt.md",
+      "inputs": [
+        {
+          "slot": "persona",
+          "source": "template"
+        },
+        {
+          "slot": "duty_rules",
+          "source": "duty"
+        },
+        {
+          "slot": "memory",
+          "source": "memory"
+        },
+        {
+          "slot": "cards",
+          "source": "cards"
+        }
+      ],
+      "tools": [],
+      "outputs": [
+        "agent/golden/daily-reading/language/*.output.md"
+      ],
+      "gate": [
+        "ai-content-safety:output-links",
+        "ai-content-safety:output-invisible",
+        "ai-content-safety:output-marked",
+        "persona-core:output-contract",
+        "persona-core:no-dates",
+        "persona-core:scrubber",
+        "persona-core:no-human-claim",
+        "persona-core:memory-scope"
+      ],
+      "on_invalid": "withhold"
+    }
+  ],
+  "links": {
+    "allow": [
+      "deckstreak.example"
+    ]
+  },
+  "disclosure": {
+    "text": "Your coach here is an AI, not a person.",
+    "surfaces": [
+      "crates/bot/src/commands.rs"
+    ]
+  },
+  "redteam": {
+    "cases": "agent/redteam",
+    "tests": [
+      "crates/agent/tests/redteam.rs"
+    ]
+  },
+  "agent": {
+    "settings": "agent/settings.json"
+  }
+}

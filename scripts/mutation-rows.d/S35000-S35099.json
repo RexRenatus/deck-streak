@@ -1,0 +1,397 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S35000-DECK-TREE-IS-METHOD-FOUR",
+        "web-engine",
+        "src/study.rs",
+        "    (service::DECKS, 4, \"deck_tree\"),",
+        "    (service::DECKS, 5, \"deck_tree\"),",
+        "study::the_study_calls_are_the_reviews_pairs",
+        "deck_tree is the pair (7,4); renumbered to (7,5), the web engine would refuse the deck list's tree and admit a method the review never named (SPEC-350 A1)"
+      ],
+      [
+        "S35001-SET-CURRENT-DECK-IS-METHOD-TWENTY-TWO",
+        "web-engine",
+        "src/study.rs",
+        "    (service::DECKS, 22, \"set_current_deck\"),",
+        "    (service::DECKS, 23, \"set_current_deck\"),",
+        "study::the_study_calls_are_the_reviews_pairs",
+        "set_current_deck is the pair (7,22); renumbered to (7,23), the web engine would refuse the chosen deck and admit a method the review never named (SPEC-350 A1)"
+      ],
+      [
+        "S35002-RENDER-EXISTING-CARD-IS-METHOD-SIX",
+        "web-engine",
+        "src/study.rs",
+        "    (service::CARD_RENDERING, 6, \"render_existing_card\"),",
+        "    (service::CARD_RENDERING, 7, \"render_existing_card\"),",
+        "study::the_study_calls_are_the_reviews_pairs",
+        "render_existing_card is the pair (27,6); renumbered to (27,7), the web engine would refuse the card's two sides and admit a method the review never named (SPEC-350 A1)"
+      ],
+      [
+        "S35003-STRIP-AV-TAGS-IS-METHOD-NINE",
+        "web-engine",
+        "src/study.rs",
+        "    (service::CARD_RENDERING, 9, \"strip_av_tags\"),",
+        "    (service::CARD_RENDERING, 10, \"strip_av_tags\"),",
+        "study::the_study_calls_are_the_reviews_pairs",
+        "strip_av_tags is the pair (27,9); renumbered to (27,10), the web engine would refuse the card's text without its sound tags and admit a method the review never named (SPEC-350 A1)"
+      ],
+      [
+        "S35004-DESCRIBE-NEXT-STATES-IS-METHOD-TWENTY-FOUR",
+        "web-engine",
+        "src/study.rs",
+        "    (service::SCHEDULER, 24, \"describe_next_states\"),",
+        "    (service::SCHEDULER, 23, \"describe_next_states\"),",
+        "study::the_study_calls_are_the_reviews_pairs",
+        "describe_next_states is the pair (13,24); renumbered to (13,23), the web engine would refuse the intervals on the answer buttons and admit a method the review never named (SPEC-350 A1)"
+      ],
+      [
+        "S35005-GET-UNDO-STATUS-IS-METHOD-SEVEN",
+        "web-engine",
+        "src/study.rs",
+        "    (service::COLLECTION, 7, \"get_undo_status\"),",
+        "    (service::COLLECTION, 6, \"get_undo_status\"),",
+        "study::the_study_calls_are_the_reviews_pairs",
+        "get_undo_status is the pair (3,7); renumbered to (3,6), the web engine would refuse whether Undo has a step to undo and admit a method the review never named (SPEC-350 A1)"
+      ],
+      [
+        "S35006-BURY-OR-SUSPEND-IS-METHOD-FOURTEEN",
+        "web-engine",
+        "src/study.rs",
+        "    (service::SCHEDULER, 14, \"bury_or_suspend_cards\"),",
+        "    (service::SCHEDULER, 15, \"bury_or_suspend_cards\"),",
+        "study::the_study_calls_are_the_reviews_pairs",
+        "bury_or_suspend_cards is the pair (13,14); renumbered to (13,15), the web engine would refuse the bury of the shown card and admit a method the review never named (SPEC-350 A1)"
+      ],
+      [
+        "S35007-SET-FLAG-IS-METHOD-FOUR",
+        "web-engine",
+        "src/study.rs",
+        "    (service::CARDS, 4, \"set_flag\"),",
+        "    (service::CARDS, 5, \"set_flag\"),",
+        "study::the_study_calls_are_the_reviews_pairs",
+        "set_flag is the pair (5,4); renumbered to (5,5), the web engine would refuse the flag of the shown card and admit a method the review never named (SPEC-350 A1)"
+      ],
+      [
+        "S35008-ONLY-THE-SHOWN-CARD-IS-ADMITTED",
+        "web-engine",
+        "src/study.rs",
+        "        .filter(|kept| kept.card == card)",
+        "        .filter(|_kept| true)",
+        "study::only_the_shown_card_is_rated_buried_or_flagged",
+        "a rating, a bury or a flag reaches the engine only for the card on screen; a guard that admits any id would act on a card the user never saw (SPEC-350 A3)"
+      ],
+      [
+        "S35009-ANOTHER-FLAG-TURNS-RED",
+        "engine-core",
+        "src/review.rs",
+        "if flag == RED {",
+        "if flag != RED {",
+        "review::the_flag_toggles_red",
+        "the flag action turns a card with no flag or another flag red; the inverted test would clear those and leave a red card red (SPEC-350 A4)"
+      ],
+      [
+        "S35010-RED-TURNS-TO-NO-FLAG",
+        "engine-core",
+        "src/review.rs",
+        "{ 0 } else { RED }",
+        "{ flag } else { RED }",
+        "review::the_flag_toggles_red",
+        "a red card's flag action clears its flag; returning its input would leave the flag red, so the action could never remove it (SPEC-350 A4)"
+      ],
+      [
+        "S35011-RED-IS-FLAG-ONE",
+        "engine-core",
+        "src/review.rs",
+        "pub const RED: u32 = 1;",
+        "pub const RED: u32 = 2;",
+        "review::the_flag_toggles_red",
+        "the engine numbers the red flag 1; as 2 the flag action would set orange (SPEC-350 A4)"
+      ],
+      [
+        "S35012-BURY-IS-THE-USERS-MODE-TWO",
+        "engine-core",
+        "src/review.rs",
+        "pub const BURY_USER: i32 = 2;",
+        "pub const BURY_USER: i32 = 1;",
+        "review::bury_is_the_users_bury_of_the_shown_card",
+        "the user's bury is the engine's mode 2; mode 1 is the scheduler's bury, which the next day undoes alone (SPEC-350 A5)"
+      ],
+      [
+        "S35013-BURY-NAMES-THE-SHOWN-CARD",
+        "engine-core",
+        "src/review.rs",
+        "        card_ids: vec![card],",
+        "        card_ids: Vec::new(),",
+        "review::bury_is_the_users_bury_of_the_shown_card",
+        "the bury names the one shown card; an empty list would bury nothing while the review moved on as if it had (SPEC-350 A5)"
+      ],
+      [
+        "S35014-DECK-TREE-IS-ON-THE-WEB",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"DecksService.DeckTree\",\n        native: true,\n        web: true,",
+        "        name: \"DecksService.DeckTree\",\n        native: true,\n        web: false,",
+        "table::the_review_pairs_are_ordinary_on_the_web",
+        "DecksService.DeckTree is a review pair, ordinary on the web; with its web column off, the core would refuse the web engine's call and the review could not run (SPEC-350 A2)"
+      ],
+      [
+        "S35015-SET-CURRENT-DECK-IS-ON-THE-WEB",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"DecksService.SetCurrentDeck\",\n        native: true,\n        web: true,",
+        "        name: \"DecksService.SetCurrentDeck\",\n        native: true,\n        web: false,",
+        "table::the_review_pairs_are_ordinary_on_the_web",
+        "DecksService.SetCurrentDeck is a review pair, ordinary on the web; with its web column off, the core would refuse the web engine's call and the review could not run (SPEC-350 A2)"
+      ],
+      [
+        "S35016-RENDER-EXISTING-CARD-IS-ON-THE-WEB",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"CardRenderingService.RenderExistingCard\",\n        native: true,\n        web: true,",
+        "        name: \"CardRenderingService.RenderExistingCard\",\n        native: true,\n        web: false,",
+        "table::the_review_pairs_are_ordinary_on_the_web",
+        "CardRenderingService.RenderExistingCard is a review pair, ordinary on the web; with its web column off, the core would refuse the web engine's call and the review could not run (SPEC-350 A2)"
+      ],
+      [
+        "S35017-STRIP-AV-TAGS-IS-ON-THE-WEB",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"CardRenderingService.StripAvTags\",\n        native: false,\n        web: true,",
+        "        name: \"CardRenderingService.StripAvTags\",\n        native: false,\n        web: false,",
+        "table::the_review_pairs_are_ordinary_on_the_web",
+        "CardRenderingService.StripAvTags is a review pair, ordinary on the web; with its web column off, the core would refuse the web engine's call and the review could not run (SPEC-350 A2)"
+      ],
+      [
+        "S35018-DESCRIBE-NEXT-STATES-IS-ON-THE-WEB",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"SchedulerService.DescribeNextStates\",\n        native: true,\n        web: true,",
+        "        name: \"SchedulerService.DescribeNextStates\",\n        native: true,\n        web: false,",
+        "table::the_review_pairs_are_ordinary_on_the_web",
+        "SchedulerService.DescribeNextStates is a review pair, ordinary on the web; with its web column off, the core would refuse the web engine's call and the review could not run (SPEC-350 A2)"
+      ],
+      [
+        "S35019-GET-UNDO-STATUS-IS-ON-THE-WEB",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"CollectionService.GetUndoStatus\",\n        native: false,\n        web: true,",
+        "        name: \"CollectionService.GetUndoStatus\",\n        native: false,\n        web: false,",
+        "table::the_review_pairs_are_ordinary_on_the_web",
+        "CollectionService.GetUndoStatus is a review pair, ordinary on the web; with its web column off, the core would refuse the web engine's call and the review could not run (SPEC-350 A2)"
+      ],
+      [
+        "S35020-BURY-OR-SUSPEND-IS-ON-THE-WEB",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"SchedulerService.BuryOrSuspendCards\",\n        native: true,\n        web: true,",
+        "        name: \"SchedulerService.BuryOrSuspendCards\",\n        native: true,\n        web: false,",
+        "table::the_review_pairs_are_ordinary_on_the_web",
+        "SchedulerService.BuryOrSuspendCards is a review pair, ordinary on the web; with its web column off, the core would refuse the web engine's call and the review could not run (SPEC-350 A2)"
+      ],
+      [
+        "S35021-SET-FLAG-IS-ON-THE-WEB",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"CardsService.SetFlag\",\n        native: true,\n        web: true,",
+        "        name: \"CardsService.SetFlag\",\n        native: true,\n        web: false,",
+        "table::the_review_pairs_are_ordinary_on_the_web",
+        "CardsService.SetFlag is a review pair, ordinary on the web; with its web column off, the core would refuse the web engine's call and the review could not run (SPEC-350 A2)"
+      ],
+      [
+        "S35023-CARDS-IS-SERVICE-FIVE",
+        "web-engine",
+        "src/study.rs",
+        "    pub const CARDS: u32 = 5;",
+        "    pub const CARDS: u32 = 6;",
+        "study::the_study_calls_are_the_reviews_pairs",
+        "the engine numbers this backend service 5; as 6 every study call through it would name another service's method (SPEC-350 A1)"
+      ],
+      [
+        "S35024-DECKS-IS-SERVICE-SEVEN",
+        "web-engine",
+        "src/study.rs",
+        "    pub const DECKS: u32 = 7;",
+        "    pub const DECKS: u32 = 8;",
+        "study::the_study_calls_are_the_reviews_pairs",
+        "the engine numbers this backend service 7; as 8 every study call through it would name another service's method (SPEC-350 A1)"
+      ],
+      [
+        "S35025-CARD-RENDERING-IS-SERVICE-TWENTY-SEVEN",
+        "web-engine",
+        "src/study.rs",
+        "    pub const CARD_RENDERING: u32 = 27;",
+        "    pub const CARD_RENDERING: u32 = 28;",
+        "study::the_study_calls_are_the_reviews_pairs",
+        "the engine numbers this backend service 27; as 28 every study call through it would name another service's method (SPEC-350 A1)"
+      ],
+      [
+        "S35040-A-NAME-ASKED-TWICE-IS-WANTED-ONCE",
+        "web-engine",
+        "src/study.rs",
+        "        if read.is_none() && !asked.iter().any(|(wanted, _)| wanted == name) {",
+        "        if read.is_none() {",
+        "study::each_name_the_core_asks_for_is_wanted_once",
+        "a name the core asks for twice is wanted once; recorded twice, the Worker would read one file twice and answer the core with the same name twice (SPEC-350 A24)"
+      ],
+      [
+        "S35041-A-FILE-IS-READ-NO-FURTHER-THAN-ITS-LIMIT",
+        "web-engine",
+        "src/study.rs",
+        "        let end = usize::try_from(limit).map_or(bytes.len(), |limit| limit.min(bytes.len()));",
+        "        let end = usize::try_from(limit).map_or(bytes.len(), |_| bytes.len());",
+        "study::a_file_is_read_no_further_than_its_limit",
+        "a file is read no further than the limit the core asked for; read whole, the core would take bytes past its cap (SPEC-350 A24)"
+      ],
+      [
+        "S35042-A-FILE-NOT-READ-IS-ABSENT",
+        "web-engine",
+        "src/study.rs",
+        "        let bytes = self.by_name.get(name)?;",
+        "        let bytes = self.by_name.get(name).map_or(&[][..], Vec::as_slice);",
+        "study::a_file_is_read_no_further_than_its_limit",
+        "a file the Worker did not read is absent, never empty; read as empty, the core would take a missing sound for a file of no bytes (SPEC-350 A24)"
+      ],
+      [
+        "S35043-AN-EXTENSION-IS-READ-WITHOUT-CASE",
+        "web-engine",
+        "src/study.rs",
+        "        .find(|(known, _)| known.eq_ignore_ascii_case(extension))",
+        "        .find(|(known, _)| *known == extension)",
+        "study::a_sound_takes_the_type_the_table_gives_its_name",
+        "an extension is read without case; compared exactly, a sound whose name is in capitals would have no type (SPEC-350 R15)"
+      ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S35030-THE-WEB-ENGINE-JOB-RUNS-THE-STUDY-SUITE",
+        ".github/workflows/ci.yml",
+        "        run: pnpm --dir web/app test:study\n",
+        "        run: 'true'\n",
+        "the web-engine job stops running the study suite, so no review over the real module is judged in a browser (SPEC-350 R13, A21)",
+        "test_ci_workflows.TheWebEngineIsHeldToItsBudget.test_the_web_engine_job_runs_the_study_suite"
+      ],
+      [
+        "S35031-THE-WEB-ENGINE-JOB-STAGES-THE-MODULE",
+        ".github/workflows/ci.yml",
+        "        run: bash scripts/web-engine-stage.sh\n",
+        "        run: 'true'\n",
+        "the web-engine job stops staging the module beside the build, so the study suite serves a build whose Worker cannot load the engine (SPEC-350 R13, A21)",
+        "test_ci_workflows.TheWebEngineIsHeldToItsBudget.test_the_web_engine_job_runs_the_study_suite"
+      ],
+      [
+        "S35032-THE-STAGE-REFUSES-A-MISSING-FILE",
+        "scripts/web-engine-stage.sh",
+        "for name in \"${files[@]}\"; do\n    if [ ! -f \"$from/$name\" ]; then\n        echo \"web-engine-stage: $from/$name is missing: run scripts/web-engine-build.sh first\" >&2\n        exit 1\n    fi\ndone\n",
+        "",
+        "the stage checks both files before it creates anything; without the check a missing file leaves a half-staged build and a copy error that names no step to run (SPEC-350 A22)",
+        "test_web_engine_stage.TheStageCopiesTheModule.test_the_stage_refuses_a_missing_module"
+      ],
+      [
+        "S35033-THE-STAGE-COPIES-THE-BINDINGS",
+        "scripts/web-engine-stage.sh",
+        "cp \"$from/deck_streak_web_engine.js\" \"$to/deck_streak_web_engine.js\"\n",
+        "",
+        "the stage copies the bindings beside the module; a stage that copied the module alone would leave a build whose Worker cannot start (SPEC-350 A22)",
+        "test_web_engine_stage.TheStageCopiesTheModule.test_the_stage_copies_the_module_and_its_bindings"
+      ],
+      [
+        "S35044-THE-RELEASE-STAGES-THE-MODULE-IN-THE-APP-BUILD",
+        ".github/workflows/release.yml",
+        "        run: bash scripts/web-engine-stage.sh\n",
+        "        run: bash scripts/web-engine-stage.sh --to web/app/engine\n",
+        "the release stages the module and its bindings in the app's build, under `engine/`, so the tarball carries them at `web/engine/`, where the Worker loads `/engine/`; staged anywhere else, the published app has no engine (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_the_release_carries_the_module_at_web_engine"
+      ],
+      [
+        "S35045-THE-RELEASE-RUNS-THE-STAGE",
+        ".github/workflows/release.yml",
+        "      - name: the module and its bindings staged beside the build, under /engine/\n        run: bash scripts/web-engine-stage.sh\n",
+        "",
+        "the release runs the stage between the app's build and the tarball; without it the tarball's `web/` holds the app alone and its Worker finds no engine (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_the_release_carries_the_module_at_web_engine"
+      ],
+      [
+        "S35046-THE-RELEASE-STAGES-AFTER-THE-APP-BUILD",
+        ".github/workflows/release.yml",
+        "      - name: the Mini App, built once\n        run: pnpm --dir web/app build\n      - name: the module and its bindings staged beside the build, under /engine/\n        run: bash scripts/web-engine-stage.sh\n",
+        "      - name: the module and its bindings staged beside the build, under /engine/\n        run: bash scripts/web-engine-stage.sh\n      - name: the Mini App, built once\n        run: pnpm --dir web/app build\n",
+        "the stage runs after the app's build and before the tarball, the order CI's web-engine job runs them in, so the module is placed in the build the tarball packs (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_the_release_carries_the_module_at_web_engine"
+      ],
+      [
+        "S35047-THE-RELEASE-GATES-THE-MODULE-AFTER-ITS-BUILD",
+        ".github/workflows/release.yml",
+        "      - name: build the module and its bindings\n        run: bash scripts/web-engine-build.sh --cc clang-18 --ar llvm-ar-18 --out target/web-engine\n      - name: the size gate (8000000 bytes gzip -9, brotli beside it)\n        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js\n",
+        "      - name: the size gate (8000000 bytes gzip -9, brotli beside it)\n        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js\n      - name: build the module and its bindings\n        run: bash scripts/web-engine-build.sh --cc clang-18 --ar llvm-ar-18 --out target/web-engine\n",
+        "the size gate runs after the module's build, so it measures the module the release ships, in the order CI's web-engine job runs them (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_an_over_budget_module_stops_the_release_before_the_draft"
+      ],
+      [
+        "S35048-THE-SIZE-GATE-FAILS-THE-JOB",
+        ".github/workflows/release.yml",
+        "        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js\n",
+        "        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js\n        continue-on-error: true\n",
+        "a module over the budget fails the gate step and so the job, before the draft exists; a gate allowed to fail lets an over-budget module publish (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_an_over_budget_module_stops_the_release_before_the_draft"
+      ],
+      [
+        "S35049-THE-SIZE-GATE-EXIT-IS-THE-STEP-EXIT",
+        ".github/workflows/release.yml",
+        "        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js\n",
+        "        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js || true\n",
+        "the gate's exit is the step's exit; with `|| true` an over-budget refusal reads as a pass and the release publishes (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_an_over_budget_module_stops_the_release_before_the_draft"
+      ],
+      [
+        "S35050-NO-STEP-AFTER-THE-GATE-RUNS-ON-A-FAILURE",
+        ".github/workflows/release.yml",
+        "      - name: a draft release, so nothing is visible until the last upload\n",
+        "      - name: a draft release, so nothing is visible until the last upload\n        if: ${{ always() }}\n",
+        "no step from the gate to the publish runs after a failed step; a draft step with `always()` would make a release for a tag whose module the gate refused (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_an_over_budget_module_stops_the_release_before_the_draft"
+      ],
+      [
+        "S35051-THE-RELEASE-ADDS-THE-WASM32-TARGET",
+        ".github/workflows/release.yml",
+        "          rustup target add wasm32-unknown-unknown\n",
+        "          rustup target list --installed\n",
+        "the release adds the wasm32 target before the module's build, as CI's web-engine job does; without it the build fails at the tag instead of in CI (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_the_release_builds_and_gates_the_module_as_ci_does"
+      ],
+      [
+        "S35052-THE-RELEASE-CHECKS-THE-BINDINGS-GENERATOR",
+        ".github/workflows/release.yml",
+        "          echo \"$WASM_BINDGEN_SHA256  /tmp/wasm-bindgen.tgz\" | sha256sum -c -\n",
+        "          true\n",
+        "the release checks the bindings generator's download against its digest, as CI does; unchecked, a changed download writes the bindings the release ships (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_the_release_builds_and_gates_the_module_as_ci_does"
+      ],
+      [
+        "S35053-THE-RELEASE-CHECKS-THE-OPTIMISER",
+        ".github/workflows/release.yml",
+        "          echo \"$BINARYEN_SHA256  /tmp/binaryen.tgz\" | sha256sum -c -\n",
+        "          true\n",
+        "the release checks the optimiser's download against its digest, as CI does; unchecked, a changed download rewrites the module the release ships (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_the_release_builds_and_gates_the_module_as_ci_does"
+      ],
+      [
+        "S35054-THE-RELEASE-BUILDS-THE-MODULE-AS-CI-DOES",
+        ".github/workflows/release.yml",
+        "        run: bash scripts/web-engine-build.sh --cc clang-18 --ar llvm-ar-18 --out target/web-engine\n",
+        "        run: bash scripts/web-engine-build.sh --cc clang --ar llvm-ar --out target/web-engine\n",
+        "the release builds the module with CI's command, compiler and archiver, so it ships a module built as the one CI's browser tests ran over (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_the_release_builds_and_gates_the_module_as_ci_does"
+      ],
+      [
+        "S35055-THE-GATE-MEASURES-THE-SHIPPED-MODULE",
+        ".github/workflows/release.yml",
+        "        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js\n",
+        "        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine.js --bindings target/web-engine/deck_streak_web_engine.js\n",
+        "the gate measures the module and the bindings the stage ships, as CI's does; measuring the bindings in the module's place passes a module over the budget (SPEC-350 R17, A29)",
+        "test_release_workflow.TheReleaseCarriesTheWebEngine.test_the_release_builds_and_gates_the_module_as_ci_does"
+      ]
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM reading_topic_days",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "adcadc95d96e2fc26797c9c1cf10e0b762d9ebc673c3e30f22c33469e26883b4"
+}

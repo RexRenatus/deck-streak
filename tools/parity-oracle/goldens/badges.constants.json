@@ -1,0 +1,134 @@
+{
+  "cases": [
+    {
+      "input": {
+        "name": "constants.LIFETIME_REVIEWS_GRINDER"
+      },
+      "output": 1000
+    },
+    {
+      "input": {
+        "name": "constants.LIFETIME_REVIEWS_MARATHONER"
+      },
+      "output": 10000
+    },
+    {
+      "input": {
+        "name": "constants.CENTURION_DAY_REVIEWS"
+      },
+      "output": 100
+    },
+    {
+      "input": {
+        "name": "constants.SHARPSHOOTER_RETENTION"
+      },
+      "output": 90.0
+    },
+    {
+      "input": {
+        "name": "constants.SHARPSHOOTER_MIN_REVIEWS"
+      },
+      "output": 50
+    },
+    {
+      "input": {
+        "name": "constants.SNIPER_ELITE_RETENTION"
+      },
+      "output": 95.0
+    },
+    {
+      "input": {
+        "name": "constants.SNIPER_ELITE_MIN_MATURE"
+      },
+      "output": 50
+    },
+    {
+      "input": {
+        "name": "constants.BACKLOG_SLAYER_CLEARED"
+      },
+      "output": 200
+    },
+    {
+      "input": {
+        "name": "constants.NIGHT_OWL_REVIEWS"
+      },
+      "output": 50
+    },
+    {
+      "input": {
+        "name": "constants.EARLY_BIRD_REVIEWS"
+      },
+      "output": 50
+    },
+    {
+      "input": {
+        "name": "constants.EARLY_BIRD_END_HOUR"
+      },
+      "output": 7
+    },
+    {
+      "input": {
+        "name": "constants.MATURITY_MILESTONE_COUNT"
+      },
+      "output": 100
+    },
+    {
+      "input": {
+        "name": "constants.FOREST_GUARDIAN_COUNT"
+      },
+      "output": 1000
+    },
+    {
+      "input": {
+        "name": "constants.POLYGLOT_DECKS_DAY"
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "name": "constants.GLOBETROTTER_DECKS_WEEK"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "name": "constants.PERFECT_WEEK_SCORE"
+      },
+      "output": 75
+    },
+    {
+      "input": {
+        "name": "constants.SPEED_DEMON_REVIEWS"
+      },
+      "output": 100
+    },
+    {
+      "input": {
+        "name": "constants.SPEED_DEMON_AVG_SECONDS"
+      },
+      "output": 6.0
+    },
+    {
+      "input": {
+        "name": "constants.IRON_WILL_DAYS"
+      },
+      "output": 30
+    },
+    {
+      "input": {
+        "name": "gamification.badges.LEECH_TAMER_MIN_LIFETIME"
+      },
+      "output": 500
+    }
+  ],
+  "function": "badges.constants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "constants",
+  "registry": "tools/parity-oracle/registry/spec_073.py",
+  "registry_sha256": "798450938bfbda152c320bc1a6255e977bd75fa65a0a9d1120f7c1331954793f",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

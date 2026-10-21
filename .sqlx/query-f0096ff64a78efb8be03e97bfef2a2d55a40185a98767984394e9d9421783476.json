@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT study_day AS \"study_day!\", reviews, seconds FROM daily_rollup\n           WHERE study_day <= ?1 ORDER BY study_day DESC LIMIT ?2",
+  "describe": {
+    "columns": [
+      {
+        "name": "study_day!",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "reviews",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "reviews"
+          }
+        }
+      },
+      {
+        "name": "seconds",
+        "ordinal": 2,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "seconds"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f0096ff64a78efb8be03e97bfef2a2d55a40185a98767984394e9d9421783476"
+}

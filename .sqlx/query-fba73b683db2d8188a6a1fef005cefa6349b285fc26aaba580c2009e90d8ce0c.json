@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO ingest_state (id, rescore_pending, created_at) VALUES (1, 1, ?1) ON CONFLICT (id) DO UPDATE SET rescore_pending = 1, refused_at = NULL, refused_reason = NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "fba73b683db2d8188a6a1fef005cefa6349b285fc26aaba580c2009e90d8ce0c"
+}

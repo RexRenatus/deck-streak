@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "Removed 30 minutes of reading for <b>Course Qaa</b>. Its day's XP and its week's bonus are settled again."
+  },
+  "x-message": "undo-done"
+}

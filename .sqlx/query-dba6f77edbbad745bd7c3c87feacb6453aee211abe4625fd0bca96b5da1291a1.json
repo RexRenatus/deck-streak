@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM minutes_log",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "dba6f77edbbad745bd7c3c87feacb6453aee211abe4625fd0bca96b5da1291a1"
+}

@@ -1,0 +1,2192 @@
+{
+  "adapter": "under_a_neutral_root",
+  "cases": [
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 2918
+      },
+      "output": {
+        "day": 2918,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1977",
+          "12",
+          "W52"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 2919
+      },
+      "output": {
+        "day": 2919,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1977",
+          "12",
+          "W52"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 2920
+      },
+      "output": {
+        "day": 2920,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1977",
+          "12",
+          "W52"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 2921
+      },
+      "output": {
+        "day": 2921,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1977",
+          "12",
+          "W52"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 2557
+      },
+      "output": {
+        "day": 2557,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1977",
+          "01",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 2558
+      },
+      "output": {
+        "day": 2558,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1977",
+          "01",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 2559
+      },
+      "output": {
+        "day": 2559,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1977",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 2560
+      },
+      "output": {
+        "day": 2560,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1977",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 7666
+      },
+      "output": {
+        "day": 7666,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1990",
+          "12",
+          "W52"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 7667
+      },
+      "output": {
+        "day": 7667,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1990",
+          "12",
+          "W52"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 7668
+      },
+      "output": {
+        "day": 7668,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1990",
+          "12",
+          "W52"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 7669
+      },
+      "output": {
+        "day": 7669,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1990",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 7305
+      },
+      "output": {
+        "day": 7305,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1990",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 7306
+      },
+      "output": {
+        "day": 7306,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1990",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 7307
+      },
+      "output": {
+        "day": 7307,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1990",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 7308
+      },
+      "output": {
+        "day": 7308,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1990",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 9858
+      },
+      "output": {
+        "day": 9858,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1996",
+          "12",
+          "W52"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 9859
+      },
+      "output": {
+        "day": 9859,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1996",
+          "12",
+          "W52"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 9860
+      },
+      "output": {
+        "day": 9860,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1996",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 9861
+      },
+      "output": {
+        "day": 9861,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1996",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 9496
+      },
+      "output": {
+        "day": 9496,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1996",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 9497
+      },
+      "output": {
+        "day": 9497,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1996",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 9498
+      },
+      "output": {
+        "day": 9498,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1996",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 9499
+      },
+      "output": {
+        "day": 9499,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1996",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 10223
+      },
+      "output": {
+        "day": 10223,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1997",
+          "12",
+          "W52"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 10224
+      },
+      "output": {
+        "day": 10224,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1997",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 10225
+      },
+      "output": {
+        "day": 10225,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1997",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 10226
+      },
+      "output": {
+        "day": 10226,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1997",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 9862
+      },
+      "output": {
+        "day": 9862,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1997",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 9863
+      },
+      "output": {
+        "day": 9863,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1997",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 9864
+      },
+      "output": {
+        "day": 9864,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1997",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 9865
+      },
+      "output": {
+        "day": 9865,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1997",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 12414
+      },
+      "output": {
+        "day": 12414,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2003",
+          "12",
+          "W52"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 12415
+      },
+      "output": {
+        "day": 12415,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2003",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 12416
+      },
+      "output": {
+        "day": 12416,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2003",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 12417
+      },
+      "output": {
+        "day": 12417,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2003",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 12053
+      },
+      "output": {
+        "day": 12053,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2003",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 12054
+      },
+      "output": {
+        "day": 12054,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2003",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 12055
+      },
+      "output": {
+        "day": 12055,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2003",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 12056
+      },
+      "output": {
+        "day": 12056,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2003",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 14606
+      },
+      "output": {
+        "day": 14606,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2009",
+          "12",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 14607
+      },
+      "output": {
+        "day": 14607,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2009",
+          "12",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 14608
+      },
+      "output": {
+        "day": 14608,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2009",
+          "12",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 14609
+      },
+      "output": {
+        "day": 14609,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2009",
+          "12",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 14245
+      },
+      "output": {
+        "day": 14245,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2009",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 14246
+      },
+      "output": {
+        "day": 14246,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2009",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 14247
+      },
+      "output": {
+        "day": 14247,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2009",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 14248
+      },
+      "output": {
+        "day": 14248,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2009",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 16432
+      },
+      "output": {
+        "day": 16432,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2014",
+          "12",
+          "W52"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 16433
+      },
+      "output": {
+        "day": 16433,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2014",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 16434
+      },
+      "output": {
+        "day": 16434,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2014",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 16435
+      },
+      "output": {
+        "day": 16435,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2014",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 16071
+      },
+      "output": {
+        "day": 16071,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2014",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 16072
+      },
+      "output": {
+        "day": 16072,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2014",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 16073
+      },
+      "output": {
+        "day": 16073,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2014",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 16074
+      },
+      "output": {
+        "day": 16074,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2014",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 24833
+      },
+      "output": {
+        "day": 24833,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2037",
+          "12",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 24834
+      },
+      "output": {
+        "day": 24834,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2037",
+          "12",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 24835
+      },
+      "output": {
+        "day": 24835,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2037",
+          "12",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 24836
+      },
+      "output": {
+        "day": 24836,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2037",
+          "12",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 24472
+      },
+      "output": {
+        "day": 24472,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2037",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 24473
+      },
+      "output": {
+        "day": 24473,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2037",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 24474
+      },
+      "output": {
+        "day": 24474,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2037",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 24475
+      },
+      "output": {
+        "day": 24475,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2037",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 30312
+      },
+      "output": {
+        "day": 30312,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2052",
+          "12",
+          "W52"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 30313
+      },
+      "output": {
+        "day": 30313,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2052",
+          "12",
+          "W52"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 30314
+      },
+      "output": {
+        "day": 30314,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2052",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 30315
+      },
+      "output": {
+        "day": 30315,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2052",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 29950
+      },
+      "output": {
+        "day": 29950,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2052",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 29951
+      },
+      "output": {
+        "day": 29951,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2052",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 29952
+      },
+      "output": {
+        "day": 29952,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2052",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 29953
+      },
+      "output": {
+        "day": 29953,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2052",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 31042
+      },
+      "output": {
+        "day": 31042,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2054",
+          "12",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 31043
+      },
+      "output": {
+        "day": 31043,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2054",
+          "12",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 31044
+      },
+      "output": {
+        "day": 31044,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2054",
+          "12",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 31045
+      },
+      "output": {
+        "day": 31045,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2054",
+          "12",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 30681
+      },
+      "output": {
+        "day": 30681,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2054",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 30682
+      },
+      "output": {
+        "day": 30682,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2054",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 30683
+      },
+      "output": {
+        "day": 30683,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2054",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 30684
+      },
+      "output": {
+        "day": 30684,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2054",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 38712
+      },
+      "output": {
+        "day": 38712,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2075",
+          "12",
+          "W52"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 38713
+      },
+      "output": {
+        "day": 38713,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2075",
+          "12",
+          "W52"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 38714
+      },
+      "output": {
+        "day": 38714,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2075",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 38715
+      },
+      "output": {
+        "day": 38715,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2075",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 38351
+      },
+      "output": {
+        "day": 38351,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2075",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 38352
+      },
+      "output": {
+        "day": 38352,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2075",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 38353
+      },
+      "output": {
+        "day": 38353,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2075",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 38354
+      },
+      "output": {
+        "day": 38354,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2075",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 39078
+      },
+      "output": {
+        "day": 39078,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2076",
+          "12",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 39079
+      },
+      "output": {
+        "day": 39079,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2076",
+          "12",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 39080
+      },
+      "output": {
+        "day": 39080,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2076",
+          "12",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 39081
+      },
+      "output": {
+        "day": 39081,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2076",
+          "12",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 38716
+      },
+      "output": {
+        "day": 38716,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2076",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 38717
+      },
+      "output": {
+        "day": 38717,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2076",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 38718
+      },
+      "output": {
+        "day": 38718,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2076",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "year-boundary",
+      "input": {
+        "day": 38719
+      },
+      "output": {
+        "day": 38719,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2076",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "leap",
+      "input": {
+        "day": 19781
+      },
+      "output": {
+        "day": 19781,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2024",
+          "02",
+          "W09"
+        ]
+      }
+    },
+    {
+      "class": "leap",
+      "input": {
+        "day": 19782
+      },
+      "output": {
+        "day": 19782,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2024",
+          "02",
+          "W09"
+        ]
+      }
+    },
+    {
+      "class": "leap",
+      "input": {
+        "day": 19783
+      },
+      "output": {
+        "day": 19783,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2024",
+          "03",
+          "W09"
+        ]
+      }
+    },
+    {
+      "class": "leap",
+      "input": {
+        "day": 20088
+      },
+      "output": {
+        "day": 20088,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2024",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "leap",
+      "input": {
+        "day": 38774
+      },
+      "output": {
+        "day": 38774,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2076",
+          "02",
+          "W09"
+        ]
+      }
+    },
+    {
+      "class": "leap",
+      "input": {
+        "day": 38775
+      },
+      "output": {
+        "day": 38775,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2076",
+          "02",
+          "W09"
+        ]
+      }
+    },
+    {
+      "class": "leap",
+      "input": {
+        "day": 38776
+      },
+      "output": {
+        "day": 38776,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2076",
+          "03",
+          "W09"
+        ]
+      }
+    },
+    {
+      "class": "leap",
+      "input": {
+        "day": 39081
+      },
+      "output": {
+        "day": 39081,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2076",
+          "12",
+          "W53"
+        ]
+      }
+    },
+    {
+      "class": "leap",
+      "input": {
+        "day": 41696
+      },
+      "output": {
+        "day": 41696,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2084",
+          "02",
+          "W09"
+        ]
+      }
+    },
+    {
+      "class": "leap",
+      "input": {
+        "day": 41697
+      },
+      "output": {
+        "day": 41697,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2084",
+          "02",
+          "W09"
+        ]
+      }
+    },
+    {
+      "class": "leap",
+      "input": {
+        "day": 41698
+      },
+      "output": {
+        "day": 41698,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2084",
+          "03",
+          "W09"
+        ]
+      }
+    },
+    {
+      "class": "leap",
+      "input": {
+        "day": 42003
+      },
+      "output": {
+        "day": 42003,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2084",
+          "12",
+          "W52"
+        ]
+      }
+    },
+    {
+      "class": "leap",
+      "input": {
+        "day": 44618
+      },
+      "output": {
+        "day": 44618,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2092",
+          "02",
+          "W09"
+        ]
+      }
+    },
+    {
+      "class": "leap",
+      "input": {
+        "day": 44619
+      },
+      "output": {
+        "day": 44619,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2092",
+          "02",
+          "W09"
+        ]
+      }
+    },
+    {
+      "class": "leap",
+      "input": {
+        "day": 44620
+      },
+      "output": {
+        "day": 44620,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2092",
+          "03",
+          "W09"
+        ]
+      }
+    },
+    {
+      "class": "leap",
+      "input": {
+        "day": 44925
+      },
+      "output": {
+        "day": 44925,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2092",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "century",
+      "input": {
+        "day": -25509
+      },
+      "output": {
+        "day": -25509,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1900",
+          "02",
+          "W09"
+        ]
+      }
+    },
+    {
+      "class": "century",
+      "input": {
+        "day": -25508
+      },
+      "output": {
+        "day": -25508,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1900",
+          "03",
+          "W09"
+        ]
+      }
+    },
+    {
+      "class": "century",
+      "input": {
+        "day": 11016
+      },
+      "output": {
+        "day": 11016,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2000",
+          "02",
+          "W09"
+        ]
+      }
+    },
+    {
+      "class": "century",
+      "input": {
+        "day": 47540
+      },
+      "output": {
+        "day": 47540,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2100",
+          "02",
+          "W08"
+        ]
+      }
+    },
+    {
+      "class": "century",
+      "input": {
+        "day": 47541
+      },
+      "output": {
+        "day": 47541,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2100",
+          "03",
+          "W09"
+        ]
+      }
+    },
+    {
+      "class": "before-epoch",
+      "input": {
+        "day": -1
+      },
+      "output": {
+        "day": -1,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1969",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "before-epoch",
+      "input": {
+        "day": -2
+      },
+      "output": {
+        "day": -2,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1969",
+          "12",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "before-epoch",
+      "input": {
+        "day": -365
+      },
+      "output": {
+        "day": -365,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1969",
+          "01",
+          "W01"
+        ]
+      }
+    },
+    {
+      "class": "before-epoch",
+      "input": {
+        "day": -6913
+      },
+      "output": {
+        "day": -6913,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1951",
+          "01",
+          "W04"
+        ]
+      }
+    },
+    {
+      "input": {
+        "day": 41537
+      },
+      "output": {
+        "day": 41537,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2083",
+          "09",
+          "W38"
+        ]
+      }
+    },
+    {
+      "input": {
+        "day": 43983
+      },
+      "output": {
+        "day": 43983,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2090",
+          "06",
+          "W22"
+        ]
+      }
+    },
+    {
+      "input": {
+        "day": 43088
+      },
+      "output": {
+        "day": 43088,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2087",
+          "12",
+          "W51"
+        ]
+      }
+    },
+    {
+      "input": {
+        "day": 56016
+      },
+      "output": {
+        "day": 56016,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2123",
+          "05",
+          "W19"
+        ]
+      }
+    },
+    {
+      "input": {
+        "day": 12153
+      },
+      "output": {
+        "day": 12153,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2003",
+          "04",
+          "W15"
+        ]
+      }
+    },
+    {
+      "input": {
+        "day": 67875
+      },
+      "output": {
+        "day": 67875,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2155",
+          "11",
+          "W44"
+        ]
+      }
+    },
+    {
+      "input": {
+        "day": 64502
+      },
+      "output": {
+        "day": 64502,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2146",
+          "08",
+          "W32"
+        ]
+      }
+    },
+    {
+      "input": {
+        "day": 53075
+      },
+      "output": {
+        "day": 53075,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2115",
+          "04",
+          "W17"
+        ]
+      }
+    },
+    {
+      "input": {
+        "day": 10677
+      },
+      "output": {
+        "day": 10677,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1999",
+          "03",
+          "W12"
+        ]
+      }
+    },
+    {
+      "input": {
+        "day": 27045
+      },
+      "output": {
+        "day": 27045,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2044",
+          "01",
+          "W03"
+        ]
+      }
+    },
+    {
+      "input": {
+        "day": 31803
+      },
+      "output": {
+        "day": 31803,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2057",
+          "01",
+          "W04"
+        ]
+      }
+    },
+    {
+      "input": {
+        "day": 4600
+      },
+      "output": {
+        "day": 4600,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "1982",
+          "08",
+          "W31"
+        ]
+      }
+    },
+    {
+      "input": {
+        "day": 26452
+      },
+      "output": {
+        "day": 26452,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2042",
+          "06",
+          "W23"
+        ]
+      }
+    },
+    {
+      "input": {
+        "day": 12389
+      },
+      "output": {
+        "day": 12389,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2003",
+          "12",
+          "W49"
+        ]
+      }
+    },
+    {
+      "input": {
+        "day": 10977
+      },
+      "output": {
+        "day": 10977,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2000",
+          "01",
+          "W03"
+        ]
+      }
+    },
+    {
+      "input": {
+        "day": 24947
+      },
+      "output": {
+        "day": 24947,
+        "folders": [
+          "12-Readings",
+          "Archive",
+          "2038",
+          "04",
+          "W16"
+        ]
+      }
+    }
+  ],
+  "function": "reading_notes._archive_dir",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Calls the function with the relative root vault and the date of epoch day day, and returns the folders of the returned path below that root, with its last folder given as the date it names; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_042.py",
+  "registry_sha256": "ca19c4147531f86d6b4d1b483f65143b4d8b21a4ff2855713d34f254cacadcd8",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

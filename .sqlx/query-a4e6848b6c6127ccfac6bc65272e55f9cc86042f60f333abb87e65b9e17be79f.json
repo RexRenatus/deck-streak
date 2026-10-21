@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE records SET celebrated_at = ?1 WHERE kind = ?2 AND study_day = ?3 AND celebrated_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "a4e6848b6c6127ccfac6bc65272e55f9cc86042f60f333abb87e65b9e17be79f"
+}

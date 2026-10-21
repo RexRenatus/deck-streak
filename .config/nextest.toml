@@ -1,0 +1,9 @@
+# cargo-nextest's configuration (SPEC-362 R9). The `rust` job's own runs keep the default profile;
+# only cargo-mutants selects `mutants`, through `.cargo/mutants.toml`.
+
+# A mutant is caught at its first failing test, so a leg stops that mutant's run there and spends
+# nothing on the tests still running: `terminate = "immediate"` ends them, where the default waits
+# for each to finish. A slow test a mutant has already failed never runs to its end, which keeps
+# every leg inside its bound.
+[profile.mutants]
+fail-fast = { max-fail = 1, terminate = "immediate" }

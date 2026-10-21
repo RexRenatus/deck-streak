@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM writing_log WHERE code = ?1 AND study_day = ?2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "1ec216343f663ca7f36158d02f9c22401977931a5b0330a60edf2f3d446e5bb1"
+}

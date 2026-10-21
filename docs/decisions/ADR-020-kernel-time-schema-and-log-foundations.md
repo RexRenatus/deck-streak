@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: "2026-09-27"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -38,6 +38,10 @@ logging setup lives; and how settings are parsed.
 - The kernel's `logging::install` (JSON, the sd-daemon priority prefix, `RUST_LOG`, a redacting writer) used by every role of the one binary — chosen: one setup, and the redactor that knows the loaded credentials is in the same crate as the loader that registers them.
 - Each binary or role building its own subscriber — rejected because two setups drift, and a setup without the redacting writer leaks.
 - A settings crate (figment, envy, config) — rejected because the kernel's settings are a handful of typed values, and a hand-written parser can promise that no error carries a value, which a generic deserializer's messages do not.
+- The token pattern matched by hand, its `\d` a table of the decimal-digit runs Python's `re` reads, proved against the redaction golden character by character — chosen: the predecessor's pattern exactly, with no crate added.
+- A regular-expression crate for the one token pattern — rejected because no ADR admits one, and its Unicode tables need not be the predecessor interpreter's, so the golden would still have to prove them.
+- Only ASCII digits in the token's id — rejected because the predecessor redacts a token whose id is written in any decimal digits, and a scrub that redacts less than the predecessor's is the one direction a secret filter may not diverge in.
+- The writer scrubbing only each secret as written — rejected because a JSON line carries a secret holding a quote or a backslash only as JSON escapes it, so the raw value never matches.
 
 ## Decision Outcome
 
@@ -51,9 +55,15 @@ Chosen options as above, plus:
   compares. It is shared because the contexts that write settings and the one that reads the
   generation may not depend on each other.
 - **An intended divergence** (ADR-012's `diverges`): the predecessor falls back to its default for
-  an UNPARSABLE `ANKI_DIGEST_HOUR`; DeckStreak refuses start on it, like every malformed setting
-  (SPEC-020, R10). The unset case ports verbatim (the larger of 9 and the rollover hour). The digest-hour
-  golden's unparsable case carries `diverges: ADR-020`.
+  an UNPARSABLE `ANKI_DIGEST_HOUR`, and Python's `int` also reads spellings DeckStreak does not (a
+  digit separator, digits outside ASCII); DeckStreak refuses start on each, like every malformed
+  setting (SPEC-020, R10). The unset case ports verbatim (the larger of 9 and the rollover hour).
+  The generator writes a case's class, not a `diverges` key, so the digest-hour golden marks these
+  cases `class: unparsable` and `class: python-only`, and SPEC-020's A4 holds each to a refusal.
+- The redactor's `redact` is the predecessor's scrub exactly; the log writer's `redact_line` also
+  replaces each secret as a JSON string and a Rust debug string escape it. A log line carries no
+  timestamp, because journald stamps every line and the system time is read by the kernel's clock
+  alone.
 - `tempfile` is admitted as a dev-dependency for tests that need a temporary database or
   collection; `serde` and `serde_json` are ADR-029's.
 

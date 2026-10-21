@@ -2,8 +2,10 @@
 
 - **Wave:** W1. **Issue:** #37 (epic #2). **Context(s):** the Mini App (`web/app`); `deck-streak-api` (the read-only routes); `deck-streak-coordination` (the views).
 - **Decided by:** ADR-005 (a SvelteKit SPA in Telegram's webview), ADR-006 (every request owner-only),
-  ADR-012 (Vitest for the Mini App), ADR-019 (the Mini App is the primary reading surface), and ADR-051
-  (a closed renderer, the day's offline cache, and the audit in Vitest's browser mode).
+  ADR-012 (Vitest for the Mini App), ADR-019 (the Mini App is the primary reading surface), ADR-037
+  (a sync once per study day plus the owner's triggers, and never on opening the app), ADR-054 (with
+  no AI route, the Mini App says readings are not enabled), and ADR-051 (a closed renderer, the day's
+  offline cache, and the audit in Vitest's browser mode).
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-051.md` (ADR-016).
 
@@ -40,8 +42,10 @@ R2. The reader renders the gated text only, through a parser (`web/app/src/lib/r
 R3. The reader's "I read it" button calls the read route (SPEC-047) and then shows the reading as
     read; a vault tick recorded `pending` shows as pending, with a tap that retries it.
 R4. The studied chip reads "Studied n/N" from the reading view, which is fetched again when the reader
-    regains focus and at least once per sync interval (15 minutes) while the reader is open, so the
-    chip reflects a sync that brought reviews within one sync interval.
+    regains focus and after an owner-triggered sync: returning from the bot's `/sync` (SPEC-026)
+    regains focus, and a Mini App action that triggers a sync, once one exists (ADR-037), fetches the
+    view again when it answers. The reader sets no refresh timer, because the view changes only with a
+    sync, and opening the Mini App never triggers one (ADR-037).
 R5. An opened reading is kept in the webview's local storage under a key carrying the server's study
     day and served from there when the network is unavailable; every key of an earlier study day is
     removed when the server's study day changes. `privacy.json` declares this device cache.
@@ -57,6 +61,10 @@ R9. The readings routes pass the axe-core audit with the tags `wcag2a`, `wcag2aa
     browser mode (ADR-051), and the cjk-typography pack's rows are green over the readings screens.
 R10. The startapp token `r_<reading id>` opens that reading in the reader; an unknown reading id opens
     Today (SPEC-028's token map learns the prefix).
+R11. With the AI route absent (ADR-054), the today view says so, and Today shows "Readings are not
+    enabled" in place of the topic cards: no topic card, no Regenerate button, and no failed or
+    could-not-tell state, because nothing failed. The words are their own, never a failure's and never
+    a placeholder reading.
 
 ## 3. Acceptance criteria
 
@@ -66,7 +74,7 @@ R10. The startapp token `r_<reading id>` opens that reading in the reader; an un
 | A2 | a topic with no new cards shows "No new cards today" and no reading or placeholder | `a topic with no new cards shows no placeholder reading` |
 | A3 | the reader renders no HTML element and no anchor from the body, even when the body holds markup and links | `renders no html and no link from the body` |
 | A4 | an opened reading is served offline for its study day and removed when the study day changes | `serves the reading of the day offline and clears it at the rollover` |
-| A5 | with a mocked API and fake timers, the studied chip moves within one sync interval of a sync that brings reviews | `updates within one sync interval of a sync that brings reviews` |
+| A5 | with a mocked API, the studied chip refreshes when the reader regains focus after a sync that brought reviews, and no timer fetches it | `refreshes on focus after a sync that brings reviews and sets no timer` |
 | A6 | the readings routes pass the axe-core audit in both Telegram colour schemes in a real browser | accessibility runtime audit; `the readings routes pass axe in both colour schemes` |
 | A7 | a language reading's container carries its `lang`, and furigana renders as ruby | cjk-typography `cjk-lang`; `a language reading carries its lang and ruby` |
 | A8 | the cjk-typography rows are green over the readings screens with non-zero examined counts | cjk-typography, every row; `test_the_cjk_typography_rows_are_green_over_the_readings_screens` |
@@ -75,13 +83,14 @@ R10. The startapp token `r_<reading id>` opens that reading in the reader; an un
 | A11 | an `r_` startapp token opens the reader, and an unknown id opens Today | `an r_ token opens the reader and an unknown id opens Today` |
 | A12 | the three reading routes answer the owner only | `the_reading_routes_answer_only_the_owner` |
 | A13 | the today view holds exactly one entry per topic of the study day, with its state, class and reason | `the_today_view_holds_one_entry_per_topic` |
+| A14 | with the route absent, Today says "Readings are not enabled" and shows no topic card, no Regenerate and no failure | `says readings are not enabled when the route is absent` |
 
 ```acceptance
 A1: pnpm exec vitest run web/app/src/lib/readings/TodayReadings.test.ts -t "shows one card per topic with its honest state"
 A2: pnpm exec vitest run web/app/src/lib/readings/TodayReadings.test.ts -t "a topic with no new cards shows no placeholder reading"
 A3: pnpm exec vitest run web/app/src/lib/readings/render.test.ts -t "renders no html and no link from the body"
 A4: pnpm exec vitest run web/app/src/lib/readings/offline.test.ts -t "serves the reading of the day offline and clears it at the rollover"
-A5: pnpm exec vitest run web/app/src/lib/readings/StudiedChip.test.ts -t "updates within one sync interval of a sync that brings reviews"
+A5: pnpm exec vitest run web/app/src/lib/readings/StudiedChip.test.ts -t "refreshes on focus after a sync that brings reviews and sets no timer"
 A6: pnpm exec vitest run web/app/src/routes/readings/readings.a11y.browser.test.ts -t "the readings routes pass axe in both colour schemes"
 A7: pnpm exec vitest run web/app/src/lib/readings/render.test.ts -t "a language reading carries its lang and ruby"
 A8: python3 -m unittest discover -s scripts/tests -p test_readings_screens_rows.py -k test_the_cjk_typography_rows_are_green_over_the_readings_screens
@@ -90,6 +99,7 @@ A10: pnpm exec vitest run web/app/src/lib/readings/TodayReadings.test.ts -t "reg
 A11: pnpm exec vitest run web/app/src/lib/startapp.test.ts -t "an r_ token opens the reader and an unknown id opens Today"
 A12: cargo test -p deck-streak-api --test readings_views -- --exact the_reading_routes_answer_only_the_owner
 A13: cargo test -p deck-streak-coordination --test readings_views -- --exact the_today_view_holds_one_entry_per_topic
+A14: pnpm exec vitest run web/app/src/lib/readings/TodayReadings.test.ts -t "says readings are not enabled when the route is absent"
 ```
 
 ## 4. File manifest
@@ -119,7 +129,7 @@ A13: cargo test -p deck-streak-coordination --test readings_views -- --exact the
 | `web/app/vite.config.ts` | miniapp | changed: the app's own Vitest run (`pnpm -r test`, the gate's web stage) keeps `*.browser.test.ts` out of Node and runs it in the same browser project |
 | `web/app/package.json` | miniapp | changed: dev dependencies `@vitest/browser-playwright` and `axe-core` (ADR-051) |
 | `pnpm-lock.yaml` | repo | changed |
-| `crates/coordination/src/readings/views.rs` | `deck-streak-coordination` | added: today, reading and history views |
+| `crates/coordination/src/readings/views.rs` | `deck-streak-coordination` | added: today, reading and history views; the today view carries whether an AI route is configured |
 | `crates/coordination/tests/readings_views.rs` | `deck-streak-coordination` | added |
 | `crates/api/src/readings_routes.rs` | `deck-streak-api` | changed: the three read-only routes |
 | `crates/api/tests/readings_views.rs` | `deck-streak-api` | added |

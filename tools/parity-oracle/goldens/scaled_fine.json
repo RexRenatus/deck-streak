@@ -1,0 +1,770 @@
+{
+  "cases": [
+    {
+      "class": "configured_zero_or_less",
+      "input": {
+        "configured": -10,
+        "wallet": -5
+      },
+      "output": 0
+    },
+    {
+      "class": "configured_zero_or_less",
+      "input": {
+        "configured": -10,
+        "wallet": 0
+      },
+      "output": 0
+    },
+    {
+      "class": "configured_zero_or_less",
+      "input": {
+        "configured": -10,
+        "wallet": 1
+      },
+      "output": 0
+    },
+    {
+      "class": "configured_zero_or_less",
+      "input": {
+        "configured": -10,
+        "wallet": 100
+      },
+      "output": 0
+    },
+    {
+      "class": "configured_zero_or_less",
+      "input": {
+        "configured": -10,
+        "wallet": 10000
+      },
+      "output": 0
+    },
+    {
+      "class": "configured_zero_or_less",
+      "input": {
+        "configured": -1,
+        "wallet": -5
+      },
+      "output": 0
+    },
+    {
+      "class": "configured_zero_or_less",
+      "input": {
+        "configured": -1,
+        "wallet": 0
+      },
+      "output": 0
+    },
+    {
+      "class": "configured_zero_or_less",
+      "input": {
+        "configured": -1,
+        "wallet": 1
+      },
+      "output": 0
+    },
+    {
+      "class": "configured_zero_or_less",
+      "input": {
+        "configured": -1,
+        "wallet": 100
+      },
+      "output": 0
+    },
+    {
+      "class": "configured_zero_or_less",
+      "input": {
+        "configured": -1,
+        "wallet": 10000
+      },
+      "output": 0
+    },
+    {
+      "class": "configured_zero_or_less",
+      "input": {
+        "configured": 0,
+        "wallet": -5
+      },
+      "output": 0
+    },
+    {
+      "class": "configured_zero_or_less",
+      "input": {
+        "configured": 0,
+        "wallet": 0
+      },
+      "output": 0
+    },
+    {
+      "class": "configured_zero_or_less",
+      "input": {
+        "configured": 0,
+        "wallet": 1
+      },
+      "output": 0
+    },
+    {
+      "class": "configured_zero_or_less",
+      "input": {
+        "configured": 0,
+        "wallet": 100
+      },
+      "output": 0
+    },
+    {
+      "class": "configured_zero_or_less",
+      "input": {
+        "configured": 0,
+        "wallet": 10000
+      },
+      "output": 0
+    },
+    {
+      "class": "empty",
+      "input": {
+        "configured": 1,
+        "wallet": 0
+      },
+      "output": 1
+    },
+    {
+      "class": "empty",
+      "input": {
+        "configured": 1,
+        "wallet": -7
+      },
+      "output": 1
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 1,
+        "wallet": 48
+      },
+      "output": 1
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 1,
+        "wallet": 49
+      },
+      "output": 1
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 1,
+        "wallet": 50
+      },
+      "output": 1
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 1,
+        "wallet": 51
+      },
+      "output": 2
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 1,
+        "wallet": 52
+      },
+      "output": 2
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 1,
+        "wallet": 53
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "configured": 1,
+        "wallet": 1
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "configured": 1,
+        "wallet": 25
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "configured": 1,
+        "wallet": 150
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "configured": 1,
+        "wallet": 1001
+      },
+      "output": 21
+    },
+    {
+      "class": "empty",
+      "input": {
+        "configured": 2,
+        "wallet": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "empty",
+      "input": {
+        "configured": 2,
+        "wallet": -7
+      },
+      "output": 2
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 2,
+        "wallet": 98
+      },
+      "output": 2
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 2,
+        "wallet": 99
+      },
+      "output": 2
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 2,
+        "wallet": 100
+      },
+      "output": 2
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 2,
+        "wallet": 101
+      },
+      "output": 3
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 2,
+        "wallet": 102
+      },
+      "output": 3
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 2,
+        "wallet": 103
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "configured": 2,
+        "wallet": 1
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "configured": 2,
+        "wallet": 50
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "configured": 2,
+        "wallet": 300
+      },
+      "output": 6
+    },
+    {
+      "input": {
+        "configured": 2,
+        "wallet": 2001
+      },
+      "output": 41
+    },
+    {
+      "class": "empty",
+      "input": {
+        "configured": 5,
+        "wallet": 0
+      },
+      "output": 5
+    },
+    {
+      "class": "empty",
+      "input": {
+        "configured": 5,
+        "wallet": -7
+      },
+      "output": 5
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 5,
+        "wallet": 248
+      },
+      "output": 5
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 5,
+        "wallet": 249
+      },
+      "output": 5
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 5,
+        "wallet": 250
+      },
+      "output": 5
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 5,
+        "wallet": 251
+      },
+      "output": 6
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 5,
+        "wallet": 252
+      },
+      "output": 6
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 5,
+        "wallet": 253
+      },
+      "output": 6
+    },
+    {
+      "input": {
+        "configured": 5,
+        "wallet": 1
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "configured": 5,
+        "wallet": 125
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "configured": 5,
+        "wallet": 750
+      },
+      "output": 15
+    },
+    {
+      "input": {
+        "configured": 5,
+        "wallet": 5001
+      },
+      "output": 101
+    },
+    {
+      "class": "empty",
+      "input": {
+        "configured": 10,
+        "wallet": 0
+      },
+      "output": 10
+    },
+    {
+      "class": "empty",
+      "input": {
+        "configured": 10,
+        "wallet": -7
+      },
+      "output": 10
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 10,
+        "wallet": 498
+      },
+      "output": 10
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 10,
+        "wallet": 499
+      },
+      "output": 10
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 10,
+        "wallet": 500
+      },
+      "output": 10
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 10,
+        "wallet": 501
+      },
+      "output": 11
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 10,
+        "wallet": 502
+      },
+      "output": 11
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 10,
+        "wallet": 503
+      },
+      "output": 11
+    },
+    {
+      "input": {
+        "configured": 10,
+        "wallet": 1
+      },
+      "output": 10
+    },
+    {
+      "input": {
+        "configured": 10,
+        "wallet": 250
+      },
+      "output": 10
+    },
+    {
+      "input": {
+        "configured": 10,
+        "wallet": 1500
+      },
+      "output": 30
+    },
+    {
+      "input": {
+        "configured": 10,
+        "wallet": 10001
+      },
+      "output": 201
+    },
+    {
+      "class": "empty",
+      "input": {
+        "configured": 25,
+        "wallet": 0
+      },
+      "output": 25
+    },
+    {
+      "class": "empty",
+      "input": {
+        "configured": 25,
+        "wallet": -7
+      },
+      "output": 25
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 25,
+        "wallet": 1248
+      },
+      "output": 25
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 25,
+        "wallet": 1249
+      },
+      "output": 25
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 25,
+        "wallet": 1250
+      },
+      "output": 25
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 25,
+        "wallet": 1251
+      },
+      "output": 26
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 25,
+        "wallet": 1252
+      },
+      "output": 26
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 25,
+        "wallet": 1253
+      },
+      "output": 26
+    },
+    {
+      "input": {
+        "configured": 25,
+        "wallet": 1
+      },
+      "output": 25
+    },
+    {
+      "input": {
+        "configured": 25,
+        "wallet": 625
+      },
+      "output": 25
+    },
+    {
+      "input": {
+        "configured": 25,
+        "wallet": 3750
+      },
+      "output": 75
+    },
+    {
+      "input": {
+        "configured": 25,
+        "wallet": 25001
+      },
+      "output": 501
+    },
+    {
+      "class": "empty",
+      "input": {
+        "configured": 50,
+        "wallet": 0
+      },
+      "output": 50
+    },
+    {
+      "class": "empty",
+      "input": {
+        "configured": 50,
+        "wallet": -7
+      },
+      "output": 50
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 50,
+        "wallet": 2498
+      },
+      "output": 50
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 50,
+        "wallet": 2499
+      },
+      "output": 50
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 50,
+        "wallet": 2500
+      },
+      "output": 50
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 50,
+        "wallet": 2501
+      },
+      "output": 51
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 50,
+        "wallet": 2502
+      },
+      "output": 51
+    },
+    {
+      "class": "crossing",
+      "input": {
+        "configured": 50,
+        "wallet": 2503
+      },
+      "output": 51
+    },
+    {
+      "input": {
+        "configured": 50,
+        "wallet": 1
+      },
+      "output": 50
+    },
+    {
+      "input": {
+        "configured": 50,
+        "wallet": 1250
+      },
+      "output": 50
+    },
+    {
+      "input": {
+        "configured": 50,
+        "wallet": 7500
+      },
+      "output": 150
+    },
+    {
+      "input": {
+        "configured": 50,
+        "wallet": 50001
+      },
+      "output": 1001
+    },
+    {
+      "input": {
+        "configured": 16,
+        "wallet": 2108
+      },
+      "output": 43
+    },
+    {
+      "input": {
+        "configured": 78,
+        "wallet": 811
+      },
+      "output": 78
+    },
+    {
+      "input": {
+        "configured": 38,
+        "wallet": 4673
+      },
+      "output": 94
+    },
+    {
+      "input": {
+        "configured": 18,
+        "wallet": 201
+      },
+      "output": 18
+    },
+    {
+      "input": {
+        "configured": 49,
+        "wallet": 3312
+      },
+      "output": 67
+    },
+    {
+      "input": {
+        "configured": 6,
+        "wallet": 825
+      },
+      "output": 17
+    },
+    {
+      "input": {
+        "configured": 13,
+        "wallet": 2594
+      },
+      "output": 52
+    },
+    {
+      "input": {
+        "configured": 57,
+        "wallet": 4736
+      },
+      "output": 95
+    },
+    {
+      "input": {
+        "configured": 54,
+        "wallet": 3354
+      },
+      "output": 68
+    },
+    {
+      "input": {
+        "configured": 23,
+        "wallet": 1616
+      },
+      "output": 33
+    },
+    {
+      "input": {
+        "configured": 37,
+        "wallet": 2728
+      },
+      "output": 55
+    },
+    {
+      "input": {
+        "configured": 39,
+        "wallet": 3481
+      },
+      "output": 70
+    }
+  ],
+  "function": "gamification.economy.scaled_fine",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_082.py",
+  "registry_sha256": "a69a0d3ef28d4d443743ee93fd7a1541597ecbfc742b280cff28d41faea8a8d8",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

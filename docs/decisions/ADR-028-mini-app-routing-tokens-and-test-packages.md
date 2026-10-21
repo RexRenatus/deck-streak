@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: "2026-09-27"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -37,8 +37,10 @@ tokens reach the CSS, and which test packages the shell's tests may use.
 
 Chosen options as above. `web/app/src/lib/routes.ts` is the route table; `startapp.ts` maps
 tokens onto it and nothing else; `web/app/tests/a11y.spec.ts` and A4's coverage test read the same
-table. `web/app/scripts/build-tokens.ts` runs before `vite build` and before the Vitest run that
-reads its output. The packages admitted, as `devDependencies` of `web/app`:
+table. `web/app/scripts/build-tokens.ts` runs when `vite build` or the dev server starts (a Vite
+plugin's `buildStart`), before any stylesheet is transformed; the Vitest tests compile the same token
+file through the same function, so they judge the variables that ship without depending on a build
+having run. The packages admitted, as `devDependencies` of `web/app`:
 `@testing-library/svelte`, `jsdom`, `@axe-core/playwright`. A root `vitest.config.ts` names `web/app`
 as its project so the acceptance commands run from the repository root.
 

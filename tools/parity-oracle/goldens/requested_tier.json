@@ -1,0 +1,750 @@
+{
+  "cases": [
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "badge",
+        "rarity": "common"
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "badge",
+        "rarity": "rare"
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "badge",
+        "rarity": "epic"
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "badge",
+        "rarity": "legendary"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "badge",
+        "rarity": "qaa_unknown_rarity"
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "event_type": "badge",
+        "rarity": ""
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "level_up",
+        "rarity": "common"
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "level_up",
+        "rarity": "rare"
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "level_up",
+        "rarity": "epic"
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "level_up",
+        "rarity": "legendary"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "level_up",
+        "rarity": "qaa_unknown_rarity"
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "event_type": "level_up",
+        "rarity": ""
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "quest",
+        "rarity": "common"
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "quest",
+        "rarity": "rare"
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "quest",
+        "rarity": "epic"
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "quest",
+        "rarity": "legendary"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "quest",
+        "rarity": "qaa_unknown_rarity"
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "event_type": "quest",
+        "rarity": ""
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "quest_all",
+        "rarity": "common"
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "quest_all",
+        "rarity": "rare"
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "quest_all",
+        "rarity": "epic"
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "quest_all",
+        "rarity": "legendary"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "quest_all",
+        "rarity": "qaa_unknown_rarity"
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "event_type": "quest_all",
+        "rarity": ""
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "record",
+        "rarity": "common"
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "record",
+        "rarity": "rare"
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "record",
+        "rarity": "epic"
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "record",
+        "rarity": "legendary"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "record",
+        "rarity": "qaa_unknown_rarity"
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "event_type": "record",
+        "rarity": ""
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "season_node",
+        "rarity": "common"
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "season_node",
+        "rarity": "rare"
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "season_node",
+        "rarity": "epic"
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "season_node",
+        "rarity": "legendary"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "season_node",
+        "rarity": "qaa_unknown_rarity"
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "event_type": "season_node",
+        "rarity": ""
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "season_node_final",
+        "rarity": "common"
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "season_node_final",
+        "rarity": "rare"
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "season_node_final",
+        "rarity": "epic"
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "season_node_final",
+        "rarity": "legendary"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "season_node_final",
+        "rarity": "qaa_unknown_rarity"
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "event_type": "season_node_final",
+        "rarity": ""
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "queue_zero",
+        "rarity": "common"
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "queue_zero",
+        "rarity": "rare"
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "queue_zero",
+        "rarity": "epic"
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "queue_zero",
+        "rarity": "legendary"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "queue_zero",
+        "rarity": "qaa_unknown_rarity"
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "event_type": "queue_zero",
+        "rarity": ""
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "ghost_win",
+        "rarity": "common"
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "ghost_win",
+        "rarity": "rare"
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "ghost_win",
+        "rarity": "epic"
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "ghost_win",
+        "rarity": "legendary"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "ghost_win",
+        "rarity": "qaa_unknown_rarity"
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "event_type": "ghost_win",
+        "rarity": ""
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "band_up",
+        "rarity": "common"
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "band_up",
+        "rarity": "rare"
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "band_up",
+        "rarity": "epic"
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "band_up",
+        "rarity": "legendary"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "band_up",
+        "rarity": "qaa_unknown_rarity"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "band_up",
+        "rarity": ""
+      },
+      "output": 5
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "ceremony",
+        "rarity": "common"
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "ceremony",
+        "rarity": "rare"
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "ceremony",
+        "rarity": "epic"
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "ceremony",
+        "rarity": "legendary"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "ceremony",
+        "rarity": "qaa_unknown_rarity"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "ceremony",
+        "rarity": ""
+      },
+      "output": 5
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "share_card",
+        "rarity": "common"
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "share_card",
+        "rarity": "rare"
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "share_card",
+        "rarity": "epic"
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "share_card",
+        "rarity": "legendary"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "share_card",
+        "rarity": "qaa_unknown_rarity"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "share_card",
+        "rarity": ""
+      },
+      "output": 5
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "landmark_anniversary",
+        "rarity": "common"
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "landmark_anniversary",
+        "rarity": "rare"
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "landmark_anniversary",
+        "rarity": "epic"
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "landmark_anniversary",
+        "rarity": "legendary"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "landmark_anniversary",
+        "rarity": "qaa_unknown_rarity"
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "event_type": "landmark_anniversary",
+        "rarity": ""
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "landmark_study_day",
+        "rarity": "common"
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "landmark_study_day",
+        "rarity": "rare"
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "landmark_study_day",
+        "rarity": "epic"
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "landmark_study_day",
+        "rarity": "legendary"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "landmark_study_day",
+        "rarity": "qaa_unknown_rarity"
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "event_type": "landmark_study_day",
+        "rarity": ""
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "qaa_unknown_event",
+        "rarity": "common"
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "qaa_unknown_event",
+        "rarity": "rare"
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "qaa_unknown_event",
+        "rarity": "epic"
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "qaa_unknown_event",
+        "rarity": "legendary"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "qaa_unknown_event",
+        "rarity": "qaa_unknown_rarity"
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "event_type": "qaa_unknown_event",
+        "rarity": ""
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "",
+        "rarity": "common"
+      },
+      "output": 2
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "",
+        "rarity": "rare"
+      },
+      "output": 3
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "",
+        "rarity": "epic"
+      },
+      "output": 4
+    },
+    {
+      "class": "rarity",
+      "input": {
+        "event_type": "",
+        "rarity": "legendary"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "event_type": "",
+        "rarity": "qaa_unknown_rarity"
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "event_type": "",
+        "rarity": ""
+      },
+      "output": 2
+    }
+  ],
+  "function": "gamification.ladder.requested_tier",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_084.py",
+  "registry_sha256": "d94121fc9e1af11dff03656086884c0469daf7c5443f325a08a51ce9430f21bc",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM relight_due",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "c2730b267ab8e52ff0f60393cbf2c66a1d8c682600cea67070060db9d91d6366"
+}

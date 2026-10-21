@@ -1,5 +1,5 @@
 /*
- * The house CJK stylesheet (packs/cjk-typography, SPEC-V2-2223).
+ * The house CJK stylesheet (the cjk-typography pack, one of the box-run packs).
  *
  * Import it once, globally, after the base styles. Every rule keys on :lang(), so a CJK passage is
  * styled only when it carries its lang (and Chinese names its script, zh-Hans or zh-Hant). The

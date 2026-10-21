@@ -1,0 +1,150 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S07501-THE-BOARD-WINDOW",
+        "coordination",
+        "src/progression/board_view.rs",
+        "pub const BOARD_ROLLUPS: i64 = 365;",
+        "pub const BOARD_ROLLUPS: i64 = 364;",
+        "board_view::the_board_matches_the_parity_golden",
+        "the best day is chosen from the 365 most recent stored rollups, as many as the predecessor's ReadApiLayer.leaderboard asked for, and the golden's limits name that count (SPEC-075 R1, A1); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S07502-THE-LATEST-BEST-DAY-ON-A-TIE",
+        "progression",
+        "src/board.rs",
+        "if total.score > best.score {",
+        "if total.score >= best.score {",
+        "board_rows::the_best_day_on_a_tie_is_the_most_recent",
+        "of two days that score as much the best day is the more recent, as Python's max keeps the first maximum of rollups read most recent first: 19998 and 19996 both score 88 and the board answers 19998 (SPEC-075 R1, A11)"
+      ],
+      [
+        "S07503-AN-UNDEFINED-RATE",
+        "progression",
+        "src/exchange.rs",
+        "let rate_defined = graduated_cards > 0;",
+        "let rate_defined = true;",
+        "exchange_rates::a_bucket_with_no_graduation_has_an_undefined_rate",
+        "a bucket none of whose days graduated a card has no rate and says so, never a division by zero: focus pays 110 XP on a day with no graduation and a day with no rollup (SPEC-075 R4, A4)"
+      ],
+      [
+        "S07504-BOTH-XP-TABLES",
+        "progression",
+        "src/exchange.rs",
+        "rows.extend(settled);",
+        "let _ = settled;",
+        "exchange_rates::the_window_rows_read_both_xp_tables",
+        "the readout's rows are both XP tables': the settled rows of xp_settlement beside the grants of xp_ledger, so the window holds the settled 12 of 19999 (SPEC-075 R5, A12)"
+      ],
+      [
+        "S07505-ONE-GRADUATION-DAY-PER-BUCKET",
+        "progression",
+        "src/exchange.rs",
+        "if bucket.days.insert(row.study_day) {",
+        "if { bucket.days.insert(row.study_day); true } {",
+        "exchange_rates::the_exchange_readout_matches_the_parity_golden",
+        "a bucket counts a study day's graduations once however many of its rows pay on that day, as the predecessor's set of days did: quest:1, quest:2 and quest:3 on one day graduating 4 read 4, never 12 (SPEC-075 R4, A3)"
+      ],
+      [
+        "S07506-THE-BUCKET-PREFIX",
+        "progression",
+        "src/exchange.rs",
+        "source.find(':')",
+        "source.rfind(':')",
+        "exchange_rates::the_bucket_of_a_source_matches_the_parity_golden",
+        "a source's bucket is its text up to and including its FIRST colon, as the predecessor's normalize_source split it once (SPEC-075 R4, A5)"
+      ],
+      [
+        "S07507-THE-WINDOW-CAP",
+        "coordination",
+        "src/progression/exchange_view.rs",
+        "pub const EXCHANGE_WINDOW_CAP: i64 = 3650;",
+        "pub const EXCHANGE_WINDOW_CAP: i64 = 3651;",
+        "exchange_view::the_exchange_window_matches_the_parity_golden",
+        "a window spans at most 3650 study days, the predecessor tool's cap, so a window of 3651 or more starts 3649 days before today (SPEC-075 R6, A7); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S07508-EVERY-DAY-AT-ZERO",
+        "coordination",
+        "src/progression/exchange_view.rs",
+        "if days <= 0 {",
+        "if days < 0 {",
+        "exchange_view::the_exchange_window_matches_the_parity_golden",
+        "a window of 0 days reads every day, as the predecessor's create_server read it, never a one-day window (SPEC-075 R6, A7)"
+      ],
+      [
+        "S07509-THE-WINDOW-ENDS-TODAY",
+        "coordination",
+        "src/progression/exchange_view.rs",
+        "today.epoch_day() - (span - 1)",
+        "today.epoch_day() - span",
+        "exchange_view::the_exchange_window_matches_the_parity_golden",
+        "a window of N days holds N study days ending today, both ends included, so a one-day window starts and ends today (SPEC-075 R6, A7)"
+      ],
+      [
+        "S07510-THE-BOARD-ROUTE-ASKS-FOR-THE-OWNER",
+        "api",
+        "src/badges_routes.rs",
+        "async fn board(_owner: OwnerSession, ",
+        "async fn board(",
+        "board_routes::the_board_and_exchange_routes_answer_only_the_owner",
+        "GET /api/board takes the owner's session before it reads anything, so a request without the owner's live session answers 401 with the reason alone and no board data (SPEC-075 R2, A2)"
+      ],
+      [
+        "S07511-THE-EXCHANGE-ROUTE-ASKS-FOR-THE-OWNER",
+        "api",
+        "src/xp_routes.rs",
+        "async fn exchange(\n    _owner: OwnerSession,\n",
+        "async fn exchange(\n",
+        "board_routes::the_board_and_exchange_routes_answer_only_the_owner",
+        "GET /api/xp/exchange takes the owner's session before it reads anything, so a request without the owner's live session answers 401 with the reason alone and no XP data (SPEC-075 R7, A2)"
+      ],
+      [
+        "S07512-BOARD-PATH",
+        "api",
+        "src/badges_routes.rs",
+        "BOARD_PATH: &str = \"/api/board\";",
+        "BOARD_PATH: &str = \"/api/boards\";",
+        "board_routes::the_board_and_exchange_routes_answer_only_the_owner",
+        "the board is served at /api/board (SPEC-075 R2, A2)"
+      ],
+      [
+        "S07513-EXCHANGE-PATH",
+        "api",
+        "src/xp_routes.rs",
+        "EXCHANGE_PATH: &str = \"/api/xp/exchange\";",
+        "EXCHANGE_PATH: &str = \"/api/xp/exchanges\";",
+        "board_routes::the_board_and_exchange_routes_answer_only_the_owner",
+        "the XP exchange readout is served at /api/xp/exchange (SPEC-075 R7, A2)"
+      ],
+      [
+        "S07514-A-MALFORMED-WINDOW-IS-REFUSED",
+        "api",
+        "src/xp_routes.rs",
+        "\"invalid_days\"",
+        "\"invalid_cursor\"",
+        "board_routes::the_exchange_route_refuses_a_malformed_window",
+        "a days value that is not an integer is refused 400 with the reason invalid_days and nothing is read (SPEC-075 R11, A14)"
+      ],
+      [
+        "S07515-THE-BOARD-READS-THE-LANGUAGE-STREAK",
+        "coordination",
+        "src/progression/board_view.rs",
+        "store::state(&mut read, \"language\")",
+        "store::state(&mut read, \"law\")",
+        "board_view::the_board_matches_the_parity_golden",
+        "the board's streak row is the language streak, never the law one, which each fixture seeds with other numbers (SPEC-075 R1, A1)"
+      ],
+      [
+        "S07516-AN-UNDEFINED-RATE-IS-NULL",
+        "api",
+        "src/xp_routes.rs",
+        "\"rate\": rate.rate,",
+        "\"rate\": rate.rate.unwrap_or(0.0),",
+        "board_routes::the_exchange_route_answers_null_for_an_undefined_rate",
+        "an undefined rate answers null beside rate_defined false, never 0, so the Mini App never shows a rate nothing earned (SPEC-075 R7, A15)"
+      ]
+    ]
+  }
+}

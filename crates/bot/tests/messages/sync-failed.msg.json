@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "The sync failed (<code>server_error</code>), so the copy here was not refreshed.\nYour scores were recomputed from the copy here."
+  },
+  "x-message": "sync-failed"
+}
