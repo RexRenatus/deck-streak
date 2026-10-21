@@ -7960,6 +7960,15 @@ DYNAMIC_IMPORTS = {
         ),
     ),
     **allowed(
+        "stands in for the loaded carry module's one URL opener by its constant attribute name, so the test opens no URL; it imports nothing and reads no workflow file",
+        (
+            "test_mutation_carry_kills",
+            "BaseChoice.test_choose_base_requests_and_answers_exactly.<locals>.fetched",
+            "mock.patch.object(self.mc.urllib.request, 'urlopen', urlopen)",
+            1,
+        ),
+    ),
+    **allowed(
         "an import of this repository's own script module by its constant name, `import mutation_rows`, after a sys.path insert of the constant scripts directory; it reads no workflow file",
         ("test_mutation_rows_survivor_kills", "<module>", "import mutation_rows as runner", 1),
     ),
