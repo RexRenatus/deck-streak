@@ -17,6 +17,69 @@
       "evidence": "With flags absent the test reads 'i' in 'XX', which is False exactly as 'i' in '' is, so IGNORECASE is set only by a row whose own flags holds i, before and after.",
       "issue": "#993",
       "reached_by": "test_public_scrub.TheScrubOwnsItsShapes.test_the_loader_reads_a_synthetic_private_list_in_its_schema"
+    },
+    {
+      "file": "scripts/mutation_carry.py",
+      "mutant": "replace \"\" with \"XX\" in select_base",
+      "anchor": "str(candidate.get(\"path\", \"\"))",
+      "reason": "No default but the workflow's own path passes the workflow test, and XX is not that path.",
+      "evidence": "The default is read only for a run with no path; both '' and 'XX' differ from .github/workflows/ci.yml, so such a run fails the same test with the same reason before and after.",
+      "issue": "#1003",
+      "reached_by": "test_mutation_carry_kills.BaseChoice.test_select_base_names_each_disqualifying_test_exactly"
+    },
+    {
+      "file": "scripts/mutation_carry.py",
+      "mutant": "replace \"\" with \"XX\" in union_rule",
+      "anchor": "or sorted(extra) or both), \"\")",
+      "reason": "The default of the first name is never read: the rule returns earlier unless a name is missing, extra or in both.",
+      "evidence": "When the rule reaches next, one of the three lists holds a name, so next returns that name and neither '' nor 'XX' is ever returned.",
+      "issue": "#1003",
+      "reached_by": "test_mutation_carry_kills.UnionAndListing.test_the_union_rule_and_the_json_helpers"
+    },
+    {
+      "file": "scripts/mutation_carry.py",
+      "mutant": "replace \"\\n\" with \"\" in sections",
+      "anchor": "header = DIFF_HEADER.match(block[0].rstrip(\"\\n\"))",
+      "reason": "The header pattern ends in $, which matches before a final newline, so stripping it first changes no match.",
+      "evidence": "re.match on 'diff --git a/x b/x' with and without its final newline gives the same two groups; a line holding a carriage return fails both ways.",
+      "issue": "#1003",
+      "reached_by": "test_mutation_carry_kills.DiffSections.test_sections_changes_and_presence"
+    },
+    {
+      "file": "scripts/mutation_carry.py",
+      "mutant": "replace \"\" with \"XX\" in read_inputs",
+      "anchor": "document = json.loads(text or \"\")",
+      "reason": "An empty text and XX fail JSON decoding at the same place, so the refusal reads the same.",
+      "evidence": "json.loads('') and json.loads('XX') both raise 'Expecting value: line 1 column 1 (char 0)', so the NoBase text names the same error before and after.",
+      "issue": "#1003",
+      "reached_by": "test_mutation_carry_kills.ClassDigests.test_rows_digest_and_the_inputs_map"
+    },
+    {
+      "file": "scripts/mutation_carry.py",
+      "mutant": "replace \"temp\" with \"\" in Member.called",
+      "anchor": "if receiver is not None and receiver.kind == \"temp\":",
+      "reason": "A read of a temporary value adds nothing and refuses nothing, so returning early for it changes no census.",
+      "evidence": "Member.read holds a path, refuses None, the working directory and the root, and does nothing for a temp; with the early return gone the temp reaches read and is ignored there.",
+      "issue": "#1003",
+      "reached_by": "test_mutation_carry_kills.CensusCalls.test_each_file_call_reads_its_paths_exactly"
+    },
+    {
+      "file": "scripts/mutation_carry.py",
+      "mutant": "replace \"\" with \"XX\" in Member.walk",
+      "anchor": "self.imported(node, node.module or \"\")",
+      "reason": "An absolute from-import always names its module, which Python's parser requires, so the default is never read.",
+      "evidence": "ast.parse refuses 'from import x', and a relative import returns before this line, so node.module is a non-empty name each time the line runs.",
+      "issue": "#1003",
+      "reached_by": "test_mutation_carry_kills.CensusCalls.test_the_walk_binds_scopes_imports_and_assignments"
+    },
+    {
+      "file": "scripts/mutation_carry.py",
+      "mutant": "replace \"\" with \"XX\" in carry",
+      "anchor": "\"why\": \"\", \"files\": {}, \"carried\": []}",
+      "reason": "Every path out of carry sets why before it returns, so its first value is never read.",
+      "evidence": "The refusal, the missing base run, each NoBase and the final count each assign document['why']; any other error leaves carry, and carry_verb writes its own document.",
+      "issue": "#1003",
+      "reached_by": "test_mutation_carry_kills.CarryDocument.test_carry_writes_each_refusal_and_carry_exactly"
     }
   ]
 }
