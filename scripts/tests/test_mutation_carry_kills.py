@@ -1950,5 +1950,119 @@ class DiffSections(Base):
         examined("K27 cases", table)
 
 
+class OutcomesKept(Base):
+    """K28: the outcomes document the manifest verb keeps."""
+
+    def test_the_outcomes_document_is_kept_exactly(self):
+        plan = {
+            "classes": {"scripts": {"applies": False}, "oracle": {"applies": True}},
+            "base": "b0",
+            "head": "h0",
+        }
+        report = {
+            "files": [
+                "x",
+                {
+                    "path": "tools/v.py",
+                    "void": True,
+                    "mutants": [{"name": "v1", "outcome": "killed"}],
+                },
+                {
+                    "path": "tools/a.py",
+                    "mutants": [
+                        {"name": "m1", "outcome": "killed", "killers": ["k1"]},
+                        {"name": "m1", "outcome": "killed"},
+                        {"name": "m2", "outcome": "survived", "killers": []},
+                    ],
+                },
+            ]
+        }
+
+        def kept(document=plan):
+            place = Path(tempfile.mkdtemp(dir=self.scratch))
+            path = place / "plan.json"
+            if document is not None:
+                written(path, json.dumps(document))
+            written(place / "git.diff", "d\n")
+            (place / "root").mkdir()
+            out = place / "out.json"
+            args = self.mc.argparse.Namespace(
+                plan=str(path),
+                root=str(place / "root"),
+                python=str(place / "legs"),
+                run_id="300",
+                out=str(out),
+            )
+
+            def reader(scratch, given, directory):
+                return [("leg 1", report)] if scratch.klass == "oracle" else []
+
+            def classify(file):
+                return "oracle" if file.startswith("tools/") else "scripts"
+
+            code, lines = printed(lambda: self.mc.manifest_verb(args, reader, classify))
+            found = json.loads(out.read_text(encoding="utf-8")) if out.is_file() else None
+            return code, lines, found, str(path)
+
+        def missing():
+            code, lines, found, path = kept(None)
+            return (
+                code,
+                lines
+                == [f"carry: manifest: nothing kept: ValueError: {path} is not a mutation plan"],
+                found,
+            )
+
+        document = {
+            "schema": "deckstreak.mutation-outcomes.v1",
+            "tree": {
+                "base": "b0",
+                "head": "h0",
+                "diff_sha256": hashlib.sha256(b"d\n").hexdigest(),
+            },
+            "keys": {
+                "refused": "scripts/mutation-inputs.json cannot be read: "
+                "Expecting value: line 1 column 1 (char 0)"
+            },
+            "mutants": [
+                {
+                    "name": "m1",
+                    "file": "tools/a.py",
+                    "class": "oracle",
+                    "outcome": "killed",
+                    "killers": ["k1"],
+                    "run": "300",
+                },
+                {
+                    "name": "m2",
+                    "file": "tools/a.py",
+                    "class": "oracle",
+                    "outcome": "survived",
+                    "killers": [],
+                    "run": "300",
+                },
+            ],
+        }
+
+        def whole():
+            code, lines, found, _path = kept()
+            return code, lines, found
+
+        two = (0, ["carry: manifest: 2 whole or carried Python outcome(s) kept"], document)
+        table = [
+            ("1318:39 replace or with and", missing, (0, True, None)),
+            ("1325:17 replace continue with break", whole, two),
+            ('1330:83 replace "" with "XX"', whole, two),
+            ("1332:25 replace continue with break", whole, two),
+            ('1333:45 replace "mutants" with ""', whole, two),
+            ("1336:29 replace continue with break", whole, two),
+            ('1356:26 replace "refused" with ""', whole, two),
+            ('1359:13 replace "tree" with ""', whole, two),
+            ("1371:12 replace return value with return None", whole, two),
+        ]
+        self.judge(table)
+        examined("K28 cases", table)
+
+
 if __name__ == "__main__":
     unittest.main()
