@@ -10,12 +10,16 @@ through `attempt`, so the case fails by assertion and not by an exception.
 """
 
 import collections
+import contextlib
 import importlib.util
+import io
+import json
 import shutil
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from _support import REPO, examined
 
@@ -85,6 +89,277 @@ class AncestorsEnd(Base):
         ]
         self.judge(table)
         examined("K01 cases", table)
+
+
+def qualifying(**over):
+    """A run that passes every test of select_base for run 10 of o/r, with `over` changed."""
+    run = {
+        "id": 5,
+        "path": ".github/workflows/ci.yml@refs/heads/dev",
+        "event": "pull_request",
+        "head_branch": "dev",
+        "head_repository": {"full_name": "o/r"},
+        "pull_requests": [{"base": {"ref": "main"}}],
+        "status": "completed",
+        "conclusion": "success",
+        "head_sha": "b1",
+    }
+    run.update(over)
+    return run
+
+
+def unnumbered():
+    """A qualifying run that holds no id."""
+    return {key: value for key, value in qualifying().items() if key != "id"}
+
+
+def printed(thunk):
+    """(what `thunk()` returns, the lines it prints)."""
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        value = thunk()
+    return value, out.getvalue().splitlines()
+
+
+FORGE = "http://forge"
+RUNS_URL = (
+    "http://forge/repos/o/r/actions/workflows/ci.yml/runs"
+    "?event=pull_request&branch=dev&status=completed&per_page=100"
+)
+COMPARE_URL = "http://forge/repos/o/r/compare/b1...h1"
+ARTIFACTS_URL = "http://forge/repos/o/r/actions/runs/5/artifacts?per_page=100&direction=asc"
+UNSET = {"base_run": "", "base_manifest": "false"}
+
+
+class BaseChoice(Base):
+    """K02 to K04: the admission, the one candidate and the base step's requests."""
+
+    def test_admission_names_each_refusal_exactly(self):
+        plan = {"release": True}
+        table = [
+            (
+                "78:16 replace return value with return None",
+                lambda: self.mc.admission(plan, "x"),
+                "not admitted: 'x' names no pull request",
+            ),
+            (
+                "79:15 replace not in with in",
+                lambda: (self.mc.admission(plan, 823), self.mc.admission(plan, 822)),
+                ("not admitted: pull request #823 is not one the carry admits", None),
+            ),
+        ]
+        self.judge(table)
+        examined("K02 cases", table)
+
+    def test_select_base_names_each_disqualifying_test_exactly(self):
+        def pick(listed, run_id=10):
+            return self.mc.select_base(listed, run_id, "o/r")
+
+        def runs(*listed):
+            return {"workflow_runs": list(listed)}
+
+        def refused(why, number=5):
+            return None, f"no base: the newest run, {number}, is no base: {why}"
+
+        table = [
+            (
+                "90:16 replace return value with return None",
+                lambda: pick([]),
+                (None, "no base: the runs listing holds no workflow runs"),
+            ),
+            (
+                '90:22 replace "no base: the runs listing holds no w... with ""',
+                lambda: pick({"workflow_runs": "x"}),
+                (None, "no base: the runs listing holds no workflow runs"),
+            ),
+            (
+                "91:62 replace and with or",
+                lambda: pick(runs(1, qualifying())),
+                (qualifying(), "the newest run, 5, qualifies"),
+            ),
+            (
+                '91:74 replace "id" with ""',
+                lambda: pick(runs(qualifying(), qualifying(id=10))),
+                (qualifying(), "the newest run, 5, qualifies"),
+            ),
+            (
+                "93:16 replace return value with return None",
+                lambda: pick(runs()),
+                (None, "no base: no other run of ci is listed"),
+            ),
+            (
+                '93:22 replace "no base: no other run of ci is listed" with ""',
+                lambda: pick(runs({"id": 10})),
+                (None, "no base: no other run of ci is listed"),
+            ),
+            (
+                '94:57 replace "id" with ""',
+                lambda: pick(runs(qualifying(id=3), qualifying(id=5))),
+                (qualifying(id=5), "the newest run, 5, qualifies"),
+            ),
+            (
+                "94:63 replace or with and",
+                lambda: pick(runs(qualifying(id=4), qualifying(id=6))),
+                (qualifying(id=6), "the newest run, 6, qualifies"),
+            ),
+            (
+                "94:66 replace 0 with 1",
+                lambda: pick(runs(unnumbered(), qualifying(id=1))),
+                (qualifying(id=1), "the newest run, 1, qualifies"),
+            ),
+            (
+                "99:24 replace 0 with 1",
+                lambda: pick(runs(unnumbered()), run_id=1),
+                (unnumbered(), "the newest run, None, qualifies"),
+            ),
+            (
+                "99:27 replace < with >=",
+                lambda: pick(runs(qualifying())),
+                (qualifying(), "the newest run, 5, qualifies"),
+            ),
+            (
+                '99:37 replace "it is not older than this run" with ""',
+                lambda: pick(runs(qualifying(id=12))),
+                refused("it is not older than this run", 12),
+            ),
+            (
+                '101:52 replace "its event is not pull_request" with ""',
+                lambda: pick(runs(qualifying(event="push"))),
+                refused("its event is not pull_request"),
+            ),
+            (
+                '102:49 replace "its head branch is not dev" with ""',
+                lambda: pick(runs(qualifying(head_branch="main"))),
+                refused("its head branch is not dev"),
+            ),
+            (
+                '103:48 replace "its head is not this repository\'s" with ""',
+                lambda: pick(runs(qualifying(head_repository={"full_name": "x/y"}))),
+                refused("its head is not this repository's"),
+            ),
+            (
+                "105:61 replace == with !=",
+                lambda: pick(runs(qualifying())),
+                (qualifying(), "the newest run, 5, qualifies"),
+            ),
+            (
+                '106:13 replace "it names no pull request into main" with ""',
+                lambda: pick(runs(qualifying(pull_requests=[]))),
+                refused("it names no pull request into main"),
+            ),
+            (
+                '108:50 replace "it is not completed" with ""',
+                lambda: pick(runs(qualifying(status="in_progress"))),
+                refused("it is not completed"),
+            ),
+            (
+                "116:20 replace return value with return None",
+                lambda: pick(runs(qualifying(conclusion="cancelled"))),
+                refused("its conclusion is cancelled"),
+            ),
+        ]
+        self.judge(table)
+        examined("K03 cases", table)
+
+    def test_choose_base_requests_and_answers_exactly(self):
+        def fetched():
+            seen = []
+
+            def urlopen(request, timeout):
+                seen.append((request.full_url, sorted(request.header_items()), timeout))
+                return io.BytesIO(b'{"runs": 1}')
+
+            with mock.patch.object(self.mc.urllib.request, "urlopen", urlopen):
+                value = self.mc.fetch("http://forge/x", "t")
+            return value, seen
+
+        def base(api=FORGE, out="out", release=True, token="t", status="ahead"):
+            plan = self.scratch / "plan.json"
+            plan.write_text(json.dumps({"release": release}), encoding="utf-8")
+            args = self.mc.argparse.Namespace(
+                plan=str(plan),
+                pull_request="822",
+                out=str(self.scratch / out),
+                repository="o/r",
+                api=api,
+                run_id="10",
+                head_sha="h1",
+            )
+            answers = {
+                RUNS_URL: {"workflow_runs": [qualifying()]},
+                COMPARE_URL: {"status": status},
+                ARTIFACTS_URL: {
+                    "artifacts": [{"name": "mutation-plan"}, {"name": "mutation-outcomes"}]
+                },
+            }
+            urls = []
+
+            def answer(url, held):
+                urls.append((url, held))
+                return answers.get(url)
+
+            with mock.patch.object(self.mc, "fetch", answer):
+                outputs, lines = printed(lambda: self.mc.choose_base(args, token))
+            return outputs, lines, urls
+
+        headers = [
+            ("Accept", "application/vnd.github+json"),
+            ("Authorization", "Bearer t"),
+            ("X-github-api-version", "2022-11-28"),
+        ]
+        sent = ({"runs": 1}, [("http://forge/x", headers, 60)])
+        carried = (
+            {"base_run": "5", "base_manifest": "true"},
+            [
+                "carry: base: the newest run, 5, qualifies",
+                "carry: base: run 5, its manifest to be read",
+            ],
+            [(RUNS_URL, "t"), (COMPARE_URL, "t"), (ARTIFACTS_URL, "t")],
+        )
+        no_token = (UNSET, ["carry: base: no base: the step holds no token"], [])
+        table = [
+            ('52:15 replace "2022-11-28" with ""', fetched, sent),
+            ('124:23 replace "application/vnd.github+json" with ""', fetched, sent),
+            ("129:50 replace 60 with 61", fetched, sent),
+            (
+                '136:28 replace "" with "XX"',
+                lambda: base(release=False),
+                (
+                    UNSET,
+                    [
+                        "carry: base: not admitted: this run is not the release run, "
+                        "so nothing carries"
+                    ],
+                    [],
+                ),
+            ),
+            ('136:32 replace "base_manifest" with ""', lambda: base(token=""), no_token),
+            (
+                '136:49 replace "false" with ""',
+                lambda: base(api="http://other"),
+                (
+                    UNSET,
+                    ["carry: base: no base: the runs listing holds no workflow runs"],
+                    [(RUNS_URL.replace(FORGE, "http://other"), "t")],
+                ),
+            ),
+            (
+                '142:15 replace "carry: base: no base: the step holds... with ""',
+                lambda: base(token=""),
+                no_token,
+            ),
+            ("143:16 replace return value with return None", lambda: base(token=""), no_token),
+            ("145:23 replace True with False", lambda: base(out="a/b"), carried),
+            ('146:50 replace "/" with ""', lambda: base(api="http://forge/"), carried),
+            (
+                '147:13 replace "event=pull_request&branch=dev&status... with ""',
+                base,
+                carried,
+            ),
+            ('158:32 replace "identical" with ""', lambda: base(status="identical"), carried),
+        ]
+        self.judge(table)
+        examined("K04 cases", table)
 
 
 if __name__ == "__main__":
