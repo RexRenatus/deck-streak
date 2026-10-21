@@ -13,6 +13,7 @@ import ast
 import collections
 import contextlib
 import dataclasses
+import hashlib
 import importlib.util
 import io
 import json
@@ -1630,6 +1631,160 @@ class CensusCalls(Base):
         ]
         self.judge(table)
         examined("K22 cases", table)
+
+
+def digest(text):
+    """The sha256 hex digest of `text` as UTF-8."""
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+ROWS = (
+    "X = 1\n"
+    "def f():\n"
+    "    k()\n"
+    "    g()\n"
+    "    g()\n"
+    "def g():\n"
+    "    pass\n"
+    "def k():\n"
+    "    pass\n"
+    "def z():\n"
+    "    pass\n"
+)
+
+
+class ClassDigests(Base):
+    """K23 and K24: a job's lines, each class's key and the runner digest."""
+
+    def test_job_lines_and_the_class_digests(self):
+        jobs = self.mc.job_lines
+        files = {
+            "w.yml": "jobs:\n  a:\n    run: x\n  b:\n    run: y\n",
+            "r1.py": "one",
+            "r2.py": "two",
+        }
+        inputs = {
+            "workflow": "w.yml",
+            "leg_jobs": ["a", "b"],
+            "runner": ["r1.py", "r2.py"],
+            "runner_digest": {"file": "rows.py", "named_by": "named.py", "module": "m"},
+        }
+        runner = "\n".join(
+            [
+                "r1.py\0" + hashlib.sha256(b"one").hexdigest(),
+                "r2.py\0" + hashlib.sha256(b"two").hexdigest(),
+            ]
+        )
+        key = {
+            "jobs": digest("\n".join(["  a:", "    run: x", "  b:", "    run: y"])),
+            "runner": digest(runner),
+            "rows": None,
+        }
+
+        def keyed():
+            return self.mc.class_key(files.get, inputs)
+
+        table = [
+            (
+                "367:25 replace False with True",
+                lambda: jobs("    stray: x\n  j:\n    run: a\n", "j"),
+                ["  j:", "    run: a"],
+            ),
+            (
+                "371:37 replace == with !=",
+                lambda: jobs("jobs:\n  j:\n    run: a\n  k:\n    run: b\n", "j"),
+                ["  j:", "    run: a"],
+            ),
+            (
+                "375:18 replace 1 with 2",
+                lambda: jobs("  j:\n    a: 1\n y\n    b: 2\n", "j"),
+                ["  j:", "    a: 1", " y", "    b: 2"],
+            ),
+            (
+                "376:22 replace False with True",
+                lambda: jobs("  j:\n    a: 1\ntop: 1\n    b: 2\n", "j"),
+                ["  j:", "    a: 1"],
+            ),
+            ('418:60 replace "\\n" with ""', keyed, key),
+            ('425:9 replace "jobs" with ""', keyed, key),
+            ('426:9 replace "runner" with ""', keyed, key),
+            ('426:60 replace "\\n" with ""', keyed, key),
+            ('427:9 replace "rows" with ""', keyed, key),
+        ]
+        self.judge(table)
+        examined("K23 cases", table)
+
+    def test_rows_digest_and_the_inputs_map(self):
+        body = ast.parse(ROWS).body
+        closed = digest(
+            "\n".join(
+                [
+                    ast.dump(body[0]),
+                    "f: " + ast.dump(body[1]),
+                    "g: " + ast.dump(body[2]),
+                    "k: " + ast.dump(body[3]),
+                ]
+            )
+        )
+        inputs = "scripts/mutation-inputs.json"
+        schema = "deckstreak.mutation-inputs.v1"
+
+        def inputs_of(document):
+            return self.mc.read_inputs(json.dumps(document))
+
+        def wrong_schema():
+            return (
+                attempt(lambda: inputs_of({"schema": "x", "classes": {}})),
+                attempt(lambda: self.mc.read_inputs(None)),
+            )
+
+        written(self.scratch / "a.txt", "hello\n")
+        table = [
+            (
+                "386:21 replace or with and",
+                lambda: self.mc.rows_digest(None, "m.f()\n", "m"),
+                None,
+            ),
+            (
+                "405:13 replace continue with break",
+                lambda: self.mc.rows_digest(ROWS, "m.f()\n", "m"),
+                closed,
+            ),
+            (
+                "408:78 replace not in with in",
+                lambda: self.mc.rows_digest(ROWS, "m.f()\n", "m"),
+                closed,
+            ),
+            (
+                '412:27 replace "\\n" with ""',
+                lambda: self.mc.rows_digest(ROWS, "m.f()\n", "m"),
+                closed,
+            ),
+            (
+                "438:48 replace or with and",
+                wrong_schema,
+                (
+                    ("raised", "NoBase", f"{inputs} is not of the schema {schema}"),
+                    (
+                        "raised",
+                        "NoBase",
+                        f"{inputs} cannot be read: Expecting value: line 1 column 1 (char 0)",
+                    ),
+                ),
+            ),
+            (
+                "443:40 replace or with and",
+                lambda: inputs_of({"schema": schema, "classes": {"scripts": None}}),
+                ("raised", "NoBase", f"{inputs} holds no complete entry for the scripts class"),
+            ),
+            (
+                "1401:16 replace return value with return None",
+                lambda: self.mc.tree_reader(self.scratch)("a.txt"),
+                "hello\n",
+            ),
+        ]
+        self.judge(table)
+        examined("K24 cases", table)
 
 
 if __name__ == "__main__":
