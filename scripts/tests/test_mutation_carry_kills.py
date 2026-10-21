@@ -378,6 +378,7 @@ class BaseJudgement(Base):
         """base_judged over a scratch base whose manifest holds `text` (none when None), with a
         stand-in reader that records each Scratch it is handed and yields `reports`."""
         base = Path(tempfile.mkdtemp(dir=self.scratch))
+        self.addCleanup(shutil.rmtree, base)
         if text is not None:
             (base / "mutation-outcomes").mkdir(parents=True)
             (base / "mutation-outcomes" / "mutation-outcomes.json").write_text(
@@ -598,6 +599,7 @@ class CarryDocument(Base):
         """carry over a scratch tree, plan and base, with every child process refused and
         recorded: (the document, the recorded calls)."""
         place = Path(tempfile.mkdtemp(dir=self.scratch))
+        self.addCleanup(shutil.rmtree, place)
         root = place / "root"
         root.mkdir()
         if inputs:
@@ -753,9 +755,27 @@ class CarryDocument(Base):
                 "the map's census at the head finds a problem: p1",
             ),
             (
-                "1267:20 replace return value with return None",
+                "1270:20 replace return value with return None",
                 lambda: refusal(judged={"m1": [("killed", [], "7"), ("killed", [], "8")]}),
                 "m1 was judged 2 times at the base",
+            ),
+            (
+                "1267:20 replace return value with return None",
+                lambda: self.mc.file_refusal(
+                    "scripts/a.py",
+                    [{"name": "m1"}, {"name": "m1"}],
+                    "scripts",
+                    {"scripts": {"jobs": "1", "runner": "2"}},
+                    {"scripts": {"jobs": "1", "runner": "2"}},
+                    {},
+                    {},
+                    [],
+                    {"scripts": {"rule": "closure"}},
+                    {},
+                    self.scratch,
+                    self.mc.Changes(),
+                ),
+                "m1 is listed 2 times here",
             ),
         ]
         self.judge(table)
@@ -780,6 +800,7 @@ class CarryDocument(Base):
 
         def verb(outcome, blocked=False):
             place = Path(tempfile.mkdtemp(dir=self.scratch))
+            self.addCleanup(shutil.rmtree, place)
             plan = place / "plan.json"
             written(plan, PLAN_TEXT)
             if blocked:
@@ -1981,6 +2002,7 @@ class OutcomesKept(Base):
 
         def kept(document=plan):
             place = Path(tempfile.mkdtemp(dir=self.scratch))
+            self.addCleanup(shutil.rmtree, place)
             path = place / "plan.json"
             if document is not None:
                 written(path, json.dumps(document))
@@ -2611,6 +2633,7 @@ class UnionAndListing(Base):
         """held_to_listing over a scratch directory holding `carry` and `listing` as text (none
         when None): (what it returns, what the verdict recorded)."""
         place = Path(tempfile.mkdtemp(dir=self.scratch))
+        self.addCleanup(shutil.rmtree, place)
         if carry is not None:
             written(place / "mutation-plan" / "carry.json", carry)
         if listing is not None:
