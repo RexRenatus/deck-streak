@@ -9,6 +9,7 @@ tests start. Every case is labelled by its mutant's `<line>:<col> <operator>`, r
 through `attempt`, so the case fails by assertion and not by an exception.
 """
 
+import ast
 import collections
 import contextlib
 import dataclasses
@@ -1057,6 +1058,134 @@ class CensusAllowlists(Base):
         ]
         self.judge(table)
         examined("K13 cases", table)
+
+
+def expression(text):
+    """The expression node `text` parses to."""
+    return ast.parse(text, mode="eval").body
+
+
+class CensusValues(Base):
+    """K14 and K15: each constant value the census computes, and its path helpers."""
+
+    def setUp(self):
+        super().setUp()
+        self.member = self.mc.Member("scripts/a.py", "", "scripts")
+        self.cwd = {"c": self.mc.Value("cwd", "scripts")}
+
+    def value(self, text, env=None, temps=()):
+        return self.member.value(expression(text), env or {}, set(temps))
+
+    def test_each_constant_value_is_computed_exactly(self):
+        value, member, Value = self.value, self.member, self.mc.Value
+
+        def tempish(text, temps):
+            return member.tempish(expression(text), set(temps))
+
+        def constant(text, temps=()):
+            return member.constant(expression(text), {}, set(temps))
+
+        temp, here = Value("temp"), Value("path", "scripts/a.py")
+        table = [
+            ("613:53 replace in with not in", lambda: tempish("a", {"a"}), True),
+            ("614:44 replace and with or", lambda: tempish("b", set()), False),
+            (
+                "621:20 replace return value with return None",
+                lambda: value("'a'"),
+                Value("text", "a"),
+            ),
+            ('631:30 replace "temp" with ""', lambda: value("t / 'a'", temps={"t"}), temp),
+            (
+                '632:38 replace "cwd" with ""',
+                lambda: value("c / 'a'", env=self.cwd),
+                Value("path", "scripts/a"),
+            ),
+            ("632:45 replace and with or", lambda: value("'a' / 'b'"), None),
+            (
+                '632:63 replace "text" with ""',
+                lambda: value("__file__ / 'x'"),
+                Value("path", "scripts/a.py/x"),
+            ),
+            ("637:30 replace or with and", lambda: value("name.attr"), None),
+            (
+                '637:60 replace "cwd" with ""',
+                lambda: value("c.parent", env=self.cwd),
+                Value("path", "."),
+            ),
+            ('637:67 replace "temp" with ""', lambda: value("t.x", temps={"t"}), temp),
+            ('639:30 replace "temp" with ""', lambda: value("t.x", temps={"t"}), temp),
+            (
+                "640:24 replace return value with return None",
+                lambda: value("t.x", temps={"t"}),
+                temp,
+            ),
+            ('640:30 replace "temp" with ""', lambda: value("t.x", temps={"t"}), temp),
+            (
+                "651:23 replace is not with is",
+                lambda: value("__file__.parents[1]"),
+                Value("path", "."),
+            ),
+            ("652:17 replace and with or", lambda: value("'a'.parents[0]"), None),
+            ("653:17 replace and with or", lambda: value("name.parents[0]"), None),
+            ("654:17 replace and with or", lambda: value("__file__.parents[n]"), None),
+            (
+                "656:87 replace 1 with 2",
+                lambda: value("__file__.parents[0]"),
+                Value("path", "scripts"),
+            ),
+            ("765:16 replace return value with return None", lambda: constant("__file__"), here),
+            ("765:31 replace is not with is", lambda: constant("__file__"), here),
+            ("765:43 replace and with or", lambda: constant("'a'"), None),
+            ("765:58 replace in with not in", lambda: constant("__file__"), here),
+            ('765:62 replace "path" with ""', lambda: constant("__file__"), here),
+            ('765:70 replace "temp" with ""', lambda: constant("t", temps={"t"}), temp),
+        ]
+        self.judge(table)
+        examined("K14 cases", table)
+
+    def test_paths_join_and_name_exactly(self):
+        mc, member, Value = self.mc, self.member, self.mc.Value
+
+        def fs_arg(text, env=None):
+            return member.fs_arg(expression(text), env or {}, set())
+
+        held = Value("temp")
+
+        def own_temp():
+            found = member.fs_arg(expression("t"), {"t": held}, set())
+            return found, found is held
+
+        here = Value("path", "scripts/a.py")
+        table = [
+            ('535:59 replace "tempfile." with ""', lambda: mc.is_temp_call("other.mkdtemp"), False),
+            ("535:80 replace == with !=", lambda: mc.is_temp_call("mkdtemp"), True),
+            (
+                '559:12 replace "" with "XX"',
+                lambda: mc.dotted(expression("Path('x').read_text")),
+                "",
+            ),
+            ("565:13 replace == with !=", lambda: mc.joined("a", "b"), "a/b"),
+            ('565:16 replace ".." with ""', lambda: mc.joined("a", "..", ".."), "."),
+            ("565:21 replace or with and", lambda: mc.joined("a", "..", ".."), "."),
+            ("565:47 replace or with and", lambda: mc.joined("a", "/x"), "."),
+            ('566:16 replace "." with ""', lambda: mc.joined("a", "..", ".."), "."),
+            ("566:16 replace return value with return None", lambda: mc.joined("a", "/x"), "."),
+            ("845:30 replace and with or", lambda: fs_arg("__file__"), here),
+            ('845:48 replace "text" with ""', lambda: fs_arg("'x'"), Value("path", "scripts/x")),
+            (
+                "846:20 replace return value with return None",
+                lambda: fs_arg("'x'"),
+                Value("path", "scripts/x"),
+            ),
+            ("846:33 replace is with is not", lambda: fs_arg("'x'"), Value("path", "scripts/x")),
+            ('846:52 replace "path" with ""', lambda: fs_arg("'x'"), Value("path", "scripts/x")),
+            ('847:48 replace "temp" with ""', own_temp, (Value("temp"), False)),
+            ("848:20 replace return value with return None", own_temp, (Value("temp"), False)),
+            ('848:26 replace "temp" with ""', own_temp, (Value("temp"), False)),
+            ("849:16 replace return value with return None", lambda: fs_arg("__file__"), here),
+        ]
+        self.judge(table)
+        examined("K15 cases", table)
 
 
 if __name__ == "__main__":
