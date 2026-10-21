@@ -362,5 +362,104 @@ class BaseChoice(Base):
         examined("K04 cases", table)
 
 
+OUTCOMES = "deckstreak.mutation-outcomes.v1"
+NOT_ITS_SCHEMA = ("raised", "NoBase", "no base: the base's manifest is not of its schema")
+
+
+class BaseJudgement(Base):
+    """K05 and K06: what a base judged, by its kept manifest or by its legs."""
+
+    def judged(self, text=None, reports=()):
+        """base_judged over a scratch base whose manifest holds `text` (none when None), with a
+        stand-in reader that records each Scratch it is handed and yields `reports`."""
+        base = Path(tempfile.mkdtemp(dir=self.scratch))
+        if text is not None:
+            (base / "mutation-outcomes").mkdir(parents=True)
+            (base / "mutation-outcomes" / "mutation-outcomes.json").write_text(
+                text, encoding="utf-8"
+            )
+        calls = []
+
+        def reader(scratch, plan, directory):
+            calls.append((scratch.klass, scratch.where, plan, directory))
+            return list(reports)
+
+        found = self.mc.base_judged(base, {"plan": 1}, "300", reader)
+        return found, calls, str(base / "legs")
+
+    def test_a_kept_manifest_is_read_whole_or_refused_by_name(self):
+        kept = json.dumps(
+            {
+                "schema": OUTCOMES,
+                "mutants": [
+                    {"name": "m1", "outcome": "killed", "killers": ["k1"], "run": "7"},
+                    "x",
+                ],
+            }
+        )
+        read = (({"m1": [("killed", ["k1"], "7")]}, "its manifest"), [])
+
+        def manifest(text):
+            found, calls, _legs = self.judged(text)
+            return found, calls
+
+        table = [
+            (
+                '1140:53 replace "mutation-outcomes.json" with ""',
+                lambda: manifest(kept),
+                read,
+            ),
+            ("1142:12 replace not with nothing", lambda: manifest(kept), read),
+            ("1142:43 replace or with and", lambda: manifest("[1]"), NOT_ITS_SCHEMA),
+            ('1142:59 replace "schema" with ""', lambda: manifest(kept), read),
+            (
+                "1142:69 replace != with ==",
+                lambda: manifest(json.dumps({"mutants": []})),
+                NOT_ITS_SCHEMA,
+            ),
+            (
+                '1143:26 replace "no base: the base\'s manifest is not ... with ""',
+                lambda: manifest("null"),
+                NOT_ITS_SCHEMA,
+            ),
+            ('1144:35 replace "mutants" with ""', lambda: manifest(kept), read),
+            ("1144:46 replace or with and", lambda: manifest(kept), read),
+            ('1146:49 replace "name" with ""', lambda: manifest(kept), read),
+            ('1148:39 replace "outcome" with ""', lambda: manifest(kept), read),
+            ('1149:40 replace "killers" with ""', lambda: manifest(kept), read),
+            ("1149:51 replace or with and", lambda: manifest(kept), read),
+            ('1150:39 replace "run" with ""', lambda: manifest(kept), read),
+            ("1153:16 replace return value with return None", lambda: manifest(kept), read),
+            ('1153:24 replace "its manifest" with ""', lambda: manifest(kept), read),
+        ]
+        self.judge(table)
+        examined("K05 cases", table)
+
+    def test_the_legs_are_read_through_the_verdicts_reader(self):
+        report = {
+            "files": [
+                {"void": True, "mutants": [{"name": "v1", "outcome": "survived"}]},
+                "x",
+                {"mutants": [{"name": "m2", "outcome": "survived", "killers": ["k2"]}]},
+            ]
+        }
+
+        def legs():
+            found, calls, directory = self.judged(reports=[("leg", report)])
+            return found, calls == [("scripts", "the base's legs", {"plan": 1}, directory)]
+
+        read = (({"m2": [("survived", ["k2"], "300")]}, "its legs"), True)
+        table = [
+            ('1154:23 replace "scripts" with ""', legs, read),
+            ('1154:34 replace "the base\'s legs" with ""', legs, read),
+            ("1157:44 replace or with and", legs, read),
+            ('1157:57 replace "void" with ""', legs, read),
+            ("1158:17 replace continue with break", legs, read),
+            ('1164:20 replace "its legs" with ""', legs, read),
+        ]
+        self.judge(table)
+        examined("K06 cases", table)
+
+
 if __name__ == "__main__":
     unittest.main()
