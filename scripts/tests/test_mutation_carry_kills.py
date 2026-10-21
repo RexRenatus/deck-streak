@@ -17,6 +17,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -2217,6 +2218,317 @@ class ReadSetsAndHolds(Base):
         ]
         self.judge(table)
         examined("K30 cases", table)
+
+
+GITHUB = "https://api.github.com"
+QUERY = "?event=pull_request&branch=dev&status=completed&per_page=100"
+SUMMARY = (
+    "The release run's carry (SPEC-493, ADR-511): an admitted release run takes a Python "
+    "mutant's outcome from one recorded release run of this repository, for a population file "
+    "whose whole read set is byte-identical there and here, and runs every other listed mutant."
+)
+KEYS_OUT = """{
+  "oracle": {
+    "jobs": null,
+    "rows": null,
+    "runner": null
+  },
+  "scripts": {
+    "jobs": null,
+    "rows": null,
+    "runner": null
+  }
+}
+"""
+READ_SET_OUT = """{
+  "file": "scripts/a.py",
+  "whole": true,
+  "why": "scripts/a.py: its map entry names no dir and modules",
+  "entry": null,
+  "members": [],
+  "paths": [],
+  "trees": [],
+  "globs": [],
+  "listings": []
+}
+"""
+HOLDS_OUT = """{
+  "file": "scripts/a.py",
+  "whole": true,
+  "unchanged": true,
+  "why": "the read set is the whole tree, and no path changed"
+}
+"""
+
+
+class ScriptVerbs(Base):
+    """K31 to K33: the script's own verbs and the verdict's, in process."""
+
+    def test_the_base_verb_reads_its_defaults_and_prints_its_outputs(self):
+        plan = self.scratch / "plan.json"
+        written(plan, json.dumps({"release": True}))
+        full = {
+            "--plan": str(plan),
+            "--pull-request": "822",
+            "--run-id": "10",
+            "--repository": "o/r",
+            "--head-sha": "h1",
+            "--out": str(self.scratch / "out"),
+        }
+
+        def argv(*dropped):
+            words = ["base"]
+            for flag, word in full.items():
+                if flag not in dropped:
+                    words += [flag, word]
+            return words
+
+        def base(words, token="t", answers=None, refused=False):
+            urls = []
+
+            def answer(url, held):
+                urls.append((url, held))
+                return (answers or {}).get(url)
+
+            def refuse(args, held):
+                raise OSError("down")
+
+            with contextlib.ExitStack() as stack:
+                stack.enter_context(mock.patch.dict(os.environ, {"GH_TOKEN": token}))
+                if not token:
+                    os.environ.pop("GH_TOKEN")
+                stack.enter_context(mock.patch.object(self.mc, "fetch", answer))
+                if refused:
+                    stack.enter_context(mock.patch.object(self.mc, "choose_base", refuse))
+                code, lines = printed(lambda: self.mc.main(words))
+            return code, lines, urls
+
+        def helped():
+            out, code = io.StringIO(), None
+            with contextlib.redirect_stdout(out):
+                try:
+                    self.mc.main(["--help"])
+                except SystemExit as stop:
+                    code = stop.code
+            text = "".join(out.getvalue().split())
+            return code, "".join(SUMMARY.split()) in text, "Verbsofthisscript:" in text
+
+        unset = ["base_run=", "base_manifest=false"]
+        runs = f"{GITHUB}/repos/o/r/actions/workflows/ci.yml/runs{QUERY}"
+        listed = (
+            0,
+            ["carry: base: no base: the runs listing holds no workflow runs", *unset],
+            [(runs, "t")],
+        )
+        failed = (0, ["carry: base: no base: a request or its answer failed: down", *unset], [])
+        table = [
+            ('51:7 replace "https://api.github.com" with ""', lambda: base(argv()), listed),
+            ("1407:72 replace 0 with 1", helped, (0, True, False)),
+            (
+                '1411:51 replace "" with "XX"',
+                lambda: base(argv("--pull-request")),
+                (0, ["carry: base: not admitted: '' names no pull request", *unset], []),
+            ),
+            (
+                "1412:55 replace 0 with 1",
+                lambda: base(
+                    argv("--run-id"), answers={runs: {"workflow_runs": [qualifying(id=1)]}}
+                ),
+                (
+                    0,
+                    [
+                        "carry: base: no base: the newest run, 1, is no base: "
+                        "it is not older than this run",
+                        *unset,
+                    ],
+                    [(runs, "t")],
+                ),
+            ),
+            (
+                '1413:49 replace "" with "XX"',
+                lambda: base(argv("--repository")),
+                (
+                    0,
+                    ["carry: base: no base: the runs listing holds no workflow runs", *unset],
+                    [(f"{GITHUB}/repos//actions/workflows/ci.yml/runs{QUERY}", "t")],
+                ),
+            ),
+            (
+                '1414:47 replace "" with "XX"',
+                lambda: base(argv("--head-sha"), answers={runs: {"workflow_runs": [qualifying()]}}),
+                (
+                    0,
+                    [
+                        "carry: base: the newest run, 5, qualifies",
+                        "carry: base: no base: run 5's head is None of this head, no ancestor",
+                        *unset,
+                    ],
+                    [(runs, "t"), (f"{GITHUB}/repos/o/r/compare/b1...", "t")],
+                ),
+            ),
+            ('1416:25 replace "--api" with ""', lambda: base(argv()), listed),
+            (
+                "1425:16 replace return value with return None",
+                lambda: base(["admitted"]),
+                (0, ["[822]"], []),
+            ),
+            (
+                '1428:68 replace "" with "XX"',
+                lambda: base(argv(), token=""),
+                (0, ["carry: base: no base: the step holds no token", *unset], []),
+            ),
+            ('1431:24 replace "base_run" with ""', lambda: base(argv(), refused=True), failed),
+            ('1431:36 replace "" with "XX"', lambda: base(argv(), refused=True), failed),
+            ('1431:40 replace "base_manifest" with ""', lambda: base(argv(), refused=True), failed),
+            ('1431:57 replace "false" with ""', lambda: base(argv(), refused=True), failed),
+            ('1433:26 replace "" with "XX"', lambda: base(argv(), refused=True), failed),
+            (
+                "1437:16 replace return value with return None",
+                lambda: base(argv(), refused=True),
+                failed,
+            ),
+        ]
+        self.judge(table)
+        examined("K31 cases", table)
+
+    def test_the_key_read_set_and_holds_verbs_print_exactly(self):
+        root = self.scratch / "tree"
+        written(root / "scripts" / "mutation-inputs.json", INPUTS_TEXT)
+        written(root / "scripts" / "mutation-python.json", "{}")
+        written(self.scratch / "base.diff", "")
+        written(self.scratch / "head.diff", "")
+
+        def verb(*words):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = self.mc.main([*words, "--root", str(root)])
+            return code, out.getvalue()
+
+        def key():
+            return verb("key")
+
+        def read_set():
+            return verb("read-set", "--file", "scripts/a.py")
+
+        def held():
+            return verb(
+                "holds",
+                "--file",
+                "scripts/a.py",
+                "--base-diff",
+                str(self.scratch / "base.diff"),
+                "--head-diff",
+                str(self.scratch / "head.diff"),
+            )
+
+        table = [
+            ("1439:58 replace 2 with 3", key, (0, KEYS_OUT)),
+            ("1439:71 replace True with False", key, (0, KEYS_OUT)),
+            ("1440:16 replace return value with return None", key, (0, KEYS_OUT)),
+            ("1444:51 replace 2 with 3", read_set, (0, READ_SET_OUT)),
+            ("1445:16 replace return value with return None", read_set, (0, READ_SET_OUT)),
+            ('1449:23 replace "file" with ""', held, (0, HOLDS_OUT)),
+            ("1450:43 replace 2 with 3", held, (0, HOLDS_OUT)),
+            ("1451:12 replace return value with return None", held, (0, HOLDS_OUT)),
+        ]
+        self.judge(table)
+        examined("K32 cases", table)
+
+    def test_the_verdicts_verbs_parse_their_arguments_exactly(self):
+        Namespace = self.mc.argparse.Namespace
+
+        def verdict(*words):
+            seen, err, code = [], io.StringIO(), None
+
+            def carry_verb(args, reader, classify, census):
+                seen.append(args)
+                return 7
+
+            def manifest_verb(args, reader, classify):
+                seen.append(args)
+                return 8
+
+            with contextlib.ExitStack() as stack:
+                stack.enter_context(mock.patch.object(self.mc, "carry_verb", carry_verb))
+                stack.enter_context(mock.patch.object(self.mc, "manifest_verb", manifest_verb))
+                stack.enter_context(contextlib.redirect_stderr(err))
+                try:
+                    self.mc.verbs(list(words), None, None, None)
+                except SystemExit as stop:
+                    code = stop.code
+            lines = err.getvalue().splitlines()
+            return code, seen, lines[-1] if lines else ""
+
+        def required(verb, flags):
+            return (
+                2,
+                [],
+                f"mutation-verdict.py {verb}: error: the following arguments are required: {flags}",
+            )
+
+        carried = (
+            7,
+            [
+                Namespace(
+                    root=str(REPO),
+                    plan="p",
+                    python_listed="l",
+                    base_dir="b",
+                    base_run="",
+                    pull_request="",
+                )
+            ],
+            "",
+        )
+        kept = (8, [Namespace(root=str(REPO), plan="p", python="y", out="o", run_id="")], "")
+        whole = ("carry", "--plan", "p", "--python-listed", "l", "--base-dir", "b")
+        table = [
+            (
+                '1380:43 replace "mutation-verdict.py " with ""',
+                lambda: verdict("carry"),
+                required("carry", "--plan, --python-listed, --base-dir"),
+            ),
+            (
+                "1380:74 replace 0 with 1",
+                lambda: verdict("carry"),
+                required("carry", "--plan, --python-listed, --base-dir"),
+            ),
+            ('1382:25 replace "--plan" with ""', lambda: verdict(*whole), carried),
+            (
+                "1382:44 replace True with False",
+                lambda: verdict("carry", "--python-listed", "l", "--base-dir", "b"),
+                required("carry", "--plan"),
+            ),
+            (
+                "1384:57 replace True with False",
+                lambda: verdict("carry", "--plan", "p", "--base-dir", "b"),
+                required("carry", "--python-listed"),
+            ),
+            (
+                "1385:52 replace True with False",
+                lambda: verdict("carry", "--plan", "p", "--python-listed", "l"),
+                required("carry", "--base-dir"),
+            ),
+            ('1386:51 replace "" with "XX"', lambda: verdict(*whole), carried),
+            ('1387:55 replace "" with "XX"', lambda: verdict(*whole), carried),
+            (
+                "1389:46 replace True with False",
+                lambda: verdict("manifest", "--plan", "p", "--out", "o"),
+                required("manifest", "--python"),
+            ),
+            (
+                "1390:43 replace True with False",
+                lambda: verdict("manifest", "--plan", "p", "--python", "y"),
+                required("manifest", "--out"),
+            ),
+            (
+                '1391:45 replace "" with "XX"',
+                lambda: verdict("manifest", "--plan", "p", "--python", "y", "--out", "o"),
+                kept,
+            ),
+        ]
+        self.judge(table)
+        examined("K33 cases", table)
 
 
 if __name__ == "__main__":
