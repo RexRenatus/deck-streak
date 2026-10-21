@@ -92,7 +92,7 @@ jobs:
           print(f"matrix-limit: {json.dumps(record)}")
           PY
       - name: keep the leg's record
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: matrix-limit-first-${{ matrix.leg }}
           path: ${{ runner.temp }}/matrix-limit/
@@ -123,7 +123,7 @@ jobs:
           print(f"matrix-limit: {json.dumps(record)}")
           PY
       - name: keep the leg's record
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: matrix-limit-second-${{ matrix.leg }}
           path: ${{ runner.temp }}/matrix-limit/
@@ -195,7 +195,7 @@ jobs:
           print(f"matrix-limit: results {results}; {len(records)} record(s); {run_jobs} job(s) in the run")
           PY
       - name: keep the run's record
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: matrix-limit
           path: ${{ runner.temp }}/matrix-limit/matrix-limit.json

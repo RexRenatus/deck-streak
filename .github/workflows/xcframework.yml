@@ -164,7 +164,7 @@ jobs:
           PY
       - name: upload the XCFramework, the bindings and the report
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: xcframework
           path: |
@@ -258,7 +258,7 @@ jobs:
           PY
       - name: upload the codec's report
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: harness-wire
           path: harness-wire-report/
@@ -347,7 +347,7 @@ jobs:
           PY
       - name: upload the card view's report
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: card-isolation
           path: card-isolation-report/
@@ -707,7 +707,7 @@ jobs:
           PY
       - name: upload the report and the result bundles
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: harness
           path: |
