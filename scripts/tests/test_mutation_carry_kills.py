@@ -1188,5 +1188,449 @@ class CensusValues(Base):
         examined("K15 cases", table)
 
 
+class CensusCalls(Base):
+    """K16 to K22: the value of each call, and what each call and statement adds or refuses."""
+
+    def setUp(self):
+        super().setUp()
+        self.member = self.mc.Member("scripts/a.py", "", "scripts")
+
+    def value(self, text):
+        return self.member.value(expression(text), {}, set())
+
+    def census(self, text):
+        return self.mc.Member("scripts/a.py", text, "scripts")
+
+    def test_call_values_of_types_and_the_working_directory(self):
+        value, Value = self.value, self.mc.Value
+        temp, cwd = Value("temp"), Value("cwd", "scripts")
+        x = Value("path", "scripts/x")
+        table = [
+            (
+                "667:20 replace return value with return None",
+                lambda: value("tempfile.mkdtemp()"),
+                temp,
+            ),
+            ('667:26 replace "temp" with ""', lambda: value("tempfile.mkdtemp()"), temp),
+            ('668:20 replace "cwd" with ""', lambda: value("Path.cwd()"), cwd),
+            ("668:26 replace or with and", lambda: value("Path.cwd()"), cwd),
+            ('668:51 replace "os.getcwdb" with ""', lambda: value("os.getcwdb()"), cwd),
+            ("669:20 replace return value with return None", lambda: value("os.getcwd()"), cwd),
+            ("673:24 replace return value with return None", lambda: value("Path()"), cwd),
+            ('673:30 replace "cwd" with ""', lambda: value("Path()"), cwd),
+            ("673:55 replace in with not in", lambda: value("Path()"), cwd),
+            ('677:30 replace "text" with ""', lambda: value("Path('x')"), x),
+            ("677:37 replace and with or", lambda: value("str('x')"), Value("text", "x")),
+            ("677:46 replace in with not in", lambda: value("Path('x')"), x),
+            ("678:31 replace in with not in", lambda: value("Path('.')"), cwd),
+            ('678:35 replace "" with "XX"', lambda: value("Path('')"), cwd),
+            ('678:39 replace "." with ""', lambda: value("Path('.')"), cwd),
+            ("679:28 replace return value with return None", lambda: value("Path('')"), cwd),
+            ('679:34 replace "cwd" with ""', lambda: value("Path('')"), cwd),
+            ("680:24 replace return value with return None", lambda: value("Path('x')"), x),
+            ('680:30 replace "path" with ""', lambda: value("Path('x')"), x),
+        ]
+        self.judge(table)
+        examined("K16 cases", table)
+
+    def test_call_values_of_os_path_joins_and_dirnames(self):
+        value, Value = self.value, self.mc.Value
+        three = "os.path.join(Path(__file__).parent, 'a', 'b')"
+        made = "os.path.join(tempfile.mkdtemp(), 'a')"
+        here = "os.path.dirname(__file__)"
+        ab, temp, up = Value("path", "scripts/a/b"), Value("temp"), Value("path", "scripts")
+        table = [
+            ("682:17 replace == with !=", lambda: value(three), ab),
+            ('682:20 replace "os.path.join" with ""', lambda: value(three), ab),
+            ("682:35 replace and with or", lambda: value("os.path.join(name, 'a')"), None),
+            ("682:53 replace not in with in", lambda: value(three), ab),
+            ('683:16 replace "temp" with ""', lambda: value(made), temp),
+            ("683:23 replace in with not in", lambda: value(made), temp),
+            ("684:24 replace return value with return None", lambda: value(made), temp),
+            ('684:30 replace "temp" with ""', lambda: value(made), temp),
+            ("685:21 replace 0 with 1", lambda: value(three), ab),
+            ("685:29 replace in with not in", lambda: value(three), ab),
+            ('685:33 replace "path" with ""', lambda: value(three), ab),
+            (
+                '685:41 replace "cwd" with ""',
+                lambda: value("os.path.join(Path.cwd(), 'a')"),
+                Value("path", "scripts/a"),
+            ),
+            ("685:48 replace and with or", lambda: value("os.path.join('a', 'b')"), None),
+            ("685:65 replace == with !=", lambda: value(three), ab),
+            ('685:68 replace "text" with ""', lambda: value(three), ab),
+            (
+                "685:91 replace 1 with 2",
+                lambda: value("os.path.join(Path(__file__).parent, Path.cwd(), 'b')"),
+                None,
+            ),
+            ("686:24 replace return value with return None", lambda: value(three), ab),
+            ('686:30 replace "path" with ""', lambda: value(three), ab),
+            ("686:50 replace 0 with 1", lambda: value(three), ab),
+            ("686:86 replace 1 with 2", lambda: value(three), ab),
+            ("688:17 replace == with !=", lambda: value(here), up),
+            ('688:20 replace "os.path.dirname" with ""', lambda: value(here), up),
+            ("688:38 replace and with or", lambda: value("os.path.basename(__file__)"), None),
+            ("688:52 replace == with !=", lambda: value(here), up),
+            ("688:55 replace 1 with 2", lambda: value(here), up),
+            ("688:66 replace 0 with 1", lambda: value(here), up),
+            ("688:69 replace is not with is", lambda: value(here), up),
+            ("689:20 replace return value with return None", lambda: value(here), up),
+            ('689:26 replace "path" with ""', lambda: value(here), up),
+            ("689:46 replace 0 with 1", lambda: value(here), up),
+            ('689:55 replace ".." with ""', lambda: value(here), up),
+            ("689:70 replace 0 with 1", lambda: value(here), up),
+            ("689:78 replace == with !=", lambda: value(here), up),
+            ('689:81 replace "path" with ""', lambda: value(here), up),
+        ]
+        self.judge(table)
+        examined("K17 cases", table)
+
+    def test_call_values_of_methods_on_a_path(self):
+        value, Value = self.value, self.mc.Value
+        joins = "Path('a').joinpath('b', 'c')"
+        sibling = "Path('a/b').with_name('c')"
+        made = "tempfile.mkdtemp().joinpath('x')"
+        abc, temp, a = Value("path", "scripts/a/b/c"), Value("temp"), Value("path", "scripts/a")
+        table = [
+            (
+                '692:66 replace "cwd" with ""',
+                lambda: value("Path.cwd().joinpath('x')"),
+                Value("path", "scripts/x"),
+            ),
+            ('692:73 replace "temp" with ""', lambda: value(made), temp),
+            ('694:33 replace "temp" with ""', lambda: value(made), temp),
+            ("695:24 replace return value with return None", lambda: value(made), temp),
+            ('695:30 replace "temp" with ""', lambda: value(made), temp),
+            ("696:29 replace and with or", lambda: value("Path('a').resolve('x')"), None),
+            ("699:22 replace == with !=", lambda: value(joins), abc),
+            ('699:25 replace "joinpath" with ""', lambda: value(joins), abc),
+            ("700:17 replace and with or", lambda: value(sibling), a),
+            ("701:17 replace and with or", lambda: value(sibling), a),
+            ("701:29 replace is not with is", lambda: value(joins), abc),
+            (
+                "701:41 replace and with or",
+                lambda: value("Path('a').joinpath(name)"),
+                Value("path", "scripts"),
+            ),
+            ("701:54 replace == with !=", lambda: value(joins), abc),
+            ('701:57 replace "text" with ""', lambda: value(joins), abc),
+            ("703:24 replace return value with return None", lambda: value(joins), abc),
+            ('703:30 replace "path" with ""', lambda: value(joins), abc),
+            ("704:21 replace in with not in", lambda: value(sibling), a),
+            ("706:24 replace return value with return None", lambda: value(sibling), a),
+            ('706:30 replace "path" with ""', lambda: value(sibling), a),
+            ('706:60 replace ".." with ""', lambda: value(sibling), a),
+        ]
+        self.judge(table)
+        examined("K18 cases", table)
+
+    def test_each_refusal_of_a_loader_or_the_environment(self):
+        def seen(text):
+            member = self.census(text)
+            return member.whole, member.imports, member.loads, member.search
+
+        def refused(why, line=1):
+            return [f"scripts/a.py:{line}: {why}"], set(), set(), set()
+
+        nothing = ([], set(), set(), set())
+        script = "Path(__file__).parent / 'x.py'"
+        loaded = ([], set(), {"scripts/x.py"}, set())
+        by_name = "runpy.run_module(name)\n"
+        table = [
+            ('782:27 replace "." with ""', lambda: seen("f()\n"), nothing),
+            (
+                "786:25 replace in with not in",
+                lambda: seen("__import__('json')\n"),
+                ([], {"json"}, set(), set()),
+            ),
+            (
+                '786:29 replace "__import__" with ""',
+                lambda: seen("__import__('json')\n"),
+                ([], {"json"}, set(), set()),
+            ),
+            (
+                '786:43 replace "importlib.import_module" with ""',
+                lambda: seen("import importlib\nimportlib.import_module('json')\n"),
+                ([], {"importlib", "json"}, set(), set()),
+            ),
+            (
+                '791:38 replace "it reads the environment" with ""',
+                lambda: seen("os.getenv('X')\n"),
+                refused("it reads the environment"),
+            ),
+            (
+                '792:20 replace "os" with ""',
+                lambda: seen("os.execv('a', [])\n"),
+                refused("it starts a process by os.execv"),
+            ),
+            ("792:25 replace and with or", lambda: seen("os.listdir('x')\n"), nothing),
+            ('792:68 replace "exec" with ""', lambda: seen("os.listdir('x')\n"), nothing),
+            ('792:76 replace "spawn" with ""', lambda: seen("os.stat('x')\n"), nothing),
+            (
+                "799:44 replace != with ==",
+                lambda: seen("sys.path.insert(0, Path(__file__).parent)\n"),
+                ([], set(), set(), {"scripts"}),
+            ),
+            (
+                '800:42 replace "it puts a path held in data on sys.p... with ""',
+                lambda: seen("sys.path.insert(0, name)\n"),
+                refused("it puts a path held in data on sys.path"),
+            ),
+            (
+                '803:48 replace "run_path" with ""',
+                lambda: seen(f"runpy.run_path({script})\n"),
+                loaded,
+            ),
+            (
+                '803:60 replace "SourceFileLoader" with ""',
+                lambda: seen(f"SourceFileLoader('m', {script})\n"),
+                loaded,
+            ),
+            (
+                "806:30 replace or with and",
+                lambda: seen("runpy.run_path(name)\n"),
+                refused("it loads code by runpy.run_path from a path held in data"),
+            ),
+            (
+                "806:54 replace or with and",
+                lambda: seen("runpy.run_path('x')\n"),
+                refused("it loads code by runpy.run_path from a path held in data"),
+            ),
+            (
+                '806:71 replace "." with ""',
+                lambda: seen("ROOT_DIR = Path(__file__).parents[1]\nrunpy.run_path(ROOT_DIR)\n"),
+                refused("it loads code by runpy.run_path from a path held in data", 2),
+            ),
+            (
+                "807:24 replace return value with return None",
+                lambda: seen("importlib.util.spec_from_file_location('m', name)\n"),
+                refused(
+                    "it loads code by importlib.util.spec_from_file_location from a path held "
+                    "in data"
+                ),
+            ),
+            (
+                '810:20 replace "run_module" with ""',
+                lambda: seen("runpy.run_module('m')\n"),
+                ([], {"m"}, set(), set()),
+            ),
+            (
+                "811:31 replace 0 with 1",
+                lambda: seen("runpy.run_module('m')\n"),
+                ([], {"m"}, set(), set()),
+            ),
+            (
+                "812:48 replace and with or",
+                lambda: seen(by_name),
+                refused("it runs a module named in data"),
+            ),
+            (
+                "815:20 replace return value with return None",
+                lambda: seen(by_name),
+                refused("it runs a module named in data"),
+            ),
+            (
+                '815:38 replace "it runs a module named in data" with ""',
+                lambda: seen(by_name),
+                refused("it runs a module named in data"),
+            ),
+        ]
+        self.judge(table)
+        examined("K19 cases", table)
+
+    def test_each_file_call_reads_its_paths_exactly(self):
+        def seen(text):
+            member = self.census(text)
+            return member.reads, member.whole
+
+        d = "Path(__file__).parent / 'd'"
+        x, read_d = ({"scripts/x"}, []), ({"scripts/d"}, [])
+        table = [
+            ("820:17 replace == with !=", lambda: seen("os.listdir('x')\n"), x),
+            ('820:20 replace "os" with ""', lambda: seen("os.listdir('x')\n"), x),
+            ("820:25 replace and with or", lambda: seen(f"os.fspath({d})\n"), (set(), [])),
+            ("820:35 replace in with not in", lambda: seen("os.listdir('x')\n"), x),
+            ("820:44 replace or with and", lambda: seen("os.listdir('x')\n"), x),
+            ('820:64 replace "os.path." with ""', lambda: seen("os.isfile('x')\n"), (set(), [])),
+            ("820:76 replace and with or", lambda: seen("os.path.basename('x')\n"), (set(), [])),
+            ("820:85 replace in with not in", lambda: seen("os.path.isfile('x')\n"), x),
+            (
+                "821:35 replace 2 with 3",
+                lambda: seen("os.rename('a', 'b', name)\n"),
+                ({"scripts/a", "scripts/b"}, []),
+            ),
+            (
+                "828:50 replace is with is not",
+                lambda: seen("'x'.read_text()\n"),
+                (set(), ["scripts/a.py:1: it calls read_text on a path held in data"]),
+            ),
+            (
+                '828:78 replace "text" with ""',
+                lambda: seen("'x'.read_text()\n"),
+                (set(), ["scripts/a.py:1: it calls read_text on a path held in data"]),
+            ),
+            ('833:71 replace "os.fspath" with ""', lambda: seen(f"os.fspath({d})\n"), (set(), [])),
+            ("834:17 replace continue with break", lambda: seen(f"f(name, {d})\n"), read_d),
+            (
+                '835:30 replace "cwd" with ""',
+                lambda: seen("f(Path.cwd())\n"),
+                (set(), ["scripts/a.py:1: it passes the working directory to f"]),
+            ),
+            ("837:39 replace and with or", lambda: seen(f"f({d})\n"), read_d),
+            ("839:29 replace == with !=", lambda: seen(f"f({d})\n"), read_d),
+            ('839:32 replace "path" with ""', lambda: seen(f"f({d})\n"), read_d),
+        ]
+        self.judge(table)
+        examined("K20 cases", table)
+
+    def test_each_child_process_is_allowed_or_refused_exactly(self):
+        def seen(text):
+            member = self.census(text)
+            return member.whole, member.loads
+
+        def refused(why):
+            return [f"scripts/a.py:1: {why}"], set()
+
+        b = "Path(__file__).parent / 'b.py'"
+        p = "Path(__file__).parent"
+        other = refused("it starts a process other than the interpreter")
+        b_py = ([], {"scripts/b.py"})
+        in_data = "subprocess.run([sys.executable, name])\n"
+        no_script = "subprocess.run([sys.executable, '-c', 'x'])\n"
+        table = [
+            (
+                "854:56 replace or with and",
+                lambda: seen("subprocess.run('ls')\n"),
+                refused("it starts a process by subprocess.run"),
+            ),
+            (
+                "855:20 replace return value with return None",
+                lambda: seen("subprocess.run([])\n"),
+                refused("it starts a process by subprocess.run"),
+            ),
+            ("858:47 replace and with or", lambda: seen("subprocess.run(['ls'])\n"), other),
+            (
+                "858:65 replace in with not in",
+                lambda: seen(f"subprocess.run(['python3', {b}])\n"),
+                b_py,
+            ),
+            (
+                '858:69 replace "python3" with ""',
+                lambda: seen(f"subprocess.run(['python3', {b}])\n"),
+                b_py,
+            ),
+            (
+                '858:80 replace "python" with ""',
+                lambda: seen(f"subprocess.run(['python', {b}])\n"),
+                b_py,
+            ),
+            (
+                "860:28 replace or with and",
+                lambda: seen(f"subprocess.run([sys.executable, {b}], shell=True)\n"),
+                other,
+            ),
+            (
+                '860:44 replace "shell" with ""',
+                lambda: seen(f"subprocess.run([sys.executable, {b}], shell=True)\n"),
+                other,
+            ),
+            (
+                '861:38 replace "it starts a process other than the i... with ""',
+                lambda: seen("subprocess.run(['ls'])\n"),
+                other,
+            ),
+            (
+                "866:24 replace return value with return None",
+                lambda: seen(in_data),
+                refused("it hands the interpreter an argument held in data"),
+            ),
+            (
+                '866:42 replace "it hands the interpreter an argument... with ""',
+                lambda: seen(in_data),
+                refused("it hands the interpreter an argument held in data"),
+            ),
+            (
+                "867:37 replace and with or",
+                lambda: seen(f"subprocess.run([sys.executable, {b}, {p} / 'd'])\n"),
+                b_py,
+            ),
+            (
+                '867:61 replace ".py" with ""',
+                lambda: seen(f"subprocess.run([sys.executable, {p} / 'd', {b}])\n"),
+                b_py,
+            ),
+            (
+                "867:68 replace and with or",
+                lambda: seen(no_script),
+                refused("it runs the interpreter on no constant script"),
+            ),
+            (
+                "870:20 replace return value with return None",
+                lambda: seen(no_script),
+                refused("it runs the interpreter on no constant script"),
+            ),
+            (
+                '870:38 replace "it runs the interpreter on no consta... with ""',
+                lambda: seen(no_script),
+                refused("it runs the interpreter on no constant script"),
+            ),
+        ]
+        self.judge(table)
+        examined("K21 cases", table)
+
+    def test_the_walk_binds_scopes_imports_and_assignments(self):
+        Value = self.mc.Value
+
+        def seen(text):
+            member = self.census(text)
+            return member.whole, member.reads, member.relative, member.module_env
+
+        table = [
+            (
+                "588:62 replace True with False",
+                lambda: seen("from pathlib import Path\nP = Path(__file__).parent\n"),
+                ([], set(), set(), {"P": Value("path", "scripts")}),
+            ),
+            (
+                "593:71 replace False with True",
+                lambda: seen("def f():\n    name = 'a.txt'\nopen(name)\n"),
+                (["scripts/a.py:3: open on a path held in data"], set(), set(), {}),
+            ),
+            (
+                "712:28 replace is not with is",
+                lambda: seen("def f(p=open('x')):\n    pass\n"),
+                ([], {"scripts/x"}, set(), {}),
+            ),
+            (
+                "725:61 replace and with or",
+                lambda: seen("with open('a.txt') as h:\n    open(h)\n"),
+                (["scripts/a.py:2: open on a path held in data"], {"scripts/a.txt"}, set(), {}),
+            ),
+            (
+                "740:47 replace or with and",
+                lambda: seen("from . import x\n"),
+                ([], set(), {""}, {}),
+            ),
+            (
+                '740:50 replace "" with "XX"',
+                lambda: seen("from . import x\n"),
+                ([], set(), {""}, {}),
+            ),
+            (
+                '747:31 replace "it reads the environment" with ""',
+                lambda: seen("os.environ['X']\n"),
+                (["scripts/a.py:1: it reads the environment"], set(), set(), {}),
+            ),
+            (
+                '753:35 replace "it sets sys.path to a value held in ... with ""',
+                lambda: seen("sys.path = [name]\n"),
+                (["scripts/a.py:1: it sets sys.path to a value held in data"], set(), set(), {}),
+            ),
+        ]
+        self.judge(table)
+        examined("K22 cases", table)
+
+
 if __name__ == "__main__":
     unittest.main()
