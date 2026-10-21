@@ -156,8 +156,8 @@
       [
         "S42120-AUDIT-WEB-VERDICT-PY-MUTANT-FIGURE-IS-THE-PRICE-RUNS",
         "scripts/mutation-verdict.py",
-        "\"scripts/audit-web-verdict.py\": (3, 3, 1),",
-        "\"scripts/audit-web-verdict.py\": (3, 3, 2),",
+        "\"scripts/audit-web-verdict.py\": (2, 3, 1),",
+        "\"scripts/audit-web-verdict.py\": (2, 3, 2),",
         "scripts/audit-web-verdict.py's scoped mutant figure is the price run's (SPEC-421 R6, A9)",
         "test_mutation_python_shard_binding.AScopedLegIsPricedByItsTriple.test_the_scoped_table_is_the_verbs_output_over_the_recorded_price_run"
       ],
@@ -180,56 +180,56 @@
       [
         "S42123-IOS-ICON-PY-MUTANT-FIGURE-IS-THE-PRICE-RUNS",
         "scripts/mutation-verdict.py",
-        "\"scripts/ios_icon.py\": (1, 2, 1),",
-        "\"scripts/ios_icon.py\": (1, 2, 2),",
+        "\"scripts/ios_icon.py\": (1, 1, 1),",
+        "\"scripts/ios_icon.py\": (1, 1, 2),",
         "scripts/ios_icon.py's scoped mutant figure is the price run's (SPEC-421 R6, A9)",
         "test_mutation_python_shard_binding.AScopedLegIsPricedByItsTriple.test_the_scoped_table_is_the_verbs_output_over_the_recorded_price_run"
       ],
       [
         "S42124-IOS-LANE-PY-MUTANT-FIGURE-IS-THE-PRICE-RUNS",
         "scripts/mutation-verdict.py",
-        "\"scripts/ios_lane.py\": (10, 11, 4),",
-        "\"scripts/ios_lane.py\": (10, 11, 5),",
+        "\"scripts/ios_lane.py\": (12, 12, 5),",
+        "\"scripts/ios_lane.py\": (12, 12, 6),",
         "scripts/ios_lane.py's scoped mutant figure is the price run's (SPEC-421 R6, A9)",
         "test_mutation_python_shard_binding.AScopedLegIsPricedByItsTriple.test_the_scoped_table_is_the_verbs_output_over_the_recorded_price_run"
       ],
       [
         "S42125-MEMORY-SCOPE-PY-MUTANT-FIGURE-IS-THE-PRICE-RUNS",
         "scripts/mutation-verdict.py",
-        "\"scripts/memory_scope.py\": (36, 52, 13),",
-        "\"scripts/memory_scope.py\": (36, 52, 14),",
+        "\"scripts/memory_scope.py\": (39, 58, 14),",
+        "\"scripts/memory_scope.py\": (39, 58, 15),",
         "scripts/memory_scope.py's scoped mutant figure is the price run's (SPEC-421 R6, A9)",
         "test_mutation_python_shard_binding.AScopedLegIsPricedByItsTriple.test_the_scoped_table_is_the_verbs_output_over_the_recorded_price_run"
       ],
       [
         "S42126-MUTATION-PYTHON-PY-MUTANT-FIGURE-IS-THE-PRICE-RUNS",
         "scripts/mutation-verdict.py",
-        "\"scripts/mutation_python.py\": (184, 204, 53),",
-        "\"scripts/mutation_python.py\": (184, 204, 54),",
+        "\"scripts/mutation_python.py\": (269, 287, 79),",
+        "\"scripts/mutation_python.py\": (269, 287, 80),",
         "scripts/mutation_python.py's scoped mutant figure is the price run's (SPEC-421 R6, A9)",
         "test_mutation_python_shard_binding.AScopedLegIsPricedByItsTriple.test_the_scoped_table_is_the_verbs_output_over_the_recorded_price_run"
       ],
       [
         "S42127-MUTATION-ROWS-PY-MUTANT-FIGURE-IS-THE-PRICE-RUNS",
         "scripts/mutation-verdict.py",
-        "\"scripts/mutation_rows.py\": (172, 171, 58),",
-        "\"scripts/mutation_rows.py\": (172, 171, 59),",
+        "\"scripts/mutation_rows.py\": (167, 167, 55),",
+        "\"scripts/mutation_rows.py\": (167, 167, 56),",
         "scripts/mutation_rows.py's scoped mutant figure is the price run's (SPEC-421 R6, A9)",
         "test_mutation_python_shard_binding.AScopedLegIsPricedByItsTriple.test_the_scoped_table_is_the_verbs_output_over_the_recorded_price_run"
       ],
       [
         "S42128-PUBLIC-SCRUB-PY-MUTANT-FIGURE-IS-THE-PRICE-RUNS",
         "scripts/mutation-verdict.py",
-        "\"scripts/public-scrub.py\": (53, 60, 17),",
-        "\"scripts/public-scrub.py\": (53, 60, 18),",
+        "\"scripts/public-scrub.py\": (55, 63, 13),",
+        "\"scripts/public-scrub.py\": (55, 63, 14),",
         "scripts/public-scrub.py's scoped mutant figure is the price run's (SPEC-421 R6, A9)",
         "test_mutation_python_shard_binding.AScopedLegIsPricedByItsTriple.test_the_scoped_table_is_the_verbs_output_over_the_recorded_price_run"
       ],
       [
         "S42129-TESTFLIGHT-AGE-PY-MUTANT-FIGURE-IS-THE-PRICE-RUNS",
         "scripts/mutation-verdict.py",
-        "\"scripts/testflight_age.py\": (6, 5, 2),",
-        "\"scripts/testflight_age.py\": (6, 5, 3),",
+        "\"scripts/testflight_age.py\": (5, 5, 2),",
+        "\"scripts/testflight_age.py\": (5, 5, 3),",
         "scripts/testflight_age.py's scoped mutant figure is the price run's (SPEC-421 R6, A9)",
         "test_mutation_python_shard_binding.AScopedLegIsPricedByItsTriple.test_the_scoped_table_is_the_verbs_output_over_the_recorded_price_run"
       ],
@@ -244,16 +244,16 @@
       [
         "S42131-WEB-ENGINE-SIZE-PY-MUTANT-FIGURE-IS-THE-PRICE-RUNS",
         "scripts/mutation-verdict.py",
-        "\"scripts/web-engine-size.py\": (13, 13, 5),",
-        "\"scripts/web-engine-size.py\": (13, 13, 6),",
+        "\"scripts/web-engine-size.py\": (18, 17, 6),",
+        "\"scripts/web-engine-size.py\": (18, 17, 7),",
         "scripts/web-engine-size.py's scoped mutant figure is the price run's (SPEC-421 R6, A9)",
         "test_mutation_python_shard_binding.AScopedLegIsPricedByItsTriple.test_the_scoped_table_is_the_verbs_output_over_the_recorded_price_run"
       ],
       [
         "S42132-WEB-MUTATION-SHARDS-PY-MUTANT-FIGURE-IS-THE-PRICE-RUNS",
         "scripts/mutation-verdict.py",
-        "\"scripts/web_mutation_shards.py\": (12, 14, 2),",
-        "\"scripts/web_mutation_shards.py\": (12, 14, 3),",
+        "\"scripts/web_mutation_shards.py\": (13, 15, 2),",
+        "\"scripts/web_mutation_shards.py\": (13, 15, 3),",
         "scripts/web_mutation_shards.py's scoped mutant figure is the price run's (SPEC-421 R6, A9)",
         "test_mutation_python_shard_binding.AScopedLegIsPricedByItsTriple.test_the_scoped_table_is_the_verbs_output_over_the_recorded_price_run"
       ],
@@ -268,8 +268,8 @@
       [
         "S42134-GENERATE-PY-MUTANT-FIGURE-IS-THE-PRICE-RUNS",
         "scripts/mutation-verdict.py",
-        "\"tools/parity-oracle/generate.py\": (2, 2, 1),",
-        "\"tools/parity-oracle/generate.py\": (2, 2, 2),",
+        "\"tools/parity-oracle/generate.py\": (3, 2, 1),",
+        "\"tools/parity-oracle/generate.py\": (3, 2, 2),",
         "tools/parity-oracle/generate.py's scoped mutant figure is the price run's (SPEC-421 R6, A9)",
         "test_mutation_python_shard_binding.AScopedLegIsPricedByItsTriple.test_the_scoped_table_is_the_verbs_output_over_the_recorded_price_run"
       ]

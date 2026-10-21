@@ -4,6 +4,7 @@ import Formal.HabitWritingVectors
 import Formal.NextMilestoneVectors
 import Formal.OpenLapseVectors
 import Formal.RecordClassBindingVectors
+import Formal.ReleaseCarryVectors
 import Formal.ReplayHistoryVectors
 import Formal.RoadToC2Vectors
 import Formal.SensitiveDeckVectors
@@ -36,6 +37,7 @@ def main (args : List String) : IO UInt32 := do
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run
   | ["OpenLapse"] => Formal.OpenLapseVectors.run
   | ["RecordClassBinding"] => Formal.RecordClassBindingVectors.run
+  | ["ReleaseCarry"] => Formal.ReleaseCarryVectors.run
   | ["ReplayHistory"] => Formal.ReplayHistoryVectors.run
   | ["RoadToC2"] => Formal.RoadToC2Vectors.run
   | ["SensitiveDeck"] => Formal.SensitiveDeckVectors.run

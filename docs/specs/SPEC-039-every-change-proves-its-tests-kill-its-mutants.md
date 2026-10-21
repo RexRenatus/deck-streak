@@ -1394,3 +1394,13 @@ reads each shard by name, reads VOID when one is missing, cut or partial, and ha
 files to the judge step, whose line is unchanged. R3's rule stands: every changed web file is
 mutated whole, now in exactly one shard. R18's 100 minutes stands on each shard and on
 `mutation-web`, and no StrykerJS setting changes.
+
+## 41. Amendment: a release run carries Python outcomes from one recorded run (SPEC-493)
+
+Insert-only; every earlier byte is kept. R3 runs every listed mutant of every pull request, the release's included. SPEC-493
+lets the release run of a release pull request it admits carry a Python mutant's outcome from one recorded release run of this
+repository, for a file whose whole read set, absent paths and directory listings included, is byte-identical at that run and
+here (ADR-511): `mutation-plan` gains job-level permissions of `contents: read` and `actions: read`, a base step, its downloads
+and a `carry` step, and `shards` deals the re-run set, `python-rerun.json`; `mutation-verdict` holds the listing to the re-run
+names plus the carried ones and keeps `mutation-outcomes`. The listing, every bound and R3's jobs are unchanged, a carried
+outcome is judged at the head as a re-run one is, and Rust, rows and web outcomes are never carried.
