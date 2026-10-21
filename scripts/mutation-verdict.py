@@ -128,8 +128,8 @@ PYTHON_SHARD_MUTANTS = 20
 PYTHON_MAX_SHARDS = 32
 #: The ceiling no signed share may pass: a share outside 1 to it is refused before any deal.
 PYTHON_SHARE_CAP = 128
-#: Signed in docs/rulings/OWNER-RULING-2026-10-16-release-legs-python-305-rust-192.md (SPEC-422 R4).
-PYTHON_RELEASE_CEILING = 305
+#: Signed in docs/rulings/OWNER-RULING-2026-10-21-release-legs-python-489.md (SPEC-422 R4).
+PYTHON_RELEASE_CEILING = 489
 #: A Python leg's projected time may reach half its job's `timeout-minutes` of 60, the margin the
 #: Rust legs keep under theirs, since a projection is a price and not a measurement (SPEC-418 R1).
 PYTHON_LEG_BOUND_SECONDS = 1800
