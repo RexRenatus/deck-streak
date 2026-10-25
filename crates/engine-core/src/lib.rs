@@ -41,6 +41,8 @@
 //!   engine's day, and the rule that judges a card past its due day in it (SPEC-376 R1, R2).
 //! - [`replay`]: the replay of a deck set's review history into stock-field values, and their
 //!   mapping onto the engine's card; it writes nothing (SPEC-386 R7 to R13).
+//! - [`ai_assisted`]: whether a card was made with AI assistance: the one tag its note carries and
+//!   the rule that reads it from the note's tags (SPEC-388 R1, R2).
 //!
 //! The core depends on the engine and on one crate of this workspace, the isolated FSRS-7
 //! scheduler, which [`replay`] alone names; only the two client adapters depend on it (ADR-356 D4
@@ -48,6 +50,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod ai_assisted;
 pub mod answer;
 pub mod credential;
 pub mod dispatch;
