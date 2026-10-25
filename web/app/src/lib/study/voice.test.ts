@@ -132,7 +132,8 @@ const CARD: CardView = {
   css: '',
   labels: ['<1m', '<6m', '<10m', '4d'],
   undo: null,
-  late: false
+  late: false,
+  withheld: false
 };
 
 /** The engine with one card whose faces speak German, a sound and Japanese. */
