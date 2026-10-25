@@ -35,6 +35,7 @@ const ENGLISH: Readonly<Record<string, string>> = {
   methods_remove: 'Remove',
   methods_remove_confirm: 'Remove this passkey? You can still sign in with Telegram.',
   methods_remove_keep: 'Keep',
+  methods_remove_passkey: 'Remove passkey {position}, added {date}',
   methods_reopen: 'Reopen DeckStreak from Telegram, then try again.'
 };
 
@@ -64,12 +65,37 @@ describe('the passkey wording', () => {
       }
     }
     console.log(`examined ${judged} of ${total} locale keys`);
-    expect([keys.length, judged]).toEqual([25, total]);
+    expect([keys.length, judged]).toEqual([26, total]);
     // the fixed list is every locale the project has a file for
     const files = readdirSync(MESSAGES)
       .filter((name) => name.endsWith('.json'))
       .map((name) => name.slice(0, -'.json'.length))
       .sort();
     expect(files).toEqual([...LOCALES].sort());
+  });
+});
+
+describe('the passkey remove name', () => {
+  it("every locale names a passkey's remove with its place, its day and its own remove word", () => {
+    let judged = 0;
+    for (const locale of LOCALES) {
+      const messages = JSON.parse(readFileSync(join(MESSAGES, `${locale}.json`), 'utf8')) as Record<
+        string,
+        unknown
+      >;
+      const text = messages.methods_remove_passkey;
+      const word = messages.methods_remove;
+      expect([
+        locale,
+        typeof text === 'string' && text.trim() !== '',
+        String(text).includes('{position}'),
+        String(text).includes('{date}'),
+        typeof word === 'string' && String(text).includes(word)
+      ]).toEqual([locale, true, true, true, true]);
+      if (locale === 'en') expect(text).toBe('Remove passkey {position}, added {date}');
+      judged += 1;
+    }
+    console.log(`examined ${judged} of ${LOCALES.length} locales`);
+    expect(judged).toBe(7);
   });
 });

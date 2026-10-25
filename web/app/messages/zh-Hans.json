@@ -214,5 +214,6 @@
   "methods_remove": "移除",
   "methods_remove_confirm": "移除此通行密钥？你仍可以使用Telegram登录。",
   "methods_remove_keep": "保留",
+  "methods_remove_passkey": "移除通行密钥 {position}（添加于{date}）",
   "methods_reopen": "请从Telegram重新打开DeckStreak，然后再试一次。"
 }
