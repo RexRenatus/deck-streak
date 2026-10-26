@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   xcframework:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 120
     env:
       REPORT: ${{ github.workspace }}/xcframework-report
@@ -39,6 +39,8 @@ jobs:
       PROTOC_MACOS_DIGEST: 99ea004549c139f46da5638187a85bbe422d78939be0fa01af1aa8ab672e395f
       # The lowest iOS the consumer check typechecks the bindings for.
       IOS_DEPLOYMENT: "17.0"
+      # Xcode 27.0 (27A266a): the same path on GitHub's xcode-27 image and in cirruslabs' single-Xcode 27 image.
+      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -176,11 +178,11 @@ jobs:
           if-no-files-found: warn
 
   harness-wire:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 30
     env:
       REPORT: ${{ github.workspace }}/harness-wire-report
-      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -265,11 +267,11 @@ jobs:
           if-no-files-found: warn
 
   card-isolation:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 30
     env:
       REPORT: ${{ github.workspace }}/card-isolation-report
-      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -355,16 +357,16 @@ jobs:
 
   harness:
     needs: xcframework
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 150
     env:
       REPORT: ${{ github.workspace }}/harness-report
       RESULTS: ${{ github.workspace }}/harness-results
-      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
-      # One iPhone and one iPad the runner image holds, on the default Xcode's simulator runtime.
+      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
+      # One iPhone and one iPad on Xcode 27.0's own simulator runtime, iOS 27.0, which the xcode-27 image holds.
       IPHONE_SIM: "iPhone 17"
       IPAD_SIM: "iPad (A16)"
-      SIM_OS: "26.5"
+      SIM_OS: "27.0"
       # The project generator, pinned by its release and the digest of its archive.
       XCODEGEN_VERSION: "2.46.0"
       XCODEGEN_DIGEST: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
