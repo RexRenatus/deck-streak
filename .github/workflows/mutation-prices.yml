@@ -31,7 +31,7 @@ concurrency:
 
 jobs:
   population:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     outputs:
       files: ${{ steps.files.outputs.files }}
@@ -54,7 +54,7 @@ jobs:
 
   price:
     needs: [population]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 120
     strategy:
       fail-fast: false

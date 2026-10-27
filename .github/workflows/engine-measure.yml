@@ -26,7 +26,7 @@ concurrency:
 
 jobs:
   measure:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 90
     env:
       REPORT: ${{ github.workspace }}/engine-measure-report
@@ -115,7 +115,7 @@ jobs:
           lines = [
               f"The engine at tag `{tag.group(1) if tag else 'unknown'}`, measured by "
               f"`engine-measure.yml` run {os.environ['RUN_ID']} at {os.environ['HEAD_SHA'][:7]}, "
-              f"on a GitHub-hosted `ubuntu-24.04` runner with {read('runner-cpus')} CPUs:",
+              f"on a GitHub-hosted `ubuntu-26.04` runner with {read('runner-cpus')} CPUs:",
               "",
               "| measure | budget | measured | verdict |",
               "|---|---|---|---|",

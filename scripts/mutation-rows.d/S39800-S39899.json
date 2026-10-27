@@ -20,8 +20,8 @@
       [
         "S39802-THE-CARD-JOB-IS-BOUNDED-FOR-THREE-ENGINES",
         ".github/workflows/ci.yml",
-        "    # frame, and each layer removed alone opens exactly the channels the schematic gives it.\n    runs-on: ubuntu-24.04\n    timeout-minutes: 30\n",
-        "    # frame, and each layer removed alone opens exactly the channels the schematic gives it.\n    runs-on: ubuntu-24.04\n    timeout-minutes: 20\n",
+        "    # frame, and each layer removed alone opens exactly the channels the schematic gives it.\n    runs-on: ubuntu-26.04\n    timeout-minutes: 30\n",
+        "    # frame, and each layer removed alone opens exactly the channels the schematic gives it.\n    runs-on: ubuntu-26.04\n    timeout-minutes: 20\n",
         "the card-sandbox job's bound falls back to the two-engine figure (SPEC-398 A3, R4)",
         "test_ci_workflows.TheCardSandboxOutlastsItsThreeEngines.test_the_card_sandbox_timeout_holds_three_engines"
       ]

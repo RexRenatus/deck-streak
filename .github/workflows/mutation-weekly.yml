@@ -60,7 +60,7 @@ jobs:
   # and the test tool are the sized sweep's.
   size:
     if: ${{ github.event_name != 'pull_request' }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     outputs:
       shards: ${{ steps.size.outputs.shards }}
@@ -108,7 +108,7 @@ jobs:
   rust:
     needs: size
     if: ${{ github.event_name != 'pull_request' && inputs.package != 'miniapp' && inputs.package != 'python' }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 360
     strategy:
       fail-fast: false
@@ -186,7 +186,7 @@ jobs:
 
   web:
     if: ${{ github.event_name != 'pull_request' && (!inputs.package || inputs.package == 'miniapp') }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 100
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -226,7 +226,7 @@ jobs:
   # crate's or the Mini App's scope sweeps no Python; `python` sweeps this and nothing else.
   python:
     if: ${{ github.event_name != 'pull_request' && (!inputs.package || inputs.package == 'python') }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -254,7 +254,7 @@ jobs:
 
   rows:
     if: ${{ github.event_name != 'pull_request' && !inputs.package }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 120
     env:
       CARGO_INCREMENTAL: "0"
@@ -303,7 +303,7 @@ jobs:
   # a scoped dispatch gave a mutant (SPEC-057 R8, R12, R14).
   listing:
     if: ${{ github.event_name != 'pull_request' }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -339,7 +339,7 @@ jobs:
   survivors:
     needs: [size, rust, python, web, rows, listing]
     if: ${{ always() && github.event_name != 'pull_request' }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -398,7 +398,7 @@ jobs:
 
   rehearsal:
     if: ${{ github.event_name == 'pull_request' }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 60
     env:
       CARGO_INCREMENTAL: "0"

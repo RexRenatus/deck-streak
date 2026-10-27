@@ -149,7 +149,7 @@ class TheReleaseRunsOnSemverTags(unittest.TestCase):
         self.assertRegex(text, r"GITHUB_STEP_SUMMARY", "the unpacked size is reported")
         self.assertRegex(text, r"\bdu\b|\bwc\b|stat ", "the unpacked size is measured")
         self.assertIn(".tar.gz", steps[attest]["with"]["subject-path"])
-        self.assertEqual(job["runs-on"], "ubuntu-24.04")
+        self.assertEqual(job["runs-on"], "ubuntu-26.04")
 
 
 class TheAppleBuildRunsOnEveryReleaseTag(unittest.TestCase):
@@ -177,7 +177,7 @@ class TheReleaseWorkflowIsHardened(unittest.TestCase):
         self.assertEqual(workflow["permissions"], {"contents": "read"})
         job = workflow["jobs"]["release"]
         self.assertEqual(job["permissions"], JOB_WRITES)
-        self.assertEqual(job["runs-on"], "ubuntu-24.04")
+        self.assertEqual(job["runs-on"], "ubuntu-26.04")
         refs = examined("action references", entries(workflow, "uses"))
         for ref in refs:
             self.assertRegex(ref, PINNED, f"release.yml uses {ref}")
@@ -536,7 +536,7 @@ class TheReleaseBuildsTheSyncServer(unittest.TestCase):
         audit = jobs[AUDIT_JOB]
         self.assertEqual(audit["permissions"], {"contents": "read"})
         self.assertEqual(jobs["release"]["permissions"], JOB_WRITES)
-        self.assertEqual(audit["runs-on"], "ubuntu-24.04")
+        self.assertEqual(audit["runs-on"], "ubuntu-26.04")
         steps = audit["steps"]
         # The release job's own pinned checkout, and ci.yml's pinned installer for cargo-deny.
         checkout = [s for s in steps if action(s) == "actions/checkout"]

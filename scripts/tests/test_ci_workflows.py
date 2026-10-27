@@ -193,7 +193,7 @@ class WorkflowsAreHardened(unittest.TestCase):
             self.assertEqual((jobs.get("app") or {}).get("runs-on"), runner, lane)
             self.assertNotEqual(jobs["plan"].get("runs-on"), runner, lane)
         texts = {lane: workflow_file_text(WORKFLOWS / lane) for lane in lanes}
-        app, plan = f"    runs-on: {runner}\n", "    runs-on: ubuntu-24.04\n"
+        app, plan = f"    runs-on: {runner}\n", "    runs-on: ubuntu-26.04\n"
         internal = texts[lanes[0]]
         self.assertEqual((internal.count(app), internal.count(plan)), (1, 1))
         plants = {
