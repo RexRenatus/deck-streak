@@ -424,7 +424,7 @@ jobs:
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         if: ${{ steps.plan.outputs.rust == 'true' }}
         with:
-          tool: cargo-nextest@0.9.146
+          tool: cargo-nextest@0.9.149
           fallback: none
       - name: the diff's mutants, as cargo-mutants itself lists them
         if: ${{ steps.plan.outputs.rust == 'true' }}
@@ -580,7 +580,7 @@ jobs:
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
         with:
-          tool: cargo-nextest@0.9.146
+          tool: cargo-nextest@0.9.149
           fallback: none
       # The leg's own unmutated baseline, inside the memory scope and bounded by SPEC-480 section 9's
       # budget, before cargo-mutants, which then skips its own. Its exit and its log are recorded under

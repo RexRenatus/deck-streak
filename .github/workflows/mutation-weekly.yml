@@ -83,7 +83,7 @@ jobs:
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         if: ${{ inputs.package != 'miniapp' }}
         with:
-          tool: cargo-nextest@0.9.146
+          tool: cargo-nextest@0.9.149
           fallback: none
       - name: the package's mutants, in the order the shards take them
         if: ${{ inputs.package != 'miniapp' }}
@@ -149,7 +149,7 @@ jobs:
           fallback: none
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: cargo-nextest@0.9.146
+          tool: cargo-nextest@0.9.149
           fallback: none
       # Round-robin spreads the engine's crates, whose mutants cost minutes each, across every
       # shard. In place, cargo-mutants applies no multiplier and bounds no build unless told:
@@ -320,7 +320,7 @@ jobs:
       # test and builds nothing, but it carries the same tool and bounds as every other command.
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: cargo-nextest@0.9.146
+          tool: cargo-nextest@0.9.149
           fallback: none
       - name: the whole tree's mutants, in the order the shards take them
         run: |
@@ -433,7 +433,7 @@ jobs:
           fallback: none
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: cargo-nextest@0.9.146
+          tool: cargo-nextest@0.9.149
           fallback: none
       - name: cargo-mutants over one file, as a shard runs it (laid out as a shard's artifact lands)
         run: |
