@@ -5,6 +5,7 @@
 // cards, queued in the order its builder adds them: a text card, an image card, a sound card and a
 // speech card, each with the back "the back". A test waits for what it reads with a bounded poll
 // and then asserts the value it read, so a red quotes what the app showed when the wait ran out.
+// Each test ends its app after it asserts, so no launch ends an app another test left running.
 import UIKit
 import XCTest
 
@@ -47,6 +48,7 @@ final class ReviewActionsFlowTests: XCTestCase {
             [["shown", notShown], ["shown", unflagged], [flaggedRed], [unflagged]],
             "A11: Bury shows the image card in the text card's place; the text card's Flag reads "
                 + "\"Flagged red\" after one press and \"Flag\" again after the next")
+        app.terminate()
     }
 
     @MainActor
@@ -98,6 +100,7 @@ final class ReviewActionsFlowTests: XCTestCase {
                 "A12: on the iPhone the review stands alone, and the text card's answer side "
                     + "stays shown in landscape and back in portrait")
         }
+        app.terminate()
     }
 
     // MARK: - Steps
