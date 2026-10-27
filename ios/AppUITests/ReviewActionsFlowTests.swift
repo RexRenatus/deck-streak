@@ -6,6 +6,7 @@
 // speech card, each with the back "the back". A test waits for what it reads with a bounded poll
 // and then asserts the value it read, so a red quotes what the app showed when the wait ran out.
 // Each test ends its app after it asserts, so no launch ends an app another test left running.
+// A wait that runs out prints its seconds and keeps the screen as it stood then.
 import UIKit
 import XCTest
 
@@ -146,14 +147,25 @@ final class ReviewActionsFlowTests: XCTestCase {
     }
 
     /// Reads until the reading is `expected` or `engineWait` runs out, and returns the last
-    /// reading, so the assertion quotes what was shown when the wait ended.
+    /// reading, so the assertion quotes what was shown when the wait ended. A reading that runs
+    /// out prints its seconds and its last value and keeps the screen as it was then.
     @MainActor
     private func reading<Value: Equatable>(until expected: Value, _ read: () -> Value) -> Value {
-        let deadline = Date().addingTimeInterval(engineWait)
+        let started = Date()
+        let deadline = started.addingTimeInterval(engineWait)
         var last = read()
         while last != expected, Date() < deadline {
             Thread.sleep(forTimeInterval: 0.5)
             last = read()
+        }
+        if last != expected {
+            let seconds = Int(Date().timeIntervalSince(started))
+            let line = "a reading ran out after \(seconds) s at \(last)"
+            let screen = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            screen.name = line
+            screen.lifetime = .keepAlways
+            add(screen)
+            print(line)
         }
         return last
     }
