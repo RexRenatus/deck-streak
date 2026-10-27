@@ -158,7 +158,7 @@ p256 = "0.13.2"
 web-push-native = { version = "0.5.0", default-features = false }
 base64ct = { version = "1.8.3", default-features = false, features = ["alloc"] }
 hkdf = "0.13.0"
-aes-gcm = "0.10.3"
+aes-gcm = "0.11.1"
 
 # ADR-058 (#233): the engine's upstream tag above, replaced by a commit of the maintainer's fork that
 # is that tag plus one fix, so the engine's protobuf build script stops rerunning on every cargo
