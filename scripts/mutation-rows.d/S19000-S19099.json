@@ -220,8 +220,8 @@
       [
         "S19028-A-RELEASE-VALUE-NEVER-STARTS-WITH-A-BACKTICK",
         ".github/workflows/release.yml",
-        "    runs-on: ubuntu-26.04\n",
-        "    runs-on: `ubuntu-26.04\n",
+        "    runs-on: ubuntu-24.04\n",
+        "    runs-on: `ubuntu-24.04\n",
         "no plain value in release.yml starts with a backtick, a character YAML reserves (SPEC-190 R12)",
         "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
       ],

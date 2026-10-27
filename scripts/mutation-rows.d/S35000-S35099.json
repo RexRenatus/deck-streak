@@ -323,8 +323,8 @@
       [
         "S35047-THE-RELEASE-GATES-THE-MODULE-AFTER-ITS-BUILD",
         ".github/workflows/release.yml",
-        "      - name: build the module and its bindings\n        run: bash scripts/web-engine-build.sh --cc clang-22 --ar llvm-ar-22 --out target/web-engine\n      - name: the size gate (8000000 bytes gzip -9, brotli beside it)\n        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js\n",
-        "      - name: the size gate (8000000 bytes gzip -9, brotli beside it)\n        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js\n      - name: build the module and its bindings\n        run: bash scripts/web-engine-build.sh --cc clang-22 --ar llvm-ar-22 --out target/web-engine\n",
+        "      - name: build the module and its bindings\n        run: bash scripts/web-engine-build.sh --cc clang-18 --ar llvm-ar-18 --out target/web-engine\n      - name: the size gate (8000000 bytes gzip -9, brotli beside it)\n        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js\n",
+        "      - name: the size gate (8000000 bytes gzip -9, brotli beside it)\n        run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js\n      - name: build the module and its bindings\n        run: bash scripts/web-engine-build.sh --cc clang-18 --ar llvm-ar-18 --out target/web-engine\n",
         "the size gate runs after the module's build, so it measures the module the release ships, in the order CI's web-engine job runs them (SPEC-350 R17, A29)",
         "test_release_workflow.TheReleaseCarriesTheWebEngine.test_an_over_budget_module_stops_the_release_before_the_draft"
       ],
@@ -379,7 +379,7 @@
       [
         "S35054-THE-RELEASE-BUILDS-THE-MODULE-AS-CI-DOES",
         ".github/workflows/release.yml",
-        "        run: bash scripts/web-engine-build.sh --cc clang-22 --ar llvm-ar-22 --out target/web-engine\n",
+        "        run: bash scripts/web-engine-build.sh --cc clang-18 --ar llvm-ar-18 --out target/web-engine\n",
         "        run: bash scripts/web-engine-build.sh --cc clang --ar llvm-ar --out target/web-engine\n",
         "the release builds the module with CI's command, compiler and archiver, so it ships a module built as the one CI's browser tests ran over (SPEC-350 R17, A29)",
         "test_release_workflow.TheReleaseCarriesTheWebEngine.test_the_release_builds_and_gates_the_module_as_ci_does"

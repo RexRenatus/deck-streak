@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   rerelease:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     environment: rerelease-read
     permissions:
       contents: read

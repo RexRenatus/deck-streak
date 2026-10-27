@@ -31,7 +31,7 @@ concurrency:
 jobs:
   release:
     needs: [audit-sync-server]
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 150
     permissions:
       contents: write
@@ -112,10 +112,10 @@ jobs:
           echo "$HOME/.local/wasm/binaryen-version_133/bin" >> "$GITHUB_PATH"
       - name: a C compiler and archiver for wasm32 (SQLite's source)
         run: |
-          command -v llvm-ar-22 || sudo apt-get install -y --no-install-recommends llvm-22
-          clang-22 --version
+          command -v llvm-ar-18 || sudo apt-get install -y --no-install-recommends llvm-18
+          clang-18 --version
       - name: build the module and its bindings
-        run: bash scripts/web-engine-build.sh --cc clang-22 --ar llvm-ar-22 --out target/web-engine
+        run: bash scripts/web-engine-build.sh --cc clang-18 --ar llvm-ar-18 --out target/web-engine
       - name: the size gate (8000000 bytes gzip -9, brotli beside it)
         run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js
       - name: the Mini App's dependencies
@@ -168,7 +168,7 @@ jobs:
   # entry pins, under the fork's own lockfile. It reads the repository and writes nothing, and the
   # release job needs it, so an advisory refuses the release before anything is built.
   audit-sync-server:
-    runs-on: "ubuntu-26.04"
+    runs-on: "ubuntu-24.04"
     timeout-minutes: 20
     permissions:
       contents: read

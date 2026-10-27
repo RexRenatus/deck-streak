@@ -42,8 +42,8 @@ HEAD_SHA = "f" * 40
 #: last line that is neither blank nor a comment: SPEC-493 R5 keys the carry on them, so no byte
 #: of either changes.
 LEG_JOBS = {
-    "mutation-python": "cb47fec818245c8f58677d8a4ab3ee56bf29e7fff1046347fc2fc548b447530b",
-    "mutation-python-release": "c4ea18c07b5055765dbe45b3cec6f10293811781e87a29dcfba9294039f497e4",
+    "mutation-python": "560d13e7222564b40b3ead71a8ea396118e58d1fb651893e27a349c664d6f12c",
+    "mutation-python-release": "411b7d0bad619ffb723067ae54b5eaac085bed360fb4114961edd46c36a8b3b1",
 }
 JOB = re.compile(r"^  ([A-Za-z0-9_-]+):\s*$")
 DOWNLOAD = "actions/download-artifact@"

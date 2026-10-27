@@ -28,8 +28,8 @@
       [
         "S41903-A-WEB-SHARD-PASSES-ITS-BOUND",
         ".github/workflows/ci.yml",
-        "  mutation-web-shard:\n    runs-on: ubuntu-26.04\n    timeout-minutes: 100\n",
-        "  mutation-web-shard:\n    runs-on: ubuntu-26.04\n    timeout-minutes: 101\n",
+        "  mutation-web-shard:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 100\n",
+        "  mutation-web-shard:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 101\n",
         "each web shard keeps the leg's 100 minutes; a raised bound is refused (SPEC-419 R3)",
         "test_ci_workflows.ThePullRequestsWebSweepRunsInShards.test_the_web_sweep_runs_in_three_shards_read_by_name"
       ],

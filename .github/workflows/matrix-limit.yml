@@ -40,7 +40,7 @@ concurrency:
 
 jobs:
   size:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       first: ${{ steps.axes.outputs.first }}
@@ -69,7 +69,7 @@ jobs:
 
   first:
     needs: [size]
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     strategy:
       fail-fast: false
@@ -100,7 +100,7 @@ jobs:
 
   second:
     needs: [size]
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     strategy:
       fail-fast: false
@@ -134,7 +134,7 @@ jobs:
   empty:
     needs: [size]
     if: ${{ needs.size.outputs.empty != '[]' }}
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     strategy:
       fail-fast: false
@@ -149,7 +149,7 @@ jobs:
   count:
     needs: [size, first, second, empty]
     if: ${{ always() }}
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

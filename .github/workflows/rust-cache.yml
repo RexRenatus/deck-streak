@@ -28,7 +28,7 @@ concurrency:
 
 jobs:
   warm:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
       # The same setting as ci.yml's rust job: incremental state would only fill the cache.
