@@ -47,7 +47,7 @@ jobs:
       # The lowest iOS the consumer check typechecks the bindings for.
       IOS_DEPLOYMENT: "17.0"
       # Xcode 27.0 (27A266a): the same path on GitHub's xcode-27 image and in cirruslabs' single-Xcode 27 image.
-      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_27.9.app/Contents/Developer
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -189,7 +189,7 @@ jobs:
     timeout-minutes: 30
     env:
       REPORT: ${{ github.workspace }}/harness-wire-report
-      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_27.9.app/Contents/Developer
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -278,7 +278,7 @@ jobs:
     timeout-minutes: 30
     env:
       REPORT: ${{ github.workspace }}/card-isolation-report
-      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_27.9.app/Contents/Developer
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
