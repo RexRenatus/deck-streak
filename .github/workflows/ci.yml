@@ -1043,8 +1043,8 @@ jobs:
           echo "$HOME/.local/wasm/binaryen-version_133/bin" >> "$GITHUB_PATH"
       - name: a C compiler and archiver for wasm32 (SQLite's source)
         run: |
-          command -v llvm-ar-18 || sudo apt-get install -y --no-install-recommends llvm-18
-          clang-18 --version
+          command -v llvm-ar-22 || sudo apt-get install -y --no-install-recommends llvm-22
+          clang-22 --version
       - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
         id: rust-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -1058,7 +1058,7 @@ jobs:
           restore-keys: |
             rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
       - name: build the module and its bindings
-        run: bash scripts/web-engine-build.sh --cc clang-18 --ar llvm-ar-18 --out target/web-engine
+        run: bash scripts/web-engine-build.sh --cc clang-22 --ar llvm-ar-22 --out target/web-engine
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
