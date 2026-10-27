@@ -1303,7 +1303,7 @@ version = "0.3.0"
 dependencies = [
  "anki",
  "anki_proto",
- "base64 0.22.1",
+ "base64 0.23.1",
  "deck-streak-fsrs7",
  "prost",
  "serde_json",
@@ -1355,7 +1355,7 @@ name = "deck-streak-identity"
 version = "0.3.0"
 dependencies = [
  "axum",
- "base64 0.22.1",
+ "base64 0.23.1",
  "deck-streak-kernel",
  "getrandom 0.4.3",
  "hmac 0.13.0",
