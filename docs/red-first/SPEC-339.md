@@ -60,3 +60,17 @@ block's fourth run, `launch()` could not end the instance the third run had left
 that run's measured window. 62395e0b ends each pass's app after `stopMeasuring()` instead, so each
 measured window holds one launch and nothing to end. Both metrics, the five measured passes and
 each pass's wait for the deck list are unchanged, and M1 is still not red, a measurement.
+
+At e6dc596d, under the newer simulator runtime, SPEC-358's A12
+(`test_a12_the_review_survives_the_sidebar`) failed on the iPad simulator in run 40439982510, job
+121980478793 (`apple / harness`), in the step that runs the bury and flag tests on the iPhone and
+then the iPad, at `ReviewActionsFlowTests.swift:82`. The answer side, read after Show Answer and
+before the sidebar moved, read `[false, false, true]` against `[true, true, true]`: one check of
+that reading took 41 seconds in job 121980478793 and ended past its 30-second bound, while the two
+measurements across the sidebar matched; the iPhone passed. The test and the app code it drives are
+those of dev. 3ed6ef3f ends each test's app after it asserts, e4a0c4bc keeps the screen and prints
+the seconds when a reading runs out, bd04da9b notes in the device's log when a card's page finishes
+loading, and f2bca63c has the step let both simulators settle before its tests, sample the CPU
+through them and keep each simulator's log of page loads. A12's rows, its assertion, its bound and
+both destinations are unchanged, and it stays `not red` in SPEC-358's record. CI reads it by name at
+this push, on the iPhone and on the iPad.
