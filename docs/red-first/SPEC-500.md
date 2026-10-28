@@ -53,3 +53,40 @@ delivery's: `test_the_app_is_generated_tested_and_archived_in_the_harness_job`,
 controls of `test_the_census_is_red_on_every_planted_site`. The census's failures name 3 problems,
 each in the formal ledger's test or module and none in a site this delivery adds, so A5's census
 test reads the base's red there and no new problem.
+
+## The job output's wiring (R1)
+
+A1's scenario tests set `needs.base-is-dev.outputs.release` as a value, so no test read the line
+of `ci.yml` that wires the job output to the release step: a mutant that reads another output of
+the step, `steps.release.outputs.released`, and one that reads another step id,
+`steps.release-run.outputs.release`, each passed every test that reads `ci.yml`.
+`TheReleaseRunIsNamedInBaseIsDev.test_the_job_output_reads_the_step_that_writes_release` now reads
+the job through the tests' own loader and holds the wiring closed: the job's `outputs` map holds
+exactly the key `release`, its value is exactly `${{ steps.<id>.outputs.release }}`, exactly one
+step of the job carries that id, and that step's one `GITHUB_OUTPUT` line writes `release=`. It was
+committed alone, with `ci.yml` unchanged, at 3721a581fe5954f3e70b79d6ce316a73d815c0dd, and read
+`examined 1 base-is-dev outputs` and `examined 2 base-is-dev steps`.
+
+```text
+python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_job_output_reads_the_step_that_writes_release
+```
+
+Each mutant was applied to a scratch copy of the tree at that commit and the test run alone:
+
+```text
+steps.release.outputs.released: red: AssertionError: unexpectedly None : base-is-dev's release output reads '${{ steps.release.outputs.released }}', not a step's release output
+steps.release-run.outputs.release: red: AssertionError: 0 != 1 : base-is-dev's release output reads step 'release-run', and 0 of its steps carry that id
+unmutated: green: Ran 1 test, OK
+```
+
+The 37 hand-written mutants of this delivery's `ci.yml` lines were then run over
+`test_not_started_legs.py` and `test_verdict_folds.py` whole and `test_ci_workflows.py`'s two
+base-is-dev classes, after an unmutated control that read green: 37 examined, 35 killed, 2
+equivalent, 0 escapes. The two equivalent mutants change the release step's predicate without
+changing its value on any event the workflow runs on: `!= push` for `= pull_request`, where `on:`
+holds only those two events, and `-n "$HEAD_REPO"` for `-n "$REPO"`, beside
+`[ "$HEAD_REPO" = "$REPO" ]`. The new test also kills the two mutants that rename the release
+step's id or its output key. Over the commit, `test_ci_workflows.py` ran 70 tests with the same 8
+failures by name as above, `test_not_started_legs.py` ran 9 with none and `test_verdict_folds.py`
+ran 7 with none; the census of reads names the same 3 problems, as the new test reads `ci.yml`
+only through the loader.
