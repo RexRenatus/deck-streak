@@ -186,8 +186,8 @@ def rust_definitions(text):
 
 
 def python_defines(text, name):
-    """Whether a Python source defines `name`: `<Class>.<method>`, a test method of a top-level
-    class, or a top-level test function."""
+    """Whether a Python source defines `name` as `<Class>.<method>`: a test method of a top-level
+    class. That is the one form a Python tie names; unittest runs no top-level function."""
     try:
         module = ast.parse(text)
     except SyntaxError:
@@ -201,9 +201,9 @@ def python_defines(text, name):
             and any(isinstance(item, functions) and item.name == method for item in node.body)
             for node in module.body
         )
-    return name.startswith("test") and any(
-        isinstance(node, functions) and node.name == name for node in module.body
-    )
+    # A top-level function is no tie, even when its name starts with `test`: no unittest run
+    # would ever fail it, so it could count a property that nothing checks.
+    return False
 
 
 class Tree:
