@@ -28,7 +28,8 @@
   `vite dev` and `vite build`. The built Mini App does not contain it.
 - **The behaviour.** Reached as the plugin resolves it, at #1036's head: T1 and T2 read
   `expected 'yes' to be undefined` and T6 reads `expected undefined to be defined`; T3 to T5
-  pass (`docs/red-first/SPEC-499.md`).
+  pass. T7 to T9, which followed the copy, fail there too, by assertion
+  (`docs/red-first/SPEC-499.md`).
 
 ## 2. Requirements
 
@@ -46,8 +47,8 @@
   plugin's major, and one comment sentence naming ADR-517.
 - **R5.** No advisory is ignored or excepted, and the audit's level is not lowered:
   `AUDIT_WEB_LEVEL` in `scripts/check.sh` stays `low`.
-- **R6.** The test reaches deepmerge as the plugin resolves it, from the plugin's own installed
-  directory, never through a dependency that web/app declares.
+- **R6.** The test reaches deepmerge through the resolution web/app's declared dependency (the
+  Vite plugin) itself gets, never by declaring deepmerge in web/app.
 
 ## 3. Acceptance criteria
 
@@ -59,6 +60,9 @@
 | A4 | a deep merge leaves both of its inputs unchanged (R2) | not red: a control any fix keeps | `T4 a deep merge leaves both of its inputs unchanged` |
 | A5 | `Object.prototype` gains no property from the merges (R2) | not red: a control any fix keeps | `T5 Object.prototype gains no property from the merges` |
 | A6 | an own `__proto__` key stays an own data property of the result, cloned, with the result's prototype unchanged, the shape of TehShrike/deepmerge#277 (R2, R6) | red at #1036's head: `expected undefined to be defined` | `T6 an own __proto__ key stays an own data property, cloned, and the prototype unchanged` |
+| A6b | an own `__proto__` key of a null-prototype target stays an own data property of the result, cloned, with the result's prototype unchanged: the null-prototype-target case of upstream pull request 277 (R2, R6) | red at #1036's head: `expected { admin: true } to be { …(12) } // Object.is equality` | `T7 an own __proto__ key of a null-prototype target stays an own data property, cloned` |
+| A6c | the kept own `__proto__` key is enumerable, writable and configurable (R2, R6) | red at #1036's head: `expected undefined to deeply equal { value: { admin: true }, …(3) }` | `T8 the kept own __proto__ key is enumerable, writable and configurable` |
+| A6d | an own `__proto__` key on both target and source merges into one own data property, with the default options and with an `isMergeableObject` option that declines the target, so that the deep-merge branch alone writes the key (R2, R6) | red at #1036's head: `expected { a: 1, b: 2 } to be { …(12) } // Object.is equality` | `T9 an own __proto__ key on both target and source merges into one own data property` |
 
 ```acceptance
 A1: pnpm exec vitest run web/app/src/lib/deepmerge-prototype.test.ts -t "T1 a nested own __proto__ key"
@@ -67,15 +71,18 @@ A3: pnpm exec vitest run web/app/src/lib/deepmerge-prototype.test.ts -t "T3 the 
 A4: pnpm exec vitest run web/app/src/lib/deepmerge-prototype.test.ts -t "T4 a deep merge leaves"
 A5: pnpm exec vitest run web/app/src/lib/deepmerge-prototype.test.ts -t "T5 Object.prototype gains"
 A6: pnpm exec vitest run web/app/src/lib/deepmerge-prototype.test.ts -t "T6 an own __proto__ key"
+A6b: pnpm exec vitest run web/app/src/lib/deepmerge-prototype.test.ts -t "T7 an own __proto__ key of a null-prototype target"
+A6c: pnpm exec vitest run web/app/src/lib/deepmerge-prototype.test.ts -t "T8 the kept own __proto__ key"
+A6d: pnpm exec vitest run web/app/src/lib/deepmerge-prototype.test.ts -t "T9 an own __proto__ key on both"
 ```
 
-All six run in CI's `web` job, whose `pnpm -r test` runs web/app's suite.
+All nine run in CI's `web` job, whose `pnpm -r test` runs web/app's suite.
 
 ## 4. File manifest
 
 | path | part | change |
 |---|---|---|
-| `web/app/src/lib/deepmerge-prototype.test.ts` | Mini App tests | added: T1 to T6 |
+| `web/app/src/lib/deepmerge-prototype.test.ts` | Mini App tests | added: T1 to T9 |
 | `vendor/deepmerge/package.json` | the copy | added: the release's bytes |
 | `vendor/deepmerge/license.txt` | the copy | added: the release's bytes (MIT) |
 | `vendor/deepmerge/index.d.ts` | the copy | added: the release's bytes |
@@ -85,10 +92,12 @@ All six run in CI's `web` job, whose `pnpm -r test` runs web/app's suite.
 | `vendor/deepmerge/PATCHED.md` | the copy | added: what it patches, the diff, the fix it mirrors, the test and the rule for leaving |
 | `pnpm-workspace.yaml` | workspace | changed: one override entry and one comment sentence |
 | `pnpm-lock.yaml` | workspace | changed: regenerated lockfile-only, +5 -4 lines |
+| `REUSE.toml` | licensing | changed: an override annotating the copy's upstream files MIT under upstream's holders, then an annotation keeping `vendor/deepmerge/PATCHED.md` DeckStreak's own text |
+| `LICENSES/MIT.txt` | licensing | added: the MIT text the copy's annotation names |
 | `docs/specs/SPEC-499-the-vite-plugins-deepmerge-is-our-fixed-copy-of-4-3-1-so-an-own-proto-key-never-sets-a-prototype.md` | docs | added: this file |
 | `docs/decisions/ADR-517-the-vite-plugins-deepmerge-is-our-own-fixed-copy-of-4-3-1-until-a-release-outside-the-advisorys-range.md` | docs | added |
 | `docs/decisions/ADR-005-mini-app-front-end-sveltekit.md` | docs | changed: an amendment section appended, naming ADR-517 |
-| `docs/red-first/SPEC-499.md` | docs | added: A1 to A6 |
+| `docs/red-first/SPEC-499.md` | docs | added: A1 to A6, then A6b to A6d |
 | `changelog.d/deps-deepmerge-copy-20261028.md` | docs | added: the changelog fragment |
 
 ## 5. What this does NOT do
@@ -102,25 +111,30 @@ All six run in CI's `web` job, whose `pnpm -r test` runs web/app's suite.
 
 ## 6. Risks
 
-- **The audit still reports the copy.** If `pnpm audit` matched the copy by its name and the
-  version in its `package.json`, 4.3.1, audit-web would stay red. Detected by CI's audit-web
-  stage on this pull request; the answer is never an ignore, an exception or a lower level
-  (ADR-517).
+- **audit-web cannot see the copy.** `pnpm audit` does not audit a `file:` package, so
+  audit-web's zero for deepmerge is structural: at this pull request's head the audit reads
+  `No known vulnerabilities found`, against 1 low at #1036's head (GHSA-gcqx-w48m-w2h4, through
+  the plugin). After landing, the guards are the red-first test and the maintainer's dependency
+  scan's rule for a repository's own patched copy; never an ignore, an exception or a lower
+  level (ADR-517).
 - **Upstream reworks its fix before a release.** The copy then differs from the release it waits
-  for. The rule for leaving takes the release once it is outside the range, and T1 to T6 must
+  for. The rule for leaving takes the release once it is outside the range, and T1 to T9 must
   still pass on it; until then the copy follows an upstream change to the same lines.
 - **A later plugin major.** The selector names major 7, so a major 8 is not overridden and the
   audit judges whatever it resolves.
-- **pnpm installs a `file:` directory as a copy.** An edit to `vendor/deepmerge` reaches
-  `node_modules` only at the next install; CI's frozen install reads the committed copy.
+- **pnpm hard-links a `file:` directory on this host (inode-shared with the vendored file), not a
+  copy.** After an install, `stat -c '%i %h'` reads one inode and 2 links for the plugin's
+  installed `deepmerge/dist/cjs.js` and for `vendor/deepmerge/dist/cjs.js`, so an in-place edit
+  to `vendor/deepmerge` reaches `node_modules` at once, with no install between; CI's frozen
+  install reads the committed copy.
 
 ## 7. What only CI proves
 
-A1 to A6 on GitHub's runner, the build that merges SvelteKit's options through the copy, and
-audit-web's reading of the lock with the copy in it, all in the `web` job.
+A1 to A6 and A6b to A6d on GitHub's runner, the build that merges SvelteKit's options through the
+copy, and audit-web's reading of the lock with the copy in it, all in the `web` job.
 
 ## 8. Formal model and mutation rows
 
 None. The change adds no actor, shared state or write path. No production file under
 `web/app/src` changes, and the copy is a dependency that StrykerJS's `mutate` globs do not reach
-(`web/app/stryker.config.json`); T1 to T6 pin its behaviour.
+(`web/app/stryker.config.json`); T1 to T9 pin its behaviour.
