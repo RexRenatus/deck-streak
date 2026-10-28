@@ -17,5 +17,9 @@ engineStrict: true
 # major, so the entry never touches a later major, which declares a fixed range itself; an entry
 # whose parent no longer matches is removed, as SvelteKit 2's `cookie` and Mermaid 11's `katex`
 # entries were when SvelteKit 3 and Mermaid 12 declared fixed ranges themselves.
+# One entry has no fixed release to move to (ADR-517): every 7.x release of SvelteKit's Vite plugin
+# declares `deepmerge ^4.3.1`, and no release fixes GHSA-gcqx-w48m-w2h4, so its selector takes our
+# fixed copy in `vendor/deepmerge` (its PATCHED.md) until a release outside the advisory's range.
 overrides:
   'typed-rest-client@2>qs': '>=6.16.1 <7'
+  '@sveltejs/vite-plugin-svelte@7>deepmerge': 'file:./vendor/deepmerge'
