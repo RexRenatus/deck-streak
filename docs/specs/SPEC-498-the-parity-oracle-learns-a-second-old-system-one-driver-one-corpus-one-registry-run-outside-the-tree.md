@@ -61,6 +61,66 @@ Rust tests through `tools/parity-oracle/golden.rs` (ADR-029). What was read at `
   source digest differs from the pin; it fails the run (exit 3) and writes nothing on a harness of another engine, a
   protocol fault, a refusal in words rather than a label, or a census hit; and it writes only in its output folder.
 
+The second delivery of this SPEC, "the engine writes every parity golden once, sandboxed outside the tree", adds:
+
+- **R12. A golden for every registered function.** One committed golden per registration of the engine registry, named
+  as registered, and no other engine golden.
+- **R13. Provenance, synthetic and seeded** (`dm.oracle-provenance`, `dm.oracle-synthetic`). Each engine golden is strict
+  `phx.parity-golden.v1` as the driver writes it; its `source_commit` is the commit the root manifest's engine patch
+  pins (`65e053b8…`, the upstream engine plus the fork's patches, `Cargo.toml:165-176`); its `generator_sha256` and
+  `registry_sha256` are the committed driver's and registry module's; its inputs are `synthetic` and its seed is the
+  corpus's integer seed.
+- **R14. Each engine golden read by a Rust test** (`dm.oracle-consumed`). `crates/ingest/tests/engine_goldens.rs` reads
+  every engine golden through `golden.rs`, holds it to the pin and the driver, and holds every case's answer to the
+  harness's answer keys for its function (section 2a) or to a refusal label. The port of each function compares its
+  own outputs through `golden::assert_parity` in the delivery that ports it.
+- **R15. No date, id, clock or stock line.** No engine golden holds a calendar date or clock time, an integer (or a 10-
+  or 13-digit run in a text) in the run's clock range unless the case's input gave it (a field checksum, a digest of
+  the input's own text, is not a clock), or a stock line the committed census `tools/parity-oracle/anki/stock-lines.sha256`
+  names. A refusal is a label, never the engine's words.
+- **R16. The schema snapshot and its pin line.** `tools/parity-oracle/anki/snapshot.py` derives
+  `tools/parity-oracle/anki/schema-snapshot.sql` from the fresh-collection golden: two comment lines, one pin line
+  `PRAGMA user_version = N;` with the golden's version, then each statement of the fresh collection's schema.
+- **R17. The one run.** The goldens, the census and the snapshot come from one run of the runbook's sandbox: an
+  egress-closed guest that mounts only a clean `git archive` export of the pinned DeckStreak commit and cargo's registry
+  and git checkouts, read-only, with one writable output folder. Its private record shows the planted outbound
+  connection refused inside and accepted outside, a planted canary outside the mounts unreadable inside and read
+  outside, the mounts and their modes, the driver's `examined` line, the digest of every file written, and the dirty
+  side's read list. Runs after this one follow a separate later rule; this SPEC binds the first.
+
+## 2a. The harness's answers
+
+Each case's `output` is either `{"refused": LABEL}` or an object of exactly these keys:
+
+| golden | keys |
+|---|---|
+| `anki.read.collection_view` | `cards`, `decks`, `notes`, `notetypes`, `revlog` |
+| `anki.export.package` | `media`, `members`, `rows` |
+| `anki.import.package` | `counts`, `notes`, `revlog` |
+| `anki.timing.day`, `anki.sched.timing_today` | `day`, `next_rollover` |
+| `anki.card.due_view` | `due` |
+| `anki.note.checksum` | `csum`, `sfld` |
+| `anki.media.name`, `anki.render.media_refs`, `anki.media.field_refs` | `names` |
+| `anki.collation.order` | `order` |
+| `anki.blob.encode` | `hex` |
+| `anki.history.local_answer` | `revlog` |
+| `anki.guid.accepts` | `kept` |
+| `anki.schema.snapshot` | `col_ver`, `schema` (each statement), `user_version` |
+| `anki.render.card`, `anki.render.occlusion_render` | `answer`, `question` |
+| `anki.render.card_ordinals`, `anki.render.generated_ordinals` | `ordinals` |
+| `anki.render.cloze_only_text`, `anki.render.strip_av_tags`, `anki.render.html_to_text_line` | `text` |
+| `anki.render.extract_av_tags` | `tags`, `text` |
+| `anki.render.latex_images` | `images`, `text` |
+| `anki.render.compare_answer` | `html` |
+| `anki.render.note_type_check`, `anki.render.note_check` | `result` |
+| `anki.media.check` | `missing`, `unused` |
+| `anki.search.operator`, `anki.search.browser` | `cards` (corpus indices, in the engine's order) |
+| `anki.history.revlog_events` | `rows` |
+| `anki.deck.name_equal` | `decks` |
+| `anki.read.reader_fixture` | `tables` |
+
+Every row is named by its corpus index, never by an id the engine assigns.
+
 ## 3. Acceptance criteria of SPEC-498
 
 | id | criterion | red it must show first | decided by |
@@ -71,6 +131,12 @@ Rust tests through `tools/parity-oracle/golden.rs` (ADR-029). What was read at `
 | A4 | R5, R10: the runbook names the planted network control, the read-only mounts and the run record, and the clean-room record exists in the owner's private evidence (read by the reviewer) | none: text | ADR-516 D4 |
 | A5 | R6: a golden holding a stock line fails the run and writes nothing; short lines are not counted | the stub census refuses nothing | ADR-516 D5 |
 | A6 | R8: the consumer reports the fixture's one wrong case, and its assertion panics naming it | the stub comparison finds nothing | ADR-516 D6 |
+| A8 | R12: every registered engine function has its committed golden, and the two oracles split the goldens whole | no engine golden is committed | ADR-516 D4 |
+| A9 | R13: each engine golden records the manifest's engine pin, the committed driver and registry, synthetic inputs and the corpus seed; planted faults of each are caught | no engine golden is committed | ADR-516 D1 |
+| A10 | R14: each engine golden is read by a Rust test holding its answers to section 2a's keys; a planted answer off its keys or a worded refusal is a fault, and a golden named only in a comment is caught | the goldens the tests read are absent | ADR-516 D6 |
+| A11 | R15: no engine golden holds a date, an id or clock of the run, or a stock line; planted ones are caught | no engine golden or census is committed | ADR-516 D5 |
+| A12 | R16: the committed snapshot is the fresh-collection golden's schema under one pin line equal to its `user_version` | the writer, the golden and the snapshot are absent | ADR-516 D1 |
+| A13 | R17: the run record shows the planted connection refused inside and accepted outside, the canary, the read-only mounts, the writes and the read list (read by the reviewer) | none: the run's private record | ADR-516 D4 |
 
 ```acceptance
 A1: python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_driver.py' -k test_every_golden_is_strict_synthetic_and_seeded
@@ -87,6 +153,16 @@ A3: python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_workspace.
 A5: python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_driver.py' -k test_a_golden_holding_a_stock_line_is_refused
 A6: cargo test -p deck-streak-ingest --test oracle_consumer -- --exact golden_consumer_can_fail
 A6: cargo test -p deck-streak-ingest --test oracle_consumer -- --exact the_consumer_panics_naming_the_wrong_case
+A8: python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k test_every_registered_engine_function_has_its_golden
+A8: python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k test_the_two_oracles_split_the_goldens_whole
+A9: python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k test_engine_golden_provenance
+A9: python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k test_engine_goldens_are_synthetic_and_seeded
+A10: python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k test_every_engine_golden_is_read_by_a_rust_test
+A10: cargo test -p deck-streak-ingest --test engine_goldens
+A11: python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k test_no_engine_golden_holds_a_date_an_id_or_a_clock
+A11: python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k test_no_engine_golden_holds_a_stock_line
+A12: python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k test_the_schema_snapshot_carries_its_pin_line
+A12: cargo test -p deck-streak-ingest --test engine_goldens -- --exact the_schema_snapshot_is_its_golden_under_one_pin_line
 ```
 
 ## 4. File manifest
@@ -112,6 +188,16 @@ A6: cargo test -p deck-streak-ingest --test oracle_consumer -- --exact the_consu
 | `docs/schematics/the-second-oracle-from-a-sandboxed-engine-run-to-a-rust-assertion.md` | docs | new: the data flow and the two roles |
 | `docs/red-first/SPEC-498.md` | docs | new: the red-first record |
 | `changelog.d/parity-oracle-second-system-498.md` | changelog | new: the fragment |
+| `tools/parity-oracle/test_goldens.py` | oracle tests | changed (second delivery): A8 to A12; the predecessor's checks read only its own goldens |
+| `tools/parity-oracle/test_generate.py` | oracle tests | changed (second delivery): A9 of SPEC-029 counts only the predecessor's goldens |
+| `crates/ingest/tests/engine_goldens.rs` | ingest tests | new (second delivery): A10 and A12 |
+| `tools/parity-oracle/anki/snapshot.py` | oracle | new (second delivery): the snapshot writer |
+| `tools/parity-oracle/anki/schema-snapshot.sql` | oracle | new (second delivery, with the run): the snapshot |
+| `tools/parity-oracle/anki/stock-lines.sha256` | oracle | new (second delivery, with the run): the census digests |
+| `tools/parity-oracle/goldens/anki.*.json` | oracle | new (second delivery, with the run): the 33 engine goldens |
+| `tools/parity-oracle/anki/generate.py` | oracle | changed (second delivery): `HARNESS_SOURCE_SHA256` pinned |
+| `tools/parity-oracle/test_anki_driver.py` | oracle tests | changed (second delivery): the unpinned refusal is held with the pin unset |
+| `changelog.d/engine-writes-parity-goldens-498.md` | changelog | new (second delivery): the fragment |
 
 ## 5. What this does NOT cover
 
