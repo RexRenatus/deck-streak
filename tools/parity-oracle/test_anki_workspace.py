@@ -95,5 +95,22 @@ class OutsideTheWorkspace(unittest.TestCase):
                 self.assertTrue(all(member in r for r in refusals), refusals)
 
 
+class TheDriverInAWorkflow(unittest.TestCase):
+    def test_a_workflow_that_names_the_driver_is_caught(self):
+        """A3 (R4, T-G15): a temporary workflow copy that names the driver itself is caught, as
+        one that names a harness path or the harness's package is."""
+        with tempfile.TemporaryDirectory() as scratch:
+            copy = copy_of_root(scratch)
+            planted = copy / ".github" / "workflows" / "planted.yml"
+            planted.write_text(
+                f"jobs:\n  oracle:\n    steps:\n      - run: python3 {generate.GENERATOR}\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                generate.workspace_refusals(copy),
+                [f".github/workflows/planted.yml: names {generate.GENERATOR}"],
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

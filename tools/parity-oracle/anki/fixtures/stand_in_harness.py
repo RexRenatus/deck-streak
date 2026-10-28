@@ -6,8 +6,9 @@ the driver recorded what it sent.
     stand_in_harness.py [--commit HEX] [--stock TEXT]... [--refuse NAME=LABEL]... [--fault KIND]
 
 `--fault` plants one protocol fault: `extra-key` (an answer with a second key), `not-json`,
-`words` (a refusal in sentences, not a label), `exit` (exit 1 after the last call) or `close`
-(close after the hello).
+`not-object` (a call answered with a JSON list), `words` (a refusal in sentences, not a label),
+`exit` (exit 1 after the last call), `close` (close after the hello), `hello-keys` (a hello with
+a third key) or `stock-type` (the stock texts sent as one text, not a list).
 """
 
 import argparse
@@ -30,6 +31,10 @@ def main() -> int:
         message = json.loads(line)
         if message["op"] == "hello":
             answer = {"engine_commit": args.commit, "stock_texts": args.stock}
+            if args.fault == "hello-keys":
+                answer["build"] = "extra"
+            elif args.fault == "stock-type":
+                answer["stock_texts"] = "\n".join(args.stock)
         elif message["op"] == "bye":
             return 1 if args.fault == "exit" else 0
         elif args.fault == "close":
@@ -44,6 +49,8 @@ def main() -> int:
                 answer["note"] = "extra"
         if args.fault == "not-json" and message["op"] == "call":
             sys.stdout.write("not json\n")
+        elif args.fault == "not-object" and message["op"] == "call":
+            sys.stdout.write(json.dumps([answer]) + "\n")
         else:
             sys.stdout.write(json.dumps(answer) + "\n")
         sys.stdout.flush()

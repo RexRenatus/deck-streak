@@ -8,8 +8,10 @@ import ast
 import hashlib
 import importlib.util
 import json
+import random
 import re
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -48,6 +50,39 @@ def examined(what, items):
 
 
 REGISTERED = generate.load_registry(generate.REGISTRY)
+
+#: A registry module over the committed corpus with one valid registration, `DAY`; each refusal
+#: test appends the lines that plant its fault.
+PLANTED = """
+import hashlib
+import importlib.util
+import sys
+from pathlib import Path
+
+_path = Path(CORPUS_FILE)
+_spec = importlib.util.spec_from_file_location("anki_corpus_planted", _path)
+CORPUS = importlib.util.module_from_spec(_spec)
+sys.modules["anki_corpus_planted"] = CORPUS
+_spec.loader.exec_module(CORPUS)
+CORPUS_SHA256 = hashlib.sha256(_path.read_bytes()).hexdigest()
+SEED = CORPUS.SEED
+
+
+def day(rng):
+    return [("rollover", CORPUS.timing(rng, "rollover")), (None, CORPUS.timing(rng))]
+
+
+DAY = {"id": "F4", "classes": ["rollover"], "note": "day", "cases": day}
+"""
+
+
+def planted(directory, lines, name="spec_498.py"):
+    """A registry folder in `directory` with one more module: PLANTED, then `lines`."""
+    folder = Path(directory) / "registry"
+    folder.mkdir(exist_ok=True)
+    text = PLANTED.replace("CORPUS_FILE", repr(str(ANKI / "corpus.py"))) + lines + "\n"
+    (folder / name).write_text(text, encoding="utf-8")
+    return folder
 
 
 class Registered(unittest.TestCase):
@@ -138,6 +173,163 @@ class Corpus(unittest.TestCase):
                     names = [a.name for a in node.names] + [getattr(node, "module", "") or ""]
                     for imported in names:
                         self.assertNotIn(imported.split(".")[0], banned_imports, path.name)
+
+
+class RolloverClocks(unittest.TestCase):
+    def test_every_rollover_clock_is_one_second_before_the_local_rollover_hour(self):
+        """A2 (R2, G-L9-1): every clock the corpus draws at the rollover, in each registration
+        that declares a rollover class and in timing draws from 64 other seeds, reads one second
+        before the rollover hour at its own UTC offset, and some offsets are not whole days."""
+        clocks = []
+        for name, (_, reg) in REGISTERED.items():
+            if not any(c == "rollover" or c.endswith("-at-rollover") for c in reg["classes"]):
+                continue
+            for edge, case in generate.covered(name, reg, corpus.SEED):
+                if edge == "rollover" or (edge or "").endswith("-at-rollover"):
+                    clocks.append(case.get("collection", case))
+        clocks += [corpus.timing(random.Random(n), "rollover") for n in range(64)]
+        for clock in examined("rollover clocks", clocks):
+            local = clock["now"] + clock["utc_offset_minutes"] * 60
+            self.assertEqual(local % corpus.DAY, (clock["rollover_hour"] * 3600 - 1) % corpus.DAY)
+        moved = [c for c in clocks if c["utc_offset_minutes"] * 120 % corpus.DAY]
+        examined("rollover clocks at an offset that is not a multiple of 12 hours", moved)
+
+
+class Refusals(unittest.TestCase):
+    """Each registry fault, planted alone beside the valid `DAY`, is refused before anything
+    runs, for its own reason."""
+
+    def refused(self, reason, *modules):
+        """load_registry over `modules`, spec_498.py first, refuses for `reason`."""
+        with tempfile.TemporaryDirectory() as scratch:
+            for index, lines in enumerate(modules):
+                folder = planted(scratch, lines, f"spec_{498 + index}.py")
+            with self.assertRaisesRegex(generate.Refused, reason):
+                generate.load_registry(folder)
+
+    def test_the_planted_registry_loads_when_nothing_is_planted(self):
+        """The control: PLANTED with `DAY` alone loads, so each refusal below is its fault's."""
+        with tempfile.TemporaryDirectory() as scratch:
+            folder = planted(scratch, 'FUNCTIONS = {"anki.timing.day": DAY}')
+            registered = generate.load_registry(folder)
+        self.assertEqual([reg["id"] for _, reg in registered.values()], ["F4"])
+
+    def test_a_module_with_no_functions_mapping_is_refused(self):
+        """A2 (R3): a registry module that exports no FUNCTIONS mapping is refused."""
+        for lines in examined("modules", ["", 'FUNCTIONS = [("anki.timing.day", DAY)]']):
+            with self.subTest(lines=lines):
+                self.refused("exports no FUNCTIONS mapping", lines)
+
+    def test_a_module_with_no_integer_seed_is_refused(self):
+        """A2 (R2): a module whose SEED is not an integer, a bool included, is refused."""
+        for seed in examined("seeds", ["str(SEED)", "True", "None"]):
+            with self.subTest(seed=seed):
+                lines = f'SEED = {seed}\nFUNCTIONS = {{"anki.timing.day": DAY}}'
+                self.refused("exports no integer SEED", lines)
+
+    def test_a_module_with_no_corpus_is_refused(self):
+        """A2 (R2): a module that exports no CORPUS module, so no corpus to pin, is refused."""
+        lines = 'CORPUS = None\nFUNCTIONS = {"anki.timing.day": DAY}'
+        self.refused("exports no CORPUS module", lines)
+
+    def test_a_golden_registered_twice_is_refused(self):
+        """A2 (R3): two modules that register the same golden are refused, naming both."""
+        self.refused(
+            "registered by both registry/spec_498.py and registry/spec_499.py",
+            'FUNCTIONS = {"anki.timing.day": DAY}',
+            'FUNCTIONS = {"anki.timing.day": dict(DAY, id="F5")}',
+        )
+
+    def test_an_id_taken_twice_is_refused(self):
+        """A2 (R3): two goldens that take the same id are refused, naming the first holder."""
+        lines = 'FUNCTIONS = {"anki.timing.day": DAY, "anki.timing.today": dict(DAY)}'
+        self.refused("takes id F4, which anki.timing.day already holds", lines)
+
+    def test_a_registry_that_registers_nothing_is_refused(self):
+        """A2 (R3): a registry folder with no module, or whose modules register nothing, is
+        refused."""
+        self.refused("registers no golden", "FUNCTIONS = {}")
+        with tempfile.TemporaryDirectory() as scratch:
+            empty = Path(scratch) / "registry"
+            empty.mkdir()
+            with self.assertRaisesRegex(generate.Refused, "registers no golden"):
+                generate.load_registry(empty)
+
+    def test_a_name_that_is_not_a_golden_name_is_refused(self):
+        """A2 (R3): a golden's name is anki, then lowercase words each after a '.' or a '_'."""
+        names = ["timing.day", "anki", "anki.Timing", "anki..day", "anki.timing day"]
+        for name in examined("names", names):
+            with self.subTest(name=name):
+                self.refused("is not a golden name", f"FUNCTIONS = {{{name!r}: DAY}}")
+
+    def test_a_registration_with_other_keys_is_refused(self):
+        """A2 (R3): a registration is exactly id, classes, note and cases."""
+        shapes = ["dict(DAY, extra=1)", '{k: v for k, v in DAY.items() if k != "note"}']
+        for shape in examined("registrations", shapes):
+            with self.subTest(shape=shape):
+                lines = f'FUNCTIONS = {{"anki.timing.day": {shape}}}'
+                self.refused("a registration takes cases, classes, id, note", lines)
+
+    def test_a_class_name_outside_the_grammar_is_refused(self):
+        """A2 (R9): a declared class is lowercase words joined by '-'."""
+        class_lists = ['["Rollover"]', '["roll over"]', '["rollover", 4]']
+        for classes in examined("class lists", class_lists):
+            with self.subTest(classes=classes):
+                lines = f'FUNCTIONS = {{"anki.timing.day": dict(DAY, classes={classes})}}'
+                self.refused("declares classes that are not a list of class names", lines)
+
+    def test_a_class_declared_twice_is_refused(self):
+        """A2 (R9): a registration that declares one class twice is refused."""
+        lines = 'FUNCTIONS = {"anki.timing.day": dict(DAY, classes=["rollover", "rollover"])}'
+        self.refused("declares a class twice", lines)
+
+    def test_a_registration_with_no_id_is_refused(self):
+        """A2 (R3): every registration carries an id that is not blank."""
+        for id_ in examined("ids", ['""', '"  "', "4", "None"]):
+            with self.subTest(id_=id_):
+                lines = f'FUNCTIONS = {{"anki.timing.day": dict(DAY, id={id_})}}'
+                self.refused("has no id", lines)
+
+    def test_a_registration_with_no_note_is_refused(self):
+        """A2 (R3): every registration carries a note on what the harness calls, not blank."""
+        for note in examined("notes", ['""', '" "', "None"]):
+            with self.subTest(note=note):
+                lines = f'FUNCTIONS = {{"anki.timing.day": dict(DAY, note={note})}}'
+                self.refused("has no note on what the harness calls", lines)
+
+    def test_a_registration_with_no_case_builder_is_refused(self):
+        """A2 (R3): a registration's cases is a builder the driver can call."""
+        for cases in examined("builders", ['"day"', "None", "[day]"]):
+            with self.subTest(cases=cases):
+                lines = f'FUNCTIONS = {{"anki.timing.day": dict(DAY, cases={cases})}}'
+                self.refused("needs a case builder", lines)
+
+    def test_a_builder_that_draws_from_more_than_its_seed_is_refused(self):
+        """A2 (R2): a builder whose second draw from random.Random(SEED) differs from its first
+        is refused, and one that draws only from the seed is not."""
+        calls = []
+
+        def drifting(rng):
+            calls.append(rng.random())
+            return [(None, {"call": len(calls)})]
+
+        with self.assertRaisesRegex(generate.Refused, r"more than random\.Random\(SEED\)"):
+            generate.draw("anki.timing.day", drifting, corpus.SEED)
+        self.assertEqual(len(calls), 2)
+        seeded = generate.draw("anki.timing.day", lambda rng: [(None, {"x": rng.random()})], 1)
+        self.assertEqual(len(seeded), 1)
+
+    def test_a_builder_that_draws_no_case_is_refused(self):
+        """A2 (R9): a builder that draws no case is refused, so no golden is empty."""
+        with self.assertRaisesRegex(generate.Refused, "drew no case"):
+            generate.draw("anki.timing.day", lambda rng: [], corpus.SEED)
+
+    def test_a_case_class_outside_the_grammar_is_refused(self):
+        """A2 (R9): a case's class is None or a class name, never another word."""
+        for edge in examined("case classes", ["Rollover", "two words", "-lead", 7]):
+            with self.subTest(edge=edge):
+                with self.assertRaisesRegex(generate.Refused, "not a class name or None"):
+                    generate.draw("anki.timing.day", lambda rng, e=edge: [(e, {"x": 1})], 1)
 
 
 if __name__ == "__main__":
