@@ -61,10 +61,14 @@ flowchart TB
   subgraph shared[the shared kernel]
     kernel
   end
+  subgraph slot[the scheduling companion's substitutable body]
+    companion_slot["companion-slot"]
+  end
   subgraph foundations[no workspace dependency]
     study_day["study-day"]
     xp
     fsrs7
+    companion
   end
 
   daemon --> kernel
@@ -164,6 +168,8 @@ flowchart TB
   agent --> kernel
 
   kernel --> study_day
+
+  companion_slot --> companion
 ```
 
 The daemon composes none of `ffi`, `web-engine` and `push`. A native client links `ffi` into its
@@ -174,6 +180,10 @@ when native push carries the one router (#640). The clients' edges to `xp` are #
 
 `study-day` depends on no workspace crate, and `kernel` alone depends on it: it holds the study day
 the kernel re-exports, so the kernel sits in a layer of its own above it (SPEC-497, ADR-515).
+
+`companion` depends on no workspace crate, and `companion-slot` alone depends on it: the slot is the
+one body a build substitutes behind the scheduling companion's interface, so it sits in a layer of
+its own above the interface (SPEC-501, ADR-519). No other crate reaches either yet.
 
 `deck-streak-migration` is planned in the fence and has no directory under `crates/`, so it is not
 drawn until the delivery that builds it.

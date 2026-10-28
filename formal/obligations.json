@@ -117,12 +117,16 @@
       "layers": ["scheduler", "boundary"],
       "artifacts": [
         {"kind": "tla", "entry": "tla/ScheduledAnswer", "state": "planned"},
-        {"kind": "lean", "entry": "lean/CompanionDecide", "state": "planned"},
+        {"kind": "lean", "entry": "lean/CompanionDecide", "property": "decide_admits_exactly_when_every_condition_holds", "state": "present"},
+        {"kind": "lean", "entry": "lean/CompanionDecide", "property": "decide_names_the_session_and_status_refusals", "state": "present"},
+        {"kind": "lean", "entry": "lean/CompanionDecide", "property": "negotiate_admits_only_a_present_trained_companion_at_major_one", "state": "present"},
         {"kind": "lean", "entry": "lean/ScheduledState", "state": "planned"},
         {"kind": "kani", "harness": "K-decide", "state": "planned"},
         {"kind": "kani", "harness": "K-companion-codec", "state": "planned"}
       ],
-      "ties": [],
+      "ties": [
+        {"method": "vectors", "for": "lean/CompanionDecide", "test": "crates/companion/tests/formal_vectors_decide.rs::decide_and_negotiate_answer_every_lean_vector"}
+      ],
       "gaps": [
         "stock Anki clients can still write due dates through sync while they are kept",
         "the scheduling companion's own behaviour is covered by its own tests only",
@@ -414,6 +418,7 @@
     {"entry": "tla/UndoOwnAnswer", "disposition": "re-point", "act": "re-stamped if the answer seam edits the rate call it covers; re-pointed onto the store's own undo, a retraction on the op log, keeping its four properties", "obligations": ["O11"]},
     {"entry": "tla/WalletFloor", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
     {"entry": "lean/Chest", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/CompanionDecide", "disposition": "keep", "act": "new with the scheduling companion's interface (SPEC-501); re-stamped when the decision or the handshake it covers moves, with no weakening", "obligations": ["O6"]},
     {"entry": "lean/Exchange", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/HabitWriting", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/NextMilestone", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
