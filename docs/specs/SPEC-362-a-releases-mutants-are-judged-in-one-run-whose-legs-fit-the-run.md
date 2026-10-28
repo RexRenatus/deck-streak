@@ -359,3 +359,14 @@ release ceiling (SPEC-423, ADR-437).
 Section 5's "It does not add a verdict across runs, or a second matrix" stands for the Rust legs:
 the release run's Rust legs are one matrix, and the one `mutation-verdict` counts every leg, 0 to
 N - 1, as it counts any plan's.
+
+## Amendment: on the release run `ci` reads the mutation jobs as advisory (SPEC-500)
+
+Insert-only; every earlier byte is kept. R1 stands as written: the release pull request's mutants
+run in that one run, `mutation-plan` sizes the legs, every leg's report goes to `mutation-verdict`,
+`ci` needs the verdict, and no release case defers a mutant, a row or a leg to any other run.
+SPEC-500 changes how `ci` reads those jobs on that run alone (ADR-518): `base-is-dev` names the
+release run, and there `ci` prints each of the 8 mutation jobs' results and admits each, by value,
+while every other need must succeed. R3's derivation is unchanged: `base-is-dev` gains a step and
+an output, not a job, so `LEG_CEILING` stays `{"ci": 190, "battery": 234}`. Every other run keeps
+R1's reading, in which the verdict's `success` is required.
