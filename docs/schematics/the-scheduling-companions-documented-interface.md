@@ -39,12 +39,12 @@ sequenceDiagram
   participant Companion as companion (slot body)
   App->>Companion: Hello{major 1, minor 0, release}
   Companion-->>App: HelloReply{status, major, minor, build_id, model_id, model, adapter}
-  Note over App: negotiate: Ok only for status Ok, major 1, Trained; else the session keeps no model
+  Note over App: negotiate: Ok only for status Ok, major 1, Trained, else the session keeps no model
   App->>Codec: encode Preview{event, target_ppm}, epoch e
   Codec->>Companion: frame (len, major, minor, kind 3, e, body)
   Companion-->>Codec: frame of Due{status, card, staged_t_ms, interval_days, due_day, model_id}
   Codec-->>App: decode, or Malformed
-  Note over App: decide: Ok(NewDue) only when every condition holds; any Refusal writes nothing
+  Note over App: decide: Ok(NewDue) only when every condition holds, and any Refusal writes nothing
   App->>App: write the due date from NewDue, then read the review back from the log
   App->>Companion: Commit{event read back}
   Companion-->>App: Ack{status, folded, head_t_ms}
