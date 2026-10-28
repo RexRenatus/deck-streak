@@ -21,6 +21,7 @@ import unittest
 from pathlib import Path
 
 from _support import REPO, examined
+from test_mutation_python_judge_kills import load
 
 SCRIPT = REPO / "scripts" / "release_gates.py"
 RELEASE = REPO / ".github" / "workflows" / "release.yml"
@@ -32,8 +33,7 @@ SPEC = (
     / ("SPEC-502-a-release-tag-is-published-only-when-the-schedulers-release-gates-are-on-file.md")
 )
 
-sys.path.insert(0, str(SCRIPT.parent))
-import release_gates  # noqa: E402
+release_gates = load(SCRIPT, "release_gates")
 
 GATE_RUN = "python3 scripts/release_gates.py"
 PUBLISH_RUN = 'gh release edit "$GITHUB_REF_NAME" --draft=false'
