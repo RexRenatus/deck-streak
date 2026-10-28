@@ -261,7 +261,7 @@ impl Engine {
         }
         let request = native_sync::normal_sync(&native_sync::auth(host_key, endpoint));
         let reply = self.run(SYNC_COLLECTION.0, SYNC_COLLECTION.1, request)?;
-        native_sync::required(&reply).ok_or(EngineRefusal::Engine { error: reply })
+        Self::required(reply)
     }
 
     /// What this device has not synced, read offline by the core's one fixed statement, so the
@@ -395,6 +395,12 @@ impl Engine {
     /// The stage, under its lock.
     fn stage(&self) -> MutexGuard<'_, Option<Stage>> {
         self.stage.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// What a normal sync's `reply` requires next, as the engine numbers it (SPEC-503 R5): a reply
+    /// that does not decode is the engine's refusal, with the reply's bytes.
+    fn required(reply: Vec<u8>) -> Result<u32, EngineRefusal> {
+        native_sync::required(&reply).ok_or(EngineRefusal::Engine { error: reply })
     }
 
     /// New counts after a change since the last ones: held as the stage, with the server copy
@@ -870,4 +876,24 @@ pub fn collection_directory(
         return Err(CollectionDirectoryRefusal::NotADirectory);
     }
     Ok(value.clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Engine, EngineRefusal};
+
+    /// A normal sync's reply that does not decode is the engine's refusal with the reply's bytes,
+    /// and a reply that decodes answers its requirement (SPEC-503 R5). The engine's own encoder
+    /// always writes a reply that decodes, so only a test inside the crate reaches the refusal.
+    #[test]
+    fn an_undecodable_sync_reply_is_the_engines_refusal_with_its_bytes() {
+        assert_eq!(
+            Engine::required(vec![0xff, 0xff]),
+            Err(EngineRefusal::Engine {
+                error: vec![0xff, 0xff]
+            })
+        );
+        // Field 3, `required`, as a varint: 2, the full sync.
+        assert_eq!(Engine::required(vec![0x18, 0x02]), Ok(2));
+    }
 }
