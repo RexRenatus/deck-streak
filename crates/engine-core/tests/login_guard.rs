@@ -369,3 +369,58 @@ fn every_sync_call_reaches_only_a_guarded_endpoint_and_never_media() {
     support::examined("one-way endpoint(s)", fetched);
     support::examined("normal sync request(s)", synced);
 }
+
+/// SPEC-503 A2 (R2): the native transport's normal sync, now admitted, meets the same guard as the
+/// web's: each endpoint that breaks the rule and each request that asks for media is refused
+/// before the engine, naming only the rule, and a guarded request without media reaches the engine.
+#[test]
+fn a_native_normal_sync_reaches_only_a_guarded_endpoint_and_never_media() {
+    let native =
+        Dispatcher::start(Transport::Native, &[]).expect("the engine starts from the default init");
+    native.handshake(Some(br#"{"minimum_client_level":1}"#));
+    let cases = [
+        ("an absent endpoint", normal_sync(None, false), ABSENT),
+        (
+            "an endpoint that is not a URL",
+            normal_sync(Some("not a url"), false),
+            UNPARSEABLE,
+        ),
+        (
+            "an endpoint carrying a user and a password",
+            normal_sync(
+                Some("https://learner-one:hunter-two@example.invalid/"),
+                false,
+            ),
+            CREDENTIALS,
+        ),
+        (
+            "plain http to a name",
+            normal_sync(Some("http://example.invalid/"), false),
+            SCHEME,
+        ),
+        (
+            "media over a guarded endpoint",
+            normal_sync(Some("http://127.0.0.1:1/"), true),
+            MEDIA,
+        ),
+    ];
+    let synced: Vec<(&str, String)> = cases
+        .iter()
+        .map(|(case, request, _)| (*case, message(native.run(1, 5, request))))
+        .collect();
+    let rules: Vec<(&str, String)> = cases
+        .iter()
+        .map(|(case, _, rule)| (*case, (*rule).to_owned()))
+        .collect();
+    assert_eq!(
+        synced, rules,
+        "each native normal sync whose endpoint breaks the rule, or that asks for media, is \
+         refused before the engine, naming only the rule"
+    );
+    let guarded = message(native.run(1, 5, &normal_sync(Some("http://127.0.0.1:1/"), false)));
+    assert!(
+        ![ABSENT, UNPARSEABLE, CREDENTIALS, SCHEME, MEDIA].contains(&guarded.as_str()),
+        "a guarded native normal sync without media reaches the engine: {guarded}"
+    );
+    support::examined("native normal sync request(s)", synced);
+}

@@ -21,10 +21,12 @@ use deck_streak_engine_core::table::{
 
 /// The pairs the native adapter's allow-list holds (SPEC-345 M1), with the review screen's three
 /// (SPEC-348 R1), less `AnswerCard`, which only an owner's press records (SPEC-365 R4, R6), and
-/// less `Undo`, which only an owner's gesture runs (SPEC-371 R2), and with the review's bury and
-/// flag, which the native review runs as the web's does (SPEC-358 R1).
-const NATIVE: [(u32, u32); 10] = [
+/// less `Undo`, which only an owner's gesture runs (SPEC-371 R2), with the review's bury and
+/// flag, which the native review runs as the web's does (SPEC-358 R1), and with the normal sync,
+/// which the native client syncs with as the web client does (SPEC-503 R1).
+const NATIVE: [(u32, u32); 11] = [
     (1, 3),
+    (1, 5),
     (3, 0),
     (5, 4),
     (7, 4),
@@ -289,10 +291,10 @@ fn the_web_column_admits_the_sync_login_and_the_normal_sync() {
         decided,
         vec![
             ((1, 3), Decision::Admit, Decision::Admit),
-            ((1, 5), Decision::NotAllowed, Decision::Admit),
+            ((1, 5), Decision::Admit, Decision::Admit),
             ((1, 6), Decision::NeedsGesture, Decision::NeedsGesture),
         ],
-        "(native, web): both admit the login, the normal sync is the web's alone, and the one-way \
+        "(native, web): both admit the login and the normal sync (SPEC-503 R1), and the one-way \
          sync needs a gesture on both"
     );
     let one_way: Vec<(u32, u32, &str, TargetKind)> = EXEMPT
