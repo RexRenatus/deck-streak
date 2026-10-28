@@ -6,6 +6,8 @@
 \* @phx covers crates/engine-core/src/full_sync.rs anchor=snapshot_found digest=sha256:f025e37a54e3752c70b60dd71db37364d5f806a1431afe8a1d23444ed947c2a1
 \* @phx covers crates/engine-core/src/full_sync.rs anchor=rechecked digest=sha256:02e784b8937cb78f7419bc2335ab231a924d94e108aa0925ee48185f2cf38754
 \* @phx covers crates/engine-core/src/full_sync.rs anchor=at_write digest=sha256:83da3f27c7ad7b2749e6279bfdb695bb1ee8abfc3105bfff678e3c45006fd778
+\* @phx covers crates/ffi/src/engine.rs anchor=full_sync_count digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/ffi/src/engine.rs anchor=full_sync_confirm digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 \* @phx cites #631, #620, #660
 \* @phx property BackupBeforeReplace ramp=report
 \* @phx property SnapshotBeforeUpload ramp=report
@@ -61,6 +63,13 @@
 \* - AReview, BReview, BSync -> a review on this device, a review on the second client, and the
 \*   second client's normal sync.
 \* - Snapshot -> the daily window's sealed snapshot of the server.
+\*
+\* The re-read with the native actor (SPEC-503). This device may be the iPhone and iPad client:
+\* `engine.rs::full_sync_count` is Count, and `engine.rs::full_sync_confirm` is Confirm, Backup,
+\* DownloadReady or SnapCheck and Rechecked, then AtWriteRefused or Write, through the same core
+\* steps in the same order as the web client's exports; its stage is dropped by
+\* `engine.rs::full_sync_cancel`, which is Cancel. The native client has no snapshot answer, so its
+\* upload stops at SnapCheck's refusal, a behaviour the model already holds.
 
 EXTENDS Integers
 

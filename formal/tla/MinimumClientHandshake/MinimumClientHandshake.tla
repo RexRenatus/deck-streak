@@ -5,6 +5,8 @@
 \* @phx covers crates/engine-core/src/dispatch.rs anchor=full_sync digest=sha256:9abfdb273db3ced7e798f27554371a364f20391f28328d8a4c9822eeefa5ed8b
 \* @phx covers crates/engine-core/src/dispatch.rs anchor=private digest=sha256:c02985295519aea882e799ce355e6e6dd541a0685ad5f9d89d25aa765951a175
 \* @phx covers crates/ffi/src/engine.rs anchor=run digest=sha256:4079a05198a7a2dac97552d4e45c78493ff2a098852b9f53f8469308430fa078
+\* @phx covers crates/ffi/src/engine.rs anchor=sync digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/engine-core/src/native_sync.rs anchor=statement_url digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 \* @phx cites #671
 \* @phx property EverySyncFollowsAnAdmittingRead ramp=report
 \* @phx witness witness/EverySyncWaitsForARead.cfg kills=EverySyncFollowsAnAdmittingRead
@@ -40,12 +42,19 @@
 \*
 \* The action-to-code map, by `file::item`:
 \* - Raise -> the service's minimum, raised by a later release.
-\* - Read -> `engine.rs::run` reads the statement, `dispatch.rs::handshake` keeps its outcome as
-\*   `handshake.rs::decide` decides it.
+\* - Read -> `engine.rs::run` reads the statement before a sync login, and `engine.rs::sync`
+\*   before the native client's normal sync, at the origin `native_sync.rs::statement_url` names;
+\*   `dispatch.rs::handshake` keeps its outcome as `handshake.rs::decide` decides it.
 \* - ReadFails -> the same, when nothing answered or the body does not decode.
 \* - StartPrivate(e) -> `dispatch.rs::private`.
 \* - Sync(e) -> `dispatch.rs::run` for the sync login and the normal sync, and
 \*   `dispatch.rs::full_sync` for the one-way sync and a private engine's fetch.
+\*
+\* The re-read with the native actor (SPEC-503). The native column now admits the normal sync, so
+\* the parent engine's Sync stands for the native client's login and normal sync as well as the
+\* web's: both reach the engine only through `dispatch.rs::run`, after the same check. The native
+\* adapter reads a fresh statement before each normal sync; a read at any moment is a step the
+\* model already takes, so the native actor adds no behaviour the model lacks.
 
 EXTENDS Integers, FiniteSets
 
