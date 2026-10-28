@@ -81,3 +81,13 @@ before and after the population: engine-core's 7 targets 26 passed, the adapter'
   another thread reaches it. The facade's refusal of an undecodable reply is reached only when the engine's own
   `SyncCollection` reply does not decode, and the engine's encoder always writes one that decodes, with a requirement
   of 0 to 4. Neither is reached by a test of the public calls alone.
+
+Two behaviour-preserving seams then bring both lines within a test's reach, each line kept as it was: the normal
+sync's last line moves into a private function that takes the reply's bytes, and the match on the one-way write's
+result into a private method that takes that result. Two tests inside the adapter crate reach them.
+`an_undecodable_sync_reply_is_the_engines_refusal_with_its_bytes` feeds the reply reader bytes that do not decode and
+reads the engine's refusal carrying those bytes, then a reply that decodes and reads its requirement (an undecodable
+reply read as requiring nothing). `a_device_change_at_the_write_holds_the_new_counts_for_the_next_tap` hands the
+method a recount the core made at the write, from a device that gained a review after its backup, and reads a step
+that wrote nothing, said the device changed and shows the new counts, with the stage holding those counts over the
+device as it is now, so the next tap writes (new counts shown over the old stage).
