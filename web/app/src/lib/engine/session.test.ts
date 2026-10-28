@@ -79,6 +79,10 @@ class FakeEngine implements EngineModule {
     const offer = { card: String(id), step: this.journal.length, text: `front ${id}`, grade: 'good', returns: 'new' };
     return JSON.stringify({ offer });
   }
+  card_health(id: bigint) {
+    this.#call('card_health', id);
+    return 'null';
+  }
   snapshot(id: bigint) {
     this.#call('snapshot', id);
     const card = this.cards.get(id);

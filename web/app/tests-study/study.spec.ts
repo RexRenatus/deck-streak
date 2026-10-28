@@ -3,7 +3,8 @@
 // own, as a user's browser has (an empty path is a fresh temporary profile), seeds that profile's
 // collection through the app's own Worker (seed.ts), and then reviews from the deck list: show
 // answer, the intervals on the buttons, a rating by key and one by button, undo, bury and flag, a
-// key after a tap on the card, and the accessibility audit of both screens.
+// key after a tap on the card, the card info panel's audit in both colour schemes (SPEC-507 A6), and the
+// accessibility audit of both screens.
 // study-coverage.test.ts holds this file to those steps.
 import AxeBuilder from '@axe-core/playwright';
 import {
@@ -189,6 +190,28 @@ test('a key after a tap on the card still rates', async ({ playwright, browserNa
     await expect(page.getByRole('region', { name: 'Review', exact: true })).toBeFocused();
     await page.keyboard.press('3');
     await next(page, tapped);
+  } finally {
+    await context.close();
+  }
+});
+
+test('the card info panel passes axe in both colour schemes', async ({ playwright, browserName, baseURL }) => {
+  const { context, page } = await studying(playwright, browserName, baseURL);
+  try {
+    await review(page);
+    for (const colorScheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme });
+      await page.getByRole('button', { name: 'Card info', exact: true }).click();
+      const dialog = page.getByRole('dialog', { name: 'Card info' });
+      await expect(dialog).toBeVisible();
+      // this build's scheduler gives no readout, so the recall rows read the absent state's line (SPEC-507 R6)
+      await expect(dialog.getByRole('region', { name: 'Recall' })).toContainText('Not available in this build.');
+      // the card frame beside the dialog takes no script, so the legacy mode audits around it, as below
+      const audit = await new AxeBuilder({ page }).withTags(WCAG_22_AA).setLegacyMode().analyze();
+      expect(audit.violations).toEqual([]);
+      await page.keyboard.press('Escape');
+      await expect(dialog).toHaveCount(0);
+    }
   } finally {
     await context.close();
   }

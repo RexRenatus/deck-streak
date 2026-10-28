@@ -3,6 +3,7 @@
 import type {
   BackupsListed,
   Body,
+  CardHealth,
   ChoiceConfirmed,
   ChoiceCounted,
   Deck,
@@ -135,6 +136,12 @@ export class EngineClient {
   /** Buries the shown card, the user's bury; another card is refused as `not-shown`. */
   bury(card: bigint): Promise<null> {
     return this.#send({ op: 'bury', card }) as Promise<null>;
+  }
+
+  /** The shown card's health, by the core's two fixed reads, or `null` for an id no card has; it
+   * writes nothing (SPEC-507 R1). */
+  cardHealth(card: bigint): Promise<CardHealth | null> {
+    return this.#send({ op: 'card-health', card }) as Promise<CardHealth | null>;
   }
 
   /** Both faces of the shown card, completed by the core with the media the Worker read; the page

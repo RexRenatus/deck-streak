@@ -4,7 +4,8 @@
 
 /** The operations the Worker serves, and nothing else. Six are the review's (SPEC-350 R4): the deck
  * list, the current deck, the card view, and a rating, bury or flag of the shown card. `faces`, after
- * them, completes both faces of the shown card with its media (SPEC-350 R14). The next two log in to
+ * them, completes both faces of the shown card with its media (SPEC-350 R14), and `card-health` reads the
+ * shown card's own record by the core's two fixed reads, writing nothing (SPEC-507 R1, R10). The next two log in to
  * the sync server and run a normal sync (SPEC-364 R17, R18). The two after them read and forget the
  * sync credential, each answering a status word (SPEC-363 R15). The last four are the full sync's
  * choice: its counts, the owner's tap on one direction, its cancel, and the device's unsynced read;
@@ -29,6 +30,7 @@ export const OPS = [
   'bury',
   'flag',
   'faces',
+  'card-health',
   'sync-login',
   'sync',
   'credential-status',
@@ -92,7 +94,7 @@ export type Request =
   | { id: number; op: 'next' | 'undo-offer' | 'memory' | 'close' | 'decks' | 'card' }
   | { id: number; op: 'undo'; card: bigint; step: number }
   | { id: number; op: 'seed'; count: number }
-  | { id: number; op: 'snapshot' | 'bury' | 'flag' | 'faces'; card: bigint }
+  | { id: number; op: 'snapshot' | 'bury' | 'flag' | 'faces' | 'card-health'; card: bigint }
   | { id: number; op: 'study'; deck: bigint }
   | { id: number; op: 'rate'; card: bigint; rating: Rating; ms: number }
   | { id: number; op: 'credential-status' | 'credential-forget' }
@@ -287,6 +289,7 @@ const ARGS: Record<Op, Record<string, (value: unknown) => boolean>> = {
   bury: { card: engineId },
   flag: { card: engineId },
   faces: { card: engineId },
+  'card-health': { card: engineId },
   'sync-login': { user: loginText, password: loginText },
   sync: {},
   'credential-status': {},

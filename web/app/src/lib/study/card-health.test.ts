@@ -96,7 +96,11 @@ describe('the card health panel', () => {
     expect(text(dialog)).toContain('Reviews 4 Lapses 1');
     expect(text(dialog)).toContain('Time answering, each answer at most 60 s 100.0 s');
     expect(text(dialog)).toContain('Mean answer time 25.0 s Median answer time 16.0 s');
-    const rows = screen.getAllByRole('row').slice(1).map(text);
+    // each row's cells, in order: a table holds no whitespace between them
+    const rows = screen
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => [...row.querySelectorAll('td')].map(text).join(' '));
     expect(rows).toEqual([
       '2023-11-14 Good 20.0 s',
       '2023-11-14 Set by hand 0.0 s',

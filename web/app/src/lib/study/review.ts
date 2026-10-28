@@ -200,6 +200,12 @@ export class Review {
   /** What the last undo press was for, so its refusal reads that change's notice (SPEC-383 R13). */
   #pressed: CardView['undo'] = null;
   #shownAt = 0;
+  /** How many overlays are open over the review: the answer clock stops while any is (SPEC-507 R9). */
+  #overlays = 0;
+  /** When the open overlays began, or `null` while none is open. */
+  #pausedAt: number | null = null;
+  /** The milliseconds overlays held the shown card since it showed. */
+  #paused = 0;
   /** The late cards the engine has rated, which raise the one-tap sync offer (SPEC-409 R1). */
   #lateReviews = 0;
   #inFlight: Promise<void> = Promise.resolve();
@@ -296,15 +302,37 @@ export class Review {
     return [...new Set(clips.flatMap((clip) => (clip.kind === 'speech' ? [clip.language] : [])))];
   }
 
-  /** Opens an overlay over the review (SPEC-507 R9). */
-  openOverlay(): void {}
+  /** Opens an overlay over the review, the card health panel or an editor: the answer clock stops
+   * until the last open overlay closes (SPEC-507 R9). */
+  openOverlay(): void {
+    if (this.#overlays === 0) this.#pausedAt = this.#now();
+    this.#overlays += 1;
+  }
 
-  /** Closes the overlay last opened (SPEC-507 R9). */
-  closeOverlay(): void {}
+  /** Closes an open overlay; with the last one closed, the answer clock runs again (SPEC-507 R9). */
+  closeOverlay(): void {
+    if (this.#overlays === 0) return;
+    this.#overlays -= 1;
+    if (this.#overlays === 0 && this.#pausedAt !== null) {
+      this.#paused += this.#now() - this.#pausedAt;
+      this.#pausedAt = null;
+    }
+  }
 
-  /** The shown card's health (SPEC-507 R1). */
+  /** The shown card's health, or `null` when no card is shown, the client reads none or the engine
+   * refused the read; it moves nothing (SPEC-507 R1). */
   async cardHealth(): Promise<CardHealth | null> {
-    return null;
+    const card = this.#face?.view.id;
+    if (card === undefined) return null;
+    const client = await this.#client();
+    return (await client.cardHealth?.(card).catch(() => null)) ?? null;
+  }
+
+  /** The milliseconds the shown card has been answered: since it showed, less every overlay's time. */
+  #answerMs(): number {
+    const now = this.#now();
+    const open = this.#pausedAt === null ? 0 : now - this.#pausedAt;
+    return Math.round(now - this.#shownAt - this.#paused - open);
   }
 
   /** Loads the first card. */
@@ -414,12 +442,15 @@ export class Review {
           ? head.card
           : { ...(head.card as CardView), question: faces.question.text, answer: faces.answer.text };
       this.#shownAt = this.#now();
+      // a new card starts its clock afresh; an overlay still open holds its time from the show on
+      this.#paused = 0;
+      if (this.#pausedAt !== null) this.#pausedAt = this.#shownAt;
       return head.card === null ? 'empty' : 'view';
     }
     if (effect === 'offer') return this.#offered(await client.undoOffer());
     const card = (this.#view as CardView).id;
     if (effect === 'rate') {
-      await client.rate(card, RATING[event as Action] as Rating, Math.round(this.#now() - this.#shownAt));
+      await client.rate(card, RATING[event as Action] as Rating, this.#answerMs());
       if ((this.#view as CardView).late) this.#lateReviews += 1;
     } else if (effect === 'bury') {
       await client.bury(card);
