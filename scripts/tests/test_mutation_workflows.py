@@ -349,7 +349,7 @@ class TheToolsConfigurationsAreValid(unittest.TestCase):
         self.assertEqual(stryker["thresholds"]["break"], 100)
         package = json.loads((REPO / "web/app/package.json").read_text(encoding="utf-8"))
         for name in ("@stryker-mutator/core", "@stryker-mutator/vitest-runner"):
-            self.assertEqual(package["devDependencies"].get(name), "10.0.0", name)
+            self.assertEqual(package["devDependencies"].get(name), "10.1.1", name)
         # Planted: what each tool itself refuses. cargo-mutants 27.1.0 denies an unknown key and a
         # value of the wrong type; StrykerJS refuses a high threshold below the low one (80 and 60
         # by default), a threshold out of 0 to 100, and a JSON file with a comment.
