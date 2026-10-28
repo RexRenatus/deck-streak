@@ -11,6 +11,7 @@ import Formal.ReplayHistoryVectors
 import Formal.RoadToC2Vectors
 import Formal.SensitiveDeckVectors
 import Formal.SkipTariffVectors
+import Formal.SyncVectors
 import Formal.TableCensusReachVectors
 import Formal.TokenBonusVectors
 import Formal.TokenProgressVectors
@@ -46,6 +47,10 @@ def main (args : List String) : IO UInt32 := do
   | ["RoadToC2"] => Formal.RoadToC2Vectors.run
   | ["SensitiveDeck"] => Formal.SensitiveDeckVectors.run
   | ["SkipTariff"] => Formal.SkipTariffVectors.run
+  | ["SyncClock"] => Formal.SyncVectors.runClock
+  | ["ReviewKey"] => Formal.SyncVectors.runKey
+  | ["FieldMerge"] => Formal.SyncVectors.runMerge
+  | ["PushJudge"] => Formal.SyncVectors.runJudge
   | ["TableCensusReach"] => Formal.TableCensusReachVectors.run
   | ["TokenBonus"] => Formal.TokenBonusVectors.run
   | ["TokenProgress"] => Formal.TokenProgressVectors.run

@@ -28,16 +28,11 @@ PHASES = {
 # The planned entries, each with the obligations that name it.
 PLANNED_ENTRIES = {
     "tla/ScheduledAnswer": ("O1a", "O6"),
-    "tla/OpLog": ("O1", "O2", "O3", "O11"),
     "tla/CollectionStore": ("O12",),
     "tla/MediaSync": ("O13",),
     "tla/RelayEnvelope": ("O7",),
     "tla/AnkiCutover": ("O8",),
     "lean/ScheduledState": ("O6",),
-    "lean/SyncClock": ("O1", "O16"),
-    "lean/ReviewKey": ("O1", "O16"),
-    "lean/FieldMerge": ("O1", "O16"),
-    "lean/PushJudge": ("O1", "O16"),
     "lean/IdSlot": ("O12",),
     "lean/EffectiveLog": ("O12",),
     "lean/QueueRule": ("O12",),
@@ -52,6 +47,15 @@ PLANNED_ENTRIES = {
     "lean/ImportPlan": ("O8",),
     "lean/AnkiRoundTrip": ("O9",),
     "lean/EnvelopeLayout": ("O7",),
+}
+# The sync entries that land ahead of the sync core (SPEC-504), each with the obligations that name
+# it; each such obligation lists every name the entry's header declares, present.
+SYNC_ENTRIES = {
+    "tla/OpLog": ("O1", "O2", "O3", "O11"),
+    "lean/SyncClock": ("O1", "O16"),
+    "lean/ReviewKey": ("O1", "O16"),
+    "lean/FieldMerge": ("O1", "O16"),
+    "lean/PushJudge": ("O1", "O16"),
 }
 # The planned Kani harnesses of this repository's own code, each in the obligation of its layer.
 HARNESSES = {
@@ -128,7 +132,8 @@ COMPANION_TIE = {
 # The entries built after the 44 were dispositioned, each with its disposition and the
 # obligations that name it.
 NEW_ENTRIES = {"lean/CompanionDecide": ("keep", {"O6"})}
-# The 44 existing entries' dispositions.
+# The 49 dispositioned entries: the 43 that predate the sync entries, those five, and the
+# release gates' entry.
 DISPOSITIONS = {
     "retire": ("tla/FullSyncChoice", "tla/SyncSnapshotWindow"),
     "re-point": (
@@ -146,7 +151,8 @@ DISPOSITIONS = {
         "tla/SensitiveDeckGate",
         "tla/SkipDayOnce",
         "lean/SensitiveDeck",
-    ),
+    )
+    + tuple(SYNC_ENTRIES),
     "keep": tuple(
         f"tla/{name}"
         for name in (
@@ -820,13 +826,21 @@ class TheFormalLedger(unittest.TestCase):
         self.assertEqual(harnesses, {harness: {item} for harness, item in HARNESSES.items()})
         self.assertEqual(companions, COMPANIONS)
         headers = header_names(REPO)
-        self.assertEqual(set(present_names), {"O1a", "O6", "O11", "O17"})
-        for identity, entries in (
-            ("O1a", SYNC_MODELS),
-            ("O6", COMPANION_ENTRIES),
-            ("O11", ENGINE_TIED),
-            ("O17", (RELEASE_GATES,)),
-        ):
+        sync_named = {}
+        for entry, ids in SYNC_ENTRIES.items():
+            for identity in ids:
+                sync_named.setdefault(identity, []).append(entry)
+        expected_present = {
+            "O1a": SYNC_MODELS,
+            "O6": COMPANION_ENTRIES,
+            "O11": ENGINE_TIED + ("tla/OpLog",),
+            "O17": (RELEASE_GATES,),
+        }
+        for identity, entries in sync_named.items():
+            if identity != "O11":
+                expected_present[identity] = tuple(entries)
+        self.assertEqual(set(present_names), set(expected_present))
+        for identity, entries in expected_present.items():
             names = present_names[identity]
             self.assertEqual(len(names), len(set(names)), f"{identity} names an artifact twice")
             self.assertEqual(set(names), {(e, p) for e in entries for p in headers[e]})
@@ -836,13 +850,7 @@ class TheFormalLedger(unittest.TestCase):
         )
         examined("planned entries", planned)
         examined("planned harnesses", harnesses)
-        examined(
-            "present artifacts",
-            present_names["O1a"]
-            + present_names["O6"]
-            + present_names["O11"]
-            + present_names["O17"],
-        )
+        examined("present artifacts", [n for names in present_names.values() for n in names])
 
     def test_the_phase_sets_list_o1a_and_o1_to_o11(self):
         document = load()
@@ -929,11 +937,11 @@ class TheFormalLedger(unittest.TestCase):
         expected = {
             entry: disposition for disposition, entries in DISPOSITIONS.items() for entry in entries
         }
-        self.assertEqual(len(expected), 44)
-        self.assertFalse(set(expected) & set(NEW_ENTRIES), "a new entry was among the 44")
+        self.assertEqual(len(expected), 49)
+        self.assertFalse(set(expected) & set(NEW_ENTRIES), "a new entry was among the 49")
         expected.update({entry: disposition for entry, (disposition, _) in NEW_ENTRIES.items()})
         self.assertEqual(
-            set(tree), set(expected), "the tree's entries are not the 44 designed and the new ones"
+            set(tree), set(expected), "the tree's entries are not the 49 designed and the new ones"
         )
         rows = {item["entry"]: item for item in examined("rows", document["entries"])}
         self.assertEqual(len(rows), len(document["entries"]), "an entry has two rows")
@@ -948,7 +956,7 @@ class TheFormalLedger(unittest.TestCase):
             elif entry == RELEASE_GATES:
                 linked = {"O17"}
             else:
-                linked = set()
+                linked = set(SYNC_ENTRIES.get(entry, ()))
             self.assertEqual(set(item["obligations"]), linked, entry)
             self.assertTrue(item["act"].strip(), entry)
         arms = {"entry-without-row", "row-without-entry", "duplicate-row", "row-obligations"}
