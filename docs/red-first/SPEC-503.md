@@ -46,3 +46,38 @@ A6: not red: the three models are re-read and re-stamped; at a8a95ee0 the covers
   the first sync's test, and the band reads 4 examined, 4 killed, 0 survived, 0 void at c023bef4.
 - S50303 (the full-sync threshold in the app's model) is not registered: its killer is the XCTest (A5), and the
   registry's prover runs cargo and unittest killers only. It is proved on the macOS lane.
+
+## Fix 1: tests for the facade's surviving mutants
+
+A frozen population of 44 hand mutants over the facade, the allow-list, the table and the core's `native_sync` read
+23 killed and 21 survived at ee4b05f4: each survivor changed a line no test reached. ccbdc6e1 adds tests that reach
+them and changes no production line; 4d50b52a makes section 4's manifest and section 7's S50303 true. On a scratch
+tree of 4d50b52a the population reads 44 examined, 42 killed, 2 survived, 0 void, each member applied alone and the
+file restored byte for byte. Each red is a member's run failing by the test named; each green is the unmutated run,
+before and after the population: engine-core's 7 targets 26 passed, the adapter's 17 targets 61 passed.
+
+- **The sync's own statement read** (deleted, read and never handed to the core, or read after the sync):
+  `a_fresh_engine_syncs_on_its_own_statement_read_with_no_login_before_it` syncs a fresh engine with another
+  engine's host key, so no login's read admits it first.
+- **A statement read at an endpoint the rule refuses**:
+  `a_native_normal_sync_reads_no_statement_at_a_name_the_rule_refuses` counts the connections made to
+  `http://localhost:<port>/`, a name the rule refuses.
+- **The choice's taps**: `a_direction_the_choice_does_not_name_is_refused_and_writes_nothing` (a third direction run
+  as the download), `an_upload_waits_for_its_snapshot_and_writes_nothing_without_it` (every snapshot answer read as
+  found), `a_cancelled_choice_holds_no_counts_so_a_tap_after_it_writes_nothing` (the cancel keeps the stage),
+  `a_refused_tap_keeps_the_open_counts_for_the_next_tap` (every tap takes the stage),
+  `a_server_change_after_the_counts_shows_new_counts_and_the_next_tap_writes` (a recount, or a server change, holds
+  no new stage), `an_upload_over_a_server_that_holds_rows_rechecks_it_into_a_new_file_and_writes` (the re-check
+  reuses the counted copy, or the choice's files drop their stamp) and
+  `a_count_at_an_endpoint_the_rule_refuses_is_the_engines_refusal_not_a_sentence` (an engine refusal shown as a
+  sentence).
+- **The counts and the unsynced read**, from fixtures the engine's own API writes:
+  `the_counts_name_each_directions_lost_reviews_cards_and_notes` (lost reviews read as lost cards, lost notes as
+  none) and `the_unsynced_count_reads_the_unsynced_reviews_and_each_stamp_alone` (two unsynced reviews, then each
+  stamp after the last sync alone).
+- **A negative requirement**: `native_sync`'s `a_reply_that_names_a_negative_requirement_reads_as_none`.
+- **Two survive.** The device-changed recount's stage is reached only when the device gains a row between the
+  download's backup and its write's read of the device, both inside one `full_sync_confirm` call, so only a write from
+  another thread reaches it. The facade's refusal of an undecodable reply is reached only when the engine's own
+  `SyncCollection` reply does not decode, and the engine's encoder always writes one that decodes, with a requirement
+  of 0 to 4. Neither is reached by a test of the public calls alone.
