@@ -8,7 +8,8 @@ import { Review, type StudyClient } from './review';
 // SPEC-507 R9, A5. The answer clock excludes every overlay's time: over random sequences of a card
 // shown, overlays opened and closed (one or two at once, as the panel and an editor may be), the
 // question revealed and the card graded, with a fake clock, each grade sends the milliseconds the
-// card was shown less every moment any overlay was open, and names the card shown.
+// card was shown less every moment any overlay was open, and names the card shown; a grade sent while
+// an overlay is still open, and a card shown under it, are among the sequences.
 
 /** A seeded generator (mulberry32), so a failing sequence repeats. */
 function generator(seed: number): () => number {
@@ -74,6 +75,9 @@ describe('the answer clock', () => {
     const SEQUENCES = 300;
     let grades = 0;
     let paused = 0;
+    // grades sent while an overlay was still open, and cards shown under an open overlay
+    let gradedOpen = 0;
+    let shownOpen = 0;
     for (let seed = 1; seed <= SEQUENCES; seed += 1) {
       const random = generator(seed);
       let now = 0;
@@ -106,10 +110,13 @@ describe('the answer clock', () => {
             paused += 1;
           }
           review.closeOverlay();
-        } else if (overlays === 0 && review.phase === 'question') {
+        } else if (review.phase === 'question') {
           review.act('show-answer');
-        } else if (overlays === 0 && review.phase === 'answer') {
-          expected.push(`${shown} ${Math.round(now - shownAt - held)}`);
+        } else if (review.phase === 'answer') {
+          // a grade, an overlay open or not: an overlay still open excludes its time up to the grade
+          const open = overlays > 0 ? now - openedAt : 0;
+          expected.push(`${shown} ${Math.round(now - shownAt - held - open)}`);
+          if (overlays > 0) gradedOpen += 1;
           review.act(random() < 0.5 ? 'again' : 'good');
           await review.settled();
           grades += 1;
@@ -117,13 +124,21 @@ describe('the answer clock', () => {
           shownAt = now;
           held = 0;
           // an overlay still open when the next card shows holds its time from the show on
-          if (overlays > 0) openedAt = now;
+          if (overlays > 0) {
+            openedAt = now;
+            shownOpen += 1;
+          }
         }
       }
       expect(client.rated, `sequence ${seed}`).toEqual(expected);
     }
-    console.log(`examined ${SEQUENCES} sequence(s), ${grades} grade(s), ${paused} pause(s)`);
+    console.log(
+      `examined ${SEQUENCES} sequence(s), ${grades} grade(s), ${paused} pause(s), ` +
+        `${gradedOpen} grade(s) under an open overlay, ${shownOpen} card(s) shown under one`
+    );
     expect(grades).toBeGreaterThan(0);
     expect(paused).toBeGreaterThan(0);
+    expect(gradedOpen).toBeGreaterThan(0);
+    expect(shownOpen).toBeGreaterThan(0);
   });
 });
