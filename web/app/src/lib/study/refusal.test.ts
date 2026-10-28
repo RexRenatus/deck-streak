@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { getLocale, locales, overwriteGetLocale } from '$lib/paraglide/runtime.js';
 import { STATUS_KEYS, statusText } from './refusal';
+import type { Status } from './review';
 
 // SPEC-350 R5, R7, R10, R11; ADR-361. Each status the review announces, every engine refusal, the
 // card the frame refused and the done deck, names its own message, and the message is in every
@@ -61,6 +62,16 @@ describe('the review status', () => {
       // the one sentence for every refused card is gone, replaced by the reasons' own
       expect(Object.keys(table), locale).not.toContain('study_card_escaped');
     }
+  });
+
+  // SPEC-505 R5. The status type is the closed set: the engine's codes, the seven reasons and a
+  // done deck, and no other word. The app's check reads the directive below, and a status type that
+  // opened would leave it unused, which the check reports.
+  it('no other word is a status', () => {
+    // @ts-expect-error the one word every refused card used to announce is no status (SPEC-505 R5)
+    const word: Status = 'escaped';
+    expect(Object.keys(STATUS_KEYS)).not.toContain(word);
+    expect(Object.keys(STATUS_KEYS)).toEqual(Object.keys(EXPECTED));
   });
 
   // SPEC-505 R7, A4; ADR-523 D5. The iPhone and iPad card face shows its refusal in DeckStreak's words,

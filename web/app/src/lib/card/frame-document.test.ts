@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, expect, it } from 'vitest';
-import { frameDocument, REFUSAL_REASONS, type RefusalReason } from './frame-document';
+import { frameDocument, REFUSAL_REASONS, type FrameDocument, type RefusalReason } from './frame-document';
 import { frameCard } from './frame-host';
 
 // SPEC-341 R2 to R4, A3 to A5; ADR-352 D3, D4 (SEC01-F15). The card frame's document opens with
@@ -255,6 +255,58 @@ describe('the frame document', () => {
     // each plant has its own reason, in the order the checks run, and they are the closed list
     expect(reasons).toEqual([...REFUSAL_REASONS]);
     expect(new Set(reasons).size).toBe(7);
+  });
+
+  // SPEC-505 R2; ADR-523 D2. A card that breaks two checks next to each other in the order is
+  // refused by the earlier one. Each pair's card holds both faults, and each fault alone is refused
+  // by its own check, so the card breaks both checks and only the order picks its reason.
+  const MUTATION = '<form><math><mtext></form><form><mglyph><style></math>';
+  const CLEAN = { html: CARD, css: CSS, title: 'The card', classes: 'card card1' };
+  /** Each check's fault: a field of the clean card it replaces, or markup after the mutation. */
+  const FAULTS: Record<RefusalReason, Partial<typeof CLEAN> & { markup?: string }> = {
+    'class-list': { classes: 'card card1 x' },
+    'style-closed': { css: `${CSS}</style><base href="${ELSEWHERE}">` },
+    'reparse-element': { markup: '<template></template>' },
+    'reparse-srcset': { markup: `<img alt="" srcset="${ELSEWHERE}a.png 1x">` },
+    'reparse-target': { markup: `<a target="_blank" href="${ELSEWHERE}a">a</a>` },
+    'body-attributes': { markup: '<body data-plant="1">' },
+    'host-readback': { title: 'The\rcard' }
+  };
+
+  /** The reason the frame gives the clean card with each named check's fault planted in it. */
+  function refusedWith(...faults: RefusalReason[]): RefusalReason | undefined {
+    const card = { ...CLEAN };
+    const markup: string[] = [];
+    for (const fault of faults) {
+      const { markup: planted, ...fields } = FAULTS[fault];
+      Object.assign(card, fields);
+      if (planted !== undefined) markup.push(planted);
+    }
+    if (markup.length > 0) card.html = `${CARD}${MUTATION}${markup.join('')}`;
+    return frameCard(card.html, card.css, card.title, card.classes).refused;
+  }
+
+  const PAIRS = REFUSAL_REASONS.slice(1).map((later, index) => [REFUSAL_REASONS[index], later] as const);
+  for (const [earlier, later] of PAIRS) {
+    it(`a card that breaks both ${earlier} and ${later} is refused by the earlier check, ${earlier}`, () => {
+      // each fault alone is refused by its own check, so the card below breaks both
+      expect([refusedWith(earlier), refusedWith(later)], 'each fault alone').toEqual([earlier, later]);
+      expect(refusedWith(earlier, later), 'both faults').toBe(earlier);
+    });
+  }
+
+  // SPEC-505 R1, R5; ADR-523 D1, D4. The types close the set: no word outside the seven is a
+  // reason, and a refusal is its reason alone, with no document to show. The app's check reads each
+  // directive below, and a type that opened would leave a directive unused, which it reports.
+  it('no other word is a refusal reason, and a refusal carries no document', () => {
+    // @ts-expect-error the one word every check used to answer is no reason (SPEC-505 R1)
+    const word: RefusalReason = 'escaped';
+    // @ts-expect-error a refusal carries no document, so no part of the card (ADR-523 D4)
+    const carrying: FrameDocument = { refused: 'class-list', srcdoc: CARD };
+    expect(examined('reasons', [...REFUSAL_REASONS])).not.toContain(word);
+    // the frame's own refusal holds its reason alone, where the planted one holds a document too
+    expect(Object.keys(frameDocument(CARD, CSS, 'card card1 x'))).toEqual(['refused']);
+    expect(Object.keys(carrying)).toEqual(['refused', 'srcdoc']);
   });
 
   it('a data: media source reaches the frame unchanged', () => {

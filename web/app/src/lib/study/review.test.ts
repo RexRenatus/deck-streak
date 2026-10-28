@@ -2,6 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, expect, it } from 'vitest';
+import { frameDocument } from '$lib/card/frame-document';
 import { EngineError } from '$lib/engine/client';
 import type { CardView, Head, UndoOffer } from '$lib/engine/protocol';
 import {
@@ -460,6 +461,26 @@ describe('the review', () => {
     expect([review.side, review.escaped, review.status]).toEqual(['question', false, null]);
     review.act('show-answer');
     expect([review.side, review.escaped, review.status]).toEqual(['answer', true, 'reparse-element']);
+  });
+
+  // SPEC-505 R2, R3; ADR-523 D2. The status reads the one composition the frame renders, its host
+  // included: a face whose document is kept but whose host does not read it back (a carriage
+  // return, which the host's parser reads as a line feed) is refused in the status by the host.
+  it("a face its host does not read back is refused in the status by the host's reason", async () => {
+    const question = '<p>a&#13;b</p>';
+    const review = new Review(
+      async () => new FakeClient([head(view(1, { question }))]),
+      () => 0,
+      () => undefined
+    );
+    review.start();
+    await review.settled();
+    // the face's document alone is kept, so only its host refuses it
+    expect(frameDocument(question, view(1).css, 'card card1').refused).toBeUndefined();
+    expect([review.side, review.escaped, review.status]).toEqual(['question', true, 'host-readback']);
+    // the control: the answer, with no carriage return, is kept
+    review.act('show-answer');
+    expect([review.side, review.escaped, review.status]).toEqual(['answer', false, null]);
   });
 
   it('the frame shows the faces the engine completed', async () => {
