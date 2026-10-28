@@ -9,12 +9,14 @@
 // SPEC-383 R10, R13; ADR-397. The same press and confirmation reach the review's last bury or flag:
 // the control names the change it would undo, a flag's own return offers the flag's undo, and a
 // refused undo of a bury or a flag reads the change's notice, picked by the kind it pressed.
+// SPEC-506 R5; ADR-524. A speech clip the device has no local voice for is not spoken, and the status
+// region names its language until the next gesture; any status the review announces outranks it.
 import { frameDocument } from '$lib/card/frame-document';
 import { EngineError } from '$lib/engine/client';
 import type { CardView, Clip, Counts, ErrorCode, Faces, Head, Rating, UndoOffer } from '$lib/engine/protocol';
 import { m } from '$lib/paraglide/messages.js';
 import { sideAfter, type Action, type Side } from '$lib/remote/actions';
-import { statusText } from './refusal';
+import { noVoiceText, statusText } from './refusal';
 
 /** The schematic's states: a card loading, a side shown, a request in flight, an undo offered and
  * asking to be confirmed, a refusal, done. */
@@ -192,6 +194,9 @@ export class Review {
   #refusal: ErrorCode | null = null;
   /** A refusal the review recovered from, announced until the next gesture. */
   #notice: Status | null = null;
+  /** The language of the last speech clip the device had no local voice for, announced until the
+   * next gesture (SPEC-506 R5). */
+  #unvoiced: string | null = null;
   /** The change the engine offered to undo, kept until its confirmation sends it. */
   #offer: Offer | null = null;
   /** What the last undo press was for, so its refusal reads that change's notice (SPEC-383 R13). */
@@ -259,10 +264,11 @@ export class Review {
   }
 
   /** The status region's words, or `null` when it is quiet: a refused undo of a bury or a flag
-   * reads the change's notice, and every other status its own (SPEC-383 R13). */
+   * reads the change's notice, and every other status its own (SPEC-383 R13). With no status, a
+   * speech clip the device had no local voice for names its language (SPEC-506 R5). */
   get statusLine(): string | null {
     const status = this.status;
-    if (status === null) return null;
+    if (status === null) return this.#unvoiced === null ? null : noVoiceText(this.#unvoiced);
     const change = CHANGES.includes(this.#pressed) ? CHANGE_NOTICES[status] : undefined;
     return change?.() ?? statusText(status);
   }
@@ -299,6 +305,13 @@ export class Review {
     this.#onChange();
   }
 
+  /** The speaker had no local voice for a clip in `language`, so the clip was not spoken: the status
+   * region names the language until the learner's next gesture (SPEC-506 R5). */
+  unvoiced(language: string): void {
+    this.#unvoiced = language;
+    this.#onChange();
+  }
+
   /** The one handler every source reaches: a key, a gamepad, the stick and a click (R8). */
   act(action: Action): void {
     // undo asks only while the review's own last answer, bury or flag can be undone; a synced one
@@ -313,18 +326,21 @@ export class Review {
       }
     }
     this.#notice = null;
+    this.#unvoiced = null;
     this.#fire(action);
   }
 
   /** Keeps the offered answer: "Keep it" and Escape (SPEC-371 R10). */
   keep(): void {
     this.#notice = null;
+    this.#unvoiced = null;
     this.#fire('keep');
   }
 
   /** Asks again after a refusal. */
   retry(): void {
     this.#notice = null;
+    this.#unvoiced = null;
     this.#fire('retry');
   }
 

@@ -616,6 +616,64 @@ describe('the review screen', () => {
     expect(screen.queryAllByRole('combobox')).toEqual([]);
   });
 
+  // SPEC-506 R4, R5; ADR-524. The screen's own speaker speaks only with a voice the device runs: on a
+  // device with only a remote voice for the card's language, the clip is not spoken, the status region
+  // names the language, and the learner's next gesture clears it.
+  it('the review screen says when the device has no voice for a language', async () => {
+    const inu: Clip = { kind: 'speech', text: '犬', language: 'ja-JP', rate: 0.5 };
+    const faces: Faces = {
+      question: { text: '<p>the dog</p>', css: '', autoplay: [inu], replay: [inu], omitted: [] },
+      answer: { text: '<p>犬</p>', css: '', autoplay: [], replay: [], omitted: [] },
+      wanted: []
+    };
+    class FacesClient extends FakeClient {
+      faces(card: bigint): Promise<Faces> {
+        this.calls.push(`faces ${card}`);
+        return Promise.resolve(faces);
+      }
+    }
+    // the device lists one Japanese voice, a remote service's
+    const spoken: unknown[] = [];
+    vi.stubGlobal('speechSynthesis', {
+      getVoices: () => [{ voiceURI: 'remote-ja', name: 'Remote Japanese', lang: 'ja-JP', localService: false }],
+      speak: (utterance: unknown) => spoken.push(utterance),
+      cancel: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined
+    });
+    vi.stubGlobal(
+      'SpeechSynthesisUtterance',
+      class {
+        constructor(readonly text: string) {}
+      }
+    );
+    vi.stubGlobal(
+      'Audio',
+      class {
+        src = '';
+        onended = null;
+        onerror = null;
+        onpause = null;
+        async play(): Promise<void> {}
+        pause(): void {}
+      }
+    );
+    const client = new FacesClient([head(view(1))]);
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+
+    // the question's clip is not spoken, and the status region names its language
+    expect([body().text, spoken, status()]).toEqual(['the dog', [], 'No voice on this device for ja-JP.']);
+    // the picker offers the language's default alone
+    expect(screen.getAllByRole('option').map((option) => option.textContent?.trim())).toEqual(['Default voice']);
+
+    // the next gesture clears the line, and the answer speaks nothing
+    button('Show answer').click();
+    await settle();
+    expect([body().text, spoken, status()]).toEqual(['犬', [], '']);
+    expect(client.calls).toEqual(['card', 'faces 1']);
+  });
+
   // SPEC-350 R18; ADR-361 D15. The review reads the remote's mapping this device stores, a key's
   // and a button's, and links to the screen that changes it.
   it('the review reads the mapping this device stores, and links to its screen', async () => {

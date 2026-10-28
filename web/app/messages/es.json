@@ -120,6 +120,7 @@
   "study_replay": "Repetir",
   "study_voice": "Voz para {language}",
   "study_voice_default": "Voz predeterminada",
+  "study_no_local_voice": "No hay ninguna voz en este dispositivo para {language}.",
   "study_mapping_title": "Asignación del mando",
   "study_mapping_intro": "Elige una tecla o un botón abajo y pulsa el que quieras en tu mando. Este dispositivo guarda su propia asignación.",
   "study_mapping_action": "Acción",

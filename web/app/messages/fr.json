@@ -120,6 +120,7 @@
   "study_replay": "Rejouer",
   "study_voice": "Voix pour {language}",
   "study_voice_default": "Voix par défaut",
+  "study_no_local_voice": "Aucune voix sur cet appareil pour {language}.",
   "study_mapping_title": "Correspondance de la télécommande",
   "study_mapping_intro": "Choisissez une touche ou un bouton ci-dessous, puis appuyez sur celui que vous voulez sur votre télécommande. Cet appareil garde sa propre correspondance.",
   "study_mapping_action": "Action",

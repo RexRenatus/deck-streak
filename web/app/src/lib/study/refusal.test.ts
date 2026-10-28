@@ -2,11 +2,11 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { getLocale, locales, overwriteGetLocale } from '$lib/paraglide/runtime.js';
-import { STATUS_KEYS, statusText } from './refusal';
+import { noVoiceText, STATUS_KEYS, statusText } from './refusal';
 
 // SPEC-350 R5, R7, R10, R11; ADR-361. Each status the review announces, every engine refusal, the
 // card the frame refused and the done deck, names its own message, and the message is in every
-// locale the app has.
+// locale the app has. SPEC-506 R5; ADR-524: so is the line a clip with no local voice leaves.
 const ORIGINAL = getLocale;
 const MESSAGES = fileURLToPath(new URL('../../../messages/', import.meta.url));
 
@@ -51,6 +51,22 @@ describe('the review status', () => {
         expect(table[key]?.length ?? 0, `${locale} ${key}`).toBeGreaterThan(0);
         expect(statusText(status as keyof typeof EXPECTED), `${locale} ${status}`).toBe(table[key]);
       }
+    }
+  });
+
+  it('the no voice line is in every locale', () => {
+    // the English line, written here
+    expect(messages('en').study_no_local_voice).toBe('No voice on this device for {language}.');
+
+    const seven = examined('locales', [...locales]);
+    expect(seven).toHaveLength(7);
+    for (const locale of seven) {
+      const line = messages(locale).study_no_local_voice ?? '';
+      // each locale names the language, in its own words
+      expect(line, `${locale} study_no_local_voice`).toContain('{language}');
+      if (locale !== 'en') expect(line, `${locale} is the English line`).not.toBe(messages('en').study_no_local_voice);
+      overwriteGetLocale(() => locale);
+      expect(noVoiceText('ko-KR'), locale).toBe(line.replace('{language}', 'ko-KR'));
     }
   });
 });

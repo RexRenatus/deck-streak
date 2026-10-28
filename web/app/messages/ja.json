@@ -120,6 +120,7 @@
   "study_replay": "もう一度再生",
   "study_voice": "{language} の音声",
   "study_voice_default": "既定の音声",
+  "study_no_local_voice": "この端末には {language} の音声がありません。",
   "study_mapping_title": "リモコンの割り当て",
   "study_mapping_intro": "下のキーかボタンを選び、リモコンで使いたいものを押してください。割り当てはこの端末ごとに保存されます。",
   "study_mapping_action": "操作",

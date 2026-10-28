@@ -220,6 +220,7 @@
   "study_replay": "Replay",
   "study_voice": "Voice for {language}",
   "study_voice_default": "Default voice",
+  "study_no_local_voice": "No voice on this device for {language}.",
   "study_mapping_title": "Remote mapping",
   "study_mapping_intro": "Choose a key or a button below, then press the one you want on your remote. This device keeps its own mapping.",
   "study_mapping_action": "Action",
