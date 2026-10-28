@@ -22,7 +22,8 @@ A4: red at 9890088f: src/lib/study/refusal.test.ts:76: expected { printsTheCase:
 A4: green at f1743b4d (the census); the XCTest half not run
 A5: red at 9890088f: src/lib/study/review-screen.test.ts:515: expected 'This card cannot be shown safely here…' to be 'This card cannot be shown safely here…' (the one sentence against the reason's message); review-templates.test.ts:331: the control is refused: expected 'escaped' to be 'style-closed'; review.test.ts:277 and :462: expected [ 'question', true, 'escaped' ] to deeply equal [ 'question', true, 'style-closed' ]
 A5: green at f1743b4d
-A6: not run: the rendered audit needs browsers whose system libraries this delivery's host lacks; it is owed to a host that has them, red at 9890088f and green at f1743b4d
+A6: red at 9890088f: tests/a11y.spec.ts:354, the review route in both palettes: expect(locator).toHaveAttribute(expected) failed, unexpected value "escaped" (the refused frame's mark, read before the status)
+A6: green at 3dcd8322: the review route's two tests pass with axe in its legacy mode, which audits the screen around the refused card's frame and does not enter it; at f1743b4d they were not green: each passed its mark and status checks and then timed out after 30000 ms in `AxeBuilder.analyze` (a11y.spec.ts:357), whose default mode waits on the refused card's sandboxed frame, which runs no script, and never finished
 ```
 
 ## The runs
@@ -47,3 +48,35 @@ A6: not run: the rendered audit needs browsers whose system libraries this deliv
   reason where they expected `escaped`, and the review's status words where they expected the one sentence.
 - **The host's check is not reachable through the screen.** The screen's titles and the composed document always read
   back, so A2 and A3 plant the six checks the screen reaches, and A1 plants the host's.
+
+## Fix 1: the check order, the closed types and the host's reason
+
+A hand-written population of 87 mutants over the five changed modules (`frame-document.ts`, `frame-host.ts`,
+`CardFrame.svelte`, `refusal.ts` and `review.ts`), each run through `pnpm --dir web/app run check` and the twenty
+Vitest files that cover them on the tree of 3dcd8322, left 11 alive. One was declared equivalent before the run: the
+status composed with the other side's frame title, while no locale's two frame titles hold a character the host's
+read-back could change. aa571d9a adds tests that kill nine of the other ten. Each red below is a run of the check and
+the twenty files on the tree of aa571d9a with one mutant applied; each test is green on that tree unmutated (20
+files, 150 tests, the check 0 errors and 0 warnings).
+
+- **The order of the checks (SPEC-505 R2; ADR-523 D2).** Four mutants swapped two adjacent re-parse checks. One test
+  per adjacent pair of the seven checks, "a card that breaks both `<earlier>` and `<later>` is refused by the earlier
+  check" in `frame-document.test.ts`, first shows each fault alone refused by its own check, then the card with both
+  refused by the earlier. Red under each swap, for example: `both faults: expected 'reparse-element' to be
+  'style-closed'`.
+- **The closed types (SPEC-505 R1, R5; ADR-523 D4).** Three mutants opened a type: the reason list no longer `as
+  const`, the reason type any string, the status type any string; a fourth let a refusal carry a document. "no other
+  word is a refusal reason, and a refusal carries no document" in `frame-document.test.ts` and "no other word is a
+  status" in `refusal.test.ts` hold `@ts-expect-error` assertions the check reads. Red under each: `Error: Unused
+  '@ts-expect-error' directive.`
+- **The host's reason in the status (SPEC-505 R3).** A mutant had the status read the frame document alone, skipping
+  the host. "a face its host does not read back is refused in the status by the host's reason" in `review.test.ts`
+  shows a face holding `&#13;`, whose document is kept and whose host reads the carriage return back as a line feed.
+  Red: `expected [ 'question', false, null ] to deeply equal [ 'question', true, 'host-readback' ]`. So the host's
+  check is reachable through the review after all, and the note above that the screen never reaches it no longer
+  holds.
+- **Not settled by this fix:** a mutant that announces a refused face's reason over a notice the review recovered
+  from. No requirement states which of the two the status announces when both hold, so no test is added for it here.
+- **A6's lines above** are quoted from runs of the rendered audit's review route in Chromium, in the pinned
+  Playwright image with no network: red at 9890088f (2 failed), not green at f1743b4d (2 failed, each timed out in
+  axe's analyze) and green at 3dcd8322 (2 passed).

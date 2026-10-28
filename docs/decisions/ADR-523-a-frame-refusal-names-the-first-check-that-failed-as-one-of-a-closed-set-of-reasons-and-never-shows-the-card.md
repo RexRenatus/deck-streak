@@ -70,6 +70,13 @@ and the iOS words.
   engine, which the audit's build does not carry, so the audit serves a stand-in for the engine's bindings that shows
   one card whose CSS ends its own style element, and checks that the status and the mark name `style-closed` before
   axe runs.
+- **Chosen: axe runs in its legacy mode,** which audits the screen around the card's frame and does not enter the
+  refused card's empty frame. The audit's one axe call serves every route; the review is the one route that renders a
+  card frame. The status, the controls and the frame's title are all outside the frame, so the legacy mode still
+  audits everything a learner meets on a refused card.
+- **axe's default mode, which enters every frame:** lost, because the refused card's frame is sandboxed with no
+  script, and axe's default analyze waits on it and never finishes: the review's two audit tests timed out in it
+  after checking the mark and the status, so the audit judged nothing.
 - **A second audit file:** lost, because the audit's coverage test holds one visit per route, from the route table.
 
 ## Consequences

@@ -69,7 +69,10 @@ the words shown.
 
 R9. **What still holds.** The refused card's controls stay (answer, bury, flag), the review's existing refusal tests
 pass with the reason in place of the word, and the rendered audit runs axe over the review with a refused card in both
-of Telegram's palettes.
+of Telegram's palettes. The audit runs axe in its legacy mode, which audits the screen around the card's frame and
+does not enter the refused card's empty frame: that frame is sandboxed with no script, and axe's default mode waits on
+it and never finishes. The audit's one axe call serves every route, and the review is the one route that renders a
+card frame.
 
 ## 3. Acceptance criteria of SPEC-505
 
@@ -80,7 +83,7 @@ of Telegram's palettes.
 | A3 | R5: no plant's unique token reaches a status, the frame's attributes or a console line, and the detector catches a planted leak | the status names no reason | ADR-523 D4 |
 | A4 | R7, R8: every `CardViewRefusal` case reads a DeckStreak sentence, never its case name, `CardFaceView.swift` holds no `String(describing:)`, and the refusal is announced once, in the words shown | the stub mapper prints the case and announces nothing | ADR-523 D5 |
 | A5 | R9: the review's refusal tests pass with the reason | they expect `escaped` and the one sentence | ADR-523 D2 |
-| A6 | R9: axe finds no WCAG 2.2 AA violation on the review with a refused card, in both palettes | the review's status names no reason | ADR-523 D6 |
+| A6 | R9: axe, in its legacy mode, finds no WCAG 2.2 AA violation on the review with a refused card, in both palettes; the refused card's empty frame is not entered | the review's status names no reason | ADR-523 D6 |
 
 ```acceptance
 A1: pnpm --dir web/app exec vitest run src/lib/card/frame-document.test.ts -t "each frame check refuses with its own reason, the first failing check naming it"
@@ -113,7 +116,7 @@ A6: pnpm --dir web/app exec playwright test tests/a11y.spec.ts -g "/study/review
 | `ios/swift-roles.json` | iOS register | changed: the new file's role and decisions |
 | `web/app/src/lib/card/frame-document.test.ts`, `frame-host.test.ts`, `card-frame.test.ts` | tests | A1 |
 | `web/app/src/lib/study/review-screen.test.ts`, `review-templates.test.ts`, `review.test.ts`, `refusal.test.ts` | tests | A2 to A5 |
-| `web/app/tests/a11y.spec.ts` | tests | A6: a stand-in engine shows a refused card on the review |
+| `web/app/tests/a11y.spec.ts` | tests | A6: a stand-in engine shows a refused card on the review; axe runs in its legacy mode |
 | `ios/AppTests/CardRefusalWordsTests.swift` | tests | new: A4 |
 | `docs/specs/SPEC-505-...md`, `docs/decisions/ADR-523-...md`, the schematic, `docs/red-first/SPEC-505.md`, `changelog.d/refused-card-says-why-505.md` | docs | new |
 
