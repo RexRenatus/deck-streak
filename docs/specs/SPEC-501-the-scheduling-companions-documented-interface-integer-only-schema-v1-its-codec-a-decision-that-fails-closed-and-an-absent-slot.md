@@ -126,16 +126,15 @@ C6: cargo test -p deck-streak-companion-slot --test absent -- --exact the_public
 C6: cargo test -p deck-streak-companion-slot --test absent -- --exact a_slot_that_answers_a_due_date_is_refused
 C7: cargo test -p deck-streak-companion --doc
 C8: cargo test -p deck-streak-companion --test formal_vectors_decide -- --exact decide_and_negotiate_answer_every_lean_vector
-C8: phxd formal check --root . --base <the delivery's base> --kind lean --format json
-C9: python3 scripts/ddd-probe.py --root . check context-map-parses
-C9: python3 scripts/ddd-probe.py --root . check declared-edges-match-imports
 C9: python3 -m unittest discover -s scripts/tests -p test_context_map_schematic.py
-C10: python3 scripts/privacy-gdpr-probe.py --root . check inventory-valid
 C10: python3 -m unittest discover -s scripts/tests -p test_privacy_policy.py
 ```
 
-The ddd and privacy probes and `phxd` are the hub's, run from its checkout with `--root` at this tree (ADR-002's
-confirmation line names the same form). The crates' other tests, `a_frame_of_another_minor_decodes_and_keeps_its_minor`,
+The rest of C8, C9 and C10 is decided by the hub's tools, run from its checkout with `--root` at this tree, as ADR-002's
+confirmation line runs the ddd probe: `phxd formal check --root . --base <the delivery's base> --kind lean --gate
+--format json` (C8; section 8 says what it must read), `python3 scripts/ddd-probe.py --root . check
+context-map-parses` and `check declared-edges-match-imports` (C9), and `python3 scripts/privacy-gdpr-probe.py --root .
+check inventory-valid` (C10). The crates' other tests, `a_frame_of_another_minor_decodes_and_keeps_its_minor`,
 `random_bytes_never_panic_the_decoder`, `an_enum_value_outside_its_type_and_another_major_are_refused`,
 `the_interval_bounds_and_the_due_days_arithmetic_are_exact` and `a_reply_that_is_not_a_due_date_refuses_by_its_status`,
 pin the edges of R3 and R4 beside the criteria. `python3 -m unittest discover -s scripts/tests -p
