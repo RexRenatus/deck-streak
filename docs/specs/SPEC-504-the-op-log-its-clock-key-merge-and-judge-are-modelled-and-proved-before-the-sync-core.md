@@ -52,6 +52,8 @@ R7. Each theorem's planted control, the claim stated of its defect and proved by
 R8. The ledger records the five entries as present, each named property under every obligation that named the entry,
     and gives each entry its row (`re-stamp`: stamped when the sync core lands); the ledger's tests hold the 48
     entries.
+R9. `config/formal.json` gives `tla/OpLog` a budget of 600 s: its check measured 391 s at the head, and the default
+    300 s left 13 runs unstarted (`TIMEOUT`). The settings test pins the value.
 
 ## 3. Acceptance criteria of SPEC-504
 
@@ -61,11 +63,13 @@ R8. The ledger records the five entries as present, each named property under ev
 | A2 | R5, R6: every Lean theorem built, every witness built, vectors byte-equal, no hole | each witness theorem | `phxd formal check --root . --base <base> --kind lean --gate --format json` (local) |
 | A3 | R4, R7: the vacuity traps violated, the SANY control and each planted control refused, the axiom audit within the three | the planted controls | the red-first record's scratch runs |
 | A4 | R8: the ledger names the five entries present and their rows | the ledger test before the entries exist | the fence below |
+| A5 | R9: the entry's budget is its measured need's | the entry's check at the default budget: 13 runs `TIMEOUT` | the fence below |
 
 ```acceptance
 A4: python3 -m unittest discover -s scripts/tests -p test_formal_obligations.py -k test_the_rows_hold_o1_to_o17_and_the_planned_entries
 A4: python3 -m unittest discover -s scripts/tests -p test_formal_obligations.py -k test_every_existing_entry_has_its_disposition_row
 A4: python3 -m unittest discover -s scripts/tests -p test_formal_obligations.py -k test_the_ledger_exists_in_schema_v1
+A5: python3 -m unittest discover -s scripts/tests -p test_formal_config.py -k test_the_committed_file_holds_exactly_the_declared_fields
 ```
 
 ## 4. File manifest
@@ -82,7 +86,7 @@ A4: python3 -m unittest discover -s scripts/tests -p test_formal_obligations.py 
 | `formal/vectors/sync-clock.jsonl`, `review-key.jsonl`, `field-merge.jsonl`, `push-judge.jsonl` | formal | new |
 | `formal/obligations.json` | formal | changed: R8 |
 | `scripts/tests/test_formal_obligations.py` | guard tests | changed: the 48 entries |
-| `config/formal.json`, `scripts/tests/test_formal_config.py` | formal | changed only if the entry's measured time needs a budget of its own |
+| `config/formal.json`, `scripts/tests/test_formal_config.py` | formal | changed: `tla/OpLog` takes 600 s, its measured need (391 s) times 1.5, rounded up to the minute |
 | `docs/specs/SPEC-504-...md`, `docs/decisions/ADR-522-...md` | docs | new |
 | `docs/schematics/the-op-log-model-and-its-four-proofs.md` | docs | new |
 | `docs/red-first/SPEC-504.md` | docs | new: the red-first record |

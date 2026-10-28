@@ -26,7 +26,9 @@ specification the code is built against. The ledger (ADR-514) already lists the 
 4. **Bounds that fit the budget.** The check runs one model-checker pass per property per configuration. At the
    design's main bound with one crash per device the space measured 2,130,199 distinct states (434 s for all
    properties in one pass), so the main configuration takes no device crash (140,340 states) and one revocable
-   device; the device crash's only effect in the model, losing unread answers, is carried by the server crash.
+   device; the device crash's only effect in the model, losing unread answers, is carried by the server crash. Even
+   so the entry's check measured 391 s, past the default 300 s, so `tla/OpLog` takes 600 s in `config/formal.json`
+   (391 x 1.5, rounded up to the minute).
 5. **The ledger records them present.** Each named property is a present artifact under every obligation that named
    the entry, and each entry's row is `re-stamp`.
 
