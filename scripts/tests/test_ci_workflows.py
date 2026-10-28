@@ -27,6 +27,7 @@ from pathlib import Path
 from unittest import mock
 
 from _support import REPO, examined
+from test_mutation_verdict import verdict_module
 from test_one_static_library import umbrella_closure
 
 WORKFLOWS = REPO / ".github" / "workflows"
@@ -1173,11 +1174,14 @@ class TheRequiredCiCheckIsThePullRequestsOwn(unittest.TestCase):
 
 
 def run_base_is_dev(context):
-    """Run base-is-dev's own step from ci.yml under `bash -e`, its env taken from `context`."""
+    """Run base-is-dev's own step from ci.yml under `bash -e`, its env taken from `context`. The
+    script is the job's first `run: |` block, read up to the next step, so the release step after
+    it (SPEC-500 R1) never runs as part of it."""
     ci = workflow_file_text(WORKFLOWS / "ci.yml")
     job = re.search(r"(?ms)^  base-is-dev:\n(.*?)(?=^  [a-z-]+:\n|\Z)", ci).group(1)
     names = re.findall(r"(?m)^          ([A-Z_]+): \$\{\{ ([a-z_.]+) \}\}$", job)
-    script = textwrap.dedent(re.search(r"(?ms)^        run: \|\n(.*?)(?=^\S|\Z)", job).group(1))
+    block = re.search(r"(?ms)^        run: \|\n(.*?)(?=^      - |\Z)", job)
+    script = textwrap.dedent(block.group(1))
     env = {"PATH": os.environ["PATH"]}
     for name, expression in names:
         if expression not in context:
@@ -1204,6 +1208,113 @@ class OnlyThisRepositorysDevReachesMain(unittest.TestCase):
         done = run_base_is_dev(dict(INTO_MAIN, **{"github.head_ref": "feature/probe"}))
         self.assertEqual(done.returncode, 1, done.stdout)
         self.assertIn("feature/probe", done.stdout)
+
+
+def run_release_step(context, output):
+    """Run base-is-dev's `id: release` step from ci.yml under `bash -e`, its env taken from
+    `context` and GITHUB_OUTPUT naming `output`; its script is read as run_base_is_dev reads the
+    first step's, up to the next step (SPEC-500 R1)."""
+    ci = workflow_file_text(WORKFLOWS / "ci.yml")
+    job = re.search(r"(?ms)^  base-is-dev:\n(.*?)(?=^  [a-z-]+:\n|\Z)", ci).group(1)
+    found = [
+        step
+        for step in re.split(r"(?m)^      - ", job)[1:]
+        if re.search(r"(?m)^        id: release$", step)
+    ]
+    if len(found) != 1:
+        raise AssertionError(
+            f"base-is-dev holds {len(found)} steps with `id: release`, so no step writes the "
+            "release output"
+        )
+    names = re.findall(r"(?m)^          ([A-Z_]+): \$\{\{ ([a-z_.]+) \}\}$", found[0])
+    block = re.search(r"(?ms)^        run: \|\n(.*?)(?=^      - |\Z)", found[0])
+    if block is None:
+        raise AssertionError("base-is-dev's release step runs no script block")
+    env = {"PATH": os.environ["PATH"], "GITHUB_OUTPUT": str(output)}
+    for name, expression in names:
+        if expression not in context:
+            raise AssertionError(f"the release step reads {expression}, which no scenario models")
+        env[name] = context[expression]
+    return subprocess.run(
+        ["bash", "-e", "-c", textwrap.dedent(block.group(1))],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+class TheReleaseRunIsNamedInBaseIsDev(unittest.TestCase):
+    def test_the_release_output_is_release_run(self):
+        """SPEC-500 R1: base-is-dev's second step writes `release=true` to GITHUB_OUTPUT exactly
+        where the plan's fail-closed predicate, `release_run`, holds, and `release=false` in every
+        other context: event, base, head, head repository and repository, each with its empty
+        value, 108 contexts, the one release run among them."""
+        release_run = verdict_module().release_run
+        contexts = [
+            (event, base, head, head_repo, repo)
+            for event in ("pull_request", "push")
+            for base in ("main", "dev", "")
+            for head in ("dev", "feature/x", "")
+            for head_repo in (THIS_REPOSITORY, "someone/fork", "")
+            for repo in (THIS_REPOSITORY, "")
+        ]
+        self.assertEqual(len(contexts), 108)
+        released = [inputs for inputs in contexts if release_run(*inputs)]
+        self.assertEqual(released, [tuple(INTO_MAIN.values())])
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        for index, inputs in enumerate(examined("release contexts", contexts)):
+            output = Path(scratch.name) / f"output-{index}"
+            context = dict(zip(INTO_MAIN, inputs))
+            done = run_release_step(context, output)
+            where = f"{inputs}: {done.stdout}{done.stderr}"
+            self.assertEqual(done.returncode, 0, where)
+            self.assertTrue(output.is_file(), f"{inputs}: the step wrote no output")
+            expected = "true" if release_run(*inputs) else "false"
+            self.assertEqual(output.read_text(encoding="utf-8"), f"release={expected}\n", where)
+
+    def test_the_job_output_reads_the_step_that_writes_release(self):
+        """SPEC-500 R1: `ci` reads the release run through base-is-dev's job output, so the wiring
+        is held closed: the job's `outputs` map holds exactly one key, `release`; its value is
+        exactly `${{ steps.<id>.outputs.release }}` for one step id; exactly one step of the job
+        carries that id; and that step's script writes `release=` to GITHUB_OUTPUT, on the one line
+        of it that names GITHUB_OUTPUT. Any other key, value, id or write is refused."""
+        job = load("ci.yml")["jobs"]["base-is-dev"]
+        outputs = job.get("outputs")
+        self.assertIsInstance(outputs, dict, "base-is-dev declares no outputs map")
+        self.assertEqual(
+            examined("base-is-dev outputs", outputs),
+            ["release"],
+            "base-is-dev's outputs hold exactly the key release",
+        )
+        value = outputs["release"]
+        wired = re.fullmatch(
+            r"\$\{\{ steps\.([A-Za-z_][A-Za-z0-9_-]*)\.outputs\.release \}\}",
+            value if isinstance(value, str) else "",
+        )
+        self.assertIsNotNone(
+            wired, f"base-is-dev's release output reads {value!r}, not a step's release output"
+        )
+        steps = examined("base-is-dev steps", job["steps"])
+        named = [step for step in steps if isinstance(step, dict) and step.get("id") == wired[1]]
+        self.assertEqual(
+            len(named),
+            1,
+            f"base-is-dev's release output reads step {wired[1]!r}, and {len(named)} of its "
+            "steps carry that id",
+        )
+        script = named[0].get("run")
+        self.assertIsInstance(script, str, f"step {wired[1]!r} runs no script")
+        writes = [line.strip() for line in script.splitlines() if "GITHUB_OUTPUT" in line]
+        self.assertEqual(
+            len(writes), 1, f"step {wired[1]!r} names GITHUB_OUTPUT on {len(writes)} lines"
+        )
+        self.assertRegex(
+            writes[0],
+            r'^echo "release=[^"]*" >> "\$GITHUB_OUTPUT"$',
+            f"step {wired[1]!r} does not write release= to GITHUB_OUTPUT",
+        )
 
 
 class TheReaderReadsOnlyItsNamedForms(unittest.TestCase):
@@ -4876,6 +4987,39 @@ NOT_WORKFLOW_READS = {
         ),
     ),
     **allowed(
+        "calls run_release_step, which runs base-is-dev's release step's shell and reads the output file it writes",
+        (
+            "test_ci_workflows",
+            "TheReleaseRunIsNamedInBaseIsDev.test_the_release_output_is_release_run",
+            "run_release_step(context, output)",
+            1,
+        ),
+    ),
+    **allowed(
+        "the GITHUB_OUTPUT file base-is-dev's release step wrote to a scratch directory; a step's output, never a workflow",
+        (
+            "test_ci_workflows",
+            "TheReleaseRunIsNamedInBaseIsDev.test_the_release_output_is_release_run",
+            "output.read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "the mutation verdict script loaded as a module, read for its release_run predicate; a production script, never the reader",
+        (
+            "test_ci_workflows",
+            "TheReleaseRunIsNamedInBaseIsDev.test_the_release_output_is_release_run",
+            "release_run(*inputs)",
+            2,
+        ),
+        (
+            "test_ci_workflows",
+            "TheReleaseRunIsNamedInBaseIsDev.test_the_release_output_is_release_run",
+            "verdict_module()",
+            1,
+        ),
+    ),
+    **allowed(
         "calls required_contexts, whose one read is a ruleset's JSON",
         (
             "test_ci_workflows",
@@ -5017,6 +5161,15 @@ NOT_WORKFLOW_READS = {
             "test_ci_workflows",
             "run_base_is_dev",
             "subprocess.run(['bash', '-e', '-c', script], env=env, capture_output=True, text=True, check=False)",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs base-is-dev's release step's own shell, cut from ci.yml's loader-read text, under bash with GITHUB_OUTPUT naming a scratch file; its output is the step's, never a workflow",
+        (
+            "test_ci_workflows",
+            "run_release_step",
+            "subprocess.run(['bash', '-e', '-c', textwrap.dedent(block.group(1))], env=env, capture_output=True, text=True, check=False)",
             1,
         ),
     ),
@@ -5914,6 +6067,12 @@ NOT_WORKFLOW_READS = {
         ),
         (
             "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_ci_admits_every_mutation_result_on_the_release_run_and_no_gating_one",
+            "bash(script, env, shell_of(step, aggregate, workflow(CI)))",
+            1,
+        ),
+        (
+            "test_not_started_legs",
             "ALegWithNothingToExamineIsNotStarted.test_the_plan_writes_how_many_rust_mutants_its_listing_holds",
             "run_shards(fixture, listed)",
             1,
@@ -6467,6 +6626,15 @@ NOT_WORKFLOW_READS = {
     **allowed(
         "a log the step's shim wrote to a scratch file; never handed to the reader",
         ("test_verdict_folds", "Driver.run", "log.read_text(encoding='utf-8')", 1),
+    ),
+    **allowed(
+        "the step summary ci's step wrote to a scratch file; a step's output, never handed to the reader",
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_ci_admits_every_mutation_result_on_the_release_run_and_no_gating_one",
+            "summary.read_text(encoding='utf-8')",
+            1,
+        ),
     ),
     **allowed(
         "calls Driver.run, which runs a step's shell over a planted script and shims, and reads the shim's log; outputs, never a workflow",

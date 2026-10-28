@@ -370,3 +370,17 @@ absent paths and directory listings included, is byte-identical at that run and 
   a leg. `PYTHON_RELEASE_CEILING`, its `#:` line, `PYTHON_SHARE_CAP`, `PYTHON_MATRIX_LEGS` and
   every bound stay as they are, and a release run that carries nothing deals exactly as
   before.
+
+## Amendment: on the release run `ci` admits every mutation result by value (SPEC-500)
+
+Insert-only; every earlier byte is kept. Two things follow for this SPEC:
+
+- R1's predicate gains a second reader. `base-is-dev`'s release step evaluates it in shell over
+  the same five inputs and writes the job output `release` that `ci` reads (SPEC-500 R1); a test
+  runs the step over 108 contexts and compares each with `release_run` itself. R1 and R2 are
+  unchanged, and the plan still writes its own mark.
+- R11 holds on every run but the release run. There `ci` admits, by value, one non-success result
+  for each of the 8 mutation jobs whose result is not `success`, `mutation-python-release` among
+  them, in place of R11's one skip (SPEC-500 R2, ADR-518 D2). The verdict's `legs` call and its
+  `--python-release-leg` argument are unchanged, so the leg is still judged and its result
+  reported on that run.
