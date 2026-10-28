@@ -52,7 +52,8 @@ Rust tests through `tools/parity-oracle/golden.rs` (ADR-029). What was read at `
 - **R8. A consumer can fail.** `golden.rs` gains `mismatches` and `assert_parity`; a fixture golden with one wrong
   output makes the consumer report exactly that case.
 - **R9. Edge classes covered.** Every declared class has a case for every function it is declared for, and every
-  case's class is declared; the driver refuses a registry that breaks either before anything runs.
+  case's class is declared; the driver refuses a registry that breaks either before anything runs, and a class that
+  holds one hand case twice.
 - **R10. The clean-room record.** The record of the clean-room line, covering every crate an engine-replacing delivery
   writes, with each delivery's read list and similarity-scan score, is kept in the owner's private evidence, never in
   this tree.
@@ -100,6 +101,7 @@ A6: cargo test -p deck-streak-ingest --test oracle_consumer -- --exact the_consu
 | `tools/parity-oracle/anki/RUNBOOK.md` | oracle | new: the sandbox and the one run |
 | `tools/parity-oracle/test_anki_driver.py` | oracle tests | new: A1 and A5 |
 | `tools/parity-oracle/test_anki_registry.py` | oracle tests | new: A2 |
+| `tools/parity-oracle/test_anki_hand_cases.py` | oracle tests | new: A2 (the hand-case target and the repeated-case refusal) |
 | `tools/parity-oracle/test_anki_workspace.py` | oracle tests | new: A3 |
 | `tools/parity-oracle/golden.rs` | oracle | changed: `Mismatch`, `mismatches` and `assert_parity` |
 | `tools/parity-oracle/README.md` | oracle | changed: the second old system's files |
