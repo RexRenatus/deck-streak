@@ -9,7 +9,10 @@
 // SPEC-383 R10, R13; ADR-397. The same press and confirmation reach the review's last bury or flag:
 // the control names the change it would undo, a flag's own return offers the flag's undo, and a
 // refused undo of a bury or a flag reads the change's notice, picked by the kind it pressed.
-import { frameDocument } from '$lib/card/frame-document';
+// SPEC-505 R3, R5; ADR-523 D2: a face the frame refuses is announced by the first failing check's
+// reason, read from the one composition the frame renders, with the classes and title it is given.
+import type { RefusalReason } from '$lib/card/frame-document';
+import { frameCard } from '$lib/card/frame-host';
 import { EngineError } from '$lib/engine/client';
 import type { CardView, Clip, Counts, ErrorCode, Faces, Head, Rating, UndoOffer } from '$lib/engine/protocol';
 import { m } from '$lib/paraglide/messages.js';
@@ -169,8 +172,9 @@ export interface ClipPlayer {
   play(clips: readonly Clip[]): Promise<boolean>;
 }
 
-/** What the status region announces: a refusal's code, a card the frame refused, a done deck. */
-export type Status = ErrorCode | 'escaped' | 'done';
+/** What the status region announces: a refusal's code, the reason the frame refused a card, a done
+ * deck (SPEC-505 R5). */
+export type Status = ErrorCode | RefusalReason | 'done';
 
 /** What the frame shows: the card last shown, and its side. */
 export interface Face {
@@ -245,17 +249,25 @@ export class Review {
 
   /** Whether the frame refuses the face it shows, which then shows a message in its place. */
   get escaped(): boolean {
+    return this.refused !== null;
+  }
+
+  /** The reason the frame refuses the face it shows, or `null` when it shows it: the face as the
+   * screen frames it, with the card's classes and the side's frame title (SPEC-505 R3). */
+  get refused(): RefusalReason | null {
     const face = this.#face;
-    if (face === null) return false;
-    const html = face.side === 'answer' ? face.view.answer : face.view.question;
-    return frameDocument(html, face.view.css).refused === 'escaped';
+    if (face === null) return null;
+    const answer = face.side === 'answer';
+    const title = answer ? m.study_answer_frame() : m.study_question_frame();
+    const classes = `card card${face.view.ordinal + 1}`;
+    return frameCard(answer ? face.view.answer : face.view.question, face.view.css, title, classes).refused ?? null;
   }
 
   /** What the status region announces now, or `null` when it is quiet. */
   get status(): Status | null {
     if (this.#state.phase === 'refused') return this.#refusal;
     if (this.#state.phase === 'done') return 'done';
-    return this.#notice ?? (this.escaped ? 'escaped' : null);
+    return this.#notice ?? this.refused;
   }
 
   /** The status region's words, or `null` when it is quiet: a refused undo of a bury or a flag

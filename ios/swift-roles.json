@@ -3,7 +3,7 @@
   "ios/App/Sources/AnswerBar.swift": {"role": "view", "decisions": 3},
   "ios/App/Sources/AppModel.swift": {"role": "model", "decisions": 5},
   "ios/App/Sources/CardFaceView.swift": {"role": "card", "decisions": 2},
-  "ios/App/Sources/CardRefusalWords.swift": {"role": "view", "decisions": 0},
+  "ios/App/Sources/CardRefusalWords.swift": {"role": "view", "decisions": 2},
   "ios/App/Sources/ClipPlayer.swift": {"role": "speech", "decisions": 5},
   "ios/App/Sources/DeckListView.swift": {"role": "view", "decisions": 3},
   "ios/App/Sources/DeckStreakApp.swift": {"role": "entry", "decisions": 0},

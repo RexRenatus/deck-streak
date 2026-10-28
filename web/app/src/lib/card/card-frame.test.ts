@@ -4,7 +4,6 @@
 import { render } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 import CardFrame from './CardFrame.svelte';
-import { REFUSAL_REASONS } from './frame-document';
 
 // SPEC-341 R1, R4, R6, A6; ADR-352 D1, D2. A card face renders in one sandboxed iframe with no
 // token, whose document is the frame document, and with nothing that would widen it: no `src`,
@@ -72,7 +71,9 @@ describe('the card frame', () => {
 
   // SPEC-505 R3, R4, A1; ADR-523 D1. A refused frame's mark is the first failing check's reason,
   // from the closed list, whichever check refused it: the document's or the host's.
-  it('a card the frame document refuses renders an empty frame marked with its reason', () => {
+  it('a card the frame document refuses renders an empty frame marked with its reason', async () => {
+    // imported here, so the lines the threat model cites above keep their numbers
+    const { REFUSAL_REASONS } = await import('./frame-document');
     const mutation = '<form><math><mtext></form><form><mglyph><style></math>';
     const plants: [props: { html: string; css: string; title: string; classes?: string }, reason: string][] = [
       [{ html: CARD, css: CSS, title: 'The card', classes: 'card card0' }, 'class-list'],

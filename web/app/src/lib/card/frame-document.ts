@@ -25,10 +25,11 @@ export const REFUSAL_REASONS = [
 /** One check's reason for refusing a card. */
 export type RefusalReason = (typeof REFUSAL_REASONS)[number];
 
-/** The frame document `CardFrame` sets as its `srcdoc`, or the refusal of a card that escaped it. */
+/** The frame document `CardFrame` sets as its `srcdoc`, or the refusal of a card that escaped it,
+ * named by the first check that failed (SPEC-505 R1, R2; ADR-523 D1, D2). */
 export type FrameDocument =
   | { srcdoc: string; refused?: undefined }
-  | { srcdoc?: undefined; refused: 'escaped' };
+  | { srcdoc?: undefined; refused: RefusalReason };
 
 /** What the frame keeps out of the card: resource hints, refreshes, policies, bases, shadow roots. */
 const STRIPPED = 'link, meta, base, template';
@@ -60,7 +61,7 @@ function attributes(body: HTMLElement): string[][] {
 }
 
 export function frameDocument(html: string, css: string, classes?: string): FrameDocument {
-  if (classes !== undefined && !CLASSES.test(classes)) return { refused: 'escaped' };
+  if (classes !== undefined && !CLASSES.test(classes)) return { refused: 'class-list' };
   const card = parse(`<!doctype html><body>${html}`);
   for (const element of card.querySelectorAll(STRIPPED)) element.remove();
   // SPEC-402 R1; ADR-416 D2: the element stays, and its src still shows its image
@@ -74,11 +75,11 @@ export function frameDocument(html: string, css: string, classes?: string): Fram
   const expected = classes === undefined ? [] : [['class', classes]];
   const composed = `<!doctype html><html><head>${HEAD}${style}</head>${body}${card.body.innerHTML}</body></html>`;
   const frame = parse(composed);
-  const kept =
-    frame.head.innerHTML === HEAD + style &&
-    frame.body.querySelector(STRIPPED) === null &&
-    frame.querySelector(SRCSET) === null &&
-    frame.querySelector(TARGET) === null &&
-    JSON.stringify(attributes(frame.body)) === JSON.stringify(expected);
-  return kept ? { srcdoc: composed } : { refused: 'escaped' };
+  // SPEC-505 R2; ADR-523 D2: each check its own reason, the first that fails naming the refusal
+  if (frame.head.innerHTML !== HEAD + style) return { refused: 'style-closed' };
+  if (frame.body.querySelector(STRIPPED) !== null) return { refused: 'reparse-element' };
+  if (frame.querySelector(SRCSET) !== null) return { refused: 'reparse-srcset' };
+  if (frame.querySelector(TARGET) !== null) return { refused: 'reparse-target' };
+  if (JSON.stringify(attributes(frame.body)) !== JSON.stringify(expected)) return { refused: 'body-attributes' };
+  return { srcdoc: composed };
 }

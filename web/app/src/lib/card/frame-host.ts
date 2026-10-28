@@ -48,10 +48,14 @@ export function frameHost(card: string, title: string, policy: string = HOST_POL
     again.head.innerHTML === meta + HOST_STYLE &&
     hosted(host) === card &&
     again.body.children[0].getAttribute('title') === title;
-  return kept ? { srcdoc: host } : { refused: 'escaped' };
+  return kept ? { srcdoc: host } : { refused: 'host-readback' };
 }
 
-/** The card as its frame shows it: the frame document, carried by its host. */
+/**
+ * The card as its frame shows it: the frame document, carried by its host, or the first failing
+ * check's reason. `CardFrame` renders it and the review's status reads it, so the frame's mark and
+ * the status name the same reason (SPEC-505 R3; ADR-523 D2).
+ */
 export function frameCard(html: string, css: string, title: string, classes?: string): FrameDocument {
   const doc = frameDocument(html, css, classes);
   return doc.srcdoc === undefined ? doc : frameHost(doc.srcdoc, title);
