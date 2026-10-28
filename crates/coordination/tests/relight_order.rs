@@ -1197,11 +1197,13 @@ async fn a_day_whose_route_fails_many_times_stays_due_until_its_one_celebration(
 }
 
 /// The sources whose types the relight route holds from one route to the next: the router and all
-/// it holds (the notifications crate, and the kernel, the one crate it depends on), and the route's
-/// own two files. `route_due_relights` takes nothing else that outlives it but the database.
-const ROUTE_STATE_SOURCES: [&str; 4] = [
+/// it holds (the notifications crate, the kernel, the one crate it depends on, and the study day
+/// crate, the kernel's one dependency, whose instant the router stamps), and the route's own two
+/// files. `route_due_relights` takes nothing else that outlives it but the database.
+const ROUTE_STATE_SOURCES: [&str; 5] = [
     "crates/notifications/src",
     "crates/kernel/src",
+    "crates/study-day/src",
     "crates/coordination/src/relight.rs",
     "crates/coordination/src/recompute/streaks.rs",
 ];
@@ -1268,7 +1270,7 @@ const ROUTE_STATE: [(&str, &str); 15] = [
     ("crates/kernel/src/clock.rs", "now: AtomicI64,"),
     (
         "crates/kernel/src/clock.rs",
-        "now: AtomicI64::new(start.0),",
+        "now: AtomicI64::new(start.epoch_millis()),",
     ),
     (
         "crates/kernel/src/offload.rs",
