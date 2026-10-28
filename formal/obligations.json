@@ -371,13 +371,18 @@
       "property": "The release gates admit a release only when every gate holds",
       "layers": ["release"],
       "artifacts": [
-        {"kind": "lean", "entry": "lean/ReleaseGates", "state": "planned"}
+        {"kind": "lean", "entry": "lean/ReleaseGates", "property": "a_release_is_published_only_when_every_gate_holds", "state": "present"},
+        {"kind": "lean", "entry": "lean/ReleaseGates", "property": "each_refusal_names_its_gate_and_why", "state": "present"}
       ],
-      "ties": [],
+      "ties": [
+        {"method": "vectors", "for": "lean/ReleaseGates", "test": "scripts/tests/test_release_gates.py::TheLeanVectors.test_every_vector_is_the_scripts_verdict"}
+      ],
       "gaps": [
-        "a Lean port proves the port; vectors read by the release lane's test tie it to the code"
+        "a Lean port proves the port; vectors read by the release lane's test tie it to the code",
+        "the record's reader is covered, not ported: its tests and the vectors' records hold it",
+        "the record is trusted as committed until it is admitted only from an owner-signed commit"
       ],
-      "status": "planned"
+      "status": "tied"
     }
   ],
   "entries": [
@@ -415,6 +420,7 @@
     {"entry": "lean/OpenLapse", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/RecordClassBinding", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/ReleaseCarry", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/ReleaseGates", "disposition": "keep", "act": "unaffected by the engine's replacement; re-stamped when the release gate's covered span moves", "obligations": ["O17"]},
     {"entry": "lean/ReplayHistory", "disposition": "keep", "act": "stays while the FSRS-7 crate stays, and is retired with it otherwise", "obligations": ["O11"]},
     {"entry": "lean/RoadToC2", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/SensitiveDeck", "disposition": "re-stamp", "act": "re-stamped if the deck path form changes", "obligations": ["O11"]},
