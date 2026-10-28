@@ -1,16 +1,67 @@
-"""The formal obligations ledger's checker and its census (SPEC-496, ADR-514): the red-first stub.
+"""The formal obligations ledger's checker and its census (SPEC-496, ADR-514).
 
-It keeps every name the tests read and none of the behaviour: `check` refuses nothing, `declared`
-reads no entry, and `census` counts the ledger's words and finds no name. The checker replaces it.
+`formal/obligations.json` names every engine property the formal tools carry: the artifacts that
+carry it, the ties that bind each artifact to the shipped code, and the gaps no tool closes. `check`
+reads a ledger against a tree and lists every refusal by its arm; `census` reads the ledger's text
+for a private core name. CI runs no formal tool, so the `@phx` headers and the test definitions are
+parsed here. Both read files only and start no process.
 """
 
+import ast
 import hashlib
+import re
 from pathlib import Path
 from typing import NamedTuple
 
 SCHEMA = "formal-obligations.v1"
 LEDGER = Path("formal") / "obligations.json"
+
+TOP_KEYS = ("schema", "phases", "obligations", "entries")
+PHASE_KEYS = ("1", "2")
+OBLIGATION_KEYS = ("id", "property", "layers", "artifacts", "ties", "gaps", "status")
+STATUSES = ("planned", "artifact", "tied", "complete")
+# The statuses that claim every artifact exists, and those that claim every artifact is tied.
+PAST_PLANNED = STATUSES[1:]
+TIED = STATUSES[2:]
+KINDS = ("tla", "lean", "kani")
+STATES = ("planned", "present")
+COMPANION = "companion"
+METHODS = ("vectors", "trace", "kani-identity", "mbt", "census", "cross-target-hash")
+# A census or a cross-target hash tests an absence or an equality and proves no property.
+COUNTING = ("vectors", "trace", "kani-identity", "mbt")
+TIE_KEYS = ("method", "for", "test", "mutant")
+ROW_KEYS = ("entry", "disposition", "act", "obligations")
+DISPOSITIONS = ("keep", "re-stamp", "re-point", "retire")
+
+ID = re.compile(r"^O[1-9][0-9]*a?$")
+ENTRY = re.compile(r"^(tla|lean)/([A-Z][A-Za-z0-9]*)$")
+NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_']*$")
+HARNESS = re.compile(r"^K-[a-z0-9]+(?:-[a-z0-9]+)*$")
+TEST = re.compile(
+    r"^(?P<path>[A-Za-z0-9_][A-Za-z0-9_./-]*\.(?P<ext>rs|py))"
+    r"::(?P<name>[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)$"
+)
+
+# The header lines that declare a TLA+ property and a Lean theorem, in the entries' own grammar.
+TLA_DECLARES = re.compile(r"^\s*\\\*\s*@phx\s+property\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s|$)")
+LEAN_DECLARES = re.compile(r"^\s*--\s*@phx\s+theorem\s+([A-Za-z_][A-Za-z0-9_']*)(?:\s|$)")
+# Rust comments are blanked before a test is looked for: a commented-out test defines nothing.
+RUST_COMMENT = re.compile(r"//[^\n]*|/\*.*?\*/", re.DOTALL)
+RUST_DEFINITION = re.compile(
+    r"#\[\s*(?P<kind>test|tokio::test|kani::proof)\s*(?:\([^\]]*\))?\s*\]"
+    r"(?:\s*#\[[^\]]*\])*\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?:unsafe\s+)?"
+    r"fn\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)"
+)
+TEST_KINDS = frozenset({"test", "tokio::test", "kani::proof"})
+HARNESS_KINDS = frozenset({"kani::proof"})
+
+# The census. The brand is assembled from parts, so this file holds no token derived from it.
 CENSUS_SALT = "formal-ledger-census:"
+BRAND = "".join(("r", "e", "x"))
+BRAND_AT_A_WORD_START = re.compile(f"(?<![A-Za-z0-9]){BRAND}", re.IGNORECASE)
+BRAND_AT_A_HUMP = re.compile(f"(?<=[a-z0-9])R(?:{BRAND[1:]}|{BRAND[1:].upper()})")
+TOKEN = re.compile(r"[A-Za-z0-9_]+(?:[-.:][A-Za-z0-9_]+)*")
+PART = re.compile(r"[-.:]")
 # The private core names, each as the SHA-256 of the salt and the name in lower case.
 PRIVATE_NAME_DIGESTS = frozenset(
     (
@@ -76,14 +127,351 @@ class Refusal(NamedTuple):
     why: str
 
 
+def names(path, pattern):
+    """The names the header lines of the file at `path` declare by `pattern`."""
+    found = set()
+    for line in path.read_text(encoding="utf-8").splitlines():
+        match = pattern.match(line)
+        if match:
+            found.add(match.group(1))
+    return frozenset(found)
+
+
+def plain_file(path):
+    return path.is_file() and not path.is_symlink()
+
+
 def declared(root):
-    """The stub reads no entry."""
-    return {}
+    """Every formal entry of the tree at `root`, by its id, with the names its `@phx` header
+    declares. A TLA+ entry is a folder `formal/tla/<Name>` holding `<Name>.tla`; a Lean entry is a
+    module `formal/lean/Formal/<Name>.lean` whose header declares at least one theorem."""
+    root = Path(root)
+    found = {}
+    tla = root / "formal" / "tla"
+    if tla.is_dir() and not tla.is_symlink():
+        for folder in sorted(tla.iterdir()):
+            module = folder / f"{folder.name}.tla"
+            if folder.is_dir() and not folder.is_symlink() and plain_file(module):
+                found[f"tla/{folder.name}"] = names(module, TLA_DECLARES)
+    lean = root / "formal" / "lean" / "Formal"
+    if lean.is_dir() and not lean.is_symlink():
+        for module in sorted(lean.glob("*.lean")):
+            if plain_file(module):
+                theorems = names(module, LEAN_DECLARES)
+                if theorems:
+                    found[f"lean/{module.stem}"] = theorems
+    return found
+
+
+def tree_file(root, relative):
+    """The regular file `relative` names under `root`, or None: a path that is absolute, steps up,
+    passes a link or names no regular file names nothing."""
+    path = Path(relative)
+    if path.is_absolute() or any(part in ("..", ".") for part in path.parts):
+        return None
+    walked = Path(root)
+    for part in path.parts:
+        walked = walked / part
+        if walked.is_symlink():
+            return None
+    return walked if walked.is_file() else None
+
+
+def rust_definitions(text):
+    """Each function of a Rust source marked as a test or a Kani proof, with its marks' kinds."""
+    found = {}
+    for match in RUST_DEFINITION.finditer(RUST_COMMENT.sub(" ", text)):
+        found.setdefault(match.group("name"), set()).add(match.group("kind"))
+    return found
+
+
+def python_defines(text, name):
+    """Whether a Python source defines `name`: `<Class>.<method>`, a test method of a top-level
+    class, or a top-level test function."""
+    try:
+        module = ast.parse(text)
+    except SyntaxError:
+        return False
+    functions = (ast.FunctionDef, ast.AsyncFunctionDef)
+    if "." in name:
+        owner, method = name.split(".", 1)
+        return method.startswith("test") and any(
+            isinstance(node, ast.ClassDef)
+            and node.name == owner
+            and any(isinstance(item, functions) and item.name == method for item in node.body)
+            for node in module.body
+        )
+    return name.startswith("test") and any(
+        isinstance(node, functions) and node.name == name for node in module.body
+    )
+
+
+class Tree:
+    """The checked tree: its formal entries with their declared names, and its test definitions."""
+
+    def __init__(self, root):
+        self.root = Path(root)
+        self.entries = declared(self.root)
+        self._texts = {}
+
+    def _text(self, path):
+        if path not in self._texts:
+            self._texts[path] = path.read_text(encoding="utf-8")
+        return self._texts[path]
+
+    def defines(self, reference, kinds=TEST_KINDS):
+        """Whether `reference`, `<path>.rs::<fn>` or `<path>.py::<Class>.<method>`, names a test
+        the tree defines; a Rust function counts only under a mark of `kinds`, and a Python test
+        only when any test mark counts."""
+        match = TEST.match(reference) if isinstance(reference, str) else None
+        if not match:
+            return False
+        path = tree_file(self.root, match.group("path"))
+        if path is None:
+            return False
+        name = match.group("name")
+        if match.group("ext") == "rs":
+            marks = rust_definitions(self._text(path)).get(name, set())
+            return "." not in name and bool(marks & kinds)
+        return kinds == TEST_KINDS and python_defines(self._text(path), name)
 
 
 def check(document, root):
-    """The stub refuses nothing."""
+    """Every refusal of the ledger `document` against the tree at `root`, in reading order."""
+    tree = Tree(root)
+    refusals = []
+
+    def refuse(arm, where, why):
+        refusals.append(Refusal(arm, where, why))
+
+    if not isinstance(document, dict):
+        refuse("shape", "ledger", "the ledger is not an object")
+        return refusals
+    closed(document, TOP_KEYS, (), "ledger", refuse)
+    if document.get("schema") != SCHEMA:
+        refuse("schema", "schema", f"the schema is not {SCHEMA}")
+    ids = set()
+    linked = {}
+    for index, obligation in enumerate(listed(document.get("obligations"), "obligations", refuse)):
+        where = f"obligations[{index}]"
+        if not isinstance(obligation, dict):
+            refuse("shape", where, "an obligation is not an object")
+            continue
+        identity = obligation.get("id")
+        if not (isinstance(identity, str) and ID.match(identity)):
+            refuse("shape", where, "its id is not O<n> or O<n>a")
+            continue
+        if identity in ids:
+            refuse("duplicate-id", where, f"{identity} is named twice")
+            continue
+        ids.add(identity)
+        for entry in judge_obligation(obligation, identity, tree, refuse):
+            linked.setdefault(entry, set()).add(identity)
+    judge_phases(document.get("phases"), ids, refuse)
+    judge_rows(document.get("entries"), linked, tree, refuse)
+    return refusals
+
+
+def closed(value, required, optional, where, refuse):
+    """Refuses an object that lacks a required key or holds a key no reader judges."""
+    missing = [key for key in required if key not in value]
+    unknown = sorted(set(value) - set(required) - set(optional))
+    if missing or unknown:
+        refuse("shape", where, f"missing {missing}, unknown {unknown}")
+
+
+def listed(value, where, refuse):
+    """`value` when it is a list; otherwise a refusal and no member."""
+    if isinstance(value, list):
+        return value
+    refuse("shape", where, "not a list")
     return []
+
+
+def blank(value):
+    return not (isinstance(value, str) and value.strip())
+
+
+def judge_obligation(obligation, identity, tree, refuse):
+    """Judges one obligation, and gives the entries its artifacts name."""
+    closed(obligation, OBLIGATION_KEYS, (), identity, refuse)
+    if blank(obligation.get("property")):
+        refuse("shape", f"{identity}.property", "the property is not named")
+    layers = obligation.get("layers")
+    if (
+        not isinstance(layers, list)
+        or not layers
+        or any(blank(layer) for layer in layers)
+        or len(set(layers)) != len(layers)
+    ):
+        refuse("shape", f"{identity}.layers", "the layers are not a list of distinct names")
+    status = obligation.get("status")
+    if status not in STATUSES:
+        refuse("status", f"{identity}.status", f"the status is not one of {', '.join(STATUSES)}")
+    artifacts = listed(obligation.get("artifacts"), f"{identity}.artifacts", refuse)
+    if not artifacts:
+        refuse("no-artifact", identity, "the obligation names no artifact")
+    handles = []
+    entries = set()
+    anonymous = False
+    planned = False
+    for index, artifact in enumerate(artifacts):
+        where = f"{identity}.artifacts[{index}]"
+        handle, entry, state = judge_artifact(artifact, where, tree, refuse)
+        if handle is None:
+            anonymous = True
+        else:
+            handles.append(handle)
+        if entry is not None:
+            entries.add(entry)
+        planned = planned or state == "planned"
+    gaps = listed(obligation.get("gaps"), f"{identity}.gaps", refuse)
+    if not gaps or any(blank(gap) for gap in gaps):
+        refuse("no-gap-line", identity, "the obligation has no gap line, or a blank one")
+    counted = set()
+    for index, tie in enumerate(listed(obligation.get("ties"), f"{identity}.ties", refuse)):
+        bound = judge_tie(tie, f"{identity}.ties[{index}]", handles, tree, refuse)
+        if bound is not None:
+            counted.add(bound)
+    if status in PAST_PLANNED and planned:
+        refuse(
+            "planned-past-planned", identity, f"a planned artifact under an obligation at {status}"
+        )
+    if status in TIED:
+        untied = sorted(set(handles) - counted)
+        if untied or anonymous:
+            refuse("untied-artifact", identity, f"at {status}, no counting tie binds {untied}")
+    return entries
+
+
+def judge_artifact(artifact, where, tree, refuse):
+    """Judges one artifact. Gives (handle, entry, state): the name a tie binds it by, the formal
+    entry it names, and its state; a companion artifact has no handle and names no entry."""
+    if not isinstance(artifact, dict):
+        refuse("shape", where, "an artifact is not an object")
+        return None, None, None
+    kind = artifact.get("kind")
+    state = artifact.get("state")
+    if kind not in KINDS or state not in STATES:
+        refuse("shape", where, "its kind or its state is not one the ledger knows")
+        return None, None, None
+    if "tree" in artifact:
+        closed(artifact, ("kind", "tree", "about", "state"), (), where, refuse)
+        if artifact.get("tree") != COMPANION or blank(artifact.get("about")):
+            refuse("shape", where, "an artifact of another tree is the companion's, with an about")
+        return None, None, state
+    if kind == "kani":
+        closed(artifact, ("kind", "harness", "state"), ("at",), where, refuse)
+        harness = artifact.get("harness")
+        if not (isinstance(harness, str) and HARNESS.match(harness)):
+            refuse("shape", where, "its harness is not named K-<name>")
+            return None, None, state
+        if state == "present" and not tree.defines(artifact.get("at"), HARNESS_KINDS):
+            refuse("undeclared-harness", where, f"{harness} is at no #[kani::proof] of the tree")
+        elif "at" in artifact and not isinstance(artifact["at"], str):
+            refuse("shape", where, "its at is not a path")
+        return harness, None, state
+    closed(artifact, ("kind", "entry", "state"), ("property",), where, refuse)
+    entry = artifact.get("entry")
+    named = ENTRY.match(entry) if isinstance(entry, str) else None
+    if not named or named.group(1) != kind:
+        refuse("shape", where, "its entry is not <kind>/<Name>")
+        return None, None, state
+    prop = artifact.get("property")
+    if prop is not None and not (isinstance(prop, str) and NAME.match(prop)):
+        refuse("shape", where, "its property is not a name")
+        return entry, entry, state
+    if state == "present":
+        if entry not in tree.entries:
+            refuse("undeclared-entry", where, f"{entry} is no entry of the tree")
+        elif prop is None:
+            refuse("shape", where, "a present artifact names no property")
+        elif prop not in tree.entries[entry]:
+            refuse("undeclared-property", where, f"{entry}'s header declares no {prop}")
+    return entry, entry, state
+
+
+def judge_tie(tie, where, handles, tree, refuse):
+    """Judges one tie. Gives the handle it binds when it counts, else None."""
+    if not isinstance(tie, dict):
+        refuse("shape", where, "a tie is not an object")
+        return None
+    closed(tie, (), TIE_KEYS, where, refuse)
+    method = tie.get("method")
+    if method not in METHODS:
+        refuse("tie-method", where, f"its method is not one of {', '.join(METHODS)}")
+    bound = tie.get("for")
+    if bound is None or (isinstance(bound, str) and not bound.strip()):
+        refuse("tie-without-for", where, "the tie names no artifact in for")
+        bound = None
+    elif not isinstance(bound, str) or bound not in handles:
+        refuse("tie-for-unknown", where, "its for names no artifact of its obligation")
+        bound = None
+    defined = tree.defines(tie.get("test"))
+    if not defined:
+        refuse("undefined-test", where, "its test is not defined in the tree")
+    mutant = tie.get("mutant")
+    if mutant is not None and blank(mutant):
+        refuse("shape", where, "its mutant is not named")
+    counts = method in COUNTING and defined and (method != "mbt" or not blank(mutant))
+    return bound if counts else None
+
+
+def judge_phases(phases, ids, refuse):
+    """Judges the phase sets: each a list of distinct ids of the ledger's obligations."""
+    if not isinstance(phases, dict):
+        refuse("shape", "phases", "the phase sets are not an object")
+        return
+    closed(phases, PHASE_KEYS, (), "phases", refuse)
+    for key in PHASE_KEYS:
+        members = phases.get(key)
+        if (
+            not isinstance(members, list)
+            or not members
+            or any(not isinstance(member, str) for member in members)
+        ):
+            refuse("shape", f"phases.{key}", "a phase set is not a list of ids")
+            continue
+        if len(set(members)) != len(members):
+            refuse("phase", f"phases.{key}", "an id is named twice")
+        for member in members:
+            if member not in ids:
+                refuse("phase", f"phases.{key}", f"{member} is no obligation of the ledger")
+
+
+def judge_rows(rows, linked, tree, refuse):
+    """Judges the rows: one per formal entry of the tree, each linked to the obligations that
+    name it."""
+    seen = set()
+    for index, row in enumerate(listed(rows, "entries", refuse)):
+        where = f"entries[{index}]"
+        if not isinstance(row, dict):
+            refuse("shape", where, "a row is not an object")
+            continue
+        closed(row, ROW_KEYS, (), where, refuse)
+        entry = row.get("entry")
+        if not (isinstance(entry, str) and ENTRY.match(entry)):
+            refuse("shape", where, "its entry is not <kind>/<Name>")
+            continue
+        if entry in seen:
+            refuse("duplicate-row", entry, "the entry has two rows")
+            continue
+        seen.add(entry)
+        if row.get("disposition") not in DISPOSITIONS or blank(row.get("act")):
+            refuse("shape", entry, "its disposition or its act is not one the ledger knows")
+        obligations = row.get("obligations")
+        if (
+            not isinstance(obligations, list)
+            or any(not isinstance(item, str) for item in obligations)
+            or len(set(obligations)) != len(obligations)
+        ):
+            refuse("shape", entry, "its obligations are not a list of distinct ids")
+        elif set(obligations) != linked.get(entry, set()):
+            refuse("row-obligations", entry, "its obligations are not those that name it")
+        if entry not in tree.entries:
+            refuse("row-without-entry", entry, "the tree holds no such entry")
+    for entry in sorted(set(tree.entries) - seen):
+        refuse("entry-without-row", entry, "the tree's entry has no row")
 
 
 def digest(name):
@@ -92,5 +480,18 @@ def digest(name):
 
 
 def census(text, digests=PRIVATE_NAME_DIGESTS):
-    """The stub counts the words and finds no name."""
-    return len(text.split()), []
+    """(tokens examined, refusals) over the ledger's `text`: a line holding a token derived from
+    the scheduler's brand, and a token, or a part of it between `-`, `.` and `:`, whose digest is
+    in `digests`. A refusal names its line, never the token."""
+    examined = 0
+    refusals = []
+    for number, line in enumerate(text.splitlines(), 1):
+        where = f"line {number}"
+        if BRAND_AT_A_WORD_START.search(line) or BRAND_AT_A_HUMP.search(line):
+            refusals.append(Refusal("private-brand", where, "a token derived from the brand"))
+        for match in TOKEN.finditer(line):
+            examined += 1
+            token = match.group(0)
+            if any(digest(part) in digests for part in {token, *PART.split(token)}):
+                refusals.append(Refusal("private-name", where, "a name on the census list"))
+    return examined, refusals
