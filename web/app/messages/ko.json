@@ -120,6 +120,7 @@
   "study_replay": "다시 재생",
   "study_voice": "{language} 음성",
   "study_voice_default": "기본 음성",
+  "study_no_local_voice": "이 기기에는 {language} 음성이 없습니다.",
   "study_mapping_title": "리모컨 배치",
   "study_mapping_intro": "아래에서 키나 버튼을 고른 뒤 리모컨에서 원하는 것을 누르세요. 이 기기는 자체 배치를 저장합니다.",
   "study_mapping_action": "동작",

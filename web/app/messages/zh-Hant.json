@@ -120,6 +120,7 @@
   "study_replay": "重播",
   "study_voice": "{language} 的語音",
   "study_voice_default": "預設語音",
+  "study_no_local_voice": "此裝置上沒有 {language} 的語音。",
   "study_mapping_title": "遙控器對應",
   "study_mapping_intro": "在下方選擇一個按鍵或按鈕，然後在遙控器上按下你想用的那個。此裝置會保存自己的對應。",
   "study_mapping_action": "操作",

@@ -21,6 +21,8 @@
   // SPEC-383 R10, R11; ADR-397: the bar's undo names the change it would undo, and the
   // dialog asks for a bury with the state its card goes back to, and for a flag with what the undo
   // does to the flag.
+  // SPEC-506 R5; ADR-524: the speaker speaks only with a voice the device runs, and a clip with none
+  // leaves a line in the status region naming its language, until the next gesture.
   import { onMount } from 'svelte';
   import CardFrame from '$lib/card/CardFrame.svelte';
   import type { FlagChange, Returns } from '$lib/engine/protocol';
@@ -47,7 +49,14 @@
   let region: HTMLElement;
 
   const choices = new VoiceChoices(deviceStorage());
-  const devicePlayer = new Player(new Audio(), URL, deviceSpeaker(choices));
+  // a clip the device has no local voice for is not spoken, and the review names its language
+  const devicePlayer = new Player(
+    new Audio(),
+    URL,
+    deviceSpeaker(choices, (clip, outcome) => {
+      if (outcome === 'no-local-voice') review.unvoiced(clip.language);
+    })
+  );
 
   const updateNow = new UpdateNow(() => update, () => (offer = updateNow.face));
   let offer = $state.raw(updateNow.face);

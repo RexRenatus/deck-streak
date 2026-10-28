@@ -1,7 +1,7 @@
 // SPEC-350 R5, R10, R11; ADR-361. Each status the review announces, by its message: every refusal
 // the engine answers with, the card the frame refused, and the done deck. An undo the engine
 // refuses, or does not offer, says why: the answer has synced, or something changed after it
-// (SPEC-371 R10).
+// (SPEC-371 R10). A speech clip the device has no local voice for names its language (SPEC-506).
 import { m } from '$lib/paraglide/messages.js';
 import type { Status } from './review';
 
@@ -34,4 +34,10 @@ export const STATUS_KEYS: Record<Status, StatusKey> = {
 /** The status's message, in the app's locale. */
 export function statusText(status: Status): string {
   return m[STATUS_KEYS[status]]();
+}
+
+/** The line a speech clip with no local voice leaves in the status region, naming its language, in
+ * the app's locale (SPEC-506 R5, ADR-524). */
+export function noVoiceText(language: string): string {
+  return m.study_no_local_voice({ language });
 }
