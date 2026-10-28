@@ -10,7 +10,7 @@ import type { Envelope, Listing } from './insights/insights';
 // server answered, and a failed or unopened read as a line that says so.
 const insights = vi.fn<() => Promise<Answer<Listing[]>>>();
 const insight = vi.fn<(id: string) => Promise<Answer<Envelope | null>>>();
-vi.mock('$lib/api', () => ({ api: { insights: () => insights(), insight: (id: string) => insight(id) } }));
+vi.mock('#lib/api.js', () => ({ api: { insights: () => insights(), insight: (id: string) => insight(id) } }));
 
 import Page from '../routes/insights/+page.svelte';
 

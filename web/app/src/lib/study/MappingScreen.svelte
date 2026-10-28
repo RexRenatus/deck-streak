@@ -6,9 +6,9 @@
   // held is not taken. Escape or Cancel ends the wait. Each mode returns to its default apart, and
   // the left stick's grades and the review's single-key shortcuts (WCAG 2.1.4) are switched here
   // too; all of it is kept on this device.
-  import { m } from '$lib/paraglide/messages.js';
-  import type { Intent } from '$lib/remote/actions';
-  import { snapshotOf, type PadSnapshot } from '$lib/remote/gamepad';
+  import { m } from '#lib/paraglide/messages.js';
+  import type { Intent } from '#lib/remote/actions.js';
+  import { snapshotOf, type PadSnapshot } from '#lib/remote/gamepad.js';
   import { deviceStorage, KeySwitch } from './input';
   import { buttonOf, INTENTS, keyOf, MappingStore, type Mode } from './mapping-store';
 

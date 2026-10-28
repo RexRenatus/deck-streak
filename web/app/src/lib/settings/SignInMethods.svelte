@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { api, type Answer } from '$lib/api';
-  import { m } from '$lib/paraglide/messages.js';
-  import { getLocale } from '$lib/paraglide/runtime.js';
-  import { mint, remove, wordingText, type Method, type Wording } from '$lib/passkeys';
-  import { telegram } from '$lib/telegram.svelte';
+  import { api, type Answer } from '#lib/api.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { getLocale } from '#lib/paraglide/runtime.js';
+  import { mint, remove, wordingText, type Method, type Wording } from '#lib/passkeys.js';
+  import { telegram } from '#lib/telegram.svelte.js';
 
   /**
    * The owner's sign-in methods (SPEC-385 R6, R7, R10, R12; ADR-399 D2, D3), as

@@ -112,7 +112,7 @@ palettes (`web/app/tests/telegram-palettes.ts`) and in the fallbacks.
 Kind: sequence. Read at dev `ce2bb195`.
 
 The server answers every route with one fallback document (`deploy/caddy/deck-streak.caddy:91`).
-The shell's policy admits Telegram's origin (`web/app/svelte.config.js:27`), and the shell holds no
+The shell's policy admits Telegram's origin (`web/app/sveltekit.config.js:29`), and the shell holds no
 script element that names that origin.
 
 The app's client `init` hook (`web/app/src/hooks.client.ts`) runs once, before the router's first

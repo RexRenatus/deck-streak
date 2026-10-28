@@ -4,11 +4,11 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { hosted } from '$lib/card/frame-host';
-import { EngineError } from '$lib/engine/client';
-import type { CardView, Head, UndoOffer } from '$lib/engine/protocol';
-import type { Clip, Faces } from '$lib/engine/protocol';
-import { telegram } from '$lib/telegram.svelte';
+import { hosted } from '#lib/card/frame-host.js';
+import { EngineError } from '#lib/engine/client.js';
+import type { CardView, Head, UndoOffer } from '#lib/engine/protocol.js';
+import type { Clip, Faces } from '#lib/engine/protocol.js';
+import { telegram } from '#lib/telegram.svelte.js';
 import { KEY_SWITCH } from './input';
 import type { StudyClient } from './review';
 import ReviewScreen from './ReviewScreen.svelte';

@@ -53,7 +53,7 @@ flowchart LR
 |---|---|---|
 | card frame | its own face's markup | the origin's storage, the cookie, the Worker, the network: its origin is opaque and it runs no script (ADR-352) |
 | a page script, Telegram's included | the sealed record, the release route while a session is live, the sync form while the owner types | the cookie's value; the Worker's memory; the opened key in any reply |
-| the Worker | the store, the release, the opened key in memory, its own origin's sync route | any other origin (`connect-src 'self'`, svelte.config.js:30; the core's endpoint guard) |
+| the Worker | the store, the release, the opened key in memory, its own origin's sync route | any other origin (`connect-src 'self'`, sveltekit.config.js:32; the core's endpoint guard) |
 | the API | the seal secret (its unit's credential `sync-seal-secret`; until the host step loads it the release answers 404 `sync_seal_off`), the session store | the host key, the sync password, the sealed record |
 | the edge | the sync route's address and path | any request header on the sync route (caddy:28), any cookie on it (caddy:80-81) |
 

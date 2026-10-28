@@ -271,11 +271,11 @@ describe('the planted card suite', () => {
     const pairs = UNOBSERVABLE.map((entry) => `${entry.engine} ${entry.id}`);
     expect(new Set(pairs).size).toBe(pairs.length);
 
-    // the harness serves the page policy the app ships: svelte.config.js's directives, written by
+    // the harness serves the page policy the app ships: sveltekit.config.js's directives, written by
     // the shared header writer, and the edge's header from the Caddy file
     expect(existsSync(CARD_CONFIG), 'vite.card.config.ts does not exist').toBe(true);
     const config = readFileSync(CARD_CONFIG, 'utf8');
-    expect(config).toMatch(/import\s+\w+\s+from\s+'\.\/svelte\.config\.js'/);
+    expect(config).toMatch(/import\s+\w+\s+from\s+'\.\/sveltekit\.config\.js'/);
     expect(config).toMatch(/import\s*\{\s*policyHeader\s*\}\s*from\s*'\.\/policy-header(?:\.ts)?'/);
     expect(config).toMatch(/deploy\/caddy\/deck-streak\.caddy/);
   });

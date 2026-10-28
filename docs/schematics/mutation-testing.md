@@ -2,8 +2,8 @@
 
 Kind: data flow (the pull request's mutation jobs, the weekly battery) and a state machine (one
 row's proof). Read at DeckStreak `dev` 32bf1e1 (`.github/workflows/ci.yml`, `scripts/check.sh`,
-the mutation-rows pack's row shape), with cargo-mutants 27.1.0 and StrykerJS 10.0.0 as SPEC-039 §1
-measured them, and its shards as R18 sizes them. Decided by ADR-057; built by SPEC-039. The
+the mutation-rows pack's row shape), with cargo-mutants 27.1.0 and StrykerJS 10.1.1 (SPEC-039 §1
+measured 10.0.0), and its shards as R18 sizes them. Decided by ADR-057; built by SPEC-039. The
 equivalence record (ADR-070, SPEC-057) joins the verdict's step and the battery; its own path, from
 a fragment to a verdict, is drawn in `docs/schematics/mutation-equivalence-record.md`.
 
