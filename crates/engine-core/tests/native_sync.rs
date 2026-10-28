@@ -1,7 +1,8 @@
 //! The native client's sync messages as the core builds them (SPEC-503 A3; R2, R3, R5): the
 //! normal sync names its endpoint and never asks for media, the reply's requirement reads as the
-//! engine numbers it, and the statement is read at the endpoint's origin only when the endpoint
-//! keeps the login's rule. Every expected value is written here, never read from the core.
+//! engine numbers it (none for bytes that do not decode or a negative number), and the statement
+//! is read at the endpoint's origin only when the endpoint keeps the login's rule. Every expected
+//! value is written here, never read from the core.
 
 #![allow(clippy::expect_used, reason = "a failed fixture should fail its test")]
 
@@ -42,6 +43,26 @@ fn the_reply_reads_as_the_engines_number_and_an_undecodable_one_as_none() {
         (required(&reply), required(&[0xff, 0xff])),
         (Some(3), None),
         "a reply's requirement, and none for bytes that do not decode"
+    );
+}
+
+#[test]
+fn a_reply_that_names_a_negative_requirement_reads_as_none() {
+    let named = |number: i32| {
+        SyncCollectionResponse {
+            required: number,
+            ..SyncCollectionResponse::default()
+        }
+        .encode_to_vec()
+    };
+    assert_eq!(
+        (
+            required(&named(-1)),
+            required(&named(i32::MIN)),
+            required(&named(0))
+        ),
+        (None, None, Some(0)),
+        "a negative requirement is no number the engine uses, so it reads as none, as zero does not"
     );
 }
 
