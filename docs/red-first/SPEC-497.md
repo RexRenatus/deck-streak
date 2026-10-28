@@ -67,3 +67,18 @@ fails at the new case's assertion.
 
 From this round on, `crates/` differs from ed017445's in these two test files alone, by 32 added lines; the note
 above that every line of `crates/` equals ed017445's held for the head it named.
+
+## Fix: three mutation rows follow the moved file
+
+ed017445 changed no file under `scripts/`, so three hand-proved rows in `scripts/mutation-rows.d/S02000-S02099.json`
+still named `crates/kernel/src/study_day.rs` after it moved. At the integration head before this fix,
+`mutation_rows.py census` read `census: S02001-ROLLOVER-HOUR-IS-FOUR: its target crates/kernel/src/study_day.rs does
+not exist`, and the same for S02002-AN-HOUR-RUNS-TO-23 and S02005-THE-DAY-HAS-NO-HOUR-24, and `mutation_rows.py prove
+--row S02001-ROLLOVER-HOUR-IS-FOUR` stopped on `FileNotFoundError` for that path. The fix changes three cells and no
+line of `crates/`:
+
+- S02002 and S02005 run in the crate `study-day` (target `src/study_day.rs`); their killers keep their names, since
+  `crates/study-day/tests/study_day.rs` holds both tests.
+- S02001 stays in the crate `kernel`, because its killer is the kernel's `constants` test of the predecessor's
+  goldens, which reads the constant through the kernel's re-export; its target becomes `../study-day/src/study_day.rs`,
+  the crate-relative form other rows already use for a file outside their killer's crate.
