@@ -214,3 +214,4 @@ Amendment (SPEC-339): The figures below are run 37188070120's, at commit 0e7c507
 ## 8. Amendments
 
 - Advisory exception: `deny.toml` carries RUSTSEC-2026-0374 for `basic-toml` (unmaintained, not vulnerable) because the pinned `uniffi` bindings generator depends on it through `rinja`; issue #1001 tracks the move that drops it.
+- Advisory moves: RUSTSEC-2026-0381 (`webpki-roots`), RUSTSEC-2026-0382 (`rustls-webpki`) and RUSTSEC-2026-0383 (`webpki-root-certs`) are cleared by a dependency-only `Cargo.lock` move, each package to the lowest patch release that clears its advisory, with no `Cargo.toml` change and no `deny.toml` exception.
