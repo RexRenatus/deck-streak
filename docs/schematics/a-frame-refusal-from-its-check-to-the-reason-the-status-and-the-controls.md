@@ -41,7 +41,7 @@ The first failing check names the reason; every later check is not read. No bran
 flowchart TD
   doc["CardFaceView: the face's document"] --> make["CardWebViewFactory.makeCardWebView"]
   make -- view --> show["the card shows; the refusal line is empty"]
-  make -- throws --> words["CardRefusalWords.text(for: error)"]
+  make -- throws --> words["CardRefusalWords.text(of: error)"]
   words --> c{"a CardViewRefusal?"}
   c -- ruleListDidNotCompile --> s1["its DeckStreak sentence"]
   c -- any other error --> s2["the general sentence"]

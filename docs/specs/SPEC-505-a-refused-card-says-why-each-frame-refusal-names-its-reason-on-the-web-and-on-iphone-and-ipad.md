@@ -60,7 +60,7 @@ R6. **Seven reasons in seven locales.** `study_card_escaped` is replaced in all 
 `study_card_refused_<reason>` (the reason's hyphens written as underscores), each non-empty and distinct within its
 locale.
 
-R7. **iOS words a refusal in DeckStreak's words.** `CardRefusalWords.text(for:)` in `ios/App/Sources` gives each
+R7. **iOS words a refusal in DeckStreak's words.** `CardRefusalWords.text(of:)` in `ios/App/Sources` gives each
 `CardViewRefusal` case a DeckStreak sentence, and any other error one general sentence; `CardFaceView.swift` shows it
 and holds no `String(describing:)`. `CardViewRefusal` is `CaseIterable`, so the words are checked for every case.
 
