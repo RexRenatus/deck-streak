@@ -129,7 +129,7 @@ dependencies = [
 [[package]]
 name = "anki"
 version = "0.0.0"
-source = "git+https://github.com/RexRenatus/anki.git?rev=65e053b829825f534803b2b772c507a73ba936a3#65e053b829825f534803b2b772c507a73ba936a3"
+source = "git+https://github.com/RexRenatus/anki.git?rev=a078820fd4fec3068ed7863344cd50effddabc6b#a078820fd4fec3068ed7863344cd50effddabc6b"
 dependencies = [
  "ammonia",
  "anki_i18n",
@@ -212,13 +212,13 @@ dependencies = [
  "web-sys",
  "windows",
  "zip",
- "zstd 0.13.3",
+ "zstd",
 ]
 
 [[package]]
 name = "anki_i18n"
 version = "0.0.0"
-source = "git+https://github.com/RexRenatus/anki.git?rev=65e053b829825f534803b2b772c507a73ba936a3#65e053b829825f534803b2b772c507a73ba936a3"
+source = "git+https://github.com/RexRenatus/anki.git?rev=a078820fd4fec3068ed7863344cd50effddabc6b#a078820fd4fec3068ed7863344cd50effddabc6b"
 dependencies = [
  "anki_io",
  "anyhow",
@@ -239,7 +239,7 @@ dependencies = [
 [[package]]
 name = "anki_io"
 version = "0.0.0"
-source = "git+https://github.com/RexRenatus/anki.git?rev=65e053b829825f534803b2b772c507a73ba936a3#65e053b829825f534803b2b772c507a73ba936a3"
+source = "git+https://github.com/RexRenatus/anki.git?rev=a078820fd4fec3068ed7863344cd50effddabc6b#a078820fd4fec3068ed7863344cd50effddabc6b"
 dependencies = [
  "camino",
  "rand 0.9.5",
@@ -250,7 +250,7 @@ dependencies = [
 [[package]]
 name = "anki_proto"
 version = "0.0.0"
-source = "git+https://github.com/RexRenatus/anki.git?rev=65e053b829825f534803b2b772c507a73ba936a3#65e053b829825f534803b2b772c507a73ba936a3"
+source = "git+https://github.com/RexRenatus/anki.git?rev=a078820fd4fec3068ed7863344cd50effddabc6b#a078820fd4fec3068ed7863344cd50effddabc6b"
 dependencies = [
  "anki_io",
  "anki_proto_gen",
@@ -269,7 +269,7 @@ dependencies = [
 [[package]]
 name = "anki_proto_gen"
 version = "0.0.0"
-source = "git+https://github.com/RexRenatus/anki.git?rev=65e053b829825f534803b2b772c507a73ba936a3#65e053b829825f534803b2b772c507a73ba936a3"
+source = "git+https://github.com/RexRenatus/anki.git?rev=a078820fd4fec3068ed7863344cd50effddabc6b#a078820fd4fec3068ed7863344cd50effddabc6b"
 dependencies = [
  "anki_io",
  "anyhow",
@@ -835,8 +835,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cae36683101b2899f48bd31f8db9839437356188e3b1ff23096e73dab09ba8fe"
 dependencies = [
  "compression-core",
- "zstd 0.14.3",
- "zstd-safe 8.2.0",
+ "zstd",
+ "zstd-safe",
 ]
 
 [[package]]
@@ -1389,7 +1389,7 @@ dependencies = [
  "thiserror 2.0.21",
  "tokio",
  "tracing",
- "zstd 0.14.3",
+ "zstd",
 ]
 
 [[package]]
@@ -6931,29 +6931,11 @@ dependencies = [
 
 [[package]]
 name = "zstd"
-version = "0.13.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e91ee311a569c327171651566e07972200e76fcfe2242a4fa446149a3881c08a"
-dependencies = [
- "zstd-safe 7.3.0",
-]
-
-[[package]]
-name = "zstd"
 version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "db3ae9bf90af6e40197bef767eeefc46ad6397420fe873830bd85e5fbbfb3c70"
 dependencies = [
- "zstd-safe 8.2.0",
-]
-
-[[package]]
-name = "zstd-safe"
-version = "7.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64d80649ab6db9d9f6f9c80a40becd948eda4714a0a5ac8c4d157a32231c7882"
-dependencies = [
- "zstd-sys",
+ "zstd-safe",
 ]
 
 [[package]]
