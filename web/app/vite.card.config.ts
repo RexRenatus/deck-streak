@@ -1,7 +1,7 @@
 // The card harness server (SPEC-341 R8 to R11): Vite in development mode over tests-card/harness,
 // on the loopback address and the card port. It serves each harness page with the response
 // headers the suite needs, read from where the app declares them:
-// - index.html: the page policy svelte.config.js declares, as SvelteKit would write it, and the
+// - index.html: the page policy sveltekit.config.js declares, as SvelteKit would write it, and the
 //   edge's policy header from the Caddy file, two Content-Security-Policy headers both enforced;
 // - open.html, the reference frame: no policy at all;
 // - variant.html: the index headers, except that off=W4 leaves frame-src out of the page policy and
@@ -9,7 +9,7 @@
 import { readFileSync } from 'node:fs';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig, type Plugin } from 'vite';
-import config from './svelte.config.js';
+import config from './sveltekit.config.js';
 import { policyHeader } from './policy-header.ts';
 
 const PORT = Number(process.env.CARD_PORT ?? 4175);
@@ -17,7 +17,7 @@ const ORIGIN = `http://127.0.0.1:${PORT}`;
 const CADDY = readFileSync(new URL('../../deploy/caddy/deck-streak.caddy', import.meta.url), 'utf8');
 const EDGE = /Content-Security-Policy\s+"([^"]+)"/.exec(CADDY)?.[1] ?? '';
 if (EDGE === '') throw new Error('deploy/caddy/deck-streak.caddy declares no Content-Security-Policy');
-const DIRECTIVES: Readonly<Record<string, unknown>> = { ...config.kit?.csp?.directives };
+const DIRECTIVES: Readonly<Record<string, unknown>> = { ...config.csp?.directives };
 
 /** The page policy as a variant of the harness serves it. */
 function pagePolicy(off: string | null): string {
