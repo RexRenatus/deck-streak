@@ -7,7 +7,7 @@
 \* @phx covers crates/engine-core/src/full_sync.rs anchor=rechecked digest=sha256:02e784b8937cb78f7419bc2335ab231a924d94e108aa0925ee48185f2cf38754
 \* @phx covers crates/engine-core/src/full_sync.rs anchor=at_write digest=sha256:83da3f27c7ad7b2749e6279bfdb695bb1ee8abfc3105bfff678e3c45006fd778
 \* @phx covers crates/ffi/src/engine.rs anchor=full_sync_count digest=sha256:39b0bc550493db28cd904229de1ad95c0d66f17a6e939b0d4afe911097faaa7d
-\* @phx covers crates/ffi/src/engine.rs anchor=full_sync_confirm digest=sha256:89cdfb460b0225020a766454e42124830de55c69c17b2684c74950627319bdd2
+\* @phx covers crates/ffi/src/engine.rs anchor=full_sync_confirm digest=sha256:b342314694de201e5ff5ce70cbcf80ff628a4f7ecde6f4a2aed25570c5b8a111
 \* @phx cites #631, #620, #660
 \* @phx property BackupBeforeReplace ramp=report
 \* @phx property SnapshotBeforeUpload ramp=report
