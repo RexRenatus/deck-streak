@@ -1,10 +1,10 @@
--- @phx covers scripts/release_gates.py anchor=verdict digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers scripts/release_gates.py anchor=refused digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers scripts/release_gates.py anchor=present_refusal digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers scripts/release_gates.py anchor=pair_refusal digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers scripts/release_gates.py anchor=flag_refusal digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers scripts/release_gates.py anchor=count_refusal digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers scripts/release_gates.py anchor=read_gates digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers scripts/release_gates.py anchor=verdict digest=sha256:beb50cf29dffe279faec7a20f7472d734b2fe88098465989acd8d7e61d27e280
+-- @phx covers scripts/release_gates.py anchor=refused digest=sha256:3254cd2507aa1cf1b5fc2882ff919f69a38f81033ae442649ede7baa65e8633e
+-- @phx covers scripts/release_gates.py anchor=present_refusal digest=sha256:9f405cce3587513a31626c9eaf038b42730d60b305974d0bb84fe6627473017f
+-- @phx covers scripts/release_gates.py anchor=pair_refusal digest=sha256:e9868ee51ebe120cd945caa1adb77444ab33cee34c390405da5d72a3c2bbb98b
+-- @phx covers scripts/release_gates.py anchor=flag_refusal digest=sha256:541b5c7772415adf0380a9cb126a005ef01f2dfb22cf3acdc05b73a55253fd6c
+-- @phx covers scripts/release_gates.py anchor=count_refusal digest=sha256:37658e5099acd8cd944ae118d1a7e8c1a4d65e0f82586e59ec5b8c6ab9da60e7
+-- @phx covers scripts/release_gates.py anchor=read_gates digest=sha256:fdaddc34c59e817cad56981d79e96a83dd8d7bcfc10bdd4dcf054f29658f2ed7
 -- @phx vectors formal/vectors/release-gates.jsonl
 -- @phx cites #822
 -- @phx theorem a_release_is_published_only_when_every_gate_holds ramp=report
