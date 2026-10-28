@@ -10,8 +10,8 @@ parsed here. Both read files only and start no process.
 import ast
 import hashlib
 import re
+from collections import namedtuple
 from pathlib import Path
-from typing import NamedTuple
 
 SCHEMA = "formal-obligations.v1"
 LEDGER = Path("formal") / "obligations.json"
@@ -119,12 +119,9 @@ PRIVATE_NAME_DIGESTS = frozenset(
 )
 
 
-class Refusal(NamedTuple):
-    """One refusal: the arm that refused, where in the ledger, and why."""
-
-    arm: str
-    where: str
-    why: str
+# One refusal: the arm that refused, where in the ledger, and why. A `collections` named tuple, from
+# a module the workflow files' read census reads through; `typing`'s is a site it cannot place.
+Refusal = namedtuple("Refusal", "arm where why")
 
 
 def names(path, pattern):

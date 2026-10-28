@@ -665,18 +665,18 @@ def header_names(root):
 
 
 class TheFormalLedger(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
+    @staticmethod
+    def setUpClass():
+        # The fixture tree, built once for the class. unittest calls this on the class, and a
+        # static method is a name the workflow files' read census places; a class method is not.
+        cls = TheFormalLedger
         cls._scratch = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(cls._scratch.cleanup)
         cls.tree = Path(cls._scratch.name)
         for relative, text in FIXTURE.items():
             path = cls.tree / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
-
-    @classmethod
-    def tearDownClass(cls):
-        cls._scratch.cleanup()
 
     def assert_accepted(self, document):
         self.assertEqual(ledger.check(document, self.tree), [], "the accepted ledger is refused")
