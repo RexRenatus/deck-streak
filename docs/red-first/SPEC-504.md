@@ -53,3 +53,53 @@ control, the claim stated of the defect and proved by the theorem's own proof, w
 lines (11 of 11). `#print axioms` of the 11 theorems and 11 witnesses lists only `propext`, `Classical.choice` and
 `Quot.sound` (22 of 22). The formal check of every Lean entry at c2c5c8fd read `FORMAL OK` in 30 s (56 theorems), the 11 new theorems each
 `clean: true` at `ramp=report`, with no finding.
+
+## Fix 1: the causal claim read from the state, and the device crash checked
+
+A frozen population of 30 hand mutants of the model's actions and guards, each run by hand over the committed
+configurations in order and stopped at its first violation, left two uncaught at b4d4a4ae. One reads the least clock in
+the device's pulled copy as the clock it saw. CausalHlc's first half compares an operation's clock with its own `saw`,
+which the step that makes it writes from that same reading, so the property agreed with the wrong clock and all four
+configurations read clean. The other drops the device's queue when the device crashes; every configuration took no
+device crash, so the crash step never ran. The fix adds CausalHlcAtMake, the claim read from the state (25ca2bac), and
+`MCDeviceCrash.cfg`, the main configuration's constants with one crash per device (24f96dc4). CausalHlc is unchanged.
+
+Red first, by hand with the pinned model checker and the check's flags, each on a scratch copy of the fixed model with
+one mutant applied, before either commit:
+
+- the least-clock reading: CausalHlcAtMake VIOLATION at the main configuration's constants, the new property alone,
+  1,734 distinct states;
+- the crash that drops the queue: NoLostReview VIOLATION at `MCDeviceCrash.cfg`, 10 distinct states.
+
+The new witness, a clock past only the oldest clock it saw, switches that least-clock reading on and reads VIOLATION of
+CausalHlcAtMake at 1,734 states; each of the 16 witnesses reads VIOLATION of the property it names (16 of 16). The same
+switch checked by CausalHlc alone at the main configuration's constants reads no error at 111,862 states: the old
+property agrees with the wrong clock. Green, the fixed model at each configuration, every property in one run:
+
+| configuration | distinct states | result |
+|---|---|---|
+| `MCOpLog.cfg` | 140,340 | no error, 37 s |
+| `MCOpLogEdits.cfg` | 12,727 | no error |
+| `MCOpLogThree.cfg` | 100,098 | no error, 39 s |
+| `MCLiveness.cfg` | 6,974 | no error (Convergence) |
+| `MCDeviceCrash.cfg` | 767,800 | no error, 93 s (NoLostReview, ExactlyOnce, CausalHlcAtMake) |
+
+The population, re-applied to the fixed model and run over its five configurations in order: examined 30, caught 30,
+escaped 0. The least-clock member is caught by CausalHlcAtMake at `MCOpLog.cfg` (1,734 states), the queue-dropping
+crash by NoLostReview at `MCDeviceCrash.cfg` (10 states), and the other 28 at the configurations that caught them
+before.
+
+The ledger test, on an extract of b4d4a4ae's tree with only the fixed model in it: `Ran 9 tests`,
+`FAILED (failures=1)`, `test_the_rows_hold_o1_to_o17_and_the_planned_entries`: the header declares CausalHlcAtMake and
+the ledger does not name it. With the four new rows, one under each obligation that names the entry: `Ran 9 tests`,
+`OK`, `examined 145 present artifacts`.
+
+The budget: at 24f96dc4 and 600 s the entry's check spent its budget, 12 of 15 properties clean and six `TIMEOUT` (one
+run past its budget, five not started). With a provisional budget on a scratch copy it took 631 s, every property
+`clean: true` and no finding, so the entry took 960 s (606720ee); the check at 960 s then took 670 s, clean, so the
+entry took 1020 s (71b6bfb4); the check at 1020 s took 839 s on a loaded box (load average near 30), clean, so the
+entry takes 1260 s, the worst measurement's (2cd33c7a). The settings test read `FAILED (failures=1)` before each value
+moved and `OK` after. At 71b6bfb4 the entry's check (`--kind tla --gate --entry tla/OpLog`, base `d3b09d5e`) read
+`FORMAL OK` in 839 s: 15 properties, 16 witnesses and 5 configurations, each property `clean: true` at
+`ramp=report`, with no finding. The last commit only raises the entry's budget, so every run that check started still
+starts.

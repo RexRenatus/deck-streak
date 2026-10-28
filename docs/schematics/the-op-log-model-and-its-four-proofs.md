@@ -42,7 +42,7 @@ flowchart LR
 
 | place | TLA+ property | Lean entry |
 |---|---|---|
-| Make | CausalHlc | SyncClock: `tick_gt_seen`, `tick_ge_pt`, `run_strict_mono`, `causal` |
+| Make | CausalHlc, CausalHlcAtMake | SyncClock: `tick_gt_seen`, `tick_ge_pt`, `run_strict_mono`, `causal` |
 | Judge | ExactlyOnce, RevokedDeviceRefused | PushJudge: `judge_idempotent`, `no_review_mutation` |
 | Commit | NoSkip, MonotoneLog, NoSilentOverwrite, RetractOnlyOwn | - |
 | Verdict, Rebootstrap | NoLostReview, RebootstrapKeepsPending | - |
