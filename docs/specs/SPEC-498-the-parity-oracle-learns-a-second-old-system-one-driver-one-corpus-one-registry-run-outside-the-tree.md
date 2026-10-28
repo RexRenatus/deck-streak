@@ -80,6 +80,8 @@ A2: python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_registry.p
 A2: python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_registry.py' -k test_every_function_is_registered
 A2: python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_registry.py' -k test_revlog_to_events_is_registered_with_every_review_type
 A2: python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_registry.py' -k test_edge_classes_covered
+A2: python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_hand_cases.py' -k test_corpus_holds_the_design_hand_case_target
+A2: python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_hand_cases.py' -k test_a_hand_case_repeated_in_its_class_is_refused
 A3: python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_workspace.py' -k test_generator_outside_workspace
 A5: python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_driver.py' -k test_a_golden_holding_a_stock_line_is_refused
 A6: cargo test -p deck-streak-ingest --test oracle_consumer -- --exact golden_consumer_can_fail
@@ -119,9 +121,12 @@ A6: cargo test -p deck-streak-ingest --test oracle_consumer -- --exact the_consu
 
 ## 6. Risks
 
-- **The corpus is below the design's hand-case target.** It draws 241 hand cases, one or more per declared class of
-  each function, 9,600 grammar-random render cases and 409 other random cases, 10,250 in all; the design aims at
-  about 1,500 hand cases beside 10,000 random ones. The run time is unmeasured until the run.
+- **The corpus holds the design's hand-case target; its run time is unmeasured.** It draws 1,808 hand cases over
+  the 227 declared (function, class) pairs, at least 6 per pair: 241 drawn from the seed, one or more per declared
+  class of each function, and 1,567 written with no draw, five to eight for each pair but the blob default class,
+  whose drawn cases already cover every column. Beside them are 9,600 grammar-random render cases and 409 other
+  random cases, 11,817 in all; the design aims at about 1,500 hand cases beside 10,000 random ones. The run time is
+  unmeasured until the run.
 - **The harness answers in the corpus's terms.** A harness that answered with ids the engine assigns or with the run's
   clock would put them in a golden; the runbook forbids both and the run's review reads the goldens for them.
 
