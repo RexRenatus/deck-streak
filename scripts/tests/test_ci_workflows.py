@@ -41,13 +41,13 @@ THIS_REPOSITORY = "RexRenatus/deck-streak"
 # admitted to (SPEC-336, ADR-345 D4): the XCFramework job needs Apple's SDKs, which only a macOS
 # runner holds. The admission is by the workflow's file name, so the same runner under any other
 # name is refused, and this workflow on any other runner is refused.
-ADMITTED_RUNNERS = {"xcframework.yml": "macos-26"}
+ADMITTED_RUNNERS = {"xcframework.yml": "xcode-27"}
 # The jobs admitted to that runner by file and job (SPEC-352 R15, ADR-363): each TestFlight lane's
 # `app` job archives, signs and uploads the app, which only a macOS runner can. The lane's plan
 # job, a job of the same name in any other file, and the job on any other runner are refused.
 ADMITTED_JOB_RUNNERS = {
-    ("testflight-internal.yml", "app"): "macos-26",
-    ("testflight-release.yml", "app"): "macos-26",
+    ("testflight-internal.yml", "app"): "xcode-27",
+    ("testflight-release.yml", "app"): "xcode-27",
 }
 # A pull request into main, as the github context presents it; each test changes what it needs.
 INTO_MAIN = {
@@ -166,7 +166,7 @@ class WorkflowsAreHardened(unittest.TestCase):
         # its runner is refused under any other name (PLANTED_KEYS plants it in the control too).
         for name, admitted in examined("admitted runners", list(ADMITTED_RUNNERS.items())):
             self.assertRegex(admitted, admitted_runner(name))
-            for runner in ("macos-15", "ubuntu-24.04", [admitted], "self-hosted"):
+            for runner in ("macos-15", "macos-26", "ubuntu-24.04", [admitted], "self-hosted"):
                 self.assertNotRegex(str(runner), admitted_runner(name))
             for other in ("planted.yml", "ci.yml", name.replace(".yml", ".yaml"), f"x{name}"):
                 self.assertNotRegex(admitted, admitted_runner(other))
@@ -3367,8 +3367,8 @@ PLANTED_KEYS = (
     (
         HARDENING_RUNNER,
         "    runs-on: ubuntu-24.04",
-        "    runs-on: macos-26",
-        r"planted\.yml runs on macos-26$",
+        "    runs-on: xcode-27",
+        r"planted\.yml runs on xcode-27$",
     ),
     (
         HARDENING_RUNNER,
