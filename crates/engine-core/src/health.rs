@@ -129,40 +129,126 @@ pub const fn is_answer(kind: i64, ease: i64) -> bool {
     matches!(kind, 0..=3) && ease >= 1
 }
 
+/// The review row's columns, as the card reviews read selects them.
+const ID: usize = 0;
+const EASE: usize = 1;
+const TIME: usize = 2;
+const KIND: usize = 3;
+
 /// `time_ms` capped at [`ANSWER_CAP_MS`], a negative time read as 0.
 #[must_use]
 pub fn capped(time_ms: i64) -> u32 {
-    let _ = time_ms;
-    0
+    u32::try_from(time_ms.clamp(0, i64::from(ANSWER_CAP_MS))).unwrap_or(ANSWER_CAP_MS)
 }
 
 /// The health of the card `snapshot` reads, over its review `rows` oldest first, with the
 /// scheduler's `readout` (SPEC-507 R2 to R7).
 #[must_use]
 pub fn card_health(snapshot: SnapshotRow, rows: &[ReviewRow], scheduler: Readout) -> CardHealth {
-    let _ = rows;
+    let [card, _queue, _kind, _due, _interval, reps, lapses] = snapshot;
+    let answers: Vec<&ReviewRow> = rows
+        .iter()
+        .filter(|row| is_answer(row[KIND], row[EASE]))
+        .collect();
+    let lapsed = answers
+        .iter()
+        .filter(|row| row[KIND] == 1 && row[EASE] == 1)
+        .count();
+    let mut times: Vec<u32> = answers.iter().map(|row| capped(row[TIME])).collect();
+    let total: u64 = times.iter().copied().map(u64::from).sum();
+    times.sort_unstable();
+    let count = u64::try_from(times.len()).unwrap_or(u64::MAX);
+    let mean =
+        (count > 0).then(|| u32::try_from((total + count / 2) / count).unwrap_or(ANSWER_CAP_MS));
     CardHealth {
-        card: snapshot[0],
-        reps: 0,
-        lapses: 0,
+        card,
+        reps: counter(reps),
+        lapses: counter(lapses),
         logged: Logged {
-            answers: 0,
-            lapses: 0,
+            answers: tally(answers.len()),
+            lapses: tally(lapsed),
         },
-        rows: 0,
-        reviews: Vec::new(),
-        answer_ms_total: 0,
-        answer_ms_mean: None,
-        answer_ms_median: None,
+        rows: tally(rows.len()),
+        reviews: rows.iter().rev().take(ROWS_SHOWN).map(review).collect(),
+        answer_ms_total: total,
+        answer_ms_mean: mean,
+        answer_ms_median: median(&times),
         scheduler,
-        provenance: Provenance::Collection { created_ms: 0 },
+        provenance: Provenance::Collection { created_ms: card },
     }
 }
 
+/// A counter the card stores, a negative one read as 0.
+fn counter(value: i64) -> u32 {
+    u32::try_from(value.max(0)).unwrap_or(u32::MAX)
+}
+
+/// A count of rows.
+fn tally(count: usize) -> u32 {
+    u32::try_from(count).unwrap_or(u32::MAX)
+}
+
+/// One review row as the panel shows it.
+fn review(row: &ReviewRow) -> HealthReview {
+    let [_, ease, time, kind, interval] = *row;
+    HealthReview {
+        at_ms: row[ID],
+        grade: u8::try_from(ease.clamp(0, i64::from(u8::MAX))).unwrap_or(u8::MAX),
+        kind: u8::try_from(kind.clamp(0, i64::from(u8::MAX))).unwrap_or(u8::MAX),
+        interval: i32::try_from(interval.clamp(i64::from(i32::MIN), i64::from(i32::MAX)))
+            .unwrap_or_default(),
+        answer_ms_capped: capped(time),
+    }
+}
+
+/// The middle of `sorted`, or the floor of its two middle values' mean; `None` when it is empty.
+fn median(sorted: &[u32]) -> Option<u32> {
+    let middle = sorted.len() / 2;
+    let high = *sorted.get(middle)?;
+    if sorted.len() % 2 == 1 {
+        return Some(high);
+    }
+    let low = *sorted.get(middle.checked_sub(1)?)?;
+    Some(low.midpoint(high))
+}
+
 impl CardHealth {
-    /// The record as the web adapter answers it.
+    /// The record as the web adapter answers it: integers, closed words and `null`s only.
     #[must_use]
     pub fn to_json(&self) -> Value {
-        json!({})
+        let scheduler = match self.scheduler {
+            Readout::Ready {
+                recall_ppm,
+                days_to_90,
+            } => json!({ "state": "ready", "recall_ppm": recall_ppm, "days_to_90": days_to_90 }),
+            Readout::NotAvailable(state) => json!({ "state": state.word() }),
+        };
+        let Provenance::Collection { created_ms } = self.provenance;
+        let reviews: Vec<Value> = self
+            .reviews
+            .iter()
+            .map(|review| {
+                json!({
+                    "at": review.at_ms,
+                    "grade": review.grade,
+                    "kind": review.kind,
+                    "interval": review.interval,
+                    "ms": review.answer_ms_capped,
+                })
+            })
+            .collect();
+        json!({
+            "card": self.card,
+            "reps": self.reps,
+            "lapses": self.lapses,
+            "logged": { "answers": self.logged.answers, "lapses": self.logged.lapses },
+            "rows": self.rows,
+            "reviews": reviews,
+            "total_ms": self.answer_ms_total,
+            "mean_ms": self.answer_ms_mean,
+            "median_ms": self.answer_ms_median,
+            "scheduler": scheduler,
+            "provenance": { "source": "collection", "created_ms": created_ms },
+        })
     }
 }
