@@ -74,3 +74,18 @@ loading, and f2bca63c has the step let both simulators settle before its tests, 
 through them and keep each simulator's log of page loads. A12's rows, its assertion, its bound and
 both destinations are unchanged, and it stays `not red` in SPEC-358's record. CI reads it by name at
 this push, on the iPhone and on the iPad.
+
+At b3f79d94, under the newer simulator runtime, M2 (`test_m2_memory`) failed on the iPad simulator
+in the Release step of run 40547567828 in both of its attempts, and passed on the iPhone in both: in
+job 122347562625 its first launch never completed, and it failed at `HarnessMeasureTests.swift:54`
+(`does not have a process ID`) after 133 seconds (job 122347562625);
+in job 122404289016 the deck row took 22.8 seconds to appear after the block's third launch, and its
+tap failed at `HarnessMeasureTests.swift:58` (`Timed out while evaluating UI query`). At cec1eb72,
+whose app and tests are those of b3f79d94, SPEC-347's A9 failed on the iPad simulator in run
+40597331573, job 122520249369, in the app's test step, at `ShellFlowTests.swift:56`, after single UI
+queries of 14 to 31 seconds (job 122520249369); the iPhone passed. In each red the step's second
+simulator stalled on a launch or on its UI queries, and each test is that of dev. 14c59b15 has the
+measurements step and the app's test step boot both simulators before their tests and sample the CPU
+through them, from one copy of the settling run that the bury and flag step now also reads. Every
+assertion, bound, wait and destination is unchanged; M2 stays not red, a measurement, and A9 and A12
+keep their records. CI reads M2, A9 and A12 by name at this push, on the iPhone and on the iPad.
