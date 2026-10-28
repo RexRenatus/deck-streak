@@ -18,8 +18,8 @@ const mocks = vi.hoisted(() => ({
   me: vi.fn(),
   telegram: { launchData: 'auth_date=1&hash=synthetic' as string | null, openLink: vi.fn() }
 }));
-vi.mock('$lib/api', () => ({ api: { identities: mocks.identities, me: mocks.me } }));
-vi.mock('$lib/telegram.svelte', () => ({ telegram: mocks.telegram }));
+vi.mock('#lib/api.js', () => ({ api: { identities: mocks.identities, me: mocks.me } }));
+vi.mock('#lib/telegram.svelte.js', () => ({ telegram: mocks.telegram }));
 
 /** Telegram, then two passkeys, as the client lists them. */
 const LISTED = [

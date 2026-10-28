@@ -1,11 +1,16 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // SPEC-057 A24; SPEC-028 R3, R4. The root layout's load routes the first navigation by the launch
 // link's startapp token and no other. The module keeps its "already routed" flag at load, so each
-// scenario imports a fresh copy over a wrapper that answers the token the scenario names.
+// scenario imports a fresh copy over a wrapper that answers the token the scenario names. The load
+// runs in the browser only, where SvelteKit 3's redirect reads the page's origin to tell a route
+// from an external location, so the scenarios run in a document too.
 async function load(startParam: string | null, reads: string[] = []) {
   vi.resetModules();
-  vi.doMock('$lib/telegram.svelte', () => ({
+  vi.doMock('#lib/telegram.svelte.js', () => ({
     telegram: {
       get startParam() {
         reads.push('startParam');
@@ -27,7 +32,7 @@ function navigate(module: Awaited<ReturnType<typeof load>>, path: string) {
 }
 
 afterEach(() => {
-  vi.doUnmock('$lib/telegram.svelte');
+  vi.doUnmock('#lib/telegram.svelte.js');
 });
 
 describe('the root layout', () => {

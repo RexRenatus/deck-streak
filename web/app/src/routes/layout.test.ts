@@ -12,8 +12,8 @@ import Layout from './+layout.svelte';
 // (SPEC-082 R17) comes first, and its own tests judge it; here its read answers nothing. The feed's client and
 // Telegram's wrapper are replaced before the layout's imports run.
 const mocks = vi.hoisted(() => ({ ready: vi.fn(), feed: vi.fn(), wallet: vi.fn() }));
-vi.mock('$lib/telegram.svelte', () => ({ telegram: { ready: mocks.ready } }));
-vi.mock('$lib/api', () => ({ api: { feed: mocks.feed, wallet: mocks.wallet } }));
+vi.mock('#lib/telegram.svelte.js', () => ({ telegram: { ready: mocks.ready } }));
+vi.mock('#lib/api.js', () => ({ api: { feed: mocks.feed, wallet: mocks.wallet } }));
 // SPEC-385 R9, A15. SvelteKit's page state is replaced too, so each mount names its route; the
 // root path stands in for every screen that is not an open route.
 const place = vi.hoisted(() => ({ url: new URL('http://localhost/') }));

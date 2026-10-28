@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import AscendantChip from './AscendantChip.svelte';
   import type { LevelView } from './level';
 

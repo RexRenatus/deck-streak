@@ -4,8 +4,8 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { describe, expect, it } from 'vitest';
-import { EngineError } from '$lib/engine/client';
-import type { Deck } from '$lib/engine/protocol';
+import { EngineError } from '#lib/engine/client.js';
+import type { Deck } from '#lib/engine/protocol.js';
 import DeckList from './DeckList.svelte';
 
 // SPEC-350 R6, R10, R11; ADR-361. The deck list shows the engine's deck tree with each deck's new,

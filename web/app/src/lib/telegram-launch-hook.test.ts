@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getLocale, getTextDirection } from '$lib/paraglide/runtime.js';
+import { getLocale, getTextDirection } from '#lib/paraglide/runtime.js';
 import { init } from '../hooks.client';
 
 // SPEC-400 R2, R3; ADR-414 D2. SvelteKit awaits the client `init` hook before the router's first

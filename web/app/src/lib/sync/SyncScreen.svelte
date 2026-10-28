@@ -8,9 +8,9 @@
   // ended, never while one is held (SPEC-377 R15 to R17), and the storage status is the page's own
   // `persisted()` answer, since a Worker cannot ask (R18).
   import { onMount } from 'svelte';
-  import type { BackupsClient } from '$lib/engine/backups';
-  import type { BackupsListed, Required, StatusWord } from '$lib/engine/protocol';
-  import { m } from '$lib/paraglide/messages.js';
+  import type { BackupsClient } from '#lib/engine/backups.js';
+  import type { BackupsListed, Required, StatusWord } from '#lib/engine/protocol.js';
+  import { m } from '#lib/paraglide/messages.js';
   import BackupList from './BackupList.svelte';
   import ChoiceScreen from './ChoiceScreen.svelte';
   import { signOut } from './sign-out';
