@@ -5,7 +5,7 @@
 \* @phx covers crates/engine-core/src/dispatch.rs anchor=full_sync digest=sha256:9abfdb273db3ced7e798f27554371a364f20391f28328d8a4c9822eeefa5ed8b
 \* @phx covers crates/engine-core/src/dispatch.rs anchor=private digest=sha256:c02985295519aea882e799ce355e6e6dd541a0685ad5f9d89d25aa765951a175
 \* @phx covers crates/ffi/src/engine.rs anchor=run digest=sha256:4079a05198a7a2dac97552d4e45c78493ff2a098852b9f53f8469308430fa078
-\* @phx covers crates/ffi/src/engine.rs anchor=sync digest=sha256:506d0a8c0bc5bb1bf0aac9d44d928b5560ba9cd68bcdae2ccb29d0519493d21a
+\* @phx covers crates/ffi/src/engine.rs anchor=sync digest=sha256:f2d25285804482f69c83b727777f9c898386184a9ba52b6b8520141484f10d12
 \* @phx covers crates/engine-core/src/native_sync.rs anchor=statement_url digest=sha256:3ea1d973c2103ba9ec336a5a81025526c0b222fc510eb3e800dd9bdb9a210214
 \* @phx cites #671
 \* @phx property EverySyncFollowsAnAdmittingRead ramp=report
