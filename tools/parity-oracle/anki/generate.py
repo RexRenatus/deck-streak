@@ -69,10 +69,12 @@ ENGINE_COMMIT = "65e053b829825f534803b2b772c507a73ba936a3"
 HARNESS_PACKAGE = "parity-oracle-anki-harness"
 #: Paths the harness and the render generator may be built from. No workflow names one.
 HARNESS_PATHS = ("tools/parity-oracle/anki/harness", "tools/render-oracle")
-#: The sha256 of the harness's source tree (`tree_digest`). The run that adds the goldens pins
-#: it here, in the same commit, so every golden's `generator_sha256` covers the harness. Until
-#: then the driver refuses to start (exit 2).
-HARNESS_SOURCE_SHA256: str | None = None
+#: The sha256 of the harness's source tree (`tree_digest`), pinned before the run that adds the
+#: goldens, so every golden's `generator_sha256` covers the harness. Unpinned, the driver
+#: refuses to start (exit 2).
+HARNESS_SOURCE_SHA256: str | None = (
+    "a8d63bd2353dfc5e85c55a52db8342c214a6d83cf681297d8be4cb32d36a1dd9"
+)
 PROTOCOL = 1
 MODULE_NAME = re.compile(r"spec_\d{3}\.py")
 GOLDEN_NAME = re.compile(r"anki(?:[_.][a-z0-9]+)+")
