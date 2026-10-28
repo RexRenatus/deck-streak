@@ -371,18 +371,10 @@ impl Engine {
                 }
             }
         };
-        match one_way::write(&self.dispatcher, ready, gesture, &auth) {
-            Ok(()) => {
-                *self.stage() = None;
-                Ok(ChoiceStep {
-                    written: true,
-                    said: WRITTEN.to_owned(),
-                    counts: None,
-                })
-            }
-            Err(Unwritten::Recount(counted)) => Ok(self.changed(counted, copy, DEVICE_CHANGED)),
-            Err(Unwritten::Refused(reason)) => unwritten(reason),
-        }
+        self.written(
+            one_way::write(&self.dispatcher, ready, gesture, &auth),
+            copy,
+        )
     }
 
     /// Drops the stage held between the owner's taps: the model's `Cancel` (SPEC-503 R4).
@@ -401,6 +393,28 @@ impl Engine {
     /// that does not decode is the engine's refusal, with the reply's bytes.
     fn required(reply: Vec<u8>) -> Result<u32, EngineRefusal> {
         native_sync::required(&reply).ok_or(EngineRefusal::Engine { error: reply })
+    }
+
+    /// The step the write's result `write` shows (SPEC-503 R4): the stage is dropped on the write,
+    /// replaced on a device change since the backup by the new counts and the counted server copy
+    /// `copy`, and kept on a refusal.
+    fn written(
+        &self,
+        write: Result<(), Unwritten>,
+        copy: PathBuf,
+    ) -> Result<ChoiceStep, EngineRefusal> {
+        match write {
+            Ok(()) => {
+                *self.stage() = None;
+                Ok(ChoiceStep {
+                    written: true,
+                    said: WRITTEN.to_owned(),
+                    counts: None,
+                })
+            }
+            Err(Unwritten::Recount(counted)) => Ok(self.changed(counted, copy, DEVICE_CHANGED)),
+            Err(Unwritten::Refused(reason)) => unwritten(reason),
+        }
     }
 
     /// New counts after a change since the last ones: held as the stage, with the server copy
@@ -880,7 +894,15 @@ pub fn collection_directory(
 
 #[cfg(test)]
 mod tests {
-    use super::{Engine, EngineRefusal};
+    use std::collections::BTreeSet;
+    use std::path::PathBuf;
+
+    use deck_streak_engine_core::full_sync::{Counted, Direction, IdSets, Offer};
+    use deck_streak_engine_core::one_way::Unwritten;
+
+    use super::{
+        ChoiceCounts, ChoiceLoss, ChoiceStep, DEVICE_CHANGED, Engine, EngineRefusal, Stage,
+    };
 
     /// A normal sync's reply that does not decode is the engine's refusal with the reply's bytes,
     /// and a reply that decodes answers its requirement (SPEC-503 R5). The engine's own encoder
@@ -895,5 +917,83 @@ mod tests {
         );
         // Field 3, `required`, as a varint: 2, the full sync.
         assert_eq!(Engine::required(vec![0x18, 0x02]), Ok(2));
+    }
+
+    /// One side's ids: these reviews, and one card and one note both sides hold.
+    fn ids(reviews: &[i64]) -> IdSets {
+        IdSets {
+            reviews: reviews.iter().copied().collect(),
+            cards: BTreeSet::from([1]),
+            notes: BTreeSet::from([1]),
+            modified: 1,
+        }
+    }
+
+    /// A device that gains a review between a download's backup and its write is the core's
+    /// recount: the step writes nothing, says the device changed and shows the new counts, and the
+    /// stage holds those counts, over the device as it is now, with the counted server copy, so
+    /// the next tap confirms what the owner saw (SPEC-503 R4). Through the public calls only a
+    /// write from another thread inside one confirm reaches this arm, so a test inside the crate
+    /// hands the write's result to the method that reads it.
+    #[test]
+    fn a_device_change_at_the_write_holds_the_new_counts_for_the_next_tap() {
+        let engine =
+            Engine::new(Vec::new()).expect("the engine starts from the default init message");
+        let device = ids(&[10, 11]);
+        let server = ids(&[10, 20]);
+        let counted = Counted::show(Offer::of(true, true), device.clone(), server.clone());
+        let copy = PathBuf::from("server-copy-1-1.anki2");
+        *engine.stage() = Some(Stage {
+            counted: counted.clone(),
+            copy: copy.clone(),
+        });
+        let ready = counted
+            .confirm(Direction::Download)
+            .expect("the full sync offers the download")
+            .backed_up(&device)
+            .expect("the backup holds the device's rows")
+            .download_ready()
+            .expect("a download is ready after its backup");
+        let device_now = ids(&[10, 11, 12]);
+        let recount = ready
+            .at_write(&device_now)
+            .expect_err("the device gained a review its backup lacks");
+        let expected = Counted::show(Offer::of(true, true), device_now.clone(), server);
+        assert_eq!(recount, expected);
+
+        let step = engine
+            .written(Err(Unwritten::Recount(recount)), copy.clone())
+            .expect("a recount is a step, not a refusal");
+        let lost = |reviews| ChoiceLoss {
+            reviews,
+            cards: 0,
+            notes: 0,
+        };
+        assert_eq!(
+            step,
+            ChoiceStep {
+                written: false,
+                said: DEVICE_CHANGED.to_owned(),
+                counts: Some(ChoiceCounts {
+                    upload: Some(lost(1)),
+                    download: Some(lost(2)),
+                }),
+            }
+        );
+
+        let held = engine.stage().clone().expect("the new counts are held");
+        assert_eq!(held.counted, expected);
+        assert_eq!(held.copy, copy);
+        let next = held
+            .counted
+            .confirm(Direction::Download)
+            .expect("the held counts offer the download")
+            .backed_up(&device_now)
+            .expect("a backup of the device as it is now holds its rows")
+            .download_ready()
+            .expect("a download is ready after its backup")
+            .at_write(&device_now)
+            .expect("the next tap writes over the device it counted");
+        assert_eq!(next.direction(), Direction::Download);
     }
 }
