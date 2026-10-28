@@ -1,0 +1,17 @@
+[package]
+name = "deck-streak-companion-slot"
+description = "The one substitutable body behind the scheduling companion's interface; the public body opens the Absent default. See docs/CONTEXT-MAP.md."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# ADR-519 D4: the slot depends on the interface crate alone, so a body that substitutes it brings
+# nothing the public body does not.
+[dependencies]
+deck-streak-companion.workspace = true

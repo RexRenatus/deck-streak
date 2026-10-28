@@ -1128,6 +1128,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "deck-streak-companion"
+version = "0.3.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
+name = "deck-streak-companion-slot"
+version = "0.3.0"
+dependencies = [
+ "deck-streak-companion",
+]
+
+[[package]]
 name = "deck-streak-coordination"
 version = "0.3.0"
 dependencies = [

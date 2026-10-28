@@ -33,7 +33,6 @@ PLANNED_ENTRIES = {
     "tla/MediaSync": ("O13",),
     "tla/RelayEnvelope": ("O7",),
     "tla/AnkiCutover": ("O8",),
-    "lean/CompanionDecide": ("O6",),
     "lean/ScheduledState": ("O6",),
     "lean/ReleaseGates": ("O17",),
     "lean/SyncClock": ("O1", "O16"),
@@ -110,6 +109,18 @@ REPLAY_TIE = {
     "test": "crates/fsrs7/tests/formal_vectors_replay_history.rs"
     "::the_history_selection_matches_the_lean_vectors",
 }
+# SPEC-501: the scheduling companion's decision, the first planned entry built, present under O6
+# with its vectors tie.
+COMPANION_ENTRIES = ("lean/CompanionDecide",)
+COMPANION_TIE = {
+    "method": "vectors",
+    "for": "lean/CompanionDecide",
+    "test": "crates/companion/tests/formal_vectors_decide.rs"
+    "::decide_and_negotiate_answer_every_lean_vector",
+}
+# The entries built after the 43 were dispositioned, each with its disposition and the
+# obligations that name it.
+NEW_ENTRIES = {"lean/CompanionDecide": ("keep", {"O6"})}
 # The 43 existing entries' dispositions.
 DISPOSITIONS = {
     "retire": ("tla/FullSyncChoice", "tla/SyncSnapshotWindow"),
@@ -800,15 +811,24 @@ class TheFormalLedger(unittest.TestCase):
         self.assertEqual(harnesses, {harness: {item} for harness, item in HARNESSES.items()})
         self.assertEqual(companions, COMPANIONS)
         headers = header_names(REPO)
-        self.assertEqual(set(present_names), {"O1a", "O11"})
-        for identity, entries in (("O1a", SYNC_MODELS), ("O11", ENGINE_TIED)):
+        self.assertEqual(set(present_names), {"O1a", "O6", "O11"})
+        for identity, entries in (
+            ("O1a", SYNC_MODELS),
+            ("O6", COMPANION_ENTRIES),
+            ("O11", ENGINE_TIED),
+        ):
             names = present_names[identity]
             self.assertEqual(len(names), len(set(names)), f"{identity} names an artifact twice")
             self.assertEqual(set(names), {(e, p) for e in entries for p in headers[e]})
-        self.assertEqual([tie for item in obligations for tie in item["ties"]], [REPLAY_TIE])
+        self.assertEqual(
+            [tie for item in obligations for tie in item["ties"]], [COMPANION_TIE, REPLAY_TIE]
+        )
         examined("planned entries", planned)
         examined("planned harnesses", harnesses)
-        examined("present artifacts", present_names["O1a"] + present_names["O11"])
+        examined(
+            "present artifacts",
+            present_names["O1a"] + present_names["O6"] + present_names["O11"],
+        )
 
     def test_the_phase_sets_list_o1a_and_o1_to_o11(self):
         document = load()
@@ -888,16 +908,21 @@ class TheFormalLedger(unittest.TestCase):
             entry: disposition for disposition, entries in DISPOSITIONS.items() for entry in entries
         }
         self.assertEqual(len(expected), 43)
-        self.assertEqual(set(tree), set(expected), "the tree's entries are not the 43 designed")
+        self.assertFalse(set(expected) & set(NEW_ENTRIES), "a new entry was among the 43")
+        expected.update({entry: disposition for entry, (disposition, _) in NEW_ENTRIES.items()})
+        self.assertEqual(
+            set(tree), set(expected), "the tree's entries are not the 43 designed and the new ones"
+        )
         rows = {item["entry"]: item for item in examined("rows", document["entries"])}
         self.assertEqual(len(rows), len(document["entries"]), "an entry has two rows")
         self.assertEqual({entry: item["disposition"] for entry, item in rows.items()}, expected)
         for entry, item in rows.items():
-            linked = (
-                {"O1a", "O11"}
-                if entry in SYNC_MODELS
-                else ({"O11"} if entry in ENGINE_TIED else set())
-            )
+            if entry in NEW_ENTRIES:
+                linked = NEW_ENTRIES[entry][1]
+            elif entry in SYNC_MODELS:
+                linked = {"O1a", "O11"}
+            else:
+                linked = {"O11"} if entry in ENGINE_TIED else set()
             self.assertEqual(set(item["obligations"]), linked, entry)
             self.assertTrue(item["act"].strip(), entry)
         arms = {"entry-without-row", "row-without-entry", "duplicate-row", "row-obligations"}
