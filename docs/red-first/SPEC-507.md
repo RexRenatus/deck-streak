@@ -9,9 +9,13 @@ empty, the census pattern matches nothing, and the review's overlay seam does no
 review screen's control, the Worker operation, the clock's pause and the strings, and the study suite's axe step.
 
 ```red-first
-A1: not red here: the engine core does not build on the delivery's local host (its engine's protobuf build needs protoc, which that host lacks and CI installs); owed to a run of the health target at 036a22e0 and dc55ab82
-A2: not red here: as A1
-A3: not red here (Rust): as A1
+A1: red at 036a22e0: health.rs: examined 0 review row(s): the population is empty, so nothing was judged
+A1: green at dc55ab82
+A2: red at 036a22e0: health.rs: assertion `left == right` failed: the panel's capped time and the analytics crate's
+A2: red at 036a22e0: health.rs: examined 0 review row(s): the population is empty, so nothing was judged
+A2: green at dc55ab82
+A3: red at 036a22e0: health.rs: assertion `left == right` failed: the recall rows' part names its state and no number
+A3: green at dc55ab82
 A3: red at 830023e0: card-health.test.ts: TestingLibraryElementError: Unable to find an accessible element with the role "region" and name "Recall"
 A3: green at a939d705
 A4: red at 830023e0: card-health.test.ts: AssertionError: examined 0 panel string(s): the population is empty, so nothing was judged
@@ -37,6 +41,17 @@ A6: green at a939d705
 - **a939d705 edits one fence test's reading, not its expectations.** `the panel shows the counts, the capped times and
   the newest reviews first` reads each table row cell by cell, joined by a space, since a table holds no whitespace
   between its cells; the expected rows are unchanged.
-- **The Rust tests and the `card_health` export are not measured here.** No `cargo test`, `cargo clippy` or wasm32
-  build of the engine core ran on this delivery's local host; each is owed before the delivery lands.
+- **The Rust runs:** at 036a22e0 the health target's four tests read 4 failed of 4 (exit 101): A2's differential and A3
+  on their own assertions, and A1 and A2's real-answers test on the population guard, since the stub's record carries
+  no review row. At dc55ab82 they read 4 passed of 4 (exit 0), measured at 3ad7f0b0, whose Rust tree is dc55ab82's.
+  Each run was `cargo test --locked --offline --no-fail-fast -p deck-streak-engine-core --test health` with the four
+  test names.
+- **50207a62 renames one binding, after green.** `cargo clippy -p deck-streak-engine-core --all-targets --locked
+  --offline -- -D warnings` denied `similar_names` on the rows' lapse count beside the card's `lapses` counter; it is
+  now `logged_lapses`, and no test changed. At 50207a62 clippy reads clean, `cargo fmt --all --check` reads clean and
+  the four tests read 4 passed of 4.
+- **The `card_health` export builds for wasm32.** At 50207a62, `cargo build --release --locked --offline --target
+  wasm32-unknown-unknown -p deck-streak-web-engine` (step 1 of `scripts/web-engine-build.sh`, with clang-18 and
+  llvm-ar-18) exits 0, and the module names `card_health`. Its bindings and size steps (wasm-bindgen, wasm-opt) run in
+  CI's web-engine job.
 - **The study suite's axe step is not measured here.** It runs in Chromium and WebKit over the built module, in CI.
