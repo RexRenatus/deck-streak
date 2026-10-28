@@ -8,8 +8,8 @@
 use std::fmt;
 use std::str::FromStr;
 
-use crate::clock::UtcMillis;
 use crate::error::IsoDateError;
+use crate::instant::UtcMillis;
 
 const MINUTE_MS: i128 = 60_000;
 const HOUR_MS: i128 = 3_600_000;
