@@ -75,8 +75,14 @@ files, 150 tests, the check 0 errors and 0 warnings).
   Red: `expected [ 'question', false, null ] to deeply equal [ 'question', true, 'host-readback' ]`. So the host's
   check is reachable through the review after all, and the note above that the screen never reaches it no longer
   holds.
-- **Not settled by this fix:** a mutant that announces a refused face's reason over a notice the review recovered
-  from. No requirement states which of the two the status announces when both hold, so no test is added for it here.
+- **A notice and a refused face at once (SPEC-505 R5; SPEC-371 R9).** The tenth mutant announced a refused face's
+  reason over a notice from the learner's last gesture. R5 now states that the notice comes first and that the reason
+  stays on the frame's mark and is the status once the next gesture clears the notice; "a notice from the last gesture
+  is announced before a refused card's reason, which the mark keeps" in `review-screen.test.ts`, added by d14a1a9a,
+  pins it. Red on the tree of d14a1a9a with that mutant applied, after an undo press that found the answer synced:
+  `expected [ [ 'card', 'undo-offer' ], …(2) ] to deeply equal [ [ 'card', 'undo-offer' ], …(2) ]`, whose diff reads
+  the status as "This card cannot be shown safely here…" where "Your last answer has synced, so it can no longer be
+  undone." was expected, and the mark as `style-closed` in both. Green unmutated (20 files, 151 tests).
 - **A6's lines above** are quoted from runs of the rendered audit's review route in Chromium, in the pinned
   Playwright image with no network: red at 9890088f (2 failed), not green at f1743b4d (2 failed, each timed out in
   axe's analyze) and green at 3dcd8322 (2 passed).
