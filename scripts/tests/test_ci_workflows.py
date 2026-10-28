@@ -1274,6 +1274,48 @@ class TheReleaseRunIsNamedInBaseIsDev(unittest.TestCase):
             expected = "true" if release_run(*inputs) else "false"
             self.assertEqual(output.read_text(encoding="utf-8"), f"release={expected}\n", where)
 
+    def test_the_job_output_reads_the_step_that_writes_release(self):
+        """SPEC-500 R1: `ci` reads the release run through base-is-dev's job output, so the wiring
+        is held closed: the job's `outputs` map holds exactly one key, `release`; its value is
+        exactly `${{ steps.<id>.outputs.release }}` for one step id; exactly one step of the job
+        carries that id; and that step's script writes `release=` to GITHUB_OUTPUT, on the one line
+        of it that names GITHUB_OUTPUT. Any other key, value, id or write is refused."""
+        job = load("ci.yml")["jobs"]["base-is-dev"]
+        outputs = job.get("outputs")
+        self.assertIsInstance(outputs, dict, "base-is-dev declares no outputs map")
+        self.assertEqual(
+            examined("base-is-dev outputs", outputs),
+            ["release"],
+            "base-is-dev's outputs hold exactly the key release",
+        )
+        value = outputs["release"]
+        wired = re.fullmatch(
+            r"\$\{\{ steps\.([A-Za-z_][A-Za-z0-9_-]*)\.outputs\.release \}\}",
+            value if isinstance(value, str) else "",
+        )
+        self.assertIsNotNone(
+            wired, f"base-is-dev's release output reads {value!r}, not a step's release output"
+        )
+        steps = examined("base-is-dev steps", job["steps"])
+        named = [step for step in steps if isinstance(step, dict) and step.get("id") == wired[1]]
+        self.assertEqual(
+            len(named),
+            1,
+            f"base-is-dev's release output reads step {wired[1]!r}, and {len(named)} of its "
+            "steps carry that id",
+        )
+        script = named[0].get("run")
+        self.assertIsInstance(script, str, f"step {wired[1]!r} runs no script")
+        writes = [line.strip() for line in script.splitlines() if "GITHUB_OUTPUT" in line]
+        self.assertEqual(
+            len(writes), 1, f"step {wired[1]!r} names GITHUB_OUTPUT on {len(writes)} lines"
+        )
+        self.assertRegex(
+            writes[0],
+            r'^echo "release=[^"]*" >> "\$GITHUB_OUTPUT"$',
+            f"step {wired[1]!r} does not write release= to GITHUB_OUTPUT",
+        )
+
 
 class TheReaderReadsOnlyItsNamedForms(unittest.TestCase):
     def test_the_reader_reads_only_its_named_forms(self):
