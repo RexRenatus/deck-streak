@@ -13,6 +13,16 @@ one golden per registration. The Rust tests read the goldens through one reader,
 | `golden.rs` | the one Rust reader, included by path | every proving crate's integration tests |
 | `test_generate.py` | the generator's tests, over a synthetic stand-in | the gate's python stage |
 | `test_goldens.py` | every committed golden is current, synthetic and free of date strings; no registry module reads a file; the day token's example below round-trips | the gate's python stage |
+| `anki/generate.py` | the second old system's driver: one session of a pinned harness on the engine's API (SPEC-498, ADR-516) | the sandbox `anki/RUNBOOK.md` builds, once |
+| `anki/corpus.py` | the second oracle's seed, edge classes and DeckStreak-authored builders | loaded by its registry |
+| `anki/registry/spec_NNN.py` | the second oracle's registrations, each with its id and declared classes, and the corpus pin | loaded by the driver |
+| `anki/fixtures/` | a stand-in harness and a fixture golden with one wrong output, for the tests | the tests only |
+| `test_anki_driver.py`, `test_anki_registry.py`, `test_anki_workspace.py` | the driver's guards, census and provenance; every function registered and every class covered; the harness outside the workspace and every workflow | the gate's python stage |
+
+The second old system is the engine DeckStreak ingests through, at the commit the root manifest pins. Its harness is
+kept outside this repository, its source's sha256 pinned in `anki/generate.py`, and no workflow builds it. Its goldens
+join `goldens/` under `anki.` names, and a Rust test reads each through `golden::mismatches` or
+`golden::assert_parity`, which report every case whose recorded output differs from the port's.
 
 ## Register a golden
 
