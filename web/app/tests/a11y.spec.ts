@@ -354,7 +354,8 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
           await expect(page.locator('iframe[data-card-refused]')).toHaveAttribute('data-card-refused', REFUSED_REASON);
           await expect(page.locator('p[role="status"]')).toContainText("Its note type's CSS ends its own style block");
         }
-        const results = await new AxeBuilder({ page }).withTags(WCAG_22_AA).analyze();
+        // the refused card's frame is sandboxed with no script, so the legacy mode audits the screen around it
+        const results = await new AxeBuilder({ page }).withTags(WCAG_22_AA).setLegacyMode().analyze();
         expect(results.violations).toEqual([]);
       });
     }
