@@ -86,6 +86,12 @@
       "test_deploy_templates"
     ]
   },
+  "scripts/release_gates.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_release_gates"
+    ]
+  },
   "scripts/testflight_age.py": {
     "dir": "scripts/tests",
     "modules": [
