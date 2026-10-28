@@ -180,7 +180,8 @@ HEX64 = re.compile(r"^[0-9a-f]{64}$")
 # The small tree every planted fault is judged over. Two TLA+ entries, the first bound by a covers
 # stamp; a Lean entry beside a vectors module that declares nothing; a Rust test file with one test,
 # one commented-out test, one test inside a block comment and one plain function; a Rust source
-# with one Kani harness and one plain function; and a Python test module. Every text is synthetic.
+# with one Kani harness and one plain function; and a Python test module with a test method, a
+# helper method and a top-level function named as a test. Every text is synthetic.
 FIXTURE = {
     "formal/tla/Alpha/Alpha.tla": (
         "---- MODULE Alpha ----\n"
@@ -211,7 +212,8 @@ FIXTURE = {
     ),
     "scripts/tests/test_demo.py": (
         "import unittest\n\n\nclass Demo(unittest.TestCase):\n"
-        "    def test_runs(self):\n        pass\n\n    def helper(self):\n        pass\n"
+        "    def test_runs(self):\n        pass\n\n    def helper(self):\n        pass\n\n\n"
+        "def test_at_module_level():\n    pass\n"
     ),
 }
 GOOD_RS = "crates/demo/tests/formal_vectors_gamma.rs::the_gamma_vectors_hold"
@@ -331,6 +333,20 @@ def kani_at(harness, at=None):
     return artifact
 
 
+class Instead:
+    """What a planted change gives when its fault is the ledger's own type: the whole ledger."""
+
+    def __init__(self, document):
+        self.document = document
+
+
+def planted(change):
+    """An accepted ledger with `change` planted in it, or the ledger the change gives instead."""
+    document = accepted()
+    given = change(document)
+    return given.document if isinstance(given, Instead) else document
+
+
 # Each planted fault: its label, the one arm that must refuse it, and the change to an accepted
 # ledger that plants it.
 SCHEMA_PLANTS = (
@@ -389,6 +405,62 @@ SCHEMA_PLANTS = (
         "an unknown row disposition",
         "shape",
         lambda d: row(d, "tla/Beta").update(disposition="archive"),
+    ),
+    # Each shape below has one refusal of its own in the checker, and its plant reaches only that.
+    ("a ledger that is not an object", "shape", lambda d: Instead([d])),
+    ("an obligation that is not an object", "shape", lambda d: d["obligations"].append("O3")),
+    (
+        "an artifact that is not an object",
+        "shape",
+        lambda d: obligation(d, "O1")["artifacts"].append("tla/Planned"),
+    ),
+    (
+        "a planned harness whose at is not a path",
+        "shape",
+        lambda d: obligation(d, "O1")["artifacts"][1].update(at=7),
+    ),
+    (
+        "a present artifact whose property is not a name",
+        "shape",
+        lambda d: obligation(d, "O2")["artifacts"][0].update(property="Holds always"),
+    ),
+    (
+        "a present artifact that names no property",
+        "shape",
+        lambda d: obligation(d, "O2")["artifacts"][0].pop("property"),
+    ),
+    (
+        "a tie that is not an object",
+        "shape",
+        lambda d: obligation(d, "O1")["ties"].append("vectors"),
+    ),
+    (
+        "a tie whose mutant is blank",
+        "shape",
+        lambda d: obligation(d, "O2")["ties"][1].update(mutant=" "),
+    ),
+    (
+        "phase sets that are not an object",
+        "shape",
+        lambda d: d.update(phases=[["O1"], ["O1", "O2"]]),
+    ),
+    (
+        "a phase set that is not a list of ids",
+        "shape",
+        lambda d: d["phases"].update({"1": "O1"}),
+    ),
+    ("a row that is not an object", "shape", lambda d: d["entries"].append("tla/Alpha")),
+    (
+        "a row whose entry is not <kind>/<Name>",
+        "shape",
+        lambda d: d["entries"].append(
+            {"entry": "Alpha", "disposition": "keep", "act": "kept", "obligations": []}
+        ),
+    ),
+    (
+        "a row naming an obligation twice",
+        "shape",
+        lambda d: row(d, "tla/Alpha").update(obligations=["O2", "O2"]),
     ),
 )
 PHASE_PLANTS = (
@@ -481,6 +553,11 @@ TIE_PLANTS = tuple(
     (f"a tie naming {test}", "undefined-test", lambda d, test=test: tie_to(d, "O1", test))
     for test in UNDEFINED_TESTS
 ) + (
+    (
+        "a tie naming a top-level test function, not <Class>.<method>",
+        "undefined-test",
+        lambda d: tie_to(d, "O1", "scripts/tests/test_demo.py::test_at_module_level"),
+    ),
     (
         "a tie whose method is a covers stamp",
         "tie-method",
@@ -684,8 +761,7 @@ class TheFormalLedger(unittest.TestCase):
     def assert_planted(self, plants):
         """Each planted fault is refused by its one arm, and by no other."""
         for label, arm, change in examined("planted faults", plants):
-            document = accepted()
-            change(document)
+            document = planted(change)
             refusals = ledger.check(document, self.tree)
             with self.subTest(plant=label):
                 self.assertEqual({r.arm for r in refusals}, {arm}, f"{label}: {refusals}")
