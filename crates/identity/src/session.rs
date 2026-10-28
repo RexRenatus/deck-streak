@@ -190,7 +190,7 @@ fn id_bytes(token: &str) -> Option<[u8; ID_BYTES]> {
         _ => None,
     };
     let mut id = [0_u8; ID_BYTES];
-    for (byte, pair) in id.iter_mut().zip(digits.chunks_exact(2)) {
+    for (byte, pair) in id.iter_mut().zip(digits.as_chunks::<2>().0) {
         *byte = (value(pair[0])? << 4) | value(pair[1])?;
     }
     Some(id)
@@ -387,11 +387,16 @@ where
 {
     type Rejection = Refusal;
 
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        presented(&parts.headers)
-            .and_then(|token| Sessions::from_ref(state).admit(token))
-            .map(|owner| Self { owner })
-            .ok_or(Refusal::NoSession)
+    fn from_request_parts(
+        parts: &mut Parts,
+        state: &S,
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
+        std::future::ready(
+            presented(&parts.headers)
+                .and_then(|token| Sessions::from_ref(state).admit(token))
+                .map(|owner| Self { owner })
+                .ok_or(Refusal::NoSession),
+        )
     }
 }
 
@@ -415,6 +420,19 @@ impl LinkSession {
     pub fn token(&self) -> &str {
         &self.token
     }
+
+    /// The `link` session `headers` present to `sessions`, or `no_session`.
+    fn admitted(headers: &HeaderMap, sessions: &Sessions) -> Result<Self, Refusal> {
+        let token = presented(headers).ok_or(Refusal::NoSession)?;
+        let admitted = sessions.admit_proof(token).ok_or(Refusal::NoSession)?;
+        match admitted.proof {
+            Proof::Link => Ok(Self {
+                owner: admitted.owner,
+                token: token.to_owned(),
+            }),
+            Proof::Telegram | Proof::Linked(_) => Err(Refusal::NoSession),
+        }
+    }
 }
 
 impl fmt::Debug for LinkSession {
@@ -430,18 +448,11 @@ where
 {
     type Rejection = Refusal;
 
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let token = presented(&parts.headers).ok_or(Refusal::NoSession)?;
-        let admitted = Sessions::from_ref(state)
-            .admit_proof(token)
-            .ok_or(Refusal::NoSession)?;
-        match admitted.proof {
-            Proof::Link => Ok(Self {
-                owner: admitted.owner,
-                token: token.to_owned(),
-            }),
-            Proof::Telegram | Proof::Linked(_) => Err(Refusal::NoSession),
-        }
+    fn from_request_parts(
+        parts: &mut Parts,
+        state: &S,
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
+        std::future::ready(Self::admitted(&parts.headers, &Sessions::from_ref(state)))
     }
 }
 
@@ -467,6 +478,16 @@ impl FreshTelegramSession {
     pub fn token(&self) -> &str {
         &self.token
     }
+
+    /// The fresh `telegram` session `headers` present to `sessions`, or the refusal.
+    fn admitted(headers: &HeaderMap, sessions: &Sessions) -> Result<Self, Refusal> {
+        let token = presented(headers).ok_or(Refusal::NoSession)?;
+        let owner = crate::linking::fresh_telegram(sessions, token)?;
+        Ok(Self {
+            owner,
+            token: token.to_owned(),
+        })
+    }
 }
 
 impl fmt::Debug for FreshTelegramSession {
@@ -482,12 +503,10 @@ where
 {
     type Rejection = Refusal;
 
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let token = presented(&parts.headers).ok_or(Refusal::NoSession)?;
-        let owner = crate::linking::fresh_telegram(&Sessions::from_ref(state), token)?;
-        Ok(Self {
-            owner,
-            token: token.to_owned(),
-        })
+    fn from_request_parts(
+        parts: &mut Parts,
+        state: &S,
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
+        std::future::ready(Self::admitted(&parts.headers, &Sessions::from_ref(state)))
     }
 }
