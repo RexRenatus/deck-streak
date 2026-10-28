@@ -496,3 +496,14 @@ ADR-397 amends D1, for undo only, after SPEC-371's amendment. The rest of D1 sta
   to the review's last bury or flag, through the same gesture, checked at the write by the record's
   kind (ADR-397 D3). Bury and flag themselves stay ordinary calls, as D1 decided.
 - **D2 (`:57-72`)** is unchanged in effect: a confirmed undo still clears the kept card.
+
+## Amendment: a clip speaks only with a voice the device runs (SPEC-506)
+
+ADR-524 amends D8 and D13, for the voice only. The rest of both stands.
+
+- **D8 (`:160-176`) and D13 (`:249-263`).** "The language's default (a null voice)" no longer speaks: the browser's
+  default may be a remote voice, which sends the card's text off the device. A voice counts only when the device
+  marks it `localService`. The voice is the stored choice while the device lists it as a local voice of the
+  language, else the language's first local voice, else none, and a clip with none is not spoken: it settles at
+  once, and the review's status region names the language. The picker lists local voices only. A stored remote
+  choice is ignored and kept. The rate, the one storage key and the refused storage stay as D13 decided.

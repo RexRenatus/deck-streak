@@ -472,3 +472,65 @@ After every row, "Sync now" is enabled again and "Not now" stays.
 | the session's syncs | the study engine's open and close (ADR-388 D12) | once after the open, once before the close | no |
 | the Sync page's "Sync now" | the learner, on the Sync page | when pressed | no |
 | the offer's "Sync now" | the learner, after a late review | when pressed | added |
+
+## 9. The clip, the choice, a local voice or none (SPEC-506)
+
+Read at `d3b09d5eb13862b005b5faca9513b0fd148ed0dc`. Decided by ADR-524, which amends ADR-361 D8 and D13. This
+section is appended to `docs/schematics/web-study-screens.md`; no line above it changes.
+
+A speech clip reaches the speaker from the player (section 5). The speaker asks the voice choices for the clip's
+voice over the device's list, filtered to the voices the device runs (`localService` true). A clip with a local voice
+is handed to the synthesis; a clip with none is not spoken, settles at once, and its outcome reaches the review
+machine, whose status region names the language until the next gesture. The picker reads the same filtered list.
+
+### 9a. Data flow, from the clip to a voice or the line
+
+```mermaid
+flowchart LR
+  subgraph device["the device"]
+    voiceList["speechSynthesis.getVoices, local and remote"]
+  end
+  subgraph choices["VoiceChoices, voice.ts"]
+    localOnly["voices: the language's local voices"]
+    storedChoice["chosen: the stored choice, while local"]
+    pickVoice["voiceFor: chosen, else the first local, else none"]
+  end
+  subgraph speaker["WebSpeaker, speech.ts"]
+    hasVoice{"a voice?"}
+    speakIt["hand the utterance to the synthesis"]
+    skipIt["not spoken, settles at once"]
+  end
+  subgraph page["review screen"]
+    picker["voice picker: Default voice, then local voices"]
+    statusLine["status region: the no-voice line"]
+  end
+  machine["Review.unvoiced, review.ts"]
+  clip["a speech clip from the player"]
+  storage["local storage, one key, kept as written"]
+  voiceList --> localOnly --> storedChoice --> pickVoice
+  storage --> storedChoice
+  localOnly --> picker
+  storedChoice --> picker
+  clip --> hasVoice
+  pickVoice --> hasVoice
+  hasVoice -- "yes: local-voice" --> speakIt
+  hasVoice -- "no: no-local-voice" --> skipIt --> machine --> statusLine
+```
+
+### 9b. The voice a clip speaks with
+
+| the device lists, for the clip's language | the stored choice | the clip speaks with | the status region |
+|---|---|---|---|
+| local voices | a local voice of the language | the stored choice | quiet |
+| local voices | none, empty, gone, or a remote voice (kept) | the first local voice | quiet |
+| remote voices only, or none | any | nothing | "No voice on this device for {language}." |
+| no speech synthesis at all | any | nothing | "No voice on this device for {language}." |
+
+A refusal, a card the frame refused and a done deck outrank the line. The learner's next gesture clears it; a clip
+that again has no voice raises it again.
+
+### 9c. The one place that speaks
+
+Under `web/app/src`, outside tests, the `.speak(` calls are the synthesis inside `WebSpeaker` and the player asking
+its speaker, and only `speech.ts` makes an utterance. `speak_sites_census` holds that, and reports a planted direct
+call by name.
