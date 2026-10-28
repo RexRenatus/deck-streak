@@ -596,6 +596,43 @@ describe('the review screen', () => {
     expect(leaks([`${seen[0].status} p{content:"${TOKEN}"}`], TOKEN)).toHaveLength(1);
   });
 
+  // SPEC-505 R5; SPEC-371 R9. A refused card and a notice from the learner's last gesture at once:
+  // the status announces the notice first, since it answers the learner's own act; the frame's mark
+  // keeps the card's reason throughout, and the next gesture, which clears the notice, brings the
+  // reason back to the status.
+  it("a notice from the last gesture is announced before a refused card's reason, which the mark keeps", async () => {
+    const english = messages('en');
+    const refused = english.study_card_refused_style_closed;
+    const synced = english.undo_synced;
+    // both words are there and differ, so the status shows which of the two it announces
+    expect([refused.length > 0, synced.length > 0, refused !== synced]).toEqual([true, true, true]);
+    const client = new FakeClient([head(view(2, { css: ESCAPES, undo: 'answer' }))]);
+    client.offered = { offer: null, why: 'synced' };
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+
+    // the refused card alone: its reason is the status and the mark
+    expect([status(), frame().getAttribute('data-card-refused')]).toEqual([refused, 'style-closed']);
+
+    // the undo press finds the answer synced: its notice is announced first, and the mark keeps the reason
+    await fireEvent.click(button('Undo answer'));
+    await settle();
+    expect([client.calls, status(), frame().getAttribute('data-card-refused')]).toEqual([
+      ['card', 'undo-offer'],
+      synced,
+      'style-closed'
+    ]);
+
+    // the next gesture clears the notice: the answer's face is refused too, and its reason is the status again
+    await fireEvent.click(button('Show answer'));
+    await settle();
+    expect([frame().title, status(), frame().getAttribute('data-card-refused')]).toEqual([
+      english.study_answer_frame,
+      refused,
+      'style-closed'
+    ]);
+  });
+
   it('a gamepad the page already had holds the lock once the page is visible, and closing releases it', async () => {
     withGamepads();
     gamepads = [null, pad(2)];

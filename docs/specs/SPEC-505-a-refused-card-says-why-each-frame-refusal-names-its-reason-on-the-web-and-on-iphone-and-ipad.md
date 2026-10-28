@@ -53,8 +53,11 @@ R4. **The mark.** The refused frame's `data-card-refused` carries the reason, a 
 
 R5. **The status names the reason and the next step, and never the card.** The review's status for a refused face is
 the reason (`Status` holds the seven reasons in place of `escaped`), and its words are the reason's message: today's
-first sentence, the reason, the next step, and that the card can still be answered, buried or flagged. No status,
-mark, title or log line holds any of the refused card's markup or CSS.
+first sentence, the reason, the next step, and that the card can still be answered, buried or flagged. One exception:
+while a notice from the learner's last gesture holds (SPEC-371 R9's, such as `undo-synced`), the status announces that
+notice first, since it answers the learner's own act; the refused face's reason stays on the frame's mark throughout
+and is the status once the next gesture clears the notice. No status, mark, title or log line holds any of the refused
+card's markup or CSS.
 
 R6. **Seven reasons in seven locales.** `study_card_escaped` is replaced in all seven locale files by seven keys,
 `study_card_refused_<reason>` (the reason's hyphens written as underscores), each non-empty and distinct within its
