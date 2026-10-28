@@ -150,7 +150,7 @@ pub fn card_health(snapshot: SnapshotRow, rows: &[ReviewRow], scheduler: Readout
         .iter()
         .filter(|row| is_answer(row[KIND], row[EASE]))
         .collect();
-    let lapsed = answers
+    let logged_lapses = answers
         .iter()
         .filter(|row| row[KIND] == 1 && row[EASE] == 1)
         .count();
@@ -166,7 +166,7 @@ pub fn card_health(snapshot: SnapshotRow, rows: &[ReviewRow], scheduler: Readout
         lapses: counter(lapses),
         logged: Logged {
             answers: tally(answers.len()),
-            lapses: tally(lapsed),
+            lapses: tally(logged_lapses),
         },
         rows: tally(rows.len()),
         reviews: rows.iter().rev().take(ROWS_SHOWN).map(review).collect(),
