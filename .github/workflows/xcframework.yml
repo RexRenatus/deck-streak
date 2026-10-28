@@ -19,6 +19,13 @@ name: xcframework
 # tests on one iPhone and one iPad simulator, measures, and uploads its report and result bundles.
 # The card view (SPEC-349): `card-isolation` runs the CardIsolation package's tests and its Swift
 # mutant sweep on the host, as `harness-wire` does for the codec.
+#
+# Where each job runs: a push (a release tag through apple-on-tag.yml, dev through
+# testflight-internal.yml) or a dispatch runs it on this repository's self-hosted Apple-silicon
+# runner, the labels self-hosted, macOS, ARM64 and ds-mini; a pull request, and every other event,
+# runs it on the GitHub-hosted xcode-27 image. A called workflow reads its caller's event, so
+# apple-on-change.yml's pull requests stay hosted. A fork's pull request is held for approval by the
+# repository's rule for outside contributors before any of its jobs runs.
 on:
   workflow_call:
   workflow_dispatch:
@@ -28,7 +35,7 @@ permissions:
 
 jobs:
   xcframework:
-    runs-on: xcode-27
+    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && fromJSON('["self-hosted","macOS","ARM64","ds-mini"]') || 'xcode-27' }}
     timeout-minutes: 120
     env:
       REPORT: ${{ github.workspace }}/xcframework-report
@@ -153,7 +160,7 @@ jobs:
               path, size = line.rsplit(" ", 1)
               rows.append((f"slice `{path.split('/')[1]}`", f"{int(size) / 1048576:.1f} MiB"))
           lines = [
-              f"`xcframework.yml` on a GitHub-hosted runner with {read('runner-cpus')} CPUs:",
+              f"`xcframework.yml` on a {os.environ.get('RUNNER_ENVIRONMENT', 'github-hosted')} runner with {read('runner-cpus')} CPUs:",
               "",
               "| measure | measured |",
               "|---|---|",
@@ -178,7 +185,7 @@ jobs:
           if-no-files-found: warn
 
   harness-wire:
-    runs-on: xcode-27
+    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && fromJSON('["self-hosted","macOS","ARM64","ds-mini"]') || 'xcode-27' }}
     timeout-minutes: 30
     env:
       REPORT: ${{ github.workspace }}/harness-wire-report
@@ -267,7 +274,7 @@ jobs:
           if-no-files-found: warn
 
   card-isolation:
-    runs-on: xcode-27
+    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && fromJSON('["self-hosted","macOS","ARM64","ds-mini"]') || 'xcode-27' }}
     timeout-minutes: 30
     env:
       REPORT: ${{ github.workspace }}/card-isolation-report
@@ -357,7 +364,7 @@ jobs:
 
   harness:
     needs: xcframework
-    runs-on: xcode-27
+    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && fromJSON('["self-hosted","macOS","ARM64","ds-mini"]') || 'xcode-27' }}
     timeout-minutes: 150
     env:
       REPORT: ${{ github.workspace }}/harness-report
