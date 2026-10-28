@@ -358,7 +358,7 @@ jobs:
   harness:
     needs: xcframework
     runs-on: xcode-27
-    timeout-minutes: 150
+    timeout-minutes: 180
     env:
       REPORT: ${{ github.workspace }}/harness-report
       RESULTS: ${{ github.workspace }}/harness-results
@@ -422,6 +422,149 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
       - name: the measurements, Release, on the iPhone and then the iPad
         run: |
+          # The settling run (SPEC-358 A12), shared by the three steps whose second simulator has
+          # stalled: written here, then read by the app's tests and the bury and flag tests. Before
+          # its one test command each of them boots both simulators, and the bury and flag step
+          # also gives their wallpaper processes up to 300 s to go quiet; the CPU is sampled every
+          # few seconds until the step ends, and a record of each is kept beside the report. None
+          # of it changes a test, its rows, its bound or its destinations, and none of it decides a
+          # step: each exits with its test command's status, and a check that runs out starts the
+          # tests all the same.
+          cat > "$RUNNER_TEMP/simulators.py" <<'PY'
+          import json, os, subprocess, sys, time
+          REPORT = os.environ["REPORT"]
+          NAMES = [os.environ["IPHONE_SIM"], os.environ["IPAD_SIM"]]
+          RUNTIME = "com.apple.CoreSimulator.SimRuntime.iOS-" + os.environ["SIM_OS"].replace(".", "-")
+          WALLPAPER = "PosterBoard"
+          # The step's report stem: its record is <stem>-settle.txt and its CPU file <stem>-cpu.txt.
+          STEM = sys.argv[2]
+          # The settle's bound and quiet span in seconds, and the CPU seconds the quiet span may hold.
+          BOUND, QUIET, CALM = 300, 30, 1.0
+          def say(line):
+              line = time.strftime("%Y-%m-%d %H:%M:%S %z ") + line
+              print(line, flush=True)
+              with open(os.path.join(REPORT, f"{STEM}-settle.txt"), "a") as out:
+                  out.write(line + "\n")
+          def run(*argv, timeout=60):
+              try:
+                  done = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
+                  return done.returncode, done.stdout, done.stderr
+              except subprocess.TimeoutExpired:
+                  return None, "", f"no answer within {timeout} s"
+          def devices():
+              _, out, _ = run("xcrun", "simctl", "list", "devices", "--json")
+              try:
+                  listed = json.loads(out)["devices"].get(RUNTIME, [])
+              except (ValueError, KeyError):
+                  listed = []
+              return {name: [d for d in listed if d.get("name") == name] for name in NAMES}
+          def wallpaper():
+              _, out, _ = run("ps", "-A", "-o", "etime=,cputime=,command=")
+              path = f"{WALLPAPER}.app/{WALLPAPER}"
+              rows = [line.split(None, 2) for line in out.splitlines() if path in line]
+              total = 0.0
+              for row in rows:
+                  seconds = 0.0
+                  for part in row[1].split(":"):
+                      seconds = seconds * 60 + float(part)
+                  total += seconds
+              return rows, total
+          def boot():
+              began = time.monotonic()
+              found = devices()
+              for name in NAMES:
+                  states = ", ".join(f"{d['udid']} {d['state']}" for d in found[name])
+                  say(f"{name} before the step: {states or 'not listed'}")
+              for name in NAMES:
+                  for device in found[name]:
+                      left = max(1, int(BOUND - (time.monotonic() - began)))
+                      code, out, err = run("xcrun", "simctl", "bootstatus", device["udid"], "-b",
+                                           timeout=left)
+                      last = ((out + err).strip().splitlines() or [""])[-1]
+                      say(f"{name} booted: exit {code}: {last}")
+              rows, total = wallpaper()
+              for row in rows:
+                  say(f"wallpaper process up {row[0]}, cpu {row[1]}")
+              return began, rows, total
+          def ready():
+              began, _, _ = boot()
+              found = devices()
+              waited = time.monotonic() - began
+              states = "; ".join(
+                  f"{name} " + (", ".join(d["state"] for d in found[name]) or "not listed") for name in NAMES)
+              if all(found[name] and all(d["state"] == "Booted" for d in found[name]) for name in NAMES):
+                  say(f"ready after {waited:.0f} s: {states}")
+              else:
+                  say(f"not ready after {waited:.0f} s of {BOUND}: {states}; the tests start anyway")
+          def settle():
+              began, rows, total = boot()
+              samples = [(time.monotonic(), total)]
+              while True:
+                  now, cpu = samples[-1]
+                  since, then = next(s for s in samples if now - s[0] <= QUIET)
+                  rise, span, waited = cpu - then, now - since, now - began
+                  seen = f"{len(rows)} wallpaper processes used {rise:.2f} s of CPU in {span:.0f} s"
+                  if len(rows) >= len(NAMES) and span >= QUIET - 1 and rise < CALM:
+                      say(f"settled after {waited:.0f} s: {seen}")
+                      return
+                  if waited >= BOUND:
+                      say(f"not settled within {BOUND} s: {seen}; the tests start anyway")
+                      return
+                  time.sleep(5)
+                  rows, total = wallpaper()
+                  samples.append((time.monotonic(), total))
+                  say(f"+{samples[-1][0] - began:.0f} s: {len(rows)} wallpaper processes, cpu {total:.2f} s")
+          def collect(minutes):
+              found = devices()
+              for name in NAMES:
+                  for device in found[name]:
+                      slug = "".join(c if c.isalnum() else "-" for c in name)
+                      code, out, err = run(
+                          "xcrun", "simctl", "spawn", device["udid"], "log", "show", "--last",
+                          f"{minutes}m", "--predicate",
+                          f'eventMessage == "card face loaded" OR process == "{WALLPAPER}"', timeout=120)
+                      with open(os.path.join(REPORT, f"{STEM}-log-{slug}.txt"), "w") as kept:
+                          kept.write(out + err)
+                      loads = out.count("card face loaded")
+                      lines = sum(WALLPAPER in line for line in out.splitlines())
+                      say(f"{name} log kept: exit {code}, {loads} page loads, {lines} wallpaper lines")
+          if sys.argv[1] == "settle":
+              settle()
+          elif sys.argv[1] == "ready":
+              ready()
+          else:
+              collect(int(sys.argv[3]))
+          PY
+          cat > "$RUNNER_TEMP/simulators.sh" <<'SH'
+          # Sourced by a step as `. simulators.sh <stem> [log]`: it starts the CPU sampler, sets the
+          # EXIT trap that stops it, keeps each simulator's log when `log` is given, and exits with
+          # the step's own status.
+          stem="$1"
+          keep_log="${2:-}"
+          stop="$RUNNER_TEMP/$stem-cpu.stop"
+          sampler() {
+            while [ ! -e "$stop" ]; do
+              echo "$(date '+%Y-%m-%d %H:%M:%S %z') $(top -l 2 -s 1 -n 0 | grep '^CPU usage' | tail -n 1)"
+              ps -A -o cputime=,pid=,comm= | grep -E 'PosterBoard|WebKit|DeckStreak|Harness|SpringBoard|backboardd|testmanagerd' | sed 's/^/  /'
+              sleep 1
+            done
+          }
+          finish() {
+            status=$?
+            set +e
+            touch "$stop"
+            wait
+            if [ -n "$keep_log" ]; then
+              python3 "$RUNNER_TEMP/simulators.py" collect "$stem" "$(( ($(date +%s) - began) / 60 + 2 ))"
+            fi
+            exit "$status"
+          }
+          began=$(date +%s)
+          (set +e; sampler) > "$REPORT/$stem-cpu.txt" 2>&1 &
+          trap finish EXIT
+          SH
+          . "$RUNNER_TEMP/simulators.sh" release
+          python3 "$RUNNER_TEMP/simulators.py" ready release || true
           started=$(date +%s)
           xcodebuild test -project ios/Harness.xcodeproj -scheme Harness -configuration Release \
             -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
@@ -484,6 +627,14 @@ jobs:
         id: app-tests
         run: |
           "$RUNNER_TEMP/xcodegen/bin/xcodegen" generate --spec ios/app.yml
+          # The settling run the measurements step wrote (SPEC-358 A12): both simulators booted
+          # before the tests, and the CPU sampled until the step ends. It decides nothing.
+          if [ -f "$RUNNER_TEMP/simulators.sh" ]; then
+            . "$RUNNER_TEMP/simulators.sh" app
+            python3 "$RUNNER_TEMP/simulators.py" ready app || true
+          else
+            echo "no settling run: the measurements step did not write one; the tests start anyway"
+          fi
           started=$(date +%s)
           xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug \
             -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
@@ -525,120 +676,16 @@ jobs:
         if: ${{ !cancelled() && steps.app-tests.outcome != 'skipped' }}
         run: |
           cp -R engine-artifact/review-fixture "$RUNNER_TEMP/review-actions-fixture"
-          # The settling run (SPEC-358 A12). Before the tests, both simulators are booted and their
-          # wallpaper processes get up to 300 s to go quiet; the CPU is sampled every few seconds
-          # until the step ends; and at its end each simulator's log of the card's page loads and
-          # of its wallpaper process is kept beside the report. None of it changes a test, its
-          # rows, its bound or its destinations, and none of it decides the step: the step exits
-          # with the test command's status, and a settle that runs out starts the tests all the same.
-          stop="$RUNNER_TEMP/review-actions-cpu.stop"
-          cat > "$RUNNER_TEMP/review-actions-simulators.py" <<'PY'
-          import json, os, subprocess, sys, time
-          REPORT = os.environ["REPORT"]
-          NAMES = [os.environ["IPHONE_SIM"], os.environ["IPAD_SIM"]]
-          RUNTIME = "com.apple.CoreSimulator.SimRuntime.iOS-" + os.environ["SIM_OS"].replace(".", "-")
-          WALLPAPER = "PosterBoard"
-          # The settle's bound and quiet span in seconds, and the CPU seconds the quiet span may hold.
-          BOUND, QUIET, CALM = 300, 30, 1.0
-          def say(line):
-              line = time.strftime("%Y-%m-%d %H:%M:%S %z ") + line
-              print(line, flush=True)
-              with open(os.path.join(REPORT, "review-actions-settle.txt"), "a") as out:
-                  out.write(line + "\n")
-          def run(*argv, timeout=60):
-              try:
-                  done = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
-                  return done.returncode, done.stdout, done.stderr
-              except subprocess.TimeoutExpired:
-                  return None, "", f"no answer within {timeout} s"
-          def devices():
-              _, out, _ = run("xcrun", "simctl", "list", "devices", "--json")
-              try:
-                  listed = json.loads(out)["devices"].get(RUNTIME, [])
-              except (ValueError, KeyError):
-                  listed = []
-              return {name: [d for d in listed if d.get("name") == name] for name in NAMES}
-          def wallpaper():
-              _, out, _ = run("ps", "-A", "-o", "etime=,cputime=,command=")
-              path = f"{WALLPAPER}.app/{WALLPAPER}"
-              rows = [line.split(None, 2) for line in out.splitlines() if path in line]
-              total = 0.0
-              for row in rows:
-                  seconds = 0.0
-                  for part in row[1].split(":"):
-                      seconds = seconds * 60 + float(part)
-                  total += seconds
-              return rows, total
-          def settle():
-              began = time.monotonic()
-              found = devices()
-              for name in NAMES:
-                  states = ", ".join(f"{d['udid']} {d['state']}" for d in found[name])
-                  say(f"{name} before the step: {states or 'not listed'}")
-              for name in NAMES:
-                  for device in found[name]:
-                      left = max(1, int(BOUND - (time.monotonic() - began)))
-                      code, out, err = run("xcrun", "simctl", "bootstatus", device["udid"], "-b",
-                                           timeout=left)
-                      last = ((out + err).strip().splitlines() or [""])[-1]
-                      say(f"{name} booted: exit {code}: {last}")
-              rows, total = wallpaper()
-              for row in rows:
-                  say(f"wallpaper process up {row[0]}, cpu {row[1]}")
-              samples = [(time.monotonic(), total)]
-              while True:
-                  now, cpu = samples[-1]
-                  since, then = next(s for s in samples if now - s[0] <= QUIET)
-                  rise, span, waited = cpu - then, now - since, now - began
-                  seen = f"{len(rows)} wallpaper processes used {rise:.2f} s of CPU in {span:.0f} s"
-                  if len(rows) >= len(NAMES) and span >= QUIET - 1 and rise < CALM:
-                      say(f"settled after {waited:.0f} s: {seen}")
-                      return
-                  if waited >= BOUND:
-                      say(f"not settled within {BOUND} s: {seen}; the tests start anyway")
-                      return
-                  time.sleep(5)
-                  rows, total = wallpaper()
-                  samples.append((time.monotonic(), total))
-                  say(f"+{samples[-1][0] - began:.0f} s: {len(rows)} wallpaper processes, cpu {total:.2f} s")
-          def collect(minutes):
-              found = devices()
-              for name in NAMES:
-                  for device in found[name]:
-                      slug = "".join(c if c.isalnum() else "-" for c in name)
-                      code, out, err = run(
-                          "xcrun", "simctl", "spawn", device["udid"], "log", "show", "--last",
-                          f"{minutes}m", "--predicate",
-                          f'eventMessage == "card face loaded" OR process == "{WALLPAPER}"', timeout=120)
-                      with open(os.path.join(REPORT, f"review-actions-log-{slug}.txt"), "w") as kept:
-                          kept.write(out + err)
-                      loads = out.count("card face loaded")
-                      lines = sum(WALLPAPER in line for line in out.splitlines())
-                      say(f"{name} log kept: exit {code}, {loads} page loads, {lines} wallpaper lines")
-          if sys.argv[1] == "settle":
-              settle()
-          else:
-              collect(int(sys.argv[2]))
-          PY
-          sampler() {
-            while [ ! -e "$stop" ]; do
-              echo "$(date '+%Y-%m-%d %H:%M:%S %z') $(top -l 2 -s 1 -n 0 | grep '^CPU usage' | tail -n 1)"
-              ps -A -o cputime=,pid=,comm= | grep -E 'PosterBoard|WebKit|DeckStreak|SpringBoard|backboardd|testmanagerd' | sed 's/^/  /'
-              sleep 1
-            done
-          }
-          finish() {
-            status=$?
-            set +e
-            touch "$stop"
-            wait
-            python3 "$RUNNER_TEMP/review-actions-simulators.py" collect "$(( ($(date +%s) - began) / 60 + 2 ))"
-            exit "$status"
-          }
-          began=$(date +%s)
-          (set +e; sampler) > "$REPORT/review-actions-cpu.txt" 2>&1 &
-          trap finish EXIT
-          python3 "$RUNNER_TEMP/review-actions-simulators.py" settle || true
+          # The settling run the measurements step wrote (SPEC-358 A12): both simulators booted
+          # and their wallpaper processes given up to 300 s to go quiet before the tests, the CPU
+          # sampled until the step ends, and each simulator's log of the card's page loads and of
+          # its wallpaper process kept beside the report. It decides nothing.
+          if [ -f "$RUNNER_TEMP/simulators.sh" ]; then
+            . "$RUNNER_TEMP/simulators.sh" review-actions log
+            python3 "$RUNNER_TEMP/simulators.py" settle review-actions || true
+          else
+            echo "no settling run: the measurements step did not write one; the tests start anyway"
+          fi
           started=$(date +%s)
           TEST_RUNNER_DS_REVIEW_FIXTURE="$RUNNER_TEMP/review-actions-fixture" xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug \
             -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
