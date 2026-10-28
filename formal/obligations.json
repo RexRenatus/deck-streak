@@ -50,6 +50,7 @@
         {"kind": "tla", "entry": "tla/OpLog", "property": "RetractOnlyOwn", "state": "present"},
         {"kind": "tla", "entry": "tla/OpLog", "property": "LocalIsPrefix", "state": "present"},
         {"kind": "tla", "entry": "tla/OpLog", "property": "UndoOwnOnly", "state": "present"},
+        {"kind": "tla", "entry": "tla/OpLog", "property": "CausalHlcAtMake", "state": "present"},
         {"kind": "lean", "entry": "lean/SyncClock", "property": "tick_gt_seen", "state": "present"},
         {"kind": "lean", "entry": "lean/SyncClock", "property": "tick_ge_pt", "state": "present"},
         {"kind": "lean", "entry": "lean/SyncClock", "property": "run_strict_mono", "state": "present"},
@@ -88,7 +89,8 @@
         {"kind": "tla", "entry": "tla/OpLog", "property": "RevokedDeviceRefused", "state": "present"},
         {"kind": "tla", "entry": "tla/OpLog", "property": "RetractOnlyOwn", "state": "present"},
         {"kind": "tla", "entry": "tla/OpLog", "property": "LocalIsPrefix", "state": "present"},
-        {"kind": "tla", "entry": "tla/OpLog", "property": "UndoOwnOnly", "state": "present"}
+        {"kind": "tla", "entry": "tla/OpLog", "property": "UndoOwnOnly", "state": "present"},
+        {"kind": "tla", "entry": "tla/OpLog", "property": "CausalHlcAtMake", "state": "present"}
       ],
       "ties": [],
       "gaps": [
@@ -115,7 +117,8 @@
         {"kind": "tla", "entry": "tla/OpLog", "property": "RevokedDeviceRefused", "state": "present"},
         {"kind": "tla", "entry": "tla/OpLog", "property": "RetractOnlyOwn", "state": "present"},
         {"kind": "tla", "entry": "tla/OpLog", "property": "LocalIsPrefix", "state": "present"},
-        {"kind": "tla", "entry": "tla/OpLog", "property": "UndoOwnOnly", "state": "present"}
+        {"kind": "tla", "entry": "tla/OpLog", "property": "UndoOwnOnly", "state": "present"},
+        {"kind": "tla", "entry": "tla/OpLog", "property": "CausalHlcAtMake", "state": "present"}
       ],
       "ties": [],
       "gaps": [
@@ -312,7 +315,8 @@
         {"kind": "tla", "entry": "tla/OpLog", "property": "RevokedDeviceRefused", "state": "present"},
         {"kind": "tla", "entry": "tla/OpLog", "property": "RetractOnlyOwn", "state": "present"},
         {"kind": "tla", "entry": "tla/OpLog", "property": "LocalIsPrefix", "state": "present"},
-        {"kind": "tla", "entry": "tla/OpLog", "property": "UndoOwnOnly", "state": "present"}
+        {"kind": "tla", "entry": "tla/OpLog", "property": "UndoOwnOnly", "state": "present"},
+        {"kind": "tla", "entry": "tla/OpLog", "property": "CausalHlcAtMake", "state": "present"}
       ],
       "ties": [
         {"method": "vectors", "for": "lean/ReplayHistory", "test": "crates/fsrs7/tests/formal_vectors_replay_history.rs::the_history_selection_matches_the_lean_vectors"}

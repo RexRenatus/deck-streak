@@ -14,6 +14,7 @@
 \* @phx property RetractOnlyOwn ramp=report
 \* @phx property LocalIsPrefix ramp=report
 \* @phx property UndoOwnOnly ramp=report
+\* @phx property CausalHlcAtMake ramp=report
 \* @phx witness witness/an-answer-written-before-its-commit.cfg kills=NoLostReview
 \* @phx witness witness/a-pending-op-dropped-on-send.cfg kills=NoLostReview
 \* @phx witness witness/a-judge-with-no-origin-seq-key.cfg kills=ExactlyOnce
@@ -29,6 +30,7 @@
 \* @phx witness witness/a-pull-that-skips-never-reaches-the-head.cfg kills=Convergence
 \* @phx witness witness/a-retract-naming-another-devices-operation.cfg kills=RetractOnlyOwn
 \* @phx witness witness/an-undo-blind-to-another-devices-write.cfg kills=UndoOwnOnly
+\* @phx witness witness/a-clock-past-only-the-oldest-clock-it-saw.cfg kills=CausalHlcAtMake
 \*
 \* The operation log, ahead of its code (SPEC-504, ADR-522). The server keeps one log of
 \* operations; each device keeps a durable queue of the operations it made and has not had
@@ -114,7 +116,9 @@ Winner(S) == CHOOSE w \in S : \A x \in S \ {w} : KeyLt(x, w)
 WinnerVal(S) == IF S = {} THEN "init" ELSE Winner(S).val
 
 SeenOf(d) == LET hs == {local[d][i].hlc : i \in DOMAIN local[d]}
-             IN IF hs = {} THEN 0 ELSE CHOOSE m \in hs : \A x \in hs : x <= m
+             IN IF hs = {} THEN 0
+                ELSE IF Bug = "SeenLeast" THEN CHOOSE m \in hs : \A x \in hs : m <= x
+                ELSE CHOOSE m \in hs : \A x \in hs : x <= m
 
 \* The device's apply of an edit or an undo to one field's register, in arrival order.
 RECURSIVE RegFold(_, _, _, _)
@@ -386,5 +390,12 @@ UndoOwnOnly ==
     \A d \in Devices, f \in Fields :
         (\E i \in DOMAIN local[d] : local[d][i].kind = "undo" /\ local[d][i].field = f)
             => RegVal(d, f) = WinnerVal(LiveEdits(local[d], f))
+
+\* The causal claim read from the state: the step that makes an operation gives it a clock past
+\* every clock in its device's pulled copy at that step. It reads the copy, never the operation's
+\* own `saw`, so a wrong seen clock written into `saw` cannot agree with itself here.
+CausalHlcAtMake ==
+    [][\A o \in made' \ made :
+          \A i \in DOMAIN local[o.origin] : local[o.origin][i].hlc < o.hlc]_vars
 
 =============================================================================
