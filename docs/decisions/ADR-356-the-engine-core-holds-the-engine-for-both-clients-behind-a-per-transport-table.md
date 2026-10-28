@@ -288,3 +288,13 @@ through `crates/engine-core/src/replay.rs` alone and held by the graph census
 
 Chosen against:
 - Each client adapter depending on the FSRS-7 crate: two joins of one rule, and the web join cannot be tested natively against the engine.
+
+## Amendment: the native column admits the normal sync (SPEC-503)
+
+ADR-521 D1 amends D2. `BackendSyncService.SyncCollection` (1,5) is marked for both transports, so
+the native adapter's allow-list carries it, and the parity test holds the eleven pairs equal to the
+native column. The core's guard, handshake and media refusal for (1,5) are unchanged and now run
+for both clients. The rest of D2 stands.
+
+- (1,5) in both columns: chosen, because `run` already holds every rule the normal sync needs.
+- A native-only sync door: rejected, because it would copy `run`'s order outside the table.
