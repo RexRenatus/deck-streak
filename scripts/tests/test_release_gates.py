@@ -39,7 +39,7 @@ GATE_RUN = "python3 scripts/release_gates.py"
 PUBLISH_RUN = 'gh release edit "$GITHUB_REF_NAME" --draft=false'
 TAG = "v9.9.9"
 DIGEST = "0123456789abcdef" * 4
-HEX64 = re.compile(r"[0-9a-f]{64}")
+STAMP = re.compile(r"sha256:[0-9a-f]{64}")
 # The gates in the record's order (SPEC-502 R1).
 ORDER = (
     "model",
@@ -447,10 +447,14 @@ class TheLeanVectors(unittest.TestCase):
         self.assertEqual(header["entry"], "ReleaseGates")
         self.assertEqual(header["covers"], "scripts/release_gates.py")
         self.assertEqual(header["anchor"], "verdict")
-        self.assertRegex(header["digest"], HEX64)
-        self.assertNotEqual(header["digest"], "0" * 64, "the vectors were written unstamped")
+        self.assertIsNotNone(STAMP.fullmatch(header["digest"]), header["digest"])
+        self.assertNotEqual(
+            header["digest"], "sha256:" + "0" * 64, "the vectors were written unstamped"
+        )
         self.assertEqual(
-            header["digest"], span_digest(SCRIPT, "verdict"), "the entry's stamp is stale"
+            header["digest"],
+            "sha256:" + span_digest(SCRIPT, "verdict"),
+            "the entry's stamp is stale",
         )
         vectors = [json.loads(line) for line in lines[1:]]
         self.assertEqual(header["vectors"], len(vectors))
