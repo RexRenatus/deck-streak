@@ -39,7 +39,7 @@ jobs:
           persist-credentials: false
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         run: rustup show
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-nextest,cargo-deny
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
@@ -83,7 +83,7 @@ jobs:
           key: ${{ steps.rust-cache.outputs.cache-primary-key }}
       - name: upload stage logs
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: check-stage-logs-rust
           path: ${{ runner.temp }}/check-logs/
@@ -109,7 +109,7 @@ jobs:
           persist-credentials: false
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         run: rustup show
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-nextest
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
@@ -139,7 +139,7 @@ jobs:
         run: bash scripts/check.sh test-engine
       - name: upload stage logs
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: check-stage-logs-engine-${{ matrix.slice }}
           path: ${{ runner.temp }}/check-logs/
@@ -161,7 +161,7 @@ jobs:
           persist-credentials: false
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         run: rustup show
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-nextest
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
@@ -192,7 +192,7 @@ jobs:
         run: bash scripts/check.sh test-release
       - name: upload stage logs
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: check-stage-logs-release
           path: ${{ runner.temp }}/check-logs/
@@ -206,7 +206,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           package-manager-cache: false
@@ -259,7 +259,7 @@ jobs:
           key: ${{ steps.pnpm-cache.outputs.cache-primary-key }}
       - name: upload stage logs
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: check-stage-logs-web
           path: ${{ runner.temp }}/check-logs/
@@ -276,7 +276,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           package-manager-cache: false
@@ -290,7 +290,7 @@ jobs:
         run: pnpm --dir web/app test:card
       - name: upload the planted suite's results
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: card-sandbox-results
           path: web/app/test-results/
@@ -313,7 +313,7 @@ jobs:
         run: rustup show
       # SPEC-055 A3 runs cargo deny from the python stage: every advisory exception and allowed
       # git source in deny.toml must still be live in the graph.
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-deny
       - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
@@ -351,7 +351,7 @@ jobs:
         run: bash scripts/check.sh python scrub secrets
       - name: upload stage logs
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: check-stage-logs-hygiene
           path: ${{ runner.temp }}/check-logs/
@@ -414,17 +414,17 @@ jobs:
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         if: ${{ steps.plan.outputs.rust == 'true' }}
         run: rustup show
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         if: ${{ steps.plan.outputs.rust == 'true' }}
         with:
           tool: cargo-mutants@27.1.0
           fallback: none
       # cargo-mutants reads .cargo/mutants.toml, whose test tool is nextest; the listing runs no
       # test and builds nothing, but it carries the same tool and bounds as every other command.
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         if: ${{ steps.plan.outputs.rust == 'true' }}
         with:
-          tool: cargo-nextest@0.9.146
+          tool: cargo-nextest@0.9.149
           fallback: none
       - name: the diff's mutants, as cargo-mutants itself lists them
         if: ${{ steps.plan.outputs.rust == 'true' }}
@@ -457,7 +457,7 @@ jobs:
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
         run: python3 scripts/mutation_carry.py base --plan "$RUNNER_TEMP/mutation/plan.json" --pull-request "$PULL_REQUEST" --run-id "$RUN_ID" --repository "$REPO" --head-sha "$HEAD_SHA" --out "$RUNNER_TEMP/carry-base" --github-output "$GITHUB_OUTPUT"
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: ${{ steps.base.outputs.base_run != '' }}
         continue-on-error: true
         timeout-minutes: 5
@@ -467,7 +467,7 @@ jobs:
           run-id: ${{ steps.base.outputs.base_run }}
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: ${{ steps.base.outputs.base_run != '' && steps.base.outputs.base_manifest == 'true' }}
         continue-on-error: true
         timeout-minutes: 5
@@ -477,7 +477,7 @@ jobs:
           run-id: ${{ steps.base.outputs.base_run }}
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: ${{ steps.base.outputs.base_run != '' && steps.base.outputs.base_manifest != 'true' }}
         continue-on-error: true
         timeout-minutes: 5
@@ -509,7 +509,7 @@ jobs:
         run: python3 scripts/mutation_rows.py legs --rows-from "$RUNNER_TEMP/mutation/plan.json"
       - name: keep the plan, the diff and the listing for every job after it
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mutation-plan
           path: ${{ runner.temp }}/mutation/
@@ -534,7 +534,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: mutation-plan
           path: ${{ runner.temp }}/mutation
@@ -572,15 +572,15 @@ jobs:
       - name: the locked dependency graph, every target's packages (the census reads it offline at the baseline)
         if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
         run: cargo fetch --locked --manifest-path Cargo.toml
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
         with:
           tool: cargo-mutants@27.1.0
           fallback: none
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
         with:
-          tool: cargo-nextest@0.9.146
+          tool: cargo-nextest@0.9.149
           fallback: none
       # The leg's own unmutated baseline, inside the memory scope and bounded by SPEC-480 section 9's
       # budget, before cargo-mutants, which then skips its own. Its exit and its log are recorded under
@@ -613,7 +613,7 @@ jobs:
           echo "cargo-mutants exited $rc"
       - name: keep the shard's report
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mutation-rust-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/shards/
@@ -635,7 +635,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: mutation-plan
           path: ${{ runner.temp }}/mutation
@@ -658,7 +658,7 @@ jobs:
           echo "mutation-python exited $rc"
       - name: keep the shard's report
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mutation-python-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/python-shards/
@@ -683,7 +683,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: mutation-plan
           path: ${{ runner.temp }}/mutation
@@ -706,7 +706,7 @@ jobs:
           echo "mutation-python exited $rc"
       - name: keep the shard's report
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mutation-python-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/python-shards/
@@ -735,7 +735,7 @@ jobs:
           # The retirement check compares the rows at HEAD^1, the base's tip, with HEAD's.
           fetch-depth: 2
           persist-credentials: false
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: mutation-plan
           path: ${{ runner.temp }}/mutation
@@ -787,7 +787,7 @@ jobs:
         run: python3 scripts/mutation_rows.py retired --base HEAD^1
       - name: keep the rows leg's report
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mutation-rows-leg-${{ matrix.leg }}
           path: ${{ runner.temp }}/rows/
@@ -809,7 +809,7 @@ jobs:
       # itself when a download is by name, merged, or matches one artifact, and into a directory per
       # artifact only for two or more, so `mutation-*` laid the plan out by how many jobs had
       # uploaded (SPEC-126, #351). `mutation-web` is not read and is not waited for.
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: mutation-plan
           path: ${{ runner.temp }}/reports/mutation-plan
@@ -817,7 +817,7 @@ jobs:
       # when the plan selected rows. One pattern, merged, lays one leg and many at the same paths, and
       # a leg that uploaded nothing is named by the merge below, never by a failed download
       # (SPEC-417 R9).
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: ${{ needs.mutation-plan.outputs.rows == 'true' }}
         with:
           pattern: mutation-rows-leg-*
@@ -825,12 +825,12 @@ jobs:
           path: ${{ runner.temp }}/reports/mutation-rows
       # Each shard's artifact holds its own `mutation-rust-shard-<i>/` directory, so merging puts
       # one shard and many at the same paths; no shard at all matches nothing and is not an error.
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: mutation-rust-shard-*
           merge-multiple: true
           path: ${{ runner.temp }}/reports
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: mutation-python-shard-*
           merge-multiple: true
@@ -868,7 +868,7 @@ jobs:
         run: python3 scripts/mutation-verdict.py manifest --plan "$RUNNER_TEMP/reports/mutation-plan/plan.json" --python "$RUNNER_TEMP/reports" --out "$RUNNER_TEMP/outcomes/mutation-outcomes.json" --run-id "$GITHUB_RUN_ID"
       - name: keep the run's outcomes for a later release run's carry
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mutation-outcomes
           path: ${{ runner.temp }}/outcomes/
@@ -909,7 +909,7 @@ jobs:
         run: python3 scripts/mutation-verdict.py plan --base HEAD^1 --head HEAD --out "$RUNNER_TEMP/mutation" --event "$EVENT" --base-ref "$BASE_REF" --subject "$SUBJECT"
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         if: ${{ steps.plan.outputs.web == 'true' }}
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         if: ${{ steps.plan.outputs.web == 'true' }}
         with:
           node-version-file: .nvmrc
@@ -953,7 +953,7 @@ jobs:
           echo "StrykerJS exited $rc"
       - name: keep this shard's record and report
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mutation-web-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/shards/
@@ -982,7 +982,7 @@ jobs:
         run: python3 scripts/mutation-verdict.py plan --base HEAD^1 --head HEAD --out "$RUNNER_TEMP/mutation" --event "$EVENT" --base-ref "$BASE_REF" --subject "$SUBJECT"
       # Each shard's artifact holds its own directory named by its index, so merging lays one shard
       # and three at the same paths; a shard that kept nothing is named by the union, not here.
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: mutation-web-shard-*
           merge-multiple: true
@@ -995,7 +995,7 @@ jobs:
         run: python3 scripts/mutation-verdict.py judge --plan "$RUNNER_TEMP/mutation/plan.json" --class web --stryker "$RUNNER_TEMP/mutation/stryker/mutation.json"
       - name: keep the plan and the report
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mutation-web
           path: ${{ runner.temp }}/mutation/
@@ -1060,7 +1060,7 @@ jobs:
       - name: build the module and its bindings
         run: bash scripts/web-engine-build.sh --cc clang-18 --ar llvm-ar-18 --out target/web-engine
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           package-manager-cache: false
@@ -1086,7 +1086,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: zizmor
       - name: zizmor audits the workflows themselves
