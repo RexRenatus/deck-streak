@@ -190,7 +190,7 @@ fn id_bytes(token: &str) -> Option<[u8; ID_BYTES]> {
         _ => None,
     };
     let mut id = [0_u8; ID_BYTES];
-    for (byte, pair) in id.iter_mut().zip(digits.chunks_exact(2)) {
+    for (byte, pair) in id.iter_mut().zip(digits.as_chunks::<2>().0) {
         *byte = (value(pair[0])? << 4) | value(pair[1])?;
     }
     Some(id)
