@@ -35,7 +35,6 @@ PLANNED_ENTRIES = {
     "tla/AnkiCutover": ("O8",),
     "lean/CompanionDecide": ("O6",),
     "lean/ScheduledState": ("O6",),
-    "lean/ReleaseGates": ("O17",),
     "lean/SyncClock": ("O1", "O16"),
     "lean/ReviewKey": ("O1", "O16"),
     "lean/FieldMerge": ("O1", "O16"),
@@ -110,7 +109,15 @@ REPLAY_TIE = {
     "test": "crates/fsrs7/tests/formal_vectors_replay_history.rs"
     "::the_history_selection_matches_the_lean_vectors",
 }
-# The 43 existing entries' dispositions.
+# The release gates' entry (SPEC-502): present, and tied by the release lane's Python vectors test.
+RELEASE_GATES = "lean/ReleaseGates"
+RELEASE_GATES_TIE = {
+    "method": "vectors",
+    "for": RELEASE_GATES,
+    "test": "scripts/tests/test_release_gates.py"
+    "::TheLeanVectors.test_every_vector_is_the_scripts_verdict",
+}
+# The 44 existing entries' dispositions.
 DISPOSITIONS = {
     "retire": ("tla/FullSyncChoice", "tla/SyncSnapshotWindow"),
     "re-point": (
@@ -158,6 +165,7 @@ DISPOSITIONS = {
             "OpenLapse",
             "RecordClassBinding",
             "ReleaseCarry",
+            "ReleaseGates",
             "ReplayHistory",
             "RoadToC2",
             "SkipTariff",
@@ -781,7 +789,8 @@ class TheFormalLedger(unittest.TestCase):
         obligations = document["obligations"]
         self.assertEqual([item["id"] for item in obligations], IDS)
         self.assertEqual(
-            {item["id"]: item["status"] for item in obligations}, dict.fromkeys(IDS, "planned")
+            {item["id"]: item["status"] for item in obligations},
+            dict.fromkeys(IDS, "planned") | {"O17": "tied"},
         )
         planned, harnesses, companions, present_names = {}, {}, {}, {}
         for item in obligations:
@@ -800,15 +809,23 @@ class TheFormalLedger(unittest.TestCase):
         self.assertEqual(harnesses, {harness: {item} for harness, item in HARNESSES.items()})
         self.assertEqual(companions, COMPANIONS)
         headers = header_names(REPO)
-        self.assertEqual(set(present_names), {"O1a", "O11"})
-        for identity, entries in (("O1a", SYNC_MODELS), ("O11", ENGINE_TIED)):
+        self.assertEqual(set(present_names), {"O1a", "O11", "O17"})
+        for identity, entries in (
+            ("O1a", SYNC_MODELS),
+            ("O11", ENGINE_TIED),
+            ("O17", (RELEASE_GATES,)),
+        ):
             names = present_names[identity]
             self.assertEqual(len(names), len(set(names)), f"{identity} names an artifact twice")
             self.assertEqual(set(names), {(e, p) for e in entries for p in headers[e]})
-        self.assertEqual([tie for item in obligations for tie in item["ties"]], [REPLAY_TIE])
+        self.assertEqual(
+            [tie for item in obligations for tie in item["ties"]], [REPLAY_TIE, RELEASE_GATES_TIE]
+        )
         examined("planned entries", planned)
         examined("planned harnesses", harnesses)
-        examined("present artifacts", present_names["O1a"] + present_names["O11"])
+        examined(
+            "present artifacts", present_names["O1a"] + present_names["O11"] + present_names["O17"]
+        )
 
     def test_the_phase_sets_list_o1a_and_o1_to_o11(self):
         document = load()
@@ -873,7 +890,15 @@ class TheFormalLedger(unittest.TestCase):
         for tie in examined("committed ties", ties):
             path, name = tie["test"].split("::")
             text = (REPO / path).read_text(encoding="utf-8")
-            self.assertRegex(text, rf"#\[test\]\s*fn {name}\(", tie)
+            if path.endswith(".py"):
+                # A Python tie names `<Class>.<method>`: a test method of a top-level class.
+                owner, method = name.split(".")
+                self.assertTrue(method.startswith("test"), tie)
+                body = re.search(rf"(?ms)^class {owner}\(.*?(?=^\S|\Z)", text)
+                self.assertIsNotNone(body, tie)
+                self.assertRegex(body.group(0), rf"(?m)^    def {method}\(self", tie)
+            else:
+                self.assertRegex(text, rf"#\[test\]\s*fn {name}\(", tie)
         arms = {"tie-method", "tie-without-for", "tie-for-unknown", "undefined-test"}
         refusals = [r for r in ledger.check(document, REPO) if r.arm in arms | {"untied-artifact"}]
         self.assertEqual(refusals, [])
@@ -887,17 +912,20 @@ class TheFormalLedger(unittest.TestCase):
         expected = {
             entry: disposition for disposition, entries in DISPOSITIONS.items() for entry in entries
         }
-        self.assertEqual(len(expected), 43)
-        self.assertEqual(set(tree), set(expected), "the tree's entries are not the 43 designed")
+        self.assertEqual(len(expected), 44)
+        self.assertEqual(set(tree), set(expected), "the tree's entries are not the 44 designed")
         rows = {item["entry"]: item for item in examined("rows", document["entries"])}
         self.assertEqual(len(rows), len(document["entries"]), "an entry has two rows")
         self.assertEqual({entry: item["disposition"] for entry, item in rows.items()}, expected)
         for entry, item in rows.items():
-            linked = (
-                {"O1a", "O11"}
-                if entry in SYNC_MODELS
-                else ({"O11"} if entry in ENGINE_TIED else set())
-            )
+            if entry in SYNC_MODELS:
+                linked = {"O1a", "O11"}
+            elif entry in ENGINE_TIED:
+                linked = {"O11"}
+            elif entry == RELEASE_GATES:
+                linked = {"O17"}
+            else:
+                linked = set()
             self.assertEqual(set(item["obligations"]), linked, entry)
             self.assertTrue(item["act"].strip(), entry)
         arms = {"entry-without-row", "row-without-entry", "duplicate-row", "row-obligations"}
