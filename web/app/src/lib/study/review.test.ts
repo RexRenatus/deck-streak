@@ -274,10 +274,10 @@ describe('the review', () => {
 
     // the frame refuses the card; its controls stay, and the status region says why
     expect(review.controls).toEqual(['show-answer', 'bury', 'flag']);
-    expect([review.phase, review.escaped, review.status]).toEqual(['question', true, 'escaped']);
+    expect([review.phase, review.escaped, review.status]).toEqual(['question', true, 'style-closed']);
     review.act('show-answer');
     expect(review.controls).toEqual(['again', 'good', 'bury', 'flag']);
-    expect([review.phase, review.escaped, review.status]).toEqual(['answer', true, 'escaped']);
+    expect([review.phase, review.escaped, review.status]).toEqual(['answer', true, 'style-closed']);
     review.act('good');
     await review.settled();
     expect(client.calls).toEqual(['card', 'rate 1 3 0', 'card']);
@@ -459,7 +459,7 @@ describe('the review', () => {
     await review.settled();
     expect([review.side, review.escaped, review.status]).toEqual(['question', false, null]);
     review.act('show-answer');
-    expect([review.side, review.escaped, review.status]).toEqual(['answer', true, 'escaped']);
+    expect([review.side, review.escaped, review.status]).toEqual(['answer', true, 'reparse-element']);
   });
 
   it('the frame shows the faces the engine completed', async () => {

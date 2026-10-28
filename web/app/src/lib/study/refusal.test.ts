@@ -20,7 +20,14 @@ const EXPECTED = {
   'not-shown': 'study_refused_not_shown',
   'undo-synced': 'undo_synced',
   'not-undoable': 'undo_gone',
-  escaped: 'study_card_escaped',
+  // SPEC-505 R6, A2: each frame check's reason has its own message
+  'class-list': 'study_card_refused_class_list',
+  'style-closed': 'study_card_refused_style_closed',
+  'reparse-element': 'study_card_refused_reparse_element',
+  'reparse-srcset': 'study_card_refused_reparse_srcset',
+  'reparse-target': 'study_card_refused_reparse_target',
+  'body-attributes': 'study_card_refused_body_attributes',
+  'host-readback': 'study_card_refused_host_readback',
   done: 'study_done'
 };
 
@@ -51,6 +58,31 @@ describe('the review status', () => {
         expect(table[key]?.length ?? 0, `${locale} ${key}`).toBeGreaterThan(0);
         expect(statusText(status as keyof typeof EXPECTED), `${locale} ${status}`).toBe(table[key]);
       }
+      // the one sentence for every refused card is gone, replaced by the reasons' own
+      expect(Object.keys(table), locale).not.toContain('study_card_escaped');
     }
+  });
+
+  // SPEC-505 R7, A4; ADR-523 D5. The iPhone and iPad card face shows its refusal in DeckStreak's words,
+  // through the words file, and never prints the error's Swift case name.
+  it('the iPhone and iPad card face words a refusal through its mapper, never a Swift case name', () => {
+    const face = readFileSync(fileURLToPath(new URL('../../../../../ios/App/Sources/CardFaceView.swift', import.meta.url)), 'utf8');
+    const words = readFileSync(fileURLToPath(new URL('../../../../../ios/App/Sources/CardRefusalWords.swift', import.meta.url)), 'utf8');
+    const judged = (text: string) => ({
+      printsTheCase: /String\(\s*describing:/.test(text),
+      wordsTheRefusal: /CardRefusalWords\.text\(\s*of:\s*error\s*\)/.test(text),
+      announcesIt: /CardRefusalWords\.announce\(/.test(text)
+    });
+    expect(judged(face)).toEqual({ printsTheCase: false, wordsTheRefusal: true, announcesIt: true });
+    // the words file maps every case with a switch over the refusal, and prints no case either
+    expect(words).toMatch(/switch refusal \{/);
+    expect(words).toMatch(/case \.ruleListDidNotCompile:/);
+    expect(judged(words).printsTheCase).toBe(false);
+
+    // the control: the card face as it was, printing the case, is refused
+    const planted = face.replace(/refusal = CardRefusalWords\.text\(of: error\)/, 'refusal = String(describing: error)');
+    expect(planted).not.toBe(face);
+    expect(judged(planted).printsTheCase).toBe(true);
+    console.log('examined 2 Swift files');
   });
 });

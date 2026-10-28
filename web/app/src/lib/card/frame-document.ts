@@ -11,6 +11,20 @@ import { FRAME_POLICY } from './policy.js';
 // so is a card whose re-parsed document holds a `srcset` or a `target` on any element, the root
 // included.
 
+/** Why the frame refuses a card: each check's own reason, in the order the checks run. */
+export const REFUSAL_REASONS = [
+  'class-list',
+  'style-closed',
+  'reparse-element',
+  'reparse-srcset',
+  'reparse-target',
+  'body-attributes',
+  'host-readback'
+] as const;
+
+/** One check's reason for refusing a card. */
+export type RefusalReason = (typeof REFUSAL_REASONS)[number];
+
 /** The frame document `CardFrame` sets as its `srcdoc`, or the refusal of a card that escaped it. */
 export type FrameDocument =
   | { srcdoc: string; refused?: undefined }

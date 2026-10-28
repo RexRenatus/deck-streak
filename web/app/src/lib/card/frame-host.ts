@@ -1,4 +1,4 @@
-import type { FrameDocument } from './frame-document';
+import { frameDocument, type FrameDocument } from './frame-document';
 import { HOST_POLICY } from './policy.js';
 
 // SPEC-407 R1 to R3; ADR-421 D1, D2, D4. The card frame's host: the document `CardFrame` sets on
@@ -49,4 +49,10 @@ export function frameHost(card: string, title: string, policy: string = HOST_POL
     hosted(host) === card &&
     again.body.children[0].getAttribute('title') === title;
   return kept ? { srcdoc: host } : { refused: 'escaped' };
+}
+
+/** The card as its frame shows it: the frame document, carried by its host. */
+export function frameCard(html: string, css: string, title: string, classes?: string): FrameDocument {
+  const doc = frameDocument(html, css, classes);
+  return doc.srcdoc === undefined ? doc : frameHost(doc.srcdoc, title);
 }

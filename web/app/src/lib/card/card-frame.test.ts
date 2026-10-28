@@ -4,6 +4,7 @@
 import { render } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 import CardFrame from './CardFrame.svelte';
+import { REFUSAL_REASONS } from './frame-document';
 
 // SPEC-341 R1, R4, R6, A6; ADR-352 D1, D2. A card face renders in one sandboxed iframe with no
 // token, whose document is the frame document, and with nothing that would widen it: no `src`,
@@ -32,7 +33,7 @@ describe('the card frame', () => {
     const marked = [...refused.container.querySelectorAll('iframe')];
     expect(marked).toHaveLength(1);
     expect(marked[0].getAttributeNames().sort()).toEqual(['data-card-refused', 'sandbox', 'title']);
-    expect(marked[0].getAttribute('data-card-refused')).toBe('escaped');
+    expect(marked[0].getAttribute('data-card-refused')).toBe('style-closed');
     expect(marked[0].getAttribute('sandbox')).toBe('');
   });
 
@@ -67,6 +68,27 @@ describe('the card frame', () => {
     expect(inner[0].getAttribute('title')).toBe('The card');
     expect(inner[0].getAttribute('srcdoc')?.startsWith(OPENING)).toBe(true);
     expect(cardDocument(frame)).toBe(inner[0].getAttribute('srcdoc'));
+  });
+
+  // SPEC-505 R3, R4, A1; ADR-523 D1. A refused frame's mark is the first failing check's reason,
+  // from the closed list, whichever check refused it: the document's or the host's.
+  it('a card the frame document refuses renders an empty frame marked with its reason', () => {
+    const mutation = '<form><math><mtext></form><form><mglyph><style></math>';
+    const plants: [props: { html: string; css: string; title: string; classes?: string }, reason: string][] = [
+      [{ html: CARD, css: CSS, title: 'The card', classes: 'card card0' }, 'class-list'],
+      [{ html: CARD, css: `${CSS}</style><base href="https://cards.example/">`, title: 'The card' }, 'style-closed'],
+      [{ html: `${mutation}<link rel="preconnect" href="https://cards.example/">`, css: CSS, title: 'The card' }, 'reparse-element'],
+      [{ html: CARD, css: CSS, title: 'The\rcard' }, 'host-readback']
+    ];
+    for (const [props, reason] of plants) {
+      const shown = render(CardFrame, props);
+      const [frame] = [...shown.container.querySelectorAll('iframe')];
+      expect(frame.getAttributeNames().sort(), reason).toEqual(['data-card-refused', 'sandbox', 'title']);
+      expect(frame.getAttribute('data-card-refused'), reason).toBe(reason);
+      expect(REFUSAL_REASONS as readonly string[]).toContain(frame.getAttribute('data-card-refused'));
+      shown.unmount();
+    }
+    console.log(`examined ${plants.length} refused frames`);
   });
 });
 
