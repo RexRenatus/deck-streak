@@ -33,7 +33,7 @@
 \* The operation log, ahead of its code (SPEC-504, ADR-522). The server keeps one log of
 \* operations; each device keeps a durable queue of the operations it made and has not had
 \* answered, a cursor into the log and its pulled copy of it. Nothing in the tree runs this protocol
-\* yet: the sync core that will lands later, and then gains `@phx covers` lines on its judge, the
+\* yet: the sync core that will lands later, and then gains covers lines on its judge, the
 \* writer's commit and the device's pull and verdict handlers, each re-read against this model.
 \*
 \* What the model abstracts, and why:
