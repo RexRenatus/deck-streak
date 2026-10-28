@@ -171,7 +171,9 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
         'Default voice'
       ]);
       const review = page.getByRole('region', { name: 'Review', exact: true });
-      await expect(review.getByRole('status')).toHaveText('No voice on this device for ko-KR.');
+      // the no-voice line, by its text: the update offer below it is a status region of the review too
+      const line = review.getByRole('status').filter({ hasText: 'No voice on this device' });
+      await expect(line).toHaveText('No voice on this device for ko-KR.');
       // the card frame is sandboxed with no script, so the legacy mode audits the screen around it,
       // as the study suite does
       const results = await new AxeBuilder({ page }).withTags(WCAG_22_AA).setLegacyMode().analyze();
