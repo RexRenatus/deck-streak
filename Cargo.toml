@@ -155,7 +155,7 @@ hyper-util = { version = "0.1.21", default-features = false }
 hyper-rustls = { version = "0.27.10", default-features = false }
 rustls = { version = "0.23.45", default-features = false }
 http-body-util = "0.1.5"
-p256 = "0.13.2"
+p256 = "0.14.0"
 web-push-native = { version = "0.5.0", default-features = false }
 base64ct = { version = "1.8.3", default-features = false, features = ["alloc"] }
 hkdf = "0.13.0"
@@ -177,6 +177,14 @@ aes-gcm = "0.11.1"
 [patch."https://github.com/ankitects/anki.git"]
 anki = { git = "https://github.com/RexRenatus/anki.git", rev = "a078820fd4fec3068ed7863344cd50effddabc6b" }
 anki_proto = { git = "https://github.com/RexRenatus/anki.git", rev = "a078820fd4fec3068ed7863344cd50effddabc6b" }
+
+# ADR-513: web-push-native from the maintainer's fork, at the upstream change that moves it to
+# p256 0.14, so crypto-bigint 0.5.5 and RUSTSEC-2026-0387 leave the lock. Pinned by `rev`; the
+# fork's branch `deckstreak-p256-0.14` keeps the commit fetchable. ece-native comes from the same
+# commit through web-push-native's own path dependency, so it takes no entry. The entry goes when a
+# web-push-native release requires p256 0.14.
+[patch.crates-io]
+web-push-native = { git = "https://github.com/RexRenatus/web-push-native.git", rev = "71900bad58170ba09f952e1274c87490c5f65f99" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
