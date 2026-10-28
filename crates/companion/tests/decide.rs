@@ -340,15 +340,32 @@ fn negotiate_admits_only_a_present_companion_at_major_one_with_a_trained_model()
 
 #[test]
 fn a_minor_only_and_a_mode_blind_negotiate_are_each_refused() {
-    for (name, planted) in [
-        ("minor-only", minor_only as Negotiate),
-        ("mode-blind", mode_blind),
-    ] {
+    let plants: [(&str, Negotiate, &[&str]); 2] = [
+        (
+            "minor-only",
+            minor_only,
+            &[
+                "Ok 0 Trained: admitted wrongly",
+                "Ok 2 Trained: admitted wrongly",
+            ],
+        ),
+        (
+            "mode-blind",
+            mode_blind,
+            &["Ok 1 Fixture: admitted wrongly"],
+        ),
+    ];
+    for (name, planted, admitted) in plants {
         let (examined, findings) = negotiate_findings(planted);
         println!(
             "examined {examined} hello(s) over the {name} handshake: {} finding(s)",
             findings.len()
         );
-        assert!(!findings.is_empty(), "the {name} handshake is refused");
+        let wrongly: Vec<&str> = findings
+            .iter()
+            .map(String::as_str)
+            .filter(|finding| finding.ends_with("admitted wrongly"))
+            .collect();
+        assert_eq!(wrongly, admitted, "the {name} handshake is refused by name");
     }
 }
