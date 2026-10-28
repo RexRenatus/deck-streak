@@ -1,12 +1,24 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 // SPEC-366 R9, A11 and A12; ADR-377 D8. The page rates with two grades, Again and Good, and from
 // two sites. The cast where the review sends a rating lets any `RATING` value compile, so only a
 // read of the text holds it. The census reads text, so a comment counts.
-const APP = fileURLToPath(new URL('../../..', import.meta.url));
+
+/**
+ * The app, found by walking up to the workspace root. A fixed `../../..` would read StrykerJS's
+ * sandbox below `web/app/.stryker-tmp`, whose copy of each mutated file is instrumented text that
+ * no longer declares `RATING` as written, while the census reads the shipped text.
+ */
+function appDir(from: string): string {
+  for (let dir = from; ; dir = dirname(dir)) {
+    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return join(dir, 'web', 'app');
+    if (dirname(dir) === dir) throw new Error(`no pnpm-workspace.yaml above ${from}`);
+  }
+}
+
+const APP = appDir(import.meta.dirname);
 
 /** A call of the client's or the engine's `rate`, found by text. */
 const RATE_CALL = /\.rate\s*\(/g;
