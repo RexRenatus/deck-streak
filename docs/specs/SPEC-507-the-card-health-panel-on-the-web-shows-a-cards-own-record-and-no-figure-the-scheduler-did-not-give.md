@@ -54,8 +54,10 @@ R6. The recall rows show a figure only from the scheduler's readout in its Ready
 R7. Provenance: every card in phase 1 came through the collection, so the panel says so with the card's created
     time, which is the card id read as a millisecond instant. A collection records no package of origin for a
     note; the panel claims none.
-R8. No verdict: the panel's strings hold no judgement of the card ("hard", "difficult", "ambiguous", "leech
-    risk", "problem", "struggling", "weak"); it shows facts and the scheduler's labelled estimate only.
+R8. No verdict: the panel's own strings hold no judgement of the card ("hard", "difficult", "ambiguous",
+    "leech", "risk", "problem", "struggling", "weak", "trouble"); it shows facts and the scheduler's labelled
+    estimate only. A review row names the button the learner pressed by the review's own answer names, which
+    record what was pressed and are not the panel's words.
 R9. The panel is a `role="dialog"` opened from a "Card info" control in the review's chrome. Focus moves into
     it, Tab and Shift+Tab stay inside it, Escape and its Close button close it, and focus returns to the review
     region. While it is open, the answer clock stops: the time a grade sends excludes every moment an overlay was

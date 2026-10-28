@@ -17,6 +17,7 @@ use crate::face::{self, Face, Side};
 use crate::full_sync::{IdSets, Unsynced, Write};
 use crate::gesture::{Checked, GestureRefusal, OwnerGesture, Target};
 use crate::handshake::{self, Outcome};
+use crate::health::{self, CardHealth, Readout};
 use crate::late::EngineDay;
 use crate::login_guard;
 use crate::media::Reader;
@@ -28,6 +29,10 @@ use crate::undo_change::{self, Mark};
 /// The one read of a card the page may make: its scheduling fields, by id (moved from the web
 /// engine, which passed it to the engine's database door itself).
 const SNAPSHOT_SQL: &str = "select id, queue, type, due, ivl, reps, lapses from cards where id = ?";
+/// One card's review-log rows, oldest first: each row's instant, button, time, type and interval,
+/// the card health panel's second read (SPEC-507 R1).
+const CARD_REVIEWS_SQL: &str =
+    "select id, ease, time, type, ivl from revlog where cid = ? order by id";
 /// The note count the web engine's `open` reports.
 const NOTE_COUNT_SQL: &str = "select count() from notes";
 /// The newest review-log row: its id and its card, the row an answer just wrote (SPEC-371 R4).
@@ -509,6 +514,40 @@ impl Dispatcher {
     /// [`Refusal::Engine`] when the engine cannot run the read, a closed collection among them.
     pub fn read(&self, read: Read) -> Result<Vec<u8>, Refusal> {
         self.query(read).map_err(|error| Refusal::Engine { error })
+    }
+
+    /// One card's health (SPEC-507 R1): the card by the snapshot's fixed read and its review rows by
+    /// `CARD_REVIEWS_SQL`, with the scheduler's `readout`, or `None` when no card has the id. It
+    /// writes nothing, and no adapter passes SQL.
+    ///
+    /// # Errors
+    ///
+    /// [`Refusal::Engine`] when the engine cannot run a read, a closed collection among them, or
+    /// answers one with a row that is not the integers its statement selects.
+    pub fn card_health(&self, card: i64, readout: Readout) -> Result<Option<CardHealth>, Refusal> {
+        let reply = self.read(Read::CardSnapshot(card))?;
+        let cards: Vec<Vec<i64>> =
+            serde_json::from_slice(&reply).map_err(|_| unreadable(SNAPSHOT_SQL))?;
+        let Some(row) = cards.first() else {
+            return Ok(None);
+        };
+        let snapshot: health::SnapshotRow = row
+            .as_slice()
+            .try_into()
+            .map_err(|_| unreadable(SNAPSHOT_SQL))?;
+        let request = serde_json::json!({
+            "kind": "query",
+            "sql": CARD_REVIEWS_SQL,
+            "args": [card],
+            "first_row_only": false
+        });
+        let reply = self
+            .backend
+            .run_db_command_bytes(request.to_string().as_bytes())
+            .map_err(|error| Refusal::Engine { error })?;
+        let rows: Vec<health::ReviewRow> =
+            serde_json::from_slice(&reply).map_err(|_| unreadable(CARD_REVIEWS_SQL))?;
+        Ok(Some(health::card_health(snapshot, &rows, readout)))
     }
 
     /// One fixed read's JSON reply, or the engine's error, encoded.
