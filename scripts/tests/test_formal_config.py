@@ -32,7 +32,7 @@ EXPECTED = {
             "tla/HabitXpFollowsItsLog": 300,
             "tla/LandmarkOnce": 420,
             "tla/MintReadsTheFinalBase": 180,
-            "tla/OpLog": 600,
+            "tla/OpLog": 960,
             "tla/RelightOrder": 360,
             "tla/SecondRoute": 480,
             "tla/StagedNoJournal": 120,
