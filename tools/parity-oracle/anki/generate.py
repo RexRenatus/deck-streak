@@ -14,8 +14,9 @@ The registry is one module per SPEC, `registry/spec_NNN.py`, loaded in path orde
     {"id": "F4", "classes": ["rollover", ...], "note": "...", "cases": build}
 
 `build(rng)` receives only a `random.Random` seeded with the corpus's SEED and returns
-`(class or None, input)` pairs. Every declared class must have a case, and every case's class
-must be declared, or the registry is refused before anything runs (exit 2).
+`(class or None, input)` pairs. Every declared class must have a case, every case's class must
+be declared, and no class may hold one input twice, or the registry is refused before anything
+runs (exit 2).
 
 The harness is a small program on the engine's API, kept outside this repository and outside
 its workspace. This driver pins the sha256 of the harness's source, so a golden's
@@ -230,7 +231,8 @@ def draw(name: str, build: Callable[[random.Random], list[Case]], seed: int) -> 
 
 def covered(name: str, registration: dict, seed: int) -> list[Case]:
     """The registration's cases, refused unless every declared class has a case and every
-    case's class is declared (edge-class coverage)."""
+    case's class is declared (edge-class coverage), and refused if a class holds one hand case
+    twice, which would count a copy as a case."""
     cases = draw(name, registration["cases"], seed)
     declared = registration["classes"]
     drawn = {edge for edge, _ in cases if edge is not None}
@@ -240,6 +242,16 @@ def covered(name: str, registration: dict, seed: int) -> list[Case]:
     stray = sorted(drawn - set(declared))
     if stray:
         raise Refused(f"{name}: case class(es) it does not declare: {', '.join(stray)}")
+    seen = set()
+    for edge, arguments in cases:
+        if edge is None:
+            continue
+        key = (edge, json.dumps(arguments, sort_keys=True, ensure_ascii=False))
+        if key in seen:
+            raise Refused(
+                f"{name}: class {edge} holds one input twice; a repeated case adds nothing"
+            )
+        seen.add(key)
     return cases
 
 
