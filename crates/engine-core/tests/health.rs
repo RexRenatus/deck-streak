@@ -15,6 +15,7 @@
 mod support;
 
 use std::collections::BTreeMap;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use anki::collection::CollectionBuilder;
 use anki::prelude::{CardId, TimestampMillis};
@@ -22,7 +23,8 @@ use anki::scheduler::answering::{CardAnswer, Rating};
 use deck_streak_analytics::metrics::daily_metrics;
 use deck_streak_engine_core::dispatch::Dispatcher;
 use deck_streak_engine_core::health::{
-    self, ANSWER_CAP_MS, CardHealth, Logged, Provenance, Readout, ReviewRow, SchedulerState,
+    self, ANSWER_CAP_MS, CardHealth, Logged, Provenance, ROWS_SHOWN, Readout, ReviewRow,
+    SchedulerState,
 };
 use deck_streak_engine_core::table::Transport;
 use deck_streak_ingest::reader::Review;
@@ -39,6 +41,13 @@ const BASE_MS: i64 = 1_700_000_000_000;
 /// and difficulty 5.6, which no part of the record may carry.
 const STORE_STATE_SQL: &str =
     r#"update cards set data = '{"s":12.34,"d":5.6,"dr":0.9}' where id = ?"#;
+/// Each state but Ready and its word in the record's JSON (SPEC-507 R6).
+const STATE_WORDS: [(SchedulerState, &str); 4] = [
+    (SchedulerState::Absent, "absent"),
+    (SchedulerState::Fixture, "fixture"),
+    (SchedulerState::Unready, "unready"),
+    (SchedulerState::Stale, "stale"),
+];
 
 /// A native dispatcher with `synthetic` open.
 fn opened(synthetic: &support::Synthetic) -> Dispatcher {
@@ -106,30 +115,91 @@ fn revlog(
     )
 }
 
+/// The entries set by hand that come before the fixture's own rows, so the card has more rows
+/// than the record carries.
+const OLDER_ROWS: i64 = 200;
+
+/// The fixture's statements: `OLDER_ROWS` entries set by hand, then seven rows whose answers'
+/// capped times are 8,000, 0, 60,000, 12,000, 20,001 and 29,998 ms, then counters that differ
+/// from the log one count at a time: `card`'s reps (8 against 6 answers, its lapses 1 against 1)
+/// and `quiet`'s lapses (2 against none, its reps 0 against none).
+fn fixture_rows(card: i64, quiet: i64) -> Vec<(&'static str, Vec<i64>)> {
+    let mut statements: Vec<(&'static str, Vec<i64>)> = (0..OLDER_ROWS)
+        .map(|index| revlog(card, BASE_MS - (OLDER_ROWS - index) * 1_000, 0, 0, 0, 4))
+        .collect();
+    statements.extend([
+        revlog(card, BASE_MS + 1_000, 3, -600, 8_000, 0),
+        // a learning Again is no lapse, and its negative time counts as 0
+        revlog(card, BASE_MS + 2_000, 1, -60, -5_000, 0),
+        // an hour's answer counts as the cap, 60,000 ms
+        revlog(card, BASE_MS + 3_000, 3, 1, 3_600_000, 0),
+        // a review Again: the one lapse
+        revlog(card, BASE_MS + 4_000, 1, -600, 12_000, 1),
+        // an entry set by hand is a row, not an answer
+        revlog(card, BASE_MS + 5_000, 0, 0, 0, 4),
+        revlog(card, BASE_MS + 6_000, 3, 1, 20_001, 2),
+        // a review Good is no lapse
+        revlog(card, BASE_MS + 7_000, 3, 4, 29_998, 1),
+        (
+            "update cards set reps = 8, lapses = 1 where id = ?",
+            vec![card],
+        ),
+        (
+            "update cards set reps = 0, lapses = 2 where id = ?",
+            vec![quiet],
+        ),
+    ]);
+    statements
+}
+
+/// The newest 200 of the fixture's rows as `(instant less BASE_MS, button, type, capped time)`:
+/// its seven rows newest first, then the entries set by hand down to the eighth oldest row.
+fn newest_rows() -> Vec<(i64, u8, u8, u32)> {
+    [
+        (7_000, 3, 1, 29_998),
+        (6_000, 3, 2, 20_001),
+        (5_000, 0, 4, 0),
+        (4_000, 1, 1, 12_000),
+        (3_000, 3, 0, ANSWER_CAP_MS),
+        (2_000, 1, 0, 0),
+        (1_000, 3, 0, 8_000),
+    ]
+    .into_iter()
+    .chain((1..=OLDER_ROWS - 7).map(|age| (-age * 1_000, 0, 4, 0)))
+    .collect()
+}
+
+/// Holds the record's JSON provenance to the card's created instant in epoch milliseconds: the
+/// card's id, which the engine took from its clock in milliseconds when this test made the card.
+fn created_in_milliseconds(card: i64, record: &Value) {
+    let now_ms = i64::try_from(
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("the clock reads after the epoch")
+            .as_millis(),
+    )
+    .expect("a millisecond instant fits an i64");
+    assert!(
+        (now_ms - 86_400_000..=now_ms).contains(&card),
+        "the card's id {card} is a millisecond instant of this run (now {now_ms} ms)"
+    );
+    assert_eq!(
+        record.pointer("/provenance"),
+        Some(&json!({ "source": "collection", "created_ms": card })),
+        "the record's JSON carries the created instant in milliseconds"
+    );
+}
+
 #[test]
 fn the_panel_reads_a_fixture_cards_figures_through_the_two_fixed_reads() {
     let synthetic = support::synthetic("health-fixture");
     let [card, quiet] = synthetic.cards;
-    write(
-        &synthetic,
-        &[
-            revlog(card, BASE_MS + 1_000, 3, -600, 8_000, 0),
-            // an hour's answer counts as the cap, 60,000 ms
-            revlog(card, BASE_MS + 2_000, 3, 1, 3_600_000, 0),
-            revlog(card, BASE_MS + 3_000, 1, -600, 12_000, 1),
-            // an entry set by hand is a row, not an answer
-            revlog(card, BASE_MS + 4_000, 0, 0, 0, 4),
-            revlog(card, BASE_MS + 5_000, 3, 1, 20_000, 2),
-            (
-                "update cards set reps = 4, lapses = 1 where id = ?",
-                vec![card],
-            ),
-        ],
-    );
+    write(&synthetic, &fixture_rows(card, quiet));
     let dispatcher = opened(&synthetic);
     let health = health_of(&dispatcher, card, ABSENT);
     support::examined("review row(s)", health.reviews.clone());
-    // the answers' capped times: 8,000, 60,000, 12,000 and 20,000
+    // six answers capped: 0, 8,000, 12,000, 20,001, 29,998 and 60,000. Their sum, 129,999, is odd,
+    // and its mean, 21,666.5, rounds half up; the two middle ones' mean, 16,000.5, is floored.
     assert_eq!(
         (
             health.reps,
@@ -141,18 +211,23 @@ fn the_panel_reads_a_fixture_cards_figures_through_the_two_fixed_reads() {
             health.answer_ms_median,
         ),
         (
-            4,
+            8,
             1,
             Logged {
-                answers: 4,
+                answers: 6,
                 lapses: 1
             },
-            5,
-            100_000,
-            Some(25_000),
+            207,
+            129_999,
+            Some(21_667),
             Some(16_000),
         ),
         "the card's counters, the rows' counts and the capped figures"
+    );
+    assert_eq!(
+        health.reviews.len(),
+        ROWS_SHOWN,
+        "the record carries the newest 200 of the card's 207 rows"
     );
     assert_eq!(
         health
@@ -165,30 +240,39 @@ fn the_panel_reads_a_fixture_cards_figures_through_the_two_fixed_reads() {
                 review.answer_ms_capped
             ))
             .collect::<Vec<_>>(),
-        vec![
-            (5_000, 3, 2, 20_000),
-            (4_000, 0, 4, 0),
-            (3_000, 1, 1, 12_000),
-            (2_000, 3, 0, ANSWER_CAP_MS),
-            (1_000, 3, 0, 8_000),
-        ],
-        "the rows newest first, each with its capped time"
+        newest_rows(),
+        "the newest 200 rows by time, newest first, each with its capped time"
     );
     assert_eq!(
         (health.card, health.provenance, health.scheduler),
         (card, Provenance::Collection { created_ms: card }, ABSENT),
         "the card came through the collection at the instant its id records"
     );
-    // a card with no row has no mean and no median, and an id no card has reads as none
+    created_in_milliseconds(card, &health.to_json());
+    // a card with no row has no mean and no median, and shows its own counters
     let empty = health_of(&dispatcher, quiet, ABSENT);
     assert_eq!(
         (
+            empty.reps,
+            empty.lapses,
+            empty.logged,
             empty.rows,
             empty.answer_ms_total,
             empty.answer_ms_mean,
             empty.answer_ms_median
         ),
-        (0, 0, None, None),
+        (
+            0,
+            2,
+            Logged {
+                answers: 0,
+                lapses: 0
+            },
+            0,
+            0,
+            None,
+            None
+        ),
         "a card with no review row"
     );
     assert_eq!(
@@ -347,12 +431,19 @@ fn no_scheduler_figure_reaches_the_recall_rows_outside_ready() {
     // the card stores an FSRS memory state, as a card the previous scheduler kept does
     write(&synthetic, &[(STORE_STATE_SQL, vec![card])]);
     let dispatcher = opened(&synthetic);
-    let states = support::examined("state(s) but Ready", SchedulerState::ALL.to_vec());
-    for state in states {
+    // each state's word as the record's JSON spells it, written out here rather than read back
+    // from the type, so a wrong word fails
+    let states = support::examined("state(s) but Ready", STATE_WORDS.to_vec());
+    assert_eq!(
+        states.iter().map(|(state, _)| *state).collect::<Vec<_>>(),
+        SchedulerState::ALL.to_vec(),
+        "every state but Ready, each with its word"
+    );
+    for (state, word) in states {
         let record = health_of(&dispatcher, card, Readout::NotAvailable(state)).to_json();
         assert_eq!(
             record.pointer("/scheduler"),
-            Some(&json!({ "state": state.word() })),
+            Some(&json!({ "state": word })),
             "the recall rows' part names its state and no number"
         );
         let text = record.to_string();
