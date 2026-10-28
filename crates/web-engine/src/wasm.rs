@@ -52,6 +52,7 @@ use deck_streak_engine_core::credential::{self, Generation, Kept, Outcome};
 use deck_streak_engine_core::dispatch::{Dispatcher, Read, Refusal};
 use deck_streak_engine_core::face::{Clip, Face, Side};
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
+use deck_streak_engine_core::health::{CardHealth, Readout, SchedulerState};
 use deck_streak_engine_core::late;
 use deck_streak_engine_core::media::{Reader, TYPES};
 use deck_streak_engine_core::review::{bury_of, toggled_red};
@@ -521,6 +522,20 @@ pub fn snapshot(card_id: i64) -> Result<String, JsValue> {
         .pointer("/0")
         .cloned()
         .unwrap_or(serde_json::Value::Null)
+        .to_string())
+}
+
+/// One card's health as JSON (SPEC-507 R1), or `null` when no card has the id: its counters and
+/// review rows by the core's two fixed reads. The scheduler's port gives no readout in this build,
+/// so the recall rows read the absent state (ADR-525 D3).
+#[wasm_bindgen]
+pub fn card_health(card_id: i64) -> Result<String, JsValue> {
+    let health = dispatcher()?
+        .card_health(card_id, Readout::NotAvailable(SchedulerState::Absent))
+        .map_err(|_| refuse("the read failed"))?;
+    Ok(health
+        .as_ref()
+        .map_or(serde_json::Value::Null, CardHealth::to_json)
         .to_string())
 }
 

@@ -21,6 +21,8 @@
 //! - [`handshake`]: the minimum-client handshake: this client's level, the outcome of the
 //!   latest statement of the service's minimum, its sentences and the statement's URL
 //!   (SPEC-374 R1, R4 to R8).
+//! - [`health`]: the card health panel's record: a card's counters, its review rows with each
+//!   answer's time capped, the scheduler's readout or its state, and its provenance (SPEC-507).
 //! - [`login_guard`]: the endpoint guard on the engine's sync login (SPEC-347 R2).
 //! - [`media`]: the rules a face's media references pass: the name rule, the closed type table,
 //!   the two caps and the `data:` rewrite (SPEC-348 R3).
@@ -59,6 +61,7 @@ pub mod files;
 pub mod full_sync;
 pub mod gesture;
 pub mod handshake;
+pub mod health;
 pub mod late;
 pub mod login_guard;
 pub mod media;

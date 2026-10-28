@@ -101,6 +101,8 @@ describe('the study operations on the wire', () => {
       'bury',
       'flag',
       'faces',
+      // the card health read joins after the faces (SPEC-507 R10)
+      'card-health',
       // the sync's two join before the credential's two (SPEC-364 R17, R18)
       'sync-login',
       'sync',

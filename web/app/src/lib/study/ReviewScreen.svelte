@@ -25,12 +25,13 @@
   // leaves a line in the status region naming its language, until the next gesture.
   import { onMount } from 'svelte';
   import CardFrame from '$lib/card/CardFrame.svelte';
-  import type { FlagChange, Returns } from '$lib/engine/protocol';
+  import type { CardHealth, FlagChange, Returns } from '$lib/engine/protocol';
   import { m } from '$lib/paraglide/messages.js';
   import { snapshotOf } from '$lib/remote/gamepad';
   import { WakeLockHolder, type Conditions } from '$lib/remote/wake-lock';
   import { telegram } from '$lib/telegram.svelte';
   import AnswerButtons from './AnswerButtons.svelte';
+  import CardHealthPanel from './CardHealthPanel.svelte';
   import { Player } from './audio';
   import { deviceStorage, StudyInput } from './input';
   import { MappingStore } from './mapping-store';
@@ -113,6 +114,28 @@
     flag: () => m.study_undo_flag()
   };
 
+  /** The card health panel while it is open, with the shown card's record once read (SPEC-507 R9). */
+  let health = $state.raw<{ loading: boolean; record: CardHealth | null } | null>(null);
+  let healthPanel = $state<{ trap(event: KeyboardEvent): void }>();
+
+  /** Opens the card health panel over the shown card: the answer clock stops while it is open, and
+   * the record comes through the review's one read (SPEC-507 R1, R9). */
+  async function openHealth(): Promise<void> {
+    if (health !== null) return;
+    health = { loading: true, record: null };
+    review.openOverlay();
+    const record = await review.cardHealth();
+    if (health !== null) health = { loading: false, record };
+  }
+
+  /** Closes the panel, runs the answer clock again, and gives the focus back to the review. */
+  function closeHealth(): void {
+    if (health === null) return;
+    health = null;
+    review.closeOverlay();
+    region.focus();
+  }
+
   /** "Keep it", which takes the focus while the review asks (SPEC-371 R10). */
   let keeper = $state<HTMLButtonElement>();
 
@@ -173,6 +196,13 @@
   /** A key on the page: while the review asks, Escape keeps the answer; every key else is the
    * input's. */
   function key(event: KeyboardEvent): void {
+    // while the card health panel is open, Escape closes it, Tab stays inside it, and no key reaches
+    // the review (SPEC-507 R9)
+    if (health !== null) {
+      if (event.key === 'Escape') closeHealth();
+      else if (event.key === 'Tab') healthPanel?.trap(event);
+      return;
+    }
     if (shown.phase === 'confirming' && event.key === 'Escape') {
       keep();
       return;
@@ -358,6 +388,14 @@
           >
             {m.study_flag()}
           </button>
+          <button
+            type="button"
+            class="min-h-11 min-w-11 rounded-md border px-3 transition-colors duration-150"
+            aria-haspopup="dialog"
+            onclick={() => void openHealth()}
+          >
+            {m.card_health_open()}
+          </button>
         </div>
       {/if}
     {/if}
@@ -401,6 +439,9 @@
           </div>
         {/if}
       </div>
+    {/if}
+    {#if health !== null}
+      <CardHealthPanel bind:this={healthPanel} health={health.record} loading={health.loading} onclose={closeHealth} />
     {/if}
   </section>
 
