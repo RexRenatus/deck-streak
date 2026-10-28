@@ -1,0 +1,8 @@
+{"schema":"phx.formal.vectors.v1","entry":"PushJudge","covers":null,"anchor":null,"digest":null,"vectors":7}
+{"revoked":[],"log":[],"op":[1,1,7],"verdict":"accepted","after":[[1,1,7]]}
+{"revoked":[],"log":[[1,1,7]],"op":[1,1,7],"verdict":"duplicate","after":[[1,1,7]]}
+{"revoked":[],"log":[[1,1,7]],"op":[1,1,8],"verdict":"duplicate","after":[[1,1,7]]}
+{"revoked":[],"log":[[1,1,7]],"op":[1,2,7],"verdict":"accepted","after":[[1,1,7],[1,2,7]]}
+{"revoked":[],"log":[[1,1,7]],"op":[2,1,7],"verdict":"accepted","after":[[1,1,7],[2,1,7]]}
+{"revoked":[2],"log":[[1,1,7]],"op":[2,1,7],"verdict":"rejected","after":[[1,1,7]]}
+{"revoked":[2],"log":[],"op":[1,1,7],"verdict":"accepted","after":[[1,1,7]]}
