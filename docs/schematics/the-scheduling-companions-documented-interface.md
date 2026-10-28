@@ -59,7 +59,7 @@ sequenceDiagram
 | grade, kind, answer time, study day, target retention | the app | companion | no |
 | status, model, adapter, build and model ids, state hash | companion | the app | no |
 | interval and due day | companion | the app | no |
-| checkpoint bytes | companion | the app, and back verbatim | derived, opaque; kept on the device only (`companion-state`) |
+| checkpoint bytes | companion | the app, and back verbatim | derived, opaque; kept on the device only, by the change that first writes it (SPEC-501 R10) |
 
 Never crossing: note fields, tags, deck names and paths, guids, media, notetype names, the per-review client record,
 the Telegram id, sync credentials and the collection file. No type of `wire.rs` can hold them (SPEC-501 C1).

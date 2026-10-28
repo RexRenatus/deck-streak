@@ -85,15 +85,17 @@ R9. **The map carries the two contexts.** The fence gains `deck-streak-companion
 `deck-streak-companion-slot ... depends on: companion`; the schematic draws both crates and `companion_slot -->
 companion`, pointing down; the ddd probe's `context-map-parses` and `declared-edges-match-imports` read green.
 
-R10. **The privacy inventory carries the companion's state.** `privacy.json` gains the category `companion-state`: the
-scheduling companion's checkpoint, derived from the review log, kept on the device only, never exported because the app
-recomputes it from the log, and erased by the device erase routine, on the device's own erase and on `Reset`.
-`PRIVACY.md` names it with its basis and its retention, and the privacy pack's `inventory-valid` row reads green.
+R10. **The privacy inventory declares no companion state yet.** The category `companion-state` is not declared by this
+delivery, because nothing in it writes the companion's checkpoint, or any of its state, to a device: it ships the
+interface and the `Absent` slot only, and a declared store that no code writes and no erase reaches would be worse
+than none. The change that first writes companion state to a device declares the category, with its erase, in the same
+change. So `privacy.json` and `PRIVACY.md` are unchanged, and every row of the privacy pack reads as it did at
+`d3b09d5e`, its `inventory-valid` and `erase-complete` rows green.
 
 R11. **Unchanged.** Every other crate, the engine core's answer path, every client, every other formal entry and vector,
-every migration and every mutation row. The only lines changed outside the two crates and the new formal files are the
-workspace's two dependency entries, the lock's two packages, `Formal/Vectors.lean`'s import and arm, the ledger's
-`O6` artifact, tie and row and its test's constants, the map, the schematic, the inventory and the policy.
+every migration, every mutation row, the privacy inventory and the policy. The only lines changed outside the two crates
+and the new formal files are the workspace's two dependency entries, the lock's two packages, `Formal/Vectors.lean`'s
+import and arm, the ledger's `O6` artifact, tie and row and its test's constants, the map and the schematic.
 
 ## 3. Acceptance criteria of SPEC-501
 
@@ -108,7 +110,7 @@ workspace's two dependency entries, the lock's two packages, `Formal/Vectors.lea
 | C7 | R7: a `compile_fail` doctest that builds a `Restore` from raw bytes does not compile, and one that builds it from a `CheckpointReply` does | the stub's field is public, so the raw build compiles | ADR-519 D2 |
 | C8 | R8: the Lean entry's three theorems are clean at `ramp=report`, its four witnesses refute them, its vectors are byte-equal, and the shipped functions answer all 275 vectors | the stub decision and handshake answer the vectors otherwise | ADR-519 D6 |
 | C9 | R9: the ddd probe's `context-map-parses` and `declared-edges-match-imports` are green with the two new contexts, and the schematic census holds the drawing | the crates exist and the fence and the drawing do not name them | ADR-519 D5 |
-| C10 | R10: the inventory names `companion-state`, the pack's `inventory-valid` row is green, and the policy discloses it | the inventory names no such category | ADR-519 D7 |
+| C10 | R10: the inventory and the policy declare no `companion-state` category, the pack's `inventory-valid` and `erase-complete` rows are green with every row at the base's count, and the policy test is green | not red: the criterion holds at the base; it pins that this delivery declares no device store it does not write | ADR-519 D7 |
 
 ```acceptance
 C1: cargo test -p deck-streak-companion --test wire_integers -- --exact every_field_of_every_wire_type_is_an_integer_a_closed_enum_or_a_named_checkpoint_byte_field
@@ -134,7 +136,7 @@ The rest of C8, C9 and C10 is decided by the hub's tools, run from its checkout 
 confirmation line runs the ddd probe: `phxd formal check --root . --base <the delivery's base> --kind lean --gate
 --format json` (C8; section 8 says what it must read), `python3 scripts/ddd-probe.py --root . check
 context-map-parses` and `check declared-edges-match-imports` (C9), and `python3 scripts/privacy-gdpr-probe.py --root .
-check inventory-valid` (C10). The crates' other tests, `a_frame_of_another_minor_decodes_and_keeps_its_minor`,
+check inventory-valid` and `check erase-complete` (C10). The crates' other tests, `a_frame_of_another_minor_decodes_and_keeps_its_minor`,
 `random_bytes_never_panic_the_decoder`, `an_enum_value_outside_its_type_and_another_major_are_refused`,
 `the_interval_bounds_and_the_due_days_arithmetic_are_exact` and `a_reply_that_is_not_a_due_date_refuses_by_its_status`,
 pin the edges of R3 and R4 beside the criteria. `python3 -m unittest discover -s scripts/tests -p
@@ -169,8 +171,6 @@ test_formal_obligations.py` holds the ledger's change (R8).
 | `docs/CONTEXT-MAP.md` | docs | changed: the two fence rows and their prose |
 | `docs/schematics/context-map.md` | docs | changed: the two nodes, their layer and the arrow |
 | `docs/schematics/the-scheduling-companions-documented-interface.md` | docs | new: component and data flow |
-| `privacy.json` | privacy | changed: the `companion-state` category |
-| `PRIVACY.md` | privacy | changed: the category's row and its device paragraph |
 | `docs/specs/SPEC-501-the-scheduling-companions-documented-interface-integer-only-schema-v1-its-codec-a-decision-that-fails-closed-and-an-absent-slot.md` | docs | new: this file |
 | `docs/decisions/ADR-519-the-scheduling-companion-is-reached-through-integer-only-frames-with-an-absent-default-and-a-decision-that-fails-closed.md` | docs | new: the decisions |
 | `docs/red-first/SPEC-501.md` | docs | new: the red-first record |
@@ -179,8 +179,9 @@ test_formal_obligations.py` holds the ledger's change (R8).
 ## 5. What this does NOT cover
 
 - The engine core asking the port at the answer: the preview, write and commit steps, the fold of the log, the catch-up
-  after a crash, the device's checkpoint file, its load and the device erase routine that deletes it, and the answer
-  path writing a due date built from `NewDue` in place of the engine's next state (#997).
+  after a crash, the device's checkpoint file, its load and the device erase routine that deletes it, the privacy
+  category `companion-state` declared with that erase, and the answer path writing a due date built from `NewDue` in
+  place of the engine's next state (#997).
 - The umbrella FFI crate composing the slot, and the web engine carrying frames in the Worker beside a separately built
   module (#998).
 - Any body of the slot but `Absent`, and any weights (#997).
@@ -198,11 +199,11 @@ test_formal_obligations.py` holds the ledger's change (R8).
 - **A census that reads nothing.** Each enumerating test prints its examined count and pins it.
 - **A forged checkpoint.** `Restore`'s field is private (C7). The decoder builds one from a frame's bytes: it is the
   companion's side of the codec, and a body reads its own frames.
-- **An inventory row the device does not yet honour.** The category names its store as
-  `devicestorage:companion-state`, the pack's one store kind for a client's own device. No device writes or erases the
-  checkpoint yet, so the privacy pack's `erase-complete` row reads one finding ("the erase never calls removeItem for
-  devicestorage:companion-state") until the device erase routine lands with the code that writes the file (#997).
-  Every other row of the pack reads as it did at `d3b09d5e`.
+- **A device store the inventory declares before any code writes it.** A category for the checkpoint would name the
+  store `devicestorage:companion-state`, and with no device erase to reach it the privacy pack's `erase-complete` row
+  would read a finding for it. Held by R10: no file of this delivery writes companion state to a device, so the
+  category waits for the change that writes it and lands with its erase (#997), and every row of the pack reads as it
+  did at `d3b09d5e`.
 
 ## 7. What only CI proves
 

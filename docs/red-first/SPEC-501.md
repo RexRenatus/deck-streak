@@ -29,8 +29,7 @@ C8: red at ae64a4ed: crates/companion/tests/formal_vectors_decide.rs:211: assert
 C8: green at 5f886f10
 C9: red at ae64a4ed: test_context_map_schematic.py: test_every_arrow_is_a_manifest_edge_the_fence_names: AssertionError: findings: 3; test_every_crate_directory_is_one_node_named_by_it: AssertionError: findings: 2
 C9: green at 5f886f10
-C10: red at ae64a4ed: privacy.json names no category companion-state (0 lines read `"id": "companion-state"`), and PRIVACY.md names none
-C10: green at 5f886f10
+C10: not red: the criterion holds at the base and pins that this delivery declares no device store it does not write; 5f886f10 declared `companion-state` and the commit after 4f2a143a withdrew it
 ```
 
 ## What each pair disclosed
@@ -50,14 +49,13 @@ C10: green at 5f886f10
   read OK, 38 contexts and 101 edges. The privacy pack's `inventory-valid` read OK at both. The formal check of the Lean
   kind read `FORMAL OK exit=0` at 5f886f10, its three `lean/CompanionDecide` theorems `clean: true` at `ramp=report`
   with their four witnesses renamed onto the wrong ports, and no finding.
-- **Where C9's and C10's reds were read.** On the tree of the test commit before a clippy-only amend of
-  `crates/companion/tests/codec.rs`, which is the only file in which it differs from ae64a4ed; neither census reads it.
+- **Where C9's red was read.** On the tree of the test commit before a clippy-only amend of
+  `crates/companion/tests/codec.rs`, which is the only file in which it differs from ae64a4ed; the census does not read
+  it.
 - **One fence test changed after the code.** f39e2604 makes C5's planted control name the hellos each wrong handshake
   admits (major 0 and 2 for the minor-only one, a fixture at major 1 for the mode-blind one), in place of asserting
   only that some finding exists. It reads planted functions only, so its outcome at ae64a4ed is unchanged; no criterion
   test of C1 to C10 changed after 5f886f10.
-- **One row of the privacy pack reads a finding it did not read before.** `erase-complete` names
-  `devicestorage:companion-state` until the device erase routine lands (#997; SPEC-501 section 6). Every other row reads
-  as it did at the base.
+- **The privacy category is deferred to its writer.** `fix(privacy): defer the companion-state category to its writer`, the commit after 4f2a143a, restores `privacy.json` and `PRIVACY.md` to their bytes at `d3b09d5e` (at 5f886f10 the pack's `erase-complete` row read one finding the base lacks, for `devicestorage:companion-state`); at it the privacy pack's 15 rows read the base's finding counts, `defaults-private` 1, `public-scrub` 10 and each other row 0, with `inventory-valid` and `erase-complete` exit 0, and `test_privacy_policy.py` reads 8 tests, OK.
 - **Not run here:** the whole workspace's tests, clippy and release profile, the documentation tests of other crates,
   and the mutation jobs, which only CI proves (SPEC-501 section 7).

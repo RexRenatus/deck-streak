@@ -440,17 +440,6 @@
       "retention": {"until": "account-deletion"},
       "export": true,
       "erase": "delete"
-    },
-    {
-      "id": "companion-state",
-      "data": "the scheduling companion's state: its checkpoint as opaque bytes, derived from the review log, with the model id and the adapter mode it was folded under; kept on the device only, never synced and never sent to the service; erased by the device erase routine, on the device's own erase and on `Reset`",
-      "source": "derived",
-      "stores": ["devicestorage:companion-state"],
-      "purpose": "resuming the scheduling companion on the device without folding the whole review log again",
-      "lawful_basis": "contract",
-      "retention": {"until": "account-deletion"},
-      "export": {"exempt": "derived state the app recomputes from the review log; it never leaves the device"},
-      "erase": "delete"
     }
   ],
   "sql": ["migrations/*.sql"],

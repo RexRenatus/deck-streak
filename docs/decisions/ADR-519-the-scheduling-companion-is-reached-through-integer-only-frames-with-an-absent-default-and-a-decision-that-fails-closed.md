@@ -109,14 +109,15 @@ at `d3b09d5e`.
 
 ## D7. The companion's state in the privacy inventory
 
-- **Chosen: the category `companion-state`**: the companion's checkpoint, derived from the review log, kept on the
-  device only, never exported because the app recomputes it from the log, and erased by the device erase routine, on the
-  device's own erase and on `Reset`. It lands with the interface that names the checkpoint, before any device writes
-  one, so the inventory never lags the code. Its store is `devicestorage:companion-state`, the privacy pack's one store
-  kind for a client's own device, and its export is exempt with that reason. Until the device erase routine lands
-  (#997), the pack's `erase-complete` row reads one finding for it, by name.
-- **No category until a device writes the file:** lost, because the schema already defines the bytes, and the privacy
-  checks judge the inventory against what the code can hold.
+- **Chosen: no category in this change; the change that first writes the companion's state to a device declares the
+  category `companion-state` with its erase, in the same change.** This change ships the interface and the `Absent`
+  slot, and nothing in it writes the checkpoint, or any companion state, to a device. When the category lands, its
+  store is `devicestorage:companion-state`, the privacy pack's one store kind for a client's own device; its export is
+  exempt, because the app recomputes it from the review log; and it is erased by the device erase routine, on the
+  device's own erase and on `Reset` (#997).
+- **The category now, with the interface that names the checkpoint:** lost, because no code writes the store and no
+  erase reaches it, so the inventory would declare a store with no erase, which is worse than none; the pack's
+  `erase-complete` row read one finding for it.
 
 ## Consequences
 
@@ -127,8 +128,12 @@ at `d3b09d5e`.
   committed frames are the contract it is read against.
 - Bad, because the answer path still writes the engine's next state until the engine core's delivery uses the port
   (#997).
+- Neutral, because the privacy inventory names no `companion-state` category yet. The category is not declared by this
+  change, because nothing in it writes companion state; the change that first writes companion state to a device
+  declares the category with its erase in the same change (D7), so the inventory and the erase land together, and
+  every row of the privacy pack reads as it did before this change.
 
 ### Confirmation
 
 The acceptance fence of SPEC-501: the two crates' tests, the formal check of `lean/CompanionDecide`, the ddd probe's
-`context-map-parses` and `declared-edges-match-imports`, and the privacy pack's `inventory-valid`.
+`context-map-parses` and `declared-edges-match-imports`, and the privacy pack's `inventory-valid` and `erase-complete`.
