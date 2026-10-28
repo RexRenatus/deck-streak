@@ -10,6 +10,11 @@
 // A failed setup step fails the test, as clippy.toml allows inside a test function.
 #![allow(clippy::expect_used)]
 
+#[expect(
+    dead_code,
+    reason = "the sync tests open the synthetic collection by its path and read neither of its ids, \
+              and they send and read only the wire fields a sync needs"
+)]
 mod support;
 
 #[path = "support/sync_server.rs"]
@@ -20,7 +25,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use deck_streak_ffi::engine::{ChoiceLoss, Engine, EngineRefusal};
-use support::{synthetic, wire};
+use support::{Synthetic, synthetic, wire};
 use sync_server::{PASSWORD, SERVER, SyncServer, USERNAME};
 
 /// The engine's login call, `BackendSyncService.SyncLogin`.
@@ -105,6 +110,49 @@ fn message(refusal: &EngineRefusal) -> String {
     }
 }
 
+/// A second client holding `synthetic` fills the empty server at `endpoint` by its own upload,
+/// through the same facade, so the server holds the collection a fresh install downloads.
+fn fill_the_server(synthetic: &Synthetic, endpoint: &str) {
+    let other = engine();
+    other
+        .run(
+            OPEN_COLLECTION.0,
+            OPEN_COLLECTION.1,
+            support::open_request(synthetic),
+        )
+        .expect("the second client opens its collection");
+    let other_key = host_key(&other, endpoint);
+    let required = other
+        .sync(other_key.clone(), endpoint.to_owned())
+        .expect("the second client's normal sync is answered");
+    assert!(
+        [FULL_SYNC, FULL_UPLOAD].contains(&required),
+        "an empty server asks the second client for a full sync: {required}"
+    );
+    let other_folder = folder(&synthetic.dir, "choice");
+    let counted = other
+        .full_sync_count(
+            other_key.clone(),
+            endpoint.to_owned(),
+            required,
+            other_folder.clone(),
+        )
+        .expect("the second client's counts");
+    assert_eq!(
+        counted.counts.and_then(|counts| counts.upload),
+        Some(NOTHING),
+        "the upload is offered, and the empty server loses nothing"
+    );
+    let uploaded = other
+        .full_sync_confirm(UPLOAD, other_key, endpoint.to_owned(), true, other_folder)
+        .expect("the second client's upload");
+    assert!(
+        uploaded.written,
+        "the second client's upload is written: {}",
+        uploaded.said
+    );
+}
+
 #[test]
 fn a_fresh_installs_first_sync_counts_backs_up_and_downloads_then_syncs_normally() {
     if sync_server::role().as_deref() == Some(SERVER) {
@@ -117,35 +165,7 @@ fn a_fresh_installs_first_sync_counts_backs_up_and_downloads_then_syncs_normally
 
     // A second client holding the synthetic collection fills the empty server by its own upload.
     let synthetic = synthetic("native-sync-first-sync");
-    let other = engine();
-    other
-        .run(
-            OPEN_COLLECTION.0,
-            OPEN_COLLECTION.1,
-            support::open_request(&synthetic),
-        )
-        .expect("the second client opens its collection");
-    let other_key = host_key(&other, &endpoint);
-    let required = other
-        .sync(other_key.clone(), endpoint.clone())
-        .expect("the second client's normal sync is answered");
-    assert!(
-        [FULL_SYNC, FULL_UPLOAD].contains(&required),
-        "an empty server asks the second client for a full sync: {required}"
-    );
-    let other_folder = folder(&synthetic.dir, "choice");
-    let counted = other
-        .full_sync_count(other_key.clone(), endpoint.clone(), required, other_folder.clone())
-        .expect("the second client's counts");
-    assert_eq!(
-        counted.counts.and_then(|counts| counts.upload),
-        Some(NOTHING),
-        "the upload is offered, and the empty server loses nothing"
-    );
-    let uploaded = other
-        .full_sync_confirm(UPLOAD, other_key, endpoint.clone(), true, other_folder)
-        .expect("the second client's upload");
-    assert!(uploaded.written, "the second client's upload is written: {}", uploaded.said);
+    fill_the_server(&synthetic, &endpoint);
 
     // The fresh install: an empty collection, its first sync through the choice.
     let device = engine();
@@ -160,9 +180,17 @@ fn a_fresh_installs_first_sync_counts_backs_up_and_downloads_then_syncs_normally
         "a fresh install's first sync needs a full sync: {required}"
     );
     let unsynced = device.unsynced().expect("the unsynced read");
-    assert_eq!(unsynced.reviews, 0, "a fresh install has no unsynced review");
+    assert_eq!(
+        unsynced.reviews, 0,
+        "a fresh install has no unsynced review"
+    );
     let counted = device
-        .full_sync_count(key.clone(), endpoint.clone(), required, device_folder.clone())
+        .full_sync_count(
+            key.clone(),
+            endpoint.clone(),
+            required,
+            device_folder.clone(),
+        )
         .expect("the fresh install's counts");
     let counts = counted.counts.expect("the choice is open with its counts");
     assert_eq!(
@@ -171,7 +199,13 @@ fn a_fresh_installs_first_sync_counts_backs_up_and_downloads_then_syncs_normally
         "the download alone is offered, and a fresh install loses nothing by it"
     );
     let written = device
-        .full_sync_confirm(DOWNLOAD, key.clone(), endpoint.clone(), false, device_folder.clone())
+        .full_sync_confirm(
+            DOWNLOAD,
+            key.clone(),
+            endpoint.clone(),
+            false,
+            device_folder.clone(),
+        )
         .expect("the download");
     assert!(written.written, "the download is written: {}", written.said);
     let backups = std::fs::read_dir(&device_folder)
@@ -179,7 +213,10 @@ fn a_fresh_installs_first_sync_counts_backs_up_and_downloads_then_syncs_normally
         .filter_map(Result::ok)
         .filter(|entry| entry.file_name().to_string_lossy().starts_with("backup-"))
         .count();
-    assert_eq!(backups, 1, "the download's backup is kept beside the collection");
+    assert_eq!(
+        backups, 1,
+        "the download's backup is kept beside the collection"
+    );
     assert!(
         deck_names(&device).contains(&synthetic::SECOND_DECK.to_owned()),
         "the device holds the server's deck after its download"
@@ -196,8 +233,7 @@ fn a_fresh_installs_first_sync_counts_backs_up_and_downloads_then_syncs_normally
 }
 
 #[test]
-fn a_native_normal_sync_keeps_the_endpoint_rule_and_reads_no_statement_for_a_refused_endpoint()
-{
+fn a_native_normal_sync_keeps_the_endpoint_rule_and_reads_no_statement_for_a_refused_endpoint() {
     let refused = engine()
         .sync(
             String::from("planted-host-key"),
@@ -249,7 +285,9 @@ fn the_unsynced_count_is_read_offline_before_any_full_sync() {
             support::open_request(&synthetic),
         )
         .expect("the device opens its collection");
-    let unsynced = device.unsynced().expect("the unsynced read needs no network");
+    let unsynced = device
+        .unsynced()
+        .expect("the unsynced read needs no network");
     assert!(
         unsynced.changed || unsynced.schema,
         "a collection that never synced reads as changed since its last sync: {unsynced:?}"

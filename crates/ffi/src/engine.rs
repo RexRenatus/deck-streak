@@ -341,7 +341,8 @@ impl Engine {
             1 => Direction::Download,
             _ => return Ok(step(NOT_OFFERED, None)),
         };
-        let Ok(gesture) = OwnerGesture::from_tap(ExemptWrite::OneWaySync, Target::Collection) else {
+        let Ok(gesture) = OwnerGesture::from_tap(ExemptWrite::OneWaySync, Target::Collection)
+        else {
             return Ok(step(NOT_THE_OWNERS, None));
         };
         let Ok(confirmed) = counted.confirm(direction) else {

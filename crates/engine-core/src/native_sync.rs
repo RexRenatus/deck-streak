@@ -11,7 +11,6 @@ use prost::Message;
 use crate::handshake;
 
 /// The engine's sync auth for `host_key` at `endpoint`, with the engine's own timeout.
-#[must_use]
 pub fn auth(host_key: String, endpoint: String) -> SyncAuth {
     SyncAuth {
         hkey: host_key,
@@ -40,7 +39,6 @@ pub fn required(reply: &[u8]) -> Option<u32> {
 }
 
 /// The normal sync's answer the choice's offer is read from, given what it required (R4).
-#[must_use]
 pub fn answer(required: u32) -> SyncCollectionResponse {
     SyncCollectionResponse {
         required: i32::try_from(required).unwrap_or(i32::MAX),
