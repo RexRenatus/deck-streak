@@ -2,6 +2,11 @@
 //! defines is an integer, a closed enum, a fixed array of them, a `Vec` of them, a type the file
 //! itself defines, or one of the two named checkpoint byte fields; anything else is refused by
 //! name (default-deny). The census reads the file's text, so a field added in any form is read.
+//!
+//! Two more censuses read the crate's sources the same way, each with planted sources it must
+//! refuse: `Restore`'s doors (R7: its field is private, its one public constructor is
+//! `From<CheckpointReply>`, and its one other door is the decoder's crate-private one, which only
+//! `decode_request` calls), and the crate root's `#![no_std]` (ADR-519 D5).
 
 // An integration test is test code: its helpers panic on a malformed source, and it prints the
 // examined count on purpose.
@@ -297,4 +302,248 @@ fn a_planted_string_field_and_a_planted_float_field_are_each_refused() {
         );
     }
     println!("examined {} planted field(s), each refused", plants.len());
+}
+
+/// The interface crate's sources, as committed: every file a door to `Restore` could sit in.
+const LIB: &str = include_str!("../src/lib.rs");
+const CODEC: &str = include_str!("../src/codec.rs");
+const DECIDE: &str = include_str!("../src/decide.rs");
+const PORT: &str = include_str!("../src/port.rs");
+
+fn sources() -> Vec<(&'static str, String)> {
+    vec![
+        ("lib.rs", LIB.to_owned()),
+        ("wire.rs", WIRE.to_owned()),
+        ("codec.rs", CODEC.to_owned()),
+        ("decide.rs", DECIDE.to_owned()),
+        ("port.rs", PORT.to_owned()),
+    ]
+}
+
+/// Whether the word `word` starts at `at` in `chars`.
+fn word_at(chars: &[char], at: usize, word: &str) -> bool {
+    let word: Vec<char> = word.chars().collect();
+    let before = at == 0 || !(chars[at - 1].is_alphanumeric() || chars[at - 1] == '_');
+    let after = chars
+        .get(at + word.len())
+        .is_none_or(|next| !(next.is_alphanumeric() || *next == '_'));
+    before && after && chars[at..].starts_with(&word)
+}
+
+/// Every `impl` block of `code` (comments blanked), nested ones included: its header with the
+/// whitespace collapsed and any `where` clause dropped, and its braced body.
+fn impls(code: &str) -> Vec<(String, String)> {
+    let chars: Vec<char> = code.chars().collect();
+    let mut found = Vec::new();
+    let mut at = 0;
+    while at < chars.len() {
+        if word_at(&chars, at, "impl") {
+            let open = (at..chars.len()).find(|index| chars[*index] == '{');
+            if let Some(open) = open {
+                let mut depth = 0_i32;
+                let mut close = chars.len();
+                for (index, character) in chars.iter().enumerate().skip(open) {
+                    if *character == '{' {
+                        depth += 1;
+                    } else if *character == '}' {
+                        depth -= 1;
+                        if depth == 0 {
+                            close = index;
+                            break;
+                        }
+                    }
+                }
+                let header: String = chars[at..open].iter().collect();
+                let header = header.split_whitespace().collect::<Vec<_>>().join(" ");
+                let header = header.split(" where ").next().unwrap_or("").to_owned();
+                found.push((header, chars[open + 1..close].iter().collect()));
+            }
+        }
+        at += 1;
+    }
+    found
+}
+
+/// The functions an `impl` body declares at its top level: each one's visibility with the
+/// whitespace removed (`pub`, `pub(crate)`, or empty), and its name.
+fn functions(body: &str) -> Vec<(String, String)> {
+    let chars: Vec<char> = body.chars().collect();
+    let mut found = Vec::new();
+    let mut depth = 0_i32;
+    let mut since = 0;
+    let mut at = 0;
+    while at < chars.len() {
+        if depth == 0 && word_at(&chars, at, "fn") {
+            let visibility: String = chars[since..at]
+                .iter()
+                .filter(|c| !c.is_whitespace())
+                .collect();
+            let name: String = chars[at + 2..]
+                .iter()
+                .skip_while(|c| c.is_whitespace())
+                .take_while(|c| c.is_alphanumeric() || **c == '_')
+                .collect();
+            found.push((visibility, name));
+        }
+        match chars[at] {
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    since = at + 1;
+                }
+            }
+            ';' | ']' if depth == 0 => since = at + 1,
+            _ => {}
+        }
+        at += 1;
+    }
+    found
+}
+
+/// Whether a visibility reaches outside the crate: `pub` alone does; `pub(crate)`,
+/// `pub(super)` and none do not.
+fn is_public(visibility: &str) -> bool {
+    visibility.starts_with("pub") && !visibility.starts_with("pub(")
+}
+
+/// R7's census over `sources`: every way to build a `Restore` beyond the ones by design, and the
+/// number of doors examined. By design, `Restore`'s one field is private, its one trait impl is
+/// `From<CheckpointReply>`, its only public function is `bytes`, and its crate-private
+/// `decoded` is called once, by `decode_request` in `codec.rs`.
+fn restore_doors(sources: &[(&str, String)]) -> (usize, Vec<String>) {
+    let mut examined = 0;
+    let mut findings = Vec::new();
+    let mut calls = Vec::new();
+    for (file, source) in sources {
+        let code = without_comments(source);
+        for (header, body) in impls(&code) {
+            if header.ends_with(" for Restore") {
+                examined += 1;
+                if header != "impl From<CheckpointReply> for Restore" {
+                    findings.push(format!("{file}: {header}"));
+                }
+            } else if header == "impl Restore" {
+                for (visibility, name) in functions(&body) {
+                    examined += 1;
+                    if is_public(&visibility) && name != "bytes" {
+                        findings.push(format!("{file}: Restore::{name} is {visibility}"));
+                    }
+                }
+            }
+        }
+        let count = squeeze(&code).matches("::decoded(").count();
+        examined += count;
+        if count > 0 {
+            calls.push(format!("{file}: {count}"));
+        }
+        for item in items(source) {
+            if item.name == "Restore" {
+                for part in top_level(&item.body) {
+                    examined += 1;
+                    if part.starts_with("pub") {
+                        findings.push(format!("{file}: Restore's field is public: {part}"));
+                    }
+                }
+            }
+        }
+    }
+    if calls != ["codec.rs: 1"] {
+        findings.push(format!("the decoder's door is called at {calls:?}"));
+    }
+    (examined, findings)
+}
+
+#[test]
+fn restore_is_built_only_from_a_checkpoint_reply_or_by_the_decoder() {
+    let (examined, findings) = restore_doors(&sources());
+    println!("examined {examined} door(s) to Restore");
+    assert_eq!(findings, Vec::<String>::new(), "doors to Restore");
+    // One trait impl, two functions, one call of the decoder's door and one field.
+    assert_eq!(examined, 5, "the doors read");
+}
+
+#[test]
+fn a_planted_public_door_to_restore_is_refused() {
+    let plants: [(&str, &str, &str, &str); 4] = [
+        (
+            "wire.rs",
+            "    pub(crate) fn decoded(",
+            "    pub fn decoded(",
+            "wire.rs: Restore::decoded is pub",
+        ),
+        (
+            "wire.rs",
+            "impl From<CheckpointReply> for Restore {",
+            "impl From<Vec<u8>> for Restore {\n    fn from(bytes: Vec<u8>) -> Self {\n        Self { bytes }\n    }\n}\n\nimpl From<CheckpointReply> for Restore {",
+            "wire.rs: impl From<Vec<u8>> for Restore",
+        ),
+        (
+            "wire.rs",
+            "pub struct Restore {\n    bytes: Vec<u8>,",
+            "pub struct Restore {\n    pub bytes: Vec<u8>,",
+            "wire.rs: Restore's field is public: pub bytes: Vec<u8>",
+        ),
+        (
+            "codec.rs",
+            "/// A frame's header, read.\n",
+            "/// A forged door.\npub fn forge(bytes: Vec<u8>) -> Restore {\n    Restore::decoded(bytes)\n}\n\n/// A frame's header, read.\n",
+            "the decoder's door is called at [\"codec.rs: 2\"]",
+        ),
+    ];
+    for (file, anchor, planted, named) in plants {
+        let mut planted_sources = sources();
+        let source = planted_sources
+            .iter_mut()
+            .find(|(name, _)| *name == file)
+            .map(|(_, source)| source)
+            .expect("the planted file is a source");
+        assert_eq!(
+            source.matches(anchor).count(),
+            1,
+            "the planting anchor is in {file} once: {anchor}"
+        );
+        *source = source.replacen(anchor, planted, 1);
+        let (_, findings) = restore_doors(&planted_sources);
+        assert_eq!(
+            findings,
+            [named.to_owned()],
+            "the planted door is refused by name"
+        );
+    }
+    println!("examined {} planted door(s), each refused", plants.len());
+}
+
+/// Whether a crate root declares `#![no_std]` on a line of its own and links no `std` back in
+/// (ADR-519 D5).
+fn declares_no_std(root: &str) -> bool {
+    let code = without_comments(root);
+    code.lines().any(|line| line.trim() == "#![no_std]")
+        && !squeeze(&code).contains("externcratestd")
+}
+
+#[test]
+fn the_interface_crate_is_no_std_and_a_root_without_it_is_refused() {
+    assert!(
+        declares_no_std(LIB),
+        "the interface crate's root declares #![no_std]"
+    );
+    let anchor = "#![no_std]\n";
+    assert_eq!(
+        LIB.matches(anchor).count(),
+        1,
+        "the planting anchor is in the root once"
+    );
+    let plants = [
+        LIB.replacen(anchor, "", 1),
+        LIB.replacen(anchor, "// #![no_std]\n", 1),
+        LIB.replacen(anchor, "#![no_std]\nextern crate std;\n", 1),
+    ];
+    for planted in &plants {
+        assert!(
+            !declares_no_std(planted),
+            "a planted root is refused: {planted}"
+        );
+    }
+    println!("examined 1 crate root and {} planted root(s)", plants.len());
 }

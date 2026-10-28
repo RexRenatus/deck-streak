@@ -2,6 +2,9 @@
 //! reasons by name and admits the one valid case; `negotiate` is `Ok` only for a present
 //! companion at major 1 holding a trained model, over every status, three majors and both
 //! models. Each enumeration is run once more over a planted wrong function, which it must refuse.
+//! The edges of R4 and R5 are pinned with the SPEC's own values: an epoch other than the
+//! session's, earlier or later, is stale; the status is named before the epoch; a session keeps
+//! the epoch it was opened with; and every reply carries its own status.
 
 // An integration test is test code: it prints the examined count on purpose.
 #![allow(clippy::expect_used, clippy::print_stdout)]
@@ -9,7 +12,7 @@
 use deck_streak_companion::codec::encode_reply;
 use deck_streak_companion::decide::{NewDue, Refusal, Session, decide_frame, negotiate};
 use deck_streak_companion::wire::{
-    Adapter, HelloReply, MAJOR, MINOR, Model, Preview, Reply, ReviewEvent, Status,
+    Adapter, CheckpointReply, HelloReply, MAJOR, MINOR, Model, Preview, Reply, ReviewEvent, Status,
 };
 
 const EPOCH: u32 = 7;
@@ -368,4 +371,131 @@ fn a_minor_only_and_a_mode_blind_negotiate_are_each_refused() {
             .collect();
         assert_eq!(wrongly, admitted, "the {name} handshake is refused by name");
     }
+}
+
+/// The valid reply's `NewDue`: card 42, due in 3 days on study day 103.
+const VALID: NewDue = NewDue {
+    card: 42,
+    interval_days: 3,
+    due_day: 103,
+};
+
+/// R4: the reply's epoch is the session's, so a later epoch is as stale as an earlier one.
+#[test]
+fn a_reply_of_a_later_epoch_is_stale_like_an_earlier_one() {
+    let good = due(Status::Ok, 42, 1_000, 3, 103, MODEL);
+    let at = |epoch: u32| decide_frame(&negotiated(), &asked(), &frame(epoch, &good));
+    assert_eq!(at(7), Ok(VALID), "the session's own epoch, 7, is admitted");
+    let others = [0, 6, 8, 9, 1_000, u32::MAX];
+    let stale: Vec<String> = others
+        .iter()
+        .filter_map(|epoch| {
+            let got = at(*epoch);
+            (got != Err(Refusal::StaleEpoch)).then(|| format!("epoch {epoch}: {got:?}"))
+        })
+        .collect();
+    println!("examined {} other epoch(s) of a session at 7", others.len());
+    assert_eq!(stale, Vec::<String>::new(), "every other epoch is stale");
+}
+
+/// R4's order: a reply's status is checked before its epoch, so a stale reply with a status
+/// other than `Ok` refuses by its status.
+#[test]
+fn a_stale_reply_refuses_by_its_status_first() {
+    for epoch in [6, 8] {
+        let at = |status: Status| {
+            decide_frame(
+                &negotiated(),
+                &asked(),
+                &frame(epoch, &due(status, 42, 1_000, 3, 103, MODEL)),
+            )
+        };
+        assert_eq!(at(Status::Ok), Err(Refusal::StaleEpoch), "epoch {epoch}");
+        assert_eq!(at(Status::Absent), Err(Refusal::Absent), "epoch {epoch}");
+        for status in [
+            Status::FixtureRefuses,
+            Status::Busy,
+            Status::Error,
+            Status::Conflict,
+            Status::Unsupported,
+        ] {
+            assert_eq!(
+                at(status),
+                Err(Refusal::Status(status)),
+                "epoch {epoch}: the status is named before the epoch"
+            );
+        }
+    }
+}
+
+/// R5: a session keeps the epoch it was opened with, whether its handshake was `Ok` or not.
+#[test]
+fn a_session_keeps_the_epoch_it_was_opened_with() {
+    for epoch in [1, 7, 8, u32::MAX] {
+        let ok = Session::new(epoch, &hello(Status::Ok, 1, Model::Trained));
+        let failed = Session::new(epoch, &hello(Status::Ok, 2, Model::Trained));
+        assert_eq!((ok.epoch(), failed.epoch()), (epoch, epoch));
+    }
+}
+
+/// One reply of each of the six kinds, each with `status`.
+fn every_reply_kind(status: Status) -> [Reply; 6] {
+    [
+        Reply::Hello(HelloReply {
+            status,
+            ..hello(Status::Ok, 1, Model::Trained)
+        }),
+        Reply::Ack {
+            status,
+            folded: 1,
+            head_t_ms: 1_000,
+        },
+        due(status, 42, 1_000, 3, 103, MODEL),
+        Reply::Checkpoint(CheckpointReply {
+            status,
+            model_id: MODEL,
+            adapter: Adapter::Off,
+            bytes: vec![1, 2, 3],
+        }),
+        Reply::Hash {
+            status,
+            words: [1, 2, 3, 4],
+        },
+        Reply::Refused { status },
+    ]
+}
+
+/// R4: every reply carries its own status, and one that is not a `Due` refuses by it: `Absent`
+/// for `Absent`, `WrongStage` for `Ok` and `Status` for any other, over the six kinds and the
+/// seven statuses.
+#[test]
+fn every_reply_carries_its_own_status_and_one_that_is_not_a_due_refuses_by_it() {
+    let replies: Vec<(Status, Reply)> = STATUSES
+        .iter()
+        .flat_map(|status| every_reply_kind(*status).map(|reply| (*status, reply)))
+        .collect();
+    let mut findings = Vec::new();
+    for (status, reply) in &replies {
+        if reply.status() != *status {
+            findings.push(format!("{reply:?}: status() is {:?}", reply.status()));
+        }
+        if matches!(reply, Reply::Due { .. }) {
+            continue;
+        }
+        let want = match status {
+            Status::Ok => Refusal::WrongStage,
+            Status::Absent => Refusal::Absent,
+            other => Refusal::Status(*other),
+        };
+        let got = decide_frame(&negotiated(), &asked(), &frame(EPOCH, reply));
+        if got != Err(want) {
+            findings.push(format!("{reply:?}: {got:?}, not {want:?}"));
+        }
+    }
+    println!(
+        "examined {} reply(ies) over 6 kind(s) and 7 status(es)",
+        replies.len()
+    );
+    assert_eq!(replies.len(), 42);
+    assert_eq!(findings, Vec::<String>::new());
 }

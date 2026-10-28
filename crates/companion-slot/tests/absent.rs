@@ -1,6 +1,7 @@
 //! The public slot is Absent (SPEC-501 C6): the companion `open` gives answers `Refused` with
 //! status `Absent` to every request kind, whatever the model bytes, and a planted slot that
-//! answers a due date is refused by the same enumeration.
+//! answers a due date is refused by the same enumeration. The slot's root is `#![no_std]`
+//! (ADR-519 D5), held by a census of its source with planted roots it must refuse.
 
 // An integration test is test code: it prints the examined count on purpose.
 #![allow(clippy::print_stdout)]
@@ -115,4 +116,45 @@ fn a_slot_that_answers_a_due_date_is_refused() {
         found.len()
     );
     assert_eq!(found.len(), 9, "{found:?}");
+}
+
+/// The slot's root, as committed.
+const ROOT: &str = include_str!("../src/lib.rs");
+
+/// Whether a crate root declares `#![no_std]` on a line of its own, outside any comment, and
+/// links no `std` back in (ADR-519 D5).
+fn declares_no_std(root: &str) -> bool {
+    let code: Vec<String> = root
+        .lines()
+        .map(|line| line.split("//").next().unwrap_or("").to_owned())
+        .collect();
+    let squeezed: String = code
+        .concat()
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect();
+    code.iter().any(|line| line.trim() == "#![no_std]") && !squeezed.contains("externcratestd")
+}
+
+#[test]
+fn the_slot_is_no_std_and_a_root_without_it_is_refused() {
+    assert!(declares_no_std(ROOT), "the slot's root declares #![no_std]");
+    let anchor = "#![no_std]\n";
+    assert_eq!(
+        ROOT.matches(anchor).count(),
+        1,
+        "the planting anchor is in the root once"
+    );
+    let plants = [
+        ROOT.replacen(anchor, "", 1),
+        ROOT.replacen(anchor, "// #![no_std]\n", 1),
+        ROOT.replacen(anchor, "#![no_std]\nextern crate std;\n", 1),
+    ];
+    for planted in &plants {
+        assert!(
+            !declares_no_std(planted),
+            "a planted root is refused: {planted}"
+        );
+    }
+    println!("examined 1 crate root and {} planted root(s)", plants.len());
 }
