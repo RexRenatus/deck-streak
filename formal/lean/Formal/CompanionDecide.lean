@@ -1,5 +1,5 @@
--- @phx covers crates/companion/src/decide.rs anchor=decide digest=sha256:d04804c51bd28b4ad0cda4238f8880afcf5e9c255c37f2cc84e8572888c62136
--- @phx covers crates/companion/src/decide.rs anchor=negotiate digest=sha256:237842bcfd29e9a163de5967d4e528060da51dc8b4724498545cab1c7f493079
+-- @phx covers crates/companion/src/decide.rs anchor=decide digest=sha256:0fd658169fde7a94f5c4090fe9acac85e6ce9112f5222bf83abf6108a51808bf
+-- @phx covers crates/companion/src/decide.rs anchor=negotiate digest=sha256:ed35a0e61ba8a4e7338df6f7b278d0bd05859ab37e75dff05c205b4d8af32332
 -- @phx vectors formal/vectors/companion-decide.jsonl
 -- @phx cites #997
 -- @phx theorem decide_admits_exactly_when_every_condition_holds ramp=report

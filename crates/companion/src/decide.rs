@@ -78,49 +78,101 @@ impl Session {
     }
 }
 
-/// The handshake: this stub admits every hello.
+/// The handshake: the model id when the companion is present, speaks [`MAJOR`] and holds a
+/// trained model. A minor difference is admitted.
 ///
 /// # Errors
 ///
-/// None in this stub.
+/// [`Refusal::Absent`] for an absent companion, [`Refusal::Status`] for any other status but
+/// `Ok`, [`Refusal::Mismatch`] for another major and [`Refusal::Fixture`] for a fixture model,
+/// checked in that order.
 pub fn negotiate(hello: &HelloReply) -> Result<[u64; 4], Refusal> {
+    match hello.status {
+        Status::Ok => {}
+        Status::Absent => return Err(Refusal::Absent),
+        status => return Err(Refusal::Status(status)),
+    }
+    if hello.major != MAJOR {
+        return Err(Refusal::Mismatch);
+    }
+    if hello.model != Model::Trained {
+        return Err(Refusal::Fixture);
+    }
     Ok(hello.model_id)
 }
 
-/// The decision: this stub admits every reply, due the next study day.
+/// The decision: `Ok` only when the session negotiated a model, the reply is a `Due` with
+/// status `Ok`, its epoch is the session's, its card and its previewed review's id are the
+/// press's, its model is the negotiated one, its interval is 1 to 36,500 days, and its due day
+/// is the press's study day plus the interval by checked arithmetic.
 ///
 /// # Errors
 ///
-/// None in this stub.
+/// The first condition that fails, as a named [`Refusal`], in the order above. A reply that is
+/// not a `Due` refuses by its status: [`Refusal::Absent`], [`Refusal::Status`], or
+/// [`Refusal::WrongStage`] when its status is `Ok`.
 pub fn decide(
-    _session: &Session,
+    session: &Session,
     asked: &Preview,
-    _replied_epoch: u32,
-    _reply: &Reply,
+    replied_epoch: u32,
+    reply: &Reply,
 ) -> Result<NewDue, Refusal> {
+    let Some(model) = session.model else {
+        return Err(Refusal::NotNegotiated);
+    };
+    let Reply::Due {
+        status,
+        card,
+        staged_t_ms,
+        interval_days,
+        due_day,
+        model_id,
+    } = *reply
+    else {
+        return Err(match reply.status() {
+            Status::Absent => Refusal::Absent,
+            Status::Ok => Refusal::WrongStage,
+            status => Refusal::Status(status),
+        });
+    };
+    if status == Status::Absent {
+        return Err(Refusal::Absent);
+    }
+    if status != Status::Ok {
+        return Err(Refusal::Status(status));
+    }
+    if replied_epoch != session.epoch {
+        return Err(Refusal::StaleEpoch);
+    }
+    if card != asked.event.card {
+        return Err(Refusal::WrongCard);
+    }
+    if staged_t_ms != asked.event.t_ms {
+        return Err(Refusal::WrongStage);
+    }
+    if model_id != model {
+        return Err(Refusal::ModelChanged);
+    }
+    if !(1..=INTERVAL_DAYS_MAX).contains(&interval_days) {
+        return Err(Refusal::IntervalOutOfRange);
+    }
+    if asked.event.study_day.checked_add_unsigned(interval_days) != Some(due_day) {
+        return Err(Refusal::DueDayInconsistent);
+    }
     Ok(NewDue {
-        card: asked.event.card,
-        interval_days: 1,
-        due_day: asked.event.study_day.wrapping_add(1),
+        card,
+        interval_days,
+        due_day,
     })
 }
 
-/// Decodes a reply frame, then decides: this stub admits every frame.
+/// Decodes a reply frame, then decides: [`Refusal::Malformed`] for a frame that does not decode,
+/// and otherwise [`decide`] over the frame's epoch and reply.
 ///
 /// # Errors
 ///
-/// None in this stub.
+/// [`Refusal::Malformed`], or any refusal of [`decide`].
 pub fn decide_frame(session: &Session, asked: &Preview, frame: &[u8]) -> Result<NewDue, Refusal> {
-    decide(
-        session,
-        asked,
-        0,
-        &Reply::Refused {
-            status: Status::Absent,
-        },
-    )
-    .map(|due| {
-        let _ = frame;
-        due
-    })
+    let decoded = decode_reply(frame).map_err(|_| Refusal::Malformed)?;
+    decide(session, asked, decoded.epoch, &decoded.message)
 }

@@ -6,7 +6,6 @@
 //! other field a learner writes never cross: no type here can hold them. The field order of each
 //! type is its order on the wire ([`crate::codec`]).
 
-use alloc::string::String;
 use alloc::vec::Vec;
 
 /// The schema's major version. A companion that answers another major is refused.
@@ -260,8 +259,7 @@ pub struct CheckpointReply {
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Restore {
-    /// The bytes.
-    pub bytes: Vec<u8>,
+    bytes: Vec<u8>,
 }
 
 impl Restore {
@@ -281,11 +279,4 @@ impl From<CheckpointReply> for Restore {
     fn from(reply: CheckpointReply) -> Self {
         Self { bytes: reply.bytes }
     }
-}
-
-/// A note's text, as this stub of the schema carries it.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct NoteText {
-    /// The text.
-    pub text: String,
 }

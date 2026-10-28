@@ -18,13 +18,8 @@ pub struct Absent;
 
 impl Companion for Absent {
     fn call(&mut self, _epoch: u32, _request: &Request) -> Reply {
-        Reply::Due {
-            status: Status::Ok,
-            card: 0,
-            staged_t_ms: 0,
-            interval_days: 1,
-            due_day: 1,
-            model_id: [0; 4],
+        Reply::Refused {
+            status: Status::Absent,
         }
     }
 }

@@ -43,6 +43,8 @@ deck-streak-web-engine    (Anki's engine on wasm32 in the web client's Worker: t
 deck-streak-push          (APNs and web push senders for a native or web client: provider and VAPID tokens, RFC 8291; ADR-354)  depends on: kernel
 deck-streak-xp            (the per-review XP rule, with no I/O, for the server and both clients; ADR-371)  depends on: nothing
 deck-streak-study-day     (the study day, its instant and its date error, with no I/O, for the server and both clients; ADR-515)  depends on: nothing
+deck-streak-companion     (the scheduling companion's documented interface: schema v1, its codec, the handshake, the decision that fails closed, the Absent default; ADR-519)  depends on: nothing
+deck-streak-companion-slot  (the one substitutable companion body; the public body opens Absent; ADR-519)  depends on: companion
 miniapp   web/app/src     (the SvelteKit Mini App)  depends on: nothing internal
 ios-harness  ios/  (the SwiftUI harness over deck-streak-ffi's XCFramework; ADR-335)  depends on: nothing internal
 landing   web/site/src    (the Astro landing page, planned)  depends on: nothing internal
@@ -74,6 +76,15 @@ offset and its ISO calendar, the instant it is computed from and the error a mal
 (SPEC-497, ADR-515). It depends on nothing and does no I/O, so both clients can link it without the
 kernel. The kernel depends on it alone and re-exports each item at the path it always had;
 `SystemClock`, the one reader of the system time, stays in the kernel.
+
+`deck-streak-companion` is the scheduling companion's documented interface (SPEC-501, ADR-519): the
+integer-only schema v1 that crosses between the app and a scheduler outside its public code, the
+frames and their codec, the handshake, and the one decision whose `Ok` lets a due date be written.
+It is `no_std`, depends on nothing and does no I/O, so both clients can link it.
+`deck-streak-companion-slot` is the one body a build substitutes behind that interface, and it
+depends on the interface alone; its public body opens `Absent`, which refuses every request. The
+engine core, the umbrella FFI crate and the web engine gain their edges to them in the changes that
+first use them (#997, #998).
 
 `deck-streak-push` is an outbound adapter: it builds APNs and web push requests and reports what
 each platform answered, and it depends on the kernel's clock alone (SPEC-343, ADR-354 D3). The

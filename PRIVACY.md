@@ -49,6 +49,7 @@ inventory, in the form the repository's privacy checks read.
 | `writing-log` | each study day you confirmed writing in a writing course: the course, the study day, and when it was confirmed | earning the writing XP and counting the writing streaks | contract | until account deletion |
 | `passkeys` | each passkey you registered for signing in on the web: its credential id, the random user handle your passkeys share, the stored credential with its public key, the signature counter, the backup state, and when it was added and last used | signing you in on the web with a passkey | contract | until account deletion |
 | `sensitive-decks` | the ids of the decks you keep away from AI, and when each was marked; never a deck's name or its cards | keeping every card of a deck you marked, and of the decks under it, away from every AI feature; after an erase every deck is readable again until you keep one away | contract | until account deletion |
+| `companion-state` | on your device only: the scheduling companion's saved state, opaque bytes derived from your review log, with the model and the mode it was computed under | resuming the scheduler on your device without reading your whole review log again | contract | until account deletion |
 
 The lawful basis of each is the contract (GDPR Article 6(1)(b)): the service you run needs it. None
 is kept for a fixed period. Each is kept until you erase it, which is how an account is deleted here.
@@ -75,24 +76,32 @@ copies of the server's collection, at most three of each kind, the oldest of a k
 They stay on your device alone, are never sent to the service, and leave your device only when you
 export one from the sync screen.
 
+`companion-state` is the one category above that is not in DeckStreak's database. When an app on
+your device runs a scheduling companion, it keeps the companion's saved state on that device, so the
+companion resumes without reading your whole review log again. It is derived from your review log
+and holds no card text, tag or deck name. It is never synced and never sent to the service, so an
+export of your data does not include it; it is erased by the device erase routine, on the device's
+own erase and on `Reset`. A build with no scheduling companion keeps none.
+
 ## Your copy of your data, and erasing it
 
 From Telegram, the bot answers two commands, and only yours:
 
-- `/export` sends you every category above as one JSON document, the same one the host writes
-  below. The document goes to your chat through Telegram, which keeps it there until you delete it
-  in Telegram.
+- `/export` sends you every category above but `companion-state` as one JSON document, the same one
+  the host writes below. The document goes to your chat through Telegram, which keeps it there until
+  you delete it in Telegram.
 - `/delete` asks you to confirm with a button, and erases exactly as the host's erase below does
   once you tap it. Only the button on the latest question erases, and only once.
 
 You can also export and erase on the host that runs DeckStreak:
 
-- `deckstreakd data export` writes every category above as one JSON document, whose `schema` is
-  `deckstreak.export.v1`, with one key per table holding its rows.
-- `deckstreakd data erase --confirm ERASE` erases every category above in one transaction: each
-  table's rows are deleted, and each one-row table is reset to its starting values. The pages the
-  erase frees are overwritten with zeros, the database file is rebuilt, and its write-ahead log is
-  emptied, so neither holds an erased value. Without the confirmation word, nothing is erased.
+- `deckstreakd data export` writes every category above but `companion-state` as one JSON
+  document, whose `schema` is `deckstreak.export.v1`, with one key per table holding its rows.
+- `deckstreakd data erase --confirm ERASE` erases every category above but `companion-state` in
+  one transaction: each table's rows are deleted, and each one-row table is reset to its starting
+  values. The pages the erase frees are overwritten with zeros, the database file is rebuilt, and
+  its write-ahead log is emptied, so neither holds an erased value. Without the confirmation word,
+  nothing is erased.
 
 ## What an erase does not reach
 
