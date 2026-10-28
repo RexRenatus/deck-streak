@@ -71,8 +71,12 @@ self, epoch: u32, request: &Request) -> Reply`) and `Absent`, which answers `Ref
 request. `crates/companion-slot` is the one substitutable body: its `open(weights: &[u8]) -> Box<dyn Companion + Send>`
 opens `Absent`, and it depends on the interface crate alone.
 
-R7. **`Restore` holds only the companion's bytes.** `Restore`'s one field is private, and its one public constructor is
-`From<CheckpointReply>`; raw bytes do not build one.
+R7. **`Restore` holds only the companion's bytes.** `Restore`'s one field is private, its one public constructor is
+`From<CheckpointReply>`, and no public function of its own and no `From` of raw bytes builds one. Its one other door is
+`decode_request`, by design (ADR-519 D2): the decoder reads a `Restore` frame's bytes through a crate-private function,
+because it is the companion's side of the codec. So the app builds a `Restore` only from a `CheckpointReply`, and raw
+bytes become one only as a frame the decoder reads; the census
+`restore_is_built_only_from_a_checkpoint_reply_or_by_the_decoder` holds both doors.
 
 R8. **The formal entry.** `formal/lean/Formal/CompanionDecide.lean` ports `decide` and `negotiate` and proves, at
 `ramp=report`: `decide` is `ok d` exactly when every condition of R4 holds; it names the session's and the status's
