@@ -90,6 +90,10 @@ signed out, no sync call. It runs on the macOS lane only. A6 holds R9.
   `formal/tla/FullSyncChoice/FullSyncChoice.tla`, `formal/tla/SyncCredential/SyncCredential.tla`.
 - `docs/decisions/ADR-521-*.md` (new), `docs/decisions/ADR-356-*.md` (amendment),
   `docs/schematics/native-first-sync.md` (new), `changelog.d/native-sync-503.md` (new).
+- This SPEC (new) and its red-first record, `docs/red-first/SPEC-503.md` (new).
+- `scripts/mutation-rows.d/S50300-S50399.json` (new): the band's rows (section 7);
+  `scripts/mutation-rows.d/S36400-S36499.json`: S36402's anchor names the native column's mark on
+  the normal sync, now `native: true`.
 
 ## 5. What this does NOT cover
 
@@ -110,6 +114,10 @@ signed out, no sync call. It runs on the macOS lane only. A6 holds R9.
 Band S50300-S50399: S50300 (1,5)'s native mark; S50301 the facade's statement read; S50302 the
 request's `sync_media: false`; S50303 the full-sync threshold in the app's model; S50304 the stage
 dropped on the write. Each row's killer is named in the acceptance block above.
+
+S50303 is deferred: its killer is A5's XCTest, and the registry's prover (`scripts/mutation_rows.py`)
+runs cargo and unittest killers only. It is registered with that XCTest killer when the macOS lane
+runs A5; until then the band's file holds S50300, S50301, S50302 and S50304.
 
 ## 8. Formal models
 
