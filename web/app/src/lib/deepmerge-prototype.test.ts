@@ -6,12 +6,16 @@
  *
  * T1, T2 and T6 are the advisory's behaviour and the shape of the fix (upstream's open pull request
  * TehShrike/deepmerge#277 keeps the key as an own data property). T3 to T5 are controls that any
- * fix must keep.
+ * fix must keep. T7 to T9 pin the rest of that shape: the key on the target's side, its property
+ * flags, and the key on both sides.
  */
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 
-type Options = { arrayMerge?: (target: unknown[], source: unknown[]) => unknown[] };
+type Options = {
+  arrayMerge?: (target: unknown[], source: unknown[]) => unknown[];
+  isMergeableObject?: (value: unknown) => boolean;
+};
 type Merge = (target: object, source: object, options?: Options) => Record<string, unknown>;
 
 /** deepmerge as `@sveltejs/vite-plugin-svelte` resolves it, from that package's own directory. */
@@ -25,6 +29,21 @@ const deepmerge = deepmergeOfThePlugin();
 /** A value `JSON.parse` returns, whose `__proto__` key is an own property of the object. */
 function parsed(text: string): Record<string, unknown> {
   return JSON.parse(text) as Record<string, unknown>;
+}
+
+/**
+ * A null-prototype object with an own enumerable `__proto__` data property, built the way
+ * upstream's tests build one.
+ */
+function withOwnProtoKey(value: object): Record<string, unknown> {
+  const holder = Object.create(null) as Record<string, unknown>;
+  Object.defineProperty(holder, '__proto__', {
+    value,
+    enumerable: true,
+    writable: true,
+    configurable: true
+  });
+  return holder;
 }
 
 describe('deepmerge as the SvelteKit Vite plugin resolves it (GHSA-gcqx-w48m-w2h4)', () => {
@@ -74,5 +93,43 @@ describe('deepmerge as the SvelteKit Vite plugin resolves it (GHSA-gcqx-w48m-w2h
     expect(own?.value).toEqual({ admin: true });
     expect(own?.value).not.toBe(Object.getOwnPropertyDescriptor(source, '__proto__')?.value);
     expect(Object.getPrototypeOf(merged)).toBe(Object.prototype);
+  });
+
+  it('T7 an own __proto__ key of a null-prototype target stays an own data property, cloned', () => {
+    // Upstream pull request 277's case 'preserving an own __proto__ data property from a
+    // null-prototype target', reading the kept key through its own descriptor.
+    const proto = { admin: true };
+    const merged = deepmerge(withOwnProtoKey(proto), {});
+    expect(Object.getPrototypeOf(merged)).toBe(Object.prototype);
+    const own = Object.getOwnPropertyDescriptor(merged, '__proto__');
+    expect(own?.value).toEqual({ admin: true });
+    expect(own?.value).not.toBe(proto);
+    expect(merged.admin).toBeUndefined();
+  });
+
+  it('T8 the kept own __proto__ key is enumerable, writable and configurable', () => {
+    const merged = deepmerge(Object.create(null) as object, parsed('{"__proto__": {"admin": true}}'));
+    expect(Object.getOwnPropertyDescriptor(merged, '__proto__')).toEqual({
+      value: { admin: true },
+      enumerable: true,
+      writable: true,
+      configurable: true
+    });
+  });
+
+  it('T9 an own __proto__ key on both target and source merges into one own data property', () => {
+    const merged = deepmerge(parsed('{"__proto__": {"a": 1}}'), parsed('{"__proto__": {"b": 2}}'));
+    expect(Object.getPrototypeOf(merged)).toBe(Object.prototype);
+    expect(Object.getOwnPropertyDescriptor(merged, '__proto__')?.value).toEqual({ a: 1, b: 2 });
+
+    // deepmerge's isMergeableObject option declines the null-prototype target here, so the target's
+    // own keys are not copied first and the deep-merge branch alone writes the key.
+    const plainOnly = (value: unknown) =>
+      value !== null && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype;
+    const declined = deepmerge(withOwnProtoKey({ a: 1 }), parsed('{"__proto__": {"b": 2}}'), {
+      isMergeableObject: plainOnly
+    });
+    expect(Object.getPrototypeOf(declined)).toBe(Object.prototype);
+    expect(Object.getOwnPropertyDescriptor(declined, '__proto__')?.value).toEqual({ a: 1, b: 2 });
   });
 });
