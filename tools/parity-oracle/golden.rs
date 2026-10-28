@@ -228,10 +228,21 @@ impl fmt::Display for Mismatch {
 /// in case order. A consumer that compares through this reports each mismatch it finds, so a
 /// golden with a wrong output fails it (the non-vacuity control, SPEC-498).
 #[must_use]
-pub fn mismatches(golden: &Golden, port: impl FnMut(&Value) -> Value) -> Vec<Mismatch> {
-    // Red-first stub: the comparison finds nothing.
-    let _ = (golden, port);
-    Vec::new()
+pub fn mismatches(golden: &Golden, mut port: impl FnMut(&Value) -> Value) -> Vec<Mismatch> {
+    golden
+        .cases
+        .iter()
+        .enumerate()
+        .filter_map(|(index, case)| {
+            let found = port(&case.input);
+            (found != case.output).then(|| Mismatch {
+                index,
+                input: case.input.clone(),
+                expected: case.output.clone(),
+                found,
+            })
+        })
+        .collect()
 }
 
 /// Runs `port` over every case of the golden at `path`, prints
