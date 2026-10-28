@@ -105,6 +105,9 @@ A6: pnpm exec vitest run web/app/src/lib/study/study-coverage.test.ts -t "the st
 | `web/app/src/lib/engine/protocol.ts` | web | changed: the `card-health` operation and the record's type |
 | `web/app/src/lib/engine/session.ts` | web | changed: the Worker serves `card-health` |
 | `web/app/src/lib/engine/client.ts` | web | changed: `cardHealth` |
+| `web/app/src/lib/engine/protocol.test.ts` | web | changed: the operations' census names `card-health` |
+| `web/app/src/lib/engine/session.test.ts` | web | changed: its stand-in module answers `card_health` |
+| `web/app/src/lib/engine/credential-stand-in.test.support.ts` | web | changed: its stand-in module answers `card_health` |
 | `web/app/src/lib/study/review.ts` | web | changed: the clock's overlay pause and the panel's read |
 | `web/app/src/lib/study/card-health.ts` | web | added: the panel's lines |
 | `web/app/src/lib/study/CardHealthPanel.svelte` | web | added: the dialog |
