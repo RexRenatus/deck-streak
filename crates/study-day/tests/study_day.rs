@@ -127,6 +127,17 @@ fn a_study_day_renders_as_its_iso_date_and_parses_back() {
             "{text:?} was read as a date"
         );
     }
+    // A fourth part after the day, or a day of one digit, is refused, each case named for its
+    // criterion (SPEC-497 A3).
+    for (refusal, text) in [
+        ("a fourth part after the day", "2024-01-15-01"),
+        ("a day of one digit", "2024-01-5"),
+    ] {
+        assert!(
+            text.parse::<StudyDay>().is_err(),
+            "SPEC-497 A3, {refusal}: {text:?} was read as a date"
+        );
+    }
 }
 
 #[test]
@@ -134,6 +145,11 @@ fn a_signed_year_is_written_only_where_four_digits_cannot_hold_it() {
     // A minus sign names a year below zero, never year zero; a plus sign a year past 9999.
     assert!("-0000-01-01".parse::<StudyDay>().is_err());
     assert!("+9999-01-01".parse::<StudyDay>().is_err());
+    // A signed year has four digits at least (SPEC-497 A3): a sign before one digit is refused.
+    assert!(
+        "-1-01-01".parse::<StudyDay>().is_err(),
+        "SPEC-497 A3, a signed year of one digit: \"-1-01-01\" was read as a date"
+    );
     assert_eq!(
         "-0001-01-01".parse::<StudyDay>().map(|day| day.to_string()),
         Ok("-0001-01-01".to_owned())

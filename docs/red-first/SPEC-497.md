@@ -43,3 +43,27 @@ A6: green at ed017445
   step exited 0, no test died by signal 9, and its own journal names no out-of-memory kill.
 - **Every line of `crates/` at the head equals ed017445's;** the later commit adds only this record and the
   changelog fragment.
+
+## Fix round 2: three refusals the parse already made
+
+A mutation run over the crate's parse found three refusal arms that no test held: the date's part count, the signed
+year's width and the day's width. Widening any one of them (to admit a fourth part, a signed year of one digit or a day
+of one digit) passed the crate's suite and the kernel's. Each was inherited: the kernel's tests lacked the same inputs
+before the move. This round adds one case per arm, in the test that owns the arm, and changes no production line:
+
+- SPEC-497 A3, a fourth part after the day: `2024-01-15-01` is refused, in
+  `a_study_day_renders_as_its_iso_date_and_parses_back`.
+- SPEC-497 A3, a day of one digit: `2024-01-5` is refused, in the same test.
+- SPEC-497 A3, a signed year of one digit: `-1-01-01` is refused, in
+  `a_signed_year_is_written_only_where_four_digits_cannot_hold_it`.
+
+The kernel's `crates/kernel/tests/study_day.rs` gains the same three cases in its tests of the same names, each named
+for SPEC-020 A2, the criterion that file holds. R3 and R7 keep the kernel's tests as they were; this round adds three
+cases to them and changes none of their lines.
+
+Each case passes from the start, because the parse already refused its input, so none is red here and A3's red quote
+above stands. Each is proved by its arm instead: on a copy of this commit with that one arm widened, the case's test
+fails at the new case's assertion.
+
+From this round on, `crates/` differs from ed017445's in these two test files alone, by 32 added lines; the note
+above that every line of `crates/` equals ed017445's held for the head it named.
