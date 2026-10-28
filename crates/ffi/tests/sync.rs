@@ -49,6 +49,9 @@ const NOTHING: ChoiceLoss = ChoiceLoss {
     notes: 0,
 };
 
+/// The facade's sentence for a tap when no counts are open, as the app shows it.
+const NO_COUNTS_OPEN: &str = "Nothing was written: no counts are open. Sync again.";
+
 fn engine() -> Arc<Engine> {
     Engine::new(Vec::new()).expect("the engine starts from the default init message")
 }
@@ -220,6 +223,22 @@ fn a_fresh_installs_first_sync_counts_backs_up_and_downloads_then_syncs_normally
     assert!(
         deck_names(&device).contains(&synthetic::SECOND_DECK.to_owned()),
         "the device holds the server's deck after its download"
+    );
+
+    // The write closed the choice: a second tap finds no counts open and writes nothing.
+    let closed = device
+        .full_sync_confirm(
+            DOWNLOAD,
+            key.clone(),
+            endpoint.clone(),
+            false,
+            device_folder,
+        )
+        .expect("a second tap is answered");
+    assert_eq!(
+        (closed.written, closed.said.as_str(), closed.counts),
+        (false, NO_COUNTS_OPEN, None),
+        "once the download is written, the choice is closed and a second tap writes nothing"
     );
 
     // The syncs after it are normal ones.
