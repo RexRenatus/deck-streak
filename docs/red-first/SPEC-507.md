@@ -55,3 +55,55 @@ A6: green at a939d705
   llvm-ar-18) exits 0, and the module names `card_health`. Its bindings and size steps (wasm-bindgen, wasm-opt) run in
   CI's web-engine job.
 - **The study suite's axe step is not measured here.** It runs in Chromium and WebKit over the built module, in CI.
+
+## Fix 1: tests for the mutants a review left alive
+
+A review of the delivery at f0050af3 applied 61 hand-written mutants to the lines it adds, and 24 survived the tests.
+d75e821a (the engine core's health tests) and 041ff071 (the panel's and the clock's tests) change tests only: no
+production line changed, so each mutant still applies where it did. Each changed test was seen red with each mutant it
+answers applied on a scratch tree at 041ff071, on its own assertion, and green at 041ff071 itself.
+
+| mutant | requirement | the test that fails | its red with the mutant applied |
+|---|---|---|---|
+| `capped` reads a negative time as the cap | R3 | A1 | the capped figures: total 189,999 and mean 31,667, not 129,999 and 21,667 |
+| the mean truncates | R3 | A1 | mean 21,666, not 21,667 (the odd sum's 21,666.5 rounds half up) |
+| the median of an even count rounds up | R3 | A1 | median 16,001, not 16,000 (the middle pair's 16,000.5 is floored) |
+| the record keeps every row | R2 | A1 | 207 rows carried, not the newest 200 |
+| the record keeps the oldest 200, reversed | R2 | A1 | the rows begin with the oldest entries set by hand, not the newest fixture row |
+| a lapse is any Again | R5 | A1 | the log's lapses read 2, not 1: a learning Again counted |
+| a lapse is any review row | R5 | A1 | the log's lapses read 2, not 1: a review Good counted |
+| a state spells another's word (four mutants) | R6 | A3, Rust | the scheduler part reads `fixture` for absent, `absent` for fixture, `stale` for unready and `unready` for stale |
+| the JSON carries the created instant in seconds | R7 | A1 | `created_ms` 1793218510, not the card's id 1793218510377 |
+| the clock keeps an overlay still open at the grade | R9 | A5, the clock property | in the first sequence, card 4's grade under an open overlay sends 82,745 ms, not 39,488 |
+| an overlay open as a new card shows keeps its earlier start | R9 | A5, the clock property | in the first sequence, card 5's grade sends 9,956 ms, not 53,213 |
+| the Worker reads Ready without both figures | R6 | A3, Vitest | a Ready part with no `days_to_90` reads Ready, not absent |
+| the Worker reads every state as absent | R6 | A3, Vitest | the core's `fixture` record reads absent |
+| the Worker drops the created instant | R7 | A4, where the card came from | `createdMs` 0, not 1712345678901 |
+| the panel shows the log's answers as its reviews | R5 | the counts test | "Reviews 4 Lapses 1" where the card's counter reads 6 |
+| the panel shows the log's lapses as its lapses | R5 | the counts test | "Lapses 1" where the card's counter reads 3 |
+| the log line only when the answers differ | R5 | the counts test | no log line when only the lapses differ |
+| the newest-of line at the bound | R2 | the counts test | "The newest 5 of 5 reviews." shown when every row is |
+| a fetch reached through `globalThis` | R10 | A5, the census | `global globalThis` and `member fetch` refused |
+| a navigation through `location` | R10 | A5, the census | `global location` and `member assign` refused |
+| an endpoint route under another name | R10 | A5, the census | 27 route files against the base's frozen 26 |
+
+- **What the tests now hold.** A1's card has 200 older entries set by hand and seven rows: a negative time, an hour's
+  answer, an odd capped sum, an even answer count whose middle pair's sum is odd, a learning Again and a review Good,
+  neither a lapse; its counters differ from the log one count at a time across the two cards, and the record's JSON
+  carries the card's id as its created instant, a millisecond instant of the run. A3 writes each state's word out
+  rather than reading it back from the type. The Vitest recall and provenance tests feed the core's own JSON through a
+  Worker session over a stand-in module; the counts test sets each counter apart from the log in turn and passes the
+  row bound; the clock property grades under open overlays (830 of its 1,970 grades) and shows cards under them.
+- **The census is default-deny.** It parses the panel's two modules with Svelte's parser and refuses any import,
+  undeclared name, property read by name, indexed value, kind of syntax, element or attribute that its closed lists do
+  not hold; names resolve through the scopes that declare them, so a global a parameter shadows elsewhere is still
+  refused, and every list entry must be one the modules use. Ten planted reaches are refused (a direct fetch, one
+  through `globalThis`, `location`, a shadowed `location`, a fetch through an element's document, a dynamic import, a
+  navigation import, a link, an indexed value and a shorthand `fetch`). The base's 26 route files are frozen, so a
+  route under any name is refused.
+- **The differential's domain is non-negative times.** R4 now says so: the analytics crate's function keeps a negative
+  time negative where the panel reads it as 0 (R3). A2's generator draws no negative time; A1's fixture holds it.
+- **All 61 mutants ran again at 041ff071.** Examined 61, killed 61, none survived and none failed to apply or build:
+  the 29 Rust mutants each against the health target's four tests (4 passed before and after), and the 32 web mutants
+  each against the panel's, the clock's, the session's and the protocol's test files (38 passed before and after),
+  each judged by a test named for it failing.

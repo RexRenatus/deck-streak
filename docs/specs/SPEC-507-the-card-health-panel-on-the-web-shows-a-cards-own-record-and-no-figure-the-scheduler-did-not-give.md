@@ -42,8 +42,10 @@ R3. Each answer's time counts as `min(time, 60000)` milliseconds, a negative tim
     capped answers; the mean is the total over the count, rounded half up to a millisecond; the median is the
     middle capped answer, or the floor of the two middle ones' mean. With no answer, the mean and the median
     are absent.
-R4. The panel's capped total equals the analytics crate's capped seconds over the same rows, times 1000, and
-    its answer count equals the analytics crate's review count.
+R4. Over rows whose times are not negative, the panel's capped total equals the analytics crate's capped seconds
+    over the same rows, times 1000, and its answer count equals the analytics crate's review count. That is the
+    differential's domain: the analytics crate's function keeps a negative time negative, where the panel reads it
+    as 0 (R3), so a negative time is held by A1's fixture and never by the differential.
 R5. A lapse in the rows is an answer of type 1 (review) with button 1 (Again). The record carries the card's
     counters and the rows' counts side by side; when they differ the panel says what the log holds, as a fact.
 R6. The recall rows show a figure only from the scheduler's readout in its Ready state: the recall chance in
@@ -71,11 +73,11 @@ R11. The panel passes axe-core's WCAG 2.2 A and AA rules in both colour schemes 
 
 | id | criterion | decided by |
 |---|---|---|
-| A1 | a fixture card's reps, lapses, capped mean and median, rows newest first and provenance, through the two fixed reads; a 3,600,000 ms row counts as 60,000 (R1, R2, R3, R7) | `cargo test -p deck-streak-engine-core --test health -- --exact the_panel_reads_a_fixture_cards_figures_through_the_two_fixed_reads` |
-| A2 | the capped total and the answer count equal the analytics crate's over generated rows, and after real answers through the engine the card's reps and lapses equal the counts over its rows (R4, R5) | `cargo test -p deck-streak-engine-core --test health -- --exact the_panels_capped_time_equals_the_analytics_functions_over_generated_rows` and `... --exact the_cards_reps_and_lapses_equal_the_counts_of_its_review_rows` |
+| A1 | a fixture card's reps, lapses, capped mean and median, rows newest first and provenance, through the two fixed reads; a 3,600,000 ms row counts as 60,000 and a negative time as 0, and the record keeps the newest 200 of 207 rows (R1, R2, R3, R5, R7) | `cargo test -p deck-streak-engine-core --test health -- --exact the_panel_reads_a_fixture_cards_figures_through_the_two_fixed_reads` |
+| A2 | the capped total and the answer count equal the analytics crate's over generated rows whose times are not negative, and after real answers through the engine the card's reps and lapses equal the counts over its rows (R4, R5) | `cargo test -p deck-streak-engine-core --test health -- --exact the_panels_capped_time_equals_the_analytics_functions_over_generated_rows` and `... --exact the_cards_reps_and_lapses_equal_the_counts_of_its_review_rows` |
 | A3 | outside Ready, the recall rows name their state and no number; the stored FSRS state never reaches them (R6) | `cargo test -p deck-streak-engine-core --test health -- --exact no_scheduler_figure_reaches_the_recall_rows_outside_ready` and the Vitest test `the recall rows read the state's line in every state but Ready` |
 | A4 | the panel's strings say "The scheduler estimates" and hold no verdict word, and the panel names the collection and the created date (R7, R8) | Vitest `the panel's strings label the estimate and name no verdict` and `the panel says where the card came from` |
-| A5 | the answer clock excludes every overlay's time over random sequences and the panel pauses it, and the panel's module opens no fetch and adds no route (R9, R10) | Vitest `the answer clock excludes every overlay's time`, `the card info panel pauses the answer clock` and `the panel's module opens no fetch and adds no route` |
+| A5 | the answer clock excludes every overlay's time over random sequences, grades under an open overlay among them, and the panel pauses it; the panel's two modules reach only what a default-deny census of their imports, names, properties and markup lists, and the base's route files stand frozen (R9, R10) | Vitest `the answer clock excludes every overlay's time`, `the card info panel pauses the answer clock` and `the panel's module opens no fetch and adds no route` |
 | A6 | axe passes on the review with the panel open, in both colour schemes (R11) | the study suite's `the card info panel passes axe in both colour schemes` (`web/app/tests-study/study.spec.ts`), held by the Vitest census `the study suite covers the review loop in both engines` |
 
 ```acceptance
