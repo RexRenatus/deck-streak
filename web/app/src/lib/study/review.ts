@@ -11,7 +11,7 @@
 // refused undo of a bury or a flag reads the change's notice, picked by the kind it pressed.
 import { frameDocument } from '$lib/card/frame-document';
 import { EngineError } from '$lib/engine/client';
-import type { CardView, Clip, Counts, ErrorCode, Faces, Head, Rating, UndoOffer } from '$lib/engine/protocol';
+import type { CardHealth, CardView, Clip, Counts, ErrorCode, Faces, Head, Rating, UndoOffer } from '$lib/engine/protocol';
 import { m } from '$lib/paraglide/messages.js';
 import { sideAfter, type Action, type Side } from '$lib/remote/actions';
 import { statusText } from './refusal';
@@ -162,6 +162,9 @@ export interface StudyClient {
   /** Both faces of the shown card, completed by the core with its media (SPEC-350 R14). A client
    * without it shows the card view's own sides, as part 1 does. */
   faces?(card: bigint): Promise<Faces>;
+  /** The shown card's health, read by the core's two fixed reads (SPEC-507 R1); it writes nothing. A
+   * client without it shows no record. */
+  cardHealth?(card: bigint): Promise<CardHealth | null>;
 }
 
 /** What plays a face's clips: the page's player (`audio.ts`). */
@@ -291,6 +294,17 @@ export class Review {
     if (faces === null) return [];
     const clips = [faces.question, faces.answer].flatMap((face) => [...face.autoplay, ...face.replay]);
     return [...new Set(clips.flatMap((clip) => (clip.kind === 'speech' ? [clip.language] : [])))];
+  }
+
+  /** Opens an overlay over the review (SPEC-507 R9). */
+  openOverlay(): void {}
+
+  /** Closes the overlay last opened (SPEC-507 R9). */
+  closeOverlay(): void {}
+
+  /** The shown card's health (SPEC-507 R1). */
+  async cardHealth(): Promise<CardHealth | null> {
+    return null;
   }
 
   /** Loads the first card. */

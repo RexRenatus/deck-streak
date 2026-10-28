@@ -42,6 +42,37 @@ export const OPS = [
 ] as const;
 export type Op = (typeof OPS)[number];
 
+/** The scheduler's part of a card's health: its estimate when Ready, else the state that says why
+ * there is none (SPEC-507 R6). */
+export type HealthReadout =
+  | { state: 'ready'; recallPpm: number; daysTo90: number }
+  | { state: 'absent' | 'fixture' | 'unready' | 'stale' };
+
+/** One review row as the card health panel shows it (SPEC-507 R2): its instant, the button pressed
+ * (0 for an entry set by hand), its type, its interval and its time capped at 60,000 ms. */
+export interface HealthReview {
+  at: number;
+  grade: number;
+  kind: number;
+  interval: number;
+  ms: number;
+}
+
+/** One card's health, as the engine core reads it from the card and its review rows (SPEC-507 R2). */
+export interface CardHealth {
+  card: bigint;
+  reps: number;
+  lapses: number;
+  logged: { answers: number; lapses: number };
+  rows: number;
+  reviews: HealthReview[];
+  totalMs: number;
+  meanMs: number | null;
+  medianMs: number | null;
+  scheduler: HealthReadout;
+  provenance: { source: 'collection'; createdMs: number };
+}
+
 /** Why the Worker refused a request. */
 export type ErrorCode =
   | 'bad-request'
