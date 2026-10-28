@@ -27,6 +27,7 @@ struct AccountView: View {
                     .disabled(model.signingIn)
                 }
                 Text(model.message).accessibilityIdentifier("account-message")
+                SyncView(model: model.sync)
             }
             .navigationTitle("Account")
             .toolbar {

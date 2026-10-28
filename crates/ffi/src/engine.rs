@@ -2,7 +2,7 @@
 
 use std::fmt;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -11,8 +11,11 @@ use deck_streak_engine_core::answer::{
 };
 use deck_streak_engine_core::dispatch::{Dispatcher, Refusal};
 use deck_streak_engine_core::face::Side;
+use deck_streak_engine_core::full_sync::{Counted, Counts, Direction, Losses, SnapshotAnswer};
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
 use deck_streak_engine_core::handshake;
+use deck_streak_engine_core::native_sync;
+use deck_streak_engine_core::one_way::{self, Reason, Unwritten};
 use deck_streak_engine_core::review::{self, bury_of, bury_request, flag_request, toggled_red};
 use deck_streak_engine_core::table::{ExemptWrite, Transport};
 
@@ -68,6 +71,8 @@ impl std::error::Error for EngineRefusal {}
 #[derive(uniffi::Object)]
 pub struct Engine {
     dispatcher: Dispatcher,
+    /// The full-sync choice's stage between the owner's taps (SPEC-503 R4).
+    stage: Mutex<Option<Stage>>,
 }
 
 #[uniffi::export]
@@ -84,7 +89,12 @@ impl Engine {
     )]
     pub fn new(message: Vec<u8>) -> Result<Arc<Self>, EngineRefusal> {
         Dispatcher::start(Transport::Native, &message)
-            .map(|dispatcher| Arc::new(Self { dispatcher }))
+            .map(|dispatcher| {
+                Arc::new(Self {
+                    dispatcher,
+                    stage: Mutex::new(None),
+                })
+            })
             .map_err(|reason| EngineRefusal::Start { reason })
     }
 
@@ -229,6 +239,285 @@ impl Engine {
         self.run(5, 4, flag_request(card_id, flag))?;
         Ok(flag)
     }
+}
+
+/// The native sync facade (SPEC-503 R2 to R7; ADR-521 D2): the normal sync, the unsynced read and
+/// the full-sync choice, as the web engine's exports run them, each through the core. The app
+/// hands over the host key it read from its Keychain item and never a password.
+#[uniffi::export]
+impl Engine {
+    /// Runs a normal sync with the host key `host_key` against `endpoint`, with no media, and
+    /// answers what the server requires next as the engine numbers it (SPEC-503 R2, R5). The
+    /// service's statement of its minimum client level is read first at the endpoint's origin and
+    /// handed to the core, which refuses the sync unless the statement admits this client (R3).
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the endpoint rule, the handshake or the engine refuses, in
+    /// the engine's error shape, or with the reply's bytes when the reply does not decode.
+    pub fn sync(&self, host_key: String, endpoint: String) -> Result<u32, EngineRefusal> {
+        if let Some(url) = native_sync::statement_url(&endpoint) {
+            self.dispatcher.handshake(read_statement(&url).as_deref());
+        }
+        let request = native_sync::normal_sync(&native_sync::auth(host_key, endpoint));
+        let reply = self.run(SYNC_COLLECTION.0, SYNC_COLLECTION.1, request)?;
+        native_sync::required(&reply).ok_or(EngineRefusal::Engine { error: reply })
+    }
+
+    /// What this device has not synced, read offline by the core's one fixed statement, so the
+    /// app shows it before a full sync can lose it (SPEC-503 R7).
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the engine cannot run the read.
+    pub fn unsynced(&self) -> Result<UnsyncedCount, EngineRefusal> {
+        self.dispatcher
+            .unsynced()
+            .map(|read| UnsyncedCount {
+                reviews: read.reviews,
+                changed: read.changed,
+                schema: read.schema,
+            })
+            .map_err(refusal)
+    }
+
+    /// The full-sync choice's counts, from the normal sync's `required` (SPEC-503 R4): the core
+    /// fetches the server's collection into a new file in `folder` and counts what each offered
+    /// direction loses. The counts and that file are held as the stage until the owner's tap.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the endpoint rule, the handshake or the engine refuses.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "a foreign caller's values cross the boundary owned, as the bindings pass them"
+    )]
+    pub fn full_sync_count(
+        &self,
+        host_key: String,
+        endpoint: String,
+        required: u32,
+        folder: String,
+    ) -> Result<ChoiceStep, EngineRefusal> {
+        let auth = native_sync::auth(host_key, endpoint);
+        let copy = choice_file(&folder, "server-copy");
+        let answer = native_sync::answer(required);
+        match one_way::count(&self.dispatcher, &answer, &auth, &copy) {
+            Ok(counted) => {
+                let counts = counted.counts();
+                *self.stage() = Some(Stage { counted, copy });
+                Ok(step(COUNTED, Some(counts)))
+            }
+            Err(reason) => unwritten(reason),
+        }
+    }
+
+    /// The owner's tap on `direction` (0 the upload, 1 the download), with the snapshot answer
+    /// `snapshot_found` (SPEC-503 R4). The tap builds the one-way gesture; the core backs up the
+    /// side the write replaces into a new file in `folder` and, for an upload, judges the answer
+    /// and checks a fresh server copy, before the write. The stage is kept on every refusal,
+    /// replaced on a change and dropped on the write.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the endpoint rule, the handshake or the engine refuses.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "a foreign caller's values cross the boundary owned, as the bindings pass them"
+    )]
+    pub fn full_sync_confirm(
+        &self,
+        direction: u32,
+        host_key: String,
+        endpoint: String,
+        snapshot_found: bool,
+        folder: String,
+    ) -> Result<ChoiceStep, EngineRefusal> {
+        let Some(Stage { counted, copy }) = self.stage().clone() else {
+            return Ok(step(NO_STAGE, None));
+        };
+        let direction = match direction {
+            0 => Direction::Upload,
+            1 => Direction::Download,
+            _ => return Ok(step(NOT_OFFERED, None)),
+        };
+        let Ok(gesture) = OwnerGesture::from_tap(ExemptWrite::OneWaySync, Target::Collection) else {
+            return Ok(step(NOT_THE_OWNERS, None));
+        };
+        let Ok(confirmed) = counted.confirm(direction) else {
+            return Ok(step(NOT_OFFERED, None));
+        };
+        let auth = native_sync::auth(host_key, endpoint);
+        let backup = choice_file(&folder, "backup");
+        let backed_up = match one_way::back_up(&self.dispatcher, confirmed, &backup, &copy) {
+            Ok(backed_up) => backed_up,
+            Err(refused) => return unwritten(refused.reason),
+        };
+        let ready = match backed_up.download_ready() {
+            Ok(ready) => ready,
+            Err(backed_up) => {
+                let answer = SnapshotAnswer {
+                    found: snapshot_found,
+                };
+                let Ok(checked) = backed_up.snapshot_found(&answer) else {
+                    return Ok(step(NO_SNAPSHOT, None));
+                };
+                let fresh = choice_file(&folder, "server-copy");
+                match one_way::recheck(&self.dispatcher, checked, &auth, &fresh) {
+                    Ok(Ok(ready)) => ready,
+                    Ok(Err(counted)) => return Ok(self.changed(counted, fresh, SERVER_CHANGED)),
+                    Err(refused) => return unwritten(refused.reason),
+                }
+            }
+        };
+        match one_way::write(&self.dispatcher, ready, gesture, &auth) {
+            Ok(()) => {
+                *self.stage() = None;
+                Ok(ChoiceStep {
+                    written: true,
+                    said: WRITTEN.to_owned(),
+                    counts: None,
+                })
+            }
+            Err(Unwritten::Recount(counted)) => Ok(self.changed(counted, copy, DEVICE_CHANGED)),
+            Err(Unwritten::Refused(reason)) => unwritten(reason),
+        }
+    }
+
+    /// Drops the stage held between the owner's taps: the model's `Cancel` (SPEC-503 R4).
+    pub fn full_sync_cancel(&self) {
+        *self.stage() = None;
+    }
+}
+
+impl Engine {
+    /// The stage, under its lock.
+    fn stage(&self) -> MutexGuard<'_, Option<Stage>> {
+        self.stage.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// New counts after a change since the last ones: held as the stage, with the server copy
+    /// they were taken from, and shown with why the write did not run.
+    fn changed(&self, counted: Counted, copy: PathBuf, said: &str) -> ChoiceStep {
+        let counts = counted.counts();
+        *self.stage() = Some(Stage { counted, copy });
+        step(said, Some(counts))
+    }
+}
+
+/// One choice's stage between the owner's taps (SPEC-503 R4): the counts the owner saw, and the
+/// server copy they were taken from.
+#[derive(Clone)]
+struct Stage {
+    counted: Counted,
+    copy: PathBuf,
+}
+
+/// What this device has not synced (SPEC-503 R7).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
+pub struct UnsyncedCount {
+    /// The reviews not yet synced.
+    pub reviews: u32,
+    /// Whether the collection changed since its last sync.
+    pub changed: bool,
+    /// Whether its schema changed since its last sync.
+    pub schema: bool,
+}
+
+/// What one direction of a full sync loses, by id.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
+pub struct ChoiceLoss {
+    /// Review-log rows lost.
+    pub reviews: u64,
+    /// Cards lost.
+    pub cards: u64,
+    /// Notes lost.
+    pub notes: u64,
+}
+
+/// The choice's counts: what each offered direction loses, and `None` for one not offered.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
+pub struct ChoiceCounts {
+    /// What the upload loses: the server's rows this device lacks.
+    pub upload: Option<ChoiceLoss>,
+    /// What the download loses: this device's rows the server lacks.
+    pub download: Option<ChoiceLoss>,
+}
+
+/// One step of the full-sync choice as the app shows it: whether the write ran, the sentence the
+/// app shows, and the counts the owner chooses from next, when there are any.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ChoiceStep {
+    /// Whether the one-way write ran.
+    pub written: bool,
+    /// The sentence the app shows.
+    pub said: String,
+    /// The counts to choose from, when the choice is open.
+    pub counts: Option<ChoiceCounts>,
+}
+
+/// The engine's normal sync, `BackendSyncService.SyncCollection` (SPEC-503 R1).
+const SYNC_COLLECTION: (u32, u32) = (1, 5);
+
+/// The sentences of the choice's steps, which the app shows as they are.
+const COUNTED: &str = "Choose a direction. The counts show what each direction loses.";
+const WRITTEN: &str = "The full sync was written after its backup.";
+const NO_STAGE: &str = "Nothing was written: no counts are open. Sync again.";
+const NOT_OFFERED: &str = "Nothing was written: that direction is not offered.";
+const NOT_THE_OWNERS: &str = "Nothing was written: the full sync was not the owner's.";
+const NO_SNAPSHOT: &str =
+    "Nothing was written: an upload waits until the server's snapshot is found.";
+const SERVER_CHANGED: &str =
+    "Nothing was written: the server changed since the counts. Check the new counts.";
+const DEVICE_CHANGED: &str =
+    "Nothing was written: this device changed since its backup. Check the new counts.";
+const UNFILLABLE: &str = "Nothing was written: a full sync's file could not be used.";
+const UNHELD: &str = "Nothing was written: the backup lacks a row of the side it replaces.";
+
+/// A step that shows `said`, with the counts to choose from when there are any.
+fn step(said: &str, counts: Option<Counts>) -> ChoiceStep {
+    ChoiceStep {
+        written: false,
+        said: said.to_owned(),
+        counts: counts.map(|counts| ChoiceCounts {
+            upload: counts.upload.map(loss),
+            download: counts.download.map(loss),
+        }),
+    }
+}
+
+/// One direction's losses as the app reads them.
+fn loss(losses: Losses) -> ChoiceLoss {
+    let wide = |count: usize| u64::try_from(count).unwrap_or(u64::MAX);
+    ChoiceLoss {
+        reviews: wide(losses.reviews),
+        cards: wide(losses.cards),
+        notes: wide(losses.notes),
+    }
+}
+
+/// A step that did not write: the engine's refusal as its bytes, and the core's own reasons as
+/// the sentence the app shows.
+fn unwritten(reason: Reason) -> Result<ChoiceStep, EngineRefusal> {
+    let said = match reason {
+        Reason::Engine(engine) => return Err(refusal(engine)),
+        Reason::Gesture(GestureRefusal::Engine { error }) => {
+            return Err(EngineRefusal::Engine { error });
+        }
+        Reason::Gesture(_) => NOT_THE_OWNERS,
+        Reason::OpenCollection | Reason::HoldsRows => UNFILLABLE,
+        Reason::Unheld => UNHELD,
+    };
+    Ok(step(said, None))
+}
+
+/// A new file name for one of the choice's files in `folder`: `kind`, the clock's nanoseconds and
+/// this process, so no two of the choice's files share a name and none is the open collection.
+fn choice_file(folder: &str, kind: &str) -> PathBuf {
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |since| since.as_nanos());
+    Path::new(folder).join(format!("{kind}-{stamp}-{}.anki2", std::process::id()))
 }
 
 /// The engine's number for the red flag, which the app reads once and compares a card's flag with,

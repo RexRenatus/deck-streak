@@ -15,6 +15,8 @@
   "ios/App/Sources/ReviewView.swift": {"role": "view", "decisions": 3},
   "ios/App/Sources/SyncConfiguration.swift": {"role": "config", "decisions": 2},
   "ios/App/Sources/SyncCredentialStore.swift": {"role": "credential", "decisions": 3},
+  "ios/App/Sources/SyncModel.swift": {"role": "model", "decisions": 6},
+  "ios/App/Sources/SyncView.swift": {"role": "view", "decisions": 2},
   "ios/App/Sources/VoicePickerView.swift": {"role": "view", "decisions": 3},
   "ios/AppTests/CredentialStoreTests.swift": {"role": "test"},
   "ios/AppTests/ReviewModelTests.swift": {"role": "test"},

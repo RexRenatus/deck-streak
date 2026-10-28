@@ -27,6 +27,9 @@ final class AppModel {
     var signedIn: Bool
     /// The engine's message after a refused login, or a refused sign-out's.
     var message = ""
+    /// The account sheet's sync section, which syncs through the same session with the host key
+    /// the one Keychain item holds (SPEC-503 R6).
+    let sync: SyncModel
 
     private let configuration: SyncConfiguration
     private let session = EngineSession()
@@ -42,6 +45,7 @@ final class AppModel {
         self.store = store
         user = configuration.user
         signedIn = (try? store.hostKey()) != nil
+        sync = SyncModel(engine: session, store: store, endpoint: configuration.endpoint)
     }
 
     /// Opens the collection and lists its decks, once per model (R7).
