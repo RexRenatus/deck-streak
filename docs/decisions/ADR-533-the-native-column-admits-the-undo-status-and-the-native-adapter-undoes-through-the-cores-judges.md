@@ -40,10 +40,17 @@ web does. This ADR decides where the native record, its judge and its words live
 
 ### How the native client reads the undo status
 
-- Admit (3,7) in the native column and the allow-list: chosen, because the adapter's offer and the
-  app's undo control both read it through `run`, as the web engine reads it through its column.
+- Admit (3,7) in the native column and the allow-list: chosen, because the adapter's offer and its
+  confirmation read it through `run`, as the web engine reads it through its column.
 - A status read the core makes past the table: rejected, because the column would then not say
   what the native client calls.
+
+### What enables the app's undo control
+
+- The adapter's offer, judged now, read after every step: chosen, because it names only a step
+  the review made and may still undo, as the web's card view does.
+- (3,7)'s raw label: rejected, because choosing the review's deck is itself an engine step with a
+  label, so the control would be enabled with nothing of the review's own to undo.
 
 ### Where the dialog's words live
 
@@ -64,7 +71,8 @@ web does. This ADR decides where the native record, its judge and its words live
   slot now and answers the offer with its words or the sentence that says why none was made.
   `undo(card, step)` checks the confirmation against the slot, judges again, mints the gesture on
   the exempt Undo and runs it through `run_exempt`, where the core's `run_undo` or `run_restore`
-  judges once more at the write.
+  judges once more at the write. The app's undo control is enabled by the offer, read after the
+  review opens and after every answer, bury, flag and undo.
 - **D4. Containment.** The gesture on the exempt Undo is minted once in each of the two review
   doors; outside the core `.undo(` appears only at the adapter's own tests' held lines; in the app,
   only the session calls the adapter's undo, and only the review's undo control sends its gestures.

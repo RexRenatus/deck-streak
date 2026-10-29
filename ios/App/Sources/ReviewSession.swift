@@ -9,14 +9,15 @@ struct ReviewCounts: Equatable, Sendable {
 }
 
 /// What the session shows next: a card's question with the queue's counts and the four
-/// intervals, or the designed end (SPEC-348 R10, R11); and the card's flag, 0 at the end
-/// (SPEC-358 R5).
+/// intervals, or the designed end (SPEC-348 R10, R11); the card's flag, 0 at the end
+/// (SPEC-358 R5); and what the review's undo offers now, nothing at the end (SPEC-515 R6).
 struct ReviewStep: Equatable, Sendable {
     var phase: ReviewPhase
     var face: ReviewFace
     var counts: ReviewCounts
     var intervals: [String]
     var flag: UInt32
+    var undo: UndoDialog?
 }
 
 /// One review of one deck, over the engine's session: the queue's head card, the time it was
@@ -44,7 +45,8 @@ actor ReviewSession {
         try await engine.setCurrentDeck(deck)
     }
 
-    /// The queue's head card's question, its counts and its four intervals, or the designed end.
+    /// The queue's head card's question, its counts, its four intervals and what the review's undo
+    /// offers now, or the designed end, which offers none.
     func next(autoplay: Bool, installed: [InstalledVoice]) async throws -> ReviewStep {
         let queue = try await engine.queue()
         let counts = ReviewCounts(
@@ -52,15 +54,17 @@ actor ReviewSession {
         guard let card = queue.cards.first else {
             head = nil
             return ReviewStep(
-                phase: .finished, face: .empty, counts: counts, intervals: [], flag: 0)
+                phase: .finished, face: .empty, counts: counts, intervals: [], flag: 0, undo: nil)
         }
         let intervals = try await engine.intervals(card)
         let face = try await engine.face(
             card.cardID, answer: false, autoplay: autoplay, installed: installed)
+        let undo = try await undoOffer().dialog
         head = card
         shownAt = Date()
         return ReviewStep(
-            phase: .question, face: face, counts: counts, intervals: intervals, flag: card.flag)
+            phase: .question, face: face, counts: counts, intervals: intervals, flag: card.flag,
+            undo: undo)
     }
 
     /// The shown card's answer face, or the empty face when no card is shown.
@@ -103,6 +107,18 @@ actor ReviewSession {
     /// The languages' installed voices and the choice for each, for the voice picker.
     func voices(_ languages: [String], installed: [InstalledVoice]) async -> [VoiceLanguage] {
         await engine.voices(languages, installed: installed)
+    }
+
+    /// What the adapter would undo now, with its dialog's words, or none and the sentence that
+    /// says why (SPEC-515 R3, R5).
+    func undoOffer() async throws -> (dialog: UndoDialog?, said: String) {
+        try await engine.undoOffer()
+    }
+
+    /// The owner's confirmation of `dialog`, through the session; the sentence that says why it
+    /// was not undone, or empty (SPEC-515 R4, R5).
+    func undo(_ dialog: UndoDialog) async throws -> String {
+        try await engine.undo(dialog)
     }
 
     /// Records `identifier` as the voice for `language`, or clears the choice given nil.

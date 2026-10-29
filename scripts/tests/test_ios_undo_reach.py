@@ -9,7 +9,9 @@ call to the files and the counts the review's one path gives it:
 - `.undoOffer(` and `.undo(`: once each in the session, which calls the adapter
   (`EngineSession.swift`), once each in the review's session, which calls the session
   (`ReviewSession.swift`), and once each in the review's undo model, which calls the review's
-  session (`ReviewUndo.swift`), and nowhere else;
+  session (`ReviewUndo.swift`); and `.undoOffer(` once more in the review model, which reads the
+  offer after a flag, as the review's session reads it after every other step
+  (`ReviewModel.swift`); and nowhere else;
 - `undo.perform(`: once, in the review model's one entry for its gestures (`ReviewModel.swift`);
 - `.perform(.undo)`, `.perform(.keep)` and `.perform(.confirmUndo)`: only in the undo control
   (`UndoControl.swift`), the press once, the confirmation once, and Keep twice, its button's and
@@ -34,6 +36,7 @@ DIALOG = APP + "UndoDialogView.swift"
 SITES = {
     ".undoOffer(": {
         APP + "EngineSession.swift": 1,
+        APP + "ReviewModel.swift": 1,
         APP + "ReviewSession.swift": 1,
         APP + "ReviewUndo.swift": 1,
     },

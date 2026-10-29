@@ -1,7 +1,7 @@
 # SPEC-515: iPhone and iPad undo the review's own last answer, bury or flag, as the web does
 
 - **Context(s):** `deck-streak-engine-core` (`crates/engine-core`), `deck-streak-ffi`
-  (`crates/ffi`), the app (`ios/App`) and its codec (`ios/HarnessWire`).
+  (`crates/ffi`), the app (`ios/App`).
 - **Decided by:** ADR-533 (this SPEC's own), under ADR-382 (Undo is an exempt write behind the
   owner's gesture, checked at the write, after the review shows what it changes), ADR-397 (a bury
   or a flag is restored through the same exempt Undo, by the record's kind) and ADR-521 (the native
@@ -37,9 +37,11 @@ exempt Undo (3,8), which only an owner's gesture reaches (`table.rs:336-342`; `d
 - **R2. One slot, in the adapter.** The adapter's `Engine` keeps the review's last recorded step,
   an answer, a bury or a flag, and never two. `answer` records only when the newest review is the
   answered card's; `bury` records only when the card's mark shows it user-buried; `flag` records
-  only when the mark shows the flag the toggle set. Opening a collection and a successful undo
-  empty the slot. `bury` takes the states the card was shown with, as `answer` does, so a bury's
-  record names the state its card returns to. The core's new `native_undo` module reads each fact
+  only when the mark shows the flag the toggle set. A successful undo empties the slot; the native
+  engine opens one collection, so no step of another opening is kept. A step the engine's reads
+  cannot record is not kept, and the press, bury or flag itself stands. `bury` takes the states the
+  card was shown with, as `answer` does, so a bury's record names the state its card returns to.
+  The core's new `native_undo` module reads each fact
   through the dispatcher's fixed reads and the status the adapter read through `run`, and keeps the
   record the exempt Undo decodes; the adapter names no protocol type.
 - **R3. The offer.** `undo_offer()` reads (3,7) through `run`, has the core judge the slot's record
@@ -61,15 +63,18 @@ exempt Undo (3,8), which only an owner's gesture reaches (`table.rs:336-342`; `d
   something changed after it.", by the kind the confirmation's offer named. An engine error stays
   `EngineRefusal::Engine`.
 - **R6. The app.** `ReviewAction` gains undo, keep and the confirmation. The undo control sits in
-  the review's top row, enabled only from a card's question or answer while (3,7)'s undo label
-  names a step, the label as its accessibility value; the label is read after the review opens and
-  after every answer, bury, flag and undo. A press asks for the offer and writes nothing; the
-  dialog shows the offer's words as text, with the focus on Keep; Keep writes nothing; the
-  confirmation runs the undo, then the review shows the next queued card; a refusal shows its
-  sentence. Swift builds no record and judges nothing. Every new Swift file is registered with its
-  role and exact decision count, and no ceiling rises.
-- **R7. The codec.** `Requests.undoStatus()` writes `Empty`, and `Responses.undoLabel(_:)` reads
-  `UndoStatus.undo` (field 1), each held by literal bytes.
+  the review's top row, enabled only from a card's question or answer while the adapter's offer
+  names a step it would undo now, that step's confirmation title ("Undo answer", "Undo bury" or
+  "Undo flag") as its accessibility value; the offer is read after the review opens and after
+  every answer, bury, flag and undo, and the done screen offers none. (3,7)'s raw label does not
+  gate it: choosing the review's deck is itself an engine step with a label, which the review did
+  not make. A press asks for the offer and writes nothing; the dialog shows the offer's words as
+  text, with the focus on Keep; Keep writes nothing; the confirmation runs the undo, then the
+  review shows the next queued card; a refusal shows its sentence. Swift builds no record and
+  judges nothing. Every new Swift file is registered with its role and exact decision count, and
+  no ceiling rises.
+- **R7. The app's terms.** The app holds an offer as its own `UndoDialog`, field for field; the
+  session alone names the adapter's records, as it does the sync choice's.
 - **R8. The model.** `UndoOwnAnswer` is re-read with the native actor: its covers gain
   `crates/ffi/src/engine.rs` `undo` and `undo_offer`, and its four witnesses still violate.
 - **R9. Containment.** Outside the core, `.undo(` is held at the adapter's own tests' lines, and
@@ -89,22 +94,21 @@ A2: cargo test -p deck-streak-ffi --test undo -- --exact a_bury_is_offered_with_
 A2: cargo test -p deck-streak-ffi --test undo -- --exact a_flag_is_offered_with_its_line_then_undone
 A2: cargo test -p deck-streak-ffi --test review_actions -- --exact a_bury_buries_the_card_as_the_users_bury
 A3: cargo test -p deck-streak-ffi --test undo -- --exact a_confirmation_after_a_later_change_is_refused_and_says_why
-A3: cargo test -p deck-streak-ffi --test undo -- --exact with_nothing_kept_no_undo_is_offered_and_an_open_forgets_the_kept_step
+A3: cargo test -p deck-streak-ffi --test undo -- --exact with_nothing_kept_no_undo_is_offered
 A3: cargo test -p deck-streak-ffi --test sync -- --exact after_a_normal_sync_the_undo_says_the_answer_has_synced
 A4: cargo test -p deck-streak-engine-core --test containment
 A4: python3 -m unittest discover -s scripts/tests -p test_ios_undo_reach.py
 A5: python3 -m unittest discover -s scripts/tests -p test_ios_thin_swift.py
-A5: swift test --package-path ios/HarnessWire
 A5: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug -destination "platform=iOS Simulator,name=iPhone 17,OS=27.0" -destination "platform=iOS Simulator,name=iPad (A16),OS=27.0" -disable-concurrent-destination-testing -only-testing:DeckStreakTests/ReviewModelTests -only-testing:DeckStreakUITests/ReviewActionsFlowTests
 A6: phxd formal check --root . --base <the base> --kind tla --gate --format json
 ```
 
 A1 holds R1. A2 holds R2, R3 and R4 at the adapter: an answer's, a bury's and a flag's offer, each
 with its words and the card named as text, and the undo the confirmation runs, after which the card
-is back. A3 holds R5: a confirmation after a later change, an offer with nothing kept, an open that
-forgets the slot, and an answer that has synced. A4 holds R9. A5 holds R6 and R7 in the app: the
-census of the Swift budgets runs everywhere; the codec's tests and the XCTest classes, on one iPhone
-and one iPad simulator, run on the macOS lane only. A6 holds R8.
+is back. A3 holds R5: a confirmation after a later change, an offer and a confirmation with nothing
+kept, and an answer that has synced. A4 holds R9. A5 holds R6 and R7 in the app: the census of the
+Swift budgets runs everywhere; the XCTest classes, on one iPhone and one iPad simulator, run on the
+macOS lane only, beside the review's other classes, with the review fixture. A6 holds R8.
 
 ## 4. File manifest
 
@@ -121,9 +125,8 @@ and one iPad simulator, run on the macOS lane only. A6 holds R8.
   `review_actions.rs`; `crates/engine-core/tests/table.rs` and `containment.rs`.
 - `ios/App/Sources/ReviewUndo.swift`, `UndoControl.swift` and `UndoDialogView.swift` (new),
   `ReviewModel.swift`, `ReviewSession.swift`, `EngineSession.swift`, `ReviewChrome.swift`,
-  `AnswerBar.swift`, `ReviewView.swift`; `ios/AppTests/ReviewModelTests.swift`,
-  `ios/AppUITests/ReviewActionsFlowTests.swift`; `ios/HarnessWire/Sources/HarnessWire/Messages.swift`
-  and its two tests; `ios/swift-roles.json`.
+  `AnswerBar.swift`; `ios/AppTests/ReviewModelTests.swift`,
+  `ios/AppUITests/ReviewActionsFlowTests.swift`; `ios/swift-roles.json`.
 - `scripts/tests/test_ios_undo_reach.py` (new).
 - `formal/tla/UndoOwnAnswer/UndoOwnAnswer.tla`.
 - `docs/decisions/ADR-533-*.md` (new), `docs/schematics/native-undo.md` (new),
@@ -142,17 +145,16 @@ and one iPad simulator, run on the macOS lane only. A6 holds R8.
 
 ## 6. Risks
 
-- The undo label can name a step that is not the review's own (an engine operation the review did
-  not make): the control is then enabled, and the press says the answer can no longer be undone.
+- The control reads the adapter's offer after every step, one render of the kept step's card each
+  time; a review's step is a press, so the render runs at the press's pace.
 - The dialog's words live in the adapter beside the sync choice's sentences, so a change of them is
   a Rust change.
 
 ## 7. Mutation rows
 
 Band S51500-S51599: S51500 (3,7)'s native mark; S51501 (3,7)'s allow-list entry; S51502 the
-offer's judge; S51503 the answer recorded only for the answered card; S51504 the slot emptied by a
-successful undo; S51505 the bury recorded only when its mark shows; S51506 the open forgetting the
-slot. Each row's killer is named in the acceptance block above. S35019 keeps its id and property;
+offer's judge; S51503 the card the offer names; S51504 the kind a late confirmation's refusal
+names. Each row's killer is named in the acceptance block above. S35019 keeps its id and property;
 its find reads (3,7)'s `native: true`.
 
 ## 8. Formal model

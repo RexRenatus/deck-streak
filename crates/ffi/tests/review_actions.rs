@@ -27,7 +27,7 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anki::collection::CollectionBuilder;
-use deck_streak_ffi::engine::{red_flag, Engine};
+use deck_streak_ffi::engine::{Engine, red_flag};
 use support::wire;
 
 /// `BackendCollectionService.OpenCollection`.

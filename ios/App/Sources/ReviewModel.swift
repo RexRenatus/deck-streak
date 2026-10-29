@@ -34,6 +34,9 @@ final class ReviewModel {
     private(set) var voices: [VoiceLanguage] = []
     /// Whether the voice picker is shown.
     var showingVoices = false
+    /// The review's undo of its last answer, bury or flag: its control's label, its dialog and
+    /// its sentence (SPEC-515 R6).
+    let undo: ReviewUndo
 
     private let session: ReviewSession
     private let voiceOverRunning: @MainActor () -> Bool
@@ -49,6 +52,7 @@ final class ReviewModel {
         self.session = session
         self.voiceOverRunning = voiceOverRunning
         self.installed = installed
+        undo = ReviewUndo(session: session)
         player.refused = { [weak self] line in self?.notes.append(line) }
     }
 
@@ -64,7 +68,8 @@ final class ReviewModel {
     /// from a question and a rating only from an answer; each writes its phase before it awaits.
     /// Bury and flag start from either side and write `marking`: a bury then shows the next
     /// card, and a flag returns to the side it started from (SPEC-358 R5). Replay and stop go
-    /// to the player from any phase.
+    /// to the player from any phase, and the undo's press, Keep and confirmation to the review's
+    /// undo, which shows the next queued card after an undo (SPEC-515 R6).
     func perform(_ action: ReviewAction) async {
         switch (action, phase) {
         case (.showAnswer, .question):
@@ -94,10 +99,14 @@ final class ReviewModel {
             phase = .marking
             await run {
                 flagged = try await session.flag() == session.red
+                undo.read(try await session.undoOffer().dialog)
                 phase = side
             }
         default:
             ReviewPlayback.perform(action, face: face, player: player)
+            await run {
+                try await undo.perform(action, from: phase) { try await next() }
+            }
         }
     }
 
@@ -114,13 +123,14 @@ final class ReviewModel {
         voices = await session.voices(face.languages, installed: installed())
     }
 
-    /// Shows the next card's question, or the designed end.
+    /// Shows the next card's question, or the designed end, and what the review's undo offers.
     private func next() async throws {
         let step = try await session.next(autoplay: !voiceOverRunning(), installed: installed())
         counts = step.counts
         intervals = step.intervals
         revealed = false
         flagged = step.flag == session.red
+        undo.read(step.undo)
         show(step.face)
         phase = step.phase
     }

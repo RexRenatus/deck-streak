@@ -16,12 +16,6 @@
 // A failed setup step fails the test, as clippy.toml allows inside a test function.
 #![allow(clippy::expect_used)]
 
-#[expect(
-    dead_code,
-    reason = "the sync tests open the synthetic collection by its path and read its ids only to tell \
-              two collections apart and to review its card, and they send and read only the wire \
-              fields a sync needs"
-)]
 mod support;
 
 #[path = "support/sync_server.rs"]
@@ -585,7 +579,10 @@ fn queued_head(engine: &Engine) -> (i64, Vec<u8>) {
         .into_iter()
         .next()
         .expect("the synthetic collection queues its card");
-    (wire::signed(&wire::bytes(&first, 1), 1), wire::bytes(&first, 3))
+    (
+        wire::signed(&wire::bytes(&first, 1), 1),
+        wire::bytes(&first, 3),
+    )
 }
 
 #[test]
@@ -606,7 +603,10 @@ fn after_a_normal_sync_the_undo_says_the_answer_has_synced() {
 
     // The review's answer, offered for its undo before the sync.
     let (card, states) = queued_head(&device.engine);
-    assert_eq!(card, synthetic.card_id, "the queue shows the synthetic card");
+    assert_eq!(
+        card, synthetic.card_id,
+        "the queue shows the synthetic card"
+    );
     device
         .engine
         .answer(card, PressedGrade::Good, states, 1_000)

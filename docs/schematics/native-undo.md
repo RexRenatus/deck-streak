@@ -1,8 +1,9 @@
 # The native review's undo of its own last answer, bury or flag (SPEC-515)
 
 The sequence of an undo on iPhone and iPad, from the review's open to the next queued card. Each
-arrow is one call; the core decides every rule, and the engine's undo status (3,7) is read after
-the open and after every answer, bury, flag and undo.
+arrow is one call; the core decides every rule. The adapter's offer, judged with the engine's undo
+status (3,7), is read after the open and after every answer, bury, flag and undo, and enables the
+control only while it names a step.
 
 ```mermaid
 sequenceDiagram
@@ -15,9 +16,9 @@ sequenceDiagram
     participant Engine as the engine
 
     Model->>Session: next() after the open
-    Session->>Adapter: run(3,7)
-    Adapter->>Core: dispatcher.run(3,7), native column
-    Core-->>Model: the undo label (empty: the control is disabled)
+    Session->>Adapter: undo_offer()
+    Adapter->>Core: run(3,7), native column; nothing kept
+    Core-->>Model: no offer (the control is disabled)
     Owner->>Model: Good (or bury, or flag)
     Model->>Session: answer(rating)
     Session->>Adapter: answer(card, grade, states)
@@ -25,7 +26,7 @@ sequenceDiagram
     Core->>Engine: AnswerCard (13,4); GetUndoStatus; the newest review
     Core-->>Adapter: the record of the review's own last answer
     Adapter->>Adapter: the slot keeps it (a bury's or a flag's replaces it)
-    Model->>Session: next(): the next card and the undo label
+    Model->>Session: next(): the next card and the offer ("Undo answer")
     Owner->>Control: Undo
     Control->>Model: perform(.undo)
     Model->>Session: undoOffer()
@@ -47,7 +48,7 @@ sequenceDiagram
         Core->>Core: run_undo or run_restore judges at the write
         Core->>Engine: Undo (3,8), empty request
         Adapter-->>Model: undone (or the sentence that says why not)
-        Model->>Session: next(): the undone card again, and the label
+        Model->>Session: next(): the undone card again, and no offer
     end
 ```
 
