@@ -11,7 +11,7 @@ use deck_streak_companion::codec::{decode_request, encode_reply};
 use deck_streak_companion::wire::{
     Adapter, CheckpointReply, HelloReply, Model, Reply, Request, Status,
 };
-use deck_streak_web_engine::companion::{load_check, purge, restore, Verdict};
+use deck_streak_web_engine::companion::{Verdict, load_check, purge, restore};
 
 /// The negotiated model.
 const MODEL: [u64; 4] = [5, 6, 7, 8];
@@ -140,7 +140,7 @@ fn table() -> Vec<(&'static str, Case, Verdict, u8)> {
         (
             "another model's checkpoint",
             with(&|case| {
-                case.checkpoint = checkpoint(Status::Ok, [5, 6, 7, 9], Adapter::OwnerOnly)
+                case.checkpoint = checkpoint(Status::Ok, [5, 6, 7, 9], Adapter::OwnerOnly);
             }),
             Verdict::ModelChanged,
             3,

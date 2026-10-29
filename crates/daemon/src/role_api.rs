@@ -14,6 +14,7 @@
 
 use std::sync::Arc;
 
+use deck_streak_api::companion_routes::CompanionDirectory;
 use deck_streak_api::settings::LISTEN;
 use deck_streak_api::{ApiError, ApiState, ListenAddress, OwnerAccess, Readiness};
 use deck_streak_coordination::progression::law_tiers::CollectionLawTiers;
@@ -158,6 +159,20 @@ pub fn with_snapshot_lister(state: ApiState, lister: Option<CommandLister>) -> A
     }
 }
 
+/// `state`, serving the owner's scheduling companion files from `directory` when the role's
+/// settings name one (SPEC-511 R4). With none the routes answer 404 to the owner, as every public
+/// deployment does, and the role still starts.
+#[must_use]
+pub fn with_companion_directory(
+    state: ApiState,
+    directory: Option<CompanionDirectory>,
+) -> ApiState {
+    match directory {
+        Some(directory) => state.with_companion(directory),
+        None => state,
+    }
+}
+
 /// Runs the `api` role until SIGTERM (or SIGINT), and returns once every request in flight has
 /// finished. `redactor` is the one the process's log writer reads: every credential the role
 /// loads is registered with it.
@@ -182,6 +197,9 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     let _conventions = Conventions::load(env)?;
     // So does a public origin that is set and is not an https origin (SPEC-359 R1).
     let linking = LinkingConfig::from_env(env)?;
+    // So does a companion directory that is set and is not an absolute path; unset, the companion
+    // routes answer 404 to the owner (SPEC-511 R4).
+    let companion = CompanionDirectory::from_env(env)?;
     // The archive's lister is read last of the settings and credentials, still before anything is
     // bound: a list command that is set and malformed refuses start, and an absent command or
     // credential turns it off with an INFO line, which comes after every other refusal so that a
@@ -201,14 +219,17 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     let access = OwnerAccess::new(gate, Arc::clone(&clock), kernel.study_day_rule);
     let late = wiring::LateInstruments::new();
     let offload = Offload::new(kernel.offload_workers, clock);
-    let router = deck_streak_api::router(with_snapshot_lister(
-        with_seal_secret(
-            api_state(env, &offload, readiness.clone(), access)
-                .with_linking(linking, owner)
-                .with_instruments(Arc::new(late.clone())),
-            seal,
+    let router = deck_streak_api::router(with_companion_directory(
+        with_snapshot_lister(
+            with_seal_secret(
+                api_state(env, &offload, readiness.clone(), access)
+                    .with_linking(linking, owner)
+                    .with_instruments(Arc::new(late.clone())),
+                seal,
+            ),
+            archive_lister,
         ),
-        archive_lister,
+        companion,
     ));
     tracing::info!(listen = %bound, "the api role serves");
     notifier.notify(NotifyState::Ready);

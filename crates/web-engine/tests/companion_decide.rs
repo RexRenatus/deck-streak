@@ -9,7 +9,7 @@
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
 use deck_streak_companion::codec::{encode_reply, encode_request};
-use deck_streak_companion::decide::{decide as native_decide, NewDue, Refusal, Session};
+use deck_streak_companion::decide::{NewDue, Refusal, Session, decide as native_decide};
 use deck_streak_companion::wire::{
     Adapter, HelloReply, Model, Preview, Reply, Request, ReviewEvent, Status,
 };
@@ -236,8 +236,10 @@ fn committed(name: &str) -> Vec<u8> {
         .lines()
         .map(|line| serde_json::from_str::<Value>(line).expect("a JSON frame line"))
         .find(|line| line["name"] == name)
-        .map(|line| hex(line["hex"].as_str().expect("a hex frame")))
-        .unwrap_or_else(|| panic!("a committed frame {name}"))
+        .map_or_else(
+            || panic!("a committed frame {name}"),
+            |line| hex(line["hex"].as_str().expect("a hex frame")),
+        )
 }
 
 #[test]

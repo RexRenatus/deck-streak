@@ -22,7 +22,8 @@ axum.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = ["net"] }
+# SPEC-511 R3: the companion route reads its files with tokio's fs and a bounded read (io-util).
+tokio = { workspace = true, features = ["fs", "io-util", "net"] }
 tower = { workspace = true, features = ["limit", "load-shed"] }
 tower-http = { workspace = true, features = ["catch-panic", "request-id", "sensitive-headers", "timeout", "trace"] }
 tracing.workspace = true

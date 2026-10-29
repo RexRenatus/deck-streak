@@ -176,7 +176,8 @@ impl Answer {
     }
 
     fn reason(&self) -> Value {
-        serde_json::from_slice::<Value>(&self.body).map_or(Value::Null, |body| body["reason"].clone())
+        serde_json::from_slice::<Value>(&self.body)
+            .map_or(Value::Null, |body| body["reason"].clone())
     }
 }
 
@@ -218,13 +219,24 @@ async fn served(app: &Router, cookie: &str, candidates: &[&str]) -> Vec<String> 
 /// The census's judgement: the route serves exactly the three names, each path that answered beyond
 /// them named.
 fn judge(served: &[String]) -> Result<(), String> {
-    let wanted: Vec<String> = SERVED.iter().map(|(path, _, _)| (*path).to_owned()).collect();
-    let extra: Vec<&String> = served.iter().filter(|path| !wanted.contains(path)).collect();
-    let missing: Vec<&String> = wanted.iter().filter(|path| !served.contains(path)).collect();
+    let wanted: Vec<String> = SERVED
+        .iter()
+        .map(|(path, _, _)| (*path).to_owned())
+        .collect();
+    let extra: Vec<&String> = served
+        .iter()
+        .filter(|path| !wanted.contains(path))
+        .collect();
+    let missing: Vec<&String> = wanted
+        .iter()
+        .filter(|path| !served.contains(path))
+        .collect();
     if extra.is_empty() && missing.is_empty() {
         Ok(())
     } else {
-        Err(format!("served beyond the three: {extra:?}; not served: {missing:?}"))
+        Err(format!(
+            "served beyond the three: {extra:?}; not served: {missing:?}"
+        ))
     }
 }
 
@@ -277,8 +289,15 @@ async fn no_session_gives_401_and_an_owner_with_no_directory_or_no_file_gives_40
     for (path, what, cookie) in examined("requests with no owner session", refusals) {
         let answer = get_path(&app_full, path, cookie).await;
         assert_eq!(answer.status, StatusCode::UNAUTHORIZED, "{what} on {path}");
-        assert_eq!(answer.reason(), "no_session", "{what} on {path} is told why");
-        assert_ne!(answer.body, contents(path.rsplit('/').next().unwrap_or_default()));
+        assert_eq!(
+            answer.reason(),
+            "no_session",
+            "{what} on {path} is told why"
+        );
+        assert_ne!(
+            answer.body,
+            contents(path.rsplit('/').next().unwrap_or_default())
+        );
     }
 
     // An owner, with no directory named, with an empty directory, and with a directory whose files
@@ -296,7 +315,11 @@ async fn no_session_gives_401_and_an_owner_with_no_directory_or_no_file_gives_40
         vec![
             ("no directory", &app_off, telegram(&sessions_off)),
             ("an empty directory", &app_empty, telegram(&sessions_empty)),
-            ("directories, not files", &app_shaped, telegram(&sessions_shaped)),
+            (
+                "directories, not files",
+                &app_shaped,
+                telegram(&sessions_shaped),
+            ),
         ],
     );
     for (what, app, cookie) in cases {
@@ -316,7 +339,11 @@ async fn each_of_the_three_names_answers_its_exact_bytes_its_type_and_private_no
     for (path, name, content_type) in examined("served names", SERVED.to_vec()) {
         let answer = get_path(&app, path, Some(&owner)).await;
         assert_eq!(answer.status, StatusCode::OK, "{path}");
-        assert_eq!(answer.body, contents(name), "{path} answers the file's exact bytes");
+        assert_eq!(
+            answer.body,
+            contents(name),
+            "{path} answers the file's exact bytes"
+        );
         assert_eq!(
             answer.header(CONTENT_TYPE.as_str()),
             Some(content_type.as_bytes()),
@@ -347,7 +374,11 @@ async fn every_other_name_and_every_traversal_form_gives_404_and_three_names_are
         assert_ne!(answer.body, b"the parent's secret".to_vec(), "{path}");
     }
     let found = served(&app, &owner, &asked).await;
-    assert_eq!(judge(&found), Ok(()), "the route serves exactly the three names");
+    assert_eq!(
+        judge(&found),
+        Ok(()),
+        "the route serves exactly the three names"
+    );
     drop(parent);
 }
 
@@ -386,7 +417,12 @@ async fn a_file_over_the_cap_is_refused_and_one_at_the_cap_is_served() {
         .collect();
     fs::write(at.path().join("weights.bin"), &at_cap).expect("a file at the cap");
     let (sessions, app_at) = app(Some(at.path()));
-    let answer = get_path(&app_at, "/api/companion/v1/weights.bin", Some(&telegram(&sessions))).await;
+    let answer = get_path(
+        &app_at,
+        "/api/companion/v1/weights.bin",
+        Some(&telegram(&sessions)),
+    )
+    .await;
     assert_eq!(answer.status, StatusCode::OK, "a file of the cap is served");
     assert_eq!(answer.body.len(), at_cap.len());
     assert!(answer.body == at_cap, "with its exact bytes");
@@ -396,9 +432,17 @@ async fn a_file_over_the_cap_is_refused_and_one_at_the_cap_is_served() {
     over_cap.push(7);
     fs::write(over.path().join("weights.bin"), &over_cap).expect("a file one byte over");
     let (sessions, app_over) = app(Some(over.path()));
-    let answer =
-        get_path(&app_over, "/api/companion/v1/weights.bin", Some(&telegram(&sessions))).await;
-    assert_eq!(answer.status, StatusCode::NOT_FOUND, "a file over the cap is refused");
+    let answer = get_path(
+        &app_over,
+        "/api/companion/v1/weights.bin",
+        Some(&telegram(&sessions)),
+    )
+    .await;
+    assert_eq!(
+        answer.status,
+        StatusCode::NOT_FOUND,
+        "a file over the cap is refused"
+    );
     assert_eq!(answer.reason(), "companion_over_cap");
     assert!(answer.body.len() < 1024, "and none of its bytes are sent");
 }
@@ -473,7 +517,10 @@ fn the_directory_setting_is_off_unset_and_refuses_start_when_relative() {
         );
         let said = refused.map(|_| ()).expect_err("a refusal").to_string();
         assert!(said.contains("DECKSTREAK_COMPANION_DIR"), "{said}");
-        assert!(!said.contains(value), "the refusal never names its value: {said}");
+        assert!(
+            !said.contains(value),
+            "the refusal never names its value: {said}"
+        );
     }
     let named = read(Some("/srv/owner-companion")).expect("an absolute directory");
     assert_eq!(
