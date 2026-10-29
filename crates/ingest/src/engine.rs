@@ -436,6 +436,28 @@ impl CollectionWrite for RslibEngine {
     }
 }
 
+impl RslibEngine {
+    /// The engine's day and the cards `search` selects in the scratch copy at `scratch`, for the
+    /// read-only search parity tool (SPEC-514 R9): the write port's two reads, which write no card
+    /// and push nothing, behind a door that does not hand out the write port, so the tool never
+    /// names it. Both open the copy writable, and in client mode the day first rewrites a
+    /// configured UTC offset that differs from the process's zone, so the caller passes a copy it
+    /// made and never a collection it keeps.
+    ///
+    /// # Errors
+    ///
+    /// The [`EngineError`] of [`CollectionWrite::engine_day`] or [`CollectionWrite::due_cards`].
+    pub fn scratch_search(
+        &self,
+        scratch: &Path,
+        search: &str,
+    ) -> Result<(EngineDay, Vec<DueCard>), EngineError> {
+        let day = CollectionWrite::engine_day(self, scratch)?;
+        let cards = CollectionWrite::due_cards(self, scratch, search)?;
+        Ok((day, cards))
+    }
+}
+
 /// The columns a skip reads of each card a search selected, by the ids in `?1`, a JSON array,
 /// ascending by id. The engine's card type keeps these fields private, so they are read through the
 /// engine's own connection, which its storage hands out for exactly this.

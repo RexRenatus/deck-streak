@@ -29,7 +29,7 @@ use deck_streak_search::{
     Card, Collection, Deck, EngineDay, Note, Notetype, Profile, Refusal, Review, eval,
 };
 
-use crate::engine::{CollectionWrite, EngineError, RslibEngine};
+use crate::engine::{EngineError, RslibEngine};
 
 /// The separator between a stored deck name's levels and a stored note's fields.
 const SEPARATOR: char = '\u{1f}';
@@ -106,14 +106,10 @@ pub async fn search_parity(
     foreign.close().await;
     let rows = rows?;
     copy_to_a_new_file(source, scratch).map_err(|_| ParityError::Copy)?;
-    let engine = RslibEngine;
-    let day = engine.engine_day(scratch).map_err(ParityError::Engine)?;
-    let engine_ids: BTreeSet<i64> = engine
-        .due_cards(scratch, search)
-        .map_err(ParityError::Engine)?
-        .into_iter()
-        .map(|card| card.id)
-        .collect();
+    let (day, selected) = RslibEngine
+        .scratch_search(scratch, search)
+        .map_err(ParityError::Engine)?;
+    let engine_ids: BTreeSet<i64> = selected.into_iter().map(|card| card.id).collect();
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |since| {
