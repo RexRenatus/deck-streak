@@ -21,6 +21,7 @@ use deck_streak_engine_core::table::{ExemptWrite, Transport};
 
 use crate::allow_list::allowed;
 use crate::face::{CardFace, MediaFolder};
+use crate::review_undo::{UndoDone, UndoOffered};
 
 /// Why a call was not answered with the response's bytes. A native client reads it as a thrown
 /// error; nothing on this path panics.
@@ -216,12 +217,18 @@ impl Engine {
     }
 
     /// Buries the card `card_id` as the user's bury of that card alone, so the queue moves on to
-    /// the next card (SPEC-358 R3).
+    /// the next card (SPEC-358 R3). `states` are the encoded `SchedulingStates` the card was shown
+    /// with, as an answer hands them over, for the undo's record (SPEC-515 R2).
     ///
     /// # Errors
     ///
     /// [`EngineRefusal::Engine`] when the engine refuses the bury.
-    pub fn bury(&self, card_id: i64) -> Result<(), EngineRefusal> {
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "a foreign caller's bytes cross the boundary owned, as the bindings pass them"
+    )]
+    pub fn bury(&self, card_id: i64, states: Vec<u8>) -> Result<(), EngineRefusal> {
+        drop(states);
         // `SchedulerService.BuryOrSuspendCards`, through the allow-list as every call goes.
         self.run(13, 14, bury_request(bury_of(card_id)))?;
         Ok(())
@@ -238,6 +245,31 @@ impl Engine {
         // `CardsService.SetFlag`, through the allow-list as every call goes.
         self.run(5, 4, flag_request(card_id, flag))?;
         Ok(flag)
+    }
+
+    /// The undo the review offers for its last answer, bury or flag (SPEC-515 R3).
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the engine cannot answer a read.
+    pub fn undo_offer(&self) -> Result<UndoOffered, EngineRefusal> {
+        Ok(UndoOffered {
+            offer: None,
+            said: String::new(),
+        })
+    }
+
+    /// The owner's confirmation of the offer of `card` at `step` (SPEC-515 R4).
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the engine cannot answer a read or refuses the undo.
+    pub fn undo(&self, card: i64, step: u32) -> Result<UndoDone, EngineRefusal> {
+        drop((card, step));
+        Ok(UndoDone {
+            undone: false,
+            said: String::new(),
+        })
     }
 }
 
