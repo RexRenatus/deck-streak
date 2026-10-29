@@ -10,7 +10,7 @@ use std::fmt;
 
 use chrono::{Datelike, NaiveDate};
 use deck_streak_kernel::{Db, KernelError, StudyDay, UtcMillis};
-use deck_streak_search::{Refusal, SkipQuery};
+use deck_streak_search::{HOLDS, Refusal, SkipQuery};
 use sqlx::SqliteConnection;
 
 /// The day spec's smallest lower bound: a moved card lands strictly after today
@@ -115,7 +115,8 @@ pub fn wrap_search(configured: &str) -> String {
 /// [`SearchRefusal::NotOneExpression`] when `configured` does not parse as one expression, and
 /// [`SearchRefusal::OutsideTheSkipProfile`] when it parses but the skip profile refuses it.
 pub fn skip_search(configured: &str) -> Result<String, SearchRefusal> {
-    Ok(SkipQuery::new(configured)?.text().to_owned())
+    SkipQuery::new(configured)?;
+    Ok(format!("{} {HOLDS}", wrap_search(configured)))
 }
 
 /// The calendar year and month of a study day, as the tariff and the summary count months.
