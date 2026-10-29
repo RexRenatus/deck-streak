@@ -5,8 +5,8 @@
   // and where the card came from. It judges no card and reaches nothing: the review hands it the
   // record. The focus moves to Close when it opens; the review screen keeps Tab inside it and closes
   // it on Escape (`trap` below).
-  import type { CardHealth } from '$lib/engine/protocol';
-  import { m } from '$lib/paraglide/messages.js';
+  import type { CardHealth } from '#lib/engine/protocol.js';
+  import { m } from '#lib/paraglide/messages.js';
   import { answerName, createdDate, recallLines, seconds } from './card-health';
 
   let { health, loading, onclose }: { health: CardHealth | null; loading: boolean; onclose: () => void } =

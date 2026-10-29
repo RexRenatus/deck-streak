@@ -1,8 +1,8 @@
 // SPEC-507 R6 to R8; ADR-525. The card health panel's lines: the recall rows, which show a number only
 // from the scheduler's Ready readout and the state's line otherwise; the times in seconds; the created
 // date; and the name of the button each review row records. The panel judges no card.
-import type { HealthReadout } from '$lib/engine/protocol';
-import { m } from '$lib/paraglide/messages.js';
+import type { HealthReadout } from '#lib/engine/protocol.js';
+import { m } from '#lib/paraglide/messages.js';
 
 /** The words that would judge a card rather than state a fact about it (SPEC-507 R8). */
 export const VERDICT = /\b(hard|difficult|ambiguous|leech|risk|risky|problem|problems|struggl\w*|weak|trouble\w*)\b|at risk/i;

@@ -7,9 +7,9 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { parse } from 'svelte/compiler';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { studyEngine } from '$lib/engine/credential-stand-in.test.support';
-import type { CardHealth, CardView, Head, HealthReadout, UndoOffer } from '$lib/engine/protocol';
-import { Session, type EngineModule } from '$lib/engine/session';
+import { studyEngine } from '#lib/engine/credential-stand-in.test.support.js';
+import type { CardHealth, CardView, Head, HealthReadout, UndoOffer } from '#lib/engine/protocol.js';
+import { Session, type EngineModule } from '#lib/engine/session.js';
 import en from '../../../messages/en.json';
 import { VERDICT } from './card-health';
 import CardHealthPanel from './CardHealthPanel.svelte';
@@ -113,7 +113,7 @@ function panel(health: CardHealth | null): void {
  * an attribute fails the census until it is reviewed and listed here. */
 const ALLOWED = {
   /** the modules they import */
-  imports: new Set(['$lib/engine/protocol', '$lib/paraglide/messages.js', './card-health']),
+  imports: new Set(['#lib/engine/protocol.js', '#lib/paraglide/messages.js', './card-health']),
   /** the names they read that no scope of theirs declares: the language's, Svelte's runes, the document */
   globals: new Set(['$derived', '$effect', '$props', 'Date', 'String', 'document']),
   /** the properties they read by name; the message catalogue's keys are read through `m` too */
