@@ -64,7 +64,8 @@ At the base:
   `backup_now::back_up` writes the open collection into it with the core's fixed statement and
   reads it back through a private engine, refusing the open collection's own name, a file that
   already holds a row, and a backup that lacks a device id. It refuses while a choice's stage is
-  held. It answers the new backup's id alone. The screen then lists the backups again, which runs
+  held. It answers the new backup's id alone, the stem `files::backup_id` reads from the file's
+  name, the id the list names it by. The screen then lists the backups again, which runs
   SPEC-377 R17's retention first, so at most three of a kind are kept; the list and each backup's
   export are SPEC-377 R15 and R16's, shown on `/data` by the sync screen's own list.
 - **R5. iPhone and iPad: the device backups.** The adapter lists the backups and server copies in
@@ -72,8 +73,9 @@ At the base:
   file's stem, its kind and its age in seconds, after the core's retention
   (`deck_streak_engine_core::retention`) removes what the rule removes; it refuses to remove while
   a full-sync choice's stage is held. `back_up_now` makes a backup in that folder through the same
-  core function as the web's. `backup_bytes` answers the bytes of a listed backup an id names and
-  refuses any other id. The app's data screen lists them, exports one through SwiftUI's
+  core function as the web's, named as a full sync names its backup, and refuses while a stage is
+  held. `backup_bytes` answers the bytes of a listed backup an id names and refuses any other id.
+  The app's data screen, opened from the account sheet, lists them, exports one through SwiftUI's
   `fileExporter`, and backs up now. The JSON copy is offered where an owner session exists: the
   native app holds none until a later delivery gives it a device credential, so its screen names
   the web screen and the bot's `/export` instead.
@@ -83,9 +85,9 @@ At the base:
   never as a number. The native screen shows unknown, the same words, while it holds no owner
   session.
 - **R7. Inside Telegram on a phone.** Where the web screen runs inside Telegram on iOS or Android
-  (the client's `platform` is `ios` or `android`), it says that Telegram may not save a download
-  there and names `/export`, which sends the same document in the chat. Whether a download saves
-  is measured on the owner's devices (section 9).
+  (the client's `platform` is `ios`, `android` or `android_x`), it says that Telegram may not save
+  a download there and names `/export`, which sends the same document in the chat. Whether a
+  download saves is measured on the owner's devices (section 9).
 - **R8. Locales.** Every string the web data screen shows is a message key in each of the seven
   locale files. Every string the native data screen shows is one entry of its words table
   (`ios/App/Sources/DataWords.swift`), which the view reads and nothing else.
@@ -101,12 +103,12 @@ At the base:
 
 | id | criterion | red at its tests commit | decided by |
 |---|---|---|---|
-| B1 | `/data` is routed, so the coverage test and the rendered audit cover it in both schemes | red: `ROUTES` lacks `/data` | `data-screen.test.ts`; `tests/a11y.spec.ts` for `/data` |
-| B2 | the route answers the data role's bytes over one database; 401 without a session; 403 cross-site or not JSON before the session is read; 503 without its database | red: no route (404) | `data_export_route`, `data_export_composed` |
+| B1 | `/data` is routed, so the coverage test and the rendered audit cover it in both schemes | red: `ROUTES` lacks `/data` | `data-screen.test.ts`; `a11y-coverage.test.ts`; `tests/a11y.spec.ts` for `/data` |
+| B2 | the route answers the data role's bytes over one database; 401 without a session; 403 cross-site or not JSON before the session is read; 503 without its database; the page posts it and saves what came | red: no route (404) | `data_export_route`, `data_export_composed`, `api.test.ts`, `data-screen.test.ts` |
 | B3 | the body bound and the rate bound are the route's own | red: no route (404) | `data_export_route` |
-| B4 | back up now makes one Backup-kind file holding every device id, never into the open collection or a file with rows; the screen lists again after it | red: the stub makes nothing | `backup_now`, `boundary`, `backups.test.ts`, `protocol.test.ts`, `data-screen.test.ts` |
-| B5 | the native backups are listed newest first by kind, kept three of each kind by the core's rule, backed up now, and exported only by a listed id | red: the stubs list nothing | `crates/ffi/tests/backups.rs`; `DataModelTests` on the macOS lane |
-| B6 | the server's backup age is shown, unknown as unknown | red: no screen | `data-screen.test.ts`; `DataModelTests` on the macOS lane |
+| B4 | back up now makes one Backup-kind file holding every device id, never into the open collection or a file with rows; the screen lists again after it | red: the stub makes nothing | `backup_now`, `boundary`, `files`, `backups.test.ts`, `protocol.test.ts`, `data-screen.test.ts` |
+| B5 | the native backups are listed newest first by kind, kept three of each kind by the core's rule, backed up now, and exported only by a listed id; none removed and none made while a stage is held | red: the stubs list nothing | `crates/ffi/tests/backups.rs`, the adapter's `lib` test; `DataModelTests` on the macOS lane |
+| B6 | the server's backup age is shown, unknown as unknown | red: no screen | `data-screen.test.ts`, `api.test.ts`; `DataModelTests` on the macOS lane |
 | B7 | inside Telegram on a phone the screen names `/export` | red: no screen | `data-screen.test.ts` |
 | B8 | every web string is in the seven locales; every native string is in the words table | red: the locales lack the keys | `data-locales.test.ts`; `DataModelTests` on the macOS lane |
 | B9 | the policy states the native backups and the JSON copy | red: no line | `test_privacy_policy.py`; the privacy pack's `policy-published` |
@@ -121,24 +123,32 @@ B2: cargo test -p deck-streak-api --test data_export_route -- --exact the_route_
 B2: cargo test -p deck-streak-api --test data_export_route -- --exact a_cross_site_or_non_json_request_is_refused_before_the_session
 B2: cargo test -p deck-streak-api --test data_export_route -- --exact without_its_database_the_route_answers_unavailable
 B2: cargo test -p deck-streak-daemon --test data_export_composed -- --exact the_route_answers_the_bytes_the_data_role_writes
+B2: pnpm --dir web/app exec vitest run src/lib/api.test.ts -t "export"
+B2: pnpm --dir web/app exec vitest run src/lib/data/data-screen.test.ts -t "the JSON copy"
 B3: cargo test -p deck-streak-api --test data_export_route -- --exact the_route_states_its_body_bound
 B3: cargo test -p deck-streak-api --test data_export_route -- --exact the_route_states_its_rate_bound
 B4: cargo test -p deck-streak-engine-core --test backup_now
 B4: cargo test -p deck-streak-web-engine --test boundary -- --exact the_backup_now_export_reaches_the_pool_through_files_and_the_core
+B4: cargo test -p deck-streak-web-engine --test files -- --exact a_new_backup_is_answered_by_the_id_the_list_names_it_by
 B4: pnpm --dir web/app exec vitest run src/lib/engine/backups.test.ts -t "back up now"
 B4: pnpm --dir web/app exec vitest run src/lib/engine/protocol.test.ts -t "backup-now"
 B4: pnpm --dir web/app exec vitest run src/lib/data/data-screen.test.ts -t "back up now"
 B5: cargo test -p deck-streak-ffi --test backups
+B5: cargo test -p deck-streak-ffi --lib -- --exact engine::tests::while_a_choice_is_held_the_backups_are_listed_and_none_is_removed
 B6: pnpm --dir web/app exec vitest run src/lib/data/data-screen.test.ts -t "the server's backup age"
+B6: pnpm --dir web/app exec vitest run src/lib/api.test.ts -t "the server's backup"
 B7: pnpm --dir web/app exec vitest run src/lib/data/data-screen.test.ts -t "inside Telegram on a phone"
 B8: pnpm --dir web/app exec vitest run src/lib/data/data-locales.test.ts
+B8: python3 -B -m unittest discover -s scripts/tests -p test_ios_thin_swift.py
 B9: python3 -B -m unittest discover -s scripts/tests -p test_privacy_policy.py -k the_policy_states_the_iphone_backups_and_the_json_copy
 B10: cargo test -p deck-streak-engine-core --test data_screen_pairs
 ```
 
 The native half (R5, R6 and R8's words table) is held on the macOS lane by
 `xcodebuild test ... -only-testing:AppTests/DataModelTests`, which no Linux host runs; its rows read
-unmeasured until that lane runs them, and the adapter's half is held here by `backups`.
+unmeasured until that lane runs them, and the adapter's half is held here by `backups` and the
+adapter's `lib` test. The Swift census (`test_ios_thin_swift.py`) holds the native files' roles,
+doors and decision counts on any host.
 
 ## 4. File manifest
 
@@ -157,16 +167,18 @@ unmeasured until that lane runs them, and the adapter's half is held here by `ba
 | `crates/engine-core/src/backup_now.rs`, `crates/engine-core/src/lib.rs`, `crates/engine-core/src/one_way.rs` | new: back up now, over the one-way module's fill check, read and statement |
 | `crates/engine-core/tests/backup_now.rs`, `crates/engine-core/tests/data_screen_pairs.rs` | new: B4, B10 |
 | `crates/web-engine/src/wasm.rs`, `crates/web-engine/tests/boundary.rs` | the `back_up_now` export; its census, insert-only |
-| `crates/ffi/src/backups.rs`, `crates/ffi/src/lib.rs`, `crates/ffi/src/engine.rs` | new: the device backups; the module; the stage's read |
+| `crates/web-engine/src/files.rs`, `crates/web-engine/tests/files.rs` | `backup_id`, the id a pool name gives; its test |
+| `crates/ffi/src/backups.rs`, `crates/ffi/src/lib.rs`, `crates/ffi/src/engine.rs` | new: the device backups; the module; the stage's read, and the stage-held test |
 | `crates/ffi/tests/backups.rs` | new: B5 |
 | `web/app/src/lib/routes.ts`, `web/app/src/routes/data/+page.svelte` | the route |
+| `web/app/src/lib/startapp.test.ts`, `web/app/src/lib/study/card-health.test.ts` | the route's place in the path-opened screens and in the frozen route files |
 | `web/app/src/lib/data/DataScreen.svelte`, `web/app/src/lib/data/data.ts` | new: the screen and its reads |
-| `web/app/src/lib/data/data-screen.test.ts`, `web/app/src/lib/data/data-locales.test.ts` | new: B1, B4, B6 to B8 |
-| `web/app/src/lib/api.ts` | the export call |
+| `web/app/src/lib/data/data-screen.test.ts`, `web/app/src/lib/data/data-locales.test.ts` | new: B1, B2, B4, B6 to B8 |
+| `web/app/src/lib/api.ts`, `web/app/src/lib/api.test.ts` | the export call and the server's backup read; their tests |
 | `web/app/src/lib/engine/protocol.ts`, `protocol.test.ts`, `backups.ts`, `backups.test.ts`, `session.ts`, `client.ts` | the `backup-now` operation |
 | `web/app/messages/en.json`, `es.json`, `fr.json`, `ja.json`, `ko.json`, `zh-Hans.json`, `zh-Hant.json` | the new messages |
 | `ios/App/Sources/DataModel.swift`, `DataView.swift`, `DataWords.swift` | new: the native data screen |
-| `ios/App/Sources/AccountView.swift`, `ios/App/Sources/EngineSession.swift` | the screen's entry and its engine calls |
+| `ios/App/Sources/AccountView.swift`, `ios/App/Sources/AppModel.swift`, `ios/App/Sources/EngineSession.swift` | the screen's entry, its model and its engine calls |
 | `ios/AppTests/DataModelTests.swift`, `ios/swift-roles.json` | new: the macOS lane's tests; the files' roles |
 | `PRIVACY.md`, `scripts/tests/test_privacy_policy.py` | R9 and its test |
 | `scripts/mutation-rows.d/S51600-S51699.json` | new: section 7's rows |
