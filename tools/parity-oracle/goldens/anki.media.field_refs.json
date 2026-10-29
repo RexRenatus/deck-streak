@@ -1,0 +1,998 @@
+{
+  "cases": [
+    {
+      "class": "quotes",
+      "input": {
+        "html": "<img src=\"ds_harbor.png\"><img src='ds_harbor2.png'><img src=ds_harbor3.png>"
+      },
+      "output": {
+        "names": [
+          "ds_harbor.png",
+          "ds_harbor2.png",
+          "ds_harbor3.png"
+        ]
+      }
+    },
+    {
+      "class": "quotes",
+      "input": {
+        "html": "<img src=\"ds_amber.png\">"
+      },
+      "output": {
+        "names": [
+          "ds_amber.png"
+        ]
+      }
+    },
+    {
+      "class": "quotes",
+      "input": {
+        "html": "<img src='ds_basil.png'>"
+      },
+      "output": {
+        "names": [
+          "ds_basil.png"
+        ]
+      }
+    },
+    {
+      "class": "quotes",
+      "input": {
+        "html": "<img src=ds_cobalt.png>"
+      },
+      "output": {
+        "names": [
+          "ds_cobalt.png"
+        ]
+      }
+    },
+    {
+      "class": "quotes",
+      "input": {
+        "html": "<img src=\"ds_dune.png\" alt='ds'>"
+      },
+      "output": {
+        "names": [
+          "ds_dune.png"
+        ]
+      }
+    },
+    {
+      "class": "quotes",
+      "input": {
+        "html": "<img src = \"ds_ember.png\">"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "class": "quotes",
+      "input": {
+        "html": "<img alt=\"x\" src=\"ds_fjord.png\">"
+      },
+      "output": {
+        "names": [
+          "ds_fjord.png"
+        ]
+      }
+    },
+    {
+      "class": "quotes",
+      "input": {
+        "html": "<img src='ds_garnet.png'><img src=\"ds_harbor.png\">"
+      },
+      "output": {
+        "names": [
+          "ds_garnet.png",
+          "ds_harbor.png"
+        ]
+      }
+    },
+    {
+      "class": "case",
+      "input": {
+        "html": "<IMG SRC=\"ds_dune.png\"><Img Src=\"ds_dune.PNG\">"
+      },
+      "output": {
+        "names": [
+          "ds_dune.PNG",
+          "ds_dune.png"
+        ]
+      }
+    },
+    {
+      "class": "case",
+      "input": {
+        "html": "<IMG SRC=\"ds_amber.png\">"
+      },
+      "output": {
+        "names": [
+          "ds_amber.png"
+        ]
+      }
+    },
+    {
+      "class": "case",
+      "input": {
+        "html": "<Img src=\"ds_Basil.PNG\">"
+      },
+      "output": {
+        "names": [
+          "ds_Basil.PNG"
+        ]
+      }
+    },
+    {
+      "class": "case",
+      "input": {
+        "html": "<img SRC=\"DS_COBALT.png\">"
+      },
+      "output": {
+        "names": [
+          "DS_COBALT.png"
+        ]
+      }
+    },
+    {
+      "class": "case",
+      "input": {
+        "html": "[SOUND:ds_dune.mp3]"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "class": "case",
+      "input": {
+        "html": "[Sound:ds_ember.mp3]"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "class": "case",
+      "input": {
+        "html": "<IMG src=ds_fjord.png>"
+      },
+      "output": {
+        "names": [
+          "ds_fjord.png"
+        ]
+      }
+    },
+    {
+      "class": "case",
+      "input": {
+        "html": "<iMg sRc=\"ds_garnet.png\">"
+      },
+      "output": {
+        "names": [
+          "ds_garnet.png"
+        ]
+      }
+    },
+    {
+      "class": "percent-escape",
+      "input": {
+        "html": "<img src=\"ds_juniper%20one%2Bx.png\">"
+      },
+      "output": {
+        "names": [
+          "ds_juniper%20one%2Bx.png"
+        ]
+      }
+    },
+    {
+      "class": "percent-escape",
+      "input": {
+        "html": "<img src=\"ds%20amber.png\">"
+      },
+      "output": {
+        "names": [
+          "ds%20amber.png"
+        ]
+      }
+    },
+    {
+      "class": "percent-escape",
+      "input": {
+        "html": "<img src=\"ds_basil%2Bcobalt.png\">"
+      },
+      "output": {
+        "names": [
+          "ds_basil%2Bcobalt.png"
+        ]
+      }
+    },
+    {
+      "class": "percent-escape",
+      "input": {
+        "html": "<img src=\"ds_%E2%9C%93.png\">"
+      },
+      "output": {
+        "names": [
+          "ds_%E2%9C%93.png"
+        ]
+      }
+    },
+    {
+      "class": "percent-escape",
+      "input": {
+        "html": "<img src=\"ds_100%25.png\">"
+      },
+      "output": {
+        "names": [
+          "ds_100%25.png"
+        ]
+      }
+    },
+    {
+      "class": "percent-escape",
+      "input": {
+        "html": "<img src=\"ds%2Fdune.png\">"
+      },
+      "output": {
+        "names": [
+          "ds%2Fdune.png"
+        ]
+      }
+    },
+    {
+      "class": "percent-escape",
+      "input": {
+        "html": "<img src=\"ds_ember%zz.png\">"
+      },
+      "output": {
+        "names": [
+          "ds_ember%zz.png"
+        ]
+      }
+    },
+    {
+      "class": "percent-escape",
+      "input": {
+        "html": "[sound:ds%20fjord.mp3]"
+      },
+      "output": {
+        "names": [
+          "ds%20fjord.mp3"
+        ]
+      }
+    },
+    {
+      "class": "url-schemes",
+      "input": {
+        "html": "<img src=\"https://example.invalid/ds_cobalt.png\"><img src=\"data:image/png;base64,AAAA\"><img src=\"file:///ds_cobalt.png\">"
+      },
+      "output": {
+        "names": [
+          "file:///ds_cobalt.png",
+          "paste-29e2dcfbb16f63bb0254df7585a15bb6fb5e927d.png"
+        ]
+      }
+    },
+    {
+      "class": "url-schemes",
+      "input": {
+        "html": "<img src=\"http://example.invalid/ds_a.png\">"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "class": "url-schemes",
+      "input": {
+        "html": "<img src=\"https://example.invalid/ds_b.png?x=1\">"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "class": "url-schemes",
+      "input": {
+        "html": "<img src=\"data:image/gif;base64,R0lGOD\">"
+      },
+      "output": {
+        "names": [
+          "data:image/gif;base64,R0lGOD"
+        ]
+      }
+    },
+    {
+      "class": "url-schemes",
+      "input": {
+        "html": "<img src=\"file://ds_c.png\">"
+      },
+      "output": {
+        "names": [
+          "file://ds_c.png"
+        ]
+      }
+    },
+    {
+      "class": "url-schemes",
+      "input": {
+        "html": "<img src=\"//example.invalid/ds_d.png\">"
+      },
+      "output": {
+        "names": [
+          "//example.invalid/ds_d.png"
+        ]
+      }
+    },
+    {
+      "class": "url-schemes",
+      "input": {
+        "html": "<img src=\"ftp://example.invalid/ds_e.png\">"
+      },
+      "output": {
+        "names": [
+          "ftp://example.invalid/ds_e.png"
+        ]
+      }
+    },
+    {
+      "class": "url-schemes",
+      "input": {
+        "html": "<img src=\"blob:ds_f\">"
+      },
+      "output": {
+        "names": [
+          "blob:ds_f"
+        ]
+      }
+    },
+    {
+      "class": "sound-tag",
+      "input": {
+        "html": "[sound:ds_harbor.mp3] [sound:ds_harbor two.ogg]"
+      },
+      "output": {
+        "names": [
+          "ds_harbor two.ogg",
+          "ds_harbor.mp3"
+        ]
+      }
+    },
+    {
+      "class": "sound-tag",
+      "input": {
+        "html": "[sound:ds_amber.mp3]"
+      },
+      "output": {
+        "names": [
+          "ds_amber.mp3"
+        ]
+      }
+    },
+    {
+      "class": "sound-tag",
+      "input": {
+        "html": "[sound:ds basil.ogg]"
+      },
+      "output": {
+        "names": [
+          "ds basil.ogg"
+        ]
+      }
+    },
+    {
+      "class": "sound-tag",
+      "input": {
+        "html": "[sound:ds_cobalt.mp3][sound:ds_dune.mp3]"
+      },
+      "output": {
+        "names": [
+          "ds_cobalt.mp3",
+          "ds_dune.mp3"
+        ]
+      }
+    },
+    {
+      "class": "sound-tag",
+      "input": {
+        "html": "[sound:]"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "class": "sound-tag",
+      "input": {
+        "html": "[sound:ds_ember.mp3"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "class": "sound-tag",
+      "input": {
+        "html": "[sound:ds_[fjord].mp3]"
+      },
+      "output": {
+        "names": [
+          "ds_[fjord"
+        ]
+      }
+    },
+    {
+      "class": "sound-tag",
+      "input": {
+        "html": "[sound:ds_garnet.MP3] harbor"
+      },
+      "output": {
+        "names": [
+          "ds_garnet.MP3"
+        ]
+      }
+    },
+    {
+      "class": "nested-markup",
+      "input": {
+        "html": "<div><span><img src=\"ds_indigo.png\"></span></div>"
+      },
+      "output": {
+        "names": [
+          "ds_indigo.png"
+        ]
+      }
+    },
+    {
+      "class": "nested-markup",
+      "input": {
+        "html": "<div><img src=\"ds_amber.png\"></div>"
+      },
+      "output": {
+        "names": [
+          "ds_amber.png"
+        ]
+      }
+    },
+    {
+      "class": "nested-markup",
+      "input": {
+        "html": "<span><b><img src=\"ds_basil.png\"></b></span>"
+      },
+      "output": {
+        "names": [
+          "ds_basil.png"
+        ]
+      }
+    },
+    {
+      "class": "nested-markup",
+      "input": {
+        "html": "<table><tr><td><img src=\"ds_cobalt.png\"></td></tr></table>"
+      },
+      "output": {
+        "names": [
+          "ds_cobalt.png"
+        ]
+      }
+    },
+    {
+      "class": "nested-markup",
+      "input": {
+        "html": "<ul><li>[sound:ds_dune.mp3]</li></ul>"
+      },
+      "output": {
+        "names": [
+          "ds_dune.mp3"
+        ]
+      }
+    },
+    {
+      "class": "nested-markup",
+      "input": {
+        "html": "<a href=\"#\"><img src=\"ds_ember.png\"></a>"
+      },
+      "output": {
+        "names": [
+          "ds_ember.png"
+        ]
+      }
+    },
+    {
+      "class": "nested-markup",
+      "input": {
+        "html": "<div><div><div><img src=\"ds_fjord.png\"></div></div></div>"
+      },
+      "output": {
+        "names": [
+          "ds_fjord.png"
+        ]
+      }
+    },
+    {
+      "class": "nested-markup",
+      "input": {
+        "html": "<p><i>[sound:ds_garnet.mp3]</i> <img src=\"ds_harbor.png\"></p>"
+      },
+      "output": {
+        "names": [
+          "ds_garnet.mp3",
+          "ds_harbor.png"
+        ]
+      }
+    },
+    {
+      "class": "broken-markup",
+      "input": {
+        "html": "<img src=\"ds_garnet.png\" <b>indigo"
+      },
+      "output": {
+        "names": [
+          "ds_garnet.png"
+        ]
+      }
+    },
+    {
+      "class": "broken-markup",
+      "input": {
+        "html": "<img src=\"ds_amber.png\""
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "class": "broken-markup",
+      "input": {
+        "html": "<img src=\"ds_basil.png>"
+      },
+      "output": {
+        "names": [
+          "\"ds_basil.png"
+        ]
+      }
+    },
+    {
+      "class": "broken-markup",
+      "input": {
+        "html": "<img src='ds_cobalt.png\">"
+      },
+      "output": {
+        "names": [
+          "'ds_cobalt.png\""
+        ]
+      }
+    },
+    {
+      "class": "broken-markup",
+      "input": {
+        "html": "<img src=>"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "class": "broken-markup",
+      "input": {
+        "html": "<<img src=\"ds_dune.png\">>"
+      },
+      "output": {
+        "names": [
+          "ds_dune.png"
+        ]
+      }
+    },
+    {
+      "class": "broken-markup",
+      "input": {
+        "html": "<img src=\"ds_ember.png\" <img src=\"ds_fjord.png\">"
+      },
+      "output": {
+        "names": [
+          "ds_ember.png"
+        ]
+      }
+    },
+    {
+      "class": "broken-markup",
+      "input": {
+        "html": "</img src=\"ds_garnet.png\">"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "class": "underscore-names",
+      "input": {
+        "html": "<img src=\"_ds_garnet.png\"> [sound:_ds_garnet.mp3]"
+      },
+      "output": {
+        "names": [
+          "_ds_garnet.mp3",
+          "_ds_garnet.png"
+        ]
+      }
+    },
+    {
+      "class": "underscore-names",
+      "input": {
+        "html": "<img src=\"_ds_amber.png\">"
+      },
+      "output": {
+        "names": [
+          "_ds_amber.png"
+        ]
+      }
+    },
+    {
+      "class": "underscore-names",
+      "input": {
+        "html": "[sound:_ds_basil.mp3]"
+      },
+      "output": {
+        "names": [
+          "_ds_basil.mp3"
+        ]
+      }
+    },
+    {
+      "class": "underscore-names",
+      "input": {
+        "html": "<img src=\"__ds_cobalt.png\">"
+      },
+      "output": {
+        "names": [
+          "__ds_cobalt.png"
+        ]
+      }
+    },
+    {
+      "class": "underscore-names",
+      "input": {
+        "html": "<img src=\"_.png\">"
+      },
+      "output": {
+        "names": [
+          "_.png"
+        ]
+      }
+    },
+    {
+      "class": "underscore-names",
+      "input": {
+        "html": "<img src=\"ds__dune.png\">"
+      },
+      "output": {
+        "names": [
+          "ds__dune.png"
+        ]
+      }
+    },
+    {
+      "class": "underscore-names",
+      "input": {
+        "html": "[sound:_ds_ember.ogg] <img src=\"_ds_fjord.png\">"
+      },
+      "output": {
+        "names": [
+          "_ds_ember.ogg",
+          "_ds_fjord.png"
+        ]
+      }
+    },
+    {
+      "class": "underscore-names",
+      "input": {
+        "html": "<img src=\"_DS_GARNET.PNG\">"
+      },
+      "output": {
+        "names": [
+          "_DS_GARNET.PNG"
+        ]
+      }
+    },
+    {
+      "class": "latex",
+      "input": {
+        "html": "[latex]ember^2[/latex] [$]dune[/$]"
+      },
+      "output": {
+        "names": [
+          "latex-e51f29450047f2abf74c187609d08fd0a30ad1e5.png",
+          "latex-eced204302d9ed1412ac6257bd706c8e4e94b95f.png"
+        ]
+      }
+    },
+    {
+      "class": "latex",
+      "input": {
+        "html": "[latex]amber^2[/latex]"
+      },
+      "output": {
+        "names": [
+          "latex-f3e21de3565feb94788b8625558f66f4d7f345c9.png"
+        ]
+      }
+    },
+    {
+      "class": "latex",
+      "input": {
+        "html": "[$]basil[/$]"
+      },
+      "output": {
+        "names": [
+          "latex-1be5e69b00dfd00cd456013bae7b2afa44a8f0fe.png"
+        ]
+      }
+    },
+    {
+      "class": "latex",
+      "input": {
+        "html": "[$$]cobalt[/$$]"
+      },
+      "output": {
+        "names": [
+          "latex-a97fe61bdf8cef413f6299ecae317a106bf62e6d.png"
+        ]
+      }
+    },
+    {
+      "class": "latex",
+      "input": {
+        "html": "[latex]\\frac{dune}{2}[/latex]"
+      },
+      "output": {
+        "names": [
+          "latex-903623ba080f02dee13c6dc1c71815811bac0786.png"
+        ]
+      }
+    },
+    {
+      "class": "latex",
+      "input": {
+        "html": "[latex][/latex]"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "class": "latex",
+      "input": {
+        "html": "[$]ember[/$] [$$]fjord[/$$]"
+      },
+      "output": {
+        "names": [
+          "latex-5575abc0d1af847d456488a0d09be67242352a2d.png",
+          "latex-f0e351ebefabe1c8c437db3e6a2b6a9b40c15648.png"
+        ]
+      }
+    },
+    {
+      "class": "latex",
+      "input": {
+        "html": "[latex]garnet\n[/latex]"
+      },
+      "output": {
+        "names": [
+          "latex-c816d25b806bfbe758e372fb707506c79f15cf04.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "html": "{{c1::basil}} {{c2::harbor}} {{c1::garnet}} fjord fjord indigo garnet <img src=\"ds_ember.png\"> [sound:ds_basil.mp3]"
+      },
+      "output": {
+        "names": [
+          "ds_basil.mp3",
+          "ds_ember.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "html": "basil dune basil 학교[よみ] 山水"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "juniper amber"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "harbor &amp; &lt;dune&gt; &nbsp;&#x263A;&#9731; {{c1::dune {{c2::indigo ember}}}} fjord indigo"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "fjord {{c1::dune::harbor hint}} garnet café amber naïve basil &amp; &lt;juniper&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "<b>{{c1::harbor</b> cobalt}} indigo"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "ember harbor"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "{{c1::harbor {{c2::ember indigo}}}} dune basil"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "مرحبا بكم juniper cobalt basil"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "\\(fjord^{2}\\) {{c1::\\(amber + 1\\)}} harbor &amp; &lt;basil&gt; &nbsp;&#x263A;&#9731; cobalt ember garnet basil harbor garnet"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "مرحبا بكم amber {{c1::dune {{c2::harbor {{c3::cobalt {{c4::harbor cobalt}}}}}}}} <b>{{c1::dune</b> fjord}} basil amber"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "\\(ember^{2}\\) {{c1::\\(garnet + 1\\)}} basil <img src=\"ds_juniper.png\"> [sound:ds_fjord.mp3] garnet indigo indigo café fjord naïve"
+      },
+      "output": {
+        "names": [
+          "ds_fjord.mp3",
+          "ds_juniper.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "html": "juniper COBALT Cobalt"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "cobalt"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "garnet cobalt {{c1::indigo {{c2::cobalt {{c3::ember {{c4::basil amber}}}}}}}} {{c1::cobalt {{c2::fjord {{c3::garnet ember}}}}}} {{c1::dune {{c2::harbor {{c3::ember basil}}}}}}"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "{{c1::dune}} {{c3::dune}} basil"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "harbor 山水[よみ] 학교 {{c1::amber indigo}} {{c1::basil {{c2::harbor {{c3::fjord fjord}}}}}}"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "ember ember basil <img src=\"ds_basil.png\"> [sound:ds_cobalt.mp3]"
+      },
+      "output": {
+        "names": [
+          "ds_basil.png",
+          "ds_cobalt.mp3"
+        ]
+      }
+    },
+    {
+      "input": {
+        "html": "indigo fjord basil cobalt fjord {{c1::fjord {{c2::dune {{c3::cobalt {{c4::cobalt basil}}}}}}}} fjord"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "harbor basil "
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "{{c1::cobalt::garnet hint}} indigo harbor"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "  basil\t fjord \n   ember\t indigo \n {{c1::juniper {{c2::cobalt {{c3::indigo {{c4::ember garnet}}}}}}}} garnet indigo juniper"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "amber cobalt juniper {{c1::basil {{c2::fjord {{c3::basil indigo}}}}}}"
+      },
+      "output": {
+        "names": []
+      }
+    },
+    {
+      "input": {
+        "html": "indigo &amp; &lt;indigo&gt; &nbsp;&#x263A;&#9731; juniper basil fjord"
+      },
+      "output": {
+        "names": []
+      }
+    }
+  ],
+  "function": "anki.media.field_refs",
+  "generator": "tools/parity-oracle/anki/generate.py",
+  "generator_sha256": "8bd480ee4afb7a31cc6096a397940da1c3661ab11df1cc95214ca464c49e6737",
+  "inputs": "synthetic",
+  "kind": "engine",
+  "note": "answers the media names the engine extracts from the field HTML (G-L5-1); cases drawn under CPython 3.12.3.",
+  "registry": "tools/parity-oracle/anki/registry/spec_498.py",
+  "registry_sha256": "c6ea7a8db7ff6c74beebbad4aba059085fe6d258dd415a35190f7eb3f084c571",
+  "schema": "phx.parity-golden.v1",
+  "seed": 498,
+  "source_commit": "65e053b829825f534803b2b772c507a73ba936a3"
+}

@@ -1,0 +1,2719 @@
+{
+  "cases": [
+    {
+      "class": "queue-m3",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 859,
+          "factor": 0,
+          "ivl": 24,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -3,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1021254400,
+          "now": 1043334812,
+          "rollover_hour": 13,
+          "utc_offset_minutes": 0
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 859
+        }
+      }
+    },
+    {
+      "class": "queue-m3",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 0,
+          "factor": 0,
+          "ivl": 0,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -3,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1000000000,
+          "now": 1002595600,
+          "rollover_hour": 4,
+          "utc_offset_minutes": 0
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 0
+        }
+      }
+    },
+    {
+      "class": "queue-m3",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1,
+          "factor": 0,
+          "ivl": 1,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -3,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1001468800,
+          "now": 1017325000,
+          "rollover_hour": 0,
+          "utc_offset_minutes": 540
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 1
+        }
+      }
+    },
+    {
+      "class": "queue-m3",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 7,
+          "factor": 0,
+          "ivl": 3,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -3,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1008640000,
+          "now": 1008733600,
+          "rollover_hour": 23,
+          "utc_offset_minutes": -300
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 7
+        }
+      }
+    },
+    {
+      "class": "queue-m3",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 30,
+          "factor": 0,
+          "ivl": 10,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -3,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1031536000,
+          "now": 1086486399,
+          "rollover_hour": 12,
+          "utc_offset_minutes": 330
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 30
+        }
+      }
+    },
+    {
+      "class": "queue-m3",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 365,
+          "factor": 0,
+          "ivl": 45,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -3,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1000259200,
+          "now": 1003456001,
+          "rollover_hour": 6,
+          "utc_offset_minutes": -210
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 365
+        }
+      }
+    },
+    {
+      "class": "queue-m3",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 899,
+          "factor": 0,
+          "ivl": 120,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -3,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1004320000,
+          "now": 1082120000,
+          "rollover_hour": 2,
+          "utc_offset_minutes": 780
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 899
+        }
+      }
+    },
+    {
+      "class": "queue-m3",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 4000,
+          "factor": 0,
+          "ivl": 365,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -3,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1021600000,
+          "now": 1021751200,
+          "rollover_hour": 18,
+          "utc_offset_minutes": 345
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 4000
+        }
+      }
+    },
+    {
+      "class": "queue-m2",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 851,
+          "factor": 0,
+          "ivl": 43,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -2,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1000604800,
+          "now": 1053343342,
+          "rollover_hour": 19,
+          "utc_offset_minutes": 720
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 851
+        }
+      }
+    },
+    {
+      "class": "queue-m2",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 0,
+          "factor": 0,
+          "ivl": 0,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -2,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1000000000,
+          "now": 1002595600,
+          "rollover_hour": 4,
+          "utc_offset_minutes": 0
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 0
+        }
+      }
+    },
+    {
+      "class": "queue-m2",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1,
+          "factor": 0,
+          "ivl": 1,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -2,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1001468800,
+          "now": 1017325000,
+          "rollover_hour": 0,
+          "utc_offset_minutes": 540
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 1
+        }
+      }
+    },
+    {
+      "class": "queue-m2",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 7,
+          "factor": 0,
+          "ivl": 3,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -2,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1008640000,
+          "now": 1008733600,
+          "rollover_hour": 23,
+          "utc_offset_minutes": -300
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 7
+        }
+      }
+    },
+    {
+      "class": "queue-m2",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 30,
+          "factor": 0,
+          "ivl": 10,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -2,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1031536000,
+          "now": 1086486399,
+          "rollover_hour": 12,
+          "utc_offset_minutes": 330
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 30
+        }
+      }
+    },
+    {
+      "class": "queue-m2",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 365,
+          "factor": 0,
+          "ivl": 45,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -2,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1000259200,
+          "now": 1003456001,
+          "rollover_hour": 6,
+          "utc_offset_minutes": -210
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 365
+        }
+      }
+    },
+    {
+      "class": "queue-m2",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 899,
+          "factor": 0,
+          "ivl": 120,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -2,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1004320000,
+          "now": 1082120000,
+          "rollover_hour": 2,
+          "utc_offset_minutes": 780
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 899
+        }
+      }
+    },
+    {
+      "class": "queue-m2",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 4000,
+          "factor": 0,
+          "ivl": 365,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -2,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1021600000,
+          "now": 1021751200,
+          "rollover_hour": 18,
+          "utc_offset_minutes": 345
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 4000
+        }
+      }
+    },
+    {
+      "class": "queue-m1",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 131,
+          "factor": 0,
+          "ivl": 23,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -1,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1005616000,
+          "now": 1045681463,
+          "rollover_hour": 20,
+          "utc_offset_minutes": 720
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 131
+        }
+      }
+    },
+    {
+      "class": "queue-m1",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 0,
+          "factor": 0,
+          "ivl": 0,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -1,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1000000000,
+          "now": 1002595600,
+          "rollover_hour": 4,
+          "utc_offset_minutes": 0
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 0
+        }
+      }
+    },
+    {
+      "class": "queue-m1",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1,
+          "factor": 0,
+          "ivl": 1,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -1,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1001468800,
+          "now": 1017325000,
+          "rollover_hour": 0,
+          "utc_offset_minutes": 540
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 1
+        }
+      }
+    },
+    {
+      "class": "queue-m1",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 7,
+          "factor": 0,
+          "ivl": 3,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -1,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1008640000,
+          "now": 1008733600,
+          "rollover_hour": 23,
+          "utc_offset_minutes": -300
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 7
+        }
+      }
+    },
+    {
+      "class": "queue-m1",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 30,
+          "factor": 0,
+          "ivl": 10,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -1,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1031536000,
+          "now": 1086486399,
+          "rollover_hour": 12,
+          "utc_offset_minutes": 330
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 30
+        }
+      }
+    },
+    {
+      "class": "queue-m1",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 365,
+          "factor": 0,
+          "ivl": 45,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -1,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1000259200,
+          "now": 1003456001,
+          "rollover_hour": 6,
+          "utc_offset_minutes": -210
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 365
+        }
+      }
+    },
+    {
+      "class": "queue-m1",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 899,
+          "factor": 0,
+          "ivl": 120,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -1,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1004320000,
+          "now": 1082120000,
+          "rollover_hour": 2,
+          "utc_offset_minutes": 780
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 899
+        }
+      }
+    },
+    {
+      "class": "queue-m1",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 4000,
+          "factor": 0,
+          "ivl": 365,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -1,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1021600000,
+          "now": 1021751200,
+          "rollover_hour": 18,
+          "utc_offset_minutes": 345
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 4000
+        }
+      }
+    },
+    {
+      "class": "queue-0",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 414,
+          "factor": 0,
+          "ivl": 34,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 0,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1034300800,
+          "now": 1043758950,
+          "rollover_hour": 17,
+          "utc_offset_minutes": -120
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 414
+        }
+      }
+    },
+    {
+      "class": "queue-0",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 0,
+          "factor": 0,
+          "ivl": 0,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 0,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1000000000,
+          "now": 1002595600,
+          "rollover_hour": 4,
+          "utc_offset_minutes": 0
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 0
+        }
+      }
+    },
+    {
+      "class": "queue-0",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1,
+          "factor": 0,
+          "ivl": 1,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 0,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1001468800,
+          "now": 1017325000,
+          "rollover_hour": 0,
+          "utc_offset_minutes": 540
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 1
+        }
+      }
+    },
+    {
+      "class": "queue-0",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 7,
+          "factor": 0,
+          "ivl": 3,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 0,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1008640000,
+          "now": 1008733600,
+          "rollover_hour": 23,
+          "utc_offset_minutes": -300
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 7
+        }
+      }
+    },
+    {
+      "class": "queue-0",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 30,
+          "factor": 0,
+          "ivl": 10,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 0,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1031536000,
+          "now": 1086486399,
+          "rollover_hour": 12,
+          "utc_offset_minutes": 330
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 30
+        }
+      }
+    },
+    {
+      "class": "queue-0",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 365,
+          "factor": 0,
+          "ivl": 45,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 0,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1000259200,
+          "now": 1003456001,
+          "rollover_hour": 6,
+          "utc_offset_minutes": -210
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 365
+        }
+      }
+    },
+    {
+      "class": "queue-0",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 899,
+          "factor": 0,
+          "ivl": 120,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 0,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1004320000,
+          "now": 1082120000,
+          "rollover_hour": 2,
+          "utc_offset_minutes": 780
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 899
+        }
+      }
+    },
+    {
+      "class": "queue-0",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 4000,
+          "factor": 0,
+          "ivl": 365,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 0,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1021600000,
+          "now": 1021751200,
+          "rollover_hour": 18,
+          "utc_offset_minutes": 345
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 4000
+        }
+      }
+    },
+    {
+      "class": "queue-1",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1044009227,
+          "factor": 0,
+          "ivl": 40,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 1,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1024192000,
+          "now": 1044008627,
+          "rollover_hour": 17,
+          "utc_offset_minutes": 540
+        }
+      },
+      "output": {
+        "due": {
+          "days": -1,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-1",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1002595660,
+          "factor": 0,
+          "ivl": 0,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 1,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1000000000,
+          "now": 1002595600,
+          "rollover_hour": 4,
+          "utc_offset_minutes": 0
+        }
+      },
+      "output": {
+        "due": {
+          "days": -1,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-1",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1017325600,
+          "factor": 0,
+          "ivl": 1,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 1,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1001468800,
+          "now": 1017325000,
+          "rollover_hour": 0,
+          "utc_offset_minutes": 540
+        }
+      },
+      "output": {
+        "due": {
+          "days": -1,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-1",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1008737200,
+          "factor": 0,
+          "ivl": 3,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 1,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1008640000,
+          "now": 1008733600,
+          "rollover_hour": 23,
+          "utc_offset_minutes": -300
+        }
+      },
+      "output": {
+        "due": {
+          "days": -1,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-1",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1086486339,
+          "factor": 0,
+          "ivl": 10,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 1,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1031536000,
+          "now": 1086486399,
+          "rollover_hour": 12,
+          "utc_offset_minutes": 330
+        }
+      },
+      "output": {
+        "due": {
+          "days": -1,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-1",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1003456001,
+          "factor": 0,
+          "ivl": 45,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 1,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1000259200,
+          "now": 1003456001,
+          "rollover_hour": 6,
+          "utc_offset_minutes": -210
+        }
+      },
+      "output": {
+        "due": {
+          "days": -1,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-1",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1082206400,
+          "factor": 0,
+          "ivl": 120,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 1,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1004320000,
+          "now": 1082120000,
+          "rollover_hour": 2,
+          "utc_offset_minutes": 780
+        }
+      },
+      "output": {
+        "due": {
+          "days": 0,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-1",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1021751230,
+          "factor": 0,
+          "ivl": 365,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 1,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1021600000,
+          "now": 1021751200,
+          "rollover_hour": 18,
+          "utc_offset_minutes": 345
+        }
+      },
+      "output": {
+        "due": {
+          "days": -1,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-2",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 810,
+          "factor": 0,
+          "ivl": 35,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1024364800,
+          "now": 1046769261,
+          "rollover_hour": 9,
+          "utc_offset_minutes": -300
+        }
+      },
+      "output": {
+        "due": {
+          "days": 550,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-2",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 0,
+          "factor": 0,
+          "ivl": 0,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1000000000,
+          "now": 1002595600,
+          "rollover_hour": 4,
+          "utc_offset_minutes": 0
+        }
+      },
+      "output": {
+        "due": {
+          "days": -30,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-2",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1,
+          "factor": 0,
+          "ivl": 1,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1001468800,
+          "now": 1017325000,
+          "rollover_hour": 0,
+          "utc_offset_minutes": 540
+        }
+      },
+      "output": {
+        "due": {
+          "days": -183,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-2",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 7,
+          "factor": 0,
+          "ivl": 3,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1008640000,
+          "now": 1008733600,
+          "rollover_hour": 23,
+          "utc_offset_minutes": -300
+        }
+      },
+      "output": {
+        "due": {
+          "days": 6,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-2",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 30,
+          "factor": 0,
+          "ivl": 10,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1031536000,
+          "now": 1086486399,
+          "rollover_hour": 12,
+          "utc_offset_minutes": 330
+        }
+      },
+      "output": {
+        "due": {
+          "days": -605,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-2",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 365,
+          "factor": 0,
+          "ivl": 45,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1000259200,
+          "now": 1003456001,
+          "rollover_hour": 6,
+          "utc_offset_minutes": -210
+        }
+      },
+      "output": {
+        "due": {
+          "days": 327,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-2",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 899,
+          "factor": 0,
+          "ivl": 120,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1004320000,
+          "now": 1082120000,
+          "rollover_hour": 2,
+          "utc_offset_minutes": 780
+        }
+      },
+      "output": {
+        "due": {
+          "days": -2,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-2",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 4000,
+          "factor": 0,
+          "ivl": 365,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1021600000,
+          "now": 1021751200,
+          "rollover_hour": 18,
+          "utc_offset_minutes": 345
+        }
+      },
+      "output": {
+        "due": {
+          "days": 3999,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-3",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 308,
+          "factor": 0,
+          "ivl": 4,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 3,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1013824000,
+          "now": 1044029077,
+          "rollover_hour": 11,
+          "utc_offset_minutes": 330
+        }
+      },
+      "output": {
+        "due": {
+          "days": -41,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-3",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 27,
+          "factor": 0,
+          "ivl": 0,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 3,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1000000000,
+          "now": 1002595600,
+          "rollover_hour": 4,
+          "utc_offset_minutes": 0
+        }
+      },
+      "output": {
+        "due": {
+          "days": -3,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-3",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 181,
+          "factor": 0,
+          "ivl": 1,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 3,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1001468800,
+          "now": 1017325000,
+          "rollover_hour": 0,
+          "utc_offset_minutes": 540
+        }
+      },
+      "output": {
+        "due": {
+          "days": -3,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-3",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 0,
+          "factor": 0,
+          "ivl": 3,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 3,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1008640000,
+          "now": 1008733600,
+          "rollover_hour": 23,
+          "utc_offset_minutes": -300
+        }
+      },
+      "output": {
+        "due": {
+          "days": -1,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-3",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 635,
+          "factor": 0,
+          "ivl": 10,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 3,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1031536000,
+          "now": 1086486399,
+          "rollover_hour": 12,
+          "utc_offset_minutes": 330
+        }
+      },
+      "output": {
+        "due": {
+          "days": 0,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-3",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 38,
+          "factor": 0,
+          "ivl": 45,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 3,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1000259200,
+          "now": 1003456001,
+          "rollover_hour": 6,
+          "utc_offset_minutes": -210
+        }
+      },
+      "output": {
+        "due": {
+          "days": 0,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-3",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 902,
+          "factor": 0,
+          "ivl": 120,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 3,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1004320000,
+          "now": 1082120000,
+          "rollover_hour": 2,
+          "utc_offset_minutes": 780
+        }
+      },
+      "output": {
+        "due": {
+          "days": 1,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "queue-3",
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 4,
+          "factor": 0,
+          "ivl": 365,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 3,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1021600000,
+          "now": 1021751200,
+          "rollover_hour": 18,
+          "utc_offset_minutes": 345
+        }
+      },
+      "output": {
+        "due": {
+          "days": 3,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "odue-filtered",
+      "input": {
+        "card": {
+          "deck": 1,
+          "due": -100000,
+          "factor": 0,
+          "ivl": 0,
+          "lapses": 0,
+          "note": 0,
+          "odeck": 0,
+          "odue": 417,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1018576000,
+          "now": 1077986549,
+          "rollover_hour": 3,
+          "utc_offset_minutes": 720
+        }
+      },
+      "output": {
+        "due": {
+          "days": -271,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "odue-filtered",
+      "input": {
+        "card": {
+          "deck": 1,
+          "due": -100000,
+          "factor": 0,
+          "ivl": 0,
+          "lapses": 0,
+          "note": 0,
+          "odeck": 0,
+          "odue": 1,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1000000000,
+          "now": 1002595600,
+          "rollover_hour": 4,
+          "utc_offset_minutes": 0
+        }
+      },
+      "output": {
+        "due": {
+          "days": -29,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "odue-filtered",
+      "input": {
+        "card": {
+          "deck": 1,
+          "due": -100000,
+          "factor": 0,
+          "ivl": 0,
+          "lapses": 0,
+          "note": 0,
+          "odeck": 0,
+          "odue": 2,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1001468800,
+          "now": 1017325000,
+          "rollover_hour": 0,
+          "utc_offset_minutes": 540
+        }
+      },
+      "output": {
+        "due": {
+          "days": -182,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "odue-filtered",
+      "input": {
+        "card": {
+          "deck": 1,
+          "due": -100000,
+          "factor": 0,
+          "ivl": 0,
+          "lapses": 0,
+          "note": 0,
+          "odeck": 0,
+          "odue": 8,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1008640000,
+          "now": 1008733600,
+          "rollover_hour": 23,
+          "utc_offset_minutes": -300
+        }
+      },
+      "output": {
+        "due": {
+          "days": 7,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "odue-filtered",
+      "input": {
+        "card": {
+          "deck": 1,
+          "due": -100000,
+          "factor": 0,
+          "ivl": 0,
+          "lapses": 0,
+          "note": 0,
+          "odeck": 0,
+          "odue": 31,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1031536000,
+          "now": 1086486399,
+          "rollover_hour": 12,
+          "utc_offset_minutes": 330
+        }
+      },
+      "output": {
+        "due": {
+          "days": -604,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "odue-filtered",
+      "input": {
+        "card": {
+          "deck": 1,
+          "due": -100000,
+          "factor": 0,
+          "ivl": 0,
+          "lapses": 0,
+          "note": 0,
+          "odeck": 0,
+          "odue": 366,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1000259200,
+          "now": 1003456001,
+          "rollover_hour": 6,
+          "utc_offset_minutes": -210
+        }
+      },
+      "output": {
+        "due": {
+          "days": 328,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "odue-filtered",
+      "input": {
+        "card": {
+          "deck": 1,
+          "due": -100000,
+          "factor": 0,
+          "ivl": 0,
+          "lapses": 0,
+          "note": 0,
+          "odeck": 0,
+          "odue": 900,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1004320000,
+          "now": 1082120000,
+          "rollover_hour": 2,
+          "utc_offset_minutes": 780
+        }
+      },
+      "output": {
+        "due": {
+          "days": -1,
+          "position": null
+        }
+      }
+    },
+    {
+      "class": "odue-filtered",
+      "input": {
+        "card": {
+          "deck": 1,
+          "due": -100000,
+          "factor": 0,
+          "ivl": 0,
+          "lapses": 0,
+          "note": 0,
+          "odeck": 0,
+          "odue": 4001,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1021600000,
+          "now": 1021751200,
+          "rollover_hour": 18,
+          "utc_offset_minutes": 345
+        }
+      },
+      "output": {
+        "due": {
+          "days": 4000,
+          "position": null
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 512,
+          "factor": 0,
+          "ivl": 9,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -3,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1031795200,
+          "now": 1093062955,
+          "rollover_hour": 3,
+          "utc_offset_minutes": 0
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 512
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1059349554,
+          "factor": 0,
+          "ivl": 1,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 1,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1034214400,
+          "now": 1059348954,
+          "rollover_hour": 1,
+          "utc_offset_minutes": 540
+        }
+      },
+      "output": {
+        "due": {
+          "days": -1,
+          "position": null
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 371,
+          "factor": 0,
+          "ivl": 31,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -3,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1017020800,
+          "now": 1074030090,
+          "rollover_hour": 23,
+          "utc_offset_minutes": 330
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 371
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1065436434,
+          "factor": 0,
+          "ivl": 11,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 1,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1022636800,
+          "now": 1065435834,
+          "rollover_hour": 6,
+          "utc_offset_minutes": 60
+        }
+      },
+      "output": {
+        "due": {
+          "days": -1,
+          "position": null
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1037355331,
+          "factor": 0,
+          "ivl": 30,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 1,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1001814400,
+          "now": 1037354731,
+          "rollover_hour": 10,
+          "utc_offset_minutes": 720
+        }
+      },
+      "output": {
+        "due": {
+          "days": -1,
+          "position": null
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 834,
+          "factor": 0,
+          "ivl": 57,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 3,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1029635200,
+          "now": 1097821152,
+          "rollover_hour": 0,
+          "utc_offset_minutes": 60
+        }
+      },
+      "output": {
+        "due": {
+          "days": 45,
+          "position": null
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 629,
+          "factor": 0,
+          "ivl": 28,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 3,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1030931200,
+          "now": 1079686829,
+          "rollover_hour": 11,
+          "utc_offset_minutes": 0
+        }
+      },
+      "output": {
+        "due": {
+          "days": 65,
+          "position": null
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 9,
+          "factor": 0,
+          "ivl": 19,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -1,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1028771200,
+          "now": 1052503928,
+          "rollover_hour": 2,
+          "utc_offset_minutes": 720
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 9
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 296,
+          "factor": 0,
+          "ivl": 31,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 0,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1030240000,
+          "now": 1074369955,
+          "rollover_hour": 2,
+          "utc_offset_minutes": 0
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 296
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 763,
+          "factor": 0,
+          "ivl": 22,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -3,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1021513600,
+          "now": 1097390991,
+          "rollover_hour": 5,
+          "utc_offset_minutes": -300
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 763
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 718,
+          "factor": 0,
+          "ivl": 30,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -3,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1022809600,
+          "now": 1065547639,
+          "rollover_hour": 22,
+          "utc_offset_minutes": -300
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 718
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1047715001,
+          "factor": 0,
+          "ivl": 19,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 1,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1020390400,
+          "now": 1047714401,
+          "rollover_hour": 2,
+          "utc_offset_minutes": -300
+        }
+      },
+      "output": {
+        "due": {
+          "days": -1,
+          "position": null
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 352,
+          "factor": 0,
+          "ivl": 55,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 3,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1025747200,
+          "now": 1031535353,
+          "rollover_hour": 10,
+          "utc_offset_minutes": -600
+        }
+      },
+      "output": {
+        "due": {
+          "days": 285,
+          "position": null
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 368,
+          "factor": 0,
+          "ivl": 57,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 3,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1004924800,
+          "now": 1060250898,
+          "rollover_hour": 1,
+          "utc_offset_minutes": 720
+        }
+      },
+      "output": {
+        "due": {
+          "days": -273,
+          "position": null
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 22,
+          "factor": 0,
+          "ivl": 47,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -1,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1021859200,
+          "now": 1040747938,
+          "rollover_hour": 5,
+          "utc_offset_minutes": 720
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 22
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 536,
+          "factor": 0,
+          "ivl": 49,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -2,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1018835200,
+          "now": 1077831231,
+          "rollover_hour": 12,
+          "utc_offset_minutes": 540
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 536
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 111,
+          "factor": 0,
+          "ivl": 38,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 3,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1029894400,
+          "now": 1067348696,
+          "rollover_hour": 10,
+          "utc_offset_minutes": 60
+        }
+      },
+      "output": {
+        "due": {
+          "days": -322,
+          "position": null
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 632,
+          "factor": 0,
+          "ivl": 10,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1031968000,
+          "now": 1070873823,
+          "rollover_hour": 5,
+          "utc_offset_minutes": -300
+        }
+      },
+      "output": {
+        "due": {
+          "days": 180,
+          "position": null
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 67,
+          "factor": 0,
+          "ivl": 28,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -3,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1006307200,
+          "now": 1009612550,
+          "rollover_hour": 5,
+          "utc_offset_minutes": 330
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 67
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 190,
+          "factor": 0,
+          "ivl": 35,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 3,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1006048000,
+          "now": 1042121957,
+          "rollover_hour": 13,
+          "utc_offset_minutes": 60
+        }
+      },
+      "output": {
+        "due": {
+          "days": -227,
+          "position": null
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 525,
+          "factor": 0,
+          "ivl": 5,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -3,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1004492800,
+          "now": 1071868048,
+          "rollover_hour": 9,
+          "utc_offset_minutes": -120
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 525
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 1054729643,
+          "factor": 0,
+          "ivl": 19,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": 1,
+          "reps": 0,
+          "type": 1
+        },
+        "timing": {
+          "crt": 1021168000,
+          "now": 1054729043,
+          "rollover_hour": 23,
+          "utc_offset_minutes": 0
+        }
+      },
+      "output": {
+        "due": {
+          "days": -1,
+          "position": null
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 0,
+          "due": 796,
+          "factor": 0,
+          "ivl": 14,
+          "lapses": 0,
+          "note": 0,
+          "odeck": null,
+          "odue": 0,
+          "ord": 0,
+          "queue": -3,
+          "reps": 0,
+          "type": 0
+        },
+        "timing": {
+          "crt": 1003801600,
+          "now": 1022317130,
+          "rollover_hour": 5,
+          "utc_offset_minutes": 0
+        }
+      },
+      "output": {
+        "due": {
+          "days": null,
+          "position": 796
+        }
+      }
+    },
+    {
+      "input": {
+        "card": {
+          "deck": 1,
+          "due": -100000,
+          "factor": 0,
+          "ivl": 0,
+          "lapses": 0,
+          "note": 0,
+          "odeck": 0,
+          "odue": 107,
+          "ord": 0,
+          "queue": 2,
+          "reps": 0,
+          "type": 2
+        },
+        "timing": {
+          "crt": 1019958400,
+          "now": 1050954182,
+          "rollover_hour": 16,
+          "utc_offset_minutes": 330
+        }
+      },
+      "output": {
+        "due": {
+          "days": -251,
+          "position": null
+        }
+      }
+    }
+  ],
+  "function": "anki.card.due_view",
+  "generator": "tools/parity-oracle/anki/generate.py",
+  "generator_sha256": "8bd480ee4afb7a31cc6096a397940da1c3661ab11df1cc95214ca464c49e6737",
+  "inputs": "synthetic",
+  "kind": "engine",
+  "note": "answers the due the engine reports for the card's scheduling columns at the instant (F5); cases drawn under CPython 3.12.3.",
+  "registry": "tools/parity-oracle/anki/registry/spec_498.py",
+  "registry_sha256": "c6ea7a8db7ff6c74beebbad4aba059085fe6d258dd415a35190f7eb3f084c571",
+  "schema": "phx.parity-golden.v1",
+  "seed": 498,
+  "source_commit": "65e053b829825f534803b2b772c507a73ba936a3"
+}

@@ -1,0 +1,8335 @@
+{
+  "cases": [
+    {
+      "class": "cloze-hint",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::harbor::garnet hint}} juniper"
+      },
+      "output": {
+        "text": "garnet hint"
+      }
+    },
+    {
+      "class": "cloze-hint",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::amber::color}}"
+      },
+      "output": {
+        "text": "color"
+      }
+    },
+    {
+      "class": "cloze-hint",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::basil::herb}} cobalt"
+      },
+      "output": {
+        "text": "herb"
+      }
+    },
+    {
+      "class": "cloze-hint",
+      "input": {
+        "ord": 2,
+        "text": "dune {{c1::ember::glow hint}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-hint",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::fjord::}} garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-hint",
+      "input": {
+        "ord": 3,
+        "text": "{{c1::harbor::a <i>port</i>}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-hint",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::indigo::hint::extra}}"
+      },
+      "output": {
+        "text": "hint::extra"
+      }
+    },
+    {
+      "class": "cloze-hint",
+      "input": {
+        "ord": 2,
+        "text": "{{c2::juniper::tree}}"
+      },
+      "output": {
+        "text": "tree"
+      }
+    },
+    {
+      "class": "cloze-math",
+      "input": {
+        "ord": 1,
+        "text": "\\(dune^{2}\\) {{c1::\\(dune + 1\\)}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-math",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::\\(a^2 + b^2\\)}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-math",
+      "input": {
+        "ord": 1,
+        "text": "\\(\\frac{1}{2}\\) {{c1::half}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-math",
+      "input": {
+        "ord": 2,
+        "text": "\\[{{c1::e^{i\\pi}}} + 1 = 0\\]"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-math",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::\\(x\\)}} and {{c2::\\(y\\)}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-math",
+      "input": {
+        "ord": 3,
+        "text": "\\(\\sqrt{ {{c1::amber}} }\\)"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-math",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::\\[\\sum_{k=1}^{n} k\\]::sum}}"
+      },
+      "output": {
+        "text": "sum"
+      }
+    },
+    {
+      "class": "cloze-math",
+      "input": {
+        "ord": 2,
+        "text": "\\(a\\) {{c1::basil}} \\(b\\)"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-multi",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::fjord}} {{c2::garnet}} {{c1::amber}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "class": "cloze-multi",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::amber}} {{c2::basil}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-multi",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::cobalt}} {{c1::dune}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "class": "cloze-multi",
+      "input": {
+        "ord": 2,
+        "text": "{{c1::ember}} {{c2::fjord}} {{c3::garnet}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-multi",
+      "input": {
+        "ord": 1,
+        "text": "{{c2::harbor}} {{c1::indigo}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-multi",
+      "input": {
+        "ord": 3,
+        "text": "{{c1::juniper}} and {{c2::amber::hint}} and {{c3::basil}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-multi",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::cobalt}}{{c2::dune}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-multi",
+      "input": {
+        "ord": 2,
+        "text": "{{c10::ember}} {{c2::fjord}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-1",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::harbor juniper}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-1",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::amber basil}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-1",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::cobalt <i>dune</i>}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-1",
+      "input": {
+        "ord": 2,
+        "text": "ember {{c1::fjord garnet}} harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-nest-1",
+      "input": {
+        "ord": 1,
+        "text": "{{c2::indigo juniper}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-nest-1",
+      "input": {
+        "ord": 3,
+        "text": "{{c1::amber cobalt ember}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-nest-1",
+      "input": {
+        "ord": 1,
+        "text": "basil {{c1::dune}} fjord"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-1",
+      "input": {
+        "ord": 2,
+        "text": "{{c1::fjord, garnet; harbor}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-nest-2",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::cobalt {{c2::ember juniper}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-2",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::amber {{c2::basil}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-2",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::cobalt {{c2::dune}} ember}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-2",
+      "input": {
+        "ord": 2,
+        "text": "{{c2::fjord {{c1::garnet}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-2",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::harbor {{c1::indigo}}}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "class": "cloze-nest-2",
+      "input": {
+        "ord": 3,
+        "text": "{{c1::{{c2::juniper}} amber}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-nest-2",
+      "input": {
+        "ord": 1,
+        "text": "basil {{c1::cobalt {{c2::dune::hint}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-2",
+      "input": {
+        "ord": 2,
+        "text": "{{c1::ember {{c2::fjord}} {{c3::garnet}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-3",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::harbor {{c2::harbor {{c3::indigo juniper}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-3",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::amber {{c2::basil {{c3::cobalt}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-3",
+      "input": {
+        "ord": 1,
+        "text": "{{c3::dune {{c2::ember {{c1::fjord}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-3",
+      "input": {
+        "ord": 2,
+        "text": "{{c1::garnet {{c2::harbor}} {{c2::indigo {{c3::juniper}}}}}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "class": "cloze-nest-3",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::{{c2::{{c3::amber}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-3",
+      "input": {
+        "ord": 3,
+        "text": "{{c1::basil {{c1::cobalt {{c1::dune}}}}}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-nest-3",
+      "input": {
+        "ord": 1,
+        "text": "ember {{c1::fjord {{c2::garnet {{c3::harbor::hint}}}}}} indigo"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-3",
+      "input": {
+        "ord": 2,
+        "text": "{{c2::juniper {{c3::amber {{c4::basil}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-4",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::cobalt {{c2::indigo {{c3::fjord {{c4::cobalt harbor}}}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-4",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::amber {{c2::basil {{c3::cobalt {{c4::dune}}}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-4",
+      "input": {
+        "ord": 1,
+        "text": "{{c4::ember {{c3::fjord {{c2::garnet {{c1::harbor}}}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-4",
+      "input": {
+        "ord": 2,
+        "text": "{{c1::{{c2::{{c3::{{c4::indigo}}}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-4",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::juniper {{c2::amber}} {{c2::basil {{c3::cobalt {{c4::dune}}}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-nest-4",
+      "input": {
+        "ord": 3,
+        "text": "{{c1::ember {{c1::fjord {{c1::garnet {{c1::harbor}}}}}}}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-nest-4",
+      "input": {
+        "ord": 1,
+        "text": "indigo {{c2::juniper {{c3::amber {{c4::basil {{c5::cobalt}}}}}}}} dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-nest-4",
+      "input": {
+        "ord": 2,
+        "text": "{{c1::<b>ember</b> {{c2::<i>fjord</i> {{c3::garnet {{c4::harbor::deep hint}}}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-single",
+      "input": {
+        "ord": 1,
+        "text": "basil {{c1::ember}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-single",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::amber}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-single",
+      "input": {
+        "ord": 1,
+        "text": "cobalt {{c1::dune}} ember"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-single",
+      "input": {
+        "ord": 2,
+        "text": "{{c1::fjord garnet}} harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-single",
+      "input": {
+        "ord": 1,
+        "text": "indigo {{c1::<b>juniper</b>}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-single",
+      "input": {
+        "ord": 3,
+        "text": "  {{c1:: ember }}  "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-single",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::basil}}."
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-single",
+      "input": {
+        "ord": 2,
+        "text": "<div>{{c1::cobalt}}</div>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-span",
+      "input": {
+        "ord": 1,
+        "text": "<b>{{c1::garnet</b> indigo}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-span",
+      "input": {
+        "ord": 1,
+        "text": "<b>{{c1::amber</b> basil}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-span",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::cobalt <i>dune}}</i>"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-span",
+      "input": {
+        "ord": 2,
+        "text": "<div>{{c1::ember</div><div>fjord}}</div>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-span",
+      "input": {
+        "ord": 1,
+        "text": "<span>garnet {{c1::harbor</span> indigo}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-span",
+      "input": {
+        "ord": 3,
+        "text": "{{c1::<b>juniper}}</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "cloze-span",
+      "input": {
+        "ord": 1,
+        "text": "<u>{{c1::amber <b>basil</u> cobalt}}</b>"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "cloze-span",
+      "input": {
+        "ord": 2,
+        "text": "<i>{{c2::dune</i>}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "gap",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::indigo}} {{c3::indigo}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "gap",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::amber}} {{c3::basil}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "gap",
+      "input": {
+        "ord": 1,
+        "text": "{{c2::cobalt}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "gap",
+      "input": {
+        "ord": 2,
+        "text": "{{c1::dune}} {{c5::ember}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "gap",
+      "input": {
+        "ord": 1,
+        "text": "{{c3::fjord}} {{c1::garnet}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "gap",
+      "input": {
+        "ord": 3,
+        "text": "{{c2::harbor}} {{c4::indigo}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "gap",
+      "input": {
+        "ord": 1,
+        "text": "{{c1::juniper}} {{c2::amber}} {{c4::basil}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "class": "gap",
+      "input": {
+        "ord": 2,
+        "text": "{{c10::cobalt}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "ord": 1,
+        "text": ""
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "ord": 1,
+        "text": " "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "ord": 1,
+        "text": "\t"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "ord": 2,
+        "text": "\n"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "ord": 1,
+        "text": "<br>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "ord": 3,
+        "text": "&nbsp;"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "ord": 1,
+        "text": "<div></div>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "ord": 2,
+        "text": " <br> "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-nfc",
+      "input": {
+        "ord": 1,
+        "text": "café garnet naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-nfc",
+      "input": {
+        "ord": 1,
+        "text": "café amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-nfc",
+      "input": {
+        "ord": 1,
+        "text": "naïve basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-nfc",
+      "input": {
+        "ord": 2,
+        "text": "Ångström cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-nfc",
+      "input": {
+        "ord": 1,
+        "text": "résumé dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-nfc",
+      "input": {
+        "ord": 3,
+        "text": "über ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-nfc",
+      "input": {
+        "ord": 1,
+        "text": "crème brûlée fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-nfc",
+      "input": {
+        "ord": 2,
+        "text": "piñata garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-nfd",
+      "input": {
+        "ord": 1,
+        "text": "café dune naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-nfd",
+      "input": {
+        "ord": 1,
+        "text": "café amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-nfd",
+      "input": {
+        "ord": 1,
+        "text": "naïve basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-nfd",
+      "input": {
+        "ord": 2,
+        "text": "Ångström cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-nfd",
+      "input": {
+        "ord": 1,
+        "text": "résumé dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-nfd",
+      "input": {
+        "ord": 3,
+        "text": "über ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-nfd",
+      "input": {
+        "ord": 1,
+        "text": "crème brûlée fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-nfd",
+      "input": {
+        "ord": 2,
+        "text": "piñata garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-emoji",
+      "input": {
+        "ord": 1,
+        "text": "👩‍🔬 🇳🇴 🙂"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-emoji",
+      "input": {
+        "ord": 1,
+        "text": "🙂"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-emoji",
+      "input": {
+        "ord": 1,
+        "text": "👩‍🔬 amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-emoji",
+      "input": {
+        "ord": 2,
+        "text": "🇳🇴🇯🇵"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-emoji",
+      "input": {
+        "ord": 1,
+        "text": "❤️ basil ❤"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-emoji",
+      "input": {
+        "ord": 3,
+        "text": "👍🏽"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-emoji",
+      "input": {
+        "ord": 1,
+        "text": "🧑‍🤝‍🧑 cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "class": "unicode-emoji",
+      "input": {
+        "ord": 2,
+        "text": "1️⃣ 2️⃣"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet <img src=\"ds_ember.png\"> [sound:ds_basil.mp3] dune indigo indigo {{c1::fjord}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet garnet amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil 학교[よみ] 山水"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "amber amber garnet {{c1::dune {{c2::indigo ember}}}} {{c1::indigo}} {{c3::fjord}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "  fjord\t harbor \n indigo {{c1::dune::harbor hint}} garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "café fjord naïve {{c1::amber {{c2::harbor ember}}}} juniper dune juniper harbor cobalt basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::harbor {{c2::amber indigo}}}}  harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "juniper amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "ember garnet &amp; &lt;juniper&gt; &nbsp;&#x263A;&#9731; harbor ember "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "fjord garnet basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::dune {{c2::harbor {{c3::cobalt {{c4::harbor cobalt}}}}}}}} juniper dune مرحبا بكم amber"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "\\(ember^{2}\\) {{c1::\\(garnet + 1\\)}} basil <img src=\"ds_juniper.png\"> [sound:ds_fjord.mp3] garnet indigo café fjord naïve"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt amber cobalt amber <img src=\"ds_cobalt.png\"> [sound:ds_basil.mp3]"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::fjord}} {{c2::cobalt}} {{c1::indigo}}   basil\t ember \n garnet"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "amber &amp; &lt;basil&gt; &nbsp;&#x263A;&#9731; dune garnet "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::fjord indigo}} dune harbor {{c1::basil}} 山水[よみ] 학교"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor basil {{c1::ember {{c2::basil {{c3::basil {{c4::ember juniper}}}}}}}} basil <img src=\"ds_basil.png\"> [sound:ds_cobalt.mp3]"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord indigo {{c1::basil}} {{c3::cobalt}} ember ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "<b>{{c1::garnet</b> dune}} dune {{c1::cobalt {{c2::dune basil}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "  basil\t fjord \n   ember\t indigo \n {{c1::juniper {{c2::cobalt {{c3::indigo {{c4::ember garnet}}}}}}}} indigo juniper"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt {{c1::basil {{c2::fjord {{c3::basil indigo}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::indigo {{c2::dune {{c3::basil indigo}}}}}} <b>juniper <i>garnet</b> basil fjord dune"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "\\(basil^{2}\\) {{c1::\\(indigo + 1\\)}} {{c1::basil}} {{c2::garnet}} {{c1::garnet}} ember"
+      },
+      "output": {
+        "text": "..., ..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::cobalt}} {{c3::harbor}} cobalt <img src=\"ds_dune.png\"> [sound:ds_fjord.mp3] basil garnet"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember garnet cobalt café ember naïve   garnet\t garnet \n {{c1::amber {{c2::fjord {{c3::amber juniper}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember ember amber garnet {{c1::indigo}} {{c2::ember}} {{c1::fjord}} fjord {{c1::ember cobalt}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor {{c1::garnet {{c2::garnet {{c3::indigo cobalt}}}}}} {{c1::indigo}} {{c3::garnet}} cobalt harbor indigo juniper cobalt"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper fjord cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "harbor garnet amber juniper juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil &amp; &lt;juniper&gt; &nbsp;&#x263A;&#9731; garnet cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "  harbor\t dune \n <b>cobalt <i>amber</b> juniper ember harbor café garnet naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::indigo::cobalt hint}} indigo juniper {{c1::fjord}} {{c1::cobalt}} {{c3::juniper}} ember"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember cobalt indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "<b>{{c1::harbor</b> ember}}  amber basil indigo"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": " fjord 👩‍🔬 🙂 🇳🇴"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "EMBER Amber amber ember indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "café dune naïve café ember naïve ember ember dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "harbor garnet INDIGO Garnet مرحبا بكم dune cobalt &amp; &lt;garnet&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "café harbor naïve café dune naïve juniper harbor juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "<b>{{c1::cobalt</b> amber}} basil dune amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "basil cobalt juniper amber &amp; &lt;basil&gt; &nbsp;&#x263A;&#9731; {{c1::cobalt {{c2::amber {{c3::indigo {{c4::basil dune}}}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "café fjord naïve dune garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "fjord indigo שלום עולם indigo café juniper naïve café basil naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune garnet dune garnet amber harbor HARBOR Harbor ember &amp; &lt;ember&gt; &nbsp;&#x263A;&#9731; amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "harbor ember harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil cobalt cobalt amber indigo {{c1::indigo {{c2::amber {{c3::dune fjord}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt amber harbor ember fjord <b>garnet <i>juniper</b> dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil juniper cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "indigo harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "fjord ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "amber cobalt fjord {{c1::amber}} {{c2::ember}} {{c1::ember}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil juniper indigo juniper amber juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "juniper ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "indigo {{c1::garnet}} juniper juniper {{c1::ember {{c2::dune {{c3::dune {{c4::amber dune}}}}}}}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "juniper indigo   harbor\t dune \n"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::indigo}} {{c3::cobalt}} dune ember amber"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber {{c1::dune}} ember juniper   basil\t basil \n {{c1::cobalt {{c2::indigo {{c3::cobalt dune}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "cobalt garnet garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "cobalt amber amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "fjord dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "ember <img src=\"ds_harbor.png\"> [sound:ds_fjord.mp3] {{c1::cobalt ember}} amber garnet ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "  ember\t fjord \n cobalt dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "ember cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil <img src=\"ds_amber.png\"> [sound:ds_ember.mp3] שלום עולם dune {{c1::indigo {{c2::indigo {{c3::dune cobalt}}}}}} juniper"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": " juniper fjord fjord {{c1::dune}} {{c3::garnet}} basil"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune <b>dune <i>ember</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "amber <b>{{c1::fjord</b> indigo}} {{c1::amber}} {{c3::fjord}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet harbor juniper harbor juniper basil basil juniper   basil\t amber \n"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::garnet ember}} juniper cobalt {{c1::fjord amber}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "  indigo\t dune \n {{c1::amber {{c2::juniper basil}}}} juniper harbor"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember {{c1::ember}} {{c1::harbor ember}} {{c1::fjord {{c2::basil {{c3::dune indigo}}}}}} juniper"
+      },
+      "output": {
+        "text": "..., ..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "juniper basil garnet fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "ember basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "<b>indigo <i>harbor</b> basil basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "juniper harbor juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor basil garnet <img src=\"ds_juniper.png\"> [sound:ds_cobalt.mp3] {{c1::amber {{c2::cobalt amber}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "indigo amber amber café cobalt naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "<b>garnet <i>cobalt</b> café garnet naïve fjord juniper amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "cobalt fjord garnet {{c1::juniper}} {{c2::indigo}} {{c1::basil}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt مرحبا بكم fjord <b>harbor <i>amber</b> "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt <img src=\"ds_cobalt.png\"> [sound:ds_indigo.mp3]   dune\t juniper \n dune garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::amber {{c2::cobalt {{c3::dune {{c4::basil cobalt}}}}}}}} amber ember amber"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "<b>{{c1::indigo</b> cobalt}} {{c1::harbor::garnet hint}} harbor {{c1::garnet {{c2::garnet cobalt}}}} fjord"
+      },
+      "output": {
+        "text": "..., garnet hint, ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "  fjord\t indigo \n indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper garnet garnet garnet amber amber cobalt juniper \\(dune^{2}\\) {{c1::\\(harbor + 1\\)}} café garnet naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::garnet {{c2::harbor {{c3::harbor {{c4::harbor ember}}}}}}}} fjord juniper basil amber garnet harbor harbor"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "🇳🇴 🇳🇴 🇳🇴 dune fjord fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::cobalt}} {{c2::garnet}} {{c1::dune}} harbor harbor juniper basil juniper juniper indigo "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "<b>garnet <i>dune</b> ember <img src=\"ds_fjord.png\"> [sound:ds_indigo.mp3] amber juniper {{c1::dune {{c2::juniper {{c3::amber {{c4::dune fjord}}}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt ember garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "cobalt ember dune indigo garnet fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::basil {{c2::fjord {{c3::juniper {{c4::harbor cobalt}}}}}}}} {{c1::juniper basil}} harbor amber {{c1::cobalt ember}}"
+      },
+      "output": {
+        "text": "..., ..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "indigo fjord 🇳🇴 👩‍🔬 👩‍🔬"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember cobalt <img src=\"ds_ember.png\"> [sound:ds_juniper.mp3] harbor dune <img src=\"ds_harbor.png\"> [sound:ds_indigo.mp3]"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil juniper juniper fjord &amp; &lt;amber&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::harbor harbor}} garnet dune garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::harbor {{c2::ember cobalt}}}} amber basil café indigo naïve"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "\\(dune^{2}\\) {{c1::\\(indigo + 1\\)}} cobalt amber dune {{c1::juniper::indigo hint}} indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune basil 花火[よみ] 読書 {{c1::fjord}} {{c3::indigo}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": " ember {{c1::juniper}}   amber\t fjord \n garnet harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::juniper}} {{c3::harbor}} basil ember basil {{c1::fjord {{c2::garnet garnet}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember {{c1::dune}} fjord harbor harbor"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor basil {{c1::fjord {{c2::dune {{c3::dune indigo}}}}}} "
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "basil ember indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune juniper harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": " fjord <b>juniper <i>cobalt</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper amber garnet fjord fjord fjord cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "basil café indigo naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "학교[よみ] 학교 {{c1::indigo}} {{c2::indigo}} {{c1::ember}} juniper fjord {{c1::cobalt {{c2::basil {{c3::harbor {{c4::dune garnet}}}}}}}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "fjord indigo juniper indigo ember harbor garnet {{c1::basil {{c2::ember {{c3::garnet {{c4::garnet amber}}}}}}}} {{c1::basil juniper}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::amber {{c2::ember {{c3::amber garnet}}}}}} dune"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "indigo amber basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": " ember <img src=\"ds_fjord.png\"> [sound:ds_cobalt.mp3] juniper ember juniper {{c1::amber}} {{c3::garnet}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "café dune naïve garnet harbor fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber basil <img src=\"ds_harbor.png\"> [sound:ds_ember.mp3]"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "basil <img src=\"ds_indigo.png\"> [sound:ds_amber.mp3]   garnet\t basil \n 학교[よみ] 読書 fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "<b>fjord <i>dune</b> dune 👩‍🔬 🙂 ❤️"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "fjord basil COBALT Harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor &amp; &lt;cobalt&gt; &nbsp;&#x263A;&#9731; JUNIPER Juniper amber harbor harbor amber dune harbor dune amber garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "basil ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "COBALT Garnet   ember\t juniper \n dune ember indigo garnet fjord basil ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::dune indigo}}   cobalt\t amber \n juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune ember basil café garnet naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::harbor {{c2::basil {{c3::juniper {{c4::indigo basil}}}}}}}} 👩‍🔬 👩‍🔬 🙂 dune basil juniper {{c1::harbor {{c2::amber indigo}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::fjord::indigo hint}} basil dune basil"
+      },
+      "output": {
+        "text": "indigo hint"
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::harbor dune}} harbor juniper basil dune garnet amber"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "fjord garnet dune café juniper naïve amber &amp; &lt;cobalt&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil juniper ember {{c1::basil}} {{c3::ember}} <b>{{c1::cobalt</b> harbor}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "<b>{{c1::dune</b> juniper}} cobalt indigo  café amber naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "❤️ ❤️ 🙂 dune juniper fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "cobalt dune cobalt juniper harbor indigo indigo amber {{c1::garnet}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember café garnet naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "dune <img src=\"ds_cobalt.png\"> [sound:ds_harbor.mp3] juniper dune 👩‍🔬 ❤️ 👩‍🔬 ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune cobalt indigo {{c1::dune}} {{c3::cobalt}} <b>cobalt <i>amber</b>"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "café dune naïve ❤️ 👩‍🔬 🙂 {{c1::indigo {{c2::juniper dune}}}} amber ember cobalt"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "harbor cobalt juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune juniper indigo café amber naïve indigo garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "cobalt garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "\\(harbor^{2}\\) {{c1::\\(harbor + 1\\)}} amber indigo fjord ember harbor amber HARBOR Amber juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "garnet <img src=\"ds_dune.png\"> [sound:ds_fjord.mp3] harbor ember cobalt fjord basil ember basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune basil {{c1::basil}} {{c3::cobalt}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "café dune naïve juniper cobalt amber ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember garnet dune ember cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember ember harbor garnet indigo {{c1::dune {{c2::juniper basil}}}} 🙂 ❤️ ❤️"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "juniper ember <img src=\"ds_amber.png\"> [sound:ds_amber.mp3]"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet basil cobalt basil &amp; &lt;harbor&gt; &nbsp;&#x263A;&#9731; café ember naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper fjord harbor <b>garnet <i>juniper</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "dune café fjord naïve JUNIPER Indigo 학교[よみ] 花火"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "fjord cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "amber garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil dune dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "👩‍🔬 👩‍🔬 ❤️ {{c1::juniper {{c2::ember {{c3::cobalt amber}}}}}} cobalt ember basil basil indigo ember cobalt basil"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::juniper juniper}} {{c1::garnet {{c2::ember {{c3::harbor {{c4::fjord indigo}}}}}}}} {{c1::cobalt}} {{c3::cobalt}} ember garnet"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor cobalt {{c1::garnet}} {{c3::amber}}  ember {{c1::fjord}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt juniper basil 花火[よみ] 花火"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "  juniper\t basil \n {{c1::garnet}} {{c2::amber}} {{c1::indigo}} cobalt cobalt \\(dune^{2}\\) {{c1::\\(fjord + 1\\)}}"
+      },
+      "output": {
+        "text": "..., ..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::indigo amber}} garnet fjord dune &amp; &lt;basil&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::juniper}} {{c2::ember}} {{c1::fjord}} indigo basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "花火[よみ] 電車  fjord harbor {{c1::fjord {{c2::ember cobalt}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "indigo cobalt harbor <b>harbor <i>dune</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "<b>indigo <i>harbor</b> fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "café indigo naïve \\(amber^{2}\\) {{c1::\\(juniper + 1\\)}} cobalt basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt basil fjord café basil naïve fjord juniper indigo basil <img src=\"ds_indigo.png\"> [sound:ds_fjord.mp3]"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "juniper cobalt cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "basil {{c1::ember}} {{c2::dune}} {{c1::ember}} indigo harbor ember dune ember "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "juniper fjord juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "amber harbor ember dune garnet juniper INDIGO Basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::juniper harbor}} \\(juniper^{2}\\) {{c1::\\(harbor + 1\\)}} harbor garnet juniper"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "café cobalt naïve basil basil indigo {{c1::juniper {{c2::dune harbor}}}} garnet harbor indigo amber garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil basil garnet "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember {{c1::ember}} amber indigo <img src=\"ds_amber.png\"> [sound:ds_amber.mp3]"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::juniper {{c2::amber {{c3::ember dune}}}}}} cobalt amber ember cobalt garnet harbor dune"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": " amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor basil juniper fjord basil "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "fjord {{c1::dune}} juniper indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt basil juniper indigo <b>garnet <i>garnet</b> garnet {{c1::harbor}} {{c2::indigo}} {{c1::dune}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::indigo {{c2::amber {{c3::cobalt cobalt}}}}}} {{c1::dune {{c2::garnet juniper}}}} dune"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "cobalt amber juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember dune juniper {{c1::ember {{c2::ember dune}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor ember amber café amber naïve {{c1::garnet}} {{c2::juniper}} {{c1::amber}} \\(juniper^{2}\\) {{c1::\\(indigo + 1\\)}}"
+      },
+      "output": {
+        "text": "..., ..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember fjord basil garnet amber fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "ember harbor juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "  amber {{c1::garnet}} {{c2::cobalt}} {{c1::juniper}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "harbor garnet amber amber garnet indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "fjord harbor dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "indigo {{c1::harbor {{c2::basil {{c3::amber fjord}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::basil}} {{c3::indigo}} ember basil dune"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "مرحبا بكم indigo harbor <img src=\"ds_amber.png\"> [sound:ds_indigo.mp3] fjord cobalt juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet harbor café dune naïve <b>amber <i>ember</b> {{c1::dune {{c2::indigo {{c3::indigo ember}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor <img src=\"ds_dune.png\"> [sound:ds_cobalt.mp3] dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "basil garnet fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "harbor basil amber juniper dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "電車[よみ] 読書 dune ember harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor basil amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::cobalt {{c2::garnet juniper}}}} indigo amber harbor"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet dune   basil\t basil \n <b>{{c1::harbor</b> ember}} שלום עולם fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "ember juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "山水[よみ] 山水 fjord indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil amber dune {{c1::ember {{c2::juniper {{c3::juniper garnet}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor مرحبا بكم juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune indigo <b>{{c1::ember</b> dune}} fjord <img src=\"ds_amber.png\"> [sound:ds_harbor.mp3]"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "読書[よみ] 電車 {{c1::garnet {{c2::harbor {{c3::basil fjord}}}}}} {{c1::juniper {{c2::dune indigo}}}} indigo"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "amber indigo \\(dune^{2}\\) {{c1::\\(dune + 1\\)}} BASIL Ember ember &amp; &lt;harbor&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::cobalt}} {{c2::cobalt}} {{c1::juniper}} <b>{{c1::harbor</b> juniper}} dune garnet <b>{{c1::basil</b> juniper}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "<b>{{c1::juniper</b> ember}}  garnet"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt {{c1::amber}} fjord amber juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt 花火[よみ] 학교"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "indigo ember garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil fjord juniper juniper fjord amber 🇳🇴 👩‍🔬 🇳🇴 garnet garnet basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "<b>{{c1::fjord</b> cobalt}} amber cobalt indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::indigo {{c2::fjord {{c3::ember {{c4::harbor amber}}}}}}}} {{c1::basil::fjord hint}} amber indigo {{c1::juniper}} {{c2::basil}} {{c1::dune}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord dune dune ember indigo indigo amber indigo ember amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "JUNIPER Harbor garnet dune basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil cobalt garnet {{c1::fjord::dune hint}} ember"
+      },
+      "output": {
+        "text": "dune hint"
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "<b>juniper <i>garnet</b> ember cobalt indigo harbor indigo basil {{c1::dune}} {{c2::fjord}} {{c1::harbor}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber ember fjord café indigo naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "basil ember amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "ember 花火[よみ] 山水"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune harbor <b>ember <i>basil</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "amber \\(amber^{2}\\) {{c1::\\(harbor + 1\\)}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "<b>amber <i>cobalt</b> indigo amber ember DUNE Ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::ember {{c2::dune {{c3::harbor {{c4::basil harbor}}}}}}}} {{c1::basil}} {{c2::garnet}} {{c1::juniper}} juniper"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune dune cobalt cobalt مرحبا بكم juniper garnet garnet 🙂 👩‍🔬 👩‍🔬"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::garnet::garnet hint}} harbor cobalt ember fjord {{c1::amber}} {{c2::garnet}} {{c1::dune}} <b>basil <i>harbor</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "שלום עולם basil dune dune amber basil basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "cobalt <img src=\"ds_fjord.png\"> [sound:ds_fjord.mp3] שלום עולם indigo fjord garnet {{c1::dune {{c2::basil {{c3::juniper fjord}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet cobalt dune cobalt garnet ember fjord juniper fjord indigo {{c1::fjord {{c2::dune {{c3::juniper {{c4::cobalt cobalt}}}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "BASIL Ember مرحبا بكم fjord amber garnet café garnet naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt harbor &amp; &lt;basil&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": " garnet dune amber <b>{{c1::fjord</b> basil}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber basil amber juniper juniper harbor basil garnet ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune harbor ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "indigo amber cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember indigo cobalt 👩‍🔬 👩‍🔬 👩‍🔬 ❤️ 🙂 🙂"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor {{c1::garnet}} basil basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt amber harbor amber garnet garnet indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "FJORD Garnet juniper garnet amber garnet &amp; &lt;basil&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::juniper ember}} dune cobalt dune dune ember ember fjord amber dune amber"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "juniper &amp; &lt;indigo&gt; &nbsp;&#x263A;&#9731; {{c1::garnet {{c2::juniper juniper}}}} juniper dune indigo &amp; &lt;indigo&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "שלום עולם indigo harbor basil juniper {{c1::indigo {{c2::fjord indigo}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "indigo basil harbor "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "花火[よみ] 電車 indigo ember garnet <b>{{c1::fjord</b> basil}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "dune fjord juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "🇳🇴 ❤️ ❤️ basil amber harbor harbor cobalt basil amber amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord dune basil {{c1::harbor {{c2::juniper garnet}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor cobalt harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "ember <b>{{c1::cobalt</b> harbor}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper garnet COBALT Indigo dune fjord fjord &amp; &lt;fjord&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "❤️ 🙂 👩‍🔬 {{c1::basil}} {{c3::juniper}} dune"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "café ember naïve juniper {{c1::cobalt {{c2::fjord {{c3::fjord {{c4::harbor fjord}}}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "café ember naïve juniper café harbor naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune indigo garnet amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::harbor {{c2::fjord {{c3::dune juniper}}}}}} ember dune juniper cobalt"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil dune dune amber cobalt juniper 花火[よみ] 山水 amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "  harbor\t indigo \n {{c1::basil {{c2::fjord ember}}}} dune amber"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet dune dune  {{c1::amber}} {{c3::garnet}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "café ember naïve indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "❤️ ❤️ ❤️ indigo cobalt amber dune {{c1::fjord}} {{c3::basil}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor {{c1::cobalt}} {{c2::indigo}} {{c1::juniper}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil basil harbor  indigo <img src=\"ds_ember.png\"> [sound:ds_dune.mp3] café juniper naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "juniper amber {{c1::harbor}} {{c3::cobalt}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune amber café cobalt naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "indigo juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "dune juniper ember indigo fjord basil fjord basil fjord fjord <img src=\"ds_indigo.png\"> [sound:ds_fjord.mp3]"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet fjord {{c1::ember}} {{c3::indigo}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "indigo ember basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet indigo "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "fjord juniper   amber\t amber \n"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "<b>{{c1::juniper</b> juniper}} cobalt cobalt café amber naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "<b>{{c1::cobalt</b> amber}} indigo {{c1::basil {{c2::harbor {{c3::basil {{c4::ember indigo}}}}}}}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::amber {{c2::amber cobalt}}}} basil amber café indigo naïve"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet cobalt {{c1::cobalt}} {{c1::dune {{c2::indigo {{c3::harbor ember}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "<b>indigo <i>garnet</b>  indigo cobalt ember dune juniper basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt {{c1::cobalt}} {{c2::fjord}} {{c1::fjord}} dune amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "basil &amp; &lt;basil&gt; &nbsp;&#x263A;&#9731; {{c1::dune {{c2::indigo {{c3::indigo {{c4::amber garnet}}}}}}}} مرحبا بكم basil fjord dune"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt garnet fjord <b>juniper <i>garnet</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "dune basil garnet {{c1::harbor::harbor hint}} amber café amber naïve café harbor naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber harbor {{c1::dune {{c2::cobalt harbor}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::dune}} {{c3::cobalt}} amber basil indigo ember juniper amber juniper harbor {{c1::dune}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::garnet {{c2::indigo juniper}}}} harbor"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "juniper basil garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune ember \\(fjord^{2}\\) {{c1::\\(harbor + 1\\)}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember garnet amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "<b>garnet <i>garnet</b> dune fjord basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "ember indigo cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "café amber naïve juniper basil harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord {{c1::cobalt {{c2::juniper {{c3::amber garnet}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "fjord {{c1::amber {{c2::indigo {{c3::juniper {{c4::basil cobalt}}}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper fjord {{c1::fjord {{c2::garnet juniper}}}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "café amber naïve amber basil indigo EMBER Fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber basil fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber harbor basil {{c1::juniper::ember hint}} harbor juniper cobalt harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor    amber\t dune \n <b>{{c1::amber</b> basil}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "basil &amp; &lt;garnet&gt; &nbsp;&#x263A;&#9731;   garnet\t basil \n 読書[よみ] 山水 basil dune juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper fjord indigo {{c1::amber}} \\(cobalt^{2}\\) {{c1::\\(indigo + 1\\)}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor fjord cobalt  🇳🇴 👩‍🔬 ❤️"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::garnet {{c2::fjord indigo}}}} basil مرحبا بكم ember 👩‍🔬 👩‍🔬 👩‍🔬"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord fjord indigo COBALT Ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber garnet dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor cobalt {{c1::fjord}} {{c3::fjord}} "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "basil amber  <b>harbor <i>indigo</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "indigo {{c1::harbor {{c2::fjord {{c3::indigo {{c4::dune cobalt}}}}}}}} "
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::indigo {{c2::indigo {{c3::basil {{c4::fjord basil}}}}}}}} juniper <img src=\"ds_basil.png\"> [sound:ds_harbor.mp3] fjord cobalt"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::ember::harbor hint}} indigo   amber\t fjord \n harbor cobalt שלום עולם cobalt"
+      },
+      "output": {
+        "text": "harbor hint"
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::indigo {{c2::garnet {{c3::indigo {{c4::fjord harbor}}}}}}}} juniper juniper <b>ember <i>juniper</b>"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "garnet harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "dune dune garnet ember basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor cobalt indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "dune indigo dune indigo dune garnet café juniper naïve dune &amp; &lt;harbor&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::cobalt}} {{c3::basil}} indigo amber café dune naïve \\(cobalt^{2}\\) {{c1::\\(garnet + 1\\)}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::garnet}} {{c2::basil}} {{c1::indigo}} indigo ember ember basil garnet ember dune garnet   harbor\t indigo \n"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "cobalt basil "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune cobalt harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "harbor ember indigo {{c1::indigo}} 読書[よみ] 山水"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::cobalt}} {{c3::ember}} amber &amp; &lt;fjord&gt; &nbsp;&#x263A;&#9731; {{c1::fjord {{c2::indigo {{c3::ember cobalt}}}}}} ember"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil basil harbor ember indigo juniper <b>harbor <i>juniper</b> {{c1::basil ember}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": " garnet amber שלום עולם amber cobalt amber cobalt amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor basil garnet garnet basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet {{c1::cobalt}} \\(indigo^{2}\\) {{c1::\\(amber + 1\\)}} garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord harbor {{c1::ember garnet}}   basil\t indigo \n"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord harbor {{c1::indigo::garnet hint}} indigo harbor fjord juniper indigo fjord basil garnet {{c1::dune}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember garnet ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "🙂 ❤️ ❤️ dune {{c1::ember {{c2::harbor amber}}}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt indigo garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "مرحبا بكم juniper garnet {{c1::harbor::harbor hint}} garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "cobalt amber basil {{c1::harbor}} {{c3::dune}} \\(garnet^{2}\\) {{c1::\\(cobalt + 1\\)}} \\(ember^{2}\\) {{c1::\\(ember + 1\\)}}"
+      },
+      "output": {
+        "text": "..., ..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::cobalt {{c2::fjord {{c3::fjord harbor}}}}}} indigo ember garnet مرحبا بكم juniper"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "dune juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune indigo ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt cobalt cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt GARNET Amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::amber cobalt}}  garnet ember basil <b>cobalt <i>cobalt</b>"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "café harbor naïve harbor <img src=\"ds_cobalt.png\"> [sound:ds_amber.mp3] indigo garnet \\(cobalt^{2}\\) {{c1::\\(dune + 1\\)}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::dune {{c2::basil {{c3::dune basil}}}}}} cobalt {{c1::cobalt}} cobalt"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune juniper fjord {{c1::garnet basil}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "🇳🇴 🙂 🇳🇴 שלום עולם dune basil garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "juniper fjord juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "indigo ember juniper <b>harbor <i>basil</b> {{c1::basil}} {{c2::juniper}} {{c1::indigo}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber &amp; &lt;harbor&gt; &nbsp;&#x263A;&#9731; juniper amber harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": " 🙂 ❤️ 🇳🇴 שלום עולם garnet fjord harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil {{c1::dune::ember hint}} garnet"
+      },
+      "output": {
+        "text": "ember hint"
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "indigo cobalt basil \\(harbor^{2}\\) {{c1::\\(juniper + 1\\)}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember ember amber juniper \\(harbor^{2}\\) {{c1::\\(indigo + 1\\)}} <b>harbor <i>indigo</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember amber ember fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "שלום עולם indigo {{c1::amber juniper}} ember basil amber basil {{c1::garnet}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt cobalt cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "🙂 🇳🇴 ❤️ BASIL Indigo {{c1::harbor}} {{c2::basil}} {{c1::basil}} garnet"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt ember indigo &amp; &lt;indigo&gt; &nbsp;&#x263A;&#9731; {{c1::amber::garnet hint}} fjord amber fjord harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::basil::dune hint}} ember garnet amber ember JUNIPER Harbor"
+      },
+      "output": {
+        "text": "dune hint"
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "\\(indigo^{2}\\) {{c1::\\(cobalt + 1\\)}} dune <b>{{c1::basil</b> basil}} harbor dune juniper indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "café garnet naïve ember cobalt amber basil juniper ember   juniper\t cobalt \n ember fjord basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor fjord ember 電車[よみ] 電車"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber garnet cobalt juniper fjord basil amber fjord ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "indigo {{c1::dune {{c2::harbor {{c3::indigo {{c4::harbor dune}}}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::fjord}} {{c2::indigo}} {{c1::fjord}} cobalt fjord dune cobalt garnet ❤️ 🇳🇴 👩‍🔬"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "BASIL Ember amber garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "indigo harbor amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil fjord indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": " garnet ember fjord garnet {{c1::indigo}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::harbor {{c2::basil {{c3::dune {{c4::indigo juniper}}}}}}}} cobalt basil basil"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "indigo cobalt {{c1::amber}} {{c2::fjord}} {{c1::harbor}} مرحبا بكم harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::harbor {{c2::fjord {{c3::dune {{c4::indigo amber}}}}}}}} {{c1::garnet::dune hint}} ember {{c1::ember::dune hint}} ember garnet harbor"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt cobalt indigo {{c1::garnet cobalt}} שלום עולם garnet harbor &amp; &lt;ember&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::basil {{c2::fjord {{c3::dune indigo}}}}}} garnet"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "basil garnet indigo   harbor\t basil \n"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::ember indigo}} dune harbor juniper café dune naïve"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "café juniper naïve {{c1::juniper::amber hint}} dune amber ember {{c1::garnet basil}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "dune &amp; &lt;fjord&gt; &nbsp;&#x263A;&#9731; harbor café amber naïve 花火[よみ] 山水"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::basil}} {{c3::ember}} indigo ember <b>fjord <i>fjord</b>   indigo\t garnet \n"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "indigo fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil harbor ember {{c1::garnet}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber fjord garnet amber ember   harbor\t indigo \n"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "BASIL Basil שלום עולם dune HARBOR Indigo harbor indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber cobalt indigo {{c1::cobalt}} {{c3::fjord}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber indigo cobalt ember indigo ember <b>{{c1::amber</b> juniper}} juniper &amp; &lt;cobalt&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor garnet fjord dune indigo amber {{c1::fjord}} {{c3::dune}} <b>{{c1::garnet</b> amber}} cobalt"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor cobalt fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet amber basil {{c1::harbor {{c2::dune indigo}}}} {{c1::amber {{c2::amber {{c3::juniper {{c4::harbor fjord}}}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord harbor 학교[よみ] 학교 {{c1::fjord {{c2::harbor {{c3::garnet indigo}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "fjord basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::amber::ember hint}} basil dune fjord cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil garnet indigo  {{c1::amber::juniper hint}} amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber basil basil 👩‍🔬 🇳🇴 🇳🇴"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt basil {{c1::ember {{c2::ember {{c3::basil cobalt}}}}}} \\(basil^{2}\\) {{c1::\\(juniper + 1\\)}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune 👩‍🔬 🇳🇴 🇳🇴"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber harbor fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor &amp; &lt;cobalt&gt; &nbsp;&#x263A;&#9731; indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::juniper {{c2::basil {{c3::dune {{c4::garnet ember}}}}}}}} مرحبا بكم cobalt garnet"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber cobalt ember {{c1::indigo {{c2::garnet harbor}}}} amber harbor basil indigo garnet ember dune basil juniper basil amber"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune ember basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "café indigo naïve dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "harbor <img src=\"ds_dune.png\"> [sound:ds_garnet.mp3] dune basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "café fjord naïve indigo juniper   harbor\t fjord \n {{c1::amber {{c2::harbor {{c3::garnet amber}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "\\(juniper^{2}\\) {{c1::\\(garnet + 1\\)}}   dune\t cobalt \n basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil cobalt cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember dune garnet JUNIPER Indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune cobalt {{c1::fjord {{c2::harbor ember}}}} ❤️ 🇳🇴 👩‍🔬"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "HARBOR Garnet indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper fjord ember harbor juniper garnet juniper basil amber \\(juniper^{2}\\) {{c1::\\(juniper + 1\\)}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "dune &amp; &lt;harbor&gt; &nbsp;&#x263A;&#9731; dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "harbor {{c1::cobalt {{c2::fjord {{c3::ember juniper}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor garnet   garnet\t juniper \n <b>basil <i>dune</b> garnet amber basil amber cobalt amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet ember harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper dune harbor cobalt ember garnet harbor dune juniper ember basil harbor juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "café harbor naïve \\(dune^{2}\\) {{c1::\\(harbor + 1\\)}} ember {{c1::juniper}} {{c3::ember}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "café ember naïve dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune basil ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "garnet cobalt café garnet naïve ember &amp; &lt;amber&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::fjord}} {{c3::cobalt}} COBALT Fjord amber cobalt dune harbor cobalt ember garnet"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "garnet juniper fjord cobalt fjord basil fjord ember amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet basil garnet {{c1::garnet {{c2::fjord dune}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil harbor {{c1::garnet}} {{c3::dune}} garnet fjord basil cobalt fjord ember fjord cobalt garnet amber"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "garnet fjord harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt {{c1::indigo {{c2::cobalt {{c3::basil {{c4::ember juniper}}}}}}}} {{c1::dune garnet}} {{c1::garnet {{c2::cobalt {{c3::dune amber}}}}}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "AMBER Amber harbor <img src=\"ds_harbor.png\"> [sound:ds_harbor.mp3] fjord dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::harbor}} {{c2::harbor}} {{c1::amber}} EMBER Dune fjord {{c1::dune}} {{c2::ember}} {{c1::garnet}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember \\(basil^{2}\\) {{c1::\\(dune + 1\\)}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt \\(indigo^{2}\\) {{c1::\\(harbor + 1\\)}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "학교[よみ] 花火 <b>{{c1::cobalt</b> garnet}} dune"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "indigo indigo dune ember cobalt ember fjord indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet amber 👩‍🔬 ❤️ 🙂"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "<b>dune <i>amber</b> fjord cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt indigo basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "dune {{c1::indigo {{c2::garnet amber}}}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt &amp; &lt;amber&gt; &nbsp;&#x263A;&#9731; AMBER Fjord harbor ember 🙂 🙂 🙂"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "DUNE Juniper garnet &amp; &lt;amber&gt; &nbsp;&#x263A;&#9731; HARBOR Basil juniper fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember ember juniper basil garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "café dune naïve amber indigo ember dune dune ember indigo indigo "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord juniper {{c1::harbor fjord}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet indigo fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber amber dune fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "مرحبا بكم harbor   ember\t indigo \n ember harbor "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "juniper cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor garnet 학교[よみ] 花火 café amber naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "café dune naïve amber <img src=\"ds_fjord.png\"> [sound:ds_harbor.mp3] amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "indigo amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "juniper   ember\t juniper \n"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "indigo harbor garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune garnet garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::harbor}} {{c3::amber}} indigo harbor {{c1::juniper {{c2::garnet {{c3::fjord indigo}}}}}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber amber basil amber basil juniper indigo harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "café basil naïve ember garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "fjord dune fjord {{c1::basil {{c2::garnet {{c3::ember {{c4::garnet indigo}}}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "garnet amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "dune basil fjord {{c1::basil}} {{c1::harbor amber}} harbor garnet indigo harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor café basil naïve \\(cobalt^{2}\\) {{c1::\\(harbor + 1\\)}} café garnet naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet basil café ember naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": " fjord juniper basil <b>harbor <i>fjord</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "amber juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "  amber\t harbor \n dune indigo fjord dune harbor harbor indigo {{c1::garnet::harbor hint}} amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "juniper <img src=\"ds_harbor.png\"> [sound:ds_harbor.mp3] basil amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "indigo fjord juniper amber café dune naïve שלום עולם garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "HARBOR Amber basil café ember naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil {{c1::ember}} {{c2::garnet}} {{c1::basil}} {{c1::basil basil}} {{c1::fjord cobalt}}"
+      },
+      "output": {
+        "text": "..., ..., ..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "\\(fjord^{2}\\) {{c1::\\(harbor + 1\\)}} garnet harbor cobalt ember <img src=\"ds_garnet.png\"> [sound:ds_ember.mp3]"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "ember amber <b>dune <i>juniper</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "ember cobalt garnet <img src=\"ds_harbor.png\"> [sound:ds_fjord.mp3]"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil <img src=\"ds_indigo.png\"> [sound:ds_indigo.mp3] garnet {{c1::garnet {{c2::fjord harbor}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "amber harbor <b>{{c1::juniper</b> garnet}} {{c1::garnet {{c2::garnet {{c3::basil cobalt}}}}}} \\(harbor^{2}\\) {{c1::\\(ember + 1\\)}}"
+      },
+      "output": {
+        "text": "..., ..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::harbor {{c2::ember fjord}}}} garnet basil fjord {{c1::ember {{c2::garnet {{c3::fjord {{c4::basil fjord}}}}}}}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber harbor indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "ember garnet fjord ❤️ ❤️ 👩‍🔬"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::ember {{c2::juniper {{c3::garnet {{c4::basil garnet}}}}}}}} \\(basil^{2}\\) {{c1::\\(indigo + 1\\)}} ember ember basil"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "👩‍🔬 👩‍🔬 👩‍🔬 harbor garnet ember harbor ember basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "\\(amber^{2}\\) {{c1::\\(dune + 1\\)}} DUNE Amber ember cobalt basil "
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "❤️ 🇳🇴 ❤️ garnet juniper dune <b>basil <i>ember</b> ember harbor cobalt juniper ember fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "  garnet\t cobalt \n indigo ember juniper fjord juniper harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "  juniper\t amber \n juniper fjord amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "ember {{c1::fjord::basil hint}} juniper 🇳🇴 🙂 👩‍🔬 "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor dune cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::fjord fjord}}  cobalt juniper garnet <b>{{c1::ember</b> dune}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "שלום עולם juniper basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember harbor dune &amp; &lt;garnet&gt; &nbsp;&#x263A;&#9731; {{c1::basil::basil hint}} garnet   garnet\t harbor \n"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "<b>{{c1::harbor</b> garnet}} {{c1::dune::garnet hint}} garnet indigo juniper harbor fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber <b>amber <i>indigo</b> indigo &amp; &lt;juniper&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "  garnet\t garnet \n café cobalt naïve dune cobalt dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "مرحبا بكم garnet juniper cobalt amber {{c1::amber}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "juniper indigo indigo שלום עולם garnet ember cobalt basil juniper basil indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "indigo indigo indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "juniper {{c1::basil}} {{c3::ember}} {{c1::amber}} {{c2::harbor}} {{c1::cobalt}} harbor fjord fjord"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil &amp; &lt;juniper&gt; &nbsp;&#x263A;&#9731; fjord dune {{c1::cobalt}} 🙂 ❤️ ❤️"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::fjord}} {{c2::basil}} {{c1::juniper}} <b>garnet <i>amber</b>   cobalt\t garnet \n ember"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "ember fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "harbor {{c1::juniper}} INDIGO Harbor مرحبا بكم fjord harbor juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "juniper cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "juniper dune {{c1::indigo {{c2::amber {{c3::juniper {{c4::amber indigo}}}}}}}} \\(dune^{2}\\) {{c1::\\(dune + 1\\)}} "
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "indigo amber harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "indigo "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor harbor dune {{c1::dune harbor}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": " amber garnet harbor juniper ember harbor <img src=\"ds_juniper.png\"> [sound:ds_basil.mp3]"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet harbor basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "indigo amber cobalt harbor amber cobalt {{c1::dune {{c2::indigo basil}}}} fjord juniper harbor"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil dune {{c1::garnet}} {{c3::amber}} \\(dune^{2}\\) {{c1::\\(harbor + 1\\)}} {{c1::indigo}} {{c3::harbor}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "\\(ember^{2}\\) {{c1::\\(cobalt + 1\\)}} indigo {{c1::basil}} {{c2::basil}} {{c1::dune}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune juniper amber   ember\t amber \n"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": " {{c1::basil {{c2::basil cobalt}}}} indigo juniper"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper ember DUNE Garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "indigo café ember naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune indigo ember {{c1::basil {{c2::basil {{c3::indigo harbor}}}}}}  garnet <img src=\"ds_amber.png\"> [sound:ds_amber.mp3]"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord fjord harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "garnet cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper harbor dune {{c1::juniper amber}} basil juniper fjord garnet 花火[よみ] 読書"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "indigo fjord amber harbor ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember 🙂 ❤️ 🙂"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor amber <b>basil <i>harbor</b> 👩‍🔬 👩‍🔬 👩‍🔬"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "שלום עולם amber cobalt indigo cobalt ember amber amber amber dune <b>juniper <i>harbor</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "DUNE Garnet ember garnet basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil dune COBALT Fjord fjord cobalt indigo indigo ember garnet   indigo\t basil \n"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "indigo {{c1::basil}} juniper dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::cobalt {{c2::dune {{c3::cobalt harbor}}}}}} indigo dune dune 🙂 🇳🇴 🙂 {{c1::indigo}} {{c2::garnet}} {{c1::basil}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet {{c1::indigo {{c2::basil {{c3::fjord {{c4::indigo harbor}}}}}}}} {{c1::fjord {{c2::dune {{c3::indigo ember}}}}}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "dune garnet {{c1::juniper::amber hint}} harbor fjord {{c1::ember}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "\\(amber^{2}\\) {{c1::\\(juniper + 1\\)}} basil cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune cobalt fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil juniper harbor {{c1::ember {{c2::juniper juniper}}}} INDIGO Dune"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "indigo juniper fjord cobalt dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet ember amber fjord harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::cobalt {{c2::dune indigo}}}} basil dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::indigo::garnet hint}} fjord juniper \\(ember^{2}\\) {{c1::\\(amber + 1\\)}}"
+      },
+      "output": {
+        "text": "garnet hint, ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "amber garnet dune <img src=\"ds_harbor.png\"> [sound:ds_dune.mp3] "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "<b>{{c1::garnet</b> ember}} harbor juniper amber indigo basil {{c1::amber}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "amber juniper garnet juniper {{c1::amber}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "<b>juniper <i>fjord</b> harbor juniper amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::dune {{c2::dune {{c3::garnet indigo}}}}}} café garnet naïve juniper garnet basil"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "학교[よみ] 電車 {{c1::cobalt {{c2::dune {{c3::basil fjord}}}}}} café indigo naïve ember basil harbor"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "cobalt garnet ember {{c1::ember}} {{c2::garnet}} {{c1::ember}} {{c1::garnet}} {{c3::juniper}} harbor indigo amber garnet"
+      },
+      "output": {
+        "text": "..., ..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper {{c1::ember}} {{c3::harbor}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "読書[よみ] 電車 🇳🇴 🇳🇴 ❤️ indigo {{c1::amber}} ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "\\(amber^{2}\\) {{c1::\\(dune + 1\\)}} <b>indigo <i>amber</b> indigo ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "juniper harbor {{c1::cobalt {{c2::fjord {{c3::ember {{c4::fjord ember}}}}}}}} {{c1::harbor}} {{c2::basil}} {{c1::garnet}}"
+      },
+      "output": {
+        "text": "..., ..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber amber dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::indigo basil}} indigo dune ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "\\(basil^{2}\\) {{c1::\\(fjord + 1\\)}} <b>{{c1::juniper</b> garnet}} <b>{{c1::harbor</b> cobalt}} harbor"
+      },
+      "output": {
+        "text": "..., ..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "<b>basil <i>harbor</b> cobalt <img src=\"ds_juniper.png\"> [sound:ds_indigo.mp3] {{c1::harbor indigo}} ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::basil {{c2::indigo {{c3::ember harbor}}}}}} café indigo naïve juniper"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor dune cobalt indigo ember ember indigo {{c1::juniper {{c2::garnet indigo}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "indigo dune amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::basil}} {{c3::juniper}} juniper juniper cobalt garnet dune dune garnet juniper <img src=\"ds_garnet.png\"> [sound:ds_fjord.mp3]"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "indigo ember ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "garnet cobalt ember <b>amber <i>cobalt</b> cobalt <img src=\"ds_garnet.png\"> [sound:ds_dune.mp3]"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper basil harbor dune basil indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet &amp; &lt;cobalt&gt; &nbsp;&#x263A;&#9731; harbor fjord 👩‍🔬 👩‍🔬 ❤️ مرحبا بكم basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::garnet amber}} 🙂 👩‍🔬 🙂 harbor amber basil garnet amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::juniper {{c2::juniper {{c3::fjord amber}}}}}}  {{c1::juniper {{c2::indigo {{c3::ember dune}}}}}} garnet dune basil"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet fjord  {{c1::fjord {{c2::ember {{c3::harbor basil}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "\\(garnet^{2}\\) {{c1::\\(ember + 1\\)}} {{c1::cobalt}} {{c3::dune}} cobalt ember amber"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord <img src=\"ds_ember.png\"> [sound:ds_amber.mp3] amber cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember indigo garnet DUNE Juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet juniper cobalt 山水[よみ] 학교 basil &amp; &lt;basil&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "café garnet naïve cobalt &amp; &lt;indigo&gt; &nbsp;&#x263A;&#9731; dune basil juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember harbor ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::garnet::cobalt hint}} dune  dune amber basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": " dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::dune}} {{c2::cobalt}} {{c1::dune}} harbor fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "indigo   fjord\t basil \n"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "BASIL Harbor amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "ember dune garnet harbor juniper fjord {{c1::harbor::harbor hint}} juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember cobalt cobalt basil garnet <img src=\"ds_garnet.png\"> [sound:ds_amber.mp3]"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "juniper amber dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember ember fjord שלום עולם ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor dune {{c1::garnet::indigo hint}} juniper COBALT Fjord "
+      },
+      "output": {
+        "text": "indigo hint"
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::fjord {{c2::juniper {{c3::juniper harbor}}}}}}   dune\t juniper \n garnet"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::fjord dune}} harbor cobalt fjord amber dune basil indigo indigo <b>basil <i>amber</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::indigo}} {{c2::basil}} {{c1::basil}} basil fjord fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::indigo::cobalt hint}} juniper indigo cobalt dune {{c1::harbor::fjord hint}} indigo"
+      },
+      "output": {
+        "text": "cobalt hint, fjord hint"
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "fjord amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber HARBOR Cobalt fjord harbor {{c1::indigo {{c2::garnet {{c3::fjord {{c4::cobalt ember}}}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil {{c1::harbor}} amber {{c1::indigo garnet}} HARBOR Juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::juniper}} {{c2::garnet}} {{c1::juniper}} 🙂 👩‍🔬 👩‍🔬 JUNIPER Cobalt ember ember fjord"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt cobalt juniper garnet cobalt amber cobalt basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::amber {{c2::dune {{c3::garnet {{c4::ember cobalt}}}}}}}}  ember fjord"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor juniper   juniper\t fjord \n dune "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::cobalt}} {{c3::juniper}} DUNE Harbor indigo שלום עולם basil"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember   garnet\t garnet \n \\(amber^{2}\\) {{c1::\\(indigo + 1\\)}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "dune juniper dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt cobalt amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "EMBER Fjord ember basil ember &amp; &lt;ember&gt; &nbsp;&#x263A;&#9731; ❤️ 🇳🇴 🙂"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet ember basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "café dune naïve juniper <b>ember <i>indigo</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "fjord basil   basil\t garnet \n {{c1::fjord}} {{c2::ember}} {{c1::amber}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "  ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil fjord garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord cobalt ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::indigo}} {{c2::juniper}} {{c1::ember}} fjord"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "indigo garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::basil}} {{c2::dune}} {{c1::dune}} café ember naïve garnet basil juniper ember <img src=\"ds_basil.png\"> [sound:ds_ember.mp3]"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "harbor fjord ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "café basil naïve ember juniper amber <b>ember <i>ember</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::amber {{c2::ember cobalt}}}} {{c1::basil {{c2::garnet {{c3::harbor juniper}}}}}} {{c1::basil {{c2::juniper {{c3::fjord indigo}}}}}} juniper indigo"
+      },
+      "output": {
+        "text": "..., ..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": " basil harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::dune {{c2::amber {{c3::ember garnet}}}}}} indigo indigo"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::amber {{c2::cobalt indigo}}}}  juniper dune basil fjord"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": " {{c1::indigo {{c2::amber juniper}}}} {{c1::indigo}} {{c2::garnet}} {{c1::ember}} amber"
+      },
+      "output": {
+        "text": "..., ..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "harbor ember amber {{c1::garnet {{c2::amber ember}}}} {{c1::indigo {{c2::ember amber}}}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil {{c1::juniper}} مرحبا بكم indigo dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "juniper &amp; &lt;juniper&gt; &nbsp;&#x263A;&#9731; {{c1::indigo}} {{c3::fjord}} dune cobalt"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor <img src=\"ds_garnet.png\"> [sound:ds_juniper.mp3] \\(indigo^{2}\\) {{c1::\\(dune + 1\\)}} basil indigo &amp; &lt;garnet&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::cobalt}} {{c2::basil}} {{c1::fjord}} ember"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "dune cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::basil}} {{c2::harbor}} {{c1::harbor}} ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber basil indigo {{c1::garnet::juniper hint}} juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember <img src=\"ds_amber.png\"> [sound:ds_cobalt.mp3] garnet garnet harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "amber indigo basil dune cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt ember basil مرحبا بكم basil   indigo\t amber \n"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember basil garnet cobalt ember fjord dune cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "  fjord\t ember \n café basil naïve amber 🇳🇴 ❤️ ❤️"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember ember <img src=\"ds_indigo.png\"> [sound:ds_juniper.mp3] {{c1::juniper {{c2::garnet {{c3::fjord harbor}}}}}} harbor indigo indigo"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "<b>dune <i>juniper</b> dune dune basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber fjord ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "juniper <b>{{c1::juniper</b> amber}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune fjord ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::harbor {{c2::juniper {{c3::indigo dune}}}}}} ember &amp; &lt;garnet&gt; &nbsp;&#x263A;&#9731; cobalt"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::amber}} {{c2::harbor}} {{c1::dune}} juniper"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "basil harbor harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil juniper dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord cobalt {{c1::ember}} dune &amp; &lt;cobalt&gt; &nbsp;&#x263A;&#9731; café amber naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber ember {{c1::juniper harbor}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::fjord}} {{c2::indigo}} {{c1::basil}} café basil naïve cobalt cobalt indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "fjord {{c1::basil {{c2::harbor {{c3::amber {{c4::garnet dune}}}}}}}} <b>{{c1::dune</b> indigo}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune dune ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "amber ember basil basil juniper indigo שלום עולם fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::amber::amber hint}} ember ember indigo <b>{{c1::garnet</b> dune}}"
+      },
+      "output": {
+        "text": "amber hint, ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet garnet \\(juniper^{2}\\) {{c1::\\(juniper + 1\\)}} {{c1::fjord}} {{c3::harbor}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "garnet garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "INDIGO Cobalt fjord fjord garnet amber cobalt ember dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil <b>fjord <i>harbor</b> {{c1::indigo {{c2::harbor {{c3::juniper cobalt}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt <img src=\"ds_amber.png\"> [sound:ds_fjord.mp3] {{c1::indigo {{c2::fjord basil}}}} dune &amp; &lt;dune&gt; &nbsp;&#x263A;&#9731; ember dune fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::cobalt::cobalt hint}} ember ember juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil harbor ember cobalt amber amber dune garnet amber 🇳🇴 👩‍🔬 ❤️ {{c1::harbor {{c2::garnet {{c3::basil {{c4::basil basil}}}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember \\(harbor^{2}\\) {{c1::\\(amber + 1\\)}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "fjord dune indigo {{c1::garnet basil}} café indigo naïve {{c1::garnet}} {{c3::dune}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "juniper café basil naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "café dune naïve {{c1::fjord {{c2::basil basil}}}} amber amber harbor"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "café harbor naïve fjord basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "  basil basil garnet {{c1::basil dune}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "\\(fjord^{2}\\) {{c1::\\(garnet + 1\\)}} <b>basil <i>basil</b> {{c1::indigo {{c2::harbor fjord}}}} basil"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "fjord ember <b>basil <i>dune</b> ember {{c1::fjord}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "garnet JUNIPER Dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "indigo  "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune basil cobalt {{c1::dune::harbor hint}} juniper café garnet naïve {{c1::cobalt}} {{c3::cobalt}}"
+      },
+      "output": {
+        "text": "harbor hint, ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::juniper}} {{c3::fjord}} indigo amber fjord basil amber "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "juniper cobalt cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "{{c1::fjord::fjord hint}} amber  garnet garnet juniper dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune juniper dune {{c1::amber}} {{c2::juniper}} {{c1::harbor}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper dune {{c1::dune amber}} cobalt cobalt &amp; &lt;ember&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet dune harbor 학교[よみ] 花火"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil amber juniper ember cobalt fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "שלום עולם garnet basil مرحبا بكم cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::harbor juniper}} harbor"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "COBALT Basil basil indigo indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "dune garnet harbor {{c1::indigo::harbor hint}} juniper <b>{{c1::garnet</b> juniper}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "café ember naïve juniper {{c1::amber}} basil cobalt juniper indigo basil dune garnet basil"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "juniper amber juniper indigo <b>harbor <i>ember</b> <b>fjord <i>cobalt</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": " cobalt amber ember ember {{c1::dune juniper}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "fjord basil basil amber {{c1::amber}}   cobalt\t juniper \n 🇳🇴 ❤️ 🇳🇴"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::fjord {{c2::harbor {{c3::ember {{c4::indigo indigo}}}}}}}}  harbor {{c1::garnet}} basil garnet"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet {{c1::fjord}} indigo INDIGO Garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet harbor fjord cobalt amber garnet <b>dune <i>fjord</b>"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "ember basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::garnet::harbor hint}} cobalt indigo"
+      },
+      "output": {
+        "text": "harbor hint"
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber ember {{c1::fjord {{c2::ember {{c3::ember {{c4::ember harbor}}}}}}}} "
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "indigo basil cobalt juniper harbor basil ember {{c1::juniper indigo}}   indigo\t harbor \n"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper 👩‍🔬 🇳🇴 ❤️"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "fjord cobalt {{c1::cobalt::basil hint}} cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "amber garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "indigo harbor indigo amber basil amber ember indigo harbor cobalt <b>{{c1::basil</b> amber}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "🇳🇴 👩‍🔬 🇳🇴 amber harbor ember basil ember dune dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember fjord amber <b>ember <i>fjord</b>  "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "juniper garnet basil {{c1::juniper::amber hint}} fjord <b>{{c1::indigo</b> dune}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "basil cobalt ember amber مرحبا بكم garnet basil juniper amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "❤️ 🙂 ❤️ amber cobalt"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "ember dune indigo cobalt fjord cobalt amber &amp; &lt;harbor&gt; &nbsp;&#x263A;&#9731; مرحبا بكم harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "harbor basil café harbor naïve harbor garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "harbor cobalt ember 🙂 🇳🇴 👩‍🔬 cobalt ember {{c1::cobalt {{c2::fjord {{c3::harbor {{c4::indigo ember}}}}}}}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "amber amber {{c1::juniper {{c2::basil {{c3::fjord {{c4::harbor basil}}}}}}}} harbor fjord   amber\t amber \n"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "cobalt garnet {{c1::ember {{c2::ember {{c3::juniper harbor}}}}}} juniper {{c1::ember}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "cobalt garnet amber dune indigo juniper harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "{{c1::garnet {{c2::amber indigo}}}} \\(ember^{2}\\) {{c1::\\(harbor + 1\\)}} indigo \\(ember^{2}\\) {{c1::\\(cobalt + 1\\)}}"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "  harbor\t fjord \n indigo dune juniper"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "harbor fjord fjord garnet &amp; &lt;amber&gt; &nbsp;&#x263A;&#9731;"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "<b>{{c1::fjord</b> cobalt}} café harbor naïve basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "basil cobalt {{c1::garnet}} {{c3::basil}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "café cobalt naïve {{c1::fjord juniper}} dune basil ember"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "dune ember basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": " {{c1::ember {{c2::cobalt basil}}}} indigo garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "amber harbor dune"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "cobalt dune garnet"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::ember {{c2::cobalt {{c3::fjord dune}}}}}} harbor"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "GARNET Ember dune basil café juniper naïve"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "ember  ❤️ 🙂 👩‍🔬 amber indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": " cobalt basil dune \\(cobalt^{2}\\) {{c1::\\(juniper + 1\\)}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "GARNET Juniper indigo harbor juniper harbor garnet cobalt indigo indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "amber   cobalt\t garnet \n café juniper naïve 電車[よみ] 電車"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "garnet "
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "<b>{{c1::ember</b> juniper}} ember ember amber &amp; &lt;fjord&gt; &nbsp;&#x263A;&#9731; {{c1::juniper fjord}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "読書[よみ] 電車 garnet basil ember {{c1::fjord {{c2::juniper {{c3::basil {{c4::dune basil}}}}}}}} שלום עולם indigo"
+      },
+      "output": {
+        "text": "..."
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "<b>{{c1::basil</b> ember}} cobalt basil {{c1::fjord}} {{c2::amber}} {{c1::juniper}}"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "שלום עולם cobalt café garnet naïve juniper indigo indigo"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "juniper harbor"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "harbor harbor garnet basil cobalt cobalt fjord"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 3,
+        "text": "basil"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "{{c1::basil}} {{c2::dune}} {{c1::indigo}} garnet ember cobalt"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    },
+    {
+      "input": {
+        "ord": 2,
+        "text": "amber <img src=\"ds_amber.png\"> [sound:ds_fjord.mp3] 👩‍🔬 🇳🇴 👩‍🔬 dune amber"
+      },
+      "output": {
+        "text": ""
+      }
+    },
+    {
+      "input": {
+        "ord": 1,
+        "text": "<b>{{c1::harbor</b> ember}} basil cobalt dune basil ember cobalt ember {{c1::cobalt {{c2::garnet {{c3::indigo dune}}}}}}"
+      },
+      "output": {
+        "text": "..., ..."
+      }
+    }
+  ],
+  "function": "anki.render.cloze_only_text",
+  "generator": "tools/parity-oracle/anki/generate.py",
+  "generator_sha256": "8bd480ee4afb7a31cc6096a397940da1c3661ab11df1cc95214ca464c49e6737",
+  "inputs": "synthetic",
+  "kind": "engine",
+  "note": "answers the text of the cloze deletions of the ordinal (R-3); cases drawn under CPython 3.12.3.",
+  "registry": "tools/parity-oracle/anki/registry/spec_498.py",
+  "registry_sha256": "c6ea7a8db7ff6c74beebbad4aba059085fe6d258dd415a35190f7eb3f084c571",
+  "schema": "phx.parity-golden.v1",
+  "seed": 498,
+  "source_commit": "65e053b829825f534803b2b772c507a73ba936a3"
+}
