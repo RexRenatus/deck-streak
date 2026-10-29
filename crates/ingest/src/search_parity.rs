@@ -6,9 +6,11 @@
 //! [`Db::open_foreign_read_only`] (`mode=ro` and `query_only`, as [`crate::reader`] does), so a
 //! write through it is refused by `SQLite` itself. The engine opens collections writable and, in
 //! client mode, rewrites a configured offset, so its side runs only on a scratch copy the tool
-//! makes; a scratch path that is the source is refused before anything is opened. The answer is
-//! three counts (match, engine-only, evaluator-only): no card id, deck name, field text or
-//! search text leaves the tool.
+//! makes. A scratch path that names the source's own file (the same device and inode, so a hard
+//! link, a symbolic link or another spelling of the path) is refused before anything is opened,
+//! and the copy creates its scratch path (`O_CREAT | O_EXCL`), so it never truncates an existing
+//! file. The answer is three counts (match, engine-only, evaluator-only): no card id, deck name,
+//! field text or search text leaves the tool.
 //!
 //! A known gap: the read takes every note type's first field as its sort field (the note type's
 //! configured sort field is in its protobuf configuration, which the read does not decode), so a
@@ -16,6 +18,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+use std::fs::{File, OpenOptions};
+use std::io;
+use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -53,7 +58,8 @@ impl fmt::Display for ParityCounts {
 /// Why the tool gives no counts. No variant names a path, a search or a row.
 #[derive(Debug, thiserror::Error)]
 pub enum ParityError {
-    /// The scratch path the engine would write is the source: refused before anything opens.
+    /// The scratch path the engine would write names the source's own file (its device and
+    /// inode): refused before anything opens.
     #[error("the engine's scratch copy would be the source collection")]
     WritableOpen,
     /// The search is not one expression of the operator profile.
@@ -62,7 +68,8 @@ pub enum ParityError {
     /// The read-only open, or one of its reads, failed.
     #[error("the read-only read of the collection failed")]
     Read,
-    /// Copying the source to the scratch path failed.
+    /// Copying the source to the scratch path failed, an existing scratch path among the causes:
+    /// the copy creates the path and never opens an existing one.
     #[error("the scratch copy could not be made")]
     Copy,
     /// The engine's day or search failed on the scratch copy.
@@ -77,9 +84,10 @@ pub enum ParityError {
 /// # Errors
 ///
 /// [`ParityError::Search`] for a search the operator profile refuses,
-/// [`ParityError::WritableOpen`] when `scratch` is `source`, [`ParityError::Read`] when the
-/// read-only read fails, [`ParityError::Copy`] when the copy fails, and [`ParityError::Engine`]
-/// when the engine fails on the copy.
+/// [`ParityError::WritableOpen`] when `scratch` names the source's own file,
+/// [`ParityError::Read`] when the read-only read fails, [`ParityError::Copy`] when the copy fails
+/// (an existing `scratch` path among the causes), and [`ParityError::Engine`] when the engine
+/// fails on the copy.
 pub async fn search_parity(
     source: &Path,
     scratch: &Path,
@@ -88,12 +96,7 @@ pub async fn search_parity(
     let query = Profile::OPERATOR
         .parse(search)
         .map_err(ParityError::Search)?;
-    let same = scratch == source
-        || matches!(
-            (source.canonicalize(), scratch.canonicalize()),
-            (Ok(a), Ok(b)) if a == b
-        );
-    if same {
+    if names_the_source(source, scratch) {
         return Err(ParityError::WritableOpen);
     }
     let foreign = Db::open_foreign_read_only(source)
@@ -102,7 +105,7 @@ pub async fn search_parity(
     let rows = read_rows(&foreign).await;
     foreign.close().await;
     let rows = rows?;
-    std::fs::copy(source, scratch).map_err(|_| ParityError::Copy)?;
+    copy_to_a_new_file(source, scratch).map_err(|_| ParityError::Copy)?;
     let engine = RslibEngine;
     let day = engine.engine_day(scratch).map_err(ParityError::Engine)?;
     let engine_ids: BTreeSet<i64> = engine
@@ -133,6 +136,30 @@ pub async fn search_parity(
         engine_only: engine_ids.difference(&ds_ids).count(),
         ds_only: ds_ids.difference(&engine_ids).count(),
     })
+}
+
+/// Whether `scratch` names the file `source` names: the same device and inode, so a hard link, a
+/// symbolic link or another spelling of the source's path is the source. A path that does not
+/// exist names no file yet; the copy then creates it.
+fn names_the_source(source: &Path, scratch: &Path) -> bool {
+    match (std::fs::metadata(source), std::fs::metadata(scratch)) {
+        (Ok(source), Ok(scratch)) => {
+            (source.dev(), source.ino()) == (scratch.dev(), scratch.ino())
+        }
+        _ => false,
+    }
+}
+
+/// Copies `source` to `scratch`, which the copy creates (`O_CREAT | O_EXCL`): any existing entry
+/// at `scratch`, a dangling symbolic link included, fails the open, so no existing file is ever
+/// truncated.
+fn copy_to_a_new_file(source: &Path, scratch: &Path) -> io::Result<u64> {
+    let mut from = File::open(source)?;
+    let mut to = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(scratch)?;
+    io::copy(&mut from, &mut to)
 }
 
 /// A card row as the read takes it.

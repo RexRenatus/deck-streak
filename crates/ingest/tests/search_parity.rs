@@ -90,3 +90,75 @@ async fn the_parity_tool_opens_read_only_refuses_a_writable_open_and_prints_only
     );
     println!("examined {} search(es)", SEARCHES.len());
 }
+
+/// Builds a one-card collection at `dir`/collection.anki2 and returns its path and bytes.
+fn one_card_source(dir: &std::path::Path) -> (std::path::PathBuf, Vec<u8>) {
+    let source = dir.join("collection.anki2");
+    let cards = [PlannedCard {
+        id: 1_700_000_000_001,
+        deck: "Spanish",
+        filtered: false,
+    }];
+    build_planned(&source, &["Spanish"], &cards, &[]);
+    let bytes = std::fs::read(&source).expect("the source reads");
+    (source, bytes)
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_scratch_path_hard_linked_to_the_source_is_refused_and_the_source_is_kept() {
+    // A hard link is the source's own file under another name: the guard compares the device and
+    // inode, so no spelling of the path lets the engine open the source writable.
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let (source, before) = one_card_source(dir.path());
+    let linked = dir.path().join("linked.anki2");
+    std::fs::hard_link(&source, &linked).expect("a hard link to the source");
+
+    let refused = search_parity(&source, &linked, "deck:Spanish").await;
+    let after = std::fs::read(&source).expect("the source reads");
+    println!(
+        "hard link: result={refused:?} source_bytes_before={} after={} kept={}",
+        before.len(),
+        after.len(),
+        after == before
+    );
+    assert!(
+        after == before,
+        "the source was written through a hard-linked scratch path"
+    );
+    assert!(
+        matches!(refused, Err(ParityError::WritableOpen)),
+        "a scratch path with the source's device and inode is refused: {refused:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn an_existing_scratch_path_is_never_truncated() {
+    // The copy creates its scratch path and opens no existing one, so a file already at the path,
+    // whatever it is, keeps its bytes and the tool gives no counts.
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let (source, before) = one_card_source(dir.path());
+    let scratch = dir.path().join("scratch.anki2");
+    let kept: &[u8] = b"a file already at the scratch path";
+    std::fs::write(&scratch, kept).expect("an existing scratch file");
+
+    let refused = search_parity(&source, &scratch, "deck:Spanish").await;
+    let found = std::fs::read(&scratch).expect("the scratch path reads");
+    println!(
+        "existing scratch: result={refused:?} scratch_bytes_before={} after={} kept={}",
+        kept.len(),
+        found.len(),
+        found == kept
+    );
+    assert!(
+        found == kept,
+        "an existing scratch path was truncated and rewritten"
+    );
+    assert!(
+        matches!(refused, Err(ParityError::Copy)),
+        "the copy refuses an existing scratch path: {refused:?}"
+    );
+    assert!(
+        std::fs::read(&source).expect("the source reads") == before,
+        "the source is never written"
+    );
+}
