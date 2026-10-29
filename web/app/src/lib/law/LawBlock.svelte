@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import { TIERS, type LawLineKey, type LawTiersView, type LawView } from './law';
 
   // The law tab's block (SPEC-077 R10 to R14): the lines the block shows, in the server's order,

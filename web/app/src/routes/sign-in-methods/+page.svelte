@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import SignInMethods from '$lib/settings/SignInMethods.svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import SignInMethods from '#lib/settings/SignInMethods.svelte';
 
   // The sign-in methods screen (SPEC-385 R12), which Today links to; the settings screen embeds the
   // same component later (#57).

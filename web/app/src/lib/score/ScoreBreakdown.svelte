@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import { PILLARS, type DayScore, type Pillar } from './score';
 
   // The score screen's breakdown (SPEC-071 R22): the total and the grade, then the five pillars,

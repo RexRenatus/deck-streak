@@ -287,3 +287,29 @@ which this note leaves as they stand.
 | patch | commit | reason | removal condition |
 |---|---|---|---|
 | `zip` | `65e053b829825f534803b2b772c507a73ba936a3` | the engine's `zip` requirement moves to its next major line, which clears the three advisories #931 names; the commit takes only the API changes that line forces | upstream requires that line or a later one |
+
+## Note, appended for the zstd and lock advisories: the pin moves two commits along the fork
+
+This note leaves the body above as it was decided. The fork's branch `wasm32-26.09.3-zstd` takes
+two commits over `65e053b829825f534803b2b772c507a73ba936a3`, the zip commit. The first moves the engine's zstd requirement and the
+`wasm32` target's own zstd line from 0.13.3 to 0.14.3, which clears the thirteen advisories zstd
+0.13.3 and zstd-safe 7.3.0 carry, and the fork's lock moves only its compression entries: those
+that line forces, and async-compression with them; the tag `deckstreak-pin-26.09.3-wasm32-zstd`
+names it. The second changes only the fork's
+lock: rustls, rustls-webpki, webpki-roots, quinn-proto, tokio, rand and ammonia move to patched
+versions, which clears sixteen advisories in the sync server's crates, read from that lock by the release's
+sync server build and audit. A new tag, `deckstreak-pin-26.09.3-wasm32-rustsec`, names it; the
+earlier tags stay where they are. The root manifest's `[patch]` entry takes `anki` and `anki_proto`
+by `rev` from the second commit. Neither commit changes a source file, and the native engine is
+the one this ADR pinned. Read with ADR-336 and ADR-348, which this note leaves as they stand.
+
+| record | measured |
+|---|---|
+| the pinned commit | `a078820fd4fec3068ed7863344cd50effddabc6b`, the head of branch `wasm32-26.09.3-zstd`, tagged `deckstreak-pin-26.09.3-wasm32-rustsec` (`git ls-remote`) |
+| its range | seventeen commits over `57382da`, one per patch; none adds a workflow file (`git diff --stat 57382da a078820 -- .github` is empty) |
+| `git diff --stat 26.09.3 a078820` on the fork | 30 files changed, 686 insertions(+), 226 deletions(-) |
+
+| patch | commit | reason | removal condition |
+|---|---|---|---|
+| `zstd` | `cfd5f4fe006b7fad948cdf2bf15dd672cdc7afb7` | the engine's zstd requirement moves from 0.13.3 to 0.14.3, which clears the thirteen advisories zstd 0.13.3 and zstd-safe 7.3.0 carry; no source file changes | upstream requires zstd 0.14.3 or a later line |
+| lock advisories | `a078820fd4fec3068ed7863344cd50effddabc6b` | the fork's lock moves rustls, rustls-webpki, webpki-roots, quinn-proto, tokio, rand and ammonia to patched versions, which clears sixteen advisories in the sync server's crates; no manifest or source file changes | upstream's lock carries these versions or later |

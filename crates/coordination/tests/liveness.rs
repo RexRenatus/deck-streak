@@ -53,9 +53,9 @@ struct NoCycle {
 }
 
 impl SyncCycle for NoCycle {
-    async fn run_scheduled(&self) -> Result<SyncReport, Reason> {
+    fn run_scheduled(&self) -> impl Future<Output = Result<SyncReport, Reason>> + Send {
         self.calls.fetch_add(1, Ordering::SeqCst);
-        Err(Reason::new("no_cycle_in_this_test"))
+        std::future::ready(Err(Reason::new("no_cycle_in_this_test")))
     }
 }
 

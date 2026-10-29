@@ -5,9 +5,9 @@
   // upload waits; a cancel at every step before the write; and, when the counts changed, the new
   // counts with a sentence saying why. Every value shown is a reply of the Worker's (D5).
   import { onMount } from 'svelte';
-  import type { ChoiceCounts, Direction, SnapshotRead } from '$lib/engine/protocol';
-  import { m } from '$lib/paraglide/messages.js';
-  import { getLocale } from '$lib/paraglide/runtime.js';
+  import type { ChoiceCounts, Direction, SnapshotRead } from '#lib/engine/protocol.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { getLocale } from '#lib/paraglide/runtime.js';
   import { snapshotAge, type ChoiceClient } from './status';
 
   let {

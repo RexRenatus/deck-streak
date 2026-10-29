@@ -1,21 +1,21 @@
 // Serves the web engine's harness page for its browser tests (SPEC-338 R9, ADR-348): the page and
 // the engine's Worker from `engine-harness/`, the module the build wrote from
 // `../../target/web-engine/` under `/engine/`, and every response under the page's own policy,
-// read from svelte.config.js, so a test that loads the module proves the policy admits it.
+// read from sveltekit.config.js, so a test that loads the module proves the policy admits it.
 import { randomBytes } from 'node:crypto';
 import { createReadStream, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
 import { policyHeader } from './policy-header.ts';
-import svelteConfig from './svelte.config.js';
+import svelteConfig from './sveltekit.config.js';
 
 /** The directory `scripts/web-engine-build.sh --out target/web-engine` writes. */
 const ENGINE_DIR = fileURLToPath(new URL('../../target/web-engine/', import.meta.url));
 
 /** The page policy as a header, without `frame-src`: this harness's cross-site frame test frames
  * the harness in itself, which the page's `frame-src 'none'` would refuse (SPEC-341 R13). */
-const directives = svelteConfig.kit?.csp?.directives;
-if (directives === undefined) throw new Error('svelte.config.js names no kit.csp.directives');
+const directives = svelteConfig.csp?.directives;
+if (directives === undefined) throw new Error('sveltekit.config.js names no csp.directives');
 const engineDirectives: Record<string, unknown> = { ...directives };
 delete engineDirectives['frame-src'];
 const POLICY = policyHeader(engineDirectives);

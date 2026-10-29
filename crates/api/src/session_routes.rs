@@ -187,13 +187,16 @@ where
 {
     type Rejection = Response;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+    fn from_request_parts(
+        parts: &mut Parts,
+        _state: &S,
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
         let cross_site = parts
             .headers
             .get(&SEC_FETCH_SITE)
             .is_some_and(|site| site != "same-origin");
         if cross_site {
-            return Err(refused(StatusCode::FORBIDDEN, "cross_site_request"));
+            return std::future::ready(Err(refused(StatusCode::FORBIDDEN, "cross_site_request")));
         }
         let json = parts
             .headers
@@ -202,9 +205,9 @@ where
             .and_then(|value| value.split(';').next())
             .is_some_and(|media| media.trim().eq_ignore_ascii_case("application/json"));
         if !json {
-            return Err(refused(StatusCode::FORBIDDEN, "not_json"));
+            return std::future::ready(Err(refused(StatusCode::FORBIDDEN, "not_json")));
         }
-        Ok(Self)
+        std::future::ready(Ok(Self))
     }
 }
 
@@ -215,18 +218,18 @@ struct HandshakeSlot;
 impl FromRequestParts<OwnerAccess> for HandshakeSlot {
     type Rejection = Response;
 
-    async fn from_request_parts(
+    fn from_request_parts(
         _parts: &mut Parts,
         access: &OwnerAccess,
-    ) -> Result<Self, Self::Rejection> {
-        match access.bound.admit(access.clock.now()) {
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
+        std::future::ready(match access.bound.admit(access.clock.now()) {
             Ok(()) => Ok(Self),
             Err(seconds) => {
                 let mut response = refused(StatusCode::TOO_MANY_REQUESTS, "too_many_handshakes");
                 response.headers_mut().insert(RETRY_AFTER, seconds.into());
                 Err(response)
             }
-        }
+        })
     }
 }
 

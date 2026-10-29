@@ -91,3 +91,12 @@ router's first navigation, so it still runs before any app code reads the launch
 the page loads no script from Telegram and adds a policy that refuses that origin.
 `src/lib/telegram.svelte.ts` stays the script's one typed wrapper, and the rest of this decision is
 unchanged.
+
+## Amendment: ADR-517, an override to our own fixed copy
+
+The amendments above move a development-only dependency to a release that fixes its advisory.
+`deepmerge` 4.3.1 (GHSA-gcqx-w48m-w2h4), which every 7.x release of SvelteKit's Vite plugin
+declares, has no such release, so ADR-517 (SPEC-499) adds an override of another shape:
+`@sveltejs/vite-plugin-svelte@7>deepmerge` takes our fixed copy in `vendor/deepmerge` until a
+release outside the advisory's range replaces it. The selector still names its parent's major,
+and the rest of this decision is unchanged.

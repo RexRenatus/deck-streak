@@ -1414,7 +1414,7 @@ class TheCaddyBlock(unittest.TestCase):
         # a script-src or default-src here would block the scripts that policy admits.
         self.assertNotIn("script-src", directives)
         self.assertNotIn("default-src", directives)
-        config = (REPO / "web" / "app" / "svelte.config.js").read_text(encoding="utf-8")
+        config = (REPO / "web" / "app" / "sveltekit.config.js").read_text(encoding="utf-8")
         self.assertRegex(
             config, r"'script-src': \['self', 'https://telegram\.org', 'wasm-unsafe-eval'\]"
         )
@@ -1451,7 +1451,7 @@ class TheCaddyBlock(unittest.TestCase):
         self.assertIsNotNone(spa, "no fallback handle")
         self.assertEqual(spa.one("root").tokens, ["root", "*", "{$DECKSTREAK_WEB_ROOT}"])
         fallback = re.search(
-            r"fallback: '([^']+)'", (REPO / "web" / "app" / "svelte.config.js").read_text()
+            r"fallback: '([^']+)'", (REPO / "web" / "app" / "sveltekit.config.js").read_text()
         ).group(1)
         self.assertEqual(
             spa.one("try_files").tokens, ["try_files", "{path}", "{path}.html", f"/{fallback}"]
@@ -3404,3 +3404,17 @@ class TheSyncLoginIsTheSyncJobsAlone(unittest.TestCase):
             self.assertEqual(
                 [w for w, rc in verdicts.items() if rc == 0], ["/etc/systemd/system"], verdicts
             )
+
+
+class TheKitOptionsReachThePlugin(unittest.TestCase):
+    def test_the_app_holds_no_svelte_config_and_its_vite_config_passes_the_options(self):
+        # SvelteKit 3 refuses a svelte.config.js or svelte.config.ts at the Vite root. The page
+        # policy TheCaddyBlock reads lives in sveltekit.config.js, and vite.config.ts hands it to
+        # the plugin, so a file of the old name beside it would only stop the build.
+        app = REPO / "web" / "app"
+        for name in ("svelte.config.js", "svelte.config.ts"):
+            self.assertFalse((app / name).exists(), f"web/app/{name}")
+        self.assertTrue((app / "sveltekit.config.js").is_file(), "web/app/sveltekit.config.js")
+        vite = (app / "vite.config.ts").read_text(encoding="utf-8")
+        self.assertRegex(vite, r"(?m)^import config from '\./sveltekit\.config\.js';$")
+        self.assertRegex(vite, r"\bsveltekit\(config\)")

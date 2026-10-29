@@ -83,11 +83,9 @@ async fn the_drill_tables_are_exported_and_erased_and_no_note() {
     }
     port.erase(&mut tx).await.expect("an erase");
     assert!(!has_answer(&mut tx, "irac-1").await.expect("a read"));
-    assert!(
-        recent_grades(&mut tx, "Torts", 10)
-            .await
-            .expect("a read")
-            .is_empty()
+    assert_eq!(
+        recent_grades(&mut tx, "Torts", 10).await.expect("a read"),
+        Vec::<GradeRow>::new()
     );
     drop(tx);
     assert_eq!(

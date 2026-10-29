@@ -4,9 +4,9 @@
 // then reads the count of reviews still waiting, as the Sync page's "Sync now" does, and names the
 // outcome in the Sync page's own words. It never offers the full-sync choice: that stays on the
 // Sync page, where its warnings are.
-import type { Synced } from '$lib/engine/protocol';
-import { m } from '$lib/paraglide/messages.js';
-import { choosing, signsIn, statusText, type SyncClient } from '$lib/sync/status';
+import type { Synced } from '#lib/engine/protocol.js';
+import { m } from '#lib/paraglide/messages.js';
+import { choosing, signsIn, statusText, type SyncClient } from '#lib/sync/status.js';
 
 /** What the offer asks of the engine's client: the two calls of the Sync page's "Sync now". */
 export type UpdateClient = Pick<SyncClient, 'sync' | 'unsynced'>;

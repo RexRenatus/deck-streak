@@ -9,8 +9,8 @@ import type {
   StatusWord,
   Synced,
   Unsynced
-} from '$lib/engine/protocol';
-import { m } from '$lib/paraglide/messages.js';
+} from '#lib/engine/protocol.js';
+import { m } from '#lib/paraglide/messages.js';
 
 /** What the choice screen asks of the engine's client. */
 export interface ChoiceClient {

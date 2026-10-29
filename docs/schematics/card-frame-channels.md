@@ -3,9 +3,9 @@
 Kind: component (the layers and what each sits between) and data flow (every channel a card's
 markup can open, and the layer that closes it), with one planted pair as a sequence. Read at
 DeckStreak `dev` c56bbd11 (`web/app/svelte.config.js`, the page policy;
-`deploy/caddy/deck-streak.caddy`, the edge's header). The iOS half's seam is #616's harness, which
-is not on `dev` yet. Both deliveries cite this one schematic: the web delivery (SPEC-341) adds it,
-and the iPhone and iPad delivery amends its iOS tables with what its suite measured.
+`deploy/caddy/deck-streak.caddy`, the edge's header). The page policy now sits in `web/app/sveltekit.config.js`.
+The iOS half's seam is #616's harness, which is not on `dev` yet. Both deliveries cite this one schematic: the web
+delivery (SPEC-341) adds it, and the iPhone and iPad delivery amends its iOS tables with what its suite measured.
 
 - **SPECs:** SPEC-341 (the web card frame) and the iPhone and iPad delivery's own SPEC (the card
   view).
@@ -33,7 +33,7 @@ suite that plants a different set.
 
 ```mermaid
 flowchart LR
-  subgraph page["the Mini App page (origin: the app), page policy from svelte.config.js"]
+  subgraph page["the Mini App page (origin: the app), page policy from sveltekit.config.js"]
     app["app code: study screen (row 1.4)"]
     fd["frameDocument(html, css)<br/>parse inert, strip link meta base template<br/>and every srcset and target attribute,<br/>prepend frame policy, re-parse check"]
     fh["frameHost(frame document, title)<br/>host policy meta, one srcdoc frame,<br/>re-parse check"]
@@ -86,8 +86,8 @@ The card frame is `<iframe sandbox="" srcdoc="...">`, and its document is the ho
 | W1 | the sandbox with no token: an opaque origin, no script, no forms, no popups, no top navigation, no downloads, no plugins | `CardFrame.svelte` |
 | W2 | the frame policy, at two points: the host policy `img-src data:; script-src 'none'; object-src 'none'; base-uri 'none'`, which the card document inherits from its host, so it is in force from the card document's creation, before its first byte is parsed; and a `Content-Security-Policy` meta element placed first in the card document's head: `default-src 'none'; img-src data:; media-src data:; font-src data:; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'` | `policy.js` `HOST_POLICY`, written by `frameHost`, and `FRAME_POLICY`, written by `frameDocument` |
 | W3 | the strip: the card's `link`, `meta`, `base` and `template` elements removed (a `template` can declare a shadow root whose `link` the inert parse never sees, and with no script a card has no use for one), the `srcset` attribute removed from every element that carries one (an image-set candidate is fetched from what that attribute lists, and the element's `src` still shows its image), the `target` attribute removed from every element that carries one (a link's follow is then the frame's own navigation, for which WebKit's click handler starts no preconnect), `x-dns-prefetch-control` off, and a re-parse of the composed document that refuses the card if any of those elements came back or any element, the root included, carries a `srcset` or a `target` | `frame-document.ts` |
-| W4 | the page's `frame-src 'none'`: a frame's own navigation, including one the frame starts itself, is checked against the embedding page's `frame-src`. A `srcdoc` document is not fetched, so the card frame itself still renders | `svelte.config.js`, from `policy.js` `PAGE_FRAME_SRC` |
-| P | the page policy the srcdoc document inherits: hash-mode `script-src`, `object-src 'none'`, `base-uri 'self'`, `connect-src 'self'` | `svelte.config.js` (not this work's layer; listed because it closes channels too) |
+| W4 | the page's `frame-src 'none'`: a frame's own navigation, including one the frame starts itself, is checked against the embedding page's `frame-src`. A `srcdoc` document is not fetched, so the card frame itself still renders | `sveltekit.config.js`, from `policy.js` `PAGE_FRAME_SRC` |
+| P | the page policy the srcdoc document inherits: hash-mode `script-src`, `object-src 'none'`, `base-uri 'self'`, `connect-src 'self'` | `sveltekit.config.js` (not this work's layer; listed because it closes channels too) |
 
 "Layer alone" names the one layer whose removal, with every other layer on, opens the channel. A
 dash means at least two layers hold it, so no single-layer variant opens it.

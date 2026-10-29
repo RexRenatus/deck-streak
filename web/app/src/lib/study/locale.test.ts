@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { getLocale, locales, overwriteGetLocale } from '$lib/paraglide/runtime.js';
+import { getLocale, locales, overwriteGetLocale } from '#lib/paraglide/runtime.js';
 import { engineLanguages } from './locale';
 
 // SPEC-350 R4, A9; ADR-361. The engine speaks the app's locale: its interval labels, undo label and

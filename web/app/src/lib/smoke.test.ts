@@ -1,7 +1,7 @@
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
-import { m } from '$lib/paraglide/messages.js';
-import { baseLocale, locales } from '$lib/paraglide/runtime.js';
+import { m } from '#lib/paraglide/messages.js';
+import { baseLocale, locales } from '#lib/paraglide/runtime.js';
 import Page from '../routes/+page.svelte';
 
 describe('the Mini App shell', () => {

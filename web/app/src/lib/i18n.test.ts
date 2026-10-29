@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { afterEach, describe, expect, it } from 'vitest';
-import { getLocale, locales, overwriteGetLocale } from '$lib/paraglide/runtime.js';
+import { getLocale, locales, overwriteGetLocale } from '#lib/paraglide/runtime.js';
 import { init } from '../hooks.client';
 
 // SPEC-028 R6, A10. Han unification makes the glyphs follow the language tag, so Chinese always

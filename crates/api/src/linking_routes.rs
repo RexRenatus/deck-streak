@@ -260,20 +260,20 @@ struct Ready {
 impl FromRequestParts<Linking> for Ready {
     type Rejection = Response;
 
-    async fn from_request_parts(
+    fn from_request_parts(
         _parts: &mut Parts,
         linking: &Linking,
-    ) -> Result<Self, Self::Rejection> {
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
         let Some(passkeys) = linking.passkeys.clone() else {
-            return Err(failed(&Refusal::LinkingOff.into()));
+            return std::future::ready(Err(failed(&Refusal::LinkingOff.into())));
         };
         let Some(db) = linking.readiness.database().cloned() else {
-            return Err(refused(
+            return std::future::ready(Err(refused(
                 StatusCode::SERVICE_UNAVAILABLE,
                 "database_not_open",
-            ));
+            )));
         };
-        Ok(Self { passkeys, db })
+        std::future::ready(Ok(Self { passkeys, db }))
     }
 }
 
@@ -284,18 +284,18 @@ struct CeremonySlot;
 impl FromRequestParts<Linking> for CeremonySlot {
     type Rejection = Response;
 
-    async fn from_request_parts(
+    fn from_request_parts(
         _parts: &mut Parts,
         linking: &Linking,
-    ) -> Result<Self, Self::Rejection> {
-        match linking.bound.admit(linking.clock.now()) {
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
+        std::future::ready(match linking.bound.admit(linking.clock.now()) {
             Ok(()) => Ok(Self),
             Err(seconds) => {
                 let mut response = refused(StatusCode::TOO_MANY_REQUESTS, "too_many_ceremonies");
                 response.headers_mut().insert(RETRY_AFTER, seconds.into());
                 Err(response)
             }
-        }
+        })
     }
 }
 
