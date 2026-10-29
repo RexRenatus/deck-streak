@@ -64,6 +64,9 @@ flowchart TB
   subgraph slot[the scheduling companion's substitutable body]
     companion_slot["companion-slot"]
   end
+  subgraph reading[the search, over the study day]
+    search
+  end
   subgraph foundations[no workspace dependency]
     study_day["study-day"]
     xp
@@ -163,11 +166,13 @@ flowchart TB
   privacy --> kernel
 
   ingest --> kernel
+  ingest --> search
   vault --> kernel
   identity --> kernel
   agent --> kernel
 
   kernel --> study_day
+  search --> study_day
 
   companion_slot --> companion
 ```
@@ -180,6 +185,10 @@ when native push carries the one router (#640). The clients' edges to `xp` are #
 
 `study-day` depends on no workspace crate, and `kernel` alone depends on it: it holds the study day
 the kernel re-exports, so the kernel sits in a layer of its own above it (SPEC-497, ADR-515).
+
+`search` depends on `study-day` alone and `ingest` alone depends on it: it reads a search into a
+typed query and evaluates it over rows, with no edge to the kernel, so it sits in a layer of its
+own between the anti-corruption layer that uses it and the foundations (SPEC-514, ADR-532).
 
 `companion` depends on no workspace crate, and `companion-slot` alone depends on it: the slot is the
 one body a build substitutes behind the scheduling companion's interface, so it sits in a layer of

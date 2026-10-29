@@ -10,6 +10,7 @@ use std::fmt;
 
 use chrono::{Datelike, NaiveDate};
 use deck_streak_kernel::{Db, KernelError, StudyDay, UtcMillis};
+use deck_streak_search::{Refusal, SkipQuery};
 use sqlx::SqliteConnection;
 
 /// The day spec's smallest lower bound: a moved card lands strictly after today
@@ -24,10 +25,6 @@ pub const SKIP_DEFAULT_SEARCH: &str = "prop:due=0 -is:suspended -is:buried";
 pub const SKIP_MAX_CARDS: usize = 5000;
 /// The skips a month the streak bridge covers (`constants.SKIP_BRIDGE_MONTHLY_CAP`).
 pub const SKIP_BRIDGE_MONTHLY_CAP: u32 = 3;
-
-/// What holds a search to the study day's due review cards whatever the owner configured, and out
-/// of filtered decks (R3): a card in one would return to a deck that may no longer exist.
-const HOLDS: &str = "prop:due=0 -is:suspended -is:buried -deck:filtered";
 
 /// Days from the Common Era's day 1 to the epoch day 0.
 const EPOCH_DAY_FROM_CE: i64 = 719_163;
@@ -46,7 +43,7 @@ pub fn skip_spec(min_days: i64, max_days: i64) -> String {
     }
 }
 
-/// Why a configured search is refused at start (R3).
+/// Why a configured search is refused at start (R3; SPEC-514 R8).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum SearchRefusal {
     /// The search is blank, or does not parse as one expression: a closing parenthesis with none
@@ -54,15 +51,19 @@ pub enum SearchRefusal {
     /// and escape every hold.
     #[error("the skip search is not one expression")]
     NotOneExpression,
-    /// The stub's second refusal, never given.
+    /// The search parses, but uses a key, an operator or a value the skip profile does not admit,
+    /// or passes the grammar's depth, length or arity limit (SPEC-514 R3, R4).
     #[error("the skip search is outside the skip profile")]
     OutsideTheSkipProfile,
 }
 
-impl From<deck_streak_search::Refusal> for SearchRefusal {
-    fn from(refusal: deck_streak_search::Refusal) -> Self {
-        let _ = refusal;
-        Self::NotOneExpression
+impl From<Refusal> for SearchRefusal {
+    fn from(refusal: Refusal) -> Self {
+        if refusal.is_structural() {
+            Self::NotOneExpression
+        } else {
+            Self::OutsideTheSkipProfile
+        }
     }
 }
 
@@ -105,16 +106,16 @@ pub fn wrap_search(configured: &str) -> String {
 }
 
 /// The search the preview shows and the write runs (R3): the predecessor's wrap of the configured
-/// search, followed by the holds no configured search can escape.
+/// search, followed by the holds no configured search can escape. The configured search is first
+/// parsed under the skip profile (SPEC-514 R8), so the wrap joins the holds to one expression of
+/// that profile, and the text equals [`wrap_search`]'s followed by the holds.
 ///
 /// # Errors
 ///
-/// [`SearchRefusal::NotOneExpression`] when `configured` does not parse as one expression.
+/// [`SearchRefusal::NotOneExpression`] when `configured` does not parse as one expression, and
+/// [`SearchRefusal::OutsideTheSkipProfile`] when it parses but the skip profile refuses it.
 pub fn skip_search(configured: &str) -> Result<String, SearchRefusal> {
-    if !is_one_expression(configured) {
-        return Err(SearchRefusal::NotOneExpression);
-    }
-    Ok(format!("{} {HOLDS}", wrap_search(configured)))
+    Ok(SkipQuery::new(configured)?.text().to_owned())
 }
 
 /// The calendar year and month of a study day, as the tariff and the summary count months.

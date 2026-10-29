@@ -85,6 +85,206 @@ pub async fn search_parity(
     scratch: &Path,
     search: &str,
 ) -> Result<ParityCounts, ParityError> {
-    let _ = (source, scratch, search);
-    Err(ParityError::Read)
+    let query = Profile::OPERATOR
+        .parse(search)
+        .map_err(ParityError::Search)?;
+    let same = scratch == source
+        || matches!(
+            (source.canonicalize(), scratch.canonicalize()),
+            (Ok(a), Ok(b)) if a == b
+        );
+    if same {
+        return Err(ParityError::WritableOpen);
+    }
+    let foreign = Db::open_foreign_read_only(source)
+        .await
+        .map_err(|_| ParityError::Read)?;
+    let rows = read_rows(&foreign).await;
+    foreign.close().await;
+    let rows = rows?;
+    std::fs::copy(source, scratch).map_err(|_| ParityError::Copy)?;
+    let engine = RslibEngine;
+    let day = engine.engine_day(scratch).map_err(ParityError::Engine)?;
+    let engine_ids: BTreeSet<i64> = engine
+        .due_cards(scratch, search)
+        .map_err(ParityError::Engine)?
+        .into_iter()
+        .map(|card| card.id)
+        .collect();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |since| {
+            i64::try_from(since.as_secs()).unwrap_or(i64::MAX)
+        });
+    let ds_ids: BTreeSet<i64> = eval(
+        &query,
+        &rows,
+        EngineDay {
+            days_elapsed: day.days_elapsed,
+            next_day_at: day.next_day_at,
+            now,
+        },
+    )
+    .into_iter()
+    .map(|index| rows.cards[index].id)
+    .collect();
+    Ok(ParityCounts {
+        matched: engine_ids.intersection(&ds_ids).count(),
+        engine_only: engine_ids.difference(&ds_ids).count(),
+        ds_only: ds_ids.difference(&engine_ids).count(),
+    })
+}
+
+/// A card row as the read takes it.
+type CardRow = (i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64);
+
+/// The tables the evaluator needs, as the read takes them.
+struct Tables {
+    decks: Vec<(i64, String)>,
+    types: Vec<(i64, String)>,
+    fields: Vec<(i64, i64, String)>,
+    templates: Vec<(i64, i64, String)>,
+    notes: Vec<(i64, i64, String, String)>,
+    cards: Vec<CardRow>,
+    revlog: Vec<(i64, i64, i64)>,
+}
+
+/// Reads the rows the evaluator needs through the read-only handle.
+async fn read_rows(foreign: &ForeignDb) -> Result<Collection, ParityError> {
+    let pool = foreign.reader();
+    let decks: Vec<(i64, String)> = sqlx::query_as("SELECT id, name FROM decks")
+        .fetch_all(pool)
+        .await
+        .map_err(|_| ParityError::Read)?;
+    let types: Vec<(i64, String)> = sqlx::query_as("SELECT id, name FROM notetypes")
+        .fetch_all(pool)
+        .await
+        .map_err(|_| ParityError::Read)?;
+    let fields: Vec<(i64, i64, String)> =
+        sqlx::query_as("SELECT ntid, ord, name FROM fields ORDER BY ntid, ord")
+            .fetch_all(pool)
+            .await
+            .map_err(|_| ParityError::Read)?;
+    let templates: Vec<(i64, i64, String)> =
+        sqlx::query_as("SELECT ntid, ord, name FROM templates ORDER BY ntid, ord")
+            .fetch_all(pool)
+            .await
+            .map_err(|_| ParityError::Read)?;
+    let notes: Vec<(i64, i64, String, String)> =
+        sqlx::query_as("SELECT id, mid, flds, tags FROM notes")
+            .fetch_all(pool)
+            .await
+            .map_err(|_| ParityError::Read)?;
+    let cards: Vec<CardRow> = sqlx::query_as(
+        "SELECT id, nid, did, odid, ord, type, queue, due, odue, ivl, reps, lapses FROM cards",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|_| ParityError::Read)?;
+    let revlog: Vec<(i64, i64, i64)> = sqlx::query_as("SELECT id, cid, ease FROM revlog")
+        .fetch_all(pool)
+        .await
+        .map_err(|_| ParityError::Read)?;
+    Ok(assemble(Tables {
+        decks,
+        types,
+        fields,
+        templates,
+        notes,
+        cards,
+        revlog,
+    }))
+}
+
+/// The evaluator's rows from the read tables: a note of an unknown note type, a card of an
+/// unknown note and a review of an unknown card are left out, as the engine's joins leave them.
+fn assemble(tables: Tables) -> Collection {
+    let Tables {
+        decks,
+        types,
+        fields,
+        templates,
+        notes,
+        cards,
+        revlog,
+    } = tables;
+
+    let type_index: BTreeMap<i64, usize> = types
+        .iter()
+        .enumerate()
+        .map(|(i, (id, _))| (*id, i))
+        .collect();
+    let mut notetypes: Vec<Notetype> = types
+        .into_iter()
+        .map(|(id, name)| Notetype {
+            id,
+            name,
+            fields: Vec::new(),
+            templates: Vec::new(),
+            sort_field: 0,
+        })
+        .collect();
+    for (ntid, _, name) in fields {
+        if let Some(&i) = type_index.get(&ntid) {
+            notetypes[i].fields.push(name);
+        }
+    }
+    for (ntid, _, name) in templates {
+        if let Some(&i) = type_index.get(&ntid) {
+            notetypes[i].templates.push(name);
+        }
+    }
+    let mut note_index = BTreeMap::new();
+    let mut read_notes = Vec::with_capacity(notes.len());
+    for (id, mid, flds, tags) in notes {
+        let Some(&notetype) = type_index.get(&mid) else {
+            continue;
+        };
+        note_index.insert(id, read_notes.len());
+        read_notes.push(Note {
+            id,
+            notetype,
+            fields: flds.split(SEPARATOR).map(str::to_owned).collect(),
+            tags: tags.split_whitespace().map(str::to_owned).collect(),
+        });
+    }
+    let mut card_index = BTreeMap::new();
+    let mut read_cards = Vec::with_capacity(cards.len());
+    for (id, nid, did, odid, ord, kind, queue, due, odue, ivl, reps, lapses) in cards {
+        let Some(&note) = note_index.get(&nid) else {
+            continue;
+        };
+        card_index.insert(id, read_cards.len());
+        read_cards.push(Card {
+            id,
+            note,
+            deck_id: did,
+            original_deck_id: odid,
+            ord: u16::try_from(ord).unwrap_or(u16::MAX),
+            kind,
+            queue,
+            due,
+            original_due: odue,
+            interval: ivl,
+            reps,
+            lapses,
+        });
+    }
+    let reviews = revlog
+        .into_iter()
+        .filter_map(|(id, cid, ease)| card_index.get(&cid).map(|&card| Review { id, card, ease }))
+        .collect();
+    Collection {
+        decks: decks
+            .into_iter()
+            .map(|(id, name)| Deck {
+                id,
+                name: name.replace(SEPARATOR, "::"),
+            })
+            .collect(),
+        notetypes,
+        notes: read_notes,
+        cards: read_cards,
+        revlog: reviews,
+    }
 }

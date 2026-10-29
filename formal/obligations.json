@@ -384,6 +384,7 @@
       "layers": ["search"],
       "artifacts": [
         {"kind": "lean", "entry": "lean/SearchCompile", "state": "planned"},
+        {"kind": "lean", "entry": "lean/SearchHolds", "property": "holds_inescapable", "state": "present"},
         {"kind": "kani", "harness": "K-compile-binds", "state": "planned"},
         {"kind": "kani", "harness": "K-operator-profile", "state": "planned"}
       ],
@@ -502,6 +503,7 @@
     {"entry": "lean/ReplayHistory", "disposition": "keep", "act": "stays while the FSRS-7 crate stays, and is retired with it otherwise", "obligations": ["O11"]},
     {"entry": "lean/ReviewKey", "disposition": "re-stamp", "act": "stamped when the sync core lands: its review sort gains a cover and its test reads the vectors byte-equal", "obligations": ["O1", "O16"]},
     {"entry": "lean/RoadToC2", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/SearchHolds", "disposition": "keep", "act": "new with the search crate (SPEC-514): the skip wrap's holds cannot be escaped; re-stamped when the wrap or the holds it covers move, with no weakening", "obligations": ["O14"]},
     {"entry": "lean/SensitiveDeck", "disposition": "re-stamp", "act": "re-stamped if the deck path form changes", "obligations": ["O11"]},
     {"entry": "lean/SkipTariff", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/SyncClock", "disposition": "re-stamp", "act": "stamped when the sync core lands: its tick gains a cover and its test reads the vectors byte-equal", "obligations": ["O1", "O16"]},
