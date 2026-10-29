@@ -9,8 +9,8 @@
 \* @phx covers crates/web-engine/src/wasm.rs anchor=bury digest=sha256:92b201917eaa8281e924399340f1551030f8fa659352f3ae951f9b16ed960ed6
 \* @phx covers crates/web-engine/src/wasm.rs anchor=flag digest=sha256:21ef36f04c73eb7704a55eb933c52b2c81860793018cbaac4cb4aae62cc73429
 \* @phx covers crates/web-engine/src/wasm.rs anchor=current_card digest=sha256:605adfade6242520ebc39f34b2852dc699ed1dcb1029ca71522fdef82edf8118
-\* @phx covers crates/ffi/src/engine.rs anchor=undo_offer digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-\* @phx covers crates/ffi/src/engine.rs anchor=undo digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+\* @phx covers crates/ffi/src/engine.rs anchor=undo_offer digest=sha256:32e4d30dbb00f2db1725fe391bf4109b9b9b530dfbde7149f6d38150a5e208fa
+\* @phx covers crates/ffi/src/engine.rs anchor=undo digest=sha256:972aa55505a20a5c52d7ede8cd47341977ecf17425e0ae0c77c7b75625878e4c
 \* @phx cites #714
 \* @phx cites #753
 \* @phx property AnUndoRevertsOnlyTheOfferedAnswer ramp=report
