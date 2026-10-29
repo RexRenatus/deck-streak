@@ -510,7 +510,7 @@ fn the_directory_setting_is_off_unset_and_refuses_start_when_relative() {
                 refused,
                 Err(ApiError::Settings(SettingsError::Malformed {
                     setting: "DECKSTREAK_COMPANION_DIR",
-                    ..
+                    expected: "an absolute directory path",
                 }))
             ),
             "{value} refuses start: {refused:?}"
