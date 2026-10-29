@@ -1,0 +1,21 @@
+{
+  "cases": [
+    {"input": {"crt": 1000000000, "now": 1000000000}, "output": 0},
+    {"input": {"crt": 1000000000, "now": 1000086399}, "output": 0},
+    {"input": {"crt": 1000000000, "now": 1000086400}, "output": 1, "class": "rollover"},
+    {"input": {"crt": 1000000000, "now": 1000172805}, "output": 3},
+    {"input": {"crt": 1000000000, "now": 999999999}, "output": -1, "class": "crt-after-now"},
+    {"input": {"crt": 1000000000, "now": 1000864000}, "output": 10}
+  ],
+  "function": "anki.fixture.whole_days",
+  "generator": "tools/parity-oracle/anki/generate.py",
+  "generator_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "inputs": "synthetic",
+  "kind": "engine",
+  "note": "A fixture, not a golden: case 3 records 3 whole days where the instant is 2 days and 5 seconds after the creation time, on purpose, so a consumer that compares must report it.",
+  "registry": "tools/parity-oracle/anki/registry/spec_498.py",
+  "registry_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "schema": "phx.parity-golden.v1",
+  "seed": 498,
+  "source_commit": "0000000000000000000000000000000000000000"
+}

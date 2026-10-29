@@ -5,42 +5,11 @@
 //! [`SystemClock`] is the only reader of the system time in the workspace's production code.
 
 use std::sync::atomic::{AtomicI64, Ordering};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime};
 
-/// An instant: whole milliseconds since the Unix epoch, in UTC.
-///
-/// It is the one representation of an instant in the kernel, in the goldens (ADR-029) and in the
-/// database, so no layer converts between two. It has no arithmetic: a duration is computed by the
-/// rule that needs it, from [`UtcMillis::epoch_millis`], never by adding two instants.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct UtcMillis(i64);
-
-impl UtcMillis {
-    /// The instant `millis` milliseconds after the Unix epoch, or before it when negative.
-    #[must_use]
-    pub const fn from_epoch_millis(millis: i64) -> Self {
-        Self(millis)
-    }
-
-    /// Whole milliseconds since the Unix epoch.
-    #[must_use]
-    pub const fn epoch_millis(self) -> i64 {
-        self.0
-    }
-
-    /// The instant `time` names: whole milliseconds since the Unix epoch, negative before it,
-    /// saturating at the ends of an `i64`. [`SystemClock`] reads the system time through it, and it
-    /// is apart from that read so a test can hand it any time, one before the epoch too.
-    #[must_use]
-    pub fn from_system_time(time: SystemTime) -> Self {
-        Self(match time.duration_since(UNIX_EPOCH) {
-            Ok(since) => i64::try_from(since.as_millis()).unwrap_or(i64::MAX),
-            Err(before) => {
-                i64::try_from(before.duration().as_millis()).map_or(i64::MIN, |millis| -millis)
-            }
-        })
-    }
-}
+// The instant moved to the study day crate, which both clients link without the kernel
+// (ADR-515); the kernel re-exports it, so this path names the crate's own type.
+pub use deck_streak_study_day::UtcMillis;
 
 /// The source of the current instant, injected wherever a rule depends on the time.
 pub trait Clock: Send + Sync {
@@ -69,13 +38,13 @@ impl ManualClock {
     #[must_use]
     pub const fn new(start: UtcMillis) -> Self {
         Self {
-            now: AtomicI64::new(start.0),
+            now: AtomicI64::new(start.epoch_millis()),
         }
     }
 
     /// Moves the clock to `instant`, forward or back.
     pub fn set(&self, instant: UtcMillis) {
-        self.now.store(instant.0, Ordering::SeqCst);
+        self.now.store(instant.epoch_millis(), Ordering::SeqCst);
     }
 
     /// Moves the clock forward by `by`, whole milliseconds, saturating at the last instant.
@@ -92,7 +61,7 @@ impl ManualClock {
 
 impl Clock for ManualClock {
     fn now(&self) -> UtcMillis {
-        UtcMillis(self.now.load(Ordering::SeqCst))
+        UtcMillis::from_epoch_millis(self.now.load(Ordering::SeqCst))
     }
 }
 

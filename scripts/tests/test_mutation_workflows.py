@@ -1423,7 +1423,7 @@ class CargoMutantsRunsTheGatesTestTool(unittest.TestCase):
         for workflow_name, name, job in examined("jobs that run cargo-mutants", running):
             self.assertRegex(
                 job,
-                r"(?m)^\s*tool: cargo-nextest@0\.9\.146$",
+                r"(?m)^\s*tool: cargo-nextest@0\.9\.149$",
                 f"{workflow_name}:{name} runs cargo-mutants without the nextest it names",
             )
 

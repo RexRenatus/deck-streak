@@ -33,7 +33,7 @@ cut, and `scripts/threat_model.py` holds every one in CI (SPEC-375 R5, A2).
 | the iPhone and iPad client | `ios/App/Sources/DeckStreakApp.swift:5:@main` |
 | the web client | `web/app/src/routes/study/review/+page.svelte:7:<ReviewScreen`, `web/app/src/lib/engine/worker.ts:78:scope.addEventListener('message'`, `crates/api/src/sync_seal_routes.rs:40:pub const SEAL_KEY_PATH` |
 | the sync service | `deploy/systemd/deck-streak-sync-server.service:21:ExecStart=`, `deploy/scripts/sync-server.sh:19:set -euo pipefail` |
-| the engine and its boundaries | `crates/engine-core/src/lib.rs:49:#![forbid(unsafe_code)]`, `crates/ffi/src/lib.rs:21:#![forbid(unsafe_code)]`, `crates/web-engine/src/wasm.rs:133:#[wasm_bindgen]` |
+| the engine and its boundaries | `crates/engine-core/src/lib.rs:52:#![forbid(unsafe_code)]`, `crates/ffi/src/lib.rs:21:#![forbid(unsafe_code)]`, `crates/web-engine/src/wasm.rs:133:#[wasm_bindgen]` |
 | the build and release lanes | `.github/workflows/testflight-internal.yml:27:permissions:`, `.github/workflows/testflight-release.yml:11:tags:`, `.github/workflows/release.yml:19:permissions:` |
 
 ## 3. Components and trust boundaries

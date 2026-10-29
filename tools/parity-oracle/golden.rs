@@ -201,6 +201,82 @@ pub fn committed(name: &str) -> PathBuf {
         .join(format!("{name}.json"))
 }
 
+/// One case whose output differs from what the port gives for its input.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Mismatch {
+    /// The case's position in the golden, from 0.
+    pub index: usize,
+    /// The case's input.
+    pub input: Value,
+    /// The output the golden records.
+    pub expected: Value,
+    /// The output the port gives.
+    pub found: Value,
+}
+
+impl fmt::Display for Mismatch {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "case {} with input {}: the golden records {}, the port gives {}",
+            self.index, self.input, self.expected, self.found
+        )
+    }
+}
+
+/// Every case of `golden` whose recorded output differs from what `port` gives for its input,
+/// in case order. A consumer that compares through this reports each mismatch it finds, so a
+/// golden with a wrong output fails it (the non-vacuity control, SPEC-498).
+#[must_use]
+pub fn mismatches(golden: &Golden, mut port: impl FnMut(&Value) -> Value) -> Vec<Mismatch> {
+    golden
+        .cases
+        .iter()
+        .enumerate()
+        .filter_map(|(index, case)| {
+            let found = port(&case.input);
+            (found != case.output).then(|| Mismatch {
+                index,
+                input: case.input.clone(),
+                expected: case.output.clone(),
+                found,
+            })
+        })
+        .collect()
+}
+
+/// Runs `port` over every case of the golden at `path`, prints
+/// `examined N case(s) of <function>`, and returns that report.
+///
+/// # Panics
+///
+/// When the golden is refused, and when any case's recorded output differs from the port's,
+/// naming every such case.
+#[must_use]
+#[allow(
+    clippy::print_stdout,
+    reason = "the examined count is the test's report (the tdd pack)"
+)]
+pub fn assert_parity(path: &Path, port: impl FnMut(&Value) -> Value) -> Examined {
+    let golden = read(path).unwrap_or_else(|refusal| panic!("{refusal}"));
+    let found = mismatches(&golden, port);
+    let examined = Examined {
+        function: golden.function,
+        count: golden.cases.len(),
+    };
+    println!("{examined}");
+    let named: Vec<String> = found.iter().map(ToString::to_string).collect();
+    assert!(
+        found.is_empty(),
+        "{}: {} of {} case(s) differ from the port:\n{}",
+        path.display(),
+        found.len(),
+        examined.count,
+        named.join("\n")
+    );
+    examined
+}
+
 /// Runs `check` over every case of the committed golden `name`, prints
 /// `examined N case(s) of <function>`, and returns that report.
 ///

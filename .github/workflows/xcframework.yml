@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   xcframework:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 120
     env:
       REPORT: ${{ github.workspace }}/xcframework-report
@@ -39,6 +39,8 @@ jobs:
       PROTOC_MACOS_DIGEST: 99ea004549c139f46da5638187a85bbe422d78939be0fa01af1aa8ab672e395f
       # The lowest iOS the consumer check typechecks the bindings for.
       IOS_DEPLOYMENT: "17.0"
+      # Xcode 27.0 (27A266a): the same path on GitHub's xcode-27 image and in cirruslabs' single-Xcode 27 image.
+      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -164,7 +166,7 @@ jobs:
           PY
       - name: upload the XCFramework, the bindings and the report
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: xcframework
           path: |
@@ -176,11 +178,11 @@ jobs:
           if-no-files-found: warn
 
   harness-wire:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 30
     env:
       REPORT: ${{ github.workspace }}/harness-wire-report
-      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -258,18 +260,18 @@ jobs:
           PY
       - name: upload the codec's report
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: harness-wire
           path: harness-wire-report/
           if-no-files-found: warn
 
   card-isolation:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 30
     env:
       REPORT: ${{ github.workspace }}/card-isolation-report
-      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -347,7 +349,7 @@ jobs:
           PY
       - name: upload the card view's report
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: card-isolation
           path: card-isolation-report/
@@ -355,16 +357,16 @@ jobs:
 
   harness:
     needs: xcframework
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 150
     env:
       REPORT: ${{ github.workspace }}/harness-report
       RESULTS: ${{ github.workspace }}/harness-results
-      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
-      # One iPhone and one iPad the runner image holds, on the default Xcode's simulator runtime.
+      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
+      # One iPhone and one iPad on Xcode 27.0's own simulator runtime, iOS 27.0, which the xcode-27 image holds.
       IPHONE_SIM: "iPhone 17"
       IPAD_SIM: "iPad (A16)"
-      SIM_OS: "26.5"
+      SIM_OS: "27.0"
       # The project generator, pinned by its release and the digest of its archive.
       XCODEGEN_VERSION: "2.46.0"
       XCODEGEN_DIGEST: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
@@ -373,7 +375,7 @@ jobs:
         with:
           persist-credentials: false
       - name: this run's XCFramework, bindings and synthetic collection
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: xcframework
           path: engine-artifact
@@ -707,7 +709,7 @@ jobs:
           PY
       - name: upload the report and the result bundles
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: harness
           path: |

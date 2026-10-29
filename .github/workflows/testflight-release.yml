@@ -67,7 +67,7 @@ jobs:
 
   app:
     needs: [plan, framework]
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 60
     environment: testflight-release
     permissions:
@@ -78,7 +78,7 @@ jobs:
       VERSION: ${{ needs.plan.outputs.version }}
       REPORT: ${{ github.workspace }}/harness-report
       RESULTS: ${{ github.workspace }}/harness-results
-      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
       XCODEGEN_VERSION: "2.46.0"
       XCODEGEN_DIGEST: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
     steps:
@@ -86,7 +86,7 @@ jobs:
         with:
           persist-credentials: false
       - name: this run's XCFramework, bindings and synthetic collection
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: xcframework
           path: engine-artifact

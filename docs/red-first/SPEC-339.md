@@ -53,3 +53,10 @@ A9: green at 0a9ec800
 A10: red at f8db32b7: AssertionError: False is not true : ios/Harness/Info.plist is not in the tree
 A10: green at 0a9ec800
 ```
+
+At 8bc14293, under the newer simulator runtime, M1 failed on the iPhone simulator in the Release
+step, at `HarnessMeasureTests.swift:33: Failed to terminate invalid.deckstreak.harness`: on the
+block's fourth run, `launch()` could not end the instance the third run had left running, inside
+that run's measured window. 62395e0b ends each pass's app after `stopMeasuring()` instead, so each
+measured window holds one launch and nothing to end. Both metrics, the five measured passes and
+each pass's wait for the deck list are unchanged, and M1 is still not red, a measurement.
