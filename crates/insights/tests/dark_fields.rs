@@ -249,7 +249,7 @@ fn a_report_shows_at_most_the_cap_and_counts_the_rest() {
     assert_eq!(view.dark_fields.len(), 40);
     assert_eq!(view.dark_fields[0].field, "Extra 001");
     assert_eq!(view.notetypes_checked, 1);
-    assert!(DarkFields.failed_reads(&view).is_empty());
+    assert_eq!(DarkFields.failed_reads(&view), Vec::<String>::new());
 }
 
 #[test]

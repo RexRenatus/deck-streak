@@ -59,9 +59,11 @@ const SPECIFIER = /\bfrom\s*['"]([^'"]+)['"]|\bimport\s*\(?\s*['"]([^'"]+)['"]/g
 
 /** The file a specifier names, without its extension, or null for a package. */
 function target(from: string, specifier: string): string | null {
-  if (specifier === '$lib' || specifier.startsWith('$lib/')) return join(SOURCE, 'lib', specifier.slice(5));
-  if (!specifier.startsWith('.')) return null;
-  return resolve(dirname(from), specifier).replace(/\.(ts|js)$/, '');
+  let path: string;
+  if (specifier === '#lib' || specifier.startsWith('#lib/')) path = join(SOURCE, 'lib', specifier.slice(5));
+  else if (specifier.startsWith('.')) path = resolve(dirname(from), specifier);
+  else return null;
+  return path.replace(/\.(ts|js)$/, '');
 }
 
 /** The modules that import the credential module, each by its path under web/app/src. */
@@ -159,7 +161,7 @@ describe('where the sync key reaches', () => {
     // the positive control: a planted page that imports the credential module is refused by name
     const planted = {
       path: join(SOURCE, 'routes', 'planted', '+page.svelte'),
-      text: `<script lang="ts">\n  import { CredentialStore } from '$lib/engine/credential';\n</script>\n`
+      text: `<script lang="ts">\n  import { CredentialStore } from '#lib/engine/credential.js';\n</script>\n`
     };
     expect(importers([...sources, planted]).filter((path) => !WORKER_MODULES.includes(path))).toEqual([
       'routes/planted/+page.svelte'
@@ -228,7 +230,7 @@ describe('where the sync key reaches', () => {
     // the positive control: a planted page that imports the sync module is refused by name
     const planted = {
       path: join(SOURCE, 'routes', 'planted', '+page.svelte'),
-      text: `<script lang="ts">\n  import { Sync } from '$lib/engine/sync';\n</script>\n`
+      text: `<script lang="ts">\n  import { Sync } from '#lib/engine/sync.js';\n</script>\n`
     };
     expect(importersOf([...sources, planted], SYNC).filter((path) => path !== 'lib/engine/worker.ts')).toEqual([
       'routes/planted/+page.svelte'
@@ -335,7 +337,7 @@ describe('where the sync key reaches the choice', () => {
     // the positive control: a planted page that imports the choice module is refused by name
     const planted = {
       path: join(SOURCE, 'routes', 'planted', '+page.svelte'),
-      text: `<script lang="ts">\n  import { Choice } from '$lib/engine/choice';\n</script>\n`
+      text: `<script lang="ts">\n  import { Choice } from '#lib/engine/choice.js';\n</script>\n`
     };
     expect(importersOf([...sources, planted], CHOICE).filter((path) => path !== 'lib/engine/worker.ts')).toEqual([
       'routes/planted/+page.svelte'

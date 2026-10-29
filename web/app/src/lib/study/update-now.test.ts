@@ -6,7 +6,7 @@ import { join, relative, resolve } from 'node:path';
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { CardView, Head, StatusWord, Synced, Unsynced, UndoOffer } from '$lib/engine/protocol';
+import type { CardView, Head, StatusWord, Synced, Unsynced, UndoOffer } from '#lib/engine/protocol.js';
 import StudyReview from '../../routes/study/review/+page.svelte';
 import { Review, type StudyClient } from './review';
 import ReviewScreen from './ReviewScreen.svelte';
@@ -16,7 +16,7 @@ import type { UpdateClient } from './update-now';
 // sync offer under one set of keys, with its own text and no word for the streak, and the study
 // code's shipped sync calls are the session's one and the offer's one.
 const routes = vi.hoisted(() => ({ client: vi.fn() }));
-vi.mock('$lib/study/engine', () => ({ studyEngine: () => ({ client: routes.client }) }));
+vi.mock('#lib/study/engine.js', () => ({ studyEngine: () => ({ client: routes.client }) }));
 
 afterEach(() => {
   cleanup();

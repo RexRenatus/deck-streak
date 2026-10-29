@@ -13,12 +13,12 @@
 // reason, read from the one composition the frame renders, with the classes and title it is given.
 // SPEC-506 R5; ADR-524. A speech clip the device has no local voice for is not spoken, and the status
 // region names its language until the next gesture; any status the review announces outranks it.
-import type { RefusalReason } from '$lib/card/frame-document';
-import { frameCard } from '$lib/card/frame-host';
-import { EngineError } from '$lib/engine/client';
-import type { CardHealth, CardView, Clip, Counts, ErrorCode, Faces, Head, Rating, UndoOffer } from '$lib/engine/protocol';
-import { m } from '$lib/paraglide/messages.js';
-import { sideAfter, type Action, type Side } from '$lib/remote/actions';
+import type { RefusalReason } from '#lib/card/frame-document.js';
+import { frameCard } from '#lib/card/frame-host.js';
+import { EngineError } from '#lib/engine/client.js';
+import type { CardHealth, CardView, Clip, Counts, ErrorCode, Faces, Head, Rating, UndoOffer } from '#lib/engine/protocol.js';
+import { m } from '#lib/paraglide/messages.js';
+import { sideAfter, type Action, type Side } from '#lib/remote/actions.js';
 import { noVoiceText, statusText } from './refusal';
 
 /** The schematic's states: a card loading, a side shown, a request in flight, an undo offered and

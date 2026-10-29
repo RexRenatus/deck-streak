@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { getLocale } from '$lib/paraglide/runtime.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { getLocale } from '#lib/paraglide/runtime.js';
   import type { ExchangeView } from './exchange';
 
   // The XP exchange readout (SPEC-075 R9, #80): for each source bucket, the XP it paid, the cards

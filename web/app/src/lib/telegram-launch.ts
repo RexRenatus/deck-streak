@@ -25,7 +25,7 @@ const LAUNCH_PATH = '/api/launch';
 /** How long the server may take to answer, as long as its own request timeout (SPEC-403 R4), in milliseconds. */
 const DEADLINE = 10_000;
 
-/** `svelte.config.js`'s `script-src` without Telegram's origin (SPEC-400 R4; its unit test holds them equal). */
+/** `sveltekit.config.js`'s `script-src` without Telegram's origin (SPEC-400 R4; its unit test holds them equal). */
 const NARROWED = "script-src 'self' 'wasm-unsafe-eval'";
 
 /** How the gate asks the server about a launch: the page's own `fetch`, or a stand-in for it in a test. */

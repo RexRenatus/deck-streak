@@ -4,7 +4,7 @@
 // (SPEC-371 R10). SPEC-505 R5, R6; ADR-523 D3: a card the frame refused is announced by its reason,
 // each reason with its own message in every locale. A speech clip the device has no local voice for
 // names its language (SPEC-506).
-import { m } from '$lib/paraglide/messages.js';
+import { m } from '#lib/paraglide/messages.js';
 import type { Status } from './review';
 
 type StatusKey =

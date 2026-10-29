@@ -72,6 +72,31 @@ fn every_hour_past_23_is_refused_and_23_is_admitted() {
 }
 
 #[test]
+fn every_offset_past_the_settings_bounds_is_refused_and_each_bound_is_admitted() {
+    // The setting runs from -720 to +840 minutes (`config.py:Settings.validate`): each bound is an
+    // offset, as itself, and so is UTC between them.
+    assert_eq!(
+        UtcOffset::from_minutes(UtcOffset::MIN_MINUTES).map(UtcOffset::minutes),
+        Some(-720)
+    );
+    assert_eq!(
+        UtcOffset::from_minutes(UtcOffset::MAX_MINUTES).map(UtcOffset::minutes),
+        Some(840)
+    );
+    assert_eq!(UtcOffset::from_minutes(0), Some(UtcOffset::UTC));
+    // A minute past either bound is no offset, nor is any further value an i16 holds.
+    let west = i16::MIN..UtcOffset::MIN_MINUTES;
+    let east = UtcOffset::MAX_MINUTES + 1..=i16::MAX;
+    for minutes in west.chain(east) {
+        assert_eq!(
+            UtcOffset::from_minutes(minutes),
+            None,
+            "{minutes} was admitted as an offset"
+        );
+    }
+}
+
+#[test]
 fn a_study_day_renders_as_its_iso_date_and_parses_back() {
     // Epoch day zero is the Unix epoch's own day, by definition, and the day before it closed 1969.
     assert_eq!(StudyDay::from_epoch_day(0).to_string(), "1970-01-01");

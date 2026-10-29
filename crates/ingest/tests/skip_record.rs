@@ -313,7 +313,7 @@ fn a_fail_reason_displays_as_its_stored_code() {
             reason.as_str(),
             "the display is the code the record stores"
         );
-        assert!(!reason.to_string().is_empty());
+        assert_ne!(reason.to_string(), "");
     }
 }
 

@@ -2,8 +2,8 @@
 // markup: the switch each deck shows, the marked deck above it that keeps it away, and a change
 // saved at once and turned back when the server did not save it. The marks live on the server
 // alone, so this module keeps none of its own.
-import type { Answer } from '$lib/api';
-import type { Deck } from '$lib/engine/protocol';
+import type { Answer } from '#lib/api.js';
+import type { Deck } from '#lib/engine/protocol.js';
 
 /** What the screen asks of the server: the marked decks, and one deck's change. */
 export interface MarksClient {

@@ -4,7 +4,7 @@
   // the list follows the device's voices, which a browser may load after the page. SPEC-506 R2, R3;
   // ADR-524: it lists only the voices the device runs, and shows the stored choice while it is one
   // of them, else the default.
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import type { Voice, VoiceChoices } from './voice';
 
   /** Where the picker reads the device's voices: `speechSynthesis` is one. */

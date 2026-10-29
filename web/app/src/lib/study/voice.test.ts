@@ -6,7 +6,7 @@ import { join, relative, resolve, sep } from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { CardView, Clip, Faces, FaceView, UndoOffer } from '$lib/engine/protocol';
+import type { CardView, Clip, Faces, FaceView, UndoOffer } from '#lib/engine/protocol.js';
 import { Player, type AudioOut, type ObjectUrls } from './audio';
 import { Review, type StudyClient } from './review';
 import {

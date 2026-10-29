@@ -53,7 +53,7 @@ impl ManualClock {
         // The update never declines, so its result carries nothing to handle.
         let _previous = self
             .now
-            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |now| {
+            .try_update(Ordering::SeqCst, Ordering::SeqCst, |now| {
                 Some(now.saturating_add(millis))
             });
     }
