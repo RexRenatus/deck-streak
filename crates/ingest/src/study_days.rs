@@ -8,14 +8,7 @@ use deck_streak_kernel::{StudyDay, StudyDayRule, UtcMillis};
 use crate::reader::{
     CollectionReader, ReadError, allowed_deck_ids, deck_names, read_failed, scope_ids,
 };
-
-/// The review ids above the floor `?1` that are study events of the cards whose home deck is one
-/// of the ids in `?2`, oldest first, `?3` at a time: the SQL mirror of `reader::is_study_event`
-/// and `reader::Card::home_deck_id`, as `window.rs` writes its own count.
-const STUDY_EVENT_IDS: &str = "SELECT r.id FROM revlog r JOIN cards c ON c.id = r.cid \
-     WHERE r.id > ?1 AND r.type IN (0, 1, 2, 3) AND r.ease >= 1 \
-     AND (CASE WHEN c.odid != 0 THEN c.odid ELSE c.did END) IN (SELECT value FROM json_each(?2)) \
-     ORDER BY r.id LIMIT ?3";
+use crate::schema18::STUDY_EVENT_IDS;
 
 /// How many review ids one page of the read holds.
 const PAGE_SIZE: i64 = 50_000;

@@ -57,6 +57,7 @@ deck-streak-xp = { path = "crates/xp" }
 deck-streak-study-day = { path = "crates/study-day" }
 deck-streak-companion = { path = "crates/companion" }
 deck-streak-companion-slot = { path = "crates/companion-slot" }
+deck-streak-collection = { path = "crates/collection" }
 # ADR-029: the parity oracle's golden reader. So far only a proving crate's dev-dependencies name
 # them; later ADRs cite ADR-029 rather than admitting them again.
 serde = { version = "1.0.229", features = ["derive"] }
@@ -65,6 +66,10 @@ serde_json = "1.0.154"
 # the kernel's repository base needs; a member adds tokio's features as it uses them.
 sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros"] }
 tokio = "~1.54"
+# ADR-530 (SPEC-512): the collection store's driver, with SQLite's own source bundled, at the version
+# and source the lock already holds through the engine. The collection crate and ingest's schema-18
+# adapter name it; only crates/collection/src/store.rs builds a connection.
+rusqlite = { version = "0.39.0", features = ["bundled"] }
 thiserror = "2.0.21"
 chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 tracing = "0.1.44"

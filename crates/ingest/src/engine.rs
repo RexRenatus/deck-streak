@@ -30,6 +30,8 @@ use anki::search::SortMode;
 use anki::sync::collection::normal::SyncActionRequired;
 use anki::sync::login::{SyncAuth, sync_login};
 
+use crate::schema18::CARD_STATE;
+
 /// How many queued cards the scheduler is asked for per top-level deck: the fetch limit the
 /// predecessor's day-set query passes (`preread.py:_query_root_queued`, predecessor `27ee2bc`).
 /// The day set's own delivery (#31) proves it against a golden.
@@ -435,12 +437,6 @@ impl CollectionWrite for RslibEngine {
         }
     }
 }
-
-/// The columns a skip reads of each card a search selected, by the ids in `?1`, a JSON array,
-/// ascending by id. The engine's card type keeps these fields private, so they are read through the
-/// engine's own connection, which its storage hands out for exactly this.
-const CARD_STATE: &str = "SELECT id, did, odid, due, queue, type, ivl, factor, odue, mod \
-     FROM cards WHERE id IN (SELECT value FROM json_each(?1)) ORDER BY id";
 
 /// The cards `search` selects in `col`, ascending by id, each with its scheduling state and the
 /// top-level deck of its home deck.

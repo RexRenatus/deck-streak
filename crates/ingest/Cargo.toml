@@ -17,7 +17,13 @@ anki.workspace = true
 # SPEC-083 R6: the summary and the tariff count calendar months; the write reads the process's zone
 # (ADR-083; the version Cargo.lock already pins through the engine).
 chrono.workspace = true
+# ADR-530 D8 and D9 (SPEC-512): the read port the schema-18 adapter implements, and the foreign
+# opener it opens the copy through.
+deck-streak-collection.workspace = true
 deck-streak-kernel.workspace = true
+# ADR-530 D8: the schema-18 adapter runs its statements on the connection the collection's foreign
+# opener builds; no file of this crate builds one.
+rusqlite.workspace = true
 # SPEC-083 R20 and ADR-321 D17, D20: the preview's digest over the listed card ids, and the take's
 # backup checked against the working copy it was copied from.
 sha2.workspace = true
