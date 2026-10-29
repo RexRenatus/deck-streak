@@ -33,9 +33,9 @@ pub enum StoreError {
     /// The store was opened to read, and refuses every write.
     #[error("the store was opened to read, and refuses every write")]
     ReadOnly,
-    /// A device's erase could not remove the store's file.
-    #[error("the store's file could not be removed")]
-    Remove(#[source] std::io::Error),
+    /// The store's file could not be read, or a device's erase could not remove it.
+    #[error("the store's file could not be read or removed")]
+    File(#[source] std::io::Error),
     /// `SQLite` refused or failed a statement.
     #[error("the store's database failed a statement")]
     Sqlite(#[from] rusqlite::Error),

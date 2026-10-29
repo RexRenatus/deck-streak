@@ -64,6 +64,10 @@ jobs:
             cargo rustc --locked --release -p deck-streak-ffi --lib --crate-type staticlib --target "$target"
           done
           echo "$(( $(date +%s) - started ))" > "$REPORT/build-seconds"
+      # The collection store's library for an iPhone and an iPad (SPEC-512 R9; ADR-530 D10): its
+      # bundled SQLite compiles against the iOS SDK this image carries.
+      - name: the collection store for the iOS target
+        run: cargo build --locked -p deck-streak-collection --lib --target aarch64-apple-ios
       - name: the Swift bindings, in library mode over the device library
         run: |
           export PROTOC="$RUNNER_TEMP/protoc/bin/protoc"

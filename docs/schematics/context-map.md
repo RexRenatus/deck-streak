@@ -69,6 +69,7 @@ flowchart TB
     xp
     fsrs7
     companion
+    collection
   end
 
   daemon --> kernel
@@ -163,6 +164,7 @@ flowchart TB
   privacy --> kernel
 
   ingest --> kernel
+  ingest --> collection
   vault --> kernel
   identity --> kernel
   agent --> kernel
@@ -184,6 +186,10 @@ the kernel re-exports, so the kernel sits in a layer of its own above it (SPEC-4
 `companion` depends on no workspace crate, and `companion-slot` alone depends on it: the slot is the
 one body a build substitutes behind the scheduling companion's interface, so it sits in a layer of
 its own above the interface (SPEC-501, ADR-519). No other crate reaches either yet.
+
+`collection` depends on no workspace crate, and `ingest` alone depends on it: its schema-18 adapter
+implements the collection's read port, and the store stays dormant until the cut-over (SPEC-512,
+ADR-530).
 
 `deck-streak-migration` is planned in the fence and has no directory under `crates/`, so it is not
 drawn until the delivery that builds it.

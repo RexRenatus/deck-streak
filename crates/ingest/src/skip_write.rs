@@ -20,6 +20,10 @@ use deck_streak_kernel::{CredentialLoader, Db, ForeignDb, StudyDay, StudyDayRule
 use crate::engine::{CollectionWrite, DueCard, EngineDay, EngineError, SyncLogin, WriteSync};
 use crate::lock::CollectionLock;
 use crate::reader::is_study_event;
+use crate::schema18::{
+    CARD_COUNT, CARDS_BY_QUEUE_AND_TYPE, NOTE_COUNT, RESCHEDULE_ROW_COUNT, REVIEW_ROW_COUNT,
+    STUDIED_AFTER,
+};
 use crate::settings::{SYNC_PASSWORD, SYNC_USERNAME, SkipSearch, SyncSettings};
 use crate::skip::{
     CardState, FailReason, SKIP_MAX_CARDS, SKIP_SPREAD_MAX_DAYS, SKIP_SPREAD_MIN_DAYS,
@@ -715,11 +719,10 @@ where
 /// review log cannot be read.
 async fn studied_after(path: &Path, after: i64) -> Option<Vec<i64>> {
     let db = Db::open_foreign_read_only(path).await.ok()?;
-    let rows =
-        sqlx::query_as::<_, (i64, i64, i64)>("SELECT cid, type, ease FROM revlog WHERE id > ?1")
-            .bind(after)
-            .fetch_all(db.reader())
-            .await;
+    let rows = sqlx::query_as::<_, (i64, i64, i64)>(STUDIED_AFTER)
+        .bind(after)
+        .fetch_all(db.reader())
+        .await;
     db.close().await;
     Some(
         rows.ok()?
@@ -754,27 +757,24 @@ where
 /// read.
 async fn read_counts(db: &ForeignDb, due: i64) -> Result<Counts, sqlx::Error> {
     let reader = db.reader();
-    let cards = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM cards")
+    let cards = sqlx::query_scalar::<_, i64>(CARD_COUNT)
         .fetch_one(reader)
         .await?;
-    let notes = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM notes")
+    let notes = sqlx::query_scalar::<_, i64>(NOTE_COUNT)
         .fetch_one(reader)
         .await?;
-    let rows = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM revlog")
+    let rows = sqlx::query_scalar::<_, i64>(REVIEW_ROW_COUNT)
         .fetch_one(reader)
         .await?;
-    let reschedules =
-        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM revlog WHERE type = 4 AND ease = 0")
-            .fetch_one(reader)
-            .await?;
-    let by_kind = sqlx::query_as::<_, (i64, i64, i64)>(
-        "SELECT queue, type, count(*) FROM cards GROUP BY queue, type ORDER BY queue, type",
-    )
-    .fetch_all(reader)
-    .await?
-    .into_iter()
-    .map(|(queue, kind, count)| ((queue, kind), count))
-    .collect();
+    let reschedules = sqlx::query_scalar::<_, i64>(RESCHEDULE_ROW_COUNT)
+        .fetch_one(reader)
+        .await?;
+    let by_kind = sqlx::query_as::<_, (i64, i64, i64)>(CARDS_BY_QUEUE_AND_TYPE)
+        .fetch_all(reader)
+        .await?
+        .into_iter()
+        .map(|(queue, kind, count)| ((queue, kind), count))
+        .collect();
     Ok(Counts {
         cards,
         notes,

@@ -9,9 +9,10 @@
 //! card marked suspended, each tag a row. The expected values are computed from the case's rows by
 //! the port's rules, so neither adapter is judged only against the other.
 
-#![allow(clippy::expect_used, clippy::print_stdout)]
+#![allow(clippy::expect_used, clippy::print_stdout, clippy::too_many_lines)]
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -153,7 +154,10 @@ fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
 }
 
 fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+    bytes.iter().fold(String::new(), |mut text, byte| {
+        let _ = write!(text, "{byte:02x}");
+        text
+    })
 }
 
 #[test]
@@ -304,35 +308,51 @@ fn each_adapter_refuses_the_others_file_by_application_id() {
     assert_eq!(findings, Vec::<String>::new(), "the refusals");
 }
 
+/// Deck id, name, usn, filtered.
+type DeckRow = (i64, String, i64, bool);
+/// Notetype id, name, usn, kind, css.
+type NotetypeRow = (i64, String, i64, i64, String);
+/// Notetype id, ordinal, name.
+type FieldRow = (i64, i64, String);
+/// Notetype id, ordinal, name, usn, front, back.
+type TemplateRow = (i64, i64, String, i64, String, String);
+/// Id, guid, notetype, usn, tags, flds, sfld, csum, flags, data.
+type NoteRow = (
+    i64,
+    String,
+    i64,
+    i64,
+    String,
+    String,
+    String,
+    i64,
+    i64,
+    String,
+);
+
 /// One golden case's collection, in its own ids: the case's corpus indices mapped to ids.
 struct Case {
     class: String,
     crt: i64,
     /// Deck id, name, usn, filtered.
-    decks: Vec<(i64, String, i64, bool)>,
+    decks: Vec<DeckRow>,
     /// Notetype id, name, usn, kind, css.
-    notetypes: Vec<(i64, String, i64, i64, String)>,
+    notetypes: Vec<NotetypeRow>,
     /// Notetype id, ordinal, name.
-    fields: Vec<(i64, i64, String)>,
+    fields: Vec<FieldRow>,
     /// Notetype id, ordinal, name, usn, front, back.
-    templates: Vec<(i64, i64, String, i64, String, String)>,
+    templates: Vec<TemplateRow>,
     /// Id, guid, notetype, usn, tags, flds, sfld, csum, flags, data.
-    notes: Vec<(
-        i64,
-        String,
-        i64,
-        i64,
-        String,
-        String,
-        String,
-        i64,
-        i64,
-        String,
-    )>,
+    notes: Vec<NoteRow>,
     /// The 18 schema-18 card columns.
     cards: Vec<[Value; 18]>,
     /// Id, card, usn, ease, ivl, lastIvl, factor, time, type.
     revlog: Vec<[i64; 9]>,
+}
+
+/// A corpus index as a position, or none for a null.
+fn position(value: &Value) -> Option<usize> {
+    value.as_u64().and_then(|index| usize::try_from(index).ok())
 }
 
 fn int(value: &Value) -> i64 {
@@ -368,14 +388,14 @@ impl Case {
         let input = &case["input"]["collection"];
         let tables = &case["output"]["tables"];
         let rows = |table: &str| tables[table].as_array().cloned().unwrap_or_default();
-        let input_notetype =
-            |index: &Value| index.as_u64().map(|i| &input["notetypes"][i as usize]);
+        let input_notetype = |index: &Value| position(index).map(|i| &input["notetypes"][i]);
         let decks = rows("decks")
             .iter()
             .map(|row| {
                 let filtered = row[0]
                     .as_u64()
-                    .is_some_and(|i| input["decks"][i as usize]["filtered"] == Value::Bool(true));
+                    .and_then(|i| usize::try_from(i).ok())
+                    .is_some_and(|i| input["decks"][i]["filtered"] == Value::Bool(true));
                 (deck_id(&row[0]), text(&row[1]), int(&row[2]), filtered)
             })
             .collect();
@@ -395,8 +415,11 @@ impl Case {
         let templates = rows("templates")
             .iter()
             .map(|row| {
-                let source = input_notetype(&row[0])
-                    .and_then(|nt| nt["templates"].get(int(&row[1]) as usize).cloned());
+                let source = input_notetype(&row[0]).and_then(|nt| {
+                    nt["templates"]
+                        .get(usize::try_from(int(&row[1])).ok()?)
+                        .cloned()
+                });
                 let side = |key: &str| source.as_ref().map(|t| text(&t[key])).unwrap_or_default();
                 (
                     notetype_id(&row[0]),
@@ -620,16 +643,25 @@ impl Case {
                 )?;
             }
         }
+        // Schema 18 admits two cards of one note at one ordinal, and some golden cases hold them;
+        // the store keeps one card per note and ordinal, so a later duplicate takes the note's next
+        // free ordinal. No value of the port carries the ordinal.
+        let mut taken: BTreeSet<(i64, i64)> = BTreeSet::new();
         for card in &self.cards {
             let kind = int(&card[6]);
             let due = int(&card[8]);
             let new_position = (kind == 0 && due >= 0).then_some(due);
+            let note = int(&card[1]);
+            let mut ord = int(&card[3]);
+            while !taken.insert((note, ord)) {
+                ord += 1;
+            }
             tx.execute(
                 "INSERT INTO cards VALUES (?1, ?2, ?3, ?4, ?5, ?6, NULL, ?7, 0)",
                 params![
                     int(&card[0]),
-                    int(&card[1]),
-                    int(&card[3]),
+                    note,
+                    ord,
                     Self::home(card),
                     new_position,
                     i64::from(int(&card[7]) == -1),

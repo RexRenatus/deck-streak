@@ -11,7 +11,7 @@ that amends this file in the same change. Never add an edge to make code compile
 
 ```context-map
 deck-streak-kernel        (shared kernel: ids, study day, track, verdict, errors, config, Db, data-rights port)  depends on: study-day
-deck-streak-ingest        (anti-corruption layer for Anki: sync, read, change gate, new-card queue, skip day)  depends on: kernel
+deck-streak-ingest        (anti-corruption layer for Anki: sync, read, change gate, new-card queue, skip day)  depends on: kernel, collection
 deck-streak-identity      (Telegram initData, the owner allow-list, sessions, linked sign-in)  depends on: kernel
 deck-streak-analytics     (daily rollup, per-language stats, five-pillar score, today snapshot)  depends on: kernel, ingest
 deck-streak-progression   (XP ledger and grant port, levels, tiers, badges, records, seasons)  depends on: kernel, ingest, xp
@@ -45,6 +45,7 @@ deck-streak-xp            (the per-review XP rule, with no I/O, for the server a
 deck-streak-study-day     (the study day, its instant and its date error, with no I/O, for the server and both clients; ADR-515)  depends on: nothing
 deck-streak-companion     (the scheduling companion's documented interface: schema v1, its codec, the handshake, the decision that fails closed, the Absent default; ADR-519)  depends on: nothing
 deck-streak-companion-slot  (the one substitutable companion body; the public body opens Absent; ADR-519)  depends on: companion
+deck-streak-collection    (the collection store, dormant: one file per user, its one opener, schema and migrations, the append-only review log and its erase gate, the read port and the store's data-rights port; ADR-530)  depends on: nothing
 miniapp   web/app/src     (the SvelteKit Mini App)  depends on: nothing internal
 ios-harness  ios/  (the SwiftUI harness over deck-streak-ffi's XCFramework; ADR-335)  depends on: nothing internal
 landing   web/site/src    (the Astro landing page, planned)  depends on: nothing internal
@@ -86,6 +87,16 @@ depends on the interface alone; its public body opens `Absent`, which refuses ev
 engine core, the umbrella FFI crate and the web engine gain their edges to them in the changes that
 first use them (#997, #998).
 
+`deck-streak-collection` is DeckStreak's own collection store (SPEC-512, ADR-530): one SQLite file
+per user, the same schema on the server and on each device, opened only by its one opener, whose
+pragmas follow the role and which refuses another application's file by its `application_id`. Its
+review log is append-only behind one erase gate, which only its data-rights port opens, and every
+statement it runs is a registered constant its census prepares. It declares `CollectionRead`, the
+read port the server's contexts read a collection through: the store answers it, and ingest's
+schema-18 adapter answers it over Anki's file. It depends on nothing and reads no clock, so both
+clients can link it. It is dormant: nothing live reads or writes the store, and ingest's live
+readers keep their drivers until the cut-over switches them to the port.
+
 `deck-streak-push` is an outbound adapter: it builds APNs and web push requests and reports what
 each platform answered, and it depends on the kernel's clock alone (SPEC-343, ADR-354 D3). The
 daemon does not compose it until native push carries the one router (#640), which adds its
@@ -123,7 +134,7 @@ learns it:
 
 | context | foreign model it translates | what it publishes |
 |---|---|---|
-| `ingest` | Anki's collection schema, its sync protocol, its unicase and protobuf quirks | reviews, cards, notes, decks, the day's new-card queue |
+| `ingest` | Anki's collection schema (its 19 statements held by the schema-18 adapter of the collection's read port, `CollectionRead`), its sync protocol, its unicase and protobuf quirks | reviews, cards, notes, decks, the day's new-card queue |
 | `vault` | the second brain's file contract (paths, frontmatter, rails, temp names) | staged duty runs, reading archive writes, drill and inbox records |
 | `identity` | Telegram's `initData` and user object | the caller, and whether they are the owner |
 | `agent` | the headless Claude Code runner and its output | gated duty outputs, or a fail-closed verdict |
@@ -294,6 +305,25 @@ minutes log's queries run on the caller's connection (`sqlx`), an entry's refusa
 (`thiserror`), and its data-rights port writes its rows as JSON (`serde_json`). None of them is an
 edge to another context: the map's line for `deck-streak-habits` stays `depends on: kernel`
 (SPEC-078 R21).
+
+### The collection store's tables
+
+The collection store (SPEC-512) is a file of its own, one per user, apart from the service's
+database: its migrations live in `crates/collection/migrations/`, and `crates/collection` is the one
+writer of every table below. Its data-rights port is `crates/collection/src/data_rights.rs`; on the
+server an erase empties every table but the store's record, and on a device it removes the file.
+
+| table | owning context | created by | export and erase |
+|---|---|---|---|
+| `store_meta` | `collection` | `crates/collection/migrations/000001_collection_base.sql` (SPEC-512) | exported; anonymised: the import digest cleared, the role, writer id, slot and counters kept |
+| `study_rule` | `collection` | the same | exported and erased |
+| `erase_gate` | `collection` | the same | exempt: the switch an erase opens and closes, holding no personal data |
+| `notetypes`, `fields`, `templates` | `collection` | the same | exported and erased |
+| `notes`, `note_tags`, `note_field_history` | `collection` | the same | exported and erased |
+| `presets`, `decks`, `cards` | `collection` | the same | exported and erased |
+| `review_log`, `review_retraction` | `collection` | the same | exported and erased, through the open gate |
+| `review_client` | `collection` | the same | exported and erased, through the open gate; its own erase keeps every review |
+| `outbox`, `applied_ops`, `undo_journal`, `schedule`, `device_setting` | `collection` | the same | exported and erased |
 
 ## Overloaded words, held apart
 

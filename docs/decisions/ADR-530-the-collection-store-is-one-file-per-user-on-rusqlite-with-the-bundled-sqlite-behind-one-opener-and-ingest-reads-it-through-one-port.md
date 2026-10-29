@@ -158,6 +158,9 @@ dormant, and ingest reads exactly what it reads today.
 - **Chosen: the `web-engine` job builds the crate's library for `wasm32-unknown-unknown` with `clang-18` and
   `llvm-ar-18`, which SQLite's source needs there; the Apple workflow builds it for `aarch64-apple-ios` on the Xcode
   image.** Both with `--locked`.
+- **The internal TestFlight lane watches the crate.** Its census holds the lane's push filter to every crate the
+  Apple workflow builds, so the filter gains `crates/collection/**`: a change to the store starts that lane on dev
+  until the umbrella crate links the store, when the filter would name it anyway.
 - **Both targets on Ubuntu, as for the study day crate:** lost, because the bundled SQLite is C, and compiling it for
   iOS needs the iOS SDK's headers, which only the Xcode image carries.
 

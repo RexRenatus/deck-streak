@@ -97,7 +97,8 @@ foreign opener refuses a file whose `application_id` is the store's.
 
 R9. **CI builds the store for both clients' targets.** The `web-engine` job builds the crate's library for
 `wasm32-unknown-unknown` with the C compiler SQLite's source needs there, and the Apple workflow builds it for
-`aarch64-apple-ios` where the iOS SDK is, each with `--locked`.
+`aarch64-apple-ios` where the iOS SDK is, each with `--locked`. Since the Apple workflow then builds the crate, the
+internal TestFlight lane's push filter watches it, as its census of the crates that workflow builds requires.
 
 R10. **Privacy and the store's data-rights port.** `privacy.json` reads the store's migrations and declares the store's
 tables in six categories: its notes, its cards, its review log, its client record (a category of its own), the
@@ -143,6 +144,8 @@ A8: cargo test -p deck-streak-collection --test opener -- --exact the_store_open
 A8: cargo test -p deck-streak-ingest --test collection_read -- --exact each_adapter_refuses_the_others_file_by_application_id
 A9: cargo build --locked -p deck-streak-collection --lib --target wasm32-unknown-unknown
 A9: cargo build --locked -p deck-streak-collection --lib --target aarch64-apple-ios
+A9: python3 -m unittest discover -s scripts/tests -p test_testflight_workflows.py
+A9: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py
 A10: cargo test -p deck-streak-collection --test data_rights -- --exact the_export_writes_every_declared_table_as_json
 A10: cargo test -p deck-streak-collection --test data_rights -- --exact the_server_erase_empties_every_table_through_the_gate_and_closes_it
 A10: cargo test -p deck-streak-collection --test data_rights -- --exact the_client_record_erase_deletes_only_the_client_rows_and_keeps_every_review
@@ -180,6 +183,7 @@ driver.
 | `docs/LEXICON.md` | docs | changed: the store's words |
 | `privacy.json`, `PRIVACY.md` | privacy | changed: the store's six categories and its migrations glob |
 | `.github/workflows/ci.yml`, `.github/workflows/xcframework.yml` | CI | changed: the store's library for wasm32 and iOS |
+| `.github/workflows/testflight-internal.yml`, `scripts/tests/test_testflight_workflows.py` | CI | changed: the internal lane's push filter, and its census's expected filter, watch the store's crate |
 | this SPEC, ADR-530, the three schematics, `docs/red-first/SPEC-512.md`, `changelog.d/collection-store-512.md` | docs | new |
 
 ## 5. What this does NOT cover

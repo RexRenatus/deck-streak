@@ -1,7 +1,7 @@
 //! The store adapter of the read port (SPEC-512 A6; ADR-530 D9): a retracted review leaves every
 //! read, a review's deck is its card's current home deck, and the scope is the cards' home decks.
 
-#![allow(clippy::expect_used, clippy::print_stdout)]
+#![allow(clippy::expect_used, clippy::print_stdout, clippy::too_many_lines)]
 
 mod support;
 

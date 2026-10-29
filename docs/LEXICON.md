@@ -23,6 +23,9 @@ owner in deck-streak-identity: admin, superuser
 celebration in deck-streak-notifications: fanfare, confetti
 study_day in deck-streak-kernel, deck-streak-analytics: calendar
 leech in deck-streak-curriculum: hardcard
+review in deck-streak-collection: revlog
+preset in deck-streak-collection: deckconfig, dconf
+notetype in deck-streak-collection: model
 ```
 
 ## Glossary
@@ -54,3 +57,11 @@ leech in deck-streak-curriculum: hardcard
 | leech | curriculum | a card with eight or more lapses that is not suspended |
 | grade | engine-core | the owner's judgement of one answered card, Again or Good: the engine records it as rating 0 or 2, and no type names a third |
 | owner answer | engine-core | the token one press mints for one card and one grade (`OwnerAnswer`): the dispatcher's one door that records a grade consumes it, and refuses a request that names another card or another grade |
+| store | collection | DeckStreak's own collection, one SQLite file per user with one schema on the server and each device, stamped with the application id `DSTC` |
+| review | collection | one answer in the store's review log, made by a DeckStreak client or imported; a row never changes |
+| retraction | collection | the row that withdraws one review from the effective log, which keeps the review itself |
+| client record | collection | which client made a review (web, iOS or stock), one row beside it; no row reads unknown |
+| origin | collection | a store's writer id, 16 bytes fixed when the store is made |
+| slot | collection | a store's id slot: 0 for the server, 1 to 63 for an enrolled device |
+| erase gate | collection | the one switch under which a review, a retraction, a client record or a field history row may leave; only an erase opens it |
+| read port | collection | `CollectionRead`, what the server's contexts read of a collection, answered by the store or by ingest's schema-18 adapter |

@@ -652,12 +652,35 @@ fn named_tables(inventory: &Value) -> BTreeMap<String, Vec<&Value>> {
     named
 }
 
+/// Every table the collection store's migrations create (SPEC-512 R10): the store is a file of its
+/// own with its own data-rights port, so a category naming one of them is judged by the store's
+/// census (`crates/collection/tests/data_rights.rs`), not against the service database's ports.
+fn store_tables() -> BTreeSet<String> {
+    let dir = root().join("crates/collection/migrations");
+    let mut tables = BTreeSet::new();
+    for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
+        let text = fs::read_to_string(entry.path()).unwrap_or_default();
+        for line in text.lines() {
+            if let Some(rest) = line.trim_start().strip_prefix("CREATE TABLE ") {
+                let name: String = rest
+                    .chars()
+                    .take_while(|character| character.is_ascii_alphanumeric() || *character == '_')
+                    .collect();
+                tables.insert(name);
+            }
+        }
+    }
+    tables
+}
+
 /// Every refusal of `privacy.json` against the ports: a table a port exports or erases that no
 /// category names, or more than one does, or whose category exports it not or erases it by another
-/// mode; and a table a category names that no port exports or erases.
+/// mode; and a table a category names that no port exports or erases, unless it is one of the
+/// collection store's, which the store's own census judges.
 fn judge(inventory: &Value, declarations: &[Declaration]) -> Vec<String> {
     let modes = erase_modes(declarations);
     let named = named_tables(inventory);
+    let store = store_tables();
     let mut refused = Vec::new();
     for (table, mode) in &modes {
         match named.get(*table).map(Vec::as_slice) {
@@ -681,7 +704,7 @@ fn judge(inventory: &Value, declarations: &[Declaration]) -> Vec<String> {
         }
     }
     for table in named.keys() {
-        if !modes.contains_key(table.as_str()) {
+        if !modes.contains_key(table.as_str()) && !store.contains(table) {
             refused.push(format!(
                 "{table} is named by a category, and no port exports or erases it"
             ));

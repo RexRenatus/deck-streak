@@ -39,10 +39,7 @@ const CONSTRUCTORS: [&str; 4] = [
 /// with a statement's first word, written in capitals, or in any case and followed by more words
 /// (so `"delete"`, a word of prose, is not a statement, and `"select id FROM decks"` is).
 fn is_sql(rest: &str) -> bool {
-    let head: String = rest
-        .chars()
-        .take_while(|character| character.is_ascii_alphabetic())
-        .collect();
+    let head: String = rest.chars().take_while(char::is_ascii_alphabetic).collect();
     let continues = rest[head.len()..].starts_with(' ');
     SQL_WORDS
         .iter()

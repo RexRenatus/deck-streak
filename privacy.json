@@ -440,9 +440,75 @@
       "retention": {"until": "account-deletion"},
       "export": true,
       "erase": "delete"
+    },
+    {
+      "id": "collection-notes",
+      "data": "in the collection store, the owner's notetypes with their fields, templates and CSS, each note's fields as written (MathJax source included), its tags, and every earlier version of a field with who wrote it and when",
+      "source": "learner-input",
+      "stores": ["notetypes.*", "fields.*", "templates.*", "notes.*", "note_tags.*", "note_field_history.*"],
+      "purpose": "keeping the owner's notes, rendering their cards, and showing a field's history",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "collection-cards",
+      "data": "in the collection store, the owner's decks and their presets, each card's note, ordinal, deck, new-card position, suspension, burial day and flag, and the study rule's rollover hour and offset",
+      "source": "learner-input",
+      "stores": ["presets.*", "decks.*", "cards.*", "study_rule.*"],
+      "purpose": "organising the owner's cards into decks and building each day's study",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "collection-review-log",
+      "data": "in the collection store, each answer the owner gave: the card, note, deck and preset, the kind, the button, how long it took, the study day, the due date shown and committed, the scheduler version that committed it, its key and order, and each retraction of an answer the owner undid",
+      "source": "derived",
+      "stores": ["review_log.*", "review_retraction.*"],
+      "purpose": "scheduling the owner's cards from their history, and counting the study the game rewards",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "collection-client-record",
+      "data": "in the collection store, which client made each answer (the web client, the iPhone and iPad client, or stock Anki), one row beside the answer; an answer with no row reads unknown",
+      "source": "derived",
+      "stores": ["review_client.*"],
+      "purpose": "telling apart the answers each client made, so a client's defect can be traced; its own erase keeps every answer",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
+    },
+    {
+      "id": "collection-store-record",
+      "data": "the collection store's own record: whether it is the server's or a device's store, its writer id and slot, its id floor and operation counter, and the digest of the collection it was imported from",
+      "source": "derived",
+      "stores": ["store_meta.*"],
+      "purpose": "opening each store in its own role and never making an id twice; an erase clears the import digest and keeps the rest",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "anonymise"
+    },
+    {
+      "id": "collection-device-state",
+      "data": "in the collection store, a device's own working state: the operations it has not yet sent and their outcome, the operations it applied, its undo journal, each card's schedule as the scheduler computed it there, and its settings such as the current deck",
+      "source": "derived",
+      "stores": ["outbox.*", "applied_ops.*", "undo_journal.*", "schedule.*", "device_setting.*"],
+      "purpose": "sending the device's changes, undoing the owner's last action, and showing the day's queue on the device",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
     }
   ],
-  "sql": ["migrations/*.sql"],
+  "sql": ["migrations/*.sql", "crates/collection/migrations/*.sql"],
   "code": ["crates/*/src/**/*.rs", "web/app/src/**/*.ts", "web/app/src/**/*.svelte"],
   "export": {"code": ["crates/*/src/data_rights.rs", "crates/privacy/src/export.rs"], "format": "json"},
   "erase": {"code": ["crates/*/src/data_rights.rs", "crates/privacy/src/erase.rs"]},

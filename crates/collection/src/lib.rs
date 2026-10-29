@@ -1,4 +1,4 @@
-//! DeckStreak's collection store (SPEC-512, ADR-530): one `SQLite` file per user, the same schema
+//! The collection store (SPEC-512, ADR-530): one `SQLite` file per user, the same schema
 //! on the server and on each device, opened only by [`Store::open`], [`Store::open_reader`] and
 //! [`ForeignFile::open_read_only`].
 //!
