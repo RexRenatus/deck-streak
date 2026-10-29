@@ -99,7 +99,8 @@ final class ReviewModel {
             phase = .marking
             await run {
                 flagged = try await session.flag() == session.red
-                undo.read(try await session.undoOffer().dialog)
+                let available = try await session.undoOffer().dialog
+                undo.read(available)
                 phase = side
             }
         default:
