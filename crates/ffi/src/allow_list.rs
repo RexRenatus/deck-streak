@@ -28,7 +28,9 @@ pub struct Call {
 /// answered only through the adapter's answer entry, `Engine::answer`, an owner's press
 /// (SPEC-365 R6), and an undo is an exempt write, which `run` refuses (SPEC-371 R15). The review's
 /// bury and flag join them (SPEC-358 R1): bury the shown card as the user's bury, and set its flag.
-pub const ALLOW_LIST: [Call; 10] = [
+/// The normal sync joins them (SPEC-503 R1), its endpoint and its media guarded by the core, as the
+/// web's is.
+pub const ALLOW_LIST: [Call; 11] = [
     Call {
         service: 3,
         method: 0,
@@ -68,6 +70,11 @@ pub const ALLOW_LIST: [Call; 10] = [
         service: 1,
         method: 3,
         name: "BackendSyncService.SyncLogin",
+    },
+    Call {
+        service: 1,
+        method: 5,
+        name: "BackendSyncService.SyncCollection",
     },
     Call {
         service: 13,

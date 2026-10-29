@@ -56,12 +56,15 @@ struct VoiceLanguage: Equatable, Sendable {
 /// (SPEC-347 R7, R8). The actor serialises the calls; the engine itself is `Sendable` because the
 /// adapter's Rust side is `Send + Sync`. The voice choices live here too, beside the collection
 /// and never inside it, because the engine's types stop at this file (SPEC-348 R6, R14).
-actor EngineSession {
+actor EngineSession: SyncEngine {
     /// The engine's red flag, read once from the adapter, so the app holds no copy of the
     /// core's rule (SPEC-358 R3, ADR-369 O4).
     nonisolated let red = redFlag()
     private var engine: Engine?
     private var choices = VoiceChoices.open(path: "")
+    /// The collection's directory, where the full-sync choice keeps its server copy and its backup
+    /// beside the collection (SPEC-503 R4).
+    private var folder = ""
 
     /// The adapter's voice qualities, in the order the app numbers them: 0 default, 1 enhanced,
     /// 2 premium.
@@ -78,6 +81,7 @@ actor EngineSession {
         let path = try collectionDirectory(
             fallback: fallback.path(percentEncoded: false), arguments: arguments)
         let directory = URL(filePath: path, directoryHint: .isDirectory)
+        folder = directory.path(percentEncoded: false)
         let media = directory.appending(path: "collection.media", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: media, withIntermediateDirectories: true)
         _ = try call(
@@ -192,6 +196,65 @@ actor EngineSession {
             call(
                 EngineCall.syncLogin,
                 Requests.syncLogin(username: user, password: password, endpoint: endpoint)))
+    }
+
+    /// A normal sync with the host key the sync section read from the Keychain item, through the
+    /// adapter's sync facade, which reads the service's statement first and sends no media
+    /// (SPEC-503 R2, R3, R5). It answers what the server requires next, as the engine numbers it.
+    func sync(hostKey: String, endpoint: String) throws -> UInt32 {
+        let engine = try started()
+        return try refused { try engine.sync(hostKey: hostKey, endpoint: endpoint) }
+    }
+
+    /// What this device has not synced, read offline by the adapter (SPEC-503 R7).
+    func unsynced() throws -> Unsynced {
+        let engine = try started()
+        let read = try refused { try engine.unsynced() }
+        return Unsynced(reviews: read.reviews, changed: read.changed, schema: read.schema)
+    }
+
+    /// The full-sync choice's counts from what the normal sync required; the adapter keeps the
+    /// server copy in the collection's directory (SPEC-503 R4).
+    func countChoice(hostKey: String, endpoint: String, required: UInt32) throws -> FullSyncStep {
+        let engine = try started()
+        let folder = folder
+        return Self.step(
+            try refused {
+                try engine.fullSyncCount(
+                    hostKey: hostKey, endpoint: endpoint, required: required, folder: folder)
+            })
+    }
+
+    /// The owner's download, the adapter's direction 1, with no snapshot answer: the adapter backs
+    /// up this device's collection into its directory before the write (SPEC-503 R4).
+    func download(hostKey: String, endpoint: String) throws -> FullSyncStep {
+        let engine = try started()
+        let folder = folder
+        return Self.step(
+            try refused {
+                try engine.fullSyncConfirm(
+                    direction: 1, hostKey: hostKey, endpoint: endpoint, snapshotFound: false,
+                    folder: folder)
+            })
+    }
+
+    /// The owner's cancel: the adapter drops the choice's stage and writes nothing.
+    func cancelChoice() {
+        engine?.fullSyncCancel()
+    }
+
+    /// A choice step in the app's own terms, field for field.
+    private static func step(_ step: ChoiceStep) -> FullSyncStep {
+        FullSyncStep(
+            written: step.written, said: step.said,
+            counts: step.counts.map {
+                FullSyncCounts(upload: $0.upload.map(loss), download: $0.download.map(loss))
+            })
+    }
+
+    /// One direction's losses in the app's own terms.
+    private static func loss(_ loss: ChoiceLoss) -> Loss {
+        Loss(reviews: loss.reviews, cards: loss.cards, notes: loss.notes)
     }
 
     /// The engine, started from an empty init message by the first call that needs it.

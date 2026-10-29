@@ -65,6 +65,7 @@ pub mod health;
 pub mod late;
 pub mod login_guard;
 pub mod media;
+pub mod native_sync;
 pub mod one_way;
 pub mod replay;
 pub mod retention;
