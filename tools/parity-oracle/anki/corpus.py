@@ -225,14 +225,16 @@ def cloze_type() -> dict:
 
 
 def occlusion_type() -> dict:
+    """An image occlusion note type: a cloze kind whose one template names its mask field in a
+    cloze replacement on both sides, so each mask number is a card."""
     return notetype(
         "ds.masked-image",
         ["Masks", "Picture", "Caption"],
         [
             (
                 "Mask",
-                "<div class=ds-mask>{{image-occlusion:Masks}}</div>{{Picture}}",
-                "<div class=ds-mask>{{image-occlusion:Masks}}</div>{{Picture}}<p>{{Caption}}</p>",
+                "<div class=ds-mask>{{cloze:Masks}}</div>{{Picture}}",
+                "<div class=ds-mask>{{cloze:Masks}}</div>{{Picture}}<p>{{Caption}}</p>",
             )
         ],
         kind="occlusion",

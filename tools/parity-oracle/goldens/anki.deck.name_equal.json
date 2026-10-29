@@ -1,0 +1,175 @@
+{
+  "cases": [
+    {
+      "class": "case-forms",
+      "input": {
+        "a": "Ds Harbor Café",
+        "b": "DS HARBOR CAFÉ"
+      },
+      "output": {
+        "decks": 2
+      }
+    },
+    {
+      "class": "case-forms",
+      "input": {
+        "a": "Ds Amber",
+        "b": "ds amber"
+      },
+      "output": {
+        "decks": 2
+      }
+    },
+    {
+      "class": "case-forms",
+      "input": {
+        "a": "Basil Deck",
+        "b": "BASIL DECK"
+      },
+      "output": {
+        "decks": 2
+      }
+    },
+    {
+      "class": "case-forms",
+      "input": {
+        "a": "Ds::Cobalt",
+        "b": "DS::COBALT"
+      },
+      "output": {
+        "decks": 3
+      }
+    },
+    {
+      "class": "case-forms",
+      "input": {
+        "a": "Dune Ember",
+        "b": "dUNE eMBER"
+      },
+      "output": {
+        "decks": 2
+      }
+    },
+    {
+      "class": "case-forms",
+      "input": {
+        "a": "Ärger Fjord",
+        "b": "ÄRGER FJORD"
+      },
+      "output": {
+        "decks": 2
+      }
+    },
+    {
+      "class": "case-forms",
+      "input": {
+        "a": "Ds Ωmega",
+        "b": "DS ΩMEGA"
+      },
+      "output": {
+        "decks": 2
+      }
+    },
+    {
+      "class": "case-forms",
+      "input": {
+        "a": "garnet",
+        "b": "Garnet"
+      },
+      "output": {
+        "decks": 2
+      }
+    },
+    {
+      "class": "unicode-forms",
+      "input": {
+        "a": "Ds Garnet Café",
+        "b": "Ds Garnet Café"
+      },
+      "output": {
+        "decks": 2
+      }
+    },
+    {
+      "class": "unicode-forms",
+      "input": {
+        "a": "Ds Crème",
+        "b": "Ds Crème"
+      },
+      "output": {
+        "decks": 2
+      }
+    },
+    {
+      "class": "unicode-forms",
+      "input": {
+        "a": "Ds Ångström",
+        "b": "Ds Ångström"
+      },
+      "output": {
+        "decks": 2
+      }
+    },
+    {
+      "class": "unicode-forms",
+      "input": {
+        "a": "Ds Résumé::Naïve",
+        "b": "Ds Résumé::Naïve"
+      },
+      "output": {
+        "decks": 3
+      }
+    },
+    {
+      "class": "unicode-forms",
+      "input": {
+        "a": "Ds Über",
+        "b": "Ds Über"
+      },
+      "output": {
+        "decks": 2
+      }
+    },
+    {
+      "class": "unicode-forms",
+      "input": {
+        "a": "Ds Piñata",
+        "b": "Ds Piñata"
+      },
+      "output": {
+        "decks": 2
+      }
+    },
+    {
+      "class": "unicode-forms",
+      "input": {
+        "a": "Ds Ḱite",
+        "b": "Ds Ḱite"
+      },
+      "output": {
+        "decks": 2
+      }
+    },
+    {
+      "class": "unicode-forms",
+      "input": {
+        "a": "Ds άλφα",
+        "b": "Ds άλφα"
+      },
+      "output": {
+        "decks": 2
+      }
+    }
+  ],
+  "function": "anki.deck.name_equal",
+  "generator": "tools/parity-oracle/anki/generate.py",
+  "generator_sha256": "8bd480ee4afb7a31cc6096a397940da1c3661ab11df1cc95214ca464c49e6737",
+  "inputs": "synthetic",
+  "kind": "engine",
+  "note": "adds a deck of each name, then answers whether the engine kept one deck or two (GL-2); cases drawn under CPython 3.12.3.",
+  "registry": "tools/parity-oracle/anki/registry/spec_498.py",
+  "registry_sha256": "bdd6ffaf1205a07705397b3793244fd7a4852bbd9af35882003df5e2ccf706f8",
+  "schema": "phx.parity-golden.v1",
+  "seed": 498,
+  "source_commit": "65e053b829825f534803b2b772c507a73ba936a3"
+}

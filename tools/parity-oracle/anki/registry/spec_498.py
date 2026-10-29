@@ -25,7 +25,7 @@ _spec.loader.exec_module(corpus)
 #: The corpus this module draws from, pinned: a corpus edit must edit this module too, which
 #: stales every golden it registered.
 CORPUS = corpus
-CORPUS_SHA256 = "e6f32a23885161f4be7662792890e7607ddd1f7c29adee6dea64d40fbd748286"
+CORPUS_SHA256 = "8b59468578ce33bf436e87a852c4a01300833999b6e435a976e3f293bcc1fdd0"
 SEED = corpus.SEED
 
 word, words, timing, collection = corpus.word, corpus.words, corpus.timing, corpus.collection

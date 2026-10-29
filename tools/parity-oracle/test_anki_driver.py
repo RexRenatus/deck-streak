@@ -290,7 +290,11 @@ class Provenance(unittest.TestCase):
                 str(Path(scratch) / "out"),
             ]
             quiet = contextlib.redirect_stderr(io.StringIO())
-            with quiet as err, mock.patch.object(generate, "writable_refusals", return_value=[]):
+            with (
+                quiet as err,
+                mock.patch.object(generate, "writable_refusals", return_value=[]),
+                mock.patch.object(generate, "HARNESS_SOURCE_SHA256", None),
+            ):
                 self.assertEqual(generate.main(common, pin="0" * 64), 2)
                 self.assertEqual(generate.main(common, pin=None), 2)
             refusals = err.getvalue().splitlines()
