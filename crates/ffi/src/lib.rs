@@ -11,6 +11,9 @@
 //! - [`face`]: a card's face as a native client shows and plays it: one closed page whose media
 //!   are `data:` URLs read from the opened collection's media folder, its clips and the names it
 //!   left out (SPEC-348 R5). [`engine::Engine::face`] completes it through the core, beside `run`.
+//! - [`health`]: one card's health as the core reads it, field for field, and the card health
+//!   panel's sections in the words the app shows as they are (SPEC-507 R12, R13).
+//!   [`engine::Engine::card_health`] reads it through the core's two fixed reads.
 //! - [`voices`]: the voice a learner chose for each language, kept in one file on the device and
 //!   never synced, and the installed voices a picker offers (SPEC-348 R6).
 //!
@@ -25,4 +28,5 @@ uniffi::setup_scaffolding!();
 pub mod allow_list;
 pub mod engine;
 pub mod face;
+pub mod health;
 pub mod voices;

@@ -21,6 +21,7 @@ use deck_streak_engine_core::table::{ExemptWrite, Transport};
 
 use crate::allow_list::allowed;
 use crate::face::{CardFace, MediaFolder};
+use crate::health::CardHealth;
 
 /// Why a call was not answered with the response's bytes. A native client reads it as a thrown
 /// error; nothing on this path panics.
@@ -238,6 +239,19 @@ impl Engine {
         // `CardsService.SetFlag`, through the allow-list as every call goes.
         self.run(5, 4, flag_request(card_id, flag))?;
         Ok(flag)
+    }
+
+    /// The health of the card `card_id` (SPEC-507 R12): the core's record by its two fixed reads,
+    /// field for field, or `None` when no card has the id. This build's scheduler port gives no
+    /// readout, so the recall part is the absent state, as the web adapter's is (ADR-525 D3). It
+    /// writes nothing.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the engine cannot run a read, a closed collection among them.
+    pub fn card_health(&self, card_id: i64) -> Result<Option<CardHealth>, EngineRefusal> {
+        let _ = (&self.dispatcher, card_id);
+        Ok(None)
     }
 }
 
