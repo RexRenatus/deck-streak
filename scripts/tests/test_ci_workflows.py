@@ -41,14 +41,25 @@ THIS_REPOSITORY = "RexRenatus/deck-streak"
 # admitted to (SPEC-336, ADR-345 D4): the XCFramework job needs Apple's SDKs, which only a macOS
 # runner holds. The admission is by the workflow's file name, so the same runner under any other
 # name is refused, and this workflow on any other runner is refused.
-ADMITTED_RUNNERS = {"xcframework.yml": "macos-26"}
+ADMITTED_RUNNERS = {"xcframework.yml": "xcode-27"}
 # The jobs admitted to that runner by file and job (SPEC-352 R15, ADR-363): each TestFlight lane's
 # `app` job archives, signs and uploads the app, which only a macOS runner can. The lane's plan
 # job, a job of the same name in any other file, and the job on any other runner are refused.
 ADMITTED_JOB_RUNNERS = {
-    ("testflight-internal.yml", "app"): "macos-26",
-    ("testflight-release.yml", "app"): "macos-26",
+    ("testflight-internal.yml", "app"): "xcode-27",
+    ("testflight-release.yml", "app"): "xcode-27",
 }
+# The owner's decision of 2026-10-28: the Apple push and dispatch jobs run on the self-hosted Apple runner.
+# Each job named here by file and job may hold this one `runs-on` expression beside its admitted
+# runner: a push or a dispatch runs it on the self-hosted labels, and every other event, a pull
+# request among them, on the admitted image. Any other job, file or expression is refused.
+SELF_HOSTED_ON_PUSH = (
+    "${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && "
+    'fromJSON(\'["self-hosted","macOS","ARM64","ds-mini"]\') || \'xcode-27\' }}'
+)
+SELF_HOSTED_ON_PUSH_JOBS = frozenset(
+    ("xcframework.yml", job) for job in ("xcframework", "harness-wire", "card-isolation", "harness")
+)
 # A pull request into main, as the github context presents it; each test changes what it needs.
 INTO_MAIN = {
     "github.event_name": "pull_request",
@@ -97,14 +108,27 @@ CACHE_BY_THEMSELVES = (
 def admitted_runner(name, job=None):
     """The pattern every runner of the workflow `name` must match: a pinned Ubuntu image (SPEC-002
     A9), or, for the one workflow ADMITTED_RUNNERS names, its one runner exactly (SPEC-336 R9), or,
-    for a job ADMITTED_JOB_RUNNERS names by file and job, its one runner exactly (SPEC-352 R15).
+    for a job ADMITTED_JOB_RUNNERS names by file and job, its one runner exactly (SPEC-352 R15), or,
+    for a job SELF_HOSTED_ON_PUSH_JOBS names by file and job, its file's runner or the expression
+    SELF_HOSTED_ON_PUSH, each exactly.
     `job` is the job whose own `runs-on` the runner is, or None for a value placed anywhere else,
     which only the file's own admission or the Ubuntu pattern can admit."""
+    if (name, job) in SELF_HOSTED_ON_PUSH_JOBS:
+        return f"^(?:{re.escape(ADMITTED_RUNNERS[name])}|{re.escape(SELF_HOSTED_ON_PUSH)})$"
     if name in ADMITTED_RUNNERS:
         return f"^{re.escape(ADMITTED_RUNNERS[name])}$"
     if (name, job) in ADMITTED_JOB_RUNNERS:
         return f"^{re.escape(ADMITTED_JOB_RUNNERS[name, job])}$"
     return r"^ubuntu-\d\d\.\d\d$"
+
+
+def apple_job_runners(job):
+    """The `runs-on` values the xcframework.yml job `job` may hold: its admitted runner, and the
+    expression of SELF_HOSTED_ON_PUSH besides for a job SELF_HOSTED_ON_PUSH_JOBS names."""
+    runners = [ADMITTED_RUNNERS["xcframework.yml"]]
+    if ("xcframework.yml", job) in SELF_HOSTED_ON_PUSH_JOBS:
+        runners.append(SELF_HOSTED_ON_PUSH)
+    return runners
 
 
 def workflow_file_text(path):
@@ -166,7 +190,7 @@ class WorkflowsAreHardened(unittest.TestCase):
         # its runner is refused under any other name (PLANTED_KEYS plants it in the control too).
         for name, admitted in examined("admitted runners", list(ADMITTED_RUNNERS.items())):
             self.assertRegex(admitted, admitted_runner(name))
-            for runner in ("macos-15", "ubuntu-24.04", [admitted], "self-hosted"):
+            for runner in ("macos-15", "macos-26", "ubuntu-24.04", [admitted], "self-hosted"):
                 self.assertNotRegex(str(runner), admitted_runner(name))
             for other in ("planted.yml", "ci.yml", name.replace(".yml", ".yaml"), f"x{name}"):
                 self.assertNotRegex(admitted, admitted_runner(other))
@@ -915,7 +939,7 @@ class TheAppleBuildRunsFromOneBody(unittest.TestCase):
         self.assertEqual(sorted(callee["on"]), ["workflow_call", "workflow_dispatch"])
         self.assertNotIn("concurrency", callee)
         for job_id, job in examined("callee jobs", callee["jobs"].items()):
-            self.assertEqual(job["runs-on"], ADMITTED_RUNNERS["xcframework.yml"], job_id)
+            self.assertIn(job["runs-on"], apple_job_runners(job_id), job_id)
         text = workflow_file_text(WORKFLOWS / "xcframework.yml")
         self.assertEqual(pull_request_reads(text), [])
         plant = text.replace(
@@ -3367,8 +3391,8 @@ PLANTED_KEYS = (
     (
         HARDENING_RUNNER,
         "    runs-on: ubuntu-24.04",
-        "    runs-on: macos-26",
-        r"planted\.yml runs on macos-26$",
+        "    runs-on: xcode-27",
+        r"planted\.yml runs on xcode-27$",
     ),
     (
         HARDENING_RUNNER,
@@ -8844,7 +8868,7 @@ def app_steps_problems(workflow):
     steps = job.get("steps") or []
     names = [step.get("name") for step in steps]
     problems = []
-    if job.get("runs-on") != ADMITTED_RUNNERS["xcframework.yml"]:
+    if job.get("runs-on") not in apple_job_runners("harness"):
         problems.append(f"harness: it runs on {job.get('runs-on')!r}, not the admitted runner")
     found = {}
     for name in (
@@ -9690,7 +9714,7 @@ def card_probe_problems(jobs):
     job = jobs.get("card-isolation")
     if job is None:
         return problems + ["card-isolation: no such job"]
-    if job.get("runs-on") != ADMITTED_RUNNERS["xcframework.yml"]:
+    if job.get("runs-on") not in apple_job_runners("card-isolation"):
         problems.append(
             f"card-isolation: it runs on {job.get('runs-on')!r}, not the admitted runner"
         )
