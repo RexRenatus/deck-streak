@@ -63,7 +63,7 @@ GENERATOR = "tools/parity-oracle/anki/generate.py"
 #: Where a registry module is published, whichever directory the driver loaded it from.
 PUBLISHED_REGISTRY = "tools/parity-oracle/anki/registry"
 #: The engine commit DeckStreak's root manifest pins: the engine every golden records.
-ENGINE_COMMIT = "65e053b829825f534803b2b772c507a73ba936a3"
+ENGINE_COMMIT = "a078820fd4fec3068ed7863344cd50effddabc6b"
 #: The harness's package name. Its manifest has an empty `[workspace]` table, so no lock but its
 #: own ever names it.
 HARNESS_PACKAGE = "parity-oracle-anki-harness"
@@ -73,7 +73,7 @@ HARNESS_PATHS = ("tools/parity-oracle/anki/harness", "tools/render-oracle")
 #: goldens, so every golden's `generator_sha256` covers the harness. Unpinned, the driver
 #: refuses to start (exit 2).
 HARNESS_SOURCE_SHA256: str | None = (
-    "a8d63bd2353dfc5e85c55a52db8342c214a6d83cf681297d8be4cb32d36a1dd9"
+    "80bc6bf572faef9e5a64211a1ab526e4802ee84fc8863d9b61328786a43edbb2"
 )
 PROTOCOL = 1
 MODULE_NAME = re.compile(r"spec_\d{3}\.py")
@@ -408,7 +408,7 @@ class Harness:
                 stdout=subprocess.PIPE,
                 text=True,
                 encoding="utf-8",
-                env={"PATH": os.environ.get("PATH", ""), "LC_ALL": "C.UTF-8"},
+                env={"PATH": os.environ.get("PATH", ""), "LC_ALL": "C.UTF-8", "TZ": "UTC"},
             )
         except OSError as error:
             raise RunFailed(f"the harness cannot start: {error.strerror}") from error

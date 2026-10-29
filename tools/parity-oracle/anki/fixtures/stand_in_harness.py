@@ -16,7 +16,7 @@ import hashlib
 import json
 import sys
 
-PINNED = "65e053b829825f534803b2b772c507a73ba936a3"
+PINNED = "a078820fd4fec3068ed7863344cd50effddabc6b"
 
 
 def main() -> int:

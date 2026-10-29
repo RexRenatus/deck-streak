@@ -683,7 +683,7 @@ PLANTED_ENGINE = {
     "registry": "tools/parity-oracle/anki/registry/spec_498.py",
     "schema": SCHEMA,
     "seed": 498,
-    "source_commit": "65e053b829825f534803b2b772c507a73ba936a3",
+    "source_commit": "a078820fd4fec3068ed7863344cd50effddabc6b",
 }
 
 

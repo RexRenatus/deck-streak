@@ -17,7 +17,7 @@ Rust tests through `tools/parity-oracle/golden.rs` (ADR-029). What was read at `
 
 - **The oracle knows one old system.** `generate.py` imports a Python package by name (`resolve`, `:155-172`). The
   engine DeckStreak ingests through is Rust, pinned in the root manifest (`Cargo.toml:173-175`, commit
-  `65e053b829825f534803b2b772c507a73ba936a3`), and no file under `tools/parity-oracle` drives it: `ls
+  `a078820fd4fec3068ed7863344cd50effddabc6b`), and no file under `tools/parity-oracle` drives it: `ls
   tools/parity-oracle/goldens | grep -c anki` prints 0.
 - **A replacement of the engine's import, export, rendering, media, search and history needs the engine's own
   outputs** over inputs nobody owns, so each port is compared with the engine rather than re-derived.
@@ -67,7 +67,7 @@ The second delivery of this SPEC, "the engine writes every parity golden once, s
   as registered, and no other engine golden.
 - **R13. Provenance, synthetic and seeded** (`dm.oracle-provenance`, `dm.oracle-synthetic`). Each engine golden is strict
   `phx.parity-golden.v1` as the driver writes it; its `source_commit` is the commit the root manifest's engine patch
-  pins (`65e053b8…`, the upstream engine plus the fork's patches, `Cargo.toml:165-176`); its `generator_sha256` and
+  pins (`a078820f…`, the upstream engine plus the fork's patches, `Cargo.toml:165-176`); its `generator_sha256` and
   `registry_sha256` are the committed driver's and registry module's; its inputs are `synthetic` and its seed is the
   corpus's integer seed.
 - **R14. Each engine golden read by a Rust test** (`dm.oracle-consumed`). `crates/ingest/tests/engine_goldens.rs` reads
@@ -86,7 +86,21 @@ The second delivery of this SPEC, "the engine writes every parity golden once, s
   and git checkouts, read-only, with one writable output folder. Its private record shows the planted outbound
   connection refused inside and accepted outside, a planted canary outside the mounts unreadable inside and read
   outside, the mounts and their modes, the driver's `examined` line, the digest of every file written, and the dirty
-  side's read list. Runs after this one follow a separate later rule; this SPEC binds the first.
+  side's read list. Runs after this one follow R19.
+
+The third delivery of this SPEC, "each engine golden is a function of its input", adds:
+
+- **R18. Each golden is a function of its input.** An engine golden's answers depend on the case's input, the pinned
+  harness, the driver, the registry and the engine pin, and on nothing of the host that runs them: (a) the harness
+  holds the process's real-time clock at the case's own recorded instant (`collection.now`, else `timing.now`, else
+  `now`), moving 1 microsecond a read; (b) it runs under `TZ=UTC`; (c) a GUID the package shares with the target
+  carries an explicit `mod` on both sides, so an import's updated or duplicate count is read from the input; (d) the
+  per-collection phase: the k-th engine collection a call opens, counted from 0, starts k held seconds after the
+  call's instant, so two collections of one call never share the ids the engine takes from its clock.
+- **R19. A re-run reads before it writes.** Goldens are written only after non-writing passes read equal at the pin:
+  two passes of the pinned harness, one of them under a planted host instant, byte-equal file for file; and a semantic
+  gate, fixed before the run, reads the previous pin's pass against the committed goldens and the new pin's pass
+  against the previous pin's. Any reading off the gate's rule writes nothing.
 
 ## 2a. The harness's answers
 
@@ -137,6 +151,8 @@ Every row is named by its corpus index, never by an id the engine assigns.
 | A11 | R15: no engine golden holds a date, an id or clock of the run, or a stock line; planted ones are caught | no engine golden or census is committed | ADR-516 D5 |
 | A12 | R16: the committed snapshot is the fresh-collection golden's schema under one pin line equal to its `user_version` | the writer, the golden and the snapshot are absent | ADR-516 D1 |
 | A13 | R17: the run record shows the planted connection refused inside and accepted outside, the canary, the read-only mounts, the writes and the read list (read by the reviewer) | none: the run's private record | ADR-516 D4 |
+| A14 | R18: every drawn import case whose package shares a GUID with the target gives that note a `mod` on both sides (examined 72); the driver starts the harness with `TZ=UTC` beside `PATH` and `LC_ALL`; no engine golden holds a number of the run's clock its input did not give | 40 of 72 import cases share a GUID with no mod on both sides; the harness's environment holds `LC_ALL` and `PATH` only | ADR-516 D7 |
+| A15 | R19: the run record shows the two non-writing passes byte-equal, one under a planted host instant, and the semantic gate's reading before the one writing pass (read by the reviewer) | none: the run's private record | ADR-516 D7 |
 
 ```acceptance
 A1: python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_driver.py' -k test_every_golden_is_strict_synthetic_and_seeded
@@ -163,6 +179,9 @@ A11: python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k
 A11: python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k test_no_engine_golden_holds_a_stock_line
 A12: python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k test_the_schema_snapshot_carries_its_pin_line
 A12: cargo test -p deck-streak-ingest --test engine_goldens -- --exact the_schema_snapshot_is_its_golden_under_one_pin_line
+A14: python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_registry.py' -k test_a_note_the_package_shares_with_the_target_carries_a_mod_on_both_sides
+A14: python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_driver.py' -k test_the_driver_starts_the_harness_in_utc
+A14: python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k test_no_engine_golden_holds_a_date_an_id_or_a_clock
 ```
 
 ## 4. File manifest
@@ -198,6 +217,16 @@ A12: cargo test -p deck-streak-ingest --test engine_goldens -- --exact the_schem
 | `tools/parity-oracle/anki/generate.py` | oracle | changed (second delivery): `HARNESS_SOURCE_SHA256` pinned |
 | `tools/parity-oracle/test_anki_driver.py` | oracle tests | changed (second delivery): the unpinned refusal is held with the pin unset |
 | `changelog.d/engine-writes-parity-goldens-498.md` | changelog | new (second delivery): the fragment |
+| `tools/parity-oracle/anki/generate.py` | oracle | changed (third delivery): the harness starts under `TZ=UTC`; `ENGINE_COMMIT` moves to `a078820f…`; `HARNESS_SOURCE_SHA256` pins the harness with the held clock |
+| `tools/parity-oracle/anki/registry/spec_498.py` | oracle | changed (third delivery): `explicit_mods`, a GUID the package shares with the target carries a `mod` on both sides |
+| `tools/parity-oracle/anki/fixtures/stand_in_harness.py` | oracle tests | changed (third delivery): the stand-in's commit follows the engine pin |
+| `tools/parity-oracle/anki/RUNBOOK.md` | oracle | changed (third delivery): the engine pin |
+| `tools/parity-oracle/test_anki_registry.py` | oracle tests | changed (third delivery): A14, the shared GUID's `mod` on both sides |
+| `tools/parity-oracle/test_anki_driver.py` | oracle tests | changed (third delivery): A14, the harness starts under `TZ=UTC` |
+| `tools/parity-oracle/test_goldens.py` | oracle tests | changed (third delivery): the planted engine golden's commit follows the engine pin |
+| `docs/specs/SPEC-498-the-parity-oracle-learns-a-second-old-system-one-driver-one-corpus-one-registry-run-outside-the-tree.md` | docs | changed (third delivery): R18, R19, A14 and A15 |
+| `docs/decisions/ADR-516-the-second-oracle-is-one-driver-over-a-pinned-harness-kept-outside-the-tree.md` | docs | changed (third delivery): D7 |
+| `docs/red-first/SPEC-498.md` | docs | changed (third delivery): A14's red and green |
 
 ## 5. What this does NOT cover
 

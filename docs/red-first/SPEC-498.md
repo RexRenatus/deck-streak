@@ -149,3 +149,21 @@ the 33 tests named for its golden, `every_engine_golden_is_read_here` and
 
 Green waits for the one sandboxed run: the pin commit, the export, the run, then the goldens, the census and the
 snapshot in one commit.
+
+## The third delivery: each golden is a function of its input
+
+Red at 49595199 with only the two new tests added, the driver, the registry and their texts unchanged. Each test ran
+alone in DeckStreak's own form from the checkout root:
+
+- `python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_registry.py' -k
+  test_a_note_the_package_shares_with_the_target_carries_a_mod_on_both_sides` failed: it printed `examined 72 import
+  case(s)` and read `40 import case(s) share a GUID without a mod on both sides`, cases 24 to 31 and 40 to 71.
+- `python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_driver.py' -k
+  test_the_driver_starts_the_harness_in_utc` failed: `the harness env keys are ['LC_ALL', 'PATH']`, after `examined
+  2 harness environment key(s)`.
+
+Green after the fix, the same two commands: the first printed `examined 72 import case(s)` and read OK, the second
+`examined 3 harness environment key(s)` and OK. The registry's change moves the input of exactly those 40 import
+cases; every other drawn input, 11,777 of the 11,817 cases of 33 functions, equals the committed goldens' input.
+`test_engine_golden_provenance` reads the committed goldens, which still record the old pin, driver and registry; it
+turns green with the run that writes them under R19.

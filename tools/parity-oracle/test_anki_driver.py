@@ -245,6 +245,25 @@ class Run(unittest.TestCase):
                 with self.assertRaisesRegex(generate.RunFailed, reason):
                     run_small(scratch, *options)
 
+    def test_the_driver_starts_the_harness_in_utc(self):
+        """A14 (R18 (b)): the driver starts the harness with TZ=UTC beside PATH and LC_ALL, so the
+        host's zone never reaches a golden. Popen is patched, so nothing is started."""
+        seen = {}
+
+        class Started(Exception):
+            pass
+
+        def popen(argv, **kwargs):
+            seen.update(kwargs.get("env") or {})
+            raise Started
+
+        with mock.patch.object(generate.subprocess, "Popen", popen):
+            with self.assertRaises(Started):
+                generate.Harness(["planted-harness"], Path("planted-work"))
+        keys = examined("harness environment key(s)", sorted(seen))
+        self.assertEqual(keys, ["LC_ALL", "PATH", "TZ"], f"the harness env keys are {keys}")
+        self.assertEqual(seen["TZ"], "UTC")
+
 
 class Provenance(unittest.TestCase):
     def test_golden_provenance(self):
