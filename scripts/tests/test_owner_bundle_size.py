@@ -72,17 +72,19 @@ def sized(root, target):
     sizes = [target // 4 - 2_000] * 4
     # Room for the last file to grow by every other file's overhead, which is under 1 KiB each.
     pools = [os.urandom(target // 4 + 64_000) for _ in NAMES]
+    seen = set()
     for _ in range(16):
         paths = planted(root, sizes, pools)
         total = sum(gzip_size(path) for path in paths)
         if total == target:
             return paths, total
         # Random bytes compress to themselves plus a small overhead, so the last file's raw size
-        # moves its compressed size by about as much; a stored block's header can skip a value,
-        # so a near miss also moves the third file by one byte.
+        # moves its compressed size by as much. A stored block's header adds its bytes at once, so
+        # the last file can skip the value; a total seen before moves the third file instead.
+        if total in seen:
+            sizes[2] += 7
+        seen.add(total)
         sizes[3] += target - total
-        if abs(target - total) <= 8:
-            sizes[2] += 1
     raise AssertionError(f"no four files sum to {target} bytes gzip -9")
 
 
