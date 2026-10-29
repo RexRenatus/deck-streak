@@ -25,6 +25,8 @@
 //! ([`minimum_client`]), to any caller, beside the health routes.
 //! SPEC-377 adds the snapshot answer ([`snapshot_routes`]): whether the archive holds a sealed
 //! snapshot of the server's collection, and its age, to the owner's session alone.
+//! SPEC-516 adds the owner's export for the study clients ([`data_export_routes`]): the bytes the
+//! host's `data` role writes, to the owner's session alone, within bounds of its own.
 //!
 //! The context map (docs/CONTEXT-MAP.md) is binding: this crate depends only on what its line
 //! there declares, and a new edge is an ADR, never a fix to make code compile.
@@ -34,6 +36,7 @@
 
 pub mod analytics_routes;
 pub mod badges_routes;
+pub mod data_export_routes;
 pub mod drill_routes;
 pub mod health;
 pub mod inbox_capture_route;

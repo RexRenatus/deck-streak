@@ -996,4 +996,60 @@ mod tests {
             .expect("the next tap writes over the device it counted");
         assert_eq!(next.direction(), Direction::Download);
     }
+
+    /// While a full-sync choice's stage is held, the device's backups are listed and none is
+    /// removed, so the counted server copy the confirm reads is never taken from under it, and back
+    /// up now makes nothing (SPEC-516 R5, section 6). Through the public calls only a sync server
+    /// holds a stage, so a test inside the crate holds one by hand.
+    #[test]
+    fn while_a_choice_is_held_the_backups_are_listed_and_none_is_removed() {
+        use crate::backups::{BackupRefusal, DeviceBackupKind};
+
+        let engine =
+            Engine::new(Vec::new()).expect("the engine starts from the default init message");
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("the clock reads after the epoch")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!(
+            "deck-streak-ffi-held-{}-{now}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&dir).expect("a scratch folder");
+        // five server copies: past the rule's three, so two would go were no stage held
+        let names: Vec<String> = (1..=5_u128)
+            .map(|n| format!("server-copy-{}-7.anki2", now - n * 1_000_000_000))
+            .collect();
+        for name in &names {
+            std::fs::write(dir.join(name), b"s").expect("the test writes a server copy");
+        }
+        let counted = Counted::show(Offer::of(true, true), ids(&[1]), ids(&[2]));
+        *engine.stage() = Some(Stage {
+            counted,
+            copy: dir.join(&names[4]),
+        });
+        let folder = dir.to_str().expect("a UTF-8 scratch path").to_owned();
+
+        let listed = engine
+            .device_backups(folder.clone())
+            .expect("the folder's backups are listed");
+        let made = engine.back_up_now(folder.clone());
+        let left = names.iter().filter(|name| dir.join(name).is_file()).count();
+        *engine.stage() = None;
+        let after = engine
+            .device_backups(folder)
+            .expect("the folder's backups are listed again");
+        let left_after = names.iter().filter(|name| dir.join(name).is_file()).count();
+        drop(std::fs::remove_dir_all(&dir));
+
+        assert_eq!(
+            listed.iter().map(|backup| backup.kind).collect::<Vec<_>>(),
+            vec![DeviceBackupKind::ServerCopy; 5],
+            "every copy is listed while the stage is held"
+        );
+        assert_eq!(left, 5, "no copy was removed while the stage was held");
+        assert_eq!(made, Err(BackupRefusal::StageHeld));
+        assert_eq!(after.len(), 3, "once the stage ends, the rule keeps three");
+        assert_eq!(left_after, 3);
+    }
 }

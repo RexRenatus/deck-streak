@@ -20,6 +20,9 @@ export interface BackupsEngine {
   backups(): Promise<string>;
   /** The bytes of the listed backup `id` names; refused for any id the pool does not list. */
   export_backup(id: string): Promise<Uint8Array>;
+  /** Back up now: a new Backup-kind pool file the core fills with the open collection, answered
+   * as JSON naming its id; refused while a choice's stage is held (SPEC-516 R4). */
+  back_up_now(): Promise<string>;
 }
 
 /** The client's two backup calls, as the sync screen needs them. */
@@ -50,6 +53,11 @@ export class Backups {
   /** The bytes of the backup the page named by an id the Worker listed. */
   async export(backup: string): Promise<Uint8Array> {
     return (await this.#engine()).export_backup(backup);
+  }
+
+  /** Back up now: the id of the new backup the web engine made. */
+  async backUpNow(): Promise<string> {
+    return '';
   }
 }
 

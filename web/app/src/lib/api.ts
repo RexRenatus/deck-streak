@@ -29,6 +29,7 @@ import { parseWallet, walletPath, type WalletView } from './economy/wallet';
 import { parseBoard, type BoardView } from './records/board';
 import { parseExchange, type ExchangeView } from './level/exchange';
 import { parseMethods, type Method } from './passkeys';
+import type { SnapshotRead } from './engine/protocol';
 import { telegram } from './telegram.svelte';
 
 /**
@@ -118,6 +119,10 @@ export interface Api {
   setSensitive(id: string, sensitive: boolean): Promise<Answer<string[]>>;
   /** The owner's ways in: Telegram, and each passkey with the day it was added (SPEC-385 R12). */
   identities(): Promise<Answer<Method[]>>;
+  /** The owner's export, the document the bot's `/export` sends, as its bytes (SPEC-516 R2). */
+  dataExport(): Promise<Answer<Blob>>;
+  /** Whether the server holds a sealed backup, and the newest one's age (SPEC-516 R6). */
+  serverBackup(): Promise<Answer<SnapshotRead>>;
 }
 
 /** How opening a session ended: a session, a refusal only reopening the app can answer, or no answer. */
@@ -283,7 +288,9 @@ export function createApi(options: ApiOptions): Api {
       if (response === null || !response.ok) return { kind: 'unavailable' };
       const marked = parseMarked(await response.json().catch(() => null));
       return marked === null ? { kind: 'unavailable' } : { kind: 'ok', value: marked };
-    }
+    },
+    dataExport: async () => ({ kind: 'unavailable' }),
+    serverBackup: async () => ({ kind: 'unavailable' })
   };
 }
 

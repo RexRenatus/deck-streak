@@ -1362,3 +1362,137 @@ fn the_review_records_one_change_at_a_time() {
     let owed: usize = functions.iter().map(|(_, _, _, owed)| owed.len()).sum();
     println!("examined {owed} slot statement(s)");
 }
+
+// SPEC-516 R4, R10 (ADR-534 D3): back up now on the web. The export takes nothing, waits while a
+// choice's stage is held, mints its Backup-kind file through `choice_file`, which reserves the pool
+// first, writes the open collection into it through the core's `backup_now`, and names the new
+// backup by the id `files.rs` gives it. It reaches the engine through the core alone: no pair, no
+// statement and no private engine of its own.
+
+/// The back up now export: its name, the parameters it takes (none), and the statements it owes.
+const BACKUP_NOW: [(&str, &str, &[&str]); 1] = [(
+    "back_up_now",
+    "",
+    &[
+        "STAGE.with(|stage| stage.borrow().is_some())",
+        "let backup = choice_file(Kind::Backup).await?;",
+        "backup_now::back_up(&dispatcher()?, Path::new(&backup))",
+        "files::backup_id(&backup)",
+    ],
+)];
+
+/// What the back up now export may not hold: an engine call of its own, a statement or a private
+/// engine, a name it minted past the reserve or made itself, or a removal.
+const BACKUP_NOW_REFUSED: [&str; 11] = [
+    "call(",
+    "query(",
+    ".run(",
+    "run_method(",
+    "run_exempt(",
+    ".execute(",
+    ".private(",
+    "choice_name(",
+    "format!(",
+    "delete_db(",
+    "retention::",
+];
+
+/// What the back up now export owes and holds that it must not, each named with the export: an
+/// export the module does not make, a parameter, a statement it lacks, or a refused text.
+fn backup_now_problems(source: &str) -> Vec<String> {
+    let mut found = lacks(
+        source,
+        &BACKUP_NOW.map(|(name, _, owed)| {
+            (
+                name,
+                "reaches the pool through `choice_file`, `files.rs` and the core",
+                owed,
+            )
+        }),
+    );
+    let whole = squeezed(source);
+    for (name, wanted, _) in BACKUP_NOW {
+        let exported = ["pubasyncfn", "pubfn"]
+            .iter()
+            .any(|head| whole.contains(&format!("#[wasm_bindgen]{head}{name}(")));
+        if !exported {
+            found.push(format!("{name} is not an export of the module"));
+        }
+        let taken = parameters(source, name);
+        if taken.as_deref() != Some(squeezed(wanted).as_str()) {
+            found.push(format!("{name} takes `{taken:?}`, not `{wanted}` alone"));
+        }
+        if let Ok(text) = body(source, name) {
+            let text = squeezed(text);
+            for refused in BACKUP_NOW_REFUSED {
+                if text.contains(&squeezed(refused)) {
+                    found.push(format!(
+                        "{name} reaches past the core's `backup_now`, and holds `{refused}`"
+                    ));
+                }
+            }
+        }
+    }
+    found
+}
+
+#[test]
+fn the_backup_now_export_reaches_the_pool_through_files_and_the_core() {
+    let source = boundary();
+    assert_eq!(backup_now_problems(&source), Vec::<String>::new());
+
+    // an engine call, a statement, a name made in the export and a removal are each refused by the
+    // export's name, and so are a parameter, an export unmade and a stage check planted out
+    let [(name, _, _)] = BACKUP_NOW;
+    for (planted, cause) in [
+        ("call(service::SYNC, 5, &[])?;", "`call(`"),
+        (
+            "dispatcher()?.execute(\"VACUUM INTO ?\", Path::new(\"/x\"))?;",
+            "`.execute(`",
+        ),
+        ("let name = format!(\"/deck-streak/{id}\");", "`format!(`"),
+        ("installed()?.delete_db(\"/deck-streak/backup-1.anki2\")?;", "`delete_db(`"),
+    ] {
+        let refused = backup_now_problems(&planted_in(&source, name, planted));
+        assert!(
+            refused_by_name(&refused, name, cause),
+            "`{planted}` planted in {name} is not refused by name: {refused:?}"
+        );
+    }
+    let head = format!("fn {name}(");
+    let widened = source.replacen(&head, &format!("{head}path: String"), 1);
+    assert_ne!(widened, source, "the parameter was not planted");
+    let refused = backup_now_problems(&widened);
+    assert!(
+        refused_by_name(&refused, name, "takes"),
+        "a path parameter planted in {name} is not refused by name: {refused:?}"
+    );
+    let unexported = source.replacen(
+        "#[wasm_bindgen]\npub async fn back_up_now(",
+        "pub async fn back_up_now(",
+        1,
+    );
+    assert_ne!(unexported, source, "the export was not planted out");
+    let refused = backup_now_problems(&unexported);
+    assert!(
+        refused_by_name(&refused, name, "not an export"),
+        "an unexported back up now is not refused by name: {refused:?}"
+    );
+    let [(_, _, [stage, ..])] = BACKUP_NOW else {
+        panic!("the back up now census names its stage check first");
+    };
+    let unchecked = replaced_in(&source, name, stage, "false");
+    assert_ne!(unchecked, source, "the stage check was not planted out");
+    let refused = backup_now_problems(&unchecked);
+    assert!(
+        refused_by_name(&refused, name, "lacks"),
+        "a back up now that ignores a held stage is not refused by name: {refused:?}"
+    );
+    let exports = examined("back up now export(s) of src/wasm.rs", BACKUP_NOW.to_vec());
+    let refused_texts = examined("refused text(s)", BACKUP_NOW_REFUSED.to_vec());
+    println!(
+        "examined {} x {} refusal(s)",
+        exports.len(),
+        refused_texts.len()
+    );
+}
