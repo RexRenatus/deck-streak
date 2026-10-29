@@ -14,6 +14,7 @@ use deck_streak_engine_core::face::Side;
 use deck_streak_engine_core::full_sync::{Counted, Counts, Direction, Losses, SnapshotAnswer};
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
 use deck_streak_engine_core::handshake;
+use deck_streak_engine_core::health::{Readout, SchedulerState};
 use deck_streak_engine_core::native_sync;
 use deck_streak_engine_core::one_way::{self, Reason, Unwritten};
 use deck_streak_engine_core::review::{self, bury_of, bury_request, flag_request, toggled_red};
@@ -250,8 +251,10 @@ impl Engine {
     ///
     /// [`EngineRefusal::Engine`] when the engine cannot run a read, a closed collection among them.
     pub fn card_health(&self, card_id: i64) -> Result<Option<CardHealth>, EngineRefusal> {
-        let _ = (&self.dispatcher, card_id);
-        Ok(None)
+        self.dispatcher
+            .card_health(card_id, Readout::NotAvailable(SchedulerState::Absent))
+            .map(|health| health.map(CardHealth::from))
+            .map_err(refusal)
     }
 }
 
