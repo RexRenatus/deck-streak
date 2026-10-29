@@ -538,9 +538,10 @@ describe('the review screen', () => {
   });
 
   // SPEC-505 R2, R3, R5, R6, A2; ADR-523 D2, D3. Each card the frame refuses, through each check the
-  // screen can reach (the host's check is held by frame-document.test.ts, since the screen's title
-  // and composed document always read back), shows the reason's own message in the status and the
-  // same reason on the frame, in every locale.
+  // screen plants here (the host's check is held by frame-document.test.ts, and through the review
+  // by review.test.ts's face holding a carriage return, whose composed document does not read
+  // back), shows the reason's own message in the status and the same reason on the frame, in every
+  // locale.
   it('each card the frame refuses names its reason in the status and the mark, in every locale', async () => {
     const shown: string[] = [];
     try {

@@ -94,6 +94,7 @@ A1: pnpm --dir web/app exec vitest run src/lib/card/frame-host.test.ts -t "a hos
 A1: pnpm --dir web/app exec vitest run src/lib/card/card-frame.test.ts -t "a card the frame document refuses renders an empty frame marked with its reason"
 A2: pnpm --dir web/app exec vitest run src/lib/study/review-screen.test.ts -t "each card the frame refuses names its reason in the status and the mark, in every locale"
 A2: pnpm --dir web/app exec vitest run src/lib/study/refusal.test.ts -t "each refusal names its own message in every locale"
+A2: pnpm --dir web/app exec vitest run src/lib/study/review-screen.test.ts -t "a notice from the last gesture is announced before a refused card's reason, which the mark keeps"
 A3: pnpm --dir web/app exec vitest run src/lib/study/review-screen.test.ts -t "a refused card's status, mark and logs hold none of its markup or CSS"
 A4: pnpm --dir web/app exec vitest run src/lib/study/refusal.test.ts -t "the iPhone and iPad card face words a refusal through its mapper, never a Swift case name"
 A4: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -only-testing:AppTests/CardRefusalWordsTests
