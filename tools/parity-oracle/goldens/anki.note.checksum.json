@@ -1,0 +1,887 @@
+{
+  "cases": [
+    {
+      "class": "html",
+      "input": {
+        "fields": [
+          "<b>harbor</b><br>garnet",
+          "juniper"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 3541534758,
+        "sfld": "harborgarnet"
+      }
+    },
+    {
+      "class": "html",
+      "input": {
+        "fields": [
+          "<b>amber</b>",
+          "amber basil"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 4014734622,
+        "sfld": "amber"
+      }
+    },
+    {
+      "class": "html",
+      "input": {
+        "fields": [
+          "<div>basil<br>cobalt</div>",
+          "cobalt"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 4019075744,
+        "sfld": "basilcobalt"
+      }
+    },
+    {
+      "class": "html",
+      "input": {
+        "fields": [
+          "<i>dune</i> <u>ember</u>",
+          "dune ember fjord"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 324499234,
+        "sfld": "dune ember"
+      }
+    },
+    {
+      "class": "html",
+      "input": {
+        "fields": [
+          "<span style=\"color: red\">fjord</span>",
+          "garnet harbor"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 2128171122,
+        "sfld": "fjord"
+      }
+    },
+    {
+      "class": "html",
+      "input": {
+        "fields": [
+          "<p>garnet</p><p>harbor</p>",
+          "indigo"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 323336348,
+        "sfld": "garnetharbor"
+      }
+    },
+    {
+      "class": "html",
+      "input": {
+        "fields": [
+          "<a href=\"#ds\">indigo</a>",
+          "juniper amber cobalt"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 2437861004,
+        "sfld": "indigo"
+      }
+    },
+    {
+      "class": "html",
+      "input": {
+        "fields": [
+          "<table><tr><td>juniper</td></tr></table>",
+          "basil dune"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 3395066887,
+        "sfld": "juniper"
+      }
+    },
+    {
+      "class": "media-refs",
+      "input": {
+        "fields": [
+          "<img src=\"ds_cobalt.png\">juniper",
+          "[sound:ds_a.mp3]"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 4224453037,
+        "sfld": " ds_cobalt.png juniper"
+      }
+    },
+    {
+      "class": "media-refs",
+      "input": {
+        "fields": [
+          "<img src=\"ds_amber.png\">",
+          "amber basil"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 793205242,
+        "sfld": " ds_amber.png "
+      }
+    },
+    {
+      "class": "media-refs",
+      "input": {
+        "fields": [
+          "[sound:ds_basil.mp3]",
+          "cobalt"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 2605384476,
+        "sfld": "[sound:ds_basil.mp3]"
+      }
+    },
+    {
+      "class": "media-refs",
+      "input": {
+        "fields": [
+          "cobalt <img src=\"ds_dune.jpg\"> [sound:ds_ember.ogg]",
+          "dune ember fjord"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 3685529406,
+        "sfld": "cobalt  ds_dune.jpg  [sound:ds_ember.ogg]"
+      }
+    },
+    {
+      "class": "media-refs",
+      "input": {
+        "fields": [
+          "[sound:ds_fjord.mp3][sound:ds_garnet.mp3]",
+          "garnet harbor"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 1760395472,
+        "sfld": "[sound:ds_fjord.mp3][sound:ds_garnet.mp3]"
+      }
+    },
+    {
+      "class": "media-refs",
+      "input": {
+        "fields": [
+          "<img src=\"ds_harbor.svg\" alt=\"ds harbor\"> indigo",
+          "indigo"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 467712285,
+        "sfld": " ds_harbor.svg  indigo"
+      }
+    },
+    {
+      "class": "media-refs",
+      "input": {
+        "fields": [
+          "[sound:ds juniper two.wav] <img src=\"ds_juniper.gif\">",
+          "juniper amber cobalt"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 3162201136,
+        "sfld": "[sound:ds juniper two.wav]  ds_juniper.gif "
+      }
+    },
+    {
+      "class": "media-refs",
+      "input": {
+        "fields": [
+          "<audio src=\"ds_amber.mp3\"></audio> [sound:ds_basil.m4a]",
+          "basil dune"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 3109916388,
+        "sfld": " ds_amber.mp3  [sound:ds_basil.m4a]"
+      }
+    },
+    {
+      "class": "entities",
+      "input": {
+        "fields": [
+          "ember&nbsp;&amp;&lt;",
+          "garnet"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 222495788,
+        "sfld": "ember &<"
+      }
+    },
+    {
+      "class": "entities",
+      "input": {
+        "fields": [
+          "amber &amp; basil",
+          "amber basil"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 2778232493,
+        "sfld": "amber & basil"
+      }
+    },
+    {
+      "class": "entities",
+      "input": {
+        "fields": [
+          "&lt;b&gt;cobalt&lt;/b&gt;",
+          "cobalt"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 1837393665,
+        "sfld": "<b>cobalt</b>"
+      }
+    },
+    {
+      "class": "entities",
+      "input": {
+        "fields": [
+          "dune&nbsp;&nbsp;ember",
+          "dune ember fjord"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 58301484,
+        "sfld": "dune  ember"
+      }
+    },
+    {
+      "class": "entities",
+      "input": {
+        "fields": [
+          "&#x263A; fjord &#9731;",
+          "garnet harbor"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 4062856823,
+        "sfld": "☺ fjord ☃"
+      }
+    },
+    {
+      "class": "entities",
+      "input": {
+        "fields": [
+          "&quot;garnet&quot; &apos;harbor&apos;",
+          "indigo"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 656322973,
+        "sfld": "&quot;garnet&quot; &apos;harbor&apos;"
+      }
+    },
+    {
+      "class": "entities",
+      "input": {
+        "fields": [
+          "indigo &copy; &eacute;t&eacute;",
+          "juniper amber cobalt"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 2837419215,
+        "sfld": "indigo © été"
+      }
+    },
+    {
+      "class": "entities",
+      "input": {
+        "fields": [
+          "&#128578; juniper &notanentity;",
+          "basil dune"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 1233267839,
+        "sfld": "&#128578; juniper &notanentity;"
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "fields": [
+          "",
+          ""
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 3661210606,
+        "sfld": ""
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "fields": [
+          " ",
+          "amber basil"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 3092826920,
+        "sfld": " "
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "fields": [
+          "\t",
+          "cobalt"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 2895262170,
+        "sfld": "\t"
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "fields": [
+          "\n",
+          "dune ember fjord"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 2915580697,
+        "sfld": "\n"
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "fields": [
+          "<br>",
+          "garnet harbor"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 3661210606,
+        "sfld": ""
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "fields": [
+          "&nbsp;",
+          "indigo"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 3092826920,
+        "sfld": " "
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "fields": [
+          "<div></div>",
+          "juniper amber cobalt"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 3661210606,
+        "sfld": ""
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "fields": [
+          " <br> ",
+          "basil dune"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 160825505,
+        "sfld": "  "
+      }
+    },
+    {
+      "class": "cjk",
+      "input": {
+        "fields": [
+          "학교",
+          "山水"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 3703234019,
+        "sfld": "학교"
+      }
+    },
+    {
+      "class": "cjk",
+      "input": {
+        "fields": [
+          "山水画",
+          "amber basil"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 2779131514,
+        "sfld": "山水画"
+      }
+    },
+    {
+      "class": "cjk",
+      "input": {
+        "fields": [
+          "読書 する",
+          "cobalt"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 2259804766,
+        "sfld": "読書 する"
+      }
+    },
+    {
+      "class": "cjk",
+      "input": {
+        "fields": [
+          "학교 가다",
+          "dune ember fjord"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 3914469879,
+        "sfld": "학교 가다"
+      }
+    },
+    {
+      "class": "cjk",
+      "input": {
+        "fields": [
+          "電車[でんしゃ]",
+          "garnet harbor"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 756413892,
+        "sfld": "電車[でんしゃ]"
+      }
+    },
+    {
+      "class": "cjk",
+      "input": {
+        "fields": [
+          "花火大会",
+          "indigo"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 1382937208,
+        "sfld": "花火大会"
+      }
+    },
+    {
+      "class": "cjk",
+      "input": {
+        "fields": [
+          "中文 汉字",
+          "juniper amber cobalt"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 1316395252,
+        "sfld": "中文 汉字"
+      }
+    },
+    {
+      "class": "cjk",
+      "input": {
+        "fields": [
+          "ひらがな カタカナ",
+          "basil dune"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 3072656384,
+        "sfld": "ひらがな カタカナ"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "{{c1::amber}} {{c2::basil}} {{c1::dune}} basil harbor {{c1::garnet {{c2::amber {{c3::ember cobalt}}}}}} café basil naïve",
+          "amber garnet fjord indigo fjord harbor"
+        ],
+        "sort_index": 1
+      },
+      "output": {
+        "csum": 1676114465,
+        "sfld": "amber garnet fjord indigo fjord harbor"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "dune ember harbor ",
+          "fjord"
+        ],
+        "sort_index": 1
+      },
+      "output": {
+        "csum": 3442929685,
+        "sfld": "fjord"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "dune harbor {{c1::fjord::dune hint}} indigo basil &amp; &lt;juniper&gt; &nbsp;&#x263A;&#9731; café amber naïve",
+          "basil harbor"
+        ],
+        "sort_index": 1
+      },
+      "output": {
+        "csum": 3545707790,
+        "sfld": "basil harbor"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "café basil naïve amber ember",
+          "indigo ember harbor indigo"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 3641179937,
+        "sfld": "café basil naïve amber ember"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "مرحبا بكم juniper cobalt basil",
+          "basil harbor garnet harbor ember"
+        ],
+        "sort_index": 1
+      },
+      "output": {
+        "csum": 1518810588,
+        "sfld": "basil harbor garnet harbor ember"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "garnet &amp; &lt;juniper&gt; &nbsp;&#x263A;&#9731; basil ",
+          "fjord"
+        ],
+        "sort_index": 1
+      },
+      "output": {
+        "csum": 2636135785,
+        "sfld": "fjord"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "مرحبا بكم amber {{c1::dune {{c2::harbor {{c3::cobalt {{c4::harbor cobalt}}}}}}}} <b>{{c1::dune</b> fjord}} amber",
+          "garnet indigo indigo garnet fjord juniper"
+        ],
+        "sort_index": 1
+      },
+      "output": {
+        "csum": 3624263241,
+        "sfld": "garnet indigo indigo garnet fjord juniper"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "שלום עולם basil {{c1::juniper dune}} fjord basil",
+          "cobalt fjord"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 1174068485,
+        "sfld": "שלום עולם basil {{c1::juniper dune}} fjord basil"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "garnet &amp; &lt;fjord&gt; &nbsp;&#x263A;&#9731; {{c1::cobalt}} {{c2::garnet}} {{c1::indigo}}  basil",
+          "indigo indigo"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 2815943134,
+        "sfld": "garnet & <fjord>  ☺☃ {{c1::cobalt}} {{c2::garnet}} {{c1::indigo}}  basil"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "harbor dune ember &amp; &lt;amber&gt; &nbsp;&#x263A;&#9731; dune dune <b>dune <i>harbor</b>",
+          "harbor basil amber"
+        ],
+        "sort_index": 1
+      },
+      "output": {
+        "csum": 2398729238,
+        "sfld": "harbor basil amber"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "indigo amber {{c1::ember {{c2::basil harbor}}}}",
+          "basil"
+        ],
+        "sort_index": 1
+      },
+      "output": {
+        "csum": 3868899493,
+        "sfld": "basil"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "\\(juniper^{2}\\) {{c1::\\(harbor + 1\\)}} basil basil",
+          "ember ember juniper"
+        ],
+        "sort_index": 1
+      },
+      "output": {
+        "csum": 953858196,
+        "sfld": "ember ember juniper"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "cobalt {{c1::fjord {{c2::dune {{c3::cobalt {{c4::cobalt basil}}}}}}}} dune ember harbor basil dune cobalt",
+          "harbor cobalt"
+        ],
+        "sort_index": 1
+      },
+      "output": {
+        "csum": 268228394,
+        "sfld": "harbor cobalt"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "garnet",
+          "garnet indigo juniper garnet amber"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 3166822640,
+        "sfld": "garnet"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "👩‍🔬 🙂 🇳🇴 🙂 🙂 🙂 indigo garnet",
+          "indigo basil fjord basil fjord"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 2632680747,
+        "sfld": "👩‍🔬 🙂 🇳🇴 🙂 🙂 🙂 indigo garnet"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "dune ember",
+          "dune indigo dune juniper garnet amber"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 324499234,
+        "sfld": "dune ember"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "\\(basil^{2}\\) {{c1::\\(indigo + 1\\)}} {{c1::basil}} {{c2::garnet}} {{c1::garnet}} amber ember indigo",
+          "harbor basil"
+        ],
+        "sort_index": 1
+      },
+      "output": {
+        "csum": 2195782631,
+        "sfld": "harbor basil"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "cobalt harbor  basil basil cobalt",
+          "cobalt garnet indigo juniper"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 207581609,
+        "sfld": "cobalt harbor  basil basil cobalt"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "amber ember",
+          "garnet garnet dune garnet fjord cobalt"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 2061219499,
+        "sfld": "amber ember"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "fjord harbor harbor garnet &amp; &lt;indigo&gt; &nbsp;&#x263A;&#9731;",
+          "basil harbor ember"
+        ],
+        "sort_index": 1
+      },
+      "output": {
+        "csum": 4274256375,
+        "sfld": "basil harbor ember"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "🙂 👩‍🔬 🇳🇴 garnet",
+          "harbor indigo garnet dune"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 856498701,
+        "sfld": "🙂 👩‍🔬 🇳🇴 garnet"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "indigo juniper {{c1::garnet {{c2::garnet {{c3::indigo cobalt}}}}}}",
+          "fjord harbor juniper juniper"
+        ],
+        "sort_index": 1
+      },
+      "output": {
+        "csum": 2710463654,
+        "sfld": "fjord harbor juniper juniper"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "amber <b>{{c1::dune</b> basil}}",
+          "garnet amber juniper amber"
+        ],
+        "sort_index": 1
+      },
+      "output": {
+        "csum": 679606791,
+        "sfld": "garnet amber juniper amber"
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "{{c1::amber harbor}} cobalt cobalt basil harbor juniper juniper ember",
+          "garnet dune cobalt amber fjord basil"
+        ],
+        "sort_index": 0
+      },
+      "output": {
+        "csum": 2400435912,
+        "sfld": "{{c1::amber harbor}} cobalt cobalt basil harbor juniper juniper ember"
+      }
+    }
+  ],
+  "function": "anki.note.checksum",
+  "generator": "tools/parity-oracle/anki/generate.py",
+  "generator_sha256": "8bd480ee4afb7a31cc6096a397940da1c3661ab11df1cc95214ca464c49e6737",
+  "inputs": "synthetic",
+  "kind": "engine",
+  "note": "answers the sort field text and checksum the engine stores for the fields (F6); cases drawn under CPython 3.12.3.",
+  "registry": "tools/parity-oracle/anki/registry/spec_498.py",
+  "registry_sha256": "bdd6ffaf1205a07705397b3793244fd7a4852bbd9af35882003df5e2ccf706f8",
+  "schema": "phx.parity-golden.v1",
+  "seed": 498,
+  "source_commit": "65e053b829825f534803b2b772c507a73ba936a3"
+}
