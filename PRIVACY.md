@@ -73,7 +73,13 @@ and only your browser holds it.
 The web app also keeps backups in your browser: saved copies of this device's collection and saved
 copies of the server's collection, at most three of each kind, the oldest of a kind removed first.
 They stay on your device alone, are never sent to the service, and leave your device only when you
-export one from the sync screen.
+export one from the sync screen or the data screen.
+
+The iPhone and iPad app keeps backups on your device too: saved copies of this device's collection,
+made before a full sync replaces it or when you tap Back up now, and saved copies of the server's
+collection a full sync counted, at most three of each kind, the oldest of a kind removed first.
+They are kept in the app's own folder on your device, are never sent to the service, and leave your
+device only when you export one from the app's data screen through the system's save dialog.
 
 ## Your copy of your data, and erasing it
 
@@ -84,6 +90,11 @@ From Telegram, the bot answers two commands, and only yours:
   in Telegram.
 - `/delete` asks you to confirm with a button, and erases exactly as the host's erase below does
   once you tap it. Only the button on the latest question erases, and only once.
+
+In the web app, the data screen downloads a JSON copy of your data, the same document
+`/export` sends, fetched in your own signed-in session and saved by your browser as a file on your
+device. Inside Telegram on a phone the download may not be saved, so the screen names `/export`
+beside it.
 
 You can also export and erase on the host that runs DeckStreak:
 

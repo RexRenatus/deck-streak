@@ -211,4 +211,10 @@ export class EngineClient {
   backupExport(backup: string): Promise<Uint8Array<ArrayBuffer>> {
     return this.#send({ op: 'backup-export', backup }) as Promise<Uint8Array<ArrayBuffer>>;
   }
+
+  /** Back up now: the Worker's engine writes the open collection into a new backup and answers its
+   * id; the page lists again to see it (SPEC-516 R4). */
+  backUpNow(): Promise<string> {
+    return this.#send({ op: 'backup-now' }) as Promise<string>;
+  }
 }

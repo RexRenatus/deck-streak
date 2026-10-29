@@ -529,6 +529,18 @@ impl Engine {
         self.run(GET_UNDO_STATUS.0, GET_UNDO_STATUS.1, Vec::new())
     }
 
+    /// Whether a full-sync choice's stage is held between the owner's taps: the device's backups
+    /// then make nothing and remove nothing, so the counted server copy is never taken from under
+    /// the confirm (SPEC-516 R5).
+    pub(crate) fn stage_held(&self) -> bool {
+        self.stage().is_some()
+    }
+
+    /// The core's dispatcher this engine reaches the engine through, for the device's backups.
+    pub(crate) const fn dispatcher(&self) -> &Dispatcher {
+        &self.dispatcher
+    }
+
     /// What a normal sync's `reply` requires next, as the engine numbers it (SPEC-503 R5): a reply
     /// that does not decode is the engine's refusal, with the reply's bytes.
     fn required(reply: Vec<u8>) -> Result<u32, EngineRefusal> {
@@ -684,7 +696,8 @@ fn unwritten(reason: Reason) -> Result<ChoiceStep, EngineRefusal> {
 
 /// A new file name for one of the choice's files in `folder`: `kind`, the clock's nanoseconds and
 /// this process, so no two of the choice's files share a name and none is the open collection.
-fn choice_file(folder: &str, kind: &str) -> PathBuf {
+/// Back up now names its backup the same way (SPEC-516 R5).
+pub(crate) fn choice_file(folder: &str, kind: &str) -> PathBuf {
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |since| since.as_nanos());
@@ -1145,5 +1158,59 @@ mod tests {
             .at_write(&device_now)
             .expect("the next tap writes over the device it counted");
         assert_eq!(next.direction(), Direction::Download);
+    }
+
+    /// While a full-sync choice's stage is held, the device's backups are listed and none is
+    /// removed, so the counted server copy the confirm reads is never taken from under it, and back
+    /// up now makes nothing (SPEC-516 R5, section 6). Through the public calls only a sync server
+    /// holds a stage, so a test inside the crate holds one by hand.
+    #[test]
+    fn while_a_choice_is_held_the_backups_are_listed_and_none_is_removed() {
+        use crate::backups::{BackupRefusal, DeviceBackupKind};
+
+        let engine =
+            Engine::new(Vec::new()).expect("the engine starts from the default init message");
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("the clock reads after the epoch")
+            .as_nanos();
+        let dir =
+            std::env::temp_dir().join(format!("deck-streak-ffi-held-{}-{now}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("a scratch folder");
+        // five server copies: past the rule's three, so two would go were no stage held
+        let names: Vec<String> = (1..=5_u128)
+            .map(|n| format!("server-copy-{}-7.anki2", now - n * 1_000_000_000))
+            .collect();
+        for name in &names {
+            std::fs::write(dir.join(name), b"s").expect("the test writes a server copy");
+        }
+        let counted = Counted::show(Offer::of(true, true), ids(&[1]), ids(&[2]));
+        *engine.stage() = Some(Stage {
+            counted,
+            copy: dir.join(&names[4]),
+        });
+        let folder = dir.to_str().expect("a UTF-8 scratch path").to_owned();
+
+        let listed = engine
+            .device_backups(folder.clone())
+            .expect("the folder's backups are listed");
+        let made = engine.back_up_now(folder.clone());
+        let left = names.iter().filter(|name| dir.join(name).is_file()).count();
+        *engine.stage() = None;
+        let after = engine
+            .device_backups(folder)
+            .expect("the folder's backups are listed again");
+        let left_after = names.iter().filter(|name| dir.join(name).is_file()).count();
+        drop(std::fs::remove_dir_all(&dir));
+
+        assert_eq!(
+            listed.iter().map(|backup| backup.kind).collect::<Vec<_>>(),
+            vec![DeviceBackupKind::ServerCopy; 5],
+            "every copy is listed while the stage is held"
+        );
+        assert_eq!(left, 5, "no copy was removed while the stage was held");
+        assert_eq!(made, Err(BackupRefusal::StageHeld));
+        assert_eq!(after.len(), 3, "once the stage ends, the rule keeps three");
+        assert_eq!(left_after, 3);
     }
 }

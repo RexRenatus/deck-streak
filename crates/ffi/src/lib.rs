@@ -19,6 +19,8 @@
 //!   [`engine::Engine::undo_offer`] and [`engine::Engine::undo`] answer them.
 //! - [`voices`]: the voice a learner chose for each language, kept in one file on the device and
 //!   never synced, and the installed voices a picker offers (SPEC-348 R6).
+//! - [`backups`]: the device's backups in the collection's folder: back up now through the core,
+//!   the list kept by the core's retention, and one listed backup's bytes (SPEC-516 R5).
 //!
 //! Of this workspace's crates the adapter depends on the engine core (`deck-streak-engine-core`)
 //! alone (ADR-345 D1), and reaches the engine only through the core's dispatcher started on the
@@ -29,6 +31,7 @@
 uniffi::setup_scaffolding!();
 
 pub mod allow_list;
+pub mod backups;
 pub mod engine;
 pub mod face;
 pub mod health;

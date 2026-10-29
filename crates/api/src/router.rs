@@ -55,6 +55,7 @@ use tracing::Level;
 use crate::analytics_routes;
 use crate::badges_routes;
 use crate::companion_routes::{self, CompanionDirectory};
+use crate::data_export_routes;
 use crate::drill_routes;
 use crate::health::{self, Readiness};
 use crate::inbox_capture_route;
@@ -277,6 +278,10 @@ pub fn router(state: ApiState) -> Router {
                 .merge(sync_seal_routes::routes(access.clone(), seal))
                 .merge(snapshot_routes::routes(access.clone(), snapshot))
                 .merge(companion_routes::routes(access.clone(), companion))
+                .merge(data_export_routes::routes(
+                    access.clone(),
+                    readiness.clone(),
+                ))
                 .merge(drill_routes::routes(
                     access.clone(),
                     readiness.clone(),

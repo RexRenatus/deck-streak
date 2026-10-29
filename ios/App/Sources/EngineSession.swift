@@ -63,7 +63,7 @@ struct CardInfoSection: Equatable, Sendable {
 /// (SPEC-347 R7, R8). The actor serialises the calls; the engine itself is `Sendable` because the
 /// adapter's Rust side is `Send + Sync`. The voice choices live here too, beside the collection
 /// and never inside it, because the engine's types stop at this file (SPEC-348 R6, R14).
-actor EngineSession: SyncEngine {
+actor EngineSession: SyncEngine, DataEngine {
     /// The engine's red flag, read once from the adapter, so the app holds no copy of the
     /// core's rule (SPEC-358 R3, ADR-369 O4).
     nonisolated let red = redFlag()
@@ -285,6 +285,34 @@ actor EngineSession: SyncEngine {
     /// The owner's cancel: the adapter drops the choice's stage and writes nothing.
     func cancelChoice() {
         engine?.fullSyncCancel()
+    }
+
+    /// Backs this device's collection up now in the collection's directory, through the adapter
+    /// and the core, and answers the new backup's id; the adapter refuses while a full-sync
+    /// choice is open (SPEC-516 R5).
+    func backUpNow() throws -> String {
+        let engine = try started()
+        let folder = folder
+        return try engine.backUpNow(folder: folder)
+    }
+
+    /// The backups and server copies in the collection's directory, newest first, once the core's
+    /// retention kept three of each kind; while a full-sync choice is open, none is removed
+    /// (SPEC-516 R5).
+    func deviceBackups() throws -> [DeviceCopy] {
+        let engine = try started()
+        let folder = folder
+        return try engine.deviceBackups(folder: folder).map {
+            DeviceCopy(id: $0.id, serverCopy: $0.kind == .serverCopy, ageSeconds: $0.ageSeconds)
+        }
+    }
+
+    /// The bytes of the listed backup `id`; the adapter refuses any id it did not list
+    /// (SPEC-516 R5).
+    func backupBytes(_ id: String) throws -> Data {
+        let engine = try started()
+        let folder = folder
+        return try engine.backupBytes(folder: folder, id: id)
     }
 
     /// A choice step in the app's own terms, field for field.

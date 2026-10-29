@@ -239,7 +239,8 @@ const TYPE_ONLY = new Set([
   'TSVoidKeyword'
 ]);
 
-/** The base's route files under src/routes, each a SvelteKit route (`+` first), frozen. */
+/** The base's route files under src/routes, each a SvelteKit route (`+` first), frozen. SPEC-516 R1
+ * adds the data screen's, `data/+page.svelte`. */
 const ROUTES = [
   '+layout.svelte',
   '+layout.ts',
@@ -248,6 +249,7 @@ const ROUTES = [
   'apple-touch-icon.png/+server.ts',
   'badges/+page.svelte',
   'capture/+page.svelte',
+  'data/+page.svelte',
   'icon-192.png/+server.ts',
   'icon-512.png/+server.ts',
   'insights/+page.svelte',
