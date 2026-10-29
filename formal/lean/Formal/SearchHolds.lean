@@ -1,6 +1,6 @@
 -- @phx covers crates/search/src/skip.rs anchor=query digest=sha256:039246c27c23186d74c044c0ed4ceaf6cc53c4d40d13702f0737c382428ddad2
 -- @phx covers crates/search/src/skip.rs anchor=holds digest=sha256:f3d918c8a64a4cfc3872cef45bdacdeb29c0271c9283d5ad2336f49da243dd48
--- @phx cites #822
+-- @phx cites #108
 -- @phx theorem holds_inescapable ramp=report
 -- @phx witness a_text_wrap_a_closing_parenthesis_escapes kills=holds_inescapable
 

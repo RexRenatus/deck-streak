@@ -32,7 +32,7 @@ A6: green at 635dcff7
   `the_skip_profile_is_the_closed_list_its_holds_were_written_against`, reads the profiles' constant lists, which the
   stub keeps; no criterion rests on it alone.
 - **The existing suites that read the changed code stay green at 635dcff7:** `deck-streak-ingest --test skip_record`
-  (7 passed) and `--test settings` (12 passed), and `deck-streak-coordination --test skip_flow` (7 passed).
+  (12 passed) and `--test settings` (7 passed), and `deck-streak-coordination --test skip_flow` (7 passed).
 - **A3's golden depends on the run's time of day.** At 635dcff7 the census prints that 480 of the day's 1,440 minutes
   (04:00 to 11:59 UTC) give every one of the 88 cases its recorded answer, and the run's second, 10:00 UTC, is among
   them.
