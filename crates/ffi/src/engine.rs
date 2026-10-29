@@ -14,6 +14,7 @@ use deck_streak_engine_core::face::Side;
 use deck_streak_engine_core::full_sync::{Counted, Counts, Direction, Losses, SnapshotAnswer};
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
 use deck_streak_engine_core::handshake;
+use deck_streak_engine_core::health::{Readout, SchedulerState};
 use deck_streak_engine_core::native_sync;
 use deck_streak_engine_core::native_undo::{self, Kept};
 use deck_streak_engine_core::one_way::{self, Reason, Unwritten};
@@ -22,6 +23,7 @@ use deck_streak_engine_core::table::{ExemptWrite, Transport};
 
 use crate::allow_list::allowed;
 use crate::face::{CardFace, MediaFolder};
+use crate::health::CardHealth;
 use crate::review_undo::{self, UndoDone, UndoKind, UndoOffered};
 
 /// Why a call was not answered with the response's bytes. A native client reads it as a thrown
@@ -324,6 +326,21 @@ impl Engine {
             Err(GestureRefusal::Engine { error }) => Err(EngineRefusal::Engine { error }),
             Err(_) => Ok(UndoDone::refused(review_undo::gone(named))),
         }
+    }
+
+    /// The health of the card `card_id` (SPEC-507 R12): the core's record by its two fixed reads,
+    /// field for field, or `None` when no card has the id. This build's scheduler port gives no
+    /// readout, so the recall part is the absent state, as the web adapter's is (ADR-525 D3). It
+    /// writes nothing.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the engine cannot run a read, a closed collection among them.
+    pub fn card_health(&self, card_id: i64) -> Result<Option<CardHealth>, EngineRefusal> {
+        self.dispatcher
+            .card_health(card_id, Readout::NotAvailable(SchedulerState::Absent))
+            .map(|health| health.map(CardHealth::from))
+            .map_err(refusal)
     }
 }
 

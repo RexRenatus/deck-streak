@@ -3,8 +3,9 @@ import SwiftUI
 /// The review screen's top, above the card (SPEC-348 R9, R13, R14): the deck's name; the replay,
 /// stop and voice buttons, and the bury and flag buttons, the flag's title beside its icon
 /// (SPEC-358 R5), and the undo control (SPEC-515 R6); the queue's new, learning and review counts,
-/// each a number with its word; a line naming how many media files the face could not show; and
-/// one line per note, a refusal's sentence or a sound the player refused, and the undo's sentence.
+/// each a number with its word, and the "Card info" control, which opens the card info sheet over
+/// the review (SPEC-507 R14); a line naming how many media files the face could not show; and one
+/// line per note, a refusal's sentence or a sound the player refused, and the undo's sentence.
 struct ReviewChrome: View {
     @Bindable var model: ReviewModel
 
@@ -58,6 +59,17 @@ struct ReviewChrome: View {
                 Text("\(model.counts.new) new").accessibilityIdentifier("count-new")
                 Text("\(model.counts.learning) learning").accessibilityIdentifier("count-learning")
                 Text("\(model.counts.review) to review").accessibilityIdentifier("count-review")
+                Spacer()
+                // Its title is its VoiceOver label, though it shows its icon alone (SPEC-507 R16).
+                Button {
+                    Task { await model.health.open() }
+                } label: {
+                    Label("Card info", systemImage: "info.circle")
+                        .labelStyle(.iconOnly)
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+                .accessibilityIdentifier("card-info")
+                .disabled(!idle)
             }
             .font(.subheadline)
             if !model.face.omitted.isEmpty {
@@ -73,6 +85,13 @@ struct ReviewChrome: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
+        // Closed by its Close button or by a swipe, the sheet starts the answer clock again.
+        .sheet(
+            isPresented: Bindable(model.health).showing,
+            onDismiss: { Task { await model.health.close() } }
+        ) {
+            CardHealthView(health: model.health)
+        }
     }
 
     /// Whether a bury or a flag may start: from a card's question or its answer, never while a

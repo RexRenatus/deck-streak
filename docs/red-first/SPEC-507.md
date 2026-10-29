@@ -107,3 +107,50 @@ answers applied on a scratch tree at 041ff071, on its own assertion, and green a
   the 29 Rust mutants each against the health target's four tests (4 passed before and after), and the 32 web mutants
   each against the panel's, the clock's, the session's and the protocol's test files (38 passed before and after),
   each judged by a test named for it failing.
+
+## Part b: the panel on iPhone and iPad
+
+Section 8 of the SPEC came first (f5ac4b77). The adapter's tests came next, whole, over a stub that keeps every shape
+and computes nothing (345ae8bf): the native record's types are in place, its conversion from the core's record answers
+zeros, `card_health_lines` answers no section, and `Engine::card_health` answers no record. The same commit adds the
+card health collection's builder and its `health/` beside the review fixture. 989c88cb fills the conversion, the
+panel's words and the export. The app's tests came over Swift stubs (d40886e7): the clock holds no overlay's time, the
+session reads no section, the panel's model reads nothing, and the chrome has no control. 12d22421 builds the clock,
+the model, the sheet, the chrome's control and the session's read.
+
+```red-first
+B1: red at 345ae8bf: card_health.rs: the card exists
+B1: green at 934f96b2
+B2: red at 345ae8bf: card_health.rs: assertion `left == right` failed: the native record and the core's
+B2: green at 934f96b2
+B3: red at 345ae8bf: card_health.rs: the card exists
+B3: green at 934f96b2
+B4: red at 345ae8bf: card_health.rs: the card exists
+B4: green at 934f96b2
+```
+
+### What each pair disclosed
+
+- **The Rust runs:** at 345ae8bf the card health target's four tests read 4 failed of 4 (exit 101): B2 on its own
+  assertion, every one of its 300 generated cards a mismatch, and B1, B3 and B4 on the stub's missing record, after
+  B1's queue read had found the health card at the head of its deck. At 934f96b2 they read 4 passed of 4 (exit 0).
+  Each run was `cargo test --locked --offline --no-fail-fast -p deck-streak-ffi --test card_health` with the four test
+  names.
+- **989c88cb's first run read 3 passed of 4.** B4's planted census control expected two catches in "This card is a
+  leech at risk." where the census reads three: the word `leech`, the word `risk` and the phrase `at risk`.
+  934f96b2 corrects the control's expectation alone; the census, the panel's words and the other three tests are
+  unchanged.
+- **a3cf501f answers clippy, after green.** `cargo clippy -p deck-streak-ffi --all-targets --locked --offline -- -D
+  warnings` denied `doc_markdown` on one doc line of `health.rs` and `too_many_lines` on B4; the line now says "the
+  screen reader", and B4 calls two functions that hold its quiet, named and missing records and its census. No
+  assertion changed. At a3cf501f clippy reads clean and `cargo fmt --all --check` reads clean.
+- **The whole adapter package at 12d22421:** `cargo test --locked --offline --no-fail-fast -p deck-streak-ffi` reads
+  18 binaries, 67 passed and 0 failed, the fixture's own test and the review actions' among them. The built
+  `review-fixture` example writes `health/` beside `parity/` and `sound-video/` and exits 0.
+- **The Swift census holds at each Swift commit.** `test_ios_thin_swift.py`, `test_ios_review_screen.py` and
+  `test_ios_answer_door.py` read OK at d40886e7 and at 12d22421, with the register recording the clock at 2 decisions,
+  the panel's model at 1 and the sheet at 0; the chrome stays at 3 of its 3, the review model at 6 of its 6, and the
+  two session files at 4 and 3.
+- **B5 to B7 are not measured here.** They are XCTest and XCUITest cases, which run only on macOS with the iPhone
+  and iPad simulators; on Linux the Swift is neither compiled nor run, so neither their red at d40886e7 nor their
+  green at 12d22421 is claimed. They wait for the Apple lane.
