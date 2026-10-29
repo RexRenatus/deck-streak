@@ -17,13 +17,13 @@ sequenceDiagram
 
     Model->>Session: next() after the open
     Session->>Adapter: undo_offer()
-    Adapter->>Core: run(3,7), native column; nothing kept
+    Adapter->>Core: run(3,7), native column, nothing kept
     Core-->>Model: no offer (the control is disabled)
     Owner->>Model: Good (or bury, or flag)
     Model->>Session: answer(rating)
     Session->>Adapter: answer(card, grade, states)
     Adapter->>Core: run_answer, then run(3,7) and native_undo::answered
-    Core->>Engine: AnswerCard (13,4); GetUndoStatus; the newest review
+    Core->>Engine: AnswerCard (13,4), GetUndoStatus, the newest review
     Core-->>Adapter: the record of the review's own last answer
     Adapter->>Adapter: the slot keeps it (a bury's or a flag's replaces it)
     Model->>Session: next(): the next card and the offer ("Undo answer")
@@ -43,7 +43,7 @@ sequenceDiagram
         Control->>Model: perform(.confirmUndo)
         Model->>Session: undo(offer)
         Session->>Adapter: undo(card, step)
-        Adapter->>Core: the slot names card and step; judged again
+        Adapter->>Core: the slot names card and step, judged again
         Adapter->>Core: run_exempt(OwnerGesture Undo on the card, the record)
         Core->>Core: run_undo or run_restore judges at the write
         Core->>Engine: Undo (3,8), empty request
