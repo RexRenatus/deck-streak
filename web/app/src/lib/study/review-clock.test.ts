@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, expect, it } from 'vitest';
-import type { CardView, Head, UndoOffer } from '$lib/engine/protocol';
+import type { CardView, Head, UndoOffer } from '#lib/engine/protocol.js';
 import { Review, type StudyClient } from './review';
 
 // SPEC-507 R9, A5. The answer clock excludes every overlay's time: over random sequences of a card
