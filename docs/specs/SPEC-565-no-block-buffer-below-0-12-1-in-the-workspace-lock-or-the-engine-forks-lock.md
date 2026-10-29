@@ -105,6 +105,7 @@ A1 to A5 and A6b run in the python stage of `scripts/check.sh`, A6 in the Rust t
 | `docs/specs/SPEC-565-no-block-buffer-below-0-12-1-in-the-workspace-lock-or-the-engine-forks-lock.md` | docs | added: this file |
 | `docs/decisions/ADR-583-the-sqlx-crates-come-from-a-fork-until-a-sqlx-release-moves-them-to-sha2-0-11.md` | docs | added |
 | `changelog.d/deps-block-buffer-1025.md` | docs | added (commit 2): the changelog fragment |
+| `docs/red-first/SPEC-565.md` | docs | added (commit 2): the red-first record |
 
 ## 5. What this does NOT do
 
