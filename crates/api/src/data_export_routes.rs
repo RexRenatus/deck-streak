@@ -116,18 +116,18 @@ struct ExportSlot;
 impl FromRequestParts<Exports> for ExportSlot {
     type Rejection = Response;
 
-    async fn from_request_parts(
+    fn from_request_parts(
         _parts: &mut Parts,
         exports: &Exports,
-    ) -> Result<Self, Self::Rejection> {
-        match exports.bound.admit(exports.access.clock().now()) {
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
+        ready(match exports.bound.admit(exports.access.clock().now()) {
             Ok(()) => Ok(Self),
             Err(seconds) => {
                 let mut response = refused(StatusCode::TOO_MANY_REQUESTS, "too_many_exports");
                 response.headers_mut().insert(RETRY_AFTER, seconds.into());
                 Err(response)
             }
-        }
+        })
     }
 }
 
