@@ -30,7 +30,7 @@ What was read at `92755ef0`:
   `[target.'cfg(target_arch = "wasm32")'.dependencies]`, and none is `deck-streak-companion`; no file under
   `crates/web-engine/src` names the companion (`git grep -c companion 92755ef0 -- crates/web-engine` prints nothing).
 - **The size gate takes two files.** `scripts/web-engine-size.py` requires exactly `--module` and `--bindings` and sums
-  their `gzip -9 -n` sizes against ADR-336's 8,000,000 bytes (`:20-21`, `:97-106`); a page that also loads a companion
+  their `gzip -9 -n` sizes against ADR-336's 8,000,000 bytes (`:8-9`, `:33`, `:97-106`); a page that also loads a companion
   module and its weights downloads bytes the gate never counts.
 
 ## 2. Requirements
