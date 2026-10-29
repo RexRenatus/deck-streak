@@ -169,5 +169,9 @@ fn back_up_now_refuses_a_file_that_holds_rows() {
         Err(Reason::HoldsRows),
         "a file that holds a card or a note is never filled"
     );
-    assert_eq!(held(&other.collection), before, "the other file is unchanged");
+    assert_eq!(
+        held(&other.collection),
+        before,
+        "the other file is unchanged"
+    );
 }

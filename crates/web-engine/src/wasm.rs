@@ -1429,3 +1429,29 @@ pub async fn retain() -> Json {
     }
     Ok(serde_json::Value::from(removed).to_string())
 }
+
+use deck_streak_engine_core::backup_now;
+
+/// Back up now's refusal: the engine's error bytes, or the web engine's sentence naming why.
+fn unbacked(reason: Reason) -> JsValue {
+    match why(reason) {
+        Ok(word) => refuse(format!("backup-refused: {word}")),
+        Err(bytes) => bytes,
+    }
+}
+
+/// Back up now (SPEC-516 R4; ADR-534 D3): the core writes the open collection into a new
+/// Backup-kind pool file, minted after the pool is reserved for it, and reads it back from that
+/// file. It waits while a choice's stage is held, takes nothing from the page, and answers the new
+/// backup's id alone, as JSON; the page lists the backups again to see it, which runs the
+/// retention first. An engine refusal is thrown as its bytes.
+#[wasm_bindgen]
+pub async fn back_up_now() -> Json {
+    if STAGE.with(|stage| stage.borrow().is_some()) {
+        return Err(refuse("back up now waits while a choice is held"));
+    }
+    let backup = choice_file(Kind::Backup).await?;
+    backup_now::back_up(&dispatcher()?, Path::new(&backup)).map_err(unbacked)?;
+    let id = files::backup_id(&backup).ok_or_else(|| refuse("back up now named no backup"))?;
+    Ok(serde_json::json!({ "id": id }).to_string())
+}

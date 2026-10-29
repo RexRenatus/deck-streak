@@ -1,7 +1,7 @@
 // The Worker's backups (SPEC-377 R15 to R17; ADR-388 D14, D15, D17, D18): the browser's backups
 // and server copies as the web engine lists them after its retention, and one backup's bytes, which
-// the Worker posts to the page by transfer. The rule of what is kept is the core's; this module
-// only carries the engine's answers.
+// the Worker posts to the page by transfer; and back up now's new backup, by its id (SPEC-516 R4).
+// The rule of what is kept is the core's; this module only carries the engine's answers.
 import type { BackupKind, BackupsListed, Reply } from './protocol';
 
 /** A backup or a removal as the web engine answers it: its kind, and its age in whole seconds. */
@@ -11,7 +11,7 @@ interface Listed {
   age_seconds: number;
 }
 
-/** The web engine's three backup exports, as the module wasm-bindgen writes them. */
+/** The web engine's four backup exports, as the module wasm-bindgen writes them. */
 export interface BackupsEngine {
   /** Applies the core's retention and answers what it removed, as JSON; refused while a choice's
    * stage is held. */
@@ -55,9 +55,11 @@ export class Backups {
     return (await this.#engine()).export_backup(backup);
   }
 
-  /** Back up now: the id of the new backup the web engine made. */
+  /** Back up now: the id of the new backup the web engine made through the core (SPEC-516 R4). It
+   * neither lists nor runs retention: the page lists again, which runs retention first. */
   async backUpNow(): Promise<string> {
-    return '';
+    const made = JSON.parse(await (await this.#engine()).back_up_now()) as { id: string };
+    return made.id;
   }
 }
 

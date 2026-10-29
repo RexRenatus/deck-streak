@@ -3,8 +3,8 @@
 //! and never one the pool lists.
 
 use deck_streak_web_engine::files::{
-    backup_id, backup_of, backups, choice_name, exported, holds, record, same, unrecorded, Backup,
-    Kind,
+    Backup, Kind, backup_id, backup_of, backups, choice_name, exported, holds, record, same,
+    unrecorded,
 };
 
 /// The collection's path inside the pool, as `src/wasm.rs` names it.

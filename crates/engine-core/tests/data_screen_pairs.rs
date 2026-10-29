@@ -5,8 +5,10 @@
 //! table at this delivery's base, never read from the core.
 
 #![allow(
+    clippy::expect_used,
     clippy::print_stdout,
-    reason = "an enumerating test prints what it examined"
+    reason = "the shared support's fixtures fail their test, and an enumerating test prints what it \
+              examined"
 )]
 
 mod support;
@@ -84,8 +86,15 @@ fn the_data_screens_add_no_engine_pair() {
             base.iter().copied().collect::<BTreeSet<_>>(),
             "the {table} rows are the base's, by pair and name"
         );
-        assert_eq!(found.len(), base.len(), "the {table} table holds no row twice");
+        assert_eq!(
+            found.len(),
+            base.len(),
+            "the {table} table holds no row twice"
+        );
     }
-    let pairs: BTreeSet<(u32, u32)> = rows.iter().map(|(service, method, _)| (*service, *method)).collect();
+    let pairs: BTreeSet<(u32, u32)> = rows
+        .iter()
+        .map(|(service, method, _)| (*service, *method))
+        .collect();
     assert_eq!(pairs.len(), rows.len(), "no pair is in two rows");
 }

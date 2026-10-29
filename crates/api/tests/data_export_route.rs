@@ -108,7 +108,14 @@ impl Answer {
 
 /// The page's export: a same-origin JSON `POST` with `body`, with `cookie` when there is one.
 async fn export(app: &Router, cookie: Option<&str>, body: &str) -> Answer {
-    send(app, cookie, &[("sec-fetch-site", "same-origin")], "application/json", body).await
+    send(
+        app,
+        cookie,
+        &[("sec-fetch-site", "same-origin")],
+        "application/json",
+        body,
+    )
+    .await
 }
 
 /// One `POST` to the export with `headers`, `content_type` and `body`, and `cookie` when given.
@@ -215,8 +222,16 @@ async fn a_cross_site_or_non_json_request_is_refused_before_the_session() {
             "application/json",
             "cross_site_request",
         ),
-        (&[("sec-fetch-site", "same-site")][..], "application/json", "cross_site_request"),
-        (&[("sec-fetch-site", "same-origin")][..], "text/plain", "not_json"),
+        (
+            &[("sec-fetch-site", "same-site")][..],
+            "application/json",
+            "cross_site_request",
+        ),
+        (
+            &[("sec-fetch-site", "same-origin")][..],
+            "text/plain",
+            "not_json",
+        ),
         (
             &[("sec-fetch-site", "same-origin")][..],
             "application/x-www-form-urlencoded",
@@ -246,7 +261,12 @@ async fn the_route_states_its_body_bound() {
     let answer = export(&app, Some(&cookie), &at).await;
     assert_eq!(answer.status, StatusCode::OK, "{}", answer.text());
     let answer = export(&app, Some(&cookie), &past).await;
-    assert_eq!(answer.status, StatusCode::PAYLOAD_TOO_LARGE, "{}", answer.text());
+    assert_eq!(
+        answer.status,
+        StatusCode::PAYLOAD_TOO_LARGE,
+        "{}",
+        answer.text()
+    );
 }
 
 #[tokio::test]
@@ -264,7 +284,12 @@ async fn the_route_states_its_rate_bound() {
     };
     assert_eq!(admitted, vec![StatusCode::OK; 6]);
     let refused = export(&app, Some(&cookie), "{}").await;
-    assert_eq!(refused.status, StatusCode::TOO_MANY_REQUESTS, "{}", refused.text());
+    assert_eq!(
+        refused.status,
+        StatusCode::TOO_MANY_REQUESTS,
+        "{}",
+        refused.text()
+    );
     assert_eq!(refused.json()["reason"], "too_many_exports");
     assert_eq!(refused.header(RETRY_AFTER), Some(&b"50"[..]));
     // A refusal without a session is the session's, and spends nothing of the window.
@@ -281,6 +306,11 @@ async fn without_its_database_the_route_answers_unavailable() {
     let (_clock, sessions, app) = app(None);
     let cookie = telegram(&sessions);
     let answer = export(&app, Some(&cookie), "{}").await;
-    assert_eq!(answer.status, StatusCode::SERVICE_UNAVAILABLE, "{}", answer.text());
+    assert_eq!(
+        answer.status,
+        StatusCode::SERVICE_UNAVAILABLE,
+        "{}",
+        answer.text()
+    );
     assert_eq!(answer.json()["reason"], "database_not_open");
 }

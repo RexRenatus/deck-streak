@@ -389,6 +389,18 @@ impl Engine {
         self.stage.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
+    /// Whether a full-sync choice's stage is held between the owner's taps: the device's backups
+    /// then make nothing and remove nothing, so the counted server copy is never taken from under
+    /// the confirm (SPEC-516 R5).
+    pub(crate) fn stage_held(&self) -> bool {
+        self.stage().is_some()
+    }
+
+    /// The core's dispatcher this engine reaches the engine through, for the device's backups.
+    pub(crate) const fn dispatcher(&self) -> &Dispatcher {
+        &self.dispatcher
+    }
+
     /// What a normal sync's `reply` requires next, as the engine numbers it (SPEC-503 R5): a reply
     /// that does not decode is the engine's refusal, with the reply's bytes.
     fn required(reply: Vec<u8>) -> Result<u32, EngineRefusal> {
@@ -534,7 +546,8 @@ fn unwritten(reason: Reason) -> Result<ChoiceStep, EngineRefusal> {
 
 /// A new file name for one of the choice's files in `folder`: `kind`, the clock's nanoseconds and
 /// this process, so no two of the choice's files share a name and none is the open collection.
-fn choice_file(folder: &str, kind: &str) -> PathBuf {
+/// Back up now names its backup the same way (SPEC-516 R5).
+pub(crate) fn choice_file(folder: &str, kind: &str) -> PathBuf {
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |since| since.as_nanos());
@@ -1011,10 +1024,8 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .expect("the clock reads after the epoch")
             .as_nanos();
-        let dir = std::env::temp_dir().join(format!(
-            "deck-streak-ffi-held-{}-{now}",
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("deck-streak-ffi-held-{}-{now}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("a scratch folder");
         // five server copies: past the rule's three, so two would go were no stage held
         let names: Vec<String> = (1..=5_u128)

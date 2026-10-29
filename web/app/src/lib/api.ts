@@ -29,6 +29,7 @@ import { parseWallet, walletPath, type WalletView } from './economy/wallet';
 import { parseBoard, type BoardView } from './records/board';
 import { parseExchange, type ExchangeView } from './level/exchange';
 import { parseMethods, type Method } from './passkeys';
+import { EXPORT_PATH, SNAPSHOT_PATH, parseServerBackup } from './data/data';
 import type { SnapshotRead } from './engine/protocol';
 import { telegram } from './telegram.svelte';
 
@@ -289,8 +290,18 @@ export function createApi(options: ApiOptions): Api {
       const marked = parseMarked(await response.json().catch(() => null));
       return marked === null ? { kind: 'unavailable' } : { kind: 'ok', value: marked };
     },
-    dataExport: async () => ({ kind: 'unavailable' }),
-    serverBackup: async () => ({ kind: 'unavailable' })
+    dataExport: async () => {
+      const response = await call(EXPORT_PATH, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}'
+      });
+      if (response === 'reopen') return { kind: 'reopen' };
+      if (response === null || !response.ok) return { kind: 'unavailable' };
+      // the document's bytes as they came: the screen saves them and never reads them
+      return { kind: 'ok', value: await response.blob() };
+    },
+    serverBackup: () => read(SNAPSHOT_PATH, parseServerBackup)
   };
 }
 

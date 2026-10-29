@@ -30,6 +30,9 @@ final class AppModel {
     /// The account sheet's sync section, which syncs through the same session with the host key
     /// the one Keychain item holds (SPEC-503 R6).
     let sync: SyncModel
+    /// The data screen, which lists and makes this device's backups through the same session
+    /// (SPEC-516 R5).
+    let data: DataModel
 
     private let configuration: SyncConfiguration
     private let session = EngineSession()
@@ -46,6 +49,7 @@ final class AppModel {
         user = configuration.user
         signedIn = (try? store.hostKey()) != nil
         sync = SyncModel(engine: session, store: store, endpoint: configuration.endpoint)
+        data = DataModel(engine: session)
     }
 
     /// Opens the collection and lists its decks, once per model (R7).

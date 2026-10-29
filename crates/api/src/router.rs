@@ -261,7 +261,10 @@ pub fn router(state: ApiState) -> Router {
                 .merge(session_routes::launch_routes(access.clone()))
                 .merge(sync_seal_routes::routes(access.clone(), seal))
                 .merge(snapshot_routes::routes(access.clone(), snapshot))
-                .merge(data_export_routes::routes(access.clone(), readiness.clone()))
+                .merge(data_export_routes::routes(
+                    access.clone(),
+                    readiness.clone(),
+                ))
                 .merge(drill_routes::routes(
                     access.clone(),
                     readiness.clone(),

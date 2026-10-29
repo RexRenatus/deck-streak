@@ -87,8 +87,7 @@ pub fn backup_of(name: &str) -> Option<(Kind, u32)> {
 /// the list and the export name it by (SPEC-516 R4). Any other name is none.
 #[must_use]
 pub fn backup_id(name: &str) -> Option<String> {
-    let _ = name;
-    None
+    backup_of(name).map(|(kind, number)| format!("{}-{number}", kind.word()))
 }
 
 /// The pool name of the record that says `name` was first listed at `made`, in milliseconds since

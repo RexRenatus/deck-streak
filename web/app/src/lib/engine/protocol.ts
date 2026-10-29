@@ -12,8 +12,9 @@
  * the page names a direction and nothing else (SPEC-377 R6). A grade is recorded only by `rate`, on
  * the card shown: no operation answers the queue's head (SPEC-365 R9). `undo-offer` reads the
  * review's own last answer and writes nothing, and `undo` reverts only the answer an offer named, by
- * its card and its step (SPEC-371 R12). The last two list the browser's backups after retention, and
- * export one by its id alone, never a path (SPEC-377 R15, R16). */
+ * its card and its step (SPEC-371 R12). The two after them list the browser's backups after retention, and
+ * export one by its id alone, never a path (SPEC-377 R15, R16). The last makes a backup now, taking
+ * nothing: the web engine names its file (SPEC-516 R4). */
 export const OPS = [
   'open',
   'seed',
@@ -40,7 +41,8 @@ export const OPS = [
   'choice-cancel',
   'unsynced',
   'backups',
-  'backup-export'
+  'backup-export',
+  'backup-now'
 ] as const;
 export type Op = (typeof OPS)[number];
 
@@ -103,7 +105,8 @@ export type Request =
   | { id: number; op: 'choice-count' | 'choice-cancel' | 'unsynced' }
   | { id: number; op: 'choice-confirm'; direction: Direction }
   | { id: number; op: 'backups' }
-  | { id: number; op: 'backup-export'; backup: string };
+  | { id: number; op: 'backup-export'; backup: string }
+  | { id: number; op: 'backup-now' };
 
 /** What a normal sync found the collections need, in the engine's order: the engine answers the
  * index, and this list names it (SPEC-364 R18). */
@@ -299,7 +302,8 @@ const ARGS: Record<Op, Record<string, (value: unknown) => boolean>> = {
   'choice-cancel': {},
   unsynced: {},
   backups: {},
-  'backup-export': { backup: backupId }
+  'backup-export': { backup: backupId },
+  'backup-now': {}
 };
 
 /** Reads a request off the wire. Anything but an operation of `OPS` with exactly its arguments,

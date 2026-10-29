@@ -1382,13 +1382,13 @@ const BACKUP_NOW: [(&str, &str, &[&str]); 1] = [(
 )];
 
 /// What the back up now export may not hold: an engine call of its own, a statement or a private
-/// engine, a name it minted past the reserve or made itself, or a removal.
-const BACKUP_NOW_REFUSED: [&str; 11] = [
+/// engine, a name it minted past the reserve or made itself, or a removal. (The exempt entry is
+/// held by the core's containment census, which refuses its name anywhere outside the entry files.)
+const BACKUP_NOW_REFUSED: [&str; 10] = [
     "call(",
     "query(",
     ".run(",
     "run_method(",
-    "run_exempt(",
     ".execute(",
     ".private(",
     "choice_name(",
@@ -1451,7 +1451,10 @@ fn the_backup_now_export_reaches_the_pool_through_files_and_the_core() {
             "`.execute(`",
         ),
         ("let name = format!(\"/deck-streak/{id}\");", "`format!(`"),
-        ("installed()?.delete_db(\"/deck-streak/backup-1.anki2\")?;", "`delete_db(`"),
+        (
+            "installed()?.delete_db(\"/deck-streak/backup-1.anki2\")?;",
+            "`delete_db(`",
+        ),
     ] {
         let refused = backup_now_problems(&planted_in(&source, name, planted));
         assert!(

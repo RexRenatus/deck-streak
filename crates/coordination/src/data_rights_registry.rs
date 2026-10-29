@@ -97,6 +97,19 @@ pub async fn export_all(db: &Db) -> Result<Export, PrivacyError> {
     deck_streak_privacy::export(db, &ports()).await
 }
 
+/// The owner's export as the bytes every surface answers: [`export_all`]'s document as one line of
+/// compact JSON, ended by its newline. The host's `data` role writes it and the study clients'
+/// export route answers it, so the two are one document by construction (SPEC-516 R2; ADR-534 D2).
+///
+/// # Errors
+///
+/// Every refusal of [`PrivacyError`].
+pub async fn export_document(db: &Db) -> Result<String, PrivacyError> {
+    let mut line = export_all(db).await?.to_line();
+    line.push('\n');
+    Ok(line)
+}
+
 /// The owner's erase: every table a port exports or resets, in one transaction
 /// (`privacy::erase` over [`ports`]).
 ///
