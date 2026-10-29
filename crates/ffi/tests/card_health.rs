@@ -682,8 +682,8 @@ fn the_panels_lines_word_the_record_and_name_no_verdict() {
         "a record that could not be read"
     );
 
-    // The census bites: a planted verdict is caught, and a review row's answer name is not the
-    // panel's own word.
+    // The census bites: a planted verdict is caught, by its word and by its phrase, and a review
+    // row's answer name is not the panel's own word.
     let planted = [
         HealthSection {
             title: "Recall".to_owned(),
@@ -702,7 +702,9 @@ fn the_panels_lines_word_the_record_and_name_no_verdict() {
             .iter()
             .flat_map(|line| verdicts(line))
             .collect::<Vec<_>>(),
-        ["leech", "at risk", "hard"].map(String::from).to_vec(),
+        ["leech", "risk", "at risk", "hard"]
+            .map(String::from)
+            .to_vec(),
         "the census catches each planted verdict and passes the answer name"
     );
 
