@@ -1,9 +1,9 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { api, type Answer } from '$lib/api';
-  import StreakScreen from '$lib/streak/StreakScreen.svelte';
-  import type { StreakView } from '$lib/streak/streak';
-  import { m } from '$lib/paraglide/messages.js';
+  import { api, type Answer } from '#lib/api.js';
+  import StreakScreen from '#lib/streak/StreakScreen.svelte';
+  import type { StreakView } from '#lib/streak/streak.js';
+  import { m } from '#lib/paraglide/messages.js';
 
   // The streak screen (SPEC-076 R23): the owner's streak as the server answers it, the same numbers
   // the bot's /streak reports.

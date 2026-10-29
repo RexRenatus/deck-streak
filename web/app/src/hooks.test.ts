@@ -1,4 +1,5 @@
-import type { RequestEvent, ResolveOptions } from '@sveltejs/kit';
+import type { RequestEvent } from '@sveltejs/kit';
+import type { ResolveOptions } from '@sveltejs/kit/hooks';
 import { describe, expect, it, vi } from 'vitest';
 import { handle } from './hooks.server';
 import { reroute } from './hooks';
@@ -8,7 +9,8 @@ import { reroute } from './hooks';
 // with the locale prefix taken off.
 describe('the server hook', () => {
   it('fills the language and direction placeholders of the page with the base locale', async () => {
-    const event = { request: new Request('http://localhost/about') } as unknown as RequestEvent;
+    const url = new URL('http://localhost/about');
+    const event = { request: new Request(url), url } as unknown as RequestEvent;
     const original = event.request;
     const resolve = vi.fn(async (_event: RequestEvent, options?: ResolveOptions) => {
       const html = await options?.transformPageChunk?.({
@@ -22,9 +24,13 @@ describe('the server hook', () => {
 
     expect(await response.text()).toBe('<html lang="en" dir="ltr">');
     expect(resolve).toHaveBeenCalledTimes(1);
-    expect(resolve.mock.calls[0][0]).toBe(event);
-    expect(event.request).toBeInstanceOf(Request);
-    expect(event.request.url).toBe(original.url);
+    // SvelteKit 3's event is read-only: the hook leaves it alone and resolves a copy of it that
+    // carries the middleware's request
+    const resolved = resolve.mock.calls[0][0];
+    expect(event.request).toBe(original);
+    expect(resolved.url).toBe(url);
+    expect(resolved.request).toBeInstanceOf(Request);
+    expect(resolved.request.url).toBe(original.url);
   });
 });
 

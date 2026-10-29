@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import config from '../../svelte.config.js';
+import config from '../../sveltekit.config.js';
 import { policyHeader } from '../../policy-header';
 import { accepts, admitLaunch, launchData, wasAccepted, type Send } from './telegram-launch';
 
@@ -333,7 +333,7 @@ describe('the launch gate', () => {
   });
 
   it("outside a launch the page adds a policy that admits its own scripts and not Telegram's", async () => {
-    const directives = config.kit?.csp?.directives?.['script-src'] ?? [];
+    const directives = config.csp?.directives?.['script-src'] ?? [];
     const oracle = policyHeader({ 'script-src': directives.filter((source) => source !== 'https://telegram.org') });
     const send = answering(204);
 

@@ -96,8 +96,8 @@ pub trait Flush: Send + Sync {
 pub struct NoFlush;
 
 impl Flush for NoFlush {
-    async fn flush(&self) -> Result<(), KernelError> {
-        Ok(())
+    fn flush(&self) -> impl Future<Output = Result<(), KernelError>> + Send {
+        std::future::ready(Ok(()))
     }
 }
 

@@ -2,7 +2,7 @@
 // the engine answers with, the card the frame refused, and the done deck. An undo the engine
 // refuses, or does not offer, says why: the answer has synced, or something changed after it
 // (SPEC-371 R10).
-import { m } from '$lib/paraglide/messages.js';
+import { m } from '#lib/paraglide/messages.js';
 import type { Status } from './review';
 
 type StatusKey =

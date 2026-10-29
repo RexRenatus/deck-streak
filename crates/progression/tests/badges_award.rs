@@ -135,11 +135,11 @@ async fn a_band_badge_key_names_a_configured_course_and_a_band() {
     assert_eq!(rows(&db).await, 12, "only the accepted keys are written");
     // A band badge is celebrated by the band-up: it is written marked, so no offer raises it.
     let mut connection = db.reader().acquire().await.expect("a connection");
-    assert!(
+    assert_eq!(
         unmarked(&mut connection)
             .await
-            .expect("the unmarked badges")
-            .is_empty()
+            .expect("the unmarked badges"),
+        Vec::<deck_streak_progression::badges::award::EarnedBadge>::new()
     );
     // The pool's close waits for every connection, so the one held here goes back first.
     drop(connection);

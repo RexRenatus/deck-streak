@@ -118,7 +118,7 @@ impl<'a> Notification<'a> {
 }
 
 impl Work for Notification<'_> {
-    async fn perform(&self, _fire: &Fire) -> Result<Done, Reason> {
+    fn perform(&self, _fire: &Fire) -> impl Future<Output = Result<Done, Reason>> + Send {
         self.runs.fetch_add(1, Ordering::SeqCst);
         self.marker
             .attempted
@@ -126,13 +126,13 @@ impl Work for Notification<'_> {
         self.marker
             .delivered
             .fetch_add(self.deliveries, Ordering::SeqCst);
-        if self.fails {
+        std::future::ready(if self.fails {
             Err(Reason::new("synthetic_failure"))
         } else if self.delivered {
             Ok(Done::Done)
         } else {
             Ok(Done::NotDelivered)
-        }
+        })
     }
 }
 
@@ -260,30 +260,43 @@ impl Recording {
 }
 
 impl CronLedger for Recording {
-    async fn claim(&self, job: &str, date: FireDate, _at: UtcMillis) -> Result<bool, KernelError> {
+    fn claim(
+        &self,
+        job: &str,
+        date: FireDate,
+        _at: UtcMillis,
+    ) -> impl Future<Output = Result<bool, KernelError>> + Send {
         self.push(json!(["claim", job, date.epoch_day()]));
-        Ok(self.claim)
+        std::future::ready(Ok(self.claim))
     }
 
-    async fn release(&self, job: &str, date: FireDate, _at: UtcMillis) -> Result<(), KernelError> {
+    fn release(
+        &self,
+        job: &str,
+        date: FireDate,
+        _at: UtcMillis,
+    ) -> impl Future<Output = Result<(), KernelError>> + Send {
         self.push(json!(["release", job, date.epoch_day()]));
-        Ok(())
+        std::future::ready(Ok(()))
     }
 
-    async fn record(
+    fn record(
         &self,
         job: &str,
         date: FireDate,
         outcome: Outcome,
         _once_a_day: bool,
         _at: UtcMillis,
-    ) -> Result<Recorded, KernelError> {
+    ) -> impl Future<Output = Result<Recorded, KernelError>> + Send {
         self.push(json!(["record", job, date.epoch_day(), outcome.as_str()]));
-        Ok(Recorded::Written)
+        std::future::ready(Ok(Recorded::Written))
     }
 
-    async fn latest(&self, _job: &str) -> Result<Option<FireRow>, KernelError> {
-        Ok(None)
+    fn latest(
+        &self,
+        _job: &str,
+    ) -> impl Future<Output = Result<Option<FireRow>, KernelError>> + Send {
+        std::future::ready(Ok(None))
     }
 }
 
@@ -299,7 +312,7 @@ struct Body<'a> {
 }
 
 impl Work for Body<'_> {
-    async fn perform(&self, fire: &Fire) -> Result<Done, Reason> {
+    fn perform(&self, fire: &Fire) -> impl Future<Output = Result<Done, Reason>> + Send {
         self.events
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
@@ -310,13 +323,13 @@ impl Work for Body<'_> {
         self.marker
             .delivered
             .fetch_add(self.deliveries, Ordering::SeqCst);
-        if self.raises {
+        std::future::ready(if self.raises {
             Err(Reason::new("synthetic_failure"))
         } else if self.delivered {
             Ok(Done::Done)
         } else {
             Ok(Done::NotDelivered)
-        }
+        })
     }
 }
 
@@ -574,12 +587,12 @@ struct Reader {
 }
 
 impl Work for Reader {
-    async fn perform(&self, fire: &Fire) -> Result<Done, Reason> {
+    fn perform(&self, fire: &Fire) -> impl Future<Output = Result<Done, Reason>> + Send {
         self.seen
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .push(fire.sync);
-        Ok(Done::Done)
+        std::future::ready(Ok(Done::Done))
     }
 }
 

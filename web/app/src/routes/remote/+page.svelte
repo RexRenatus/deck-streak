@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { resolve, sideAfter, type Action, type Intent, type Side } from '$lib/remote/actions';
-  import { GamepadReader, snapshotOf, type PadReading } from '$lib/remote/gamepad';
-  import { readKey } from '$lib/remote/keys';
-  import { append, type LogEntry, type Source } from '$lib/remote/log';
-  import { WakeLockHolder } from '$lib/remote/wake-lock';
+  import { m } from '#lib/paraglide/messages.js';
+  import { resolve, sideAfter, type Action, type Intent, type Side } from '#lib/remote/actions.js';
+  import { GamepadReader, snapshotOf, type PadReading } from '#lib/remote/gamepad.js';
+  import { readKey } from '#lib/remote/keys.js';
+  import { append, type LogEntry, type Source } from '#lib/remote/log.js';
+  import { WakeLockHolder } from '#lib/remote/wake-lock.js';
 
   // SPEC-343 R16; ADR-354. The remote harness: it reads each gamepad every animation frame and the
   // keys from the window through the remote modules, drives a simulated review, holds the screen

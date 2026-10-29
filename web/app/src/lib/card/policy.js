@@ -1,5 +1,5 @@
 // SPEC-341 R2, R5, R6; ADR-352 D1 to D3. The card frame's policy, in one module both the page
-// policy (svelte.config.js) and the card frame read, so the two cannot drift apart.
+// policy (sveltekit.config.js) and the card frame read, so the two cannot drift apart.
 
 /**
  * The page policy's `frame-src` (SEC01-F13). A frame's own navigation, one the card frame starts

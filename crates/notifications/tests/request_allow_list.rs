@@ -858,18 +858,25 @@ fn a_suppression_in_a_manifest_or_a_flag_is_refused_and_a_look_alike_is_not() {
     assert_eq!(members, 18);
 
     // Look-alikes: a group at warn, a lint unrelated to the rule, a plain flag.
-    assert!(
+    assert_eq!(
         manifest_refusals(
             "Cargo.toml",
             "[lints.clippy]\nall = { level = \"warn\", priority = -1 }\n"
-        )
-        .is_empty()
+        ),
+        Vec::<String>::new()
     );
-    assert!(
-        manifest_refusals("Cargo.toml", "[lints.clippy]\nunwrap_used = \"allow\"\n").is_empty()
+    assert_eq!(
+        manifest_refusals("Cargo.toml", "[lints.clippy]\nunwrap_used = \"allow\"\n"),
+        Vec::<String>::new()
     );
-    assert!(flag_refusals("x.sh", "ls -A clippy.toml").is_empty());
-    assert!(flag_refusals("x.sh", "cargo clippy -- -A clippy::module_name_repetitions").is_empty());
+    assert_eq!(
+        flag_refusals("x.sh", "ls -A clippy.toml"),
+        Vec::<String>::new()
+    );
+    assert_eq!(
+        flag_refusals("x.sh", "cargo clippy -- -A clippy::module_name_repetitions"),
+        Vec::<String>::new()
+    );
 }
 
 #[test]

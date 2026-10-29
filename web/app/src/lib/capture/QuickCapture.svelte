@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { Answer } from '$lib/api';
-  import { m } from '$lib/paraglide/messages.js';
+  import type { Answer } from '#lib/api.js';
+  import { m } from '#lib/paraglide/messages.js';
   import {
     QUICK_TEXT_CHARS,
     fits,

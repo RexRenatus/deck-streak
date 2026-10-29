@@ -1,9 +1,9 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { api, type Answer } from '$lib/api';
-  import LawBlock from '$lib/law/LawBlock.svelte';
-  import type { LawTiersView, LawView } from '$lib/law/law';
-  import { m } from '$lib/paraglide/messages.js';
+  import { api, type Answer } from '#lib/api.js';
+  import LawBlock from '#lib/law/LawBlock.svelte';
+  import type { LawTiersView, LawView } from '#lib/law/law.js';
+  import { m } from '#lib/paraglide/messages.js';
 
   // The law tab (SPEC-077 R17): the law block and SPEC-072's law cards by tier, as the server
   // answers them. The block shows without the tiers when only they cannot be read; the page

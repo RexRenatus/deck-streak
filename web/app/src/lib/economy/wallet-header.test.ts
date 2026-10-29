@@ -11,8 +11,8 @@ import Layout from '../../routes/+layout.svelte';
 // client and Telegram's wrapper are replaced before the layout's imports run; every number is
 // synthetic.
 const mocks = vi.hoisted(() => ({ ready: vi.fn(), feed: vi.fn(), wallet: vi.fn() }));
-vi.mock('$lib/telegram.svelte', () => ({ telegram: { ready: mocks.ready } }));
-vi.mock('$lib/api', () => ({ api: { feed: mocks.feed, wallet: mocks.wallet } }));
+vi.mock('#lib/telegram.svelte.js', () => ({ telegram: { ready: mocks.ready } }));
+vi.mock('#lib/api.js', () => ({ api: { feed: mocks.feed, wallet: mocks.wallet } }));
 
 const WALLET = {
   studyDay: '2025-01-14',

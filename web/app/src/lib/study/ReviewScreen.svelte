@@ -22,12 +22,12 @@
   // dialog asks for a bury with the state its card goes back to, and for a flag with what the undo
   // does to the flag.
   import { onMount } from 'svelte';
-  import CardFrame from '$lib/card/CardFrame.svelte';
-  import type { FlagChange, Returns } from '$lib/engine/protocol';
-  import { m } from '$lib/paraglide/messages.js';
-  import { snapshotOf } from '$lib/remote/gamepad';
-  import { WakeLockHolder, type Conditions } from '$lib/remote/wake-lock';
-  import { telegram } from '$lib/telegram.svelte';
+  import CardFrame from '#lib/card/CardFrame.svelte';
+  import type { FlagChange, Returns } from '#lib/engine/protocol.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { snapshotOf } from '#lib/remote/gamepad.js';
+  import { WakeLockHolder, type Conditions } from '#lib/remote/wake-lock.js';
+  import { telegram } from '#lib/telegram.svelte.js';
   import AnswerButtons from './AnswerButtons.svelte';
   import { Player } from './audio';
   import { deviceStorage, StudyInput } from './input';
