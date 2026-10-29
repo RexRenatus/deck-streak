@@ -135,9 +135,10 @@ read the changed code (`--test skip_record`, `--test settings` of `deck-streak-i
 | `crates/search/tests/eval_golden.rs` | search tests | new: A3 |
 | `crates/search/tests/holds.rs` | search tests | new: A4 |
 | `crates/ingest/Cargo.toml` | ingest | changed: the edge to the search crate |
-| `crates/ingest/src/skip.rs` | ingest | changed: `skip_search` wraps through `SkipQuery`; `SearchRefusal::OutsideTheSkipProfile`; the holds' text is the search crate's |
+| `crates/ingest/src/skip.rs` | ingest | changed: `skip_search` parses through `SkipQuery` and wraps with `wrap_search`; `SearchRefusal::OutsideTheSkipProfile`; the holds' text is the search crate's |
 | `crates/ingest/src/settings.rs` | ingest | changed: `SkipSearch::parse` admits what `Profile::SKIP` admits |
 | `crates/ingest/src/search_parity.rs` | ingest | new: the read-only parity tool |
+| `crates/ingest/src/engine.rs` | ingest | changed: `RslibEngine::scratch_search`, the parity tool's one call into the engine's day and due cards |
 | `crates/ingest/src/lib.rs` | ingest | changed: the `search_parity` module |
 | `crates/ingest/tests/search_profile.rs` | ingest tests | new: A1, A2 |
 | `crates/ingest/tests/search_parity.rs` | ingest tests | new: A6 |
