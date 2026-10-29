@@ -154,9 +154,15 @@ actor EngineSession: SyncEngine {
         return try refused { try engine.flag(cardId: card.cardID, flag: card.flag) }
     }
 
-    /// The card info panel's sections for `cardID` (SPEC-507 R12, R13). A stub: it reads nothing.
+    /// The card info panel's sections for `cardID` (SPEC-507 R12, R13): the adapter reads the
+    /// card's record by the core's two fixed reads and words it, and the app takes each section
+    /// as it is. A card the engine does not hold reads as the adapter's one unreadable line.
     func cardHealth(_ cardID: Int64) throws -> [CardInfoSection] {
-        []
+        let engine = try started()
+        let record = try refused { try engine.cardHealth(cardId: cardID) }
+        return cardHealthLines(health: record).map {
+            CardInfoSection(title: $0.title, lines: $0.lines)
+        }
     }
 
     /// The face of `cardID`: its question, or its answer when `answer` is set, with the clips to

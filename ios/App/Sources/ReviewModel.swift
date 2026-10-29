@@ -34,6 +34,9 @@ final class ReviewModel {
     private(set) var voices: [VoiceLanguage] = []
     /// Whether the voice picker is shown.
     var showingVoices = false
+    /// The card info panel over the shown card, on the review's own session, so opening it stops
+    /// this review's answer clock (SPEC-507 R14, R15).
+    let health: CardHealthModel
 
     private let session: ReviewSession
     private let voiceOverRunning: @MainActor () -> Bool
@@ -49,6 +52,7 @@ final class ReviewModel {
         self.session = session
         self.voiceOverRunning = voiceOverRunning
         self.installed = installed
+        health = CardHealthModel(session: session)
         player.refused = { [weak self] line in self?.notes.append(line) }
     }
 

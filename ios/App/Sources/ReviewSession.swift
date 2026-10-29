@@ -107,9 +107,11 @@ actor ReviewSession {
     }
 
     /// The card info panel's sections for the shown card, as the adapter words them, or none when
-    /// no card is shown (SPEC-507 R14). A stub: it reads nothing.
+    /// no card is shown (SPEC-507 R14).
     func health() async throws -> [CardInfoSection] {
-        []
+        try await shown([]) { card in
+            try await engine.cardHealth(card.cardID)
+        }
     }
 
     /// An overlay opens over the shown card: the answer clock stops (SPEC-507 R15).
