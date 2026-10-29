@@ -474,7 +474,7 @@ async fn a_nudge_raised_in_the_mini_app_goes_to_the_bot() {
             tier: Tier::T2
         }
     );
-    assert!(harness.feed().await.is_empty());
+    assert_eq!(harness.feed().await, Vec::<String>::new());
 }
 
 #[tokio::test]

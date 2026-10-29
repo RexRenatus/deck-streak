@@ -24,12 +24,12 @@
   // SPEC-506 R5; ADR-524: the speaker speaks only with a voice the device runs, and a clip with none
   // leaves a line in the status region naming its language, until the next gesture.
   import { onMount } from 'svelte';
-  import CardFrame from '$lib/card/CardFrame.svelte';
-  import type { CardHealth, FlagChange, Returns } from '$lib/engine/protocol';
-  import { m } from '$lib/paraglide/messages.js';
-  import { snapshotOf } from '$lib/remote/gamepad';
-  import { WakeLockHolder, type Conditions } from '$lib/remote/wake-lock';
-  import { telegram } from '$lib/telegram.svelte';
+  import CardFrame from '#lib/card/CardFrame.svelte';
+  import type { CardHealth, FlagChange, Returns } from '#lib/engine/protocol.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { snapshotOf } from '#lib/remote/gamepad.js';
+  import { WakeLockHolder, type Conditions } from '#lib/remote/wake-lock.js';
+  import { telegram } from '#lib/telegram.svelte.js';
   import AnswerButtons from './AnswerButtons.svelte';
   import CardHealthPanel from './CardHealthPanel.svelte';
   import { Player } from './audio';

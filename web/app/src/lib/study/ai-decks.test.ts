@@ -4,8 +4,8 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Answer } from '$lib/api';
-import type { Deck } from '$lib/engine/protocol';
+import type { Answer } from '#lib/api.js';
+import type { Deck } from '#lib/engine/protocol.js';
 import AiDecksRoute from '../../routes/study/ai-decks/+page.svelte';
 import AiDecks from './AiDecks.svelte';
 import { parseMarked, type MarksClient } from './ai-decks';
@@ -18,8 +18,8 @@ import DeckList from './DeckList.svelte';
 // draws the screen over the app's one engine and its one API client, which are replaced before the
 // route's imports run.
 const mocks = vi.hoisted(() => ({ client: vi.fn(), sensitiveDecks: vi.fn(), setSensitive: vi.fn() }));
-vi.mock('$lib/study/engine', () => ({ studyEngine: () => ({ client: mocks.client }) }));
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/study/engine.js', () => ({ studyEngine: () => ({ client: mocks.client }) }));
+vi.mock('#lib/api.js', () => ({
   api: { sensitiveDecks: mocks.sensitiveDecks, setSensitive: mocks.setSensitive }
 }));
 

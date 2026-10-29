@@ -25,10 +25,13 @@ deletes the note types the engine adds by itself before it builds anything, answ
 ## Steps
 
 1. **Pin the harness.** Outside the sandbox, print the source's digest and set `HARNESS_SOURCE_SHA256` in
-   `tools/parity-oracle/anki/generate.py` to it, in the commit that will carry the goldens:
+   `tools/parity-oracle/anki/generate.py` to it, and commit the pin. The sandbox's tree is a `git archive` export of
+   that commit, so the pin is committed before the run and the goldens follow it in a second commit; every golden's
+   `generator_sha256` is the pinned driver's digest either way:
 
    ```sh
    python3 tools/parity-oracle/anki/generate.py --digest-harness PATH/TO/HARNESS/SOURCE
+   git archive --format=tar PINNED_COMMIT | tar -x -C EXPORT
    ```
 
 2. **Plant the network control.** Outside the sandbox, start a listener on the host's loopback and connect to it; the
@@ -77,8 +80,18 @@ deletes the note types the engine adds by itself before it builds anything, answ
    line).
 
 7. **Leave the sandbox** and copy `OUT/goldens/*.json` into `tools/parity-oracle/goldens/` and `OUT/stock-lines.sha256`
-   into `tools/parity-oracle/anki/stock-lines.sha256`. Commit them with the driver's pin line, and run
-   `python3 -m unittest discover -s tools/parity-oracle -p 'test_*.py'`.
+   into `tools/parity-oracle/anki/stock-lines.sha256`. Write the schema snapshot from the fresh-collection golden, then
+   commit the goldens, the census and the snapshot together, and run the tests that read them:
+
+   ```sh
+   python3 tools/parity-oracle/anki/snapshot.py
+   python3 -m unittest discover -s tools/parity-oracle -p 'test_*.py'
+   cargo test -p deck-streak-ingest --test engine_goldens
+   ```
+
+   The host's sandbox may also be an egress-closed virtual machine guest that mounts only the export and cargo's
+   registry and git checkouts, read-only, and one output folder; steps 2 and 4's controls prove it the same way, the
+   accepted connection and the readable canary on the host, the refused ones in the guest.
 
 ## The run record
 
@@ -91,4 +104,5 @@ Kept in the owner's private evidence, never in this tree:
 - the engine commit the harness reported;
 - the driver's exit code and its `examined` line;
 - the sha256 of every golden written and of `stock-lines.sha256`, and the listing of the output folder showing no
-  other file.
+  other file;
+- the dirty side's read list: each engine file the harness's author and the run's operator read.

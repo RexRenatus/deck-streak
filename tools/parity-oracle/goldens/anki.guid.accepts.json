@@ -1,0 +1,2847 @@
+{
+  "cases": [
+    {
+      "class": "vc1-prefix",
+      "input": {
+        "collection": {
+          "cards": [
+            {
+              "deck": 0,
+              "due": 526,
+              "factor": 2500,
+              "ivl": 47,
+              "lapses": 0,
+              "note": 0,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 348,
+              "factor": 2500,
+              "ivl": 51,
+              "lapses": 0,
+              "note": 1,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 308,
+              "factor": 2500,
+              "ivl": 10,
+              "lapses": 0,
+              "note": 2,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            }
+          ],
+          "crt": 1021254400,
+          "decks": [
+            {
+              "filtered": false,
+              "name": "Ds Home"
+            },
+            {
+              "filtered": false,
+              "name": "Ds Home::Garnet"
+            }
+          ],
+          "media": [],
+          "notes": [
+            {
+              "fields": [
+                "juniper",
+                "juniper ember cobalt juniper"
+              ],
+              "guid": "vc1-d1ab9bb0b2",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "harbor cobalt fjord indigo",
+                "basil ember"
+              ],
+              "guid": "vc1-03680132a9",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "dune indigo",
+                "basil ember dune"
+              ],
+              "guid": "vc1-83b07b1afe",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            }
+          ],
+          "notetypes": [
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Prompt",
+                "Answer"
+              ],
+              "kind": "standard",
+              "name": "ds.prompt-answer",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+                  "front": "{{Prompt}}",
+                  "name": "Forward"
+                }
+              ]
+            },
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Body",
+                "Notes"
+              ],
+              "kind": "cloze",
+              "name": "ds.gap-text",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+                  "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+                  "name": "Gap"
+                }
+              ]
+            }
+          ],
+          "now": 1043334812,
+          "revlog": [
+            {
+              "at_ms": 1040224412000,
+              "card": 0,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1040310812000,
+              "card": 1,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1040656412000,
+              "card": 2,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            }
+          ],
+          "rollover_hour": 13,
+          "synced": false,
+          "utc_offset_minutes": 0
+        }
+      },
+      "output": {
+        "kept": [
+          true,
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "class": "vc1-prefix",
+      "input": {
+        "collection": {
+          "cards": [
+            {
+              "deck": 0,
+              "due": 10,
+              "factor": 2500,
+              "ivl": 5,
+              "lapses": 0,
+              "note": 0,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 42,
+              "factor": 2500,
+              "ivl": 21,
+              "lapses": 0,
+              "note": 1,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 300,
+              "factor": 2500,
+              "ivl": 60,
+              "lapses": 0,
+              "note": 2,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            }
+          ],
+          "crt": 1000000000,
+          "decks": [
+            {
+              "filtered": false,
+              "name": "Ds Home"
+            },
+            {
+              "filtered": false,
+              "name": "Ds Home::Amber"
+            }
+          ],
+          "media": [],
+          "notes": [
+            {
+              "fields": [
+                "amber basil",
+                "cobalt"
+              ],
+              "guid": "vc1-0a1b2c3d",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "dune",
+                "ember fjord"
+              ],
+              "guid": "vc1-1b2c3d4e",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "garnet harbor indigo",
+                "juniper"
+              ],
+              "guid": "vc1-2c3d4e5f",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            }
+          ],
+          "notetypes": [
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Prompt",
+                "Answer"
+              ],
+              "kind": "standard",
+              "name": "ds.prompt-answer",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+                  "front": "{{Prompt}}",
+                  "name": "Forward"
+                }
+              ]
+            },
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Body",
+                "Notes"
+              ],
+              "kind": "cloze",
+              "name": "ds.gap-text",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+                  "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+                  "name": "Gap"
+                }
+              ]
+            }
+          ],
+          "now": 1002595600,
+          "revlog": [
+            {
+              "at_ms": 999226000000,
+              "card": 0,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 999398800000,
+              "card": 1,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 999658000000,
+              "card": 2,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            }
+          ],
+          "rollover_hour": 4,
+          "synced": false,
+          "utc_offset_minutes": 0
+        }
+      },
+      "output": {
+        "kept": [
+          true,
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "class": "vc1-prefix",
+      "input": {
+        "collection": {
+          "cards": [
+            {
+              "deck": 0,
+              "due": 0,
+              "factor": 2500,
+              "ivl": 1,
+              "lapses": 0,
+              "note": 0,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 1,
+              "factor": 2500,
+              "ivl": 2,
+              "lapses": 0,
+              "note": 1,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 2,
+              "factor": 2500,
+              "ivl": 3,
+              "lapses": 0,
+              "note": 2,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            }
+          ],
+          "crt": 1001468800,
+          "decks": [
+            {
+              "filtered": false,
+              "name": "Ds Home"
+            },
+            {
+              "filtered": false,
+              "name": "Ds Home::Basil"
+            }
+          ],
+          "media": [],
+          "notes": [
+            {
+              "fields": [
+                "<b>basil</b>",
+                "<i>cobalt</i>"
+              ],
+              "guid": "vc1-3d4e5f60",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "dune ember",
+                ""
+              ],
+              "guid": "vc1-4e5f6071",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "fjord",
+                "garnet"
+              ],
+              "guid": "vc1-5f607182",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            }
+          ],
+          "notetypes": [
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Prompt",
+                "Answer"
+              ],
+              "kind": "standard",
+              "name": "ds.prompt-answer",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+                  "front": "{{Prompt}}",
+                  "name": "Forward"
+                }
+              ]
+            },
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Body",
+                "Notes"
+              ],
+              "kind": "cloze",
+              "name": "ds.gap-text",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+                  "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+                  "name": "Gap"
+                }
+              ]
+            }
+          ],
+          "now": 1017325000,
+          "revlog": [
+            {
+              "at_ms": 1014214600000,
+              "card": 0,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1014560200000,
+              "card": 1,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1014905800000,
+              "card": 2,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            }
+          ],
+          "rollover_hour": 0,
+          "synced": false,
+          "utc_offset_minutes": 540
+        }
+      },
+      "output": {
+        "kept": [
+          true,
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "class": "vc1-prefix",
+      "input": {
+        "collection": {
+          "cards": [
+            {
+              "deck": 0,
+              "due": 899,
+              "factor": 2500,
+              "ivl": 89,
+              "lapses": 0,
+              "note": 0,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 450,
+              "factor": 2500,
+              "ivl": 45,
+              "lapses": 0,
+              "note": 1,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 1,
+              "factor": 2500,
+              "ivl": 1,
+              "lapses": 0,
+              "note": 2,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            }
+          ],
+          "crt": 1008640000,
+          "decks": [
+            {
+              "filtered": false,
+              "name": "Ds Home"
+            },
+            {
+              "filtered": false,
+              "name": "Ds Home::Cobalt"
+            }
+          ],
+          "media": [],
+          "notes": [
+            {
+              "fields": [
+                "harbor",
+                "indigo juniper"
+              ],
+              "guid": "vc1-60718293",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "amber amber",
+                "basil basil"
+              ],
+              "guid": "vc1-718293a4",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "cobalt dune ember fjord garnet harbor",
+                "indigo"
+              ],
+              "guid": "vc1-8293a4b5",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            }
+          ],
+          "notetypes": [
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Prompt",
+                "Answer"
+              ],
+              "kind": "standard",
+              "name": "ds.prompt-answer",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+                  "front": "{{Prompt}}",
+                  "name": "Forward"
+                }
+              ]
+            },
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Body",
+                "Notes"
+              ],
+              "kind": "cloze",
+              "name": "ds.gap-text",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+                  "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+                  "name": "Gap"
+                }
+              ]
+            }
+          ],
+          "now": 1008733600,
+          "revlog": [
+            {
+              "at_ms": 1005364000000,
+              "card": 0,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1005450400000,
+              "card": 1,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1005536800000,
+              "card": 2,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            }
+          ],
+          "rollover_hour": 23,
+          "synced": false,
+          "utc_offset_minutes": -300
+        }
+      },
+      "output": {
+        "kept": [
+          true,
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "class": "vc1-prefix",
+      "input": {
+        "collection": {
+          "cards": [
+            {
+              "deck": 0,
+              "due": 365,
+              "factor": 2500,
+              "ivl": 30,
+              "lapses": 0,
+              "note": 0,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 730,
+              "factor": 2500,
+              "ivl": 60,
+              "lapses": 0,
+              "note": 1,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 5,
+              "factor": 2500,
+              "ivl": 2,
+              "lapses": 0,
+              "note": 2,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            }
+          ],
+          "crt": 1031536000,
+          "decks": [
+            {
+              "filtered": false,
+              "name": "Ds Home"
+            },
+            {
+              "filtered": false,
+              "name": "Ds Home::Dune"
+            }
+          ],
+          "media": [],
+          "notes": [
+            {
+              "fields": [
+                "café",
+                "naïve"
+              ],
+              "guid": "vc1-93a4b5c6",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "山水 amber",
+                "basil 学校"
+              ],
+              "guid": "vc1-a4b5c6d7",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "ember",
+                "fjord"
+              ],
+              "guid": "vc1-b5c6d7e8",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            }
+          ],
+          "notetypes": [
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Prompt",
+                "Answer"
+              ],
+              "kind": "standard",
+              "name": "ds.prompt-answer",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+                  "front": "{{Prompt}}",
+                  "name": "Forward"
+                }
+              ]
+            },
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Body",
+                "Notes"
+              ],
+              "kind": "cloze",
+              "name": "ds.gap-text",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+                  "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+                  "name": "Gap"
+                }
+              ]
+            }
+          ],
+          "now": 1086486399,
+          "revlog": [
+            {
+              "at_ms": 1083203199000,
+              "card": 0,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1083462399000,
+              "card": 1,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1083807999000,
+              "card": 2,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            }
+          ],
+          "rollover_hour": 12,
+          "synced": false,
+          "utc_offset_minutes": 330
+        }
+      },
+      "output": {
+        "kept": [
+          true,
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "class": "vc1-prefix",
+      "input": {
+        "collection": {
+          "cards": [
+            {
+              "deck": 0,
+              "due": 7,
+              "factor": 2500,
+              "ivl": 3,
+              "lapses": 0,
+              "note": 0,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 14,
+              "factor": 2500,
+              "ivl": 7,
+              "lapses": 0,
+              "note": 1,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 28,
+              "factor": 2500,
+              "ivl": 14,
+              "lapses": 0,
+              "note": 2,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            }
+          ],
+          "crt": 1000259200,
+          "decks": [
+            {
+              "filtered": false,
+              "name": "Ds Home"
+            },
+            {
+              "filtered": false,
+              "name": "Ds Home::Ember"
+            }
+          ],
+          "media": [],
+          "notes": [
+            {
+              "fields": [
+                "garnet",
+                "harbor"
+              ],
+              "guid": "vc1-c6d7e8f9",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "indigo juniper amber",
+                "basil"
+              ],
+              "guid": "vc1-d7e8f90a",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "cobalt",
+                "dune ember"
+              ],
+              "guid": "vc1-e8f90a1b",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            }
+          ],
+          "notetypes": [
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Prompt",
+                "Answer"
+              ],
+              "kind": "standard",
+              "name": "ds.prompt-answer",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+                  "front": "{{Prompt}}",
+                  "name": "Forward"
+                }
+              ]
+            },
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Body",
+                "Notes"
+              ],
+              "kind": "cloze",
+              "name": "ds.gap-text",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+                  "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+                  "name": "Gap"
+                }
+              ]
+            }
+          ],
+          "now": 1003456001,
+          "revlog": [
+            {
+              "at_ms": 1000259201000,
+              "card": 0,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1000345601000,
+              "card": 1,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1000518401000,
+              "card": 2,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            }
+          ],
+          "rollover_hour": 6,
+          "synced": false,
+          "utc_offset_minutes": -210
+        }
+      },
+      "output": {
+        "kept": [
+          true,
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "class": "vc1-prefix",
+      "input": {
+        "collection": {
+          "cards": [
+            {
+              "deck": 0,
+              "due": 600,
+              "factor": 2500,
+              "ivl": 80,
+              "lapses": 0,
+              "note": 0,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 601,
+              "factor": 2500,
+              "ivl": 81,
+              "lapses": 0,
+              "note": 1,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 602,
+              "factor": 2500,
+              "ivl": 82,
+              "lapses": 0,
+              "note": 2,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            }
+          ],
+          "crt": 1004320000,
+          "decks": [
+            {
+              "filtered": false,
+              "name": "Ds Home"
+            },
+            {
+              "filtered": false,
+              "name": "Ds Home::Fjord"
+            }
+          ],
+          "media": [],
+          "notes": [
+            {
+              "fields": [
+                "fjord garnet",
+                "harbor indigo"
+              ],
+              "guid": "vc1-f90a1b2c",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "juniper",
+                "amber basil cobalt"
+              ],
+              "guid": "vc1-0a1b2c3e",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "dune",
+                "dune"
+              ],
+              "guid": "vc1-1b2c3d4f",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            }
+          ],
+          "notetypes": [
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Prompt",
+                "Answer"
+              ],
+              "kind": "standard",
+              "name": "ds.prompt-answer",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+                  "front": "{{Prompt}}",
+                  "name": "Forward"
+                }
+              ]
+            },
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Body",
+                "Notes"
+              ],
+              "kind": "cloze",
+              "name": "ds.gap-text",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+                  "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+                  "name": "Gap"
+                }
+              ]
+            }
+          ],
+          "now": 1082120000,
+          "revlog": [
+            {
+              "at_ms": 1079009600000,
+              "card": 0,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1079268800000,
+              "card": 1,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1079441600000,
+              "card": 2,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            }
+          ],
+          "rollover_hour": 2,
+          "synced": false,
+          "utc_offset_minutes": 780
+        }
+      },
+      "output": {
+        "kept": [
+          true,
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "class": "vc1-prefix",
+      "input": {
+        "collection": {
+          "cards": [
+            {
+              "deck": 0,
+              "due": 33,
+              "factor": 2500,
+              "ivl": 11,
+              "lapses": 0,
+              "note": 0,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 66,
+              "factor": 2500,
+              "ivl": 22,
+              "lapses": 0,
+              "note": 1,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 99,
+              "factor": 2500,
+              "ivl": 33,
+              "lapses": 0,
+              "note": 2,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            }
+          ],
+          "crt": 1021600000,
+          "decks": [
+            {
+              "filtered": false,
+              "name": "Ds Home"
+            },
+            {
+              "filtered": false,
+              "name": "Ds Home::Garnet"
+            }
+          ],
+          "media": [],
+          "notes": [
+            {
+              "fields": [
+                "ember fjord garnet",
+                "harbor"
+              ],
+              "guid": "vc1-2c3d4e60",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "indigo",
+                "juniper amber"
+              ],
+              "guid": "vc1-3d4e5f71",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "basil cobalt",
+                "dune"
+              ],
+              "guid": "vc1-4e5f6082",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            }
+          ],
+          "notetypes": [
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Prompt",
+                "Answer"
+              ],
+              "kind": "standard",
+              "name": "ds.prompt-answer",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+                  "front": "{{Prompt}}",
+                  "name": "Forward"
+                }
+              ]
+            },
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Body",
+                "Notes"
+              ],
+              "kind": "cloze",
+              "name": "ds.gap-text",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+                  "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+                  "name": "Gap"
+                }
+              ]
+            }
+          ],
+          "now": 1021751200,
+          "revlog": [
+            {
+              "at_ms": 1018468000000,
+              "card": 0,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1018640800000,
+              "card": 1,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1018727200000,
+              "card": 2,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            }
+          ],
+          "rollover_hour": 18,
+          "synced": false,
+          "utc_offset_minutes": 345
+        }
+      },
+      "output": {
+        "kept": [
+          true,
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "class": "ds-prefix",
+      "input": {
+        "collection": {
+          "cards": [
+            {
+              "deck": 0,
+              "due": 886,
+              "factor": 2500,
+              "ivl": 31,
+              "lapses": 0,
+              "note": 0,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 563,
+              "factor": 2500,
+              "ivl": 26,
+              "lapses": 0,
+              "note": 1,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 629,
+              "factor": 2500,
+              "ivl": 58,
+              "lapses": 0,
+              "note": 2,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            }
+          ],
+          "crt": 1034214400,
+          "decks": [
+            {
+              "filtered": false,
+              "name": "Ds Home"
+            },
+            {
+              "filtered": false,
+              "name": "Ds Home::Amber"
+            }
+          ],
+          "media": [],
+          "notes": [
+            {
+              "fields": [
+                "amber garnet fjord indigo fjord harbor",
+                "indigo dune ember"
+              ],
+              "guid": "ds-04737c49cd",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "indigo ember",
+                "fjord"
+              ],
+              "guid": "ds-744f474b15",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "dune harbor garnet amber",
+                "basil juniper garnet"
+              ],
+              "guid": "ds-fe3fe96033",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            }
+          ],
+          "notetypes": [
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Prompt",
+                "Answer"
+              ],
+              "kind": "standard",
+              "name": "ds.prompt-answer",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+                  "front": "{{Prompt}}",
+                  "name": "Forward"
+                }
+              ]
+            },
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Body",
+                "Notes"
+              ],
+              "kind": "cloze",
+              "name": "ds.gap-text",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+                  "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+                  "name": "Gap"
+                }
+              ]
+            }
+          ],
+          "now": 1059348954,
+          "revlog": [
+            {
+              "at_ms": 1056065754000,
+              "card": 0,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1056152154000,
+              "card": 1,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1056497754000,
+              "card": 2,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            }
+          ],
+          "rollover_hour": 1,
+          "synced": false,
+          "utc_offset_minutes": 540
+        }
+      },
+      "output": {
+        "kept": [
+          true,
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "class": "ds-prefix",
+      "input": {
+        "collection": {
+          "cards": [
+            {
+              "deck": 0,
+              "due": 10,
+              "factor": 2500,
+              "ivl": 5,
+              "lapses": 0,
+              "note": 0,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 42,
+              "factor": 2500,
+              "ivl": 21,
+              "lapses": 0,
+              "note": 1,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 300,
+              "factor": 2500,
+              "ivl": 60,
+              "lapses": 0,
+              "note": 2,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            }
+          ],
+          "crt": 1000000000,
+          "decks": [
+            {
+              "filtered": false,
+              "name": "Ds Home"
+            },
+            {
+              "filtered": false,
+              "name": "Ds Home::Amber"
+            }
+          ],
+          "media": [],
+          "notes": [
+            {
+              "fields": [
+                "amber basil",
+                "cobalt"
+              ],
+              "guid": "ds-0a1b2c3d",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "dune",
+                "ember fjord"
+              ],
+              "guid": "ds-1b2c3d4e",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "garnet harbor indigo",
+                "juniper"
+              ],
+              "guid": "ds-2c3d4e5f",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            }
+          ],
+          "notetypes": [
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Prompt",
+                "Answer"
+              ],
+              "kind": "standard",
+              "name": "ds.prompt-answer",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+                  "front": "{{Prompt}}",
+                  "name": "Forward"
+                }
+              ]
+            },
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Body",
+                "Notes"
+              ],
+              "kind": "cloze",
+              "name": "ds.gap-text",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+                  "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+                  "name": "Gap"
+                }
+              ]
+            }
+          ],
+          "now": 1002595600,
+          "revlog": [
+            {
+              "at_ms": 999226000000,
+              "card": 0,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 999398800000,
+              "card": 1,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 999658000000,
+              "card": 2,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            }
+          ],
+          "rollover_hour": 4,
+          "synced": false,
+          "utc_offset_minutes": 0
+        }
+      },
+      "output": {
+        "kept": [
+          true,
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "class": "ds-prefix",
+      "input": {
+        "collection": {
+          "cards": [
+            {
+              "deck": 0,
+              "due": 0,
+              "factor": 2500,
+              "ivl": 1,
+              "lapses": 0,
+              "note": 0,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 1,
+              "factor": 2500,
+              "ivl": 2,
+              "lapses": 0,
+              "note": 1,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 2,
+              "factor": 2500,
+              "ivl": 3,
+              "lapses": 0,
+              "note": 2,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            }
+          ],
+          "crt": 1001468800,
+          "decks": [
+            {
+              "filtered": false,
+              "name": "Ds Home"
+            },
+            {
+              "filtered": false,
+              "name": "Ds Home::Basil"
+            }
+          ],
+          "media": [],
+          "notes": [
+            {
+              "fields": [
+                "<b>basil</b>",
+                "<i>cobalt</i>"
+              ],
+              "guid": "ds-3d4e5f60",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "dune ember",
+                ""
+              ],
+              "guid": "ds-4e5f6071",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "fjord",
+                "garnet"
+              ],
+              "guid": "ds-5f607182",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            }
+          ],
+          "notetypes": [
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Prompt",
+                "Answer"
+              ],
+              "kind": "standard",
+              "name": "ds.prompt-answer",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+                  "front": "{{Prompt}}",
+                  "name": "Forward"
+                }
+              ]
+            },
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Body",
+                "Notes"
+              ],
+              "kind": "cloze",
+              "name": "ds.gap-text",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+                  "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+                  "name": "Gap"
+                }
+              ]
+            }
+          ],
+          "now": 1017325000,
+          "revlog": [
+            {
+              "at_ms": 1014214600000,
+              "card": 0,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1014560200000,
+              "card": 1,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1014905800000,
+              "card": 2,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            }
+          ],
+          "rollover_hour": 0,
+          "synced": false,
+          "utc_offset_minutes": 540
+        }
+      },
+      "output": {
+        "kept": [
+          true,
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "class": "ds-prefix",
+      "input": {
+        "collection": {
+          "cards": [
+            {
+              "deck": 0,
+              "due": 899,
+              "factor": 2500,
+              "ivl": 89,
+              "lapses": 0,
+              "note": 0,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 450,
+              "factor": 2500,
+              "ivl": 45,
+              "lapses": 0,
+              "note": 1,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 1,
+              "factor": 2500,
+              "ivl": 1,
+              "lapses": 0,
+              "note": 2,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            }
+          ],
+          "crt": 1008640000,
+          "decks": [
+            {
+              "filtered": false,
+              "name": "Ds Home"
+            },
+            {
+              "filtered": false,
+              "name": "Ds Home::Cobalt"
+            }
+          ],
+          "media": [],
+          "notes": [
+            {
+              "fields": [
+                "harbor",
+                "indigo juniper"
+              ],
+              "guid": "ds-60718293",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "amber amber",
+                "basil basil"
+              ],
+              "guid": "ds-718293a4",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "cobalt dune ember fjord garnet harbor",
+                "indigo"
+              ],
+              "guid": "ds-8293a4b5",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            }
+          ],
+          "notetypes": [
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Prompt",
+                "Answer"
+              ],
+              "kind": "standard",
+              "name": "ds.prompt-answer",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+                  "front": "{{Prompt}}",
+                  "name": "Forward"
+                }
+              ]
+            },
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Body",
+                "Notes"
+              ],
+              "kind": "cloze",
+              "name": "ds.gap-text",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+                  "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+                  "name": "Gap"
+                }
+              ]
+            }
+          ],
+          "now": 1008733600,
+          "revlog": [
+            {
+              "at_ms": 1005364000000,
+              "card": 0,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1005450400000,
+              "card": 1,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1005536800000,
+              "card": 2,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            }
+          ],
+          "rollover_hour": 23,
+          "synced": false,
+          "utc_offset_minutes": -300
+        }
+      },
+      "output": {
+        "kept": [
+          true,
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "class": "ds-prefix",
+      "input": {
+        "collection": {
+          "cards": [
+            {
+              "deck": 0,
+              "due": 365,
+              "factor": 2500,
+              "ivl": 30,
+              "lapses": 0,
+              "note": 0,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 730,
+              "factor": 2500,
+              "ivl": 60,
+              "lapses": 0,
+              "note": 1,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 5,
+              "factor": 2500,
+              "ivl": 2,
+              "lapses": 0,
+              "note": 2,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            }
+          ],
+          "crt": 1031536000,
+          "decks": [
+            {
+              "filtered": false,
+              "name": "Ds Home"
+            },
+            {
+              "filtered": false,
+              "name": "Ds Home::Dune"
+            }
+          ],
+          "media": [],
+          "notes": [
+            {
+              "fields": [
+                "café",
+                "naïve"
+              ],
+              "guid": "ds-93a4b5c6",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "山水 amber",
+                "basil 学校"
+              ],
+              "guid": "ds-a4b5c6d7",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "ember",
+                "fjord"
+              ],
+              "guid": "ds-b5c6d7e8",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            }
+          ],
+          "notetypes": [
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Prompt",
+                "Answer"
+              ],
+              "kind": "standard",
+              "name": "ds.prompt-answer",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+                  "front": "{{Prompt}}",
+                  "name": "Forward"
+                }
+              ]
+            },
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Body",
+                "Notes"
+              ],
+              "kind": "cloze",
+              "name": "ds.gap-text",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+                  "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+                  "name": "Gap"
+                }
+              ]
+            }
+          ],
+          "now": 1086486399,
+          "revlog": [
+            {
+              "at_ms": 1083203199000,
+              "card": 0,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1083462399000,
+              "card": 1,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1083807999000,
+              "card": 2,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            }
+          ],
+          "rollover_hour": 12,
+          "synced": false,
+          "utc_offset_minutes": 330
+        }
+      },
+      "output": {
+        "kept": [
+          true,
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "class": "ds-prefix",
+      "input": {
+        "collection": {
+          "cards": [
+            {
+              "deck": 0,
+              "due": 7,
+              "factor": 2500,
+              "ivl": 3,
+              "lapses": 0,
+              "note": 0,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 14,
+              "factor": 2500,
+              "ivl": 7,
+              "lapses": 0,
+              "note": 1,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 28,
+              "factor": 2500,
+              "ivl": 14,
+              "lapses": 0,
+              "note": 2,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            }
+          ],
+          "crt": 1000259200,
+          "decks": [
+            {
+              "filtered": false,
+              "name": "Ds Home"
+            },
+            {
+              "filtered": false,
+              "name": "Ds Home::Ember"
+            }
+          ],
+          "media": [],
+          "notes": [
+            {
+              "fields": [
+                "garnet",
+                "harbor"
+              ],
+              "guid": "ds-c6d7e8f9",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "indigo juniper amber",
+                "basil"
+              ],
+              "guid": "ds-d7e8f90a",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "cobalt",
+                "dune ember"
+              ],
+              "guid": "ds-e8f90a1b",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            }
+          ],
+          "notetypes": [
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Prompt",
+                "Answer"
+              ],
+              "kind": "standard",
+              "name": "ds.prompt-answer",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+                  "front": "{{Prompt}}",
+                  "name": "Forward"
+                }
+              ]
+            },
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Body",
+                "Notes"
+              ],
+              "kind": "cloze",
+              "name": "ds.gap-text",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+                  "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+                  "name": "Gap"
+                }
+              ]
+            }
+          ],
+          "now": 1003456001,
+          "revlog": [
+            {
+              "at_ms": 1000259201000,
+              "card": 0,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1000345601000,
+              "card": 1,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1000518401000,
+              "card": 2,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            }
+          ],
+          "rollover_hour": 6,
+          "synced": false,
+          "utc_offset_minutes": -210
+        }
+      },
+      "output": {
+        "kept": [
+          true,
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "class": "ds-prefix",
+      "input": {
+        "collection": {
+          "cards": [
+            {
+              "deck": 0,
+              "due": 600,
+              "factor": 2500,
+              "ivl": 80,
+              "lapses": 0,
+              "note": 0,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 601,
+              "factor": 2500,
+              "ivl": 81,
+              "lapses": 0,
+              "note": 1,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 602,
+              "factor": 2500,
+              "ivl": 82,
+              "lapses": 0,
+              "note": 2,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            }
+          ],
+          "crt": 1004320000,
+          "decks": [
+            {
+              "filtered": false,
+              "name": "Ds Home"
+            },
+            {
+              "filtered": false,
+              "name": "Ds Home::Fjord"
+            }
+          ],
+          "media": [],
+          "notes": [
+            {
+              "fields": [
+                "fjord garnet",
+                "harbor indigo"
+              ],
+              "guid": "ds-f90a1b2c",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "juniper",
+                "amber basil cobalt"
+              ],
+              "guid": "ds-0a1b2c3e",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "dune",
+                "dune"
+              ],
+              "guid": "ds-1b2c3d4f",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            }
+          ],
+          "notetypes": [
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Prompt",
+                "Answer"
+              ],
+              "kind": "standard",
+              "name": "ds.prompt-answer",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+                  "front": "{{Prompt}}",
+                  "name": "Forward"
+                }
+              ]
+            },
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Body",
+                "Notes"
+              ],
+              "kind": "cloze",
+              "name": "ds.gap-text",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+                  "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+                  "name": "Gap"
+                }
+              ]
+            }
+          ],
+          "now": 1082120000,
+          "revlog": [
+            {
+              "at_ms": 1079009600000,
+              "card": 0,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1079268800000,
+              "card": 1,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1079441600000,
+              "card": 2,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            }
+          ],
+          "rollover_hour": 2,
+          "synced": false,
+          "utc_offset_minutes": 780
+        }
+      },
+      "output": {
+        "kept": [
+          true,
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "class": "ds-prefix",
+      "input": {
+        "collection": {
+          "cards": [
+            {
+              "deck": 0,
+              "due": 33,
+              "factor": 2500,
+              "ivl": 11,
+              "lapses": 0,
+              "note": 0,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 66,
+              "factor": 2500,
+              "ivl": 22,
+              "lapses": 0,
+              "note": 1,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            },
+            {
+              "deck": 0,
+              "due": 99,
+              "factor": 2500,
+              "ivl": 33,
+              "lapses": 0,
+              "note": 2,
+              "odeck": null,
+              "odue": 0,
+              "ord": 0,
+              "queue": 2,
+              "reps": 0,
+              "type": 2
+            }
+          ],
+          "crt": 1021600000,
+          "decks": [
+            {
+              "filtered": false,
+              "name": "Ds Home"
+            },
+            {
+              "filtered": false,
+              "name": "Ds Home::Garnet"
+            }
+          ],
+          "media": [],
+          "notes": [
+            {
+              "fields": [
+                "ember fjord garnet",
+                "harbor"
+              ],
+              "guid": "ds-2c3d4e60",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "indigo",
+                "juniper amber"
+              ],
+              "guid": "ds-3d4e5f71",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            },
+            {
+              "fields": [
+                "basil cobalt",
+                "dune"
+              ],
+              "guid": "ds-4e5f6082",
+              "notetype": 0,
+              "tags": [
+                "ds"
+              ]
+            }
+          ],
+          "notetypes": [
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Prompt",
+                "Answer"
+              ],
+              "kind": "standard",
+              "name": "ds.prompt-answer",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+                  "front": "{{Prompt}}",
+                  "name": "Forward"
+                }
+              ]
+            },
+            {
+              "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+              "fields": [
+                "Body",
+                "Notes"
+              ],
+              "kind": "cloze",
+              "name": "ds.gap-text",
+              "sort_field": 0,
+              "templates": [
+                {
+                  "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+                  "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+                  "name": "Gap"
+                }
+              ]
+            }
+          ],
+          "now": 1021751200,
+          "revlog": [
+            {
+              "at_ms": 1018468000000,
+              "card": 0,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1018640800000,
+              "card": 1,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            },
+            {
+              "at_ms": 1018727200000,
+              "card": 2,
+              "ease": 3,
+              "factor": 2500,
+              "ivl": 1,
+              "last_ivl": 0,
+              "taken_ms": 4000,
+              "type": 1
+            }
+          ],
+          "rollover_hour": 18,
+          "synced": false,
+          "utc_offset_minutes": 345
+        }
+      },
+      "output": {
+        "kept": [
+          true,
+          true,
+          true
+        ]
+      }
+    }
+  ],
+  "function": "anki.guid.accepts",
+  "generator": "tools/parity-oracle/anki/generate.py",
+  "generator_sha256": "8bd480ee4afb7a31cc6096a397940da1c3661ab11df1cc95214ca464c49e6737",
+  "inputs": "synthetic",
+  "kind": "engine",
+  "note": "exports the collection and imports it into a fresh one, then answers whether each GUID was kept (F11); cases drawn under CPython 3.12.3.",
+  "registry": "tools/parity-oracle/anki/registry/spec_498.py",
+  "registry_sha256": "bdd6ffaf1205a07705397b3793244fd7a4852bbd9af35882003df5e2ccf706f8",
+  "schema": "phx.parity-golden.v1",
+  "seed": 498,
+  "source_commit": "65e053b829825f534803b2b772c507a73ba936a3"
+}

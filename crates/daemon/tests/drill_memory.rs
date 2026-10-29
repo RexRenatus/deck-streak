@@ -54,6 +54,6 @@ async fn the_drill_grades_port_gives_types_and_xp_only() {
         .read(&Subject::parse("law/property").expect("a subject"))
         .await
         .expect("the port answers");
-    assert!(none.is_empty());
+    assert_eq!(none, Vec::<String>::new());
     db.close().await;
 }

@@ -407,8 +407,13 @@ class EachOperandOfTheGeneratorIsHeld(unittest.TestCase):
 
     def test_the_default_registry_names_every_committed_golden(self):
         """A9: the registry the generator reads by default registers exactly the goldens
-        committed beside it, one golden file per registered name."""
-        committed = sorted(path.stem for path in (HERE / "goldens").glob("*.json"))
+        committed beside it, one golden file per registered name; the engine's goldens are the
+        second oracle's (SPEC-498), held by test_goldens.py."""
+        committed = sorted(
+            path.stem
+            for path in (HERE / "goldens").glob("*.json")
+            if not path.name.startswith("anki.")
+        )
         registered = sorted(generate.load_registry(generate.REGISTRY))
         self.assertEqual(registered, examined("committed goldens", committed))
 

@@ -1,4 +1,4 @@
-# The JavaScript workspace. pnpm 11 reads its settings here and from the environment, and reads
+# The JavaScript workspace. pnpm 12 reads its settings here and from the environment, and reads
 # only registry and auth settings from `.npmrc`.
 packages:
   - web/app
@@ -6,19 +6,20 @@ packages:
 # One version for a tool that more than one package depends on. Vitest is a devDependency of the
 # root, which runs web/app's tests from the repository root, and of web/app itself.
 catalog:
-  vitest: ^4.1.12
+  vitest: ^5.0.5
 
 # Refuse to install on a Node that a package's `engines` rules out (the root pins Node 24).
 engineStrict: true
 
-# Two development-only transitive dependencies, moved to the versions that fix their advisories,
-# which no update inside a parent's major reaches (ADR-005's amendment). SvelteKit 2 declares
-# `cookie ^0.6.0` (fixed in 0.7.0), and StrykerJS 10's `typed-rest-client` 2.3.1 pins `qs` 6.15.1
-# (fixed in 6.16.0). Each selector names its parent's major, so an entry never touches a later
-# major, which declares a fixed range itself; an entry whose parent no longer matches is removed.
-# A third follows the same rule: Mermaid 11 declares a `katex` range that no update reaches past
-# (GHSA-238p-pmpm-9mq7); its selector holds the first fixed release.
+# A development-only transitive dependency, moved to the version that fixes its advisory, which no
+# update inside its parent's major reaches (ADR-005's amendment). StrykerJS 10's
+# `typed-rest-client` 2.3.1 pins `qs` 6.15.1 (fixed in 6.16.1). The selector names its parent's
+# major, so the entry never touches a later major, which declares a fixed range itself; an entry
+# whose parent no longer matches is removed, as SvelteKit 2's `cookie` and Mermaid 11's `katex`
+# entries were when SvelteKit 3 and Mermaid 12 declared fixed ranges themselves.
+# One entry has no fixed release to move to (ADR-517): every 7.x release of SvelteKit's Vite plugin
+# declares `deepmerge ^4.3.1`, and no release fixes GHSA-gcqx-w48m-w2h4, so its selector takes our
+# fixed copy in `vendor/deepmerge` (its PATCHED.md) until a release outside the advisory's range.
 overrides:
-  '@sveltejs/kit@2>cookie': '>=0.7.0 <0.8'
-  'typed-rest-client@2>qs': '>=6.16.0 <7'
-  'mermaid@11>katex': '>=0.18.2 <0.19'
+  'typed-rest-client@2>qs': '>=6.16.1 <7'
+  '@sveltejs/vite-plugin-svelte@7>deepmerge': 'file:./vendor/deepmerge'

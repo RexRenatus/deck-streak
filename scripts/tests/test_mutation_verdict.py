@@ -185,7 +185,7 @@ def outcomes(caught=0, missed=(), timeout=0, unviable=0, file=LIB, total=None):
 
 
 def stryker(statuses, file="src/lib/start.ts"):
-    """A mutation-testing-elements report, as StrykerJS 10.0.0's json reporter writes it."""
+    """A mutation-testing-elements report, as StrykerJS 10.1.1's json reporter writes it."""
     mutants = [
         {
             "id": str(index),
@@ -1984,7 +1984,7 @@ class TheVerdictReadsTheRecord(unittest.TestCase):
 
 
 def stryker_mutant(text, needle, mutator, replacement, status, occurrence=1, length=None):
-    """One mutant of a mutation-testing-elements report, as StrykerJS 10.0.0 writes it."""
+    """One mutant of a mutation-testing-elements report, as StrykerJS 10.1.1 writes it."""
     line, column, end = located(text, needle, occurrence, length)
     mutant = {
         "id": f"{mutator}-{line}-{column}-{replacement}",

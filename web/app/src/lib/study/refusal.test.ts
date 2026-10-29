@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { getLocale, locales, overwriteGetLocale } from '$lib/paraglide/runtime.js';
+import { getLocale, locales, overwriteGetLocale } from '#lib/paraglide/runtime.js';
 import { noVoiceText, STATUS_KEYS, statusText } from './refusal';
 import type { Status } from './review';
 

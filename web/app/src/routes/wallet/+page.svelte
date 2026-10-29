@@ -1,8 +1,8 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { api, type Answer } from '$lib/api';
-  import { signed, type Movement, type WalletView } from '$lib/economy/wallet';
-  import { m } from '$lib/paraglide/messages.js';
+  import { api, type Answer } from '#lib/api.js';
+  import { signed, type Movement, type WalletView } from '#lib/economy/wallet.js';
+  import { m } from '#lib/paraglide/messages.js';
 
   // The wallet screen (SPEC-082 R15, R17; ADR-315 ruling 3): the balance, today's loss limit and
   // the coin movements in the server's order, newest first, a page at a time. The screen computes

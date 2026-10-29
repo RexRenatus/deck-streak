@@ -1,15 +1,15 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { api, type Answer } from '$lib/api';
-  import { m } from '$lib/paraglide/messages.js';
-  import DarkFields from '$lib/insights/DarkFields.svelte';
-  import InstrumentSection from '$lib/insights/InstrumentSection.svelte';
+  import { api, type Answer } from '#lib/api.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import DarkFields from '#lib/insights/DarkFields.svelte';
+  import InstrumentSection from '#lib/insights/InstrumentSection.svelte';
   import {
     DARK_FIELDS_ID,
     parseDarkFields,
     type Envelope,
     type Listing
-  } from '$lib/insights/insights';
+  } from '#lib/insights/insights.js';
 
   // The insights screen (SPEC-094 R19): each instrument's latest stored report, as the server
   // answers it. Charts render here, on the client (ADR-085); the server sends numbers only.

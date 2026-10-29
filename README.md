@@ -23,7 +23,7 @@ stay quiet.
 ## Install
 
 DeckStreak is a Rust workspace (the backend) and a SvelteKit Mini App (the front end). You need the
-Rust toolchain pinned in `rust-toolchain.toml`, Node 24 (`.nvmrc`), pnpm 11 (pinned by
+Rust toolchain pinned in `rust-toolchain.toml`, Node 24 (`.nvmrc`), pnpm 12 (pinned by
 `packageManager` in `package.json`), Python 3.11 or later for the gate's probes, and
 `cargo-nextest`.
 

@@ -89,12 +89,11 @@ const INITIAL_STATE: [u32; 8] = [
 #[must_use]
 pub fn digest(bytes: &[u8]) -> [u8; 32] {
     let mut state = INITIAL_STATE;
-    let mut blocks = bytes.chunks_exact(64);
-    for block in &mut blocks {
+    let (blocks, rest) = bytes.as_chunks::<64>();
+    for block in blocks {
         compress(&mut state, block);
     }
     // The padding: a one bit, zeros to 56 bytes past a block boundary, then the length in bits.
-    let rest = blocks.remainder();
     let mut tail = [0_u8; 128];
     tail[..rest.len()].copy_from_slice(rest);
     tail[rest.len()] = 0x80;
@@ -103,12 +102,12 @@ pub fn digest(bytes: &[u8]) -> [u8; 32] {
         .unwrap_or(u64::MAX)
         .wrapping_mul(8);
     tail[tail_len - 8..tail_len].copy_from_slice(&bits.to_be_bytes());
-    for block in tail[..tail_len].chunks_exact(64) {
+    for block in tail[..tail_len].as_chunks::<64>().0 {
         compress(&mut state, block);
     }
     let mut out = [0_u8; 32];
-    for (word, chunk) in state.iter().zip(out.chunks_exact_mut(4)) {
-        chunk.copy_from_slice(&word.to_be_bytes());
+    for (word, chunk) in state.iter().zip(out.as_chunks_mut::<4>().0) {
+        *chunk = word.to_be_bytes();
     }
     out
 }
@@ -133,7 +132,7 @@ pub fn parse_hex(text: &str) -> Option<[u8; 32]> {
         return None;
     }
     let mut out = [0_u8; 32];
-    for (byte, pair) in out.iter_mut().zip(bytes.chunks_exact(2)) {
+    for (byte, pair) in out.iter_mut().zip(bytes.as_chunks::<2>().0) {
         let high = hex_value(pair[0])?;
         let low = hex_value(pair[1])?;
         *byte = (high << 4) | low;
@@ -157,8 +156,8 @@ fn hex_value(digit: u8) -> Option<u8> {
 )]
 fn compress(state: &mut [u32; 8], block: &[u8]) {
     let mut schedule = [0_u32; 64];
-    for (word, bytes) in schedule.iter_mut().zip(block.chunks_exact(4)) {
-        *word = u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+    for (word, bytes) in schedule.iter_mut().zip(block.as_chunks::<4>().0) {
+        *word = u32::from_be_bytes(*bytes);
     }
     for i in 16..64 {
         let s0 = schedule[i - 15].rotate_right(7)

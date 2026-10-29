@@ -3,7 +3,7 @@
 Kind: data flow (a record from its fragment to the verdict), a state machine (one record across
 runs) and a delivery flow (the campaign, crate by crate, then the release rehearsal). Read at
 DeckStreak `dev` 16ed8e2 (`scripts/mutation-verdict.py`, `.github/workflows/ci.yml`,
-`.github/workflows/mutation-weekly.yml`), with cargo-mutants 27.1.0 and StrykerJS 10.0.0. Decided by
+`.github/workflows/mutation-weekly.yml`), with cargo-mutants 27.1.0 and StrykerJS 10.1.1. Decided by
 ADR-070 (proposed); planned by SPEC-057, whose vault delivery builds it. The pull request's own
 mutation jobs, which this record joins, are drawn in `docs/schematics/mutation-testing.md`.
 

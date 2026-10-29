@@ -4,8 +4,8 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { hosted } from '$lib/card/frame-host';
-import type { CardView, Deck, Head } from '$lib/engine/protocol';
+import { hosted } from '#lib/card/frame-host.js';
+import type { CardView, Deck, Head } from '#lib/engine/protocol.js';
 import Study from './study/+page.svelte';
 import StudyReview from './study/review/+page.svelte';
 
@@ -14,7 +14,7 @@ import StudyReview from './study/review/+page.svelte';
 // the same engine. The engine and SvelteKit's navigation are replaced before the routes' imports
 // run.
 const mocks = vi.hoisted(() => ({ client: vi.fn(), goto: vi.fn() }));
-vi.mock('$lib/study/engine', () => ({ studyEngine: () => ({ client: mocks.client }) }));
+vi.mock('#lib/study/engine.js', () => ({ studyEngine: () => ({ client: mocks.client }) }));
 vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
 
 async function settle(): Promise<void> {
