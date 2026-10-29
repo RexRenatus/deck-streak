@@ -497,6 +497,18 @@ DIGITS = re.compile(r"(?<!\d)\d{10}(?:\d{3})?(?!\d)")
 HEX_TEXT = re.compile(r"[0-9a-f]+")
 #: Keys whose number is a digest of the case's own input, never a clock.
 DIGESTS = {"csum"}
+#: The columns of each `notes` row in the reader fixture's `tables` answer, in order: the schema's
+#: `notes` columns but `mod`. The rows are lists, so their field checksum has no `csum` key to skip.
+READER_NOTES = ("id", "guid", "mid", "usn", "tags", "flds", "sfld", "csum", "flags", "data")
+#: The one column skipped by position (SPEC-498 R15: a field checksum, a digest of the input's own
+#: text, is not a clock): `csum`, in a `notes` row of that width under the output's `tables`. No
+#: other table, column or row width is skipped.
+NOTES_CSUM = READER_NOTES.index("csum")
+#: The engine's name for a LaTeX image: `latex-`, the sha1 of the LaTeX's own text in 40 hex
+#: characters, and `.png` or `.svg` (SPEC-498 R15: a digest of the input's own text, not a clock).
+#: A decimal run is skipped only where it lies wholly inside those 40 hex characters of a match;
+#: every other run in the same string is still read. No other name form is skipped.
+LATEX_NAME = re.compile(r"latex-([0-9a-f]{40})\.(?:png|svg)")
 #: A test of a consumer crate, and a Rust comment, which names nothing.
 RUST_TEST = re.compile(r"#\s*\[\s*(?:[\w:]+::)?test\b")
 RUST_COMMENT = re.compile(r"//[^\n]*|/\*.*?\*/", re.DOTALL)
@@ -560,26 +572,45 @@ def read_seed(module):
         sys.dont_write_bytecode = writes
 
 
-def numbers(value):
+def numbers(value, path=()):
     """Every integer in a value, and every 10- or 13-digit run inside its strings, but a field
-    checksum's (`csum`, a digest of the input's own text) and a hex string's (bytes, not a
-    count)."""
+    checksum's (`csum`, a digest of the input's own text, by key or as a reader fixture `notes`
+    row's column), a hex string's (bytes, not a count) and a run inside the digest of a LaTeX
+    image's name. `path` is the value's place in the case's output or input, as keys and list
+    positions."""
     if isinstance(value, bool):
         return
     if isinstance(value, int):
         yield value
     elif isinstance(value, str):
         if not HEX_TEXT.fullmatch(value):
-            yield from (int(run) for run in DIGITS.findall(value))
+            digests = [name.span(1) for name in LATEX_NAME.finditer(value)]
+            for run in DIGITS.finditer(value):
+                if not any(start <= run.start() and run.end() <= end for start, end in digests):
+                    yield int(run.group())
     elif isinstance(value, dict):
         for key, item in value.items():
             if key in DIGESTS:
                 continue
             yield from numbers(key)
-            yield from numbers(item)
+            yield from numbers(item, (*path, key))
     elif isinstance(value, list):
-        for item in value:
-            yield from numbers(item)
+        notes_row = is_notes_row(path, value)
+        for index, item in enumerate(value):
+            if notes_row and index == NOTES_CSUM:
+                continue
+            yield from numbers(item, (*path, index))
+
+
+def is_notes_row(path, value):
+    """Whether a list is a row of the `notes` table in the output's `tables`, of the reader
+    fixture's width: the only place a field checksum is skipped by position."""
+    return (
+        len(path) == 3
+        and path[:2] == ("tables", "notes")
+        and type(path[2]) is int
+        and len(value) == len(READER_NOTES)
+    )
 
 
 def run_marks(name, golden):
@@ -743,6 +774,28 @@ class EngineGoldensAreCurrent(unittest.TestCase):
         self.assertEqual(len(run_marks("planted", named)), 1)
         digest = planted_engine(cases=[{"input": {}, "output": {"csum": 1_793_000_000}}])
         self.assertEqual(run_marks("planted", digest), [])
+
+        def fixture(table, column):
+            """A reader fixture output of one row of `table` with a clock at `column`."""
+            row = [0] * len(READER_NOTES)
+            row[column] = 1_793_000_000
+            return planted_engine(cases=[{"input": {}, "output": {"tables": {table: [row]}}}])
+
+        clock = ["planted: case 0 answers 1793000000, an id or clock of the run"]
+        self.assertEqual(run_marks("planted", fixture("notes", 0)), clock)
+        self.assertEqual(run_marks("planted", fixture("revlog", NOTES_CSUM)), clock)
+        self.assertEqual(run_marks("planted", fixture("notes", NOTES_CSUM)), [])
+        held = f"{'a' * 15}1793000000{'b' * 15}"
+        for label, output, marks in (
+            ("a LaTeX image name", {"name": f"latex-{held}.png"}, []),
+            ("another image name", {"name": f"img-{held}.png"}, clock),
+            ("a LaTeX name of 39 hex", {"name": f"latex-{held[1:]}.png"}, clock),
+            ("a run beside the name", {"text": f'<img src="latex-{held}.png"> 1793000000 '}, clock),
+            ("an svg LaTeX image name", {"name": f"latex-{held}.svg"}, []),
+        ):
+            with self.subTest(label):
+                plant = planted_engine(cases=[{"input": {}, "output": output}])
+                self.assertEqual(run_marks("planted", plant), marks)
         self.assertEqual(
             date_strings("planted", dated), ["planted: cases[0].output.due holds '2026-10-29'"]
         )
