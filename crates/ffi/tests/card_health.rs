@@ -596,7 +596,13 @@ fn the_panels_lines_word_the_record_and_name_no_verdict() {
         ],
         "the health card's sections, word by word"
     );
+    a_quiet_card_a_named_card_and_no_record_read_their_words();
+    the_census_catches_a_planted_verdict_and_finds_none_in_the_panel();
+}
 
+/// B4's records beside the health card's: a card with no row, a card whose rows all fit, and no
+/// record.
+fn a_quiet_card_a_named_card_and_no_record_read_their_words() {
     // A card with no row: no answer time, no log line and no history.
     let quiet = card_health_lines(Some(CardHealth::from(core::card_health(
         [CARD, 0, 0, 0, 0, 0, 0],
@@ -681,7 +687,11 @@ fn the_panels_lines_word_the_record_and_name_no_verdict() {
         vec![("Card info", vec!["This card's record could not be read."])],
         "a record that could not be read"
     );
+}
 
+/// B4's census: it catches a planted verdict and passes a review row's answer name, then reads
+/// every line of the panel's own words over generated records in every state.
+fn the_census_catches_a_planted_verdict_and_finds_none_in_the_panel() {
     // The census bites: a planted verdict is caught, by its word and by its phrase, and a review
     // row's answer name is not the panel's own word.
     let planted = [

@@ -154,8 +154,8 @@ const fn readout(readout: Readout) -> HealthReadout {
     }
 }
 
-/// One section of the panel: its heading, and its lines, each shown and read by VoiceOver as it
-/// is (SPEC-507 R13, R16).
+/// One section of the panel: its heading, and its lines, each shown, and spoken by the screen
+/// reader, as it is (SPEC-507 R13, R16).
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct HealthSection {
     /// The section's heading.
