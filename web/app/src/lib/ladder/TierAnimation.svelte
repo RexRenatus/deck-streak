@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import { BEATS, DICE, reducedMotion, type FeedItem } from './feed';
 
   // One celebration of the owner's feed, at the tier the router rendered it at (SPEC-084 R10): a T3

@@ -540,13 +540,13 @@ impl AnkiEngine for ScriptedEngine {
         answer
     }
 
-    async fn full_download(
+    fn full_download(
         &self,
         _collection: &Path,
         _login: &SyncLogin,
-    ) -> Result<(), EngineError> {
+    ) -> impl std::future::Future<Output = Result<(), EngineError>> + Send {
         self.0.full_downloads.fetch_add(1, Ordering::SeqCst);
-        Ok(())
+        std::future::ready(Ok(()))
     }
 }
 
@@ -564,24 +564,32 @@ impl MemoryRuns {
 }
 
 impl SyncRunStore for MemoryRuns {
-    async fn scheduled_run_on(&self, day: StudyDay) -> Result<bool, KernelError> {
-        Ok(self
+    fn scheduled_run_on(
+        &self,
+        day: StudyDay,
+    ) -> impl std::future::Future<Output = Result<bool, KernelError>> + Send {
+        std::future::ready(Ok(self
             .runs()
             .iter()
-            .any(|run| run.trigger == Trigger::Scheduled && run.study_day == day))
+            .any(|run| run.trigger == Trigger::Scheduled && run.study_day == day)))
     }
 
-    async fn last_success(&self) -> Result<Option<SyncRun>, KernelError> {
-        Ok(self
+    fn last_success(
+        &self,
+    ) -> impl std::future::Future<Output = Result<Option<SyncRun>, KernelError>> + Send {
+        std::future::ready(Ok(self
             .runs()
             .into_iter()
             .filter(|run| run.outcome.is_ok())
-            .max_by_key(|run| run.finished_at))
+            .max_by_key(|run| run.finished_at)))
     }
 
-    async fn record(&self, run: &SyncRun) -> Result<(), KernelError> {
+    fn record(
+        &self,
+        run: &SyncRun,
+    ) -> impl std::future::Future<Output = Result<(), KernelError>> + Send {
         self.0.lock().unwrap().push(run.clone());
-        Ok(())
+        std::future::ready(Ok(()))
     }
 }
 

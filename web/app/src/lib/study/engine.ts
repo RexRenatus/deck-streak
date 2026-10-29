@@ -4,9 +4,9 @@
 // the next call starts again. A refused open ends its Worker too, so a retry starts afresh. A
 // session syncs once when its collection opens and once before it closes, awaiting neither, so the
 // Worker's one queue orders them before and after its study requests (SPEC-377 R7; ADR-388 D12).
-import { EngineClient, type EnginePort } from '$lib/engine/client';
-import { requestPersistence } from '$lib/engine/persistence';
-import type { Opened } from '$lib/engine/protocol';
+import { EngineClient, type EnginePort } from '#lib/engine/client.js';
+import { requestPersistence } from '#lib/engine/persistence.js';
+import type { Opened } from '#lib/engine/protocol.js';
 import { engineLanguages } from './locale';
 
 /** The Worker as the study engine sees it: a port it can also end. */

@@ -1,6 +1,6 @@
-import type { ClientInit } from '@sveltejs/kit';
-import { getLocale, getTextDirection } from '$lib/paraglide/runtime';
-import { admitLaunch } from '$lib/telegram-launch';
+import type { ClientInit } from '@sveltejs/kit/hooks';
+import { getLocale, getTextDirection } from '#lib/paraglide/runtime.js';
+import { admitLaunch } from '#lib/telegram-launch.js';
 
 // The fallback page is rendered once, at build, in the base locale. When the app starts, the
 // document takes the visitor's locale, so `:lang()` styles (the CJK font stacks and line

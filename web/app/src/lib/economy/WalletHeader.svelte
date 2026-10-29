@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { Answer } from '$lib/api';
-  import { m } from '$lib/paraglide/messages.js';
+  import type { Answer } from '#lib/api.js';
+  import { m } from '#lib/paraglide/messages.js';
   import type { WalletView } from './wallet';
 
   // The wallet header (SPEC-082 R17): the owner's balance on every screen, as a link to the

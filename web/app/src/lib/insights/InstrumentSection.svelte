@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import type { Envelope } from './insights';
 
   // SPEC-094 R19: one instrument's section. A run that failed, or a read that failed, is shown as

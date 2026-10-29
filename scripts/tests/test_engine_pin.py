@@ -5,7 +5,7 @@ that carries the rebuild fix (SPEC-055 A1, A2, A3 and A5; ADR-058).
   tag, the root manifest's `[patch]` entry on the upstream URL takes `anki` from the fork by a full
   commit id, and `anki_proto` from the same commit when it is patched too (SPEC-338 A14, ADR-348),
   every engine package in the lockfile comes from that commit, and `allow-git` names exactly the
-  fork, `ankitects/rust-url` and fsrs-rs (ADR-338; SPEC-342 A2).
+  fork, `ankitects/rust-url`, fsrs-rs and the web-push-native fork (ADR-338; SPEC-342 A2; ADR-513).
 - A2 builds `deck-streak-ingest` twice in the workspace's own target directory and reads the second
   build's `Compiling`, `Dirty`, `Fresh` and `Finished` lines. With the fix, nothing is compiled or
   judged dirty, and cargo's own time stays inside R2's bound. Unpatched, the second build recompiles
@@ -51,6 +51,9 @@ RUST_URL = "https://github.com/ankitects/rust-url.git"
 #: The upstream scheduler's repository, whose development line is the only source of FSRS-7; only
 #: `deck-streak-fsrs7` takes a crate from it (ADR-338, ADR-353 D1).
 FSRS_RS = "https://github.com/open-spaced-repetition/fsrs-rs.git"
+#: The maintainer's fork of web-push-native, at the upstream change that moves it to p256 0.14; the
+#: push crate takes web-push-native and ece-native from it until upstream releases (ADR-513).
+WEB_PUSH = "https://github.com/RexRenatus/web-push-native.git"
 #: The upstream release the engine runs (SPEC-055 R1).
 TAG = "26.09.3"
 #: The dependency line, in the one form its two readers parse: SPEC-022's A1 check and the report
@@ -147,8 +150,10 @@ def pin_findings(manifest, lock, deny):
         found.append(f"the lockfile records the patch as unused: {[p['name'] for p in unused]}")
     sources = tomllib.loads(deny).get("sources", {})
     allowed = sources.get("allow-git", [])
-    if sorted(allowed) != sorted([FORK, RUST_URL, FSRS_RS]):
-        found.append(f"allow-git is {allowed}, not exactly the fork, rust-url and fsrs-rs")
+    if sorted(allowed) != sorted([FORK, RUST_URL, FSRS_RS, WEB_PUSH]):
+        found.append(
+            f"allow-git is {allowed}, not exactly the fork, rust-url, fsrs-rs and web-push-native"
+        )
     if sources.get("unknown-git") != "deny":
         found.append(f"unknown-git is {sources.get('unknown-git')!r}, not 'deny'")
     return found
@@ -188,7 +193,7 @@ def planted_lock(sources=None, unused=""):
     return body + unused
 
 
-def planted_deny(allowed=(FORK, RUST_URL, FSRS_RS)):
+def planted_deny(allowed=(FORK, RUST_URL, FSRS_RS, WEB_PUSH)):
     listed = ", ".join(f'"{url}"' for url in allowed)
     return f'[sources]\nunknown-git = "deny"\nallow-git = [{listed}]\n'
 
@@ -626,17 +631,29 @@ class TheEngineIsPatchedByRev(unittest.TestCase):
             "upstream still allowed": (
                 planted_manifest(),
                 planted_lock(),
-                planted_deny((UPSTREAM, FORK, RUST_URL, FSRS_RS)),
+                planted_deny((UPSTREAM, FORK, RUST_URL, FSRS_RS, WEB_PUSH)),
                 [
-                    f"allow-git is {[UPSTREAM, FORK, RUST_URL, FSRS_RS]}, "
-                    "not exactly the fork, rust-url and fsrs-rs"
+                    f"allow-git is {[UPSTREAM, FORK, RUST_URL, FSRS_RS, WEB_PUSH]}, "
+                    "not exactly the fork, rust-url, fsrs-rs and web-push-native"
                 ],
             ),
             "fsrs-rs not allowed": (
                 planted_manifest(),
                 planted_lock(),
-                planted_deny((FORK, RUST_URL)),
-                [f"allow-git is {[FORK, RUST_URL]}, not exactly the fork, rust-url and fsrs-rs"],
+                planted_deny((FORK, RUST_URL, WEB_PUSH)),
+                [
+                    f"allow-git is {[FORK, RUST_URL, WEB_PUSH]}, "
+                    "not exactly the fork, rust-url, fsrs-rs and web-push-native"
+                ],
+            ),
+            "web-push-native's fork not allowed": (
+                planted_manifest(),
+                planted_lock(),
+                planted_deny((FORK, RUST_URL, FSRS_RS)),
+                [
+                    f"allow-git is {[FORK, RUST_URL, FSRS_RS]}, "
+                    "not exactly the fork, rust-url, fsrs-rs and web-push-native"
+                ],
             ),
             "a comment that names neither": (
                 planted_manifest(comment="# the fix"),
