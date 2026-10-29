@@ -135,7 +135,7 @@ same change (SPEC-501 R10). `privacy.json` and `PRIVACY.md` are unchanged.
 | C8 | R5, R7: a manifest that answers 404 reads `Absent`, and `Absent` answers the committed refusal frame to all 9 committed requests | the stub loader admits every manifest | ADR-529 D2 |
 | C9 | R5: a module or weights changed by one byte read `Absent`; a loader that skips the digest admits it, and the census refuses that loader | the stub loader checks no digest | ADR-529 D2 |
 | C10 | R6: a module that imports `env.x` reads `Absent` under `IMPORTS`; a loader that passes a non-empty import object links it, and the census refuses that loader | the stub loader passes an import object with `env.x` | ADR-529 D2 |
-| C11 | R5, R6: a present module is opened with the weights through `alloc`, answers through `call`, is given `IMPORTS` and nothing else, and only the three names are fetched; the source holds no script import | the stub loader passes another import object | ADR-529 D2 |
+| C11 | R5, R6, R7: a present module is opened with the weights through `alloc`, answers through `call`, is given `IMPORTS` and nothing else, and only the three names are fetched; the source holds no script import. A missing export, a trapping or out-of-bounds `open` and a file over 16 MiB read `Absent`, a module of exactly 16 MiB loads, and a trapping `call` answers the committed refusal | the stub loader passes another import object | ADR-529 D2 |
 | C12 | R8: a checkpoint is stored and read back verbatim, and purge sends `Purge` and removes the directory | the stub store keeps nothing | ADR-529 D3 |
 | C13 | R9: the Worker keeps a checkpoint only when the engine's load check keeps it, and otherwise purges and folds from genesis | the stub keeps every checkpoint | ADR-529 D3 |
 | C14 | R9: `load_check` keeps one valid case and refuses each of its 8 discards, 9 of 9, and a check that skips the head clause is refused by the table | the stub check keeps everything | ADR-529 D3 |
@@ -143,7 +143,7 @@ same change (SPEC-501 R10). `privacy.json` and `PRIVACY.md` are unchanged.
 | C16 | R10, R7: the web engine's `decide` answers all 191 decision vectors byte-equal with the native decision, and the `Absent` frames are refused | the stub answers one constant | ADR-529 D4 |
 | C17 | R11: four files summing to 8,000,001 bytes `gzip -9 -n` fail the gate, the same set at 8,000,000 passes, and the module and bindings alone are under the budget | the gate refuses `--owner-file` | ADR-529 D5 |
 | C18 | R12: a planted site with no served file passes and counts its files; each of 5 planted findings fails by path; an empty or missing site is VOID | the census does not exist | ADR-529 D5 |
-| C19 | R13: the context map's tests are green with the new edge | the manifest names the edge and the fence and the drawing do not | ADR-529 D4 |
+| C19 | R13: the context map's tests are green with the new edge | the fence and the drawing name the edge and no manifest does (the docs commit) | ADR-529 D4 |
 
 ```acceptance
 C1: cargo test -p deck-streak-api --test companion_route -- --exact no_session_gives_401_and_an_owner_with_no_directory_or_no_file_gives_404
@@ -157,6 +157,7 @@ C8: pnpm exec vitest run web/app/src/lib/engine/companion.test.ts -t "a manifest
 C9: pnpm exec vitest run web/app/src/lib/engine/companion.test.ts -t "a module or weights changed by one byte read Absent"
 C10: pnpm exec vitest run web/app/src/lib/engine/companion.test.ts -t "a module that imports env.x reads Absent"
 C11: pnpm exec vitest run web/app/src/lib/engine/companion.test.ts -t "a present module is opened with the weights"
+C11: pnpm exec vitest run web/app/src/lib/engine/companion.test.ts -t "a missing export, a trapping or out-of-bounds open"
 C12: pnpm exec vitest run web/app/src/lib/engine/companion.test.ts -t "a checkpoint is stored and read back verbatim"
 C13: pnpm exec vitest run web/app/src/lib/engine/companion.test.ts -t "the worker keeps a checkpoint only when the load check keeps it"
 C14: cargo test -p deck-streak-web-engine --test companion_load -- --exact the_load_check_keeps_one_case_and_refuses_each_discard_by_name
@@ -193,6 +194,8 @@ Beside the fence: `cargo test -p deck-streak-web-engine --test boundary` holds t
 | `crates/web-engine/tests/companion_load.rs` | web-engine tests | new: C14, C15 |
 | `crates/web-engine/tests/boundary.rs` | web-engine tests | changed: the four exports' owed statements |
 | `Cargo.lock` | workspace | changed: the web engine's dependency list names the interface crate |
+| `crates/engine-core/tests/graph.rs` | engine-core tests | changed: the map's web engine row names the interface beside the core |
+| `scripts/mutation-python.json` | scripts | changed: the census's entry and the size gate's second test module |
 | `web/app/src/lib/engine/companion.ts` | web | new: the loader, `Absent`, the checkpoint store and the load sequence (R5 to R9) |
 | `web/app/src/lib/engine/companion.test.ts` | web tests | new: C8 to C13 |
 | `web/app/src/lib/engine/companion-modules.test.support.ts` | web tests | new: the hand-assembled test modules |
