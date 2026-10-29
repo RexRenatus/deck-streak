@@ -55,6 +55,7 @@ deck-streak-ffi = { path = "crates/ffi" }
 deck-streak-engine-core = { path = "crates/engine-core" }
 deck-streak-xp = { path = "crates/xp" }
 deck-streak-study-day = { path = "crates/study-day" }
+deck-streak-search = { path = "crates/search" }
 deck-streak-companion = { path = "crates/companion" }
 deck-streak-companion-slot = { path = "crates/companion-slot" }
 # ADR-029: the parity oracle's golden reader. So far only a proving crate's dev-dependencies name

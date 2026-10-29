@@ -18,6 +18,9 @@ anki.workspace = true
 # (ADR-083; the version Cargo.lock already pins through the engine).
 chrono.workspace = true
 deck-streak-kernel.workspace = true
+# SPEC-514 and ADR-532: the skip search is parsed under the search crate's skip profile and wrapped
+# by structure; the crate has no edge to the kernel and no I/O.
+deck-streak-search.workspace = true
 # SPEC-083 R20 and ADR-321 D17, D20: the preview's digest over the listed card ids, and the take's
 # backup checked against the working copy it was copied from.
 sha2.workspace = true

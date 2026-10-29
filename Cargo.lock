@@ -1335,6 +1335,7 @@ dependencies = [
  "anki",
  "chrono",
  "deck-streak-kernel",
+ "deck-streak-search",
  "serde",
  "serde_json",
  "sha2 0.11.0",
@@ -1502,6 +1503,15 @@ dependencies = [
  "thiserror 2.0.21",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "deck-streak-search"
+version = "0.3.0"
+dependencies = [
+ "deck-streak-study-day",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

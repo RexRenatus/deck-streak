@@ -54,6 +54,16 @@ pub enum SearchRefusal {
     /// and escape every hold.
     #[error("the skip search is not one expression")]
     NotOneExpression,
+    /// The stub's second refusal, never given.
+    #[error("the skip search is outside the skip profile")]
+    OutsideTheSkipProfile,
+}
+
+impl From<deck_streak_search::Refusal> for SearchRefusal {
+    fn from(refusal: deck_streak_search::Refusal) -> Self {
+        let _ = refusal;
+        Self::NotOneExpression
+    }
 }
 
 /// Whether `search` is one expression on its own: its parentheses balance without closing a group
