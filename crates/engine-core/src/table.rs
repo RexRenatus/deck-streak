@@ -115,8 +115,9 @@ impl Exempt {
 /// The ordinary calls, each marked with the transports that may make it.
 ///
 /// The native column is the native adapter's allow-list, the normal sync included (SPEC-503 R1;
-/// ADR-521 D1), and the web column is the web engine's study calls with its sync calls (SPEC-345
-/// M1, M4; SPEC-364 R1); a parity test holds each adapter's own table equal to its column.
+/// ADR-521 D1) and the undo status the native review's undo reads (SPEC-515 R1; ADR-533 D1), and
+/// the web column is the web engine's study calls with its sync calls (SPEC-345 M1, M4; SPEC-364
+/// R1); a parity test holds each adapter's own table equal to its column.
 /// A pair one transport may make is not thereby admitted on the other: the native client neither
 /// closes the collection nor adds notes through this table (ADR-356 D2).
 pub const ORDINARY: [Ordinary; 18] = [
@@ -152,7 +153,7 @@ pub const ORDINARY: [Ordinary; 18] = [
         service: 3,
         method: 7,
         name: "CollectionService.GetUndoStatus",
-        native: false,
+        native: true,
         web: true,
     },
     Ordinary {

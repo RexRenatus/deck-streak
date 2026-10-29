@@ -3,7 +3,8 @@
 //! the handshake before a native normal sync, and the unsynced count read offline. The choice's
 //! steps are each tapped as the app may tap them: after a cancel, after a refusal, with a direction
 //! the choice does not name, with no snapshot found, over a server that holds rows, and after the
-//! server changed since the counts.
+//! server changed since the counts. After an answer and a normal sync, the review's undo says the
+//! answer has synced (SPEC-515 A3).
 //!
 //! Each test that needs the server re-executes its own binary as the server's child
 //! ([`sync_server::SERVER`]). The server is filled by a second client through the same facade, an
@@ -15,12 +16,6 @@
 // A failed setup step fails the test, as clippy.toml allows inside a test function.
 #![allow(clippy::expect_used)]
 
-#[expect(
-    dead_code,
-    reason = "the sync tests open the synthetic collection by its path and read its ids only to tell \
-              two collections apart and to review its card, and they send and read only the wire \
-              fields a sync needs"
-)]
 mod support;
 
 #[path = "support/sync_server.rs"]
@@ -35,7 +30,9 @@ use std::thread;
 use std::time::Duration;
 
 use anki::collection::CollectionBuilder;
-use deck_streak_ffi::engine::{ChoiceLoss, ChoiceStep, Engine, EngineRefusal, UnsyncedCount};
+use deck_streak_ffi::engine::{
+    ChoiceLoss, ChoiceStep, Engine, EngineRefusal, PressedGrade, UnsyncedCount,
+};
 use support::{Synthetic, synthetic, wire};
 use sync_server::{PASSWORD, SERVER, SyncServer, USERNAME};
 
@@ -562,6 +559,93 @@ fn an_upload_waits_for_its_snapshot_and_writes_nothing_without_it() {
         written.written,
         "once the snapshot is found, the same counts' upload writes: {}",
         written.said
+    );
+}
+
+/// `SchedulerService.GetQueuedCards`.
+const GET_QUEUED_CARDS: (u32, u32) = (13, 3);
+/// Why a synced answer can no longer be undone, written here from SPEC-371 R10, never read from the
+/// adapter.
+const ANSWER_SYNCED: &str = "Your last answer has synced, so it can no longer be undone.";
+
+/// The queue's first card's id and the states it is shown with, through the adapter.
+fn queued_head(engine: &Engine) -> (i64, Vec<u8>) {
+    let mut request = Vec::new();
+    wire::put_varint_field(&mut request, 1, 1);
+    let reply = engine
+        .run(GET_QUEUED_CARDS.0, GET_QUEUED_CARDS.1, request)
+        .expect("the queue is on the allow-list");
+    let first = wire::repeated(&reply, 1)
+        .into_iter()
+        .next()
+        .expect("the synthetic collection queues its card");
+    (
+        wire::signed(&wire::bytes(&first, 1), 1),
+        wire::bytes(&first, 3),
+    )
+}
+
+#[test]
+fn after_a_normal_sync_the_undo_says_the_answer_has_synced() {
+    if sync_server::role().as_deref() == Some(SERVER) {
+        return sync_server::serve();
+    }
+    let server = SyncServer::start("after_a_normal_sync_the_undo_says_the_answer_has_synced");
+    let synthetic = synthetic("native-sync-undo");
+    let device = Client::holding(&synthetic, server.endpoint());
+    device.count();
+    let uploaded = device.tap(UPLOAD, true);
+    assert!(
+        uploaded.written,
+        "the device's first sync uploads it: {}",
+        uploaded.said
+    );
+
+    // The review's answer, offered for its undo before the sync.
+    let (card, states) = queued_head(&device.engine);
+    assert_eq!(
+        card, synthetic.card_id,
+        "the queue shows the synthetic card"
+    );
+    device
+        .engine
+        .answer(card, PressedGrade::Good, states, 1_000)
+        .expect("the adapter records the press");
+    let before = device
+        .engine
+        .undo_offer()
+        .expect("the adapter answers the offer")
+        .offer
+        .expect("the unsynced answer is offered");
+
+    let required = device
+        .engine
+        .sync(device.key.clone(), device.endpoint.clone())
+        .expect("the normal sync is answered");
+    assert!(
+        required < FULL_SYNC,
+        "after the upload, the sync is a normal one: {required}"
+    );
+    let after = device
+        .engine
+        .undo_offer()
+        .expect("the adapter answers the offer");
+    let refused = device
+        .engine
+        .undo(before.card, before.step)
+        .expect("the adapter answers the confirmation");
+    let unsynced = device.engine.unsynced().expect("the unsynced read");
+    assert_eq!(
+        (
+            after.offer.is_none(),
+            after.said.as_str(),
+            refused.undone,
+            refused.said.as_str(),
+            unsynced.reviews
+        ),
+        (true, ANSWER_SYNCED, false, ANSWER_SYNCED, 0),
+        "after a normal sync the answer is not offered, its confirmation is refused, each says \
+         it has synced, and the answer stays synced"
     );
 }
 

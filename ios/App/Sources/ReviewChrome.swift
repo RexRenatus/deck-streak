@@ -2,9 +2,9 @@ import SwiftUI
 
 /// The review screen's top, above the card (SPEC-348 R9, R13, R14): the deck's name; the replay,
 /// stop and voice buttons, and the bury and flag buttons, the flag's title beside its icon
-/// (SPEC-358 R5); the queue's new, learning and review counts, each a number with its
-/// word; a line naming how many media files the face could not show; and one line per note, a
-/// refusal's sentence or a sound the player refused.
+/// (SPEC-358 R5), and the undo control (SPEC-515 R6); the queue's new, learning and review counts,
+/// each a number with its word; a line naming how many media files the face could not show; and
+/// one line per note, a refusal's sentence or a sound the player refused, and the undo's sentence.
 struct ReviewChrome: View {
     @Bindable var model: ReviewModel
 
@@ -51,6 +51,7 @@ struct ReviewChrome: View {
                 }
                 .accessibilityIdentifier("flag")
                 .disabled(!idle)
+                UndoControl(model: model, undo: model.undo)
             }
             .labelStyle(.iconOnly)
             HStack(spacing: 16) {
@@ -65,6 +66,9 @@ struct ReviewChrome: View {
             }
             ForEach(Array(model.notes.enumerated()), id: \.offset) { _, note in
                 Text(note).font(.footnote)
+            }
+            ForEach(Array(model.undo.said.enumerated()), id: \.offset) { _, said in
+                Text(verbatim: said).font(.footnote).accessibilityIdentifier("undo-said")
             }
         }
         .padding(.horizontal)

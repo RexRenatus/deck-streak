@@ -15,12 +15,14 @@ use deck_streak_engine_core::full_sync::{Counted, Counts, Direction, Losses, Sna
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
 use deck_streak_engine_core::handshake;
 use deck_streak_engine_core::native_sync;
+use deck_streak_engine_core::native_undo::{self, Kept};
 use deck_streak_engine_core::one_way::{self, Reason, Unwritten};
 use deck_streak_engine_core::review::{self, bury_of, bury_request, flag_request, toggled_red};
 use deck_streak_engine_core::table::{ExemptWrite, Transport};
 
 use crate::allow_list::allowed;
 use crate::face::{CardFace, MediaFolder};
+use crate::review_undo::{self, UndoDone, UndoKind, UndoOffered};
 
 /// Why a call was not answered with the response's bytes. A native client reads it as a thrown
 /// error; nothing on this path panics.
@@ -73,6 +75,8 @@ pub struct Engine {
     dispatcher: Dispatcher,
     /// The full-sync choice's stage between the owner's taps (SPEC-503 R4).
     stage: Mutex<Option<Stage>>,
+    /// The review's undo slot: its last recorded answer, bury or flag (SPEC-515 R2).
+    slot: Mutex<Slot>,
 }
 
 #[uniffi::export]
@@ -93,6 +97,7 @@ impl Engine {
                 Arc::new(Self {
                     dispatcher,
                     stage: Mutex::new(None),
+                    slot: Mutex::new(Slot::default()),
                 })
             })
             .map_err(|reason| EngineRefusal::Start { reason })
@@ -181,7 +186,9 @@ impl Engine {
     /// encoded `SchedulingStates` in `states`, after `milliseconds_taken` (SPEC-365 R6). This is
     /// the adapter's one answer entry, and the only place it builds an owner's answer: the request
     /// names the press's card, its grade's rating and the next state its grade picks out of the
-    /// states the card was shown with, at the time the adapter's clock reads.
+    /// states the card was shown with, at the time the adapter's clock reads. Once the engine has
+    /// recorded it, the answer is kept as the review's own last answer for its undo, when the
+    /// newest review is the pressed card's (SPEC-515 R2).
     ///
     /// # Errors
     ///
@@ -200,6 +207,7 @@ impl Engine {
     ) -> Result<Vec<u8>, PressRefusal> {
         let grade = core_grade(grade);
         let states = shown_states(&states).map_err(press_refusal)?;
+        let current = states.current.clone();
         let next = grade.pick(states.again, states.good);
         let request = answer_request(
             card,
@@ -210,34 +218,112 @@ impl Engine {
             milliseconds_taken,
         );
         let answer = OwnerAnswer::from_press(card, grade);
-        self.dispatcher
+        let recorded = self
+            .dispatcher
             .run_answer(answer, &request)
-            .map_err(press_refusal)
+            .map_err(press_refusal)?;
+        self.keep(self.undo_status().and_then(|status| {
+            native_undo::answered(&self.dispatcher, &status, card, grade, current.as_ref())
+                .map_err(refusal)
+        }));
+        Ok(recorded)
     }
 
     /// Buries the card `card_id` as the user's bury of that card alone, so the queue moves on to
-    /// the next card (SPEC-358 R3).
+    /// the next card (SPEC-358 R3). `states` are the encoded `SchedulingStates` the card was shown
+    /// with, as an answer hands them over: once the card's mark shows it buried, the bury is kept
+    /// for its undo with the state its card returns to (SPEC-515 R2).
     ///
     /// # Errors
     ///
     /// [`EngineRefusal::Engine`] when the engine refuses the bury.
-    pub fn bury(&self, card_id: i64) -> Result<(), EngineRefusal> {
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "a foreign caller's bytes cross the boundary owned, as the bindings pass them"
+    )]
+    pub fn bury(&self, card_id: i64, states: Vec<u8>) -> Result<(), EngineRefusal> {
         // `SchedulerService.BuryOrSuspendCards`, through the allow-list as every call goes.
         self.run(13, 14, bury_request(bury_of(card_id)))?;
+        let current = shown_states(&states).ok().and_then(|shown| shown.current);
+        self.keep(self.undo_status().and_then(|status| {
+            native_undo::buried(&self.dispatcher, &status, card_id, current.as_ref())
+                .map_err(refusal)
+        }));
         Ok(())
     }
 
     /// Toggles red on the card `card_id`, whose flag is `flag` as its queued card carries it, and
     /// answers the flag the card now carries: red to none, and any other flag to red (SPEC-358 R3).
+    /// Once the card's mark shows the new flag, the flag is kept for its undo (SPEC-515 R2).
     ///
     /// # Errors
     ///
     /// [`EngineRefusal::Engine`] when the engine refuses the flag.
     pub fn flag(&self, card_id: i64, flag: u32) -> Result<u32, EngineRefusal> {
+        let before = flag;
         let flag = toggled_red(flag);
         // `CardsService.SetFlag`, through the allow-list as every call goes.
         self.run(5, 4, flag_request(card_id, flag))?;
+        self.keep(self.undo_status().and_then(|status| {
+            native_undo::flagged(&self.dispatcher, &status, card_id, before, flag).map_err(refusal)
+        }));
         Ok(flag)
+    }
+
+    /// The undo the review offers for its last answer, bury or flag (SPEC-515 R3, R5): the engine's
+    /// undo status is read through the allow-list, the core judges the kept step now by its kind's
+    /// rule, and the offer names the card as one line of text and the dialog's words. With nothing
+    /// kept, or a step the rule refuses, no offer is made, and the sentence says why. It writes
+    /// nothing.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the engine cannot answer a read or render the card.
+    pub fn undo_offer(&self) -> Result<UndoOffered, EngineRefusal> {
+        let Some(kept) = self.slot().kept.clone() else {
+            return Ok(UndoOffered::none(review_undo::gone(UndoKind::Answer)));
+        };
+        let status = self.undo_status()?;
+        if let Err(why) = native_undo::judged(&self.dispatcher, &status, &kept).map_err(refusal)? {
+            return Ok(UndoOffered::none(review_undo::refused(
+                review_undo::kind_of(&kept),
+                why,
+            )));
+        }
+        let line = native_undo::question_line(&self.dispatcher, kept.card()).map_err(refusal)?;
+        Ok(UndoOffered {
+            offer: Some(review_undo::offer(&kept, &line)),
+            said: String::new(),
+        })
+    }
+
+    /// The owner's confirmation of the offer of `card` at `step` (SPEC-515 R4, R5): refused unless
+    /// the review still keeps that step, judged again by its kind's rule, and only then run as the
+    /// owner's gesture on the exempt Undo, which the core judges once more at the write. A
+    /// successful undo empties the slot. A refusal writes nothing and says why.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the engine cannot answer a read or refuses the undo.
+    pub fn undo(&self, card: i64, step: u32) -> Result<UndoDone, EngineRefusal> {
+        let (kept, named) = self.confirmed(card, step);
+        let Some(kept) = kept else {
+            return Ok(UndoDone::refused(review_undo::gone(named)));
+        };
+        let status = self.undo_status()?;
+        if let Err(why) = native_undo::judged(&self.dispatcher, &status, &kept).map_err(refusal)? {
+            return Ok(UndoDone::refused(review_undo::refused(named, why)));
+        }
+        let ran = OwnerGesture::from_tap(ExemptWrite::Undo, Target::Card(card))
+            .and_then(|gesture| self.dispatcher.run_exempt(gesture, &kept.request()));
+        match ran {
+            Ok(_) => {
+                *self.slot() = Slot::default();
+                Ok(UndoDone::undone())
+            }
+            Err(GestureRefusal::Engine { error }) => Err(EngineRefusal::Engine { error }),
+            Err(_) => Ok(UndoDone::refused(review_undo::gone(named))),
+        }
     }
 }
 
@@ -389,6 +475,43 @@ impl Engine {
         self.stage.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
+    /// The review's undo slot, under its lock.
+    fn slot(&self) -> MutexGuard<'_, Slot> {
+        self.slot.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// Keeps the review's newest step in the slot in place of the one it held, whose card, step
+    /// and kind a late confirmation's refusal names (SPEC-515 R2, R5). A step the engine's reads
+    /// could not record is not kept: the press, bury or flag itself stands, and no undo of it is
+    /// offered.
+    fn keep(&self, recorded: Result<Option<Kept>, EngineRefusal>) {
+        let mut slot = self.slot();
+        slot.replaced = slot
+            .kept
+            .as_ref()
+            .map(|kept| (kept.card(), kept.step(), review_undo::kind_of(kept)));
+        slot.kept = recorded.ok().flatten();
+    }
+
+    /// The kept step a confirmation of `card` at `step` names, while the slot still keeps it, and
+    /// the kind its refusal names: the kept step's, the replaced step's when the confirmation
+    /// names that one, and an answer's otherwise.
+    fn confirmed(&self, card: i64, step: u32) -> (Option<Kept>, UndoKind) {
+        let slot = self.slot();
+        match (&slot.kept, slot.replaced) {
+            (Some(kept), _) if kept.names(card, step) => {
+                (Some(kept.clone()), review_undo::kind_of(kept))
+            }
+            (_, Some((replaced, at, kind))) if (replaced, at) == (card, step) => (None, kind),
+            _ => (None, UndoKind::Answer),
+        }
+    }
+
+    /// The engine's undo status, through the allow-list as every call goes (SPEC-515 R1).
+    fn undo_status(&self) -> Result<Vec<u8>, EngineRefusal> {
+        self.run(GET_UNDO_STATUS.0, GET_UNDO_STATUS.1, Vec::new())
+    }
+
     /// What a normal sync's `reply` requires next, as the engine numbers it (SPEC-503 R5): a reply
     /// that does not decode is the engine's refusal, with the reply's bytes.
     fn required(reply: Vec<u8>) -> Result<u32, EngineRefusal> {
@@ -432,6 +555,14 @@ impl Engine {
 struct Stage {
     counted: Counted,
     copy: PathBuf,
+}
+
+/// The review's undo slot (SPEC-515 R2): its last recorded answer, bury or flag, never two, and
+/// the card, step and kind of the step that one replaced.
+#[derive(Default)]
+struct Slot {
+    kept: Option<Kept>,
+    replaced: Option<(i64, u32, UndoKind)>,
 }
 
 /// What this device has not synced (SPEC-503 R7).
@@ -479,6 +610,8 @@ pub struct ChoiceStep {
 
 /// The engine's normal sync, `BackendSyncService.SyncCollection` (SPEC-503 R1).
 const SYNC_COLLECTION: (u32, u32) = (1, 5);
+/// The engine's undo status, `CollectionService.GetUndoStatus` (SPEC-515 R1).
+const GET_UNDO_STATUS: (u32, u32) = (3, 7);
 
 /// The sentences of the choice's steps, which the app shows as they are.
 const COUNTED: &str = "Choose a direction. The counts show what each direction loses.";

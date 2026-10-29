@@ -39,6 +39,9 @@
 //!   review row it names, the refusals and the state the card returns to (SPEC-371 R3).
 //! - [`undo_change`]: the rule an undo of the review's last bury or flag passes: the card's mark
 //!   it reads and the order of its refusals (SPEC-383 R5).
+//! - [`native_undo`]: the native review's undo slot: the record of its last answer, bury or flag
+//!   from the undo status and the fixed reads, its judge by the two rules above, the card's
+//!   question as one line and the record's bytes, for the native adapter (SPEC-515 R2 to R5).
 //! - [`late`]: whether a review cannot count toward the streak for its card's due day: the
 //!   engine's day, and the rule that judges a card past its due day in it (SPEC-376 R1, R2).
 //! - [`replay`]: the replay of a deck set's review history into stock-field values, and their
@@ -66,6 +69,7 @@ pub mod late;
 pub mod login_guard;
 pub mod media;
 pub mod native_sync;
+pub mod native_undo;
 pub mod one_way;
 pub mod replay;
 pub mod retention;

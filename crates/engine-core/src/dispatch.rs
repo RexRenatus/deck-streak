@@ -735,6 +735,17 @@ impl Dispatcher {
     ) -> Result<Face, Refusal> {
         face::complete(&self.backend, card, side, autoplay, media)
     }
+
+    /// `card`'s question as one line of text, as the web engine's undo offer reads a card
+    /// (SPEC-371 R8; SPEC-515 R3). The core renders it itself, so neither transport's column
+    /// names the two text calls it makes; it writes nothing.
+    ///
+    /// # Errors
+    ///
+    /// [`Refusal::Engine`] when the engine cannot render the card.
+    pub fn question_line(&self, card: i64) -> Result<String, Refusal> {
+        face::question_line(&self.backend, card)
+    }
 }
 
 /// `path` as the engine's open request names it: a path that is not UTF-8 is refused, never

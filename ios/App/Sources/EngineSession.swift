@@ -134,10 +134,14 @@ actor EngineSession: SyncEngine {
         }
     }
 
-    /// Buries `card` as the user's bury of one card, through the adapter (SPEC-358 R3).
+    /// Buries `card` as the user's bury of one card, through the adapter, with the states the card
+    /// was shown with, which the adapter keeps for the bury's undo (SPEC-358 R3, SPEC-515 R2).
     func bury(_ card: QueuedCard) throws {
         let engine = try started()
-        try refused { try engine.bury(cardId: card.cardID) }
+        try refused {
+            try engine.bury(
+                cardId: card.cardID, states: Data(Requests.describeNextStates(card)))
+        }
     }
 
     /// Toggles red on `card` from the flag it carries, through the adapter, and answers the
@@ -145,6 +149,28 @@ actor EngineSession: SyncEngine {
     func flag(_ card: QueuedCard) throws -> UInt32 {
         let engine = try started()
         return try refused { try engine.flag(cardId: card.cardID, flag: card.flag) }
+    }
+
+    /// What the adapter would undo now, with its dialog's words, or none and the adapter's
+    /// sentence that says why (SPEC-515 R3, R5). It writes nothing.
+    func undoOffer() throws -> (dialog: UndoDialog?, said: String) {
+        let engine = try started()
+        let offered = try refused { try engine.undoOffer() }
+        return (offered.offer.map(Self.dialog), offered.said)
+    }
+
+    /// The owner's confirmation of `dialog`, which the adapter checks and the core judges at the
+    /// write; the adapter's sentence that says why it was not undone, or empty (SPEC-515 R4, R5).
+    func undo(_ dialog: UndoDialog) throws -> String {
+        let engine = try started()
+        return try refused { try engine.undo(card: dialog.card, step: dialog.step) }.said
+    }
+
+    /// An offer in the app's own terms, field for field.
+    private static func dialog(_ offer: UndoOffer) -> UndoDialog {
+        UndoDialog(
+            card: offer.card, step: offer.step, title: offer.title, lines: offer.lines,
+            keep: offer.keep, confirm: offer.confirm)
     }
 
     /// The face of `cardID`: its question, or its answer when `answer` is set, with the clips to
