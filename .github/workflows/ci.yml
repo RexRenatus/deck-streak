@@ -1085,6 +1085,10 @@ jobs:
         run: pnpm --dir web/app build
       - name: the module and its bindings staged beside the build, under /engine/
         run: bash scripts/web-engine-stage.sh
+      # SPEC-511 R12 (ADR-529 D5): the staged site holds no file the owner's companion route
+      # serves, so a companion file copied into the site fails here before it can be deployed.
+      - name: the census of the staged build (no companion file in the public site)
+        run: python3 scripts/companion-site-census.py --root web/app/build
       - name: the study suite over the staged build (Chromium and WebKit, persistent profiles)
         run: pnpm --dir web/app test:study
 

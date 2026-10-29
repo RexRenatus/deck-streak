@@ -114,6 +114,7 @@ flowchart TB
   ffi --> engine_core
 
   web_engine --> engine_core
+  web_engine --> companion
 
   engine_core --> fsrs7
 
@@ -181,9 +182,11 @@ when native push carries the one router (#640). The clients' edges to `xp` are #
 `study-day` depends on no workspace crate, and `kernel` alone depends on it: it holds the study day
 the kernel re-exports, so the kernel sits in a layer of its own above it (SPEC-497, ADR-515).
 
-`companion` depends on no workspace crate, and `companion-slot` alone depends on it: the slot is the
-one body a build substitutes behind the scheduling companion's interface, so it sits in a layer of
-its own above the interface (SPEC-501, ADR-519). No other crate reaches either yet.
+`companion` depends on no workspace crate, and `companion-slot` and `web-engine` depend on it: the
+slot is the one body a build substitutes behind the scheduling companion's interface, so it sits in
+a layer of its own above the interface (SPEC-501, ADR-519), and the web engine decides over the
+owner's companion frames in the Worker with the interface's own decision (SPEC-511, ADR-529 D4).
+No other crate reaches either yet.
 
 `deck-streak-migration` is planned in the fence and has no directory under `crates/`, so it is not
 drawn until the delivery that builds it.

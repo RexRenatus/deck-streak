@@ -61,6 +61,7 @@ use deck_streak_engine_core::undo_answer::{self, Review};
 use deck_streak_engine_core::undo_change::{self, Mark};
 use js_sys::{Array, Object, Reflect, Uint8Array};
 
+use crate::companion;
 use crate::study::{
     Change, Files, Grade, LastAnswer, LastMark, Recorded, Returns, Shown, StudyError, UndoRefusal,
     Wanted, admit, engine_languages, flag_change, grade, last_answer_for, last_mark_for, mark_view,
@@ -603,6 +604,45 @@ pub fn credential_on_outcome(sent: u64, current: u64, outcome: u8) -> bool {
         _ => Outcome::Failed,
     };
     credential::on_outcome(Generation::from(sent), Generation::from(current), outcome)
+}
+
+/// The scheduling companion's decision over one press's frames (SPEC-511 R10): 17 bytes for an
+/// admitted due date, 3 for a refusal. The web engine's own decision answers; the Worker moves the
+/// frames only.
+#[wasm_bindgen]
+#[must_use]
+pub fn companion_decide(hello: &[u8], epoch: u32, preview: &[u8], reply: &[u8]) -> Vec<u8> {
+    companion::decide(hello, epoch, preview, reply)
+}
+
+/// The `Restore` frame at `epoch` for a stored checkpoint frame, or no bytes when it is not an
+/// `Ok` checkpoint (SPEC-511 R9).
+#[wasm_bindgen]
+#[must_use]
+pub fn companion_restore(epoch: u32, checkpoint: &[u8]) -> Vec<u8> {
+    companion::restore(epoch, checkpoint)
+}
+
+/// The web load check's verdict on a stored checkpoint: 0 to keep it, else the discard's code
+/// (SPEC-511 R9).
+#[wasm_bindgen]
+#[must_use]
+pub fn companion_load_check(
+    hello: &[u8],
+    checkpoint: &[u8],
+    ack: &[u8],
+    head_named: bool,
+    index_count: Option<u64>,
+    index_head: Option<i64>,
+) -> u8 {
+    companion::load_check(hello, checkpoint, ack, head_named, index_count, index_head).code()
+}
+
+/// The `Purge` frame at `epoch` (SPEC-511 R8).
+#[wasm_bindgen]
+#[must_use]
+pub fn companion_purge(epoch: u32) -> Vec<u8> {
+    companion::purge(epoch)
 }
 
 /// The generation a removal moves the store to from `current` (SPEC-363 R4), or nothing at the

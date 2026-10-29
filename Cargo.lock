@@ -1543,6 +1543,7 @@ name = "deck-streak-web-engine"
 version = "0.3.0"
 dependencies = [
  "anki_proto",
+ "deck-streak-companion",
  "deck-streak-engine-core",
  "js-sys",
  "prost",

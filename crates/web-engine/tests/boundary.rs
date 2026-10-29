@@ -22,7 +22,7 @@ fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
 /// Each boundary function the census reads: its name, why it owes what it owes, and the
 /// statements its body holds for it. A statement is compared with every blank removed, so a
 /// reflow by rustfmt changes nothing.
-const OWED: [(&str, &str, &[&str]); 35] = [
+const OWED: [(&str, &str, &[&str]); 39] = [
     (
         "create_backend",
         "starts the core's dispatcher on the web transport and keeps it",
@@ -336,6 +336,28 @@ const OWED: [(&str, &str, &[&str]); 35] = [
             "Refusal::Engine { error } => Uint8Array::from(error.as_slice()).into()",
             "refuse(StudyError::CallRefused { service, method })",
         ],
+    ),
+    (
+        "companion_decide",
+        "answers the web engine's own decision over the companion's frames (SPEC-511 R10)",
+        &["companion::decide(hello, epoch, preview, reply)"],
+    ),
+    (
+        "companion_restore",
+        "builds the Restore frame for a stored checkpoint through the web engine alone (SPEC-511 R9)",
+        &["companion::restore(epoch, checkpoint)"],
+    ),
+    (
+        "companion_load_check",
+        "judges a stored checkpoint by the web load check and answers its code (SPEC-511 R9)",
+        &[
+            "companion::load_check(hello, checkpoint, ack, head_named, index_count, index_head).code()",
+        ],
+    ),
+    (
+        "companion_purge",
+        "builds the Purge frame through the web engine alone (SPEC-511 R8)",
+        &["companion::purge(epoch)"],
     ),
 ];
 

@@ -25,6 +25,9 @@
 //! ([`minimum_client`]), to any caller, beside the health routes.
 //! SPEC-377 adds the snapshot answer ([`snapshot_routes`]): whether the archive holds a sealed
 //! snapshot of the server's collection, and its age, to the owner's session alone.
+//! SPEC-511 adds the owner's scheduling companion route ([`companion_routes`]): the companion's
+//! manifest, module and weights under three literal names, to the owner's session alone, uncached,
+//! and off while the deployment names no directory.
 //!
 //! The context map (docs/CONTEXT-MAP.md) is binding: this crate depends only on what its line
 //! there declares, and a new edge is an ADR, never a fix to make code compile.
@@ -34,6 +37,7 @@
 
 pub mod analytics_routes;
 pub mod badges_routes;
+pub mod companion_routes;
 pub mod drill_routes;
 pub mod health;
 pub mod inbox_capture_route;
