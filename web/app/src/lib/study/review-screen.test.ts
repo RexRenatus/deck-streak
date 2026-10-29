@@ -1,6 +1,8 @@
 /**
  * @vitest-environment jsdom
  */
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -8,6 +10,7 @@ import { hosted } from '$lib/card/frame-host';
 import { EngineError } from '$lib/engine/client';
 import type { CardView, Head, UndoOffer } from '$lib/engine/protocol';
 import type { Clip, Faces } from '$lib/engine/protocol';
+import { getLocale, locales, overwriteGetLocale } from '$lib/paraglide/runtime.js';
 import { telegram } from '$lib/telegram.svelte';
 import { KEY_SWITCH } from './input';
 import type { StudyClient } from './review';
@@ -21,6 +24,47 @@ import ReviewScreen from './ReviewScreen.svelte';
 // animation frames are stubbed here, and the frames are run by hand.
 const COUNTS = { new: 1, learning: 0, review: 2 };
 const ESCAPES = '</style><base href="https://cards.example/">';
+
+// SPEC-505: the locale the app runs in, kept to put back, and the message files the status reads.
+const ORIGINAL_LOCALE = getLocale;
+const MESSAGES = resolve(import.meta.dirname, '../../../messages');
+/** A token no message and no page of the app holds, planted in each refused card. */
+const TOKEN = 'zq7planted-card-token';
+
+function messages(locale: string): Record<string, string> {
+  return JSON.parse(readFileSync(resolve(MESSAGES, `${locale}.json`), 'utf8')) as Record<string, string>;
+}
+
+function examined<T>(what: string, items: T[]): T[] {
+  console.log(`examined ${items.length} ${what}`);
+  expect(items.length, `examined 0 ${what}: the population is empty, so nothing was judged`).toBeGreaterThan(0);
+  return items;
+}
+
+/** Each texts that holds `token`: what a refusal would leak. */
+function leaks(texts: readonly string[], token: string): string[] {
+  return texts.filter((text) => text.includes(token));
+}
+
+/**
+ * A card for each frame check the screen reaches, keyed by the reason it must give: the screen's own
+ * classes refused through an ordinal no card has, CSS that ends its style element, and markup the
+ * re-parse turns into a stripped element, a srcset, a target or a body attribute. `token` is in each
+ * card's markup and CSS.
+ */
+function screenPlants(token: string): [reason: string, card: CardView][] {
+  const mutation = '<form><math><mtext></form><form><mglyph><style></math>';
+  const css = `.card { color: navy; } p::after { content: "${token}"; }`;
+  const text = `<p>${token}</p>`;
+  return [
+    ['class-list', view(1, { ordinal: -1, css, question: text })],
+    ['style-closed', view(2, { css: `${css}</style><p>${token}</p>`, question: text })],
+    ['reparse-element', view(3, { css, question: `${text}${mutation}<link rel="preconnect" href="https://cards.example/">` })],
+    ['reparse-srcset', view(4, { css, question: `${text}${mutation}<img alt="" srcset="https://cards.example/a.png 1x">` })],
+    ['reparse-target', view(5, { css, question: `${text}${mutation}<a target="_blank" href="https://cards.example/a">a</a>` })],
+    ['body-attributes', view(6, { css, question: `${text}${mutation}<body data-plant="${token}">` })]
+  ];
+}
 
 function view(id: number, extra: Partial<CardView> = {}): CardView {
   return {
@@ -466,10 +510,13 @@ describe('the review screen', () => {
     await fireEvent.click(button('Try again'));
     await settle();
 
-    // a card the frame refuses: announced, its frame empty and marked, and its controls still there
-    expect(status()).toBe('This card cannot be shown safely here. You can still answer, bury or flag it.');
+    // a card the frame refuses: announced with its reason, its frame empty and marked with that
+    // reason, and its controls still there
+    expect(status()).toBe(
+      "This card cannot be shown safely here. Its note type's CSS ends its own style block (</style>). Edit the note type's CSS. You can still answer, bury or flag it."
+    );
     expect([frame().getAttribute('data-card-refused'), screen.queryByRole('button', { name: 'Try again' })]).toEqual([
-      'escaped',
+      'style-closed',
       null
     ]);
     expect(document.activeElement).toBe(review());
@@ -488,6 +535,103 @@ describe('the review screen', () => {
       null
     ]);
     expect(screen.getByRole('link', { name: 'Back to decks' }).getAttribute('href')).toBe('/study');
+  });
+
+  // SPEC-505 R2, R3, R5, R6, A2; ADR-523 D2, D3. Each card the frame refuses, through each check the
+  // screen plants here (the host's check is held by frame-document.test.ts, and through the review
+  // by review.test.ts's face holding a carriage return, whose composed document does not read
+  // back), shows the reason's own message in the status and the same reason on the frame, in every
+  // locale.
+  it('each card the frame refuses names its reason in the status and the mark, in every locale', async () => {
+    const shown: string[] = [];
+    try {
+      for (const locale of examined('locales', [...locales])) {
+        overwriteGetLocale(() => locale);
+        const table = messages(locale);
+        for (const [reason, card] of examined('reachable checks', screenPlants('plant'))) {
+          const client = new FakeClient([head(card)]);
+          render(ReviewScreen, { client: async () => client });
+          await settle();
+          const key = `study_card_refused_${reason.replaceAll('-', '_')}`;
+          expect(frame().getAttribute('data-card-refused'), `${locale} ${reason}`).toBe(reason);
+          expect(status(), `${locale} ${reason}`).toBe(table[key]);
+          shown.push(status());
+          cleanup();
+        }
+      }
+    } finally {
+      overwriteGetLocale(ORIGINAL_LOCALE);
+    }
+    // each locale words each reason differently from every other reason
+    expect(new Set(shown).size).toBe(shown.length);
+  });
+
+  // SPEC-505 R5, A3; ADR-523 D4. A refused card is untrusted: no part of it, here a token planted in
+  // each card's markup and CSS, reaches the status, any attribute or text of the page, or a log line.
+  it("a refused card's status, mark and logs hold none of its markup or CSS", async () => {
+    const logged: string[] = [];
+    for (const method of ['log', 'info', 'warn', 'error', 'debug'] as const) {
+      vi.spyOn(console, method).mockImplementation((...args: unknown[]) => {
+        logged.push(args.map(String).join(' '));
+      });
+    }
+    const english = messages('en');
+    const seen: { reason: string; status: string; page: string }[] = [];
+    for (const [reason, card] of screenPlants(TOKEN)) {
+      const client = new FakeClient([head(card)]);
+      render(ReviewScreen, { client: async () => client });
+      await settle();
+      seen.push({ reason, status: status(), page: document.documentElement.outerHTML });
+      cleanup();
+    }
+    vi.restoreAllMocks();
+    examined('refused cards', seen);
+    for (const { reason, status: words, page } of seen) {
+      // the status names the reason, in its own words
+      expect(words, reason).toBe(english[`study_card_refused_${reason.replaceAll('-', '_')}`]);
+      expect(leaks([words, page], TOKEN), reason).toEqual([]);
+    }
+    expect(leaks(logged, TOKEN)).toEqual([]);
+
+    // the control: the detector finds the token in a status that carried the card's CSS
+    expect(leaks([`${seen[0].status} p{content:"${TOKEN}"}`], TOKEN)).toHaveLength(1);
+  });
+
+  // SPEC-505 R5; SPEC-371 R9. A refused card and a notice from the learner's last gesture at once:
+  // the status announces the notice first, since it answers the learner's own act; the frame's mark
+  // keeps the card's reason throughout, and the next gesture, which clears the notice, brings the
+  // reason back to the status.
+  it("a notice from the last gesture is announced before a refused card's reason, which the mark keeps", async () => {
+    const english = messages('en');
+    const refused = english.study_card_refused_style_closed;
+    const synced = english.undo_synced;
+    // both words are there and differ, so the status shows which of the two it announces
+    expect([refused.length > 0, synced.length > 0, refused !== synced]).toEqual([true, true, true]);
+    const client = new FakeClient([head(view(2, { css: ESCAPES, undo: 'answer' }))]);
+    client.offered = { offer: null, why: 'synced' };
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+
+    // the refused card alone: its reason is the status and the mark
+    expect([status(), frame().getAttribute('data-card-refused')]).toEqual([refused, 'style-closed']);
+
+    // the undo press finds the answer synced: its notice is announced first, and the mark keeps the reason
+    await fireEvent.click(button('Undo answer'));
+    await settle();
+    expect([client.calls, status(), frame().getAttribute('data-card-refused')]).toEqual([
+      ['card', 'undo-offer'],
+      synced,
+      'style-closed'
+    ]);
+
+    // the next gesture clears the notice: the answer's face is refused too, and its reason is the status again
+    await fireEvent.click(button('Show answer'));
+    await settle();
+    expect([frame().title, status(), frame().getAttribute('data-card-refused')]).toEqual([
+      english.study_answer_frame,
+      refused,
+      'style-closed'
+    ]);
   });
 
   it('a gamepad the page already had holds the lock once the page is visible, and closing releases it', async () => {

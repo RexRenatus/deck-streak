@@ -27,7 +27,9 @@ struct CardFaceView: View {
                 refusal = ""
             } catch {
                 card = nil
-                refusal = String(describing: error)
+                // SPEC-505 R7, R8: the refusal in DeckStreak's words, announced once
+                refusal = CardRefusalWords.text(of: error)
+                CardRefusalWords.announce(refusal)
             }
         }
     }

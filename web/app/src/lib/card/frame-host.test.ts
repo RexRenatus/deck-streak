@@ -46,9 +46,9 @@ describe('the card frame host', () => {
   });
 
   it('a host that cannot carry the card document or its title byte for byte is refused', () => {
-    expect(frameHost('<p>a\rb</p>', 'The card')).toEqual({ refused: 'escaped' });
-    expect(frameHost('<p>ab</p>', 'The\rcard')).toEqual({ refused: 'escaped' });
-    expect(frameHost('<p>ab</p>', 'The card', 'img-src "data:"')).toEqual({ refused: 'escaped' });
+    expect(frameHost('<p>a\rb</p>', 'The card')).toEqual({ refused: 'host-readback' });
+    expect(frameHost('<p>ab</p>', 'The\rcard')).toEqual({ refused: 'host-readback' });
+    expect(frameHost('<p>ab</p>', 'The card', 'img-src "data:"')).toEqual({ refused: 'host-readback' });
     expect(frameHost('<p>ab</p>', 'The card').refused).toBeUndefined();
   });
 
@@ -69,9 +69,9 @@ describe('the card frame host', () => {
   });
 
   it('a policy, a card or a title the parser changes is refused, each alone', () => {
-    expect(frameHost('<p>a</p>', 'The card', 'img-src\u00a0data:')).toEqual({ refused: 'escaped' });
-    expect(frameHost('<p>a\u0000b</p>', 'The card')).toEqual({ refused: 'escaped' });
-    expect(frameHost('<p>a</p>', 'The\u0000card')).toEqual({ refused: 'escaped' });
+    expect(frameHost('<p>a</p>', 'The card', 'img-src\u00a0data:')).toEqual({ refused: 'host-readback' });
+    expect(frameHost('<p>a\u0000b</p>', 'The card')).toEqual({ refused: 'host-readback' });
+    expect(frameHost('<p>a</p>', 'The\u0000card')).toEqual({ refused: 'host-readback' });
   });
 
   it('a document that is not a host carries no frame document', () => {
