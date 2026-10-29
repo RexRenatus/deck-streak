@@ -39,7 +39,7 @@ deck-streak-ffi           (the umbrella FFI crate, the app's one Rust static lib
 deck-streak-fsrs7         (the isolated FSRS-7 scheduler: review history replayed into memory state; ADR-338)  depends on: nothing
 deck-streak-daemon        (composition root: the deckstreakd binary)  depends on: kernel, ingest, identity, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault, agent, insights, publishing, privacy, coordination, api, bot, mcp
 deck-streak-migration     (one-off import of v9's schema 24, planned)  depends on: kernel, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault
-deck-streak-web-engine    (Anki's engine on wasm32 in the web client's Worker: the study calls over OPFS)  depends on: engine-core
+deck-streak-web-engine    (Anki's engine on wasm32 in the web client's Worker: the study calls over OPFS)  depends on: companion, engine-core
 deck-streak-push          (APNs and web push senders for a native or web client: provider and VAPID tokens, RFC 8291; ADR-354)  depends on: kernel
 deck-streak-xp            (the per-review XP rule, with no I/O, for the server and both clients; ADR-371)  depends on: nothing
 deck-streak-study-day     (the study day, its instant and its date error, with no I/O, for the server and both clients; ADR-515)  depends on: nothing
@@ -83,8 +83,10 @@ frames and their codec, the handshake, and the one decision whose `Ok` lets a du
 It is `no_std`, depends on nothing and does no I/O, so both clients can link it.
 `deck-streak-companion-slot` is the one body a build substitutes behind that interface, and it
 depends on the interface alone; its public body opens `Absent`, which refuses every request. The
-engine core, the umbrella FFI crate and the web engine gain their edges to them in the changes that
-first use them (#997, #998).
+web engine depends on the interface on every target (SPEC-511, ADR-529 D4): its `companion` module
+decides over the frames of the owner's companion module in the Worker, as the native decision does.
+The engine core and the umbrella FFI crate gain their edges to them in the changes that first use
+them (#997, #998).
 
 `deck-streak-push` is an outbound adapter: it builds APNs and web push requests and reports what
 each platform answered, and it depends on the kernel's clock alone (SPEC-343, ADR-354 D3). The
