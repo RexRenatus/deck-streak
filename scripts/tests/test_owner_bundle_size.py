@@ -70,7 +70,8 @@ def planted(root, sizes, pools=None):
 def sized(root, target):
     """Four planted files whose `gzip -9 -n` sizes sum to exactly `target`, and that sum."""
     sizes = [target // 4 - 2_000] * 4
-    pools = [os.urandom(target // 4 + 4_000) for _ in NAMES]
+    # Room for the last file to grow by every other file's overhead, which is under 1 KiB each.
+    pools = [os.urandom(target // 4 + 64_000) for _ in NAMES]
     for _ in range(16):
         paths = planted(root, sizes, pools)
         total = sum(gzip_size(path) for path in paths)
