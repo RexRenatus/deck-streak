@@ -1128,6 +1128,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "deck-streak-collection"
+version = "0.3.0"
+dependencies = [
+ "rusqlite",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "deck-streak-companion"
 version = "0.3.0"
 dependencies = [
@@ -1334,7 +1344,9 @@ version = "0.3.0"
 dependencies = [
  "anki",
  "chrono",
+ "deck-streak-collection",
  "deck-streak-kernel",
+ "rusqlite",
  "serde",
  "serde_json",
  "sha2 0.11.0",
