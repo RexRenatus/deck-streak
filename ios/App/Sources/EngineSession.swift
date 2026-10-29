@@ -52,6 +52,13 @@ struct VoiceLanguage: Equatable, Sendable {
     var chosen: String?
 }
 
+/// One section of the card info panel as the adapter words it: its heading and its lines, which
+/// the sheet shows and VoiceOver reads as they are (SPEC-507 R13, R16).
+struct CardInfoSection: Equatable, Sendable {
+    var title: String
+    var lines: [String]
+}
+
 /// The one owner of the engine: every engine call runs here, off the main actor, one at a time
 /// (SPEC-347 R7, R8). The actor serialises the calls; the engine itself is `Sendable` because the
 /// adapter's Rust side is `Send + Sync`. The voice choices live here too, beside the collection
@@ -145,6 +152,11 @@ actor EngineSession: SyncEngine {
     func flag(_ card: QueuedCard) throws -> UInt32 {
         let engine = try started()
         return try refused { try engine.flag(cardId: card.cardID, flag: card.flag) }
+    }
+
+    /// The card info panel's sections for `cardID` (SPEC-507 R12, R13). A stub: it reads nothing.
+    func cardHealth(_ cardID: Int64) throws -> [CardInfoSection] {
+        []
     }
 
     /// The face of `cardID`: its question, or its answer when `answer` is set, with the clips to
