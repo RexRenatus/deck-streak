@@ -139,9 +139,7 @@ pub async fn search_parity(
 /// exist names no file yet; the copy then creates it.
 fn names_the_source(source: &Path, scratch: &Path) -> bool {
     match (std::fs::metadata(source), std::fs::metadata(scratch)) {
-        (Ok(source), Ok(scratch)) => {
-            (source.dev(), source.ino()) == (scratch.dev(), scratch.ino())
-        }
+        (Ok(source), Ok(scratch)) => (source.dev(), source.ino()) == (scratch.dev(), scratch.ino()),
         _ => false,
     }
 }
