@@ -9,9 +9,9 @@
 //! tag's, in the order written, then every sound tag's.
 //!
 //! What it does not do, each a divergence the decision records: render LaTeX into the image names
-//! the engine derives from it, write an inline `data:image/…;base64,` image to a file, normalize a
-//! name to NFC, and decode a named entity other than `&amp;`, `&lt;`, `&gt;`, `&quot;` and
-//! `&nbsp;` (a numeric one is decoded).
+//! the engine derives from it (the index adds those names, read by [`crate::latex`]), write an
+//! inline `data:image/…;base64,` image to a file, normalize a name to NFC, and decode a named entity
+//! other than `&amp;`, `&lt;`, `&gt;`, `&quot;` and `&nbsp;` (a numeric one is decoded).
 
 use std::borrow::Cow;
 
@@ -250,7 +250,7 @@ fn sound_at(text: &str, open: usize) -> Option<(&str, usize)> {
 }
 
 /// Where `literal`, ASCII lower case, matches `text` at `at` with case ignored, `ſ` matching `s`.
-fn match_ignoring_case(text: &str, at: usize, literal: &str) -> Option<usize> {
+pub(crate) fn match_ignoring_case(text: &str, at: usize, literal: &str) -> Option<usize> {
     let mut found = text[at..].char_indices();
     for expected in literal.chars() {
         let (_, character) = found.next()?;

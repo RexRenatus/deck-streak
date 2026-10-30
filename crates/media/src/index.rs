@@ -8,6 +8,7 @@
 use std::collections::BTreeSet;
 
 use crate::css::scan_css;
+use crate::latex::{LatexFormat, latex_images};
 use crate::scan::scan;
 use crate::sweep::{StoredFile, SweepPlan, SweepPolicy, plan_sweep};
 
@@ -34,17 +35,28 @@ pub trait MediaIndex {
     fn stored(&self) -> Vec<StoredFile>;
 }
 
-/// Every name the index's texts write.
+/// Every name the index's texts write, with the images the engine renders from their LaTeX.
 #[must_use]
 pub fn references<I: MediaIndex + ?Sized>(index: &I) -> BTreeSet<String> {
     let mut names = BTreeSet::new();
     for source in index.sources() {
         match source {
-            Source::Html(text) | Source::HtmlSvg(text) => names.extend(scan(text)),
+            Source::Html(text) => html_names(&mut names, text, LatexFormat::Png),
+            Source::HtmlSvg(text) => html_names(&mut names, text, LatexFormat::Svg),
             Source::Css(css) => names.extend(scan_css(css)),
         }
     }
     names
+}
+
+/// Adds the names an HTML text writes, then the names of the images its LaTeX renders to.
+fn html_names(names: &mut BTreeSet<String>, text: &str, format: LatexFormat) {
+    names.extend(scan(text));
+    names.extend(
+        latex_images(text, format)
+            .into_iter()
+            .map(|image| image.name),
+    );
 }
 
 /// The sweep plan for the index's store against every name its texts write.
