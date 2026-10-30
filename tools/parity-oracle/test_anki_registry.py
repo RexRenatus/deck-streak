@@ -174,6 +174,25 @@ class Corpus(unittest.TestCase):
                     for imported in names:
                         self.assertNotIn(imported.split(".")[0], banned_imports, path.name)
 
+    def test_a_note_the_package_shares_with_the_target_carries_a_mod_on_both_sides(self):
+        """A14 (R18 (c)): every drawn import case whose package shares a GUID with the target
+        gives that note a `mod` on both sides, so the import's updated or duplicate count is
+        decided by the input and never by the clock that added the two notes."""
+        name = "anki.import.package"
+        _, registration = REGISTERED[name]
+        drawn = generate.covered(name, registration, corpus.SEED)
+        missing = []
+        for index, (_, case) in enumerate(examined("import case(s)", drawn)):
+            target = {note.get("guid"): note for note in case["collection"]["notes"]}
+            for note in case["package"]["notes"]:
+                twin = target.get(note.get("guid"))
+                if twin is not None and ("mod" not in note or "mod" not in twin):
+                    missing.append(index)
+                    break
+        self.assertEqual(
+            missing, [], f"{len(missing)} import case(s) share a GUID without a mod on both sides"
+        )
+
 
 class RolloverClocks(unittest.TestCase):
     def test_every_rollover_clock_is_one_second_before_the_local_rollover_hour(self):

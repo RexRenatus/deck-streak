@@ -89,6 +89,17 @@ def write_package(edge):
     return [{"collection": source, "kind": kind} for source in sketched(edges)]
 
 
+def explicit_mods(target_note, package_note, mod):
+    """A note the package shares with the target by GUID, with no mod on either side, takes one mod on both: the
+    import then answers from the case's input, never from the clock that added the two notes."""
+    if (
+        package_note.get("guid") == target_note.get("guid")
+        and "mod" not in package_note
+        and "mod" not in target_note
+    ):
+        package_note["mod"], target_note["mod"] = mod, mod
+
+
 def write_import(edge):
     cases = []
     for k in range(7):
@@ -111,6 +122,7 @@ def write_import(edge):
             note["guid"] = corpus.NEW_GUIDS[k]
         elif edge == "revlog-id-clash":
             incoming["revlog"] = [dict(incoming["revlog"][0], at_ms=target["revlog"][0]["at_ms"])]
+        explicit_mods(target["notes"][0], note, mod)
         incoming["notes"][0] = note
         cases.append({"collection": target, "package": incoming, "kind": "personal"})
     return cases
@@ -404,6 +416,7 @@ def import_case(edge, rng):
         note["guid"] = f"ds-{rng.randrange(16**8):08x}"
     elif edge == "revlog-id-clash":
         incoming["revlog"] = [dict(incoming["revlog"][0], at_ms=target["revlog"][0]["at_ms"])]
+    explicit_mods(target["notes"][0], note, mod)
     incoming["notes"][0] = note
     return {"collection": target, "package": incoming, "kind": "personal"}
 

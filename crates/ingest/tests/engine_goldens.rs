@@ -98,7 +98,7 @@ fn read_engine_golden(name: &str, keys: &[&str]) -> usize {
             None => {}
         }
     }
-    println!("examined {} case(s) of {name}", golden.cases.len());
+    eprintln!("examined {} case(s) of {name}", golden.cases.len());
     assert!(
         faults.is_empty(),
         "{name}: {} case(s) off the harness's answer keys:\n{}",
