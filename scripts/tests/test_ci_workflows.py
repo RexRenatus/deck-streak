@@ -7900,6 +7900,38 @@ DYNAMIC_IMPORTS = {
         ),
     ),
     **allowed(
+        "packs a planted image's header and chunk fields into bytes, and compresses and checksums its rows, to build the brand census's refused files in memory (SPEC-579 R2); numbers and bytes in and bytes out, and it imports, runs and reads nothing",
+        (
+            "test_brand_files",
+            "TheBrandFilesAreTheExports.test_a_text_or_time_chunk_is_refused",
+            "struct.pack('>HBBBBB', 2026, 1, 1, 0, 0, 0)",
+            1,
+        ),
+        ("test_brand_files", "chunk", "struct.pack('>I', len(body))", 1),
+        ("test_brand_files", "chunk", "struct.pack('>I', zlib.crc32(kind + body))", 1),
+        ("test_brand_files", "chunk", "zlib.crc32(kind + body)", 1),
+        ("test_brand_files", "planted_gif", "struct.pack('<HHBBB', 1, 1, 128, 0, 0)", 1),
+        ("test_brand_files", "planted_gif", "struct.pack('<HHHHB', 0, 0, 1, 1, 0)", 1),
+        (
+            "test_brand_files",
+            "planted_ico",
+            "struct.pack('<BBBBHHII', side, side, 0, 0, 1, 32, len(image), offset)",
+            1,
+        ),
+        ("test_brand_files", "planted_ico", "struct.pack('<HHH', 0, 1, len(images))", 1),
+        (
+            "test_brand_files",
+            "planted_png",
+            "struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0)",
+            1,
+        ),
+        ("test_brand_files", "planted_png", "zlib.compress(rows)", 1),
+    ),
+    **allowed(
+        "checksums each chunk of a PNG the brand census walks, to refuse a chunk whose checksum is wrong (SPEC-579 R2); bytes in and a number out, and it imports, runs and reads nothing",
+        ("test_brand_files", "png_chunks", "zlib.crc32(kind + body)", 1),
+    ),
+    **allowed(
         "names the exception class plistlib's XML parser raises on a malformed property list, to refuse it by name (SPEC-347 A13); a class caught, and it imports, runs and reads nothing",
         ("test_ios_app_tree", "plist_of", "ExpatError", 1),
     ),
