@@ -36,6 +36,9 @@ binary file (a NUL byte in its first 8000 bytes, or bytes that are not UTF-8) is
 `binary` wherever it is, and its bytes are still searched for the private literals; a file over the
 size limit is refused by the rule `oversize`. A shallow repository makes `--history` VOID, because
 the history it would read is incomplete.
+A binary whose path, sha256 and byte count equal an entry of `scripts/brand-files.json` at the
+root is admitted instead of refused, in the tree and in history, and is still searched for the
+private literals; a list that cannot be read is a usage error (SPEC-579).
 
 A finding names the rule, the file (or `history:<path>@<blob>`) and the line, never the value (a
 literal is reported by its index in the private list). The deny lists themselves are skipped: they
@@ -47,6 +50,7 @@ examined nothing, or the history is shallow.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import ipaddress
 import json
 import os
@@ -67,6 +71,10 @@ SNIFF_BYTES = 8000
 # The rule files themselves, and license texts, are not disclosures.
 SKIP_NAMES = {"deny-list.json", "LICENSE"}
 SKIP_PREFIXES = ("LICENSES/", "scripts/scrub-rules/")
+#: The brand list (SPEC-579): a binary is admitted only at a path it names, with the sha256 and the
+#: byte count it names for that path; every other binary is still refused by the rule `binary`.
+BRAND_LIST = Path("scripts") / "brand-files.json"
+SHA256 = re.compile(r"^[0-9a-f]{64}$")
 ADDRESS_RULES = {"ipv4", "ipv6"}
 # The ranges privacy-gdpr's public scrub passes: documentation (RFC 5737, RFC 3849, RFC 9637).
 DOCUMENTATION = [
@@ -198,6 +206,43 @@ class RulesError(Exception):
     cannot be read): a usage error, reported with exit 2 by every caller of `rules()`."""
 
 
+def brand_list(root: Path) -> set[tuple[str, str, int]]:
+    """The (path, sha256, bytes) of each entry of the brand list at `root`, and none when it is
+    absent. A list that cannot be read, an entry without its path, a 64-digit lowercase sha256 or
+    an integer byte count, and a path named twice are usage errors, each naming the list."""
+    listed = root / BRAND_LIST
+    name = BRAND_LIST.as_posix()
+    if not listed.exists():
+        return set()
+    try:
+        files = json.loads(listed.read_text(encoding="utf-8"))["files"]
+    except (OSError, UnicodeDecodeError, ValueError, KeyError, TypeError) as error:
+        raise UsageError(f"the brand list {name} cannot be read: {error!r}") from None
+    if not isinstance(files, list):
+        raise UsageError(f"the brand list {name} holds no list of files")
+    admitted: set[tuple[str, str, int]] = set()
+    paths: set[str] = set()
+    for number, entry in enumerate(files):
+        if not isinstance(entry, dict) or not {"path", "sha256", "bytes"} <= entry.keys():
+            raise UsageError(f"the brand list {name}: entry {number} lacks a path, sha256 or bytes")
+        path, digest, size = entry["path"], entry["sha256"], entry["bytes"]
+        if not isinstance(path, str) or not path:
+            raise UsageError(f"the brand list {name}: entry {number}'s path is not a path")
+        if not isinstance(digest, str) or SHA256.fullmatch(digest) is None:
+            raise UsageError(f"the brand list {name}: entry {number}'s sha256 is not 64 hex digits")
+        if not isinstance(size, int) or isinstance(size, bool):
+            raise UsageError(f"the brand list {name}: entry {number}'s bytes is not an integer")
+        if path in paths:
+            raise UsageError(f"the brand list {name} names {path} twice")
+        paths.add(path)
+        admitted.add((path, digest, size))
+    return admitted
+
+
+def admits(admitted: set[tuple[str, str, int]], path: str, data: bytes) -> bool:
+    return (path, hashlib.sha256(data).hexdigest(), len(data)) in admitted
+
+
 class Scan:
     """Applies the composed shapes and literals, and collects findings that never carry a value."""
 
@@ -230,6 +275,13 @@ class Scan:
         # Refused for being binary; its bytes are still searched, so the report says whether it
         # also carried a private literal (a compiled cache embeds the paths it was built from).
         self.findings.append(f"{shown}: binary")
+        self.search_literals(shown, data)
+
+    def admitted(self, shown: str, data: bytes) -> None:
+        # Admitted by the brand list: not refused for being binary, and still searched.
+        self.search_literals(shown, data)
+
+    def search_literals(self, shown: str, data: bytes) -> None:
         folded = data.decode("latin-1").casefold()
         for index, (origin, literal) in enumerate(self.literals):
             if literal and literal in folded:
@@ -260,7 +312,7 @@ def read_blobs(root: Path, ids: list[str]) -> list[bytes]:
     return contents
 
 
-def history(root: Path, rev: str, scan: Scan) -> int | None:
+def history(root: Path, rev: str, scan: Scan, admitted: set[tuple[str, str, int]]) -> int | None:
     """Scan every blob reachable from `rev` once. None when the repository is shallow (VOID)."""
     if git(root, "rev-parse", "--is-shallow-repository").strip() != b"false":
         return None
@@ -296,7 +348,10 @@ def history(root: Path, rev: str, scan: Scan) -> int | None:
         readable, read_blobs(root, [item[0] for item in readable]), strict=True
     ):
         if is_binary(data):
-            scan.binary(shown, data)
+            if admits(admitted, path, data):
+                scan.admitted(shown, data)
+            else:
+                scan.binary(shown, data)
         elif not skipped_name(path):
             scan.text(shown, data.decode("utf-8"))
     return blobs
@@ -333,7 +388,7 @@ def subject_files(subject: str) -> list[Path]:
     raise UsageError(f"the subject {subject} is not a file or a directory")
 
 
-def examine(scan: Scan, files: list[Path], root: Path) -> int:
+def examine(scan: Scan, files: list[Path], root: Path, admitted: set[tuple[str, str, int]]) -> int:
     """Scan every file, and return how many were examined: a rule file the scrub skips is not."""
     examined = 0
     for path in files:
@@ -352,7 +407,11 @@ def examine(scan: Scan, files: list[Path], root: Path) -> int:
             continue
         if is_binary(data):
             examined += 1
-            scan.binary(shown, data)
+            rel = path.relative_to(root) if path.is_relative_to(root) else path
+            if admits(admitted, rel.as_posix(), data):
+                scan.admitted(shown, data)
+            else:
+                scan.binary(shown, data)
             continue
         if skipped(path, root):
             continue
@@ -379,20 +438,21 @@ def main() -> int:
     try:
         scan = rules(private)
         subjects = [(subject, subject_files(subject)) for subject in args.subject]
+        admitted = brand_list(root)
     except (RulesError, UsageError) as error:
         print(f"public-scrub: {error}")
         return 2
-    examined = examine(scan, [] if args.no_tree else tracked(root), root)
+    examined = examine(scan, [] if args.no_tree else tracked(root), root, admitted)
     voids = []
     for subject, files in subjects:
-        counted = examine(scan, files, root)
+        counted = examine(scan, files, root, admitted)
         examined += counted
         if counted == 0:
             voids.append(f"the subject {subject} examined no file")
     blobs = 0
     if args.history:
         try:
-            counted = history(root, args.rev, scan)
+            counted = history(root, args.rev, scan, admitted)
         except UsageError as error:
             print(f"public-scrub: {error}")
             return 2
