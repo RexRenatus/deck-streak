@@ -47,8 +47,8 @@ R2. `scripts/brand-files.json` lists each file of R1 by its path, full sha256, b
     pixel sizes, and a census refuses a listed file that is missing, differs by a byte, has other
     pixel sizes than its entry, or carries text, time or comment metadata.
 R3. `web/app/static/manifest.webmanifest`'s `icons` member is the brand source's three entries; its
-    other members are unchanged. `web/app/src/app.html` links `favicon.svg` as an `image/svg+xml`
-    icon beside its two existing links. `web/app/src/lib/icon.ts` and the endpoints at
+    other members are unchanged. `web/app/src/app.html` links `favicon.svg` as an icon, with no
+    media type named, beside its two existing links. `web/app/src/lib/icon.ts` and the endpoints at
     `apple-touch-icon.png`, `icon-192.png` and `icon-512.png` are removed.
 R4. `README.md`'s first line stays `# DeckStreak`; its third line is
     `![DeckStreak](docs/assets/deckstreak-hero-tide-light.gif)`; a blank line separates each, and the
@@ -119,6 +119,7 @@ A19: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k te
 | `scripts/public-scrub.py` | scrub | changed: the admission (R6) |
 | `scripts/tests/test_public_scrub.py` | tests | changed: class `AListedBrandBinaryIsAdmitted`, A15 to A19 |
 | `scripts/tests/test_brand_files.py` | tests | new: A1 to A12 |
+| `scripts/tests/test_ci_workflows.py` | tests | changed: `DYNAMIC_IMPORTS` lists the brand module's bytes-only sites |
 | `web/app/static/favicon.svg` | web | new (R1) |
 | `web/app/static/favicon.ico` | web | new (R1) |
 | `web/app/static/apple-touch-icon.png` | web | new (R1) |

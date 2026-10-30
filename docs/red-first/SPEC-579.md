@@ -86,3 +86,14 @@ passed), the replacement installed once by script, the killer run by its explici
 - S57905, another icon set name: its killer,
   `test_brand_files.TheAppCarriesItsIconSet.test_the_app_target_names_the_catalog_and_its_icon_set`, failed with
   `AssertionError: Lists differ: ["no-icon-setting: ios/app.yml: ASSETCATAL[37 chars]et'"] != []`.
+
+## After the last green
+
+A fix round after the last green changes three test modules and no criterion's red or green commit.
+`manifest.test.ts` pins the vector favicon link with no media type, as `app.html` now writes it, so
+that the web census of the media rules finds no second copy of a media type. `test_public_scrub.py`
+plants three more malformed lists in the malformed-list test (an entry that is not an object, an empty
+path and a byte count that is a boolean); each kills one mutant of the brand list reader that the
+three earlier lists left alive. `test_ci_workflows.py` lists the bytes-only sites of
+`test_brand_files.py` in its census of the test directory. A run at the head reads these three
+modules as the fix round leaves them; at each green commit named above, they held their earlier form.

@@ -87,7 +87,8 @@ The export's web files are copied into `web/app/static/`: `favicon.svg`, `favico
 `apple-touch-icon.png`, `icon-192.png`, `icon-512.png` and `icon-maskable-512.png`. The manifest's
 `icons` member becomes the export's three entries, copied as they are (their `src` paths are
 relative, and the manifest sits at the root). `app.html` gains one link,
-`<link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />`; the touch icon
+`<link rel="icon" href="%sveltekit.assets%/favicon.svg" />`, which names no media type: the
+engine core's table is the media rules' one copy, and a web census refuses a second; the touch icon
 link stays; `/favicon.ico` is served at the root as browsers ask for it. `icon.ts` and the three
 endpoints are removed, so no prerendered answer shadows a static file. `manifest.test.ts` keeps its
 test name and reads the static files: the three entries, each icon's size from its header, the
