@@ -23,6 +23,8 @@ owner in deck-streak-identity: admin, superuser
 celebration in deck-streak-notifications: fanfare, confetti
 study_day in deck-streak-kernel, deck-streak-analytics: calendar
 leech in deck-streak-curriculum: hardcard
+operation in deck-streak-sync: mutation, changeset
+conflict in deck-streak-sync: clash
 ```
 
 ## Glossary
@@ -54,3 +56,10 @@ leech in deck-streak-curriculum: hardcard
 | leech | curriculum | a card with eight or more lapses that is not suspended |
 | grade | engine-core | the owner's judgement of one answered card, Again or Good: the engine records it as rating 0 or 2, and no type names a third |
 | owner answer | engine-core | the token one press mints for one card and one grade (`OwnerAnswer`): the dispatcher's one door that records a grade consumes it, and refuses a request that names another card or another grade |
+| operation | sync | one change a device or the server makes to study data, typed (`Op`) and written in one byte encoding: an answer, an undo of one, or an edit of a note, card, deck, notetype or media name |
+| server seq | sync | an operation's place in the server's log, given when the server accepts it; every device folds the log in that order and pulls by it |
+| pending | sync | a device's own operation the server has not judged: it leaves the device's queue only on the server's verdict on it or its appearance in a pull |
+| conflict record | sync | an edit that lost to a concurrent edit of the same register, kept with the winner's key, so no edit is lost silently |
+| sealed event | sync | an event the devices encrypt and the server only relays and orders, unable to read it; a tag edit travels as one |
+| hybrid clock | sync | an operation's clock: one past every clock its device made or saw, never below the device's wall clock |
+| slot | sync | a number 0 to 63 given once per device (0 is the server's); every id a device makes has its slot as its residue mod 64 |

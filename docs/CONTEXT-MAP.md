@@ -45,6 +45,7 @@ deck-streak-xp            (the per-review XP rule, with no I/O, for the server a
 deck-streak-study-day     (the study day, its instant and its date error, with no I/O, for the server and both clients; ADR-515)  depends on: nothing
 deck-streak-companion     (the scheduling companion's documented interface: schema v1, its codec, the handshake, the decision that fails closed, the Absent default; ADR-519)  depends on: nothing
 deck-streak-companion-slot  (the one substitutable companion body; the public body opens Absent; ADR-519)  depends on: companion
+deck-streak-sync          (the sync core: typed operations, one encoding, the hybrid clock, the id allocator, the key, the field merge and the pending queue, with no I/O, for the server and both clients; ADR-527)  depends on: nothing
 miniapp   web/app/src     (the SvelteKit Mini App)  depends on: nothing internal
 ios-harness  ios/  (the SwiftUI harness over deck-streak-ffi's XCFramework; ADR-335)  depends on: nothing internal
 landing   web/site/src    (the Astro landing page, planned)  depends on: nothing internal
@@ -85,6 +86,13 @@ It is `no_std`, depends on nothing and does no I/O, so both clients can link it.
 depends on the interface alone; its public body opens `Absent`, which refuses every request. The
 engine core, the umbrella FFI crate and the web engine gain their edges to them in the changes that
 first use them (#997, #998).
+
+`deck-streak-sync` is the sync core (SPEC-509, ADR-527): the typed operations every device and the
+server write in, their one byte encoding, the hybrid clock and the id allocator beside it, the key
+every party folds by, the rule for concurrent edits that keeps every loser, and a device's queue of
+operations the server has not judged. It depends on nothing and does no I/O: a caller hands in the
+wall clock and the bytes. The server's log, the umbrella FFI crate and the web engine gain their
+edges to it in the changes that first use it (#15).
 
 `deck-streak-push` is an outbound adapter: it builds APNs and web push requests and reports what
 each platform answered, and it depends on the kernel's clock alone (SPEC-343, ADR-354 D3). The

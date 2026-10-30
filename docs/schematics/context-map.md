@@ -69,6 +69,7 @@ flowchart TB
     xp
     fsrs7
     companion
+    sync
   end
 
   daemon --> kernel
