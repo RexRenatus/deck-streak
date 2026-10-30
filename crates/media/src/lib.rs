@@ -1,6 +1,6 @@
 //! # deck-streak-media
 //!
-//! What this crate owns: how DeckStreak knows a media file and the names that point at it
+//! What this crate owns: how the product knows a media file and the names that point at it
 //! (SPEC-513, ADR-531). A file is known by the SHA-256 of its bytes ([`MediaHash`]); a name is a
 //! certified `ds-` name that carries that hash, or a name an import brought, kept unchanged
 //! ([`MediaName`]); a name is bound to one hash, once ([`Bindings`]); one grammar finds every

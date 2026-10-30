@@ -68,22 +68,42 @@ pub struct Facts {
     pub added_ms: i64,
 }
 
-/// One file's fate. STUB: every file is kept as live.
+/// One file's fate: kept for the first reason that holds, live, pinned, in grace or imported, and
+/// deleted when none does.
 #[must_use]
-pub fn fate(_facts: Facts, _policy: SweepPolicy) -> Fate {
-    Fate::Keep(Keep::Live)
+pub fn fate(facts: Facts, policy: SweepPolicy) -> Fate {
+    if facts.referenced {
+        Fate::Keep(Keep::Live)
+    } else if facts.pinned {
+        Fate::Keep(Keep::Pinned)
+    } else if in_grace(facts.added_ms, policy) {
+        Fate::Keep(Keep::InGrace)
+    } else if facts.imported {
+        Fate::Keep(Keep::Imported)
+    } else {
+        Fate::Delete
+    }
 }
 
-/// Whether a file added at `added_ms` is within the grace window. STUB: always.
+/// Whether a file added at `added_ms` is within the grace window at the sweep's instant: added at
+/// or after the instant, or less than `grace_ms` before it.
 #[must_use]
-pub fn in_grace(_added_ms: i64, _policy: SweepPolicy) -> bool {
-    true
+pub fn in_grace(added_ms: i64, policy: SweepPolicy) -> bool {
+    if added_ms >= policy.now_ms {
+        return true;
+    }
+    let age = i128::from(policy.now_ms) - i128::from(added_ms);
+    let grace = i128::from(policy.grace_ms);
+    // The witness's mutant: the sweep reads no grace window.
+    #[cfg(feature = "kani-witness-sweep")]
+    let grace = 0;
+    age < grace
 }
 
-/// Whether `name` is pinned. STUB: never.
+/// Whether `name` is pinned: it starts with `_`.
 #[must_use]
-pub fn pinned(_name: &str) -> bool {
-    false
+pub fn pinned(name: &str) -> bool {
+    name.starts_with(PINNED_PREFIX)
 }
 
 /// A sweep's plan: the names it deletes, each name it keeps with its reason, and each name a note
@@ -98,20 +118,33 @@ pub struct SweepPlan {
     pub missing: Vec<String>,
 }
 
-/// The sweep plan for the files `stored` against the names `referenced`. STUB: keeps every file
-/// as live and lists nothing missing.
+/// The sweep plan for the files `stored` against the names `referenced`, at `policy`'s instant.
 #[must_use]
 pub fn plan_sweep(
     stored: &[StoredFile],
-    _referenced: &BTreeSet<String>,
-    _policy: SweepPolicy,
+    referenced: &BTreeSet<String>,
+    policy: SweepPolicy,
 ) -> SweepPlan {
-    SweepPlan {
-        delete: Vec::new(),
-        kept: stored
-            .iter()
-            .map(|file| (file.name.clone(), Keep::Live))
-            .collect(),
-        missing: Vec::new(),
+    let mut files: Vec<&StoredFile> = stored.iter().collect();
+    files.sort_by(|a, b| a.name.cmp(&b.name));
+    let mut plan = SweepPlan::default();
+    for file in files {
+        let facts = Facts {
+            referenced: referenced.contains(&file.name),
+            pinned: pinned(&file.name),
+            imported: file.imported,
+            added_ms: file.added_ms,
+        };
+        match fate(facts, policy) {
+            Fate::Keep(reason) => plan.kept.push((file.name.clone(), reason)),
+            Fate::Delete => plan.delete.push(file.name.clone()),
+        }
     }
+    let held: BTreeSet<&str> = stored.iter().map(|file| file.name.as_str()).collect();
+    plan.missing = referenced
+        .iter()
+        .filter(|name| !held.contains(name.as_str()))
+        .cloned()
+        .collect();
+    plan
 }

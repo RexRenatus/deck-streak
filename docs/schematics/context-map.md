@@ -69,6 +69,7 @@ flowchart TB
     xp
     fsrs7
     companion
+    media
   end
 
   daemon --> kernel
@@ -184,6 +185,10 @@ the kernel re-exports, so the kernel sits in a layer of its own above it (SPEC-4
 `companion` depends on no workspace crate, and `companion-slot` alone depends on it: the slot is the
 one body a build substitutes behind the scheduling companion's interface, so it sits in a layer of
 its own above the interface (SPEC-501, ADR-519). No other crate reaches either yet.
+
+`media` depends on no workspace crate (its one dependency is `sha2`), and no crate depends on it
+yet: the collection that implements its index and the renderer that reads names through its grammar
+are later deliveries (SPEC-513, ADR-531).
 
 `deck-streak-migration` is planned in the fence and has no directory under `crates/`, so it is not
 drawn until the delivery that builds it.

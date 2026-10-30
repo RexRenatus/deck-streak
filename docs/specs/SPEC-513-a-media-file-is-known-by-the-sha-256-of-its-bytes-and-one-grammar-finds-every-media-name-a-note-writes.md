@@ -153,8 +153,8 @@ their suites and show the goldens' comparisons can fail.
 | `formal/lean/Formal/Vectors.lean` | formal | changed: the two entries' arms |
 | `formal/vectors/media-bind.jsonl` | formal | new: written by the checker |
 | `formal/vectors/media-gc.jsonl` | formal | new: written by the checker |
-| `formal/obligations.json` | formal | changed: O13 lists the two Lean entries and the four harnesses present; the entries' rows |
-| `scripts/tests/test_formal_obligations.py` | formal census | changed: the two entries leave the planned list and join the new entries |
+| `formal/obligations.json` | formal | changed: O13 lists the two Lean entries present with their vectors ties, and the four harnesses planned with where each sits; the entries' rows |
+| `scripts/tests/test_formal_obligations.py` | formal census | changed: the two entries leave the planned list, join the new entries and O13's present names, and their ties join the committed ties |
 | `Cargo.toml` | workspace | changed: the crate's workspace dependency entry; `cfg(kani)` declared to the `unexpected_cfgs` lint |
 | `Cargo.lock` | workspace | changed: the crate's package |
 | `docs/CONTEXT-MAP.md` | docs | changed: the crate's fence row and its prose |
@@ -207,11 +207,12 @@ this change.
 - **Lean: `lean/MediaGc`, present.** Two theorems over `fate` and `in_grace`: a live, pinned, young or imported file
   is never deleted, and every other file is. Each has a witness (a sweep blind to the window; a sweep that keeps
   every file). The vectors (`formal/vectors/media-gc.jsonl`, 244 lines) are answered by `formal_vectors_gc`.
-- O13 lists both entries and the four harnesses present; its status stays `planned`: `tla/MediaSync`, K-evictable
-  and K-put are still planned.
+- O13 lists both entries present, each tied by its vectors test; its status stays `planned`: `tla/MediaSync`,
+  K-evictable and K-put are still planned, and so are the four harnesses below.
 - **Kani: K-blob-path, K-bind, K-sweep, K-scan, VOID.** The harnesses and their four witness features are in the
   tree (`crates/media/src/kani_proofs.rs`), and no Kani run is pinned for this tree yet: each is unratcheted and
-  nothing runs. Their owner is the delivery that runs the formal checker's Kani kind over this tree.
+  nothing runs, and the ledger keeps each planned, naming where it sits. Their owner is the delivery that runs the
+  formal checker's Kani kind over this tree.
 - **TLA+: NOT APPLICABLE.** Each function here is pure; nothing interleaves.
 
 ## 9. Mutation rows

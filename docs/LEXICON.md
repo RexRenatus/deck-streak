@@ -23,6 +23,9 @@ owner in deck-streak-identity: admin, superuser
 celebration in deck-streak-notifications: fanfare, confetti
 study_day in deck-streak-kernel, deck-streak-analytics: calendar
 leech in deck-streak-curriculum: hardcard
+media_hash in deck-streak-media: checksum, fingerprint
+binding in deck-streak-media: attachment
+sweep in deck-streak-media: purge, cleanup
 ```
 
 ## Glossary
@@ -54,3 +57,8 @@ leech in deck-streak-curriculum: hardcard
 | leech | curriculum | a card with eight or more lapses that is not suspended |
 | grade | engine-core | the owner's judgement of one answered card, Again or Good: the engine records it as rating 0 or 2, and no type names a third |
 | owner answer | engine-core | the token one press mints for one card and one grade (`OwnerAnswer`): the dispatcher's one door that records a grade consumes it, and refuses a request that names another card or another grade |
+| media hash | media | the SHA-256 of a media file's bytes: the one identity the media store knows a file by |
+| certified name | media | `ds-`, a file's media hash in lowercase hex, and an optional extension: a name that carries its file's hash and reads back to itself |
+| imported name | media | any other plain media name, brought by an import and kept exactly as written; it claims no hash |
+| binding | media | a name's one hash, live while its file is held and released after a sweep deletes it; a name is bound once and comes back only for the same hash |
+| sweep | media | the plan of which stored media files to delete: every file that is not live, pinned, in grace or imported |

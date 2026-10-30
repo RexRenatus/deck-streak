@@ -45,6 +45,7 @@ deck-streak-xp            (the per-review XP rule, with no I/O, for the server a
 deck-streak-study-day     (the study day, its instant and its date error, with no I/O, for the server and both clients; ADR-515)  depends on: nothing
 deck-streak-companion     (the scheduling companion's documented interface: schema v1, its codec, the handshake, the decision that fails closed, the Absent default; ADR-519)  depends on: nothing
 deck-streak-companion-slot  (the one substitutable companion body; the public body opens Absent; ADR-519)  depends on: companion
+deck-streak-media         (a media file known by its SHA-256, certified and imported names, write-once bindings, the one grammar of media names, the sweep plan, with no I/O; ADR-531)  depends on: nothing
 miniapp   web/app/src     (the SvelteKit Mini App)  depends on: nothing internal
 ios-harness  ios/  (the SwiftUI harness over deck-streak-ffi's XCFramework; ADR-335)  depends on: nothing internal
 landing   web/site/src    (the Astro landing page, planned)  depends on: nothing internal
@@ -85,6 +86,14 @@ It is `no_std`, depends on nothing and does no I/O, so both clients can link it.
 depends on the interface alone; its public body opens `Absent`, which refuses every request. The
 engine core, the umbrella FFI crate and the web engine gain their edges to them in the changes that
 first use them (#997, #998).
+
+`deck-streak-media` is the media core (SPEC-513, ADR-531): a file is known by the SHA-256 of its
+bytes, a certified `ds-` name carries that hash and an imported name is kept as written, a name is
+bound to one hash once, one grammar (the engine's own) finds every media name a note's text and a
+CSS write, and a sweep plan keeps every live, pinned, in-grace and imported file. It depends on the
+workspace's `sha2` alone and does no I/O, so it has no edge to the kernel. A collection implements
+its `MediaIndex` port, and the renderer reads names through its grammar; each gains its edge to it
+in the change that first uses it.
 
 `deck-streak-push` is an outbound adapter: it builds APNs and web push requests and reports what
 each platform answered, and it depends on the kernel's clock alone (SPEC-343, ADR-354 D3). The

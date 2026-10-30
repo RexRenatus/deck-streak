@@ -85,21 +85,50 @@ impl fmt::Display for ReleaseRefusal {
 
 impl std::error::Error for ReleaseRefusal {}
 
-/// One bind over one name's slot: the slot after, and what happened. STUB: every bind is refused
-/// as a conflict.
-#[must_use]
+/// One bind over one name's slot: the slot after, and what happened. `claimed` is the hash a
+/// certified name claims (none for an imported name), and `hash` the hash of the file being
+/// bound. A refusal leaves the slot as it was.
 pub fn step(
     slot: Option<Binding>,
-    _claimed: Option<MediaHash>,
-    _hash: MediaHash,
+    claimed: Option<MediaHash>,
+    hash: MediaHash,
 ) -> (Option<Binding>, Result<Bound, BindRefusal>) {
-    (slot, Err(BindRefusal::Conflict))
+    if claimed.is_some_and(|claimed| claimed != hash) {
+        return (slot, Err(BindRefusal::Mismatch));
+    }
+    let live = Binding {
+        hash,
+        state: BindState::Live,
+    };
+    match slot {
+        None => (Some(live), Ok(Bound::New)),
+        Some(bound) if bound.hash == hash => match bound.state {
+            BindState::Live => (slot, Ok(Bound::Unchanged)),
+            BindState::Released => (Some(live), Ok(Bound::Revived)),
+        },
+        #[cfg(not(feature = "kani-witness-bind"))]
+        Some(_) => (slot, Err(BindRefusal::Conflict)),
+        // The witness's mutant: a bind of a bound name to another hash overwrites it.
+        #[cfg(feature = "kani-witness-bind")]
+        Some(_) => (Some(live), Ok(Bound::New)),
+    }
 }
 
-/// One release over one name's slot. STUB: every release is refused as unbound.
-#[must_use]
+/// One release over one name's slot: a live binding is released and keeps its hash.
 pub fn release_step(slot: Option<Binding>) -> (Option<Binding>, Result<Release, ReleaseRefusal>) {
-    (slot, Err(ReleaseRefusal::Unbound))
+    match slot {
+        None => (None, Err(ReleaseRefusal::Unbound)),
+        Some(bound) => match bound.state {
+            BindState::Live => (
+                Some(Binding {
+                    hash: bound.hash,
+                    state: BindState::Released,
+                }),
+                Ok(Release::Released),
+            ),
+            BindState::Released => (slot, Ok(Release::AlreadyReleased)),
+        },
+    }
 }
 
 /// Every name's binding, keyed by the name as written.
