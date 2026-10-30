@@ -26,10 +26,11 @@ A search is text the engine reads, and DeckStreak has no reading of its own. Wha
   `suspended`, `intraday-learning`, `day-learning`, `deck-children`, `unicode-deck-names`) and 24 seeded random
   cases, each a synthetic collection, a search and the corpus indices of the cards the engine selects, in its order.
   `crates/ingest/tests/engine_goldens.rs:156` checks its answer keys; no port reads its answers.
-- **The golden's clock.** The driver's harness moves each case's clock by whole days to the host's day and the engine
-  reads the host's clock and zone (the harness's `build`), so each case ran at the first instant at or after the
-  case's own whose time of day is the run's, read in the host's zone (UTC). Measured: of the 1,440 minutes of a day,
-  480 (from 04:00 to 11:59 UTC) give every case its recorded answer; the run's commit was made at 10:25 UTC.
+- **The golden's clock.** The driver's harness holds each case's clock at the case's own recorded instant, its `now`,
+  and the engine reads that clock and the host's zone, so each case ran at its own instant, read in the host's zone
+  (UTC); no one time of day is assumed for the run. Measured: moving every case's instant by each whole minute of a
+  day around its own, 643 of the 1,440 shifts (from -17,940 to 20,580 s, one band that holds the unshifted instant)
+  give every case its recorded answer.
 - **The engine's day has goldens too.** `anki.sched.timing_today.json` (40 cases) and `anki.timing.day.json` (48)
   record the day number and next rollover for a creation time, rollover hour, offset and instant.
 - **What the engine's search compiles to** (the pinned engine's `rslib/src/search/sqlwriter.rs`): unqualified text is
@@ -174,10 +175,10 @@ read the changed code (`--test skip_record`, `--test settings` of `deck-streak-i
 - **The engine's order for other shapes.** The order rule is pinned by the goldens' shapes (a top-level deck name, or
   none); a deck name inside an `or`, or two deck names, may list in another order in the engine. The parity tool
   compares sets, so the counts are unaffected.
-- **The golden's clock.** A3 depends on the run's time of day, which the golden does not record. The census test
-  prints the band of seconds that give every case and holds the run's second inside it; a re-run of the driver at
-  another time of day may move cases at a rollover, and a driver that fixed the engine's clock would remove the
-  dependency.
+- **The golden's clock.** The driver holds each case's clock at the case's own recorded instant, so A3 does not
+  depend on the run's time of day. The census test moves every case's instant by each minute of a day and holds the
+  unshifted instant inside the one band that gives every case (643 of 1,440 shifts, from -17,940 to 20,580 s); a
+  driver that read the clock another way would move cases at a rollover, and the census would show it.
 - **A refusal that leaks the search.** Every `Refusal` variant is text-free; the grammar test checks each refusal's
   message carries none of its search, and A2 checks the start refusal names the setting only.
 - **The skip text drifts from the query.** A4 parses every wrapped text back and compares it with the wrapped query.
