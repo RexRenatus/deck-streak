@@ -6,11 +6,11 @@
   // server's backup age as the snapshot route answers it, unknown said as unknown. Inside Telegram
   // on a phone, where a download may not save, it names the bot's `/export` beside the download.
   import { onMount } from 'svelte';
-  import type { BackupsListed } from '$lib/engine/protocol';
-  import { m } from '$lib/paraglide/messages.js';
-  import { getLocale } from '$lib/paraglide/runtime.js';
-  import BackupList from '$lib/sync/BackupList.svelte';
-  import { snapshotAge } from '$lib/sync/status';
+  import type { BackupsListed } from '#lib/engine/protocol.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { getLocale } from '#lib/paraglide/runtime.js';
+  import BackupList from '#lib/sync/BackupList.svelte';
+  import { snapshotAge } from '#lib/sync/status.js';
   import {
     EXPORT_FILE,
     onPhone,

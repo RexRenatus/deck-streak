@@ -1,9 +1,9 @@
 // SPEC-516 R2, R6, R7; ADR-534 D1, D5, D6. The data screen's reads: the export's route and file name,
 // what the screen asks of the Worker and of the API, the snapshot route's answer as the screen reads
 // it, whether Telegram runs on a phone, and the anchor that saves a file.
-import type { Answer } from '$lib/api';
-import type { BackupsClient } from '$lib/engine/backups';
-import type { SnapshotRead } from '$lib/engine/protocol';
+import type { Answer } from '#lib/api.js';
+import type { BackupsClient } from '#lib/engine/backups.js';
+import type { SnapshotRead } from '#lib/engine/protocol.js';
 
 /** The owner's export: one route, posted, so no link, preview or prefetch starts a download. */
 export const EXPORT_PATH = '/api/data/export';

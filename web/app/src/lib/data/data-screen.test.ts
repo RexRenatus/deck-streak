@@ -6,12 +6,12 @@ import { resolve } from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
-import type { Answer } from '$lib/api';
-import type { BackupsListed, SnapshotRead } from '$lib/engine/protocol';
-import { m } from '$lib/paraglide/messages.js';
-import { getLocale } from '$lib/paraglide/runtime.js';
-import { ROUTES } from '$lib/routes';
-import { snapshotAge } from '$lib/sync/status';
+import type { Answer } from '#lib/api.js';
+import type { BackupsListed, SnapshotRead } from '#lib/engine/protocol.js';
+import { m } from '#lib/paraglide/messages.js';
+import { getLocale } from '#lib/paraglide/runtime.js';
+import { ROUTES } from '#lib/routes.js';
+import { snapshotAge } from '#lib/sync/status.js';
 import DataRoute from '../../routes/data/+page.svelte';
 import DataScreen from './DataScreen.svelte';
 import { EXPORT_FILE, type DataApi, type DataClient } from './data';
@@ -29,11 +29,11 @@ const route = vi.hoisted(() => ({
   serverBackup: vi.fn(),
   platform: 'tdesktop'
 }));
-vi.mock('$lib/study/engine', () => ({ studyEngine: () => ({ client: route.client }) }));
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/study/engine.js', () => ({ studyEngine: () => ({ client: route.client }) }));
+vi.mock('#lib/api.js', () => ({
   api: { dataExport: route.dataExport, serverBackup: route.serverBackup }
 }));
-vi.mock('$lib/telegram.svelte', () => ({
+vi.mock('#lib/telegram.svelte.js', () => ({
   telegram: {
     get platform() {
       return route.platform;
