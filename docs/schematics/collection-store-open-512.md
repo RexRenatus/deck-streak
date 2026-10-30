@@ -18,10 +18,10 @@ sequenceDiagram
   else a store, or an empty file
     opener->>file: foreign_keys, secure_delete, WAL (native), synchronous FULL (server) or NORMAL (device)
     loop each pending migration n
-      opener->>file: BEGIN IMMEDIATE; re-read user_version
-      opener->>file: the migration; PRAGMA user_version = n; COMMIT
+      opener->>file: BEGIN IMMEDIATE#59; re-read user_version
+      opener->>file: the migration#59; PRAGMA user_version = n#59; COMMIT
     end
-    opener->>file: BEGIN IMMEDIATE; store_meta written once, then read
+    opener->>file: BEGIN IMMEDIATE#59; store_meta written once, then read
     alt store_meta names another role, writer id or slot
       opener-->>caller: refused: another role
     else
