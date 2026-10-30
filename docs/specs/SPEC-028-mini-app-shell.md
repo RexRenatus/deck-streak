@@ -243,3 +243,22 @@ So "first in `<head>`" no longer describes the page where this SPEC says it:
 
 What "first in `<head>`" was for, the script running before any navigation so that no navigation
 loses the launch, is now held by SPEC-400's A3.
+
+## Amendment: the Ember palette's mode tier (SPEC-578)
+
+R5 is amended by SPEC-578 and ADR-597; its text above is kept as it was. Its second sentence,
+"Every colour token resolves to a `--tg-theme-*` variable with a fallback value", reads every token
+of the `color` tier, the roles the page paints, and this is unchanged: each still names the Telegram
+theme parameter that paints it inside Telegram and aliases its fallback from `ref`, and a role with
+no parameter still fails the compile.
+
+The token file gains a third tier, `modes`, holding DeckStreak's product palette, Ember: a
+background, an ink and an accent for each of a dark and a light mode, each an alias of a raw colour
+in `ref.ember`. Telegram's theme paints none of them. `web/app/scripts/build-tokens.ts` compiles
+each to its own custom property, `--ember-<mode>-<role>`, and maps it into Tailwind's theme as
+`--color-ember-<mode>-<role>`; a mode missing a role, or a role outside the three, fails the compile.
+No `color` role reads the tier in SPEC-578, so no page colour changes.
+
+A8 and A9 keep their tests, names and assertions: A8 judges the `color` tier, and A9 judges the
+text pairs the `color` tier declares, in both of Telegram's palettes and in the fallbacks. The
+Ember tier's own contrast is SPEC-578's A3.
