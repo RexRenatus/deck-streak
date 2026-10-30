@@ -1,14 +1,14 @@
 //! `plan_sweep` plus `scan` reproduce the engine's media check, G-L5-2 (SPEC-513 A6): over every
 //! case's collection, read through `MediaIndex`, the files the sweep deletes are the engine's
-//! unused files, and the names the plan lists missing are the engine's missing names but for the
-//! images the engine renders from LaTeX, which ADR-531 D4 cites.
+//! unused files and the names the plan lists missing are the engine's missing names, in every case,
+//! with no name set aside.
 
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
 #[path = "../../../tools/parity-oracle/golden.rs"]
 mod golden;
 
-use deck_streak_media::{MediaIndex, Source, StoredFile, SweepPolicy, plan};
+use deck_streak_media::{plan, MediaIndex, Source, StoredFile, SweepPolicy};
 use serde_json::Value;
 
 /// The committed golden of the engine's media check.
@@ -73,44 +73,52 @@ fn policy(collection: &Value) -> SweepPolicy {
 }
 
 #[test]
-fn plan_sweep_and_scan_reproduce_the_engines_media_check_golden_but_for_latex() {
+fn plan_sweep_and_scan_reproduce_the_engines_media_check_golden() {
     let golden = golden::read(&golden::committed(CHECK)).expect("the golden");
-    let mut latex_cases = 0;
-    let mut latex_names = 0;
+    let mut unused_equal = 0;
+    let mut missing_equal = 0;
+    let mut differ = Vec::new();
     for (index, case) in golden.cases.iter().enumerate() {
         let collection = &case.input["collection"];
         let planned = plan(&Collection(collection), policy(collection));
-        assert_eq!(
-            planned.delete,
-            sorted(&case.output["unused"]),
-            "case {index}: the sweep deletes the engine's unused files"
-        );
+        let unused = sorted(&case.output["unused"]);
         let missing = sorted(&case.output["missing"]);
-        let (rendered, read): (Vec<String>, Vec<String>) = missing
-            .into_iter()
-            .partition(|name| name.starts_with("latex-"));
-        assert_eq!(
-            planned.missing, read,
-            "case {index}: the plan's missing names are the engine's, LaTeX aside"
-        );
-        if !rendered.is_empty() {
-            assert_eq!(
-                case.class.as_deref(),
-                Some("latex-notes"),
-                "case {index}: only a LaTeX case names a rendered image"
-            );
-            latex_cases += 1;
-            latex_names += rendered.len();
+        if planned.delete == unused {
+            unused_equal += 1;
+        } else {
+            differ.push(format!(
+                "case {index} ({:?}): deleted {:?}, the engine's unused {unused:?}",
+                case.class, planned.delete
+            ));
+        }
+        if planned.missing == missing {
+            missing_equal += 1;
+        } else {
+            differ.push(format!(
+                "case {index} ({:?}): missing {:?}, the engine's missing {missing:?}",
+                case.class, planned.missing
+            ));
         }
     }
-    assert_eq!(golden.cases.len(), 64, "the golden's cases");
     println!(
-        "examined {} case(s) of {}: unused equal in all, missing equal in all but {latex_cases} \
-         LaTeX case(s), which differ by {latex_names} rendered name(s) cited to ADR-531 D4",
+        "examined {} case(s) of {}: unused equal {unused_equal}, missing equal {missing_equal}",
         golden.cases.len(),
         golden.function
     );
-    assert_eq!(latex_cases, 8);
+    for line in &differ {
+        println!("{line}");
+    }
+    assert_eq!(golden.cases.len(), 64, "the golden's cases");
+    assert_eq!(
+        unused_equal,
+        golden.cases.len(),
+        "the sweep deletes the engine's unused files in every case"
+    );
+    assert_eq!(
+        missing_equal,
+        golden.cases.len(),
+        "the plan's missing names are the engine's in every case, none set aside"
+    );
 }
 
 #[test]
