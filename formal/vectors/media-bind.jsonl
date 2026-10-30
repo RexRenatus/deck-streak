@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"MediaBind","covers":"crates/media/src/bind.rs","anchor":"step","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":35}
+{"schema":"phx.formal.vectors.v1","entry":"MediaBind","covers":"crates/media/src/bind.rs","anchor":"step","digest":"sha256:1682f90fcead53523bf03966167fb9a8ac71a3bdc2a22fbe184432eb9df96cd6","vectors":35}
 {"op":"bind","slot":null,"claimed":null,"hash":0,"after":{"hash":0,"state":"live"},"outcome":"new"}
 {"op":"bind","slot":null,"claimed":null,"hash":1,"after":{"hash":1,"state":"live"},"outcome":"new"}
 {"op":"bind","slot":null,"claimed":0,"hash":0,"after":{"hash":0,"state":"live"},"outcome":"new"}

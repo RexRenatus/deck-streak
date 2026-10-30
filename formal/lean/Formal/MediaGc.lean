@@ -1,5 +1,5 @@
--- @phx covers crates/media/src/sweep.rs anchor=fate digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/media/src/sweep.rs anchor=in_grace digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/media/src/sweep.rs anchor=fate digest=sha256:7e8a4c2017b74dd5315f0abb5beff9df9bd4c76eb3c950afb69161c790e4c531
+-- @phx covers crates/media/src/sweep.rs anchor=in_grace digest=sha256:51406200d7d6364f17f5659ff25f0264940a7d53643a6a77ebfab97b079133ef
 -- @phx vectors formal/vectors/media-gc.jsonl
 -- @phx cites #822
 -- @phx theorem a_kept_file_is_never_deleted ramp=report

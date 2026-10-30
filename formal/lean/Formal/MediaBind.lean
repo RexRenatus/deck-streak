@@ -1,5 +1,5 @@
--- @phx covers crates/media/src/bind.rs anchor=step digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/media/src/bind.rs anchor=release_step digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/media/src/bind.rs anchor=step digest=sha256:1682f90fcead53523bf03966167fb9a8ac71a3bdc2a22fbe184432eb9df96cd6
+-- @phx covers crates/media/src/bind.rs anchor=release_step digest=sha256:d48922bb849a225a9f2b38efe71b8d2202aeca7ebfae9a0e01c76b1243a4ff09
 -- @phx vectors formal/vectors/media-bind.jsonl
 -- @phx cites #822
 -- @phx theorem bind_keeps_a_bound_hash ramp=report

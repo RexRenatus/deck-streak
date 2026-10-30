@@ -1,9 +1,10 @@
 // @phx cites #822
-// @phx covers crates/media/src/hash.rs anchor=blob_path digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-// @phx covers crates/media/src/bind.rs anchor=step digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-// @phx covers crates/media/src/sweep.rs anchor=fate digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-// @phx covers crates/media/src/sweep.rs anchor=in_grace digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-// @phx covers crates/media/src/scan.rs anchor=sound_at digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+// @phx covers crates/media/src/hash.rs anchor=blob_path digest=sha256:1c54b6a38d8fae6e9f86a3d4afea36b85b13f42b3745dab676f7cfc973c0b8dc
+// @phx covers crates/media/src/bind.rs anchor=step digest=sha256:1682f90fcead53523bf03966167fb9a8ac71a3bdc2a22fbe184432eb9df96cd6
+// @phx covers crates/media/src/sweep.rs anchor=fate digest=sha256:7e8a4c2017b74dd5315f0abb5beff9df9bd4c76eb3c950afb69161c790e4c531
+// @phx covers crates/media/src/sweep.rs anchor=in_grace digest=sha256:51406200d7d6364f17f5659ff25f0264940a7d53643a6a77ebfab97b079133ef
+// @phx covers crates/media/src/scan.rs anchor=scan digest=sha256:1cf2ea966a4b5e4d5c1effd17563c8f74b6df71cf1b3596f8bdf32a1a0ba4c13
+// @phx covers crates/media/src/scan.rs anchor=sound_at digest=sha256:121337b5ba557a48a710c09a6d4fbb5aa431ca2275d587b0566a69bdc4cea735
 // @phx harness k_blob_path ramp=report unwind=70
 // @phx witness feature=kani-witness-blob-path kills=k_blob_path
 // @phx harness k_bind ramp=report unwind=2

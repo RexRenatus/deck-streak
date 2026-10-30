@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"MediaGc","covers":"crates/media/src/sweep.rs","anchor":"fate","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":244}
+{"schema":"phx.formal.vectors.v1","entry":"MediaGc","covers":"crates/media/src/sweep.rs","anchor":"fate","digest":"sha256:7e8a4c2017b74dd5315f0abb5beff9df9bd4c76eb3c950afb69161c790e4c531","vectors":244}
 {"referenced":false,"pinned":false,"imported":false,"added_ms":-1,"now_ms":0,"grace_ms":0,"fate":"delete"}
 {"referenced":false,"pinned":false,"imported":false,"added_ms":-1,"now_ms":0,"grace_ms":5,"fate":"in_grace"}
 {"referenced":false,"pinned":false,"imported":false,"added_ms":-1,"now_ms":0,"grace_ms":10,"fate":"in_grace"}
