@@ -32,6 +32,13 @@ DeckStreak has no media core of its own. What was read at `554a223e`:
   its expression, `.png` (`[latex]amber^2[/latex]` gives `latex-` and the SHA-1 of `amber^2`; `[$]basil[/$]`, of
   `$basil$`), and writes a `data:image/png;base64,` source to a file named `paste-` and the SHA-1 of its bytes; a
   `data:` source it cannot decode it keeps as written (case 27). A file whose name starts with `_` is never unused.
+- **How the engine names a LaTeX image.** `tools/parity-oracle/goldens/anki.render.latex_images.json` (SPEC-498)
+  holds 838 cases, 404 of them for a note type that renders SVG, each a text and the expressions and image names the
+  engine finds in it (875 images). The expression is what `[latex]…[/latex]` holds, `$…$` for `[$]…[/$]` and
+  `\begin{displaymath}…\end{displaymath}` for `[$$]…[/$$]`, with its line-ending tags made newlines, its markup removed
+  and its entities decoded; the name is `latex-`, the SHA-1 of the expression, and `.png` or `.svg`. The engine's media
+  check reads a note's fields this way, under its note type's image type (`rslib/src/media/check.rs`), and G-L5-2's
+  eight `latex-notes` cases each miss two such images.
 - **The face suite's font cases.** `crates/engine-core/tests/face.rs` holds 18 `#[test]`; five of them give a note
   type a CSS that names fonts (`a_font_the_css_names_is_inlined_for_a_reader_that_asks`,
   `a_refused_font_is_emptied_and_named_and_any_other_url_stays`,
@@ -73,10 +80,19 @@ that no stored file has (missing). `fate` decides one file; `in_grace` reads the
 or window overflows.
 
 R7. **The port a collection implements.** `MediaIndex` hands the core every text that names media, as HTML (a note's
-field, a card template) or CSS (a note type's), and every stored file; `references` and `plan` read it.
+field, a card template; `Source::Html` for a note type that renders its LaTeX as PNG, `Source::HtmlSvg` for one that
+renders SVG) or CSS (a note type's), and every stored file; `references` and `plan` read it, an HTML text through
+`scan` and `latex_images` both.
 
 R8. **A pure core.** The crate reads no file, clock, environment, network, process or thread, depends on `sha2`
-alone, and has no workspace edge; the context map carries it.
+alone, and has no workspace edge; the context map carries it. Its SHA-1, used for a LaTeX image's name alone, is
+written in the crate.
+
+R9. **The engine's LaTeX image names.** `latex_images` finds every LaTeX expression a text writes as the pinned
+engine finds it (`[latex]…[/latex]`, `[$]…[/$]` and `[$$]…[/$$]`, the markers in any case, an expression of at least
+one character up to the first closing marker), makes `<br>`, `<br/>` and `<div>` newlines, removes every comment,
+`style` and `script` element and other tag, decodes the entities as `scan` does, and names the image `latex-`, the
+expression's SHA-1 in lowercase hex, and `.png` or `.svg`. `sha1::sha1` is SHA-1 (FIPS 180-4).
 
 ## 3. Acceptance criteria of SPEC-513
 
@@ -87,7 +103,7 @@ alone, and has no workspace edge; the context map carries it.
 | A3 | R3: the bind is write-once, idempotent, refuses a conflict and a mismatch, and revives only for the same hash; Lean `MediaBind` holds the machine and its vectors are byte-equal. K-bind: VOID (section 8) | the stub refuses every bind and release | ADR-531 D3 |
 | A4 | R4: `scan` equals G-L5-1 in 88 of its 96 cases, and each of the 8 others is a case ADR-531 D4 cites, differing only by the names the engine derives; hand cases of the grammar. K-scan: VOID (section 8) | the stub names nothing | ADR-531 D4 |
 | A5 | R5: `scan_css` keeps every font case of `crates/engine-core/tests/face.rs` (18 `#[test]`): each case's fonts, in order, and no name for a scheme, a `data:` URL or a path | the stub names nothing | ADR-531 D5 |
-| A6 | R6, R7: `plan_sweep` keeps live, pinned, in-grace and imported files and deletes the rest; with `scan` it reproduces G-L5-2's unused names in all 64 cases and its missing names in all but the 8 `latex-notes` cases, which differ only by the LaTeX images ADR-531 D4 cites; Lean `MediaGc` holds the decision and its vectors are byte-equal. K-sweep: VOID (section 8) | the stub keeps every file and lists nothing missing | ADR-531 D6 |
+| A6 | R6, R7, R9: `plan_sweep` keeps live, pinned, in-grace and imported files and deletes the rest; with `scan` and the LaTeX image names it reproduces G-L5-2's unused names and its missing names in all 64 cases, none set aside; `latex_images` names every image of the engine's LaTeX golden but case 14, which ADR-531 D8 cites, and `sha1` gives the FIPS 180 examples; Lean `MediaGc` holds the decision and its vectors are byte-equal. K-sweep: VOID (section 8) | the stub keeps every file and lists nothing missing; then the plan lists no LaTeX image, the SHA-1 is all zeros and no LaTeX image is found | ADR-531 D6, D8 |
 
 ```acceptance
 A1: cargo test -p deck-streak-media --test hash -- --exact media_hash_of_matches_the_nist_sha256_vectors
@@ -113,15 +129,20 @@ A6: cargo test -p deck-streak-media --test sweep -- --exact plan_sweep_keeps_liv
 A6: cargo test -p deck-streak-media --test sweep -- --exact every_other_file_is_deleted_and_every_missing_name_is_listed
 A6: cargo test -p deck-streak-media --test sweep -- --exact a_file_is_in_grace_until_the_window_has_passed
 A6: cargo test -p deck-streak-media --test sweep -- --exact each_reason_is_asked_in_order_and_none_leaves_the_file_deleted
-A6: cargo test -p deck-streak-media --test check_golden -- --exact plan_sweep_and_scan_reproduce_the_engines_media_check_golden_but_for_latex
+A6: cargo test -p deck-streak-media --test check_golden -- --exact plan_sweep_and_scan_reproduce_the_engines_media_check_golden
 A6: cargo test -p deck-streak-media --test formal_vectors_gc -- --exact fate_answers_every_lean_vector
+A6: cargo test -p deck-streak-media --test latex -- --exact sha1_gives_the_fips_examples_and_every_padding_boundary
+A6: cargo test -p deck-streak-media --test latex -- --exact latex_images_name_every_image_of_the_engines_latex_golden_but_the_cited_case
+A6: cargo test -p deck-streak-media --test latex -- --exact latex_images_read_the_shapes_the_golden_does_not_draw
+A6: cargo test -p deck-streak-media --test latex -- --exact the_plan_lists_a_notes_latex_images_and_keeps_a_stored_one
 ```
 
 The Lean halves of A3 and A6 are judged by the formal checker (`--kind lean`): `lean/MediaBind` and `lean/MediaGc`
 build with no hole, each witness refutes its theorem, and each vectors file is byte-equal to its writer's output.
-The Kani halves are VOID (section 8). The two controls (`a_golden_answer_changed_by_hand_is_caught` in
-`scan_golden`, `a_pinned_file_is_never_unused_and_a_planted_unused_answer_is_caught` in `check_golden`) run with
-their suites and show the goldens' comparisons can fail.
+The Kani halves are VOID (section 8). The three controls (`a_golden_answer_changed_by_hand_is_caught` in
+`scan_golden`, `a_pinned_file_is_never_unused_and_a_planted_unused_answer_is_caught` in `check_golden`,
+`a_latex_answer_changed_by_hand_is_caught` in `latex`) run with their suites and show the goldens' comparisons can
+fail.
 
 ## 4. File manifest
 
@@ -134,8 +155,10 @@ their suites and show the goldens' comparisons can fail.
 | `crates/media/src/bind.rs` | media | new: `step`, `release_step`, `Bindings` and their outcomes |
 | `crates/media/src/scan.rs` | media | new: `scan`, `is_remote`, `decode_entities` |
 | `crates/media/src/css.rs` | media | new: `scan_css`, `decoded_name` |
+| `crates/media/src/latex.rs` | media | new: `latex_images`, `latex_name`, `LatexImage`, `LatexFormat` |
+| `crates/media/src/sha1.rs` | media | new: `sha1`, `sha1_hex` |
 | `crates/media/src/sweep.rs` | media | new: `fate`, `in_grace`, `pinned`, `plan_sweep` and their types |
-| `crates/media/src/index.rs` | media | new: `MediaIndex`, `Source`, `references`, `plan` |
+| `crates/media/src/index.rs` | media | new: `MediaIndex`, `Source` (HTML with PNG or SVG LaTeX, CSS), `references`, `plan` |
 | `crates/media/src/kani_proofs.rs` | media | new: K-blob-path, K-bind, K-sweep and K-scan, under `cfg(kani)` |
 | `crates/media/tests/hash.rs` | media tests | new: A1 |
 | `crates/media/tests/name.rs` | media tests | new: A2 |
@@ -146,6 +169,7 @@ their suites and show the goldens' comparisons can fail.
 | `crates/media/tests/sweep.rs` | media tests | new: A6 |
 | `crates/media/tests/check_golden.rs` | media tests | new: A6's golden |
 | `crates/media/tests/formal_vectors_gc.rs` | media tests | new: A6's vectors |
+| `crates/media/tests/latex.rs` | media tests | new: A6's LaTeX image names and SHA-1 |
 | `formal/lean/Formal/MediaBind.lean` | formal | new: the bind machine's six theorems and their witnesses |
 | `formal/lean/Formal/MediaBindVectors.lean` | formal | new: its vector writer |
 | `formal/lean/Formal/MediaGc.lean` | formal | new: the sweep decision's two theorems and their witnesses |
@@ -172,17 +196,20 @@ their suites and show the goldens' comparisons can fail.
   another delivery's, and so is the media sync model (`tla/MediaSync`) and its harnesses (K-evictable, K-put).
 - The collection's implementation of `MediaIndex`, and the renderer's reading of names through this grammar: the
   engine core keeps its own font pass and the engine's text rewrite until the renderer depends on this crate.
-- LaTeX: no image is rendered or named from a LaTeX expression (ADR-531 D4).
+- LaTeX: no image is rendered; only its name is derived (R9). A cloze is not revealed before an expression is read,
+  a card template's LaTeX is named too, and an expression's named entity other than the five below is kept as
+  written (ADR-531 D8).
 - An inline `data:image/…;base64,` image is not written to a file (ADR-531 D4).
 - NFC normalization of a name, and the engine's named entities other than `&amp;`, `&lt;`, `&gt;`, `&quot;` and
-  `&nbsp;` (ADR-531 D4); no case of either golden holds one.
+  `&nbsp;` (ADR-531 D4); no case of G-L5-1 or G-L5-2 holds one, and case 14 of the LaTeX golden does (ADR-531 D8).
 
 ## 6. Risks
 
 - **A sweep that deletes a file a note still needs.** Every file a note, template or CSS names is live, every `_`
   file is pinned, every imported file stays, and a new file waits out the grace window; the plan lists, it never
-  deletes. A LaTeX image the engine rendered is unnamed here, so a store that holds one must pin or import it until
-  the renderer names it.
+  deletes. A LaTeX image is live while a note writes its expression, named as the engine names it; an image the
+  engine renders from a revealed cloze inside an expression is named otherwise, so a store that holds one must pin
+  or import it.
 - **The grammar drifts from the engine's.** G-L5-1 holds it case by case; the hand cases hold the shapes the golden
   does not draw (a quoted `>`, the long s, an entity). A re-pin of the engine re-runs both.
 - **A word boundary the engine reads otherwise.** The grammar's word characters are letters, numbers and `_`; the
@@ -203,10 +230,10 @@ this change.
   through any bind; an admitted bind leaves the name live at its hash and a refusal leaves the slot as it was; an
   admitted bind repeated changes nothing; a released name is admitted only for its own hash; a claim of another hash
   is refused; a release keeps the hash. Each has a witness, the machine with that rule broken, which refutes it. The
-  vectors (`formal/vectors/media-bind.jsonl`, 35 lines) are answered by `formal_vectors_bind`.
+  vectors (`formal/vectors/media-bind.jsonl`, 35 vectors) are answered by `formal_vectors_bind`.
 - **Lean: `lean/MediaGc`, present.** Two theorems over `fate` and `in_grace`: a live, pinned, young or imported file
   is never deleted, and every other file is. Each has a witness (a sweep blind to the window; a sweep that keeps
-  every file). The vectors (`formal/vectors/media-gc.jsonl`, 244 lines) are answered by `formal_vectors_gc`.
+  every file). The vectors (`formal/vectors/media-gc.jsonl`, 244 vectors) are answered by `formal_vectors_gc`.
 - O13 lists both entries present, each tied by its vectors test; its status stays `planned`: `tla/MediaSync`,
   K-evictable and K-put are still planned, and so are the four harnesses below.
 - **Kani: K-blob-path, K-bind, K-sweep, K-scan, VOID.** The harnesses and their four witness features are in the
@@ -217,5 +244,5 @@ this change.
 
 ## 9. Mutation rows
 
-None. The new crate's code is generated by cargo-mutants, and its own tests (A1 to A6) are their killers. The band
+None. The new crate's mutants are generated by cargo-mutants, and its own tests (A1 to A6) are their killers. The band
 S51300-S51399 holds no row.

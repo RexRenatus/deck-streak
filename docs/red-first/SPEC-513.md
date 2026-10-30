@@ -6,8 +6,9 @@ bind and release is refused, the grammars name nothing, and the sweep keeps ever
 missing. The Lean entries `MediaBind` and `MediaGc` and their vectors, written by their ports, came with the tests, and
 so did the Kani harnesses under `cfg(kani)`. 9753a450 turns them green: the hash, the names, the bind machine, the
 grammar, the CSS reading, the sweep and the index port, the ledger's rows and the context map's. 7a95f80b stamps the
-entries' covers and rewrites their vectors' headers. Each red below is quoted from a run of the media crate's nine test
-targets on the tree of 1d3170e4, each green from a run on the tree of 7a95f80b.
+entries' covers and rewrites their vectors' headers. Each first-round red below is quoted from a run of the media
+crate's nine test targets on the tree of 1d3170e4, each green from a run on the tree of 7a95f80b; the second round's
+three A6 lines name their own commits (the last section).
 
 ```red-first
 A1: red at 1d3170e4: crates/media/tests/hash.rs:35: assertion `left == right` failed: the SHA-256 of "abc" (media_hash_of_matches_the_nist_sha256_vectors); hash.rs:54 (a_hash_reads_back_from_its_hex_form_and_its_blob_path)
@@ -22,6 +23,9 @@ A5: red at 1d3170e4: crates/media/tests/css.rs:101: assertion `left == right` fa
 A5: green at 7a95f80b
 A6: red at 1d3170e4: crates/media/tests/sweep.rs:48, :79, :93 and :138 (the four sweep tests); crates/media/tests/check_golden.rs:83: case 0: the sweep deletes the engine's unused files, left: [], right: ["ds_present.png"]; crates/media/tests/formal_vectors_gc.rs:59: the first vector's fate is live, the port's is delete
 A6: green at 7a95f80b
+A6: red at 5df312b0: crates/media/tests/check_golden.rs:117: assertion `left == right` failed: the plan's missing names are the engine's in every case, none set aside, left: 56, right: 64 (plan_sweep_and_scan_reproduce_the_engines_media_check_golden)
+A6: red at 35d16808: crates/media/tests/latex.rs:50: the SHA-1 of 1 x "abc" (3 bytes), left: "0000000000000000000000000000000000000000" (sha1_gives_the_fips_examples_and_every_padding_boundary); latex.rs:117: an uncited case differs, left: 0, right: 14 (latex_images_name_every_image_of_the_engines_latex_golden_but_the_cited_case); latex.rs:194 (latex_images_read_the_shapes_the_golden_does_not_draw); latex.rs:250: the PNG note's stored image is live, left: [] (the_plan_lists_a_notes_latex_images_and_keeps_a_stored_one); check_golden.rs:117 as at 5df312b0
+A6: green at f48df91e
 ```
 
 ## What each pair disclosed
@@ -43,5 +47,27 @@ A6: green at 7a95f80b
   clean, each refuted by its witness, and the four covers read FRESH.
 - **Each Kani witness is killed by the plain tests too.** With each witness feature on, the crate's own tests fail:
   `kani-witness-bind` fails four tests of A3, `kani-witness-sweep` three of A6, `kani-witness-scan` both grammar
-  tests of A4 and `kani-witness-blob-path` two hash tests of A1. No Kani run is pinned for this tree, so the harnesses
-  are VOID.
+  tests of A4 and the media check golden of A6, and `kani-witness-blob-path` two hash tests of A1. No Kani run is
+  pinned for this tree, so the harnesses are VOID.
+
+## The second round: the LaTeX image names
+
+The first round's media check golden set the 8 `latex-notes` cases' 16 rendered names aside. The second round holds
+that golden with no name set aside and names the images as the engine does (ADR-531 D8).
+
+- **5df312b0 changes one file, `crates/media/tests/check_golden.rs`, and nothing else.** Its test now counts the cases
+  whose deletions and whose missing names equal the golden's, and requires 64 of 64 for each. On the tree of
+  5df312b0, whose code is db4bbadf's, the media crate's nine targets give 26 passed and 1 failed: unused equal 64,
+  missing equal 56, and the 8 that differ are cases 8 to 15, each missing its two `latex-` names.
+- **35d16808 adds `crates/media/tests/latex.rs` over a stub:** `sha1.rs` answers all zeros, `latex.rs` finds no
+  image, and the index has its SVG source but names no LaTeX image. The ten targets give 27 passed and 5 failed: the
+  media check golden as before, and four of the five LaTeX tests. The fifth, the control
+  `a_latex_answer_changed_by_hand_is_caught`, passes at the stub, as the other controls do.
+- **f48df91e turns them green:** the ten targets give 32 passed and 0 failed. The media check golden reads unused
+  equal 64 and missing equal 64; the LaTeX golden reads 838 cases (875 images, 404 SVG cases), 837 equal and case 14
+  cited to ADR-531 D8. The tests are byte-identical at 35d16808 and f48df91e (`git diff --stat 35d16808 f48df91e --
+  crates/media/tests` prints nothing); `check_golden.rs` differs between 5df312b0 and 35d16808 only in its import
+  line's order, which `cargo fmt` restored.
+- **Each witness at f48df91e, over the ten targets:** `kani-witness-blob-path` fails 2 tests, `kani-witness-bind` 4,
+  `kani-witness-sweep` 3 and `kani-witness-scan` 3 (both grammar tests of A4 and the media check golden of A6); no
+  LaTeX test reads a witness's mutant.

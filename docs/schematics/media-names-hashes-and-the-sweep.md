@@ -1,8 +1,8 @@
 # Schematic: a media file's hash, its names and their bindings, the names a note writes, and the sweep
 
 Kinds: component, and the binding state machine. Read at the delivery's base `554a223e`, and at the pinned engine
-`a078820f` for the grammar it ports (`rslib/src/text.rs`, `rslib/src/media/check.rs`). Decided by ADR-531; built by
-SPEC-513.
+`a078820f` for the grammar it ports (`rslib/src/text.rs`, `rslib/src/media/check.rs`) and the LaTeX image names
+(`rslib/src/latex.rs`). Decided by ADR-531; built by SPEC-513.
 
 ## Component
 
@@ -12,7 +12,7 @@ The media core is one crate with no workspace edge. A collection hands it texts 
 ```mermaid
 flowchart LR
   subgraph collection["a collection (implements MediaIndex)"]
-    fields["note fields and card templates (HTML)"]
+    fields["note fields and card templates (HTML, LaTeX as PNG or SVG)"]
     styles["note types' CSS"]
     store["the media store's files: name, added instant, imported"]
   end
@@ -22,6 +22,8 @@ flowchart LR
     bind["bind.rs: step, release_step, Bindings (write-once)"]
     scan["scan.rs: scan (the engine's tag and sound tag grammar)"]
     css["css.rs: scan_css (url( as the font pass reads it)"]
+    latex["latex.rs: latex_images (the engine's LaTeX image names, PNG or SVG)"]
+    sha1["sha1.rs: sha1 (FIPS 180-4, for LaTeX image names alone)"]
     sweep["sweep.rs: fate, in_grace, plan_sweep"]
     index["index.rs: MediaIndex, references, plan"]
   end
@@ -36,8 +38,11 @@ flowchart LR
   store --> index
   index --> scan
   index --> css
+  index --> latex
+  sha1 --> latex
   scan --> index
   css --> index
+  latex --> index
   index --> sweep
   sweep --> plan["SweepPlan: delete, kept with reasons, missing"]
   plan --> release["the store deletes the planned files and releases their bindings"]

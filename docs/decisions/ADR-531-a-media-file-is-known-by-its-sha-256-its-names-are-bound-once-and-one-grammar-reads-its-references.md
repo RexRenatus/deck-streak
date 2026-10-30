@@ -14,7 +14,7 @@ text through the engine's own media expressions, a note type's CSS through the e
 fonts alone. Nothing can tell two files of one name apart, say which stored file no note needs, or read a note's
 names without the engine. The engine's reading and its media check have goldens (G-L5-1, G-L5-2, SPEC-498). This ADR
 decides how a file is identified, how a name is formed and bound, which grammar reads names, where it diverges from
-the engine, and what a sweep may delete.
+the engine, how an image the engine renders from LaTeX is named, and what a sweep may delete.
 
 ## D1. A file is known by the SHA-256 of its bytes
 
@@ -63,8 +63,8 @@ the engine, and what a sweep may delete.
   core depends on `sha2` alone.
 - **The divergences, each cited by its G-L5-1 case:**
   - **LaTeX (cases 64 to 68, 70 and 71):** the engine names an image `latex-` and the SHA-1 of the expression; the
-    grammar renders nothing and names nothing for LaTeX. Rendering belongs to the renderer, and SHA-1 is not the
-    core's digest. G-L5-2's eight `latex-notes` cases differ the same way, by their two rendered names each.
+    grammar renders nothing and names nothing for LaTeX. The index adds those names from `latex_images` (D8), so
+    `plan` lists them, and G-L5-2's eight `latex-notes` cases are equal.
   - **The inline image (case 24):** the engine writes a `data:image/png;base64,` source to a file named `paste-` and
     the SHA-1 of its bytes and names that file; the grammar writes nothing and keeps the source as written.
   - **Not drawn by either golden:** NFC normalization of a name, the engine's named entities other than `&amp;`,
@@ -90,12 +90,14 @@ the engine, and what a sweep may delete.
   name no scan sees), in grace (added within the window, or after the sweep's instant) or imported; and deletes every
   other file. `plan_sweep` applies it to every stored file in name order and lists every name written that no stored
   file has.** The window is read through `i128`, so no instant or window overflows.
-- **`MediaIndex` is the port a collection implements:** every note field and card template as HTML, every note type's
-  CSS as CSS, and every stored file. The core does no I/O and has no workspace edge; the collection runs its own
-  queries and hands the core what they return.
+- **`MediaIndex` is the port a collection implements:** every note field and card template as HTML (`Source::Html`
+  for a note type that renders its LaTeX as PNG, `Source::HtmlSvg` for one that renders SVG), every note type's CSS as
+  CSS, and every stored file. The core does no I/O and has no workspace edge; the collection runs its own queries and
+  hands the core what they return.
 - **Sweeping imported files by reference alone:** lost, because an imported deck may load a file by a name no note
   writes (a template's script, a font), and the deck's files are the deck's.
-- With no window, no pin and no import, the plan's deletions are G-L5-2's unused names in all 64 cases.
+- With no window, no pin and no import, the plan's deletions are G-L5-2's unused names and its missing names are
+  G-L5-2's missing names, in all 64 cases, with no name set aside.
 - Lean `MediaGc` proves that a live, pinned, young or imported file is never deleted and every other file is.
 
 ## D7. Kani harnesses beside the code, each with its witness
@@ -106,8 +108,38 @@ the engine, and what a sweep may delete.
   `unexpected_cfgs` lint in the workspace's lint table, so `-D warnings` stays clean.
 - No Kani run is pinned for this tree yet, so each harness is VOID: unratcheted, and nothing runs.
 
+## D8. A LaTeX image is named as the engine names it
+
+- **Chosen: `latex_images` reads a text's LaTeX as the pinned engine's `extract_latex` does
+  (`rslib/src/latex.rs`), and `references` adds each image's name for every HTML text.** The three forms
+  (`[latex]…[/latex]`; `[$]…[/$]`, the expression `$…$`; `[$$]…[/$$]`, the expression
+  `\begin{displaymath}…\end{displaymath}`) match in any case, at least one character up to the first closing marker,
+  tried in that order at each `[`. In the expression `<br>`, `<br/>` and `<div>` become newlines (the engine's
+  expression for them ignores its own whitespace, so `<br />` is removed as a tag), every comment, `style` and
+  `script` element and other tag is removed, and the entities are decoded by the grammar's decoder. The image is
+  `latex-`, the expression's SHA-1 in lowercase hex, and `.png`, or `.svg` for a note type that renders SVG. Without
+  these names a sweep would plan to delete every image the engine renders, and the plan would not reproduce G-L5-2.
+- **SHA-1 written in the crate (FIPS 180-4), 82 lines of code in `sha1.rs`.** It names what the engine already names
+  by it and certifies nothing, so D1's reason against it does not apply. Its test holds it to the FIPS 180 examples
+  and to every padding boundary (55, 56, 63, 64, 65, 119 and 120 bytes), each digest computed by Python's `hashlib`.
+- **The lock's `sha1` package:** lost. The lock holds `sha1` 0.11.0 for another package, but its first use here would
+  be a new admission, with its licence and size measured in its own decision, and the core would gain a second
+  dependency for one function.
+- **Leaving LaTeX unnamed, a store pinning its images:** lost, because the plan would then miss 16 of G-L5-2's
+  missing names, and a store that forgot the pin would delete images the engine keeps.
+- **The divergences:**
+  - **Case 14 of the LaTeX golden** (`anki.render.latex_images`, 838 cases, 875 images, 404 SVG cases; every other
+    case is equal): its expression holds `&copy;` and `&eacute;`, which the engine decodes and the grammar's decoder
+    (D4) keeps whole, so the image is named for the text as written.
+  - **Not drawn by any golden:** the engine's media check reveals a field's clozes before it reads LaTeX, where its
+    renderer, which the golden draws, does not; the core reads an expression as written. The check reads LaTeX in a
+    note's fields alone, and the core reads it in every HTML text, a card template's included, so a sweep keeps an
+    image a template renders where the engine's check would report it unused.
+
 ## Consequences
 
-- One crate decides a media file's identity, its names, their bindings, the names a note and a CSS write, and what a
-  sweep may delete; the store, the collection and the renderer depend on it rather than on the engine.
-- A LaTeX image, until the renderer names it, must be pinned or imported by its store to survive a sweep.
+- One crate decides a media file's identity, its names, their bindings, the names a note and a CSS write, the images
+  the engine renders from LaTeX, and what a sweep may delete; the store, the collection and the renderer depend on it
+  rather than on the engine.
+- A LaTeX image is live while a note writes its expression. An image the engine renders from a revealed cloze inside
+  an expression is named otherwise, so a store must pin or import it to keep it through a sweep.
