@@ -1,0 +1,33 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT code, SUM(minutes) AS \"minutes!: i64\" FROM minutes_log\n           WHERE study_day BETWEEN ?1 AND ?2 GROUP BY code ORDER BY code",
+  "describe": {
+    "columns": [
+      {
+        "name": "code",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "minutes_log",
+            "name": "code"
+          }
+        }
+      },
+      {
+        "name": "minutes!: i64",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "b4c6e82baf54c06ce8f65aa31bda07c2bcf7e980f6b0ba88580ae78102bf5ac6"
+}

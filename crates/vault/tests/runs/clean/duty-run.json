@@ -1,0 +1,76 @@
+{
+  "schema": "phx.duty.vault.run.v1",
+  "duty": "daily-note",
+  "vault": [
+    "12-Readings/Evidence primer.md",
+    "11-Drills/Hearsay drill.md"
+  ],
+  "inputs": [
+    {
+      "path": "12-Readings/Evidence primer.md",
+      "section": "readings"
+    },
+    {
+      "path": "11-Drills/Hearsay drill.md",
+      "section": "drills"
+    }
+  ],
+  "layout": {
+    "schema": "phx.duty.vault.layout.v1",
+    "note": "A synthetic layout whose periodic formats hold no date, as the pack's worked example uses.",
+    "periodic": {
+      "daily": {
+        "folder": "Daily",
+        "format": "[Today]"
+      },
+      "weekly": {
+        "folder": "Weekly",
+        "format": "[This week]"
+      }
+    },
+    "inbox": "90-Inbox",
+    "folders": {
+      "11-Drills": "title",
+      "12-Readings": "title",
+      "90-Inbox": "any"
+    },
+    "duties": {
+      "daily-note": {
+        "writes": [
+          "@daily"
+        ]
+      },
+      "weekly-synthesis": {
+        "writes": [
+          "@weekly"
+        ]
+      },
+      "inbox-curator": {
+        "moves_from": [
+          "90-Inbox"
+        ],
+        "moves_to": [
+          "11-Drills",
+          "12-Readings"
+        ]
+      },
+      "daily-reading": {
+        "writes": [
+          "12-Readings"
+        ]
+      },
+      "drill-coach": {
+        "writes": [
+          "11-Drills"
+        ]
+      }
+    },
+    "journal": []
+  },
+  "ops": [
+    {
+      "op": "create",
+      "path": "Daily/Today.md"
+    }
+  ]
+}

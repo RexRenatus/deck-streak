@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM freeze_events",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "1c611f7b25715dcb93f2b023bd6455d81d6dccd500937a06d4285ace5d0036f5"
+}

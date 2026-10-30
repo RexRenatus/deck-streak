@@ -1,0 +1,83 @@
+name: mutation-prices
+
+# The scoped price run (SPEC-421 R11, ADR-435 D1): each file of scripts/mutation-python.json run by
+# `mutation_python.py run --file --scoped --sample 20`, one leg per file, on the runner class of
+# ci.yml's mutation-python legs. Each leg traces its file's sentinel, runs a sample of its mutants
+# against the tests each line traced, and keeps its report and its costs.jsonl as the artifact
+# mutation-prices-<job index>, whatever its outcome. `prices --scoped` turns the kept records into
+# PYTHON_SCOPED_SECONDS lines, each naming its run, attempt and job. The run files nothing and
+# judges nothing.
+#
+# A dispatch prices every population file. A pull request that changes this file runs the
+# rehearsal: one leg over scripts/dynamic-imports-check.py, which also registers the workflow so
+# that a dispatch can name a branch. No secret is used, the token is read-only, and every action is
+# pinned by its full commit SHA.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [dev]
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/mutation-prices.yml"
+
+permissions:
+  contents: read
+
+# A pull request's runs share its ref's group, and a newer push to it cancels the run it supersedes.
+# A dispatch has a group of its own, its run id, so it is never cancelled.
+concurrency:
+  group: mutation-prices-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  population:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      files: ${{ steps.files.outputs.files }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: the files to price, every population file or the rehearsal's one
+        id: files
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            files='["scripts/dynamic-imports-check.py"]'
+          else
+            files=$(python3 -c 'import json; print(json.dumps(sorted(json.load(open("scripts/mutation-python.json")))))')
+          fi
+          echo "mutation-prices: $files"
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+
+  price:
+    needs: [population]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        file: ${{ fromJSON(needs.population.outputs.files) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: the runner, a sample of the file's mutants each against the tests its line traced
+        env:
+          FILE: ${{ matrix.file }}
+          MUTATION_JOB_ID: ${{ job.check_run_id }}
+        run: |
+          out="$RUNNER_TEMP/mutation-prices"
+          mkdir -p "$out"
+          rc=0
+          python3 scripts/mutation_python.py run --file "$FILE" --scoped --sample 20 --failfast --report "$out/report.json" || rc=$?
+          echo "mutation-prices: $FILE exited $rc"
+      - name: keep the leg's report and its cost records
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mutation-prices-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/mutation-prices/
+          if-no-files-found: warn

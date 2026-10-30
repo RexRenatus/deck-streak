@@ -1,0 +1,87 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S09107-DAY-NUMBER-QUEUES",
+        "curriculum",
+        "src/horizon.rs",
+        "const DAY_NUMBER_QUEUES: [i64; 2] = [2, 3];",
+        "const DAY_NUMBER_QUEUES: [i64; 1] = [2];",
+        "horizon_goldens::the_horizon_matches_the_predecessors_golden",
+        "only queues 2 and 3 are bucketed by due minus today, so a day-relearn card in queue 3 lands on its day and not in the owed-now index (SPEC-091 R6, A8)"
+      ],
+      [
+        "S09108-HORIZON-DAYS",
+        "curriculum",
+        "src/horizon.rs",
+        "pub const HORIZON_DAYS: usize = 365;",
+        "pub const HORIZON_DAYS: usize = 364;",
+        "horizon_goldens::the_horizon_constants_equal_the_predecessors",
+        "the histogram is 365 days long (SPEC-091 R6, A19; T8 moves this killer to the horizon's own constants test)"
+      ],
+      [
+        "S09110-OVERDUE-CLAMP",
+        "curriculum",
+        "src/horizon.rs",
+        "let offset = card.due.saturating_sub(today).max(0);",
+        "let offset = card.due.saturating_sub(today).max(-1);",
+        "horizon_goldens::the_horizon_matches_the_predecessors_golden",
+        "arrears are clamped to day 0 and never dropped or sent beyond the horizon (SPEC-091 R6, A8)"
+      ],
+      [
+        "S09111-BEYOND-EDGE",
+        "curriculum",
+        "src/horizon.rs",
+        "Ok(day) if day < HORIZON_DAYS => bump(&mut curve, day),",
+        "Ok(day) if day <= HORIZON_DAYS => bump(&mut curve, day),",
+        "horizon_goldens::the_horizon_matches_the_predecessors_golden",
+        "a card due on day 365 is beyond the horizon, so it is counted there and never lost or folded into day 364 (SPEC-091 R6, A8)"
+      ],
+      [
+        "S09112-NEW-DISJUNCTION",
+        "curriculum",
+        "src/horizon.rs",
+        "if card.kind == 0 || card.queue == 0 {",
+        "if card.kind == 0 && card.queue == 0 {",
+        "horizon_goldens::the_horizon_matches_the_predecessors_golden",
+        "a card is new when its type is 0 or its queue is 0, since a reset card keeps its answers and an inconsistent row still holds a position (SPEC-091 R6, A8)"
+      ],
+      [
+        "S09113-FLAT-PEAK-EDGE",
+        "curriculum",
+        "src/horizon.rs",
+        "let is_flat = peak_reviews <= FLAT_PEAK_REVIEWS;",
+        "let is_flat = peak_reviews < FLAT_PEAK_REVIEWS;",
+        "horizon_goldens::the_horizon_readout_matches_the_predecessors_golden",
+        "a forward peak of exactly 25 reviews is still flat, so the honest half states the flatness claim at the edge (SPEC-091 R6, A9)"
+      ],
+      [
+        "S09114-PEAK-SKIPS-ARREARS",
+        "curriculum",
+        "src/horizon.rs",
+        "for day in 1..curve.len() {",
+        "for day in 0..curve.len() {",
+        "horizon_goldens::the_horizon_readout_matches_the_predecessors_golden",
+        "the forward peak starts at day 1, so a backlog held at day 0 never reads as a busy forward day (SPEC-091 R6, A9)"
+      ],
+      [
+        "S09115-WINDOW-DAYS",
+        "curriculum",
+        "src/horizon.rs",
+        "pub const WINDOW_DAYS: usize = 30;",
+        "pub const WINDOW_DAYS: usize = 31;",
+        "horizon_goldens::the_horizon_constants_equal_the_predecessors",
+        "the headline obligation is the next 30 days (SPEC-091 R12, A19)"
+      ],
+      [
+        "S09116-NEW-CARD-PRICE",
+        "curriculum",
+        "src/horizon.rs",
+        "pub const NEW_CARD_LIFETIME_REVIEWS: u64 = 8;",
+        "pub const NEW_CARD_LIFETIME_REVIEWS: u64 = 9;",
+        "horizon_goldens::the_horizon_constants_equal_the_predecessors",
+        "a new card is priced at 8 reviews over its lifetime, the figure the honest half states (SPEC-091 R12, A19, ADR-317)"
+      ]
+    ]
+  }
+}

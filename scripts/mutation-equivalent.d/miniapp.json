@@ -1,0 +1,258 @@
+{
+  "records": [
+    {
+      "file": "web/app/src/lib/api.ts",
+      "mutant": "StringLiteral: \"\"",
+      "anchor": "if (response.ok) return 'open';",
+      "reason": "An opened session reads as the empty string instead of open, and no reader tells the two apart.",
+      "evidence": "call(path, init) tests the handshake's answer only against 'refused' and 'failed', so the empty string takes the path 'open' takes: the request goes out as asked, read()'s GET or capture's POST with its body, and a 401 renews the session once and repeats that request, body and all. Measured through createApi with an injected fetch and real Responses over a frozen list of 203,979 scenarios: every reader the client returns (me, score, level, streak with its governor, badges, records, feed, insights, insight, wallet and capture) through handshakes that open, fail, drop or are refused, renewals that open, fail, drop, are refused or meet a second 401, and 26 body shapes; and 201,400 interleavings of three callers, capture's POST among them, around a first handshake or a renewal (the second caller 0-24 microtask turns in, the third one turn before it, with it, or one or three turns after it, in either order; the handshake's answer already settled or 0-24 turns late; two calls after every caller settles). Answers, every request (URL, method, credentials, headers and body bytes), handshake counts and launch-data reads were identical to the unmutated client in every one; the two clients differ in no microtask count either.",
+      "issue": "#240"
+    },
+    {
+      "file": "web/app/src/lib/api.ts",
+      "mutant": "BooleanLiteral: false",
+      "anchor": "reopens the app\n        stopped = true;",
+      "reason": "A refused session stays cached, so a later call answers reopen and sends nothing whether or not this sets stopped.",
+      "evidence": "opening() keeps the refused handshake as the session, and nothing clears it: call(path, init) clears session only after a failed handshake, or after a 401 on the open session it used itself, never after a refused one, so no later call, read()'s GET or capture's POST, a first send or a renewal's repeat, can open a second handshake after a refusal. The next call awaits the same settled 'refused' and answers 'reopen' before any send, as it does when stopped is set. Measured through createApi with an injected fetch and real Responses over a frozen list of 203,979 scenarios: every reader the client returns (me, score, level, streak with its governor, badges, records, feed, insights, insight, wallet and capture) through handshakes that open, fail, drop or are refused, renewals that open, fail, drop, are refused or meet a second 401, and 26 body shapes; and 201,400 interleavings of three callers, capture's POST among them, around a first handshake or a renewal (the second caller 0-24 microtask turns in, the third one turn before it, with it, or one or three turns after it, in either order; the handshake's answer already settled or 0-24 turns late; two calls after every caller settles). Answers, every request (URL, method, credentials, headers and body bytes), handshake counts and launch-data reads were identical to the unmutated client in every one; only the number of microtasks a later call takes to answer differs, in 75,284 of them, which is scheduling and not an answer.",
+      "issue": "#240"
+    },
+    {
+      "file": "web/app/src/lib/api.ts",
+      "mutant": "ArrowFunction: () => undefined",
+      "anchor": "parse(await response.json().catch(() => null))",
+      "reason": "parseMe, parseScore and parseFeed read an undefined body as they read null.",
+      "evidence": "read() serves every GET reader, and a body json() cannot parse reaches the parser as undefined instead of null; each parser read() is given treats the two alike. parseMe, parseWallet, parseListings and parseEnvelope test for a non-null object, which neither is, and parseScore, parseLevel, parseStreak, parseGovernor, parseBadges, parseRecords and parseFeed read body ?? {}, so both read as a body with none of their fields: each answers null, and insight() maps parseEnvelope's undefined to unavailable alike. capture's POST parses its own response outside read(), so this catch is not on its path. Measured through createApi with an injected fetch and real Responses over a frozen list of 203,979 scenarios: every reader the client returns (me, score, level, streak with its governor, badges, records, feed, insights, insight, wallet and capture) through handshakes that open, fail, drop or are refused, renewals that open, fail, drop, are refused or meet a second 401, and 26 body shapes; and 201,400 interleavings of three callers, capture's POST among them, around a first handshake or a renewal (the second caller 0-24 microtask turns in, the third one turn before it, with it, or one or three turns after it, in either order; the handshake's answer already settled or 0-24 turns late; two calls after every caller settles). Each reader met a 200 or 201 answer with a malformed body or none, streak's governor too: answers, every request (URL, method, credentials, headers and body bytes), handshake counts and launch-data reads were identical to the unmutated client in every one, and so were the microtask counts.",
+      "issue": "#240"
+    },
+    {
+      "file": "web/app/src/lib/api.ts",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "typeof body === 'object'",
+      "reason": "A JSON value that is no object reads no study_day either, so null is the one value the object test's neighbour must stop.",
+      "evidence": "A parsed JSON body is null, a boolean, a number, a string, an array or an object; body !== null already stops null, and reading study_day from a boolean, number or string gives undefined, which the string check after it refuses. Only a Fetch body that json() cannot produce (a function) or a polluted Object, Boolean, Number or String prototype could carry the property. parseMe serves me() alone, through read() and the GET of call(path, init), a first send and a renewal's repeat alike: the frozen list of 203,979 scenarios sent it null, 5, 0, true, false, three strings, two arrays, an empty object, objects with a null, malformed or valid study_day, malformed JSON and no body, at 200 and after renewals, and met it in 201,400 interleavings of three callers: answers, every request, handshake counts and launch-data reads were identical to the unmutated client, and so were the microtask counts.",
+      "issue": "#240"
+    },
+    {
+      "file": "web/app/src/lib/telegram.svelte.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "this.launchData === null ? null : new URLSearchParams",
+      "reason": "Parsing a launch that has no data as the text null finds no start parameter, the same null.",
+      "evidence": "new URLSearchParams(null) parses the text 'null' into one key called null, so get('start_param') gives null exactly as the guard's own branch does; the only difference a test could see is a stubbed URLSearchParams constructor counting its calls, which is not the wrapper's behaviour. Measured over 32 hosts (none, no Telegram, no WebApp, a WebApp with no initData, and 14 initData texts, the empty one among them, each at Bot API 6.0 and 8.0): every field the wrapper exposes, and the launch data it hands createApi as the handshake in call(path, init) reads and posts it, were identical to the unmutated wrapper; only the stubbed constructor's count differs, on the 6 hosts with no launch data. The start parameter is read once, in the wrapper's constructor, so call()'s POST and renewal paths never reach it.",
+      "issue": "#240"
+    },
+    {
+      "file": "web/app/src/lib/insights/insights.ts",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "return value !== null && typeof value === 'object' && !Array.isArray(value)",
+      "span": "value !== null",
+      "reason": "A body that is no plain object holds none of the keys the callers read, so the key tests after record() refuse it whether or not record() does.",
+      "evidence": "Every caller reads only named keys from what record() returns and then tests those keys' own types, and a parsed JSON body that is no plain object (null, a boolean, a number, a string or an array) has none of those keys, so each such value is refused by the key test after it exactly as record() refuses it here.",
+      "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/insights/insights.ts",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null;",
+      "span": "typeof value === 'number'",
+      "reason": "Number.isInteger already answers false for every value that is not a number.",
+      "evidence": "Number.isInteger(x) is false for a string, boolean, null, undefined, object or array, so dropping the typeof test changes no answer of count().",
+      "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/insights/insights.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (stored === null || failed === null || day === null) return undefined;",
+      "span": "stored === null",
+      "reason": "A null stored report makes failed_reads and study_day undefined, so failed is null and the next test refuses it.",
+      "evidence": "stored === null gives stored?.failed_reads === undefined, which names() answers null for (it is no array), so the failed === null test on the same line returns undefined as the stored === null test did.",
+      "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/insights/insights.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "report: stored.report === null ? null : stored.report",
+      "span": "stored.report === null",
+      "reason": "Both arms of the ternary answer null when stored.report is null.",
+      "evidence": "The false arm reads stored.report, which is null exactly when the true arm would answer null.",
+      "issue": "#294"
+    },
+    {
+      "file": "web/app/src/lib/economy/wallet.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "typeof item !== 'object'",
+      "reason": "A movement that is no object and not null is refused by the field checks after this guard.",
+      "evidence": "With this term false, a string, number or boolean item passes the guard and destructures to an undefined id, which Number.isInteger refuses, so parseMovement answers null as it does now; null is still stopped by item === null, and a JSON array holds no other kind of value.",
+      "issue": "#106"
+    },
+    {
+      "file": "web/app/src/lib/economy/wallet.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "typeof body !== 'object'",
+      "reason": "A body that is no object and not null is refused by the date check after this guard.",
+      "evidence": "With this term false, a string, number or boolean body passes the guard and destructures to an undefined study_day, which isIsoDate refuses, so parseWallet answers null as it does now; null is still stopped by body === null, and the test that refuses the body 'wallet' reads null either way.",
+      "issue": "#106"
+    },
+    {
+      "file": "web/app/src/routes/wallet/+page.svelte",
+      "mutant": "ArrayDeclaration: [\"Stryker was here\"]",
+      "anchor": "let movements = $state<Movement[]>([]);",
+      "reason": "The first list is never shown: an ok wallet replaces it before the screen shows any list.",
+      "evidence": "The movements render only inside the branch for wallet.kind 'ok', and the effect assigns the answer's movements before it assigns wallet; a refused or unavailable answer shows its alert and no list, so the initial value never reaches the screen.",
+      "issue": "#106"
+    },
+    {
+      "file": "web/app/src/routes/wallet/+page.svelte",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (next === null) return;",
+      "reason": "older() is called only by the button, which is shown only while next is not null.",
+      "evidence": "The one caller of older() is the button inside {#if next !== null}, and a click before an older page arrives still finds next unchanged, so next is a number on every call and the guard never returns; it is there for the type of api.wallet's argument.",
+      "issue": "#106"
+    },
+    {
+      "file": "web/app/src/lib/api.ts",
+      "mutant": "ArrowFunction: () => undefined",
+      "anchor": "parseSaved(response.status, await response.json().catch(() => null))",
+      "reason": "parseSaved reads an undefined body as it reads null.",
+      "evidence": "parseSaved answers null for a body that is null or whose typeof is not 'object', and typeof undefined is 'undefined', so a capture answer whose body is not JSON reads as naming no capture under either value, and capture answers unavailable.",
+      "issue": "#56"
+    },
+    {
+      "file": "web/app/src/lib/engine/choice.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (typeof body !== 'object' || body === null) return UNKNOWN;",
+      "span": "typeof body !== 'object' || body === null",
+      "reason": "With the guard never taken, a null body throws at the destructure and a primitive body reads an undefined found, so each is still unknown.",
+      "evidence": "`snapshotOf` is module-private and its one caller is `readSnapshot`'s `return snapshotOf(JSON.parse(...))`, inside a `try` whose `catch` answers unknown. So a null body's TypeError becomes the unknown answer, and a number, string or boolean destructures to an undefined `found` and falls to it. Measured: `readSnapshot` of the original and of each of the four line-54 survivors read a fixed corpus of 310 bodies at status 200, the one status that reaches `snapshotOf` (JSON primitives, arrays, 286 objects over 11 `found` values, 13 `age_seconds` values and a pad field, unparsable text, `__proto__` keys and a body over the cap), and every answer was identical, while the control mutant `age >= 0` -> `age > 0` changed 2 of them.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/engine/choice.ts",
+      "mutant": "LogicalOperator: typeof body !== 'object' && body === null",
+      "anchor": "if (typeof body !== 'object' || body === null) return UNKNOWN;",
+      "reason": "Turned to a conjunction the guard is never true, so a null or primitive body reaches the destructure, and each is still read as unknown.",
+      "evidence": "`snapshotOf` is module-private and its one caller is `readSnapshot`'s `return snapshotOf(JSON.parse(...))`, inside a `try` whose `catch` answers unknown. No value is both not an object and null, so every body reaches the destructure, where a null one throws into that `catch` and a primitive one reads an undefined `found`. Measured: `readSnapshot` of the original and of each of the four line-54 survivors read a fixed corpus of 310 bodies at status 200, the one status that reaches `snapshotOf` (JSON primitives, arrays, 286 objects over 11 `found` values, 13 `age_seconds` values and a pad field, unparsable text, `__proto__` keys and a body over the cap), and every answer was identical, while the control mutant `age >= 0` -> `age > 0` changed 2 of them.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/engine/choice.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (typeof body !== 'object' || body === null) return UNKNOWN;",
+      "span": "typeof body !== 'object'",
+      "reason": "With the type test dropped, a number, string or boolean body reaches the destructure, which reads an undefined found from it, so it is still unknown.",
+      "evidence": "Destructuring a primitive boxes it, and no primitive's prototype carries `found` or `age_seconds`, so `found` is undefined and neither `found === false` nor `found === true` holds; null is still caught by the half that remains. Measured: `readSnapshot` of the original and of each of the four line-54 survivors read a fixed corpus of 310 bodies at status 200, the one status that reaches `snapshotOf` (JSON primitives, arrays, 286 objects over 11 `found` values, 13 `age_seconds` values and a pad field, unparsable text, `__proto__` keys and a body over the cap), and every answer was identical, while the control mutant `age >= 0` -> `age > 0` changed 2 of them.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/engine/choice.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "body === null) return UNKNOWN;",
+      "reason": "With the null test dropped, a null body throws at the destructure, and the reader's catch answers unknown for it as the guard did.",
+      "evidence": "`snapshotOf` is module-private and its one caller is `readSnapshot`'s `return snapshotOf(JSON.parse(...))`, inside a `try` whose `catch` answers unknown. `typeof null` is 'object', so null passes the type test and meets the destructure, whose TypeError that `catch` turns into the unknown answer. Measured: `readSnapshot` of the original and of each of the four line-54 survivors read a fixed corpus of 310 bodies at status 200, the one status that reaches `snapshotOf` (JSON primitives, arrays, 286 objects over 11 `found` values, 13 `age_seconds` values and a pad field, unparsable text, `__proto__` keys and a body over the cap), and every answer was identical, while the control mutant `age >= 0` -> `age > 0` changed 2 of them.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/sync/SyncScreen.svelte",
+      "mutant": "BooleanLiteral: true",
+      "anchor": "let working = $state(false);",
+      "reason": "The screen starts working either way: the open's act sets working to true as the screen mounts, before anything is drawn for the owner.",
+      "evidence": "`onMount` calls `act` as the screen mounts, and `act`'s first two statements set `working` to true and `failed` to false before its first `await`, so no read of the screen ever sees the initial value. Measured: 'before the worker answers, the screen says it is working and offers nothing' of `sync-screen.test.ts` reads the paragraphs straight after `render` returns, before any turn of the event loop, and finds the act's state already drawn.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/sync/SyncScreen.svelte",
+      "mutant": "BooleanLiteral: true",
+      "anchor": "let failed = $state(false);",
+      "reason": "The open's act sets failed back to false as the screen mounts, before anything is drawn, so a screen that starts failed never shows it.",
+      "evidence": "`onMount` calls `act` as the screen mounts, and `act`'s first two statements set `working` to true and `failed` to false before its first `await`, so no read of the screen ever sees the initial value. Measured: 'before the worker answers, the screen says it is working and offers nothing' of `sync-screen.test.ts` reads the paragraphs straight after `render` returns, before any turn of the event loop, and finds the act's state already drawn.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/sync/SyncScreen.svelte",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "{#if word !== null}{statusText(word)}{/if}",
+      "reason": "Before the Worker answers a word, the status line reads empty either way: the status text of no word is undefined, which draws as nothing.",
+      "evidence": "`statusText` in `status.ts` is a switch over the five status words with no default, so for null it returns undefined, and a Svelte text expression draws undefined as the empty string. 'before the worker answers, the screen says it is working and offers nothing' of `sync-screen.test.ts` asserts the status paragraph's text is empty while the word is null.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/sync/ChoiceScreen.svelte",
+      "mutant": "ArrowFunction: () => undefined",
+      "anchor": "const answer = await client.choiceCount().catch(() => null);",
+      "reason": "A failed count's answer becomes undefined in place of null, and the count reads both as no counts and no snapshot.",
+      "evidence": "Each answer is read only through optional chaining (`answer?.counts ?? null`, `answer?.snapshot ?? null`, `answer?.outcome`), which reads undefined and null alike, or is discarded unread; `choice-screen.test.ts` drives a failed count and a failed tap and asserts what each screen then shows.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/sync/ChoiceScreen.svelte",
+      "mutant": "ArrowFunction: () => undefined",
+      "anchor": "const answer = await client.choiceConfirm(direction).catch(() => null);",
+      "reason": "A failed tap's answer becomes undefined in place of null, and the tap reads both as neither written nor changed, so it says the choice replaced nothing.",
+      "evidence": "Each answer is read only through optional chaining (`answer?.counts ?? null`, `answer?.snapshot ?? null`, `answer?.outcome`), which reads undefined and null alike, or is discarded unread; `choice-screen.test.ts` drives a failed count and a failed tap and asserts what each screen then shows.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/sync/ChoiceScreen.svelte",
+      "mutant": "StringLiteral: \"\"",
+      "anchor": "phase = 'cancelled';",
+      "reason": "A cancelled choice's phase becomes the empty string, and nothing on the screen tells a cancelled phase from an unnamed one.",
+      "evidence": "The screen compares its phase only with 'counting', 'shown' and 'written' (the late count's `phase !== 'counting'` and the template's four tests), never with 'cancelled', so any other value draws nothing and refuses a late count alike; 'a cancel leaves nothing to tap, and a count answered after it changes nothing' of `choice-screen.test.ts` asserts both.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/sync/ChoiceScreen.svelte",
+      "mutant": "ArrowFunction: () => undefined",
+      "anchor": "await client.choiceCancel().catch(() => null);",
+      "reason": "A failed cancel's answer becomes undefined in place of null, and the cancel never reads it.",
+      "evidence": "The awaited value is discarded: `cancel` goes on to `ondone('cancelled')` whatever the Worker answered, so only the wait is kept, and it is the same wait either way.",
+      "issue": "#631"
+    },
+    {
+      "file": "web/app/src/lib/api.ts",
+      "mutant": "ArrowFunction: () => undefined",
+      "anchor": "parseMarked(await response.json().catch(() => null))",
+      "reason": "parseMarked reads an undefined body as it reads null.",
+      "evidence": "parseMarked answers null for a body that is null or whose typeof is not 'object', and typeof undefined is 'undefined', so a change answer whose body is not JSON names no marked decks under either value, and setSensitive answers unavailable; the test 'an answer that is not an object names no marked decks' pins parseMarked(undefined) and parseMarked(null) to null.",
+      "issue": "#751"
+    },
+    {
+      "file": "web/app/src/routes/link/+page.svelte",
+      "mutant": "StringLiteral: \"\"",
+      "anchor": "let stage = $state<Stage>('reading');",
+      "reason": "The page's first stage becomes the empty string in place of reading, and the mount replaces it before anything reads the page.",
+      "evidence": "onMount sets the stage from the fragment in the same flush that mounts the page, and the app renders on the client only (`ssr = false` in `+layout.ts`), so the stage the page starts in is never drawn; `link.test.ts` renders the page through testing-library, whose render flushes the mount, and asserts what each later stage shows.",
+      "issue": "#627"
+    },
+    {
+      "file": "web/app/src/routes/link/+page.svelte",
+      "mutant": "StringLiteral: \"Stryker was here!\"",
+      "anchor": "let code = '';",
+      "reason": "The code's first value becomes another text, and the mount overwrites it before anything reads it.",
+      "evidence": "onMount assigns the fragment to `code` before the owner can tap, and only `create`, which the tap runs, reads it; 'the link page posts the code from the fragment' of `link.test.ts` asserts the redeem body carries the fragment's code.",
+      "issue": "#627"
+    },
+    {
+      "file": "web/app/src/routes/link/+page.svelte",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "{:else if stage !== 'reading'}",
+      "reason": "The button branch is offered while the page still reads its fragment, a stage the mount leaves before anything reads the page.",
+      "evidence": "onMount sets the stage from the fragment in the same flush that mounts the page, and the app renders on the client only (`ssr = false` in `+layout.ts`); every other stage that reaches this branch is ready or working, where the condition already holds, and `link.test.ts` asserts the button or its absence in each of them.",
+      "issue": "#627"
+    },
+    {
+      "file": "web/app/src/routes/link/+page.svelte",
+      "mutant": "StringLiteral: \"\"",
+      "anchor": "{:else if stage !== 'reading'}",
+      "reason": "The branch compares the stage with the empty string in place of reading, which differs only while the page reads its fragment, before the mount.",
+      "evidence": "No stage is ever the empty string, so the branch is offered in every stage the chain above leaves, reading included; onMount sets the stage from the fragment in the same flush that mounts the page, and the app renders on the client only (`ssr = false` in `+layout.ts`), so that extra branch is never drawn, and `link.test.ts` asserts each later stage.",
+      "issue": "#627"
+    },
+    {
+      "file": "web/app/src/routes/link/+page.svelte",
+      "mutant": "StringLiteral: \"\"",
+      "anchor": "stage = 'working';",
+      "reason": "A pending step's stage becomes the empty string, and the page draws a stage it does not name as it draws working: the button, held.",
+      "evidence": "The template names no-code, no-webauthn, spent and done, offers the button in every other stage past reading and holds it in each but ready, so the empty string draws what working draws; `create` sets the stage again before it returns, and 'the button waits while a step is pending, and returns after a refusal' of `link.test.ts` asserts the held button and its return.",
+      "issue": "#627"
+    }
+  ]
+}

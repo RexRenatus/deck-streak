@@ -1,0 +1,20 @@
+[package]
+name = "deck-streak-study-day"
+description = "DeckStreak's study day, its instant and its ISO date error, with no dependency and no I/O, for the server and both clients. See docs/CONTEXT-MAP.md."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# ADR-515 D4: the crate depends on nothing, so a client links the study day without the kernel's
+# database, runtime or log setup. Its census (tests/crate_shape.rs) refuses a dependency table.
+
+[dev-dependencies]
+# ADR-029: the parity oracle's golden reader, compiled into the crate's golden test by path.
+serde.workspace = true
+serde_json.workspace = true

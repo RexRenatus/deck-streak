@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM drill_grades",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "ceb89728f5a538436fbe0a5ab38e30ef229492cd1984e068d7bd200f4f0af93c"
+}

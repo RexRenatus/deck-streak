@@ -1,0 +1,202 @@
+name: matrix-limit
+
+# The per-matrix reading (SPEC-422 R14, ADR-436): a matrix generates at most 256 jobs, and the
+# release run deals its Python legs over two matrices of at most PYTHON_MATRIX_LEGS each, on the
+# reading that the limit holds for each matrix and not for the whole run. This workflow measures
+# that reading in public. `size` writes two axes of `legs` legs each and an empty one; `first` and
+# `second` expand one matrix each, every leg keeping its matrix, its leg and its
+# `strategy.job-total` as the artifact matrix-limit-<matrix>-<leg>; `empty` is a job whose
+# condition is false over an empty axis, as `mutation-python-release` is on every run but a release
+# run past the first matrix; and `count`, whatever its needs returned, keeps every leg's record,
+# every job's result and the run's job count as the artifact matrix-limit. The run files nothing
+# and judges nothing.
+#
+# A dispatch takes `legs`, from 1 to 256; `size` refuses any other value by name. A pull request
+# that changes this file runs the rehearsal at two legs a matrix, which also registers the workflow
+# so that a dispatch can name a branch. No secret is used, the token is read-only, and every action
+# is pinned by its full commit SHA.
+on:
+  workflow_dispatch:
+    inputs:
+      legs:
+        description: "The legs of each matrix, from 1 to 256"
+        type: number
+        default: 256
+        required: true
+  pull_request:
+    branches: [dev]
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/matrix-limit.yml"
+
+permissions:
+  contents: read
+
+# A pull request's runs share its ref's group, and a newer push to it cancels the run it supersedes.
+# A dispatch has a group of its own, its run id, so it is never cancelled.
+concurrency:
+  group: matrix-limit-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  size:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      first: ${{ steps.axes.outputs.first }}
+      second: ${{ steps.axes.outputs.second }}
+      empty: ${{ steps.axes.outputs.empty }}
+    steps:
+      - name: the two matrices' axes, numbered on as the release deal numbers its legs, and the empty one
+        id: axes
+        env:
+          EVENT: ${{ github.event_name }}
+          LEGS: ${{ inputs.legs }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, sys
+          legs = "2" if os.environ["EVENT"] == "pull_request" else os.environ["LEGS"]
+          if not re.fullmatch("[0-9]+", legs) or not 1 <= int(legs) <= 256:
+              print(f"matrix-limit: legs {legs!r} is outside 1 to 256; refused")
+              sys.exit(1)
+          n = int(legs)
+          axes = {"first": list(range(n)), "second": list(range(n, 2 * n)), "empty": []}
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              for name, axis in axes.items():
+                  print(f"matrix-limit: {name}: {len(axis)} leg(s)")
+                  print(f"{name}={json.dumps(axis)}", file=out)
+          PY
+
+  first:
+    needs: [size]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: ${{ fromJSON(needs.size.outputs.first) }}
+    steps:
+      - name: this leg's record, its matrix, its leg and its job total
+        env:
+          MATRIX: first
+          LEG: ${{ matrix.leg }}
+          TOTAL: ${{ strategy.job-total }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/matrix-limit"
+          python3 - <<'PY'
+          import json, os
+          record = {"matrix": os.environ["MATRIX"], "leg": int(os.environ["LEG"]), "job_total": int(os.environ["TOTAL"])}
+          path = os.path.join(os.environ["RUNNER_TEMP"], "matrix-limit", f"{record['matrix']}-{record['leg']}.json")
+          with open(path, "w", encoding="utf-8") as out:
+              json.dump(record, out)
+          print(f"matrix-limit: {json.dumps(record)}")
+          PY
+      - name: keep the leg's record
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: matrix-limit-first-${{ matrix.leg }}
+          path: ${{ runner.temp }}/matrix-limit/
+          if-no-files-found: error
+
+  second:
+    needs: [size]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: ${{ fromJSON(needs.size.outputs.second) }}
+    steps:
+      - name: this leg's record, its matrix, its leg and its job total
+        env:
+          MATRIX: second
+          LEG: ${{ matrix.leg }}
+          TOTAL: ${{ strategy.job-total }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/matrix-limit"
+          python3 - <<'PY'
+          import json, os
+          record = {"matrix": os.environ["MATRIX"], "leg": int(os.environ["LEG"]), "job_total": int(os.environ["TOTAL"])}
+          path = os.path.join(os.environ["RUNNER_TEMP"], "matrix-limit", f"{record['matrix']}-{record['leg']}.json")
+          with open(path, "w", encoding="utf-8") as out:
+              json.dump(record, out)
+          print(f"matrix-limit: {json.dumps(record)}")
+          PY
+      - name: keep the leg's record
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: matrix-limit-second-${{ matrix.leg }}
+          path: ${{ runner.temp }}/matrix-limit/
+          if-no-files-found: error
+
+  # The job condition is read before the matrix is expanded, so a false condition over an empty
+  # axis skips the job whole, which is the release job's skip on every run that deals it nothing.
+  empty:
+    needs: [size]
+    if: ${{ needs.size.outputs.empty != '[]' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: ${{ fromJSON(needs.size.outputs.empty) }}
+    steps:
+      - name: a leg of the empty axis, which no run should start
+        run: |
+          echo "matrix-limit: a leg of the empty axis started"
+          exit 1
+
+  count:
+    needs: [size, first, second, empty]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Every leg's record by one pattern, merged: each record is named by its matrix and its leg,
+      # so the legs share one path, and no leg at all matches nothing and is not an error.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: matrix-limit-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/matrix-limit/legs
+      - name: every leg's record, every job's result and the run's job count
+        env:
+          SIZE: ${{ needs.size.result }}
+          FIRST: ${{ needs.first.result }}
+          SECOND: ${{ needs.second.result }}
+          EMPTY: ${{ needs.empty.result }}
+        run: |
+          python3 - <<'PY'
+          import glob, json, os
+          root = os.path.join(os.environ["RUNNER_TEMP"], "matrix-limit")
+          records = []
+          for path in sorted(glob.glob(os.path.join(root, "legs", "*.json"))):
+              with open(path, encoding="utf-8") as kept:
+                  records.append(json.load(kept))
+          matrices = {}
+          for name in ("first", "second"):
+              mine = [record for record in records if record["matrix"] == name]
+              matrices[name] = {
+                  "legs": len(mine),
+                  "leg_values": sorted(record["leg"] for record in mine),
+                  "job_totals": sorted({record["job_total"] for record in mine}),
+              }
+          results = {job: os.environ[job.upper()] for job in ("size", "first", "second", "empty")}
+          # The run's jobs: size, empty and count, one each, and every leg that kept a record.
+          run_jobs = 3 + sum(matrix["legs"] for matrix in matrices.values())
+          record = {"matrices": matrices, "results": results, "records": len(records), "run_jobs": run_jobs}
+          with open(os.path.join(root, "matrix-limit.json"), "w", encoding="utf-8") as out:
+              json.dump(record, out, indent=2, sort_keys=True)
+          for name, matrix in matrices.items():
+              print(f"matrix-limit: {name}: {matrix['legs']} leg(s), job total(s) {matrix['job_totals']}")
+          print(f"matrix-limit: results {results}; {len(records)} record(s); {run_jobs} job(s) in the run")
+          PY
+      - name: keep the run's record
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: matrix-limit
+          path: ${{ runner.temp }}/matrix-limit/matrix-limit.json
+          if-no-files-found: error

@@ -1,0 +1,249 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S39300-THE-FACE-CARRIES-ITS-TEMPLATE-ORDINAL",
+        "engine-core",
+        "src/face.rs",
+        "    let ordinal = card.template_idx;",
+        "    let ordinal = 0;",
+        "face::a_face_carries_its_cards_template_ordinal",
+        "the face carries the card's template index, read from the card the preset is read from; set to 0, a reverse card's faces carry the forward card's ordinal (SPEC-393 R1, A1)"
+      ],
+      [
+        "S39301-THE-FONT-TABLE-TYPES-A-TTF-AS-TTF",
+        "engine-core",
+        "src/media.rs",
+        "    (\"ttf\", \"font/ttf\"),",
+        "    (\"ttf\", \"font/otf\"),",
+        "face::a_font_the_css_names_is_inlined_for_a_reader_that_asks",
+        "a ttf font is typed font/ttf in its data: URL; typed font/otf, the face hands the frame a font under another format's type (SPEC-393 R3, A4)"
+      ],
+      [
+        "S39302-A-URL-ARGUMENT-LOSES-ITS-QUOTES",
+        "engine-core",
+        "src/media.rs",
+        "        let written = unquoted(argument.trim());",
+        "        let written = argument.trim();",
+        "face::a_font_the_css_names_is_inlined_for_a_reader_that_asks",
+        "a url( argument is stripped of one pair of matching quotes before it is read as a name; kept, a quoted font name is no font and stays as written (SPEC-393 R4, A4)"
+      ],
+      [
+        "S39303-A-REFUSED-FONT-IS-EMPTIED",
+        "engine-core",
+        "src/media.rs",
+        "            None => \"url(\\\"\\\")\".to_owned(),",
+        "            None => format!(\"url(\\\"{written}\\\")\"),",
+        "face::a_refused_font_is_emptied_and_named_and_any_other_url_stays",
+        "a refused font is written url(\"\"); keeping its written name, the document names a file the frame can never load (SPEC-393 R4, A5)"
+      ],
+      [
+        "S39304-ONLY-A-FONT-NAME-IS-REWRITTEN",
+        "engine-core",
+        "src/media.rs",
+        "        let font = plain_name(&name) && media_type(&name, &FONT_TYPES).is_some();",
+        "        let font = plain_name(&name);",
+        "face::a_refused_font_is_emptied_and_named_and_any_other_url_stays",
+        "only a plain name whose extension is in the font table is rewritten; admitting every plain name, an image the CSS names is emptied and named as a refused font (SPEC-393 R4, A5)"
+      ],
+      [
+        "S39305-ONLY-A-READER-THAT-ASKS-GETS-FONTS",
+        "engine-core",
+        "src/face.rs",
+        "    if media.inlines_fonts() {",
+        "    if true {",
+        "face::the_css_stays_as_written_for_a_reader_that_does_not_ask",
+        "the font pass runs only for a reader that asks; taken as yes, a reader that does not ask is asked for the CSS's fonts and gets a rewritten CSS (SPEC-393 R6, A6)"
+      ],
+      [
+        "S39306-A-READER-DOES-NOT-ASK-BY-DEFAULT",
+        "engine-core",
+        "src/media.rs",
+        "    fn inlines_fonts(&self) -> bool {\n        false",
+        "    fn inlines_fonts(&self) -> bool {\n        true",
+        "face::the_css_stays_as_written_for_a_reader_that_does_not_ask",
+        "a reader asks for no font unless it says so; defaulting to yes, the web's reader and every test reader would be asked for the CSS's fonts (SPEC-393 R6, A6)"
+      ],
+      [
+        "S39307-FONTS-ARE-TAKEN-AFTER-THE-CARDS-MEDIA",
+        "engine-core",
+        "src/face.rs",
+        "    let text = budget.rewrite(&shown);",
+        "    if media.inlines_fonts() {\n        rendered.css = budget.fonts(&rendered.css);\n    }\n    let text = budget.rewrite(&shown);",
+        "face::a_font_never_crowds_out_the_cards_own_media",
+        "the fonts take from the face's budget after the text's media and the clips; taken first, a font crowds the card's own sound out of the face's cap (SPEC-393 R5, A7)"
+      ],
+      [
+        "S39308-THE-SPEECH-CARRIES-THE-TAGS-VOICES",
+        "engine-core",
+        "src/face.rs",
+        "        voices: tag.voices.clone(),",
+        "        voices: Vec::new(),",
+        "face::a_tts_tag_carries_its_voices_in_order",
+        "a speech clip carries the voices its TTS tag names, in order; emptied, the voice a template asks for never reaches the client (SPEC-393 R7, A9)"
+      ],
+      [
+        "S39309-THE-URL-NAME-IS-MATCHED-IN-ANY-CASE",
+        "engine-core",
+        "src/media.rs",
+        "            .position(|window| window.eq_ignore_ascii_case(URL_OPEN.as_bytes()))",
+        "            .position(|window| window == URL_OPEN.as_bytes())",
+        "face::a_font_the_css_names_is_inlined_for_a_reader_that_asks",
+        "url( is matched in any ASCII case, as CSS reads it; matched case-sensitively, a font named by URL( stays a name the frame can never load (SPEC-393 R4, A4)"
+      ],
+      [
+        "S39310-THE-BODY-CLASS-COUNTS-FROM-ONE",
+        "ffi",
+        "src/face.rs",
+        "    let template = u64::from(face.ordinal) + 1;",
+        "    let template = u64::from(face.ordinal);",
+        "face::the_body_class_names_the_cards_template",
+        "the body class names the template counted from one, as the desktop writes card1 for the first; without the one, every card is styled by the previous template's rules (SPEC-393 R2, A2)"
+      ],
+      [
+        "S39311-THE-NATIVE-READER-ASKS-FOR-FONTS",
+        "ffi",
+        "src/face.rs",
+        "    fn inlines_fonts(&self) -> bool {\n        true",
+        "    fn inlines_fonts(&self) -> bool {\n        false",
+        "face::the_native_document_carries_its_fonts_inline",
+        "the media folder asks for the CSS's fonts; answering no, the native document keeps a font name the frame can never load (SPEC-393 R6, A8)"
+      ],
+      [
+        "S39312-EVERY-VIDEO-PLAYS-INLINE",
+        "ffi",
+        "src/face.rs",
+        "const PLAYS_INLINE: &str = \" playsinline\";",
+        "const PLAYS_INLINE: &str = \"\";",
+        "face::a_video_plays_inline_in_the_native_document",
+        "each video start tag gains playsinline; emptied, an iPhone takes a card's video full screen (SPEC-393 R11, A15)"
+      ],
+      [
+        "S39313-A-VIDEO-TAG-IS-FOUND-IN-ANY-CASE",
+        "ffi",
+        "src/face.rs",
+        "        .position(|window| window.eq_ignore_ascii_case(VIDEO_OPEN.as_bytes()))",
+        "        .position(|window| window == VIDEO_OPEN.as_bytes())",
+        "face::a_video_plays_inline_in_the_native_document",
+        "a video start tag is found in any ASCII case, as HTML reads it; matched case-sensitively, a VIDEO tag plays full screen (SPEC-393 R11, A15)"
+      ],
+      [
+        "S39314-A-VIDEO-NAME-ENDS-AT-ITS-TAG",
+        "ffi",
+        "src/face.rs",
+        "rest.starts_with(|next: char| next.is_ascii_whitespace() || next == '/' || next == '>')",
+        "rest.starts_with(|_: char| true)",
+        "face::a_video_plays_inline_in_the_native_document",
+        "the element name ends at whitespace, / or >; admitting any character, a video-note element is rewritten as if it were a video (SPEC-393 R11, A15)"
+      ],
+      [
+        "S39315-THE-FFI-SPEECH-CARRIES-ITS-VOICES",
+        "ffi",
+        "src/face.rs",
+        "            voices,\n        },",
+        "            voices: Vec::new(),\n        },",
+        "face::the_speech_clip_carries_the_tags_voices",
+        "the native speech clip carries the core clip's voices; emptied, Swift never sees the voice a template asks for (SPEC-393 R7, A13)"
+      ],
+      [
+        "S39316-A-KEPT-CHOICE-SPEAKS-FIRST",
+        "ffi",
+        "src/voices.rs",
+        "        if kept.is_some() {",
+        "        if false {",
+        "voices::a_kept_choice_speaks_over_a_requested_voice",
+        "the learner's kept choice speaks first; never consulted, a template's request overrides the voice the learner chose (SPEC-393 R8, A11)"
+      ],
+      [
+        "S39317-A-REQUESTED-VOICE-IS-ONE-THE-PICKER-OFFERS",
+        "ffi",
+        "src/voices.rs",
+        "        let offered = self.options(language, installed);",
+        "        let offered = installed;",
+        "voices::a_request_the_picker_would_not_offer_is_passed_over",
+        "a requested voice is one the picker offers for the language; with every installed voice a candidate, a voice of another language speaks the text (SPEC-393 R8, A12)"
+      ],
+      [
+        "S39318-A-REQUESTED-NAME-MAY-CARRY-ONE-PREFIX",
+        "ffi",
+        "src/voices.rs",
+        "    let unprefixed = entry.split_once('_').map(|(_, rest)| rest);",
+        "    let unprefixed: Option<&str> = None;",
+        "voices::a_requested_voice_speaks_when_no_choice_is_kept",
+        "a requested entry is compared whole and after its first _, as the desktop's prefixed names are written; compared whole only, a prefixed request finds no voice (SPEC-393 R8, A10)"
+      ],
+      [
+        "S39319-A-REQUESTED-NAME-WRITES-SPACES-AS-UNDERSCORES",
+        "ffi",
+        "src/voices.rs",
+        "    let name = voice.name.replace(' ', \"_\");",
+        "    let name = voice.name.clone();",
+        "voices::a_requested_voice_speaks_when_no_choice_is_kept",
+        "a voice's name is compared with each space written _, as a tag writes it; with the spaces kept, a request naming a two-word voice finds none (SPEC-393 R8, A10)"
+      ],
+      [
+        "S39320-A-REQUESTED-IDENTIFIER-SPEAKS",
+        "ffi",
+        "src/voices.rs",
+        "candidate == voice.identifier || candidate == name",
+        "false || candidate == name",
+        "voices::a_request_the_picker_would_not_offer_is_passed_over",
+        "a requested entry may name a voice by its identifier; never matching it, a request by identifier is passed over (SPEC-393 R8, A12)"
+      ],
+      [
+        "S39321-THE-FIRST-OFFERED-REQUEST-WINS",
+        "ffi",
+        "src/voices.rs",
+        "        requested.into_iter().find_map(|entry| {",
+        "        requested.into_iter().rev().find_map(|entry| {",
+        "voices::a_request_the_picker_would_not_offer_is_passed_over",
+        "the first requested entry the picker offers speaks; read last first, a template's fallback voice speaks over its first choice (SPEC-393 R8, A12)"
+      ],
+      [
+        "S39322-THE-FONT-TABLE-TYPES-AN-OTF-AS-OTF",
+        "engine-core",
+        "src/media.rs",
+        "    (\"otf\", \"font/otf\"),",
+        "    (\"otf\", \"font/ttf\"),",
+        "face::every_font_type_is_inlined_under_its_own_type",
+        "an otf font is typed font/otf in its data: URL; typed font/ttf, the frame reads it under another format's type (SPEC-393 R3, A19)"
+      ],
+      [
+        "S39323-THE-FONT-TABLE-TYPES-A-WOFF-AS-WOFF",
+        "engine-core",
+        "src/media.rs",
+        "    (\"woff\", \"font/woff\"),",
+        "    (\"woff\", \"font/woff2\"),",
+        "face::every_font_type_is_inlined_under_its_own_type",
+        "a woff font is typed font/woff in its data: URL; typed font/woff2, the frame reads it under another format's type (SPEC-393 R3, A19)"
+      ],
+      [
+        "S39324-THE-FONT-TABLE-TYPES-A-WOFF2-AS-WOFF2",
+        "engine-core",
+        "src/media.rs",
+        "    (\"woff2\", \"font/woff2\"),",
+        "    (\"woff2\", \"font/woff\"),",
+        "face::every_font_type_is_inlined_under_its_own_type",
+        "a woff2 font is typed font/woff2 in its data: URL; typed font/woff, the frame reads it under another format's type (SPEC-393 R3, A19)"
+      ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S39340-THE-FACTORY-PLAYS-MEDIA-INLINE",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        "            configuration.allowsInlineMediaPlayback = true",
+        "            configuration.allowsInlineMediaPlayback = false",
+        "the factory sets inline playback on, inside the iPhone guard; set false, an iPhone takes a card's video full screen (SPEC-393 R10, A16)",
+        "test_card_web_view_layers.TheFactoryPlaysMediaInline.test_the_factory_plays_media_inline_and_every_plant_is_refused"
+      ],
+      [
+        "S39341-THE-INLINE-CENSUS-NAMES-ITS-GUARD",
+        "scripts/tests/test_card_web_view_layers.py",
+        "            settings.append((found.group(1), any(guards)))",
+        "            settings.append((found.group(1), True))",
+        "the census reads whether the inline line sits inside the iPhone guard; taken as always guarded, a factory setting it outside the guard passes (SPEC-393 R12, A16)",
+        "test_card_web_view_layers.TheFactoryPlaysMediaInline.test_the_factory_plays_media_inline_and_every_plant_is_refused"
+      ]
+    ]
+  }
+}

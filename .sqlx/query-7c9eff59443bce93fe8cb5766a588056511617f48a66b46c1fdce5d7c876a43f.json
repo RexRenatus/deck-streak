@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO relight_due (study_day, created_at) VALUES (?1, ?2)\n         ON CONFLICT (study_day) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "7c9eff59443bce93fe8cb5766a588056511617f48a66b46c1fdce5d7c876a43f"
+}

@@ -1,0 +1,134 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT job_id, fire_date, first_seen_at, updated_at, last_fire_at, ok_count, error_count, catchup_count, missed_count, last_outcome FROM cron_fires WHERE job_id = ?1 AND fire_date = ?2",
+  "describe": {
+    "columns": [
+      {
+        "name": "job_id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "cron_fires",
+            "name": "job_id"
+          }
+        }
+      },
+      {
+        "name": "fire_date",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "cron_fires",
+            "name": "fire_date"
+          }
+        }
+      },
+      {
+        "name": "first_seen_at",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "cron_fires",
+            "name": "first_seen_at"
+          }
+        }
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "cron_fires",
+            "name": "updated_at"
+          }
+        }
+      },
+      {
+        "name": "last_fire_at",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "cron_fires",
+            "name": "last_fire_at"
+          }
+        }
+      },
+      {
+        "name": "ok_count",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "cron_fires",
+            "name": "ok_count"
+          }
+        }
+      },
+      {
+        "name": "error_count",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "cron_fires",
+            "name": "error_count"
+          }
+        }
+      },
+      {
+        "name": "catchup_count",
+        "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "cron_fires",
+            "name": "catchup_count"
+          }
+        }
+      },
+      {
+        "name": "missed_count",
+        "ordinal": 8,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "cron_fires",
+            "name": "missed_count"
+          }
+        }
+      },
+      {
+        "name": "last_outcome",
+        "ordinal": 9,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "cron_fires",
+            "name": "last_outcome"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f62df1651a9d24da27a8162edc6ed36b6074bb76eb540ac572f5093604699f4b"
+}

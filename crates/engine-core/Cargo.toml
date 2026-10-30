@@ -1,0 +1,38 @@
+[package]
+name = "deck-streak-engine-core"
+description = "DeckStreak's engine core: Anki's engine behind one allow-listed dispatcher both clients share. See docs/CONTEXT-MAP.md."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# ADR-356 D1 and D4: the one client-side holder of the engine. It declares no feature, no
+# `crate-type` and no build script, so nothing a member turns on can widen what it admits.
+[dependencies]
+# ADR-022 and ADR-058: Anki's engine, whose backend this crate holds privately (SPEC-345 R1).
+anki.workspace = true
+# ADR-348: the engine's protobuf messages and their codec, from the same fork commit.
+anki_proto.workspace = true
+prost.workspace = true
+# ADR-029: the engine's database command is JSON; the core builds it from its own fixed reads
+# (ADR-356 D7).
+serde_json.workspace = true
+# ADR-358 D4: the URL parser for the sync login's endpoint guard (SPEC-347 R2); the engine's own
+# dependencies already bring it, so it adds no package.
+url.workspace = true
+# ADR-359 D1: the encoder for a face's `data:` URLs (SPEC-348 R3); the engine's own dependencies
+# already bring this version, so it adds no package.
+base64.workspace = true
+# ADR-400 D1: the isolated FSRS-7 scheduler, the core's one workspace edge, named by
+# `src/replay.rs` alone and held by the graph census (SPEC-386 R7).
+deck-streak-fsrs7 = { path = "../fsrs7" }
+
+[dev-dependencies]
+# ADR-375 (SPEC-364 section 3): the runtime that runs the engine's own sync server as a child of the
+# one-way tests, on a loopback port, as the native adapter's login tests run it.
+tokio = { workspace = true, features = ["rt"] }

@@ -1,0 +1,70 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S35301-THE-SITE-IMPORT-NAMES-THE-BLOCK-BY-ITS-ABSOLUTE-PATH",
+        "deploy/deploy.sh",
+        "IMPORT_LINE=\"import $CADDY_DIR/deck-streak.caddy\"\n",
+        "IMPORT_LINE=\"import deck-streak.caddy\"\n",
+        "the site import names the block by its absolute path, so it resolves to it in both layouts (SPEC-353 R1)",
+        "test_deploy_scripts.TheCaddyInstall.test_the_site_import_resolves_to_the_site_block_in_both_layouts"
+      ],
+      [
+        "S35302-THE-INSTALL-CHECKS-ITS-CANDIDATE-BESIDE-THE-CADDYFILE",
+        "deploy/deploy.sh",
+        "copy=$(dirname -- \"$file\")/deck-streak.candidate\nkept=$file.previous\nhad=\nput_back_block() {\n",
+        "copy=$dir/deck-streak.candidate\nkept=$file.previous\nhad=\nput_back_block() {\n",
+        "the install writes and checks its candidate in the Caddyfile's own directory, where the reload reads it (SPEC-353 R2)",
+        "test_deploy_scripts.TheCaddyInstall.test_the_candidate_is_validated_where_the_reload_reads_the_caddyfile"
+      ],
+      [
+        "S35303-THE-REMOVAL-CHECKS-ITS-CANDIDATE-BESIDE-THE-CADDYFILE",
+        "deploy/deploy.sh",
+        "copy=$(dirname -- \"$file\")/deck-streak.candidate\nkept=$file.previous\nhad=\nunwritten() {\n",
+        "copy=$dir/deck-streak.candidate\nkept=$file.previous\nhad=\nunwritten() {\n",
+        "the removal writes and checks its candidate in the Caddyfile's own directory, where the reload reads it (SPEC-353 R2)",
+        "test_deploy_scripts.TheCaddyInstall.test_the_candidate_is_validated_where_the_reload_reads_the_caddyfile"
+      ],
+      [
+        "S35304-A-RELATIVE-CADDY-DIRECTORY-IS-REFUSED",
+        "deploy/deploy.sh",
+        "    [!/]* | /*[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._@+/-]*)\n",
+        "    /*[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._@+/-]*)\n",
+        "a Caddy directory that is not an absolute path is refused, since the import line could not name the block (SPEC-353 R3)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_directory_the_import_line_cannot_carry_is_refused_before_the_host"
+      ],
+      [
+        "S35305-A-CADDY-DIRECTORY-OF-OTHER-CHARACTERS-IS-REFUSED",
+        "deploy/deploy.sh",
+        "    [!/]* | /*[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._@+/-]*)\n",
+        "    [!/]*)\n",
+        "a Caddy directory holding a character a Caddyfile token does not read literally is refused (SPEC-353 R3)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_directory_the_import_line_cannot_carry_is_refused_before_the_host"
+      ],
+      [
+        "S35306-THE-INSTALL-CHECKS-THE-CADDY-DIRECTORY-FIRST",
+        "deploy/deploy.sh",
+        "block template\n    plain_caddy_dir\n",
+        "block template\n",
+        "the install refuses an unfit Caddy directory before it reads the tag or reaches the host (SPEC-353 R3)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_directory_the_import_line_cannot_carry_is_refused_before_the_host"
+      ],
+      [
+        "S35307-THE-REMOVAL-CHECKS-THE-CADDY-DIRECTORY-FIRST",
+        "deploy/deploy.sh",
+        "caddy_remove() {\n    plain_caddy_dir\n",
+        "caddy_remove() {\n",
+        "the removal refuses an unfit Caddy directory before it reaches the host (SPEC-353 R3)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_directory_the_import_line_cannot_carry_is_refused_before_the_host"
+      ],
+      [
+        "S35308-A-CADDY-DIRECTORY-OF-OTHER-LETTERS-IS-REFUSED-IN-EVERY-LOCALE",
+        "deploy/deploy.sh",
+        "/*[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._@+/-]*)",
+        "/*[!A-Za-z0-9._@+/-]*)",
+        "a Caddy directory holding a letter or digit outside ASCII is refused whatever the locale the step runs under (SPEC-353 R3)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_directory_the_import_line_cannot_carry_is_refused_before_the_host"
+      ]
+    ]
+  }
+}

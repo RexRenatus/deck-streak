@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO coin_ledger (study_day, source, reference, delta, created_at) VALUES (?1, ?2, ?3, ?4, ?5) ON CONFLICT (study_day, source, reference) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "22eb6ca956e2a4659ec3256f9e18e3c98036a2755e9aa5e5a5b3581cfa5a26a1"
+}

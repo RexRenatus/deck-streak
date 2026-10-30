@@ -1,0 +1,13 @@
+{
+  "schema": "runner.skills.catalog.v1",
+  "note": "A synthetic catalog for scripts/tests/test_box_packs.py: one pack for each verb scripts/box-packs.sh dispatches, three probe packs for the private file's packs section, and one row that is not a pack. A pack's name says nothing about its verb; only the card schema it declares does, which is why the tests can swap two packs' verbs by editing this file.",
+  "skills": [
+    {"id": "packs/alpha", "kind": "pack", "gate": "refuse-on-red", "requires_schema": ["runner.pack.probe.v1"]},
+    {"id": "packs/beta", "kind": "pack", "gate": "refuse-on-red", "requires_schema": ["runner.pack.run.v1"]},
+    {"id": "packs/seo-pipeline", "kind": "pack", "gate": "refuse-on-red", "requires_schema": ["runner.seo-pipeline.v1"]},
+    {"id": "packs/gamma", "kind": "pack", "gate": "refuse-on-red", "requires_schema": ["runner.pack.probe.v1"]},
+    {"id": "packs/delta", "kind": "pack", "gate": "refuse-on-red", "requires_schema": ["runner.pack.probe.v1"]},
+    {"id": "packs/epsilon", "kind": "pack", "gate": "refuse-on-red", "requires_schema": ["runner.pack.probe.v1"]},
+    {"id": "roles/builder", "kind": "path-executor", "gate": "none", "requires_schema": ["runner.path.exec.v1"]}
+  ]
+}

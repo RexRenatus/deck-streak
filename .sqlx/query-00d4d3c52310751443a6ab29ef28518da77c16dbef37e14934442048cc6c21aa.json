@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT source AS \"source!: String\", amount AS \"amount!: u32\" FROM xp_settlement\n           WHERE study_day = ?1\n           UNION ALL\n           SELECT source, amount FROM xp_ledger WHERE study_day = ?1",
+  "describe": {
+    "columns": [
+      {
+        "name": "source!: String",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "name": "amount!: u32",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "amount"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "00d4d3c52310751443a6ab29ef28518da77c16dbef37e14934442048cc6c21aa"
+}

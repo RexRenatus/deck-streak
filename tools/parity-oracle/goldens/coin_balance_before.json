@@ -1,0 +1,575 @@
+{
+  "adapter": "with_a_ledger",
+  "cases": [
+    {
+      "class": "empty",
+      "input": {
+        "day": 20000,
+        "movements": []
+      },
+      "output": 0
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "day": 20000,
+        "movements": [
+          {
+            "day": 19999,
+            "delta": 40,
+            "ref": "",
+            "source": "mint"
+          },
+          {
+            "day": 20000,
+            "delta": 25,
+            "ref": "",
+            "source": "mint"
+          },
+          {
+            "day": 20000,
+            "delta": -40,
+            "ref": "pass:1",
+            "source": "shop"
+          },
+          {
+            "day": 20000,
+            "delta": -15,
+            "ref": "a",
+            "source": "fine"
+          },
+          {
+            "day": 20000,
+            "delta": 10,
+            "ref": "q",
+            "source": "quest"
+          },
+          {
+            "day": 20001,
+            "delta": -9,
+            "ref": "b",
+            "source": "fine"
+          },
+          {
+            "day": 19998,
+            "delta": -150,
+            "ref": "freeze:1",
+            "source": "shop"
+          }
+        ]
+      },
+      "output": -110
+    },
+    {
+      "class": "later_days_only",
+      "input": {
+        "day": 20000,
+        "movements": [
+          {
+            "day": 20001,
+            "delta": 12,
+            "ref": "",
+            "source": "mint"
+          },
+          {
+            "day": 20002,
+            "delta": -5,
+            "ref": "z",
+            "source": "fine"
+          }
+        ]
+      },
+      "output": 0
+    },
+    {
+      "class": "purchase_only",
+      "input": {
+        "day": 20000,
+        "movements": [
+          {
+            "day": 20000,
+            "delta": -40,
+            "ref": "pass:2",
+            "source": "shop"
+          }
+        ]
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "day": 20000,
+        "movements": [
+          {
+            "day": 19998,
+            "delta": 44,
+            "ref": "k0",
+            "source": "payout"
+          },
+          {
+            "day": 20002,
+            "delta": 17,
+            "ref": "k1",
+            "source": "refund"
+          },
+          {
+            "day": 19999,
+            "delta": 55,
+            "ref": "k2",
+            "source": "mint"
+          },
+          {
+            "day": 19997,
+            "delta": 37,
+            "ref": "k3",
+            "source": "quest"
+          },
+          {
+            "day": 19997,
+            "delta": -27,
+            "ref": "k4",
+            "source": "fine"
+          },
+          {
+            "day": 19999,
+            "delta": 7,
+            "ref": "k5",
+            "source": "quest"
+          },
+          {
+            "day": 20000,
+            "delta": -31,
+            "ref": "k6",
+            "source": "tariff"
+          },
+          {
+            "day": 19998,
+            "delta": 27,
+            "ref": "k7",
+            "source": "quest"
+          },
+          {
+            "day": 20002,
+            "delta": 21,
+            "ref": "k8",
+            "source": "refund"
+          },
+          {
+            "day": 20000,
+            "delta": -22,
+            "ref": "k9",
+            "source": "shop"
+          },
+          {
+            "day": 20001,
+            "delta": 6,
+            "ref": "k10",
+            "source": "refund"
+          },
+          {
+            "day": 20000,
+            "delta": 52,
+            "ref": "k11",
+            "source": "payout"
+          }
+        ]
+      },
+      "output": 143
+    },
+    {
+      "input": {
+        "day": 20000,
+        "movements": [
+          {
+            "day": 20001,
+            "delta": 6,
+            "ref": "k0",
+            "source": "quest"
+          },
+          {
+            "day": 19998,
+            "delta": 16,
+            "ref": "k1",
+            "source": "mint"
+          },
+          {
+            "day": 19998,
+            "delta": 7,
+            "ref": "k2",
+            "source": "mint"
+          },
+          {
+            "day": 19999,
+            "delta": 17,
+            "ref": "k3",
+            "source": "refund"
+          },
+          {
+            "day": 19999,
+            "delta": 20,
+            "ref": "k4",
+            "source": "refund"
+          },
+          {
+            "day": 19997,
+            "delta": -11,
+            "ref": "k5",
+            "source": "tariff"
+          },
+          {
+            "day": 19999,
+            "delta": 58,
+            "ref": "k6",
+            "source": "mint"
+          }
+        ]
+      },
+      "output": 107
+    },
+    {
+      "input": {
+        "day": 20000,
+        "movements": [
+          {
+            "day": 19998,
+            "delta": 15,
+            "ref": "k0",
+            "source": "payout"
+          },
+          {
+            "day": 19997,
+            "delta": 37,
+            "ref": "k1",
+            "source": "quest"
+          },
+          {
+            "day": 20002,
+            "delta": 1,
+            "ref": "k2",
+            "source": "payout"
+          },
+          {
+            "day": 19999,
+            "delta": -40,
+            "ref": "k3",
+            "source": "shop"
+          },
+          {
+            "day": 20002,
+            "delta": 9,
+            "ref": "k4",
+            "source": "refund"
+          },
+          {
+            "day": 20002,
+            "delta": -22,
+            "ref": "k5",
+            "source": "tariff"
+          },
+          {
+            "day": 20002,
+            "delta": 29,
+            "ref": "k6",
+            "source": "quest"
+          },
+          {
+            "day": 20000,
+            "delta": -18,
+            "ref": "k7",
+            "source": "tariff"
+          },
+          {
+            "day": 20000,
+            "delta": 11,
+            "ref": "k8",
+            "source": "quest"
+          },
+          {
+            "day": 19997,
+            "delta": 46,
+            "ref": "k9",
+            "source": "payout"
+          },
+          {
+            "day": 20001,
+            "delta": 45,
+            "ref": "k10",
+            "source": "quest"
+          },
+          {
+            "day": 19998,
+            "delta": -28,
+            "ref": "k11",
+            "source": "shop"
+          }
+        ]
+      },
+      "output": 30
+    },
+    {
+      "input": {
+        "day": 20000,
+        "movements": [
+          {
+            "day": 19997,
+            "delta": -59,
+            "ref": "k0",
+            "source": "tariff"
+          },
+          {
+            "day": 20000,
+            "delta": 34,
+            "ref": "k1",
+            "source": "quest"
+          }
+        ]
+      },
+      "output": -59
+    },
+    {
+      "input": {
+        "day": 20000,
+        "movements": [
+          {
+            "day": 19997,
+            "delta": 12,
+            "ref": "k0",
+            "source": "payout"
+          },
+          {
+            "day": 19999,
+            "delta": 8,
+            "ref": "k1",
+            "source": "payout"
+          },
+          {
+            "day": 20002,
+            "delta": 1,
+            "ref": "k2",
+            "source": "payout"
+          }
+        ]
+      },
+      "output": 20
+    },
+    {
+      "input": {
+        "day": 20000,
+        "movements": [
+          {
+            "day": 20002,
+            "delta": 21,
+            "ref": "k0",
+            "source": "refund"
+          },
+          {
+            "day": 20001,
+            "delta": -26,
+            "ref": "k1",
+            "source": "fine"
+          },
+          {
+            "day": 20002,
+            "delta": 49,
+            "ref": "k2",
+            "source": "payout"
+          },
+          {
+            "day": 20002,
+            "delta": 4,
+            "ref": "k3",
+            "source": "payout"
+          },
+          {
+            "day": 20000,
+            "delta": 11,
+            "ref": "k4",
+            "source": "mint"
+          },
+          {
+            "day": 19997,
+            "delta": -36,
+            "ref": "k5",
+            "source": "shop"
+          },
+          {
+            "day": 20002,
+            "delta": -5,
+            "ref": "k6",
+            "source": "tariff"
+          },
+          {
+            "day": 19999,
+            "delta": 7,
+            "ref": "k7",
+            "source": "mint"
+          },
+          {
+            "day": 19997,
+            "delta": 17,
+            "ref": "k8",
+            "source": "refund"
+          },
+          {
+            "day": 19999,
+            "delta": 43,
+            "ref": "k9",
+            "source": "payout"
+          },
+          {
+            "day": 19997,
+            "delta": 43,
+            "ref": "k10",
+            "source": "mint"
+          },
+          {
+            "day": 20001,
+            "delta": 13,
+            "ref": "k11",
+            "source": "quest"
+          },
+          {
+            "day": 19997,
+            "delta": 33,
+            "ref": "k12",
+            "source": "refund"
+          }
+        ]
+      },
+      "output": 107
+    },
+    {
+      "input": {
+        "day": 20000,
+        "movements": [
+          {
+            "day": 20002,
+            "delta": 2,
+            "ref": "k0",
+            "source": "refund"
+          },
+          {
+            "day": 19999,
+            "delta": 34,
+            "ref": "k1",
+            "source": "quest"
+          },
+          {
+            "day": 20000,
+            "delta": 56,
+            "ref": "k2",
+            "source": "quest"
+          }
+        ]
+      },
+      "output": 34
+    },
+    {
+      "input": {
+        "day": 20000,
+        "movements": [
+          {
+            "day": 19997,
+            "delta": -7,
+            "ref": "k0",
+            "source": "fine"
+          },
+          {
+            "day": 19998,
+            "delta": 14,
+            "ref": "k1",
+            "source": "quest"
+          },
+          {
+            "day": 19997,
+            "delta": 55,
+            "ref": "k2",
+            "source": "quest"
+          },
+          {
+            "day": 20001,
+            "delta": 20,
+            "ref": "k3",
+            "source": "quest"
+          },
+          {
+            "day": 20002,
+            "delta": 25,
+            "ref": "k4",
+            "source": "quest"
+          }
+        ]
+      },
+      "output": 62
+    },
+    {
+      "input": {
+        "day": 20000,
+        "movements": [
+          {
+            "day": 19997,
+            "delta": -29,
+            "ref": "k0",
+            "source": "fine"
+          },
+          {
+            "day": 20002,
+            "delta": 12,
+            "ref": "k1",
+            "source": "quest"
+          }
+        ]
+      },
+      "output": -29
+    },
+    {
+      "input": {
+        "day": 20000,
+        "movements": [
+          {
+            "day": 19997,
+            "delta": 26,
+            "ref": "k0",
+            "source": "payout"
+          },
+          {
+            "day": 19999,
+            "delta": 59,
+            "ref": "k1",
+            "source": "payout"
+          },
+          {
+            "day": 20001,
+            "delta": -14,
+            "ref": "k2",
+            "source": "shop"
+          },
+          {
+            "day": 20002,
+            "delta": 20,
+            "ref": "k3",
+            "source": "quest"
+          },
+          {
+            "day": 19997,
+            "delta": 47,
+            "ref": "k4",
+            "source": "mint"
+          }
+        ]
+      },
+      "output": 132
+    }
+  ],
+  "function": "database.GamifyStore.coin_balance_before",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Fills a temporary store with the case's synthetic movements through its own upsert_coin_grant, then reads the wallet before the day; each day is an epoch day turned into the store's form inside the adapter; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_082.py",
+  "registry_sha256": "a69a0d3ef28d4d443743ee93fd7a1541597ecbfc742b280cff28d41faea8a8d8",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

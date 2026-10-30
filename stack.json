@@ -1,6 +1,5 @@
 {
   "schema": "phx.stack.v1",
-  "radar": ".packs/skills/packs/stack-selection/radar.json",
   "app_types": [
     "backend-api",
     "app-ui",
@@ -11,20 +10,16 @@
       "item": "rust"
     },
     {
-      "item": "axum",
-      "planned": true
+      "item": "axum"
     },
     {
-      "item": "tokio",
-      "planned": true
+      "item": "tokio"
     },
     {
-      "item": "sqlx",
-      "planned": true
+      "item": "sqlx"
     },
     {
-      "item": "tracing",
-      "planned": true
+      "item": "tracing"
     },
     {
       "item": "sqlite"
@@ -33,8 +28,7 @@
       "item": "litestream"
     },
     {
-      "item": "frankenstein",
-      "planned": true
+      "item": "frankenstein"
     },
     {
       "item": "tma-initdata-auth"
@@ -98,8 +92,7 @@
       "item": "caddy"
     },
     {
-      "item": "tower-http",
-      "planned": true
+      "item": "tower-http"
     },
     {
       "item": "journald",
@@ -110,12 +103,10 @@
       "planned": true
     },
     {
-      "item": "dtcg-tokens",
-      "planned": true
+      "item": "dtcg-tokens"
     },
     {
-      "item": "svelte-runes-state",
-      "planned": true
+      "item": "svelte-runes-state"
     },
     {
       "item": "sveltekit-superforms",
@@ -132,6 +123,10 @@
     {
       "item": "astro",
       "planned": true
+    },
+    {
+      "item": "rust-wasm",
+      "adr": "docs/decisions/ADR-348-the-web-engine-pins-the-forks-wasm32-patches-by-tag-and-crosses-into-a-worker-through-wasm-bindgen.md"
     }
   ]
 }

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM buffs",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "d47109620f5ee4ef2fce871cd5a188ce4778dbe9abbfc07451c2883500c8586e"
+}

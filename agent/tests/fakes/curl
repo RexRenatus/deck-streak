@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# A fake `curl` for the runner's preflight tests: it records its argv and the headers it read from
+# stdin, writes the canned body to the `-o` file and prints the canned HTTP status for `-w`.
+set -u
+records="${FAKE_RECORDS:?the test names a records directory}"
+printf '%s\n' "$@" >"$records/curl.argv"
+cat >"$records/curl.stdin"
+if [ -n "${FAKE_CURL_EXIT:-}" ]; then
+  exit "$FAKE_CURL_EXIT"
+fi
+out=""
+want_code=0
+prev=""
+for arg in "$@"; do
+  if [ "$prev" = "-o" ]; then out="$arg"; fi
+  if [ "$prev" = "-w" ]; then want_code=1; fi
+  prev="$arg"
+done
+if [ -n "$out" ]; then
+  printf '%s' "${FAKE_CURL_BODY:-}" >"$out"
+fi
+if [ "$want_code" = 1 ]; then
+  printf '%s' "${FAKE_CURL_HTTP:-200}"
+fi
+exit 0

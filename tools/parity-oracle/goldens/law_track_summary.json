@@ -1,0 +1,635 @@
+{
+  "adapter": "law_summary",
+  "cases": [
+    {
+      "class": "empty",
+      "input": {
+        "dues": null,
+        "ledger": [],
+        "leeches": [],
+        "streak": 0,
+        "today": 20000
+      },
+      "output": {
+        "dues": null,
+        "leech_active": 0,
+        "level": 1,
+        "mastery": 100.0,
+        "streak": 0,
+        "total_xp": 0,
+        "xp_today": 0
+      }
+    },
+    {
+      "class": "dues_pending",
+      "input": {
+        "dues": null,
+        "ledger": [],
+        "leeches": [],
+        "streak": 3,
+        "today": 20000
+      },
+      "output": {
+        "dues": null,
+        "leech_active": 0,
+        "level": 1,
+        "mastery": 100.0,
+        "streak": 3,
+        "total_xp": 0,
+        "xp_today": 0
+      }
+    },
+    {
+      "class": "dues_zero",
+      "input": {
+        "dues": 0,
+        "ledger": [],
+        "leeches": [],
+        "streak": 0,
+        "today": 20000
+      },
+      "output": {
+        "dues": 0,
+        "leech_active": 0,
+        "level": 1,
+        "mastery": 100.0,
+        "streak": 0,
+        "total_xp": 0,
+        "xp_today": 0
+      }
+    },
+    {
+      "class": "dues_not_a_number",
+      "input": {
+        "dues": "12",
+        "ledger": [],
+        "leeches": [],
+        "streak": 0,
+        "today": 20000
+      },
+      "output": {
+        "dues": null,
+        "leech_active": 0,
+        "level": 1,
+        "mastery": 100.0,
+        "streak": 0,
+        "total_xp": 0,
+        "xp_today": 0
+      }
+    },
+    {
+      "class": "tracks_apart",
+      "input": {
+        "dues": 17,
+        "ledger": [
+          {
+            "amount": 40,
+            "day": 20000,
+            "track": "law"
+          },
+          {
+            "amount": 900,
+            "day": 20000,
+            "track": "language"
+          },
+          {
+            "amount": 70,
+            "day": 19999,
+            "track": "law"
+          },
+          {
+            "amount": 5,
+            "day": 20001,
+            "track": "law"
+          }
+        ],
+        "leeches": [
+          "law",
+          "language",
+          "law"
+        ],
+        "streak": 5,
+        "today": 20000
+      },
+      "output": {
+        "dues": 17,
+        "leech_active": 2,
+        "level": 2,
+        "mastery": 94.0,
+        "streak": 5,
+        "total_xp": 115,
+        "xp_today": 40
+      }
+    },
+    {
+      "class": "leech_cap",
+      "input": {
+        "dues": 4,
+        "ledger": [],
+        "leeches": [
+          "law",
+          "law",
+          "law",
+          "law",
+          "law",
+          "law",
+          "law",
+          "law",
+          "law",
+          "law",
+          "law",
+          "law"
+        ],
+        "streak": 1,
+        "today": 20000
+      },
+      "output": {
+        "dues": 4,
+        "leech_active": 12,
+        "level": 1,
+        "mastery": 70.0,
+        "streak": 1,
+        "total_xp": 0,
+        "xp_today": 0
+      }
+    },
+    {
+      "class": "leech_cap",
+      "input": {
+        "dues": 4,
+        "ledger": [],
+        "leeches": [
+          "law",
+          "law",
+          "law",
+          "law",
+          "law",
+          "law",
+          "law",
+          "law",
+          "law",
+          "law"
+        ],
+        "streak": 1,
+        "today": 20000
+      },
+      "output": {
+        "dues": 4,
+        "leech_active": 10,
+        "level": 1,
+        "mastery": 70.0,
+        "streak": 1,
+        "total_xp": 0,
+        "xp_today": 0
+      }
+    },
+    {
+      "class": "level_curve",
+      "input": {
+        "dues": 1,
+        "ledger": [
+          {
+            "amount": 100000,
+            "day": 19991,
+            "track": "law"
+          }
+        ],
+        "leeches": [],
+        "streak": 0,
+        "today": 20000
+      },
+      "output": {
+        "dues": 1,
+        "leech_active": 0,
+        "level": 45,
+        "mastery": 100.0,
+        "streak": 0,
+        "total_xp": 100000,
+        "xp_today": 0
+      }
+    },
+    {
+      "class": "negative_ledger",
+      "input": {
+        "dues": null,
+        "ledger": [
+          {
+            "amount": -30,
+            "day": 20000,
+            "track": "law"
+          },
+          {
+            "amount": 10,
+            "day": 20000,
+            "track": "law"
+          }
+        ],
+        "leeches": [],
+        "streak": 0,
+        "today": 20000
+      },
+      "output": {
+        "dues": null,
+        "leech_active": 0,
+        "level": 1,
+        "mastery": 100.0,
+        "streak": 0,
+        "total_xp": -20,
+        "xp_today": -20
+      }
+    },
+    {
+      "input": {
+        "dues": null,
+        "ledger": [
+          {
+            "amount": 336,
+            "day": 19998,
+            "track": "law"
+          },
+          {
+            "amount": 28,
+            "day": 19996,
+            "track": "law"
+          }
+        ],
+        "leeches": [
+          "law",
+          "law",
+          "law",
+          "language",
+          "language",
+          "language"
+        ],
+        "streak": 26,
+        "today": 20000
+      },
+      "output": {
+        "dues": null,
+        "leech_active": 3,
+        "level": 3,
+        "mastery": 91.0,
+        "streak": 26,
+        "total_xp": 364,
+        "xp_today": 0
+      }
+    },
+    {
+      "input": {
+        "dues": null,
+        "ledger": [
+          {
+            "amount": 337,
+            "day": 19998,
+            "track": "language"
+          },
+          {
+            "amount": 643,
+            "day": 19997,
+            "track": "law"
+          },
+          {
+            "amount": 415,
+            "day": 19996,
+            "track": "language"
+          }
+        ],
+        "leeches": [
+          "law",
+          "law",
+          "law"
+        ],
+        "streak": 5,
+        "today": 20000
+      },
+      "output": {
+        "dues": null,
+        "leech_active": 3,
+        "level": 4,
+        "mastery": 91.0,
+        "streak": 5,
+        "total_xp": 643,
+        "xp_today": 0
+      }
+    },
+    {
+      "input": {
+        "dues": 84,
+        "ledger": [
+          {
+            "amount": 313,
+            "day": 19998,
+            "track": "language"
+          },
+          {
+            "amount": 639,
+            "day": 19998,
+            "track": "law"
+          },
+          {
+            "amount": 274,
+            "day": 20000,
+            "track": "law"
+          }
+        ],
+        "leeches": [
+          "law",
+          "law",
+          "law",
+          "law",
+          "language",
+          "language",
+          "law",
+          "language",
+          "language",
+          "law",
+          "language",
+          "language",
+          "law"
+        ],
+        "streak": 14,
+        "today": 20000
+      },
+      "output": {
+        "dues": 84,
+        "leech_active": 7,
+        "level": 4,
+        "mastery": 79.0,
+        "streak": 14,
+        "total_xp": 913,
+        "xp_today": 274
+      }
+    },
+    {
+      "input": {
+        "dues": null,
+        "ledger": [
+          {
+            "amount": 354,
+            "day": 19999,
+            "track": "language"
+          }
+        ],
+        "leeches": [
+          "law"
+        ],
+        "streak": 14,
+        "today": 20000
+      },
+      "output": {
+        "dues": null,
+        "leech_active": 1,
+        "level": 1,
+        "mastery": 97.0,
+        "streak": 14,
+        "total_xp": 0,
+        "xp_today": 0
+      }
+    },
+    {
+      "input": {
+        "dues": null,
+        "ledger": [
+          {
+            "amount": 83,
+            "day": 19999,
+            "track": "law"
+          },
+          {
+            "amount": 3,
+            "day": 20000,
+            "track": "language"
+          },
+          {
+            "amount": 469,
+            "day": 19998,
+            "track": "language"
+          },
+          {
+            "amount": 684,
+            "day": 19996,
+            "track": "law"
+          },
+          {
+            "amount": 467,
+            "day": 19999,
+            "track": "law"
+          },
+          {
+            "amount": 13,
+            "day": 19996,
+            "track": "language"
+          }
+        ],
+        "leeches": [
+          "law",
+          "law",
+          "language",
+          "language",
+          "law",
+          "language",
+          "law",
+          "law",
+          "law"
+        ],
+        "streak": 4,
+        "today": 20000
+      },
+      "output": {
+        "dues": null,
+        "leech_active": 6,
+        "level": 5,
+        "mastery": 82.0,
+        "streak": 4,
+        "total_xp": 1234,
+        "xp_today": 0
+      }
+    },
+    {
+      "input": {
+        "dues": null,
+        "ledger": [
+          {
+            "amount": 320,
+            "day": 20000,
+            "track": "law"
+          },
+          {
+            "amount": 282,
+            "day": 19999,
+            "track": "language"
+          }
+        ],
+        "leeches": [
+          "law",
+          "law",
+          "law",
+          "law",
+          "law",
+          "law"
+        ],
+        "streak": 6,
+        "today": 20000
+      },
+      "output": {
+        "dues": null,
+        "leech_active": 6,
+        "level": 3,
+        "mastery": 82.0,
+        "streak": 6,
+        "total_xp": 320,
+        "xp_today": 320
+      }
+    },
+    {
+      "input": {
+        "dues": null,
+        "ledger": [
+          {
+            "amount": 664,
+            "day": 19997,
+            "track": "law"
+          },
+          {
+            "amount": 500,
+            "day": 20000,
+            "track": "language"
+          },
+          {
+            "amount": 194,
+            "day": 20000,
+            "track": "law"
+          },
+          {
+            "amount": 98,
+            "day": 19998,
+            "track": "language"
+          },
+          {
+            "amount": 374,
+            "day": 19998,
+            "track": "law"
+          },
+          {
+            "amount": 148,
+            "day": 19996,
+            "track": "language"
+          },
+          {
+            "amount": 283,
+            "day": 20000,
+            "track": "law"
+          },
+          {
+            "amount": 383,
+            "day": 20000,
+            "track": "language"
+          }
+        ],
+        "leeches": [
+          "language",
+          "law",
+          "law",
+          "language",
+          "law",
+          "law"
+        ],
+        "streak": 18,
+        "today": 20000
+      },
+      "output": {
+        "dues": null,
+        "leech_active": 4,
+        "level": 6,
+        "mastery": 88.0,
+        "streak": 18,
+        "total_xp": 1515,
+        "xp_today": 477
+      }
+    },
+    {
+      "input": {
+        "dues": null,
+        "ledger": [
+          {
+            "amount": 732,
+            "day": 19996,
+            "track": "language"
+          },
+          {
+            "amount": 285,
+            "day": 20000,
+            "track": "law"
+          },
+          {
+            "amount": 3,
+            "day": 19998,
+            "track": "law"
+          },
+          {
+            "amount": 768,
+            "day": 20000,
+            "track": "law"
+          },
+          {
+            "amount": 706,
+            "day": 19999,
+            "track": "language"
+          },
+          {
+            "amount": 597,
+            "day": 19996,
+            "track": "law"
+          },
+          {
+            "amount": 454,
+            "day": 19998,
+            "track": "language"
+          },
+          {
+            "amount": 638,
+            "day": 20000,
+            "track": "law"
+          }
+        ],
+        "leeches": [
+          "language",
+          "language",
+          "language",
+          "law",
+          "language",
+          "law",
+          "language",
+          "language",
+          "law",
+          "law",
+          "language",
+          "language",
+          "language"
+        ],
+        "streak": 24,
+        "today": 20000
+      },
+      "output": {
+        "dues": null,
+        "leech_active": 4,
+        "level": 7,
+        "mastery": 88.0,
+        "streak": 24,
+        "total_xp": 2291,
+        "xp_today": 1691
+      }
+    }
+  ],
+  "function": "pipeline_layers.digests.DigestsLayer.law_track_summary",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Runs law_track_summary over a temporary store the case's ledger rows fill, a stub leech snapshot, a stub law streak and a stub coaching value for the law dues; returns the summary's fields; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_077.py",
+  "registry_sha256": "a4df214341b4c7fb76da5699faf932c96faac65eef67d5945590c876aaf92946",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

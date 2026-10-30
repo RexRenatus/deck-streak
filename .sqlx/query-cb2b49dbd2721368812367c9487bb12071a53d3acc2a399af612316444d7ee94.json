@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT message_id, arrived_at FROM owner_last_message WHERE id = 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "message_id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "owner_last_message",
+            "name": "message_id"
+          }
+        }
+      },
+      {
+        "name": "arrived_at",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "owner_last_message",
+            "name": "arrived_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "cb2b49dbd2721368812367c9487bb12071a53d3acc2a399af612316444d7ee94"
+}

@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT code, study_day FROM writing_log WHERE study_day BETWEEN ?1 AND ?2 ORDER BY study_day, code",
+  "describe": {
+    "columns": [
+      {
+        "name": "code",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "writing_log",
+            "name": "code"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "writing_log",
+            "name": "study_day"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "b6de9d67c83536c0c75a26fcdc0c1e64a8386b8824c84e41332cf9f9dbe6c100"
+}

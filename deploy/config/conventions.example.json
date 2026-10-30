@@ -1,0 +1,23 @@
+{
+  "schema": "deckstreak.conventions.v1",
+  "direction": {
+    "pair_rules": [
+      { "front": "Example front", "back": "Example back", "direction": "cued_recall" }
+    ],
+    "template_rules": [
+      { "template": "Example forward", "direction": "production" },
+      { "template": "Example reverse", "direction": "recognition" }
+    ],
+    "note_type_rules": [
+      { "contains": "Example type", "direction": "cued_recall" }
+    ],
+    "exempt_tokens": ["Example exempt"]
+  },
+  "transfer": {
+    "excluded_fields": ["Example Sort", "Example Audio"],
+    "choice_prefix": "Pick_",
+    "rank_field": "Example Rank",
+    "meaning_fields": ["Example Gloss", "Example Sense"]
+  },
+  "can_do_field": "Example Statement"
+}

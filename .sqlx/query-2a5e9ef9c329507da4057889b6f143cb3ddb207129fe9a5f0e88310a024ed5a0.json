@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO notification_queue (kind, dedupe_key, surface, tier_requested, tier_pending, text, hold, tries, state, deferred_at, study_day, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'held', ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 11
+    },
+    "nullable": []
+  },
+  "hash": "2a5e9ef9c329507da4057889b6f143cb3ddb207129fe9a5f0e88310a024ed5a0"
+}

@@ -7,3 +7,35 @@ path = "**"
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 DeckStreak contributors"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+[[annotations]]
+path = "vendor/deepmerge/**"
+precedence = "override"
+SPDX-FileCopyrightText = "2012 James Halliday, Josh Duff, and other contributors"
+SPDX-License-Identifier = "MIT"
+
+# PATCHED.md is DeckStreak's own text about the copy. The last matching table applies to a file,
+# so this one, after the copy's override, keeps it under the project's own annotation.
+[[annotations]]
+path = "vendor/deepmerge/PATCHED.md"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 DeckStreak contributors"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+[[annotations]]
+path = [
+  "docs/assets/deckstreak-hero-tide-light.gif",
+  "ios/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
+  "ios/App/Assets.xcassets/AppIcon.appiconset/AppIcon-dark-1024.png",
+  "ios/App/Assets.xcassets/AppIcon.appiconset/AppIcon-tinted-1024.png",
+  "ios/App/Assets.xcassets/AppIcon.appiconset/Contents.json",
+  "web/app/static/apple-touch-icon.png",
+  "web/app/static/favicon.ico",
+  "web/app/static/favicon.svg",
+  "web/app/static/icon-192.png",
+  "web/app/static/icon-512.png",
+  "web/app/static/icon-maskable-512.png",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "RexRenatus"
+SPDX-License-Identifier = "LicenseRef-DeckStreak-Brand"

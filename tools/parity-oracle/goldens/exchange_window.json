@@ -1,0 +1,115 @@
+{
+  "adapter": "with_a_server",
+  "cases": [
+    {
+      "class": "negative",
+      "input": {
+        "days": -5,
+        "today": 20000
+      },
+      "output": {
+        "end": null,
+        "start": null
+      }
+    },
+    {
+      "class": "zero",
+      "input": {
+        "days": 0,
+        "today": 20000
+      },
+      "output": {
+        "end": null,
+        "start": null
+      }
+    },
+    {
+      "class": "one",
+      "input": {
+        "days": 1,
+        "today": 20000
+      },
+      "output": {
+        "end": 20000,
+        "start": 20000
+      }
+    },
+    {
+      "class": "two",
+      "input": {
+        "days": 2,
+        "today": 20000
+      },
+      "output": {
+        "end": 20000,
+        "start": 19999
+      }
+    },
+    {
+      "class": "week",
+      "input": {
+        "days": 7,
+        "today": 20000
+      },
+      "output": {
+        "end": 20000,
+        "start": 19994
+      }
+    },
+    {
+      "class": "at-the-cap",
+      "input": {
+        "days": 3650,
+        "today": 20000
+      },
+      "output": {
+        "end": 20000,
+        "start": 16351
+      }
+    },
+    {
+      "class": "above-the-cap",
+      "input": {
+        "days": 3651,
+        "today": 20000
+      },
+      "output": {
+        "end": 20000,
+        "start": 16351
+      }
+    },
+    {
+      "class": "far-above-the-cap",
+      "input": {
+        "days": 10000,
+        "today": 20000
+      },
+      "output": {
+        "end": 20000,
+        "start": 16351
+      }
+    },
+    {
+      "class": "another-today",
+      "input": {
+        "days": 30,
+        "today": 20371
+      },
+      "output": {
+        "end": 20371,
+        "start": 20342
+      }
+    }
+  ],
+  "function": "server.create_server",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds the server over a stand-in pipeline that records the window it is asked for, calls the get_xp_exchange_rates tool with the case's days, and returns that window's first and last day, or none; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_075.py",
+  "registry_sha256": "647cd71a23f67d493c65619d7640845186beeb2f58afe24a6dfe70b09bcd0091",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

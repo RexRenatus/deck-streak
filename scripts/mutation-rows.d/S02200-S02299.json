@@ -1,0 +1,24 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S02201-SCHEDULED-SYNC-ONCE-A-STUDY-DAY",
+        "ingest",
+        "src/sync.rs",
+        "                SyncReport::RefusedToday\n",
+        "                self.run(trigger, started).await?\n",
+        "sync::a_second_scheduled_sync_in_one_study_day_is_refused",
+        "a second scheduled sync in one study day is refused before any request (SPEC-022, ADR-037)"
+      ],
+      [
+        "S02202-A-FULL-UPLOAD-IS-NEVER-SATISFIED",
+        "ingest",
+        "src/sync.rs",
+        "                Err(ReasonCode::FullUploadRequired)",
+        "                Ok(false)",
+        "sync::a_server_with_no_collection_is_refused_with_full_upload_required",
+        "a server that holds no collection is refused as full_upload_required, never treated as synced: ingest never uploads (CHARTER 4)"
+      ]
+    ]
+  }
+}

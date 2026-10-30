@@ -1,0 +1,46 @@
+{
+  "cases": [
+    {
+      "input": {
+        "name": "constants.INGEST_WINDOW_DAYS"
+      },
+      "output": 400
+    },
+    {
+      "input": {
+        "name": "constants.INGEST_REBASE_DAYS"
+      },
+      "output": 7
+    },
+    {
+      "input": {
+        "name": "anki_reader._CARD_FIELD_WEIGHTS"
+      },
+      "output": [
+        131,
+        137,
+        139,
+        149,
+        151,
+        157,
+        163
+      ]
+    },
+    {
+      "input": {
+        "name": "anki_reader._CARDS_FINGERPRINT_MOD"
+      },
+      "output": 1000000007
+    }
+  ],
+  "function": "ingest.constants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "constants",
+  "registry": "tools/parity-oracle/registry/spec_023.py",
+  "registry_sha256": "026e22ff12807ce0338220a4afe850ec60178625e377995bb0d7b492b1f8fc67",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

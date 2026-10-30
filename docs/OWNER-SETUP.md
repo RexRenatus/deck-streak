@@ -31,15 +31,22 @@ way (the bot's first `/start` from you logs a hint to look it up; it is never wr
 
 ## 3. The Anki sync server
 
-DeckStreak reads your own Anki sync server; it never logs in to AnkiWeb. Store the sync server's
-URL, username and password as secrets. Serve the sync server over HTTPS if you can: a plain-HTTP
-sync server sends its credentials in the clear.
+DeckStreak reads your own Anki sync server; it never logs in to AnkiWeb, and it never uploads to
+your server (ADR-037). Set the server's URL as the setting `DECKSTREAK_SYNC_ENDPOINT` in the host's
+private configuration, never in this repository. Store the account's username and password as the
+secrets `anki-sync-username` and `anki-sync-password`; they reach the service as credentials at
+start (ADR-038).
 
-## 4. The AI agent's device key
+The transport is your decision. Serve the sync server over HTTPS if you can: with a plain `http:`
+URL the credentials cross the network in the clear, and the service says so once at start, in a
+WARN line that names the setting and never its value.
 
-The agent reaches your subscription proxy with its own device key. Create the key, add it to the
-proxy's device roster (which restarts the proxy), and store it as a secret. The agent reads it into
-its process environment at launch and never writes it to disk.
+## 4. The AI agent's device key (optional; only when you enable the AI route)
+
+DeckStreak runs whole without an AI route: the readings say they are not enabled, and nothing alerts
+(ADR-054). To enable the subscription route, create the agent's own device key, add it to the proxy's
+device roster (which restarts the proxy), and store it as a secret. It reaches the agent's unit
+through the credential socket at start and is never written to disk (ADR-038).
 
 ## 5. Hosting and HTTPS
 
@@ -74,8 +81,9 @@ bash scripts/github-setup.sh
 ```
 
 It sets the default branch, applies the rulesets for `main`, `dev` and release tags, and turns on
-secret scanning, push protection, Dependabot alerts and security updates, and private
-vulnerability reporting.
+secret scanning, push protection, Dependabot alerts and private vulnerability reporting.
+Dependabot's automated security fixes stay off, because they would open against `main` (ADR-036);
+each alert is triaged, and a fixable one becomes a pull request into `dev`.
 
 ## 9. Each deploy
 

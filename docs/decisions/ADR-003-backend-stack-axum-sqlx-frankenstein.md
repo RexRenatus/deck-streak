@@ -10,7 +10,8 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 
 The owner chose "port it to rust" and approved a house stack (the stack-selection pack's golden
 paths, owner-approved on the radar). DeckStreak needs an HTTPS API for the Mini App, a Telegram
-bot, a SQLite store and structured logs, on a 2 vCPU / 1.9 GiB VM.
+bot, a SQLite store and structured logs, on one small host within a stated memory budget
+(CHARTER 3).
 
 ## Decision Drivers
 
@@ -52,3 +53,6 @@ The stack-selection pack's rows (`pinned-majors`, `no-hold-items`, `stack-matche
 ## More Information
 
 The stack-selection pack and `radar.json` (vendored under `.packs/`); the rust-service and observability packs.
+
+Amendment (2026-09-28): one passage stating the host's size, in the context, was redacted under the
+public-prose rule (ADR-059).

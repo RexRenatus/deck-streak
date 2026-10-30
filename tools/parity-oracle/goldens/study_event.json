@@ -1,0 +1,520 @@
+{
+  "adapter": "on_a_review",
+  "cases": [
+    {
+      "class": "grid",
+      "input": {
+        "ease": -1,
+        "rtype": -1
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 0,
+        "rtype": -1
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 1,
+        "rtype": -1
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 2,
+        "rtype": -1
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 3,
+        "rtype": -1
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 4,
+        "rtype": -1
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 5,
+        "rtype": -1
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": -1,
+        "rtype": 0
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 0,
+        "rtype": 0
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 1,
+        "rtype": 0
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 2,
+        "rtype": 0
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 3,
+        "rtype": 0
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 4,
+        "rtype": 0
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 5,
+        "rtype": 0
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": -1,
+        "rtype": 1
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 0,
+        "rtype": 1
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 1,
+        "rtype": 1
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 2,
+        "rtype": 1
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 3,
+        "rtype": 1
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 4,
+        "rtype": 1
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 5,
+        "rtype": 1
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": -1,
+        "rtype": 2
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 0,
+        "rtype": 2
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 1,
+        "rtype": 2
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 2,
+        "rtype": 2
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 3,
+        "rtype": 2
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 4,
+        "rtype": 2
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 5,
+        "rtype": 2
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": -1,
+        "rtype": 3
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 0,
+        "rtype": 3
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 1,
+        "rtype": 3
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 2,
+        "rtype": 3
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 3,
+        "rtype": 3
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 4,
+        "rtype": 3
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 5,
+        "rtype": 3
+      },
+      "output": true
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": -1,
+        "rtype": 4
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 0,
+        "rtype": 4
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 1,
+        "rtype": 4
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 2,
+        "rtype": 4
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 3,
+        "rtype": 4
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 4,
+        "rtype": 4
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 5,
+        "rtype": 4
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": -1,
+        "rtype": 5
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 0,
+        "rtype": 5
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 1,
+        "rtype": 5
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 2,
+        "rtype": 5
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 3,
+        "rtype": 5
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 4,
+        "rtype": 5
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 5,
+        "rtype": 5
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": -1,
+        "rtype": 6
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 0,
+        "rtype": 6
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 1,
+        "rtype": 6
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 2,
+        "rtype": 6
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 3,
+        "rtype": 6
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 4,
+        "rtype": 6
+      },
+      "output": false
+    },
+    {
+      "class": "grid",
+      "input": {
+        "ease": 5,
+        "rtype": 6
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "ease": 7,
+        "rtype": 8
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "ease": 9,
+        "rtype": 9
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "ease": 1,
+        "rtype": -1
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "ease": 7,
+        "rtype": 7
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "ease": 2,
+        "rtype": -2
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "ease": -1,
+        "rtype": 6
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "ease": 3,
+        "rtype": -3
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "ease": -2,
+        "rtype": 3
+      },
+      "output": false
+    }
+  ],
+  "function": "types.Review.is_study_event",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Reads the property on a Review holding the case's type and ease, every other field zero; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_023.py",
+  "registry_sha256": "026e22ff12807ce0338220a4afe850ec60178625e377995bb0d7b492b1f8fc67",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

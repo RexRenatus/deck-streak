@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, lapse_since, standby, notified_day, created_at FROM governor_state",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "governor_state",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "lapse_since",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "governor_state",
+            "name": "lapse_since"
+          }
+        }
+      },
+      {
+        "name": "standby",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "governor_state",
+            "name": "standby"
+          }
+        }
+      },
+      {
+        "name": "notified_day",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "governor_state",
+            "name": "notified_day"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "governor_state",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "6d4f14f4e14e46811ea0868860ad02254c09b32d6946aa7afe4a4b9aa856750f"
+}

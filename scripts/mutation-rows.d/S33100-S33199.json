@@ -1,0 +1,78 @@
+{
+  "tables": {
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S33100-A-ONE-CHARACTER-PIECE-STAYS-OUT-OF-THE-POOL",
+        "tools/table-census/table_census.rs",
+        "part.chars().count() < 2",
+        "part.chars().count() < 1",
+        "progression",
+        "ledger_census::a_lone_character_unjoined_in_its_file_completes_no_path",
+        "a piece of one character stays out of the workspace-wide pool and is judged only in a file's reach; pooled, one unrelated character completes a path and refuses every file of a lone-character tree (SPEC-331 R1)"
+      ],
+      [
+        "S33101-A-REACH-FOLLOWS-ITS-FILES-INCLUDES",
+        "tools/table-census/table_census.rs",
+        "pending.extend(self.included.get(&next).into_iter().flatten().cloned());",
+        "pending.extend(self.included.get(&next).into_iter().flatten().cloned().filter(|_| false));",
+        "progression",
+        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "a file's reach holds the pieces of every file it includes, transitively; without the include step, a character held in an included file no longer joins its includer's pieces and that spelling goes unrefused (SPEC-331 R2)"
+      ],
+      [
+        "S33102-A-REACH-HOLDS-THE-ITEMS-ITS-FILE-NAMES",
+        "tools/table-census/table_census.rs",
+        "self.items.get(name)",
+        "self.items.get(name).filter(|_| false)",
+        "progression",
+        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "a file's reach holds the pieces of every const or static item it names; without them, a character held by a named const in another file no longer joins and that spelling goes unrefused (SPEC-331 R2)"
+      ],
+      [
+        "S33103-EACH-FILES-REACH-COVERS-THE-NAME",
+        "tools/table-census/table_census.rs",
+        "covered.extend(covering(table, &reader.reach(file)));",
+        "covered.extend(covering(table, &reader.reach(file)).into_iter().filter(|_| false));",
+        "progression",
+        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "the name is covered when one file's reach covers it; with the reaches discarded, only the pool of two or more characters judges and every spelling joined through a one-character piece goes unrefused (SPEC-331 R3)"
+      ],
+      [
+        "S33104-A-FORMAT-PLACEHOLDER-NAMES-AN-ITEM",
+        "tools/table-census/table_census.rs",
+        "if template {",
+        "if template && part.is_empty() {",
+        "progression",
+        "xp_census::the_joins_the_census_names_stay_refused",
+        "a format string's placeholder name is a name its file writes; unrecorded, a one-character const captured inline by a format string from another file no longer reaches its join (SPEC-331 R2, A2)"
+      ],
+      [
+        "S33105-A-WORD-NAMES-AN-ITEM",
+        "tools/table-census/table_census.rs",
+        ".insert(word.to_owned());",
+        ".insert(String::new());",
+        "progression",
+        "ledger_census::a_reserved_name_joined_from_literals_is_refused_in_every_spelling",
+        "every word a file writes is a name that can name an item; recorded as nothing, a one-character const named from another file no longer reaches the file that names it (SPEC-331 R2)"
+      ],
+      [
+        "S33106-A-METAVARIABLE-ITEM-POOLS-ITS-CHARACTERS",
+        "tools/table-census/table_census.rs",
+        "self.item.as_deref() != Some(\"$\")",
+        "self.item.as_deref() != Some(\"\")",
+        "progression",
+        "xp_census::the_joins_the_census_names_stay_refused",
+        "a const or static item named by a macro's metavariable has a name the reader cannot read, so its one-character pieces stay in the workspace-wide pool, failing closed; held back, a macro-defined one-character const joins nothing (SPEC-331 R2, A2)"
+      ],
+      [
+        "S33107-A-FILE-READ-HAS-A-REACH-OF-ITS-OWN",
+        "tools/table-census/table_census.rs",
+        "self.local.entry(file.to_owned()).or_default();",
+        "",
+        "progression",
+        "xp_census::a_join_in_a_file_holding_no_literal_stays_refused",
+        "every file read has a reach, also one that holds no piece of its own; unrecorded, a joining file with no literal never has its reach judged, so three pieces joined only through the items it names stop being refused (SPEC-331 R2, AD2)"
+      ]
+    ]
+  }
+}

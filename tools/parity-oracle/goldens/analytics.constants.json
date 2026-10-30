@@ -1,0 +1,171 @@
+{
+  "cases": [
+    {
+      "input": {
+        "name": "constants.ANSWER_TIME_CAP_SECONDS"
+      },
+      "output": 60.0
+    },
+    {
+      "input": {
+        "name": "constants.MATURE_IVL_DAYS"
+      },
+      "output": 21
+    },
+    {
+      "input": {
+        "name": "constants.DEFAULT_LEECH_THRESHOLD"
+      },
+      "output": 8
+    },
+    {
+      "input": {
+        "name": "constants.WEIGHT_CONSISTENCY"
+      },
+      "output": 0.3
+    },
+    {
+      "input": {
+        "name": "constants.WEIGHT_RETENTION"
+      },
+      "output": 0.25
+    },
+    {
+      "input": {
+        "name": "constants.WEIGHT_WORKLOAD"
+      },
+      "output": 0.2
+    },
+    {
+      "input": {
+        "name": "constants.WEIGHT_VOLUME"
+      },
+      "output": 0.15
+    },
+    {
+      "input": {
+        "name": "constants.WEIGHT_MASTERY"
+      },
+      "output": 0.1
+    },
+    {
+      "input": {
+        "name": "constants.RETENTION_FLOOR_PCT"
+      },
+      "output": 50.0
+    },
+    {
+      "input": {
+        "name": "constants.RETENTION_CEIL_PCT"
+      },
+      "output": 95.0
+    },
+    {
+      "input": {
+        "name": "constants.RETENTION_MIN_SAMPLE"
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "name": "constants.RETENTION_BLEND_TARGET"
+      },
+      "output": 70.0
+    },
+    {
+      "input": {
+        "name": "constants.VOLUME_REVIEW_WEIGHT"
+      },
+      "output": 0.6
+    },
+    {
+      "input": {
+        "name": "constants.VOLUME_TIME_WEIGHT"
+      },
+      "output": 0.4
+    },
+    {
+      "input": {
+        "name": "constants.VOLUME_CAP_RATIO"
+      },
+      "output": 1.25
+    },
+    {
+      "input": {
+        "name": "constants.MASTERY_GRADUATION_TARGET"
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "name": "constants.MASTERY_LEECH_PENALTY"
+      },
+      "output": 3.0
+    },
+    {
+      "input": {
+        "name": "constants.MASTERY_LEECH_PENALTY_CAP"
+      },
+      "output": 30.0
+    },
+    {
+      "input": {
+        "name": "constants.WORKLOAD_BACKLOG_DIVISOR"
+      },
+      "output": 5.0
+    },
+    {
+      "input": {
+        "name": "constants.WORKLOAD_BACKLOG_PENALTY_CAP"
+      },
+      "output": 40.0
+    },
+    {
+      "input": {
+        "name": "constants.GRADE_BANDS"
+      },
+      "output": [
+        [
+          90,
+          "LEGENDARY",
+          "\ud83c\udfc6"
+        ],
+        [
+          75,
+          "ON FIRE",
+          "\ud83d\udd25"
+        ],
+        [
+          60,
+          "SOLID",
+          "\u2705"
+        ],
+        [
+          40,
+          "SHAKY",
+          "\u26a0\ufe0f"
+        ],
+        [
+          1,
+          "COLD",
+          "\ud83e\udd76"
+        ],
+        [
+          0,
+          "NO STUDY",
+          "\ud83d\udca4"
+        ]
+      ]
+    }
+  ],
+  "function": "analytics.constants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "constants",
+  "registry": "tools/parity-oracle/registry/spec_071.py",
+  "registry_sha256": "f1c7ec842fede7f22e07a58b4c7043d57049f0b0c78a9419b6c7d77f2cdf2402",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

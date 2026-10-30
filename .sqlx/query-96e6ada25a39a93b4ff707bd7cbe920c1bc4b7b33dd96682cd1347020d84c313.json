@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO skip_days (study_day, due_count, state, created_at) VALUES (?1, ?2, 'pending', ?3) ON CONFLICT (study_day) WHERE state IN ('pending', 'applied') AND undone = 0 DO NOTHING RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_days",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "96e6ada25a39a93b4ff707bd7cbe920c1bc4b7b33dd96682cd1347020d84c313"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE governor_state SET lapse_since = NULL, standby = 0, notified_day = NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "ea55e1c44c37bec675ce95b0c108aecdbf720d91df0516912cc34c09a34f55db"
+}

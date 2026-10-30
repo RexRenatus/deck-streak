@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT study_day, created_at FROM relight_due ORDER BY study_day",
+  "describe": {
+    "columns": [
+      {
+        "name": "study_day",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "relight_due",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "relight_due",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "463431877a7c46b133e1c7b9ad11496c3dab1196ac1cc67c037046b7e5a2c46f"
+}

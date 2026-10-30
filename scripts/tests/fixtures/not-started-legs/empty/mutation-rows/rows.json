@@ -1,0 +1,37 @@
+[
+  {
+    "id": "S04312-A-VOID-PROBE-IS-NAMED",
+    "target": "crates/agent/src/gate.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S04313-AN-EMPTY-PROBE-IS-NAMED",
+    "target": "crates/agent/src/gate.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S04323-THE-EMPTY-CLASS-LIST-IS-REFUSED",
+    "target": "crates/agent/src/gate.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S04324-A-DUTY-THAT-READS-INPUTS-NEEDS-AN-INPUT-CLASS",
+    "target": "crates/agent/src/gate.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S04325-THE-VERDICT-IS-MUST-USE",
+    "target": "crates/agent/src/verdict.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S04326-THE-PRUNE-INDEX-IS-CREATED",
+    "target": "migrations/004302_agent_runs_created_at_index.sql",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S04327-THE-PRUNE-INDEX-IS-ON-CREATED-AT",
+    "target": "migrations/004302_agent_runs_created_at_index.sql",
+    "verdict": "KILLED"
+  }
+]

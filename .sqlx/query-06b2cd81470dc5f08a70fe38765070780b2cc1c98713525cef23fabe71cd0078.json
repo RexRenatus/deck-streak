@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE band_milestones SET celebrated_at = ?3 WHERE course = ?1 AND band = ?2 AND baseline = 0 AND celebrated_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "06b2cd81470dc5f08a70fe38765070780b2cc1c98713525cef23fabe71cd0078"
+}

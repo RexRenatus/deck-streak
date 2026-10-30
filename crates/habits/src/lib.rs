@@ -10,3 +10,9 @@
 #![forbid(unsafe_code)]
 #![deny(unused_must_use)]
 #![warn(missing_docs, clippy::all)]
+
+pub mod badges;
+pub mod data_rights;
+pub mod minutes;
+pub mod store;
+pub mod writing;

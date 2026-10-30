@@ -1,0 +1,102 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S34401-THE-TAG-FILTER-IS-THE-RELEASES",
+        ".github/workflows/apple-on-tag.yml",
+        "      - 'v[0-9]+.[0-9]+.[0-9]+'\n",
+        "      - 'v*'\n",
+        "the tag caller admits exactly the tags the release workflow admits (SPEC-344 R3)",
+        "test_release_workflow.TheAppleBuildRunsOnEveryReleaseTag.test_the_tag_caller_runs_the_build_on_every_release_tag"
+      ],
+      [
+        "S34402-THE-TAG-CALLER-RUNS-ON-TAGS-ALONE",
+        ".github/workflows/apple-on-tag.yml",
+        "  push:\n    tags:\n",
+        "  push:\n    branches: [main]\n    tags:\n",
+        "the tag caller's push carries a tag filter and nothing else (SPEC-344 R3)",
+        "test_release_workflow.TheAppleBuildRunsOnEveryReleaseTag.test_the_tag_caller_runs_the_build_on_every_release_tag"
+      ],
+      [
+        "S34403-THE-TAG-CALLER-QUEUES-EVERY-RUN",
+        ".github/workflows/apple-on-tag.yml",
+        "  queue: max\n",
+        "",
+        "every run of one tag waits its turn in the release class's group (SPEC-344 R3)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S34404-THE-CHANGE-CALLER-WATCHES-THE-MANIFEST",
+        ".github/workflows/apple-on-change.yml",
+        "      - \"Cargo.toml\"\n",
+        "",
+        "a change to the workspace manifest runs the Apple build (SPEC-344 R2)",
+        "test_ci_workflows.TheAppleBuildRunsFromOneBody.test_the_change_caller_runs_the_build_on_each_apple_path"
+      ],
+      [
+        "S34405-THE-CHANGE-CALLER-WATCHES-THE-TOOLCHAIN",
+        ".github/workflows/apple-on-change.yml",
+        "      - \"rust-toolchain.toml\"\n",
+        "",
+        "a change to the toolchain pin runs the Apple build (SPEC-344 R2)",
+        "test_ci_workflows.TheAppleBuildRunsFromOneBody.test_the_change_caller_runs_the_build_on_each_apple_path"
+      ],
+      [
+        "S34406-THE-CHANGE-CALLER-CALLS-WITHOUT-A-REF",
+        ".github/workflows/apple-on-change.yml",
+        "    uses: $/.github/workflows/xcframework.yml\n",
+        "    uses: $/.github/workflows/xcframework.yml@dev\n",
+        "the change caller calls the job body as a local call with no ref (SPEC-344 R2, R5)",
+        "test_ci_workflows.WorkflowsAreHardened.test_a_call_job_is_a_local_call_or_pinned"
+      ],
+      [
+        "S34407-THE-JOB-BODY-IS-CALLED-NOT-TRIGGERED",
+        ".github/workflows/xcframework.yml",
+        "on:\n  workflow_call:\n",
+        "on:\n  pull_request:\n",
+        "the job body takes a call and no pull request of its own (SPEC-344 R1)",
+        "test_ci_workflows.TheAppleBuildRunsFromOneBody.test_one_job_body_serves_the_change_and_the_tag"
+      ],
+      [
+        "S34408-THE-STATIC-LIBRARIES-BUILD-LOCKED",
+        ".github/workflows/xcframework.yml",
+        "cargo rustc --locked --release",
+        "cargo rustc --release",
+        "the static libraries resolve only the locked graph (SPEC-344 R6)",
+        "test_ci_workflows.TheAppleBuildRunsFromOneBody.test_the_apple_build_resolves_only_the_locked_graph"
+      ],
+      [
+        "S34409-THE-TAG-CALLER-CALLS-A-FILE-THAT-IS-HERE",
+        ".github/workflows/apple-on-tag.yml",
+        "    uses: $/.github/workflows/xcframework.yml\n",
+        "    uses: $/.github/workflows/missing.yml\n",
+        "the tag caller calls a workflow file that is here and takes a call (SPEC-344 R3)",
+        "test_workflow_concurrency.EveryReleaseWorkflowQueuesEveryRun.test_every_workflow_that_can_hold_two_runs_of_a_release_queues_them"
+      ],
+      [
+        "S34410-A-STEP-IS-NOT-A-CALL-JOB",
+        "scripts/tests/test_ci_workflows.py",
+        "[(item, name == \"uses\" and len(path) == 2 and path[0] == \"jobs\")]",
+        "[(item, name == \"uses\")]",
+        "the pin census marks a call job's own uses and no step's (SPEC-344 R5)",
+        "test_ci_workflows.WorkflowsAreHardened.test_a_call_job_is_a_local_call_or_pinned"
+      ],
+      [
+        "S34411-A-LOCAL-CALL-IS-ADMITTED-BY-ITS-SHAPE",
+        "scripts/tests/test_ci_workflows.py",
+        "if is_call and isinstance(ref, str) and LOCAL_CALL.fullmatch(ref):",
+        "if is_call and isinstance(ref, str) and ref.startswith(\"./\"):",
+        "the pin census admits a local call by its full shape and not by a prefix (SPEC-344 R5)",
+        "test_ci_workflows.WorkflowsAreHardened.test_a_call_job_is_a_local_call_or_pinned"
+      ],
+      [
+        "S34412-A-DOUBLE-STAR-CROSSES-A-SLASH",
+        "scripts/tests/test_ci_workflows.py",
+        "out, at = out + \".*\", at + 2",
+        "out, at = out + \"[^/]*\", at + 2",
+        "the path filter's double star crosses a slash as GitHub reads it (SPEC-344 A1)",
+        "test_ci_workflows.TheAppleBuildRunsFromOneBody.test_the_change_caller_runs_the_build_on_each_apple_path"
+      ]
+    ]
+  }
+}

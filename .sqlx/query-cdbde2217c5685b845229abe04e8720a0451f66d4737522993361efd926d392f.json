@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT count(*) AS \"failures!: i64\" FROM sync_runs\n               WHERE status = 'error'\n                 AND id > coalesce((SELECT max(id) FROM sync_runs WHERE status != 'error'), 0)",
+  "describe": {
+    "columns": [
+      {
+        "name": "failures!: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "cdbde2217c5685b845229abe04e8720a0451f66d4737522993361efd926d392f"
+}

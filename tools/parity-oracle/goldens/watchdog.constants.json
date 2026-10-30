@@ -1,0 +1,26 @@
+{
+  "cases": [
+    {
+      "input": {
+        "name": "watchdog._MIN_WATCHDOG_SEC"
+      },
+      "output": 5.0
+    },
+    {
+      "input": {
+        "name": "watchdog._HEARTBEAT_DIVISOR"
+      },
+      "output": 3.0
+    }
+  ],
+  "function": "watchdog.constants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "constants",
+  "registry": "tools/parity-oracle/registry/spec_025.py",
+  "registry_sha256": "4e47727c78134c86f4ca6fddbaaec0763b9d7b702dd64379315313a5d0e7642f",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

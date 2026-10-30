@@ -1,0 +1,20 @@
+# DeckStreak's Python style: 100-column lines, and fixes that never delete code a red-first commit
+# relies on (`ruff check --fix` must not remove an import or a variable a stub leaves unused).
+#
+# Excluded, and skipped even when passed by name (`force-exclude`), because their bytes are pinned:
+# the parity oracle's generator and registry modules (each golden records their digests; SPEC-029),
+# and the second oracle's driver, corpus and registry (the same digests, and the corpus pinned by
+# its registry; SPEC-498).
+line-length = 100
+target-version = "py311"
+force-exclude = true
+extend-exclude = [
+    "tools/parity-oracle/generate.py",
+    "tools/parity-oracle/registry",
+    "tools/parity-oracle/anki/generate.py",
+    "tools/parity-oracle/anki/corpus.py",
+    "tools/parity-oracle/anki/registry",
+]
+
+[lint]
+unfixable = ["F401", "F841"]

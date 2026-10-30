@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE write_class_stop SET stopped = 1, set_by = ?1, reason = ?2, set_at = ?3\n             WHERE id = 1 AND stopped = 0",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "22cba5b6ddb785b4ebab97f0c9202d36dc0dfd2d642efacc9906849555a38dda"
+}

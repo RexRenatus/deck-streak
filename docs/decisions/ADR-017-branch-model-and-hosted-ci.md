@@ -56,3 +56,7 @@ CONTRIBUTING.md; RELEASING.md; the release-ops and cyber-pipeline packs.
 Superseded in part by ADR-034: `main` is never merged back into `dev`, `main` does not require an
 up-to-date head, `base-is-dev` is enforced through `ci`, and the rulesets were active on the
 private repository. ADR-035 pins the required checks to GitHub Actions and refuses a fork's `dev`.
+
+Amendment (2026-09-28): a squash merge takes the pull request's title and a blank body
+(`scripts/github-setup.sh`, the `settings` step), so no branch commit's message reaches the base
+branch through a squash. A merge that wants a body passes one explicitly.

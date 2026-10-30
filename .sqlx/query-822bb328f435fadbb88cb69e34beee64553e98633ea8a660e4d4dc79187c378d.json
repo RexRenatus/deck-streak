@@ -1,0 +1,146 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id!\", run_id, study_day, topic, state, class, reason, digest, card_ids,\n                      note_ids, new_cards\n               FROM reading_topic_days WHERE study_day = ?1 ORDER BY topic",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "reading_topic_days",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "run_id",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "reading_topic_days",
+            "name": "run_id"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "reading_topic_days",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "topic",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_topic_days",
+            "name": "topic"
+          }
+        }
+      },
+      {
+        "name": "state",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_topic_days",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "name": "class",
+        "ordinal": 5,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_topic_days",
+            "name": "class"
+          }
+        }
+      },
+      {
+        "name": "reason",
+        "ordinal": 6,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_topic_days",
+            "name": "reason"
+          }
+        }
+      },
+      {
+        "name": "digest",
+        "ordinal": 7,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_topic_days",
+            "name": "digest"
+          }
+        }
+      },
+      {
+        "name": "card_ids",
+        "ordinal": 8,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_topic_days",
+            "name": "card_ids"
+          }
+        }
+      },
+      {
+        "name": "note_ids",
+        "ordinal": 9,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_topic_days",
+            "name": "note_ids"
+          }
+        }
+      },
+      {
+        "name": "new_cards",
+        "ordinal": 10,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "reading_topic_days",
+            "name": "new_cards"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "822bb328f435fadbb88cb69e34beee64553e98633ea8a660e4d4dc79187c378d"
+}

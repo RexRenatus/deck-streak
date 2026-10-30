@@ -1,0 +1,260 @@
+# Red-first record: SPEC-049
+
+## The lapse slice (ADR-088)
+
+The predecessor's lapse episode was registered and generated first (72e5f92), an inert `open_lapse`
+that compiled and always answered no lapse was committed in streaks and in coordination
+(474da3f), then the tests were committed (5fb50bd). Each criterion was run there with the SPEC's own
+fenced command and failed by assertion, not by a compile error, a missing fixture or an empty
+selection. The implementation followed in two commits, streaks first (fed4e0a) and coordination
+second (d392ab7). Between the red and the green no test changed what it asserts, and one test that was never red,
+`an_empty_window_holds_no_lapse`, gained a positive assertion after the tdd probe refused it for
+asserting only an absence. A15 stays red
+until the coordination commit because it counts through streaks' rule, which the first green
+supplies.
+
+```red-first
+A11: red at 5fb50bd4f939f0cdd1a4c7d99050c9f83ea5e77f: assertion `left == right` failed: class Some("three-silent"), the predecessor's lapse differs; left: None, right: Some(19998)
+A11: green at fed4e0a6a0f8bfdd40fa916bc780e0bdb407dd10
+A12: red at 5fb50bd4f939f0cdd1a4c7d99050c9f83ea5e77f: assertion `left == right` failed: three silent days; left: None, right: Some(19998)
+A12: green at fed4e0a6a0f8bfdd40fa916bc780e0bdb407dd10
+A13: red at 5fb50bd4f939f0cdd1a4c7d99050c9f83ea5e77f: assertion `left == right` failed: the third silent day; left: None, right: Some(19996)
+A13: green at fed4e0a6a0f8bfdd40fa916bc780e0bdb407dd10
+A15: red at 5fb50bd4f939f0cdd1a4c7d99050c9f83ea5e77f: assertion `left == right` failed; left: None, right: Some(StudyDay(19997))
+A15: green at d392ab75dbaec5b44332ca1362dd09e6dc67249e
+```
+
+## The lapse walk's first day and the rollover boundary (issue 422; the 2026-09-29 amendment)
+
+The code already satisfies R13 and R15, so no new test is red at the base: each criterion below
+passes on the unchanged `open_lapse` in both crates, and each is recorded `not red` with the reason.
+What each test is worth is shown by the plants: the tests were run beside a planted copy of the
+production line, and each plant below turns them red by assertion. Each class has one rule. Class W:
+the walk reads every day of its window and no other. Class R: a review counts on the study day the
+configured rule gives its instant. Each test generates its population (the walk's 2,252 members and
+the mapping's 448) and judges every member against an oracle written in the test from the rule's
+words, never by calling the function under test.
+
+```red-first
+A16: not red: the walk already reads its whole window; the test's population is generated and its oracle is R13's words, so it pins the bounds and cannot turn red until a plant moves them (see the plants below)
+A17: not red: the mapping already uses the configured rule; the test's population and its begins(day) oracle pin every boundary and cannot turn red until a plant changes the day (see the plants below)
+A18: not red: the window's first day is already read; the two cases from the issue are members of A16's population, named on their own
+```
+
+A15's red panic, read as measured at the red commit (5fb50bd4f939f0cdd1a4c7d99050c9f83ea5e77f): the
+test compares the ids as plain day numbers, so the first assertion (the test's line 56) reads
+`assertion left == right failed`, `left: None`, `right: Some(19997)`. The A15 line above shows the
+right side as a `StudyDay`; the day number is what the test compares.
+
+The plants, each applied to a clean copy of the committed tests and quoted with its first red line
+by assertion (test file line numbers are the committed file's). Plants on `crates/streaks/src/lapse.rs`,
+against `the_walk_reads_every_day_of_its_window_and_none_outside_it` (W) and
+`a_silent_run_on_the_windows_first_day_is_read` (F):
+
+```text
+(a) -    while number >= window_start {  ->  +    while number > window_start {
+    F: panicked at crates/streaks/tests/lapse.rs:237:5: left: Some(19998) right: Some(19997)
+    W: panicked at crates/streaks/tests/lapse.rs:227:5: left: None right: Some(20001)
+(b) the window's start one day earlier: let window_start = ....epoch_day() - 1;
+    F: panicked at crates/streaks/tests/lapse.rs:237:5: left: Some(19996) right: Some(19997)
+    W: panicked at crates/streaks/tests/lapse.rs:227:5: left: Some(20000) right: None
+(e1) the window's start is its LAST key (next_back)
+    W: panicked at crates/streaks/tests/lapse.rs:227:5: left: None right: Some(20001)
+(e2) the walk starts one day before today (today.epoch_day() - 1)
+    F: panicked at crates/streaks/tests/lapse.rs:240:5: left: None right: Some(19998)
+(e3) the walk steps two days (checked_sub(2))
+    F: panicked at crates/streaks/tests/lapse.rs:237:5: left: None right: Some(19997)
+    W: panicked at crates/streaks/tests/lapse.rs:227:5: left: None right: Some(20001)
+    (the existing A12, A13 and A11 tests fail too)
+(e4) the window's first day is never silent (&& number != window_start)
+    F: panicked at crates/streaks/tests/lapse.rs:237:5: left: Some(19998) right: Some(19997)
+    W: panicked at crates/streaks/tests/lapse.rs:227:5: left: None right: Some(20001)
+(e5) a review closes the run only from two reviews (> 1)
+    F: panicked at crates/streaks/tests/lapse.rs:240:5: left: Some(19997) right: Some(19998)
+    W: panicked at crates/streaks/tests/lapse.rs:227:5: left: Some(20000) right: None
+    (the existing tests fail too)
+```
+
+Plants on `crates/coordination/src/lapse.rs`, each against
+`a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary`, which panics at
+`crates/coordination/tests/lapse.rs:181:21`:
+
+```text
+(c) the study day is the UTC date: StudyDay::from_epoch_day(review.id.div_euclid(86_400_000))
+    left: None right: Some(20000)
+(d) the rollover taken as the default: StudyDayRule::default().study_day(...)
+    left: None right: Some(20000)
+(e1) the review's instant minus one millisecond      left: Some(20000) right: Some(20001)
+(e2) the review's instant plus one millisecond       left: None right: Some(20000)
+(e3) the review's instant plus one hour              left: None right: Some(20000)
+(e4) the review's instant minus the offset           left: None right: Some(20000)
+```
+
+No plant stayed green, so none is recorded as equivalent. Rows S04907 to S04919 carry every plant a row admits:
+(a), (b) and (e1) to (e5) of the walk (S04907, S04908, S04913 to S04917), and (c), (d) and (e1) to (e4) of the
+mapping (S04909 to S04912, S04918, S04919). Over dev's tests, (a), (b) and (e4) of the walk and every plant of
+the mapping pass; (e1), (e2), (e3) and (e5) of the walk are killed there by the existing tests as well.
+
+## The lapse populations pin their spread (issue 453; the 2026-09-30 amendment)
+
+The counts already hold at the base, so the new distinct assertions cannot be red on their own. They
+were committed beside two planted folds of the generators (9c46b04a5d561f716150f0236a9ce94664077b92):
+in the walk's generator, place 0 of the run never enters the skip mask; in the mapping's, the offset
+345 is written 330. Both plants keep the examined count and drop the distinct count, so the examined
+assertions stay green and the distinct ones are red by assertion. The plants were removed in
+2ad7e316058f2b958f4985a857c063d67e3b6feb.
+
+```red-first
+A19: red at 9c46b04a5d561f716150f0236a9ce94664077b92: assertion `left == right` failed: the population's spread: 964 distinct of 2252; left: 964, right: 1916
+A19: green at 2ad7e316058f2b958f4985a857c063d67e3b6feb
+A20: red at 9c46b04a5d561f716150f0236a9ce94664077b92: assertion `left == right` failed: the population's spread: 392 distinct of 448; left: 392, right: 448
+A20: green at 2ad7e316058f2b958f4985a857c063d67e3b6feb
+```
+
+Printed lines on the green tree: `examined 2252 window member(s), 1916 distinct` and
+`examined 448 rollover member(s), 448 distinct`. At the base the walk's population also holds 1916
+distinct members of 2252: 336 repeat, 224 because for one or two earlier days the second and third
+fills are the same map, and 112 because with no earlier day the pass that skips the closing day
+skips nothing more and repeats the pass before it. Each repeat follows its first occurrence, so none
+changes a verdict.
+
+Further plants, each applied to a clean copy of the tests at 2ad7e316058f2b958f4985a857c063d67e3b6feb
+(the line numbers are that file's; a later commit only fits the walk's test to clippy's line limit),
+with the first red line by assertion. Each keeps the examined count and drops the distinct count:
+
+```text
+W fold, and the walk's `|| number == window_start` on the skip test, together
+    panicked at crates/streaks/tests/lapse.rs:359:5: 964 distinct of 2252 (left: 964, right: 1916)
+    (the walk plant alone is red by the oracle: the walk differs from R13; the fold alone hid it at the base)
+W a fill replaced by a copy of another        1468 distinct of 2252
+W the future-study axis is [false, false]     964 distinct of 2252
+W the closing-day axis is [false, false]      1020 distinct of 2252
+R two offsets made equal                      392 distinct of 448
+R the hour axis is [4, 4]                     224 distinct of 448
+R an instant replaced by a copy of another    384 distinct of 448
+R a now replaced by a copy of another         336 distinct of 448
+```
+
+A plant that changes the examined count (a run length listed twice: 2572 members) is red by the
+examined assertion, as before. No plant stayed green, so none is recorded as equivalent. Rows S04921
+to S04926 carry one plant of each class (the walk's mask fold, fill copy and axis collapse; the
+mapping's offset fold, hour collapse and now copy). Each is KILLED by full id on the committed tree,
+and each survives over the base tests, which assert no distinct count.
+
+### Fix round 1: each judge records its own member
+
+The rollover test recorded a member from the generator's loop variables, so a fold of one judge's
+input kept every count. Each judge now records its member from the arguments it is handed: the lapse
+member is the rule, the instant of now and each review's instant, kind and ease (448 distinct), and
+the day member is the rule and the instant (112 distinct, the new `DISTINCT_DAY_MEMBERS`). The
+criterion is A20, whose red and green lines above stay as they are; this replay is prose.
+
+The per-judge counts were committed beside two planted folds (e38cc56247459e21e96badb210a5341630c94626): the review the lapse judge
+is handed folded to its day's first instant, and the instant the day judge is handed folded the same
+way. Each keeps the examined count and drops one judge's distinct count. The plants were removed in
+76d4aac219157962e3b58c03c34f3dc9949a8d76.
+
+```text
+A20 replay: red at e38cc56247459e21e96badb210a5341630c94626: the population's spread: 128 distinct of 448 (left: 128, right: 448); the two plants together, the lapse count is the first assertion to fail
+A20 replay: red at e38cc56247459e21e96badb210a5341630c94626: the day judge's spread: 32 distinct (left: 32, right: 112), read with the lapse plant removed, because the lapse count fails first when both stand
+A20 replay: green at 76d4aac219157962e3b58c03c34f3dc9949a8d76: examined 448 rollover member(s), 448 distinct, over 112 distinct day member(s)
+```
+
+Rows S04927 and S04928 carry the two folds; each is KILLED by full id on the committed tree. The
+window test is unchanged and still prints `examined 2252 window member(s), 1916 distinct`.
+
+### Fix round 2: the walk's boundary
+
+The distinct counts do not see a fold that keeps every member different and empties a class of what
+the lapse judge branches on. The judge folds its reviews into a count per study day and asks whether
+a day holds more than none, so a study day of exactly one review is its boundary. Moving the earlier
+review onto the later one's day (`review_at(t)` for the earlier review) keeps 448 examined, 448
+distinct and 112 distinct day members, and leaves no such day. A20 now counts, inside the lapse
+judge's wrapper and with the test's own definition of the day, the study days that hold one review
+of the reviews it is handed (`ONE_REVIEW_DAYS`, 896, two for each member), asserts it beside the
+distinct counts and prints it. The window judge derives the silent run and compares it with the threshold,
+the walk's reach and the skip days, so round 3 pins each of those boundaries.
+
+The count was committed beside the planted fold (af4e9c9073027b247bbad5146e767e0c55007eba), and the plant was removed in
+5ed1c5eeefe1fcee6abd453f4647605db1289c25. The round-1 replay of the day judge's spread above (32 distinct of 112) was read from an
+uncommitted tree, with the lapse plant removed from the committed one; only the lapse judge's red
+was committed.
+
+```text
+A20 replay: red at af4e9c9073027b247bbad5146e767e0c55007eba: the walk's boundary: 0 study day(s) holding one review (left: 0, right: 896), with the examined count held at 448 and the distinct counts at 448 and 112
+A20 replay: green at 5ed1c5eeefe1fcee6abd453f4647605db1289c25: examined 448 rollover member(s), 448 distinct, over 112 distinct day member(s), 896 study day(s) holding one review
+A19 replay: green at 5ed1c5eeefe1fcee6abd453f4647605db1289c25: examined 2252 window member(s), 1916 distinct
+```
+
+Row S04929 carries the plant; it is KILLED by full id on the committed tree.
+
+### Fix round 3: the members at each boundary read from the day and the walk
+
+The two populations pinned one boundary each, or none, while their judges compare derived values
+at several. Round 3's rule was that a population pins, by its own oracle over the arguments its
+judge is handed, how many members sit at each boundary read from its judge's code, and asserts each
+count beside the examined and distinct counts and prints it. The boundaries it read were the study
+day's floor on a review's instant, on now and on the day judge's instant, and, in the walk, the
+empty window, a day's count against none, the skip days, the walk's reach and the threshold. It did
+not read the lapse judge's study-event rule on a review's kind and ease; fix round 4 adds it. The
+folds that test the rule were generated one input at one call site at a time. A20 now pins eight
+boundary counts and A19 seven; "empty windows" pins 0, because A19's population never reaches that
+boundary, and `an_empty_window_holds_no_lapse` decides it. Fix round 4 shows that a count of the
+members at a boundary does not pin it, and adds the counts that do.
+
+The counts were committed in c3c4c1007c81d2ee9b3aced1b569224a5d016c25 with no plant beside them. Three folds were planted in an
+uncommitted tree over that test, one at the study day's floor on a review's instant (a review at
+the rollover moved 2 ms after), one at the threshold (the silent run of the threshold made one
+day longer) and one at the skip days (every skip day moved 1000 days later). Each plant was
+red by the boundary assertion, and each was removed with the files restored byte for byte.
+
+```text
+A20 replay: red under the uncommitted review plant: panicked at crates/coordination/tests/lapse.rs:233:5, the boundaries' members: "reviews at a rollover": 0, where the head's map holds 64
+A20 replay: red under the uncommitted threshold plant: panicked at crates/coordination/tests/lapse.rs:233:5, the boundaries' members: "runs of silent days at the threshold": 0, where the head's map holds 224
+A19 replay: red under the uncommitted skip-day plant: panicked at crates/streaks/tests/lapse.rs:282:5, the boundaries' members: "walks that pass a skip day": 0, where the head's map holds 2000
+A20 replay: green at c3c4c1007c81d2ee9b3aced1b569224a5d016c25: examined 448 rollover member(s), 448 distinct, over 112 distinct day member(s), 896 study day(s) holding one review
+A20 replay: green at c3c4c1007c81d2ee9b3aced1b569224a5d016c25: boundary members: {"day instants a millisecond before one": 16, "day instants at a rollover": 16, "nows a millisecond before one": 224, "nows at a rollover": 224, "reviews a millisecond before one": 64, "reviews at a rollover": 64, "runs of silent days at the threshold": 224, "runs of silent days one short of it": 224}
+A19 replay: green at c3c4c1007c81d2ee9b3aced1b569224a5d016c25: examined 2252 window member(s), 1916 distinct
+A19 replay: green at c3c4c1007c81d2ee9b3aced1b569224a5d016c25: boundary members: {"closing days of one review": 1349, "empty windows": 0, "runs of silent days at the threshold": 403, "runs of silent days one short of it": 800, "todays before the window": 2, "walks that end at the window's first day": 229, "walks that pass a skip day": 2000}
+```
+
+### Fix round 4: the members each line of a judge decides
+
+A count of the members at a boundary does not pin it: a fold can move the members whose side of the
+boundary decides their answer off it, park as many others on it whose side decides nothing, keep
+every count, and let the row that moves that boundary survive. Each population now holds a table of
+moves of its judge, each one line of the judge changed: a boundary it compares moved one step each
+way both sides exist, or a line one of its rows replaces. Over its distinct members it counts, and
+pins, how many answers each move changes, and asserts that each count is more than none; on every
+distinct member it first asserts that the judge equals a copy of its rule with no move. The mutant
+of each row on the judges' lines answers every member as one of the moves does, so it fails that
+check on the first member its move decides, and the pin keeps at least one such member. A20 holds 28
+moves and A19 14; the pins are re-derived by a generator outside the tests. The one comparison fix
+round 3 did not read, the lapse judge's study-event rule on a review's kind and ease, is now
+decided: A20 also hands, under each of its sixteen rules, both reviews at every kind from -1 to 4
+and every ease from 0 to 2 (576 more members). Row S04930 reads an answer of ease 1 as no study
+review at the lapse judge's call; it is KILLED by full id on the committed tree and survives A20 at
+the base.
+
+The counts were committed in f46af4cc0b5413d7a55bb42f56cf284fcc107682 with no plant beside them. Five folds were planted in an
+uncommitted tree over those tests, each a trade that keeps every count of fix round 3: in A20, the
+review at a rollover moved two milliseconds after it while the earlier review of the members a
+millisecond after one moved onto a rollover; the same trade a millisecond before a rollover; both at
+once; and the deciding day handed two reviews while two far days were handed one each. In A19, each
+closing day of one review was made a skip day, with the day before it given two reviews or more.
+Each plant was red by the decisive assertion, and each was removed with the files restored byte for
+byte.
+
+```text
+A20 replay: red under the uncommitted plant off the rollover: panicked at crates/coordination/tests/lapse.rs:289:5, the members each move decides: "a review a millisecond earlier": 256, where the pin is 320
+A20 replay: red under the uncommitted plant off a millisecond before one: panicked at crates/coordination/tests/lapse.rs:289:5, the members each move decides: "a review a millisecond later": 0, where the pin is 32
+A20 replay: red under the uncommitted plant of both: panicked at crates/coordination/tests/lapse.rs:289:5, the members each move decides: "a review a millisecond earlier": 256 and "a review a millisecond later": 0, where the pins are 320 and 32
+A20 replay: red under the uncommitted plant of the deciding day: panicked at crates/coordination/tests/lapse.rs:289:5, the members each move decides: "a day closing the run at two reviews": 256, "a review a millisecond earlier": 256, "a review by the default rule": 512 and "a review on its UTC date": 434, where the pins are 704, 320, 524 and 458
+A19 replay: red under the uncommitted plant of the closing days: panicked at crates/streaks/tests/lapse.rs:295:5, the members each edit decides: "a day closing the run at 101 reviews": 1494, "a day closing the run at two reviews": 0 and "the walk passing two days a step": 410, where the pins are 1557, 1001 and 559
+A20 replay: green at f46af4cc0b5413d7a55bb42f56cf284fcc107682: examined 1024 rollover member(s), 1024 distinct, over 112 distinct day member(s), 2048 study day(s) holding one review
+A20 replay: green at f46af4cc0b5413d7a55bb42f56cf284fcc107682: boundary members: {"day instants a millisecond before one": 16, "day instants at a rollover": 16, "nows a millisecond before one": 224, "nows at a rollover": 800, "reviews a millisecond before one": 64, "reviews at a rollover": 640, "runs of silent days at the threshold": 352, "runs of silent days one short of it": 352}
+A20 replay: green at f46af4cc0b5413d7a55bb42f56cf284fcc107682: members each move decides: {"a day closing the run at 101 reviews": 704, "a day closing the run at two reviews": 704, "a review a millisecond earlier": 320, "a review a millisecond later": 32, "a review an hour later": 64, "a review by the default rule": 524, "a review eight hours earlier": 832, "a review on its UTC date": 458, "a review with the offset twice": 448, "ease 0 a study answer": 128, "ease 1 no study answer": 128, "every day closing the run": 672, "every review a study review": 320, "kind -1 a study kind": 64, "kind 0 no study kind": 64, "kind 3 no study kind": 64, "kind 4 a study kind": 64, "now a millisecond earlier": 240, "now a millisecond later": 112, "one fewer silent day to open": 352, "one more silent day to open": 352, "the id the first silent day met": 672, "the walk begun a day after today": 352, "the walk begun a day before today": 352, "the walk passing two days a step": 512, "the window begun a day earlier": 320, "the window begun a day later": 320, "the window begun at its latest day": 320}
+A19 replay: green at f46af4cc0b5413d7a55bb42f56cf284fcc107682: examined 2252 window member(s), 1916 distinct
+A19 replay: green at f46af4cc0b5413d7a55bb42f56cf284fcc107682: boundary members: {"closing days of one review": 1349, "empty windows": 0, "runs of silent days at the threshold": 403, "runs of silent days one short of it": 800, "todays before the window": 2, "walks that end at the window's first day": 229, "walks that pass a skip day": 2000}
+A19 replay: green at f46af4cc0b5413d7a55bb42f56cf284fcc107682: members each edit decides: {"a day closing the run at 101 reviews": 1557, "a day closing the run at two reviews": 1001, "every day closing the run": 414, "every silent day read as a skip day": 414, "every skip day read as silent": 1292, "one fewer silent day to open": 680, "one more silent day to open": 343, "the id the first silent day met": 411, "the walk begun a day after today": 544, "the walk begun a day before today": 275, "the walk passing two days a step": 559, "the window begun a day earlier": 67, "the window begun a day later": 23, "the window begun at its latest day": 210}
+```

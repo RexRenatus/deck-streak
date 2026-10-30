@@ -1,0 +1,601 @@
+{
+  "adapter": "with_deck_ids",
+  "cases": [
+    {
+      "class": "everything",
+      "input": {
+        "deck_names": {
+          "1": "Default",
+          "1700000452651": "Law",
+          "1700001258429": "Law\u001fEvidence",
+          "1700001703165": "Law\u001fTorts\u001fDuty",
+          "1700001732211": "Language",
+          "1700002098447": "Language\u001fUnit 01",
+          "1700002536804": "Language Arts",
+          "1700002841693": "Lawn",
+          "1700004359182": "law",
+          "1700005354267": "Other",
+          "1700005493309": "Other\u001fLaw",
+          "1700006823970": "Maths",
+          "1700006904212": "\u001fLeading",
+          "1700007959204": "\u00c9bauche\u001fBrouillon",
+          "1700009612350": "\u0391\u03bb\u03c6\u03b1\u001f\u0392\u03ae\u03c4\u03b1",
+          "1700009741952": "\u7532\u001f\u4e59"
+        },
+        "include_prefixes": []
+      },
+      "output": [
+        1,
+        1700000452651,
+        1700001258429,
+        1700001703165,
+        1700001732211,
+        1700002098447,
+        1700002536804,
+        1700002841693,
+        1700004359182,
+        1700005354267,
+        1700005493309,
+        1700006823970,
+        1700006904212,
+        1700007959204,
+        1700009612350,
+        1700009741952
+      ]
+    },
+    {
+      "class": "everything",
+      "input": {
+        "deck_names": {
+          "1": "Default",
+          "1700000452651": "Law",
+          "1700001258429": "Law\u001fEvidence",
+          "1700001703165": "Law\u001fTorts\u001fDuty",
+          "1700001732211": "Language",
+          "1700002098447": "Language\u001fUnit 01",
+          "1700002536804": "Language Arts",
+          "1700002841693": "Lawn",
+          "1700004359182": "law",
+          "1700005354267": "Other",
+          "1700005493309": "Other\u001fLaw",
+          "1700006823970": "Maths",
+          "1700006904212": "\u001fLeading",
+          "1700007959204": "\u00c9bauche\u001fBrouillon",
+          "1700009612350": "\u0391\u03bb\u03c6\u03b1\u001f\u0392\u03ae\u03c4\u03b1",
+          "1700009741952": "\u7532\u001f\u4e59"
+        },
+        "include_prefixes": [
+          ""
+        ]
+      },
+      "output": [
+        1,
+        1700000452651,
+        1700001258429,
+        1700001703165,
+        1700001732211,
+        1700002098447,
+        1700002536804,
+        1700002841693,
+        1700004359182,
+        1700005354267,
+        1700005493309,
+        1700006823970,
+        1700006904212,
+        1700007959204,
+        1700009612350,
+        1700009741952
+      ]
+    },
+    {
+      "class": "top-level",
+      "input": {
+        "deck_names": {
+          "1": "Default",
+          "1700000452651": "Law",
+          "1700001258429": "Law\u001fEvidence",
+          "1700001703165": "Law\u001fTorts\u001fDuty",
+          "1700001732211": "Language",
+          "1700002098447": "Language\u001fUnit 01",
+          "1700002536804": "Language Arts",
+          "1700002841693": "Lawn",
+          "1700004359182": "law",
+          "1700005354267": "Other",
+          "1700005493309": "Other\u001fLaw",
+          "1700006823970": "Maths",
+          "1700006904212": "\u001fLeading",
+          "1700007959204": "\u00c9bauche\u001fBrouillon",
+          "1700009612350": "\u0391\u03bb\u03c6\u03b1\u001f\u0392\u03ae\u03c4\u03b1",
+          "1700009741952": "\u7532\u001f\u4e59"
+        },
+        "include_prefixes": [
+          "Law"
+        ]
+      },
+      "output": [
+        1700000452651,
+        1700001258429,
+        1700001703165,
+        1700002841693
+      ]
+    },
+    {
+      "class": "top-level",
+      "input": {
+        "deck_names": {
+          "1": "Default",
+          "1700000452651": "Law",
+          "1700001258429": "Law\u001fEvidence",
+          "1700001703165": "Law\u001fTorts\u001fDuty",
+          "1700001732211": "Language",
+          "1700002098447": "Language\u001fUnit 01",
+          "1700002536804": "Language Arts",
+          "1700002841693": "Lawn",
+          "1700004359182": "law",
+          "1700005354267": "Other",
+          "1700005493309": "Other\u001fLaw",
+          "1700006823970": "Maths",
+          "1700006904212": "\u001fLeading",
+          "1700007959204": "\u00c9bauche\u001fBrouillon",
+          "1700009612350": "\u0391\u03bb\u03c6\u03b1\u001f\u0392\u03ae\u03c4\u03b1",
+          "1700009741952": "\u7532\u001f\u4e59"
+        },
+        "include_prefixes": [
+          "Other\u001fLaw"
+        ]
+      },
+      "output": []
+    },
+    {
+      "class": "partial",
+      "input": {
+        "deck_names": {
+          "1": "Default",
+          "1700000452651": "Law",
+          "1700001258429": "Law\u001fEvidence",
+          "1700001703165": "Law\u001fTorts\u001fDuty",
+          "1700001732211": "Language",
+          "1700002098447": "Language\u001fUnit 01",
+          "1700002536804": "Language Arts",
+          "1700002841693": "Lawn",
+          "1700004359182": "law",
+          "1700005354267": "Other",
+          "1700005493309": "Other\u001fLaw",
+          "1700006823970": "Maths",
+          "1700006904212": "\u001fLeading",
+          "1700007959204": "\u00c9bauche\u001fBrouillon",
+          "1700009612350": "\u0391\u03bb\u03c6\u03b1\u001f\u0392\u03ae\u03c4\u03b1",
+          "1700009741952": "\u7532\u001f\u4e59"
+        },
+        "include_prefixes": [
+          "Lang"
+        ]
+      },
+      "output": [
+        1700001732211,
+        1700002098447,
+        1700002536804
+      ]
+    },
+    {
+      "class": "partial",
+      "input": {
+        "deck_names": {
+          "1": "Default",
+          "1700000452651": "Law",
+          "1700001258429": "Law\u001fEvidence",
+          "1700001703165": "Law\u001fTorts\u001fDuty",
+          "1700001732211": "Language",
+          "1700002098447": "Language\u001fUnit 01",
+          "1700002536804": "Language Arts",
+          "1700002841693": "Lawn",
+          "1700004359182": "law",
+          "1700005354267": "Other",
+          "1700005493309": "Other\u001fLaw",
+          "1700006823970": "Maths",
+          "1700006904212": "\u001fLeading",
+          "1700007959204": "\u00c9bauche\u001fBrouillon",
+          "1700009612350": "\u0391\u03bb\u03c6\u03b1\u001f\u0392\u03ae\u03c4\u03b1",
+          "1700009741952": "\u7532\u001f\u4e59"
+        },
+        "include_prefixes": [
+          "L",
+          "Zeta"
+        ]
+      },
+      "output": [
+        1700000452651,
+        1700001258429,
+        1700001703165,
+        1700001732211,
+        1700002098447,
+        1700002536804,
+        1700002841693
+      ]
+    },
+    {
+      "class": "case",
+      "input": {
+        "deck_names": {
+          "1": "Default",
+          "1700000452651": "Law",
+          "1700001258429": "Law\u001fEvidence",
+          "1700001703165": "Law\u001fTorts\u001fDuty",
+          "1700001732211": "Language",
+          "1700002098447": "Language\u001fUnit 01",
+          "1700002536804": "Language Arts",
+          "1700002841693": "Lawn",
+          "1700004359182": "law",
+          "1700005354267": "Other",
+          "1700005493309": "Other\u001fLaw",
+          "1700006823970": "Maths",
+          "1700006904212": "\u001fLeading",
+          "1700007959204": "\u00c9bauche\u001fBrouillon",
+          "1700009612350": "\u0391\u03bb\u03c6\u03b1\u001f\u0392\u03ae\u03c4\u03b1",
+          "1700009741952": "\u7532\u001f\u4e59"
+        },
+        "include_prefixes": [
+          "law"
+        ]
+      },
+      "output": [
+        1700004359182
+      ]
+    },
+    {
+      "class": "several",
+      "input": {
+        "deck_names": {
+          "1": "Default",
+          "1700000452651": "Law",
+          "1700001258429": "Law\u001fEvidence",
+          "1700001703165": "Law\u001fTorts\u001fDuty",
+          "1700001732211": "Language",
+          "1700002098447": "Language\u001fUnit 01",
+          "1700002536804": "Language Arts",
+          "1700002841693": "Lawn",
+          "1700004359182": "law",
+          "1700005354267": "Other",
+          "1700005493309": "Other\u001fLaw",
+          "1700006823970": "Maths",
+          "1700006904212": "\u001fLeading",
+          "1700007959204": "\u00c9bauche\u001fBrouillon",
+          "1700009612350": "\u0391\u03bb\u03c6\u03b1\u001f\u0392\u03ae\u03c4\u03b1",
+          "1700009741952": "\u7532\u001f\u4e59"
+        },
+        "include_prefixes": [
+          "Law",
+          "Language",
+          "Maths"
+        ]
+      },
+      "output": [
+        1700000452651,
+        1700001258429,
+        1700001703165,
+        1700001732211,
+        1700002098447,
+        1700002536804,
+        1700002841693,
+        1700006823970
+      ]
+    },
+    {
+      "class": "unicode",
+      "input": {
+        "deck_names": {
+          "1": "Default",
+          "1700000452651": "Law",
+          "1700001258429": "Law\u001fEvidence",
+          "1700001703165": "Law\u001fTorts\u001fDuty",
+          "1700001732211": "Language",
+          "1700002098447": "Language\u001fUnit 01",
+          "1700002536804": "Language Arts",
+          "1700002841693": "Lawn",
+          "1700004359182": "law",
+          "1700005354267": "Other",
+          "1700005493309": "Other\u001fLaw",
+          "1700006823970": "Maths",
+          "1700006904212": "\u001fLeading",
+          "1700007959204": "\u00c9bauche\u001fBrouillon",
+          "1700009612350": "\u0391\u03bb\u03c6\u03b1\u001f\u0392\u03ae\u03c4\u03b1",
+          "1700009741952": "\u7532\u001f\u4e59"
+        },
+        "include_prefixes": [
+          "\u00c9bauche",
+          "\u7532"
+        ]
+      },
+      "output": [
+        1700007959204,
+        1700009741952
+      ]
+    },
+    {
+      "class": "unicode",
+      "input": {
+        "deck_names": {
+          "1": "Default",
+          "1700000452651": "Law",
+          "1700001258429": "Law\u001fEvidence",
+          "1700001703165": "Law\u001fTorts\u001fDuty",
+          "1700001732211": "Language",
+          "1700002098447": "Language\u001fUnit 01",
+          "1700002536804": "Language Arts",
+          "1700002841693": "Lawn",
+          "1700004359182": "law",
+          "1700005354267": "Other",
+          "1700005493309": "Other\u001fLaw",
+          "1700006823970": "Maths",
+          "1700006904212": "\u001fLeading",
+          "1700007959204": "\u00c9bauche\u001fBrouillon",
+          "1700009612350": "\u0391\u03bb\u03c6\u03b1\u001f\u0392\u03ae\u03c4\u03b1",
+          "1700009741952": "\u7532\u001f\u4e59"
+        },
+        "include_prefixes": [
+          "\u0391\u03bb"
+        ]
+      },
+      "output": [
+        1700009612350
+      ]
+    },
+    {
+      "class": "nothing",
+      "input": {
+        "deck_names": {
+          "1": "Default",
+          "1700000452651": "Law",
+          "1700001258429": "Law\u001fEvidence",
+          "1700001703165": "Law\u001fTorts\u001fDuty",
+          "1700001732211": "Language",
+          "1700002098447": "Language\u001fUnit 01",
+          "1700002536804": "Language Arts",
+          "1700002841693": "Lawn",
+          "1700004359182": "law",
+          "1700005354267": "Other",
+          "1700005493309": "Other\u001fLaw",
+          "1700006823970": "Maths",
+          "1700006904212": "\u001fLeading",
+          "1700007959204": "\u00c9bauche\u001fBrouillon",
+          "1700009612350": "\u0391\u03bb\u03c6\u03b1\u001f\u0392\u03ae\u03c4\u03b1",
+          "1700009741952": "\u7532\u001f\u4e59"
+        },
+        "include_prefixes": [
+          "Zeta",
+          "Maths "
+        ]
+      },
+      "output": []
+    },
+    {
+      "class": "empty",
+      "input": {
+        "deck_names": {},
+        "include_prefixes": [
+          "Law"
+        ]
+      },
+      "output": []
+    },
+    {
+      "class": "empty",
+      "input": {
+        "deck_names": {},
+        "include_prefixes": []
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "deck_names": {
+          "1": "\u00c9bauche\u001fBrouillon",
+          "1700000588833": "Law\u001fTorts\u001fDuty",
+          "1700001366773": "\u0391\u03bb\u03c6\u03b1\u001f\u0392\u03ae\u03c4\u03b1",
+          "1700003461867": "Language\u001fUnit 01",
+          "1700004070864": "Other\u001fLaw",
+          "1700006793649": "Maths",
+          "1700008256296": "\u001fLeading",
+          "1700009616868": "Other"
+        },
+        "include_prefixes": [
+          "Lang",
+          "\u7532",
+          "\u00c9bauche"
+        ]
+      },
+      "output": [
+        1,
+        1700003461867
+      ]
+    },
+    {
+      "input": {
+        "deck_names": {
+          "1": "Law\u001fTorts\u001fDuty",
+          "1700001974627": "Law",
+          "1700002740549": "\u7532\u001f\u4e59",
+          "1700004308102": "Language"
+        },
+        "include_prefixes": [
+          "law",
+          "Zeta"
+        ]
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "deck_names": {
+          "1": "Default",
+          "1700002030625": "Language",
+          "1700002100309": "Maths",
+          "1700002567137": "Law\u001fTorts\u001fDuty",
+          "1700002629496": "\u001fLeading",
+          "1700002762731": "Other",
+          "1700003758490": "\u00c9bauche\u001fBrouillon",
+          "1700004593646": "\u7532\u001f\u4e59",
+          "1700005784406": "law",
+          "1700006807779": "Language Arts",
+          "1700007189871": "Language\u001fUnit 01",
+          "1700007262874": "\u0391\u03bb\u03c6\u03b1\u001f\u0392\u03ae\u03c4\u03b1",
+          "1700007505935": "Law\u001fEvidence",
+          "1700009322920": "Law",
+          "1700009736851": "Lawn"
+        },
+        "include_prefixes": [
+          "\u0391\u03bb",
+          "Zeta"
+        ]
+      },
+      "output": [
+        1700007262874
+      ]
+    },
+    {
+      "input": {
+        "deck_names": {
+          "1": "Law",
+          "1700002891144": "law"
+        },
+        "include_prefixes": [
+          "Other\u001fLaw"
+        ]
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "deck_names": {
+          "1": "Law\u001fEvidence",
+          "1700005290305": "Law",
+          "1700006746048": "\u001fLeading"
+        },
+        "include_prefixes": [
+          "Law",
+          "\u7532"
+        ]
+      },
+      "output": [
+        1,
+        1700005290305
+      ]
+    },
+    {
+      "input": {
+        "deck_names": {
+          "1": "Law",
+          "1700001226454": "\u00c9bauche\u001fBrouillon",
+          "1700001441468": "Other\u001fLaw",
+          "1700001564687": "Law\u001fEvidence",
+          "1700001822028": "\u7532\u001f\u4e59",
+          "1700004316971": "Lawn",
+          "1700005583134": "law",
+          "1700009627183": "Language\u001fUnit 01"
+        },
+        "include_prefixes": []
+      },
+      "output": [
+        1,
+        1700001226454,
+        1700001441468,
+        1700001564687,
+        1700001822028,
+        1700004316971,
+        1700005583134,
+        1700009627183
+      ]
+    },
+    {
+      "input": {
+        "deck_names": {
+          "1": "Other",
+          "1700001654845": "Other\u001fLaw",
+          "1700001832452": "Default",
+          "1700002114519": "\u001fLeading",
+          "1700003314091": "\u00c9bauche\u001fBrouillon",
+          "1700003657466": "Law\u001fTorts\u001fDuty",
+          "1700003798267": "\u0391\u03bb\u03c6\u03b1\u001f\u0392\u03ae\u03c4\u03b1",
+          "1700004023240": "law",
+          "1700004614419": "Maths",
+          "1700006510221": "Law",
+          "1700007029259": "Lawn"
+        },
+        "include_prefixes": [
+          "law"
+        ]
+      },
+      "output": [
+        1700004023240
+      ]
+    },
+    {
+      "input": {
+        "deck_names": {
+          "1": "Other",
+          "1700007524896": "Law\u001fEvidence"
+        },
+        "include_prefixes": [
+          "Language",
+          "\u7532",
+          "Lang"
+        ]
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "deck_names": {
+          "1": "Default",
+          "1700000081440": "Law\u001fEvidence",
+          "1700001036753": "Law\u001fTorts\u001fDuty",
+          "1700001655535": "Other\u001fLaw",
+          "1700002413250": "Language",
+          "1700004634279": "Language Arts",
+          "1700005003315": "Law",
+          "1700006500513": "Maths"
+        },
+        "include_prefixes": [
+          "Other"
+        ]
+      },
+      "output": [
+        1700001655535
+      ]
+    },
+    {
+      "input": {
+        "deck_names": {
+          "1": "Other",
+          "1700000260369": "Language Arts",
+          "1700001174206": "\u00c9bauche\u001fBrouillon",
+          "1700003002459": "Lawn",
+          "1700005717944": "Law",
+          "1700009178354": "Maths"
+        },
+        "include_prefixes": [
+          "L",
+          "Law",
+          "\u00c9bauche"
+        ]
+      },
+      "output": [
+        1700000260369,
+        1700001174206,
+        1700003002459,
+        1700005717944
+      ]
+    }
+  ],
+  "function": "deck_filter.allowed_deck_ids",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Converts the case's deck-name keys from JSON strings to the deck ids they are, calls the scope, and returns the allowed ids sorted; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_023.py",
+  "registry_sha256": "026e22ff12807ce0338220a4afe850ec60178625e377995bb0d7b492b1f8fc67",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

@@ -1,0 +1,28 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(*) AS \"sends!: i64\", MAX(study_day) AS \"last: i64\"\n           FROM notification_deliveries WHERE kind = ? AND lapse_id = ? AND id != ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "sends!: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      },
+      {
+        "name": "last: i64",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "1a93794b914d322e8cc48f81369d25d05b920430195ffabecc9c673e10421620"
+}

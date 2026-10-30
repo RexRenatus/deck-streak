@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM xp_tokens",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "e8bc6542c5e8b71d3bb789e49cc50eb8112c7b3ee99a88d7b0cec5435a1f91aa"
+}

@@ -1,0 +1,33 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S37201-A-FACE-KEEPS-ITS-NOTE-TYPES-CSS",
+        "engine-core",
+        "src/face.rs",
+        "        css: rendered.css,",
+        "        css: String::new(),",
+        "review_templates::the_engine_renders_the_template_cards_as_the_golden_file_records_them",
+        "a face carries its note type's CSS, a `.cloze` rule included; emptied, the frame shows the card unstyled (SPEC-372 A3, A5)"
+      ],
+      [
+        "S37202-A-FACE-KEEPS-ITS-TEMPLATES-TEXT",
+        "engine-core",
+        "src/face.rs",
+        "            Some(Value::Text(text)) => text.as_str(),",
+        "            Some(Value::Text(_)) => \"\",",
+        "review_templates::the_engine_renders_the_template_cards_as_the_golden_file_records_them",
+        "a face keeps its template's own markup between fields; joined as empty, the cloze question stops asking for deletion 1 (SPEC-372 A1, A5)"
+      ],
+      [
+        "S37204-FRONTSIDE-FILLS-ONLY-FRONTSIDE",
+        "engine-core",
+        "src/face.rs",
+        "                Some(front) if replacement.field_name == FRONT_SIDE => front,",
+        "                Some(front) if replacement.field_name != FRONT_SIDE => front,",
+        "review_templates::the_engine_renders_the_template_cards_as_the_golden_file_records_them",
+        "only FrontSide is filled by the shown question; negated, the reversed answer no longer opens with its question and every other field reads as it (SPEC-372 A2, A5)"
+      ]
+    ]
+  }
+}

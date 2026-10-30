@@ -1,0 +1,28 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "reply_markup": {
+      "inline_keyboard": [
+        [
+          {
+            "callback_data": "hb:c:qaa",
+            "text": "Course Qaa"
+          }
+        ],
+        [
+          {
+            "callback_data": "hb:c:qab",
+            "text": "Course Qab"
+          }
+        ]
+      ]
+    },
+    "text": "Which course did you read for?"
+  },
+  "x-message": "read-pick-course"
+}

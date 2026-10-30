@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "That is not one of your writing courses, so nothing changed. Send /write alone to see them."
+  },
+  "x-message": "write-not-a-writing-course"
+}
