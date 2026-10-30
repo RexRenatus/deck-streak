@@ -846,7 +846,8 @@ class AListedBrandBinaryIsAdmitted(unittest.TestCase):
             self.assertNotIn("binary", done.stdout)
 
     def test_a_malformed_list_stops_the_scrub_by_name(self):
-        # A19: a list that is not JSON, an entry whose sha256 has 63 digits, a path named twice.
+        # A19: a list that is not JSON, an entry whose sha256 has 63 digits, a path named twice,
+        # an entry that is not an object, an empty path and a byte count that is a boolean.
         digest = hashlib.sha256(BINARY).hexdigest()
         entry = {"path": LISTED, "sha256": digest, "bytes": len(BINARY)}
         other = {"path": LISTED, "sha256": hashlib.sha256(b"other").hexdigest(), "bytes": 5}
@@ -854,6 +855,9 @@ class AListedBrandBinaryIsAdmitted(unittest.TestCase):
             "not JSON": "{ a list that is not JSON\n",
             "a 63-digit sha256": json.dumps({"files": [dict(entry, sha256=digest[:63])]}),
             "a path named twice": json.dumps({"files": [entry, other]}),
+            "an entry that is not an object": json.dumps({"files": [LISTED]}),
+            "an empty path": json.dumps({"files": [dict(entry, path="")]}),
+            "a byte count that is a boolean": json.dumps({"files": [dict(entry, bytes=True)]}),
         }
         reached = 0
         for name, text in examined("planted malformed lists", list(planted.items())):
