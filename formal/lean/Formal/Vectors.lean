@@ -2,6 +2,8 @@ import Formal.ChestVectors
 import Formal.CompanionDecideVectors
 import Formal.ExchangeVectors
 import Formal.HabitWritingVectors
+import Formal.MediaBindVectors
+import Formal.MediaGcVectors
 import Formal.NextMilestoneVectors
 import Formal.OpenLapseVectors
 import Formal.RecordClassBindingVectors
@@ -38,6 +40,8 @@ def main (args : List String) : IO UInt32 := do
   | ["CompanionDecide"] => Formal.CompanionDecideVectors.run
   | ["Exchange"] => Formal.ExchangeVectors.run
   | ["HabitWriting"] => Formal.HabitWritingVectors.run
+  | ["MediaBind"] => Formal.MediaBindVectors.run
+  | ["MediaGc"] => Formal.MediaGcVectors.run
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run
   | ["OpenLapse"] => Formal.OpenLapseVectors.run
   | ["RecordClassBinding"] => Formal.RecordClassBindingVectors.run
