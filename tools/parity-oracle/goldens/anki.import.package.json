@@ -9435,6 +9435,7 @@
                 "indigo basil fjord basil fjord"
               ],
               "guid": "ds-109f4a60",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -9602,6 +9603,7 @@
                 "indigo"
               ],
               "guid": "ds-109f4a60",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -9776,6 +9778,7 @@
                 "cobalt"
               ],
               "guid": "ds-0a1b2c3d",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -9943,6 +9946,7 @@
                 "amber basil"
               ],
               "guid": "ds-0a1b2c3d",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -10117,6 +10121,7 @@
                 "<i>cobalt</i>"
               ],
               "guid": "ds-3d4e5f60",
+              "mod": 1100000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -10284,6 +10289,7 @@
                 "cobalt"
               ],
               "guid": "ds-3d4e5f60",
+              "mod": 1100000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -10458,6 +10464,7 @@
                 "indigo juniper"
               ],
               "guid": "ds-60718293",
+              "mod": 1234567890,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -10625,6 +10632,7 @@
                 "dune ember fjord"
               ],
               "guid": "ds-60718293",
+              "mod": 1234567890,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -10799,6 +10807,7 @@
                 "naïve"
               ],
               "guid": "ds-93a4b5c6",
+              "mod": 1000000001,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -10966,6 +10975,7 @@
                 "garnet harbor"
               ],
               "guid": "ds-93a4b5c6",
+              "mod": 1000000001,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -11140,6 +11150,7 @@
                 "harbor"
               ],
               "guid": "ds-c6d7e8f9",
+              "mod": 999999,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -11307,6 +11318,7 @@
                 "indigo"
               ],
               "guid": "ds-c6d7e8f9",
+              "mod": 999999,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -11481,6 +11493,7 @@
                 "harbor indigo"
               ],
               "guid": "ds-f90a1b2c",
+              "mod": 1500000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -11648,6 +11661,7 @@
                 "juniper amber cobalt"
               ],
               "guid": "ds-f90a1b2c",
+              "mod": 1500000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -11822,6 +11836,7 @@
                 "harbor"
               ],
               "guid": "ds-2c3d4e60",
+              "mod": 1300000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -11989,6 +12004,7 @@
                 "basil dune"
               ],
               "guid": "ds-2c3d4e60",
+              "mod": 1300000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -15391,6 +15407,7 @@
                 "amber ember indigo cobalt amber"
               ],
               "guid": "ds-4be62af5",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -15557,6 +15574,7 @@
                 "amber ember indigo cobalt amber"
               ],
               "guid": "ds-4be62af5",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -15710,6 +15728,7 @@
                 "cobalt"
               ],
               "guid": "ds-0a1b2c3d",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -15876,6 +15895,7 @@
                 "cobalt"
               ],
               "guid": "ds-0a1b2c3d",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -16029,6 +16049,7 @@
                 "<i>cobalt</i>"
               ],
               "guid": "ds-3d4e5f60",
+              "mod": 1100000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -16195,6 +16216,7 @@
                 "<i>cobalt</i>"
               ],
               "guid": "ds-3d4e5f60",
+              "mod": 1100000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -16412,6 +16434,7 @@
                 "indigo juniper"
               ],
               "guid": "ds-60718293",
+              "mod": 1234567890,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -16578,6 +16601,7 @@
                 "indigo juniper"
               ],
               "guid": "ds-60718293",
+              "mod": 1234567890,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -16731,6 +16755,7 @@
                 "naïve"
               ],
               "guid": "ds-93a4b5c6",
+              "mod": 1000000001,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -16897,6 +16922,7 @@
                 "naïve"
               ],
               "guid": "ds-93a4b5c6",
+              "mod": 1000000001,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -16982,14 +17008,14 @@
       "output": {
         "counts": {
           "conflicting": 0,
-          "duplicate": 0,
+          "duplicate": 1,
           "empty_first_field": 0,
           "first_field_match": 0,
           "found_notes": 3,
           "missing_deck": 0,
           "missing_notetype": 0,
           "new": 2,
-          "updated": 1
+          "updated": 0
         },
         "notes": [
           {
@@ -17114,6 +17140,7 @@
                 "harbor"
               ],
               "guid": "ds-c6d7e8f9",
+              "mod": 999999,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -17280,6 +17307,7 @@
                 "harbor"
               ],
               "guid": "ds-c6d7e8f9",
+              "mod": 999999,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -17497,6 +17525,7 @@
                 "harbor indigo"
               ],
               "guid": "ds-f90a1b2c",
+              "mod": 1500000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -17663,6 +17692,7 @@
                 "harbor indigo"
               ],
               "guid": "ds-f90a1b2c",
+              "mod": 1500000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -17880,6 +17910,7 @@
                 "harbor"
               ],
               "guid": "ds-2c3d4e60",
+              "mod": 1300000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -18046,6 +18077,7 @@
                 "harbor"
               ],
               "guid": "ds-2c3d4e60",
+              "mod": 1300000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -18131,14 +18163,14 @@
       "output": {
         "counts": {
           "conflicting": 0,
-          "duplicate": 0,
+          "duplicate": 1,
           "empty_first_field": 0,
           "first_field_match": 0,
           "found_notes": 3,
           "missing_deck": 0,
           "missing_notetype": 0,
           "new": 2,
-          "updated": 1
+          "updated": 0
         },
         "notes": [
           {
@@ -18262,6 +18294,7 @@
                 "juniper dune indigo basil"
               ],
               "guid": "ds-c6b15aa0",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -18428,6 +18461,7 @@
                 "juniper dune indigo basil"
               ],
               "guid": "ds-c6b15aa0",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -18674,6 +18708,7 @@
                 "amber amber harbor"
               ],
               "guid": "ds-26cd8266",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -18840,6 +18875,7 @@
                 "amber amber harbor"
               ],
               "guid": "ds-26cd8266",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -19012,6 +19048,7 @@
                 "amber"
               ],
               "guid": "ds-1eea904c",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -19178,6 +19215,7 @@
                 "amber"
               ],
               "guid": "ds-1eea904c",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -19283,14 +19321,14 @@
       "output": {
         "counts": {
           "conflicting": 0,
-          "duplicate": 0,
+          "duplicate": 1,
           "empty_first_field": 0,
           "first_field_match": 0,
           "found_notes": 3,
           "missing_deck": 0,
           "missing_notetype": 0,
           "new": 2,
-          "updated": 1
+          "updated": 0
         },
         "notes": [
           {
@@ -19424,6 +19462,7 @@
                 "fjord dune garnet"
               ],
               "guid": "ds-143f492d",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -19590,6 +19629,7 @@
                 "fjord dune garnet"
               ],
               "guid": "ds-143f492d",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -19762,6 +19802,7 @@
                 "dune"
               ],
               "guid": "ds-6af5a9d1",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -19928,6 +19969,7 @@
                 "dune"
               ],
               "guid": "ds-6af5a9d1",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -20174,6 +20216,7 @@
                 "harbor fjord cobalt dune harbor amber"
               ],
               "guid": "ds-efa91f55",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -20340,6 +20383,7 @@
                 "harbor fjord cobalt dune harbor amber"
               ],
               "guid": "ds-efa91f55",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -20586,6 +20630,7 @@
                 "amber harbor ember indigo ember"
               ],
               "guid": "ds-7be86b88",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -20752,6 +20797,7 @@
                 "amber harbor ember indigo ember"
               ],
               "guid": "ds-7be86b88",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -20998,6 +21044,7 @@
                 "dune indigo garnet fjord fjord dune"
               ],
               "guid": "ds-ba66b9b7",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -21164,6 +21211,7 @@
                 "dune indigo garnet fjord fjord dune"
               ],
               "guid": "ds-ba66b9b7",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -21336,6 +21384,7 @@
                 "amber ember harbor dune basil"
               ],
               "guid": "ds-93c82e0a",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -21502,6 +21551,7 @@
                 "amber ember harbor dune basil"
               ],
               "guid": "ds-93c82e0a",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -21748,6 +21798,7 @@
                 "amber juniper amber juniper cobalt basil"
               ],
               "guid": "ds-b5725520",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -21914,6 +21965,7 @@
                 "amber juniper amber juniper cobalt basil"
               ],
               "guid": "ds-b5725520",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -22160,6 +22212,7 @@
                 "amber juniper garnet"
               ],
               "guid": "ds-3459be1a",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -22326,6 +22379,7 @@
                 "amber juniper garnet"
               ],
               "guid": "ds-3459be1a",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -22572,6 +22626,7 @@
                 "garnet basil"
               ],
               "guid": "ds-df9e5b17",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -22738,6 +22793,7 @@
                 "garnet basil"
               ],
               "guid": "ds-df9e5b17",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -22910,6 +22966,7 @@
                 "juniper ember fjord juniper cobalt harbor"
               ],
               "guid": "ds-a622d888",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -23076,6 +23133,7 @@
                 "juniper ember fjord juniper cobalt harbor"
               ],
               "guid": "ds-a622d888",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -23248,6 +23306,7 @@
                 "harbor garnet"
               ],
               "guid": "ds-2c07e751",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -23414,6 +23473,7 @@
                 "harbor garnet"
               ],
               "guid": "ds-2c07e751",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -23660,6 +23720,7 @@
                 "indigo harbor fjord basil cobalt indigo"
               ],
               "guid": "ds-b5a53033",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -23826,6 +23887,7 @@
                 "indigo harbor fjord basil cobalt indigo"
               ],
               "guid": "ds-b5a53033",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -24072,6 +24134,7 @@
                 "indigo ember juniper harbor indigo"
               ],
               "guid": "ds-68612590",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -24238,6 +24301,7 @@
                 "indigo ember juniper harbor indigo"
               ],
               "guid": "ds-68612590",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -24484,6 +24548,7 @@
                 "ember cobalt fjord basil"
               ],
               "guid": "ds-69738401",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -24650,6 +24715,7 @@
                 "ember cobalt fjord basil"
               ],
               "guid": "ds-69738401",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -24755,14 +24821,14 @@
       "output": {
         "counts": {
           "conflicting": 0,
-          "duplicate": 0,
+          "duplicate": 1,
           "empty_first_field": 0,
           "first_field_match": 0,
           "found_notes": 3,
           "missing_deck": 0,
           "missing_notetype": 0,
           "new": 2,
-          "updated": 1
+          "updated": 0
         },
         "notes": [
           {
@@ -24896,6 +24962,7 @@
                 "fjord basil indigo fjord"
               ],
               "guid": "ds-12aae19d",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -25062,6 +25129,7 @@
                 "fjord basil indigo fjord"
               ],
               "guid": "ds-12aae19d",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -25308,6 +25376,7 @@
                 "basil indigo juniper basil"
               ],
               "guid": "ds-1ee08cd5",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -25474,6 +25543,7 @@
                 "basil indigo juniper basil"
               ],
               "guid": "ds-1ee08cd5",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -25646,6 +25716,7 @@
                 "amber dune juniper"
               ],
               "guid": "ds-54ceb9b4",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -25812,6 +25883,7 @@
                 "amber dune juniper"
               ],
               "guid": "ds-54ceb9b4",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -26058,6 +26130,7 @@
                 "garnet amber amber basil"
               ],
               "guid": "ds-7d20c364",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -26224,6 +26297,7 @@
                 "garnet amber amber basil"
               ],
               "guid": "ds-7d20c364",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -26396,6 +26470,7 @@
                 "cobalt fjord"
               ],
               "guid": "ds-a1e21f9e",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -26562,6 +26637,7 @@
                 "cobalt fjord"
               ],
               "guid": "ds-a1e21f9e",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -26734,6 +26810,7 @@
                 "amber harbor indigo"
               ],
               "guid": "ds-7216f8a8",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -26900,6 +26977,7 @@
                 "amber harbor indigo"
               ],
               "guid": "ds-7216f8a8",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -27146,6 +27224,7 @@
                 "garnet"
               ],
               "guid": "ds-c8f0b730",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -27312,6 +27391,7 @@
                 "garnet"
               ],
               "guid": "ds-c8f0b730",
+              "mod": 1000000,
               "notetype": 0,
               "tags": [
                 "ds"
@@ -27495,13 +27575,13 @@
   ],
   "function": "anki.import.package",
   "generator": "tools/parity-oracle/anki/generate.py",
-  "generator_sha256": "8bd480ee4afb7a31cc6096a397940da1c3661ab11df1cc95214ca464c49e6737",
+  "generator_sha256": "deb5cdaa400386b1fcb2c86f60fa1f9fdf964c0a499124fe2ff2f081d2deea6a",
   "inputs": "synthetic",
   "kind": "engine",
   "note": "imports the package into the collection, then answers the rows that changed and the engine's counts (F3); cases drawn under CPython 3.12.3.",
   "registry": "tools/parity-oracle/anki/registry/spec_498.py",
-  "registry_sha256": "bdd6ffaf1205a07705397b3793244fd7a4852bbd9af35882003df5e2ccf706f8",
+  "registry_sha256": "a0ee26a7384b62d141919a7a5c1c95918b6a1881492f76863b17befd33e654bf",
   "schema": "phx.parity-golden.v1",
   "seed": 498,
-  "source_commit": "65e053b829825f534803b2b772c507a73ba936a3"
+  "source_commit": "a078820fd4fec3068ed7863344cd50effddabc6b"
 }
