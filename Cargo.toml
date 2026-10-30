@@ -60,6 +60,7 @@ deck-streak-companion = { path = "crates/companion" }
 deck-streak-companion-slot = { path = "crates/companion-slot" }
 deck-streak-collection = { path = "crates/collection" }
 deck-streak-media = { path = "crates/media" }
+deck-streak-sync = { path = "crates/sync" }
 # ADR-029: the parity oracle's golden reader. So far only a proving crate's dev-dependencies name
 # them; later ADRs cite ADR-029 rather than admitting them again.
 serde = { version = "1.0.229", features = ["derive"] }
@@ -202,6 +203,8 @@ unused_must_use = "deny"
 missing_docs = "warn"
 # ADR-531 D7: a crate's Kani harnesses sit behind `cfg(kani)`, which only the model checker sets, so
 # the name is declared here and `-D warnings` stays clean (the formal-kani pack).
+# `cfg(kani)` is set by the Kani verifier's compiler alone, around a crate's proof harnesses
+# (ADR-527 D7); declaring it keeps `-D warnings` clean for every build that never sets it.
 unexpected_cfgs = { level = "warn", check-cfg = ["cfg(kani)"] }
 
 [workspace.lints.clippy]

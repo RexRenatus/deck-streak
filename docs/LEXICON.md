@@ -29,6 +29,8 @@ notetype in deck-streak-collection: model
 media_hash in deck-streak-media: checksum, fingerprint
 binding in deck-streak-media: attachment
 sweep in deck-streak-media: purge, cleanup
+operation in deck-streak-sync: mutation, changeset
+conflict in deck-streak-sync: clash
 ```
 
 ## Glossary
@@ -73,3 +75,10 @@ sweep in deck-streak-media: purge, cleanup
 | imported name | media | any other plain media name, brought by an import and kept exactly as written; it claims no hash |
 | binding | media | a name's one hash, live while its file is held and released after a sweep deletes it; a name is bound once and comes back only for the same hash |
 | sweep | media | the plan of which stored media files to delete: every file that is not live, pinned, in grace or imported |
+| operation | sync | one change a device or the server makes to study data, typed (`Op`) and written in one byte encoding: an answer, an undo of one, or an edit of a note, card, deck, notetype or media name |
+| server seq | sync | an operation's place in the server's log, given when the server accepts it; every device folds the log in that order and pulls by it |
+| pending | sync | a device's own operation the server has not judged: it leaves the device's queue only on the server's verdict on it or its appearance in a pull |
+| conflict record | sync | an edit that lost to a concurrent edit of the same register, kept with the winner's key, so no edit is lost silently |
+| sealed event | sync | an event the devices encrypt and the server only relays and orders, unable to read it; a tag edit travels as one |
+| hybrid clock | sync | an operation's clock: one past every clock its device made or saw, never below the device's wall clock |
+| slot | sync | a number 0 to 63 given once per device (0 is the server's); every id a device makes has its slot as its residue mod 64 |

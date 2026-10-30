@@ -1,3 +1,4 @@
+-- @phx covers crates/sync/src/clock.rs anchor=tick digest=sha256:5f1a758b212cfeec0d493044bd9e0352999ed213f047dbc934414c2ff2ee793e
 -- @phx cites #15
 -- @phx vectors formal/vectors/sync-clock.jsonl
 -- @phx theorem tick_gt_seen ramp=report
@@ -12,10 +13,10 @@
 /-!
 # Formal.SyncClock
 
-The device's hybrid clock, ahead of its code (SPEC-504, ADR-522). Before a device records an
-operation it takes the next clock: one past the larger of its own last clock and every clock it has
-pulled, and never below the wall clock. No code in the tree computes it yet; the sync core that
-will gains a `covers` line on its tick and reads `formal/vectors/sync-clock.jsonl` byte-equal.
+The device's hybrid clock, written ahead of its code (SPEC-504, ADR-522). Before a device records
+an operation it takes the next clock: one past the larger of its own last clock and every clock it
+has pulled, and never below the wall clock. The sync core's `tick` (SPEC-509) is the covered code,
+and its test reads `formal/vectors/sync-clock.jsonl` byte-equal.
 
 Each claim is a `Prop` over a tick function, proved of `tick` and refuted, at a concrete input, of
 the defect its witness names:

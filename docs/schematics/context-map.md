@@ -74,6 +74,7 @@ flowchart TB
     companion
     collection
     media
+    sync
   end
 
   daemon --> kernel

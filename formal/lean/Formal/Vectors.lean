@@ -2,6 +2,7 @@ import Formal.ChestVectors
 import Formal.CompanionDecideVectors
 import Formal.ExchangeVectors
 import Formal.HabitWritingVectors
+import Formal.IdSlotVectors
 import Formal.MediaBindVectors
 import Formal.MediaGcVectors
 import Formal.NextMilestoneVectors
@@ -40,6 +41,7 @@ def main (args : List String) : IO UInt32 := do
   | ["CompanionDecide"] => Formal.CompanionDecideVectors.run
   | ["Exchange"] => Formal.ExchangeVectors.run
   | ["HabitWriting"] => Formal.HabitWritingVectors.run
+  | ["IdSlot"] => Formal.IdSlotVectors.run
   | ["MediaBind"] => Formal.MediaBindVectors.run
   | ["MediaGc"] => Formal.MediaGcVectors.run
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run

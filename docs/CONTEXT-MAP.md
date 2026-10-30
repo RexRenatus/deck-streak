@@ -48,6 +48,7 @@ deck-streak-companion     (the scheduling companion's documented interface: sche
 deck-streak-companion-slot  (the one substitutable companion body; the public body opens Absent; ADR-519)  depends on: companion
 deck-streak-collection    (the collection store, dormant: one file per user, its one opener, schema and migrations, the append-only review log and its erase gate, the read port and the store's data-rights port; ADR-530)  depends on: nothing
 deck-streak-media         (a media file known by its SHA-256, certified and imported names, write-once bindings, the one grammar of media names, the sweep plan, with no I/O; ADR-531)  depends on: nothing
+deck-streak-sync          (the sync core: typed operations, one encoding, the hybrid clock, the id allocator, the key, the field merge and the pending queue, with no I/O, for the server and both clients; ADR-527)  depends on: nothing
 miniapp   web/app/src     (the SvelteKit Mini App)  depends on: nothing internal
 ios-harness  ios/  (the SwiftUI harness over deck-streak-ffi's XCFramework; ADR-335)  depends on: nothing internal
 landing   web/site/src    (the Astro landing page, planned)  depends on: nothing internal
@@ -114,6 +115,13 @@ CSS write, and a sweep plan keeps every live, pinned, in-grace and imported file
 workspace's `sha2` alone and does no I/O, so it has no edge to the kernel. A collection implements
 its `MediaIndex` port, and the renderer reads names through its grammar; each gains its edge to it
 in the change that first uses it.
+
+`deck-streak-sync` is the sync core (SPEC-509, ADR-527): the typed operations every device and the
+server write in, their one byte encoding, the hybrid clock and the id allocator beside it, the key
+every party folds by, the rule for concurrent edits that keeps every loser, and a device's queue of
+operations the server has not judged. It depends on nothing and does no I/O: a caller hands in the
+wall clock and the bytes. The server's log, the umbrella FFI crate and the web engine gain their
+edges to it in the changes that first use it (#15).
 
 `deck-streak-push` is an outbound adapter: it builds APNs and web push requests and reports what
 each platform answered, and it depends on the kernel's clock alone (SPEC-343, ADR-354 D3). The

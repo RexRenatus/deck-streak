@@ -1,3 +1,5 @@
+-- @phx covers crates/sync/src/key.rs anchor=sort_keys digest=sha256:644c2b6438b8338ff7bf846e061575d0205c984134988fa7fb798535cbfd52ac
+-- @phx covers crates/sync/src/key.rs anchor=compare digest=sha256:471a3c7435f96360232781932b72560b51c34f5ae5cbf7f9cfff937bd69457d3
 -- @phx cites #15
 -- @phx vectors formal/vectors/review-key.jsonl
 -- @phx theorem fold_sorted_perm_invariant ramp=report
@@ -8,14 +10,14 @@ import Formal.SyncOrder
 /-!
 # Formal.ReviewKey
 
-The card's canonical fold, ahead of its code (SPEC-504, ADR-522). A card's counters and due state
-are folded from its reviews in key order, (hlc, origin, seq), whatever order the server's log
-delivered them in. `sortKeys` places each review by its key (`ins`), and the claim
+The card's canonical fold, written ahead of its code (SPEC-504, ADR-522). A card's counters and
+due state are folded from its reviews in key order, (hlc, origin, seq), whatever order the server's
+log delivered them in. `sortKeys` places each review by its key (`ins`), and the claim
 `FoldPermInvariant` is that any fold over the sorted reviews gives one answer for every arrival
 order of the same set of distinct reviews. `sortServerOrder`, which keeps the arrival order, is
-refuted at two reviews delivered in both orders. No code in the tree folds the log yet; the sync
-core that will gains a `covers` line on its sort and reads `formal/vectors/review-key.jsonl`
-byte-equal.
+refuted at two reviews delivered in both orders. The sync core's `sort_keys` and the key order it
+sorts by, `compare` (SPEC-509), are the covered code, and its test reads
+`formal/vectors/review-key.jsonl` byte-equal.
 -/
 
 namespace Formal.ReviewKey

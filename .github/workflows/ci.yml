@@ -1073,6 +1073,10 @@ jobs:
         run: |
           CC_wasm32_unknown_unknown=clang-18 AR_wasm32_unknown_unknown=llvm-ar-18 \
             cargo build --locked -p deck-streak-collection --lib --target wasm32-unknown-unknown
+      # The sync core, which the server and both clients link (SPEC-509 R10; ADR-527 D1), built
+      # for the same two targets: it depends on nothing, so a library build is the whole check.
+      - name: the sync core for both clients' targets (wasm32 and iOS)
+        run: cargo build --locked -p deck-streak-sync --lib --target wasm32-unknown-unknown --target aarch64-apple-ios
       - name: build the module and its bindings
         run: bash scripts/web-engine-build.sh --cc clang-18 --ar llvm-ar-18 --out target/web-engine
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0

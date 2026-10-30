@@ -1563,6 +1563,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "deck-streak-sync"
+version = "0.3.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "deck-streak-vault"
 version = "0.3.0"
 dependencies = [
