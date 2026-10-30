@@ -65,9 +65,9 @@ allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 # ADR-022 and ADR-058: the maintainer's fork of Anki, whose commit the root manifest's `[patch]`
 # entry puts in place of the upstream tag the engine names, and the one fork the engine's own
 # manifest pins by revision (ankitects/rust-url, for percent-encoding-iri). ADR-338 and ADR-353 add
-# a third, fsrs-rs, and ADR-513 a fourth, the web-push-native fork, below; nothing else. While the
-# patch holds no crate comes from Anki's own repository, so it is not allowed: an unpatched engine
-# is refused by name.
+# a third, fsrs-rs, ADR-513 a fourth, the web-push-native fork, and ADR-583 a fifth, the sqlx fork,
+# below; nothing else. While the patch holds no crate comes from Anki's own repository, so it is not
+# allowed: an unpatched engine is refused by name.
 allow-git = [
     "https://github.com/RexRenatus/anki.git",
     "https://github.com/ankitects/rust-url.git",
@@ -78,4 +78,7 @@ allow-git = [
     # ADR-513: the maintainer's fork of web-push-native, at the upstream change that moves it to
     # p256 0.14, until upstream releases it; web-push-native and ece-native come from it.
     "https://github.com/RexRenatus/web-push-native.git",
+    # ADR-583: the maintainer's fork of sqlx, at the published 0.9.0 with sha2 moved to 0.11, until
+    # a sqlx release moves to sha2 0.11; all seven sqlx crates come from it.
+    "https://github.com/RexRenatus/sqlx.git",
 ]

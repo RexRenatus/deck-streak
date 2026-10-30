@@ -27,6 +27,13 @@
       "test_ios_lane"
     ]
   },
+  "scripts/lock-digest-line.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_lock_digest_line",
+      "test_audit_sync_server"
+    ]
+  },
   "scripts/memory_scope.py": {
     "dir": "scripts/tests",
     "modules": [
