@@ -22,6 +22,7 @@ pub mod lock;
 pub mod memory_state;
 pub mod reader;
 pub mod schema18;
+pub mod search_parity;
 pub mod sensitive;
 pub mod settings;
 pub mod skip;

@@ -11,7 +11,7 @@ that amends this file in the same change. Never add an edge to make code compile
 
 ```context-map
 deck-streak-kernel        (shared kernel: ids, study day, track, verdict, errors, config, Db, data-rights port)  depends on: study-day
-deck-streak-ingest        (anti-corruption layer for Anki: sync, read, change gate, new-card queue, skip day)  depends on: kernel, collection
+deck-streak-ingest        (anti-corruption layer for Anki: sync, read, change gate, new-card queue, skip day)  depends on: kernel, collection, search
 deck-streak-identity      (Telegram initData, the owner allow-list, sessions, linked sign-in)  depends on: kernel
 deck-streak-analytics     (daily rollup, per-language stats, five-pillar score, today snapshot)  depends on: kernel, ingest
 deck-streak-progression   (XP ledger and grant port, levels, tiers, badges, records, seasons)  depends on: kernel, ingest, xp
@@ -43,6 +43,7 @@ deck-streak-web-engine    (Anki's engine on wasm32 in the web client's Worker: t
 deck-streak-push          (APNs and web push senders for a native or web client: provider and VAPID tokens, RFC 8291; ADR-354)  depends on: kernel
 deck-streak-xp            (the per-review XP rule, with no I/O, for the server and both clients; ADR-371)  depends on: nothing
 deck-streak-study-day     (the study day, its instant and its date error, with no I/O, for the server and both clients; ADR-515)  depends on: nothing
+deck-streak-search        (the product's own search: one typed query, a closed grammar and its profiles, an evaluator over rows, with no I/O; ADR-532)  depends on: study-day
 deck-streak-companion     (the scheduling companion's documented interface: schema v1, its codec, the handshake, the decision that fails closed, the Absent default; ADR-519)  depends on: nothing
 deck-streak-companion-slot  (the one substitutable companion body; the public body opens Absent; ADR-519)  depends on: companion
 deck-streak-collection    (the collection store, dormant: one file per user, its one opener, schema and migrations, the append-only review log and its erase gate, the read port and the store's data-rights port; ADR-530)  depends on: nothing
@@ -77,6 +78,12 @@ offset and its ISO calendar, the instant it is computed from and the error a mal
 (SPEC-497, ADR-515). It depends on nothing and does no I/O, so both clients can link it without the
 kernel. The kernel depends on it alone and re-exports each item at the path it always had;
 `SystemClock`, the one reader of the system time, stays in the kernel.
+
+`deck-streak-search` is the product's own reading of a search (SPEC-514, ADR-532): one typed query,
+a closed grammar with its profiles and limits, refusals by name that never carry the search, and an
+evaluator over a collection's rows held to the engine's goldens. It depends on `study-day` alone,
+for the engine's day, and does no I/O, so it has no edge to the kernel. Ingest depends on it: the
+skip search is parsed under its skip profile and its holds are joined by structure.
 
 `deck-streak-companion` is the scheduling companion's documented interface (SPEC-501, ADR-519): the
 integer-only schema v1 that crosses between the app and a scheduler outside its public code, the

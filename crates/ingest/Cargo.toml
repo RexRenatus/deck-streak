@@ -21,6 +21,9 @@ chrono.workspace = true
 # opener it opens the copy through.
 deck-streak-collection.workspace = true
 deck-streak-kernel.workspace = true
+# SPEC-514 and ADR-532: the skip search is parsed under the search crate's skip profile and wrapped
+# by structure; the crate has no edge to the kernel and no I/O.
+deck-streak-search.workspace = true
 # ADR-530 D8: the schema-18 adapter runs its statements on the connection the collection's foreign
 # opener builds; no file of this crate builds one.
 rusqlite.workspace = true

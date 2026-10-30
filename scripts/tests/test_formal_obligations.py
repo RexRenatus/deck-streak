@@ -123,6 +123,8 @@ RELEASE_GATES_TIE = {
 # SPEC-501: the scheduling companion's decision, the first planned entry built, present under O6
 # with its vectors tie.
 COMPANION_ENTRIES = ("lean/CompanionDecide",)
+# SPEC-514: the skip wrap's holds, present under O14 beside its still planned entry and harnesses.
+SEARCH_ENTRIES = ("lean/SearchHolds",)
 COMPANION_TIE = {
     "method": "vectors",
     "for": "lean/CompanionDecide",
@@ -131,7 +133,10 @@ COMPANION_TIE = {
 }
 # The entries built after the 44 were dispositioned, each with its disposition and the
 # obligations that name it.
-NEW_ENTRIES = {"lean/CompanionDecide": ("keep", {"O6"})}
+NEW_ENTRIES = {
+    "lean/CompanionDecide": ("keep", {"O6"}),
+    "lean/SearchHolds": ("keep", {"O14"}),
+}
 # The 49 dispositioned entries: the 43 that predate the sync entries, those five, and the
 # release gates' entry.
 DISPOSITIONS = {
@@ -834,6 +839,7 @@ class TheFormalLedger(unittest.TestCase):
             "O1a": SYNC_MODELS,
             "O6": COMPANION_ENTRIES,
             "O11": ENGINE_TIED + ("tla/OpLog",),
+            "O14": SEARCH_ENTRIES,
             "O17": (RELEASE_GATES,),
         }
         for identity, entries in sync_named.items():

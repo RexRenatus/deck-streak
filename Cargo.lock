@@ -1353,6 +1353,7 @@ dependencies = [
  "chrono",
  "deck-streak-collection",
  "deck-streak-kernel",
+ "deck-streak-search",
  "rusqlite",
  "serde",
  "serde_json",
@@ -1521,6 +1522,15 @@ dependencies = [
  "thiserror 2.0.21",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "deck-streak-search"
+version = "0.3.0"
+dependencies = [
+ "deck-streak-study-day",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
