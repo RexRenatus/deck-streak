@@ -1,5 +1,7 @@
 # DeckStreak
 
+![DeckStreak](docs/assets/deckstreak-hero-tide-light.gif)
+
 DeckStreak turns your Anki reviews into XP, levels, streaks, quests and badges in a Telegram Mini
 App, with daily pre-study readings written by a mentor for each subject you study. It reads the
 reviews you already do in Anki, through your own Anki sync server, and scores every study day.

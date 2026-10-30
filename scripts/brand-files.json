@@ -1,0 +1,131 @@
+{
+  "$description": "The files that come from the DeckStreak brand source, each by its path, sha256, size, kind and pixel sizes. The public scrub admits a binary only at a listed path with the listed sha256 and size (SPEC-033 as SPEC-579 amends it), and scripts/tests/test_brand_files.py holds each file to its entry.",
+  "files": [
+    {
+      "path": "docs/assets/deckstreak-hero-tide-light.gif",
+      "sha256": "fc891c959acfbeed4b2f68d1bb795d13b254e5ce2c81fb179185e66251b6ac14",
+      "bytes": 134234,
+      "kind": "gif",
+      "pixels": [
+        [
+          960,
+          360
+        ]
+      ]
+    },
+    {
+      "path": "ios/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
+      "sha256": "2766fd033886ec3d4df767bf9d364207315f5501d885f587910c860e496eb26b",
+      "bytes": 28805,
+      "kind": "png",
+      "pixels": [
+        [
+          1024,
+          1024
+        ]
+      ]
+    },
+    {
+      "path": "ios/App/Assets.xcassets/AppIcon.appiconset/AppIcon-dark-1024.png",
+      "sha256": "2766fd033886ec3d4df767bf9d364207315f5501d885f587910c860e496eb26b",
+      "bytes": 28805,
+      "kind": "png",
+      "pixels": [
+        [
+          1024,
+          1024
+        ]
+      ]
+    },
+    {
+      "path": "ios/App/Assets.xcassets/AppIcon.appiconset/AppIcon-tinted-1024.png",
+      "sha256": "8925f8119fd1d9a17393b5faee90446c296157d6ab4c122a453226af5940d137",
+      "bytes": 24502,
+      "kind": "png",
+      "pixels": [
+        [
+          1024,
+          1024
+        ]
+      ]
+    },
+    {
+      "path": "ios/App/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "sha256": "8e290c5aab301de165da30e645051e6f08be7c2cbc392c8201def0cf635b1be3",
+      "bytes": 736,
+      "kind": "json",
+      "pixels": null
+    },
+    {
+      "path": "web/app/static/apple-touch-icon.png",
+      "sha256": "e1798e259077840ee7fc833e5a55e147dc131e74acda4fb721b065b51f3c8719",
+      "bytes": 4498,
+      "kind": "png",
+      "pixels": [
+        [
+          180,
+          180
+        ]
+      ]
+    },
+    {
+      "path": "web/app/static/favicon.ico",
+      "sha256": "86a42d27d5cc919234803c7b829fa01e89dba1b96134ce404e826d82aef74334",
+      "bytes": 451,
+      "kind": "ico",
+      "pixels": [
+        [
+          16,
+          16
+        ],
+        [
+          32,
+          32
+        ]
+      ]
+    },
+    {
+      "path": "web/app/static/favicon.svg",
+      "sha256": "a92638069276d49cf34baa5e25eb3c2424ae345ac4c3c184cfdee7734b0b8d54",
+      "bytes": 1087,
+      "kind": "svg",
+      "pixels": null
+    },
+    {
+      "path": "web/app/static/icon-192.png",
+      "sha256": "b487866bb47c096b68969774111bea8d372f73173d5d54277398753dfa0a60fb",
+      "bytes": 4890,
+      "kind": "png",
+      "pixels": [
+        [
+          192,
+          192
+        ]
+      ]
+    },
+    {
+      "path": "web/app/static/icon-512.png",
+      "sha256": "e7c5fda5b35920451d78ab409b69ff2f65bc2718228cc747e590f4696ff1e9a8",
+      "bytes": 13144,
+      "kind": "png",
+      "pixels": [
+        [
+          512,
+          512
+        ]
+      ]
+    },
+    {
+      "path": "web/app/static/icon-maskable-512.png",
+      "sha256": "d34831c08d65125ec3e7b630335d5fd746d87cf4e539949eda743ede2f525aca",
+      "bytes": 12521,
+      "kind": "png",
+      "pixels": [
+        [
+          512,
+          512
+        ]
+      ]
+    }
+  ]
+}

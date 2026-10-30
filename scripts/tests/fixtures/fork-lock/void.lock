@@ -1,0 +1,10 @@
+# void: a lock with no block-buffer, so the guard examines nothing
+version = 4
+
+[[package]]
+name = "digest"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "const-oid",
+]

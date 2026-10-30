@@ -507,3 +507,15 @@ ADR-524 amends D8 and D13, for the voice only. The rest of both stands.
   language, else the language's first local voice, else none, and a clip with none is not spoken: it settles at
   once, and the review's status region names the language. The picker lists local voices only. A stored remote
   choice is ignored and kept. The rate, the one storage key and the refused storage stay as D13 decided.
+
+## Amendment: D16 is superseded by the brand source's icons (ADR-598)
+
+D16, "A plain generated icon (part 2)", is superseded by ADR-598 D4 and D5; its text above is kept
+as it was. Drawn art now exists: the DeckStreak logo's files come from the DeckStreak brand source,
+byte for byte, and are served from `web/app/static/`. The public scrub admits each listed binary by
+its path, sha256 and byte count (`scripts/brand-files.json`; SPEC-033's amendment for SPEC-579), so
+the reason D16 gave against committed PNG files no longer holds for these files and holds for every
+other binary. `web/app/src/lib/icon.ts` and the three icon endpoints are removed.
+
+- Chosen: the brand source's files at the static root, admitted by the pinned list, because the install criteria now take the product's own mark
+- Keeping the generated squares beside the logo: rejected because two icons at one path cannot both be served, and the square is not the product's mark

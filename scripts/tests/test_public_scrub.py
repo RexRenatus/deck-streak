@@ -5,6 +5,7 @@ passes a systemd unit instance name, and composes its rules once (SPEC-054 A1 to
 public shapes are its own files, each family still found, and its loader still reads the private
 list's schema (SPEC-056 A9, A10)."""
 
+import hashlib
 import importlib.util
 import json
 import os
@@ -759,6 +760,119 @@ class TheCommandLineSaysWhatItDoes(unittest.TestCase):
             done.stdout.splitlines(),
             ["examined 0 file(s) against public shapes only; 0 finding(s)"],
         )
+
+
+# SPEC-579's planted brand file: the listed path, and the list's own path at a scanned root.
+LISTED = "icons/logo.png"
+BRAND_LIST = "scripts/brand-files.json"
+
+
+def write_brand_list(root, entries):
+    """Write the brand list at `root`: one entry per (path, bytes), its sha256 and size computed
+    from the bytes, so this file holds no digest."""
+    files = [
+        {"path": path, "sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)}
+        for path, data in entries
+    ]
+    listed = root / BRAND_LIST
+    listed.parent.mkdir(parents=True, exist_ok=True)
+    listed.write_text(json.dumps({"files": files}, indent=2) + "\n", encoding="utf-8")
+
+
+def brand_repo(tmp, files, entries):
+    """A committed repository holding a clean README, `files` (path to bytes) and a brand list of
+    `entries`."""
+    root = new_repo(tmp)
+    (root / "README.md").write_text("a clean readme\n", encoding="utf-8")
+    for path, data in files.items():
+        (root / path).parent.mkdir(parents=True, exist_ok=True)
+        (root / path).write_bytes(data)
+    write_brand_list(root, entries)
+    commit_all(root, "add the brand files")
+    return root
+
+
+class AListedBrandBinaryIsAdmitted(unittest.TestCase):
+    """SPEC-579 A15 to A19 (R6; ADR-598 D5): a binary is admitted only at a path the brand list
+    names with its sha256 and byte count, in the tree scan and in the history scan; an admitted
+    binary is still searched for every private literal; every other binary is refused as before;
+    and a list the scrub cannot read stops it by name."""
+
+    def test_a_listed_binary_passes_the_tree_and_history_scans(self):
+        # A15.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = brand_repo(tmp, {LISTED: BINARY}, [(LISTED, BINARY)])
+            done = run_scrub(root)
+            self.assertEqual(done.returncode, 0, done.stdout)
+            self.assertNotIn("binary", done.stdout)
+            self.assertRegex(done.stdout, r"examined 3 file\(s\) against .*; 0 finding\(s\)")
+            done = run_scrub(root, "--history")
+            self.assertEqual(done.returncode, 0, done.stdout)
+            self.assertNotIn("binary", done.stdout)
+            self.assertRegex(
+                done.stdout, r"examined 3 file\(s\) and 3 history blob\(s\) against .*; 0 finding"
+            )
+
+    def test_a_listed_path_with_other_bytes_is_refused_as_binary(self):
+        # A16: one byte changed, the size kept.
+        other = BINARY[:-1] + b"\x01"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = brand_repo(tmp, {LISTED: other}, [(LISTED, BINARY)])
+            done = run_scrub(root, "--history")
+            self.assertEqual(done.returncode, 1, done.stdout)
+            self.assertIn(f"public-scrub: {LISTED}: binary", done.stdout.splitlines())
+            self.assertRegex(done.stdout, r"history:icons/logo\.png@[0-9a-f]{9}: binary")
+
+    def test_listed_bytes_at_an_unlisted_path_are_refused_as_binary(self):
+        # A17.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = brand_repo(tmp, {"icons/other.png": BINARY}, [(LISTED, BINARY)])
+            done = run_scrub(root, "--history")
+            self.assertEqual(done.returncode, 1, done.stdout)
+            self.assertIn("public-scrub: icons/other.png: binary", done.stdout.splitlines())
+            self.assertRegex(done.stdout, r"history:icons/other\.png@[0-9a-f]{9}: binary")
+
+    def test_a_private_literal_inside_a_listed_binary_is_still_found(self):
+        # A18: the listed bytes hold the word "compiled", which the private list names.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = brand_repo(tmp, {LISTED: BINARY}, [(LISTED, BINARY)])
+            deny = private_list(tmp, ["compiled"])
+            done = run_scrub(root, "--history", "--deny-list", str(deny))
+            self.assertEqual(done.returncode, 1, done.stdout)
+            self.assertIn(f"public-scrub: {LISTED}: private literal #0", done.stdout.splitlines())
+            self.assertRegex(
+                done.stdout, r"history:icons/logo\.png@[0-9a-f]{9}: private literal #0"
+            )
+            self.assertNotIn("binary", done.stdout)
+
+    def test_a_malformed_list_stops_the_scrub_by_name(self):
+        # A19: a list that is not JSON, an entry whose sha256 has 63 digits, a path named twice,
+        # an entry that is not an object, an empty path and a byte count that is a boolean.
+        digest = hashlib.sha256(BINARY).hexdigest()
+        entry = {"path": LISTED, "sha256": digest, "bytes": len(BINARY)}
+        other = {"path": LISTED, "sha256": hashlib.sha256(b"other").hexdigest(), "bytes": 5}
+        planted = {
+            "not JSON": "{ a list that is not JSON\n",
+            "a 63-digit sha256": json.dumps({"files": [dict(entry, sha256=digest[:63])]}),
+            "a path named twice": json.dumps({"files": [entry, other]}),
+            "an entry that is not an object": json.dumps({"files": [LISTED]}),
+            "an empty path": json.dumps({"files": [dict(entry, path="")]}),
+            "a byte count that is a boolean": json.dumps({"files": [dict(entry, bytes=True)]}),
+        }
+        reached = 0
+        for name, text in examined("planted malformed lists", list(planted.items())):
+            with self.subTest(name), tempfile.TemporaryDirectory() as tmp:
+                root = new_repo(tmp)
+                (root / "README.md").write_text("a clean readme\n", encoding="utf-8")
+                (root / "scripts").mkdir()
+                (root / BRAND_LIST).write_text(text, encoding="utf-8")
+                commit_all(root, "add a malformed brand list")
+                done = run_scrub(root)
+                self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+                self.assertIn(BRAND_LIST, done.stdout)
+                self.assertEqual(done.stderr, "", "a refusal, never a traceback")
+                reached += 1
+        self.assertEqual(reached, len(planted))
 
 
 if __name__ == "__main__":

@@ -565,3 +565,20 @@ A29: python3 -m unittest discover -s scripts/tests -p test_release_workflow.py -
 - SPEC-358 R2 moves the flag and bury rules into the shared core, and A4's and A5's tests move
   with them, names kept: `crates/engine-core/tests/review.rs` `the_flag_toggles_red` and
   `bury_is_the_users_bury_of_the_shown_card` (#633).
+
+## Amendment: the Home Screen's icons come from the brand source (SPEC-579)
+
+R17 is amended by SPEC-579 and ADR-598; its text above is kept as it was. The touch icon and the
+manifest's icons are the DeckStreak logo's files from the DeckStreak brand source, served from
+`web/app/static/`: `apple-touch-icon.png` (180 pixels), `icon-192.png`, `icon-512.png` and
+`icon-maskable-512.png`, with `favicon.svg` linked from `app.html` and `favicon.ico` served at the
+root. The manifest's `icons` member is the brand source's three entries: 192 and 512 pixels for
+purpose `any`, and 512 for purpose `maskable`. The plain generated squares
+(`web/app/src/lib/icon.ts` and the three prerendered endpoints) are removed.
+
+A28 keeps its test and its name, "the manifest meets the install criteria", in
+`web/app/src/lib/manifest.test.ts`: it reads the static files, each icon's size from its own
+header, the three entries, the touch icon at 180 pixels, both favicons and the three head links,
+and it refuses an endpoint left at an icon's path. The page policy is unchanged (`csp.test.ts`).
+The byte-for-byte check of each file against the brand source's list is SPEC-579's
+(`scripts/tests/test_brand_files.py`).
