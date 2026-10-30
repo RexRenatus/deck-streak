@@ -1,0 +1,66 @@
+//! The port a collection implements so the media core can read it (SPEC-513 R7; ADR-531 D6, D8).
+//!
+//! The media core does no I/O and depends on no workspace crate. A collection hands it every text
+//! that names media, as HTML (a note's field, a card template) or as CSS (a note type's), and
+//! every file its store holds; the core finds the names, the images the engine renders from the
+//! HTML's LaTeX among them, and plans the sweep.
+
+use std::collections::BTreeSet;
+
+use crate::css::scan_css;
+use crate::latex::{LatexFormat, latex_images};
+use crate::scan::scan;
+use crate::sweep::{StoredFile, SweepPlan, SweepPolicy, plan_sweep};
+
+/// One text that names media.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Source<'a> {
+    /// A note's field or a card template, read by [`scan`], its LaTeX named as PNG images, the
+    /// engine's default.
+    Html(&'a str),
+    /// A note's field or a card template of a note type that renders its LaTeX as SVG images, read
+    /// by [`scan`], its LaTeX named as SVG images.
+    HtmlSvg(&'a str),
+    /// A note type's CSS, read by [`scan_css`].
+    Css(&'a str),
+}
+
+/// What a collection gives the media core.
+pub trait MediaIndex {
+    /// Every text that names media: each note's fields and each card template as HTML, and each
+    /// note type's CSS as CSS.
+    fn sources(&self) -> Vec<Source<'_>>;
+
+    /// Every file the media store holds.
+    fn stored(&self) -> Vec<StoredFile>;
+}
+
+/// Every name the index's texts write, with the images the engine renders from their LaTeX.
+#[must_use]
+pub fn references<I: MediaIndex + ?Sized>(index: &I) -> BTreeSet<String> {
+    let mut names = BTreeSet::new();
+    for source in index.sources() {
+        match source {
+            Source::Html(text) => html_names(&mut names, text, LatexFormat::Png),
+            Source::HtmlSvg(text) => html_names(&mut names, text, LatexFormat::Svg),
+            Source::Css(css) => names.extend(scan_css(css)),
+        }
+    }
+    names
+}
+
+/// Adds the names an HTML text writes, then the names of the images its LaTeX renders to.
+fn html_names(names: &mut BTreeSet<String>, text: &str, format: LatexFormat) {
+    names.extend(scan(text));
+    names.extend(
+        latex_images(text, format)
+            .into_iter()
+            .map(|image| image.name),
+    );
+}
+
+/// The sweep plan for the index's store against every name its texts write.
+#[must_use]
+pub fn plan<I: MediaIndex + ?Sized>(index: &I, policy: SweepPolicy) -> SweepPlan {
+    plan_sweep(&index.stored(), &references(index), policy)
+}

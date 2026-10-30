@@ -362,16 +362,25 @@
       "layers": ["media"],
       "artifacts": [
         {"kind": "tla", "entry": "tla/MediaSync", "state": "planned"},
-        {"kind": "lean", "entry": "lean/MediaBind", "state": "planned"},
-        {"kind": "lean", "entry": "lean/MediaGc", "state": "planned"},
-        {"kind": "kani", "harness": "K-blob-path", "state": "planned"},
-        {"kind": "kani", "harness": "K-bind", "state": "planned"},
-        {"kind": "kani", "harness": "K-sweep", "state": "planned"},
+        {"kind": "lean", "entry": "lean/MediaBind", "property": "bind_keeps_a_bound_hash", "state": "present"},
+        {"kind": "lean", "entry": "lean/MediaBind", "property": "bind_records_its_outcome", "state": "present"},
+        {"kind": "lean", "entry": "lean/MediaBind", "property": "bind_is_idempotent", "state": "present"},
+        {"kind": "lean", "entry": "lean/MediaBind", "property": "revival_only_for_the_same_hash", "state": "present"},
+        {"kind": "lean", "entry": "lean/MediaBind", "property": "a_mismatched_claim_is_refused", "state": "present"},
+        {"kind": "lean", "entry": "lean/MediaBind", "property": "release_keeps_the_hash", "state": "present"},
+        {"kind": "lean", "entry": "lean/MediaGc", "property": "a_kept_file_is_never_deleted", "state": "present"},
+        {"kind": "lean", "entry": "lean/MediaGc", "property": "every_other_file_is_deleted", "state": "present"},
+        {"kind": "kani", "harness": "K-blob-path", "state": "planned", "at": "crates/media/src/kani_proofs.rs::k_blob_path"},
+        {"kind": "kani", "harness": "K-bind", "state": "planned", "at": "crates/media/src/kani_proofs.rs::k_bind"},
+        {"kind": "kani", "harness": "K-sweep", "state": "planned", "at": "crates/media/src/kani_proofs.rs::k_sweep"},
         {"kind": "kani", "harness": "K-evictable", "state": "planned"},
-        {"kind": "kani", "harness": "K-scan", "state": "planned"},
+        {"kind": "kani", "harness": "K-scan", "state": "planned", "at": "crates/media/src/kani_proofs.rs::k_scan"},
         {"kind": "kani", "harness": "K-put", "state": "planned"}
       ],
-      "ties": [],
+      "ties": [
+        {"method": "vectors", "for": "lean/MediaBind", "test": "crates/media/tests/formal_vectors_bind.rs::step_and_release_step_answer_every_lean_vector"},
+        {"method": "vectors", "for": "lean/MediaGc", "test": "crates/media/tests/formal_vectors_gc.rs::fate_answers_every_lean_vector"}
+      ],
       "gaps": [
         "holds at the models' bounds, not universally",
         "the filesystem and OPFS are trusted"
@@ -494,6 +503,8 @@
     {"entry": "lean/Exchange", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/FieldMerge", "disposition": "re-stamp", "act": "stamped when the sync core lands: its field merge gains a cover and its test reads the vectors byte-equal", "obligations": ["O1", "O16"]},
     {"entry": "lean/HabitWriting", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/MediaBind", "disposition": "keep", "act": "new with the media core (SPEC-513): a name is bound to one hash, once; re-stamped when the bind or the release it covers moves, with no weakening", "obligations": ["O13"]},
+    {"entry": "lean/MediaGc", "disposition": "keep", "act": "new with the media core (SPEC-513): a sweep keeps every live, pinned, young or imported file; re-stamped when the decision it covers moves, with no weakening", "obligations": ["O13"]},
     {"entry": "lean/NextMilestone", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/OpenLapse", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/PushJudge", "disposition": "re-stamp", "act": "stamped when the sync core lands: its judge gains a cover and its test reads the vectors byte-equal", "obligations": ["O1", "O16"]},

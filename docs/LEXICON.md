@@ -26,6 +26,9 @@ leech in deck-streak-curriculum: hardcard
 review in deck-streak-collection: revlog
 preset in deck-streak-collection: deckconfig, dconf
 notetype in deck-streak-collection: model
+media_hash in deck-streak-media: checksum, fingerprint
+binding in deck-streak-media: attachment
+sweep in deck-streak-media: purge, cleanup
 ```
 
 ## Glossary
@@ -65,3 +68,8 @@ notetype in deck-streak-collection: model
 | slot | collection | a store's id slot: 0 for the server, 1 to 63 for an enrolled device |
 | erase gate | collection | the one switch under which a review, a retraction, a client record or a field history row may leave; only an erase opens it |
 | read port | collection | `CollectionRead`, what the server's contexts read of a collection, answered by the store or by ingest's schema-18 adapter |
+| media hash | media | the SHA-256 of a media file's bytes: the one identity the media store knows a file by |
+| certified name | media | `ds-`, a file's media hash in lowercase hex, and an optional extension: a name that carries its file's hash and reads back to itself |
+| imported name | media | any other plain media name, brought by an import and kept exactly as written; it claims no hash |
+| binding | media | a name's one hash, live while its file is held and released after a sweep deletes it; a name is bound once and comes back only for the same hash |
+| sweep | media | the plan of which stored media files to delete: every file that is not live, pinned, in grace or imported |

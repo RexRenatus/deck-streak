@@ -47,6 +47,7 @@ deck-streak-search        (the product's own search: one typed query, a closed g
 deck-streak-companion     (the scheduling companion's documented interface: schema v1, its codec, the handshake, the decision that fails closed, the Absent default; ADR-519)  depends on: nothing
 deck-streak-companion-slot  (the one substitutable companion body; the public body opens Absent; ADR-519)  depends on: companion
 deck-streak-collection    (the collection store, dormant: one file per user, its one opener, schema and migrations, the append-only review log and its erase gate, the read port and the store's data-rights port; ADR-530)  depends on: nothing
+deck-streak-media         (a media file known by its SHA-256, certified and imported names, write-once bindings, the one grammar of media names, the sweep plan, with no I/O; ADR-531)  depends on: nothing
 miniapp   web/app/src     (the SvelteKit Mini App)  depends on: nothing internal
 ios-harness  ios/  (the SwiftUI harness over deck-streak-ffi's XCFramework; ADR-335)  depends on: nothing internal
 landing   web/site/src    (the Astro landing page, planned)  depends on: nothing internal
@@ -105,6 +106,14 @@ read port the server's contexts read a collection through: the store answers it,
 schema-18 adapter answers it over Anki's file. It depends on nothing and reads no clock, so both
 clients can link it. It is dormant: nothing live reads or writes the store, and ingest's live
 readers keep their drivers until the cut-over switches them to the port.
+
+`deck-streak-media` is the media core (SPEC-513, ADR-531): a file is known by the SHA-256 of its
+bytes, a certified `ds-` name carries that hash and an imported name is kept as written, a name is
+bound to one hash once, one grammar (the engine's own) finds every media name a note's text and a
+CSS write, and a sweep plan keeps every live, pinned, in-grace and imported file. It depends on the
+workspace's `sha2` alone and does no I/O, so it has no edge to the kernel. A collection implements
+its `MediaIndex` port, and the renderer reads names through its grammar; each gains its edge to it
+in the change that first uses it.
 
 `deck-streak-push` is an outbound adapter: it builds APNs and web push requests and reports what
 each platform answered, and it depends on the kernel's clock alone (SPEC-343, ADR-354 D3). The

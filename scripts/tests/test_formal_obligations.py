@@ -37,8 +37,6 @@ PLANNED_ENTRIES = {
     "lean/EffectiveLog": ("O12",),
     "lean/QueueRule": ("O12",),
     "lean/AnkiDay": ("O12",),
-    "lean/MediaBind": ("O13",),
-    "lean/MediaGc": ("O13",),
     "lean/SearchCompile": ("O14",),
     "lean/ClozeFront": ("O15",),
     "lean/Allowlist": ("O15",),
@@ -131,11 +129,29 @@ COMPANION_TIE = {
     "test": "crates/companion/tests/formal_vectors_decide.rs"
     "::decide_and_negotiate_answer_every_lean_vector",
 }
+# SPEC-513: the media core's bind machine and sweep decision, present under O13 beside the media
+# sync model and the store's two harnesses, still planned; each with its vectors tie.
+MEDIA_ENTRIES = ("lean/MediaBind", "lean/MediaGc")
+MEDIA_TIES = [
+    {
+        "method": "vectors",
+        "for": "lean/MediaBind",
+        "test": "crates/media/tests/formal_vectors_bind.rs"
+        "::step_and_release_step_answer_every_lean_vector",
+    },
+    {
+        "method": "vectors",
+        "for": "lean/MediaGc",
+        "test": "crates/media/tests/formal_vectors_gc.rs::fate_answers_every_lean_vector",
+    },
+]
 # The entries built after the 44 were dispositioned, each with its disposition and the
 # obligations that name it.
 NEW_ENTRIES = {
     "lean/CompanionDecide": ("keep", {"O6"}),
     "lean/SearchHolds": ("keep", {"O14"}),
+    "lean/MediaBind": ("keep", {"O13"}),
+    "lean/MediaGc": ("keep", {"O13"}),
 }
 # The 49 dispositioned entries: the 43 that predate the sync entries, those five, and the
 # release gates' entry.
@@ -839,6 +855,7 @@ class TheFormalLedger(unittest.TestCase):
             "O1a": SYNC_MODELS,
             "O6": COMPANION_ENTRIES,
             "O11": ENGINE_TIED + ("tla/OpLog",),
+            "O13": MEDIA_ENTRIES,
             "O14": SEARCH_ENTRIES,
             "O17": (RELEASE_GATES,),
         }
@@ -852,7 +869,7 @@ class TheFormalLedger(unittest.TestCase):
             self.assertEqual(set(names), {(e, p) for e in entries for p in headers[e]})
         self.assertEqual(
             [tie for item in obligations for tie in item["ties"]],
-            [COMPANION_TIE, REPLAY_TIE, RELEASE_GATES_TIE],
+            [COMPANION_TIE, REPLAY_TIE, *MEDIA_TIES, RELEASE_GATES_TIE],
         )
         examined("planned entries", planned)
         examined("planned harnesses", harnesses)

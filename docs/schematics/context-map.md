@@ -73,6 +73,7 @@ flowchart TB
     fsrs7
     companion
     collection
+    media
   end
 
   daemon --> kernel
@@ -202,6 +203,10 @@ No other crate reaches either yet.
 `collection` depends on no workspace crate, and `ingest` alone depends on it: its schema-18 adapter
 implements the collection's read port, and the store stays dormant until the cut-over (SPEC-512,
 ADR-530).
+
+`media` depends on no workspace crate (its one dependency is `sha2`), and no crate depends on it
+yet: the collection that implements its index and the renderer that reads names through its grammar
+are later deliveries (SPEC-513, ADR-531).
 
 `deck-streak-migration` is planned in the fence and has no directory under `crates/`, so it is not
 drawn until the delivery that builds it.
