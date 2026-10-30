@@ -5,7 +5,7 @@ D3 to D5).
 sha256, byte count, kind and pixel sizes. This census holds every listed file to its entry: present,
 the same bytes, the kind its own header says, the pixel sizes its own header gives, and no text,
 time or comment metadata (A1 to A6). It holds the README's header to its order, the title, then the
-hero from a listed file, then the description paragraph (A7 to A9), and the app's project spec to
+hero from a listed file, then the description paragraph (under R4), and the app's project spec to
 the catalog and the icon set it names (A10 to A12). The public scrub admits a binary only at a
 listed path with the listed sha256 and size (SPEC-033 as SPEC-579 amends it); that half is
 `test_public_scrub.py`'s.
@@ -536,7 +536,7 @@ class TheBrandFilesAreTheExports(unittest.TestCase):
 
 class TheReadmeHeaderShowsTheHero(unittest.TestCase):
     def test_the_readme_opens_with_the_title_then_the_hero(self):
-        # A7 (R4).
+        # The hero-placement criterion (R4).
         self.assertEqual(readme_findings(REPO), [])
 
     def test_an_image_above_the_title_is_refused(self):
