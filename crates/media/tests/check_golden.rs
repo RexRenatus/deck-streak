@@ -8,7 +8,7 @@
 #[path = "../../../tools/parity-oracle/golden.rs"]
 mod golden;
 
-use deck_streak_media::{plan, MediaIndex, Source, StoredFile, SweepPolicy};
+use deck_streak_media::{MediaIndex, Source, StoredFile, SweepPolicy, plan};
 use serde_json::Value;
 
 /// The committed golden of the engine's media check.

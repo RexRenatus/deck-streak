@@ -1,8 +1,9 @@
-//! The port a collection implements so the media core can read it (SPEC-513 R7; ADR-531 D6).
+//! The port a collection implements so the media core can read it (SPEC-513 R7; ADR-531 D6, D8).
 //!
 //! The media core does no I/O and depends on no workspace crate. A collection hands it every text
 //! that names media, as HTML (a note's field, a card template) or as CSS (a note type's), and
-//! every file its store holds; the core finds the names and plans the sweep.
+//! every file its store holds; the core finds the names, the images the engine renders from the
+//! HTML's LaTeX among them, and plans the sweep.
 
 use std::collections::BTreeSet;
 
@@ -13,8 +14,12 @@ use crate::sweep::{StoredFile, SweepPlan, SweepPolicy, plan_sweep};
 /// One text that names media.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Source<'a> {
-    /// A note's field or a card template, read by [`scan`].
+    /// A note's field or a card template, read by [`scan`], its LaTeX named as PNG images, the
+    /// engine's default.
     Html(&'a str),
+    /// A note's field or a card template of a note type that renders its LaTeX as SVG images, read
+    /// by [`scan`], its LaTeX named as SVG images.
+    HtmlSvg(&'a str),
     /// A note type's CSS, read by [`scan_css`].
     Css(&'a str),
 }
@@ -35,7 +40,7 @@ pub fn references<I: MediaIndex + ?Sized>(index: &I) -> BTreeSet<String> {
     let mut names = BTreeSet::new();
     for source in index.sources() {
         match source {
-            Source::Html(text) => names.extend(scan(text)),
+            Source::Html(text) | Source::HtmlSvg(text) => names.extend(scan(text)),
             Source::Css(css) => names.extend(scan_css(css)),
         }
     }
