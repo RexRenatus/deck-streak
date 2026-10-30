@@ -26,12 +26,22 @@ pub struct Key {
 
 /// The key order: by clock, then rank, then the origin's bytes, then the sequence number.
 #[must_use]
+#[expect(
+    clippy::disallowed_macros,
+    reason = "a Kani witness feature, off in every build but the formal check's witness run (ADR-527 D7)"
+)]
 pub fn compare(a: &Key, b: &Key) -> Ordering {
-    a.origin
-        .cmp(&b.origin)
-        .then(a.t.cmp(&b.t))
-        .then(a.rank.cmp(&b.rank))
-        .then(a.seq.cmp(&b.seq))
+    let before_seq =
+        a.t.cmp(&b.t)
+            .then(a.rank.cmp(&b.rank))
+            .then(a.origin.cmp(&b.origin));
+    // The Kani witness (ADR-527 D7): with its feature on, the order ignores the sequence number,
+    // so two distinct operations of one device compare equal and `kani_proofs::key_order` fails.
+    if cfg!(feature = "kani-witness-key-order-noseq") {
+        before_seq
+    } else {
+        before_seq.then(a.seq.cmp(&b.seq))
+    }
 }
 
 impl Ord for Key {

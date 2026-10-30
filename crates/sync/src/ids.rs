@@ -57,6 +57,17 @@ impl std::error::Error for IdError {}
 /// [`IdError::Exhausted`] when that id would pass `i64::MAX`.
 pub fn next_id(floor: i64, now: i64, slot: Slot) -> Result<i64, IdError> {
     let base = floor.checked_add(1).ok_or(IdError::Exhausted)?.max(now);
-    let add = i64::from(slot.get());
+    let wanted = i64::from(slot.get());
+    // The Kani witness (ADR-527 D7): with its feature on, the slot is added to the base as it
+    // stands, never reduced mod 64, so `kani_proofs::next_id_holds_its_residue_and_bounds` fails.
+    #[expect(
+        clippy::disallowed_macros,
+        reason = "a Kani witness feature, off in every build but the formal check's witness run (ADR-527 D7)"
+    )]
+    let add = if cfg!(feature = "kani-witness-next-id-residue") {
+        wanted
+    } else {
+        (wanted - base.rem_euclid(SLOTS)).rem_euclid(SLOTS)
+    };
     base.checked_add(add).ok_or(IdError::Exhausted)
 }

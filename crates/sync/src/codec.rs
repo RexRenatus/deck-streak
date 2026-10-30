@@ -103,27 +103,25 @@ impl fmt::Display for DecodeError {
 impl std::error::Error for DecodeError {}
 
 /// The first field of `op` outside its range, if any: the rules the encoder and the decoder
-/// share.
+/// share. Only an answer's ease, kind and duration have ranges narrower than their types.
 fn out_of_range(op: &Op) -> Option<&'static str> {
-    match op {
-        Op::ReviewAnswered {
-            ease,
-            kind,
-            duration_ms,
-            ..
-        } => {
-            if !(1..=4).contains(ease) {
-                Some("ease")
-            } else if *kind > 3 {
-                Some("kind")
-            } else if *duration_ms > MAX_DURATION_MS {
-                Some("duration_ms")
-            } else {
-                None
-            }
-        }
-        Op::NoteCreated { fields, .. } if u16::try_from(fields.len()).is_err() => Some("fields"),
-        _ => None,
+    let Op::ReviewAnswered {
+        ease,
+        kind,
+        duration_ms,
+        ..
+    } = op
+    else {
+        return None;
+    };
+    if !(1..=4).contains(ease) {
+        Some("ease")
+    } else if *kind > 3 {
+        Some("kind")
+    } else if *duration_ms > MAX_DURATION_MS {
+        Some("duration_ms")
+    } else {
+        None
     }
 }
 
@@ -163,6 +161,136 @@ impl Writer {
             put(self, value);
         }
     }
+
+    fn ids(&mut self, ids: &[i64]) {
+        for id in ids {
+            self.put(&id.to_le_bytes());
+        }
+    }
+
+    fn texts(&mut self, texts: &[String]) -> Result<(), EncodeError> {
+        let count =
+            u16::try_from(texts.len()).map_err(|_| EncodeError::OutOfRange { field: "fields" })?;
+        self.put(&count.to_le_bytes());
+        texts.iter().try_for_each(|text| self.text(text))
+    }
+
+    fn part(&mut self, part: NotetypePart) {
+        match part {
+            NotetypePart::Template(index) => {
+                self.put(&[0]);
+                self.put(&index.to_le_bytes());
+            }
+            NotetypePart::Css => self.put(&[1]),
+            NotetypePart::FieldName(index) => {
+                self.put(&[2]);
+                self.put(&index.to_le_bytes());
+            }
+        }
+    }
+
+    /// The fields of `op`, in declaration order.
+    fn fields(&mut self, op: &Op) -> Result<(), EncodeError> {
+        match op {
+            Op::ReviewAnswered {
+                card,
+                note,
+                home_deck,
+                preset,
+                ease,
+                kind,
+                duration_ms,
+                study_day,
+                basis,
+                due_hint,
+                model_version,
+            } => {
+                self.ids(&[*card, *note, *home_deck, *preset]);
+                self.put(&[*ease, *kind]);
+                self.put(&duration_ms.to_le_bytes());
+                self.put(&study_day.to_le_bytes());
+                self.option(basis.as_ref(), Self::key);
+                self.option(due_hint.as_ref(), |w, day| w.put(&day.to_le_bytes()));
+                self.option(model_version.as_ref(), |w, version| w.put(version));
+            }
+            Op::ReviewUndone { target } => self.key(target),
+            Op::NoteCreated {
+                note,
+                notetype,
+                deck,
+                guid,
+                fields,
+            } => {
+                self.ids(&[*note, *notetype, *deck]);
+                self.put(guid);
+                self.texts(fields)?;
+            }
+            Op::NoteFieldSet {
+                note,
+                field,
+                value,
+                base_rev,
+            } => {
+                self.ids(&[*note]);
+                self.put(&field.to_le_bytes());
+                self.text(value)?;
+                self.option(base_rev.as_ref(), Self::key);
+            }
+            Op::NoteDeleted { note } => self.ids(&[*note]),
+            Op::CardMoved {
+                card,
+                deck,
+                base_rev,
+            } => {
+                self.ids(&[*card, *deck]);
+                self.option(base_rev.as_ref(), Self::key);
+            }
+            Op::CardFlag { card, flag } => {
+                self.ids(&[*card]);
+                self.put(&[*flag]);
+            }
+            Op::CardBury { card, day } => {
+                self.ids(&[*card]);
+                self.put(&day.to_le_bytes());
+            }
+            Op::CardSuspend { card, on } => {
+                self.ids(&[*card]);
+                self.flag(*on);
+            }
+            Op::DeckCreated { deck, parent, name } => {
+                self.ids(&[*deck]);
+                self.option(parent.as_ref(), |w, parent| w.ids(&[*parent]));
+                self.text(name)?;
+            }
+            Op::DeckRenamed {
+                deck,
+                name,
+                base_rev,
+            } => {
+                self.ids(&[*deck]);
+                self.text(name)?;
+                self.option(base_rev.as_ref(), Self::key);
+            }
+            Op::NotetypeEdited {
+                notetype,
+                part,
+                value,
+                base_rev,
+            } => {
+                self.ids(&[*notetype]);
+                self.part(*part);
+                self.text(value)?;
+                self.option(base_rev.as_ref(), Self::key);
+            }
+            Op::MediaBound { name, sha256, size } => {
+                self.text(name)?;
+                self.put(sha256);
+                self.put(&size.to_le_bytes());
+            }
+            Op::MediaUnbound { name } => self.text(name)?,
+        }
+        Ok(())
+    }
 }
 
 /// The body of `op`: its kind's tag and its fields, in declaration order.
@@ -177,129 +305,7 @@ pub fn encode_body(op: &Op) -> Result<Vec<u8>, EncodeError> {
     }
     let mut w = Writer { bytes: Vec::new() };
     w.put(&[op.kind().tag()]);
-    match op {
-        Op::ReviewAnswered {
-            card,
-            note,
-            home_deck,
-            preset,
-            ease,
-            kind,
-            duration_ms,
-            study_day,
-            basis,
-            due_hint,
-            model_version,
-        } => {
-            w.put(&card.to_le_bytes());
-            w.put(&note.to_le_bytes());
-            w.put(&home_deck.to_le_bytes());
-            w.put(&preset.to_le_bytes());
-            w.put(&[*ease, *kind]);
-            w.put(&duration_ms.to_le_bytes());
-            w.put(&study_day.to_le_bytes());
-            w.option(basis.as_ref(), Writer::key);
-            w.option(due_hint.as_ref(), |w, day| w.put(&day.to_le_bytes()));
-            w.option(model_version.as_ref(), |w, version| w.put(version));
-        }
-        Op::ReviewUndone { target } => w.key(target),
-        Op::NoteCreated {
-            note,
-            notetype,
-            deck,
-            guid,
-            fields,
-        } => {
-            w.put(&note.to_le_bytes());
-            w.put(&notetype.to_le_bytes());
-            w.put(&deck.to_le_bytes());
-            w.put(guid);
-            let count = u16::try_from(fields.len())
-                .map_err(|_| EncodeError::OutOfRange { field: "fields" })?;
-            w.put(&count.to_le_bytes());
-            for field in fields {
-                w.text(field)?;
-            }
-        }
-        Op::NoteFieldSet {
-            note,
-            field,
-            value,
-            base_rev,
-        } => {
-            w.put(&note.to_le_bytes());
-            w.put(&field.to_le_bytes());
-            w.text(value)?;
-            w.option(base_rev.as_ref(), Writer::key);
-        }
-        Op::NoteDeleted { note } => w.put(&note.to_le_bytes()),
-        Op::CardMoved {
-            card,
-            deck,
-            base_rev,
-        } => {
-            w.put(&card.to_le_bytes());
-            w.put(&deck.to_le_bytes());
-            w.option(base_rev.as_ref(), Writer::key);
-        }
-        Op::CardFlag { card, flag } => {
-            w.put(&card.to_le_bytes());
-            w.put(&[*flag]);
-        }
-        Op::CardBury { card, day } => {
-            w.put(&card.to_le_bytes());
-            w.put(&day.to_le_bytes());
-        }
-        Op::CardSuspend { card, on } => {
-            w.put(&card.to_le_bytes());
-            w.flag(*on);
-        }
-        Op::DeckCreated { deck, parent, name } => {
-            w.put(&deck.to_le_bytes());
-            w.option(parent.as_ref(), |w, parent| w.put(&parent.to_le_bytes()));
-            w.text(name)?;
-        }
-        Op::DeckRenamed {
-            deck,
-            name,
-            base_rev,
-        } => {
-            w.put(&deck.to_le_bytes());
-            w.text(name)?;
-            w.option(base_rev.as_ref(), Writer::key);
-        }
-        Op::NotetypeEdited {
-            notetype,
-            part,
-            value,
-            base_rev,
-        } => {
-            w.put(&notetype.to_le_bytes());
-            match part {
-                NotetypePart::Template(index) => {
-                    w.put(&[0]);
-                    w.put(&index.to_le_bytes());
-                }
-                NotetypePart::Css => w.put(&[1]),
-                NotetypePart::FieldName(index) => {
-                    w.put(&[2]);
-                    w.put(&index.to_le_bytes());
-                }
-            }
-            w.text(value)?;
-            w.option(base_rev.as_ref(), Writer::key);
-        }
-        Op::MediaBound { name, sha256, size } => {
-            w.text(name)?;
-            w.put(sha256);
-            w.put(&size.to_le_bytes());
-        }
-        Op::MediaUnbound { name } => w.text(name)?,
-        Op::ReviewEdited { target, ease } => {
-            w.key(target);
-            w.put(&[*ease]);
-        }
-    }
+    w.fields(op)?;
     let bytes = HEAD_BYTES + w.bytes.len();
     if bytes > MAX_OP_BYTES {
         return Err(EncodeError::TooLarge { bytes });
@@ -320,7 +326,6 @@ pub fn encode(head: &OpHead, op: &Op) -> Result<Vec<u8>, EncodeError> {
     frame.extend_from_slice(&head.seq.to_le_bytes());
     frame.extend_from_slice(&head.hlc.to_le_bytes());
     frame.extend_from_slice(&body);
-    frame.extend_from_slice(&head.hlc.to_le_bytes());
     Ok(frame)
 }
 
@@ -382,6 +387,10 @@ impl<'a> Reader<'a> {
             usize::try_from(self.u32()?).map_err(|_| DecodeError::OutOfRange { field: "text" })?;
         // The Kani witness (ADR-527 D7): with its feature on, the length prefix is read without
         // the remaining-bytes check, so a long prefix panics and `kani_proofs::sync_codec` fails.
+        #[expect(
+            clippy::disallowed_macros,
+            reason = "a Kani witness feature, off in every build but the formal check's witness run (ADR-527 D7)"
+        )]
         let bytes = if cfg!(feature = "kani-witness-sync-codec-len") {
             let (taken, rest) = self.rest.split_at(len);
             self.rest = rest;
@@ -517,6 +526,10 @@ pub fn decode(frame: &[u8]) -> Result<(OpHead, Op), DecodeError> {
         return Err(DecodeError::TooLarge { bytes: frame.len() });
     }
     let mut r = Reader { rest: frame };
+    let found = r.byte()?;
+    if found != VERSION {
+        return Err(DecodeError::Version { found });
+    }
     let origin: Origin = r.array()?;
     let head = OpHead {
         origin,

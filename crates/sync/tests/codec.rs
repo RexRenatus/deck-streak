@@ -304,6 +304,19 @@ fn a_value_out_of_its_range_is_refused_by_both_ends() {
     planted[value_at] = 0xFF;
     assert_eq!(decode(&planted), Err(DecodeError::NotUtf8));
 
+    // A note holds at most as many fields as the 16-bit count can say.
+    let crowded = Op::NoteCreated {
+        note: 1,
+        notetype: 2,
+        deck: 3,
+        guid: [0; 16],
+        fields: vec![String::new(); usize::from(u16::MAX) + 1],
+    };
+    assert_eq!(
+        encode(&HEAD, &crowded),
+        Err(EncodeError::OutOfRange { field: "fields" })
+    );
+
     let css = Op::NotetypeEdited {
         notetype: 1,
         part: NotetypePart::Css,

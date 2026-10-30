@@ -28,7 +28,11 @@ fn edit_order<V: Ord>(a: &Edit<V>, b: &Edit<V>) -> Ordering {
 
 /// The greater of two edits first, then the other: the winner and the loser.
 fn pick<V: Ord>(a: Edit<V>, b: Edit<V>) -> (Edit<V>, Edit<V>) {
-    (b, a)
+    if edit_order(&a, &b) == Ordering::Less {
+        (b, a)
+    } else {
+        (a, b)
+    }
 }
 
 /// Merges two registers: the greater edit wins, and an empty register yields to the other.

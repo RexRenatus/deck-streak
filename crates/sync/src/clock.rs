@@ -7,6 +7,7 @@
 //! clock's last reading as its floor, so ids and clocks rise together under one rule.
 
 use std::fmt;
+use std::ops::Add;
 
 use crate::ids::{IdError, Slot, next_id};
 
@@ -34,17 +35,19 @@ impl std::error::Error for ClockError {}
 ///
 /// [`ClockError::Exhausted`] when the larger of `last` and `seen` is `i64::MAX`.
 pub fn tick(last: i64, seen: i64, pt: i64) -> Result<i64, ClockError> {
-    Ok(last.max(seen).max(pt))
-}
-
-/// The wall clock now, in milliseconds since the epoch.
-#[must_use]
-pub fn wall_clock() -> i64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |since| {
-            i64::try_from(since.as_millis()).unwrap_or(i64::MAX)
-        })
+    let top = last.max(seen);
+    // The Kani witness (ADR-527 D7): with its feature on, `last + 1` is a plain add, which
+    // overflows at `i64::MAX`, so `kani_proofs::hlc_tick_no_overflow` fails.
+    #[expect(
+        clippy::disallowed_macros,
+        reason = "a Kani witness feature, off in every build but the formal check's witness run (ADR-527 D7)"
+    )]
+    let past = if cfg!(feature = "kani-witness-hlc-plain-add") {
+        Add::add(top, 1)
+    } else {
+        top.checked_add(1).ok_or(ClockError::Exhausted)?
+    };
+    Ok(past.max(pt))
 }
 
 /// A device's clock: the largest clock it has made or seen.

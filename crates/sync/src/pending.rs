@@ -165,10 +165,13 @@ impl PendingQueue {
     /// The operations to push now, oldest first and at most `limit`, as sequence numbers and
     /// frames. Each is marked sent and stays in the queue until it is judged.
     pub fn send(&mut self, limit: usize) -> Vec<(u64, Vec<u8>)> {
-        let count = limit.min(self.ops.len());
         self.ops
-            .drain(..count)
-            .map(|op| (op.seq, op.frame))
+            .iter_mut()
+            .take(limit)
+            .map(|op| {
+                op.stage = Stage::Sent;
+                (op.seq, op.frame.clone())
+            })
             .collect()
     }
 

@@ -9,7 +9,7 @@
 
 use std::collections::BTreeSet;
 
-use deck_streak_sync::{Edit, Key, Register};
+use deck_streak_sync::{Conflict, Edit, Key, Register};
 
 fn key(t: i64, origin: u8, seq: u64) -> Key {
     Key {
@@ -50,7 +50,7 @@ fn all_6_orders_of_3_concurrent_field_edits_end_in_one_value_and_one_loser_set()
     for order in ORDERS {
         let mut register = Register::new();
         register.receive(edit(base, "the base"), None);
-        assert!(register.conflicts().is_empty());
+        assert_eq!(register.conflicts(), Vec::<Conflict<String>>::new());
         for index in order {
             register.receive(concurrent[index].clone(), Some(base));
         }
@@ -88,7 +88,7 @@ fn an_edit_made_on_the_current_value_moves_the_register_forward_with_no_conflict
     register.receive(edit(key(11, 2, 1), "second"), Some(key(10, 1, 1)));
     register.receive(edit(key(12, 1, 2), "third"), Some(key(11, 2, 1)));
     assert_eq!(register.current(), Some(&edit(key(12, 1, 2), "third")));
-    assert!(register.conflicts().is_empty());
+    assert_eq!(register.conflicts(), Vec::<Conflict<String>>::new());
 
     // A stale edit made offline on the first value loses to the newer one, and is kept.
     register.receive(edit(key(5, 3, 9), "stale"), Some(key(10, 1, 1)));
@@ -101,6 +101,6 @@ fn an_edit_made_on_the_current_value_moves_the_register_forward_with_no_conflict
     let mut fresh = Register::new();
     fresh.receive(edit(key(1, 1, 1), "only"), Some(key(9, 9, 9)));
     assert_eq!(fresh.current(), Some(&edit(key(1, 1, 1), "only")));
-    assert!(fresh.conflicts().is_empty());
+    assert_eq!(fresh.conflicts(), Vec::<Conflict<String>>::new());
     assert_eq!(Register::<String>::default(), Register::new());
 }

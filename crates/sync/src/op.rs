@@ -169,13 +169,6 @@ pub enum Op {
         /// The media name.
         name: String,
     },
-    /// A review's ease edited.
-    ReviewEdited {
-        /// The review.
-        target: Key,
-        /// Its new ease.
-        ease: u8,
-    },
 }
 
 /// The kind of an operation: one per variant of [`Op`], with its wire tag.
@@ -277,7 +270,6 @@ impl Op {
             Self::NotetypeEdited { .. } => OpKind::NotetypeEdited,
             Self::MediaBound { .. } => OpKind::MediaBound,
             Self::MediaUnbound { .. } => OpKind::MediaUnbound,
-            Self::ReviewEdited { .. } => OpKind::ReviewAnswered,
         }
     }
 }
