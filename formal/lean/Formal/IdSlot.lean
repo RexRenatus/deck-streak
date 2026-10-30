@@ -1,4 +1,4 @@
--- @phx covers crates/sync/src/ids.rs anchor=next_id digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/sync/src/ids.rs anchor=next_id digest=sha256:5456766c92ee96b5f5f61995a0ab0eea6456e8d63f894f1242d44e4e1454621c
 -- @phx vectors formal/vectors/id-slot.jsonl
 -- @phx cites #15
 -- @phx theorem next_id_residue ramp=report

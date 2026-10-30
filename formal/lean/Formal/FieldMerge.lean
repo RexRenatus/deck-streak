@@ -1,6 +1,5 @@
--- @phx covers crates/sync/src/merge.rs anchor=merge digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/sync/src/merge.rs anchor=apply digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/sync/src/merge.rs anchor=pick digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/sync/src/merge.rs anchor=merge digest=sha256:5c675e6e5f7c91bd68c920182aaebac7c93db15da467b37780c1a9d398e75ec0
+-- @phx covers crates/sync/src/merge.rs anchor=pick digest=sha256:3f3dee3d3b7c4b55599a393ab2058c991d75f9a5eafa85ea636580eeab6bdf34
 -- @phx cites #15
 -- @phx vectors formal/vectors/field-merge.jsonl
 -- @phx theorem merge_comm ramp=report
@@ -23,8 +22,8 @@ operations never share a key for), and `apply` folds a field's edits into the re
 `merge` is commutative, associative and idempotent, so `apply` gives one register for every arrival
 order of the same edits. Each is refuted, at a concrete input, of the defect its witness names: a
 register won by arrival order, a comparison that only orders clocks within a window, a merge that
-re-stamps its winner, and an apply that keeps the last edit to arrive. The sync core's `merge`,
-`apply` and `pick` (SPEC-509) are the covered code, and its test reads
+re-stamps its winner, and an apply that keeps the last edit to arrive. The sync core's `merge` and
+`pick` (SPEC-509) are the covered code; its `apply` folds as the port's does, and its test reads
 `formal/vectors/field-merge.jsonl` byte-equal.
 -/
 

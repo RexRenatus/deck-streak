@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"IdSlot","covers":"crates/sync/src/ids.rs","anchor":"next_id","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":280}
+{"schema":"phx.formal.vectors.v1","entry":"IdSlot","covers":"crates/sync/src/ids.rs","anchor":"next_id","digest":"sha256:5456766c92ee96b5f5f61995a0ab0eea6456e8d63f894f1242d44e4e1454621c","vectors":280}
 {"floor":-9223372036854775808,"now":-9223372036854775808,"slot":0,"id":-9223372036854775744}
 {"floor":-9223372036854775808,"now":-9223372036854775808,"slot":1,"id":-9223372036854775807}
 {"floor":-9223372036854775808,"now":-9223372036854775808,"slot":2,"id":-9223372036854775806}

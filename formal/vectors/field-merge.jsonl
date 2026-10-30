@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"FieldMerge","covers":"crates/sync/src/merge.rs","anchor":"merge","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":6}
+{"schema":"phx.formal.vectors.v1","entry":"FieldMerge","covers":"crates/sync/src/merge.rs","anchor":"merge","digest":"sha256:5c675e6e5f7c91bd68c920182aaebac7c93db15da467b37780c1a9d398e75ec0","vectors":6}
 {"edits":[],"register":null}
 {"edits":[[1,1,1,10]],"register":[1,1,1,10]}
 {"edits":[[1,1,1,10],[1,2,1,20]],"register":[1,2,1,20]}

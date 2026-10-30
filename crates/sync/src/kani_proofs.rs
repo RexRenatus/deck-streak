@@ -7,6 +7,11 @@
 //! does as a header.
 
 // @phx cites #15
+// @phx covers crates/sync/src/codec.rs anchor=decode digest=sha256:300225e3068b01ba3fa8586d06368caf84bddcaf388ddd291365087ea27c33bc
+// @phx covers crates/sync/src/codec.rs anchor=encode digest=sha256:17f2afd09a4a0cff7d85210b6642d295b2d06ba2fcfba3a4e61712563e24c726
+// @phx covers crates/sync/src/key.rs anchor=compare digest=sha256:471a3c7435f96360232781932b72560b51c34f5ae5cbf7f9cfff937bd69457d3
+// @phx covers crates/sync/src/clock.rs anchor=tick digest=sha256:5f1a758b212cfeec0d493044bd9e0352999ed213f047dbc934414c2ff2ee793e
+// @phx covers crates/sync/src/ids.rs anchor=next_id digest=sha256:5456766c92ee96b5f5f61995a0ab0eea6456e8d63f894f1242d44e4e1454621c
 // @phx harness sync_codec ramp=report unwind=50
 // @phx witness feature=kani-witness-sync-codec-len kills=sync_codec
 // @phx harness key_order ramp=report unwind=17

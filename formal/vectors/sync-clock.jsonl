@@ -1,4 +1,4 @@
-{"schema":"phx.formal.vectors.v1","entry":"SyncClock","covers":"crates/sync/src/clock.rs","anchor":"tick","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000","vectors":64}
+{"schema":"phx.formal.vectors.v1","entry":"SyncClock","covers":"crates/sync/src/clock.rs","anchor":"tick","digest":"sha256:5f1a758b212cfeec0d493044bd9e0352999ed213f047dbc934414c2ff2ee793e","vectors":64}
 {"last":0,"seen":0,"pt":0,"tick":1}
 {"last":0,"seen":0,"pt":1,"tick":1}
 {"last":0,"seen":0,"pt":2,"tick":2}

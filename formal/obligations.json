@@ -338,7 +338,10 @@
       "layers": ["storage"],
       "artifacts": [
         {"kind": "tla", "entry": "tla/CollectionStore", "state": "planned"},
-        {"kind": "lean", "entry": "lean/IdSlot", "state": "planned"},
+        {"kind": "lean", "entry": "lean/IdSlot", "property": "next_id_residue", "state": "present"},
+        {"kind": "lean", "entry": "lean/IdSlot", "property": "next_id_above_floor", "state": "present"},
+        {"kind": "lean", "entry": "lean/IdSlot", "property": "next_id_at_least_now", "state": "present"},
+        {"kind": "lean", "entry": "lean/IdSlot", "property": "slots_disjoint", "state": "present"},
         {"kind": "lean", "entry": "lean/EffectiveLog", "state": "planned"},
         {"kind": "lean", "entry": "lean/QueueRule", "state": "planned"},
         {"kind": "lean", "entry": "lean/AnkiDay", "state": "planned"},
@@ -348,11 +351,14 @@
         {"kind": "kani", "harness": "K-anki-day", "state": "planned"},
         {"kind": "kani", "harness": "K-judges", "state": "planned"}
       ],
-      "ties": [],
+      "ties": [
+        {"method": "vectors", "for": "lean/IdSlot", "test": "crates/sync/tests/formal_vectors_id_slot.rs::next_id_answers_every_lean_id_slot_vector_byte_equal"}
+      ],
       "gaps": [
         "holds at the models' bounds, not universally",
         "SQLite is trusted",
-        "a Lean port proves the port; vectors tie it to the code, which is never extracted"
+        "a Lean port proves the port; vectors tie it to the code, which is never extracted",
+        "the Kani harness K-next-id is written in crates/sync/src/kani_proofs.rs and has not run: it stays planned until a Kani run checks it and its witness"
       ],
       "status": "planned"
     },
@@ -434,9 +440,15 @@
         {"kind": "kani", "harness": "K-key-order", "state": "planned"},
         {"kind": "kani", "harness": "K-hlc", "state": "planned"}
       ],
-      "ties": [],
+      "ties": [
+        {"method": "vectors", "for": "lean/SyncClock", "test": "crates/sync/tests/formal_vectors_sync_clock.rs::tick_and_recv_answer_every_lean_clock_vector_byte_equal"},
+        {"method": "vectors", "for": "lean/ReviewKey", "test": "crates/sync/tests/formal_vectors_review_key.rs::sort_keys_orders_every_lean_review_key_vector_byte_equal"},
+        {"method": "vectors", "for": "lean/FieldMerge", "test": "crates/sync/tests/formal_vectors_field_merge.rs::apply_merges_every_lean_field_merge_vector_byte_equal"}
+      ],
       "gaps": [
-        "a Lean port proves the port; vectors tie it to the code, which is never extracted"
+        "a Lean port proves the port; vectors tie it to the code, which is never extracted",
+        "the push judge is not in the sync core yet: it lands with the server's log, which stamps its entry",
+        "the Kani harnesses K-sync-codec, K-key-order and K-hlc are written in crates/sync/src/kani_proofs.rs and have not run: they stay planned until a Kani run checks each and its witness"
       ],
       "status": "planned"
     },
@@ -491,8 +503,9 @@
     {"entry": "lean/Chest", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/CompanionDecide", "disposition": "keep", "act": "new with the scheduling companion's interface (SPEC-501); re-stamped when the decision or the handshake it covers moves, with no weakening", "obligations": ["O6"]},
     {"entry": "lean/Exchange", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
-    {"entry": "lean/FieldMerge", "disposition": "re-stamp", "act": "stamped when the sync core lands: its field merge gains a cover and its test reads the vectors byte-equal", "obligations": ["O1", "O16"]},
+    {"entry": "lean/FieldMerge", "disposition": "re-stamp", "act": "stamped by the sync core (SPEC-509): its merge and pick carry covers and its test reads the vectors byte-equal through its apply; re-stamped when a covered span moves, with no weakening", "obligations": ["O1", "O16"]},
     {"entry": "lean/HabitWriting", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/IdSlot", "disposition": "keep", "act": "new with the sync core's id allocator (SPEC-509); re-stamped when the allocator it covers moves, with no weakening", "obligations": ["O12"]},
     {"entry": "lean/NextMilestone", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/OpenLapse", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/PushJudge", "disposition": "re-stamp", "act": "stamped when the sync core lands: its judge gains a cover and its test reads the vectors byte-equal", "obligations": ["O1", "O16"]},
@@ -500,11 +513,11 @@
     {"entry": "lean/ReleaseCarry", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/ReleaseGates", "disposition": "keep", "act": "unaffected by the engine's replacement; re-stamped when the release gate's covered span moves", "obligations": ["O17"]},
     {"entry": "lean/ReplayHistory", "disposition": "keep", "act": "stays while the FSRS-7 crate stays, and is retired with it otherwise", "obligations": ["O11"]},
-    {"entry": "lean/ReviewKey", "disposition": "re-stamp", "act": "stamped when the sync core lands: its review sort gains a cover and its test reads the vectors byte-equal", "obligations": ["O1", "O16"]},
+    {"entry": "lean/ReviewKey", "disposition": "re-stamp", "act": "stamped by the sync core (SPEC-509): its review sort and key order carry covers and its test reads the vectors byte-equal; re-stamped when a covered span moves, with no weakening", "obligations": ["O1", "O16"]},
     {"entry": "lean/RoadToC2", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/SensitiveDeck", "disposition": "re-stamp", "act": "re-stamped if the deck path form changes", "obligations": ["O11"]},
     {"entry": "lean/SkipTariff", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
-    {"entry": "lean/SyncClock", "disposition": "re-stamp", "act": "stamped when the sync core lands: its tick gains a cover and its test reads the vectors byte-equal", "obligations": ["O1", "O16"]},
+    {"entry": "lean/SyncClock", "disposition": "re-stamp", "act": "stamped by the sync core (SPEC-509): its tick carries a cover and its test reads the vectors byte-equal; re-stamped when the covered span moves, with no weakening", "obligations": ["O1", "O16"]},
     {"entry": "lean/TableCensusReach", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/TokenBonus", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/TokenProgress", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},

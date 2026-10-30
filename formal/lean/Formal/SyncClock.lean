@@ -1,4 +1,4 @@
--- @phx covers crates/sync/src/clock.rs anchor=tick digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/sync/src/clock.rs anchor=tick digest=sha256:5f1a758b212cfeec0d493044bd9e0352999ed213f047dbc934414c2ff2ee793e
 -- @phx cites #15
 -- @phx vectors formal/vectors/sync-clock.jsonl
 -- @phx theorem tick_gt_seen ramp=report

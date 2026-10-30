@@ -1,5 +1,5 @@
--- @phx covers crates/sync/src/key.rs anchor=sort_keys digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/sync/src/key.rs anchor=compare digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/sync/src/key.rs anchor=sort_keys digest=sha256:644c2b6438b8338ff7bf846e061575d0205c984134988fa7fb798535cbfd52ac
+-- @phx covers crates/sync/src/key.rs anchor=compare digest=sha256:471a3c7435f96360232781932b72560b51c34f5ae5cbf7f9cfff937bd69457d3
 -- @phx cites #15
 -- @phx vectors formal/vectors/review-key.jsonl
 -- @phx theorem fold_sorted_perm_invariant ramp=report

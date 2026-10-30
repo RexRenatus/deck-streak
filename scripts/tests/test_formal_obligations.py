@@ -33,7 +33,6 @@ PLANNED_ENTRIES = {
     "tla/RelayEnvelope": ("O7",),
     "tla/AnkiCutover": ("O8",),
     "lean/ScheduledState": ("O6",),
-    "lean/IdSlot": ("O12",),
     "lean/EffectiveLog": ("O12",),
     "lean/QueueRule": ("O12",),
     "lean/AnkiDay": ("O12",),
@@ -129,9 +128,38 @@ COMPANION_TIE = {
     "test": "crates/companion/tests/formal_vectors_decide.rs"
     "::decide_and_negotiate_answer_every_lean_vector",
 }
+# SPEC-509: the sync core's id allocator, present under O12 with its vectors tie, and the three
+# sync entries it stamps, each tied under O16 by the crate's test that reads its vectors.
+ID_SLOT_ENTRIES = ("lean/IdSlot",)
+ID_SLOT_TIE = {
+    "method": "vectors",
+    "for": "lean/IdSlot",
+    "test": "crates/sync/tests/formal_vectors_id_slot.rs"
+    "::next_id_answers_every_lean_id_slot_vector_byte_equal",
+}
+SYNC_CORE_TIES = [
+    {
+        "method": "vectors",
+        "for": "lean/SyncClock",
+        "test": "crates/sync/tests/formal_vectors_sync_clock.rs"
+        "::tick_and_recv_answer_every_lean_clock_vector_byte_equal",
+    },
+    {
+        "method": "vectors",
+        "for": "lean/ReviewKey",
+        "test": "crates/sync/tests/formal_vectors_review_key.rs"
+        "::sort_keys_orders_every_lean_review_key_vector_byte_equal",
+    },
+    {
+        "method": "vectors",
+        "for": "lean/FieldMerge",
+        "test": "crates/sync/tests/formal_vectors_field_merge.rs"
+        "::apply_merges_every_lean_field_merge_vector_byte_equal",
+    },
+]
 # The entries built after the 44 were dispositioned, each with its disposition and the
 # obligations that name it.
-NEW_ENTRIES = {"lean/CompanionDecide": ("keep", {"O6"})}
+NEW_ENTRIES = {"lean/CompanionDecide": ("keep", {"O6"}), "lean/IdSlot": ("keep", {"O12"})}
 # The 49 dispositioned entries: the 43 that predate the sync entries, those five, and the
 # release gates' entry.
 DISPOSITIONS = {
@@ -834,6 +862,7 @@ class TheFormalLedger(unittest.TestCase):
             "O1a": SYNC_MODELS,
             "O6": COMPANION_ENTRIES,
             "O11": ENGINE_TIED + ("tla/OpLog",),
+            "O12": ID_SLOT_ENTRIES,
             "O17": (RELEASE_GATES,),
         }
         for identity, entries in sync_named.items():
@@ -846,7 +875,7 @@ class TheFormalLedger(unittest.TestCase):
             self.assertEqual(set(names), {(e, p) for e in entries for p in headers[e]})
         self.assertEqual(
             [tie for item in obligations for tie in item["ties"]],
-            [COMPANION_TIE, REPLAY_TIE, RELEASE_GATES_TIE],
+            [COMPANION_TIE, REPLAY_TIE, ID_SLOT_TIE, *SYNC_CORE_TIES, RELEASE_GATES_TIE],
         )
         examined("planned entries", planned)
         examined("planned harnesses", harnesses)
