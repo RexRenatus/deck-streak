@@ -36,7 +36,7 @@ const EXPECTED: Icon[] = [
 const LINKS = [
   '<link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest" />',
   '<link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />',
-  '<link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />'
+  '<link rel="icon" href="%sveltekit.assets%/favicon.svg" />'
 ];
 
 /** A file the app serves from `static/`, or null where the tree holds none. */
