@@ -1,4 +1,4 @@
-//! The one encoding (SPEC-509 A01 and A06; the design's T2-1 and T2-6).
+//! The one encoding (SPEC-509 A01 and A06).
 //!
 //! Every kind of operation is built over small values, exhaustively: each field takes each of a
 //! few values, in every combination. Each operation's frame decodes to itself, and every strict

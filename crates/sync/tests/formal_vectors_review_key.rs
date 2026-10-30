@@ -1,5 +1,5 @@
-//! The key order sorts every vector the Lean port writes, byte for byte (SPEC-509 A03; the
-//! design's T2-3): for each arrival order in `formal/vectors/review-key.jsonl`, written by
+//! The key order sorts every vector the Lean port writes, byte for byte (SPEC-509 A03):
+//! for each arrival order in `formal/vectors/review-key.jsonl`, written by
 //! `formal/lean/Formal/ReviewKey.lean`'s writer, `sort_keys` gives the port's sorted reviews, and
 //! the line rendered from the crate's answer equals the file's line.
 //!

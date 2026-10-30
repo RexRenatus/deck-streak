@@ -62,7 +62,7 @@ R7. **Concurrent edits.** A register (a note field, a deck's name, a notetype pa
     every vector of `formal/vectors/field-merge.jsonl`.
 R8. **Equal bodies.** Two devices that make the same operation write byte-equal bodies; their frames differ only in the
     head, and `encode_body` is the body. The identity holds over each of the fourteen kinds. The design states it of a
-    reschedule operation too (its test T2-6); that instance is held, not owed by this delivery, because the design
+    reschedule operation too; that instance is held, not owed by this delivery, because the design
     holds reschedule out of the vocabulary until a ruling admits it. It reads not applicable here, never as a pass, and
     becomes owed with the change that admits the kind.
 R9. **Kani harnesses.** `crates/sync/src/kani_proofs.rs`, compiled only under `cfg(kani)`, declares K-sync-codec
@@ -168,8 +168,8 @@ witness built, the vectors byte-equal and every cover fresh.
   push judge's Lean entry and the op log model gain their covers there, where the judge, the writer's commit and the
   device's pull and verdict handlers run together.
 - No reschedule operation: a due change no answer made stays out of the vocabulary until a ruling admits it. The
-  identity of equal bodies (R8) is held over every kind the vocabulary has; its reschedule instance (the design's
-  T2-6) is held with the kind, not applicable to this delivery, and owed by the change that admits it.
+  identity of equal bodies (R8) is held over every kind the vocabulary has; its reschedule instance is held
+  with the kind, not applicable to this delivery, and owed by the change that admits it.
 - No clock skew refusal: the bound on how far an operation's clock may run past the server's is the judge's (#15).
 - No client links the crate yet: the umbrella FFI crate's and the web engine's edges are drawn by the change that
   first uses it (#15).

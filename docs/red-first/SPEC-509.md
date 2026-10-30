@@ -66,7 +66,7 @@ A12: green at 000097f4
   tests) pass: the crate directory and its manifest are the only things missing from the map and its drawing. On the
   tree of 000097f4 and at bf79264c both files read 4 tests, OK.
 - **The equal-bodies identity (A06) is held over each of the fourteen kinds:** 8,314 operations, each written by two
-  devices. The design's reschedule instance of it (its test T2-6) is not applicable here: the vocabulary holds
+  devices. The design's reschedule instance of it is not applicable here: the vocabulary holds
   reschedule out, so that instance is owed by the change that admits the kind (SPEC-509 R8), and nothing above reads
   it as passed.
 - **The Lean entries.** The formal check of the Lean kind at bf79264c, against the base `554a223e`, reads `FORMAL OK
@@ -77,9 +77,9 @@ A12: green at 000097f4
 - **The crate's dependencies (A10).** `cargo tree --locked --offline -p deck-streak-sync -e normal,build` prints the
   crate alone for `x86_64-unknown-linux-gnu`, `wasm32-unknown-unknown`, `aarch64-apple-ios` and every target; with
   `-e dev` its one dependency is `serde_json`. The same census over `deck-streak-companion-slot` counts its one path
-  dependency, so the census can fail. The library builds for the host target. Its builds for `wasm32-unknown-unknown`
-  and `aarch64-apple-ios` were not run here, since the machine's toolchain holds the host's standard library only:
-  CI's `web-engine` job proves them.
+  dependency, so the census can fail. The library builds for the host target and for `wasm32-unknown-unknown`. Its
+  build for `aarch64-apple-ios` was not run here, since the pinned toolchain holds no standard library for that target:
+  CI's `web-engine` job proves it.
 - **The mutation rows.** `python3 scripts/mutation_rows.py prove --band S50900-S50999` at b11e750c reads 6 rows
   examined, 6 killed, 0 survived, 0 void: each killer passes without its mutant and fails with it.
 - **Not run here:** the whole workspace's tests, clippy and release profile, the mutation jobs, and CI's builds for

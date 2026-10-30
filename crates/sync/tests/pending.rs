@@ -1,4 +1,4 @@
-//! A pending operation leaves the queue only on its judgement (SPEC-509 A04; the design's T2-4):
+//! A pending operation leaves the queue only on its judgement (SPEC-509 A04):
 //! the server's verdict on it, or its appearance in a pull. Sending it, sending it again and a
 //! retryable refusal each leave it pending; an acceptance, a duplicate and a pull acknowledge it;
 //! a terminal rejection moves it, bytes and reason, to the rejections the owner sees.

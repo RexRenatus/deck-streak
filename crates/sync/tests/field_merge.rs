@@ -1,5 +1,5 @@
 //! Concurrent edits of one register end in one value and one loser set whatever order they arrive
-//! in (SPEC-509 A05; the design's T2-5). Three edits made on one base arrive in each of their 6
+//! in (SPEC-509 A05). Three edits made on one base arrive in each of their 6
 //! orders; every order ends at the edit with the greatest key, with the other two recorded as
 //! conflicts. An edit made on the current value moves the register forward with no conflict.
 

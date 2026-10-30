@@ -1,5 +1,5 @@
-//! The hybrid clock answers every vector the Lean port writes, byte for byte (SPEC-509 A02; the
-//! design's T2-2): for each input in `formal/vectors/sync-clock.jsonl`, written by
+//! The hybrid clock answers every vector the Lean port writes, byte for byte (SPEC-509 A02):
+//! for each input in `formal/vectors/sync-clock.jsonl`, written by
 //! `formal/lean/Formal/SyncClock.lean`'s writer, `tick` and a device's clock that `recv`s the
 //! seen clock and then ticks give the port's clock, and the line rendered from the crate's answer
 //! equals the file's line.

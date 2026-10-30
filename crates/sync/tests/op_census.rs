@@ -1,4 +1,4 @@
-//! The census of the vocabulary (SPEC-509 A08; the design's T2-9): no variant of `Op` names a
+//! The census of the vocabulary (SPEC-509 A08): no variant of `Op` names a
 //! review row updated or deleted, a note's notetype changed, a preset deleted, a card reset or a
 //! whole collection replaced: the never-list. The census reads `crates/sync/src/op.rs` by path,
 //! takes every variant of `pub enum Op` in order, and checks they are one per kind, in the kinds'
