@@ -40,3 +40,13 @@ A6: green at 635dcff7
   62 properties, all 62 clean, 65 witnesses examined): `lean/SearchHolds/holds_inescapable` reads clean, and its
   witness, the text wrap of a closing parenthesis substituted for the structural wrap, refutes it. Both covers read
   FRESH.
+
+## The weakening table
+
+Across `git diff 48a4dd95...HEAD` (the held-clock test fix on the wave-3 integration head): no test is deleted, renamed
+or skipped, no golden, other test or non-test file changes, and no filter, exclusion, skip list, sample or bound is
+added on the test side. One assertion is replaced.
+
+| entry | commit | ruling |
+|---|---|---|
+| `eval_golden.rs` `the_run_second_is_one_of_the_seconds_the_golden_admits` REPLACED: it held one run time of day (10:00 UTC, `RUN_SECOND_OF_DAY`) inside the band of the day's 1,440 minutes that give every case its recorded answer; it now moves each case's own recorded instant by every minute of a day around it (1,440 shifts over all 88 cases) and holds the unshifted instant inside the admitted shifts, those shifts one band, and fewer than all 1,440 admitted (643, from -17,940 to 20,580 seconds). `RUN_SECOND_OF_DAY` and `run_instant` are removed, and the evaluator's and the rollover class's tests read each case at its own instant. The name is kept, so A3's `--exact` command still selects it | the commit whose parent is 48a4dd95 | the parity goldens now hold the clock at each case's own recorded instant (9ca8c0fc), so one run time of day no longer describes them: at 48a4dd95 case 72 differs and 0 of 1,440 minutes admit every case |

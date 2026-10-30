@@ -1,13 +1,13 @@
 //! The evaluator equals the engine's search golden, its rollover class passes, and the
 //! engine's day equals the engine's timing goldens (SPEC-514 A3).
 //!
-//! The golden's driver builds each case's collection in the engine with its clock moved by whole
-//! days to the host's day, and the engine reads the host's clock and zone: so each case ran at the
-//! first instant at or after the case's own instant whose time of day, in UTC, is the run's, and
-//! in the creation offset the case gives, with the host's zone (UTC) as the current offset. The
-//! card ids are the driver's: one second apart, ending one second before the case's instant.
-//! [`RUN_SECOND_OF_DAY`] is the run's one time of day; the census below prints every second of the
-//! day at which the evaluator equals all the golden's cases, and holds this one among them.
+//! The golden's driver builds each case's collection in the engine with the harness clock held at
+//! the case's own recorded instant, its `now`, and the engine reads that clock and the host's zone:
+//! so each case ran at its own instant, in the creation offset the case gives, with the host's zone
+//! (UTC) as the current offset. No one time of day is assumed for the run. The card ids are the
+//! driver's: one second apart, ending one second before the case's instant. The census below moves
+//! every case's instant by each minute of a day around its own, prints the shifts at which the
+//! evaluator equals all the golden's cases, and holds the unshifted instant among them.
 
 #![allow(clippy::expect_used)]
 
@@ -22,8 +22,6 @@ use serde_json::Value;
 
 /// Seconds in a day.
 const DAY: i64 = 86_400;
-/// The second of the UTC day the golden's run read from the host's clock.
-const RUN_SECOND_OF_DAY: i64 = 36_000;
 
 fn int(value: &Value, key: &str) -> i64 {
     value[key]
@@ -162,28 +160,31 @@ fn engine_day(source: &Value, instant: i64) -> EngineDay {
     )
 }
 
-/// The instant the run's engine read for a case whose own instant is `now`.
-fn run_instant(now: i64, second_of_day: i64) -> i64 {
-    now + (second_of_day - now).rem_euclid(DAY)
+/// The instant the golden's driver held the harness clock at for a case: the case's own `now`.
+fn own_instant(input: &Value) -> i64 {
+    int(&input["collection"], "now")
 }
 
-/// The cards the evaluator selects for one golden case at the run's second of the day.
-fn answer(input: &Value, second_of_day: i64) -> Value {
+/// The cards the evaluator selects for one golden case with the engine's clock at `instant`.
+fn answer_at(input: &Value, instant: i64) -> Value {
     let source = &input["collection"];
     let search = input["search"].as_str().expect("a search");
     let query = Profile::OPERATOR
         .parse(search)
         .unwrap_or_else(|refusal| panic!("{search:?} parses: {refusal}"));
-    let day = engine_day(source, run_instant(int(source, "now"), second_of_day));
+    let day = engine_day(source, instant);
     let cards = eval(&query, &collection(source), day);
     serde_json::json!({ "cards": cards })
 }
 
+/// The cards the evaluator selects for one golden case at the case's own recorded instant.
+fn answer(input: &Value) -> Value {
+    answer_at(input, own_instant(input))
+}
+
 #[test]
 fn eval_equals_the_engines_search_golden() {
-    let examined = golden::assert_parity(&golden::committed("anki.search.operator"), |input| {
-        answer(input, RUN_SECOND_OF_DAY)
-    });
+    let examined = golden::assert_parity(&golden::committed("anki.search.operator"), answer);
     assert_eq!(examined.count, 88, "the golden's cases");
 }
 
@@ -194,7 +195,7 @@ fn the_rollover_class_passes() {
         if case.class.as_deref() == Some("rollover") {
             rollover += 1;
             assert_eq!(
-                answer(&case.input, RUN_SECOND_OF_DAY),
+                answer(&case.input),
                 case.output,
                 "the rollover case {}",
                 case.input["search"]
@@ -229,36 +230,44 @@ fn the_engine_day_matches_the_engines_timing_golden() {
     }
 }
 
+/// The run's second for a case is the case's own recorded instant, where the driver held the
+/// harness clock. The census moves every case's instant by each whole minute of a day, from half a
+/// day before its own to under half a day after, and holds that the unshifted instant is one the
+/// golden admits, that the admitted shifts are one band, and that not every shift admits every
+/// case, so the golden pins each case's instant.
 #[test]
 fn the_run_second_is_one_of_the_seconds_the_golden_admits() {
     let golden = golden::read(&golden::committed("anki.search.operator")).expect("the golden");
-    let admitted: Vec<i64> = (0..DAY)
+    assert_eq!(golden.cases.len(), 88, "the golden's cases");
+    let admitted: Vec<i64> = (-DAY / 2..DAY / 2)
         .step_by(60)
-        .filter(|second| {
+        .filter(|shift| {
             golden
                 .cases
                 .iter()
-                .all(|case| answer(&case.input, *second) == case.output)
+                .all(|case| answer_at(&case.input, own_instant(&case.input) + shift) == case.output)
         })
         .collect();
     let first = admitted.first().copied().unwrap_or(-1);
     let last = admitted.last().copied().unwrap_or(-1);
     println!(
-        "examined {} minute(s) of the day: {} admit every case, from second {first} to {last}",
+        "examined {} minute(s) of shift from each of {} case(s)' own instant: {} admit every case, \
+         from shift {first} to {last} second(s)",
         DAY / 60,
+        golden.cases.len(),
         admitted.len()
     );
     assert!(
-        admitted.contains(&RUN_SECOND_OF_DAY),
-        "the run's second is not one the golden admits"
+        admitted.contains(&0),
+        "a case's own instant is not one the golden admits"
     );
     assert_eq!(
         i64::try_from(admitted.len()).expect("a count"),
         (last - first) / 60 + 1,
-        "the admitted seconds are not one band"
+        "the admitted shifts are not one band"
     );
     assert!(
         admitted.len() < usize::try_from(DAY / 60).expect("a count"),
-        "every minute admits every case, so the golden pins no clock"
+        "every shift admits every case, so the golden pins no instant"
     );
 }
