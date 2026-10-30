@@ -261,7 +261,7 @@ fn a_value_out_of_its_range_is_refused_by_both_ends() {
         (0, 0, 0, "ease"),
         (5, 0, 0, "ease"),
         (1, 4, 0, "kind"),
-        (4, 0, MAX_DURATION_MS + 1, "duration_ms"),
+        (4, 0, 3_600_001, "duration_ms"),
     ] {
         assert_eq!(
             encode(&HEAD, &answer(ease, kind, duration_ms)),
@@ -279,8 +279,8 @@ fn a_value_out_of_its_range_is_refused_by_both_ends() {
         );
     }
     assert_eq!(
-        decode(&encode(&HEAD, &answer(4, 3, MAX_DURATION_MS)).expect("the top of each range")),
-        Ok((HEAD, answer(4, 3, MAX_DURATION_MS)))
+        decode(&encode(&HEAD, &answer(4, 3, 3_600_000)).expect("the top of each range")),
+        Ok((HEAD, answer(4, 3, 3_600_000)))
     );
 
     let suspend = encode(&HEAD, &Op::CardSuspend { card: 1, on: true }).expect("a suspend");
