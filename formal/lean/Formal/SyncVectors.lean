@@ -8,24 +8,44 @@ import Formal.PushJudge
 
 The vector writers of the four sync entries (SPEC-504, ADR-522): `SyncClock`, `ReviewKey`,
 `FieldMerge` and `PushJudge`. `Formal/Vectors.lean` dispatches each entry's name to its `run`
-here, which prints one header line and then one line per input with the port's own answer. No
-entry covers code yet, so each header names no covered item; the sync core's Rust tests read these
-files byte-equal when it lands. The formal checker byte-compares the output with
-`formal/vectors/<entry>.jsonl`, and `--write-vectors` writes it; the files are never edited by hand.
-This module carries no header line, so the registry lists it as support.
+here, which prints one header line and then one line per input with the port's own answer. The
+header names the first item the entry's module covers and the digest it recorded for it, or no
+item for an entry that covers no code yet; the sync core's Rust tests read these files byte-equal
+(SPEC-509). The formal checker byte-compares the output with `formal/vectors/<entry>.jsonl`, and
+`--write-vectors` writes it; the files are never edited by hand. This module carries no header
+line, so the registry lists it as support.
 -/
 
 namespace Formal.SyncVectors
 
 open Formal.SyncOrder
 
-/-- The header line: the entry, no covered item, and how many vectors follow. -/
-def headerLine (entry : String) (count : Nat) : String :=
-  "{\"schema\":\"phx.formal.vectors.v1\",\"entry\":\"" ++ entry ++
-    "\",\"covers\":null,\"anchor\":null,\"digest\":null,\"vectors\":" ++ toString count ++ "}"
+/-- The first `covers` line of a module: its path, item and recorded digest. -/
+def coverOf (module : String) : Option (String × String × String) :=
+  (module.splitOn "\n").findSome? fun line =>
+    match (line.splitOn " ").filter (· ≠ "") with
+    | [_, _, "covers", path, anchor, digest] =>
+      if anchor.startsWith "anchor=" && digest.startsWith "digest=" then
+        some (path, (anchor.drop 7).toString, (digest.drop 7).toString)
+      else none
+    | _ => none
 
+/-- The header line: the entry, its first covered item with the recorded digest (or none), and
+how many vectors follow. A path, an item name and a hex digest carry no character JSON escapes. -/
+def headerLine (entry : String) (cover : Option (String × String × String)) (count : Nat) :
+    String :=
+  let covered := match cover with
+    | none => "\"covers\":null,\"anchor\":null,\"digest\":null"
+    | some (path, anchor, digest) =>
+      "\"covers\":\"" ++ path ++ "\",\"anchor\":\"" ++ anchor ++ "\",\"digest\":\"" ++ digest ++
+        "\""
+  "{\"schema\":\"phx.formal.vectors.v1\",\"entry\":\"" ++ entry ++ "\"," ++ covered ++
+    ",\"vectors\":" ++ toString count ++ "}"
+
+/-- Print the entry's header, read from its module `Formal/<entry>.lean`, and every vector. -/
 def emit (entry : String) (lines : List String) : IO UInt32 := do
-  IO.println (headerLine entry lines.length)
+  let module ← IO.FS.readFile ("Formal/" ++ entry ++ ".lean")
+  IO.println (headerLine entry (coverOf module) lines.length)
   for line in lines do
     IO.println line
   return 0

@@ -1,3 +1,6 @@
+-- @phx covers crates/sync/src/merge.rs anchor=merge digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/sync/src/merge.rs anchor=apply digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/sync/src/merge.rs anchor=pick digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 -- @phx cites #15
 -- @phx vectors formal/vectors/field-merge.jsonl
 -- @phx theorem merge_comm ramp=report
@@ -14,14 +17,14 @@ import Formal.SyncOrder
 /-!
 # Formal.FieldMerge
 
-A note field's register, ahead of its code (SPEC-504, ADR-522). The register holds the winning edit
-or nothing; `merge` keeps the greater edit by key (and by value, which two distinct operations never
-share a key for), and `apply` folds a field's edits into the register. The claims: `merge` is
-commutative, associative and idempotent, so `apply` gives one register for every arrival order of
-the same edits. Each is refuted, at a concrete input, of the defect its witness names: a register
-won by arrival order, a comparison that only orders clocks within a window, a merge that re-stamps
-its winner, and an apply that keeps the last edit to arrive. No code in the tree merges a field yet;
-the sync core that will gains a `covers` line on its merge and reads
+A note field's register, written ahead of its code (SPEC-504, ADR-522). The register holds the
+winning edit or nothing; `merge` keeps the greater edit by key (and by value, which two distinct
+operations never share a key for), and `apply` folds a field's edits into the register. The claims:
+`merge` is commutative, associative and idempotent, so `apply` gives one register for every arrival
+order of the same edits. Each is refuted, at a concrete input, of the defect its witness names: a
+register won by arrival order, a comparison that only orders clocks within a window, a merge that
+re-stamps its winner, and an apply that keeps the last edit to arrive. The sync core's `merge`,
+`apply` and `pick` (SPEC-509) are the covered code, and its test reads
 `formal/vectors/field-merge.jsonl` byte-equal.
 -/
 

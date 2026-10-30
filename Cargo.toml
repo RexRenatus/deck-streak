@@ -57,6 +57,7 @@ deck-streak-xp = { path = "crates/xp" }
 deck-streak-study-day = { path = "crates/study-day" }
 deck-streak-companion = { path = "crates/companion" }
 deck-streak-companion-slot = { path = "crates/companion-slot" }
+deck-streak-sync = { path = "crates/sync" }
 # ADR-029: the parity oracle's golden reader. So far only a proving crate's dev-dependencies name
 # them; later ADRs cite ADR-029 rather than admitting them again.
 serde = { version = "1.0.229", features = ["derive"] }
@@ -193,6 +194,9 @@ web-push-native = { git = "https://github.com/RexRenatus/web-push-native.git", r
 unsafe_code = "forbid"
 unused_must_use = "deny"
 missing_docs = "warn"
+# `cfg(kani)` is set by the Kani verifier's compiler alone, around a crate's proof harnesses
+# (ADR-527 D7); declaring it keeps `-D warnings` clean for every build that never sets it.
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(kani)"] }
 
 [workspace.lints.clippy]
 # A group sits at priority -1, so a single lint below it can override it (rs.lint-group-priority).
