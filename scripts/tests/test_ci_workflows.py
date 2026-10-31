@@ -2943,13 +2943,14 @@ HARNESS_TIMEOUT_MINUTES = range(150, 181)
 # after 60:26, so the band starts at one and a half times that run, rounded up to the minute, and
 # ends at twice it, rounded down to the ten, so a hung test still ends within two hours.
 RELEASE_TIMEOUT_MINUTES = range(91, 121)
-# The two web mutation legs' timeout (SPEC-379 R1, R2): the weekly battery's `web` job and the
-# pull request's `mutation-web` job each run StrykerJS over up to the whole Mini App. The band
-# starts at the bound its rule gives, the worst measured cost per mutant times the larger measured
-# count, one and a half times, plus the set-up and the report, rounded up to the five, so a leg set
-# back to 60 is refused; it ends at twice the projected whole sweep, rounded down to the ten, so a
-# hung test still ends within two hours.
-WEB_MUTATION_TIMEOUT_MINUTES = range(100, 121)
+# The two web mutation legs' timeout (SPEC-379 R1, R2, as amended on 2026-10-31): the weekly
+# battery's `web` job and the pull request's `mutation-web` job each hold StrykerJS over up to the
+# whole Mini App. The band starts at the bound its rule gives, the worst measured cost per mutant
+# over the whole sweep (its static mutants, which run every test, and the rest, each stratum at its
+# worst measured cost) times the sweep's count, one and a half times, plus the set-up and the
+# report, rounded up to the five, so a leg left at the old 100 is refused; it ends at twice the
+# projected whole sweep, rounded down to the ten, so a raise past it needs a new measurement.
+WEB_MUTATION_TIMEOUT_MINUTES = range(325, 421)
 
 
 def engine_job_problems(workflow):
@@ -10159,9 +10160,9 @@ class TheWebMutationLegsHoldTheWholeSweep(unittest.TestCase):
 
     def test_a_web_leg_bound_outside_the_band_is_refused_by_its_leg(self):
         """SPEC-379 A2: the checker accepts both legs at the band's floor and at its ceiling, and
-        refuses each leg's bound set back to 60, set one past the ceiling, or removed, naming that
-        leg alone. Every copy is planted from the workflow files with both bounds set here, so the
-        test pins the checker, not the tree's own bounds."""
+        refuses each leg's bound set back to 60, set one under the floor, set one past the
+        ceiling, or removed, naming that leg alone. Every copy is planted from the workflow files
+        with both bounds set here, so the test pins the checker, not the tree's own bounds."""
         texts = {name: workflow_file_text(WORKFLOWS / name) for name, _ in WEB_MUTATION_LEGS}
         live = {
             name: load(name)["jobs"][job_id].get("timeout-minutes")
@@ -10188,7 +10189,12 @@ class TheWebMutationLegsHoldTheWholeSweep(unittest.TestCase):
                 f"{name}: the {job_id} job's timeout is {shown}, not {band} minutes",
             )
             for name, job_id in WEB_MUTATION_LEGS
-            for minutes, shown in ((60, "60"), (ceiling + 1, str(ceiling + 1)), (None, "unset"))
+            for minutes, shown in (
+                (60, "60"),
+                (floor - 1, str(floor - 1)),
+                (ceiling + 1, str(ceiling + 1)),
+                (None, "unset"),
+            )
         ]
         for name, job_id, minutes, refusal in examined("planted web leg bounds", plants):
             with self.subTest(leg=f"{name} {job_id}", minutes=minutes):
