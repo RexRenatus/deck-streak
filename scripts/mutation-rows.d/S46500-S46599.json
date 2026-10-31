@@ -1,0 +1,126 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S46500-A-LIST-THAT-IS-NOT-AN-OBJECT-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "    if not isinstance(listed, dict):\n",
+        "    if False:\n",
+        "a retired list that is not a JSON object is refused by name, exit 2, never a traceback at the first read of it (SPEC-465 R1)",
+        "test_mutation_rows.TheRetiredListRefusesAWrongShape.test_a_top_level_list_is_refused_naming_the_shape"
+      ],
+      [
+        "S46501-A-RETIRED-VALUE-THAT-IS-NOT-AN-ARRAY-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "    if not isinstance(entries, list):\n",
+        "    if False:\n",
+        "a retired value that is not an array is refused by name, where a number crashed the loop and an empty object read as no record (SPEC-465 R2)",
+        "test_mutation_rows.TheRetiredListRefusesAWrongShape.test_a_retired_value_that_is_not_an_array_is_refused_naming_the_shape"
+      ],
+      [
+        "S46502-AN-ENTRY-THAT-IS-NOT-AN-OBJECT-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "        if not isinstance(entry, dict):\n",
+        "        if False:\n",
+        "an entry that is not an object is refused at its index, never read by a get that crashes (SPEC-465 R3)",
+        "test_mutation_rows.TheRetiredListRefusesAWrongShape.test_an_entry_that_is_not_an_object_is_refused_naming_its_place"
+      ],
+      [
+        "S46503-AN-ENTRY-WITHOUT-A-STRING-ID-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "        if not isinstance(entry.get(\"id\"), str):\n",
+        "        if False:\n",
+        "an entry whose id is missing or not a string is refused at its index, whatever its reason and approval (SPEC-465 R4)",
+        "test_mutation_rows.TheRetiredListRefusesAWrongShape.test_an_entry_without_a_string_id_is_refused_naming_its_place"
+      ],
+      [
+        "S46504-A-RECORD-NEEDS-BOTH-A-REASON-AND-AN-APPROVAL",
+        "scripts/mutation_rows.py",
+        "str(entry.get(\"reason\", \"\")).strip() and str(entry.get(\"approval\", \"\")).strip()",
+        "str(entry.get(\"reason\", \"\")).strip() or str(entry.get(\"approval\", \"\")).strip()",
+        "an entry approves its row only when its reason and its approval are both non-blank, as the base read it and the proof's vectors pin (SPEC-465 R5, R11)",
+        "test_mutation_rows.TheRetiredListReaderAgreesWithItsProof.test_the_reader_agrees_with_every_vector_of_its_proof"
+      ],
+      [
+        "S46510-A-SIGHUP-ENDS-THE-RUNNER-THROUGH-ITS-CLEANUP",
+        "scripts/mutation_rows.py",
+        "            signal.signal(signal.SIGHUP, state.handle)\n",
+        "            pass\n",
+        "a hang-up of the runner ends it through the cleanup that ends its killer's group, exit 129 (SPEC-465 R6)",
+        "test_mutation_rows.TheRunnerEndsTheKillersGroupOnEverySignal.test_a_sighup_of_the_runner_ends_the_killers_group"
+      ],
+      [
+        "S46511-THE-HOLD-BEGINS-BEFORE-THE-KILLER-STARTS",
+        "scripts/mutation_rows.py",
+        "    hold_signals()\n",
+        "    pass\n",
+        "signals are held from before the killer's tool is resolved, so one that arrives while the killer starts cannot end the run outside the cleanup (SPEC-465 R7)",
+        "test_mutation_rows.TheRunnerEndsTheKillersGroupOnEverySignal.test_a_sigterm_while_the_killer_starts_is_held_until_its_group_can_end"
+      ],
+      [
+        "S46512-A-HELD-SIGNAL-ENDS-THE-RUN-AT-ITS-RELEASE",
+        "scripts/mutation_rows.py",
+        "            raise SystemExit(128 + run.signum)\n",
+        "            pass\n",
+        "a signal held while the killer started ends the run when the hold is released, inside the try whose finally ends the group (SPEC-465 R7)",
+        "test_mutation_rows.TheRunnerEndsTheKillersGroupOnEverySignal.test_a_sigterm_while_the_killer_starts_is_held_until_its_group_can_end"
+      ],
+      [
+        "S46513-A-SIGNAL-WHILE-A-KILLER-STARTS-WAITS-FOR-ITS-RELEASE",
+        "scripts/mutation_rows.py",
+        "        if not self.holding:\n",
+        "        if True:\n",
+        "the handler records a signal that arrives while a killer starts and returns, so the start completes into the cleanup that ends the group (SPEC-465 R7)",
+        "test_mutation_rows.TheRunnerEndsTheKillersGroupOnEverySignal.test_a_sigterm_while_the_killer_starts_is_held_until_its_group_can_end"
+      ],
+      [
+        "S46514-A-LATER-SIGNAL-IS-IGNORED-SO-THE-CLEANUP-ENDS",
+        "scripts/mutation_rows.py",
+        "        if self.signum is not None:\n            return\n",
+        "        if False:\n            return\n",
+        "once a signal is recorded every later one is ignored, so a second signal cannot abandon the group kill (SPEC-465 R8)",
+        "test_mutation_rows.TheRunnerEndsTheKillersGroupOnEverySignal.test_a_second_sigterm_during_the_cleanup_is_ignored_and_the_group_ends"
+      ],
+      [
+        "S46515-AN-IGNORED-SIGHUP-STAYS-IGNORED",
+        "scripts/mutation_rows.py",
+        "        if found[signal.SIGHUP] is not signal.SIG_IGN:\n",
+        "        if True:\n",
+        "a runner started with SIGHUP ignored keeps it ignored, so only its SIGTERM ends it (SPEC-465 R6)",
+        "test_mutation_rows.TheRunnerEndsTheKillersGroupOnEverySignal.test_a_runner_started_with_sighup_ignored_keeps_it_ignored"
+      ],
+      [
+        "S46516-MAIN-REINSTALLS-THE-HANDLERS-IT-FOUND",
+        "scripts/mutation_rows.py",
+        "            signal.signal(signum, signal.SIG_DFL if handler is None else handler)\n",
+        "            pass\n",
+        "every way out of main reinstalls the SIGTERM and SIGHUP handlers it found (SPEC-465 R9)",
+        "test_mutation_rows.MainLeavesTheProcessAsItFoundIt.test_main_restores_the_handlers_it_found_on_every_way_out"
+      ],
+      [
+        "S46517-A-HANDLER-SET-OUTSIDE-PYTHON-COMES-BACK-AS-THE-DEFAULT",
+        "scripts/mutation_rows.py",
+        "signal.SIG_DFL if handler is None else handler",
+        "handler",
+        "a handler set outside Python, which getsignal reads as None, comes back as the default action (SPEC-465 R9)",
+        "test_mutation_rows.MainLeavesTheProcessAsItFoundIt.test_main_restores_the_handlers_it_found_on_every_way_out"
+      ],
+      [
+        "S46518-MAIN-RESTORES-THE-RUN-STATE-BEFORE-IT",
+        "scripts/mutation_rows.py",
+        "        RUN_SIGNALS = outer\n",
+        "        pass\n",
+        "main leaves the signal state of the run before it, none outside main, so a later killer run is held and released by nothing (SPEC-465 R9)",
+        "test_mutation_rows.MainLeavesTheProcessAsItFoundIt.test_main_leaves_no_signal_state_behind"
+      ],
+      [
+        "S46519-A-SIGNAL-HELD-AT-A-FAILED-START-ENDS-THE-RUN",
+        "scripts/mutation_rows.py",
+        "            raise SystemExit(128 + state.signum)\n",
+        "            pass\n",
+        "a signal held while a killer failed to start ends the run with its exit when the command returns (SPEC-465 R7)",
+        "test_mutation_rows.MainLeavesTheProcessAsItFoundIt.test_a_signal_held_while_a_killer_fails_to_start_still_ends_the_run"
+      ]
+    ]
+  }
+}

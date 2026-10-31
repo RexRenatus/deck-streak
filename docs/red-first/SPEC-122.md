@@ -52,3 +52,15 @@ A7: green at ad32aefc
 
 Row S12210 is the companion of the killing test of A7, proved KILLED by its full id on a clean
 committed tree.
+
+Addendum (issue #421, the amendment's A8). The four tests of A1 to A4 of SPEC-465, which pin the
+retired list's shape, were committed alone (d5d3b541) against the unchanged reader; each failed by
+assertion. The refusal in `retirement_records` (490aa7b4) turned them green; the cover stamp
+(3a6847d2), the vectors (2bb9df2f) and the rows (d654763c) followed. Between the red commit and the
+green tip, the four commits d654763c, 2bb9df2f, 3a6847d2 and 490aa7b4 change no test file:
+`git log d5d3b541..HEAD -- scripts/tests` prints nothing.
+
+```red-first
+A8: red at d5d3b541: a retired list of a wrong shape ended in a Traceback and exit 1, not the named refusal: 1 != 2 : Traceback (most recent call last):
+A8: green at d654763c
+```
