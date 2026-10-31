@@ -1521,3 +1521,105 @@ fn the_backup_now_export_reaches_the_pool_through_files_and_the_core() {
         refused_texts.len()
     );
 }
+
+// SPEC-516 R4 (ADR-534 D3): back up now's refusal. The export maps the core's refusal through one
+// helper, which throws the engine's error bytes as they are and names any other reason in a
+// `backup-refused:` sentence, so the page reads a refused backup by its cause.
+
+/// Back up now's refusal helper and the export that maps through it, with the statements each owes.
+const BACKUP_NOW_REFUSAL: [(&str, &str, &[&str]); 2] = [
+    (
+        "unbacked",
+        "throws the engine's bytes or names why back up now refused",
+        &[
+            "match why(reason) {",
+            "Ok(word) => refuse(format!(\"backup-refused: {word}\")),",
+            "Err(bytes) => bytes,",
+        ],
+    ),
+    (
+        "back_up_now",
+        "maps the core's refusal through its one helper",
+        &["backup_now::back_up(&dispatcher()?, Path::new(&backup)).map_err(unbacked)?;"],
+    ),
+];
+
+#[test]
+fn the_backup_now_refusal_throws_the_engines_bytes_or_names_why() {
+    let source = boundary();
+    assert_eq!(lacks(&source, &BACKUP_NOW_REFUSAL), Vec::<String>::new());
+
+    // the helper answering a constant, its body replaced whole, is refused by its name, and so is
+    // the export mapping the core's refusal past the helper
+    let held = body(&source, "unbacked").unwrap_or_else(|problem| panic!("unbacked: {problem}"));
+    let constant = source.replacen(held, "{\n    Default::default()\n}", 1);
+    assert_ne!(constant, source, "unbacked's body was not replaced");
+    let refused = lacks(&constant, &BACKUP_NOW_REFUSAL);
+    assert!(
+        refused_by_name(&refused, "unbacked", "lacks"),
+        "unbacked answering a constant is not refused by name: {refused:?}"
+    );
+    let unmapped = replaced_in(
+        &source,
+        "back_up_now",
+        ".map_err(unbacked)?",
+        ".map_err(|_| refuse(\"backup-refused\"))?",
+    );
+    assert_ne!(
+        unmapped, source,
+        "back up now's refusal was not planted past its helper"
+    );
+    let refused = lacks(&unmapped, &BACKUP_NOW_REFUSAL);
+    assert!(
+        refused_by_name(&refused, "back_up_now", "lacks"),
+        "a back up now that maps past its helper is not refused by name: {refused:?}"
+    );
+    let functions = examined(
+        "back up now refusal function(s) of src/wasm.rs",
+        BACKUP_NOW_REFUSAL.to_vec(),
+    );
+    let owed: usize = functions.iter().map(|(_, _, owed)| owed.len()).sum();
+    println!("examined {owed} owed statement(s)");
+}
+
+// SPEC-507 R1 (ADR-525 D3): the card health panel on the web. The export answers one card's health
+// as JSON, or `null` when no card has the id, from the core's own health read through the
+// dispatcher; the scheduler's port gives no readout in this build, so it asks with the absent
+// state.
+
+/// The card health export and the statements it owes.
+const CARD_HEALTH: [(&str, &str, &[&str]); 1] = [(
+    "card_health",
+    "reads one card's health through the core and answers its JSON, or null",
+    &[
+        "dispatcher()?.card_health(card_id, Readout::NotAvailable(SchedulerState::Absent))",
+        ".map_err(|_| refuse(\"the read failed\"))?",
+        ".map_or(serde_json::Value::Null, CardHealth::to_json)",
+    ],
+)];
+
+#[test]
+fn the_card_health_export_answers_the_cores_health_as_json() {
+    let source = boundary();
+    assert_eq!(lacks(&source, &CARD_HEALTH), Vec::<String>::new());
+
+    // the export answering a constant text, its body replaced whole, is refused by its name
+    let [(name, _, _)] = CARD_HEALTH;
+    let held = body(&source, name).unwrap_or_else(|problem| panic!("{name}: {problem}"));
+    let constants = examined(
+        "constant answer(s) planted",
+        vec!["Ok(\"xyzzy\".into())", "Ok(String::new())"],
+    );
+    for constant in constants {
+        let planted = source.replacen(held, &format!("{{\n    {constant}\n}}"), 1);
+        assert_ne!(planted, source, "{name}'s body was not replaced");
+        let refused = lacks(&planted, &CARD_HEALTH);
+        assert!(
+            refused_by_name(&refused, name, "lacks"),
+            "`{constant}` planted as {name}'s body is not refused by name: {refused:?}"
+        );
+    }
+    let functions = examined("card health export(s) of src/wasm.rs", CARD_HEALTH.to_vec());
+    let owed: usize = functions.iter().map(|(_, _, owed)| owed.len()).sum();
+    println!("examined {owed} owed statement(s)");
+}
