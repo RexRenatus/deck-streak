@@ -1,0 +1,673 @@
+{"schema":"phx.formal.vectors.v1","entry":"AgentPinGroups","covers":"crates/agent/tests/runs.rs","anchor":"prune_pin_problems","digest":"sha256:4b5a80d77c4115e497e9790c74a19375a5b55d7ac4be1f8b75f370c565c80c24","vectors":672}
+{"rule":"opens_with_a_shebang","source":"","refused":false}
+{"rule":"opens_with_a_shebang","source":"\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"#","refused":false}
+{"rule":"opens_with_a_shebang","source":"#\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"#!","refused":true}
+{"rule":"opens_with_a_shebang","source":"#!\nfn prune_before() {}\n","refused":true}
+{"rule":"opens_with_a_shebang","source":"#![","refused":false}
+{"rule":"opens_with_a_shebang","source":"#![\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"#![allow(unused)]","refused":false}
+{"rule":"opens_with_a_shebang","source":"#![allow(unused)]\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"#! [allow(unused)]","refused":true}
+{"rule":"opens_with_a_shebang","source":"#! [allow(unused)]\nfn prune_before() {}\n","refused":true}
+{"rule":"opens_with_a_shebang","source":"#!\t[allow(unused)]","refused":true}
+{"rule":"opens_with_a_shebang","source":"#!\t[allow(unused)]\nfn prune_before() {}\n","refused":true}
+{"rule":"opens_with_a_shebang","source":"#!env run-cargo-script","refused":true}
+{"rule":"opens_with_a_shebang","source":"#!env run-cargo-script\nfn prune_before() {}\n","refused":true}
+{"rule":"opens_with_a_shebang","source":"#!!","refused":true}
+{"rule":"opens_with_a_shebang","source":"#!!\nfn prune_before() {}\n","refused":true}
+{"rule":"opens_with_a_shebang","source":"#!#","refused":true}
+{"rule":"opens_with_a_shebang","source":"#!#\nfn prune_before() {}\n","refused":true}
+{"rule":"opens_with_a_shebang","source":" #!","refused":false}
+{"rule":"opens_with_a_shebang","source":" #!\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"#[","refused":false}
+{"rule":"opens_with_a_shebang","source":"#[\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"!#","refused":false}
+{"rule":"opens_with_a_shebang","source":"!#\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\u00a0#!","refused":false}
+{"rule":"opens_with_a_shebang","source":"\u00a0#!\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"#!\u00a0[allow(unused)]","refused":true}
+{"rule":"opens_with_a_shebang","source":"#!\u00a0[allow(unused)]\nfn prune_before() {}\n","refused":true}
+{"rule":"opens_with_a_shebang","source":"#!\u3000[allow(unused)]","refused":true}
+{"rule":"opens_with_a_shebang","source":"#!\u3000[allow(unused)]\nfn prune_before() {}\n","refused":true}
+{"rule":"opens_with_a_shebang","source":"\ufeff","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff#","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff#\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff#!","refused":true}
+{"rule":"opens_with_a_shebang","source":"\ufeff#!\nfn prune_before() {}\n","refused":true}
+{"rule":"opens_with_a_shebang","source":"\ufeff#![","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff#![\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff#![allow(unused)]","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff#![allow(unused)]\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff#! [allow(unused)]","refused":true}
+{"rule":"opens_with_a_shebang","source":"\ufeff#! [allow(unused)]\nfn prune_before() {}\n","refused":true}
+{"rule":"opens_with_a_shebang","source":"\ufeff#!\t[allow(unused)]","refused":true}
+{"rule":"opens_with_a_shebang","source":"\ufeff#!\t[allow(unused)]\nfn prune_before() {}\n","refused":true}
+{"rule":"opens_with_a_shebang","source":"\ufeff#!env run-cargo-script","refused":true}
+{"rule":"opens_with_a_shebang","source":"\ufeff#!env run-cargo-script\nfn prune_before() {}\n","refused":true}
+{"rule":"opens_with_a_shebang","source":"\ufeff#!!","refused":true}
+{"rule":"opens_with_a_shebang","source":"\ufeff#!!\nfn prune_before() {}\n","refused":true}
+{"rule":"opens_with_a_shebang","source":"\ufeff#!#","refused":true}
+{"rule":"opens_with_a_shebang","source":"\ufeff#!#\nfn prune_before() {}\n","refused":true}
+{"rule":"opens_with_a_shebang","source":"\ufeff #!","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff #!\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff#[","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff#[\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff!#","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff!#\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\u00a0#!","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\u00a0#!\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff#!\u00a0[allow(unused)]","refused":true}
+{"rule":"opens_with_a_shebang","source":"\ufeff#!\u00a0[allow(unused)]\nfn prune_before() {}\n","refused":true}
+{"rule":"opens_with_a_shebang","source":"\ufeff#!\u3000[allow(unused)]","refused":true}
+{"rule":"opens_with_a_shebang","source":"\ufeff#!\u3000[allow(unused)]\nfn prune_before() {}\n","refused":true}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#!","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#!\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#![","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#![\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#![allow(unused)]","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#![allow(unused)]\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#! [allow(unused)]","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#! [allow(unused)]\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#!\t[allow(unused)]","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#!\t[allow(unused)]\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#!env run-cargo-script","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#!env run-cargo-script\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#!!","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#!!\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#!#","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#!#\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff #!","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff #!\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#[","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#[\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff!#","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff!#\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff\u00a0#!","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff\u00a0#!\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#!\u00a0[allow(unused)]","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#!\u00a0[allow(unused)]\nfn prune_before() {}\n","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#!\u3000[allow(unused)]","refused":false}
+{"rule":"opens_with_a_shebang","source":"\ufeff\ufeff#!\u3000[allow(unused)]\nfn prune_before() {}\n","refused":false}
+{"rule":"counts","source":"( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"[ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"[ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"[ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"[ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"[ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"[ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"{ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":0,"delete_words":0}
+{"rule":"counts","source":"# [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":0,"delete_words":0}
+{"rule":"counts","source":"# [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":0,"delete_words":0}
+{"rule":"counts","source":"# ! [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":0,"delete_words":0}
+{"rule":"counts","source":"# ! [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"! ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"! ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"! ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"! ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"! ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"! ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"! [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"! [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"! [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"! [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"! [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"! [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"! { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"! { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"! { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"! { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"! { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"! { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"! # ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"! # ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"! # ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"! # ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"! # ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"! # ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"! # [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"! # [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":0,"delete_words":0}
+{"rule":"counts","source":"! # [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":0,"delete_words":0}
+{"rule":"counts","source":"! # [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"! # [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"! # [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"! # { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"! # { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"! # { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"! # { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"! # { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"! # { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# # ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# # ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# # ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# # ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# # ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# # ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# # [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# # [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":0,"delete_words":0}
+{"rule":"counts","source":"# # [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":0,"delete_words":0}
+{"rule":"counts","source":"# # [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# # [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# # [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# # { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# # { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# # { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# # { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# # { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# # { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! ! { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"x # ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"x # ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"x # ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"x # ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"x # ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"x # ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) )","run":1,"delete_words":1}
+{"rule":"counts","source":"x # [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"x # [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":0,"delete_words":0}
+{"rule":"counts","source":"x # [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":0,"delete_words":0}
+{"rule":"counts","source":"x # [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"x # [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"x # [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ]","run":1,"delete_words":1}
+{"rule":"counts","source":"x # { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"x # { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"x # { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"x # { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"x # { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"x # { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"[ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"[ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"[ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"[ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"[ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"[ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"# [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"# [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"# ! [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! # ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! # ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! # ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! # ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! # ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! # ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! # [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! # [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"! # [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"! # [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! # [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! # [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! # { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! # { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! # { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! # { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! # { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"! # { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# # ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# # ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# # ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# # ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# # ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# # ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# # [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# # [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"# # [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"# # [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# # [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# # [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# # { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# # { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# # { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# # { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# # { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# # { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"# ! ! { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"x # ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"x # ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"x # ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"x # ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"x # ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"x # ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"x # [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"x # [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"x # [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"x # [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"x # [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"x # [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"x # { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"x # { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"x # { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"x # { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"x # { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"x # { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":0,"delete_words":0}
+{"rule":"counts","source":"{ # [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":0,"delete_words":0}
+{"rule":"counts","source":"{ # [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":0,"delete_words":0}
+{"rule":"counts","source":"{ # ! [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":0,"delete_words":0}
+{"rule":"counts","source":"{ # ! [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":0,"delete_words":0}
+{"rule":"counts","source":"{ ! # [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":0,"delete_words":0}
+{"rule":"counts","source":"{ ! # [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":0,"delete_words":0}
+{"rule":"counts","source":"{ # # [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":0,"delete_words":0}
+{"rule":"counts","source":"{ # # [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! ! { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":0,"delete_words":0}
+{"rule":"counts","source":"{ x # [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":0,"delete_words":0}
+{"rule":"counts","source":"{ x # [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } }","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # ! [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! # ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! # ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! # ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! # ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! # ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! # ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! # [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! # [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"{ ! # [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! # [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! # [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! # { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! # { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! # { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! # { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! # { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ ! # { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # # ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # # ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # # ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # # ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # # ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # # ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # # [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # # [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"{ # # [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # # [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # # [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # # { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # # { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # # { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # # { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # # { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # # { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ # ! ! { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ x # ( sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ x # ( doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ x # ( r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ x # ( Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ x # ( docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ x # ( \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ) } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ x # [ sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ x # [ doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # [ r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":1,"delete_words":1}
+{"rule":"counts","source":"{ x # [ Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ x # [ docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ x # [ \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) ] } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ x # { sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ x # { doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ x # { r#doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ x # { Doc = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ x # { docs = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
+{"rule":"counts","source":"{ x # { \"doc\" = sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" ) } } sqlx : : query ! ( \"DELETE FROM agent_runs WHERE created_at < ?1\" )","run":2,"delete_words":2}
