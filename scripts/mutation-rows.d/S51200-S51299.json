@@ -549,6 +549,222 @@
         "WHERE id = 2",
         "opener::the_writer_holds_its_role_and_each_slot_answers_its_number",
         "the opener reads the one record it wrote; another id finds none and every store is refused (SPEC-512 A1)"
+      ],
+      [
+        "S51261-APPLICATION-ID-READS-USER-VERSION",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA application_id",
+        "PRAGMA user_version",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "the settings read the file's application_id; reading user_version instead, a store at head reports 1, not its stamp (SPEC-512 A1)"
+      ],
+      [
+        "S51262-USER-VERSION-READS-APPLICATION-ID",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA user_version",
+        "PRAGMA application_id",
+        "opener::the_reader_refuses_a_store_one_schema_below_head",
+        "the opener reads the schema's user_version; reading the application_id instead, a store below head reads far above it and is refused as newer (SPEC-512 A2)"
+      ],
+      [
+        "S51263-SCHEMA-SIZE-READS-TEMP",
+        "collection",
+        "src/sql.rs",
+        "FROM sqlite_schema",
+        "FROM sqlite_temp_schema",
+        "opener::the_store_opener_refuses_a_file_of_another_application_and_leaves_it_untouched",
+        "an unstamped file is empty only when its schema holds nothing; counted over the temp schema, another application's file with a table reads empty and is taken (SPEC-512 A8)"
+      ],
+      [
+        "S51264-JOURNAL-MODE-READS-LOCKING-MODE",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA journal_mode\";",
+        "PRAGMA locking_mode\";",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "the settings read the journal mode; reading the locking mode instead, a writer in the write-ahead log reports normal (SPEC-512 A1)"
+      ],
+      [
+        "S51265-SYNCHRONOUS-READS-FOREIGN-KEYS",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA synchronous\";",
+        "PRAGMA foreign_keys\";",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "the settings read the synchronous level; reading foreign_keys instead, the server's FULL (2) reports 1 (SPEC-512 A1)"
+      ],
+      [
+        "S51266-FOREIGN-KEYS-READS-QUERY-ONLY",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA foreign_keys\";",
+        "PRAGMA query_only\";",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "the settings read whether foreign keys are enforced; reading query_only instead, a writer reports them off (SPEC-512 A1)"
+      ],
+      [
+        "S51267-SECURE-DELETE-READS-QUERY-ONLY",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA secure_delete\";",
+        "PRAGMA query_only\";",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "the settings read whether a deleted row's bytes are overwritten; reading query_only instead, a writer reports it off (SPEC-512 A1)"
+      ],
+      [
+        "S51268-QUERY-ONLY-READS-FOREIGN-KEYS",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA query_only\";",
+        "PRAGMA foreign_keys\";",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "the settings read whether every write is refused; reading foreign_keys instead, a writer reports itself query_only (SPEC-512 A1)"
+      ],
+      [
+        "S51269-BUSY-TIMEOUT-READS-SYNCHRONOUS",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA busy_timeout",
+        "PRAGMA synchronous",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "the settings read the busy timeout; reading the synchronous level instead, a 30000 ms timeout reports 2 (SPEC-512 A1)"
+      ],
+      [
+        "S51270-INTEGRITY-CHECK-ANSWERS-OK",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA integrity_check",
+        "SELECT 'ok'",
+        "opener::the_health_check_reads_an_index_that_disagrees_with_its_table",
+        "the health check runs SQLite's integrity check; answering ok unchecked, an index that disagrees with its table reads healthy"
+      ],
+      [
+        "S51271-INTEGRITY-CHECK-QUICK",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA integrity_check",
+        "PRAGMA quick_check",
+        "opener::the_health_check_reads_an_index_that_disagrees_with_its_table",
+        "the health check compares each index with its table; the quick check does not, so a missing index entry reads healthy"
+      ],
+      [
+        "S51272-INTEGRITY-CHECK-ONE-TABLE",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA integrity_check",
+        "PRAGMA integrity_check(store_meta)",
+        "opener::the_health_check_reads_an_index_that_disagrees_with_its_table",
+        "the health check reads the whole file; checked for the store's record alone, another table's damaged index reads healthy"
+      ],
+      [
+        "S51273-FOREIGN-KEY-CHECK-ONE-TABLE",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA foreign_key_check",
+        "PRAGMA foreign_key_check(store_meta)",
+        "opener::the_health_check_counts_a_dangling_reference",
+        "the health check counts every table's dangling references; checked for the store's record alone, a card of a missing note counts none"
+      ],
+      [
+        "S51274-DECK-NAMES-READS-NOTETYPES",
+        "collection",
+        "src/sql.rs",
+        "FROM decks",
+        "FROM notetypes",
+        "read_port::a_retracted_review_leaves_every_read_of_the_store_adapter",
+        "the deck names are the decks' own; read from the notetypes, the map names a notetype for a deck (SPEC-512 A6)"
+      ],
+      [
+        "S51275-DECK-NAMES-READS-THE-KEY",
+        "collection",
+        "src/sql.rs",
+        "SELECT id, name",
+        "SELECT id, name_key",
+        "read_port::a_retracted_review_leaves_every_read_of_the_store_adapter",
+        "a deck's name is the name as written; read from its folded key, Default reads default (SPEC-512 A6)"
+      ],
+      [
+        "S51276-NEWEST-REVIEW-OLDEST",
+        "collection",
+        "src/sql.rs",
+        "max(id)",
+        "min(id)",
+        "read_port::a_retracted_review_leaves_every_read_of_the_store_adapter",
+        "the newest review is the log's highest id; at min it is the oldest (SPEC-512 A6)"
+      ],
+      [
+        "S51277-CARD-COUNT-READS-NOTES",
+        "collection",
+        "src/sql.rs",
+        "FROM cards\";",
+        "FROM notes\";",
+        "read_port::each_count_of_the_store_reads_its_own_table",
+        "the card count counts cards; counted over the notes, three cards of two notes read two"
+      ],
+      [
+        "S51278-NOTE-COUNT-READS-CARDS",
+        "collection",
+        "src/sql.rs",
+        "FROM notes\";",
+        "FROM cards\";",
+        "read_port::each_count_of_the_store_reads_its_own_table",
+        "the note count counts notes; counted over the cards, two notes with three cards read three"
+      ],
+      [
+        "S51279-REVIEW-ROW-COUNT-DROPS-RESCHEDULING",
+        "collection",
+        "src/sql.rs",
+        "count(*) FROM review_log\";",
+        "count(*) FROM review_log WHERE kind < 4\";",
+        "read_port::each_count_of_the_store_reads_its_own_table",
+        "the review row count counts every row of the log; without the rescheduling rows, four rows read three"
+      ],
+      [
+        "S51280-REVIEW-ROW-COUNT-DROPS-RETRACTED",
+        "collection",
+        "src/sql.rs",
+        "count(*) FROM review_log\";",
+        "count(*) FROM review_log r WHERE NOT EXISTS (SELECT 1 FROM review_retraction x WHERE x.review_id = r.id)\";",
+        "read_port::each_count_of_the_store_reads_its_own_table",
+        "the review row count counts every row of the log, a retracted one too; without it, four rows read three"
+      ],
+      [
+        "S51281-RECORD-ID-2",
+        "collection",
+        "src/sql.rs",
+        "VALUES (1, ",
+        "VALUES (2, ",
+        "opener::the_opener_writes_the_store_record_with_its_first_values",
+        "the store's record is row 1, the one id its table admits; written as 2 it is skipped and the opener finds no record (SPEC-512 A1)"
+      ],
+      [
+        "S51282-RECORD-ID-FLOOR",
+        "collection",
+        "src/sql.rs",
+        "?3, 0, 0, NULL",
+        "?3, 1, 0, NULL",
+        "opener::the_opener_writes_the_store_record_with_its_first_values",
+        "a new store's record starts with no id floor; written as 1, the record holds a floor no import set"
+      ],
+      [
+        "S51283-RECORD-NEXT-SEQ",
+        "collection",
+        "src/sql.rs",
+        "?3, 0, 0, NULL",
+        "?3, 0, 1, NULL",
+        "opener::the_opener_writes_the_store_record_with_its_first_values",
+        "a new store's record starts its sequence at 0; written as 1, the first change's number is skipped"
+      ],
+      [
+        "S51284-RECORD-IMPORT-SOURCE",
+        "collection",
+        "src/sql.rs",
+        "0, NULL)",
+        "0, '')",
+        "opener::the_opener_writes_the_store_record_with_its_first_values",
+        "a new store's record names no import; written as an empty text, it records an import that never ran"
       ]
     ]
   }

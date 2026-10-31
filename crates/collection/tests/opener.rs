@@ -350,3 +350,97 @@ fn a_foreign_file_opens_read_only_and_prepares_only_what_it_holds() {
     }
     assert_eq!(findings, Vec::<String>::new(), "a foreign file");
 }
+
+#[test]
+fn the_opener_writes_the_store_record_with_its_first_values() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let path = dir.path().join("server.store");
+    let mut findings = Vec::new();
+    if let Err(error) = Store::open(&path, SERVER) {
+        findings.push(format!("the opener refused: {error}"));
+    }
+    // Every column of the one record: id 1, the server's role, writer id and slot, no id floor,
+    // no sequence yet, and no import.
+    let record = raw(&path).query_row(
+        "SELECT id, role, origin, slot, id_floor, next_seq, import_source FROM store_meta",
+        [],
+        |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, Vec<u8>>(2)?,
+                row.get::<_, i64>(3)?,
+                row.get::<_, i64>(4)?,
+                row.get::<_, i64>(5)?,
+                row.get::<_, Option<String>>(6)?,
+            ))
+        },
+    );
+    match record {
+        Ok(record) if record == (1, 0, vec![7; 16], 0, 0, 0, None) => {}
+        other => findings.push(format!("the store's record reads {other:?}")),
+    }
+    assert_eq!(findings, Vec::<String>::new(), "the store's record");
+}
+
+/// A table, an index on its first column, and the index's definition then moved to its second
+/// column over a writable schema: the index's one entry no longer matches its table's row.
+const DISAGREEING_INDEX: &str = "
+CREATE TABLE health_probe (id INTEGER PRIMARY KEY, first INTEGER NOT NULL, second INTEGER NOT NULL);
+CREATE INDEX health_probe_first ON health_probe (first);
+INSERT INTO health_probe VALUES (1, 10, 20);
+PRAGMA writable_schema = ON;
+UPDATE sqlite_schema SET sql = 'CREATE INDEX health_probe_first ON health_probe (second)'
+  WHERE name = 'health_probe_first';
+PRAGMA writable_schema = OFF;
+";
+
+#[test]
+fn the_health_check_reads_an_index_that_disagrees_with_its_table() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let path = dir.path().join("damaged.store");
+    let mut findings = Vec::new();
+    match Store::open(&path, SERVER).and_then(|store| store.health()) {
+        Ok(health) if health.integrity == ["ok"] && health.foreign_key_violations == 0 => {}
+        other => findings.push(format!("the store as made answered {other:?}")),
+    }
+    if let Err(error) = raw(&path).execute_batch(DISAGREEING_INDEX) {
+        findings.push(format!("the fixture could not move its index: {error}"));
+    }
+    // The bundled SQLite's own words for the one entry the moved index lacks.
+    match Store::open(&path, SERVER).and_then(|store| store.health()) {
+        Ok(health)
+            if health.integrity == ["row 1 missing from index health_probe_first"]
+                && health.foreign_key_violations == 0 => {}
+        other => findings.push(format!("the store with a moved index answered {other:?}")),
+    }
+    assert_eq!(findings, Vec::<String>::new(), "the integrity check");
+}
+
+/// A deck and its preset, and a card of a note the store does not hold, written with the
+/// fixture's foreign keys off.
+const DANGLING_CARD: &str = "
+PRAGMA foreign_keys = OFF;
+INSERT INTO presets VALUES (1, 'Default', '{}', 0);
+INSERT INTO decks VALUES (1, 'Default', 'default', 1, 0, '{}', 0);
+INSERT INTO cards VALUES (10, 99, 0, 1, NULL, 0, NULL, 0, 0);
+";
+
+#[test]
+fn the_health_check_counts_a_dangling_reference() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let path = dir.path().join("dangling.store");
+    let mut findings = Vec::new();
+    match Store::open(&path, SERVER).and_then(|store| store.health()) {
+        Ok(health) if health.integrity == ["ok"] && health.foreign_key_violations == 0 => {}
+        other => findings.push(format!("the store as made answered {other:?}")),
+    }
+    if let Err(error) = raw(&path).execute_batch(DANGLING_CARD) {
+        findings.push(format!("the fixture could not write its card: {error}"));
+    }
+    match Store::open(&path, SERVER).and_then(|store| store.health()) {
+        Ok(health) if health.integrity == ["ok"] && health.foreign_key_violations == 1 => {}
+        other => findings.push(format!("the store with a dangling card answered {other:?}")),
+    }
+    assert_eq!(findings, Vec::<String>::new(), "the foreign key check");
+}

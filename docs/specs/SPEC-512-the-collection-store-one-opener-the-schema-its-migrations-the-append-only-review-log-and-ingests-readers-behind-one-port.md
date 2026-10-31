@@ -172,7 +172,7 @@ driver.
 | `crates/collection/src/data_rights.rs` | store | new: export, the erases and the gate |
 | `crates/collection/src/error.rs` | store | new: `StoreError` |
 | `crates/collection/tests/*.rs` | store tests | new: A1 to A6 and A8, A10 (six files and a support module) |
-| `scripts/mutation-rows.d/S51200-S51299.json` | store tests | new: the statements' guard, pragma and record rows (section 9) |
+| `scripts/mutation-rows.d/S51200-S51299.json` | store tests | new: the statements' guard, pragma, read, health and record rows (section 9) |
 | `crates/ingest/Cargo.toml` | ingest | changed: the edges to the collection and to rusqlite |
 | `crates/ingest/src/schema18.rs` | ingest | new: the 19 moved statements and the schema-18 adapter |
 | `crates/ingest/src/{reader,study_days,window,gate,structure,engine,skip_write}.rs` | ingest | changed: each moved statement imported from the adapter, its text unchanged |
@@ -227,7 +227,7 @@ the head. The journal mode under the web engine's file system is not measured by
 
 The opener's, the migrations' and the adapters' code is killed by the crate's own suites under cargo-mutants. The
 statements are not: cargo-mutants mutates no literal of a constant's initializer, so `crates/collection/src/sql.rs` gives
-it nothing to mutate, and its guards and pragma values are hand rows in `scripts/mutation-rows.d/S51200-S51299.json`.
+it nothing to mutate, and its guards and literal values are hand rows in `scripts/mutation-rows.d/S51200-S51299.json`.
 
 - Each study-review statement (the reviews, the page of ids, the count through a floor, the studied cards) owes a row
   for its floor, for kind 4 out and each study kind 0 to 3 in, for the ease boundary both ways, for its deck scope where
@@ -240,5 +240,19 @@ it nothing to mutate, and its guards and pragma values are hand rows in `scripts
   one guard alone keeps each review, card, template or field out.
 - Each pragma setting owes its value (S51253 to S51258), killed by the opener's pragma and reader tests, and the store's
   record owes its write-once insert and its one id (S51259, S51260), killed by the role check's tests.
+- Each pragma read owes the pragma it names (S51261 to S51269): read as another pragma, the settings report that
+  pragma's value, which the opener's pragma test refuses; the schema's `user_version` read is killed by the reader's
+  refusal of a store below head, and the schema's size by the opener's refusal of another application's file.
+- The health check owes the whole integrity check (S51270 to S51272: never `ok` unchecked, never the quick check, never
+  one table's), killed by `opener::the_health_check_reads_an_index_that_disagrees_with_its_table`, and the whole foreign
+  key check (S51273), killed by `opener::the_health_check_counts_a_dangling_reference`.
+- The deck names owe their table and their column (S51274, S51275) and the newest review its maximum (S51276), killed by
+  `read_port::a_retracted_review_leaves_every_read_of_the_store_adapter`; the counts owe their tables, and the review
+  rows every row, a rescheduling or a retracted one too (S51277 to S51280), killed by
+  `read_port::each_count_of_the_store_reads_its_own_table`.
+- The store's record owes its first values, id 1, no id floor, sequence 0 and no import (S51281 to S51284), killed by
+  `opener::the_opener_writes_the_store_record_with_its_first_values`.
 - The card tags' deck scope owes no row: a tag reaches a read only through a card the cards' own scope admits, and a
   note's tags are the same in every deck, so the scope bounds the work and no read can tell it dropped.
+- The deck names' order owes no row: the read collects them into a map keyed by the deck's id, so no read can tell the
+  order changed.

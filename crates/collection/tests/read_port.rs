@@ -437,3 +437,55 @@ fn each_guard_of_the_read_statements_alone_keeps_its_review_out() {
         "each guard of the read statements"
     );
 }
+
+/// One deck, two notes, three cards (two of the first note), and four review rows: two study
+/// answers, a retracted one, and a rescheduling row, so no two counts are equal.
+const COUNT_ROWS: &str = "
+INSERT INTO notetypes VALUES (1, 'Basic', 'basic', 0, '', 0, '{}', 0);
+INSERT INTO presets VALUES (1, 'Default', '{}', 0);
+INSERT INTO decks VALUES (1, 'One', 'one', 1, 0, '{}', 0);
+INSERT INTO notes VALUES (1, 'g1', 1, '[\"one\"]', 'one', zeroblob(32), 0),
+  (2, 'g2', 1, '[\"two\"]', 'two', zeroblob(32), 0);
+INSERT INTO cards VALUES (10, 1, 0, 1, NULL, 0, NULL, 0, 0), (11, 1, 1, 1, NULL, 0, NULL, 0, 0),
+  (12, 2, 0, 1, NULL, 0, NULL, 0, 0);
+INSERT INTO review_log (id, origin, seq, card_id, note_id, deck_id, preset_id, kind, ease,
+  duration_ms, study_day, server_seq) VALUES
+  (100, zeroblob(16), 1, 10, 1, 1, 1, 1, 3, 1000, 0, 1),
+  (110, zeroblob(16), 2, 11, 1, 1, 1, 0, 1, 1000, 0, 2),
+  (120, zeroblob(16), 3, 12, 2, 1, 1, 1, 2, 1000, 0, 3),
+  (130, zeroblob(16), 4, 10, 1, 1, 1, 4, 0, 0, 0, 4);
+INSERT INTO review_retraction VALUES (120, zeroblob(16), 5, 0);
+";
+
+#[test]
+fn each_count_of_the_store_reads_its_own_table() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let path = dir.path().join("counts.store");
+    drop(Store::open(&path, SERVER).expect("the store opens"));
+    let loaded = raw(&path).execute_batch(COUNT_ROWS);
+    let store = Store::open(&path, SERVER).expect("the store reopens");
+    let mut findings: Vec<String> = loaded
+        .err()
+        .map(|error| format!("the fixture rows were refused: {error}"))
+        .into_iter()
+        .collect();
+    let counts = store
+        .read(|read| read.counts())
+        .map(|counts| format!("{counts:?}"));
+    let expected = format!(
+        "{:?}",
+        LogCounts {
+            cards: 3,
+            notes: 2,
+            review_rows: 4,
+            reschedule_rows: 1,
+        }
+    );
+    match counts {
+        Ok(counts) if counts == expected => {}
+        other => findings.push(format!(
+            "the counts answered {other:?}, expected {expected}"
+        )),
+    }
+    assert_eq!(findings, Vec::<String>::new(), "the store's counts");
+}
