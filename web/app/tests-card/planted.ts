@@ -15,7 +15,7 @@ export type Layer = 'W1' | 'W2' | 'W3' | 'W4';
 export interface Listener {
   /** The HTTP listener's origin, counting requests by path. */
   http: string;
-  /** The TCP listener's origin, counting connections that carry no request (a preconnect). */
+  /** The TCP listener's origin, counting every connection and each request by its path (SPEC-461). */
   tcp: string;
   /** The UDP listener's port on the loopback address, counting datagrams (a STUN request). */
   udp: number;
@@ -77,9 +77,9 @@ function loads(id: string, alone: Layer | null, html: (http: string) => string, 
   return { id, alone, click: false, html: (l) => html(`${l.http}/${id}`), css: (l) => css(`${l.http}/${id}`), paths: [`/${id}/`] };
 }
 
-/** A card whose full-frame link or button acts when clicked, toward the HTTP listener. */
-function clicks(id: string, alone: Layer | null, html: (http: string) => string): PlantedCard {
-  return { id, alone, click: true, html: (l) => html(`${l.http}/${id}`), css: () => COVER, paths: [`/${id}/`] };
+/** A card whose full-frame link or button acts when clicked, toward the TCP listener (SPEC-461). */
+function clicks(id: string, alone: Layer | null, html: (tcp: string) => string): PlantedCard {
+  return { id, alone, click: true, html: (l) => html(`${l.tcp}/${id}`), css: () => COVER, paths: ['tcp', `/${id}/`] };
 }
 
 /**
