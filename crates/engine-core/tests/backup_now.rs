@@ -16,19 +16,25 @@ mod support;
 
 use std::collections::BTreeSet;
 use std::path::Path;
+use std::sync::{Arc, Mutex, PoisonError};
 
 use anki::card::CardId;
 use anki::collection::{Collection, CollectionBuilder};
 use anki::scheduler::answering::{CardAnswer, Rating};
 use anki::timestamp::TimestampMillis;
+use anki_proto::collection::{CloseCollectionRequest, OpenCollectionRequest};
 use deck_streak_engine_core::backup_now;
 use deck_streak_engine_core::dispatch::Dispatcher;
+use deck_streak_engine_core::files::{Files, Standard};
 use deck_streak_engine_core::full_sync::IdSets;
 use deck_streak_engine_core::one_way::Reason;
 use deck_streak_engine_core::table::Transport;
+use prost::Message;
 
 /// `BackendCollectionService.OpenCollection`.
 const OPEN_COLLECTION: (u32, u32) = (3, 0);
+/// `BackendCollectionService.CloseCollection`, which the web column admits and the native does not.
+const CLOSE_COLLECTION: (u32, u32) = (3, 1);
 
 /// The test's own engine handle on a closed collection file.
 fn engine(collection: &Path) -> Collection {
@@ -173,5 +179,90 @@ fn back_up_now_refuses_a_file_that_holds_rows() {
         held(&other.collection),
         before,
         "the other file is unchanged"
+    );
+}
+
+/// A files port that answers as the standard library does, and that, the first time it is asked
+/// whether a path names the open collection, closes that collection and opens `twin` in its place:
+/// the engine then writes a collection other than the one whose ids back up now read first.
+struct Swapped {
+    dispatcher: Mutex<Option<Dispatcher>>,
+    twin: Vec<u8>,
+}
+
+impl Files for Swapped {
+    fn holds(&self, path: &Path) -> bool {
+        Standard.holds(path)
+    }
+
+    fn same(&self, open: &Path, path: &Path) -> bool {
+        let taken = self
+            .dispatcher
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take();
+        if let Some(dispatcher) = taken {
+            let (service, method) = CLOSE_COLLECTION;
+            dispatcher
+                .run(
+                    service,
+                    method,
+                    &CloseCollectionRequest::default().encode_to_vec(),
+                )
+                .expect("the web dispatcher closes the device's collection");
+            let (service, method) = OPEN_COLLECTION;
+            dispatcher
+                .run(service, method, &self.twin)
+                .expect("the web dispatcher opens the twin");
+        }
+        Standard.same(open, path)
+    }
+}
+
+#[test]
+fn back_up_now_refuses_a_backup_that_lacks_a_review_the_device_held() {
+    let device = support::synthetic("backup-now-unheld");
+    let twin = device.dir.join("twin.anki2");
+    std::fs::copy(&device.collection, &twin).expect("the twin is the device before its answer");
+    let [first, _] = device.cards;
+    answer(&device.collection, first);
+    let [reviews, cards, notes] = held(&device.collection);
+    support::examined("review(s) of the device", reviews.iter().collect());
+    assert_eq!(
+        held(&twin),
+        [BTreeSet::new(), cards, notes],
+        "the twin holds every card and note of the device, and none of its reviews"
+    );
+    let dispatcher =
+        Dispatcher::start(Transport::Web, &[]).expect("the engine starts from the default init");
+    let (service, method) = OPEN_COLLECTION;
+    dispatcher
+        .run(service, method, &support::open_request(&device))
+        .expect("the web dispatcher opens the collection");
+    let media = device.dir.join("collection.media");
+    let media_db = device.dir.join("collection.media.db");
+    let text = |path: &Path| path.to_str().expect("a scratch path is UTF-8").to_owned();
+    dispatcher.install_files(Arc::new(Swapped {
+        dispatcher: Mutex::new(Some(dispatcher.clone())),
+        twin: OpenCollectionRequest {
+            collection_path: text(&twin),
+            media_folder_path: text(&media),
+            media_db_path: text(&media_db),
+        }
+        .encode_to_vec(),
+    }));
+    let backup = device.dir.join("backup-unheld.anki2");
+
+    let refused = backup_now::back_up(&dispatcher, &backup);
+
+    assert_eq!(
+        refused.map(rows),
+        Err(Reason::Unheld),
+        "a backup whose file, read back, lacks a review the device held is refused"
+    );
+    assert_eq!(
+        held(&backup)[0],
+        BTreeSet::new(),
+        "the engine wrote the twin, which lacks the device's review"
     );
 }
