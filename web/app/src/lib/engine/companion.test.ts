@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ABSENT,
@@ -25,8 +25,19 @@ import type { Plant } from './companion-modules.test.support';
 // load check keeps it. Every expected byte, digest and name is written out or computed here, never
 // read from the module under test.
 
-/** The repository's committed frames (SPEC-501's codec vectors), from this file's directory. */
-const FRAMES = resolve(import.meta.dirname, '..', '..', '..', '..', '..', 'formal', 'vectors', 'companion-frames.jsonl');
+/**
+ * The repository's root, found by walking up to its pnpm workspace. A fixed count of `..` would miss
+ * it when StrykerJS runs this file from its sandbox, which sits below `web/app/.stryker-tmp`.
+ */
+function repositoryRoot(from: string): string {
+  for (let dir = from; ; dir = dirname(dir)) {
+    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return dir;
+    if (dirname(dir) === dir) throw new Error(`no pnpm-workspace.yaml above ${from}`);
+  }
+}
+
+/** The repository's committed frames (SPEC-501's codec vectors), from the repository's root. */
+const FRAMES = join(repositoryRoot(import.meta.dirname), 'formal', 'vectors', 'companion-frames.jsonl');
 /** The loader's own source, which the script-import census reads. */
 const SOURCE = resolve(import.meta.dirname, 'companion.ts');
 /** 16 MiB, written out apart from the module's constant. */

@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { getLocale, locales, overwriteGetLocale } from '#lib/paraglide/runtime.js';
@@ -10,6 +11,17 @@ import type { Status } from './review';
 // locale the app has. SPEC-506 R5; ADR-524: so is the line a clip with no local voice leaves.
 const ORIGINAL = getLocale;
 const MESSAGES = fileURLToPath(new URL('../../../messages/', import.meta.url));
+
+/**
+ * The repository's root, found by walking up to its pnpm workspace. A fixed count of `..` would miss
+ * it when StrykerJS runs this file from its sandbox, which sits below `web/app/.stryker-tmp`.
+ */
+function repositoryRoot(from: string): string {
+  for (let dir = from; ; dir = dirname(dir)) {
+    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return dir;
+    if (dirname(dir) === dir) throw new Error(`no pnpm-workspace.yaml above ${from}`);
+  }
+}
 
 /** Each status and its message's key, written out rather than derived. */
 const EXPECTED = {
@@ -93,8 +105,9 @@ describe('the review status', () => {
   // SPEC-505 R7, A4; ADR-523 D5. The iPhone and iPad card face shows its refusal in DeckStreak's words,
   // through the words file, and never prints the error's Swift case name.
   it('the iPhone and iPad card face words a refusal through its mapper, never a Swift case name', () => {
-    const face = readFileSync(fileURLToPath(new URL('../../../../../ios/App/Sources/CardFaceView.swift', import.meta.url)), 'utf8');
-    const words = readFileSync(fileURLToPath(new URL('../../../../../ios/App/Sources/CardRefusalWords.swift', import.meta.url)), 'utf8');
+    const swift = join(repositoryRoot(import.meta.dirname), 'ios', 'App', 'Sources');
+    const face = readFileSync(join(swift, 'CardFaceView.swift'), 'utf8');
+    const words = readFileSync(join(swift, 'CardRefusalWords.swift'), 'utf8');
     const judged = (text: string) => ({
       printsTheCase: /String\(\s*describing:/.test(text),
       wordsTheRefusal: /CardRefusalWords\.text\(\s*of:\s*error\s*\)/.test(text),

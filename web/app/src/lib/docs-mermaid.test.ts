@@ -192,13 +192,15 @@ describe('the Mermaid diagrams under docs', () => {
     expect(wrong.slice(0, 3), `${wrong.length} of ${planted.length} members judged otherwise`).toEqual([]);
   });
 
+  // StrykerJS runs this test over the instrumented reader, which took it from 1.6 s to 5.2 s, past
+  // the default 5 s; 30 s fits a slower runner and still fails a reader that slows past it.
   it('reads every fenced block', () => {
     const blocks = examined('mermaid blocks', docsBlocks());
     const refused = markdownFiles(DOCS).flatMap((file) => refusedOf(relative(DOCS, file), readFileSync(file, 'utf8')));
 
     expect(blocks.length).toBeGreaterThan(100);
     expect(refused).toEqual([]);
-  });
+  }, 30_000);
 
   it('parses every block', async () => {
     const blocks = examined('mermaid blocks', docsBlocks());

@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  */
-import { readdirSync, readFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { parse } from 'svelte/compiler';
@@ -21,7 +21,21 @@ import ReviewScreen from './ReviewScreen.svelte';
 // scheduler is Ready and the state's line otherwise, and where it came from. It judges no card, it
 // reaches the record only through the review's read over the Worker, and the answer clock stops
 // while it is open.
-const APP = join(import.meta.dirname, '..', '..', '..');
+
+/**
+ * The repository's root, found by walking up to its pnpm workspace. A fixed count of `..` would
+ * read, when StrykerJS runs this file from its sandbox below `web/app/.stryker-tmp`, the sandbox's
+ * copies of the sources, which StrykerJS instruments; the sandbox holds no workspace file.
+ */
+function repositoryRoot(from: string): string {
+  for (let dir = from; ; dir = dirname(dir)) {
+    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return dir;
+    if (dirname(dir) === dir) throw new Error(`no pnpm-workspace.yaml above ${from}`);
+  }
+}
+
+/** The web app as committed: the census reads its sources, never an instrumented copy. */
+const APP = join(repositoryRoot(import.meta.dirname), 'web', 'app');
 
 /** Each state but Ready, and the line its recall rows read. */
 const STATE_LINES: Record<Exclude<HealthReadout['state'], 'ready'>, string> = {
