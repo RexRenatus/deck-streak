@@ -284,6 +284,29 @@ fn the_panel_reads_a_fixture_cards_figures_through_the_two_fixed_reads() {
     );
 }
 
+#[test]
+fn the_median_of_one_two_and_three_answers_is_their_middle() {
+    // review Goods with times below the cap, oldest first, the times not in sorted order
+    let median = |times: &[i64]| {
+        let rows: Vec<ReviewRow> = times
+            .iter()
+            .zip(BASE_MS..)
+            .map(|(&time, at)| [at, 3, time, 1, 4])
+            .collect();
+        health::card_health([7, 0, 0, 0, 0, 0, 0], &rows, ABSENT).answer_ms_median
+    };
+    assert_eq!(
+        [
+            median(&[5_000]),
+            median(&[9_000, 1_000]),
+            median(&[9_000, 1_000, 2_000]),
+        ],
+        [Some(5_000), Some(5_000), Some(2_000)],
+        "one answer is its own median, two give the floor of their mean, and three the middle of \
+         their sorted times"
+    );
+}
+
 /// A seeded generator of the differential's rows (`SplitMix64`), so a failure repeats.
 struct Rows(u64);
 
