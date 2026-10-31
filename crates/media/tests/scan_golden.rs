@@ -161,3 +161,32 @@ fn scan_reads_the_engines_grammar_over_hand_cases() {
     }
     println!("examined {} hand case(s)", HAND.len());
 }
+
+/// Hand cases of the grammar's edges, each with the names the engine's expression gives: a quoted
+/// run that holds only a `>`, an empty quoted value, a `>` inside a quoted value, a match that ends
+/// just after a multibyte character, the `&quot;` entity, a signed number, and a scheme one letter
+/// off a remote one.
+const EDGES: [(&str, &[&str]); 11] = [
+    (r#"<img alt=">" src="a.png">"#, &["a.png"]),
+    (r#"<img alt=">">" src="a.png">"#, &[]),
+    (r#"<img src="">"#, &["\"\""]),
+    (r#"<img src="x>" <img src="b.png">"#, &["x>"]),
+    (
+        "<img src=\"a.png\" alt=\u{e9}><img src=b.png>",
+        &["a.png", "b.png"],
+    ),
+    ("<img src=\u{e9}><img src=b.png>", &["\u{e9}", "b.png"]),
+    ("<img src=a.png \u{e9}><img src=b.png>", &["a.png", "b.png"]),
+    ("[sound:\u{e9}][sound:b.mp3]", &["\u{e9}", "b.mp3"]),
+    (r#"<img src="a&quot;b.png">"#, &["a\"b.png"]),
+    (r#"<img src="a&#+65;.png">"#, &["a&#+65;.png"]),
+    ("[sound:httpx://a.mp3]", &["httpx://a.mp3"]),
+];
+
+#[test]
+fn scan_reads_the_grammars_edges_over_hand_cases() {
+    for (text, names) in EDGES {
+        assert_eq!(scan(text), names.to_vec(), "{text:?}");
+    }
+    println!("examined {} edge case(s)", EDGES.len());
+}

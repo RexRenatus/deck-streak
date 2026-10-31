@@ -211,6 +211,28 @@ fn latex_images_read_the_shapes_the_golden_does_not_draw() {
     println!("examined {} hand case(s) and 1 SVG case", HAND.len());
 }
 
+/// Style elements whose opening tag is not a bare `<style>`, each with the expression the engine's
+/// expression gives: an attribute before the opening's `>`, a close written inside the opening,
+/// and a multibyte character just before the opening's `>`.
+const STYLE_OPENINGS: [(&str, &str); 3] = [
+    ("[latex]<style a>p</style>q[/latex]", "q"),
+    ("[latex]ab<style</style>>zz</style>[/latex]", "ab"),
+    ("[latex]<style \u{e9}>x</style>y[/latex]", "y"),
+];
+
+#[test]
+fn latex_images_end_a_style_element_at_the_close_after_its_openings_gt() {
+    for (text, expression) in STYLE_OPENINGS {
+        let images = latex_images(text, LatexFormat::Png);
+        let found: Vec<&str> = images
+            .iter()
+            .map(|image| image.expression.as_str())
+            .collect();
+        assert_eq!(found, [expression], "{text:?}");
+    }
+    println!("examined {} style opening(s)", STYLE_OPENINGS.len());
+}
+
 /// A collection of two notes: one of a note type that renders PNG, one of a note type that renders
 /// SVG, and a store that holds the first note's image and, under the wrong type, the second's.
 struct TwoNotes;

@@ -150,3 +150,16 @@ fn a_url_that_names_no_plain_file_is_no_name() {
     );
     assert_eq!(scan_css(css), vec!["spaced name.png", "plain.png"]);
 }
+
+#[test]
+fn a_url_escape_decodes_to_sixteen_times_its_high_digit_plus_its_low() {
+    assert_eq!(scan_css("a { b: url(ds%5Fa.png); }"), vec!["ds_a.png"]);
+}
+
+#[test]
+fn a_url_ending_in_a_multibyte_character_names_it_and_reads_on() {
+    assert_eq!(
+        scan_css("a { b: url(caf\u{e9}); c: url(n.otf); }"),
+        vec!["caf\u{e9}", "n.otf"]
+    );
+}
