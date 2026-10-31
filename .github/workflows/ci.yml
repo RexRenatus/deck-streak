@@ -967,7 +967,7 @@ jobs:
   # a missing, cut, partial, foreign or misdealt shard reads VOID by name and writes no union.
   mutation-web:
     runs-on: ubuntu-24.04
-    timeout-minutes: 100
+    timeout-minutes: 325
     needs: [mutation-web-shard]
     if: ${{ always() }}
     steps:

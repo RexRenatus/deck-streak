@@ -4,49 +4,65 @@
       [
         "S37900-THE-WEEKLY-WEB-LEG-IS-CUT-AT-60",
         ".github/workflows/mutation-weekly.yml",
-        "  web:\n    if: ${{ github.event_name != 'pull_request' && (!inputs.package || inputs.package == 'miniapp') }}\n    runs-on: ubuntu-24.04\n    timeout-minutes: 100\n",
+        "  web:\n    if: ${{ github.event_name != 'pull_request' && (!inputs.package || inputs.package == 'miniapp') }}\n    runs-on: ubuntu-24.04\n    timeout-minutes: 325\n",
         "  web:\n    if: ${{ github.event_name != 'pull_request' && (!inputs.package || inputs.package == 'miniapp') }}\n    runs-on: ubuntu-24.04\n    timeout-minutes: 60\n",
-        "the weekly battery's web job holds the whole Mini App's sweep at 100 minutes; set back to 60 it is cut before its report is written and its leg reads VOID (SPEC-379 R1, R2)",
+        "the weekly battery's web job holds the whole Mini App's sweep at 325 minutes, the rule's bound; set back to 60 it is cut before its report is written and its leg reads VOID (SPEC-379 R1, R2)",
         "test_ci_workflows.TheWebMutationLegsHoldTheWholeSweep.test_both_web_mutation_legs_hold_the_whole_mini_app_sweep"
       ],
       [
         "S37901-THE-PULL-REQUEST-WEB-LEG-IS-CUT-AT-60",
         ".github/workflows/ci.yml",
-        "  mutation-web:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 100\n",
+        "  mutation-web:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 325\n",
         "  mutation-web:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 60\n",
-        "the mutation-web job holds a release's sweep of most of the Mini App at 100 minutes; set back to 60 it is cut before its report is written and its leg reads VOID (SPEC-379 R1, R2)",
+        "the mutation-web job declares the rule's bound of 325 minutes beside the weekly leg; set back to 60 it sits under the band's floor and is refused by name (SPEC-379 R1, R2)",
         "test_ci_workflows.TheWebMutationLegsHoldTheWholeSweep.test_both_web_mutation_legs_hold_the_whole_mini_app_sweep"
       ],
       [
         "S37902-THE-WEEKLY-WEB-LEG-PASSES-THE-CEILING",
         ".github/workflows/mutation-weekly.yml",
-        "  web:\n    if: ${{ github.event_name != 'pull_request' && (!inputs.package || inputs.package == 'miniapp') }}\n    runs-on: ubuntu-24.04\n    timeout-minutes: 100\n",
-        "  web:\n    if: ${{ github.event_name != 'pull_request' && (!inputs.package || inputs.package == 'miniapp') }}\n    runs-on: ubuntu-24.04\n    timeout-minutes: 121\n",
-        "the weekly battery's web job's bound stays at most 120, twice the projected whole sweep rounded down to the ten, so a hung test ends within two hours (SPEC-379 R2)",
+        "  web:\n    if: ${{ github.event_name != 'pull_request' && (!inputs.package || inputs.package == 'miniapp') }}\n    runs-on: ubuntu-24.04\n    timeout-minutes: 325\n",
+        "  web:\n    if: ${{ github.event_name != 'pull_request' && (!inputs.package || inputs.package == 'miniapp') }}\n    runs-on: ubuntu-24.04\n    timeout-minutes: 421\n",
+        "the weekly battery's web job's bound stays at most 420, twice the projected whole sweep rounded down to the ten, so a raise past it needs a new measurement (SPEC-379 R2)",
         "test_ci_workflows.TheWebMutationLegsHoldTheWholeSweep.test_both_web_mutation_legs_hold_the_whole_mini_app_sweep"
       ],
       [
         "S37903-THE-PULL-REQUEST-WEB-LEG-PASSES-THE-CEILING",
         ".github/workflows/ci.yml",
-        "  mutation-web:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 100\n",
-        "  mutation-web:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 121\n",
-        "the mutation-web job's bound stays at most 120, twice the projected whole sweep rounded down to the ten, so a hung test ends within two hours (SPEC-379 R2)",
+        "  mutation-web:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 325\n",
+        "  mutation-web:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 421\n",
+        "the mutation-web job's bound stays at most 420, twice the projected whole sweep rounded down to the ten, so a raise past it needs a new measurement (SPEC-379 R2)",
         "test_ci_workflows.TheWebMutationLegsHoldTheWholeSweep.test_both_web_mutation_legs_hold_the_whole_mini_app_sweep"
       ],
       [
         "S37904-THE-WEEKLY-WEB-LEG-HAS-NO-BOUND",
         ".github/workflows/mutation-weekly.yml",
-        "  web:\n    if: ${{ github.event_name != 'pull_request' && (!inputs.package || inputs.package == 'miniapp') }}\n    runs-on: ubuntu-24.04\n    timeout-minutes: 100\n",
+        "  web:\n    if: ${{ github.event_name != 'pull_request' && (!inputs.package || inputs.package == 'miniapp') }}\n    runs-on: ubuntu-24.04\n    timeout-minutes: 325\n",
         "  web:\n    if: ${{ github.event_name != 'pull_request' && (!inputs.package || inputs.package == 'miniapp') }}\n    runs-on: ubuntu-24.04\n",
-        "the weekly battery's web job declares its bound; with no timeout-minutes it takes the hosted job's own limit, far above the band (SPEC-379 R2)",
+        "the weekly battery's web job declares its bound; with no timeout-minutes it takes the hosted job's default of 360 minutes, which no measurement chose (SPEC-379 R2)",
         "test_ci_workflows.TheWebMutationLegsHoldTheWholeSweep.test_both_web_mutation_legs_hold_the_whole_mini_app_sweep"
       ],
       [
         "S37905-THE-PULL-REQUEST-WEB-LEG-HAS-NO-BOUND",
         ".github/workflows/ci.yml",
-        "  mutation-web:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 100\n",
+        "  mutation-web:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 325\n",
         "  mutation-web:\n    runs-on: ubuntu-24.04\n",
-        "the mutation-web job declares its bound; with no timeout-minutes it takes the hosted job's own limit, far above the band (SPEC-379 R2)",
+        "the mutation-web job declares its bound; with no timeout-minutes it takes the hosted job's default of 360 minutes, which no measurement chose (SPEC-379 R2)",
+        "test_ci_workflows.TheWebMutationLegsHoldTheWholeSweep.test_both_web_mutation_legs_hold_the_whole_mini_app_sweep"
+      ],
+      [
+        "S37906-THE-WEEKLY-WEB-LEG-SITS-UNDER-THE-FLOOR",
+        ".github/workflows/mutation-weekly.yml",
+        "  web:\n    if: ${{ github.event_name != 'pull_request' && (!inputs.package || inputs.package == 'miniapp') }}\n    runs-on: ubuntu-24.04\n    timeout-minutes: 325\n",
+        "  web:\n    if: ${{ github.event_name != 'pull_request' && (!inputs.package || inputs.package == 'miniapp') }}\n    runs-on: ubuntu-24.04\n    timeout-minutes: 324\n",
+        "the weekly battery's web job holds at least 325 minutes, the rule's bound from the re-measured whole sweep; at 324, one under the floor, the band refuses it (SPEC-379 R1, R2, as amended)",
+        "test_ci_workflows.TheWebMutationLegsHoldTheWholeSweep.test_both_web_mutation_legs_hold_the_whole_mini_app_sweep"
+      ],
+      [
+        "S37907-THE-PULL-REQUEST-WEB-LEG-SITS-UNDER-THE-FLOOR",
+        ".github/workflows/ci.yml",
+        "  mutation-web:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 325\n",
+        "  mutation-web:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 324\n",
+        "the mutation-web job holds at least 325 minutes, the rule's bound from the re-measured whole sweep; at 324, one under the floor, the band refuses it (SPEC-379 R1, R2, as amended)",
         "test_ci_workflows.TheWebMutationLegsHoldTheWholeSweep.test_both_web_mutation_legs_hold_the_whole_mini_app_sweep"
       ]
     ]
