@@ -244,3 +244,13 @@ deliveries that build their surfaces:
   and the never-list), ADR-058 (the patched engine fork), ADR-054 (the optional AI route),
   ADR-131 and ADR-132 (sign-in), ADR-041 (the one router), ADR-032 (the host budget).
 - `docs/schematics/app-clients-engine-and-sync.md`: the components and the data flow.
+
+## 11. Amendment: DeckStreak's identity
+
+Section 1's "What the owner decided" (lines 27 and 28) and R2 (line 40) call the study client "a real Anki study
+client" and "a real Anki client"; their text is kept as it was, and the owner's signed ruling
+`docs/rulings/OWNER-RULING-2026-10-31-deckstreaks-identity.md` supersedes that wording. The two apps are DeckStreak's own study clients in a
+spaced-repetition study game, the owner's primary ones. Anki's Rust engine, pinned as R2 says, opens the collection,
+presents cards and records answers; Rex, DeckStreak's own memory model, becomes its only scheduler before 1.0, and
+until then the stock scheduler schedules every review. R2's engine requirement and every requirement that cites
+ANK-01's experimental half are unchanged.
