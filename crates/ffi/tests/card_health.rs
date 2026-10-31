@@ -767,3 +767,75 @@ fn the_census_catches_a_planted_verdict_and_finds_none_in_the_panel() {
         "no line of the panel's own words judges the card"
     );
 }
+
+/// The days of `month` in `year` of the proleptic Gregorian calendar.
+const fn days_in(year: i64, month: i64) -> i64 {
+    match month {
+        2 if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) => 29,
+        2 => 28,
+        4 | 6 | 9 | 11 => 30,
+        _ => 31,
+    }
+}
+
+/// Every first and last day of a month from 1 January 1599 to 31 December 2401, as its day count
+/// from 1 January 1970 and its `yyyy-mm-dd`, walked a day at a time each way from that day.
+fn month_edges() -> Vec<(i64, String)> {
+    let mut edges = Vec::new();
+    let keep = |edges: &mut Vec<(i64, String)>, day: i64, (y, m, d): (i64, i64, i64)| {
+        if d == 1 || d == days_in(y, m) {
+            edges.push((day, format!("{y:04}-{m:02}-{d:02}")));
+        }
+    };
+    let (mut day, mut at) = (0, (1970, 1, 1));
+    while at.0 <= 2401 {
+        keep(&mut edges, day, at);
+        at = if at.2 < days_in(at.0, at.1) {
+            (at.0, at.1, at.2 + 1)
+        } else if at.1 < 12 {
+            (at.0, at.1 + 1, 1)
+        } else {
+            (at.0 + 1, 1, 1)
+        };
+        day += 1;
+    }
+    let (mut day, mut at) = (-1, (1969, 12, 31));
+    while at.0 >= 1599 {
+        keep(&mut edges, day, at);
+        at = if at.2 > 1 {
+            (at.0, at.1, at.2 - 1)
+        } else if at.1 > 1 {
+            (at.0, at.1 - 1, days_in(at.0, at.1 - 1))
+        } else {
+            (at.0 - 1, 12, 31)
+        };
+        day -= 1;
+    }
+    edges
+}
+
+#[test]
+fn the_creation_date_follows_the_calendar_on_every_month_edge_of_four_centuries() {
+    const DAY_MS: i64 = 86_400_000;
+    let record = CardHealth::from(core::card_health(
+        [CARD, 0, 0, 0, 0, 0, 0],
+        &[],
+        Readout::NotAvailable(SchedulerState::Absent),
+    ));
+    let mut wrong = Vec::new();
+    for (day, expected) in examined("month edge(s)", month_edges()) {
+        let lines = card_health_lines(Some(CardHealth {
+            provenance: HealthProvenance::Collection {
+                created_ms: day * DAY_MS + DAY_MS / 2,
+            },
+            ..record.clone()
+        }));
+        let origin = section(&lines, "Where it came from");
+        let line = format!("Came through your collection, created {expected}.");
+        if origin != Some(vec![line]) {
+            wrong.push(format!("day {day}: expected {expected}, read {origin:?}"));
+        }
+    }
+    wrong.truncate(8);
+    assert_eq!(wrong, Vec::<String>::new(), "the creation dates");
+}

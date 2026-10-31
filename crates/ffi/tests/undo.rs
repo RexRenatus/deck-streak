@@ -75,6 +75,8 @@ const FLAG_REPLACED: &str = "You replaced this card's flag with a red flag. Undo
                              earlier flag back; nothing else changes.";
 /// Why an answer can no longer be undone (SPEC-371 R10).
 const ANSWER_GONE: &str = "This answer can no longer be undone: something changed after it.";
+/// Why a bury or a flag can no longer be undone (SPEC-383 R13).
+const CHANGE_GONE: &str = "This change can no longer be undone: something changed after it.";
 
 /// The review fixture, opened through a fresh adapter with its deck chosen.
 struct Opened {
@@ -453,6 +455,37 @@ fn a_confirmation_after_a_later_change_is_refused_and_says_why() {
         reviews_of(&fixture.collection, TEXT_CARD),
         1,
         "the answer stands"
+    );
+}
+
+#[test]
+fn a_confirmation_of_a_bury_after_a_later_change_names_the_bury() {
+    let Opened { engine, .. } = opened("later-bury", NO_FLAG);
+    let shown = head(&engine);
+    engine
+        .bury(TEXT_CARD, shown.states)
+        .expect("the adapter buries the shown card");
+    let offer = offer_of(&engine).offer.expect("the bury is offered");
+
+    // A later change: the image card, shown now, is flagged red before the confirmation.
+    engine
+        .flag(IMAGE_CARD, NO_FLAG)
+        .expect("the adapter flags the image card");
+    let refused = confirm(&engine, offer.card, offer.step);
+    let stale = confirm(&engine, offer.card, offer.step + 1);
+    assert_eq!(
+        (
+            (offer.card, offer.kind),
+            (refused.undone, refused.said.as_str()),
+            (stale.undone, stale.said.as_str())
+        ),
+        (
+            (TEXT_CARD, UndoKind::Bury),
+            (false, CHANGE_GONE),
+            (false, ANSWER_GONE)
+        ),
+        "a confirmation of the replaced bury names the bury, and one of a step the slot never \
+         held names an answer"
     );
 }
 
