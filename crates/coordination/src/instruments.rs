@@ -299,7 +299,7 @@ impl Instruments {
             if !due {
                 continue;
             }
-            match self.run_held(runner.as_ref(), today).await {
+            match self.run_held(runner, today).await {
                 Ok((_, false)) => report.ran.push(row.id.to_owned()),
                 Ok((_, true)) => report.failed.push(row.id.to_owned()),
                 Err(OnDemandRefusal::Store(error)) => return Err(error),
@@ -323,15 +323,15 @@ impl Instruments {
         }
         let runner = self.runner(id).ok_or(OnDemandRefusal::Unknown)?;
         let today = self.rule.study_day(self.clock.now()).epoch_day();
-        self.run_held(runner.as_ref(), today)
-            .await
-            .map(|(stored, _)| stored)
+        self.run_held(runner, today).await.map(|(stored, _)| stored)
     }
 
-    /// Takes the lock without waiting, runs, stores and releases; the flag says the run failed.
+    /// Takes the lock without waiting, then hands it and the run to a task that holds the lock
+    /// until the read ends and its report is stored, whoever still waits; the flag says the run
+    /// failed.
     async fn run_held(
         &self,
-        runner: &dyn InstrumentRunner,
+        runner: &Arc<dyn InstrumentRunner>,
         today: i64,
     ) -> Result<(StoredReport, bool), OnDemandRefusal> {
         let held = match self.lock.try_exclusive().await {
@@ -339,16 +339,24 @@ impl Instruments {
             Ok(None) => return Err(OnDemandRefusal::InProgress),
             Err(error) => return Err(OnDemandRefusal::Lock(error)),
         };
-        let (envelope, failed) = match runner.run(today).await {
-            Ok(envelope) => (envelope, false),
-            Err(reason) => (
-                failure(runner.id(), today, runner.schema_version(), &reason),
-                true,
-            ),
+        let runner = Arc::clone(runner);
+        let store = self.store.clone();
+        let clock = Arc::clone(&self.clock);
+        let run = async move {
+            let (envelope, failed) = match runner.run(today).await {
+                Ok(envelope) => (envelope, false),
+                Err(reason) => (
+                    failure(runner.id(), today, runner.schema_version(), &reason),
+                    true,
+                ),
+            };
+            let at = clock.now();
+            let stored = store.replace(&envelope, at).await;
+            (envelope, failed, at, stored)
         };
-        let at = self.clock.now();
-        let stored = self.store.replace(&envelope, at).await;
-        if let Err(error) = held.release() {
+        let ended = held.hold_to_end(run).await;
+        let ((envelope, failed, at, stored), released) = ended.map_err(OnDemandRefusal::Lock)?;
+        if let Err(error) = released {
             tracing::warn!(%error, "the instrument lock did not unlock cleanly");
         }
         stored.map_err(OnDemandRefusal::Store)?;
