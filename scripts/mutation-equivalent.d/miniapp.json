@@ -352,6 +352,65 @@
       "reason": "load with no root calls getDirectoryHandle on null inside its own try, whose catch answers the same null.",
       "evidence": "#root answers null when there is no storage, no getDirectory, or the browser refuses the root. With the guard false, load goes on to `root.getDirectoryHandle(COMPANION_DIRECTORY)` inside its try; reading a property of null throws a TypeError before anything is opened, and the catch returns null, the guard's own answer. save and remove keep their guards, so nothing else changes.",
       "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/study/CardHealthPanel.svelte",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "const recall = $derived(health === null ? null : recallLines(health.scheduler));",
+      "reason": "Both forms call recallLines whenever recall is read, because its only reads lie in the branch drawn while health is a record.",
+      "evidence": "recall is a `$derived`, which Svelte computes when it is read and recomputes only when read again after health changed. Its two reads are the tests of the recall section, inside the `{:else}` of `{#if loading}` / `{:else if health === null}`, so no read happens while health is null and the mutant's unguarded `health.scheduler` is never reached. `ReviewScreen.svelte` mounts the panel with loading and a null record, and a read begun before a close can land after a reopen, so one panel can take a record and then null; and when health does change, Svelte re-runs the outer if-block before the effects of the branch it removes, which never run again. 'while loading it says so, and a record that could not be read says that, with no counts' and the recall tests of `card-health.test.ts` pass against it.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/study/CardHealthPanel.svelte",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "health !== null && (health.logged.answers !== health.reps",
+      "span": "health !== null",
+      "reason": "differs is read only where health is a record, so its leading null test is always true at its one read.",
+      "evidence": "Its one read is `{#if differs}`, inside the same `{:else}` branch that draws only while loading is false and health is not null; there `true && (...)` and `health !== null && (...)` give the same value, that of the two counter comparisons. As a `$derived`, differs is computed at that read, so the mutant's unguarded `health.logged` never meets a null health. 'the panel shows the counts, the capped times and the newest reviews first' and 'while loading it says so, and a record that could not be read says that, with no counts' pass against it.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/study/CardHealthPanel.svelte",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "else (at === -1 || at === controls.length - 1 ? first : controls[at + 1]).focus();",
+      "span": "at === -1",
+      "reason": "With the focus outside the dialog, controls[at + 1] is controls[0], which is first, so dropping the test changes no target.",
+      "evidence": "at is `controls.indexOf(document.activeElement)`, so -1 means the focus lies outside the list; the remaining arm then focuses `controls[-1 + 1]`, the same element as `first = controls[0]`. The list always holds the dialog's own Close button, so it is never empty, and were it empty `at === controls.length - 1` would hold at -1 in both forms, which would then call focus() on undefined alike. 'Tab and Shift+Tab move through every control of the panel and wrap at each end' presses Tab from outside, first, middle and last and passes against it.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/study/CardHealthPanel.svelte",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "{#if recall !== null && recall.label !== null}",
+      "span": "recall !== null",
+      "reason": "Inside the record branch recall is recallLines' answer, an object on every path, so the null test is always true.",
+      "evidence": "The `{#if}` sits in the `{:else}` branch drawn only while health is not null, where recall is `recallLines(health.scheduler)`; `recallLines` in `card-health.ts` returns `{ label, lines }` from both of its returns and never null, so `true && recall.label !== null` decides exactly as the original does. 'the recall rows hold one paragraph in a state but Ready, and the label and two figures when Ready' passes against it.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/study/CardHealthPanel.svelte",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "{:else if recall !== null}",
+      "reason": "The fallback recall row is tested only inside the record branch, where recall is never null.",
+      "evidence": "This `{:else if}` is reached only after the label test above it failed, in the branch that draws while health is not null and recall holds the object `recallLines` returns, so `{:else if true}` draws the same one paragraph, the state's line, as the original in every state but Ready. 'the recall rows read the state's line in every state but Ready' passes against it.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/study/review.ts",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "&& this.#pausedAt !== null) {",
+      "reason": "#pausedAt holds a number while any overlay is open, so it is never null when the last one closes.",
+      "evidence": "#pausedAt starts null with #overlays at 0. openOverlay sets it to #now() whenever #overlays is 0, before counting up; closeOverlay returns at once when #overlays is 0 and nulls #pausedAt only after its count reaches 0; the card load replaces it with #shownAt only when it is already not null. So a decrement that brings #overlays to 0 starts from 1, while #pausedAt holds a number, and `this.#pausedAt !== null` is true every time it is evaluated. 'a close with no overlay open changes nothing, and the clock stops until the last overlay closes' of `review.test.ts` passes against it.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/study/review.ts",
+      "mutant": "ArrowFunction: () => undefined",
+      "anchor": "client.cardHealth?.(card).catch(() => null)) ?? null",
+      "reason": "The handler's value reaches the caller only through ?? null, which reads undefined as it reads null.",
+      "evidence": "When the engine refuses the read, `.catch` resolves the promise to the handler's value, null or under the mutant undefined, and the awaited result is the left side of `?? null`, which answers null for both, so `cardHealth()` returns null either way and nothing else holds the handler's value. A client with no `cardHealth` skips the call, and a record passes through unchanged, in both forms.",
+      "issue": "#1065"
     }
   ]
 }

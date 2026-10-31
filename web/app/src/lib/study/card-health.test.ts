@@ -854,4 +854,242 @@ describe('the card health panel on the review', () => {
     await fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
     expect(dialog.contains(document.activeElement)).toBe(true);
   });
+
+  it('while the record is read the panel says so, and a panel closed before it comes stays closed', async () => {
+    let answer: (value: CardHealth | null) => void = () => undefined;
+    class Held extends FakeClient {
+      cardHealth(card: bigint): Promise<CardHealth | null> {
+        this.calls.push(`card-health ${card}`);
+        return new Promise((resolve) => (answer = resolve));
+      }
+    }
+    const client = new Held([{ counts: { new: 1, learning: 0, review: 0 }, card: view(1) }]);
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+    await fireEvent.click(screen.getByRole('button', { name: 'Card info' }));
+    await settle();
+    expect(text(screen.getByRole('dialog', { name: 'Card info' }))).toBe(`Card info ${en.loading} Close`);
+    // Escape closes the panel before the record comes; the record then opens nothing
+    await fireEvent.keyDown(window, { key: 'Escape' });
+    await settle();
+    answer(record({ state: 'absent' }, { card: 1n }));
+    await settle();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(client.calls).toEqual(['card', 'card-health 1']);
+  });
+
+  it('a second press of Card info while the panel is open reads the record once', async () => {
+    const counts = { new: 1, learning: 0, review: 0 };
+    const client = new FakeClient([
+      { counts, card: view(1) },
+      { counts, card: null }
+    ]);
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+    const open = screen.getByRole('button', { name: 'Card info' });
+    await fireEvent.click(open);
+    await settle();
+    now += 10_000;
+    await fireEvent.click(open);
+    await settle();
+    expect(client.calls).toEqual(['card', 'card-health 1']);
+    // one Escape closes it and the clock runs again: the grade sends the time outside the panel alone
+    await fireEvent.keyDown(window, { key: 'Escape' });
+    await settle();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    now += 3_000;
+    await fireEvent.click(screen.getByRole('button', { name: 'Show answer' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Good <10m' }));
+    await settle();
+    expect(client.calls).toEqual(['card', 'card-health 1', 'rate 1 3 3000', 'card']);
+  });
+
+  it('while the panel is open Tab stops at the panel and every other key is left to the page', async () => {
+    const client = new FakeClient([{ counts: { new: 1, learning: 0, review: 0 }, card: view(1) }]);
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+    await fireEvent.click(screen.getByRole('button', { name: 'Card info' }));
+    await settle();
+    /** Whether a listener stopped the page's own handling of `key`. */
+    const stopped = (key: string): boolean => {
+      const event = new KeyboardEvent('keydown', { key, cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    const close = screen.getByRole('button', { name: 'Close' });
+    expect(stopped('Tab')).toBe(true);
+    expect(document.activeElement).toBe(close);
+    const others = examined('key(s) but Tab and Escape', ['a', 'Enter', ' ', 'ArrowDown']);
+    expect(others.map(stopped)).toEqual(others.map(() => false));
+    expect(screen.getByRole('dialog', { name: 'Card info' })).not.toBeNull();
+  });
+
+  it('a Tab pressed before the open panel has drawn reaches no panel and throws nothing', async () => {
+    const client = new FakeClient([{ counts: { new: 1, learning: 0, review: 0 }, card: view(1) }]);
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+    const thrown: unknown[] = [];
+    const caught = (event: ErrorEvent) => {
+      thrown.push(event.error);
+      event.preventDefault();
+    };
+    window.addEventListener('error', caught);
+    try {
+      // the press opens the panel at once, and the Tab comes in the same turn, before it draws
+      screen.getByRole('button', { name: 'Card info' }).click();
+      const tab = new KeyboardEvent('keydown', { key: 'Tab', cancelable: true });
+      window.dispatchEvent(tab);
+      expect(thrown).toEqual([]);
+      expect(tab.defaultPrevented).toBe(false);
+      await settle();
+      expect(screen.getByRole('dialog', { name: 'Card info' })).not.toBeNull();
+    } finally {
+      window.removeEventListener('error', caught);
+    }
+  });
+
+  it('a second press of Close before the panel is gone moves the focus nowhere', async () => {
+    const client = new FakeClient([{ counts: { new: 1, learning: 0, review: 0 }, card: view(1) }]);
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+    const open = screen.getByRole('button', { name: 'Card info' });
+    await fireEvent.click(open);
+    await settle();
+    const close = screen.getByRole('button', { name: 'Close' });
+    // the first press closes the panel and gives the focus back to the review
+    close.click();
+    expect(document.activeElement).toBe(screen.getByRole('region', { name: 'Review' }));
+    // the focus moves on, and a second press in the same turn finds the panel closed
+    open.focus();
+    close.click();
+    expect(document.activeElement).toBe(open);
+    await settle();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});
+
+// SPEC-507 R2 to R7. The panel's own branches: loading, an unread record, a card with no answers or no
+// reviews, every answer's name, the recall rows' paragraphs, and Tab kept inside the dialog.
+describe("the card health panel's branches", () => {
+  it('while loading it says so, and a record that could not be read says that, with no counts', () => {
+    render(CardHealthPanel, { health: record({ state: 'absent' }), loading: true, onclose: () => undefined });
+    expect(text(screen.getByRole('dialog', { name: 'Card info' }))).toBe(`Card info ${en.loading} Close`);
+    cleanup();
+    panel(null);
+    expect(text(screen.getByRole('dialog', { name: 'Card info' }))).toBe(
+      `Card info ${en.card_health_unreadable} Close`
+    );
+  });
+
+  it('a card with no answers says so for its mean and its median, and no history shows with no reviews', () => {
+    panel(record({ state: 'absent' }, { reviews: [], rows: 0, meanMs: null, medianMs: null }));
+    expect(text(screen.getByRole('dialog', { name: 'Card info' }))).toContain(
+      `${en.card_health_time_mean} ${en.card_health_no_answers} ${en.card_health_time_median} ${en.card_health_no_answers}`
+    );
+    expect(screen.queryByRole('region', { name: en.card_health_history_title })).toBeNull();
+    expect(screen.queryByRole('table')).toBeNull();
+  });
+
+  it('the history names its columns and each answer by its button, and a grade no button has by its number', () => {
+    panel(
+      record(
+        { state: 'absent' },
+        {
+          rows: 3,
+          reviews: [
+            { at: 1_700_000_003_000, grade: 4, kind: 1, interval: 3, ms: 9_000 },
+            { at: 1_700_000_002_000, grade: 2, kind: 1, interval: 2, ms: 7_000 },
+            { at: 1_700_000_001_000, grade: 9, kind: 1, interval: 1, ms: 5_000 }
+          ]
+        }
+      )
+    );
+    const history = screen.getByRole('region', { name: en.card_health_history_title });
+    expect([...history.querySelectorAll('th')].map(text)).toEqual([
+      en.card_health_col_date,
+      en.card_health_col_answer,
+      en.card_health_col_time
+    ]);
+    const rows = [...history.querySelectorAll('tbody tr')].map((row) =>
+      [...row.querySelectorAll('td')].map(text).join(' ')
+    );
+    expect(rows).toEqual([
+      `2023-11-14 ${en.answer_easy} 9.0 s`,
+      `2023-11-14 ${en.answer_hard} 7.0 s`,
+      '2023-11-14 9 5.0 s'
+    ]);
+  });
+
+  it('the recall rows hold one paragraph in a state but Ready, and the label and two figures when Ready', () => {
+    for (const [state, line] of examined('state(s) but Ready', Object.entries(STATE_LINES))) {
+      panel(record({ state } as HealthReadout));
+      const recall = screen.getByRole('region', { name: 'Recall' });
+      expect([...recall.querySelectorAll('p')].map(text), state).toEqual([line]);
+      cleanup();
+    }
+    panel(record({ state: 'ready', recallPpm: 912_345, daysTo90: 12 }));
+    expect([...screen.getByRole('region', { name: 'Recall' }).querySelectorAll('p')].map(text)).toEqual([
+      'The scheduler estimates',
+      'Chance of recall now: 91.2%',
+      'Days until recall falls to 90%: 12'
+    ]);
+  });
+
+  it('Tab and Shift+Tab move through every control of the panel and wrap at each end', () => {
+    const { component } = render(CardHealthPanel, {
+      health: record({ state: 'absent' }),
+      loading: false,
+      onclose: () => undefined
+    });
+    const dialog = screen.getByRole('dialog', { name: 'Card info' });
+    const close = screen.getByRole('button', { name: 'Close' });
+    // two more controls before Close, and one the trap passes over
+    const link = document.createElement('a');
+    link.href = '#history';
+    link.textContent = 'history';
+    const note = document.createElement('p');
+    note.tabIndex = 0;
+    note.textContent = 'note';
+    const skipped = document.createElement('span');
+    skipped.tabIndex = -1;
+    skipped.textContent = 'skipped';
+    dialog.prepend(link, note, skipped);
+    const outside = document.createElement('button');
+    outside.textContent = 'outside';
+    document.body.append(outside);
+    const moves: [HTMLElement, boolean, HTMLElement][] = [
+      [outside, false, link],
+      [link, false, note],
+      [note, false, close],
+      [close, false, link],
+      [outside, true, close],
+      [link, true, close],
+      [close, true, note],
+      [note, true, link]
+    ];
+    for (const [from, shiftKey, to] of examined('Tab press(es)', moves)) {
+      const label = `${shiftKey ? 'Shift+Tab' : 'Tab'} from ${from.textContent}`;
+      from.focus();
+      const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, cancelable: true });
+      component.trap(event);
+      expect(document.activeElement === to, label).toBe(true);
+      expect(event.defaultPrevented, label).toBe(true);
+    }
+    outside.remove();
+  });
+});
+
+// SPEC-507 R8. The census's verdict words in each form a struggle or a trouble takes.
+describe("the census's verdict words", () => {
+  it('a struggle or a trouble in any of its forms is a verdict', () => {
+    const forms = examined('verdict form(s)', [
+      'This card is struggling',
+      'struggles',
+      'struggl',
+      'troubled',
+      'troublesome',
+      'trouble'
+    ]);
+    expect(forms.filter((line) => !VERDICT.test(line))).toEqual([]);
+  });
 });

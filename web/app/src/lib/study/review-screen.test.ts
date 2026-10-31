@@ -760,6 +760,60 @@ describe('the review screen', () => {
     expect(screen.queryAllByRole('combobox')).toEqual([]);
   });
 
+  // SPEC-506 R4, R5; ADR-524. On a device with a local voice for the card's language, the clip is
+  // spoken with it and the status region names no language.
+  it('the review screen speaks with a local voice and says nothing of a missing one', async () => {
+    const inu: Clip = { kind: 'speech', text: '犬', language: 'ja-JP', rate: 0.5 };
+    const faces: Faces = {
+      question: { text: '<p>the dog</p>', css: '', autoplay: [inu], replay: [inu], omitted: [] },
+      answer: { text: '<p>犬</p>', css: '', autoplay: [], replay: [], omitted: [] },
+      wanted: []
+    };
+    class FacesClient extends FakeClient {
+      faces(card: bigint): Promise<Faces> {
+        this.calls.push(`faces ${card}`);
+        return Promise.resolve(faces);
+      }
+    }
+    // the device lists one Japanese voice, its own
+    const spoken: { text: string; lang: string }[] = [];
+    vi.stubGlobal('speechSynthesis', {
+      getVoices: () => [{ voiceURI: 'local-ja', name: 'Local Japanese', lang: 'ja-JP', localService: true }],
+      speak: (utterance: { text: string; lang: string }) => spoken.push(utterance),
+      cancel: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined
+    });
+    vi.stubGlobal(
+      'SpeechSynthesisUtterance',
+      class {
+        lang = '';
+        constructor(readonly text: string) {}
+      }
+    );
+    vi.stubGlobal(
+      'Audio',
+      class {
+        src = '';
+        onended = null;
+        onerror = null;
+        onpause = null;
+        async play(): Promise<void> {}
+        pause(): void {}
+      }
+    );
+    const client = new FacesClient([head(view(1))]);
+    render(ReviewScreen, { client: async () => client });
+    await settle();
+
+    // the question's clip is spoken in its language, and the status region stays empty
+    expect([body().text, spoken.map((each) => [each.text, each.lang]), status()]).toEqual([
+      'the dog',
+      [['犬', 'ja-JP']],
+      ''
+    ]);
+  });
+
   // SPEC-506 R4, R5; ADR-524. The screen's own speaker speaks only with a voice the device runs: on a
   // device with only a remote voice for the card's language, the clip is not spoken, the status region
   // names the language, and the learner's next gesture clears it.

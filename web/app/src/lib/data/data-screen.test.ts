@@ -14,7 +14,7 @@ import { ROUTES } from '#lib/routes.js';
 import { snapshotAge } from '#lib/sync/status.js';
 import DataRoute from '../../routes/data/+page.svelte';
 import DataScreen from './DataScreen.svelte';
-import { EXPORT_FILE, type DataApi, type DataClient } from './data';
+import { EXPORT_FILE, parseServerBackup, saveFile, type DataApi, type DataClient } from './data';
 
 // SPEC-516 R1, R2, R4, R6 to R8, B1, B4, B6, B7; ADR-534 D1, D4 to D6. The data screen: a JSON copy
 // of the owner's data from the one export route, saved as a file; back up now through the Worker,
@@ -288,6 +288,172 @@ describe('inside Telegram on a phone', () => {
       await settle();
       expect(texts(view.container).includes(said('data_telegram_phone')), platform).toBe(named);
       view.unmount();
+    }
+  });
+});
+
+// SPEC-516 R2, R6, R7. What each section says before any press, and how the screen reads a copy, a
+// back up now and a server read that throw rather than answer.
+describe('the data screen before any press, and when a read throws', () => {
+  it('each section names itself, and no line about a copy, a backup or an alert shows before any press', async () => {
+    const { view } = drawn(new FakeData(), new FakeApi());
+    await settle();
+    for (const key of examined('section title(s)', ['data_json_title', 'data_device_title', 'data_server_title'])) {
+      expect(screen.getByRole('heading', { level: 2, name: said(key) }).id, key).not.toBe('');
+    }
+    expect(texts(view.container)).toEqual(expect.arrayContaining([said('data_json_about'), said('data_device_about')]));
+    const shown = view.container.textContent ?? '';
+    for (const key of ['data_json_saved', 'data_json_failed', 'data_json_reopen', 'data_working', 'data_backup_made']) {
+      expect(shown, key).not.toContain(said(key));
+    }
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('a copy whose fetch throws says it failed, saves nothing and frees the button', async () => {
+    const api = new FakeApi();
+    api.dataExport = async () => {
+      api.calls.push('dataExport');
+      throw new Error('no answer');
+    };
+    const { view, saved } = drawn(new FakeData(), api);
+    await settle();
+    await fireEvent.click(button('data_json_download'));
+    await settle();
+    expect(saved).toEqual([]);
+    expect(texts(view.container)).toContain(said('data_json_failed'));
+    expect(button('data_json_download').disabled).toBe(false);
+  });
+
+  it('a second press while the copy is fetched asks nothing more, and the button waits until it ends', async () => {
+    const api = new FakeApi();
+    let answer: (value: Answer<Blob>) => void = () => undefined;
+    api.dataExport = () => {
+      api.calls.push('dataExport');
+      return new Promise((resolve) => (answer = resolve));
+    };
+    const { saved } = drawn(new FakeData(), api);
+    await settle();
+    const download = button('data_json_download');
+    // two presses in one turn, before the screen redraws
+    download.click();
+    download.click();
+    await settle();
+    expect(api.calls.filter((call) => call === 'dataExport')).toEqual(['dataExport']);
+    expect(download.disabled).toBe(true);
+    answer({ kind: 'ok', value: new Blob(['{}']) });
+    await settle();
+    expect(saved.map(([, name]) => name)).toEqual([EXPORT_FILE]);
+    expect(download.disabled).toBe(false);
+    // the copy has ended, so the next press asks again
+    download.click();
+    await settle();
+    expect(api.calls.filter((call) => call === 'dataExport')).toEqual(['dataExport', 'dataExport']);
+  });
+
+  it('a back up now says it works while it runs, then that it made a backup, and raises no alert', async () => {
+    const client = new FakeData();
+    let finish: () => void = () => undefined;
+    const made = client.backUpNow.bind(client);
+    client.backUpNow = () => new Promise((resolve) => (finish = () => resolve(made())));
+    const { view } = drawn(client, new FakeApi());
+    await settle();
+    await fireEvent.click(button('data_back_up_now'));
+    await settle();
+    expect(texts(view.container)).toContain(said('data_working'));
+    finish();
+    await settle();
+    expect(texts(view.container)).toContain(said('data_backup_made'));
+    expect(texts(view.container)).not.toContain(said('data_working'));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it("a server read that throws says unknown in words", async () => {
+    const api = new FakeApi();
+    api.serverBackup = async () => {
+      api.calls.push('serverBackup');
+      throw new Error('no answer');
+    };
+    const { view } = drawn(new FakeData(), api);
+    await settle();
+    expect(serverText(view.container)).toBe(said('data_server_unknown'));
+  });
+
+  it('an engine that throws when the screen opens raises the alert and lists nothing', async () => {
+    const { container } = render(DataScreen, {
+      client: () => Promise.reject(new Error('the engine stopped')),
+      data: new FakeApi(),
+      platform: 'tdesktop',
+      save: () => undefined
+    });
+    await settle();
+    expect(screen.getByRole('alert').textContent?.trim()).toBe(said('study_refused_engine'));
+    expect(listedRows(container)).toEqual([]);
+  });
+});
+
+// SPEC-516 R6, R7. The snapshot route's body as the screen reads it, and the anchor that saves a file.
+describe("the data screen's reads", () => {
+  it('a body that is no plain object, or found with no whole non-negative age, reads as none', () => {
+    const odd = examined('body(ies) that are no plain object', [
+      null,
+      undefined,
+      'found',
+      7,
+      Object.assign(() => undefined, { found: false }),
+      Object.assign([], { found: false })
+    ]);
+    for (const body of odd) expect(parseServerBackup(body), typeof body).toBeNull();
+    const ageless = examined('found body(ies) with no whole non-negative age', [
+      { found: true, age_seconds: -1 },
+      { found: true, age_seconds: 1.5 },
+      { found: true },
+      { found: 'true', age_seconds: 5 },
+      { found: 1, age_seconds: 5 }
+    ]);
+    for (const body of ageless) expect(parseServerBackup(body), JSON.stringify(body)).toBeNull();
+    // the three bodies it reads
+    expect(parseServerBackup({ found: true, age_seconds: 0 })).toEqual({ found: true, age: 0 });
+    expect(parseServerBackup({ found: false })).toEqual({ found: false });
+    expect(parseServerBackup({ found: null })).toEqual({ found: null });
+  });
+
+  it('a save clicks one anchor that never joins the page, then revokes its address', async () => {
+    const blob = new Blob(['{"schema":"deckstreak.export.v1"}\n']);
+    const address = 'blob:https://app.example/copy-1';
+    const made: Blob[] = [];
+    const revoked: string[] = [];
+    const clicked: { tag: string; href: string; download: string; joined: boolean }[] = [];
+    const urls = URL as unknown as Record<string, unknown>;
+    const before: Record<string, PropertyDescriptor | undefined> = Object.getOwnPropertyDescriptors(URL);
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: (each: Blob) => {
+        made.push(each);
+        return address;
+      }
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: (each: string) => revoked.push(each)
+    });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      clicked.push({ tag: this.tagName, href: this.href, download: this.download, joined: this.isConnected });
+    });
+    try {
+      saveFile(blob, EXPORT_FILE);
+      expect(made).toEqual([blob]);
+      expect(clicked).toEqual([{ tag: 'A', href: address, download: EXPORT_FILE, joined: false }]);
+      // the address is revoked once the save has begun, not before
+      expect(revoked).toEqual([]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(revoked).toEqual([address]);
+    } finally {
+      click.mockRestore();
+      for (const name of ['createObjectURL', 'revokeObjectURL']) {
+        const kept = before[name];
+        if (kept === undefined) delete urls[name];
+        else Object.defineProperty(URL, name, kept);
+      }
     }
   });
 });

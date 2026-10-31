@@ -641,3 +641,23 @@ describe('only voices that run on the device speak', () => {
     expect(spec).toMatch(/new AxeBuilder\(\{\s*page\s*\}\)\s*\.withTags\(WCAG_22_AA\)/);
   });
 });
+
+// SPEC-506 R4. A browser with no speech synthesis gives the picker no voice: it asks its choices of an
+// empty list alone, so it offers the default alone.
+describe('the voice picker without speech synthesis', () => {
+  it('asks its choices of no voice at all, and offers the default alone', () => {
+    class Recorded extends VoiceChoices {
+      asked: unknown[][] = [];
+
+      voices<V extends Voice>(all: readonly V[], tag: string): V[] {
+        this.asked.push([...all]);
+        return super.voices(all, tag);
+      }
+    }
+    const choices = new Recorded(undefined);
+    render(VoicePicker, { choices, languages: ['fr-FR'], synthesis: undefined });
+    expect(screen.getAllByRole('option').map((option) => option.textContent?.trim())).toEqual(['Default voice']);
+    const asked = examined('voice list(s) the picker asked of', choices.asked);
+    expect(asked).toEqual(asked.map(() => []));
+  });
+});
