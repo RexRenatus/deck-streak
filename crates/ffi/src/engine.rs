@@ -2,7 +2,7 @@
 
 use std::fmt;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -11,13 +11,20 @@ use deck_streak_engine_core::answer::{
 };
 use deck_streak_engine_core::dispatch::{Dispatcher, Refusal};
 use deck_streak_engine_core::face::Side;
+use deck_streak_engine_core::full_sync::{Counted, Counts, Direction, Losses, SnapshotAnswer};
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
 use deck_streak_engine_core::handshake;
+use deck_streak_engine_core::health::{Readout, SchedulerState};
+use deck_streak_engine_core::native_sync;
+use deck_streak_engine_core::native_undo::{self, Kept};
+use deck_streak_engine_core::one_way::{self, Reason, Unwritten};
 use deck_streak_engine_core::review::{self, bury_of, bury_request, flag_request, toggled_red};
 use deck_streak_engine_core::table::{ExemptWrite, Transport};
 
 use crate::allow_list::allowed;
 use crate::face::{CardFace, MediaFolder};
+use crate::health::CardHealth;
+use crate::review_undo::{self, UndoDone, UndoKind, UndoOffered};
 
 /// Why a call was not answered with the response's bytes. A native client reads it as a thrown
 /// error; nothing on this path panics.
@@ -68,6 +75,10 @@ impl std::error::Error for EngineRefusal {}
 #[derive(uniffi::Object)]
 pub struct Engine {
     dispatcher: Dispatcher,
+    /// The full-sync choice's stage between the owner's taps (SPEC-503 R4).
+    stage: Mutex<Option<Stage>>,
+    /// The review's undo slot: its last recorded answer, bury or flag (SPEC-515 R2).
+    slot: Mutex<Slot>,
 }
 
 #[uniffi::export]
@@ -84,7 +95,13 @@ impl Engine {
     )]
     pub fn new(message: Vec<u8>) -> Result<Arc<Self>, EngineRefusal> {
         Dispatcher::start(Transport::Native, &message)
-            .map(|dispatcher| Arc::new(Self { dispatcher }))
+            .map(|dispatcher| {
+                Arc::new(Self {
+                    dispatcher,
+                    stage: Mutex::new(None),
+                    slot: Mutex::new(Slot::default()),
+                })
+            })
             .map_err(|reason| EngineRefusal::Start { reason })
     }
 
@@ -171,7 +188,9 @@ impl Engine {
     /// encoded `SchedulingStates` in `states`, after `milliseconds_taken` (SPEC-365 R6). This is
     /// the adapter's one answer entry, and the only place it builds an owner's answer: the request
     /// names the press's card, its grade's rating and the next state its grade picks out of the
-    /// states the card was shown with, at the time the adapter's clock reads.
+    /// states the card was shown with, at the time the adapter's clock reads. Once the engine has
+    /// recorded it, the answer is kept as the review's own last answer for its undo, when the
+    /// newest review is the pressed card's (SPEC-515 R2).
     ///
     /// # Errors
     ///
@@ -190,6 +209,7 @@ impl Engine {
     ) -> Result<Vec<u8>, PressRefusal> {
         let grade = core_grade(grade);
         let states = shown_states(&states).map_err(press_refusal)?;
+        let current = states.current.clone();
         let next = grade.pick(states.again, states.good);
         let request = answer_request(
             card,
@@ -200,35 +220,488 @@ impl Engine {
             milliseconds_taken,
         );
         let answer = OwnerAnswer::from_press(card, grade);
-        self.dispatcher
+        let recorded = self
+            .dispatcher
             .run_answer(answer, &request)
-            .map_err(press_refusal)
+            .map_err(press_refusal)?;
+        self.keep(self.undo_status().and_then(|status| {
+            native_undo::answered(&self.dispatcher, &status, card, grade, current.as_ref())
+                .map_err(refusal)
+        }));
+        Ok(recorded)
     }
 
     /// Buries the card `card_id` as the user's bury of that card alone, so the queue moves on to
-    /// the next card (SPEC-358 R3).
+    /// the next card (SPEC-358 R3). `states` are the encoded `SchedulingStates` the card was shown
+    /// with, as an answer hands them over: once the card's mark shows it buried, the bury is kept
+    /// for its undo with the state its card returns to (SPEC-515 R2).
     ///
     /// # Errors
     ///
     /// [`EngineRefusal::Engine`] when the engine refuses the bury.
-    pub fn bury(&self, card_id: i64) -> Result<(), EngineRefusal> {
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "a foreign caller's bytes cross the boundary owned, as the bindings pass them"
+    )]
+    pub fn bury(&self, card_id: i64, states: Vec<u8>) -> Result<(), EngineRefusal> {
         // `SchedulerService.BuryOrSuspendCards`, through the allow-list as every call goes.
         self.run(13, 14, bury_request(bury_of(card_id)))?;
+        let current = shown_states(&states).ok().and_then(|shown| shown.current);
+        self.keep(self.undo_status().and_then(|status| {
+            native_undo::buried(&self.dispatcher, &status, card_id, current.as_ref())
+                .map_err(refusal)
+        }));
         Ok(())
     }
 
     /// Toggles red on the card `card_id`, whose flag is `flag` as its queued card carries it, and
     /// answers the flag the card now carries: red to none, and any other flag to red (SPEC-358 R3).
+    /// Once the card's mark shows the new flag, the flag is kept for its undo (SPEC-515 R2).
     ///
     /// # Errors
     ///
     /// [`EngineRefusal::Engine`] when the engine refuses the flag.
     pub fn flag(&self, card_id: i64, flag: u32) -> Result<u32, EngineRefusal> {
+        let before = flag;
         let flag = toggled_red(flag);
         // `CardsService.SetFlag`, through the allow-list as every call goes.
         self.run(5, 4, flag_request(card_id, flag))?;
+        self.keep(self.undo_status().and_then(|status| {
+            native_undo::flagged(&self.dispatcher, &status, card_id, before, flag).map_err(refusal)
+        }));
         Ok(flag)
     }
+
+    /// The undo the review offers for its last answer, bury or flag (SPEC-515 R3, R5): the engine's
+    /// undo status is read through the allow-list, the core judges the kept step now by its kind's
+    /// rule, and the offer names the card as one line of text and the dialog's words. With nothing
+    /// kept, or a step the rule refuses, no offer is made, and the sentence says why. It writes
+    /// nothing.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the engine cannot answer a read or render the card.
+    pub fn undo_offer(&self) -> Result<UndoOffered, EngineRefusal> {
+        let Some(kept) = self.slot().kept.clone() else {
+            return Ok(UndoOffered::none(review_undo::gone(UndoKind::Answer)));
+        };
+        let status = self.undo_status()?;
+        if let Err(why) = native_undo::judged(&self.dispatcher, &status, &kept).map_err(refusal)? {
+            return Ok(UndoOffered::none(review_undo::refused(
+                review_undo::kind_of(&kept),
+                why,
+            )));
+        }
+        let line = native_undo::question_line(&self.dispatcher, kept.card()).map_err(refusal)?;
+        Ok(UndoOffered {
+            offer: Some(review_undo::offer(&kept, &line)),
+            said: String::new(),
+        })
+    }
+
+    /// The owner's confirmation of the offer of `card` at `step` (SPEC-515 R4, R5): refused unless
+    /// the review still keeps that step, judged again by its kind's rule, and only then run as the
+    /// owner's gesture on the exempt Undo, which the core judges once more at the write. A
+    /// successful undo empties the slot. A refusal writes nothing and says why.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the engine cannot answer a read or refuses the undo.
+    pub fn undo(&self, card: i64, step: u32) -> Result<UndoDone, EngineRefusal> {
+        let (kept, named) = self.confirmed(card, step);
+        let Some(kept) = kept else {
+            return Ok(UndoDone::refused(review_undo::gone(named)));
+        };
+        let status = self.undo_status()?;
+        if let Err(why) = native_undo::judged(&self.dispatcher, &status, &kept).map_err(refusal)? {
+            return Ok(UndoDone::refused(review_undo::refused(named, why)));
+        }
+        let ran = OwnerGesture::from_tap(ExemptWrite::Undo, Target::Card(card))
+            .and_then(|gesture| self.dispatcher.run_exempt(gesture, &kept.request()));
+        match ran {
+            Ok(_) => {
+                *self.slot() = Slot::default();
+                Ok(UndoDone::undone())
+            }
+            Err(GestureRefusal::Engine { error }) => Err(EngineRefusal::Engine { error }),
+            Err(_) => Ok(UndoDone::refused(review_undo::gone(named))),
+        }
+    }
+
+    /// The health of the card `card_id` (SPEC-507 R12): the core's record by its two fixed reads,
+    /// field for field, or `None` when no card has the id. This build's scheduler port gives no
+    /// readout, so the recall part is the absent state, as the web adapter's is (ADR-525 D3). It
+    /// writes nothing.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the engine cannot run a read, a closed collection among them.
+    pub fn card_health(&self, card_id: i64) -> Result<Option<CardHealth>, EngineRefusal> {
+        self.dispatcher
+            .card_health(card_id, Readout::NotAvailable(SchedulerState::Absent))
+            .map(|health| health.map(CardHealth::from))
+            .map_err(refusal)
+    }
+}
+
+/// The native sync facade (SPEC-503 R2 to R7; ADR-521 D2): the normal sync, the unsynced read and
+/// the full-sync choice, as the web engine's exports run them, each through the core. The app
+/// hands over the host key it read from its Keychain item and never a password.
+#[uniffi::export]
+impl Engine {
+    /// Runs a normal sync with the host key `host_key` against `endpoint`, with no media, and
+    /// answers what the server requires next as the engine numbers it (SPEC-503 R2, R5). The
+    /// service's statement of its minimum client level is read first at the endpoint's origin and
+    /// handed to the core, which refuses the sync unless the statement admits this client (R3).
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the endpoint rule, the handshake or the engine refuses, in
+    /// the engine's error shape, or with the reply's bytes when the reply does not decode.
+    pub fn sync(&self, host_key: String, endpoint: String) -> Result<u32, EngineRefusal> {
+        if let Some(url) = native_sync::statement_url(&endpoint) {
+            self.dispatcher.handshake(read_statement(&url).as_deref());
+        }
+        let request = native_sync::normal_sync(&native_sync::auth(host_key, endpoint));
+        let reply = self.run(SYNC_COLLECTION.0, SYNC_COLLECTION.1, request)?;
+        Self::required(reply)
+    }
+
+    /// What this device has not synced, read offline by the core's one fixed statement, so the
+    /// app shows it before a full sync can lose it (SPEC-503 R7).
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the engine cannot run the read.
+    pub fn unsynced(&self) -> Result<UnsyncedCount, EngineRefusal> {
+        self.dispatcher
+            .unsynced()
+            .map(|read| UnsyncedCount {
+                reviews: read.reviews,
+                changed: read.changed,
+                schema: read.schema,
+            })
+            .map_err(refusal)
+    }
+
+    /// The full-sync choice's counts, from the normal sync's `required` (SPEC-503 R4): the core
+    /// fetches the server's collection into a new file in `folder` and counts what each offered
+    /// direction loses. The counts and that file are held as the stage until the owner's tap.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the endpoint rule, the handshake or the engine refuses.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "a foreign caller's values cross the boundary owned, as the bindings pass them"
+    )]
+    pub fn full_sync_count(
+        &self,
+        host_key: String,
+        endpoint: String,
+        required: u32,
+        folder: String,
+    ) -> Result<ChoiceStep, EngineRefusal> {
+        let auth = native_sync::auth(host_key, endpoint);
+        let copy = choice_file(&folder, "server-copy");
+        let answer = native_sync::answer(required);
+        match one_way::count(&self.dispatcher, &answer, &auth, &copy) {
+            Ok(counted) => {
+                let counts = counted.counts();
+                *self.stage() = Some(Stage { counted, copy });
+                Ok(step(COUNTED, Some(counts)))
+            }
+            Err(reason) => unwritten(reason),
+        }
+    }
+
+    /// The owner's tap on `direction` (0 the upload, 1 the download), with the snapshot answer
+    /// `snapshot_found` (SPEC-503 R4). The tap builds the one-way gesture; the core backs up the
+    /// side the write replaces into a new file in `folder` and, for an upload, judges the answer
+    /// and checks a fresh server copy, before the write. The stage is kept on every refusal,
+    /// replaced on a change and dropped on the write.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Engine`] when the endpoint rule, the handshake or the engine refuses.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "a foreign caller's values cross the boundary owned, as the bindings pass them"
+    )]
+    pub fn full_sync_confirm(
+        &self,
+        direction: u32,
+        host_key: String,
+        endpoint: String,
+        snapshot_found: bool,
+        folder: String,
+    ) -> Result<ChoiceStep, EngineRefusal> {
+        let Some(Stage { counted, copy }) = self.stage().clone() else {
+            return Ok(step(NO_STAGE, None));
+        };
+        let direction = match direction {
+            0 => Direction::Upload,
+            1 => Direction::Download,
+            _ => return Ok(step(NOT_OFFERED, None)),
+        };
+        let Ok(gesture) = OwnerGesture::from_tap(ExemptWrite::OneWaySync, Target::Collection)
+        else {
+            return Ok(step(NOT_THE_OWNERS, None));
+        };
+        let Ok(confirmed) = counted.confirm(direction) else {
+            return Ok(step(NOT_OFFERED, None));
+        };
+        let auth = native_sync::auth(host_key, endpoint);
+        let backup = choice_file(&folder, "backup");
+        let backed_up = match one_way::back_up(&self.dispatcher, confirmed, &backup, &copy) {
+            Ok(backed_up) => backed_up,
+            Err(refused) => return unwritten(refused.reason),
+        };
+        let ready = match backed_up.download_ready() {
+            Ok(ready) => ready,
+            Err(backed_up) => {
+                let answer = SnapshotAnswer {
+                    found: snapshot_found,
+                };
+                let Ok(checked) = backed_up.snapshot_found(&answer) else {
+                    return Ok(step(NO_SNAPSHOT, None));
+                };
+                let fresh = choice_file(&folder, "server-copy");
+                match one_way::recheck(&self.dispatcher, checked, &auth, &fresh) {
+                    Ok(Ok(ready)) => ready,
+                    Ok(Err(counted)) => return Ok(self.changed(counted, fresh, SERVER_CHANGED)),
+                    Err(refused) => return unwritten(refused.reason),
+                }
+            }
+        };
+        self.written(
+            one_way::write(&self.dispatcher, ready, gesture, &auth),
+            copy,
+        )
+    }
+
+    /// Drops the stage held between the owner's taps: the model's `Cancel` (SPEC-503 R4).
+    pub fn full_sync_cancel(&self) {
+        *self.stage() = None;
+    }
+}
+
+impl Engine {
+    /// The stage, under its lock.
+    fn stage(&self) -> MutexGuard<'_, Option<Stage>> {
+        self.stage.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// The review's undo slot, under its lock.
+    fn slot(&self) -> MutexGuard<'_, Slot> {
+        self.slot.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// Keeps the review's newest step in the slot in place of the one it held, whose card, step
+    /// and kind a late confirmation's refusal names (SPEC-515 R2, R5). A step the engine's reads
+    /// could not record is not kept: the press, bury or flag itself stands, and no undo of it is
+    /// offered.
+    fn keep(&self, recorded: Result<Option<Kept>, EngineRefusal>) {
+        let mut slot = self.slot();
+        slot.replaced = slot
+            .kept
+            .as_ref()
+            .map(|kept| (kept.card(), kept.step(), review_undo::kind_of(kept)));
+        slot.kept = recorded.ok().flatten();
+    }
+
+    /// The kept step a confirmation of `card` at `step` names, while the slot still keeps it, and
+    /// the kind its refusal names: the kept step's, the replaced step's when the confirmation
+    /// names that one, and an answer's otherwise.
+    fn confirmed(&self, card: i64, step: u32) -> (Option<Kept>, UndoKind) {
+        let slot = self.slot();
+        match (&slot.kept, slot.replaced) {
+            (Some(kept), _) if kept.names(card, step) => {
+                (Some(kept.clone()), review_undo::kind_of(kept))
+            }
+            (_, Some((replaced, at, kind))) if (replaced, at) == (card, step) => (None, kind),
+            _ => (None, UndoKind::Answer),
+        }
+    }
+
+    /// The engine's undo status, through the allow-list as every call goes (SPEC-515 R1).
+    fn undo_status(&self) -> Result<Vec<u8>, EngineRefusal> {
+        self.run(GET_UNDO_STATUS.0, GET_UNDO_STATUS.1, Vec::new())
+    }
+
+    /// Whether a full-sync choice's stage is held between the owner's taps: the device's backups
+    /// then make nothing and remove nothing, so the counted server copy is never taken from under
+    /// the confirm (SPEC-516 R5).
+    pub(crate) fn stage_held(&self) -> bool {
+        self.stage().is_some()
+    }
+
+    /// The core's dispatcher this engine reaches the engine through, for the device's backups.
+    pub(crate) const fn dispatcher(&self) -> &Dispatcher {
+        &self.dispatcher
+    }
+
+    /// What a normal sync's `reply` requires next, as the engine numbers it (SPEC-503 R5): a reply
+    /// that does not decode is the engine's refusal, with the reply's bytes.
+    fn required(reply: Vec<u8>) -> Result<u32, EngineRefusal> {
+        native_sync::required(&reply).ok_or(EngineRefusal::Engine { error: reply })
+    }
+
+    /// The step the write's result `write` shows (SPEC-503 R4): the stage is dropped on the write,
+    /// replaced on a device change since the backup by the new counts and the counted server copy
+    /// `copy`, and kept on a refusal.
+    fn written(
+        &self,
+        write: Result<(), Unwritten>,
+        copy: PathBuf,
+    ) -> Result<ChoiceStep, EngineRefusal> {
+        match write {
+            Ok(()) => {
+                *self.stage() = None;
+                Ok(ChoiceStep {
+                    written: true,
+                    said: WRITTEN.to_owned(),
+                    counts: None,
+                })
+            }
+            Err(Unwritten::Recount(counted)) => Ok(self.changed(counted, copy, DEVICE_CHANGED)),
+            Err(Unwritten::Refused(reason)) => unwritten(reason),
+        }
+    }
+
+    /// New counts after a change since the last ones: held as the stage, with the server copy
+    /// they were taken from, and shown with why the write did not run.
+    fn changed(&self, counted: Counted, copy: PathBuf, said: &str) -> ChoiceStep {
+        let counts = counted.counts();
+        *self.stage() = Some(Stage { counted, copy });
+        step(said, Some(counts))
+    }
+}
+
+/// One choice's stage between the owner's taps (SPEC-503 R4): the counts the owner saw, and the
+/// server copy they were taken from.
+#[derive(Clone)]
+struct Stage {
+    counted: Counted,
+    copy: PathBuf,
+}
+
+/// The review's undo slot (SPEC-515 R2): its last recorded answer, bury or flag, never two, and
+/// the card, step and kind of the step that one replaced.
+#[derive(Default)]
+struct Slot {
+    kept: Option<Kept>,
+    replaced: Option<(i64, u32, UndoKind)>,
+}
+
+/// What this device has not synced (SPEC-503 R7).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
+pub struct UnsyncedCount {
+    /// The reviews not yet synced.
+    pub reviews: u32,
+    /// Whether the collection changed since its last sync.
+    pub changed: bool,
+    /// Whether its schema changed since its last sync.
+    pub schema: bool,
+}
+
+/// What one direction of a full sync loses, by id.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
+pub struct ChoiceLoss {
+    /// Review-log rows lost.
+    pub reviews: u64,
+    /// Cards lost.
+    pub cards: u64,
+    /// Notes lost.
+    pub notes: u64,
+}
+
+/// The choice's counts: what each offered direction loses, and `None` for one not offered.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
+pub struct ChoiceCounts {
+    /// What the upload loses: the server's rows this device lacks.
+    pub upload: Option<ChoiceLoss>,
+    /// What the download loses: this device's rows the server lacks.
+    pub download: Option<ChoiceLoss>,
+}
+
+/// One step of the full-sync choice as the app shows it: whether the write ran, the sentence the
+/// app shows, and the counts the owner chooses from next, when there are any.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ChoiceStep {
+    /// Whether the one-way write ran.
+    pub written: bool,
+    /// The sentence the app shows.
+    pub said: String,
+    /// The counts to choose from, when the choice is open.
+    pub counts: Option<ChoiceCounts>,
+}
+
+/// The engine's normal sync, `BackendSyncService.SyncCollection` (SPEC-503 R1).
+const SYNC_COLLECTION: (u32, u32) = (1, 5);
+/// The engine's undo status, `CollectionService.GetUndoStatus` (SPEC-515 R1).
+const GET_UNDO_STATUS: (u32, u32) = (3, 7);
+
+/// The sentences of the choice's steps, which the app shows as they are.
+const COUNTED: &str = "Choose a direction. The counts show what each direction loses.";
+const WRITTEN: &str = "The full sync was written after its backup.";
+const NO_STAGE: &str = "Nothing was written: no counts are open. Sync again.";
+const NOT_OFFERED: &str = "Nothing was written: that direction is not offered.";
+const NOT_THE_OWNERS: &str = "Nothing was written: the full sync was not the owner's.";
+const NO_SNAPSHOT: &str =
+    "Nothing was written: an upload waits until the server's snapshot is found.";
+const SERVER_CHANGED: &str =
+    "Nothing was written: the server changed since the counts. Check the new counts.";
+const DEVICE_CHANGED: &str =
+    "Nothing was written: this device changed since its backup. Check the new counts.";
+const UNFILLABLE: &str = "Nothing was written: a full sync's file could not be used.";
+const UNHELD: &str = "Nothing was written: the backup lacks a row of the side it replaces.";
+
+/// A step that shows `said`, with the counts to choose from when there are any.
+fn step(said: &str, counts: Option<Counts>) -> ChoiceStep {
+    ChoiceStep {
+        written: false,
+        said: said.to_owned(),
+        counts: counts.map(|counts| ChoiceCounts {
+            upload: counts.upload.map(loss),
+            download: counts.download.map(loss),
+        }),
+    }
+}
+
+/// One direction's losses as the app reads them.
+fn loss(losses: Losses) -> ChoiceLoss {
+    let wide = |count: usize| u64::try_from(count).unwrap_or(u64::MAX);
+    ChoiceLoss {
+        reviews: wide(losses.reviews),
+        cards: wide(losses.cards),
+        notes: wide(losses.notes),
+    }
+}
+
+/// A step that did not write: the engine's refusal as its bytes, and the core's own reasons as
+/// the sentence the app shows.
+fn unwritten(reason: Reason) -> Result<ChoiceStep, EngineRefusal> {
+    let said = match reason {
+        Reason::Engine(engine) => return Err(refusal(engine)),
+        Reason::Gesture(GestureRefusal::Engine { error }) => {
+            return Err(EngineRefusal::Engine { error });
+        }
+        Reason::Gesture(_) => NOT_THE_OWNERS,
+        Reason::OpenCollection | Reason::HoldsRows => UNFILLABLE,
+        Reason::Unheld => UNHELD,
+    };
+    Ok(step(said, None))
+}
+
+/// A new file name for one of the choice's files in `folder`: `kind`, the clock's nanoseconds and
+/// this process, so no two of the choice's files share a name and none is the open collection.
+/// Back up now names its backup the same way (SPEC-516 R5).
+pub(crate) fn choice_file(folder: &str, kind: &str) -> PathBuf {
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |since| since.as_nanos());
+    Path::new(folder).join(format!("{kind}-{stamp}-{}.anki2", std::process::id()))
 }
 
 /// The engine's number for the red flag, which the app reads once and compares a card's flag with,
@@ -580,4 +1053,164 @@ pub fn collection_directory(
         return Err(CollectionDirectoryRefusal::NotADirectory);
     }
     Ok(value.clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+    use std::path::PathBuf;
+
+    use deck_streak_engine_core::full_sync::{Counted, Direction, IdSets, Offer};
+    use deck_streak_engine_core::one_way::Unwritten;
+
+    use super::{
+        ChoiceCounts, ChoiceLoss, ChoiceStep, DEVICE_CHANGED, Engine, EngineRefusal, Stage,
+    };
+
+    /// A normal sync's reply that does not decode is the engine's refusal with the reply's bytes,
+    /// and a reply that decodes answers its requirement (SPEC-503 R5). The engine's own encoder
+    /// always writes a reply that decodes, so only a test inside the crate reaches the refusal.
+    #[test]
+    fn an_undecodable_sync_reply_is_the_engines_refusal_with_its_bytes() {
+        assert_eq!(
+            Engine::required(vec![0xff, 0xff]),
+            Err(EngineRefusal::Engine {
+                error: vec![0xff, 0xff]
+            })
+        );
+        // Field 3, `required`, as a varint: 2, the full sync.
+        assert_eq!(Engine::required(vec![0x18, 0x02]), Ok(2));
+    }
+
+    /// One side's ids: these reviews, and one card and one note both sides hold.
+    fn ids(reviews: &[i64]) -> IdSets {
+        IdSets {
+            reviews: reviews.iter().copied().collect(),
+            cards: BTreeSet::from([1]),
+            notes: BTreeSet::from([1]),
+            modified: 1,
+        }
+    }
+
+    /// A device that gains a review between a download's backup and its write is the core's
+    /// recount: the step writes nothing, says the device changed and shows the new counts, and the
+    /// stage holds those counts, over the device as it is now, with the counted server copy, so
+    /// the next tap confirms what the owner saw (SPEC-503 R4). Through the public calls only a
+    /// write from another thread inside one confirm reaches this arm, so a test inside the crate
+    /// hands the write's result to the method that reads it.
+    #[test]
+    fn a_device_change_at_the_write_holds_the_new_counts_for_the_next_tap() {
+        let engine =
+            Engine::new(Vec::new()).expect("the engine starts from the default init message");
+        let device = ids(&[10, 11]);
+        let server = ids(&[10, 20]);
+        let counted = Counted::show(Offer::of(true, true), device.clone(), server.clone());
+        let copy = PathBuf::from("server-copy-1-1.anki2");
+        *engine.stage() = Some(Stage {
+            counted: counted.clone(),
+            copy: copy.clone(),
+        });
+        let ready = counted
+            .confirm(Direction::Download)
+            .expect("the full sync offers the download")
+            .backed_up(&device)
+            .expect("the backup holds the device's rows")
+            .download_ready()
+            .expect("a download is ready after its backup");
+        let device_now = ids(&[10, 11, 12]);
+        let recount = ready
+            .at_write(&device_now)
+            .expect_err("the device gained a review its backup lacks");
+        let expected = Counted::show(Offer::of(true, true), device_now.clone(), server);
+        assert_eq!(recount, expected);
+
+        let step = engine
+            .written(Err(Unwritten::Recount(recount)), copy.clone())
+            .expect("a recount is a step, not a refusal");
+        let lost = |reviews| ChoiceLoss {
+            reviews,
+            cards: 0,
+            notes: 0,
+        };
+        assert_eq!(
+            step,
+            ChoiceStep {
+                written: false,
+                said: DEVICE_CHANGED.to_owned(),
+                counts: Some(ChoiceCounts {
+                    upload: Some(lost(1)),
+                    download: Some(lost(2)),
+                }),
+            }
+        );
+
+        let held = engine.stage().clone().expect("the new counts are held");
+        assert_eq!(held.counted, expected);
+        assert_eq!(held.copy, copy);
+        let next = held
+            .counted
+            .confirm(Direction::Download)
+            .expect("the held counts offer the download")
+            .backed_up(&device_now)
+            .expect("a backup of the device as it is now holds its rows")
+            .download_ready()
+            .expect("a download is ready after its backup")
+            .at_write(&device_now)
+            .expect("the next tap writes over the device it counted");
+        assert_eq!(next.direction(), Direction::Download);
+    }
+
+    /// While a full-sync choice's stage is held, the device's backups are listed and none is
+    /// removed, so the counted server copy the confirm reads is never taken from under it, and back
+    /// up now makes nothing (SPEC-516 R5, section 6). Through the public calls only a sync server
+    /// holds a stage, so a test inside the crate holds one by hand.
+    #[test]
+    fn while_a_choice_is_held_the_backups_are_listed_and_none_is_removed() {
+        use crate::backups::{BackupRefusal, DeviceBackupKind};
+
+        let engine =
+            Engine::new(Vec::new()).expect("the engine starts from the default init message");
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("the clock reads after the epoch")
+            .as_nanos();
+        let dir =
+            std::env::temp_dir().join(format!("deck-streak-ffi-held-{}-{now}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("a scratch folder");
+        // five server copies: past the rule's three, so two would go were no stage held
+        let names: Vec<String> = (1..=5_u128)
+            .map(|n| format!("server-copy-{}-7.anki2", now - n * 1_000_000_000))
+            .collect();
+        for name in &names {
+            std::fs::write(dir.join(name), b"s").expect("the test writes a server copy");
+        }
+        let counted = Counted::show(Offer::of(true, true), ids(&[1]), ids(&[2]));
+        *engine.stage() = Some(Stage {
+            counted,
+            copy: dir.join(&names[4]),
+        });
+        let folder = dir.to_str().expect("a UTF-8 scratch path").to_owned();
+
+        let listed = engine
+            .device_backups(folder.clone())
+            .expect("the folder's backups are listed");
+        let made = engine.back_up_now(folder.clone());
+        let left = names.iter().filter(|name| dir.join(name).is_file()).count();
+        *engine.stage() = None;
+        let after = engine
+            .device_backups(folder)
+            .expect("the folder's backups are listed again");
+        let left_after = names.iter().filter(|name| dir.join(name).is_file()).count();
+        drop(std::fs::remove_dir_all(&dir));
+
+        assert_eq!(
+            listed.iter().map(|backup| backup.kind).collect::<Vec<_>>(),
+            vec![DeviceBackupKind::ServerCopy; 5],
+            "every copy is listed while the stage is held"
+        );
+        assert_eq!(left, 5, "no copy was removed while the stage was held");
+        assert_eq!(made, Err(BackupRefusal::StageHeld));
+        assert_eq!(after.len(), 3, "once the stage ends, the rule keeps three");
+        assert_eq!(left_after, 3);
+    }
 }

@@ -17,6 +17,7 @@ use std::sync::Arc;
 use deck_streak_kernel::{Clock, Db, KernelError, StudyDay, StudyDayRule, UtcMillis};
 
 use crate::reader::{CollectionReader, ReadError, read_failed};
+use crate::schema18::{CARD_FINGERPRINT, NEWEST_REVIEW};
 use crate::state::SqliteIngestState;
 use crate::sync_runs::{RunHistory, RunStatus, SkippedRun, SqliteSyncRuns, Trigger};
 
@@ -26,16 +27,6 @@ pub const CARD_FIELD_WEIGHTS: [i64; 7] = [131, 137, 139, 149, 151, 157, 163];
 /// Each card's weighted term is reduced by this modulus before the sum, so the sum over a large
 /// collection stays far below `SQLite`'s 64-bit ceiling (`anki_reader.py:_CARDS_FINGERPRINT_MOD`).
 pub const CARD_FINGERPRINT_MODULUS: i64 = 1_000_000_007;
-
-/// The newest revlog id, by the log's integer primary key.
-const NEWEST_REVIEW: &str = "SELECT max(id) FROM revlog";
-
-/// The cards' count and fingerprint: one scan of integer columns, each card's weighted term reduced
-/// by the modulus before the sum, as the predecessor's `_CARDS_FINGERPRINT_SQL` computes it. The
-/// weights are bound as `?1` to `?7`, in [`CARD_FIELD_WEIGHTS`]' order, and the modulus as `?8`:
-/// bound integers take the same integer arithmetic as the predecessor's literals.
-const CARD_FINGERPRINT: &str = "SELECT count(id), coalesce(sum((due * ?1 + ivl * ?2 + queue * ?3 \
-     + factor * ?4 + lapses * ?5 + type * ?6 + odid * ?7) % ?8), 0) FROM cards";
 
 /// The copy's cheap change signal (R9).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

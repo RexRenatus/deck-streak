@@ -61,10 +61,20 @@ flowchart TB
   subgraph shared[the shared kernel]
     kernel
   end
+  subgraph slot[the scheduling companion's substitutable body]
+    companion_slot["companion-slot"]
+  end
+  subgraph reading[the search, over the study day]
+    search
+  end
   subgraph foundations[no workspace dependency]
     study_day["study-day"]
     xp
     fsrs7
+    companion
+    collection
+    media
+    sync
   end
 
   daemon --> kernel
@@ -110,6 +120,7 @@ flowchart TB
   ffi --> engine_core
 
   web_engine --> engine_core
+  web_engine --> companion
 
   engine_core --> fsrs7
 
@@ -159,11 +170,16 @@ flowchart TB
   privacy --> kernel
 
   ingest --> kernel
+  ingest --> collection
+  ingest --> search
   vault --> kernel
   identity --> kernel
   agent --> kernel
 
   kernel --> study_day
+  search --> study_day
+
+  companion_slot --> companion
 ```
 
 The daemon composes none of `ffi`, `web-engine` and `push`. A native client links `ffi` into its
@@ -174,6 +190,24 @@ when native push carries the one router (#640). The clients' edges to `xp` are #
 
 `study-day` depends on no workspace crate, and `kernel` alone depends on it: it holds the study day
 the kernel re-exports, so the kernel sits in a layer of its own above it (SPEC-497, ADR-515).
+
+`search` depends on `study-day` alone and `ingest` alone depends on it: it reads a search into a
+typed query and evaluates it over rows, with no edge to the kernel, so it sits in a layer of its
+own between the anti-corruption layer that uses it and the foundations (SPEC-514, ADR-532).
+
+`companion` depends on no workspace crate, and `companion-slot` and `web-engine` depend on it: the
+slot is the one body a build substitutes behind the scheduling companion's interface, so it sits in
+a layer of its own above the interface (SPEC-501, ADR-519), and the web engine decides over the
+owner's companion frames in the Worker with the interface's own decision (SPEC-511, ADR-529 D4).
+No other crate reaches either yet.
+
+`collection` depends on no workspace crate, and `ingest` alone depends on it: its schema-18 adapter
+implements the collection's read port, and the store stays dormant until the cut-over (SPEC-512,
+ADR-530).
+
+`media` depends on no workspace crate (its one dependency is `sha2`), and no crate depends on it
+yet: the collection that implements its index and the renderer that reads names through its grammar
+are later deliveries (SPEC-513, ADR-531).
 
 `deck-streak-migration` is planned in the fence and has no directory under `crates/`, so it is not
 drawn until the delivery that builds it.

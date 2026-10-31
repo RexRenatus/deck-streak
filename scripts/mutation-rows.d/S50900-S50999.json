@@ -1,0 +1,60 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S50900-THE-FRAME-BOUND-GROWS",
+        "sync",
+        "src/codec.rs",
+        "pub const MAX_OP_BYTES: usize = 256 * 1024;",
+        "pub const MAX_OP_BYTES: usize = 256 * 1024 + 1;",
+        "codec::each_refusal_reads_as_its_sentence",
+        "a frame holds at most 256 KiB; one byte more and a device stores a frame another client's decoder refuses (SPEC-509 R1, A01)"
+      ],
+      [
+        "S50901-AN-ANSWER-OUTLASTS-THE-HOUR",
+        "sync",
+        "src/codec.rs",
+        "pub const MAX_DURATION_MS: u32 = 3_600_000;",
+        "pub const MAX_DURATION_MS: u32 = 3_600_001;",
+        "codec::a_value_out_of_its_range_is_refused_by_both_ends",
+        "an answer takes at most an hour; a longer one would enter the review log the scheduler reads (SPEC-509 R2, A01)"
+      ],
+      [
+        "S50902-THE-WIRE-VERSION-MOVES",
+        "sync",
+        "src/codec.rs",
+        "pub const VERSION: u8 = 1;",
+        "pub const VERSION: u8 = 2;",
+        "codec::each_refusal_reads_as_its_sentence",
+        "the encoding is wire version 1; a moved version refuses every frame a client of version 1 writes (SPEC-509 R1, A01)"
+      ],
+      [
+        "S50903-AN-EASE-OF-5-IS-ADMITTED",
+        "sync",
+        "src/codec.rs",
+        "    if !(1..=4).contains(ease) {",
+        "    if !(1..=5).contains(ease) {",
+        "codec::a_value_out_of_its_range_is_refused_by_both_ends",
+        "an answer's ease is 1 to 4; a fifth would enter the review log as a grade no client presses (SPEC-509 R2, A01)"
+      ],
+      [
+        "S50904-A-KIND-OF-4-IS-ADMITTED",
+        "sync",
+        "src/codec.rs",
+        "    } else if *kind > 3 {",
+        "    } else if *kind > 4 {",
+        "codec::a_value_out_of_its_range_is_refused_by_both_ends",
+        "an answer's review kind is 0 to 3; a fifth would enter the review log as a kind only an import carries (SPEC-509 R2, A01)"
+      ],
+      [
+        "S50905-THE-SLOTS-ARE-NOT-64",
+        "sync",
+        "src/ids.rs",
+        "pub const SLOTS: i64 = 64;",
+        "pub const SLOTS: i64 = 65;",
+        "formal_vectors_id_slot::next_id_answers_every_lean_id_slot_vector_byte_equal",
+        "ids are spread over 64 slots, as the proof's allocator is; another count makes ids the proof does not cover and slots that share ids (SPEC-509 R5, A07)"
+      ]
+    ]
+  }
+}

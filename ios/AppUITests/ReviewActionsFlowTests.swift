@@ -1,10 +1,12 @@
 // The review's bury and flag, and the review across the iPad's sidebar, on an iPhone and an iPad
-// simulator (SPEC-358 A11 and A12). Each test copies the review fixture, which the workflow step
-// names to the test runner as `DS_REVIEW_FIXTURE`, into a fresh directory beside it, and launches
-// the app on that copy with `-DSCollectionDirectory`. The fixture's deck `Review` holds four new
-// cards, queued in the order its builder adds them: a text card, an image card, a sound card and a
-// speech card, each with the back "the back". A test waits for what it reads with a bounded poll
-// and then asserts the value it read, so a red quotes what the app showed when the wait ran out.
+// simulator (SPEC-358 A11 and A12), the review's undo of its answer, bury and flag through its
+// dialog (SPEC-515 A5), and the card info sheet the review's chrome opens (SPEC-507 B7). Each test
+// copies the review fixture, which the workflow step names to the test runner as
+// `DS_REVIEW_FIXTURE`, into a fresh directory beside it, and launches the app on that copy with
+// `-DSCollectionDirectory`. The fixture's deck `Review` holds four new cards, queued in the order
+// its builder adds them: a text card, an image card, a sound card and a speech card, each with the
+// back "the back". A test waits for what it reads with a bounded poll and then asserts the value
+// it read, so a red quotes what the app showed when the wait ran out.
 import UIKit
 import XCTest
 
@@ -17,6 +19,15 @@ private let notShown = "(not shown)"
 /// The flag button's two titles: the card carries no flag, or the red one (SPEC-358 R5).
 private let unflagged = "Flag"
 private let flaggedRed = "Flagged red"
+
+/// The undo dialog's lines of what each undo changes (SPEC-515 R3).
+private let answerUnsynced =
+    "This answer has not synced yet. Undoing it removes it from your review history; nothing "
+    + "else changes."
+private let buryUnsynced =
+    "This bury has not synced yet. Undoing it puts the card back in today's queue; nothing else "
+    + "changes."
+private let flagAdded = "You added a red flag. Undoing removes it; nothing else changes."
 
 final class ReviewActionsFlowTests: XCTestCase {
     @MainActor
@@ -98,6 +109,98 @@ final class ReviewActionsFlowTests: XCTestCase {
                 "A12: on the iPhone the review stands alone, and the text card's answer side "
                     + "stays shown in landscape and back in portrait")
         }
+    }
+
+    @MainActor
+    func test_undo_of_an_answer_a_bury_and_a_flag_goes_through_the_dialog() throws {
+        // SPEC-515 A5: each undo asks first, names what it changes, keeps on Keep, and undoes only
+        // on its confirmation.
+        let app = try launchedOnTheFixture()
+        tapWhenShown(app.staticTexts["deck-row-Review"].firstMatch)
+        let textCard = app.webViews.staticTexts["a text card"].firstMatch
+        let imageCard = app.webViews.images["a grey dot"].firstMatch
+        let undo = app.buttons["undo"].firstMatch
+        let keep = app.buttons["undo-keep"].firstMatch
+        let confirm = app.buttons["undo-confirm"].firstMatch
+        let flag = app.buttons["flag"].firstMatch
+        let line = { (text: String) in app.staticTexts[text].firstMatch.exists }
+
+        // The answer: Good on the text card, then its dialog, Keep, and its confirmation.
+        tapWhenShown(app.buttons["Show Answer"].firstMatch)
+        tapWhenShown(app.buttons["Good"].firstMatch)
+        _ = reading(until: true) { shown(imageCard) }
+        tapWhenShown(undo)
+        let named = reading(until: [true, true, true, true]) {
+            [
+                "Card: a text card", "Your answer: Good", "Goes back to: New, in today's queue",
+                answerUnsynced,
+            ].map(line)
+        }
+        tapWhenShown(keep)
+        let kept = reading(until: [false, true]) { [shown(keep), shown(imageCard)] }
+        tapWhenShown(undo)
+        tapWhenShown(confirm)
+        let answerUndone = reading(until: true) { shown(textCard) }
+
+        // The bury of the text card, then its dialog and its confirmation.
+        tapWhenShown(app.buttons["bury"].firstMatch)
+        _ = reading(until: true) { shown(imageCard) }
+        tapWhenShown(undo)
+        let buryNamed = reading(until: true) { line(buryUnsynced) }
+        tapWhenShown(confirm)
+        let buryUndone = reading(until: true) { shown(textCard) }
+
+        // The flag of the text card, then its dialog and its confirmation.
+        tapWhenShown(flag)
+        _ = reading(until: flaggedRed) { label(of: flag) }
+        tapWhenShown(undo)
+        let flagNamed = reading(until: true) { line(flagAdded) }
+        tapWhenShown(confirm)
+        let flagUndone = reading(until: unflagged) { label(of: flag) }
+
+        XCTAssertEqual(
+            [named, kept, [answerUndone, buryNamed, buryUndone, flagNamed]],
+            [[true, true, true, true], [false, true], [true, true, true, true]],
+            "SPEC-515 A5: the answer's dialog names the card, the answer and the state it goes "
+                + "back to, Keep writes nothing, and each confirmation undoes its step")
+        XCTAssertEqual(flagUndone, unflagged, "SPEC-515 A5: the flag's undo takes the red flag off")
+    }
+
+    /// SPEC-507 B7 (R14, R16, R17): on the iPhone and the iPad the review's chrome opens the card
+    /// info sheet over the text card. The control reads "Card info" to VoiceOver though it shows
+    /// its icon alone, the sheet's Close reads "Close", the text card's lines read as they are
+    /// shown, and Close returns to the review.
+    @MainActor
+    func test_the_card_info_sheet_opens_from_the_chrome_with_its_voiceover_labels() throws {
+        let app = try launchedOnTheFixture()
+        tapWhenShown(app.staticTexts["deck-row-Review"].firstMatch)
+        let textCard = app.webViews.staticTexts["a text card"].firstMatch
+        let control = app.buttons["card-info"].firstMatch
+        let before = reading(until: ["shown", "Card info"]) {
+            [shown(textCard) ? "shown" : notShown, label(of: control)]
+        }
+        tapWhenShown(control)
+        let close = app.buttons["card-info-close"].firstMatch
+        let lines = [
+            "Reviews: 0", "Lapses: 0", "Mean answer time: No answers yet",
+            "Not available in this build.", "Came through your collection, created 1970-01-01.",
+        ]
+        let sheet = reading(until: ["Close"] + Array(repeating: "shown", count: lines.count)) {
+            [label(of: close)]
+                + lines.map { shown(app.staticTexts[$0].firstMatch) ? "shown" : notShown }
+        }
+        tapWhenShown(close)
+        let after = reading(until: [notShown, "shown"]) {
+            [shown(close) ? "shown" : notShown, shown(textCard) ? "shown" : notShown]
+        }
+        XCTAssertEqual(
+            [before, sheet, after],
+            [
+                ["shown", "Card info"], ["Close"] + Array(repeating: "shown", count: lines.count),
+                [notShown, "shown"],
+            ],
+            "B7: the text card shows and the control reads \"Card info\"; the sheet's Close reads "
+                + "\"Close\" and the text card's five lines are shown; Close returns to the card")
     }
 
     // MARK: - Steps

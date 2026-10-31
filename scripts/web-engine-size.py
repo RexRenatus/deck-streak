@@ -11,6 +11,11 @@ browser downloads, so the gate measures exactly them, one file at a time, and su
 quality 11 is the figure a server that serves brotli would see; it is printed beside each file
 and never gated, because the budget is in `gzip -9`.
 
+The owner's page downloads more than the public module and its bindings: the scheduling
+companion's module and weights (SPEC-511 R11, ADR-529 D5). Each is given with `--owner-file`, any
+number of times, and every file given is measured and summed against the same budget, so a budget
+that counted two of the four files cannot pass a page over it.
+
 A size is only a measurement when its compressor ran on a file that holds something, so a missing
 or empty file, or an absent compressor, reads VOID: never a pass, and never a figure printed as if
 measured. gzip runs with `-n`, so the file's name does not count toward its size.
@@ -29,7 +34,7 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True
 
-#: ADR-336's budget, in bytes `gzip -9`, for the module plus its bindings.
+#: ADR-336's budget, in bytes `gzip -9`, for the module plus its bindings, and every owner file.
 BUDGET = 8_000_000
 EXIT_PASS, EXIT_OVER, EXIT_VOID = 0, 1, 2
 #: Brotli at quality 11 with a 2^24-byte window, the brotli CLI's own defaults, by node's zlib.
@@ -101,9 +106,19 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="web-engine-size", description=__doc__.split("\n")[0])
     parser.add_argument("--module", required=True, type=Path, help="the module a browser loads")
     parser.add_argument("--bindings", required=True, type=Path, help="its JS bindings")
+    parser.add_argument(
+        "--owner-file",
+        action="append",
+        default=[],
+        type=Path,
+        help="a file the owner's page also downloads (the companion's module or weights), summed "
+        "with the others; any number of times",
+    )
     args = parser.parse_args(argv)
+    files = [("module", args.module), ("bindings", args.bindings)]
+    files += [("owner-file", path) for path in args.owner_file]
     try:
-        total, brotli = measure([("module", args.module), ("bindings", args.bindings)])
+        total, brotli = measure(files)
     except Void as void:
         print(f"web-engine-size: VOID: {void}")
         return EXIT_VOID

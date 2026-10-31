@@ -1,0 +1,19 @@
+[package]
+name = "deck-streak-companion"
+description = "The scheduling companion's documented interface: schema v1's integer-only frames and their codec, the handshake, the decision that fails closed, and the Absent default, with no dependency and no I/O. See docs/CONTEXT-MAP.md."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# ADR-519 D5: the crate is `no_std` with `alloc` and depends on nothing, so the same interface builds
+# for the server, the web client's wasm32 module and the native client's static library.
+
+[dev-dependencies]
+# ADR-029: the parity oracle's golden reader, here the reader of the formal vectors.
+serde_json.workspace = true

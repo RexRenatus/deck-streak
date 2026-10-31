@@ -1,0 +1,142 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S51600-THE-EXPORT-SKIPS-THE-STATE-CHANGE-GUARD",
+        "api",
+        "src/data_export_routes.rs",
+        "    _state_change: StateChange,\n    _owner: OwnerSession,",
+        "    _owner: OwnerSession,",
+        "data_export_route::a_cross_site_or_non_json_request_is_refused_before_the_session",
+        "the export runs the session routes' state-change guard before anything else; without it a cross-site or non-JSON request carrying the owner's cookie is answered the whole export (SPEC-516 R2, B2)"
+      ],
+      [
+        "S51601-THE-EXPORT-WINDOW-ADMITS-A-SEVENTH",
+        "api",
+        "src/data_export_routes.rs",
+        "        if window.1 >= EXPORTS_PER_MINUTE {",
+        "        if window.1 > EXPORTS_PER_MINUTE {",
+        "data_export_route::the_route_states_its_rate_bound",
+        "the route's own window admits six exports a minute and refuses the seventh with Retry-After; one past it, the bound the SPEC states is not the bound served (SPEC-516 R3, B3)"
+      ],
+      [
+        "S51602-THE-EXPORT-BODY-BOUND-WIDENS",
+        "api",
+        "src/data_export_routes.rs",
+        "    let export = export.layer(DefaultBodyLimit::max(EXPORT_BODY_LIMIT_BYTES));",
+        "    let export = export.layer(DefaultBodyLimit::max(EXPORT_BODY_LIMIT_BYTES + 1));",
+        "data_export_route::the_route_states_its_body_bound",
+        "the handler reads at most 64 bytes of body and answers 413 past them; widened, the route reads more than the bound it states (SPEC-516 R3, B3)"
+      ],
+      [
+        "S51603-THE-EXPORT-IS-CACHEABLE",
+        "api",
+        "src/data_export_routes.rs",
+        "        .insert(CACHE_CONTROL, HeaderValue::from_static(\"no-store\"));",
+        "        .insert(CACHE_CONTROL, HeaderValue::from_static(\"private\"));",
+        "data_export_route::the_export_is_the_owners_document_and_is_never_stored",
+        "every answer of the export carries Cache-Control no-store; marked private, a browser may keep the owner's whole record on disk (SPEC-516 R2, B2)"
+      ],
+      [
+        "S51604-THE-ROUTE-TRIMS-THE-DATA-ROLES-LINE",
+        "api",
+        "src/data_export_routes.rs",
+        "    match export_document(db).await {",
+        "    match export_document(db).await.map(|line| line.trim_end().to_owned()) {",
+        "data_export_route::the_export_is_the_owners_document_and_is_never_stored",
+        "the route answers the data role's line and its newline as they are; trimmed, the copy a screen saves is no longer the bytes the host writes (SPEC-516 R2, B2)"
+      ],
+      [
+        "S51605-BACK-UP-NOW-SKIPS-THE-FILL-CHECK",
+        "engine-core",
+        "src/backup_now.rs",
+        "    one_way::fillable(dispatcher, backup)?;\n    dispatcher",
+        "    dispatcher",
+        "backup_now::back_up_now_refuses_a_file_that_holds_rows",
+        "back up now refuses a file that already holds a row before the engine writes; without the check the refusal is the engine's, not the core's named one, and nothing guards the open collection's own file (SPEC-516 R4, B4)"
+      ],
+      [
+        "S51606-THE-WEB-ID-LOSES-ITS-NUMBER",
+        "web-engine",
+        "src/files.rs",
+        "    backup_of(name).map(|(kind, number)| format!(\"{}-{number}\", kind.word()))",
+        "    backup_of(name).map(|(kind, _)| kind.word().to_owned())",
+        "files::a_new_backup_is_answered_by_the_id_the_list_names_it_by",
+        "back up now answers the id the list and the export name the new backup by; without its number, the id names no listed backup (SPEC-516 R4, B4)"
+      ],
+      [
+        "S51607-THE-WEB-BACK-UP-NOW-IGNORES-A-HELD-STAGE",
+        "web-engine",
+        "src/wasm.rs",
+        "    if STAGE.with(|stage| stage.borrow().is_some()) {\n        return Err(refuse(\"back up now waits while a choice is held\"));",
+        "    if false {\n        return Err(refuse(\"back up now waits while a choice is held\"));",
+        "boundary::the_backup_now_export_reaches_the_pool_through_files_and_the_core",
+        "the web engine's back up now waits while a full-sync choice's stage is held; ignoring the stage, it writes beside a choice in flight (SPEC-516 R4, B4)"
+      ],
+      [
+        "S51608-THE-NATIVE-LIST-REMOVES-WHILE-A-STAGE-IS-HELD",
+        "ffi",
+        "src/backups.rs",
+        "        if !self.stage_held() {",
+        "        if true {",
+        "lib::engine::tests::while_a_choice_is_held_the_backups_are_listed_and_none_is_removed",
+        "the native list removes nothing while a full-sync choice's stage is held; removing, it could take the counted server copy from under the confirm (SPEC-516 R5, B5)"
+      ],
+      [
+        "S51609-NATIVE-BACK-UP-NOW-RUNS-WHILE-A-STAGE-IS-HELD",
+        "ffi",
+        "src/backups.rs",
+        "        if self.stage_held() {",
+        "        if false {",
+        "lib::engine::tests::while_a_choice_is_held_the_backups_are_listed_and_none_is_removed",
+        "the native back up now waits while a full-sync choice's stage is held and says so; running, it would refuse as the engine's or write beside a choice in flight (SPEC-516 R5, B5)"
+      ],
+      [
+        "S51610-THE-NATIVE-LIST-KEEPS-EVERY-COPY",
+        "ffi",
+        "src/backups.rs",
+        "            let removed = retention::removals(&held);",
+        "            let removed = retention::removed(&held, usize::MAX);",
+        "backups::the_backups_are_listed_newest_first_and_three_of_each_kind_are_kept",
+        "the native list keeps three of each kind by the core's one rule; keeping every copy, the device's backups grow without bound (SPEC-516 R5, B5)"
+      ],
+      [
+        "S51611-THE-NATIVE-EXPORT-READS-AN-UNLISTED-ID",
+        "ffi",
+        "src/backups.rs",
+        "        if !listed.iter().any(|named| named.id == id) {",
+        "        if listed.is_empty() {",
+        "backups::only_a_listed_backup_is_exported",
+        "the native export answers only a backup the folder lists, by its id; reading any id, it reads the collection itself or a path the id spells (SPEC-516 R5, B5)"
+      ],
+      [
+        "S51612-THE-NATIVE-NAME-TAKES-A-LEADING-ZERO",
+        "ffi",
+        "src/backups.rs",
+        "        .filter(|value| value.to_string() == text)",
+        "        .filter(|_| true)",
+        "backups::the_backups_are_listed_newest_first_and_three_of_each_kind_are_kept",
+        "a backup's stamp and process are numbers spelt as the numbers they are; taking another spelling, the list counts and removes a file the adapter never named (SPEC-516 R5, B5)"
+      ],
+      [
+        "S51613-THE-DATA-ROLE-DROPS-ITS-NEWLINE",
+        "daemon",
+        "src/role_data.rs",
+        "    let line = export_document(db).await.map_err(DataRoleError::Export)?;",
+        "    let line = export_document(db)\n        .await\n        .map_err(DataRoleError::Export)?\n        .trim_end()\n        .to_owned();",
+        "data_export_composed::the_route_answers_the_bytes_the_data_role_writes",
+        "the data role writes the one document the export route answers, its line and its newline; written apart, the host's copy and a screen's differ (SPEC-516 R2, B2)"
+      ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S51614-THE-POLICY-LEAVES-OUT-WHERE-THE-IPHONE-BACKUPS-ARE",
+        "PRIVACY.md",
+        "They are kept in the app's own folder on your device, are never sent to the service, and leave your",
+        "They are kept on your device, are never sent to the service, and leave your",
+        "the policy says where the iPhone and iPad backups are kept: in the app's own folder on the device; without it the policy no longer states the backups' place (SPEC-516 R9, B9)",
+        "test_privacy_policy.ThePolicyStatesTheDeviceCopies.test_the_policy_states_the_iphone_backups_and_the_json_copy"
+      ]
+    ]
+  }
+}

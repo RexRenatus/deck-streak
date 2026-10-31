@@ -103,6 +103,59 @@ final class ReviewModelTests: XCTestCase {
         XCTAssertTrue(player.sound === current, "the second list's first sound still plays")
     }
 
+    @MainActor
+    func test_an_undo_asks_first_keep_writes_nothing_and_the_confirmation_returns_the_card()
+        async throws
+    {
+        // SPEC-515 A5: the review's undo of its own last answer, from the model's one entry.
+        let (model, _) = try await started(voiceOver: true, installed: [])
+        let opened = model.undo.label
+        await answeredGood(model, cards: 1)
+        let answered = model.undo.label
+        let next = model.face.document
+        await model.perform(.undo)
+        let offered = model.undo.offer
+        await model.perform(.keep)
+        let kept = [model.undo.offer == nil, model.face.document == next]
+        await model.perform(.undo)
+        await model.perform(.confirmUndo)
+
+        XCTAssertEqual(opened, "", "when the review opens, it has nothing of its own to undo")
+        XCTAssertEqual(answered, "Undo answer", "after the answer, the control names its undo")
+        XCTAssertEqual(offered?.title, "Undo this answer?", "the press asks first")
+        XCTAssertEqual(
+            offered?.lines,
+            [
+                "Card: a text card", "Your answer: Good", "Goes back to: New, in today's queue",
+                "This answer has not synced yet. Undoing it removes it from your review history; "
+                    + "nothing else changes.",
+            ],
+            "the dialog names the card as text, the answer and the state it goes back to")
+        XCTAssertEqual(kept, [true, true], "Keep drops the offer and writes nothing")
+        XCTAssertEqual(model.phase, .question, "the confirmation shows the next queued card")
+        XCTAssertTrue(
+            model.face.document.contains("a text card"), "the undone card is queued first again")
+        XCTAssertEqual(model.undo.label, "", "the undo emptied the review's slot")
+    }
+
+    @MainActor
+    func test_a_refused_undo_says_why() async throws {
+        // SPEC-515 A5: a confirmation after a later change is refused, and the review says why.
+        let (model, _) = try await started(voiceOver: true, installed: [])
+        await answeredGood(model, cards: 1)
+        await model.perform(.undo)
+        // A later change before the confirmation: the image card, shown now, is flagged red.
+        await model.perform(.flag)
+        await model.perform(.confirmUndo)
+
+        XCTAssertEqual(
+            model.undo.said,
+            ["This answer can no longer be undone: something changed after it."],
+            "the refused confirmation says why")
+        XCTAssertEqual(model.undo.label, "Undo flag", "the flag is what the review offers now")
+        XCTAssertTrue(model.flagged, "the later flag stands")
+    }
+
     // MARK: - Steps
 
     /// A model over a fresh copy of the fixture, started on its deck `Review`, and that copy.

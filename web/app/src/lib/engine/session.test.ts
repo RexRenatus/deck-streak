@@ -79,6 +79,10 @@ class FakeEngine implements EngineModule {
     const offer = { card: String(id), step: this.journal.length, text: `front ${id}`, grade: 'good', returns: 'new' };
     return JSON.stringify({ offer });
   }
+  card_health(id: bigint) {
+    this.#call('card_health', id);
+    return 'null';
+  }
   snapshot(id: bigint) {
     this.#call('snapshot', id);
     const card = this.cards.get(id);
@@ -1017,5 +1021,71 @@ describe("the Worker session's choice operations", () => {
     expect(await session.handle({ id: 6, op: 'choice-confirm', direction: 'download' })).toEqual(trapped);
     expect(await session.handle({ id: 7, op: 'next' })).toEqual({ ...trapped, id: 7 });
     expect(await session.handle({ id: 8, op: 'choice-count' })).toEqual({ ...trapped, id: 8 });
+  });
+});
+
+describe("the Worker session's card health", () => {
+  // SPEC-507 R1, R2, R6: the session reads the core's health record whole, its card as a bigint,
+  // and gives a scheduler readout only when the state is ready with both of its figures.
+  class HealthEngine extends FakeEngine {
+    answer = 'null';
+    override card_health(id: bigint) {
+      super.card_health(id);
+      return this.answer;
+    }
+  }
+  const record = (scheduler: object) => ({
+    card: 1001,
+    reps: 4,
+    lapses: 1,
+    logged: { answers: 5, lapses: 1 },
+    rows: 5,
+    reviews: [],
+    total_ms: 9000,
+    mean_ms: 1800,
+    median_ms: 1500,
+    scheduler,
+    provenance: { source: 'collection', created_ms: 1_700_000_000_000 }
+  });
+  const health = (scheduler: object) => ({
+    card: 1001n,
+    reps: 4,
+    lapses: 1,
+    logged: { answers: 5, lapses: 1 },
+    rows: 5,
+    reviews: [],
+    totalMs: 9000,
+    meanMs: 1800,
+    medianMs: 1500,
+    scheduler,
+    provenance: { source: 'collection', createdMs: 1_700_000_000_000 }
+  });
+
+  it('an id no card has answers null, and a record answers its fields with the readout its scheduler earns', async () => {
+    const engine = new HealthEngine();
+    const { session } = browser(engine);
+    await session.handle({ id: 1, op: 'open', languages: ['en'] });
+    expect(await session.handle({ id: 2, op: 'card-health', card: 1001n })).toEqual({ id: 2, ok: true, value: null });
+    const cases: [object, object][] = [
+      [{ state: 'ready', recall_ppm: 912_000, days_to_90: 14 }, { state: 'ready', recallPpm: 912_000, daysTo90: 14 }],
+      [{ state: 'ready', recall_ppm: 912_000 }, { state: 'absent' }],
+      [{ state: 'ready', days_to_90: 14 }, { state: 'absent' }],
+      [{ state: 'ready', recall_ppm: 912_000.5, days_to_90: 14 }, { state: 'absent' }],
+      [{ state: 'ready', recall_ppm: 912_000, days_to_90: 14.5 }, { state: 'absent' }],
+      [{ state: 'stale', recall_ppm: 912_000, days_to_90: 14 }, { state: 'stale' }],
+      [{ state: 'unready' }, { state: 'unready' }],
+      [{ state: 'retired' }, { state: 'absent' }]
+    ];
+    let id = 3;
+    for (const [scheduler, readout] of cases) {
+      engine.answer = JSON.stringify(record(scheduler));
+      expect(await session.handle({ id, op: 'card-health', card: 1001n }), JSON.stringify(scheduler)).toEqual({
+        id,
+        ok: true,
+        value: health(readout)
+      });
+      id += 1;
+    }
+    expect(engine.calls.filter(([name]) => name === 'card_health').length).toBe(1 + cases.length);
   });
 });

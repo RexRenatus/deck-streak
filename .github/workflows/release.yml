@@ -158,6 +158,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "$GITHUB_REF_NAME" "$OUT/deck-streak-$GITHUB_REF_NAME.tar.gz" "$OUT/SHA256SUMS"
+      # SPEC-502 (ADR-520): the scheduler's release gates, read from release-gates.json at the tag's
+      # commit. A refusal fails the job here, so the publish below is never reached and the release
+      # stays a draft; every gate that refuses is named in the log.
+      - name: the scheduler's release gates are on file and hold, or nothing is published
+        run: python3 scripts/release_gates.py
       - name: publish, last
         env:
           GH_TOKEN: ${{ github.token }}

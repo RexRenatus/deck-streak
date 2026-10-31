@@ -3,7 +3,8 @@
 //! and never one the pool lists.
 
 use deck_streak_web_engine::files::{
-    Backup, Kind, backup_of, backups, choice_name, exported, holds, record, same, unrecorded,
+    Backup, Kind, backup_id, backup_of, backups, choice_name, exported, holds, record, same,
+    unrecorded,
 };
 
 /// The collection's path inside the pool, as `src/wasm.rs` names it.
@@ -201,4 +202,40 @@ fn each_backup_without_a_record_is_recorded_once() {
         ]
     );
     assert_eq!(unrecorded(&listed(&[COLLECTION])), Vec::<String>::new());
+}
+
+/// SPEC-516 R4 (ADR-534 D3): the id back up now answers is the stem of the name its file was
+/// minted with, the id the list and the export name it by; any other name names no backup.
+#[test]
+fn a_new_backup_is_answered_by_the_id_the_list_names_it_by() {
+    let asked = [
+        ("/deck-streak/backup-1.anki2", Some("backup-1")),
+        ("/deck-streak/backup-12.anki2", Some("backup-12")),
+        ("/deck-streak/server-3.anki2", Some("server-3")),
+        ("backup-4.anki2", Some("backup-4")),
+        ("/deck-streak/backup-0.anki2", None),
+        ("/deck-streak/backup-1.anki2@5", None),
+        ("/deck-streak/copy-1.anki2", None),
+        (COLLECTION, None),
+    ];
+    let answered: Vec<(&str, Option<String>)> = asked
+        .iter()
+        .map(|(name, _)| (*name, backup_id(name)))
+        .collect();
+    let expected: Vec<(&str, Option<String>)> = asked
+        .iter()
+        .map(|(name, id)| (*name, id.map(str::to_owned)))
+        .collect();
+    assert_eq!(answered, expected);
+    // the id of a backup the pool lists is the one `backups` lists it by
+    let pool = listed(&[
+        COLLECTION,
+        "/deck-streak/backup-2.anki2",
+        "/deck-streak/backup-2.anki2@9",
+    ]);
+    let ids: Vec<String> = backups(&pool).into_iter().map(|backup| backup.id).collect();
+    assert_eq!(
+        ids,
+        vec![backup_id("/deck-streak/backup-2.anki2").unwrap_or_default()]
+    );
 }

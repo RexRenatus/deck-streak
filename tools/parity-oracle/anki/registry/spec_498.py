@@ -5,6 +5,9 @@ The names are the goldens' names. The ids are the design's: F1 to F12 for import
 R-1 to R-12 for rendering, and the peers' G-L5-1, G-L5-2, G-L6-1, G-L6-2, G-L9-1 and GL-1 to
 GL-4. Each note says what the harness calls and what it answers; the harness answers in the
 corpus's own terms (row indices, never ids the engine assigns) and a refusal as a short label.
+
+Each declared class's hand cases are its drawn case or cases and its written cases, which the
+corpus's written texts, templates, masks, clocks and sketches give with no draw (`WRITTEN`).
 """
 
 from __future__ import annotations
@@ -22,7 +25,7 @@ _spec.loader.exec_module(corpus)
 #: The corpus this module draws from, pinned: a corpus edit must edit this module too, which
 #: stales every golden it registered.
 CORPUS = corpus
-CORPUS_SHA256 = "08a81b90195b1d7a62f8b9b559696a1e850b1826556678a967d860405b831aba"
+CORPUS_SHA256 = "8b59468578ce33bf436e87a852c4a01300833999b6e435a976e3f293bcc1fdd0"
 SEED = corpus.SEED
 
 word, words, timing, collection = corpus.word, corpus.words, corpus.timing, corpus.collection
@@ -37,11 +40,14 @@ def per_class(classes, make):
 
 
 def register(id_, classes, note, make, random_make=None, count=corpus.RANDOM_CASES):
+    writer = WRITERS.get(id_)
+    written = {edge: writer(edge) for edge in classes} if writer else {}
+    WRITTEN_BY_ID[id_] = written
     return {
         "id": id_,
         "classes": list(classes),
         "note": note,
-        "cases": builder(per_class(classes, make), random_make, count),
+        "cases": builder(per_class(classes, make), random_make, count, written),
     }
 
 
@@ -51,6 +57,306 @@ def edges_collection(edge, rng):
 
 def random_collection(rng):
     return {"collection": collection(rng, tuple(rng.sample(sorted(corpus.CLASSES), 3)))}
+
+
+# Written cases: each registration's hand cases built from the corpus's written texts,
+# templates, masks, clocks and sketches, with no draw, so they read the same under any seed.
+# A writer answers a class's written inputs; it reads module names only when called.
+
+PLAIN, SKETCHES, TEXTS = corpus.PLAIN, corpus.SKETCHES, corpus.TEXTS_WRITTEN
+#: Each registration's written cases by class, keyed by its id while the registry loads.
+WRITTEN_BY_ID: dict[str, dict[str, list[dict]]] = {}
+
+
+def sketched(edges):
+    """One written collection per sketch, holding `edges`."""
+    return [corpus.written_collection(sketch, edges) for sketch in SKETCHES]
+
+
+def write_collection(edge):
+    return [{"collection": source} for source in sketched((edge,))]
+
+
+def write_package(edge):
+    """A package of each sketch: with media files for the personal and shareable classes, and
+    none for no-media."""
+    kind = "shareable" if edge == "shareable" else "personal"
+    edges = {
+        "nfd-names": ("nfd-names",),
+        "nfc-names": ("nfc-names",),
+        "no-media": ("html",),
+    }.get(edge, ("html", "unused-files"))
+    return [{"collection": source, "kind": kind} for source in sketched(edges)]
+
+
+def explicit_mods(target_note, package_note, mod):
+    """A note the package shares with the target by GUID, with no mod on either side, takes one mod on both: the
+    import then answers from the case's input, never from the clock that added the two notes."""
+    if (
+        package_note.get("guid") == target_note.get("guid")
+        and "mod" not in package_note
+        and "mod" not in target_note
+    ):
+        package_note["mod"], target_note["mod"] = mod, mod
+
+
+def write_import(edge):
+    cases = []
+    for k in range(7):
+        target = corpus.written_collection(SKETCHES[k])
+        incoming = corpus.written_collection(SKETCHES[(k + 3) % 7])
+        note = dict(target["notes"][0])
+        mod, gap = corpus.MODS[k], corpus.GAPS[k]
+        if edge == "newer":
+            note["mod"], target["notes"][0]["mod"] = mod + gap, mod
+        elif edge == "older":
+            note["mod"], target["notes"][0]["mod"] = mod - gap, mod
+        elif edge == "equal-mod":
+            note["mod"], target["notes"][0]["mod"] = mod, mod
+        elif edge == "notetype-mismatch":
+            incoming["notetypes"][0] = dict(
+                incoming["notetypes"][0], fields=["Prompt", "Answer", "Extra"]
+            )
+            note["fields"] = note["fields"] + [PLAIN[k]]
+        elif edge == "new-guid":
+            note["guid"] = corpus.NEW_GUIDS[k]
+        elif edge == "revlog-id-clash":
+            incoming["revlog"] = [dict(incoming["revlog"][0], at_ms=target["revlog"][0]["at_ms"])]
+        explicit_mods(target["notes"][0], note, mod)
+        incoming["notes"][0] = note
+        cases.append({"collection": target, "package": incoming, "kind": "personal"})
+    return cases
+
+
+def write_timing(edge):
+    return [dict(clock) for clock in corpus.CLOCKS_WRITTEN[edge]]
+
+
+def write_due(edge):
+    cases = []
+    for k, clock in enumerate(corpus.CLOCKS):
+        if edge == "odue-filtered":
+            row = corpus.card(
+                0, 0, 1, queue=2, kind=2, due=-100_000, odeck=0, odue=corpus.DUES[k] + 1
+            )
+        else:
+            queue = QUEUE[edge]
+            kind = {1: 1, 3: 1, 2: 2}.get(queue, 0)
+            due = corpus.DUES[k]
+            if queue == 1:
+                due = clock["now"] + corpus.LEARNING_STEPS[k]
+            elif queue == 3:
+                due = (clock["now"] - clock["crt"]) // corpus.DAY + k - 3
+            row = corpus.card(0, 0, 0, queue=queue, kind=kind, due=due, ivl=corpus.IVLS[k])
+        cases.append({"card": row, "timing": dict(clock)})
+    return cases
+
+
+def write_checksum(edge):
+    firsts = {
+        "html": corpus.HTML_WRITTEN,
+        "media-refs": TEXTS["media"],
+        "entities": TEXTS["entities"],
+        "empty": TEXTS["empty"],
+        "cjk": corpus.CJK_WRITTEN,
+    }[edge]
+    return [{"fields": [first, PLAIN[k]], "sort_index": 0} for k, first in enumerate(firsts)]
+
+
+def write_blob(edge):
+    """The non-default class's written values, one seed per column; the default class's cases
+    already cover every column, so it writes none."""
+    if edge == "default-values":
+        return []
+    seeds = [1, 2, 3, 5, 8, 13, 21, 34]
+    return [
+        {"column": column, "values": {"seed": seed}}
+        for column, seed in zip(BLOB_COLUMNS, seeds, strict=True)
+    ]
+
+
+def write_answer(edge):
+    return [
+        {
+            "collection": source,
+            "answer": {"card": k % 3, "ease": corpus.EASES[k], "at_ms": source["now"] * 1000},
+        }
+        for k, source in enumerate(sketched((edge,)))
+    ]
+
+
+def write_guid(edge):
+    prefix = "vc1-" if edge == "vc1-prefix" else "ds-"
+    cases = []
+    for source in sketched(()):
+        for note in source["notes"]:
+            note["guid"] = prefix + note["guid"].removeprefix("ds-")
+        cases.append({"collection": source})
+    return cases
+
+
+def write_card(edge):
+    """R-1's written cases: a template class's written templates over plain fields, or a text
+    class's written texts on the cloze or prompt-answer note type."""
+    if edge in TEMPLATE_CLASSES:
+        return [
+            {
+                "notetype": corpus.basic(front, back),
+                "fields": [PLAIN[k], "" if edge == "empty-front" else PLAIN[(k + 1) % 7]],
+                "ord": 0,
+            }
+            for k, (front, back) in enumerate(corpus.TEMPLATES_WRITTEN[edge])
+        ]
+    return [
+        {
+            "notetype": corpus.cloze_type() if edge in CLOZE else corpus.basic(),
+            "fields": [text, PLAIN[k]],
+            "ord": corpus.CARD_ORDS[k] if edge in CLOZE else 0,
+        }
+        for k, text in enumerate(TEXTS[edge])
+    ]
+
+
+def write_ordinals(edge):
+    return [
+        {key: value for key, value in case.items() if key != "ord"} for case in write_card(edge)
+    ]
+
+
+def write_text(key):
+    return lambda edge: [{key: text} for text in TEXTS[edge]]
+
+
+def write_cloze_text(edge):
+    return [{"text": text, "ord": corpus.ORDS[k]} for k, text in enumerate(TEXTS[edge])]
+
+
+def write_latex(edge):
+    return [
+        {"text": f"[latex]{text}[/latex] [$]{PLAIN[k]}[/$]", "svg": edge == "unicode-nfc"}
+        for k, text in enumerate(TEXTS[edge])
+    ]
+
+
+def write_compare(edge):
+    return [
+        {
+            "expected": text,
+            "provided": text.upper() if edge == "case" else text.replace(" ", "", 1),
+            "combining": edge != "unicode-nfd",
+        }
+        for text in TEXTS[edge]
+    ]
+
+
+def write_note_type(edge):
+    if edge in TEMPLATE_CLASSES:
+        return [
+            {"notetype": corpus.basic(front, back)}
+            for front, back in corpus.TEMPLATES_WRITTEN[edge]
+        ]
+    return [
+        {
+            "notetype": corpus.notetype(
+                "ds.gap-text", ["Body", "Notes"], [("Gap", front, back)], kind="cloze"
+            )
+        }
+        for front, back in corpus.CLOZE_TEMPLATES_WRITTEN[edge]
+    ]
+
+
+def write_note_check(edge):
+    cases = []
+    for k in range(7):
+        if edge in ("missing-cloze", "cloze-single", "cloze-multi", "gap"):
+            fields = [TEXTS[edge][k], ""]
+            cases.append({"notetype": corpus.cloze_type(), "fields": fields, "existing": []})
+            continue
+        notetype, first, existing = corpus.basic(), PLAIN[k], []
+        other = PLAIN[(k + 1) % 7]
+        if edge == "empty":
+            first = TEXTS["empty"][k]
+        elif edge == "empty-front":
+            notetype = corpus.basic(*corpus.TEMPLATES_WRITTEN["empty-front"][k])
+        elif edge == "duplicate":
+            first = corpus.DUPLICATE_WRITTEN[k]
+            existing = [[first, other]]
+        elif edge == "ws":
+            first = TEXTS["ws"][k]
+            existing = [[first.strip(), other]]
+        elif edge in ("unicode-nfc", "unicode-nfd"):
+            first = TEXTS[edge][k]
+            existing = [[nfd(first) if edge == "unicode-nfc" else nfc(first), other]]
+        answer = "" if edge == "empty-front" else PLAIN[(k + 2) % 7]
+        cases.append({"notetype": notetype, "fields": [first, answer], "existing": existing})
+    return cases
+
+
+def write_occlusion(edge):
+    mode = "hide-all" if edge == "occlusion-hide-all" else "hide-one"
+    return [
+        {
+            "notetype": corpus.occlusion_type(),
+            "fields": [masks, corpus.PICTURES[k], PLAIN[k]],
+            "mode": mode,
+            "ord": 0,
+        }
+        for k, masks in enumerate(corpus.MASKS_WRITTEN[edge])
+    ]
+
+
+def write_search(edge):
+    edges = (edge, "rollover") if edge in ("added-at-rollover", "rated-at-rollover") else (edge,)
+    return [
+        {"collection": source, "search": SEARCHES[edge] + suffix}
+        for source, suffix in zip(sketched(edges), corpus.SEARCH_SUFFIXES, strict=True)
+    ]
+
+
+def write_generated(edge):
+    if edge == "two-templates":
+        return [{"notetype": corpus.two_way(), "fields": list(f)} for f in corpus.TWO_WAY_FIELDS]
+    return write_ordinals(edge)
+
+
+#: Each registration's writer, by id. F12, the schema snapshot, declares no class.
+WRITERS = {
+    "F1": write_collection,
+    "F2": write_package,
+    "F3": write_import,
+    "F4": write_timing,
+    "F5": write_due,
+    "F6": write_checksum,
+    "F7": lambda edge: [{"names": list(names)} for names in corpus.NAMES_WRITTEN[edge]],
+    "F8": lambda edge: [{"names": list(names)} for names in corpus.COLLATION_WRITTEN[edge]],
+    "F9": write_blob,
+    "F10": write_answer,
+    "F11": write_guid,
+    "R-1": write_card,
+    "R-2": write_ordinals,
+    "R-3": write_cloze_text,
+    "R-4": write_text("text"),
+    "R-5": write_text("text"),
+    "R-6": write_text("html"),
+    "R-7": write_text("html"),
+    "R-8": write_latex,
+    "R-9": write_compare,
+    "R-10": write_note_type,
+    "R-11": write_note_check,
+    "R-12": write_occlusion,
+    "G-L5-1": lambda edge: [{"html": html} for html in corpus.REFS_WRITTEN[edge]],
+    "G-L5-2": lambda edge: [{"collection": source} for source in sketched((edge, "media-refs"))],
+    "G-L6-1": write_search,
+    "G-L6-2": write_search,
+    "G-L9-1": lambda edge: [
+        {"collection": source}
+        for source in sketched((edge,) if edge == "rollover" else (edge, "rollover"))
+    ],
+    "GL-1": write_timing,
+    "GL-2": lambda edge: [{"a": a, "b": b} for a, b in corpus.DECK_PAIRS_WRITTEN[edge]],
+    "GL-3": write_collection,
+    "GL-4": write_generated,
+}
 
 
 # F1 to F12: import and export.
@@ -110,6 +416,7 @@ def import_case(edge, rng):
         note["guid"] = f"ds-{rng.randrange(16**8):08x}"
     elif edge == "revlog-id-clash":
         incoming["revlog"] = [dict(incoming["revlog"][0], at_ms=target["revlog"][0]["at_ms"])]
+    explicit_mods(target["notes"][0], note, mod)
     incoming["notes"][0] = note
     return {"collection": target, "package": incoming, "kind": "personal"}
 
@@ -748,3 +1055,10 @@ FUNCTIONS.update(
         ),
     }
 )
+
+#: Each golden's written cases by class: hand cases that draw nothing, beside the drawn ones.
+WRITTEN = {
+    name: WRITTEN_BY_ID[registration["id"]]
+    for name, registration in FUNCTIONS.items()
+    if WRITTEN_BY_ID.get(registration["id"])
+}

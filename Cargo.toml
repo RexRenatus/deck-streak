@@ -55,6 +55,12 @@ deck-streak-ffi = { path = "crates/ffi" }
 deck-streak-engine-core = { path = "crates/engine-core" }
 deck-streak-xp = { path = "crates/xp" }
 deck-streak-study-day = { path = "crates/study-day" }
+deck-streak-search = { path = "crates/search" }
+deck-streak-companion = { path = "crates/companion" }
+deck-streak-companion-slot = { path = "crates/companion-slot" }
+deck-streak-collection = { path = "crates/collection" }
+deck-streak-media = { path = "crates/media" }
+deck-streak-sync = { path = "crates/sync" }
 # ADR-029: the parity oracle's golden reader. So far only a proving crate's dev-dependencies name
 # them; later ADRs cite ADR-029 rather than admitting them again.
 serde = { version = "1.0.229", features = ["derive"] }
@@ -63,6 +69,10 @@ serde_json = "1.0.154"
 # the kernel's repository base needs; a member adds tokio's features as it uses them.
 sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros"] }
 tokio = "~1.54"
+# ADR-530 (SPEC-512): the collection store's driver, with SQLite's own source bundled, at the version
+# and source the lock already holds through the engine. The collection crate and ingest's schema-18
+# adapter name it; only crates/collection/src/store.rs builds a connection.
+rusqlite = { version = "0.39.0", features = ["bundled"] }
 thiserror = "2.0.21"
 chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 tracing = "0.1.44"
@@ -206,6 +216,11 @@ sqlx-sqlite = { git = "https://github.com/RexRenatus/sqlx.git", rev = "9e8282470
 unsafe_code = "forbid"
 unused_must_use = "deny"
 missing_docs = "warn"
+# ADR-531 D7: a crate's Kani harnesses sit behind `cfg(kani)`, which only the model checker sets, so
+# the name is declared here and `-D warnings` stays clean (the formal-kani pack).
+# `cfg(kani)` is set by the Kani verifier's compiler alone, around a crate's proof harnesses
+# (ADR-527 D7); declaring it keeps `-D warnings` clean for every build that never sets it.
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(kani)"] }
 
 [workspace.lints.clippy]
 # A group sits at priority -1, so a single lint below it can override it (rs.lint-group-priority).

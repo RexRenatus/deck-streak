@@ -1,14 +1,20 @@
 import Formal.ChestVectors
+import Formal.CompanionDecideVectors
 import Formal.ExchangeVectors
 import Formal.HabitWritingVectors
+import Formal.IdSlotVectors
+import Formal.MediaBindVectors
+import Formal.MediaGcVectors
 import Formal.NextMilestoneVectors
 import Formal.OpenLapseVectors
 import Formal.RecordClassBindingVectors
 import Formal.ReleaseCarryVectors
+import Formal.ReleaseGatesVectors
 import Formal.ReplayHistoryVectors
 import Formal.RoadToC2Vectors
 import Formal.SensitiveDeckVectors
 import Formal.SkipTariffVectors
+import Formal.SyncVectors
 import Formal.TableCensusReachVectors
 import Formal.TokenBonusVectors
 import Formal.TokenProgressVectors
@@ -32,16 +38,25 @@ lists it as support.
 def main (args : List String) : IO UInt32 := do
   match args with
   | ["Chest"] => Formal.ChestVectors.run
+  | ["CompanionDecide"] => Formal.CompanionDecideVectors.run
   | ["Exchange"] => Formal.ExchangeVectors.run
   | ["HabitWriting"] => Formal.HabitWritingVectors.run
+  | ["IdSlot"] => Formal.IdSlotVectors.run
+  | ["MediaBind"] => Formal.MediaBindVectors.run
+  | ["MediaGc"] => Formal.MediaGcVectors.run
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run
   | ["OpenLapse"] => Formal.OpenLapseVectors.run
   | ["RecordClassBinding"] => Formal.RecordClassBindingVectors.run
   | ["ReleaseCarry"] => Formal.ReleaseCarryVectors.run
+  | ["ReleaseGates"] => Formal.ReleaseGatesVectors.run
   | ["ReplayHistory"] => Formal.ReplayHistoryVectors.run
   | ["RoadToC2"] => Formal.RoadToC2Vectors.run
   | ["SensitiveDeck"] => Formal.SensitiveDeckVectors.run
   | ["SkipTariff"] => Formal.SkipTariffVectors.run
+  | ["SyncClock"] => Formal.SyncVectors.runClock
+  | ["ReviewKey"] => Formal.SyncVectors.runKey
+  | ["FieldMerge"] => Formal.SyncVectors.runMerge
+  | ["PushJudge"] => Formal.SyncVectors.runJudge
   | ["TableCensusReach"] => Formal.TableCensusReachVectors.run
   | ["TokenBonus"] => Formal.TokenBonusVectors.run
   | ["TokenProgress"] => Formal.TokenProgressVectors.run

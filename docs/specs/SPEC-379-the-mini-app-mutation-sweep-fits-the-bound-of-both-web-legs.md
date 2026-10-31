@@ -148,3 +148,125 @@ whether a leg's report is written, and the verdict already reads a missing repor
 | `S37905-THE-PULL-REQUEST-WEB-LEG-HAS-NO-BOUND` | `.github/workflows/ci.yml` | the `mutation-web` job's `timeout-minutes` key is removed | `test_ci_workflows.TheWebMutationLegsHoldTheWholeSweep.test_both_web_mutation_legs_hold_the_whole_mini_app_sweep` |
 
 The rows' kills are read in CI's rows job; the test module does not run off CI for this delivery.
+
+## Amendment, 2026-10-31: the bound is re-derived from the sweep's two strata
+
+Insert-only; every earlier byte is kept. The weekly battery's whole sweep was cut at R1's 100
+minutes. Run 41190866281, `web` job 124507228303, swept the Mini App at `land/wave-3`: StrykerJS
+instrumented 112 files with 8458 mutants, and its planner named 1311 of them static (16%),
+"estimated to take 80% of the time running the tests". A static mutant runs when its file loads,
+so StrykerJS runs every test against it. The last progress line read 7188 of 8458 tested, 97.68
+minutes after mutation testing began; the job was cancelled at its bound with no report, and the
+battery's `survivors` job 124527267651 read `table: verdict: VOID`. R1 priced every mutant at one
+cost measured over a whole sweep (section 1), and a sweep cut before its static stratum
+understates that cost: this sweep's static mutants came last. Section 5's last exclusion read a
+cut at 100 as #693's measurement, not a second raise. This amendment answers the weekly leg's cut
+by the rule, pricing the static stratum on its own, and its bound stays under the hosted job's
+360-minute limit, so ADR-390's D1 keeps the sweep whole (ADR-390's 2026-10-31 addendum).
+
+### The measured inputs
+
+Each figure is read from the job's own log, as section 1 reads it: the job's start and end,
+StrykerJS's `Initial test run succeeded` line, its progress lines and its planner's static count.
+A stratum's boundary is the sweep's count less its static count; the first progress line at or past
+it starts the static stretch, which runs to the last line.
+
+- **The cut sweep.** Run 41190866281, `web` job 124507228303: 8458 mutants, 1311 static, 795
+  tests (the initial run's net 41.35 s); set-up 2.53 minutes (job 124507228303); 7188 tested at
+  97.68 minutes, 0.8153 s a mutant overall (job 124507228303); the non-static stratum, 7149 tested
+  at the boundary 7147 after 94.18 minutes, 0.7904 s a mutant (job 124507228303); the static
+  stratum's measured part, 7149 to 7188, 39 mutants in 210.01 s, 5.3849 s a mutant (job
+  124507228303). 1270 mutants were untested at the cut.
+- **The newest completed sweep.** Run 41190868264, `web` job 124507233465, at `dev` in the same
+  minute: 7784 mutants, 1269 static, 696 tests (net 21.57 s); set-up 1.37 minutes (job
+  124507233465); StrykerJS done in 94 minutes and 31 seconds, 0.7201 s a mutant over the whole
+  sweep (job 124507233465); the non-static stratum, 6517 tested after 54.67 minutes, 0.5033 s a
+  mutant; the static stratum, 6517 to 7772, 1255 mutants in 38.67 minutes, 1.8488 s a mutant (job
+  124507233465); the tail from the last progress line to the job's end, 0.15 minutes (job
+  124507233465). It ended on a complete report: StrykerJS exited 1 for a score under the break
+  threshold, not at its bound.
+- **What is not a measurement.** StrykerJS's own remaining estimate read 5 hours 40 minutes at the
+  cut (job 124507228303). In the completed sweep the same estimate read 3 hours 38 minutes at 55
+  minutes, and the sweep ended 38.42 minutes later (job 124507233465), so it is recorded and not
+  used.
+
+R1 (as amended). **The bound is the rule's, per stratum.** Both legs' `timeout-minutes` is 325.
+Each stratum at its worst measured cost a mutant, the non-static at 0.7904 s (job 124507228303,
+over 0.5033 s in job 124507233465) and the static at 5.3849 s (job 124507228303, over 1.8488 s in
+job 124507233465), times its count in the sweep to fit (7147 and 1311 of 8458, job 124507228303),
+is 12708.6 s: 1.5026 s a mutant over the whole sweep, a projected whole sweep of 211.81 minutes.
+One and a half times (SPEC-327 R2's margin) is 317.71 minutes; plus the longest measured set-up
+(2.53 minutes, job 124507228303) and the longest measured tail (0.18 minutes, job 112096749167),
+320.42 minutes, rounded up to the five. The static cost is the first stretch of that stratum, and
+in the one completed sweep the stratum's whole cost is about half its first stretch's, so the
+projection reads high.
+
+R2 (as amended). **A band holds both legs.** `WEB_MUTATION_TIMEOUT_MINUTES` in
+`scripts/tests/test_ci_workflows.py` is 325 to 420. Its floor is R1's bound, so a leg left at 100,
+or one under the floor at 324, is refused; its ceiling is twice the projected whole sweep at the
+worst cost (211.81 minutes plus 2.53 and 0.18, 214.52 minutes), 429.04, rounded down to the ten, so
+a raise past it needs a new measurement. The ceiling passes the hosted job's 360-minute execution
+limit, at which GitHub cancels any hosted job whatever its `timeout-minutes`, so a hung job ends at
+325 minutes as set and at 360 at the most. The checker is unchanged; its fixture test also plants
+a bound one under the floor.
+
+R3 and R5 stand: no StrykerJS setting, verdict code, other job or other bound changes, and each
+workflow again changes in exactly one line. `ci.yml`'s `mutation-web` is now the verdict job
+SPEC-419 gave the shards (SPEC-039 section 40); it stays in the band beside the weekly leg, and
+`mutation-web-shard`'s 100 minutes is SPEC-419's and unchanged. SPEC-039's sections 38 and 40 and
+SPEC-362's SPEC-379 amendment state R1's earlier 100; read them through this amendment.
+
+R4 (as amended). **Rows pin both bounds.** Rows `S37900` to `S37905` keep their mutants' kinds,
+re-anchored on `timeout-minutes: 325`: each leg set back to 60, set one past the new ceiling (421),
+and its bound removed. Rows `S37906` and `S37907` set each leg one under the floor (324). A1 kills
+each.
+
+## Acceptance criteria of the 2026-10-31 amendment
+
+| id | criterion | red it must show first | decided by |
+|---|---|---|---|
+| A1 | the weekly battery's `web` job and `ci.yml`'s `mutation-web` job each declare a digit-string `timeout-minutes` inside 325 to 420 (R1, R2 as amended) | red at the base, where both are 100 | `test_both_web_mutation_legs_hold_the_whole_mini_app_sweep` |
+| A2 | the checker accepts both legs at 325 and at 420, and refuses each leg at 60, at 324, at 421 and with no bound, naming that leg alone (R2 as amended) | not red: it plants its own bounds into copies of both files, so it pins the checker; rows S37900 to S37907 read A1 red | `test_a_web_leg_bound_outside_the_band_is_refused_by_its_leg` |
+
+Section 3's fence decides both, unchanged. This amendment's red and green were read by a local run
+of `python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py`, recorded in
+`docs/red-first/SPEC-379.md`; CI's `hygiene` job reads them again on the pull request's head.
+
+## File manifest of the 2026-10-31 amendment
+
+| file | context | change |
+|---|---|---|
+| `.github/workflows/mutation-weekly.yml` | CI | changed: the `web` job's `timeout-minutes`, 100 to 325, one line |
+| `.github/workflows/ci.yml` | CI | changed: the `mutation-web` job's `timeout-minutes`, 100 to 325, one line |
+| `scripts/tests/test_ci_workflows.py` | CI tests | changed: `WEB_MUTATION_TIMEOUT_MINUTES` and its comment, and A2's plants and docstring |
+| `scripts/mutation-rows.d/S37900-S37999.json` | CI tests | changed: rows `S37900` to `S37905` re-anchored and re-described; rows `S37906` and `S37907` added |
+| `docs/specs/SPEC-379-the-mini-app-mutation-sweep-fits-the-bound-of-both-web-legs.md` | docs | changed: this amendment |
+| `docs/decisions/ADR-390-the-web-legs-bound-is-raised-by-measurement-and-the-sweep-stays-whole.md` | docs | changed: the 2026-10-31 addendum |
+| `docs/red-first/SPEC-379.md` | docs | changed: A1's red and green for this amendment |
+| `changelog.d/web-mutation-band-379a.md` | docs | added: the fragment |
+
+### What this amendment does NOT do
+
+- It does not shard the weekly sweep; that stays #693, and a re-derived bound past 355 minutes
+  goes to the owner as #693's choice against ADR-390's D1.
+- It changes no StrykerJS setting (`ignoreStatic`, `concurrency` or `mutate`), each rejected in
+  ADR-390, and the sweep's growth stays tracked by #693.
+
+### Risks of the 2026-10-31 amendment
+
+- **The static stratum costs more than its first stretch.** A static mutant that survives runs
+  every test, so a sweep with more static survivors costs more. Detected by the weekly leg's own
+  duration in every run: a completed leg past two thirds of 325 (216:40) is the signal to
+  re-measure (#693).
+- **A hung job holds a runner longer.** Either leg, the verdict job included, now runs to 325
+  minutes before it is cancelled. StrykerJS's own per-test timeout still ends a mutant's hung test.
+
+### Mutation rows of the 2026-10-31 amendment
+
+| stem | file | mutant | killer |
+|---|---|---|---|
+| `S37906-THE-WEEKLY-WEB-LEG-SITS-UNDER-THE-FLOOR` | `.github/workflows/mutation-weekly.yml` | the `web` job's bound is 324, one under the floor | `test_ci_workflows.TheWebMutationLegsHoldTheWholeSweep.test_both_web_mutation_legs_hold_the_whole_mini_app_sweep` |
+| `S37907-THE-PULL-REQUEST-WEB-LEG-SITS-UNDER-THE-FLOOR` | `.github/workflows/ci.yml` | the `mutation-web` job's bound is 324, one under the floor | `test_ci_workflows.TheWebMutationLegsHoldTheWholeSweep.test_both_web_mutation_legs_hold_the_whole_mini_app_sweep` |
+
+Rows `S37900` to `S37905` keep their stems and killer; their finds name `timeout-minutes: 325`, and
+`S37902` and `S37903` set 421.

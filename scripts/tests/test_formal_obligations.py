@@ -28,24 +28,14 @@ PHASES = {
 # The planned entries, each with the obligations that name it.
 PLANNED_ENTRIES = {
     "tla/ScheduledAnswer": ("O1a", "O6"),
-    "tla/OpLog": ("O1", "O2", "O3", "O11"),
     "tla/CollectionStore": ("O12",),
     "tla/MediaSync": ("O13",),
     "tla/RelayEnvelope": ("O7",),
     "tla/AnkiCutover": ("O8",),
-    "lean/CompanionDecide": ("O6",),
     "lean/ScheduledState": ("O6",),
-    "lean/ReleaseGates": ("O17",),
-    "lean/SyncClock": ("O1", "O16"),
-    "lean/ReviewKey": ("O1", "O16"),
-    "lean/FieldMerge": ("O1", "O16"),
-    "lean/PushJudge": ("O1", "O16"),
-    "lean/IdSlot": ("O12",),
     "lean/EffectiveLog": ("O12",),
     "lean/QueueRule": ("O12",),
     "lean/AnkiDay": ("O12",),
-    "lean/MediaBind": ("O13",),
-    "lean/MediaGc": ("O13",),
     "lean/SearchCompile": ("O14",),
     "lean/ClozeFront": ("O15",),
     "lean/Allowlist": ("O15",),
@@ -54,6 +44,15 @@ PLANNED_ENTRIES = {
     "lean/ImportPlan": ("O8",),
     "lean/AnkiRoundTrip": ("O9",),
     "lean/EnvelopeLayout": ("O7",),
+}
+# The sync entries that land ahead of the sync core (SPEC-504), each with the obligations that name
+# it; each such obligation lists every name the entry's header declares, present.
+SYNC_ENTRIES = {
+    "tla/OpLog": ("O1", "O2", "O3", "O11"),
+    "lean/SyncClock": ("O1", "O16"),
+    "lean/ReviewKey": ("O1", "O16"),
+    "lean/FieldMerge": ("O1", "O16"),
+    "lean/PushJudge": ("O1", "O16"),
 }
 # The planned Kani harnesses of this repository's own code, each in the obligation of its layer.
 HARNESSES = {
@@ -110,7 +109,81 @@ REPLAY_TIE = {
     "test": "crates/fsrs7/tests/formal_vectors_replay_history.rs"
     "::the_history_selection_matches_the_lean_vectors",
 }
-# The 43 existing entries' dispositions.
+# The release gates' entry (SPEC-502): present, and tied by the release lane's Python vectors test.
+RELEASE_GATES = "lean/ReleaseGates"
+RELEASE_GATES_TIE = {
+    "method": "vectors",
+    "for": RELEASE_GATES,
+    "test": "scripts/tests/test_release_gates.py"
+    "::TheLeanVectors.test_every_vector_is_the_scripts_verdict",
+}
+# SPEC-501: the scheduling companion's decision, the first planned entry built, present under O6
+# with its vectors tie.
+COMPANION_ENTRIES = ("lean/CompanionDecide",)
+# SPEC-514: the skip wrap's holds, present under O14 beside its still planned entry and harnesses.
+SEARCH_ENTRIES = ("lean/SearchHolds",)
+COMPANION_TIE = {
+    "method": "vectors",
+    "for": "lean/CompanionDecide",
+    "test": "crates/companion/tests/formal_vectors_decide.rs"
+    "::decide_and_negotiate_answer_every_lean_vector",
+}
+# SPEC-513: the media core's bind machine and sweep decision, present under O13 beside the media
+# sync model and the store's two harnesses, still planned; each with its vectors tie.
+MEDIA_ENTRIES = ("lean/MediaBind", "lean/MediaGc")
+MEDIA_TIES = [
+    {
+        "method": "vectors",
+        "for": "lean/MediaBind",
+        "test": "crates/media/tests/formal_vectors_bind.rs"
+        "::step_and_release_step_answer_every_lean_vector",
+    },
+    {
+        "method": "vectors",
+        "for": "lean/MediaGc",
+        "test": "crates/media/tests/formal_vectors_gc.rs::fate_answers_every_lean_vector",
+    },
+]
+# SPEC-509: the sync core's id allocator, present under O12 with its vectors tie, and the three
+# sync entries it stamps, each tied under O16 by the crate's test that reads its vectors.
+ID_SLOT_ENTRIES = ("lean/IdSlot",)
+ID_SLOT_TIE = {
+    "method": "vectors",
+    "for": "lean/IdSlot",
+    "test": "crates/sync/tests/formal_vectors_id_slot.rs"
+    "::next_id_answers_every_lean_id_slot_vector_byte_equal",
+}
+SYNC_CORE_TIES = [
+    {
+        "method": "vectors",
+        "for": "lean/SyncClock",
+        "test": "crates/sync/tests/formal_vectors_sync_clock.rs"
+        "::tick_and_recv_answer_every_lean_clock_vector_byte_equal",
+    },
+    {
+        "method": "vectors",
+        "for": "lean/ReviewKey",
+        "test": "crates/sync/tests/formal_vectors_review_key.rs"
+        "::sort_keys_orders_every_lean_review_key_vector_byte_equal",
+    },
+    {
+        "method": "vectors",
+        "for": "lean/FieldMerge",
+        "test": "crates/sync/tests/formal_vectors_field_merge.rs"
+        "::apply_merges_every_lean_field_merge_vector_byte_equal",
+    },
+]
+# The entries built after the 44 were dispositioned, each with its disposition and the
+# obligations that name it.
+NEW_ENTRIES = {
+    "lean/CompanionDecide": ("keep", {"O6"}),
+    "lean/SearchHolds": ("keep", {"O14"}),
+    "lean/MediaBind": ("keep", {"O13"}),
+    "lean/MediaGc": ("keep", {"O13"}),
+    "lean/IdSlot": ("keep", {"O12"}),
+}
+# The 49 dispositioned entries: the 43 that predate the sync entries, those five, and the
+# release gates' entry.
 DISPOSITIONS = {
     "retire": ("tla/FullSyncChoice", "tla/SyncSnapshotWindow"),
     "re-point": (
@@ -128,7 +201,8 @@ DISPOSITIONS = {
         "tla/SensitiveDeckGate",
         "tla/SkipDayOnce",
         "lean/SensitiveDeck",
-    ),
+    )
+    + tuple(SYNC_ENTRIES),
     "keep": tuple(
         f"tla/{name}"
         for name in (
@@ -158,6 +232,7 @@ DISPOSITIONS = {
             "OpenLapse",
             "RecordClassBinding",
             "ReleaseCarry",
+            "ReleaseGates",
             "ReplayHistory",
             "RoadToC2",
             "SkipTariff",
@@ -180,7 +255,8 @@ HEX64 = re.compile(r"^[0-9a-f]{64}$")
 # The small tree every planted fault is judged over. Two TLA+ entries, the first bound by a covers
 # stamp; a Lean entry beside a vectors module that declares nothing; a Rust test file with one test,
 # one commented-out test, one test inside a block comment and one plain function; a Rust source
-# with one Kani harness and one plain function; and a Python test module. Every text is synthetic.
+# with one Kani harness and one plain function; and a Python test module with a test method, a
+# helper method and a top-level function named as a test. Every text is synthetic.
 FIXTURE = {
     "formal/tla/Alpha/Alpha.tla": (
         "---- MODULE Alpha ----\n"
@@ -211,7 +287,8 @@ FIXTURE = {
     ),
     "scripts/tests/test_demo.py": (
         "import unittest\n\n\nclass Demo(unittest.TestCase):\n"
-        "    def test_runs(self):\n        pass\n\n    def helper(self):\n        pass\n"
+        "    def test_runs(self):\n        pass\n\n    def helper(self):\n        pass\n\n\n"
+        "def test_at_module_level():\n    pass\n"
     ),
 }
 GOOD_RS = "crates/demo/tests/formal_vectors_gamma.rs::the_gamma_vectors_hold"
@@ -331,6 +408,20 @@ def kani_at(harness, at=None):
     return artifact
 
 
+class Instead:
+    """What a planted change gives when its fault is the ledger's own type: the whole ledger."""
+
+    def __init__(self, document):
+        self.document = document
+
+
+def planted(change):
+    """An accepted ledger with `change` planted in it, or the ledger the change gives instead."""
+    document = accepted()
+    given = change(document)
+    return given.document if isinstance(given, Instead) else document
+
+
 # Each planted fault: its label, the one arm that must refuse it, and the change to an accepted
 # ledger that plants it.
 SCHEMA_PLANTS = (
@@ -389,6 +480,62 @@ SCHEMA_PLANTS = (
         "an unknown row disposition",
         "shape",
         lambda d: row(d, "tla/Beta").update(disposition="archive"),
+    ),
+    # Each shape below has one refusal of its own in the checker, and its plant reaches only that.
+    ("a ledger that is not an object", "shape", lambda d: Instead([d])),
+    ("an obligation that is not an object", "shape", lambda d: d["obligations"].append("O3")),
+    (
+        "an artifact that is not an object",
+        "shape",
+        lambda d: obligation(d, "O1")["artifacts"].append("tla/Planned"),
+    ),
+    (
+        "a planned harness whose at is not a path",
+        "shape",
+        lambda d: obligation(d, "O1")["artifacts"][1].update(at=7),
+    ),
+    (
+        "a present artifact whose property is not a name",
+        "shape",
+        lambda d: obligation(d, "O2")["artifacts"][0].update(property="Holds always"),
+    ),
+    (
+        "a present artifact that names no property",
+        "shape",
+        lambda d: obligation(d, "O2")["artifacts"][0].pop("property"),
+    ),
+    (
+        "a tie that is not an object",
+        "shape",
+        lambda d: obligation(d, "O1")["ties"].append("vectors"),
+    ),
+    (
+        "a tie whose mutant is blank",
+        "shape",
+        lambda d: obligation(d, "O2")["ties"][1].update(mutant=" "),
+    ),
+    (
+        "phase sets that are not an object",
+        "shape",
+        lambda d: d.update(phases=[["O1"], ["O1", "O2"]]),
+    ),
+    (
+        "a phase set that is not a list of ids",
+        "shape",
+        lambda d: d["phases"].update({"1": "O1"}),
+    ),
+    ("a row that is not an object", "shape", lambda d: d["entries"].append("tla/Alpha")),
+    (
+        "a row whose entry is not <kind>/<Name>",
+        "shape",
+        lambda d: d["entries"].append(
+            {"entry": "Alpha", "disposition": "keep", "act": "kept", "obligations": []}
+        ),
+    ),
+    (
+        "a row naming an obligation twice",
+        "shape",
+        lambda d: row(d, "tla/Alpha").update(obligations=["O2", "O2"]),
     ),
 )
 PHASE_PLANTS = (
@@ -481,6 +628,11 @@ TIE_PLANTS = tuple(
     (f"a tie naming {test}", "undefined-test", lambda d, test=test: tie_to(d, "O1", test))
     for test in UNDEFINED_TESTS
 ) + (
+    (
+        "a tie naming a top-level test function, not <Class>.<method>",
+        "undefined-test",
+        lambda d: tie_to(d, "O1", "scripts/tests/test_demo.py::test_at_module_level"),
+    ),
     (
         "a tie whose method is a covers stamp",
         "tie-method",
@@ -670,9 +822,9 @@ class TheFormalLedger(unittest.TestCase):
         # The fixture tree, built once for the class. unittest calls this on the class, and a
         # static method is a name the workflow files' read census places; a class method is not.
         cls = TheFormalLedger
-        cls._scratch = tempfile.TemporaryDirectory()
-        cls.addClassCleanup(cls._scratch.cleanup)
-        cls.tree = Path(cls._scratch.name)
+        scratch = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(scratch.cleanup)
+        cls.tree = Path(scratch.name)
         for relative, text in FIXTURE.items():
             path = cls.tree / relative
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -684,8 +836,7 @@ class TheFormalLedger(unittest.TestCase):
     def assert_planted(self, plants):
         """Each planted fault is refused by its one arm, and by no other."""
         for label, arm, change in examined("planted faults", plants):
-            document = accepted()
-            change(document)
+            document = planted(change)
             refusals = ledger.check(document, self.tree)
             with self.subTest(plant=label):
                 self.assertEqual({r.arm for r in refusals}, {arm}, f"{label}: {refusals}")
@@ -705,7 +856,8 @@ class TheFormalLedger(unittest.TestCase):
         obligations = document["obligations"]
         self.assertEqual([item["id"] for item in obligations], IDS)
         self.assertEqual(
-            {item["id"]: item["status"] for item in obligations}, dict.fromkeys(IDS, "planned")
+            {item["id"]: item["status"] for item in obligations},
+            dict.fromkeys(IDS, "planned") | {"O17": "tied"},
         )
         planned, harnesses, companions, present_names = {}, {}, {}, {}
         for item in obligations:
@@ -724,15 +876,41 @@ class TheFormalLedger(unittest.TestCase):
         self.assertEqual(harnesses, {harness: {item} for harness, item in HARNESSES.items()})
         self.assertEqual(companions, COMPANIONS)
         headers = header_names(REPO)
-        self.assertEqual(set(present_names), {"O1a", "O11"})
-        for identity, entries in (("O1a", SYNC_MODELS), ("O11", ENGINE_TIED)):
+        sync_named = {}
+        for entry, ids in SYNC_ENTRIES.items():
+            for identity in ids:
+                sync_named.setdefault(identity, []).append(entry)
+        expected_present = {
+            "O1a": SYNC_MODELS,
+            "O6": COMPANION_ENTRIES,
+            "O11": ENGINE_TIED + ("tla/OpLog",),
+            "O12": ID_SLOT_ENTRIES,
+            "O13": MEDIA_ENTRIES,
+            "O14": SEARCH_ENTRIES,
+            "O17": (RELEASE_GATES,),
+        }
+        for identity, entries in sync_named.items():
+            if identity != "O11":
+                expected_present[identity] = tuple(entries)
+        self.assertEqual(set(present_names), set(expected_present))
+        for identity, entries in expected_present.items():
             names = present_names[identity]
             self.assertEqual(len(names), len(set(names)), f"{identity} names an artifact twice")
             self.assertEqual(set(names), {(e, p) for e in entries for p in headers[e]})
-        self.assertEqual([tie for item in obligations for tie in item["ties"]], [REPLAY_TIE])
+        self.assertEqual(
+            [tie for item in obligations for tie in item["ties"]],
+            [
+                COMPANION_TIE,
+                REPLAY_TIE,
+                ID_SLOT_TIE,
+                *MEDIA_TIES,
+                *SYNC_CORE_TIES,
+                RELEASE_GATES_TIE,
+            ],
+        )
         examined("planned entries", planned)
         examined("planned harnesses", harnesses)
-        examined("present artifacts", present_names["O1a"] + present_names["O11"])
+        examined("present artifacts", [n for names in present_names.values() for n in names])
 
     def test_the_phase_sets_list_o1a_and_o1_to_o11(self):
         document = load()
@@ -797,7 +975,15 @@ class TheFormalLedger(unittest.TestCase):
         for tie in examined("committed ties", ties):
             path, name = tie["test"].split("::")
             text = (REPO / path).read_text(encoding="utf-8")
-            self.assertRegex(text, rf"#\[test\]\s*fn {name}\(", tie)
+            if path.endswith(".py"):
+                # A Python tie names `<Class>.<method>`: a test method of a top-level class.
+                owner, method = name.split(".")
+                self.assertTrue(method.startswith("test"), tie)
+                body = re.search(rf"(?ms)^class {owner}\(.*?(?=^\S|\Z)", text)
+                self.assertIsNotNone(body, tie)
+                self.assertRegex(body.group(0), rf"(?m)^    def {method}\(self", tie)
+            else:
+                self.assertRegex(text, rf"#\[test\]\s*fn {name}\(", tie)
         arms = {"tie-method", "tie-without-for", "tie-for-unknown", "undefined-test"}
         refusals = [r for r in ledger.check(document, REPO) if r.arm in arms | {"untied-artifact"}]
         self.assertEqual(refusals, [])
@@ -811,17 +997,26 @@ class TheFormalLedger(unittest.TestCase):
         expected = {
             entry: disposition for disposition, entries in DISPOSITIONS.items() for entry in entries
         }
-        self.assertEqual(len(expected), 43)
-        self.assertEqual(set(tree), set(expected), "the tree's entries are not the 43 designed")
+        self.assertEqual(len(expected), 49)
+        self.assertFalse(set(expected) & set(NEW_ENTRIES), "a new entry was among the 49")
+        expected.update({entry: disposition for entry, (disposition, _) in NEW_ENTRIES.items()})
+        self.assertEqual(
+            set(tree), set(expected), "the tree's entries are not the 49 designed and the new ones"
+        )
         rows = {item["entry"]: item for item in examined("rows", document["entries"])}
         self.assertEqual(len(rows), len(document["entries"]), "an entry has two rows")
         self.assertEqual({entry: item["disposition"] for entry, item in rows.items()}, expected)
         for entry, item in rows.items():
-            linked = (
-                {"O1a", "O11"}
-                if entry in SYNC_MODELS
-                else ({"O11"} if entry in ENGINE_TIED else set())
-            )
+            if entry in NEW_ENTRIES:
+                linked = NEW_ENTRIES[entry][1]
+            elif entry in SYNC_MODELS:
+                linked = {"O1a", "O11"}
+            elif entry in ENGINE_TIED:
+                linked = {"O11"}
+            elif entry == RELEASE_GATES:
+                linked = {"O17"}
+            else:
+                linked = set(SYNC_ENTRIES.get(entry, ()))
             self.assertEqual(set(item["obligations"]), linked, entry)
             self.assertTrue(item["act"].strip(), entry)
         arms = {"entry-without-row", "row-without-entry", "duplicate-row", "row-obligations"}

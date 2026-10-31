@@ -2,6 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, expect, it } from 'vitest';
+import { frameDocument } from '#lib/card/frame-document.js';
 import { EngineError } from '#lib/engine/client.js';
 import type { CardView, Head, UndoOffer } from '#lib/engine/protocol.js';
 import {
@@ -274,10 +275,10 @@ describe('the review', () => {
 
     // the frame refuses the card; its controls stay, and the status region says why
     expect(review.controls).toEqual(['show-answer', 'bury', 'flag']);
-    expect([review.phase, review.escaped, review.status]).toEqual(['question', true, 'escaped']);
+    expect([review.phase, review.escaped, review.status]).toEqual(['question', true, 'style-closed']);
     review.act('show-answer');
     expect(review.controls).toEqual(['again', 'good', 'bury', 'flag']);
-    expect([review.phase, review.escaped, review.status]).toEqual(['answer', true, 'escaped']);
+    expect([review.phase, review.escaped, review.status]).toEqual(['answer', true, 'style-closed']);
     review.act('good');
     await review.settled();
     expect(client.calls).toEqual(['card', 'rate 1 3 0', 'card']);
@@ -459,7 +460,27 @@ describe('the review', () => {
     await review.settled();
     expect([review.side, review.escaped, review.status]).toEqual(['question', false, null]);
     review.act('show-answer');
-    expect([review.side, review.escaped, review.status]).toEqual(['answer', true, 'escaped']);
+    expect([review.side, review.escaped, review.status]).toEqual(['answer', true, 'reparse-element']);
+  });
+
+  // SPEC-505 R2, R3; ADR-523 D2. The status reads the one composition the frame renders, its host
+  // included: a face whose document is kept but whose host does not read it back (a carriage
+  // return, which the host's parser reads as a line feed) is refused in the status by the host.
+  it("a face its host does not read back is refused in the status by the host's reason", async () => {
+    const question = '<p>a&#13;b</p>';
+    const review = new Review(
+      async () => new FakeClient([head(view(1, { question }))]),
+      () => 0,
+      () => undefined
+    );
+    review.start();
+    await review.settled();
+    // the face's document alone is kept, so only its host refuses it
+    expect(frameDocument(question, view(1).css, 'card card1').refused).toBeUndefined();
+    expect([review.side, review.escaped, review.status]).toEqual(['question', true, 'host-readback']);
+    // the control: the answer, with no carriage return, is kept
+    review.act('show-answer');
+    expect([review.side, review.escaped, review.status]).toEqual(['answer', false, null]);
   });
 
   it('the frame shows the faces the engine completed', async () => {
@@ -866,5 +887,99 @@ describe("the undo of the review's last bury or flag", () => {
       expect(answered.statusLine, why).toBe(line);
     }
     examined("an answer's notices", answers);
+  });
+});
+
+// SPEC-507 R1, R9; SPEC-506 R5. The review's overlays stop the answer clock until the last one
+// closes, a close with none open changes nothing, the card health read asks only for a shown card,
+// and a clip with no local voice is drawn at once.
+describe("the review's overlays and its card health read", () => {
+  it('a close with no overlay open changes nothing, and the clock stops until the last overlay closes', async () => {
+    const client = new FakeClient([head(view(1)), head(view(2)), head(null)]);
+    let time = 1000;
+    const review = new Review(
+      async () => client,
+      () => time,
+      () => undefined
+    );
+    review.start();
+    await review.settled();
+    // a close with nothing open, then one overlay for 30 s: the grade sends the 3 s outside it
+    review.closeOverlay();
+    time += 1_000;
+    review.openOverlay();
+    time += 30_000;
+    review.closeOverlay();
+    time += 2_000;
+    review.act('show-answer');
+    review.act('good');
+    await review.settled();
+    expect(client.calls).toEqual(['card', 'rate 1 3 3000', 'card']);
+
+    // two overlays, the second closed last: the clock runs again only then
+    time += 1_000;
+    review.openOverlay();
+    time += 10_000;
+    review.openOverlay();
+    time += 10_000;
+    review.closeOverlay();
+    time += 10_000;
+    review.closeOverlay();
+    time += 4_000;
+    review.act('show-answer');
+    review.act('good');
+    await review.settled();
+    expect(client.calls).toEqual(['card', 'rate 1 3 3000', 'card', 'rate 2 3 5000', 'card']);
+  });
+
+  it('the card health read is null before a card shows and asks nothing, and null from a client that reads none', async () => {
+    class HealthClient extends FakeClient {
+      asked: bigint[] = [];
+
+      async cardHealth(card: bigint): Promise<null> {
+        this.asked.push(card);
+        return null;
+      }
+    }
+    const health = new HealthClient([head(view(1))]);
+    const review = new Review(
+      async () => health,
+      () => 0,
+      () => undefined
+    );
+    // no card is shown yet: nothing is asked
+    expect(await review.cardHealth()).toBeNull();
+    expect(health.asked).toEqual([]);
+    review.start();
+    await review.settled();
+    expect(await review.cardHealth()).toBeNull();
+    expect(health.asked).toEqual([1n]);
+
+    // a client with no card health read: null, and the review goes on
+    const plain = new FakeClient([head(view(1))]);
+    const without = new Review(
+      async () => plain,
+      () => 0,
+      () => undefined
+    );
+    without.start();
+    await without.settled();
+    expect(await without.cardHealth()).toBeNull();
+    expect(without.phase).toBe('question');
+  });
+
+  it('a clip with no local voice is drawn at once, its language named in the status', async () => {
+    const client = new FakeClient([head(view(1))]);
+    const drawn: (string | null)[] = [];
+    const review: Review = new Review(
+      async () => client,
+      () => 0,
+      () => drawn.push(review.statusLine)
+    );
+    review.start();
+    await review.settled();
+    const before = drawn.length;
+    review.unvoiced('ja-JP');
+    expect(drawn.slice(before)).toEqual(['No voice on this device for ja-JP.']);
   });
 });

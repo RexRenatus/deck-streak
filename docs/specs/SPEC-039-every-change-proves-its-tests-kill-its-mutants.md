@@ -1404,3 +1404,15 @@ here (ADR-511): `mutation-plan` gains job-level permissions of `contents: read` 
 and a `carry` step, and `shards` deals the re-run set, `python-rerun.json`; `mutation-verdict` holds the listing to the re-run
 names plus the carried ones and keeps `mutation-outcomes`. The listing, every bound and R3's jobs are unchanged, a carried
 outcome is judged at the head as a re-run one is, and Rust, rows and web outcomes are never carried.
+
+## 42. Amendment: on the release run the mutation jobs are advisory in `ci` (SPEC-500)
+
+Insert-only; every earlier byte is kept. R3 has a release pull request into `main` judged on its merge diff, and each
+job's result a need of `ci`. SPEC-500 keeps every job, its diff and its report as R3 has them, and changes how `ci`
+reads them on that one run (ADR-518): `base-is-dev` names the release run by `release_run`'s predicate in a second
+step, and on the run it names `ci` prints each of the 8 mutation jobs' results, to its log and its step summary, and
+admits one non-success result, by value, for each mutation job's non-success result. Every other need must succeed as
+on any run. Every pull request into `dev` and every push keeps R3's rule: a failed or cancelled mutation job fails
+`ci`, and only the legs SPEC-290 and SPEC-422 name may read `skipped`. Section 1's reading, that GitHub runs
+`schedule` only from the default branch, is why it matters: the weekly battery reaches `main` only through a release
+pull request that can merge.

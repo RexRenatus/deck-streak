@@ -1,0 +1,2034 @@
+{
+  "cases": [
+    {
+      "class": "cloze-single",
+      "input": {
+        "fields": [
+          "harbor {{c1::garnet}}",
+          "dune dune fjord garnet amber"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "class": "cloze-single",
+      "input": {
+        "fields": [
+          "{{c1::amber}}",
+          "amber basil"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "class": "cloze-single",
+      "input": {
+        "fields": [
+          "cobalt {{c1::dune}} ember",
+          "cobalt"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "class": "cloze-single",
+      "input": {
+        "fields": [
+          "{{c1::fjord garnet}} harbor",
+          "dune ember fjord"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "class": "cloze-single",
+      "input": {
+        "fields": [
+          "indigo {{c1::<b>juniper</b>}}",
+          "garnet harbor"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "class": "cloze-single",
+      "input": {
+        "fields": [
+          "  {{c1:: ember }}  ",
+          "indigo"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "class": "cloze-single",
+      "input": {
+        "fields": [
+          "{{c1::basil}}.",
+          "juniper amber cobalt"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "class": "cloze-single",
+      "input": {
+        "fields": [
+          "<div>{{c1::cobalt}}</div>",
+          "basil dune"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "class": "cloze-multi",
+      "input": {
+        "fields": [
+          "{{c1::juniper}} {{c2::harbor}} {{c1::juniper}}",
+          "cobalt juniper indigo"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "class": "cloze-multi",
+      "input": {
+        "fields": [
+          "{{c1::amber}} {{c2::basil}}",
+          "amber basil"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "class": "cloze-multi",
+      "input": {
+        "fields": [
+          "{{c1::cobalt}} {{c1::dune}}",
+          "cobalt"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "class": "cloze-multi",
+      "input": {
+        "fields": [
+          "{{c1::ember}} {{c2::fjord}} {{c3::garnet}}",
+          "dune ember fjord"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0,
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "class": "cloze-multi",
+      "input": {
+        "fields": [
+          "{{c2::harbor}} {{c1::indigo}}",
+          "garnet harbor"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "class": "cloze-multi",
+      "input": {
+        "fields": [
+          "{{c1::juniper}} and {{c2::amber::hint}} and {{c3::basil}}",
+          "indigo"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0,
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "class": "cloze-multi",
+      "input": {
+        "fields": [
+          "{{c1::cobalt}}{{c2::dune}}",
+          "juniper amber cobalt"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "class": "cloze-multi",
+      "input": {
+        "fields": [
+          "{{c10::ember}} {{c2::fjord}}",
+          "basil dune"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          1,
+          9
+        ]
+      }
+    },
+    {
+      "class": "gap",
+      "input": {
+        "fields": [
+          "{{c1::harbor}} {{c3::harbor}}",
+          "cobalt fjord indigo cobalt"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0,
+          2
+        ]
+      }
+    },
+    {
+      "class": "gap",
+      "input": {
+        "fields": [
+          "{{c1::amber}} {{c3::basil}}",
+          "amber basil"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0,
+          2
+        ]
+      }
+    },
+    {
+      "class": "gap",
+      "input": {
+        "fields": [
+          "{{c2::cobalt}}",
+          "cobalt"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          1
+        ]
+      }
+    },
+    {
+      "class": "gap",
+      "input": {
+        "fields": [
+          "{{c1::dune}} {{c5::ember}}",
+          "dune ember fjord"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0,
+          4
+        ]
+      }
+    },
+    {
+      "class": "gap",
+      "input": {
+        "fields": [
+          "{{c3::fjord}} {{c1::garnet}}",
+          "garnet harbor"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0,
+          2
+        ]
+      }
+    },
+    {
+      "class": "gap",
+      "input": {
+        "fields": [
+          "{{c2::harbor}} {{c4::indigo}}",
+          "indigo"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          1,
+          3
+        ]
+      }
+    },
+    {
+      "class": "gap",
+      "input": {
+        "fields": [
+          "{{c1::juniper}} {{c2::amber}} {{c4::basil}}",
+          "juniper amber cobalt"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0,
+          1,
+          3
+        ]
+      }
+    },
+    {
+      "class": "gap",
+      "input": {
+        "fields": [
+          "{{c10::cobalt}}",
+          "basil dune"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          9
+        ]
+      }
+    },
+    {
+      "class": "empty-front",
+      "input": {
+        "fields": [
+          "ember {{c1::dune {{c2::dune {{c3::garnet {{c4::indigo indigo}}}}}}}} dune indigo fjord {{c1::indigo}} {{c3::ember}}",
+          ""
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{#Answer}}{{Answer}}{{/Answer}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "class": "empty-front",
+      "input": {
+        "fields": [
+          "amber basil",
+          ""
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{^Prompt}}{{Answer}}{{/Prompt}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "class": "empty-front",
+      "input": {
+        "fields": [
+          "cobalt",
+          ""
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "refused": "card_type_error"
+      }
+    },
+    {
+      "class": "empty-front",
+      "input": {
+        "fields": [
+          "dune ember fjord",
+          ""
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{Answer}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "class": "empty-front",
+      "input": {
+        "fields": [
+          "garnet harbor",
+          ""
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "<div class=ds-front>{{Answer}}</div>",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "class": "empty-front",
+      "input": {
+        "fields": [
+          "indigo",
+          ""
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{#Answer}}<b>{{Prompt}}</b>{{/Answer}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "class": "empty-front",
+      "input": {
+        "fields": [
+          "juniper amber cobalt",
+          ""
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{text:Answer}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "class": "empty-front",
+      "input": {
+        "fields": [
+          "basil dune",
+          ""
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{hint:Answer}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "class": "two-templates",
+      "input": {
+        "fields": [
+          "garnet ember basil",
+          "basil harbor garnet garnet"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.both-ways",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{Prompt}}",
+              "name": "Forward"
+            },
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Prompt}}",
+              "front": "{{Answer}}",
+              "name": "Backward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "class": "two-templates",
+      "input": {
+        "fields": [
+          "amber",
+          "basil"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.both-ways",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{Prompt}}",
+              "name": "Forward"
+            },
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Prompt}}",
+              "front": "{{Answer}}",
+              "name": "Backward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "class": "two-templates",
+      "input": {
+        "fields": [
+          "cobalt",
+          ""
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.both-ways",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{Prompt}}",
+              "name": "Forward"
+            },
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Prompt}}",
+              "front": "{{Answer}}",
+              "name": "Backward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "class": "two-templates",
+      "input": {
+        "fields": [
+          "",
+          "dune"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.both-ways",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{Prompt}}",
+              "name": "Forward"
+            },
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Prompt}}",
+              "front": "{{Answer}}",
+              "name": "Backward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          1
+        ]
+      }
+    },
+    {
+      "class": "two-templates",
+      "input": {
+        "fields": [
+          "ember fjord",
+          "garnet"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.both-ways",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{Prompt}}",
+              "name": "Forward"
+            },
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Prompt}}",
+              "front": "{{Answer}}",
+              "name": "Backward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "class": "two-templates",
+      "input": {
+        "fields": [
+          "<b>harbor</b>",
+          "indigo"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.both-ways",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{Prompt}}",
+              "name": "Forward"
+            },
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Prompt}}",
+              "front": "{{Answer}}",
+              "name": "Backward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "class": "two-templates",
+      "input": {
+        "fields": [
+          "juniper",
+          "juniper"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.both-ways",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{Prompt}}",
+              "name": "Forward"
+            },
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Prompt}}",
+              "front": "{{Answer}}",
+              "name": "Backward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "class": "two-templates",
+      "input": {
+        "fields": [
+          " ",
+          "amber"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.both-ways",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{Prompt}}",
+              "name": "Forward"
+            },
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Prompt}}",
+              "front": "{{Answer}}",
+              "name": "Backward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          1
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "\\(dune^{2}\\) {{c1::\\(basil + 1\\)}}",
+          "cobalt ember amber garnet ember"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "{{c1::garnet::fjord hint}} indigo",
+          "harbor ember indigo"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "{{c1::indigo cobalt}}",
+          "amber fjord harbor"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "amber ember",
+          "<b>{{c1::harbor</b> cobalt}} garnet fjord dune"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{hint:Answer}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "{{c1::harbor {{c2::ember indigo}}}} basil",
+          "مرحبا بكم juniper cobalt basil"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{Prompt}} {{^Answer}}<b>{{Prompt}}</b>{{/Answer}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "harbor ember harbor",
+          "ember garnet &amp; &lt;juniper&gt; &nbsp;&#x263A;&#9731;"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{Prompt}} {{hint:Answer}} {{#Answer}}<i>{{Answer}}</i>{{/Answer}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "\\(fjord^{2}\\) {{c1::\\(garnet + 1\\)}}",
+          "amber"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "cobalt harbor cobalt <b>garnet <i>amber</b> שלום עולם garnet 電車[よみ] 電車",
+          "ember garnet fjord"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{^Answer}}<b>{{Prompt}}</b>{{/Answer}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "juniper COBALT Cobalt",
+          "cobalt"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{#Answer}}<i>{{Answer}}</i>{{/Answer}} {{Prompt}} {{text:Prompt}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "{{c1::indigo {{c2::cobalt {{c3::ember {{c4::basil amber}}}}}}}} ember garnet fjord",
+          "harbor dune ember &amp; &lt;amber&gt; &nbsp;&#x263A;&#9731; dune dune <b>dune <i>harbor</b>"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{hint:Answer}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "harbor indigo",
+          "ember indigo juniper ember harbor basil <img src=\"ds_basil.png\"> [sound:ds_cobalt.mp3]"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{Prompt}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "cobalt {{c1::fjord {{c2::dune {{c3::cobalt {{c4::cobalt basil}}}}}}}} dune ember harbor basil dune cobalt",
+          "{{c1::cobalt::garnet hint}} indigo harbor"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{^Answer}}<b>{{Prompt}}</b>{{/Answer}} {{text:Prompt}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "🙂 🙂 🙂 fjord <b>{{c1::amber</b> ember}} indigo &amp; &lt;cobalt&gt; &nbsp;&#x263A;&#9731;",
+          "indigo basil fjord"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{text:Prompt}} {{hint:Answer}} {{Prompt}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "ember",
+          "שלום עולם ember dune indigo dune   indigo\t juniper \n café cobalt naïve"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{Prompt}} {{^Answer}}<b>{{Prompt}}</b>{{/Answer}} {{hint:Answer}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "dune juniper harbor {{c1::garnet basil}}",
+          "cobalt harbor fjord basil basil cobalt"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{text:Prompt}} {{Prompt}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "juniper amber fjord",
+          "fjord harbor harbor cobalt ember garnet ember amber garnet <b>garnet <i>fjord</b> "
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{#Answer}}<i>{{Answer}}</i>{{/Answer}} {{hint:Answer}} {{^Answer}}<b>{{Prompt}}</b>{{/Answer}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "amber amber {{c1::harbor}}",
+          "{{c1::juniper indigo}} indigo garnet dune"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{Prompt}} {{hint:Answer}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          " COBALT Juniper fjord harbor",
+          "harbor garnet"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{hint:Answer}} {{text:Prompt}} {{#Answer}}<i>{{Answer}}</i>{{/Answer}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "basil &amp; &lt;juniper&gt; &nbsp;&#x263A;&#9731; garnet cobalt",
+          "{{c1::amber harbor}} {{c1::dune {{c2::garnet dune}}}} juniper juniper"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{text:Prompt}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "{{c1::cobalt}} {{c2::juniper}} {{c1::fjord}} amber <b>{{c1::fjord</b> garnet}}",
+          "basil ember harbor  {{c1::indigo {{c2::basil {{c3::amber {{c4::harbor basil}}}}}}}}"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{#Answer}}<i>{{Answer}}</i>{{/Answer}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "ember {{c1::basil}}",
+          "harbor basil basil fjord dune"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "{{c1::ember fjord}}",
+          "amber ember"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Body",
+            "Notes"
+          ],
+          "kind": "cloze",
+          "name": "ds.gap-text",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "<div class=ds-gap>{{cloze:Body}}</div>{{Notes}}",
+              "front": "<div class=ds-gap>{{cloze:Body}}</div>",
+              "name": "Gap"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "EMBER Amber amber ember indigo",
+          "café dune naïve café ember naïve basil ember ember dune"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{hint:Answer}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    },
+    {
+      "input": {
+        "fields": [
+          "amber indigo cobalt &amp; &lt;garnet&gt; &nbsp;&#x263A;&#9731; مرحبا بكم dune {{c1::juniper {{c2::indigo {{c3::ember {{c4::fjord juniper}}}}}}}}",
+          "harbor dune cobalt"
+        ],
+        "notetype": {
+          "css": ".card { font-family: system-ui; font-size: 18px; margin: 12px; }",
+          "fields": [
+            "Prompt",
+            "Answer"
+          ],
+          "kind": "standard",
+          "name": "ds.prompt-answer",
+          "sort_field": 0,
+          "templates": [
+            {
+              "back": "{{FrontSide}}<hr class=ds-answer>{{Answer}}",
+              "front": "{{^Answer}}<b>{{Prompt}}</b>{{/Answer}} {{hint:Answer}} {{#Answer}}<i>{{Answer}}</i>{{/Answer}}",
+              "name": "Forward"
+            }
+          ]
+        }
+      },
+      "output": {
+        "ordinals": [
+          0
+        ]
+      }
+    }
+  ],
+  "function": "anki.render.generated_ordinals",
+  "generator": "tools/parity-oracle/anki/generate.py",
+  "generator_sha256": "0298e56ecf2f716be2e27633b48a21c613edc478b8c9de7c43d3e0c3beb795b6",
+  "inputs": "synthetic",
+  "kind": "engine",
+  "note": "adds the note, then answers the ordinals of the cards the engine generated (GL-4); cases drawn under CPython 3.12.3.",
+  "registry": "tools/parity-oracle/anki/registry/spec_498.py",
+  "registry_sha256": "a0ee26a7384b62d141919a7a5c1c95918b6a1881492f76863b17befd33e654bf",
+  "schema": "phx.parity-golden.v1",
+  "seed": 498,
+  "source_commit": "dca72f352730abb4222389cc148e46387c17f97f"
+}

@@ -52,6 +52,7 @@ use deck_streak_engine_core::credential::{self, Generation, Kept, Outcome};
 use deck_streak_engine_core::dispatch::{Dispatcher, Read, Refusal};
 use deck_streak_engine_core::face::{Clip, Face, Side};
 use deck_streak_engine_core::gesture::{GestureRefusal, OwnerGesture, Target};
+use deck_streak_engine_core::health::{CardHealth, Readout, SchedulerState};
 use deck_streak_engine_core::late;
 use deck_streak_engine_core::media::{Reader, TYPES};
 use deck_streak_engine_core::review::{bury_of, toggled_red};
@@ -60,6 +61,7 @@ use deck_streak_engine_core::undo_answer::{self, Review};
 use deck_streak_engine_core::undo_change::{self, Mark};
 use js_sys::{Array, Object, Reflect, Uint8Array};
 
+use crate::companion;
 use crate::study::{
     Change, Files, Grade, LastAnswer, LastMark, Recorded, Returns, Shown, StudyError, UndoRefusal,
     Wanted, admit, engine_languages, flag_change, grade, last_answer_for, last_mark_for, mark_view,
@@ -524,6 +526,20 @@ pub fn snapshot(card_id: i64) -> Result<String, JsValue> {
         .to_string())
 }
 
+/// One card's health as JSON (SPEC-507 R1), or `null` when no card has the id: its counters and
+/// review rows by the core's two fixed reads. The scheduler's port gives no readout in this build,
+/// so the recall rows read the absent state (ADR-525 D3).
+#[wasm_bindgen]
+pub fn card_health(card_id: i64) -> Result<String, JsValue> {
+    let health = dispatcher()?
+        .card_health(card_id, Readout::NotAvailable(SchedulerState::Absent))
+        .map_err(|_| refuse("the read failed"))?;
+    Ok(health
+        .as_ref()
+        .map_or(serde_json::Value::Null, CardHealth::to_json)
+        .to_string())
+}
+
 /// Runs one owner's tap on an exempt write (SPEC-345 R9): `write` names the write by its place in
 /// the core's exempt table (0 `Forget`, 1 `SetDueDate`, 2 `DeletePreset`, 3 `ChangeNoteType`,
 /// 4 `DeleteCard`, 5 `DeleteNote`), `target` its one target's id, and `input` the write's request,
@@ -588,6 +604,45 @@ pub fn credential_on_outcome(sent: u64, current: u64, outcome: u8) -> bool {
         _ => Outcome::Failed,
     };
     credential::on_outcome(Generation::from(sent), Generation::from(current), outcome)
+}
+
+/// The scheduling companion's decision over one press's frames (SPEC-511 R10): 17 bytes for an
+/// admitted due date, 3 for a refusal. The web engine's own decision answers; the Worker moves the
+/// frames only.
+#[wasm_bindgen]
+#[must_use]
+pub fn companion_decide(hello: &[u8], epoch: u32, preview: &[u8], reply: &[u8]) -> Vec<u8> {
+    companion::decide(hello, epoch, preview, reply)
+}
+
+/// The `Restore` frame at `epoch` for a stored checkpoint frame, or no bytes when it is not an
+/// `Ok` checkpoint (SPEC-511 R9).
+#[wasm_bindgen]
+#[must_use]
+pub fn companion_restore(epoch: u32, checkpoint: &[u8]) -> Vec<u8> {
+    companion::restore(epoch, checkpoint)
+}
+
+/// The web load check's verdict on a stored checkpoint: 0 to keep it, else the discard's code
+/// (SPEC-511 R9).
+#[wasm_bindgen]
+#[must_use]
+pub fn companion_load_check(
+    hello: &[u8],
+    checkpoint: &[u8],
+    ack: &[u8],
+    head_named: bool,
+    index_count: Option<u64>,
+    index_head: Option<i64>,
+) -> u8 {
+    companion::load_check(hello, checkpoint, ack, head_named, index_count, index_head).code()
+}
+
+/// The `Purge` frame at `epoch` (SPEC-511 R8).
+#[wasm_bindgen]
+#[must_use]
+pub fn companion_purge(epoch: u32) -> Vec<u8> {
+    companion::purge(epoch)
 }
 
 /// The generation a removal moves the store to from `current` (SPEC-363 R4), or nothing at the
@@ -1413,4 +1468,30 @@ pub async fn retain() -> Json {
         }));
     }
     Ok(serde_json::Value::from(removed).to_string())
+}
+
+use deck_streak_engine_core::backup_now;
+
+/// Back up now's refusal: the engine's error bytes, or the web engine's sentence naming why.
+fn unbacked(reason: Reason) -> JsValue {
+    match why(reason) {
+        Ok(word) => refuse(format!("backup-refused: {word}")),
+        Err(bytes) => bytes,
+    }
+}
+
+/// Back up now (SPEC-516 R4; ADR-534 D3): the core writes the open collection into a new
+/// Backup-kind pool file, minted after the pool is reserved for it, and reads it back from that
+/// file. It waits while a choice's stage is held, takes nothing from the page, and answers the new
+/// backup's id alone, as JSON; the page lists the backups again to see it, which runs the
+/// retention first. An engine refusal is thrown as its bytes.
+#[wasm_bindgen]
+pub async fn back_up_now() -> Json {
+    if STAGE.with(|stage| stage.borrow().is_some()) {
+        return Err(refuse("back up now waits while a choice is held"));
+    }
+    let backup = choice_file(Kind::Backup).await?;
+    backup_now::back_up(&dispatcher()?, Path::new(&backup)).map_err(unbacked)?;
+    let id = files::backup_id(&backup).ok_or_else(|| refuse("back up now named no backup"))?;
+    Ok(serde_json::json!({ "id": id }).to_string())
 }

@@ -5,6 +5,12 @@
       "test_audit_web"
     ]
   },
+  "scripts/companion-site-census.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_companion_site_census"
+    ]
+  },
   "scripts/create-issues.py": {
     "dir": "scripts/tests",
     "modules": []
@@ -93,6 +99,12 @@
       "test_deploy_templates"
     ]
   },
+  "scripts/release_gates.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_release_gates"
+    ]
+  },
   "scripts/testflight_age.py": {
     "dir": "scripts/tests",
     "modules": [
@@ -108,7 +120,8 @@
   "scripts/web-engine-size.py": {
     "dir": "scripts/tests",
     "modules": [
-      "test_web_engine_size"
+      "test_web_engine_size",
+      "test_owner_bundle_size"
     ]
   },
   "scripts/web_mutation_shards.py": {

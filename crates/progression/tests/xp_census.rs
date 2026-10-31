@@ -15,7 +15,9 @@
 //! by construction: a workspace that does not build, a feature of one member that another member
 //! turns on, a cargo configuration, a package in the repository outside the workspace, and a
 //! package from outside it that depends on progression. The graph is read with every feature on
-//! (`--all-features`), and the passes compile every combination of the members' own features.
+//! (`--all-features`), and the passes compile every combination of the members' own features. A
+//! Kani witness feature that [`WITNESSES`] names is left out while no package that reaches
+//! progression reaches its member, since no code under it can then be a use of `settle`.
 //!
 //! The census's verdict depends only on the tree it judges (SPEC-072 §12, round 8). Progression is
 //! found by its manifest's path, never by its package's name, and a graph where that cannot be told
@@ -836,6 +838,47 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), 
             }
         }
     }
+    // A Kani witness that WITNESSES names is left out of the combinations while no package that
+    // reaches progression reaches its member (ADR-531 D7, ADR-527 D7); every other declared
+    // feature is counted and compiled.
+    let owner_manifest = canonical(&root.join(OWNER_MANIFEST));
+    let mut member_named: BTreeMap<&str, &str> = BTreeMap::new();
+    let mut settling = None;
+    for package in metadata["packages"].as_array().into_iter().flatten() {
+        let id = package["id"].as_str().unwrap_or_default();
+        if !member_ids.contains(id) {
+            continue;
+        }
+        member_named.insert(package["name"].as_str().unwrap_or_default(), id);
+        if package["manifest_path"]
+            .as_str()
+            .is_some_and(|path| canonical(Path::new(path)) == owner_manifest)
+        {
+            settling = Some(depending_on(&metadata, id));
+        }
+    }
+    let left_out: Vec<String> = declared
+        .iter()
+        .filter(|feature| {
+            WITNESSES.contains(&feature.as_str())
+                && feature
+                    .split_once('/')
+                    .and_then(|(name, _)| member_named.get(name))
+                    .zip(settling.as_ref())
+                    .is_some_and(|(member, settling)| {
+                        depending_on(&metadata, member).is_disjoint(settling)
+                    })
+        })
+        .cloned()
+        .collect();
+    println!(
+        "examined {} Kani witness feature(s) the combinations leave out ({})",
+        left_out.len(),
+        left_out.join(", ")
+    );
+    for feature in &left_out {
+        declared.remove(feature);
+    }
     if declared.len() > FEATURE_LIMIT {
         refused.push(format!(
             "the members declare {} features ({}), and the census compiles every combination of \
@@ -1000,6 +1043,31 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), 
         uses,
         outside_the_tree(&tree, &workspace, &canonical(target), &read),
     ))
+}
+
+/// The packages of the graph `metadata` resolves that depend on the package `id`, directly or
+/// through others and by a dependency of any kind, `id` among them.
+fn depending_on<'a>(metadata: &'a Value, id: &'a str) -> BTreeSet<&'a str> {
+    let mut found = BTreeSet::from([id]);
+    let mut grew = true;
+    while grew {
+        grew = false;
+        for node in metadata["resolve"]["nodes"]
+            .as_array()
+            .into_iter()
+            .flatten()
+        {
+            let on_found = node["deps"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|edge| edge["pkg"].as_str().is_some_and(|pkg| found.contains(pkg)));
+            if on_found && let Some(node_id) = node["id"].as_str() {
+                grew |= found.insert(node_id);
+            }
+        }
+    }
+    found
 }
 
 /// Every combination of `declared` (each `package/feature`), the empty one first, each joined by
@@ -1797,10 +1865,30 @@ fn the_census_refuses_what_the_compiler_is_not_asked() {
 }
 
 /// The most features the members of the workspace may declare together, `default` and each optional
-/// dependency's own feature counted: the census compiles every combination of them in every pass,
-/// two to the power of their count, so past this many it refuses the tree by name rather than
-/// compile that many workspaces (SPEC-336 R11, ADR-345 D6).
+/// dependency's own feature counted and no witness that [`WITNESSES`] leaves out: the census
+/// compiles every combination of them in every pass, two to the power of their count, so past
+/// this many it refuses the tree by name rather than compile that many workspaces (SPEC-336 R11,
+/// ADR-345 D6).
 const FEATURE_LIMIT: usize = 3;
+
+/// The Kani witness features, each by its package and its name, never by a pattern (ADR-531 D7,
+/// ADR-527 D7). Each switches one shipped function's body to a recorded defect for the formal
+/// check's witness run, the only build that turns it on: it is empty, so it turns on no
+/// dependency, and no default list and no other manifest names it. The census leaves one out of
+/// its combinations only while no package that reaches progression reaches the witness's member,
+/// the member itself among them, read from the graph with every feature on: no code under the
+/// feature, the member's own or a macro of the member's that another package expands, can then
+/// be a use of `settle`. Past that it is counted and compiled as any feature is.
+const WITNESSES: [&str; 8] = [
+    "deck-streak-media/kani-witness-bind",
+    "deck-streak-media/kani-witness-blob-path",
+    "deck-streak-media/kani-witness-scan",
+    "deck-streak-media/kani-witness-sweep",
+    "deck-streak-sync/kani-witness-hlc-plain-add",
+    "deck-streak-sync/kani-witness-key-order-noseq",
+    "deck-streak-sync/kani-witness-next-id-residue",
+    "deck-streak-sync/kani-witness-sync-codec-len",
+];
 
 /// The refusal of a call to `settle` in habits' library, a member other than coordination.
 const HABITS_CALL: &str = "crates/habits/src/lib.rs calls settle, and only coordination's code may";
@@ -2013,6 +2101,112 @@ fn a12_the_census_compiles_every_combination_up_to_its_feature_limit_and_refuses
         judged,
         vec![(FEATURE_LIMIT, Vec::new()), (FEATURE_LIMIT + 1, vec![past])],
         "the tree at the limit is accepted and the tree past it refused by name"
+    );
+}
+
+#[test]
+#[allow(clippy::too_many_lines)]
+fn a_kani_witness_is_left_out_by_its_name_and_only_apart_from_settle() {
+    // ADR-531 D7 and ADR-527 D7 beside SPEC-336 R11: a Kani witness feature that `WITNESSES` names
+    // is left out of the combinations while no package that reaches settle reaches its member, the
+    // member itself among them. The controls: a feature the list does not name is counted, a plain
+    // one, one named like a witness and a witness's name in another package alike, so four of them
+    // are refused by name past the limit; and a witness whose member reaches settle, or whose
+    // member a package that reaches settle depends on, is compiled as any feature is, so a call
+    // under it, written in the member or in a macro the member exports, is refused for the call.
+    let member = |name: &str, on: &[&str], features: &str| {
+        (
+            format!("crates/{name}/Cargo.toml"),
+            format!("{}\n{features}", manifest_of(name, on)),
+        )
+    };
+    let library = |name: &str, text: &str| (format!("crates/{name}/src/lib.rs"), text.to_owned());
+    let witnesses = "[features]\nkani-witness-bind = []\nkani-witness-blob-path = []\n\
+                     kani-witness-scan = []\nkani-witness-sweep = []\n";
+    let bind = "[features]\nkani-witness-bind = []\n";
+    let quiet = "pub fn quiet() {}\n";
+    let tally = "#[cfg(feature = \"kani-witness-bind\")]\n#[macro_export]\n\
+                 macro_rules! tally {\n    () => {\n        deck_streak_progression::settle()\n    \
+                 };\n}\n#[cfg(not(feature = \"kani-witness-bind\"))]\n#[macro_export]\n\
+                 macro_rules! tally {\n    () => {\n        0\n    };\n}\n";
+    let past = format!(
+        "the members declare 4 features (deck-streak-habits/f0, \
+         deck-streak-habits/kani-witness-bind, deck-streak-media/fast, \
+         deck-streak-media/kani-witness-other), and the census compiles every combination of at \
+         most {FEATURE_LIMIT}"
+    );
+    let cases = examined(
+        "planted tree(s) of a Kani witness",
+        vec![
+            (
+                "the four witnesses of a member apart from settle",
+                vec![member("media", &[], witnesses), library("media", quiet)],
+                Vec::new(),
+            ),
+            (
+                "the control, features the list does not name beside the witnesses",
+                vec![
+                    member(
+                        "media",
+                        &[],
+                        &format!("{witnesses}fast = []\nkani-witness-other = []\n"),
+                    ),
+                    library("media", quiet),
+                    member(
+                        "habits",
+                        &[OWNER],
+                        "[features]\nf0 = []\nkani-witness-bind = []\n",
+                    ),
+                    library("habits", quiet),
+                ],
+                vec![past],
+            ),
+            (
+                "the control, a witness of a member that reaches settle",
+                vec![
+                    member("media", &[OWNER], bind),
+                    library(
+                        "media",
+                        &settle_call_under("#[cfg(feature = \"kani-witness-bind\")]\n"),
+                    ),
+                ],
+                vec![
+                    "crates/media/src/lib.rs calls settle, and only coordination's code may"
+                        .to_owned(),
+                ],
+            ),
+            (
+                "the control, a witness of a member that a package reaching settle depends on",
+                vec![
+                    member("media", &[], bind),
+                    library("media", tally),
+                    member("habits", &[OWNER, "media"], ""),
+                    library(
+                        "habits",
+                        "pub fn sneak() -> usize {\n    deck_streak_media::tally!()\n}\n",
+                    ),
+                ],
+                vec![HABITS_CALL.to_owned()],
+            ),
+        ],
+    );
+    let mut judged = Vec::new();
+    for (label, files, expected) in &cases {
+        let planted = tempfile::tempdir().expect("a temporary directory");
+        let root = planted.path();
+        plant_workspace(root);
+        for (path, text) in files {
+            plant(root, path, text);
+        }
+        let refused = census(root).refused;
+        println!("verdict: {label}: {refused:?}");
+        judged.push((*label, refused == *expected, refused));
+    }
+    let as_expected = judged.iter().filter(|(_, right, _)| *right).count();
+    assert_eq!(
+        as_expected,
+        cases.len(),
+        "each tree is judged as its case expects: {judged:#?}"
     );
 }
 

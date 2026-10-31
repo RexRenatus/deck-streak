@@ -94,6 +94,12 @@
 \*   answers 401 without an owner session and 429 past its bound, and 400 for a bad seal id, all
 \*   before it derives a key: `Unseal`'s `session` guard. A release that is off never unseals, which
 \*   is a subset of the model's behaviours.
+\*
+\* The re-read with the native actor (SPEC-503). The iPhone and iPad client keeps its host key in
+\* one Keychain item on the device (ADR-358) and has no Worker, no seal and no stored generation:
+\* it calls none of the covered items, and the native adapter's sync facade takes the key the app
+\* read from that item and never a password. The model's actions are the web client's alone, and
+\* its covers are re-stamped unchanged.
 
 EXTENDS Integers
 

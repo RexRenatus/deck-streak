@@ -101,6 +101,8 @@ describe('the study operations on the wire', () => {
       'bury',
       'flag',
       'faces',
+      // the card health read joins after the faces (SPEC-507 R10)
+      'card-health',
       // the sync's two join before the credential's two (SPEC-364 R17, R18)
       'sync-login',
       'sync',
@@ -113,7 +115,9 @@ describe('the study operations on the wire', () => {
       'unsynced',
       // the backups' list and export join after the choice's four (SPEC-377 R15, R16)
       'backups',
-      'backup-export'
+      'backup-export',
+      // back up now joins after the backups' two (SPEC-516 R4)
+      'backup-now'
     ]);
   });
 
@@ -259,5 +263,25 @@ describe('the backup operations on the wire', () => {
       expect(parseRequest(request), message).toEqual({ id: 1, message });
     }
     console.log(`examined ${admitted.length} admitted and ${refused.length} refused backup requests`);
+  });
+
+  it('backup-now takes no argument: the web engine names its file, so the page names nothing', () => {
+    // SPEC-516 R4, B4: back up now carries no path, no id and no kind; the web engine mints the
+    // file's name after the pool's reserve, and the core writes it
+    const admitted: Record<string, unknown>[] = [{ id: 1, op: 'backup-now' }];
+    for (const request of admitted) {
+      expect(parseRequest(request), String(request.id)).toEqual({ request });
+    }
+    const refused: [Record<string, unknown>, string][] = [
+      [{ id: 1, op: 'backup-now', path: '/deck-streak/backup-1.anki2' }, 'backup-now takes no path'],
+      [{ id: 1, op: 'backup-now', backup: 'backup-1' }, 'backup-now takes no backup'],
+      [{ id: 1, op: 'backup-now', kind: 'backup' }, 'backup-now takes no kind'],
+      [{ id: 1, op: 'backup-now', sql: 'VACUUM INTO ?' }, 'backup-now takes no sql']
+    ];
+    for (const [request, message] of refused) {
+      expect(parseRequest(request), message).toEqual({ id: 1, message });
+    }
+    expect(OPS).toContain('backup-now');
+    console.log(`examined ${admitted.length} admitted and ${refused.length} refused backup-now requests`);
   });
 });

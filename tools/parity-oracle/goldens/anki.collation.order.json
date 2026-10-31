@@ -1,0 +1,775 @@
+{
+  "cases": [
+    {
+      "class": "case-pairs",
+      "input": {
+        "names": [
+          "Ds Alpha",
+          "ds alpha",
+          "DS ALPHA",
+          "Ds Beta"
+        ]
+      },
+      "output": {
+        "order": [
+          "Ds Alpha",
+          "ds alpha",
+          "DS ALPHA",
+          "Ds Beta"
+        ]
+      }
+    },
+    {
+      "class": "case-pairs",
+      "input": {
+        "names": [
+          "amber",
+          "Amber",
+          "AMBER"
+        ]
+      },
+      "output": {
+        "order": [
+          "amber",
+          "Amber",
+          "AMBER"
+        ]
+      }
+    },
+    {
+      "class": "case-pairs",
+      "input": {
+        "names": [
+          "Basil",
+          "basil",
+          "BASIL",
+          "basil2"
+        ]
+      },
+      "output": {
+        "order": [
+          "Basil",
+          "basil",
+          "BASIL",
+          "basil2"
+        ]
+      }
+    },
+    {
+      "class": "case-pairs",
+      "input": {
+        "names": [
+          "cobalt",
+          "Cobalt"
+        ]
+      },
+      "output": {
+        "order": [
+          "cobalt",
+          "Cobalt"
+        ]
+      }
+    },
+    {
+      "class": "case-pairs",
+      "input": {
+        "names": [
+          "Dune Ember",
+          "dune ember",
+          "DUNE EMBER"
+        ]
+      },
+      "output": {
+        "order": [
+          "Dune Ember",
+          "dune ember",
+          "DUNE EMBER"
+        ]
+      }
+    },
+    {
+      "class": "case-pairs",
+      "input": {
+        "names": [
+          "fjord",
+          "FJORD",
+          "Fjord",
+          "fjords"
+        ]
+      },
+      "output": {
+        "order": [
+          "fjord",
+          "FJORD",
+          "Fjord",
+          "fjords"
+        ]
+      }
+    },
+    {
+      "class": "case-pairs",
+      "input": {
+        "names": [
+          "Garnet::Harbor",
+          "garnet::harbor"
+        ]
+      },
+      "output": {
+        "order": [
+          "Garnet::Harbor",
+          "garnet::harbor"
+        ]
+      }
+    },
+    {
+      "class": "case-pairs",
+      "input": {
+        "names": [
+          "iNDIGO",
+          "Indigo",
+          "indigo"
+        ]
+      },
+      "output": {
+        "order": [
+          "iNDIGO",
+          "Indigo",
+          "indigo"
+        ]
+      }
+    },
+    {
+      "class": "non-ascii-folding",
+      "input": {
+        "names": [
+          "École",
+          "ecole",
+          "école",
+          "Straße",
+          "STRASSE",
+          "İstanbul"
+        ]
+      },
+      "output": {
+        "order": [
+          "ecole",
+          "İstanbul",
+          "Straße",
+          "STRASSE",
+          "École",
+          "école"
+        ]
+      }
+    },
+    {
+      "class": "non-ascii-folding",
+      "input": {
+        "names": [
+          "Ärger",
+          "arger",
+          "ärger"
+        ]
+      },
+      "output": {
+        "order": [
+          "arger",
+          "Ärger",
+          "ärger"
+        ]
+      }
+    },
+    {
+      "class": "non-ascii-folding",
+      "input": {
+        "names": [
+          "Øre",
+          "ore",
+          "øre"
+        ]
+      },
+      "output": {
+        "order": [
+          "ore",
+          "Øre",
+          "øre"
+        ]
+      }
+    },
+    {
+      "class": "non-ascii-folding",
+      "input": {
+        "names": [
+          "Ñandú",
+          "nandu",
+          "ñandú"
+        ]
+      },
+      "output": {
+        "order": [
+          "nandu",
+          "Ñandú",
+          "ñandú"
+        ]
+      }
+    },
+    {
+      "class": "non-ascii-folding",
+      "input": {
+        "names": [
+          "Ωmega",
+          "ωmega",
+          "omega"
+        ]
+      },
+      "output": {
+        "order": [
+          "omega",
+          "Ωmega",
+          "ωmega"
+        ]
+      }
+    },
+    {
+      "class": "non-ascii-folding",
+      "input": {
+        "names": [
+          "Łódź",
+          "lodz",
+          "łódź"
+        ]
+      },
+      "output": {
+        "order": [
+          "lodz",
+          "Łódź",
+          "łódź"
+        ]
+      }
+    },
+    {
+      "class": "non-ascii-folding",
+      "input": {
+        "names": [
+          "Æble",
+          "æble",
+          "aeble"
+        ]
+      },
+      "output": {
+        "order": [
+          "aeble",
+          "Æble",
+          "æble"
+        ]
+      }
+    },
+    {
+      "class": "non-ascii-folding",
+      "input": {
+        "names": [
+          "ǅemal",
+          "Džemal",
+          "DŽEMAL"
+        ]
+      },
+      "output": {
+        "order": [
+          "Džemal",
+          "DŽEMAL",
+          "ǅemal"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "harbor",
+          "garnet",
+          "dune",
+          "basil",
+          "cobalt"
+        ]
+      },
+      "output": {
+        "order": [
+          "basil",
+          "cobalt",
+          "dune",
+          "garnet",
+          "harbor"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "garnet",
+          "amber",
+          "harbor",
+          "ember",
+          "cobalt"
+        ]
+      },
+      "output": {
+        "order": [
+          "amber",
+          "cobalt",
+          "ember",
+          "garnet",
+          "harbor"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "cobalt",
+          "indigo",
+          "harbor",
+          "dune",
+          "garnet"
+        ]
+      },
+      "output": {
+        "order": [
+          "cobalt",
+          "dune",
+          "garnet",
+          "harbor",
+          "indigo"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "cobalt",
+          "fjord",
+          "juniper",
+          "amber",
+          "harbor"
+        ]
+      },
+      "output": {
+        "order": [
+          "amber",
+          "cobalt",
+          "fjord",
+          "harbor",
+          "juniper"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "garnet",
+          "indigo",
+          "juniper",
+          "basil",
+          "harbor"
+        ]
+      },
+      "output": {
+        "order": [
+          "basil",
+          "garnet",
+          "harbor",
+          "indigo",
+          "juniper"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "indigo",
+          "ember",
+          "basil",
+          "cobalt",
+          "harbor"
+        ]
+      },
+      "output": {
+        "order": [
+          "basil",
+          "cobalt",
+          "ember",
+          "harbor",
+          "indigo"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "indigo",
+          "fjord",
+          "juniper",
+          "ember",
+          "cobalt"
+        ]
+      },
+      "output": {
+        "order": [
+          "cobalt",
+          "ember",
+          "fjord",
+          "indigo",
+          "juniper"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "fjord",
+          "garnet",
+          "ember",
+          "amber",
+          "dune"
+        ]
+      },
+      "output": {
+        "order": [
+          "amber",
+          "dune",
+          "ember",
+          "fjord",
+          "garnet"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "basil",
+          "harbor",
+          "garnet",
+          "dune",
+          "amber"
+        ]
+      },
+      "output": {
+        "order": [
+          "amber",
+          "basil",
+          "dune",
+          "garnet",
+          "harbor"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "basil",
+          "dune",
+          "juniper",
+          "ember",
+          "harbor"
+        ]
+      },
+      "output": {
+        "order": [
+          "basil",
+          "dune",
+          "ember",
+          "harbor",
+          "juniper"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ember",
+          "amber",
+          "garnet",
+          "cobalt",
+          "juniper"
+        ]
+      },
+      "output": {
+        "order": [
+          "amber",
+          "cobalt",
+          "ember",
+          "garnet",
+          "juniper"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "amber",
+          "juniper",
+          "garnet",
+          "fjord",
+          "harbor"
+        ]
+      },
+      "output": {
+        "order": [
+          "amber",
+          "fjord",
+          "garnet",
+          "harbor",
+          "juniper"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "fjord",
+          "indigo",
+          "juniper",
+          "dune",
+          "cobalt"
+        ]
+      },
+      "output": {
+        "order": [
+          "cobalt",
+          "dune",
+          "fjord",
+          "indigo",
+          "juniper"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "indigo",
+          "dune",
+          "ember",
+          "juniper",
+          "basil"
+        ]
+      },
+      "output": {
+        "order": [
+          "basil",
+          "dune",
+          "ember",
+          "indigo",
+          "juniper"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "cobalt",
+          "indigo",
+          "ember",
+          "amber",
+          "juniper"
+        ]
+      },
+      "output": {
+        "order": [
+          "amber",
+          "cobalt",
+          "ember",
+          "indigo",
+          "juniper"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "harbor",
+          "garnet",
+          "dune",
+          "juniper",
+          "indigo"
+        ]
+      },
+      "output": {
+        "order": [
+          "dune",
+          "garnet",
+          "harbor",
+          "indigo",
+          "juniper"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "amber",
+          "ember",
+          "basil",
+          "garnet",
+          "indigo"
+        ]
+      },
+      "output": {
+        "order": [
+          "amber",
+          "basil",
+          "ember",
+          "garnet",
+          "indigo"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "garnet",
+          "fjord",
+          "dune",
+          "ember",
+          "basil"
+        ]
+      },
+      "output": {
+        "order": [
+          "basil",
+          "dune",
+          "ember",
+          "fjord",
+          "garnet"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "juniper",
+          "harbor",
+          "cobalt",
+          "fjord",
+          "amber"
+        ]
+      },
+      "output": {
+        "order": [
+          "amber",
+          "cobalt",
+          "fjord",
+          "harbor",
+          "juniper"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "harbor",
+          "ember",
+          "juniper",
+          "amber",
+          "cobalt"
+        ]
+      },
+      "output": {
+        "order": [
+          "amber",
+          "cobalt",
+          "ember",
+          "harbor",
+          "juniper"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "dune",
+          "basil",
+          "juniper",
+          "harbor",
+          "fjord"
+        ]
+      },
+      "output": {
+        "order": [
+          "basil",
+          "dune",
+          "fjord",
+          "harbor",
+          "juniper"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "indigo",
+          "ember",
+          "harbor",
+          "juniper",
+          "amber"
+        ]
+      },
+      "output": {
+        "order": [
+          "amber",
+          "ember",
+          "harbor",
+          "indigo",
+          "juniper"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "harbor",
+          "cobalt",
+          "basil",
+          "garnet",
+          "juniper"
+        ]
+      },
+      "output": {
+        "order": [
+          "basil",
+          "cobalt",
+          "garnet",
+          "harbor",
+          "juniper"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "fjord",
+          "amber",
+          "basil",
+          "dune",
+          "garnet"
+        ]
+      },
+      "output": {
+        "order": [
+          "amber",
+          "basil",
+          "dune",
+          "fjord",
+          "garnet"
+        ]
+      }
+    }
+  ],
+  "function": "anki.collation.order",
+  "generator": "tools/parity-oracle/anki/generate.py",
+  "generator_sha256": "0298e56ecf2f716be2e27633b48a21c613edc478b8c9de7c43d3e0c3beb795b6",
+  "inputs": "synthetic",
+  "kind": "engine",
+  "note": "answers the names in the order the engine's case-insensitive collation sorts them (F8); cases drawn under CPython 3.12.3.",
+  "registry": "tools/parity-oracle/anki/registry/spec_498.py",
+  "registry_sha256": "a0ee26a7384b62d141919a7a5c1c95918b6a1881492f76863b17befd33e654bf",
+  "schema": "phx.parity-golden.v1",
+  "seed": 498,
+  "source_commit": "dca72f352730abb4222389cc148e46387c17f97f"
+}

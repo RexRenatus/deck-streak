@@ -21,6 +21,8 @@
 //! - [`handshake`]: the minimum-client handshake: this client's level, the outcome of the
 //!   latest statement of the service's minimum, its sentences and the statement's URL
 //!   (SPEC-374 R1, R4 to R8).
+//! - [`health`]: the card health panel's record: a card's counters, its review rows with each
+//!   answer's time capped, the scheduler's readout or its state, and its provenance (SPEC-507).
 //! - [`login_guard`]: the endpoint guard on the engine's sync login (SPEC-347 R2).
 //! - [`media`]: the rules a face's media references pass: the name rule, the closed type table,
 //!   the two caps and the `data:` rewrite (SPEC-348 R3).
@@ -37,6 +39,9 @@
 //!   review row it names, the refusals and the state the card returns to (SPEC-371 R3).
 //! - [`undo_change`]: the rule an undo of the review's last bury or flag passes: the card's mark
 //!   it reads and the order of its refusals (SPEC-383 R5).
+//! - [`native_undo`]: the native review's undo slot: the record of its last answer, bury or flag
+//!   from the undo status and the fixed reads, its judge by the two rules above, the card's
+//!   question as one line and the record's bytes, for the native adapter (SPEC-515 R2 to R5).
 //! - [`late`]: whether a review cannot count toward the streak for its card's due day: the
 //!   engine's day, and the rule that judges a card past its due day in it (SPEC-376 R1, R2).
 //! - [`replay`]: the replay of a deck set's review history into stock-field values, and their
@@ -44,6 +49,8 @@
 //! - [`scheduler`]: the scheduling port the replay's due days come through, its review event,
 //!   key, recall and refusals, the event check and the day queue with its sibling rule (SPEC-494
 //!   R1, R5 to R8).
+//! - [`backup_now`]: back up now, the open collection written into one new file on the owner's
+//!   word by the core's fixed statement and read back from it (SPEC-516 R4, R5).
 //!
 //! The core depends on the engine and on one crate of this workspace, the isolated FSRS-7
 //! scheduler, which [`replay`] alone names; only the two client adapters depend on it (ADR-356 D4
@@ -52,6 +59,7 @@
 #![forbid(unsafe_code)]
 
 pub mod answer;
+pub mod backup_now;
 pub mod credential;
 pub mod dispatch;
 pub mod face;
@@ -59,9 +67,12 @@ pub mod files;
 pub mod full_sync;
 pub mod gesture;
 pub mod handshake;
+pub mod health;
 pub mod late;
 pub mod login_guard;
 pub mod media;
+pub mod native_sync;
+pub mod native_undo;
 pub mod one_way;
 pub mod replay;
 pub mod retention;

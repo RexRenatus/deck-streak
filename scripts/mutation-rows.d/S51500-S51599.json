@@ -1,0 +1,51 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S51500-THE-NATIVE-COLUMN-REFUSES-THE-UNDO-STATUS",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"CollectionService.GetUndoStatus\",\n        native: true,",
+        "        name: \"CollectionService.GetUndoStatus\",\n        native: false,",
+        "table::every_pair_is_admitted_held_or_refused_by_its_transport",
+        "the native column admits the undo status; marked refused there, the native review could neither offer an undo nor judge a confirmation (SPEC-515 R1, A1)"
+      ],
+      [
+        "S51501-THE-ALLOW-LIST-RENUMBERS-THE-UNDO-STATUS",
+        "ffi",
+        "src/allow_list.rs",
+        "        method: 7,\n        name: \"CollectionService.GetUndoStatus\",",
+        "        method: 8,\n        name: \"CollectionService.GetUndoStatus\",",
+        "review_pairs::the_allow_list_carries_the_review_pairs",
+        "the adapter's allow-list carries the undo status at the engine's pair; renumbered, its entry would name the exempt Undo, which the core holds for the owner's gesture (SPEC-515 R1, A1)"
+      ],
+      [
+        "S51502-THE-OFFER-SKIPS-THE-JUDGE",
+        "ffi",
+        "src/engine.rs",
+        "        if let Err(why) = native_undo::judged(&self.dispatcher, &status, &kept).map_err(refusal)? {\n            return Ok(UndoOffered::none(review_undo::refused(",
+        "        if let Err(why) = native_undo::judged(&self.dispatcher, &status, &kept)\n            .map_err(refusal)?\n            .or_else(|_| Ok::<(), deck_streak_engine_core::undo_answer::UndoRefusal>(()))\n        {\n            return Ok(UndoOffered::none(review_undo::refused(",
+        "sync::after_a_normal_sync_the_undo_says_the_answer_has_synced",
+        "the offer is made only when the core's rule admits the kept step now; unjudged, a synced answer would be offered for an undo (SPEC-515 R3, R5, A3)"
+      ],
+      [
+        "S51503-THE-OFFER-DOES-NOT-NAME-THE-CARD",
+        "ffi",
+        "src/review_undo.rs",
+        "    let card = format!(\"{CARD} {text}\");",
+        "    let card = format!(\"{CARD} {}\", text.len());",
+        "undo::an_answer_is_offered_by_its_card_answer_and_state_then_undone",
+        "the dialog names the card by its question as one line of text; without it the owner would confirm an undo of a card the dialog does not name (SPEC-515 R3, A2)"
+      ],
+      [
+        "S51504-A-LATE-REFUSAL-NAMES-ANOTHER-KIND",
+        "ffi",
+        "src/engine.rs",
+        "            (_, Some((replaced, at, kind))) if (replaced, at) == (card, step) => (None, kind),",
+        "            (_, Some((replaced, at, _))) if (replaced, at) == (card, step) => {\n                (None, UndoKind::Flag)\n            }",
+        "undo::a_confirmation_after_a_later_change_is_refused_and_says_why",
+        "a confirmation of a step the slot has replaced is refused with its own kind's sentence; naming another kind, an answer's late undo would say a change can no longer be undone (SPEC-515 R5, A3)"
+      ]
+    ]
+  }
+}

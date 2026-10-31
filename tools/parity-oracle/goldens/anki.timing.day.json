@@ -1,0 +1,615 @@
+{
+  "cases": [
+    {
+      "class": "rollover",
+      "input": {
+        "crt": 1021254400,
+        "now": 1043326799,
+        "rollover_hour": 13,
+        "utc_offset_minutes": 0
+      },
+      "output": {
+        "day": 254,
+        "next_rollover": 1043326800
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "crt": 1000000000,
+        "now": 1002599999,
+        "rollover_hour": 4,
+        "utc_offset_minutes": 0
+      },
+      "output": {
+        "day": 29,
+        "next_rollover": 1002600000
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "crt": 1001468800,
+        "now": 1017241199,
+        "rollover_hour": 0,
+        "utc_offset_minutes": 540
+      },
+      "output": {
+        "day": 182,
+        "next_rollover": 1017241200
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "crt": 1008640000,
+        "now": 1008734399,
+        "rollover_hour": 23,
+        "utc_offset_minutes": -300
+      },
+      "output": {
+        "day": 0,
+        "next_rollover": 1008734400
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "crt": 1031536000,
+        "now": 1086503399,
+        "rollover_hour": 12,
+        "utc_offset_minutes": 330
+      },
+      "output": {
+        "day": 635,
+        "next_rollover": 1086503400
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "crt": 1000259200,
+        "now": 1003397399,
+        "rollover_hour": 6,
+        "utc_offset_minutes": -210
+      },
+      "output": {
+        "day": 36,
+        "next_rollover": 1003397400
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "crt": 1004320000,
+        "now": 1082120399,
+        "rollover_hour": 2,
+        "utc_offset_minutes": 780
+      },
+      "output": {
+        "day": 900,
+        "next_rollover": 1082120400
+      }
+    },
+    {
+      "class": "rollover",
+      "input": {
+        "crt": 1021600000,
+        "now": 1021810499,
+        "rollover_hour": 18,
+        "utc_offset_minutes": 345
+      },
+      "output": {
+        "day": 1,
+        "next_rollover": 1021810500
+      }
+    },
+    {
+      "class": "negative-offset",
+      "input": {
+        "crt": 1016848000,
+        "now": 1069586542,
+        "rollover_hour": 0,
+        "utc_offset_minutes": -300
+      },
+      "output": {
+        "day": 611,
+        "next_rollover": 1069650000
+      }
+    },
+    {
+      "class": "negative-offset",
+      "input": {
+        "crt": 1000000000,
+        "now": 1002595600,
+        "rollover_hour": 4,
+        "utc_offset_minutes": -60
+      },
+      "output": {
+        "day": 29,
+        "next_rollover": 1002603600
+      }
+    },
+    {
+      "class": "negative-offset",
+      "input": {
+        "crt": 1001468800,
+        "now": 1017325000,
+        "rollover_hour": 0,
+        "utc_offset_minutes": -180
+      },
+      "output": {
+        "day": 184,
+        "next_rollover": 1017370800
+      }
+    },
+    {
+      "class": "negative-offset",
+      "input": {
+        "crt": 1008640000,
+        "now": 1008733600,
+        "rollover_hour": 23,
+        "utc_offset_minutes": -210
+      },
+      "output": {
+        "day": 1,
+        "next_rollover": 1008815400
+      }
+    },
+    {
+      "class": "negative-offset",
+      "input": {
+        "crt": 1031536000,
+        "now": 1086486399,
+        "rollover_hour": 12,
+        "utc_offset_minutes": -300
+      },
+      "output": {
+        "day": 636,
+        "next_rollover": 1086541200
+      }
+    },
+    {
+      "class": "negative-offset",
+      "input": {
+        "crt": 1000259200,
+        "now": 1003456001,
+        "rollover_hour": 6,
+        "utc_offset_minutes": -420
+      },
+      "output": {
+        "day": 37,
+        "next_rollover": 1003496400
+      }
+    },
+    {
+      "class": "negative-offset",
+      "input": {
+        "crt": 1004320000,
+        "now": 1082120000,
+        "rollover_hour": 2,
+        "utc_offset_minutes": -570
+      },
+      "output": {
+        "day": 901,
+        "next_rollover": 1082201400
+      }
+    },
+    {
+      "class": "negative-offset",
+      "input": {
+        "crt": 1021600000,
+        "now": 1021751200,
+        "rollover_hour": 18,
+        "utc_offset_minutes": -720
+      },
+      "output": {
+        "day": 1,
+        "next_rollover": 1021788000
+      }
+    },
+    {
+      "class": "crt-after-now",
+      "input": {
+        "crt": 1028080000,
+        "now": 1027648000,
+        "rollover_hour": 19,
+        "utc_offset_minutes": 720
+      },
+      "output": {
+        "day": 0,
+        "next_rollover": 1027666800
+      }
+    },
+    {
+      "class": "crt-after-now",
+      "input": {
+        "crt": 1000000000,
+        "now": 999999999,
+        "rollover_hour": 4,
+        "utc_offset_minutes": 0
+      },
+      "output": {
+        "day": 0,
+        "next_rollover": 1000008000
+      }
+    },
+    {
+      "class": "crt-after-now",
+      "input": {
+        "crt": 1001468800,
+        "now": 1001465200,
+        "rollover_hour": 0,
+        "utc_offset_minutes": 540
+      },
+      "output": {
+        "day": 0,
+        "next_rollover": 1001516400
+      }
+    },
+    {
+      "class": "crt-after-now",
+      "input": {
+        "crt": 1008640000,
+        "now": 1008553600,
+        "rollover_hour": 23,
+        "utc_offset_minutes": -300
+      },
+      "output": {
+        "day": 0,
+        "next_rollover": 1008561600
+      }
+    },
+    {
+      "class": "crt-after-now",
+      "input": {
+        "crt": 1031536000,
+        "now": 1031449599,
+        "rollover_hour": 12,
+        "utc_offset_minutes": 330
+      },
+      "output": {
+        "day": 0,
+        "next_rollover": 1031466600
+      }
+    },
+    {
+      "class": "crt-after-now",
+      "input": {
+        "crt": 1000259200,
+        "now": 999654400,
+        "rollover_hour": 6,
+        "utc_offset_minutes": -210
+      },
+      "output": {
+        "day": 0,
+        "next_rollover": 999682200
+      }
+    },
+    {
+      "class": "crt-after-now",
+      "input": {
+        "crt": 1004320000,
+        "now": 1001728000,
+        "rollover_hour": 2,
+        "utc_offset_minutes": 780
+      },
+      "output": {
+        "day": 0,
+        "next_rollover": 1001768400
+      }
+    },
+    {
+      "class": "crt-after-now",
+      "input": {
+        "crt": 1021600000,
+        "now": 987040000,
+        "rollover_hour": 18,
+        "utc_offset_minutes": 345
+      },
+      "output": {
+        "day": 0,
+        "next_rollover": 987077700
+      }
+    },
+    {
+      "input": {
+        "crt": 1015897600,
+        "now": 1025355750,
+        "rollover_hour": 17,
+        "utc_offset_minutes": -120
+      },
+      "output": {
+        "day": 109,
+        "next_rollover": 1025377200
+      }
+    },
+    {
+      "input": {
+        "crt": 1017884800,
+        "now": 1037701427,
+        "rollover_hour": 17,
+        "utc_offset_minutes": 540
+      },
+      "output": {
+        "day": 229,
+        "next_rollover": 1037779200
+      }
+    },
+    {
+      "input": {
+        "crt": 1027734400,
+        "now": 1033815437,
+        "rollover_hour": 17,
+        "utc_offset_minutes": 60
+      },
+      "output": {
+        "day": 69,
+        "next_rollover": 1033833600
+      }
+    },
+    {
+      "input": {
+        "crt": 1008985600,
+        "now": 1040502532,
+        "rollover_hour": 17,
+        "utc_offset_minutes": 330
+      },
+      "output": {
+        "day": 364,
+        "next_rollover": 1040556600
+      }
+    },
+    {
+      "input": {
+        "crt": 1033523200,
+        "now": 1068381922,
+        "rollover_hour": 11,
+        "utc_offset_minutes": 330
+      },
+      "output": {
+        "day": 403,
+        "next_rollover": 1068442200
+      }
+    },
+    {
+      "input": {
+        "crt": 1003369600,
+        "now": 1071429693,
+        "rollover_hour": 13,
+        "utc_offset_minutes": -300
+      },
+      "output": {
+        "day": 788,
+        "next_rollover": 1071511200
+      }
+    },
+    {
+      "input": {
+        "crt": 1029635200,
+        "now": 1030252659,
+        "rollover_hour": 13,
+        "utc_offset_minutes": 540
+      },
+      "output": {
+        "day": 7,
+        "next_rollover": 1030334400
+      }
+    },
+    {
+      "input": {
+        "crt": 1029894400,
+        "now": 1074236564,
+        "rollover_hour": 7,
+        "utc_offset_minutes": -300
+      },
+      "output": {
+        "day": 513,
+        "next_rollover": 1074254400
+      }
+    },
+    {
+      "input": {
+        "crt": 1033350400,
+        "now": 1101960138,
+        "rollover_hour": 22,
+        "utc_offset_minutes": 60
+      },
+      "output": {
+        "day": 793,
+        "next_rollover": 1102021200
+      }
+    },
+    {
+      "input": {
+        "crt": 1018316800,
+        "now": 1075865671,
+        "rollover_hour": 9,
+        "utc_offset_minutes": -600
+      },
+      "output": {
+        "day": 666,
+        "next_rollover": 1075921200
+      }
+    },
+    {
+      "input": {
+        "crt": 1017020800,
+        "now": 1074030090,
+        "rollover_hour": 23,
+        "utc_offset_minutes": 330
+      },
+      "output": {
+        "day": 659,
+        "next_rollover": 1074101400
+      }
+    },
+    {
+      "input": {
+        "crt": 1015984000,
+        "now": 1061371951,
+        "rollover_hour": 15,
+        "utc_offset_minutes": 60
+      },
+      "output": {
+        "day": 524,
+        "next_rollover": 1061388000
+      }
+    },
+    {
+      "input": {
+        "crt": 1013132800,
+        "now": 1028664796,
+        "rollover_hour": 15,
+        "utc_offset_minutes": 0
+      },
+      "output": {
+        "day": 179,
+        "next_rollover": 1028732400
+      }
+    },
+    {
+      "input": {
+        "crt": 1011145600,
+        "now": 1076008004,
+        "rollover_hour": 1,
+        "utc_offset_minutes": 330
+      },
+      "output": {
+        "day": 750,
+        "next_rollover": 1076009400
+      }
+    },
+    {
+      "input": {
+        "crt": 1017712000,
+        "now": 1056334438,
+        "rollover_hour": 7,
+        "utc_offset_minutes": 720
+      },
+      "output": {
+        "day": 447,
+        "next_rollover": 1056394800
+      }
+    },
+    {
+      "input": {
+        "crt": 1012873600,
+        "now": 1074956510,
+        "rollover_hour": 3,
+        "utc_offset_minutes": 540
+      },
+      "output": {
+        "day": 718,
+        "next_rollover": 1074967200
+      }
+    },
+    {
+      "input": {
+        "crt": 1010368000,
+        "now": 1064858829,
+        "rollover_hour": 17,
+        "utc_offset_minutes": 0
+      },
+      "output": {
+        "day": 630,
+        "next_rollover": 1064941200
+      }
+    },
+    {
+      "input": {
+        "crt": 1008208000,
+        "now": 1050060644,
+        "rollover_hour": 20,
+        "utc_offset_minutes": -300
+      },
+      "output": {
+        "day": 484,
+        "next_rollover": 1050109200
+      }
+    },
+    {
+      "input": {
+        "crt": 1019872000,
+        "now": 1040099443,
+        "rollover_hour": 0,
+        "utc_offset_minutes": 60
+      },
+      "output": {
+        "day": 234,
+        "next_rollover": 1040166000
+      }
+    },
+    {
+      "input": {
+        "crt": 1031536000,
+        "now": 1109016355,
+        "rollover_hour": 7,
+        "utc_offset_minutes": 720
+      },
+      "output": {
+        "day": 897,
+        "next_rollover": 1109098800
+      }
+    },
+    {
+      "input": {
+        "crt": 1012787200,
+        "now": 1055923808,
+        "rollover_hour": 15,
+        "utc_offset_minutes": -600
+      },
+      "output": {
+        "day": 499,
+        "next_rollover": 1055984400
+      }
+    },
+    {
+      "input": {
+        "crt": 1004579200,
+        "now": 1057286687,
+        "rollover_hour": 4,
+        "utc_offset_minutes": 330
+      },
+      "output": {
+        "day": 610,
+        "next_rollover": 1057357800
+      }
+    },
+    {
+      "input": {
+        "crt": 1022809600,
+        "now": 1065547639,
+        "rollover_hour": 22,
+        "utc_offset_minutes": -300
+      },
+      "output": {
+        "day": 494,
+        "next_rollover": 1065582000
+      }
+    },
+    {
+      "input": {
+        "crt": 1031017600,
+        "now": 1071895161,
+        "rollover_hour": 15,
+        "utc_offset_minutes": 60
+      },
+      "output": {
+        "day": 472,
+        "next_rollover": 1071928800
+      }
+    }
+  ],
+  "function": "anki.timing.day",
+  "generator": "tools/parity-oracle/anki/generate.py",
+  "generator_sha256": "0298e56ecf2f716be2e27633b48a21c613edc478b8c9de7c43d3e0c3beb795b6",
+  "inputs": "synthetic",
+  "kind": "engine",
+  "note": "answers the engine's day number and next rollover for the creation time, rollover hour, offset and instant (F4); cases drawn under CPython 3.12.3.",
+  "registry": "tools/parity-oracle/anki/registry/spec_498.py",
+  "registry_sha256": "a0ee26a7384b62d141919a7a5c1c95918b6a1881492f76863b17befd33e654bf",
+  "schema": "phx.parity-golden.v1",
+  "seed": 498,
+  "source_commit": "dca72f352730abb4222389cc148e46387c17f97f"
+}

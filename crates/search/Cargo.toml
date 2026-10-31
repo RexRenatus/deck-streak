@@ -1,0 +1,22 @@
+[package]
+name = "deck-streak-search"
+description = "DeckStreak's own search: one typed query, a closed operator grammar with its profiles, and an evaluator over a collection's rows, with no I/O and no kernel edge. See docs/CONTEXT-MAP.md."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# ADR-532 D5: the engine's day is counted from the study day's own rule, the one crate this crate
+# depends on; it has no dependency of its own and no I/O, so the search links into either client.
+deck-streak-study-day.workspace = true
+
+[dev-dependencies]
+# ADR-029: the parity oracle's golden reader, compiled into the crate's golden tests by path.
+serde.workspace = true
+serde_json.workspace = true

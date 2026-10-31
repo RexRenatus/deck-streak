@@ -283,6 +283,7 @@ export function studyEngine(): EngineModule {
     undo: () => undefined,
     undo_offer: () => JSON.stringify({ offer: null, why: 'none' }),
     snapshot: (card) => JSON.stringify([Number(card), 2, 2, 5, 3, 1, 0]),
+    card_health: () => 'null',
     last_panic: () => undefined,
     memory_pages: () => 17,
     deck_tree: () => JSON.stringify([{ id: '1', name: 'Default', level: 1, new: 1, learning: 0, review: 0, children: [] }]),

@@ -118,3 +118,13 @@ flowchart TD
 - A `timeout` or `void` outcome, and any mutant of a partial or VOID leg.
 - Any outcome on a run that is not admitted.
 - The equivalence records, the rows retirement check and `legs`: each is evaluated at the head.
+
+## 6. How `ci` reads the release run's jobs (SPEC-500, ADR-518)
+
+Every step above runs on the release run as drawn, and its results reach the run as before: the legs' reports, the
+verdict's judgement and `mutation-outcomes`, which `mutation-verdict` uploads whatever the legs returned, so a later
+release run can carry from this one. What changes is `ci`'s reading on that run alone, drawn in
+`docs/schematics/mutation-testing.md` section 13: `base-is-dev` names the release run by `release_run`'s predicate,
+and `ci` prints `mutation-plan`'s, the Python legs' and `mutation-verdict`'s results, with the other mutation jobs',
+as advisory lines and admits each by value. A carry refused by name, a VOID leg or a survivor still reads red in its
+own job and its report on the release run; on every other run a red mutation job still fails `ci`.

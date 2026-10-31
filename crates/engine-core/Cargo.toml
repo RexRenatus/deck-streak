@@ -33,6 +33,12 @@ base64.workspace = true
 deck-streak-fsrs7 = { path = "../fsrs7" }
 
 [dev-dependencies]
+# ADR-525 D2 (SPEC-507 A2): the analytics crate's capped seconds, its review row and its study day,
+# which the card health panel's differential test compares with. Dev only: the core's own edges
+# stay the engine and the scheduler.
+deck-streak-analytics.workspace = true
+deck-streak-ingest.workspace = true
+deck-streak-kernel.workspace = true
 # ADR-375 (SPEC-364 section 3): the runtime that runs the engine's own sync server as a child of the
 # one-way tests, on a loopback port, as the native adapter's login tests run it.
 tokio = { workspace = true, features = ["rt"] }

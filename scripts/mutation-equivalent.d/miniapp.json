@@ -253,6 +253,164 @@
       "reason": "A pending step's stage becomes the empty string, and the page draws a stage it does not name as it draws working: the button, held.",
       "evidence": "The template names no-code, no-webauthn, spent and done, offers the button in every other stage past reading and holds it in each but ready, so the empty string draws what working draws; `create` sets the stage again before it returns, and 'the button waits while a step is pending, and returns after a refusal' of `link.test.ts` asserts the held button and its return.",
       "issue": "#627"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "BooleanLiteral: false",
+      "anchor": "view.setUint16(6, 0, true);",
+      "reason": "The refusal frame's minor version is written big-endian instead of little-endian, and a zero is the same two bytes in either order.",
+      "evidence": "refusedAbsent writes the minor version 0 into bytes 6 and 7 with setUint16; 0 is 0x0000, so the byte-order flag changes no byte of the 14-byte frame, while the length, the major version and the epoch, whose bytes do depend on order, keep their little-endian writes. ABSENT's hello, ABSENT.call and a present companion's trapped call all hand back the same bytes; 'a request shorter than its header is answered the refusal at epoch 0, and one of 13 bytes the refusal at its own epoch' of `companion-edges.test.ts` asserts the frame byte for byte.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "StringLiteral: \"\"",
+      "anchor": "?? '0'",
+      "reason": "A response with no content-length header declares the empty string instead of 0, and Number reads both as 0.",
+      "evidence": "Headers.get answers null for a header the response lacks, so `??` supplies the fallback, and Number('') and Number('0') are both 0, which is never past the 16 MiB cap; a declared header is used as before, since `??` never reaches the fallback for a string. The body is then read and held to the cap by its actual length on both paths.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "BlockStatement: {}",
+      "anchor": "} catch {\n    return null;\n  }\n  if (typeof parsed !== 'object'",
+      "reason": "A manifest that fails to decode or parse falls through with nothing assigned, and the object test on the next line refuses that undefined with the same null.",
+      "evidence": "`parsed` is declared without a value and assigned only when the fatal TextDecoder and JSON.parse both succeed, so with the catch emptied a failure leaves it undefined, and `typeof undefined !== 'object'` returns null before Object.keys or any digest is read. loadCompanion then answers ABSENT after the one manifest fetch, as the original does; `digests` is private to the module and loadCompanion is its one caller.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;",
+      "span": "typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)",
+      "reason": "The object test never refuses, and every JSON value it refused is refused after it with the same ABSENT and the same single fetch.",
+      "evidence": "Whatever the changed test lets through meets the exact-keys check on the next line (two keys, `module` then `weights`): Object.keys of a JSON string yields its indices ('0', '1', ...), of a number or boolean no key, and of an array its indices, so the check returns null for each, and Object.keys(null) throws a TypeError outside digests' own try, which loadCompanion's try catches and answers ABSENT. The original answers ABSENT for the same values through `wanted === null`; on both paths only manifest.json is fetched and Web Crypto is asked for nothing. Object.keys lists own enumerable keys only, so no inherited property lets a primitive or an array through, and a manifest the loader accepts is a non-null, non-array object, which this test never refused. `digests` is private to the module and loadCompanion is its one caller.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;",
+      "span": "typeof parsed !== 'object' || parsed === null",
+      "reason": "Only the array test still refuses here, and the strings, numbers, booleans and null the first two tests refused are refused later with the same ABSENT.",
+      "evidence": "Whatever the changed test lets through meets the exact-keys check on the next line (two keys, `module` then `weights`): Object.keys of a JSON string yields its indices ('0', '1', ...), of a number or boolean no key, and of an array its indices, so the check returns null for each, and Object.keys(null) throws a TypeError outside digests' own try, which loadCompanion's try catches and answers ABSENT. The original answers ABSENT for the same values through `wanted === null`; on both paths only manifest.json is fetched and Web Crypto is asked for nothing. Object.keys lists own enumerable keys only, so no inherited property lets a primitive or an array through, and a manifest the loader accepts is a non-null, non-array object, which this test never refused. `digests` is private to the module and loadCompanion is its one caller.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;",
+      "span": "typeof parsed !== 'object'",
+      "reason": "Null and arrays are still refused here, and the strings, numbers and booleans the typeof test refused fail the exact-keys check with the same null.",
+      "evidence": "Whatever the changed test lets through meets the exact-keys check on the next line (two keys, `module` then `weights`): Object.keys of a JSON string yields its indices ('0', '1', ...), of a number or boolean no key, and of an array its indices, so the check returns null for each, and Object.keys(null) throws a TypeError outside digests' own try, which loadCompanion's try catches and answers ABSENT. The original answers ABSENT for the same values through `wanted === null`; on both paths only manifest.json is fetched and Web Crypto is asked for nothing. Object.keys lists own enumerable keys only, so no inherited property lets a primitive or an array through, and a manifest the loader accepts is a non-null, non-array object, which this test never refused. `digests` is private to the module and loadCompanion is its one caller.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "LogicalOperator: (typeof parsed !== 'object' || parsed === null) && Array.isArray(parsed)",
+      "anchor": "if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;",
+      "reason": "No JSON value is both an array and a non-object or null, so the test refuses nothing, and the values it refused fail later with the same ABSENT.",
+      "evidence": "An array is a non-null object, so `(typeof parsed !== 'object' || parsed === null) && Array.isArray(parsed)` is false for every value JSON.parse returns, and the line behaves as if the whole condition were false. Whatever the changed test lets through meets the exact-keys check on the next line (two keys, `module` then `weights`): Object.keys of a JSON string yields its indices ('0', '1', ...), of a number or boolean no key, and of an array its indices, so the check returns null for each, and Object.keys(null) throws a TypeError outside digests' own try, which loadCompanion's try catches and answers ABSENT. The original answers ABSENT for the same values through `wanted === null`; on both paths only manifest.json is fetched and Web Crypto is asked for nothing. Object.keys lists own enumerable keys only, so no inherited property lets a primitive or an array through, and a manifest the loader accepts is a non-null, non-array object, which this test never refused. `digests` is private to the module and loadCompanion is its one caller.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "LogicalOperator: typeof parsed !== 'object' && parsed === null",
+      "anchor": "if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;",
+      "reason": "The first two tests joined by && are never both true, since typeof null is 'object', so only the array test refuses, and the rest fail later with the same ABSENT.",
+      "evidence": "`typeof parsed !== 'object' && parsed === null` is false for every value, which leaves `Array.isArray(parsed)` as the whole condition: arrays are still refused here. Whatever the changed test lets through meets the exact-keys check on the next line (two keys, `module` then `weights`): Object.keys of a JSON string yields its indices ('0', '1', ...), of a number or boolean no key, and of an array its indices, so the check returns null for each, and Object.keys(null) throws a TypeError outside digests' own try, which loadCompanion's try catches and answers ABSENT. The original answers ABSENT for the same values through `wanted === null`; on both paths only manifest.json is fetched and Web Crypto is asked for nothing. Object.keys lists own enumerable keys only, so no inherited property lets a primitive or an array through, and a manifest the loader accepts is a non-null, non-array object, which this test never refused. `digests` is private to the module and loadCompanion is its one caller.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "parsed === null || Array.isArray(parsed)) return null;",
+      "reason": "JSON null is no longer refused by the object test; Object.keys(null) then throws inside loadCompanion's try, which answers the same ABSENT after the same single fetch.",
+      "evidence": "With `parsed === null` false, null passes the typeof test (typeof null is 'object') and the array test, and Object.keys(null) throws a TypeError outside digests' own try; loadCompanion's try catches it and answers ABSENT, which the original reaches through `wanted === null`. Only manifest.json is fetched on either path and Web Crypto is asked for nothing; every other value meets the same tests as before. `digests` is private to the module and loadCompanion is its one caller.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "const wanted = manifest === null ? null : digests(manifest);",
+      "reason": "A manifest the route refused reaches digests as null, which fails inside digests' own try and answers the same null.",
+      "evidence": "fetched answers null for a status other than 200 or a length past the cap. With the guard false, digests(null) hands null to the fatal TextDecoder inside its try: the decoder throws a TypeError or decodes nothing to the empty string, which JSON.parse refuses, and the catch returns null either way. `wanted` is null as before, so loadCompanion answers ABSENT having fetched only manifest.json and asked Web Crypto for nothing.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (abi === null) return ABSENT;",
+      "reason": "Exports that are no ABI reach `abi.open`, which throws on null inside loadCompanion's try, and the catch answers the same ABSENT.",
+      "evidence": "abiOf answers null when the memory export is no WebAssembly.Memory or any of alloc, free, open and call is not a function. With the guard false, the next statement evaluates exchange's argument `abi.open` on null, a TypeError thrown before exchange runs, so nothing is allocated, opened or called and nothing more is fetched; loadCompanion's catch answers ABSENT, the value the guard returns. 'exports whose memory is no WebAssembly.Memory read Absent, though the rest of the ABI answers' of `companion-edges.test.ts` holds that ABSENT.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (root === null) return null;",
+      "reason": "load with no root calls getDirectoryHandle on null inside its own try, whose catch answers the same null.",
+      "evidence": "#root answers null when there is no storage, no getDirectory, or the browser refuses the root. With the guard false, load goes on to `root.getDirectoryHandle(COMPANION_DIRECTORY)` inside its try; reading a property of null throws a TypeError before anything is opened, and the catch returns null, the guard's own answer. save and remove keep their guards, so nothing else changes.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/study/CardHealthPanel.svelte",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "const recall = $derived(health === null ? null : recallLines(health.scheduler));",
+      "reason": "Both forms call recallLines whenever recall is read, because its only reads lie in the branch drawn while health is a record.",
+      "evidence": "recall is a `$derived`, which Svelte computes when it is read and recomputes only when read again after health changed. Its two reads are the tests of the recall section, inside the `{:else}` of `{#if loading}` / `{:else if health === null}`, so no read happens while health is null and the mutant's unguarded `health.scheduler` is never reached. `ReviewScreen.svelte` mounts the panel with loading and a null record, and a read begun before a close can land after a reopen, so one panel can take a record and then null; and when health does change, Svelte re-runs the outer if-block before the effects of the branch it removes, which never run again. 'while loading it says so, and a record that could not be read says that, with no counts' and the recall tests of `card-health.test.ts` pass against it.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/study/CardHealthPanel.svelte",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "health !== null && (health.logged.answers !== health.reps",
+      "span": "health !== null",
+      "reason": "differs is read only where health is a record, so its leading null test is always true at its one read.",
+      "evidence": "Its one read is `{#if differs}`, inside the same `{:else}` branch that draws only while loading is false and health is not null; there `true && (...)` and `health !== null && (...)` give the same value, that of the two counter comparisons. As a `$derived`, differs is computed at that read, so the mutant's unguarded `health.logged` never meets a null health. 'the panel shows the counts, the capped times and the newest reviews first' and 'while loading it says so, and a record that could not be read says that, with no counts' pass against it.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/study/CardHealthPanel.svelte",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "else (at === -1 || at === controls.length - 1 ? first : controls[at + 1]).focus();",
+      "span": "at === -1",
+      "reason": "With the focus outside the dialog, controls[at + 1] is controls[0], which is first, so dropping the test changes no target.",
+      "evidence": "at is `controls.indexOf(document.activeElement)`, so -1 means the focus lies outside the list; the remaining arm then focuses `controls[-1 + 1]`, the same element as `first = controls[0]`. The list always holds the dialog's own Close button, so it is never empty, and were it empty `at === controls.length - 1` would hold at -1 in both forms, which would then call focus() on undefined alike. 'Tab and Shift+Tab move through every control of the panel and wrap at each end' presses Tab from outside, first, middle and last and passes against it.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/study/CardHealthPanel.svelte",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "{#if recall !== null && recall.label !== null}",
+      "span": "recall !== null",
+      "reason": "Inside the record branch recall is recallLines' answer, an object on every path, so the null test is always true.",
+      "evidence": "The `{#if}` sits in the `{:else}` branch drawn only while health is not null, where recall is `recallLines(health.scheduler)`; `recallLines` in `card-health.ts` returns `{ label, lines }` from both of its returns and never null, so `true && recall.label !== null` decides exactly as the original does. 'the recall rows hold one paragraph in a state but Ready, and the label and two figures when Ready' passes against it.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/study/CardHealthPanel.svelte",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "{:else if recall !== null}",
+      "reason": "The fallback recall row is tested only inside the record branch, where recall is never null.",
+      "evidence": "This `{:else if}` is reached only after the label test above it failed, in the branch that draws while health is not null and recall holds the object `recallLines` returns, so `{:else if true}` draws the same one paragraph, the state's line, as the original in every state but Ready. 'the recall rows read the state's line in every state but Ready' passes against it.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/study/review.ts",
+      "mutant": "ConditionalExpression: true",
+      "anchor": "&& this.#pausedAt !== null) {",
+      "reason": "#pausedAt holds a number while any overlay is open, so it is never null when the last one closes.",
+      "evidence": "#pausedAt starts null with #overlays at 0. openOverlay sets it to #now() whenever #overlays is 0, before counting up; closeOverlay returns at once when #overlays is 0 and nulls #pausedAt only after its count reaches 0; the card load replaces it with #shownAt only when it is already not null. So a decrement that brings #overlays to 0 starts from 1, while #pausedAt holds a number, and `this.#pausedAt !== null` is true every time it is evaluated. 'a close with no overlay open changes nothing, and the clock stops until the last overlay closes' of `review.test.ts` passes against it.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/study/review.ts",
+      "mutant": "ArrowFunction: () => undefined",
+      "anchor": "client.cardHealth?.(card).catch(() => null)) ?? null",
+      "reason": "The handler's value reaches the caller only through ?? null, which reads undefined as it reads null.",
+      "evidence": "When the engine refuses the read, `.catch` resolves the promise to the handler's value, null or under the mutant undefined, and the awaited result is the left side of `?? null`, which answers null for both, so `cardHealth()` returns null either way and nothing else holds the handler's value. A client with no `cardHealth` skips the call, and a record passes through unchanged, in both forms.",
+      "issue": "#1065"
     }
   ]
 }
