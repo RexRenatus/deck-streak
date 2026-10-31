@@ -1,0 +1,13 @@
+{
+  "records": [
+    {
+      "file": "crates/search/src/eval.rs",
+      "mutant": "replace && with || in order",
+      "anchor": "&cards[index];\n        card.original_deck_id != 0 && named(card.original_deck_id)",
+      "reason": "The cards the mutant adds to the borrowed list are cards no query with that deck term selects, so the selected cards keep their order.",
+      "evidence": "order runs only inside eval, which keeps the cards Scope::holds selects. Its deck name is the top-level deck term, which every selected card meets, and Scope::deck admits a card outside the named decks only when its original deck is nonzero and named, which is this line's original condition. The mutant moves from the others list to the borrowed list only cards that fail that condition (an original deck that is nonzero and not named, or 0 when a deck with id 0 is named), and each fails the deck term and is filtered out. The selected cards in each list are the same, and the stable sort by original deck and id keeps them in the same relative order, so eval returns the same list for every query and collection.",
+      "reached_by": "eval_terms::a_deck_search_lists_its_own_cards_by_queue_and_due_then_the_borrowed_by_original_deck",
+      "issue": "#295"
+    }
+  ]
+}
