@@ -104,3 +104,23 @@ fn a_name_that_is_not_plain_is_refused() {
         );
     }
 }
+
+#[test]
+fn each_name_refusal_says_why_in_words() {
+    assert_eq!(
+        NameRefusal::NotPlain.to_string(),
+        "the name is not a plain file name"
+    );
+    assert_eq!(
+        NameRefusal::Malformed.to_string(),
+        "the name starts like a certified name but is not one"
+    );
+    assert_eq!(
+        NameRefusal::BadExtension.to_string(),
+        "the extension is not 1 to 10 lowercase letters or digits"
+    );
+    assert_eq!(
+        NameRefusal::Mismatch.to_string(),
+        "the name certifies another file's bytes"
+    );
+}

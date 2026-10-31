@@ -106,6 +106,36 @@ fn a_bind_under_a_mismatched_certified_name_is_refused() {
     );
 }
 
+#[test]
+fn bindings_count_every_bound_name_and_say_when_none_is() {
+    let mut bindings = Bindings::new();
+    assert_eq!(bindings.len(), 0, "a new set binds no name");
+    assert!(bindings.is_empty());
+    assert_eq!(
+        bindings.bind(&imported("ds_cedar.png"), hash(6)),
+        Ok(Bound::New)
+    );
+    assert_eq!(
+        bindings.bind(&imported("ds_delta.png"), hash(7)),
+        Ok(Bound::New)
+    );
+    assert_eq!(bindings.len(), 2, "two names are bound");
+    assert!(!bindings.is_empty(), "a bound name makes the set non-empty");
+}
+
+#[test]
+fn each_bind_and_release_refusal_says_why_in_words() {
+    assert_eq!(
+        BindRefusal::Mismatch.to_string(),
+        "the name certifies another hash"
+    );
+    assert_eq!(
+        BindRefusal::Conflict.to_string(),
+        "the name is bound to another hash"
+    );
+    assert_eq!(ReleaseRefusal::Unbound.to_string(), "the name is not bound");
+}
+
 /// Every slot, claim and hash over two hashes: what each bind and each release gives, written out
 /// by rule, and the slot `Bindings` keeps agrees with the machine.
 #[test]
