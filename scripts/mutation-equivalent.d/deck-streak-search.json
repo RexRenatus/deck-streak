@@ -26,6 +26,33 @@
       "evidence": "A star is stored as (star_t, star_s) when the Many arm leaves t at star_t + 1 and s at star_s, so the mutant's first backtrack from it sets t and s back to that same state, with star moved to star_s + 1. The attempt that failed met no Many (one would have replaced the star) and reads only t, s and the text, so the repeat fails at the same token; from then on the stored star_s runs one ahead of the original's, each restart sets s to the position the original's sets, and both stop at the end of the text with the same t. With the mutant applied by hand, every test of the package passes, and like and Glob::matches answer as a reference matcher written apart on all 693,547 pairs of a pattern of up to six of a, b, % and _ with a text of up to six of a and b.",
       "reached_by": "eval_golden::eval_equals_the_engines_search_golden",
       "issue": "#1060"
+    },
+    {
+      "file": "crates/search/src/parse.rs",
+      "mutant": "replace match guard at + 1 < chars.len() with true in Parser<'_>::term",
+      "anchor": "'\\\\' if at + 1 < chars.len() =>",
+      "reason": "Every backslash term() meets opens an escape pair with a character after it, so its guard is already true wherever it is read.",
+      "evidence": "term() reads only text that unquoted() or quoted() built, and each pushes a backslash only together with the character after it, refusing a backslash with nothing after it as BadEscape or UnclosedQuote; so that text is plain characters other than a backslash and two-character pairs that open with one. term() walks it with the same pairing from its first character, stepping two over a pair and one over any other character, and stops at a plain colon before it reads further, so each backslash it meets opens a pair and at + 1 < chars.len() holds there. With the mutant applied by hand, every test of the package passes, and every search of up to seven characters of a, colon, backslash, quote, both parentheses, space and star (2,696,336 parses under the operator and skip profiles) answers as it does unmutated, by one digest of every answer, which the guard replaced with false moves.",
+      "reached_by": "grammar_edges::an_escaped_colon_in_a_term_is_text_and_splits_no_key",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/search/src/parse.rs",
+      "mutant": "replace + with * in Parser<'_>::term",
+      "anchor": "'\\\\' if at + 1 < chars.len() =>",
+      "reason": "at * 1 < chars.len() is at < chars.len(), the while condition the arm sits inside, so the guard is true wherever it is read, as the original's is.",
+      "evidence": "The arm is read only inside while at < chars.len(), so the mutated guard is always true there. The original guard is always true there as well: unquoted() and quoted() push a backslash only together with the character after it, and term() walks the same pairs from the first character, so each backslash it meets opens a pair. With the mutant applied by hand, every test of the package passes, and the digest of all 2,696,336 parses of every search of up to seven characters of a, colon, backslash, quote, both parentheses, space and star equals the unmutated digest.",
+      "reached_by": "grammar_edges::an_escaped_colon_in_a_term_is_text_and_splits_no_key",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/search/src/parse.rs",
+      "mutant": "replace < with <= in Parser<'_>::term",
+      "anchor": "'\\\\' if at + 1 < chars.len() =>",
+      "reason": "at + 1 <= chars.len() is at < chars.len(), the while condition the arm sits inside, so the guard is true wherever it is read, as the original's is.",
+      "evidence": "For whole numbers at + 1 <= n holds exactly when at < n, and the arm is read only inside while at < chars.len(), so the mutated guard is always true there. The original guard is always true there as well, since each backslash term() meets opens a pair that unquoted() or quoted() pushed whole. With the mutant applied by hand, every test of the package passes, and the digest of all 2,696,336 parses of every search of up to seven characters of a, colon, backslash, quote, both parentheses, space and star equals the unmutated digest.",
+      "reached_by": "grammar_edges::an_escaped_colon_in_a_term_is_text_and_splits_no_key",
+      "issue": "#1060"
     }
   ]
 }
