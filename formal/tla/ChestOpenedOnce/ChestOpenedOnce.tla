@@ -7,13 +7,19 @@
 \* @phx covers crates/quests/src/chest_store.rs anchor=settle_choice digest=sha256:c42c52f076764878b3b139e17cd9a61025d6c4670af8ec62cf078d2f17ea8e8b
 \* @phx covers crates/quests/src/chest_store.rs anchor=sweep_resolve digest=sha256:074596e8b7e9cff568c22f0267cb48bdf4823f40aac362fb7eeb00d737b4eeac
 \* @phx covers crates/kernel/src/db.rs anchor=write digest=sha256:c3d700eda268a6f46c7eea0aabcd2f62d8fc0aeffbe03d1cd1e8437a88bdb916
+\* @phx covers crates/coordination/src/chests.rs anchor=open_chest digest=sha256:763cce5b22ba17c03358c47c7de8a2e2d5749f8ba8258d6fc752887746ad0da4
+\* @phx covers crates/coordination/src/chests.rs anchor=pick_epic_choice digest=sha256:db57599fdba7fc44a2d976906f0667b8693855fcce97cb5cefe591ab74092d32
+\* @phx covers crates/coordination/src/freeze.rs anchor=grant_freeze_on digest=sha256:80e51859d1adb864875c67cd958ca26c97e21393e0e10c2cfeda485ebbb76db5
+\* @phx covers crates/coordination/src/recompute/chests.rs anchor=sweep_and_pay digest=sha256:b5890cf0edc7a6f7a679f72eb2e5d64cfa01b24087eccc3c8db0ab9697443e0e
 \* @phx cites #102, #103
 \* @phx property OneRewardPerChest ramp=report
 \* @phx property AResolvedChestStaysResolved ramp=report
+\* @phx property AResolvedChestIsPaid ramp=report
 \* @phx witness witness/an-open-unguarded-on-the-chests-state.cfg kills=OneRewardPerChest
 \* @phx witness witness/a-prize-granted-before-its-settle.cfg kills=OneRewardPerChest
 \* @phx witness witness/an-open-split-across-two-writes.cfg kills=OneRewardPerChest
 \* @phx witness witness/a-resolve-undone-by-an-unguarded-open.cfg kills=AResolvedChestStaysResolved
+\* @phx witness witness/a-resolved-chest-left-unpaid.cfg kills=AResolvedChestIsPaid
 (***************************************************************************)
 \* A chest is opened, chosen and swept once (#102, #103): N callers over one set of stored chests,
 \* each call one of chests.rs::open_chest_on, chests.rs::settle_epic_choice_on and
@@ -47,13 +53,25 @@
 \* - the freeze cap only turns a freeze into a token: both are one prize;
 \* - a rollback keeps nothing of its call and is the call never made, so it is left out.
 \*
-\* Three defect switches, each FALSE in a witness: GuardedOpen (mark_opened's state guard),
-\* SettleFirst (the choice settles before its prize is granted; the predecessor granted first)
-\* and OneWrite (a call's steps run in one write of its caller).
+\* The caller's credit (#102, ADR-425): coordination's chests.rs::open_chest and
+\* chests.rs::pick_epic_choice, freeze.rs::grant_freeze_on and recompute/chests.rs::sweep_and_pay
+\* credit each reward the call answers (the payout to xp_ledger, the freeze row, the fallback) in
+\* the write that resolves its chest; a token prize is credited by its own row in that write.
+\* credits counts what the caller wrote, beside rewards, which counts what a call answered.
+\*
+\* Four defect switches, each FALSE in a witness: GuardedOpen (mark_opened's state guard),
+\* SettleFirst (the choice settles before its prize is granted; the predecessor granted first),
+\* OneWrite (a call's steps run in one write of its caller) and CreditInCall (the caller credits a
+\* reward in the write that answered it; the design ADR-425 rejected credits it in a later write).
 (***************************************************************************)
 EXTENDS Integers, FiniteSets
 
 CONSTANTS GuardedOpen, SettleFirst, OneWrite, NActors, NChests
+
+\* The fourth defect switch, with its default: TRUE, each reward credited in the write that answered
+\* it. A configuration assigns it as it assigns a constant (MCChestOpenedOnce.cfg TRUE, its witness
+\* FALSE); a configuration that does not name it keeps the default.
+CreditInCall == TRUE
 
 Actors == 1..NActors
 Chests == 1..NChests
@@ -68,9 +86,10 @@ VARIABLES
     holder,       \* the caller holding the write lock, or NoActor
     pc,           \* each caller's place: "idle", "resolve", "prize", "settle" or "sweep"
     target,       \* each caller's chest, for an open's or a choice's later step
-    todo          \* each sweeping caller's chests still to resolve, from its read
+    todo,         \* each sweeping caller's chests still to resolve, from its read
+    credits       \* each chest's rewards its caller credited
 
-vars == <<state, epic, chosen, rewards, everResolved, holder, pc, target, todo>>
+vars == <<state, epic, chosen, rewards, everResolved, holder, pc, target, todo, credits>>
 
 TypeOK ==
     /\ state \in [Chests -> {"sealed", "opened", "resolved"}]
@@ -82,6 +101,7 @@ TypeOK ==
     /\ pc \in [Actors -> {"idle", "resolve", "prize", "settle", "sweep"}]
     /\ target \in [Actors -> Chests]
     /\ todo \in [Actors -> SUBSET Chests]
+    /\ credits \in [Chests -> Nat]
 
 Init ==
     /\ state = [c \in Chests |-> "sealed"]
@@ -93,6 +113,7 @@ Init ==
     /\ pc = [a \in Actors |-> "idle"]
     /\ target = [a \in Actors |-> 1]
     /\ todo = [a \in Actors |-> {}]
+    /\ credits = [c \in Chests |-> 0]
 
 \* A call's first step may start: under one write, no other caller holds the lock.
 Free == ~OneWrite \/ holder = NoActor
@@ -105,6 +126,10 @@ Take(a) == holder' = IF OneWrite THEN a ELSE NoActor
 
 \* A step that ends the call gives the lock back.
 Release == holder' = NoActor
+
+\* The caller credits chest c's reward in the write that answered it; with the defect, it does not
+\* here, and LaterCredit credits it in a later write.
+Credit(c) == credits' = IF CreditInCall THEN [credits EXCEPT ![c] = @ + 1] ELSE credits
 
 \* Resolves chest c, and keeps its history.
 Resolve(c) ==
@@ -124,7 +149,7 @@ OpenChest(a, c) ==
                   /\ Take(a)
              ELSE /\ UNCHANGED <<pc, target>>
                   /\ Release
-    /\ UNCHANGED <<epic, chosen, rewards, everResolved, todo>>
+    /\ UNCHANGED <<epic, chosen, rewards, everResolved, todo, credits>>
 
 \* The open's second step: chest_store::mark_resolved, guarded on an opened chest, then the
 \* payout the open answers for its caller to grant, whatever the resolve took.
@@ -136,6 +161,7 @@ ResolveOpened(a) ==
              THEN Resolve(c)
              ELSE UNCHANGED <<state, everResolved>>
           /\ rewards' = [rewards EXCEPT ![c] = @ + 1]
+          /\ Credit(c)
     /\ pc' = [pc EXCEPT ![a] = "idle"]
     /\ Release
     /\ UNCHANGED <<epic, chosen, target, todo>>
@@ -160,10 +186,11 @@ Choose(a, c) ==
                  /\ pc' = [pc EXCEPT ![a] = "prize"]
                  /\ target' = [target EXCEPT ![a] = c]
                  /\ Take(a)
-                 /\ UNCHANGED rewards
-            ELSE /\ UNCHANGED <<state, chosen, everResolved, rewards, pc, target>>
+                 /\ UNCHANGED <<rewards, credits>>
+            ELSE /\ UNCHANGED <<state, chosen, everResolved, rewards, pc, target, credits>>
                  /\ Release
        ELSE /\ rewards' = [rewards EXCEPT ![c] = @ + 1]
+            /\ Credit(c)
             /\ pc' = [pc EXCEPT ![a] = "settle"]
             /\ target' = [target EXCEPT ![a] = c]
             /\ Take(a)
@@ -176,6 +203,7 @@ Prize(a) ==
     /\ pc[a] = "prize"
     /\ Mine(a)
     /\ rewards' = [rewards EXCEPT ![target[a]] = @ + 1]
+    /\ Credit(target[a])
     /\ pc' = [pc EXCEPT ![a] = "idle"]
     /\ Release
     /\ UNCHANGED <<state, epic, chosen, everResolved, target, todo>>
@@ -189,7 +217,7 @@ LateSettle(a) ==
        ELSE UNCHANGED <<state, chosen, everResolved>>
     /\ pc' = [pc EXCEPT ![a] = "idle"]
     /\ Release
-    /\ UNCHANGED <<epic, rewards, target, todo>>
+    /\ UNCHANGED <<epic, rewards, target, todo, credits>>
 
 \* chests.rs::sweep_stale_chests_on, its read: chest_store::unresolved_chests, of which the day
 \* rules keep any non-empty subset.
@@ -201,7 +229,7 @@ SweepRead(a) ==
           /\ todo' = [todo EXCEPT ![a] = s]
     /\ pc' = [pc EXCEPT ![a] = "sweep"]
     /\ Take(a)
-    /\ UNCHANGED <<state, epic, chosen, rewards, everResolved, target>>
+    /\ UNCHANGED <<state, epic, chosen, rewards, everResolved, target, credits>>
 
 \* One chest of the sweep's read: chest_store::sweep_resolve, guarded on an unresolved chest, and
 \* only when it took the row, the payout or the fallback for the caller to grant.
@@ -212,7 +240,8 @@ SweepOne(a) ==
           /\ IF state[c] /= "resolved"
              THEN /\ Resolve(c)
                   /\ rewards' = [rewards EXCEPT ![c] = @ + 1]
-             ELSE UNCHANGED <<state, everResolved, rewards>>
+                  /\ Credit(c)
+             ELSE UNCHANGED <<state, everResolved, rewards, credits>>
           /\ todo' = [todo EXCEPT ![a] = @ \ {c}]
           /\ IF todo[a] = {c}
              THEN /\ pc' = [pc EXCEPT ![a] = "idle"]
@@ -220,15 +249,25 @@ SweepOne(a) ==
              ELSE UNCHANGED <<pc, holder>>
     /\ UNCHANGED <<epic, chosen, target>>
 
+\* The design ADR-425 rejected: a reward a call answered is credited by a later write of its own,
+\* which any other write may come before.
+LaterCredit(c) ==
+    /\ ~CreditInCall
+    /\ Free
+    /\ credits[c] < rewards[c]
+    /\ credits' = [credits EXCEPT ![c] = @ + 1]
+    /\ UNCHANGED <<state, epic, chosen, rewards, everResolved, holder, pc, target, todo>>
+
 Next ==
-    \E a \in Actors :
-        \/ \E c \in Chests : OpenChest(a, c)
-        \/ ResolveOpened(a)
-        \/ \E c \in Chests : Choose(a, c)
-        \/ Prize(a)
-        \/ LateSettle(a)
-        \/ SweepRead(a)
-        \/ SweepOne(a)
+    \/ \E a \in Actors :
+          \/ \E c \in Chests : OpenChest(a, c)
+          \/ ResolveOpened(a)
+          \/ \E c \in Chests : Choose(a, c)
+          \/ Prize(a)
+          \/ LateSettle(a)
+          \/ SweepRead(a)
+          \/ SweepOne(a)
+    \/ \E c \in Chests : LaterCredit(c)
 
 Spec == Init /\ [][Next]_vars
 
@@ -240,6 +279,12 @@ OneRewardPerChest == \A c \in Chests : rewards[c] <= 1
 \* A resolved chest stays resolved: no open, choice or sweep moves it back (chest_store's guards
 \* on mark_opened, settle_choice and sweep_resolve).
 AResolvedChestStaysResolved == \A c \in Chests : everResolved[c] => state[c] = "resolved"
+
+\* A resolved chest is paid: whenever no write is open, every resolved chest has its reward credited,
+\* by the write that resolved it (#102; ADR-425: open_chest, pick_epic_choice with grant_freeze_on,
+\* sweep_and_pay).
+AResolvedChestIsPaid ==
+    holder = NoActor => \A c \in Chests : state[c] = "resolved" => credits[c] >= 1
 
 \* Reachability, beside the witnesses: an Epic's choice is settled; an untapped Epic is swept; a
 \* chest of another rarity is resolved.
