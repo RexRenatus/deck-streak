@@ -7,7 +7,7 @@
 #![allow(clippy::expect_used, reason = "a failed fixture should fail its test")]
 
 use anki_proto::sync::{SyncCollectionRequest, SyncCollectionResponse};
-use deck_streak_engine_core::native_sync::{auth, normal_sync, required, statement_url};
+use deck_streak_engine_core::native_sync::{answer, auth, normal_sync, required, statement_url};
 use prost::Message;
 
 #[test]
@@ -63,6 +63,24 @@ fn a_reply_that_names_a_negative_requirement_reads_as_none() {
         ),
         (None, None, Some(0)),
         "a negative requirement is no number the engine uses, so it reads as none, as zero does not"
+    );
+}
+
+#[test]
+fn the_answer_the_offer_is_read_from_carries_what_was_required() {
+    assert_eq!(
+        [answer(2), answer(u32::MAX)],
+        [
+            SyncCollectionResponse {
+                required: 2,
+                ..SyncCollectionResponse::default()
+            },
+            SyncCollectionResponse {
+                required: i32::MAX,
+                ..SyncCollectionResponse::default()
+            },
+        ],
+        "the answer names the requirement, and one past the engine's numbers as the greatest"
     );
 }
 
