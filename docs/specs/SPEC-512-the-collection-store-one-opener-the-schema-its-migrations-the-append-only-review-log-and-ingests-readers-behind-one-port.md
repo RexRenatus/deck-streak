@@ -7,7 +7,7 @@
 | decided by | ADR-530, under ADR-002, ADR-003, ADR-020, ADR-022 and ADR-029 |
 | measured at | integration head `bae990a2` (every file this SPEC cites is read there) |
 | schematic | `docs/schematics/collection-store-tables-512.md` (data flow), `docs/schematics/collection-store-components-512.md` (components), `docs/schematics/collection-store-open-512.md` (sequence); `docs/schematics/context-map.md` (changed) |
-| mutation band | S51200-S51299 (no hand row: section 9) |
+| mutation band | S51200-S51299 (the statements' rows: section 9) |
 
 ## 1. The problem, measured
 
@@ -172,6 +172,7 @@ driver.
 | `crates/collection/src/data_rights.rs` | store | new: export, the erases and the gate |
 | `crates/collection/src/error.rs` | store | new: `StoreError` |
 | `crates/collection/tests/*.rs` | store tests | new: A1 to A6 and A8, A10 (six files and a support module) |
+| `scripts/mutation-rows.d/S51200-S51299.json` | store tests | new: the statements' guard, pragma and record rows (section 9) |
 | `crates/ingest/Cargo.toml` | ingest | changed: the edges to the collection and to rusqlite |
 | `crates/ingest/src/schema18.rs` | ingest | new: the 19 moved statements and the schema-18 adapter |
 | `crates/ingest/src/{reader,study_days,window,gate,structure,engine,skip_write}.rs` | ingest | changed: each moved statement imported from the adapter, its text unchanged |
@@ -224,5 +225,20 @@ the head. The journal mode under the web engine's file system is not measured by
 
 ## 9. Mutation rows
 
-None. The opener, the migrations and the adapters are killed by the crate's own suites under cargo-mutants; the band
-S51200-S51299 holds no row.
+The opener's, the migrations' and the adapters' code is killed by the crate's own suites under cargo-mutants. The
+statements are not: cargo-mutants mutates no literal of a constant's initializer, so `crates/collection/src/sql.rs` gives
+it nothing to mutate, and its guards and pragma values are hand rows in `scripts/mutation-rows.d/S51200-S51299.json`.
+
+- Each study-review statement (the reviews, the page of ids, the count through a floor, the studied cards) owes a row
+  for its floor, for kind 4 out and each study kind 0 to 3 in, for the ease boundary both ways, for its deck scope where
+  it has one, and for the retraction guard: S51200 to S51209, S51211 to S51220, S51223 to S51241.
+- The reviews owe their order (S51210), and the page of ids its order and its limit (S51221, S51222).
+- The reviewed notes owe their kind, their ease boundary both ways, their scope and the retraction guard (S51242 to
+  S51246); the cards, the templates, the fields and the note fields owe their scopes (S51247 to S51250); the
+  rescheduling count owes its kind and its ease (S51251, S51252).
+- `read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out` kills all of these, over a fixture in which
+  one guard alone keeps each review, card, template or field out.
+- Each pragma setting owes its value (S51253 to S51258), killed by the opener's pragma and reader tests, and the store's
+  record owes its write-once insert and its one id (S51259, S51260), killed by the role check's tests.
+- The card tags' deck scope owes no row: a tag reaches a read only through a card the cards' own scope admits, and a
+  note's tags are the same in every deck, so the scope bounds the work and no read can tell it dropped.
