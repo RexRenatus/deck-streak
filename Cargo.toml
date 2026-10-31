@@ -216,6 +216,9 @@ unwrap_used = "warn"
 expect_used = "warn"
 dbg_macro = "warn"
 print_stdout = "warn"
+# SPEC-436 R1: a lock guard held across an await is denied by name, not only through `all`.
+await_holding_lock = "deny"
+await_holding_refcell_ref = "deny"
 # Pedantic lints this workspace allows, each for a reason.
 # A context's types are named for the context (readings::ReadingNote): the repetition is the
 # ubiquitous language, not noise.
