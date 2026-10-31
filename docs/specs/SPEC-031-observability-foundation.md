@@ -235,3 +235,20 @@ SPEC. Each is corrected above; the reasons are these.
 
 Amendment (2026-09-28): a passage describing another service's operations was replaced with
 DeckStreak's own memory watch under the public-text rule (ADR-059).
+
+## Amendment (SPEC-582): the alert template writes to the journal
+
+The install's alert sender is no longer Telegram (ADR-601 D4):
+
+- R2: every alert of `deploy/slo.json` routes to `journal`, and `alerting.channel` is `journal`;
+  `alerting.unit` is still `deck-streak-alert@.service`.
+- R3: `deploy/systemd/deck-streak-alert@.service` runs `deploy/scripts/alert-journal.sh` with `%i`.
+  The script reads no credential and makes no request. It writes one line at error priority naming
+  the failed unit, its result and its exit status, and quoting the failed run's last five error
+  lines, within 3500 bytes cut at a character boundary, and exits 0 once the line is written.
+- A3 is held by SPEC-582 A9 and A10. A4 (the bot token off the alert's command line) has no
+  subject: the sender loads no token.
+
+Lines 47-48, 51-57, 86-87, 123 and 166-170 record the Telegram sender as this SPEC delivered it.
+Every `OnFailure=` line, the evaluator and the memory watch page through the same template as
+before.

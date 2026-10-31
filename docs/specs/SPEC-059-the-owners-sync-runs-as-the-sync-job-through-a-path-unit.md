@@ -140,3 +140,12 @@ The last bullet of section 5 and the third risk of section 6 stand as written fo
 describe. SPEC-128 (#323) closes what they name: a refusal on the job side is now recorded on
 `ingest_state` beside the pending flag, the flag is cleared in the same write, and the owner is
 answered with the refusal's code instead of being told the sync is still running.
+
+## Amendment (SPEC-582): the doorbell is not installed
+
+R3's path unit and its request directory leave the install with the bot's unit (ADR-601 D2), and
+A3's module, `scripts/tests/test_sync_path.py`, leaves with them: SPEC-582 A10 holds that the
+install ships neither. R1, R2 and R4 to R8 describe the bot's port and the sync job's stored
+request, which stay in the code until the Telegram code's removal delivery; on the install no unit
+rings the doorbell, and the sync job runs on its own daily timer. A1, A2 and every
+criterion after A3 keep their commands.
