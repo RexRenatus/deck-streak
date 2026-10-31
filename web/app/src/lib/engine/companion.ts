@@ -202,7 +202,7 @@ export class CheckpointStore {
   /** The origin's root directory, or null when the browser has none or refuses it. */
   async #root(): Promise<CompanionFolder | null> {
     try {
-      return typeof this.storage?.getDirectory === 'function' ? await this.storage.getDirectory() : null;
+      return await this.storage!.getDirectory!();
     } catch {
       return null;
     }
