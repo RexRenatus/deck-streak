@@ -41,7 +41,7 @@ jobs:
         run: rustup show
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: cargo-nextest,cargo-deny
+          tool: cargo-nextest@0.9.146,cargo-deny@0.20.2
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
         env:
           PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
@@ -111,7 +111,7 @@ jobs:
         run: rustup show
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: cargo-nextest
+          tool: cargo-nextest@0.9.146
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
         env:
           PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
@@ -163,7 +163,7 @@ jobs:
         run: rustup show
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: cargo-nextest
+          tool: cargo-nextest@0.9.146
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
         env:
           PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
@@ -315,7 +315,7 @@ jobs:
       # git source in deny.toml must still be live in the graph.
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: cargo-deny
+          tool: cargo-deny@0.20.2
       - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
         id: rust-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -1095,9 +1095,9 @@ jobs:
           persist-credentials: false
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: zizmor
+          tool: zizmor@1.30.1
       - name: zizmor audits the workflows themselves
-        run: zizmor --no-online-audits --persona regular .github/workflows
+        run: zizmor --no-online-audits --persona regular .github
 
   base-is-dev:
     runs-on: ubuntu-24.04
