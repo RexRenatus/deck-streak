@@ -250,4 +250,57 @@ describe('the design tokens', () => {
       modes.flatMap((mode) => [`ink on background (${mode}): AA`, `accent on background (${mode}): AA`])
     );
   });
+
+  it('the modes tier refuses what it cannot compile by the exact message naming it', () => {
+    // SPEC-578 A2, the compile's own messages: each planted document breaks one thing
+    const planted = () => structuredClone(TOKENS) as Record<string, Record<string, Record<string, unknown>>>;
+    const messageOf = (document: unknown): string => {
+      try {
+        compileTokens(document);
+      } catch (error) {
+        return (error as Error).message;
+      }
+      return 'compiled';
+    };
+
+    // a mode outside dark and light, beside the two known ones
+    const withDusk = planted();
+    withDusk.modes.ember.dusk = structuredClone(withDusk.modes.ember.dark);
+    expect(messageOf(withDusk)).toBe('tokens: modes.ember.dusk is not a mode (dark or light)');
+
+    // a role outside the three, in the exact words
+    const withMuted = planted();
+    withMuted.modes.ember.dark.muted = structuredClone(withMuted.modes.ember.dark.ink);
+    expect(messageOf(withMuted)).toBe(
+      'tokens: modes.ember.dark.muted is not a role (background, ink or accent)'
+    );
+
+    // a role absent, in the exact words (not the message of a role that is no token)
+    const withoutInk = planted();
+    delete withoutInk.modes.ember.dark.ink;
+    expect(messageOf(withoutInk)).toBe('tokens: modes.ember.dark.ink is missing');
+
+    // a role that is no token (the group reader names it), and a role token whose value is no colour
+    const inkNotAToken = planted();
+    inkNotAToken.modes.ember.light.ink = 5;
+    expect(messageOf(inkNotAToken)).toBe('tokens: ink is not a token or a group');
+    const accentNotAColour = planted();
+    accentNotAColour.modes.ember.dark.accent = { $type: 'color', $value: { colorSpace: 'srgb', hex: 'red' } };
+    expect(messageOf(accentNotAColour)).toBe(
+      'tokens: modes.ember.dark.accent is not an sRGB colour with a six-digit lowercase hex'
+    );
+
+    // a modes tier that is no group
+    const modesNotAGroup = planted() as Record<string, unknown>;
+    modesNotAGroup.modes = 5;
+    expect(messageOf(modesNotAGroup)).toBe('tokens: modes is not a token or a group');
+
+    // the control: no modes tier at all compiles, and emits no Ember property
+    const withoutModes = planted() as Record<string, unknown>;
+    delete withoutModes.modes;
+    expect(messageOf(withoutModes)).toBe('compiled');
+    const css = compileTokens(withoutModes);
+    expect(css).not.toContain('--ember-');
+    expect(css).toContain('--radius:');
+  });
 });
