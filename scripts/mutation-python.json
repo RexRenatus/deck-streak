@@ -27,6 +27,12 @@
       "test_ios_lane"
     ]
   },
+  "scripts/locale_census.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_locale_census"
+    ]
+  },
   "scripts/lock-digest-line.py": {
     "dir": "scripts/tests",
     "modules": [

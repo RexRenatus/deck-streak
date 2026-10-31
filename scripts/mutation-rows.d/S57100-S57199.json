@@ -1,0 +1,102 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S57101-THE-CENSUS-NAMES-ENGLISH",
+        "scripts/locale_census.py",
+        "SEVEN = (\"en\", \"es\", \"fr\", \"ja\", \"ko\", \"zh-Hans\", \"zh-Hant\")",
+        "SEVEN = (\"es\", \"fr\", \"ja\", \"ko\", \"zh-Hans\", \"zh-Hant\")",
+        "the census reads English among the seven locales; without it a complete tree is refused (SPEC-571 R1)",
+        "test_locale_census.TheWebCensus.test_a_planted_complete_tree_reads_green"
+      ],
+      [
+        "S57102-THE-CENSUS-NAMES-SPANISH",
+        "scripts/locale_census.py",
+        "SEVEN = (\"en\", \"es\", \"fr\", \"ja\", \"ko\", \"zh-Hans\", \"zh-Hant\")",
+        "SEVEN = (\"en\", \"fr\", \"ja\", \"ko\", \"zh-Hans\", \"zh-Hant\")",
+        "the census reads Spanish among the seven locales; without it a complete tree is refused (SPEC-571 R1)",
+        "test_locale_census.TheWebCensus.test_a_planted_complete_tree_reads_green"
+      ],
+      [
+        "S57103-THE-CENSUS-NAMES-FRENCH",
+        "scripts/locale_census.py",
+        "SEVEN = (\"en\", \"es\", \"fr\", \"ja\", \"ko\", \"zh-Hans\", \"zh-Hant\")",
+        "SEVEN = (\"en\", \"es\", \"ja\", \"ko\", \"zh-Hans\", \"zh-Hant\")",
+        "the census reads French among the seven locales; without it a complete tree is refused (SPEC-571 R1)",
+        "test_locale_census.TheWebCensus.test_a_planted_complete_tree_reads_green"
+      ],
+      [
+        "S57104-THE-CENSUS-NAMES-JAPANESE",
+        "scripts/locale_census.py",
+        "SEVEN = (\"en\", \"es\", \"fr\", \"ja\", \"ko\", \"zh-Hans\", \"zh-Hant\")",
+        "SEVEN = (\"en\", \"es\", \"fr\", \"ko\", \"zh-Hans\", \"zh-Hant\")",
+        "the census reads Japanese among the seven locales; without it a complete tree is refused (SPEC-571 R1)",
+        "test_locale_census.TheWebCensus.test_a_planted_complete_tree_reads_green"
+      ],
+      [
+        "S57105-THE-CENSUS-NAMES-KOREAN",
+        "scripts/locale_census.py",
+        "SEVEN = (\"en\", \"es\", \"fr\", \"ja\", \"ko\", \"zh-Hans\", \"zh-Hant\")",
+        "SEVEN = (\"en\", \"es\", \"fr\", \"ja\", \"zh-Hans\", \"zh-Hant\")",
+        "the census reads Korean among the seven locales; without it a complete tree is refused (SPEC-571 R1)",
+        "test_locale_census.TheWebCensus.test_a_planted_complete_tree_reads_green"
+      ],
+      [
+        "S57106-THE-CENSUS-NAMES-SIMPLIFIED-CHINESE",
+        "scripts/locale_census.py",
+        "SEVEN = (\"en\", \"es\", \"fr\", \"ja\", \"ko\", \"zh-Hans\", \"zh-Hant\")",
+        "SEVEN = (\"en\", \"es\", \"fr\", \"ja\", \"ko\", \"zh-Hant\")",
+        "the census reads Simplified Chinese among the seven locales; without it a complete tree is refused (SPEC-571 R1)",
+        "test_locale_census.TheWebCensus.test_a_planted_complete_tree_reads_green"
+      ],
+      [
+        "S57107-THE-CENSUS-NAMES-TRADITIONAL-CHINESE",
+        "scripts/locale_census.py",
+        "SEVEN = (\"en\", \"es\", \"fr\", \"ja\", \"ko\", \"zh-Hans\", \"zh-Hant\")",
+        "SEVEN = (\"en\", \"es\", \"fr\", \"ja\", \"ko\", \"zh-Hans\")",
+        "the census reads Traditional Chinese among the seven locales; without it a complete tree is refused (SPEC-571 R1)",
+        "test_locale_census.TheWebCensus.test_a_planted_complete_tree_reads_green"
+      ],
+      [
+        "S57108-THE-BASE-IS-ENGLISH",
+        "scripts/locale_census.py",
+        "BASE = \"en\"",
+        "BASE = \"es\"",
+        "English is the reference every locale is compared with (SPEC-571 R1, R3)",
+        "test_locale_census.TheWebCensus.test_a_planted_complete_tree_reads_green"
+      ],
+      [
+        "S57109-PLACEHOLDERS-ARE-COUNTED",
+        "scripts/locale_census.py",
+        "PLACEHOLDER = re.compile(r\"\\{[^{}]*\\}\")",
+        "PLACEHOLDER = re.compile(r\"\\{\\}\")",
+        "a placeholder is any braced name, so a renamed or dropped one is refused (SPEC-571 R5)",
+        "test_locale_census.TheWebCensus.test_a_placeholder_that_differs_from_english_is_refused"
+      ],
+      [
+        "S57110-VALUES-ARE-READ-IN-NFC",
+        "scripts/locale_census.py",
+        "FORM = \"NFC\"",
+        "FORM = \"NFD\"",
+        "values are held to the composed normal form, so a composed letter reads green (SPEC-571 R7)",
+        "test_locale_census.TheWebCensus.test_a_planted_complete_tree_reads_green"
+      ],
+      [
+        "S57111-THE-CATALOGS-FOLLOW-ONE-PATTERN",
+        "scripts/locale_census.py",
+        "PATTERN = \"./messages/{locale}.json\"",
+        "PATTERN = \"./messages/{locale}.jsonc\"",
+        "the census reads the catalogs where the project's pattern puts them (SPEC-571 R1)",
+        "test_locale_census.TheWebCensus.test_a_planted_complete_tree_reads_green"
+      ],
+      [
+        "S57112-NOTHING-EXAMINED-IS-VOID",
+        "scripts/locale_census.py",
+        "VOID = 3",
+        "VOID = 0",
+        "a run that examined no catalog is void, never a pass (SPEC-571 R8)",
+        "test_locale_census.TheWebCensus.test_a_tree_with_no_catalog_is_void"
+      ]
+    ]
+  }
+}
