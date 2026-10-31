@@ -253,7 +253,9 @@ describe('the design tokens', () => {
 
   it('the modes tier refuses what it cannot compile by the exact message naming it', () => {
     // SPEC-578 A2, the compile's own messages: each planted document breaks one thing
-    const planted = () => structuredClone(TOKENS) as Record<string, Record<string, Record<string, unknown>>>;
+    // the planted tree, typed to the depth the cases reach: tier, group, mode, role
+    type PlantedTree = Record<string, Record<string, Record<string, Record<string, unknown>>>>;
+    const planted = () => structuredClone(TOKENS) as PlantedTree;
     const messageOf = (document: unknown): string => {
       try {
         compileTokens(document);

@@ -189,7 +189,7 @@ def raw_colour(rgb):
     return {
         "$value": {
             "colorSpace": "srgb",
-            "components": [round(c / 255, 4) for c in rgb],
+            "components": [float(format(c / 255, ".4f")) for c in rgb],
             "hex": "#" + "".join(f"{c:02x}" for c in rgb),
         }
     }
