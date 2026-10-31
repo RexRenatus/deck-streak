@@ -10,6 +10,7 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
+    "noFallthroughCasesInSwitch": true,
     "moduleResolution": "bundler"
   },
   // svelte-check reads this project, which covers src, tests and the app's configuration; the card
