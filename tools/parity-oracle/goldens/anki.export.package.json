@@ -14145,7 +14145,7 @@
   ],
   "function": "anki.export.package",
   "generator": "tools/parity-oracle/anki/generate.py",
-  "generator_sha256": "deb5cdaa400386b1fcb2c86f60fa1f9fdf964c0a499124fe2ff2f081d2deea6a",
+  "generator_sha256": "0298e56ecf2f716be2e27633b48a21c613edc478b8c9de7c43d3e0c3beb795b6",
   "inputs": "synthetic",
   "kind": "engine",
   "note": "exports the collection as a package of the kind, then answers its members, each member's compression, the rows per table and the media map (F2); cases drawn under CPython 3.12.3.",
@@ -14153,5 +14153,5 @@
   "registry_sha256": "a0ee26a7384b62d141919a7a5c1c95918b6a1881492f76863b17befd33e654bf",
   "schema": "phx.parity-golden.v1",
   "seed": 498,
-  "source_commit": "a078820fd4fec3068ed7863344cd50effddabc6b"
+  "source_commit": "dca72f352730abb4222389cc148e46387c17f97f"
 }
