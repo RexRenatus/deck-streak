@@ -21,6 +21,9 @@ mod support;
 #[path = "support/review.rs"]
 mod review;
 
+#[path = "support/clock.rs"]
+mod clock;
+
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -56,19 +59,13 @@ struct Opened {
     fixture: review::Review,
 }
 
-fn now_secs() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_secs()
-}
-
 fn text(bytes: Vec<u8>) -> String {
     String::from_utf8(bytes).expect("the engine's text is UTF-8")
 }
 
-/// Builds the review fixture in a scratch directory of the test's own, opens it through the
-/// adapter and chooses its deck, as the app does.
+/// Builds the review fixture in a scratch directory of the test's own, pins its cutoff before the
+/// adapter opens it (SPEC-443 R2), opens it through the adapter and chooses its deck on the clock's
+/// instant, as the app does.
 fn opened(test: &str) -> Opened {
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -83,6 +80,7 @@ fn opened(test: &str) -> Opened {
         [TEXT_CARD, IMAGE_CARD],
         "the review fixture's text and image cards carry their fixed ids"
     );
+    let clock = clock::pin(&fixture.collection);
     let engine = Engine::new(Vec::new()).expect("the engine starts from the default init message");
     let mut open = Vec::new();
     for (field, path) in [
@@ -98,7 +96,11 @@ fn opened(test: &str) -> Opened {
         .run(service, method, open)
         .expect("the adapter opens the review fixture");
     let mut tree_request = Vec::new();
-    wire::put_varint_field(&mut tree_request, 1, now_secs());
+    wire::put_varint_field(
+        &mut tree_request,
+        1,
+        u64::try_from(clock.at_secs()).expect("the clock reads after the epoch"),
+    );
     let (service, method) = DECK_TREE;
     let tree = engine
         .run(service, method, tree_request)
