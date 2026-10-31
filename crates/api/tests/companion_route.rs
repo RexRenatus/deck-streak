@@ -447,6 +447,74 @@ async fn a_file_over_the_cap_is_refused_and_one_at_the_cap_is_served() {
     assert!(answer.body.len() < 1024, "and none of its bytes are sent");
 }
 
+/// The served name is swapped, by an atomic rename, between a one-byte file and a sparse file one
+/// byte over the cap while the route answers it. Whichever file each step meets, every answer is
+/// the one byte or the over-cap refusal: a file that passed the size check and then read past the
+/// cap is refused, never served cut at the cap.
+#[tokio::test]
+async fn a_file_swapped_past_the_cap_between_its_size_and_its_read_is_refused() {
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let small = directory.path().join("small.store");
+    fs::write(&small, b"s").expect("a one-byte file");
+    let big = directory.path().join("big.store");
+    fs::File::create(&big)
+        .and_then(|file| file.set_len(CAP + 1))
+        .expect("a sparse file one byte over the cap");
+    let name = directory.path().join("weights.bin");
+    fs::write(&name, b"s").expect("the served name starts small");
+    let stop = Arc::new(AtomicBool::new(false));
+    let swaps = Arc::new(AtomicUsize::new(0));
+    let swapper = {
+        let (stop, swaps) = (Arc::clone(&stop), Arc::clone(&swaps));
+        let (staged, name) = (directory.path().join("staged.store"), name.clone());
+        std::thread::spawn(move || {
+            for store in [&big, &small].into_iter().cycle() {
+                if stop.load(Ordering::Relaxed) {
+                    break;
+                }
+                fs::hard_link(store, &staged).expect("a staged link");
+                fs::rename(&staged, &name).expect("an atomic swap");
+                swaps.fetch_add(1, Ordering::Relaxed);
+            }
+        })
+    };
+
+    let (sessions, app) = app(Some(directory.path()));
+    let cookie = telegram(&sessions);
+    let started = swaps.load(Ordering::Relaxed);
+    let (mut requests, mut small_served, mut refused) = (0_usize, 0_usize, 0_usize);
+    let mut other = None;
+    while requests < 200 || swaps.load(Ordering::Relaxed).saturating_sub(started) < 200 {
+        let answer = get_path(&app, "/api/companion/v1/weights.bin", Some(&cookie)).await;
+        requests += 1;
+        if answer.status == StatusCode::OK && answer.body == b"s" {
+            small_served += 1;
+        } else if answer.status == StatusCode::NOT_FOUND && answer.reason() == "companion_over_cap"
+        {
+            refused += 1;
+        } else {
+            other = Some((answer.status, answer.body.len()));
+            break;
+        }
+    }
+    stop.store(true, Ordering::Relaxed);
+    swapper.join().expect("the swapper ends");
+    println!(
+        "examined {requests} requests over the swaps: {small_served} served the one byte, \
+         {refused} refused over the cap"
+    );
+    assert_eq!(
+        other, None,
+        "every answer is the one byte or the over-cap refusal, never a file cut at the cap"
+    );
+    assert!(
+        small_served > 0 && refused > 0,
+        "both files were met, so the swap ran beside the route"
+    );
+}
+
 #[tokio::test]
 async fn every_refusal_of_the_route_carries_private_no_store() {
     let (sessions_off, app_off) = app(None);
