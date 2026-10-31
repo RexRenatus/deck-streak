@@ -253,6 +253,105 @@
       "reason": "A pending step's stage becomes the empty string, and the page draws a stage it does not name as it draws working: the button, held.",
       "evidence": "The template names no-code, no-webauthn, spent and done, offers the button in every other stage past reading and holds it in each but ready, so the empty string draws what working draws; `create` sets the stage again before it returns, and 'the button waits while a step is pending, and returns after a refusal' of `link.test.ts` asserts the held button and its return.",
       "issue": "#627"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "BooleanLiteral: false",
+      "anchor": "view.setUint16(6, 0, true);",
+      "reason": "The refusal frame's minor version is written big-endian instead of little-endian, and a zero is the same two bytes in either order.",
+      "evidence": "refusedAbsent writes the minor version 0 into bytes 6 and 7 with setUint16; 0 is 0x0000, so the byte-order flag changes no byte of the 14-byte frame, while the length, the major version and the epoch, whose bytes do depend on order, keep their little-endian writes. ABSENT's hello, ABSENT.call and a present companion's trapped call all hand back the same bytes; 'a request shorter than its header is answered the refusal at epoch 0, and one of 13 bytes the refusal at its own epoch' of `companion-edges.test.ts` asserts the frame byte for byte.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "StringLiteral: \"\"",
+      "anchor": "?? '0'",
+      "reason": "A response with no content-length header declares the empty string instead of 0, and Number reads both as 0.",
+      "evidence": "Headers.get answers null for a header the response lacks, so `??` supplies the fallback, and Number('') and Number('0') are both 0, which is never past the 16 MiB cap; a declared header is used as before, since `??` never reaches the fallback for a string. The body is then read and held to the cap by its actual length on both paths.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "BlockStatement: {}",
+      "anchor": "} catch {\n    return null;\n  }\n  if (typeof parsed !== 'object'",
+      "reason": "A manifest that fails to decode or parse falls through with nothing assigned, and the object test on the next line refuses that undefined with the same null.",
+      "evidence": "`parsed` is declared without a value and assigned only when the fatal TextDecoder and JSON.parse both succeed, so with the catch emptied a failure leaves it undefined, and `typeof undefined !== 'object'` returns null before Object.keys or any digest is read. loadCompanion then answers ABSENT after the one manifest fetch, as the original does; `digests` is private to the module and loadCompanion is its one caller.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;",
+      "span": "typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)",
+      "reason": "The object test never refuses, and every JSON value it refused is refused after it with the same ABSENT and the same single fetch.",
+      "evidence": "Whatever the changed test lets through meets the exact-keys check on the next line (two keys, `module` then `weights`): Object.keys of a JSON string yields its indices ('0', '1', ...), of a number or boolean no key, and of an array its indices, so the check returns null for each, and Object.keys(null) throws a TypeError outside digests' own try, which loadCompanion's try catches and answers ABSENT. The original answers ABSENT for the same values through `wanted === null`; on both paths only manifest.json is fetched and Web Crypto is asked for nothing. Object.keys lists own enumerable keys only, so no inherited property lets a primitive or an array through, and a manifest the loader accepts is a non-null, non-array object, which this test never refused. `digests` is private to the module and loadCompanion is its one caller.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;",
+      "span": "typeof parsed !== 'object' || parsed === null",
+      "reason": "Only the array test still refuses here, and the strings, numbers, booleans and null the first two tests refused are refused later with the same ABSENT.",
+      "evidence": "Whatever the changed test lets through meets the exact-keys check on the next line (two keys, `module` then `weights`): Object.keys of a JSON string yields its indices ('0', '1', ...), of a number or boolean no key, and of an array its indices, so the check returns null for each, and Object.keys(null) throws a TypeError outside digests' own try, which loadCompanion's try catches and answers ABSENT. The original answers ABSENT for the same values through `wanted === null`; on both paths only manifest.json is fetched and Web Crypto is asked for nothing. Object.keys lists own enumerable keys only, so no inherited property lets a primitive or an array through, and a manifest the loader accepts is a non-null, non-array object, which this test never refused. `digests` is private to the module and loadCompanion is its one caller.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;",
+      "span": "typeof parsed !== 'object'",
+      "reason": "Null and arrays are still refused here, and the strings, numbers and booleans the typeof test refused fail the exact-keys check with the same null.",
+      "evidence": "Whatever the changed test lets through meets the exact-keys check on the next line (two keys, `module` then `weights`): Object.keys of a JSON string yields its indices ('0', '1', ...), of a number or boolean no key, and of an array its indices, so the check returns null for each, and Object.keys(null) throws a TypeError outside digests' own try, which loadCompanion's try catches and answers ABSENT. The original answers ABSENT for the same values through `wanted === null`; on both paths only manifest.json is fetched and Web Crypto is asked for nothing. Object.keys lists own enumerable keys only, so no inherited property lets a primitive or an array through, and a manifest the loader accepts is a non-null, non-array object, which this test never refused. `digests` is private to the module and loadCompanion is its one caller.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "LogicalOperator: (typeof parsed !== 'object' || parsed === null) && Array.isArray(parsed)",
+      "anchor": "if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;",
+      "reason": "No JSON value is both an array and a non-object or null, so the test refuses nothing, and the values it refused fail later with the same ABSENT.",
+      "evidence": "An array is a non-null object, so `(typeof parsed !== 'object' || parsed === null) && Array.isArray(parsed)` is false for every value JSON.parse returns, and the line behaves as if the whole condition were false. Whatever the changed test lets through meets the exact-keys check on the next line (two keys, `module` then `weights`): Object.keys of a JSON string yields its indices ('0', '1', ...), of a number or boolean no key, and of an array its indices, so the check returns null for each, and Object.keys(null) throws a TypeError outside digests' own try, which loadCompanion's try catches and answers ABSENT. The original answers ABSENT for the same values through `wanted === null`; on both paths only manifest.json is fetched and Web Crypto is asked for nothing. Object.keys lists own enumerable keys only, so no inherited property lets a primitive or an array through, and a manifest the loader accepts is a non-null, non-array object, which this test never refused. `digests` is private to the module and loadCompanion is its one caller.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "LogicalOperator: typeof parsed !== 'object' && parsed === null",
+      "anchor": "if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;",
+      "reason": "The first two tests joined by && are never both true, since typeof null is 'object', so only the array test refuses, and the rest fail later with the same ABSENT.",
+      "evidence": "`typeof parsed !== 'object' && parsed === null` is false for every value, which leaves `Array.isArray(parsed)` as the whole condition: arrays are still refused here. Whatever the changed test lets through meets the exact-keys check on the next line (two keys, `module` then `weights`): Object.keys of a JSON string yields its indices ('0', '1', ...), of a number or boolean no key, and of an array its indices, so the check returns null for each, and Object.keys(null) throws a TypeError outside digests' own try, which loadCompanion's try catches and answers ABSENT. The original answers ABSENT for the same values through `wanted === null`; on both paths only manifest.json is fetched and Web Crypto is asked for nothing. Object.keys lists own enumerable keys only, so no inherited property lets a primitive or an array through, and a manifest the loader accepts is a non-null, non-array object, which this test never refused. `digests` is private to the module and loadCompanion is its one caller.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "parsed === null || Array.isArray(parsed)) return null;",
+      "reason": "JSON null is no longer refused by the object test; Object.keys(null) then throws inside loadCompanion's try, which answers the same ABSENT after the same single fetch.",
+      "evidence": "With `parsed === null` false, null passes the typeof test (typeof null is 'object') and the array test, and Object.keys(null) throws a TypeError outside digests' own try; loadCompanion's try catches it and answers ABSENT, which the original reaches through `wanted === null`. Only manifest.json is fetched on either path and Web Crypto is asked for nothing; every other value meets the same tests as before. `digests` is private to the module and loadCompanion is its one caller.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "const wanted = manifest === null ? null : digests(manifest);",
+      "reason": "A manifest the route refused reaches digests as null, which fails inside digests' own try and answers the same null.",
+      "evidence": "fetched answers null for a status other than 200 or a length past the cap. With the guard false, digests(null) hands null to the fatal TextDecoder inside its try: the decoder throws a TypeError or decodes nothing to the empty string, which JSON.parse refuses, and the catch returns null either way. `wanted` is null as before, so loadCompanion answers ABSENT having fetched only manifest.json and asked Web Crypto for nothing.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (abi === null) return ABSENT;",
+      "reason": "Exports that are no ABI reach `abi.open`, which throws on null inside loadCompanion's try, and the catch answers the same ABSENT.",
+      "evidence": "abiOf answers null when the memory export is no WebAssembly.Memory or any of alloc, free, open and call is not a function. With the guard false, the next statement evaluates exchange's argument `abi.open` on null, a TypeError thrown before exchange runs, so nothing is allocated, opened or called and nothing more is fetched; loadCompanion's catch answers ABSENT, the value the guard returns. 'exports whose memory is no WebAssembly.Memory read Absent, though the rest of the ABI answers' of `companion-edges.test.ts` holds that ABSENT.",
+      "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/engine/companion.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "if (root === null) return null;",
+      "reason": "load with no root calls getDirectoryHandle on null inside its own try, whose catch answers the same null.",
+      "evidence": "#root answers null when there is no storage, no getDirectory, or the browser refuses the root. With the guard false, load goes on to `root.getDirectoryHandle(COMPANION_DIRECTORY)` inside its try; reading a property of null throws a TypeError before anything is opened, and the catch returns null, the guard's own answer. save and remove keep their guards, so nothing else changes.",
+      "issue": "#1065"
     }
   ]
 }

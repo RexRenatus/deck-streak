@@ -1014,6 +1014,17 @@ describe("the API client's data screen calls", () => {
     expect(await api.dataExport()).toEqual({ kind: 'reopen' });
   });
 
+  it('an export whose request never reaches the server is unavailable', async () => {
+    const { api, sent } = serving([
+      open,
+      () => {
+        throw new TypeError('the network is down');
+      }
+    ]);
+    expect(await api.dataExport()).toEqual({ kind: 'unavailable' });
+    expect(lines(sent)).toEqual(['POST /api/session', 'POST /api/data/export']);
+  });
+
   it("the server's backup reads the snapshot route: found with its age, not found, or unknown", async () => {
     const cases: [unknown, unknown][] = [
       [{ found: true, age_seconds: 7200 }, { kind: 'ok', value: { found: true, age: 7200 } }],
