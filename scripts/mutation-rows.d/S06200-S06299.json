@@ -239,7 +239,7 @@
         "LoadCredential=anki-sync-password:/run/deck-streak-credentials/socket\n",
         "LoadCredential=anki-sync-password:/run/deck-streak-credentials/socket\nLoadCredential=telegram-bot-token:/run/deck-streak-credentials/socket\n",
         "the sync instance's drop-in loads the sync login alone, never the bot's token (SPEC-062 R14; #291)",
-        "test_deploy_templates.TheSyncLoginIsTheSyncJobsAlone.test_the_bots_credentials_are_loaded_by_the_held_flush_alone"
+        "test_deploy_templates.TheSyncLoginIsTheSyncJobsAlone.test_no_unit_loads_the_telegram_pair"
       ],
       [
         "S06232-THE-JOB-TEMPLATE-NEVER-LOADS-THE-BOT-PAIR",
@@ -247,7 +247,7 @@
         "[Service]\n",
         "[Service]\nLoadCredential=telegram-bot-token:/run/deck-streak-credentials/socket\n",
         "the job template requests no bot credential, so no job but the held flush holds the bot's token (SPEC-062 R14; #291)",
-        "test_deploy_templates.TheSyncLoginIsTheSyncJobsAlone.test_the_bots_credentials_are_loaded_by_the_held_flush_alone"
+        "test_deploy_templates.TheSyncLoginIsTheSyncJobsAlone.test_no_unit_loads_the_telegram_pair"
       ],
       [
         "S06233-THE-HELD-FLUSH-INSTANCE-NEVER-LOADS-THE-SYNC-PAIR",

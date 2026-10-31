@@ -25,6 +25,9 @@ from _support import REPO, examined
 
 SYSTEMD = REPO / "deploy" / "systemd"
 SCRIPT = REPO / "deploy" / "scripts" / "alert-telegram.sh"
+# The journal sender the alert template runs once the Telegram sender leaves (SPEC-582 R7).
+JOURNAL_SENDER = REPO / "deploy" / "scripts" / "alert-journal.sh"
+JOURNAL_START = "/usr/local/lib/deck-streak/current/deploy/scripts/alert-journal.sh %i"
 SLO = REPO / "deploy" / "slo.json"
 OWNER_SOURCE = REPO / "crates" / "identity" / "src" / "owner.rs"
 # The alert template every unit pages through (SPEC-032 R2), and its one instance form.
@@ -182,7 +185,8 @@ class Run:
 def run_alert(instance, environment, journal=JOURNAL_LINES, script=SCRIPT, planted=None):
     """Runs `script` as the alert unit runs it, `alert-telegram.sh %i`, with the stubs first on its
     PATH and a credentials directory holding each credential the unit loads: its synthetic value
-    and a newline, or exactly the content `planted` names for its id."""
+    and a newline, or exactly the content `planted` names for its id. A planted id the unit does
+    not load is written too, so a sender that loads none still finds a directory with files."""
     original = os.environ.get("PATH", "/usr/bin:/bin")
     with tempfile.TemporaryDirectory() as scratch:
         root = Path(scratch)
@@ -202,8 +206,9 @@ def run_alert(instance, environment, journal=JOURNAL_LINES, script=SCRIPT, plant
                 WRAPPER.format(python=sys.executable, name=name, real=real), encoding="utf-8"
             )
             wrapper.chmod(0o755)
-        for ident in loaded_credentials():
-            content = (planted or {}).get(ident, synthetic(ident) + "\n")
+        held = {ident: synthetic(ident) + "\n" for ident in loaded_credentials()}
+        held.update(planted or {})
+        for ident, content in held.items():
             (credentials / ident).write_text(content, encoding="utf-8")
         journal_file = root / "journal.txt"
         journal_file.write_text("".join(f"{line}\n" for line in journal), encoding="utf-8")
@@ -410,6 +415,101 @@ def planted_template(scratch, anchor, line, keep):
     return path
 
 
+def journal_sender(test):
+    """The journal sender, once the alert template's one `ExecStart=` runs it (SPEC-582 R7)."""
+    unit = unit_file(SYSTEMD / ALERT_TEMPLATE)
+    test.assertEqual(
+        values(unit, "Service", "ExecStart"), [JOURNAL_START], "the template runs another sender"
+    )
+    return JOURNAL_SENDER
+
+
+def journal_text(test, run):
+    """The one line the journal sender wrote to standard error, after its `<3>` prefix: nothing on
+    standard output, one line ending in a newline, at error priority."""
+    test.assertEqual(run.stdout, "", "the sender wrote to standard output")
+    lines = run.stderr.split("\n")
+    test.assertEqual((len(lines), lines[-1]), (2, ""), f"not one line: {run.stderr!r}")
+    test.assertTrue(lines[0].startswith("<3>"), f"not at error priority: {lines[0]!r}")
+    return lines[0].removeprefix("<3>")
+
+
+def credential_reads(calls):
+    """Each command of `calls` whose command line or input names a path under the credentials
+    directory its environment carries."""
+    found = []
+    for call in calls:
+        directory = call["env"].get("CREDENTIALS_DIRECTORY")
+        if not directory:
+            continue
+        if any(directory in word for word in call["argv"]) or directory in (call["stdin"] or ""):
+            found.append(call["command"])
+    return found
+
+
+class TheJournalSenderWritesOneLine(unittest.TestCase):
+    def test_the_journal_sender_names_the_unit_and_result_at_error_priority(self):
+        script = journal_sender(self)
+        run = run_alert(
+            FAILED_UNIT,
+            {
+                "MONITOR_UNIT": FAILED_UNIT,
+                "MONITOR_SERVICE_RESULT": RESULT,
+                "MONITOR_EXIT_STATUS": "KILL",
+            },
+            script=script,
+        )
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertEqual(
+            journal_text(self, run),
+            f"DeckStreak: {FAILED_UNIT} failed ({RESULT}, status KILL): "
+            + " | ".join(JOURNAL_LINES[-5:]),
+        )
+        # The failed unit's own error lines: the unit is named to the journal, at error priority.
+        asked = examined("journal read(s)", run.calls("journalctl"))
+        self.assertEqual(option(asked[0]["argv"], "--unit"), FAILED_UNIT)
+        self.assertEqual(option(asked[0]["argv"], "--priority"), "err")
+
+        # With no MONITOR_UNIT, the instance the unit was started as names the failed unit, and a
+        # journal with no error line quotes nothing.
+        other = "deck-streak-mcp.service"
+        run = run_alert(other, {"MONITOR_SERVICE_RESULT": "exit-code"}, journal=[], script=script)
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertEqual(journal_text(self, run), f"DeckStreak: {other} failed (exit-code)")
+        self.assertEqual(option(run.calls("journalctl")[0]["argv"], "--unit"), other)
+
+    def test_the_journal_sender_reads_no_credential_and_makes_no_request(self):
+        # The template loads no credential, and the sender reads none even from a credentials
+        # directory that holds the bot's pair: no request, no command reads under the directory,
+        # and neither value reaches a command line, an input or the line.
+        self.assertEqual(loaded_credentials(), [], "the alert template loads a credential")
+        script = journal_sender(self)
+        ids = identity_ids()
+        planted = {ids["TELEGRAM_BOT_TOKEN"]: TOKEN + "\n", ids["OWNER_USER_ID"]: OWNER + "\n"}
+        environment = {"MONITOR_UNIT": FAILED_UNIT, "MONITOR_SERVICE_RESULT": RESULT}
+        run = run_alert(FAILED_UNIT, environment, script=script, planted=planted)
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn(FAILED_UNIT, journal_text(self, run))
+        self.assertEqual(run.calls("curl"), [], "the sender made a request")
+        calls = examined("command(s) the sender ran", run.all_calls)
+        self.assertEqual(credential_reads(calls), [])
+        self.assertEqual(leaks(calls, [TOKEN, OWNER]), [])
+        for value in (TOKEN, OWNER):
+            self.assertNotIn(value, run.stdout + run.stderr)
+            self.assertEqual([c["command"] for c in calls if value in (c["stdin"] or "")], [])
+        # The census sees a read: a planted sender that reads the token is named by its command.
+        with tempfile.TemporaryDirectory() as scratch:
+            reader = Path(scratch) / "planted-sender.sh"
+            reader.write_text(
+                '#!/bin/sh\ncat "$CREDENTIALS_DIRECTORY/telegram-bot-token" | wc -c\n',
+                encoding="utf-8",
+            )
+            reader.chmod(0o755)
+            caught = run_alert(FAILED_UNIT, environment, script=reader, planted=planted)
+        self.assertEqual(caught.returncode, 0, caught.stdout + caught.stderr)
+        self.assertEqual(credential_reads(caught.all_calls), ["cat"])
+
+
 class TheAlertScriptNamesTheFailure(unittest.TestCase):
     def test_the_alert_script_reads_its_credentials_and_names_the_unit_and_result(self):
         run = run_alert(
@@ -451,7 +551,9 @@ class TheAlertScriptNamesTheFailure(unittest.TestCase):
         self.assertEqual(option(run.calls("journalctl")[0]["argv"], "--unit"), other)
 
     def test_the_page_quotes_the_failed_runs_last_five_error_lines(self):
-        # systemd names the failed run, so the page quotes that run's lines and no older ones.
+        # systemd names the failed run, so the line quotes that run's lines and no older ones,
+        # joined by " | " on the journal sender's one line (SPEC-582 R7).
+        script = journal_sender(self)
         run = run_alert(
             FAILED_UNIT,
             {
@@ -459,37 +561,46 @@ class TheAlertScriptNamesTheFailure(unittest.TestCase):
                 "MONITOR_SERVICE_RESULT": "exit-code",
                 "MONITOR_INVOCATION_ID": INVOCATION,
             },
+            script=script,
         )
         self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
         asked = run.calls("journalctl")[0]["argv"]
         self.assertIn(f"_SYSTEMD_INVOCATION_ID={INVOCATION}", asked)
         self.assertEqual(option(asked, "--priority"), "err")
         self.assertEqual(option(asked, "--lines"), "5")
-        text = request(run.calls("curl")[0])[1]["text"]
+        text = journal_text(self, run)
         quoted = examined("quoted line(s)", [line for line in JOURNAL_LINES if line in text])
         self.assertEqual(quoted, JOURNAL_LINES[-5:], "the last five lines, in order")
+        self.assertEqual(
+            text, f"DeckStreak: {FAILED_UNIT} failed (exit-code): " + " | ".join(JOURNAL_LINES[-5:])
+        )
 
     def test_the_page_stays_within_3500_bytes_and_whole_characters(self):
-        # Five lines of a three-byte character overflow the bound, and byte 3500 falls inside one.
-        long_lines = ["漢" * 400] * 5
+        # Five lines of a three-byte character overflow the bound; the one ASCII byte that leads
+        # them puts byte 3500 inside a character once the sender joins them by " | ".
+        script = journal_sender(self)
+        long_lines = ["x" + "漢" * 400] + ["漢" * 400] * 4
         run = run_alert(
             FAILED_UNIT,
             {"MONITOR_UNIT": FAILED_UNIT, "MONITOR_SERVICE_RESULT": "exit-code"},
             journal=long_lines,
+            script=script,
         )
         self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
-        text = request(run.calls("curl")[0])[1]["text"]
+        text = journal_text(self, run)
         encoded = text.encode("utf-8", "surrogateescape")
         try:
             encoded.decode("utf-8")
         except UnicodeDecodeError as error:
-            self.fail(f"the page is not UTF-8: {error}")
+            self.fail(f"the line is not UTF-8: {error}")
         self.assertLessEqual(len(encoded), 3500)
         self.assertGreater(len(encoded), 3490, "the text was cut short of the bound")
-        # Cut at a character boundary: the text is the start of the whole page, and nothing else.
-        whole = f"DeckStreak: {FAILED_UNIT} failed (exit-code)\n" + "\n".join(long_lines)
+        # Cut at a character boundary: the text is the start of the whole line, and nothing else.
+        whole = f"DeckStreak: {FAILED_UNIT} failed (exit-code): " + " | ".join(long_lines)
         self.assertGreater(len(whole.encode("utf-8")), 3500, "the lines do not overflow the bound")
-        self.assertTrue(whole.startswith(text), "the cut text is not the start of the page")
+        with self.assertRaises(UnicodeDecodeError, msg="byte 3500 is not inside a character"):
+            whole.encode("utf-8")[:3500].decode("utf-8")
+        self.assertTrue(whole.startswith(text), "the cut text is not the start of the line")
 
     def test_a_json_error_line_reaches_the_page_as_written(self):
         # A role's error lines are JSON, full of double quotes, and a message may hold a backslash

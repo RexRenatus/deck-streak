@@ -1009,3 +1009,75 @@ fn the_mcp_role_that_cannot_open_its_database_says_stopping_on_its_notify_socket
         "the role did not say STOPPING=1 once; seen: {seen:?}"
     );
 }
+
+/// The UTC offset, in minutes, that puts the system's now at about 07:40 local: four minutes after
+/// the held flush's 07:36 slot, inside its catch-up window, whatever the time the test runs at.
+fn offset_to_just_after_the_held_flush() -> String {
+    const MINUTE_MS: i64 = 60_000;
+    const DAY_MS: i64 = 86_400_000;
+    let minute_of_day = SystemClock.now().epoch_millis().rem_euclid(DAY_MS) / MINUTE_MS;
+    ((7 * 60 + 40 - minute_of_day + 720).rem_euclid(24 * 60) - 720).to_string()
+}
+
+#[tokio::test]
+async fn the_held_flush_with_no_telegram_credential_keeps_what_it_holds() {
+    // With neither Telegram credential held, and no credentials directory at all, the held flush
+    // builds the holding router: its fire runs and is done, nothing is delivered, the planted held
+    // celebration stays held, and the job exits 0 (SPEC-582 R9; ADR-601 D5).
+    const HOUR_MS: i64 = 3_600_000;
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let database = directory.path().join(DATABASE_FILE);
+    let db = Db::open(&database).await.expect("the database opens");
+    let held_at = SystemClock.now().epoch_millis() - HOUR_MS;
+    let mut write = db.write().await.expect("a write");
+    sqlx::query(
+        "INSERT INTO notification_queue (kind, dedupe_key, surface, tier_requested, \
+         tier_pending, text, hold, tries, state, deferred_at, study_day, created_at) \
+         VALUES ('celebration', 'badge:synthetic:held', 'bot', 'T2', 'T2', \
+         'synthetic held celebration', 'quiet', 0, 'held', ?, ?, ?)",
+    )
+    .bind(held_at)
+    .bind(held_at.div_euclid(24 * HOUR_MS))
+    .bind(held_at)
+    .execute(&mut *write)
+    .await
+    .expect("a held row");
+    write.commit().await.expect("committed");
+    db.close().await;
+
+    let offset = offset_to_just_after_the_held_flush();
+    let output = deckstreakd(
+        &["job", "held_flush"],
+        &[
+            ("STATE_DIRECTORY", directory.path().as_os_str()),
+            ("DECKSTREAK_ROLLOVER_HOUR", OsStr::new("4")),
+            ("DECKSTREAK_UTC_OFFSET_MINUTES", OsStr::new(&offset)),
+        ],
+    );
+    assert_eq!(output.status.code(), Some(0), "{}", describe(&output));
+
+    let db = Db::open(&database)
+        .await
+        .expect("the role's database opens");
+    let kept: Vec<(String, String)> =
+        sqlx::query_as("SELECT dedupe_key, state FROM notification_queue ORDER BY id")
+            .fetch_all(db.reader())
+            .await
+            .expect("the queue is read");
+    assert_eq!(
+        kept,
+        [(String::from("badge:synthetic:held"), String::from("held"))],
+        "the held item is not kept as it was"
+    );
+    let row = SqliteCronLedger::new(db.clone())
+        .latest("held_flush")
+        .await
+        .expect("the ledger reads")
+        .unwrap_or_else(|| panic!("the held flush's fire did not run: {}", describe(&output)));
+    assert_eq!(
+        (row.ok_count, row.last_outcome),
+        (1, Outcome::Ok),
+        "{row:?}"
+    );
+    db.close().await;
+}

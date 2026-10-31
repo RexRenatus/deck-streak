@@ -124,7 +124,7 @@ WATCH_SERVICE = "deck-streak-memory-watch.service"
 SECOND_ROUTE_SERVICE = "deck-streak-second-route.service"
 SECOND_ROUTE_SCRIPT = DEPLOY / "scripts" / "second-route.sh"
 SCRIPTS = {
-    f"{ALERT_TEMPLATE}@.service": f"{RELEASE}/deploy/scripts/alert-telegram.sh %i",
+    f"{ALERT_TEMPLATE}@.service": f"{RELEASE}/deploy/scripts/alert-journal.sh %i",
     SLO_SERVICE: (
         f"/usr/bin/python3 {RELEASE}/deploy/scripts/slo-evaluate.py {RELEASE}/deploy/slo.json"
     ),
@@ -239,27 +239,19 @@ CREDENTIAL_SOURCES = {
     "SECOND_ROUTE_CHECK_IN": SECOND_ROUTE_SCRIPT,
     "SECOND_ROUTE_REPORT": SECOND_ROUTE_SCRIPT,
 }
-# Which credentials each service's role reads: the api's owner gate (SPEC-024, SPEC-025), the bot's
-# transport, owner gate and `/sync` (SPEC-026 R1, R11), and the `sync` job's syncer (SPEC-022,
-# SPEC-027). The job template's `sync` instance carries the sync's pair in its drop-in, which the
-# reader reads with the template (SPEC-062 R14), and the private rail's map answers them for the
-# `sync` instance alone, the one job that reads them (ADR-038; SPEC-061 §8, A14). The `held_flush`
-# instance's drop-in carries the bot token and the owner's id, which its router sends with (#291),
-# so the template's reading is the four. SPEC-031's alert
-# reads the bot token and the owner's id, whose private chat it pages (R3);
+# Which credentials each service's role reads: the `sync` job's syncer (SPEC-022, SPEC-027), and no
+# Telegram credential anywhere (SPEC-582 R3, R7). The job template's `sync` instance carries the
+# sync's pair in its drop-in, which the reader reads with the template (SPEC-062 R14), and the
+# private rail's map answers them for the `sync` instance alone, the one job that reads them
+# (ADR-038; SPEC-061 §8, A14). The api starts with Telegram off and loads none; SPEC-031's alert,
 # the evaluator and the watch read none. The MCP server's guard reads its core token and its
 # law-track token (SPEC-119 R6; ADR-332).
 ROLE_CREDENTIALS = {
-    "deck-streak-api.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
+    "deck-streak-api.service": (),
     "deck-streak-bot.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
     "deck-streak-mcp.service": ("CORE_CREDENTIAL", "LAW_TRACK_CREDENTIAL"),
-    f"{JOB_TEMPLATE}@.service": (
-        "SYNC_USERNAME",
-        "SYNC_PASSWORD",
-        "OWNER_USER_ID",
-        "TELEGRAM_BOT_TOKEN",
-    ),
-    f"{ALERT_TEMPLATE}@.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
+    f"{JOB_TEMPLATE}@.service": ("SYNC_USERNAME", "SYNC_PASSWORD"),
+    f"{ALERT_TEMPLATE}@.service": (),
     SLO_SERVICE: (),
     WATCH_SERVICE: (),
     SECOND_ROUTE_SERVICE: ("SECOND_ROUTE_CHECK_IN", "SECOND_ROUTE_REPORT"),
@@ -399,9 +391,7 @@ PER_SERVICE_KEYS = (
 )
 # The security headers R6 names, at the values the Caddy block sends.
 HEADERS = {
-    "Content-Security-Policy": (
-        "frame-ancestors https://web.telegram.org; object-src 'none'; base-uri 'self'"
-    ),
+    "Content-Security-Policy": ("frame-ancestors 'none'; object-src 'none'; base-uri 'self'"),
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
     "X-Content-Type-Options": "nosniff",
     "X-Robots-Tag": "noindex",
@@ -1318,7 +1308,6 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
             daemons,
             [
                 "deck-streak-api.service",
-                "deck-streak-bot.service",
                 LITESTREAM_SERVICE_NAME,
                 "deck-streak-mcp.service",
                 SYNC_SERVER_SERVICE_NAME,
@@ -1331,7 +1320,6 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
                     f"{ALERT_TEMPLATE}@.service",
                     f"{JOB_TEMPLATE}@.service",
                     WATCH_SERVICE,
-                    SECOND_ROUTE_SERVICE,
                     SLO_SERVICE,
                     BACKUP_SERVICE_NAME,
                     DRILL_SERVICE_NAME,
@@ -1342,9 +1330,9 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
             ),
         )
         worst = sum(ceilings[unit] for unit in daemons) + max(ceilings[unit] for unit in oneshots)
-        # ADR-064's arithmetic with ADR-332's daemon and SPEC-337's sync server: the five daemons,
-        # and the job, still the largest, which fill the share exactly (ADR-347).
-        self.assertEqual(worst, size("1152M"))
+        # ADR-064's arithmetic with ADR-332's daemon and SPEC-337's sync server, the bot's ceiling
+        # freed (ADR-601 D7): the four daemons, and the job, still the largest, fit inside the share.
+        self.assertEqual(worst, size("1056M"))
         self.assertLessEqual(worst, size(share), "the worst case exceeds DeckStreak's share")
         # The daemons' CPU quotas fit the share's CPUs; a daemon with no quota is refused by name.
         quotas = []
@@ -1355,59 +1343,85 @@ class TheTemplatesFitTheHostBudget(unittest.TestCase):
                     quota, f"{unit.rel} has no CPUQuota, so it cannot be shown to fit"
                 )
                 quotas.append(int(quota.rstrip("%")))
-        # The five quotas divide the share's processors exactly (ADR-347): 75, 75, 20, 15 and 15.
-        self.assertEqual(sum(quotas), 100 * budget()["cpus"], quotas)
+        # The four quotas fit inside the share's processors (ADR-601 D7): 75, 75, 15 and 15.
+        self.assertEqual(sum(quotas), 180, quotas)
+        self.assertLessEqual(sum(quotas), 100 * budget()["cpus"], quotas)
 
 
 class TheSecondRouteIsInTheCensus(unittest.TestCase):
-    def test_the_census_holds_the_second_route_as_a_timer_started_oneshot(self):
-        # SPEC-396 R10: the second route's unit is shipped, and every table that holds a unit names
-        # it. The first assertion is the artifact itself, so an unshipped unit fails here and not
-        # on a missing key.
+    def test_the_install_ships_no_second_route_unit_and_keeps_its_script(self):
+        # SPEC-582 R12 (ADR-601 D6): the second route's unit and timer leave the install, and no
+        # table that holds a unit names them; its script and its formal model stay in the tree. The
+        # kept artifacts are asserted first, so a removed script fails here and not on a name.
         service = "deck-streak-second-route.service"
         timer = "deck-streak-second-route.timer"
-        shipped = {unit.name: unit for unit in services()}
-        self.assertIn(service, shipped, "the second route's unit is not shipped")
-        self.assertTrue((SYSTEMD / timer).is_file(), "the second route's timer is not shipped")
-        script = DEPLOY / "scripts" / "second-route.sh"
-        self.assertEqual(SCRIPTS.get(service), f"{RELEASE}/deploy/scripts/second-route.sh")
-        self.assertEqual(
-            OBSERVABILITY_SERVICE.get(service),
-            {
-                "Type": "oneshot",
-                "TimeoutStartSec": "3min",
-                "Nice": "10",
-                "IOSchedulingClass": "idle",
-            },
+        self.assertTrue(SECOND_ROUTE_SCRIPT.is_file(), "the second route's script left the tree")
+        model = REPO / "formal" / "tla" / "SecondRoute" / "SecondRoute.tla"
+        self.assertTrue(model.is_file(), "the second route's model left the tree")
+        shipped = {unit.name for unit in services()}
+        self.assertNotIn(service, shipped, "the second route's unit is shipped")
+        self.assertFalse((SYSTEMD / timer).exists(), "the second route's timer is shipped")
+        tables = {
+            "SCRIPTS": SCRIPTS,
+            "OBSERVABILITY_SERVICE": OBSERVABILITY_SERVICE,
+            "ROLE_CREDENTIALS": ROLE_CREDENTIALS,
+            "PER_SERVICE": PER_SERVICE,
+            "IDENTITY_ARMS": IDENTITY_ARMS,
+        }
+        self.assertEqual([table for table, held in tables.items() if service in held], [])
+        self.assertNotIn(timer, OBSERVABILITY_TIMERS)
+        self.assertEqual([entry for entry in WAIVED if entry[0] == timer], [])
+        self.assertEqual([key for key in CREDENTIAL_SOURCES if key.startswith("SECOND_ROUTE")], [])
+        self.assertNotIn(service, budget()["units"], "the host budget names the second route")
+
+
+class TheInstallShipsNoTelegramSurface(unittest.TestCase):
+    def test_the_install_ships_no_telegram_unit_and_no_doorbell(self):
+        # SPEC-582 R1, R2 (ADR-601 D2): no bot unit, no path unit, no request-directory line and
+        # no held-flush drop-in directory ship; the settings example names neither the Mini App's
+        # URL nor the doorbell's path and still names the launch data's age; and every remaining
+        # service and timer-started job pages through the alert template: 12 unit files.
+        names = {path.name for path in SYSTEMD.iterdir()}
+        gone = {
+            "deck-streak-bot.service",
+            f"{JOB_TEMPLATE}@sync.path",
+            f"{JOB_TEMPLATE}@held_flush.service.d",
+        }
+        self.assertEqual(sorted(names & gone), [], "a Telegram surface is shipped")
+        self.assertEqual(sorted(path.name for path in SYSTEMD.glob("*.path")), [])
+        tmpfiles = DEPLOY / "tmpfiles.d"
+        lines = [
+            line
+            for path in (sorted(tmpfiles.glob("*.conf")) if tmpfiles.is_dir() else [])
+            for line in path.read_text(encoding="utf-8").splitlines()
+        ]
+        self.assertEqual([line for line in lines if "/run/deck-streak-sync" in line], [])
+        example = (DEPLOY / "deck-streak.env.example").read_text(encoding="utf-8")
+        for setting in ("DECKSTREAK_MINI_APP_URL", "DECKSTREAK_SYNC_REQUEST_PATH"):
+            self.assertNotIn(setting, example, f"the settings example names {setting}")
+        self.assertIn("DECKSTREAK_INIT_DATA_MAX_AGE_SECONDS", example)
+        on_failure = re.compile(rf"(?m)^OnFailure=(?:.*\s)?{re.escape(ON_FAILURE)}\s*$")
+        paging = examined(
+            "unit file(s) paging through the alert template",
+            sorted(
+                path.name
+                for path in SYSTEMD.iterdir()
+                if path.is_file() and on_failure.search(path.read_text(encoding="utf-8"))
+            ),
         )
-        self.assertIn(timer, OBSERVABILITY_TIMERS)
-        self.assertEqual(
-            ROLE_CREDENTIALS.get(service), ("SECOND_ROUTE_CHECK_IN", "SECOND_ROUTE_REPORT")
-        )
-        for constant in ("SECOND_ROUTE_CHECK_IN", "SECOND_ROUTE_REPORT"):
-            self.assertEqual(CREDENTIAL_SOURCES.get(constant), script, constant)
-        self.assertEqual(
-            PER_SERVICE.get(service), ("deck-streak-second-route", None, ROLES_NETWORK, None)
-        )
-        self.assertIn((timer, "calendar-not-persistent"), WAIVED)
-        self.assertEqual(IDENTITY_ARMS.get(service), "link-local")
-        unit = shipped[service]
-        self.assertIn(ON_FAILURE, unit.values("Unit", "OnFailure"))
-        self.assertEqual(last(unit, "Service", "Type"), "oneshot")
-        self.assertEqual(
-            last(unit, "Service", "ExecStart"), f"{RELEASE}/deploy/scripts/second-route.sh"
-        )
+        self.assertEqual(len(paging), 12, paging)
 
 
 class TheCaddyBlock(unittest.TestCase):
-    def test_the_caddy_policy_admits_telegram_web_and_sends_the_security_headers(self):
+    def test_the_caddy_policy_admits_no_framing_and_sends_the_security_headers(self):
         block = site()
         operations = header_operations(block)
         for field, value in HEADERS.items():
             self.assertEqual(operations.get(field), value, f"the block's {field}")
         self.assertIn("-Server", operations, "the Server header is not removed")
         directives = policy(operations["Content-Security-Policy"])
-        self.assertEqual(directives["frame-ancestors"], ["https://web.telegram.org"])
+        # No framing origin: the Mini App is deprecated, and nothing frames the web app (SPEC-582 R6).
+        self.assertEqual(directives["frame-ancestors"], ["'none'"])
         self.assertEqual(directives["object-src"], ["'none'"])
         self.assertEqual(directives["base-uri"], ["'self'"])
         # The script policy is the page's own meta policy, with its build's hashes (SPEC-028 R14):
@@ -2133,21 +2147,21 @@ class TheServicesRunTheirRoles(unittest.TestCase):
         # unit's file or drop-in, and the refusal that names it.
         sync_job = f"{JOB_TEMPLATE}@{INSTANCE_DROPIN_ALLOWLIST[f'{JOB_TEMPLATE}@.service'][0]}"
         plants = {
-            "the bot's deny removed": (
-                "deck-streak-bot.service",
+            "the alert template's deny removed": (
+                f"{ALERT_TEMPLATE}@.service",
                 "IPAddressDeny=link-local\n",
                 "",
                 [
-                    "deploy/systemd/deck-streak-bot.service: opens an IP socket and no "
+                    f"deploy/systemd/{ALERT_TEMPLATE}@.service: opens an IP socket and no "
                     "IPAddressDeny= covers the host's identity endpoint, and is refused"
                 ],
             ),
-            "the bot's deny of a range that misses the endpoint": (
-                "deck-streak-bot.service",
+            "the alert template's deny of a range that misses the endpoint": (
+                f"{ALERT_TEMPLATE}@.service",
                 "IPAddressDeny=link-local\n",
                 "IPAddressDeny=multicast\n",
                 [
-                    "deploy/systemd/deck-streak-bot.service: opens an IP socket and no "
+                    f"deploy/systemd/{ALERT_TEMPLATE}@.service: opens an IP socket and no "
                     "IPAddressDeny= covers the host's identity endpoint, and is refused"
                 ],
             ),
@@ -2267,8 +2281,8 @@ class TheSyncServerRunsAsItsOwnUnit(unittest.TestCase):
         high, ceiling = last(unit, "Service", "MemoryHigh"), last(unit, "Service", "MemoryMax")
         self.assertEqual((high, ceiling), (entry["memory_high"], entry["memory_max"]))
         self.assertGreater(size(high), SYNC_SERVER_PEAK)
-        # The share holds it: the five daemons and the largest job fill 1152M, and their quotas
-        # divide the share's two processors as ADR-347 splits them.
+        # The share holds it: the four daemons and the largest job fit inside 1152M, and their
+        # quotas fit inside the share's two processors (ADR-347 as ADR-601 D7 amends it).
         units = services()
         daemons = [u for u in units if _units.long_running(u)]
         jobs = [u for u in units if not _units.long_running(u)]
@@ -2276,17 +2290,21 @@ class TheSyncServerRunsAsItsOwnUnit(unittest.TestCase):
             size(last(u, "Service", "MemoryMax")) for u in jobs
         )
         self.assertEqual((budget()["memory"], budget()["cpus"]), ("1152M", 2))
-        self.assertEqual(worst, size(budget()["memory"]))
+        self.assertEqual(worst, size("1056M"))
+        self.assertLessEqual(worst, size(budget()["memory"]))
+        quotas = {u.name: last(u, "Service", "CPUQuota") for u in daemons}
         self.assertEqual(
-            {u.name: last(u, "Service", "CPUQuota") for u in daemons},
+            quotas,
             {
                 "deck-streak-api.service": "75%",
-                "deck-streak-bot.service": "20%",
                 LITESTREAM_SERVICE_NAME: "15%",
                 "deck-streak-mcp.service": "15%",
                 SYNC_SERVER_SERVICE_NAME: "75%",
             },
         )
+        total = sum(int(quota.rstrip("%")) for quota in quotas.values())
+        self.assertEqual(total, 180)
+        self.assertLessEqual(total, 100 * budget()["cpus"])
 
     def test_the_sync_family_runs_as_its_own_user(self):
         """SPEC-340 A2 (R2; ADR-351 D1): the sync server, its window, its archive and its sync drill
@@ -3307,31 +3325,51 @@ class TheSyncLoginIsTheSyncJobsAlone(unittest.TestCase):
             self.assertFalse([p for p in pairs if p["unit"] == unit], f"{ident} asks")
         examined("pair(s) listed", pairs)
 
-    def test_the_bots_credentials_are_loaded_by_the_held_flush_alone(self):
-        # Only the held flush sends to the owner's chat (#291): its instance's drop-in loads the
-        # bot's token and the owner's id, and no other job instance, nor the template, asks.
+    def test_no_unit_loads_the_telegram_pair(self):
+        # SPEC-582 R3 (ADR-601 D2): no unit, template or drop-in under deploy/systemd loads the
+        # bot's token or the owner's id, read both by the file's own lines and by the pair list
+        # the rail compares; and the instance allowlist names `sync` alone, since the held flush's
+        # drop-in left with the pair.
         bot = ("owner-user-id", "telegram-bot-token")
-        text = (SYSTEMD / f"{JOB_TEMPLATE}@.service").read_text(encoding="utf-8")
-        for ident in bot:
-            self.assertNotIn(ident, text, "the template requests a bot credential")
-        own = self.dropin_dir(REPO, "held_flush") / "20-bot-credentials.conf"
-        self.assertTrue(own.is_file(), f"{own.relative_to(REPO)} is missing")
-        loaded = re.findall(r"^LoadCredential=(.*)$", own.read_text(encoding="utf-8"), re.M)
-        self.assertEqual(sorted(loaded), sorted(f"{i}:{SOCKET}" for i in bot))
-        folders = examined(
-            "job instance drop-in directories", sorted(SYSTEMD.glob(f"{JOB_TEMPLATE}@*.service.d"))
+        files = examined(
+            "unit file(s) and drop-in(s) under deploy/systemd",
+            sorted(path for path in SYSTEMD.rglob("*") if path.is_file()),
         )
-        others = [
-            folder.name
-            for folder in folders
-            if folder != own.parent
-            and any(
-                ident in conf.read_text(encoding="utf-8")
-                for conf in folder.glob("*.conf")
-                for ident in bot
+        loading = [
+            str(path.relative_to(REPO))
+            for path in files
+            for value in re.findall(
+                r"^LoadCredential\w*=(.*)$", path.read_text(encoding="utf-8"), re.M
             )
+            if value.partition(":")[0].strip() in bot
         ]
-        self.assertEqual(others, [], "an instance other than the held flush loads a bot credential")
+        self.assertEqual(loading, [], "a unit loads a Telegram credential")
+
+        def pairs(root):
+            lister = DEPLOY / "scripts" / "credential-pairs.py"
+            done = subprocess.run(
+                [sys.executable, str(lister), "--root", str(root)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            return json.loads(done.stdout)["pairs"]
+
+        listed = examined("pair(s) listed", pairs(REPO))
+        self.assertEqual([p for p in listed if p["credential"] in bot], [])
+        self.assertEqual(INSTANCE_DROPIN_ALLOWLIST, {f"{JOB_TEMPLATE}@.service": ("sync",)})
+        # The census sees a load: a planted unit that loads the token is listed by its name.
+        with tempfile.TemporaryDirectory() as scratch:
+            shutil.copytree(SYSTEMD, Path(scratch) / "deploy" / "systemd")
+            planted = Path(scratch) / "deploy" / "systemd" / "deck-streak-planted.service"
+            planted.write_text(
+                f"[Service]\nLoadCredential=telegram-bot-token:{SOCKET}\n", encoding="utf-8"
+            )
+            caught = [p for p in pairs(scratch) if p["credential"] in bot]
+        self.assertEqual(
+            caught, [{"unit": "deck-streak-planted.service", "credential": "telegram-bot-token"}]
+        )
 
     def test_the_effective_check_accepts_the_shipped_drop_in_and_no_other(self):
         checker = DEPLOY / "scripts" / "effective-check.py"
