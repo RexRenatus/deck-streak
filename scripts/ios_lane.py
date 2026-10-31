@@ -21,10 +21,11 @@ except the installed profile and the ignored include file, and `clean` removes a
 - `preflight` reads the six parts as presence booleans and writes `placed=all` or `placed=none`,
   or refuses a half-placed credential, naming each absent part by its role (R7).
 - `sign` reads the team and the app id from the profile, masks every private value before any
-  tool runs, refuses a development, expired or placeholder profile, re-wraps the certificate under
-  a generated passphrase, imports it non-extractable into a job keychain, refuses a profile not
-  issued for that certificate, installs the profile, writes the include file and archives the
-  harness (R8, R9, R13).
+  tool runs, refuses a development, expired or placeholder profile, reads the certificate (once
+  more with `-legacy` after a failed read, never a third time), re-wraps it under a generated
+  passphrase, imports it non-extractable into a job keychain, refuses a profile not issued for
+  that certificate, installs the profile, writes the include file and archives the harness (R8,
+  R9, R13).
 - `upload-to-testflight` writes the key into a fresh private directory for the export alone and
   removes that directory on any exit (R10).
 - `clean` restores the keychain search list, deletes the job keychain, and removes the profile,
@@ -33,8 +34,9 @@ except the installed profile and the ignored include file, and `clean` removes a
 - `summary` appends the run's summary: lane, commit, version, build, credential, outcome (R20).
 
 A build tool's full output goes to a file under the lane, and a step prints only that output's
-error and warning lines, each private value redacted (R13). A refusal is one line on standard error
-and exit 1, and writes no output.
+error and warning lines, each private value redacted (R13). A failed certificate read prints one
+line naming its class, from a closed set, and nothing of openssl's own output. A refusal is one
+line on standard error and exit 1, and writes no output.
 """
 
 import argparse
@@ -87,6 +89,14 @@ INCLUDE = "ios/Config/Signing.local.xcconfig"
 PROFILES = "Library/Developer/Xcode/UserData/Provisioning Profiles"
 # What `security find-identity` lists for each identity: its index, SHA-1 and quoted name.
 IDENTITY = re.compile(r"\) ([0-9A-F]{40}) \"")
+# The closed set a failed certificate read is named by: each class with the words of openssl's
+# standard error that choose it, tested case-blind in this order; any other error is
+# `unrecognised` (SPEC-352 R13 as amended).
+READ_FAILURES = (
+    ("wrong-password", ("invalid password", "mac verify")),
+    ("legacy-algorithm", ("unsupported",)),
+    ("option-refused", ("unknown option", "unrecognized flag", "bad option")),
+)
 
 
 class Refused(Exception):
@@ -222,6 +232,55 @@ def write_private(path, data):
         sink.write(data)
 
 
+def read_failure(errors):
+    """The class of a failed certificate read, chosen from openssl's standard error by
+    `READ_FAILURES`. The text is read here in memory and never printed, logged, written to a file
+    or put in a refusal, whole or in part."""
+    text = errors.lower()
+    for name, words in READ_FAILURES:
+        if any(word in text for word in words):
+            return name
+    return "unrecognised"
+
+
+def read_certificate(original, passphrase):
+    """Read the placed certificate out under the run-time passphrase, its password on standard
+    input and no credential part in the environment, and return what openssl wrote. After a failed
+    read, print its class and read once more with `-legacy`, never a third time, and refuse naming
+    both classes when that read fails too (SPEC-352 R9 and R13 as amended)."""
+
+    def read(*legacy):
+        return subprocess.run(
+            [
+                "openssl",
+                "pkcs12",
+                *legacy,
+                "-in",
+                str(original),
+                "-passin",
+                "stdin",
+                "-passout",
+                f"pass:{passphrase}",
+            ],
+            input=f"{os.environ['PASSWORD']}\n",
+            env=without_credential(),
+            capture_output=True,
+            text=True,
+        )
+
+    first = read()
+    if first.returncode == 0:
+        return first.stdout
+    failed = read_failure(first.stderr)
+    print(f"pkcs12 read failed: class {failed}; reading once more with -legacy", flush=True)
+    legacy = read("-legacy")
+    if legacy.returncode != 0:
+        second = read_failure(legacy.stderr)
+        raise Refused(f"openssl pkcs12 read failed: first class {failed}, -legacy class {second}")
+    print("pkcs12 read under -legacy: ok", flush=True)
+    return legacy.stdout
+
+
 def sign():
     """Check the profile, import the certificate into a job keychain, install the profile, write
     the include file and archive the harness (SPEC-352 R8, R9, R13)."""
@@ -243,17 +302,7 @@ def sign():
     lane = make_lane()
     original = lane / "original.p12"
     write_private(original, base64.b64decode(os.environ["CERTIFICATE"]))
-    pem = tool(
-        "openssl",
-        "pkcs12",
-        "-in",
-        str(original),
-        "-passin",
-        "stdin",
-        "-passout",
-        f"pass:{passphrase}",
-        stdin=f"{os.environ['PASSWORD']}\n",
-    )
+    pem = read_certificate(original, passphrase)
     original.unlink()
     bundle = lane / "certificate.p12"
     tool(
