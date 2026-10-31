@@ -5,6 +5,10 @@ no script may perform. Concrete names (secret names, host names, ids) are the ow
 the owner's private notes, never in this repository. Every value that is a secret is stored from
 standard input, never typed on a command line.
 
+DeckStreak is a spaced-repetition study game for the web, iPhone and iPad. Sections 1, 2 and 6
+set up the Telegram bot, the owner's Telegram identity and the Mini App, which are deprecated
+(ADR-589): they stay until the delivery that removes them, and gain no feature.
+
 ## 1. The Telegram bot
 
 1. In Telegram, open `@BotFather` and send `/newbot`. Choose the display name `DeckStreak - XP and

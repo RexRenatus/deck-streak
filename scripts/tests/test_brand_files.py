@@ -48,6 +48,7 @@ STILL_BYTES = 8377
 REDUCED_MOTION = "(prefers-reduced-motion: reduce)"
 # SPEC-579 R1: every file the brand source gives the tree, in the list's order (sorted by path).
 BRAND_PATHS = (
+    "docs/assets/deckstreak-hero-poster-tide-light.png",
     "docs/assets/deckstreak-hero-tide-light.gif",
     "ios/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
     "ios/App/Assets.xcassets/AppIcon.appiconset/AppIcon-dark-1024.png",

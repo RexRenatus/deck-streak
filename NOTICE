@@ -1,0 +1,27 @@
+DeckStreak
+
+DeckStreak is a spaced-repetition study game for the web, iPhone and iPad. Its complete source code
+is at https://github.com/RexRenatus/deck-streak.
+
+Licences
+
+DeckStreak's own code is free software under the GNU Affero General Public License, version 3 or
+(at your option) any later version (AGPL-3.0-or-later). The licence's text is in LICENSE, and
+REUSE.toml records the licence and the copyright of every file in this repository.
+
+DeckStreak includes Anki's Rust engine, through the maintainer's fork of it, pinned by commit in
+Cargo.toml. The engine is licensed under the GNU Affero General Public License, version 3 or later,
+and its copyright notices and its licence file are its own, kept with its source.
+
+The copy of deepmerge in vendor/deepmerge/ is under the MIT License; its notice is in
+vendor/deepmerge/license.txt.
+
+The DeckStreak brand files, which REUSE.toml lists under LicenseRef-DeckStreak-Brand, are not
+covered by the AGPL: no licence is granted to use them, as
+LICENSES/LicenseRef-DeckStreak-Brand.txt states.
+
+Trademarks
+
+The DeckStreak name and logo are trademarks of DeckStreak.
+
+Anki® is a registered trademark, and DeckStreak is not affiliated with or endorsed by its holder.
