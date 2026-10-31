@@ -1,0 +1,67 @@
+{
+  "records": [
+    {
+      "file": "crates/sync/src/kani_proofs.rs",
+      "mutant": "replace any_key -> Key with Default::default()",
+      "anchor": "fn any_key() -> Key {\n    Key {\n        t: kani::any(),",
+      "reason": "The mutated function `any_key` lies in `kani_proofs.rs`, which `#[cfg(kani)]` removes from every build but the Kani verifier's, so the mutant compiles natively to the very program the original does.",
+      "evidence": "`crates/sync/src/lib.rs` lines 23 and 24 declare `#[cfg(kani)] mod kani_proofs;`, so `cargo mutants` lists this mutant from the module tree and builds and tests it as the unchanged crate, where no native test can reach a function that is not compiled; the harnesses are checked only by a Kani run, which `formal/obligations.json` records as planned, and no workflow under `.github/workflows` names kani. The key order the harness states is held natively over keys by the sync crate's key tests.",
+      "reached_by": "formal_vectors_review_key::sort_keys_orders_every_lean_review_key_vector_byte_equal",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/sync/src/kani_proofs.rs",
+      "mutant": "replace sync_codec with ()",
+      "anchor": "fn sync_codec() {\n    let bytes: [u8; 48] = kani::any();",
+      "reason": "The mutated harness `sync_codec` lies in `kani_proofs.rs`, which `#[cfg(kani)]` removes from every build but the Kani verifier's, so the mutant compiles natively to the very program the original does.",
+      "evidence": "`crates/sync/src/lib.rs` lines 23 and 24 declare `#[cfg(kani)] mod kani_proofs;`, so `cargo mutants` lists this mutant from the module tree and builds and tests it as the unchanged crate, where no native test can reach a harness that is not compiled; the harnesses are checked only by a Kani run, which `formal/obligations.json` records as planned, and no workflow under `.github/workflows` names kani. The codec's round trip and its refusals are held natively by the sync crate's codec tests.",
+      "reached_by": "codec::every_variant_round_trips_over_small_values_and_every_truncation_is_refused",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/sync/src/kani_proofs.rs",
+      "mutant": "replace key_order with ()",
+      "anchor": "fn key_order() {\n    let (a, b, c) = (any_key(), any_key(), any_key());",
+      "reason": "The mutated harness `key_order` lies in `kani_proofs.rs`, which `#[cfg(kani)]` removes from every build but the Kani verifier's, so the mutant compiles natively to the very program the original does.",
+      "evidence": "`crates/sync/src/lib.rs` lines 23 and 24 declare `#[cfg(kani)] mod kani_proofs;`, so `cargo mutants` lists this mutant from the module tree and builds and tests it as the unchanged crate, where no native test can reach a harness that is not compiled; the harnesses are checked only by a Kani run, which `formal/obligations.json` records as planned, and no workflow under `.github/workflows` names kani. The key order is held natively by the sync crate's key tests.",
+      "reached_by": "formal_vectors_review_key::the_partial_order_of_two_keys_is_their_key_order",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/sync/src/kani_proofs.rs",
+      "mutant": "replace == with != in key_order",
+      "anchor": "if compare(&a, &b) == Ordering::Less &&",
+      "reason": "The mutated condition of the harness `key_order` lies in `kani_proofs.rs`, which `#[cfg(kani)]` removes from every build but the Kani verifier's, so the mutant compiles natively to the very program the original does.",
+      "evidence": "`crates/sync/src/lib.rs` lines 23 and 24 declare `#[cfg(kani)] mod kani_proofs;`, so `cargo mutants` lists this mutant from the module tree and builds and tests it as the unchanged crate, where no native test can reach a harness that is not compiled; the harnesses are checked only by a Kani run, which `formal/obligations.json` records as planned, and no workflow under `.github/workflows` names kani.",
+      "reached_by": "formal_vectors_review_key::the_partial_order_of_two_keys_is_their_key_order",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/sync/src/kani_proofs.rs",
+      "mutant": "replace && with || in key_order",
+      "anchor": "Ordering::Less && compare(&b, &c)",
+      "reason": "The mutated condition of the harness `key_order` lies in `kani_proofs.rs`, which `#[cfg(kani)]` removes from every build but the Kani verifier's, so the mutant compiles natively to the very program the original does.",
+      "evidence": "`crates/sync/src/lib.rs` lines 23 and 24 declare `#[cfg(kani)] mod kani_proofs;`, so `cargo mutants` lists this mutant from the module tree and builds and tests it as the unchanged crate, where no native test can reach a harness that is not compiled; the harnesses are checked only by a Kani run, which `formal/obligations.json` records as planned, and no workflow under `.github/workflows` names kani.",
+      "reached_by": "formal_vectors_review_key::the_partial_order_of_two_keys_is_their_key_order",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/sync/src/kani_proofs.rs",
+      "mutant": "replace == with != in key_order",
+      "anchor": "&& compare(&b, &c) == Ordering::Less {",
+      "reason": "The mutated condition of the harness `key_order` lies in `kani_proofs.rs`, which `#[cfg(kani)]` removes from every build but the Kani verifier's, so the mutant compiles natively to the very program the original does.",
+      "evidence": "`crates/sync/src/lib.rs` lines 23 and 24 declare `#[cfg(kani)] mod kani_proofs;`, so `cargo mutants` lists this mutant from the module tree and builds and tests it as the unchanged crate, where no native test can reach a harness that is not compiled; the harnesses are checked only by a Kani run, which `formal/obligations.json` records as planned, and no workflow under `.github/workflows` names kani.",
+      "reached_by": "formal_vectors_review_key::the_partial_order_of_two_keys_is_their_key_order",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/sync/src/kani_proofs.rs",
+      "mutant": "replace next_id_holds_its_residue_and_bounds with ()",
+      "anchor": "fn next_id_holds_its_residue_and_bounds() {\n    let (floor, now, number): (i64, i64, u8) = (kani::any(), kani::any(), kani::any());",
+      "reason": "The mutated harness `next_id_holds_its_residue_and_bounds` lies in `kani_proofs.rs`, which `#[cfg(kani)]` removes from every build but the Kani verifier's, so the mutant compiles natively to the very program the original does.",
+      "evidence": "`crates/sync/src/lib.rs` lines 23 and 24 declare `#[cfg(kani)] mod kani_proofs;`, so `cargo mutants` lists this mutant from the module tree and builds and tests it as the unchanged crate, where no native test can reach a harness that is not compiled; the harnesses are checked only by a Kani run, which `formal/obligations.json` records as planned, and no workflow under `.github/workflows` names kani. The allocator's residue and bounds are held natively by the sync crate's id tests.",
+      "reached_by": "ids::two_devices_on_slots_1_and_2_make_disjoint_ids_over_10000_random_instants",
+      "issue": "#1060"
+    }
+  ]
+}

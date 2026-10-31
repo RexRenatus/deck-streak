@@ -11,6 +11,8 @@
 // examined count on purpose.
 #![allow(clippy::expect_used, clippy::print_stdout)]
 
+use std::cmp::Ordering;
+
 use deck_streak_sync::{Key, sort_keys};
 use serde_json::Value;
 
@@ -79,4 +81,34 @@ fn sort_keys_orders_every_lean_review_key_vector_byte_equal() {
     assert_eq!(header["covers"], "crates/sync/src/key.rs", "{header}");
     assert_eq!(header["anchor"], "sort_keys", "{header}");
     assert_eq!(header["vectors"].as_u64(), Some(examined), "{header}");
+}
+
+/// The key's partial order is its key order: each field decides a pair alone, in the order
+/// `(t, rank, origin, seq)`, and a key is equal to itself, so `<` and `>` read the order a sort
+/// uses.
+#[test]
+fn the_partial_order_of_two_keys_is_their_key_order() {
+    let key = |t, rank, origin, seq| Key {
+        t,
+        rank,
+        origin: [origin; 16],
+        seq,
+    };
+    let pairs = [
+        (key(1, 9, 9, 9), key(2, 0, 0, 0), Ordering::Less),
+        (key(1, 1, 0, 0), key(1, 0, 9, 9), Ordering::Greater),
+        (key(1, 0, 1, 9), key(1, 0, 2, 0), Ordering::Less),
+        (key(1, 0, 1, 4), key(1, 0, 1, 3), Ordering::Greater),
+        (key(1, 0, 1, 4), key(1, 0, 1, 4), Ordering::Equal),
+    ];
+    let answered: Vec<(Option<Ordering>, bool, bool)> = pairs
+        .iter()
+        .map(|(a, b, _)| (a.partial_cmp(b), a < b, a > b))
+        .collect();
+    let expected: Vec<(Option<Ordering>, bool, bool)> = pairs
+        .iter()
+        .map(|(_, _, order)| (Some(*order), order.is_lt(), order.is_gt()))
+        .collect();
+    println!("examined {} key pair(s)", pairs.len());
+    assert_eq!(answered, expected, "the partial order of each pair");
 }
