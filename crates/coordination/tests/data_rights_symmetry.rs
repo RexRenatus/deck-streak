@@ -19,7 +19,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use deck_streak_coordination::data_rights::CRON_FIRES_TABLE;
-use deck_streak_coordination::data_rights_registry::{erase_all, export_all, ports};
+use deck_streak_coordination::data_rights_registry::{
+    erase_all, export_all, export_document, ports,
+};
 use deck_streak_coordination::jobs::FireDate;
 use deck_streak_coordination::ledger::{CronLedger, SqliteCronLedger};
 use deck_streak_ingest::data_rights::WRITE_CLASS_STOP_TABLE;
@@ -432,6 +434,28 @@ impl Probe {
             .cloned()
             .collect()
     }
+}
+
+#[tokio::test]
+async fn the_export_document_is_the_exports_one_compact_line_and_its_newline() {
+    let (_directory, db) = migrated().await;
+    let document = export_document(&db).await.expect("the export document");
+    let exported = export_all(&db).await.expect("the export");
+    let Some(line) = document.strip_suffix('\n') else {
+        panic!("the export document ends in no newline: {document:?}");
+    };
+    let read: Value = serde_json::from_str(line).expect("the document's line is JSON");
+    assert_eq!(
+        (line.contains('\n'), &read, line),
+        (
+            false,
+            exported.as_json(),
+            serde_json::to_string(exported.as_json())
+                .expect("compact")
+                .as_str()
+        ),
+        "the export document is the export's one compact line"
+    );
 }
 
 #[tokio::test]
