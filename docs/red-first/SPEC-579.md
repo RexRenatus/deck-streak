@@ -97,3 +97,11 @@ path and a byte count that is a boolean); each kills one mutant of the brand lis
 three earlier lists left alive. `test_ci_workflows.py` lists the bytes-only sites of
 `test_brand_files.py` in its census of the test directory. A run at the head reads these three
 modules as the fix round leaves them; at each green commit named above, they held their earlier form.
+
+## A later change to the test module
+
+After the green commits named above, one commit changed `scripts/tests/test_brand_files.py`:
+`b6a39d43` rewrote line 8 of the module docstring and the comment at line 539, to word the
+hero-placement criterion. It changed no statement, test or assertion, so the identity above holds
+for every statement of that module; only that docstring line and that comment read differently at
+the head.
