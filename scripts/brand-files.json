@@ -2,6 +2,18 @@
   "$description": "The files that come from the DeckStreak brand source, each by its path, sha256, size, kind and pixel sizes. The public scrub admits a binary only at a listed path with the listed sha256 and size (SPEC-033 as SPEC-579 amends it), and scripts/tests/test_brand_files.py holds each file to its entry.",
   "files": [
     {
+      "path": "docs/assets/deckstreak-hero-poster-tide-light.png",
+      "sha256": "92114e135df1b8bafe1a283e7464222c4b81f6de7850558224482acd69334584",
+      "bytes": 8377,
+      "kind": "png",
+      "pixels": [
+        [
+          960,
+          360
+        ]
+      ]
+    },
+    {
       "path": "docs/assets/deckstreak-hero-tide-light.gif",
       "sha256": "fc891c959acfbeed4b2f68d1bb795d13b254e5ce2c81fb179185e66251b6ac14",
       "bytes": 134234,

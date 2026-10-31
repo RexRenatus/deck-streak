@@ -181,3 +181,15 @@ A19: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k te
   unsigned archive) on this pull request.
 - **A secret scanner reading a sha256 as a key.** The build's gitleaks range scan reads the list; a
   finding is a STOP to report, never a widened rule.
+
+## 7. Amendment by SPEC-580: the hero gains a reduced-motion still
+
+R4 above is amended by SPEC-580 (ADR-599 D4); its text is kept as it was. `README.md`'s first line
+stays `# DeckStreak` and a blank line follows it. Its hero is then a `<picture>` element on four
+lines: `<picture>`, one `<source>` whose `media` is `(prefers-reduced-motion: reduce)` and whose
+`srcset` is `docs/assets/deckstreak-hero-poster-tide-light.png`, one `<img>` whose `src` is
+`docs/assets/deckstreak-hero-tide-light.gif` with `width="960"`, `height="360"` and
+`alt="DeckStreak"`, and `</picture>`; a blank line and the opening paragraph follow. The still is a
+brand file under R1 and R2: it is listed in `scripts/brand-files.json` and annotated in
+`REUSE.toml` like every other. Its README criteria keep their test names and read the picture element;
+row S57904 anchors on the `<img>` line.

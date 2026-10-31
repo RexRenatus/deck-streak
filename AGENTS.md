@@ -5,7 +5,7 @@ full rules; this file is the short form every agent reads first.
 
 ## Overview
 
-DeckStreak is a Telegram Mini App and bot that gamify Anki reviews and deliver daily pre-study
+DeckStreak is a spaced-repetition study game for the web, iPhone and iPad, with daily pre-study
 readings. The backend is a Rust workspace with one crate per bounded context
 ([docs/CONTEXT-MAP.md](docs/CONTEXT-MAP.md)); the Mini App is SvelteKit in `web/app`; the AI
 agent's public duty skills and runner are in `agent/`.

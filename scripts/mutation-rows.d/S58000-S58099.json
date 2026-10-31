@@ -1,0 +1,70 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S58001-THE-README-STILL-IS-THE-PINNED-FILE",
+        "README.md",
+        "srcset=\"docs/assets/deckstreak-hero-poster-tide-light.png\"",
+        "srcset=\"docs/assets/deckstreak-hero-poster.png\"",
+        "the hero's reduced-motion source is the pinned still; another path would show a reader who asked for less motion no still (SPEC-580 A11)",
+        "test_brand_files.TheStillIsTheBrandSourcesPoster.test_the_still_is_listed_by_its_pinned_sha256"
+      ],
+      [
+        "S58002-THE-README-STILL-ANSWERS-REDUCED-MOTION",
+        "README.md",
+        "media=\"(prefers-reduced-motion: reduce)\"",
+        "media=\"(prefers-color-scheme: dark)\"",
+        "the still answers the reduced-motion query; under another query a reader who asked for less motion would see the animation (SPEC-580 A11)",
+        "test_brand_files.TheStillIsTheBrandSourcesPoster.test_the_still_is_listed_by_its_pinned_sha256"
+      ],
+      [
+        "S58003-THE-LIST-PINS-THE-STILLS-SHA256",
+        "scripts/brand-files.json",
+        "\"sha256\": \"92114e135df1b8bafe1a283e7464222c4b81f6de7850558224482acd69334584\"",
+        "\"sha256\": \"92114e135df1b8bafe1a283e7464222c4b81f6de7850558224482acd69334585\"",
+        "the list holds the still at the brand source's sha256; another value would admit other bytes as the still (SPEC-580 A11)",
+        "test_brand_files.TheStillIsTheBrandSourcesPoster.test_the_still_is_listed_by_its_pinned_sha256"
+      ],
+      [
+        "S58004-THE-OPENING-QUOTES-THE-DESCRIPTION",
+        "README.md",
+        "model, becomes its only scheduler before 1.0.",
+        "model, becomes its scheduler before 1.0.",
+        "the opening's first paragraph is the repository description exactly; a changed word would let the README drift from it (SPEC-580 A1)",
+        "test_identity_docs.TheReadmeOpening.test_the_readme_opening_is_the_identity"
+      ],
+      [
+        "S58005-THE-BUILT-ON-NAMES-THE-SYNC-SERVER",
+        "README.md",
+        "- **DeckStreak's own sync server.**",
+        "- **The sync server.**",
+        "Built on names DeckStreak's own sync server as an item by its lead; without it the item a reader looks for is gone (SPEC-580 A3)",
+        "test_identity_docs.TheBuiltOnSection.test_the_readme_built_on_names_each_item"
+      ],
+      [
+        "S58006-THE-TRADEMARK-LINE-IS-EXACT",
+        "README.md",
+        "  by its holder.",
+        "  by any holder it names.",
+        "the trademark line is the one sentence that names no holder; any other wording is refused (SPEC-580 A3)",
+        "test_identity_docs.TheBuiltOnSection.test_the_readme_built_on_names_each_item"
+      ],
+      [
+        "S58007-NOTICE-NAMES-THE-ENGINES-LICENCE",
+        "NOTICE",
+        "Cargo.toml. The engine is licensed under the GNU Affero General Public License, version 3 or later,",
+        "Cargo.toml. The engine is licensed under its own terms, version 3 or later,",
+        "NOTICE states the engine's licence; without it a redistributor lacks the engine's terms (SPEC-580 A6)",
+        "test_identity_docs.TheNotice.test_notice_names_each_item"
+      ],
+      [
+        "S58008-AGENTS-LINE-8-IS-THE-IDENTITY",
+        "AGENTS.md",
+        "DeckStreak is a spaced-repetition study game for the web, iPhone and iPad, with daily pre-study",
+        "DeckStreak is a Telegram Mini App and bot for the web, iPhone and iPad, with daily pre-study",
+        "AGENTS.md's overview line is the identity; the old framing would tell every agent DeckStreak is a Telegram app (SPEC-580 A8)",
+        "test_identity_docs.TheAgentsOverview.test_agents_line_8_is_the_identity"
+      ]
+    ]
+  }
+}
