@@ -3,8 +3,12 @@ ADR-529 D5): a file named `module.wasm` or `weights.bin`, any file under `api/`,
 that names either, and a WebAssembly module outside `engine/`, where the public engine is staged.
 It prints how many files it examined, fails by path, and reads VOID for a missing or empty site.
 
-Every case runs the census as a command over a planted site."""
+Every case runs the census as a command over a planted site, but two that load it to read what a
+command's exit cannot show: the bytecode setting its load leaves, and the code `main` returns."""
 
+import contextlib
+import io
+import os
 import subprocess
 import sys
 import tempfile
@@ -12,21 +16,33 @@ import unittest
 from pathlib import Path
 
 from _support import REPO, examined
+from test_mutation_python_judge_kills import load
 
 CENSUS = REPO / "scripts" / "companion-site-census.py"
 # The first bytes of every WebAssembly module, written here apart from the census.
 WASM = b"\0asm\x01\0\0\0"
+# How much of a manifest.json the census reads for a served name.
+MEBIBYTE = 1 << 20
+
+companion_census = load(CENSUS, "companion_site_census")
+
+
+def command(*args):
+    """Run the census with `args`, on a terminal wide enough that argparse wraps no line. Returns
+    its exit code and its output."""
+    done = subprocess.run(
+        [sys.executable, str(CENSUS), *args],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "COLUMNS": "200"},
+    )
+    return done.returncode, done.stdout + done.stderr
 
 
 def run_census(root):
     """Run the census over `root`. Returns its exit code and its output."""
-    done = subprocess.run(
-        [sys.executable, str(CENSUS), "--root", str(root)],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return done.returncode, done.stdout + done.stderr
+    return command("--root", str(root))
 
 
 def site(root, files):
@@ -113,6 +129,77 @@ class TheSiteCensus(unittest.TestCase):
                 self.assertEqual(code, 2, f"{path} {why}: {out}")
                 self.assertIn(f"companion-site-census: VOID: the site {path} {why}", out)
                 self.assertNotIn("PASS", out)
+
+    def test_a_manifest_that_does_not_read_is_judged_by_its_path_alone(self):
+        # A link to an absent file is listed as a file and cannot be opened: the census reads it as
+        # holding nothing, so a manifest.json it cannot read names no served file.
+        with tempfile.TemporaryDirectory() as root:
+            site(root, PUBLIC)
+            os.symlink("absent.json", Path(root) / "manifest.json")
+            code, out = run_census(root)
+            self.assertEqual(code, 0, out)
+            self.assertIn(f"companion-site-census: examined {len(PUBLIC) + 1} file(s)", out)
+            self.assertIn("companion-site-census: PASS", out)
+            self.assertNotIn("Traceback", out)
+
+    def test_a_manifest_is_read_to_its_first_mebibyte_and_no_further(self):
+        name = b"weights.bin"
+        cases = [
+            ("a served name whose last byte is the mebibyte's last", MEBIBYTE - len(name), 1),
+            ("a served name whose last byte is one past the mebibyte", MEBIBYTE - len(name) + 1, 0),
+        ]
+        for what, offset, expected in examined("manifest bound(s)", cases):
+            with self.subTest(what), tempfile.TemporaryDirectory() as root:
+                site(root, PUBLIC)
+                site(root, {"_app/manifest.json": b" " * offset + name})
+                code, out = run_census(root)
+                self.assertEqual(code, expected, f"{what}: {out}")
+                found = "companion-site-census: FINDING _app/manifest.json:" in out
+                self.assertEqual(found, expected == 1, f"{what}: {out}")
+
+    def test_the_help_names_the_census_its_purpose_and_its_root(self):
+        code, out = command("--help")
+        self.assertEqual(code, 0, out)
+        shown = " ".join(out.split())
+        self.assertIn("usage: companion-site-census [-h] --root ROOT", shown)
+        self.assertIn(
+            "companion-site-census: the built site holds no file the owner route serves "
+            "(SPEC-511 R12).",
+            shown,
+        )
+        self.assertIn("--root ROOT the built site's root", shown)
+
+    def test_a_census_without_a_root_is_a_usage_error(self):
+        code, out = command()
+        self.assertEqual(code, 2, out)
+        self.assertIn(
+            "companion-site-census: error: the following arguments are required: --root", out
+        )
+        self.assertNotIn("Traceback", out)
+
+    def test_loading_the_census_turns_bytecode_writing_off(self):
+        # A copy in a scratch folder, so the bytecode its own load caches lands there, never beside
+        # the tree's script.
+        with tempfile.TemporaryDirectory() as scratch:
+            copy = Path(scratch) / CENSUS.name
+            copy.write_bytes(CENSUS.read_bytes())
+            kept = sys.dont_write_bytecode
+            sys.dont_write_bytecode = False
+            try:
+                load(copy, "companion_site_census_copy")
+                written = sys.dont_write_bytecode
+            finally:
+                sys.dont_write_bytecode = kept
+        self.assertIs(written, True)
+
+    def test_main_returns_zero_for_a_public_site(self):
+        shown = io.StringIO()
+        with tempfile.TemporaryDirectory() as root:
+            site(root, PUBLIC)
+            with contextlib.redirect_stdout(shown):
+                code = companion_census.main(["--root", root])
+        self.assertEqual(code, 0, shown.getvalue())
+        self.assertIn("companion-site-census: PASS", shown.getvalue())
 
 
 if __name__ == "__main__":

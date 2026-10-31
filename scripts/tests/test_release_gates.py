@@ -4,13 +4,16 @@
 and decides whether the release job may run its publish step (ADR-520). A1 reads the record's
 schema, A2 plants each missing or failed gate, A3 a missing record, A4 reads the Lean entry's
 vectors against the script, A5 runs the gate and publish steps cut from `release.yml` over planted
-records with `gh` stubbed, and A6 holds the step apart from every other release step. Every
-enumerating test prints `examined N` and refuses zero. The tests start bash and the interpreter
-that runs them, and no other program.
+records with `gh` stubbed, and A6 holds the step apart from every other release step. The last
+class reads the command's help and the code `main` returns. Every enumerating test prints
+`examined N` and refuses zero. The tests start bash and the interpreter that runs them, and no other
+program.
 """
 
 import ast
+import contextlib
 import hashlib
+import io
 import json
 import os
 import re
@@ -435,6 +438,27 @@ class AMissingRecordRefuses(unittest.TestCase):
         self.assertEqual(refusal_lines(done.stdout), [["record", "missing"]])
         examined("folders in the record's place", [tree.root / release_gates.RECORD])
 
+    def test_the_object_hook_names_a_key_held_twice(self):
+        with self.assertRaises(release_gates.TwiceError) as raised:
+            json.loads('{"model": "a", "model": "b"}', object_pairs_hook=release_gates.once)
+        self.assertEqual(str(raised.exception), "a key twice")
+
+    def test_a_record_that_cannot_be_read_is_named_unreadable(self):
+        class Unreadable:
+            """A record on file whose bytes cannot be read, as a file the reader may not open
+            leaves it, whoever runs the test."""
+
+            def is_file(self):
+                return True
+
+            def read_text(self, encoding):
+                raise PermissionError(13, "Permission denied")
+
+        self.assertEqual(
+            release_gates.read_record(Unreadable()),
+            (None, f"{release_gates.RECORD} cannot be read"),
+        )
+
 
 class TheLeanVectors(unittest.TestCase):
     """A4 (R8): the Lean entry's vectors, written by the formal checker, are the script's."""
@@ -549,6 +573,39 @@ class EveryOtherReleaseStepIsUnchanged(unittest.TestCase):
             self.assertNotIn(name, text)
         self.assertNotRegex(text, r"\.write\(|write_text|write_bytes|open\(", "the script writes")
         self.assertNotRegex(text, r"\bsubprocess\b|\bos\.system\b", "the script starts a program")
+
+
+class TheCommandStatesItself(unittest.TestCase):
+    """The command's help, and the code `main` returns, which the process's exit cannot tell from
+    None: `sys.exit(None)` exits 0 as well."""
+
+    def test_the_help_names_the_gate_and_its_root(self):
+        done = subprocess.run(
+            [sys.executable, str(SCRIPT), "--help"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+            env={**os.environ, "COLUMNS": "200"},
+        )
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        shown = " ".join(done.stdout.split())
+        self.assertIn(
+            "Refuse the release's publish step unless the release gates hold (SPEC-502).", shown
+        )
+        self.assertIn(
+            "--root ROOT the checkout whose release-gates.json is read (default: the one holding "
+            "this script)",
+            shown,
+        )
+
+    def test_main_returns_zero_when_every_gate_holds(self):
+        tree = Tree(self).plant(passing())
+        shown = io.StringIO()
+        with contextlib.redirect_stdout(shown):
+            code = release_gates.main(["--root", str(tree.root)])
+        self.assertEqual(code, 0, shown.getvalue())
+        self.assertEqual(shown.getvalue(), PASS_LINE.format(model=DIGEST) + "\n")
 
 
 if __name__ == "__main__":
