@@ -86,3 +86,20 @@ principle's text above is kept as it was. The ruling words what replaces it:
 > **Design principle 2: vivid in session, calm out of session.** In a session: haptics, motion,
 > sound, instant XP and ladder celebrations. Outside one: nothing pressures, shames or fabricates,
 > and at most one nudge a day. Every charter 10 anti-goal is kept.
+
+Amendment (SPEC-578): the token file holds a third tier, `modes`, beside `ref` and `color`. It holds DeckStreak's product
+palette, Ember (warm charcoal with an amber accent), as six role values: a background, an ink and an accent for each of a dark
+and a light mode, each an alias of a raw colour in `ref.ember`. The section "Tokens" above is kept as it was; its two tiers and
+the Telegram mapping of `color` are unchanged.
+
+| mode | background | ink | accent |
+|---|---|---|---|
+| dark | `#151210` | `#faf6f2` | `#ff9a3c` |
+| light | `#faf6f2` | `#151210` | `#a54d06` |
+
+`web/app/scripts/build-tokens.ts` compiles each to a custom property, `--ember-<mode>-<role>`, mapped into Tailwind's theme as
+`--color-ember-<mode>-<role>`, and the iPhone and iPad app copies them as three colour sets, `EmberBackground`, `EmberInk` and
+`EmberAccent`, each with a light entry and a dark entry; `scripts/tests/test_ember_tokens.py` holds every copy equal to the token
+file. Ink on background measures 17.35:1 in both modes, and accent on background 5.33:1 light and 8.83:1 dark: each meets WCAG
+2.2 AA for text. No screen reads the tier yet: the screens take it in their own round, which also decides the card, muted-text
+and border values the three roles do not cover.

@@ -1,0 +1,30 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S57801-THE-EMBER-LIGHT-BACKGROUND-IS-ITS-TOKEN",
+        "web/app/src/lib/design/tokens.json",
+        "\"hex\": \"#faf6f2\"",
+        "\"hex\": \"#faf6f3\"",
+        "the Ember neutral 50, the light background and the dark ink, is the value every copy reads; a one-byte change in the token file leaves the app's colour sets differing from their token (SPEC-578 A4)",
+        "test_ember_tokens.TheAppCopiesTheTokens.test_each_colour_set_holds_its_tokens_values"
+      ],
+      [
+        "S57802-THE-EMBERINK-DARK-ENTRY-IS-THE-DARK-INK",
+        "ios/App/Assets.xcassets/EmberInk.colorset/Contents.json",
+        "\"red\" : \"0xFA\"",
+        "\"red\" : \"0xFB\"",
+        "the ink colour set's dark entry carries the dark ink; a one-byte change differs from the token (SPEC-578 A4, A5)",
+        "test_ember_tokens.TheAppCopiesTheTokens.test_each_colour_set_holds_its_tokens_values"
+      ],
+      [
+        "S57803-THE-EMBERACCENT-LIGHT-ENTRY-IS-THE-LIGHT-ACCENT",
+        "ios/App/Assets.xcassets/EmberAccent.colorset/Contents.json",
+        "\"green\" : \"0x4D\"",
+        "\"green\" : \"0x4E\"",
+        "the accent colour set's light entry carries the light accent; a one-byte change differs from the token (SPEC-578 A4, A5)",
+        "test_ember_tokens.TheAppCopiesTheTokens.test_each_colour_set_holds_its_tokens_values"
+      ]
+    ]
+  }
+}

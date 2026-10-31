@@ -13,6 +13,11 @@
  * names no Telegram theme parameter fails the compile, so no build can ship one. Each colour is
  * also mapped into Tailwind's theme as `--color-<name>`; the radius becomes `--radius`, and each
  * font family `--font-<name>`. The `ref` tier is never emitted: only the tokens that alias it are.
+ *
+ * The `modes` tier (SPEC-578; ADR-597) holds a product palette by mode, and Telegram's theme paints
+ * none of it. Every role of every mode of every palette becomes `--<palette>-<mode>-<role>: <hex>`,
+ * mapped into Tailwind's theme as `--color-<palette>-<mode>-<role>`. A palette missing its `dark` or
+ * its `light` mode, a mode missing a role, and a mode or role outside the known ones fail the compile.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -56,6 +61,10 @@ const GENERIC_FAMILIES = new Set([
   'math',
   'fangsong'
 ]);
+
+// The modes and roles a palette of the `modes` tier holds (SPEC-578 R2).
+const MODES: readonly string[] = ['dark', 'light'];
+const ROLES: readonly string[] = ['background', 'ink', 'accent'];
 
 type Node = Readonly<Record<string, unknown>>;
 
@@ -129,6 +138,33 @@ function fontFamily(value: unknown, where: string): string {
     .join(', ');
 }
 
+/**
+ * Compiles each palette of the `modes` tier: for every mode and role a custom property in `:root`
+ * and its mapping into Tailwind's theme. A mode or role missing or unknown throws, naming it.
+ */
+function compileModes(document: Node, modes: Node, root: string[], theme: string[]): void {
+  for (const [palette, group] of members(modes)) {
+    for (const [mode] of members(group)) {
+      if (!MODES.includes(mode)) throw new Error(`tokens: modes.${palette}.${mode} is not a mode (dark or light)`);
+    }
+    for (const mode of MODES) {
+      const where = `modes.${palette}.${mode}`;
+      const roles = node(group[mode], where);
+      for (const [role] of members(roles)) {
+        if (!ROLES.includes(role)) {
+          throw new Error(`tokens: ${where}.${role} is not a role (background, ink or accent)`);
+        }
+      }
+      for (const role of ROLES) {
+        if (roles[role] === undefined) throw new Error(`tokens: ${where}.${role} is missing`);
+        const hex = hexOf(document, node(roles[role], `${where}.${role}`).$value, `${where}.${role}`);
+        root.push(`  --${palette}-${mode}-${role}: ${hex};`);
+        theme.push(`  --color-${palette}-${mode}-${role}: var(--${palette}-${mode}-${role});`);
+      }
+    }
+  }
+}
+
 /** The stylesheet a DTCG token document compiles to; a malformed document throws, naming the token. */
 export function compileTokens(input: unknown): string {
   const document = node(input, 'the document');
@@ -151,6 +187,8 @@ export function compileTokens(input: unknown): string {
     root.push(`  --${name}: var(--tg-theme-${parameter.replaceAll('_', '-')}, ${fallback});`);
     theme.push(`  --color-${name}: var(--${name});`);
   }
+
+  if (document.modes !== undefined) compileModes(document, node(document.modes, 'modes'), root, theme);
 
   const radius = node(document.radius, 'radius');
   if (radius.$type !== 'dimension') throw new Error('tokens: radius is not a dimension token');
