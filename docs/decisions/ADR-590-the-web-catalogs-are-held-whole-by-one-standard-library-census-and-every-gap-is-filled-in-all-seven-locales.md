@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 decision-makers: "the owner, the DeckStreak architect"
 ---
 
@@ -178,3 +178,7 @@ locally, in one push. The app's String Catalog follows under its own SPEC and AD
   refuses it as `not-text`, and a later SPEC must teach it before such a message lands.
 - A translation that is present but wrong: the census sees presence and shape, never meaning; the
   fluent reader's review on #1053 is the only check of meaning.
+
+## More Information
+
+- SPEC-571 holds this decision's acceptance criteria and its file manifest.
