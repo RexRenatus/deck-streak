@@ -198,3 +198,63 @@ fn a_retracted_review_leaves_every_read_of_the_store_adapter() {
     }
     assert_eq!(findings, Vec::<String>::new(), "the store adapter");
 }
+
+#[test]
+fn the_store_adapter_counts_each_review_and_keeps_each_note_apart() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let path = dir.path().join("read.store");
+    drop(Store::open(&path, SERVER).expect("the store opens"));
+    raw(&path)
+        .execute_batch(ROWS)
+        .expect("the fixture rows load");
+    let store = Store::open(&path, SERVER).expect("the store reopens");
+    let both = BTreeSet::from([1, 2]);
+    let two = BTreeSet::from([2]);
+    let answers = store
+        .read(|read| {
+            Ok(vec![
+                (
+                    "study reviews through 1000",
+                    format!("{:?}", read.study_reviews_through(1000, &both)?),
+                    "2".to_owned(),
+                ),
+                (
+                    "study reviews through 50",
+                    format!("{:?}", read.study_reviews_through(50, &both)?),
+                    "0".to_owned(),
+                ),
+                (
+                    "reviewed notes of deck two, whose one review is retracted",
+                    format!("{:?}", read.reviewed_notes(&two)?),
+                    "{}".to_owned(),
+                ),
+                (
+                    "note fields of both notes",
+                    format!("{:?}", read.note_fields(&BTreeSet::from([1, 2]))?),
+                    format!(
+                        "{:?}",
+                        [
+                            NoteRead {
+                                id: 1,
+                                notetype_id: 1,
+                                fields: vec!["front one".to_owned(), "back one".to_owned()],
+                            },
+                            NoteRead {
+                                id: 2,
+                                notetype_id: 1,
+                                fields: vec!["front two".to_owned(), "back two".to_owned()],
+                            },
+                        ]
+                    ),
+                ),
+            ])
+        })
+        .expect("the reads run");
+    let mut findings = Vec::new();
+    for (what, answered, expected) in examined("read(s)", answers) {
+        if answered != expected {
+            findings.push(format!("{what}: answered {answered}, expected {expected}"));
+        }
+    }
+    assert_eq!(findings, Vec::<String>::new(), "the store adapter's counts");
+}

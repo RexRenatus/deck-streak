@@ -204,6 +204,31 @@ fn a_device_erase_removes_the_store_file() {
     assert_eq!(findings, Vec::<String>::new(), "a device's erase");
 }
 
+#[test]
+#[cfg(unix)]
+fn a_device_erase_that_cannot_remove_the_file_is_refused() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let held = dir.path().join("held");
+    fs::create_dir(&held).expect("the fixture makes its directory");
+    let path = held.join("device.store");
+    let store = Store::open(&path, device(3)).expect("the store opens");
+    fs::set_permissions(&held, fs::Permissions::from_mode(0o555)).expect("read-only");
+    let admitted = fs::write(held.join("probe"), b"").is_ok();
+    let erased = store.erase_file();
+    fs::set_permissions(&held, fs::Permissions::from_mode(0o755)).expect("writable again");
+    assert!(
+        !admitted,
+        "the read-only directory admitted a write, so no removal in it can be refused"
+    );
+    match erased {
+        Err(deck_streak_collection::StoreError::File(error))
+            if error.kind() == std::io::ErrorKind::PermissionDenied => {}
+        other => panic!("the erase of a file it cannot remove answered {other:?}"),
+    }
+    assert!(path.exists(), "the refused erase removed the store's file");
+}
+
 /// Every refusal of `inventory` against the port: a store table neither declared nor exempt, a
 /// declared table no category names or two do, a category whose erase mode is not the port's or
 /// that does not export, and a missing glob.

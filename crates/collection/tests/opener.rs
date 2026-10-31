@@ -10,7 +10,9 @@ use std::fs;
 use std::path::Path;
 
 use deck_streak_collection::migrate::{HEAD, MIGRATIONS};
-use deck_streak_collection::{APPLICATION_ID, BUSY_TIMEOUT_MS, Store, StoreError};
+use deck_streak_collection::{
+    APPLICATION_ID, BUSY_TIMEOUT_MS, ForeignFile, Slot, Store, StoreError,
+};
 use support::{SERVER, device, examined, raw, root};
 
 /// The file's bytes, and whether a WAL or shared-memory file sits beside it.
@@ -259,4 +261,92 @@ fn the_store_opener_refuses_a_file_of_another_application_and_leaves_it_untouche
         }
     }
     assert_eq!(findings, Vec::<String>::new(), "foreign files");
+}
+
+#[test]
+fn a_path_whose_parent_is_a_file_is_refused_as_a_file_error() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let parent = dir.path().join("plain.txt");
+    fs::write(&parent, b"not a directory").expect("the fixture writes its file");
+    let path = parent.join("server.store");
+    let mut findings = Vec::new();
+    match Store::open(&path, SERVER) {
+        Err(StoreError::File(_)) => {}
+        other => findings.push(format!("the opener answered {other:?}")),
+    }
+    match Store::open_reader(&path) {
+        Err(StoreError::File(_)) => {}
+        other => findings.push(format!("the reader answered {other:?}")),
+    }
+    assert_eq!(findings, Vec::<String>::new(), "a path under a file");
+}
+
+#[test]
+fn the_writer_holds_its_role_and_each_slot_answers_its_number() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let mut findings = Vec::new();
+    for (what, role) in examined("role(s)", vec![("server", SERVER), ("device 3", device(3))]) {
+        let path = dir.path().join(format!("{}.store", what.replace(' ', "-")));
+        match Store::open(&path, role) {
+            Ok(store) if store.role() == Some(role) => {}
+            Ok(store) => findings.push(format!("{what}: the store holds {:?}", store.role())),
+            Err(error) => findings.push(format!("{what}: the store was refused: {error}")),
+        }
+    }
+    let slots = [
+        ("the server's slot", Some(Slot::SERVER), 0),
+        ("device slot 1", Slot::device(1), 1),
+        ("device slot 5", Slot::device(5), 5),
+        ("device slot 63", Slot::device(63), 63),
+    ];
+    for (what, slot, number) in examined("slot(s)", slots.to_vec()) {
+        match slot {
+            Some(slot) if slot.get() == number => {}
+            other => findings.push(format!("{what}: answered {:?}", other.map(Slot::get))),
+        }
+    }
+    assert_eq!(findings, Vec::<String>::new(), "roles and slots");
+}
+
+#[test]
+fn the_reader_refuses_a_store_one_schema_below_head() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let path = dir.path().join("older.store");
+    drop(Store::open(&path, SERVER).expect("the store is made"));
+    raw(&path)
+        .execute_batch(&format!("PRAGMA user_version = {}", HEAD - 1))
+        .expect("the fixture lowers the schema");
+    match Store::open_reader(&path) {
+        Err(StoreError::NotAtHead { found, newest }) if found == HEAD - 1 && newest == HEAD => {}
+        other => panic!("the reader answered {other:?}"),
+    }
+}
+
+#[test]
+fn a_foreign_file_opens_read_only_and_prepares_only_what_it_holds() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let foreign = dir.path().join("foreign.sqlite");
+    raw(&foreign)
+        .execute_batch("PRAGMA application_id = 42; CREATE TABLE col (id INTEGER PRIMARY KEY);")
+        .expect("the fixture writes its file");
+    let store = dir.path().join("server.store");
+    drop(Store::open(&store, SERVER).expect("the store is made"));
+    let mut findings = Vec::new();
+    match ForeignFile::open_read_only(&foreign) {
+        Ok(file) => {
+            if let Err(error) = file.check_statement("SELECT id FROM col") {
+                findings.push(format!("a statement over its table was refused: {error}"));
+            }
+            match file.check_statement("SELECT id FROM no_such_table") {
+                Err(StoreError::Sqlite(_)) => {}
+                other => findings.push(format!("a statement over no table answered {other:?}")),
+            }
+        }
+        Err(error) => findings.push(format!("the foreign file was refused: {error}")),
+    }
+    match ForeignFile::open_read_only(&store) {
+        Err(StoreError::StoreFile) => {}
+        other => findings.push(format!("a collection store answered {other:?}")),
+    }
+    assert_eq!(findings, Vec::<String>::new(), "a foreign file");
 }
