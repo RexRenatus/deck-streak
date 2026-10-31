@@ -86,23 +86,61 @@ def reasons(findings):
 def opening_findings(root):
     """Every way the README's opening differs from SPEC-580 R1, as
     "<reason>: README.md: <detail>"."""
-    return []
+    lines = (read(root, README) or "").split("\n")
+    end = next((n for n, line in enumerate(lines) if line.startswith("## ")), len(lines))
+    findings = [
+        f"barred-word: README.md: line {n + 1} names {match.group(0)!r}"
+        for n, line in enumerate(lines[:end])
+        for match in BARRED.finditer(line)
+    ]
+    blocks = [flat(block) for block in "\n".join(lines[:end]).split("\n\n")]
+    prose = [block for block in blocks if block and block[0] not in "#<>!"]
+    if not prose or prose[0] != DESCRIPTION:
+        first = prose[0][:60] if prose else ""
+        findings.append(f"description-missing: README.md: the first paragraph is {first!r}")
+    return findings
 
 
 def built_on_findings(root):
     """Every way the README's Built on section differs from SPEC-580 R2, as
     "<reason>: README.md: <detail>"."""
-    return []
+    lines = (read(root, README) or "").split("\n")
+    if BUILT_ON not in lines:
+        return ["built-on-missing: README.md: no `## Built on` heading"]
+    start = lines.index(BUILT_ON) + 1
+    end = next((n for n in range(start, len(lines)) if lines[n].startswith("## ")), len(lines))
+    section = lines[start:end]
+    findings = [
+        f"built-on-item-missing: README.md: no item opens with {lead}"
+        for lead in BUILT_ON_ITEMS
+        if not any(line.startswith(f"- {lead}") for line in section)
+    ]
+    if TRADEMARK not in flat("\n".join(section)):
+        findings.append("trademark-line: README.md: the Built on section lacks the trademark line")
+    if CONTENTS_LINE not in lines:
+        findings.append(f"contents-missing: README.md: no contents line {CONTENTS_LINE!r}")
+    return findings
 
 
 def notice_findings(root):
     """Every way NOTICE differs from SPEC-580 R4, as "<reason>: NOTICE: <detail>"."""
-    return []
+    text = read(root, NOTICE)
+    if text is None:
+        return ["notice-missing: NOTICE: no NOTICE at the root"]
+    flattened = flat(text)
+    return [
+        f"notice-item-missing: NOTICE: {name}"
+        for name, sentence in NOTICE_ITEMS.items()
+        if sentence not in flattened
+    ]
 
 
 def agents_findings(root):
     """Every way AGENTS.md's line 8 differs from SPEC-580 R5, as
     "<reason>: AGENTS.md: <detail>"."""
+    lines = (read(root, AGENTS) or "").split("\n") + [""] * 8
+    if lines[7] != AGENTS_LINE_8:
+        return [f"agents-line-8: AGENTS.md: line 8 is {lines[7][:60]!r}"]
     return []
 
 

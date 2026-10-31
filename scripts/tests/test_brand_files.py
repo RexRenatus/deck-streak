@@ -337,7 +337,25 @@ def readme_findings(root):
 def still_findings(root, still=STILL, sha256=STILL_SHA256, size=STILL_BYTES):
     """Every way the hero's still differs from SPEC-580 R3: the picture's reduced-motion source,
     the list's entry and the file, each held to the pin, as "<reason>: <file>: <detail>"."""
-    return []
+    lines = (Path(root) / README).read_text(encoding="utf-8").split("\n") + [""] * 8
+    findings = []
+    source = PICTURE_SOURCE.fullmatch(lines[3])
+    if source is None or source.group(1) != REDUCED_MOTION:
+        findings.append(f"hero-no-still: README.md: line 4 is {lines[3][:60]!r}")
+    elif source.group(2) != still:
+        findings.append(f"still-not-listed: README.md: the source names {source.group(2)!r}")
+    files, _problem = read_list(root)
+    entry = next((entry for entry in files or [] if entry.get("path") == still), None)
+    if entry is None:
+        findings.append(f"still-missing: {LIST.as_posix()}: no entry for {still}")
+    elif (entry.get("sha256"), entry.get("bytes"), entry.get("kind")) != (sha256, size, "png"):
+        findings.append(f"still-pin: {LIST.as_posix()}: the entry for {still} is not the pin")
+    path = Path(root) / still
+    if not path.is_file():
+        findings.append(f"still-missing: {still}: not in the tree")
+    elif hashlib.sha256(path.read_bytes()).hexdigest() != sha256:
+        findings.append(f"still-pin: {still}: the file's sha256 is not the pin")
+    return findings
 
 
 def app_target(root):
