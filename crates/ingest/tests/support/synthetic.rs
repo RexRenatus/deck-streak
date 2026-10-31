@@ -1139,7 +1139,9 @@ pub fn review_log(path: &Path) -> Vec<LogRow> {
 /// Plays another client changing cards' due dates in the collection at `path`: each `(card, due)`
 /// is written with a new modification time and as unsynced, and the collection's modified stamp
 /// moves, so that client's next sync sends it (SPEC-083 A39): a sync whose stamps are equal on
-/// both sides exchanges nothing.
+/// both sides exchanges nothing. The stamp moves to one past the stamp the collection held, never
+/// to the clock: that stamp is the server's from the copy's last sync, so the change's stamp can
+/// never equal the server's, whatever the clock reads (SPEC-459 R1).
 ///
 /// # Panics
 ///
@@ -1153,6 +1155,11 @@ pub fn change_cards(path: &Path, cards: &[(i64, i64)]) {
                 .as_secs(),
         )
         .expect("seconds fit an i64");
+        let found: i64 = col
+            .storage
+            .db()
+            .query_row("select mod from col", (), |row| row.get(0))
+            .expect("the modified stamp it found is read");
         for (card, due) in cards {
             let changed = col
                 .storage
@@ -1166,7 +1173,7 @@ pub fn change_cards(path: &Path, cards: &[(i64, i64)]) {
         }
         col.storage
             .db()
-            .execute("update col set mod = ?", (now * 1000,))
+            .execute("update col set mod = ?", (found + 1,))
             .expect("the collection's modified stamp moves");
     });
 }
