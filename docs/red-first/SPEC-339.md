@@ -60,3 +60,32 @@ block's fourth run, `launch()` could not end the instance the third run had left
 that run's measured window. 62395e0b ends each pass's app after `stopMeasuring()` instead, so each
 measured window holds one launch and nothing to end. Both metrics, the five measured passes and
 each pass's wait for the deck list are unchanged, and M1 is still not red, a measurement.
+
+At e6dc596d, under the newer simulator runtime, SPEC-358's A12
+(`test_a12_the_review_survives_the_sidebar`) failed on the iPad simulator in run 40439982510, job
+121980478793 (`apple / harness`), in the step that runs the bury and flag tests on the iPhone and
+then the iPad, at `ReviewActionsFlowTests.swift:82`. The answer side, read after Show Answer and
+before the sidebar moved, read `[false, false, true]` against `[true, true, true]`: one check of
+that reading took 41 seconds in job 121980478793 and ended past its 30-second bound, while the two
+measurements across the sidebar matched; the iPhone passed. The test and the app code it drives are
+those of dev. 3ed6ef3f ends each test's app after it asserts, e4a0c4bc keeps the screen and prints
+the seconds when a reading runs out, bd04da9b notes in the device's log when a card's page finishes
+loading, and f2bca63c has the step let both simulators settle before its tests, sample the CPU
+through them and keep each simulator's log of page loads. A12's rows, its assertion, its bound and
+both destinations are unchanged, and it stays `not red` in SPEC-358's record. CI reads it by name at
+this push, on the iPhone and on the iPad.
+
+At b3f79d94, under the newer simulator runtime, M2 (`test_m2_memory`) failed on the iPad simulator
+in the Release step of run 40547567828 in both of its attempts, and passed on the iPhone in both: in
+job 122347562625 its first launch never completed, and it failed at `HarnessMeasureTests.swift:54`
+(`does not have a process ID`) after 133 seconds (job 122347562625);
+in job 122404289016 the deck row took 22.8 seconds to appear after the block's third launch, and its
+tap failed at `HarnessMeasureTests.swift:58` (`Timed out while evaluating UI query`). At cec1eb72,
+whose app and tests are those of b3f79d94, SPEC-347's A9 failed on the iPad simulator in run
+40597331573, job 122520249369, in the app's test step, at `ShellFlowTests.swift:56`, after single UI
+queries of 14 to 31 seconds (job 122520249369); the iPhone passed. In each red the step's second
+simulator stalled on a launch or on its UI queries, and each test is that of dev. 14c59b15 has the
+measurements step and the app's test step boot both simulators before their tests and sample the CPU
+through them, from one copy of the settling run that the bury and flag step now also reads. Every
+assertion, bound, wait and destination is unchanged; M2 stays not red, a measurement, and A9 and A12
+keep their records. CI reads M2, A9 and A12 by name at this push, on the iPhone and on the iPad.

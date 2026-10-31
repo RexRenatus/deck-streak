@@ -5,6 +5,8 @@
 // cards, queued in the order its builder adds them: a text card, an image card, a sound card and a
 // speech card, each with the back "the back". A test waits for what it reads with a bounded poll
 // and then asserts the value it read, so a red quotes what the app showed when the wait ran out.
+// Each test ends its app after it asserts, so no launch ends an app another test left running.
+// A wait that runs out prints its seconds and keeps the screen as it stood then.
 import UIKit
 import XCTest
 
@@ -47,6 +49,7 @@ final class ReviewActionsFlowTests: XCTestCase {
             [["shown", notShown], ["shown", unflagged], [flaggedRed], [unflagged]],
             "A11: Bury shows the image card in the text card's place; the text card's Flag reads "
                 + "\"Flagged red\" after one press and \"Flag\" again after the next")
+        app.terminate()
     }
 
     @MainActor
@@ -98,6 +101,7 @@ final class ReviewActionsFlowTests: XCTestCase {
                 "A12: on the iPhone the review stands alone, and the text card's answer side "
                     + "stays shown in landscape and back in portrait")
         }
+        app.terminate()
     }
 
     // MARK: - Steps
@@ -143,14 +147,25 @@ final class ReviewActionsFlowTests: XCTestCase {
     }
 
     /// Reads until the reading is `expected` or `engineWait` runs out, and returns the last
-    /// reading, so the assertion quotes what was shown when the wait ended.
+    /// reading, so the assertion quotes what was shown when the wait ended. A reading that runs
+    /// out prints its seconds and its last value and keeps the screen as it was then.
     @MainActor
     private func reading<Value: Equatable>(until expected: Value, _ read: () -> Value) -> Value {
-        let deadline = Date().addingTimeInterval(engineWait)
+        let started = Date()
+        let deadline = started.addingTimeInterval(engineWait)
         var last = read()
         while last != expected, Date() < deadline {
             Thread.sleep(forTimeInterval: 0.5)
             last = read()
+        }
+        if last != expected {
+            let seconds = Int(Date().timeIntervalSince(started))
+            let line = "a reading ran out after \(seconds) s at \(last)"
+            let screen = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            screen.name = line
+            screen.lifetime = .keepAlways
+            add(screen)
+            print(line)
         }
         return last
     }

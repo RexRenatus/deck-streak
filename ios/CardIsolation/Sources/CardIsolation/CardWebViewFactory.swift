@@ -343,6 +343,13 @@ final class GateAdapter: NSObject, WKNavigationDelegate {
         }
         decisionHandler(decision == .allow ? .allow : .cancel, preferences)
     }
+
+    /// Notes in the device's log that the card's page has finished loading, so a run can set a
+    /// slow face against the device's own clock (SPEC-358 A12). It decides nothing, reads nothing
+    /// from the page and shows nothing.
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        NSLog("card face loaded")
+    }
 }
 
 extension NavigationKind {
