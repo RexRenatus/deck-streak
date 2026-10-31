@@ -7,7 +7,7 @@
 | decided by | ADR-519, under ADR-002, ADR-029 and ADR-512 |
 | measured at | `d3b09d5e` (every file this SPEC cites is byte-equal there and at the delivery's base) |
 | schematic | `docs/schematics/the-scheduling-companions-documented-interface.md` (new); `docs/schematics/context-map.md` (changed: two nodes and one arrow) |
-| mutation band | S50100-S50199 (no hand row: section 9) |
+| mutation band | S50100-S50199 (one hand row: section 9) |
 
 ## 1. The problem, measured
 
@@ -160,6 +160,7 @@ test_formal_obligations.py` holds the ledger's change (R8).
 | `crates/companion/tests/codec.rs` | companion tests | new: C2, C3 |
 | `crates/companion/tests/decide.rs` | companion tests | new: C4, C5 |
 | `crates/companion/tests/formal_vectors_decide.rs` | companion tests | new: C8's tie |
+| `scripts/mutation-rows.d/S50100-S50199.json` | companion tests | new: the crate root's `no_std` row (section 9) |
 | `crates/companion-slot/Cargo.toml` | slot | new: the interface crate, its one dependency |
 | `crates/companion-slot/src/lib.rs` | slot | new: `open`, the public body (R6) |
 | `crates/companion-slot/tests/absent.rs` | slot tests | new: C6 |
@@ -229,5 +230,7 @@ The whole workspace's clippy and tests (`rust`), the release profile's tests (`r
 
 ## 9. Mutation rows
 
-None. The two crates are new code with no hand-held property beyond their tests: cargo-mutants generates their mutants,
-and C1 to C8 are their killers. The band S50100-S50199 holds no row.
+The two crates are new code with no hand-held property beyond their tests: cargo-mutants generates their mutants,
+and C1 to C8 are their killers. One change gives it nothing to mutate: the interface crate root's `#![no_std]` is an
+attribute, which cargo-mutants never mutates. Its row is S50100 in `scripts/mutation-rows.d/S50100-S50199.json`, which
+deletes the attribute, killed by `wire_integers::the_interface_crate_is_no_std_and_a_root_without_it_is_refused`.
