@@ -1805,8 +1805,8 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
             planted = Path(scratch) / "planted.service"
             planted.write_text(
                 "[Service]\n"
-                f"LoadCredentialEncrypted=telegram-bot-token:{SOCKET}\n"
-                f"LoadCredential=telegram-bot-token:{SOCKET}\n"
+                f"LoadCredentialEncrypted=mcp-core-token:{SOCKET}\n"
+                f"LoadCredential=mcp-core-token:{SOCKET}\n"
             )
             found = credential_lines(scratch)
         self.assertEqual(len(found), 2)
@@ -1820,6 +1820,7 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
     def test_a_credential_key_with_blanks_before_its_equals_sign_is_read_and_refused(self):
         # The reader of credential lines is the unit reader, so a space or a tab before `=` is a key
         # like any other (SPEC-066 R2): each is found, and a form that is not the socket is refused.
+        # The planted id is one the tree still loads, so each refusal is the form's, never the id's.
         ids = set(credential_ids().values())
         blanks = [(" ", "space"), ("\t", "tab")]
         for blank, what in examined("blank(s) before the equals sign", blanks):
@@ -1827,13 +1828,13 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
                 planted = Path(scratch) / "planted.service"
                 planted.write_text(
                     "[Service]\n"
-                    f"LoadCredentialEncrypted{blank}=telegram-bot-token:{SOCKET}\n"
-                    f"LoadCredential{blank}=telegram-bot-token:/etc/token\n"
+                    f"LoadCredentialEncrypted{blank}=mcp-core-token:{SOCKET}\n"
+                    f"LoadCredential{blank}=mcp-core-token:/etc/token\n"
                     f"LoadCredential{blank}=\n"
                 )
                 (Path(scratch) / "planted.service.d").mkdir()
                 (Path(scratch) / "planted.service.d" / "10-planted.conf").write_text(
-                    f"[Service]\nLoadCredential{blank}=telegram-bot-token:/etc/token\n"
+                    f"[Service]\nLoadCredential{blank}=mcp-core-token:/etc/token\n"
                 )
                 found = credential_lines(scratch)
             self.assertEqual(
@@ -1841,10 +1842,9 @@ class CredentialsComeFromTheSocket(unittest.TestCase):
                 [
                     "planted.service:2: LoadCredentialEncrypted= is refused; use LoadCredential= "
                     "(ADR-038)",
-                    "planted.service:3: telegram-bot-token is read from '/etc/token', not the "
-                    "socket",
+                    "planted.service:3: mcp-core-token is read from '/etc/token', not the socket",
                     "planted.service:4: '' is not a DeckStreak credential id",
-                    "planted.service.d/10-planted.conf:2: telegram-bot-token is read from "
+                    "planted.service.d/10-planted.conf:2: mcp-core-token is read from "
                     "'/etc/token', not the socket",
                 ],
                 what,
@@ -2389,7 +2389,7 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             "service unit(s) that load a credential",
             sorted((unit for unit in subject().services if loads_a_credential(unit)), key=name),
         )
-        # The roles that read a credential, and the alert template, which reads two (SPEC-031 R3).
+        # The roles that read a credential; the alert template reads none (SPEC-582 R7).
         self.assertEqual(
             {unit.name for unit in loading},
             {unit for unit, constants in ROLE_CREDENTIALS.items() if constants},
@@ -2398,12 +2398,13 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         for unit in paging:
             self.assertIn(ON_FAILURE, unit.values("Unit", "OnFailure"), unit.rel)
         self.assertEqual([r for unit in paging for r in refusal_page_refusals(unit)], [])
-        # The alert template is the one exception: it cannot page about itself, so its own refusal
-        # is its failed state (SPEC-066 R3; test_alert_unit.py holds that route). Its refused start
-        # must still fail it and stay failed: every condition but OnFailure= holds for it, told
-        # apart by the directive each refusal reads and never by its text, it restarts none, and it
-        # is never unloaded while failed.
-        (template,) = [unit for unit in loading if unit.name == alert]
+        # The alert template loads no credential (SPEC-582 R7), so it is taken by name from the
+        # whole tree. It cannot page about itself, so its own refusal is its failed state (SPEC-066
+        # R3; test_alert_unit.py holds that route). Its refused start must still fail it and stay
+        # failed: every condition but OnFailure= holds for it, told apart by the directive each
+        # refusal reads and never by its text, it restarts none, and it is never unloaded while
+        # failed.
+        (template,) = [unit for unit in subject().services if unit.name == alert]
         self.assertEqual(template.values("Unit", "OnFailure"), [])
         self.assertEqual(alert_exit_refusals(template), [])
         self.assertEqual(restart_refusals(template), [])
@@ -2805,20 +2806,23 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         self.assertIsNone(reader_refusal({"read.service": read}))
 
     def test_a_key_off_its_units_list_is_refused_and_the_trees_units_hold_only_listed_keys(self):
-        # Each unit that loads a credential holds only the keys its kind's list names, in the
-        # section the list gives them; the alert template's list is its own (SPEC-066 R2, R3).
+        # Each unit that loads a credential, and the alert template, which loads none (SPEC-582 R7)
+        # and is taken by name, holds only the keys its kind's list names, in the section the list
+        # gives them; the alert template's list is its own (SPEC-066 R2, R3).
         alert = f"{ALERT_TEMPLATE}@.service"
         loading = examined(
             "service unit(s) that load a credential",
             sorted((unit for unit in subject().services if loads_a_credential(unit)), key=name),
         )
-        for unit in loading:
+        (template,) = [unit for unit in subject().services if unit.name == alert]
+        units = [template, *loading]
+        for unit in units:
             allowed = _units.ALERT_KEYS if unit.name == alert else _units.PAGING_KEYS
             self.assertEqual(off_list_refusals(unit, allowed), [], unit.rel)
         # The lists are the keys the units use: each kind's list is exactly the (section, key)
         # pairs its shipped units hold, drop-ins included, so a key no unit uses is on no list.
         used = {"alert": set(), "paging": set()}
-        for unit in loading:
+        for unit in units:
             used["alert" if unit.name == alert else "paging"] |= {
                 (a.section, a.key) for a in unit.assignments
             }
@@ -2894,7 +2898,7 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
                 "",
                 "",
                 "[Socket]\nExecStart=/bin/true\n",
-                [refusal(7, "Socket", "ExecStart", "/bin/true")],
+                [refusal(6, "Socket", "ExecStart", "/bin/true")],
             ),
             "paging extension key": (
                 _units.PAGING_KEYS,
@@ -2942,7 +2946,9 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         got = {}
         for label in examined("planted unit(s) held to a list", sorted(plants)):
             allowed, first, unit_line, service_line, _ = plants[label]
-            text = f"{head}{unit_line}{first}{run}{loads}{service_line}"
+            # The alert template loads no credential (SPEC-582 R7), so an alert plant carries none.
+            credential = "" if allowed is _units.ALERT_KEYS else loads
+            text = f"{head}{unit_line}{first}{run}{credential}{service_line}"
             got[label] = planted_refusals(
                 text, lambda unit, allowed=allowed: off_list_refusals(unit, allowed)
             )
@@ -2952,7 +2958,7 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
         with tempfile.TemporaryDirectory() as scratch:
             folder = Path(scratch) / "deploy" / "systemd"
             (folder / "planted.service.d").mkdir(parents=True)
-            (folder / "planted.service").write_text(f"{head}{run}{loads}", encoding="utf-8")
+            (folder / "planted.service").write_text(f"{head}{run}", encoding="utf-8")
             (folder / "planted.service.d" / "10-planted.conf").write_text(
                 "[Unit]\nRequires=missing.service\n", encoding="utf-8"
             )
@@ -3075,8 +3081,8 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
 
     def test_the_credential_census_admits_the_identity_deny_and_no_wider_peer_list(self):
         """SPEC-354 A3 (R4; ADR-365 D5): a unit that loads a credential may deny the link-local
-        range, the alert template included, while the census still refuses a deny of another
-        range on a paging unit and any allow list on the alert template."""
+        range, and so may the alert template, which loads none, while the census still refuses a
+        deny of another range on a paging unit and any allow list on the alert template."""
         head = "[Unit]\nDescription=planted\n"
         page = f"OnFailure={ON_FAILURE}\n"
         run = "[Service]\nExecStart=/bin/true\n"
@@ -3099,7 +3105,7 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             ),
             "the alert template denies the link-local range": (
                 alert,
-                f"{head}{run}{loads}IPAddressDeny=link-local\n",
+                f"{head}{run}IPAddressDeny=link-local\n",
                 [],
             ),
             "a paging unit denies a range that misses the endpoint": (
@@ -3112,9 +3118,9 @@ class ARefusedCredentialFailsItsUnitAndPages(unittest.TestCase):
             ),
             "the alert template holds an allow list": (
                 alert,
-                f"{head}{run}{loads}IPAddressAllow=localhost\n",
+                f"{head}{run}IPAddressAllow=localhost\n",
                 [
-                    f"{where}:6: [Service] IPAddressAllow=localhost is not on this unit's list of "
+                    f"{where}:5: [Service] IPAddressAllow=localhost is not on this unit's list of "
                     "keys, and is refused"
                 ],
             ),
