@@ -454,6 +454,7 @@ async fn a_file_over_the_cap_is_refused_and_one_at_the_cap_is_served() {
 #[tokio::test]
 async fn a_file_swapped_past_the_cap_between_its_size_and_its_read_is_refused() {
     use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+    use std::time::{Duration, Instant};
 
     let directory = tempfile::tempdir().expect("a temporary directory");
     let small = directory.path().join("small.store");
@@ -486,7 +487,14 @@ async fn a_file_swapped_past_the_cap_between_its_size_and_its_read_is_refused() 
     let started = swaps.load(Ordering::Relaxed);
     let (mut requests, mut small_served, mut refused) = (0_usize, 0_usize, 0_usize);
     let mut other = None;
-    while requests < 200 || swaps.load(Ordering::Relaxed).saturating_sub(started) < 200 {
+    // The window is at least 200 requests and 200 swaps. Past it the loop runs on until each file
+    // was met, so a swapper the scheduler held on one file for the whole window still meets the
+    // other one. The deadline bounds that wait: past it the last assertion fails for real.
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while requests < 200
+        || swaps.load(Ordering::Relaxed).saturating_sub(started) < 200
+        || ((small_served == 0 || refused == 0) && Instant::now() < deadline)
+    {
         let answer = get_path(&app, "/api/companion/v1/weights.bin", Some(&cookie)).await;
         requests += 1;
         if answer.status == StatusCode::OK && answer.body == b"s" {
