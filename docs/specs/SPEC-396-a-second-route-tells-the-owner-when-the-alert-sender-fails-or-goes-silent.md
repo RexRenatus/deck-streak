@@ -285,3 +285,20 @@ retire.
   command is now
   `python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k the_install_ships_no_second_route_unit_and_keeps_its_script`
   (SPEC-582 A15).
+
+## Amendment (SPEC-585): superseded by the pager
+
+SPEC-585 and ADR-604 supersede this SPEC. The second route's unit and timer left the install with
+SPEC-582, so R1 to R11 and R13 no longer describe the install. What the second route told the
+owner is now the pager's (ADR-604 D3):
+
+- a failed alert instance, whatever made it fail, is the page `an-alert-instance-failed`, matched
+  on the service manager's own record of the failure;
+- an absent or silent alert path, a host, a service manager, a timer or a log shipper gone quiet,
+  is the page `the-evaluator-is-silent`, the silence of the SLO evaluator's recorded runs;
+- a host or an edge that stops answering is the uptime checks' page, made outside this repository
+  with the pager's channels.
+
+`deploy/scripts/second-route.sh`, its model `formal/tla/SecondRoute` (R12), its rows and the tests
+of A1 to A8 stay as SPEC-582 leaves them, with no unit that runs them, until their retirement
+(#1103). §8's hand-run verify is replaced by SPEC-585's section 8.

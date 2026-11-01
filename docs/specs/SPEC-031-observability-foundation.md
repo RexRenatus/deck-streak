@@ -252,3 +252,21 @@ The install's alert sender is no longer Telegram (ADR-601 D4):
 Lines 47-48, 51-57, 86-87, 123 and 166-170 record the Telegram sender as this SPEC delivered it.
 Every `OnFailure=` line, the evaluator and the memory watch page through the same template as
 before.
+
+## Amendment (SPEC-585): the pager reads the alert template's line
+
+SPEC-585 and ADR-604 amend R2 and R3 as SPEC-582 and ADR-601 left them. Every other requirement
+stands.
+
+- **R2.** Every alert of `deploy/slo.json` is routed to `pager`, and `alerting` names
+  `deck-streak-alert@.service` with the channel `pager`. The SLOs, their objectives, windows and
+  burn rates, the error budget policy, the evaluator and the memory watch stand as R2 states them.
+- **R3.** The alert template and its journal sender stand as ADR-601 left them. The one line the
+  sender writes is the page: the pager declared in `docs/monitoring/pager.json` reads it off the
+  host and tells a person through at least two notification channels of two kinds (ADR-604 D1,
+  D2).
+- **§6, "Telegram is unreachable when a page is sent".** Superseded: a page waits on the log
+  shipper and the monitoring service, and a sender that cannot write its line is told by the
+  service manager's own record of its failure (ADR-604 D3).
+- **§5, "It installs nothing on a host".** Still true: the log shipper, the log store's window,
+  the policies and the channels are the host's and the monitoring service's acts (#42).

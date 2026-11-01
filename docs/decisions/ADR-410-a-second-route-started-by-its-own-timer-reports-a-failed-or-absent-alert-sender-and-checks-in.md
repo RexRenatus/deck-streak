@@ -242,3 +242,20 @@ and clean properties, and the host's hand-run verify (SPEC-396 §8).
 
 ADR-010, ADR-016, ADR-032 (its budget table gains the second route's row), ADR-038, ADR-067,
 SPEC-031, SPEC-066, #41, #161, #284, #285.
+
+## Amendment (ADR-604): superseded by the pager
+
+ADR-604 supersedes D1, D2, D3 and D5 for the install. The second route's unit and timer left it
+with ADR-601 D6. A failed alert instance is now told by the pager's page on the service manager's
+own record of the failure, and a silent alert path by the silence of the SLO evaluator's recorded
+runs, both heard off the host by the monitoring service with no credential and no receiver to
+keep (ADR-604 D3).
+
+D4 stands for its model while the script it covers stays: `formal/tla/SecondRoute` keeps its
+covers over `deploy/scripts/second-route.sh`, which is unchanged, until the script, the model, the
+rows and the tests retire together (#1103).
+
+Chosen against:
+- Retiring the script, the model, the rows and the tests in the same delivery: rejected because
+  the deletion reaches deploy and test files that delivery does not change, and removing a test
+  needs its own ruling.
