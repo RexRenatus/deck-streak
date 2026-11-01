@@ -83,7 +83,7 @@ flowchart LR
 |---|---|---|
 | the template runs the journal sender, which names the unit and its result at error priority | A13 | seen red in CI; row S58207 |
 | it reads no credential and makes no request | A14 | seen red in CI |
-| it quotes the failed run's lines, bounded, in whole characters | A15 | seen red in CI; rows S58208, S58209 |
+| its line carries no line of the failed run | A15 | its planted quoting sender, read in CI; row S58216 |
 | every SLO alert and the channel route to `journal` | A16, A17 | seen red on the base, locally; row S58213 |
 | no shipped source outside the bot names the Bot API | A9 | seen red on the base: the Telegram sender named it |
 | the template's deny list still names the identity endpoint's range | A22 | not red; row S58210 |
