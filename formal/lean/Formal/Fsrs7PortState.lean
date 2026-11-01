@@ -1,7 +1,7 @@
--- @phx covers crates/engine-core/src/replay.rs anchor=fold digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/engine-core/src/replay.rs anchor=new_state digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/engine-core/src/replay.rs anchor=same_model digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/engine-core/src/scheduler.rs anchor=check_event digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/engine-core/src/replay.rs anchor=fold digest=sha256:122756ece51ecabd1976ac9faf79cfcef9f1d26f2de8eeaf65480c9c8dfdb9c8
+-- @phx covers crates/engine-core/src/replay.rs anchor=new_state digest=sha256:35a48ac904f8d50abd0d8125ef0a74c55aed72f2957f9b33babd1349b095a4a9
+-- @phx covers crates/engine-core/src/replay.rs anchor=same_model digest=sha256:324176ec32f62da3764f9e5c512e07f26c95327905f3f816214c0053eedb99ea
+-- @phx covers crates/engine-core/src/scheduler.rs anchor=check_event digest=sha256:2d0a5b91be534d46902e5856a2b462914874917958b7352f44a3e50cb25a53cb
 -- @phx cites #823
 -- @phx theorem a_refused_event_leaves_the_state_unchanged ramp=report
 -- @phx witness a_fold_that_writes_before_it_checks_keeps_a_refused_event kills=a_refused_event_leaves_the_state_unchanged
