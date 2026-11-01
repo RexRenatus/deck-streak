@@ -7,7 +7,8 @@
 | issue | #823 |
 | builds on | ADR-338, ADR-353, ADR-400 |
 | amends | ADR-400 D2 ("The stock stability is the interval at which the revision's forgetting curve reads 0.9"), and SPEC-386 R6: below the floor, the stock stability is the floor |
-| measured at | dev `c74b6b96` |
+| measured at | dev `c74b6b96`; D6 and D7 after the merge of dev `e25c0c45` |
+| related | #874 (lean warnings as errors and an escape-hatch guard), #897 (formal parity in the fitness checks), `crates/engine-core/src/scheduler.rs::day_queue` (SPEC-494 R6-R7, a second builder of the stock queue with no production caller, not ported here) |
 
 ## Context
 
@@ -159,18 +160,82 @@ Considered options:
 - A copy of the rounding in the test, rejected because a test that recomputes the code's answer proves nothing about
   the code, and a second copy of the text in `replay.rs` would leave S49415's find text no longer unique.
 
+## D7. The update's bounds, the port's state, their witnesses, and what they were chosen against
+
+After the merge of dev, #823 owed two more claims (SPEC-413 R10, R11), each over code that already holds them.
+
+**The update's bounds (L12, `lean/Fsrs7MemoryState`).** The pinned revision's `stability_for_set_scalar`
+(`src/model_v7.rs:120-144`) is ported over its operations, with `exp`, `pow` and the weights abstract and held to
+stated laws: `exp` positive, monotone and 1 at 0, so `exp x >= 1` for `x >= 0`; `pow` positive on a positive base;
+every weight at least 0, the floor `FSRS::new`'s clip gives all 34 (`src/parameter_clipper_v7.rs:31-47`). Without
+`exp 0 = 1` the success bound does not follow: it needs `exp((1-r)w) - 1 >= 0` (the check's T6). The lapse bound
+needs no law. The 540 update lines are replayed through upstream's public `FSRS::next_states_with_elapsed_days`.
+
+**The port's state (L13, `lean/Fsrs7PortState`).** TLA+ was declined (main's Q1: one caller, a local state), so the
+state's discipline is proved in Lean over a port of `new_state`, `fold`, `same_model`, `check_event`, `checkpoint`
+and `restore`:
+
+- an event's fields are their bit patterns, below a power of two, and a key is read signed, as Rust's `i64` order
+  reads it; the fold makes every check before its first write;
+- the state's `OnceCell` memo is left out: every fold resets it, and it is read only through `replayed`;
+- the checkpoint is a list of bytes: `to_le_bytes` is `le`, an integer's low bytes first, and `from_le_bytes` is
+  `readLe`, so the round trip is proved over the naturals (`readLe (le w n) = n % 256^w`), with no bit-vector
+  decision procedure and no native evaluation (the check's T9);
+- `restore` keeps the code's order of checks and the reader's `take`, `array` and `event`; the `usize` arithmetic of
+  the expected length (`try_from`, `checked_mul`, `checked_add`) runs under a parameter `usizeMax`, 64 bits on a
+  desktop target and 32 on wasm, and the claim asks only that the checkpoint fits;
+- the round trip is per model (the check's T5): the checkpoint holds no parameters, `restore` folds into the model's
+  own new state, so a state made under other parameters does not round-trip.
+
+The entry covers every item the round trip and the refusal rest on (the check's T8), so an edit to the reader stales
+the claim. Its 38 vectors are replayed through `Fsrs7`'s public `SchedulerPort` methods.
+
+**The witnesses (main's Q2).** No claim here is violated by the merge-base, so each witness is a planted variant named
+for the defect class it stands for, and each is recorded here:
+
+| claim | witness | the planted variant |
+|---|---|---|
+| `a_success_never_lowers_the_stability` | `a_growth_factor_without_its_one_lets_a_success_lower_the_stability` | the growth factor with no `+ 1.0` |
+| `a_lapse_never_raises_the_stability` | `a_lapse_that_keeps_the_larger_stability_raises_it` | a lapse that takes the larger stability, not the smaller |
+| `a_refused_event_leaves_the_state_unchanged` | `a_fold_that_writes_before_it_checks_keeps_a_refused_event` | a fold that writes the event before its checks |
+| `the_folded_keys_strictly_increase` | `a_check_that_admits_an_equal_key_folds_it_twice` | a check that refuses only a key before the last |
+| `restoring_a_checkpoint_gives_the_state_back` | `a_restore_reading_another_format_refuses_the_new_states_checkpoint` | a restore that expects format byte 2 |
+
+The plant control for the formal stage: the format witness switched to a positive statement reads
+`FORMAL FAIL WITNESS_VACUOUS`, exit 1; the witness's restore switched to the port's own fails the module's build,
+`FORMAL VOID MODEL_ERROR`, exit 3 (`docs/red-first/SPEC-413.md`).
+
+Considered options:
+
+- Planted-variant witnesses recorded here, chosen because main ruled them for a verification issue whose code
+  already holds (Q2 A), and each variant is the defect a later edit would bring.
+- Only the claims the merge-base violates, rejected because it would drop every claim of #823 but the floor (L4),
+  and an issue that asks for a formal pass would close with most of its families unproved.
+- Each claim marked NOT APPLICABLE for its witness, rejected because the formal checker would then judge the claims
+  with no planted defect at all, and a claim that no variant breaks may be vacuous.
+- TLA+ for the port's state, rejected by main (Q1): one caller holds the state, nothing interleaves, and the TLA+
+  pack declines a strictly sequential carry-over.
+- The checkpoint's codec over core bit vectors and `bv_decide`, rejected because `bv_decide` closes by native
+  evaluation and adds an axiom (the check's T9), which the formal checker refuses.
+
 ## Consequences
 
 - A card whose 90-percent interval is below `0.0001` days reports and is written with a stock stability of `0.0001`,
   which the store keeps and the stock curve reads finite. Every other value is unchanged.
 - `histories` is total over every row set: no build panics and none reads a wrapped gap.
-- Four Lean entries hold the scheduler's projection, replay, schedule and selection, each replayed by a Rust vectors
-  test: the fsrs7 crate's for the projection, the replay and the selection, and the engine core's for the schedule.
+- Five Lean entries hold the scheduler's projection, replay and update, schedule, selection and port state, each
+  replayed by a Rust vectors test: the fsrs7 crate's for the projection, the replay and the selection, and the
+  engine core's for the schedule and the port state.
 - `replay.rs` carries three hidden public functions (D6) that no production caller uses.
+- #823's "the interval it derives" is partly proved: the whole-day mapping is proved, and the revision's Newton and
+  bisection derivation (L14, the interval monotone in desired retention) stays a recorded gap, accepted by main in
+  writing (N-1370 A1).
+- The witnesses of D7 are planted variants, which phx-formal-lean's witness rule does not yet name; main filed that
+  as skill feedback (N-1370 A4).
 
 ## Confirmation
 
-SPEC-413 A1 to A4, the mutation rows of section 9, and the formal checker's per-entry and ratchet checks at the
+SPEC-413 A1 to A7, the mutation rows of section 9, and the formal checker's per-entry and ratchet checks at the
 delivery's head.
 
 ## What would make this wrong
@@ -178,3 +243,5 @@ delivery's head.
 - A revision that lowers its least stability below the store's grid: `STABILITY_MIN` would then be above the model's
   floor, and the floor would need its own reason.
 - An engine that stores the stability at fewer places: the floor would no longer be a value the store keeps.
+- A checkpoint format that carries the parameters, or a `restore` that folds into a state it was handed: D7's per-model
+  round trip would then be weaker than the code, and the claim would need restating.

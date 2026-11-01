@@ -1,15 +1,20 @@
 # SPEC-413: the FSRS-7 stock stability is never below the revision's floor, and a review gap is read whole
 
 - **Wave:** the scheduler's formal pass. **Issue:** #823. **Context(s):** `deck-streak-fsrs7` (`crates/fsrs7`), with
-  one comment, three hidden pure seams and one vectors test in `deck-streak-engine-core`
-  (`crates/engine-core/src/replay.rs`, R9).
+  one comment, three hidden pure seams and two vectors tests in `deck-streak-engine-core`
+  (`crates/engine-core/src/replay.rs`, R9, R11).
 - **Decided by:** ADR-427 (this SPEC's own: D1 the stability floor, D2 the gap, D3 the formal surface, D4 the
-  upstream findings, D5 the tests), under ADR-338, ADR-353 and ADR-400. It amends SPEC-386 R6 and ADR-400 D2 (the
-  stock stability below the floor).
-- **Schematic:** `docs/schematics/fsrs-7-replay-undo-probe-and-full-sync-choice.md` section 9 (this delivery
-  appends it).
+  upstream findings, D5 the tests, D6 the schedule's seam, D7 the update's bounds and the port state), under
+  ADR-338, ADR-353 and ADR-400. It amends SPEC-386 R6 and ADR-400 D2 (the stock stability below the floor).
+- **Schematic:** `docs/schematics/fsrs-7-replay-undo-probe-and-full-sync-choice.md` sections 9 and 10 (this delivery
+  appends them; section 10 draws the replay through the scheduling port after the merge of dev).
 - **Status:** delivered by the pull request that adds this file. **Mutation band:** `S41300-S41399`.
   **Changelog:** `changelog.d/formal-fsrs7-verify.md`. **Red-first record:** `docs/red-first/SPEC-413.md`.
+- **Related:** #874 (lean warnings as errors and an escape-hatch guard; it changes the Lean build these entries
+  pass if it lands first), #897 (formal parity in the fitness checks; it changes the formal census this
+  delivery's ledger rows join), and `crates/engine-core/src/scheduler.rs::day_queue` (`origin/dev`
+  `e25c0c45`:276, SPEC-494 R6-R7), a second builder of the stock queue with no production caller, which this
+  delivery neither ports nor changes.
 
 Refs read: `DEV` is DeckStreak `dev` `c74b6b9684bf24dc56a83c7005afd52064d2632c`. The pinned scheduler is the
 revision the workspace names for `fsrs7`; the released scheduler is the one the engine locks. Every fact below is
@@ -69,6 +74,24 @@ R9. **The schedule's port and its replay.** After the merge of dev, `lean/Fsrs7S
     vector's whole days, and the engine core's test `formal_vectors_fsrs7_schedule` replays every vector through the
     hidden pure seams `whole_days`, `schedule_of` and `engine_day_of` and through `CardReplay::stock_fields`, with
     the recorded counterexamples as literal cases (ADR-427 D6).
+R10. **The stability update's bounds.** `lean/Fsrs7MemoryState` ports the pinned revision's
+    `stability_for_set_scalar` (`src/model_v7.rs:120-144`) over stated laws: `exp` is positive, monotone and 1 at
+    0; `pow` is positive on a positive base; every weight is at least 0, the floor `FSRS::new`'s clip gives all 34
+    (`src/parameter_clipper_v7.rs:31-47`); retrievability is at most 1. It proves
+    `a_success_never_lowers_the_stability` (a rating of 2 or more, from a state in the scheduler's bounds, gives at
+    least the lesser of the stability and `S_MAX`) and `a_lapse_never_raises_the_stability` (a rating of 1 gives at
+    most the greater of the stability and `S_MIN`, under no law). Its writer adds 540 update lines, and the
+    memory-state vectors test replays each through `FSRS::next_states_with_elapsed_days`, slow and fast stability,
+    and refuses zero update lines (ADR-427 D7).
+R11. **The port state.** The new entry `lean/Fsrs7PortState` ports the scheduling port's FSRS-7 state: `new_state`,
+    `fold`, `same_model`, `checkpoint` and `restore` with the checkpoint's reader (`take`, `array`, `event`) and
+    constants in `replay.rs`, and `check_event` in `scheduler.rs`. It proves
+    `a_refused_event_leaves_the_state_unchanged`, `the_folded_keys_strictly_increase` and
+    `restoring_a_checkpoint_gives_the_state_back`: for every model, every state its folds reach from its new state
+    restores from its own checkpoint as itself, on a target whose largest `usize` holds the checkpoint. Its writer
+    prints 15 fold sequences and 23 restores, and the engine core's test `formal_vectors_fsrs7_port_state` replays
+    them through `Fsrs7`'s public `SchedulerPort` methods, with the signed-key and format-byte cases as literal
+    cases (ADR-427 D7).
 
 ## 3. Acceptance criteria
 
@@ -79,6 +102,8 @@ R9. **The schedule's port and its replay.** After the merge of dev, `lean/Fsrs7S
 | A3 | R4, R5: the stock projection and the curve hold the Lean claims on every vector, the stability lines included | the stability lines are not floored | ADR-427 D3 |
 | A4 | R7: the replay holds the Lean claims on every memory-state vector | not red: it replays the formal pass's own vectors over code this delivery does not change | ADR-427 D3 |
 | A5 | R9: the engine core's schedule gives every schedule vector, and the recorded counterexamples hold as literal cases | not red: dev's `interval_days` then `scheduled` compose to the fork's `scheduled`, and `day_of` and `stock_fields` are text-identical, so the vectors hold over dev's code; the band rows its killer kills give it its teeth | ADR-427 D6 |
+| A6 | R10: the update holds both bounds on every update line, slow and fast stability, under every model | not red: the pinned update already holds both bounds; the planted-variant witnesses (the growth factor with no `+ 1.0`, a lapse that keeps the larger stability) give the claims their teeth, and the band rows its killer kills give the test its teeth | ADR-427 D7 |
+| A7 | R11: the port's fold, checkpoint and restore give every port-state vector, and the literal cases hold | not red: dev's port already refuses before it writes, orders its keys signed and restores its own checkpoints; the planted-variant witnesses (a fold that writes first, a check that admits an equal key, a restore that expects another format byte) give the claims their teeth | ADR-427 D7 |
 
 ```acceptance
 A1: cargo test -p deck-streak-fsrs7 --test stock -- --exact a_first_review_rated_again_keeps_a_stock_stability_the_store_holds
@@ -86,6 +111,8 @@ A2: cargo test -p deck-streak-fsrs7 --test convert -- --exact a_gap_past_the_sig
 A3: cargo test -p deck-streak-fsrs7 --test formal_vectors_fsrs7_stock -- --exact the_stock_projection_and_the_curve_hold_the_lean_claims_on_every_vector
 A4: cargo test -p deck-streak-fsrs7 --test formal_vectors_fsrs7_memory_state -- --exact the_replay_holds_the_lean_claims_on_every_vector
 A5: cargo test -p deck-streak-engine-core --test formal_vectors_fsrs7_schedule
+A6: cargo test -p deck-streak-fsrs7 --test formal_vectors_fsrs7_memory_state -- --exact the_replay_holds_the_lean_claims_on_every_vector
+A7: cargo test -p deck-streak-engine-core --test formal_vectors_fsrs7_port_state
 ```
 
 A1's expected values are typed: the floor's bits and the store's four-place rounding of it, never read from the
@@ -98,30 +125,36 @@ the floor as the stock stability (R2), and whose Hard, Good and Easy rows are un
 |---|---|---|
 | `docs/specs/SPEC-413-the-fsrs-7-stock-stability-is-never-below-the-revisions-floor-and-a-review-gap-is-read-whole.md` | document | new: this SPEC |
 | `docs/decisions/ADR-427-the-stock-stability-is-held-at-the-revisions-floor-and-a-review-gap-is-an-unsigned-distance.md` | document | new |
-| `docs/schematics/fsrs-7-replay-undo-probe-and-full-sync-choice.md` | document | section 9 appended |
+| `docs/schematics/fsrs-7-replay-undo-probe-and-full-sync-choice.md` | document | sections 9 and 10 appended; section 6's citations re-read at the merge |
 | `docs/red-first/SPEC-413.md` | document | new: red-first record |
 | `changelog.d/formal-fsrs7-verify.md` | document | new: fragment |
 | `crates/fsrs7/src/stock.rs` | `deck-streak-fsrs7` | `STABILITY_MIN`, `stock_stability`; `project` floors its stability |
 | `crates/fsrs7/src/convert.rs` | `deck-streak-fsrs7` | the gap is `abs_diff`; `days` reads a `u64` |
 | `crates/engine-core/src/replay.rs` | `deck-streak-engine-core` | the comment on `CardReplay::stability` names the floor; after the merge of dev, the rounding step moves into the hidden pure seam `whole_days`, and the hidden seams `schedule_of` and `engine_day_of` call `scheduled` and `day_of` (R9, ADR-427 D6) |
 | `crates/engine-core/tests/formal_vectors_fsrs7_schedule.rs` | `deck-streak-engine-core` | new; A5 |
+| `crates/engine-core/tests/formal_vectors_fsrs7_port_state.rs` | `deck-streak-engine-core` | new; A7 (R11) |
 | `crates/fsrs7/tests/stock.rs` | `deck-streak-fsrs7` | A1; SPEC-386 A7 and A8's Again row |
 | `crates/fsrs7/tests/convert.rs` | `deck-streak-fsrs7` | A2 |
 | `crates/fsrs7/tests/formal_vectors_fsrs7_stock.rs` | `deck-streak-fsrs7` | new (formal pass); A3's stability lines |
-| `crates/fsrs7/tests/formal_vectors_fsrs7_memory_state.rs` | `deck-streak-fsrs7` | new (formal pass); A4 |
+| `crates/fsrs7/tests/formal_vectors_fsrs7_memory_state.rs` | `deck-streak-fsrs7` | new (formal pass); A4; A6's update lines (R10) |
 | `formal/lean/Formal/Fsrs7Stock.lean` | formal | new (formal pass); R4's theorem, witness and covers |
 | `formal/lean/Formal/Fsrs7StockVectors.lean` | formal | new (formal pass); R4's stability lines |
-| `formal/lean/Formal/Fsrs7MemoryState.lean` | formal | new (formal pass) |
-| `formal/lean/Formal/Fsrs7MemoryStateVectors.lean` | formal | new (formal pass) |
+| `formal/lean/Formal/Fsrs7MemoryState.lean` | formal | new (formal pass); R10's port of the update, two theorems and two witnesses |
+| `formal/lean/Formal/Fsrs7MemoryStateVectors.lean` | formal | new (formal pass); R10's update lines |
+| `formal/lean/Formal/Fsrs7PortState.lean` | formal | new; R11's port, three theorems, three witnesses and covers |
+| `formal/lean/Formal/Fsrs7PortStateVectors.lean` | formal | new; R11's fold and restore lines |
 | `formal/lean/Formal/Fsrs7Schedule.lean` | formal | new (formal pass); re-ported over dev's two steps and stamped (R9) |
 | `formal/lean/Formal/Fsrs7ScheduleVectors.lean` | formal | new (formal pass); records each vector's whole days (R9) |
 | `formal/lean/Formal/ReplayHistory.lean` | formal | R6: the distance's port, the stamp |
-| `formal/lean/Formal/Vectors.lean` | formal | three writer arms (formal pass) |
+| `formal/lean/Formal/Vectors.lean` | formal | four writer arms (formal pass, R11) |
 | `formal/lean/Formal.lean` | formal | three imports (formal pass) |
 | `formal/vectors/fsrs7-stock.jsonl` | formal | new; written by the checker |
 | `formal/vectors/fsrs7-memory-state.jsonl` | formal | new; written by the checker |
 | `formal/vectors/fsrs7-schedule.jsonl` | formal | new; written by the checker |
+| `formal/vectors/fsrs7-port-state.jsonl` | formal | new; written by the checker |
 | `formal/vectors/replay-history.jsonl` | formal | the header's digest; written by the checker |
+| `formal/obligations.json` | formal | four ledger rows (section 8) |
+| `scripts/tests/test_formal_obligations.py` | rows | the four entries' dispositions, the count, O11's present artifacts, the engine ties and the vectors ties |
 | `scripts/mutation-rows.d/S41300-S41399.json` | rows | new: section 9 |
 
 ## 5. What this does NOT do
@@ -131,10 +164,16 @@ the floor as the stock stability (R2), and whose Hard, Good and Easy rows are un
   mixture, and a wrapper rule would invent a schedule the revision does not compute (#823).
 - It does not validate the preset's retention (M10): that is the caller's contract (ADR-400), and the scheduler
   switch that will call it validates its own input (#611).
-- It adds one test in the engine core, A5's replay of `lean/Fsrs7Schedule`'s vectors, and changes no engine
-  behaviour: the seams of R9 call the code the replay runs (#823).
-- It does not prove the interval monotone in desired retention: the revision's Newton and bisection search is not
-  ported, and the property was measured clean, not proved (#823).
+- It adds two tests in the engine core, A5's replay of `lean/Fsrs7Schedule`'s vectors and A7's replay of
+  `lean/Fsrs7PortState`'s, and changes no engine behaviour: the seams of R9 call the code the replay runs, and A7
+  reaches the port only through its public methods (#823).
+- It does not prove the interval monotone in desired retention (L14): the revision's Newton and bisection search is
+  not ported, and the property was measured clean, not proved. #823's "the interval it derives" is therefore partly
+  proved: the whole-day mapping (R9's L8) is proved, the derivation is a recorded gap, which main accepted in writing
+  (N-1370 A1) (#823).
+- It does not prove the difficulty update beyond its clamp (L5); "a higher rating never raises the difficulty" is an
+  optional claim the check named (N-1370 A2) and this delivery leaves (#823).
+- It does not model the replay's state in TLA+: one caller folds a state local to its call (section 8) (#823).
 - It writes nothing into a collection: the scheduler switch owns the write (#611).
 - It does not change the replay's arithmetic, its methods or its parameters (#641).
 
@@ -148,19 +187,41 @@ the floor as the stock stability (R2), and whose Hard, Good and Easy rows are un
 
 ## 7. What only CI proves
 
-- The engine core's suites, which this delivery touches by one comment only.
+- The engine core's suites, which this delivery touches by one comment, three hidden seams and two vectors tests
+  (`ci`, whose nextest stages do not run on the dev box).
 
 ## 8. Formal model
 
-- **Lean: REQUIRED.** The stock projection, the replay's bounds, the schedule and the selection are total pure
-  functions. Four entries: `lean/Fsrs7Stock` (the difficulty clamp, the curve's band and fall, and R4's floor),
-  `lean/Fsrs7MemoryState` (a replayed state lies in the scheduler's bounds; the batch equals the single replay; the
-  clamped rating and gap), `lean/Fsrs7Schedule` (the interval is a day or more and never past the maximum; the due;
-  the write is idempotent) and `lean/ReplayHistory` (R6). Each theorem has a witness over the merge-base's code.
-- **TLA+: NOT APPLICABLE by surface.** The replay reads one statement and computes in memory; `stock_fields` writes
-  a card its caller owns, and nothing writes the collection. No second actor shares state with it. The existing
-  models `tla/FullSyncChoice` and `tla/UndoOwnAnswer` cover the full-sync choice and the undo paths, which this
-  delivery does not change; the one-preset switch (#611) is not built.
+FORMAL: Lean REQUIRED (the FSRS-7 crate's projection, curve, replay fold and history gap, and the engine core's
+schedule mapping; lean/Fsrs7Stock, lean/Fsrs7MemoryState, lean/Fsrs7Schedule re-ported to dev, lean/ReplayHistory
+re-stamped, and lean/Fsrs7PortState). TLA+: NOT APPLICABLE (surface present; the replay's state is one caller's
+sequential carry-over with no second actor: writer Dispatcher::replay's local fold, reader the same call, ordering one
+statement then one fold loop, guard the state is local to the call and !Sync; declined by ADR-512 (its Formal line,
+ADR-512:230-232, not a D<k>) and SPEC-413 section 8; the full-sync choice and undo stay with tla/FullSyncChoice and
+tla/UndoOwnAnswer).
+
+- **Lean: REQUIRED.** The stock projection, the replay's bounds and update, the schedule, the selection and the
+  port's state are total pure functions. Five entries: `lean/Fsrs7Stock` (the difficulty clamp, the curve's band and
+  fall, and R4's floor), `lean/Fsrs7MemoryState` (a replayed state lies in the scheduler's bounds; the batch equals
+  the single replay; the clamped rating and gap; R10's success and lapse bounds), `lean/Fsrs7Schedule` (the interval
+  is a day or more and never past the maximum; the due; the write is idempotent), `lean/ReplayHistory` (R6) and
+  `lean/Fsrs7PortState` (R11: a refused event leaves the state unchanged; the folded keys strictly increase; a
+  checkpoint restores as the state). R4's witness and R6's port read the merge-base's code; every other theorem's
+  witness is a planted variant named for a defect class, as main ruled for a verification issue whose code already
+  holds (N-1370 Q2, ADR-427 D7).
+- **TLA+: NOT APPLICABLE by surface** (main's written answer, N-1370 Q1). The replay reads one statement and
+  computes in memory; `stock_fields` writes a card its caller owns, and nothing writes the collection. No second
+  actor shares state with it: the port's state is made per call by `Dispatcher::replay` and dropped at its end, and
+  its `OnceCell` memo is `!Sync`. The state's discipline is proved in Lean instead (R11). The existing models
+  `tla/FullSyncChoice` and `tla/UndoOwnAnswer` cover the full-sync choice and the undo paths, which this delivery
+  does not change; the one-preset switch (#611) is not built.
+- **The ledger** (`formal/obligations.json`, ADR-514; N-1370 Q4 and T15). `lean/Fsrs7Stock` and
+  `lean/Fsrs7MemoryState` keep, as `lean/ReplayHistory` does: they stay while the FSRS-7 crate stays, and are
+  retired with it otherwise. `lean/Fsrs7Schedule` (it writes an engine card) and `lean/Fsrs7PortState` (it covers
+  the engine core's port) re-point. All four link O11: their 15 properties are O11's present artifacts, each
+  entry is engine-tied in `scripts/tests/test_formal_obligations.py`, and each vectors test is an O11 tie beside
+  the replay history's. The test's count of designed entries moves from 43 to 47; whichever of this delivery and
+  SPEC-414 lands second re-merges dev and raises it over the other's rows.
 
 ## 9. Mutation rows
 
