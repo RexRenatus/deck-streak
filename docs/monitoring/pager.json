@@ -1,27 +1,58 @@
 {
   "schema": "deckstreak.pager.v1",
   "note": "What pages a person off the host, and what the shipped journal lines may hold (SPEC-585, ADR-604). The monitoring service's policies, channels and settings are made outside this repository from this file, and the host's hand-run verify proves each page (SPEC-585 section 8). deploy/slo.json routes every alert to the route named here.",
-  "route": "journal",
+  "route": "pager",
   "retention": {
-    "period": "",
-    "set_before_any_line_ships": false
+    "period": "P14D",
+    "set_before_any_line_ships": true
   },
   "shipped": {
-    "units": "*",
-    "service_manager_lines": ""
+    "units": "deck-streak-*",
+    "service_manager_lines": "about the shipped units only"
   },
-  "pages": [],
+  "pages": [
+    {
+      "id": "an-alert-line",
+      "kind": "line",
+      "identifier_prefix": "deck-streak-alert@",
+      "priority_at_most": 3,
+      "opens_with": "DeckStreak: ",
+      "tells": "every page the alert template sends: a unit's failure, a burning SLO alert or ticket, the memory watch, a job's paging transition, a backup's failure"
+    },
+    {
+      "id": "an-alert-instance-failed",
+      "kind": "unit-failed",
+      "unit_prefix": "deck-streak-alert@",
+      "tells": "an alert instance that failed, so its own line may be missing"
+    },
+    {
+      "id": "the-evaluator-is-silent",
+      "kind": "absent",
+      "unit": "deck-streak-slo.service",
+      "timer": "deck-streak-slo.timer",
+      "minutes": 20,
+      "tells": "no successful run of the SLO evaluator recorded: a host, a service manager, a timer or the log shipper gone quiet"
+    },
+    {
+      "id": "the-daily-backup-is-late",
+      "kind": "absent",
+      "unit": "deck-streak-backup.service",
+      "timer": "deck-streak-backup.timer",
+      "minutes": 1560,
+      "tells": "no successful daily backup recorded for a day and two hours"
+    }
+  ],
   "delivery": {
-    "channels_at_least": 0,
-    "kinds_at_least": 0,
-    "kinds_include": []
+    "channels_at_least": 2,
+    "kinds_at_least": 2,
+    "kinds_include": ["email"]
   },
   "counters": {
-    "units": [],
+    "units": ["deck-streak-api.service", "deck-streak-mcp.service"],
     "event": "finished processing request",
-    "labels": {},
+    "labels": {"unit": "the unit", "route": "span.route", "method": "span.method", "status_class": "status"},
     "unmatched_route": "unmatched",
     "status_classes": ["1xx", "2xx", "3xx", "4xx", "5xx"],
-    "never": []
+    "never": ["span.request_id", "latency"]
   }
 }
