@@ -2,16 +2,16 @@
 -- @phx covers crates/engine-core/src/replay.rs anchor=new_state digest=sha256:35a48ac904f8d50abd0d8125ef0a74c55aed72f2957f9b33babd1349b095a4a9
 -- @phx covers crates/engine-core/src/replay.rs anchor=same_model digest=sha256:324176ec32f62da3764f9e5c512e07f26c95327905f3f816214c0053eedb99ea
 -- @phx covers crates/engine-core/src/scheduler.rs anchor=check_event digest=sha256:2d0a5b91be534d46902e5856a2b462914874917958b7352f44a3e50cb25a53cb
--- @phx covers crates/engine-core/src/replay.rs anchor=checkpoint digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/engine-core/src/replay.rs anchor=restore digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/engine-core/src/replay.rs anchor=take digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/engine-core/src/replay.rs anchor=array digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/engine-core/src/replay.rs anchor=event digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/engine-core/src/replay.rs anchor=CHECKPOINT_MAGIC digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/engine-core/src/replay.rs anchor=CHECKPOINT_FORMAT digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/engine-core/src/replay.rs anchor=HEADER_LEN digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/engine-core/src/replay.rs anchor=EVENT_LEN digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers crates/engine-core/src/replay.rs anchor=FSRS7_VERSION digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/engine-core/src/replay.rs anchor=checkpoint digest=sha256:1fbfd20af50d8106bd9642b95cee43cef218327caef494bacdcf51598d7fc7b9
+-- @phx covers crates/engine-core/src/replay.rs anchor=restore digest=sha256:dc6a0a5fa48c8820c316e0fcecd40f2d198ecabbdbd54429097a704996dd17ea
+-- @phx covers crates/engine-core/src/replay.rs anchor=take digest=sha256:9d3401b53d665c19c691b0c70f1ec55d1c8dcd15a5deac718dd6ff84e7e449b9
+-- @phx covers crates/engine-core/src/replay.rs anchor=array digest=sha256:67abe4e2e110bbb7bbcf19d277686c5b52c65910a2618169c25ab15ba091e72c
+-- @phx covers crates/engine-core/src/replay.rs anchor=event digest=sha256:4e949ec06251bfea88e597cdc790e69ed8760a9fb0e2d66ee445d118a19ff947
+-- @phx covers crates/engine-core/src/replay.rs anchor=CHECKPOINT_MAGIC digest=sha256:409f01ba6ed8b08d144d18eb806b9420bf914711f149f137399d5c8cded6639a
+-- @phx covers crates/engine-core/src/replay.rs anchor=CHECKPOINT_FORMAT digest=sha256:865c772d36161ea2c2f4d2bf3455893533da3f334a73082c7bf4c6ee35c6cc8a
+-- @phx covers crates/engine-core/src/replay.rs anchor=HEADER_LEN digest=sha256:4b69867217cc00c5a2f344006bb05f50a6371e9be4709e3649d90883a7b7bf41
+-- @phx covers crates/engine-core/src/replay.rs anchor=EVENT_LEN digest=sha256:9b61a5efe8192eda8ce6b116d57ebb49be688173400e07457d3b05c20146d282
+-- @phx covers crates/engine-core/src/replay.rs anchor=FSRS7_VERSION digest=sha256:8c8dbb70cd570b31ad9f38fdf680f5453e9bc54af9d88cdc51b485c7237dac90
 -- @phx cites #823
 -- @phx theorem a_refused_event_leaves_the_state_unchanged ramp=report
 -- @phx witness a_fold_that_writes_before_it_checks_keeps_a_refused_event kills=a_refused_event_leaves_the_state_unchanged
