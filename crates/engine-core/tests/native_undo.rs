@@ -21,7 +21,7 @@ use anki_proto::scheduler::{CardAnswer, GetQueuedCardsRequest, QueuedCards, Sche
 use deck_streak_engine_core::answer::{Grade, OwnerAnswer};
 use deck_streak_engine_core::dispatch::{Dispatcher, Read};
 use deck_streak_engine_core::native_undo::{self, FlagChange, Step};
-use deck_streak_engine_core::review::{RED, flag_request};
+use deck_streak_engine_core::review::{RED, bury_of, bury_request, flag_request};
 use deck_streak_engine_core::table::Transport;
 use deck_streak_engine_core::undo_answer::{Kind, Recorded, Returns, UndoRefusal};
 use prost::Message;
@@ -35,6 +35,8 @@ const GET_UNDO_STATUS: (u32, u32) = (3, 7);
 const SET_FLAG: (u32, u32) = (5, 4);
 /// `SchedulerService.GetQueuedCards`.
 const GET_QUEUED_CARDS: (u32, u32) = (13, 3);
+/// `SchedulerService.BuryOrSuspendCards`.
+const BURY_OR_SUSPEND_CARDS: (u32, u32) = (13, 14);
 /// The engine's number for a card with no user flag.
 const NO_FLAG: u32 = 0;
 /// The engine's number for the blue flag, which the review's red toggle replaces.
@@ -261,6 +263,48 @@ fn a_kept_flag_is_the_change_its_cards_mark_shows() {
         unshown,
         Ok(None),
         "a flag the card's mark does not show is not kept"
+    );
+}
+
+#[test]
+fn a_kept_bury_is_the_users_bury_its_cards_mark_shows() {
+    let (synthetic, dispatcher) = opened("native-undo-bury");
+    let [card, unburied] = synthetic.cards;
+    dispatcher
+        .run(
+            BURY_OR_SUSPEND_CARDS.0,
+            BURY_OR_SUSPEND_CARDS.1,
+            &bury_request(bury_of(card)),
+        )
+        .expect("the bury is admitted natively");
+    let bytes = status(&dispatcher);
+    let now = decoded(&bytes);
+
+    let kept = native_undo::buried(&dispatcher, &bytes, card, None);
+    let unshown = native_undo::buried(&dispatcher, &bytes, unburied, None);
+
+    assert_eq!(
+        kept.map(|kept| kept.map(|kept| (kept.card(), kept.did(), kept.request()))),
+        Ok(Some((
+            card,
+            Step::Bury {
+                returns: Returns::New
+            },
+            Recorded {
+                status: Some(now),
+                review: 0,
+                kind: Kind::Bury.into(),
+                flag: 0,
+                card,
+            }
+            .encode_to_vec(),
+        ))),
+        "the bury the card's mark shows is kept, with its record"
+    );
+    assert_eq!(
+        unshown,
+        Ok(None),
+        "a bury the card's mark does not show is not kept"
     );
 }
 
