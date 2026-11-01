@@ -308,3 +308,54 @@ Chosen against:
 
 - The same failures recur at the same rate after the warm: a session's start is then not their cause, and the next design reads SPEC-339 R16's rows (#1060).
 - A warm phase often runs out of its budget: the boot wait then needs its own measurement before the tests depend on it (#1060).
+
+## Amendment: a warm budget for each simulator, and each session's longest end (SPEC-339 section 11), and the alternatives each decision was chosen against
+
+D11 bounded each warm step by one budget of 480 seconds, both simulators together. The warm's
+first run spent 436.8 seconds of it on the first simulator, booted from shut down (job
+124927199265), and the second simulator's boot wait ran out at 41.2 seconds (job 124927199265),
+so that simulator's install, launch and end never ran. In the same run the fully warmed first
+simulator failed A5 when XCTest's end of A4's instance ran 60.7 seconds (job 124927199265). Both
+meet, in part, what the earlier amendment named as making it wrong. D10, D12 and the rest of D11
+stand.
+
+### D13. Each simulator's warm has a budget of its own, set for each step
+
+The warm sets each simulator's deadline when it reaches that simulator, before its first phase:
+480 seconds a simulator in the Debug warm, which boots both, and 120 seconds a simulator in the
+Release warm, which finds both booted. One simulator's slow boot no longer spends the other's warm.
+
+Chosen against:
+
+- One budget of 960 seconds for both simulators: rejected because the first simulator could still spend the second's share, which is the failure measured.
+- 480 seconds a simulator in both warms: rejected because four budgets of 480 seconds are 32 minutes, and the slowest passing job's 127.7 minutes (job 123875777769) cannot take them inside the job's 150.
+- 240 seconds a simulator in both warms, the 16 minutes D11 allowed: rejected because the first simulator's measured warm took 436.8 seconds (job 124927199265), so 240 seconds would cut its install and skip its launch and end.
+- Both simulators booted at once at the warm's start: rejected for this amendment because two boots from shut down on one runner were never measured, and a slower pair could spend both budgets.
+- A raised job bound: rejected because SPEC-361 A16 owns it, and a raise loosens what the job holds.
+
+### D14. The report reads each session's longest end, and no warm phase is added for it
+
+The report reads, per simulator and step, the longest time XCTest took to end an earlier instance
+of the app at a launch, and how many ends it read, from the step's console by XCTest's own
+seconds. No warm phase runs XCTest's end, so the warm cannot reach an end that times out; the rows
+measure the tail of the ends on every run.
+
+Chosen against:
+
+- A second launch and end in the warm, with a wait between them: rejected because the warm's end is `simctl terminate`, not XCTest's, and the ends that timed out came at a session's second or eighth UI launch, after ends that took seconds.
+- A retry of the test whose end timed out: rejected because it would pass a hang the job is meant to show, and SPEC-339 section 9 refuses it.
+- The app ended at each test's tear-down: rejected because it moves the same end to the tear-down of the test before, where it fails that test instead.
+- No row for the ends: rejected because the tail (37.5 seconds in a test that passed, job 124840259780) shows only when a test fails, and then only in a log cut by hand.
+
+### Consequences of the #1074 amendment
+
+- Good, because each simulator gets its whole warm, whichever boots first.
+- Good, because every run now carries each session's longest end, red or green.
+- Bad, because the warm may take 20 minutes, not 16, so a run that passes ends nearer its bound (SPEC-339 section 11's risks).
+- Bad, because an end that times out is measured, not cured.
+
+### What would make the #1074 amendment wrong
+
+- The second simulator's warm still runs out of its 480 seconds: a boot from shut down then needs a measurement of its own (#1074).
+- A Release warm phase often runs out of its 120 seconds: the Release budget then needs that phase measured (#1074).
+- The longest end rows reach 60 seconds in most runs: the end's cause then needs its own design (#1074).
