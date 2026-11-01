@@ -5,7 +5,10 @@ no script may perform. Concrete names (secret names, host names, ids) are the ow
 the owner's private notes, never in this repository. Every value that is a secret is stored from
 standard input, never typed on a command line.
 
-## 1. The Telegram bot
+## 1. The Telegram bot (not part of the install)
+
+The install carries no Telegram bot, and no unit reads its token (SPEC-582): skip this
+section. The bot's code stays in the tree, deprecated, until its removal delivery.
 
 1. In Telegram, open `@BotFather` and send `/newbot`. Choose the display name `DeckStreak - XP and
    streaks for Anki` and the first free username of: `DeckStreakBot`, `deck_streak_bot`,
@@ -25,6 +28,10 @@ standard input, never typed on a command line.
    an issue.
 
 ## 2. The owner's identity
+
+The install loads no Telegram user id (SPEC-582): with none held, the API starts with Telegram
+off, and the owner signs in through the apps' own owner sign-in once it lands. The paragraph
+below is kept for the deprecated bot's code.
 
 DeckStreak answers one Telegram user. Store your numeric Telegram user id as a secret the same
 way (the bot's first `/start` from you logs a hint to look it up; it is never written to a file).
@@ -58,7 +65,9 @@ through the credential socket at start and is never written to disk (ADR-038).
    filled in from your private configuration. Approve that change before it is made: Caddy may be
    shared with other services on the host.
 
-## 6. The Mini App
+## 6. The Mini App (not part of the install)
+
+The Mini App is deprecated, and the edge admits no framing origin (SPEC-582): skip this section.
 
 1. Once HTTPS works, send `@BotFather` the command `/newapp`, choose your bot, set the title
    `DeckStreak` and the short name `deckstreak`, and give the Mini App's HTTPS URL.

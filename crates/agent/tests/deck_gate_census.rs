@@ -159,7 +159,7 @@ const DECLARED: [Declared; 13] = [
     Declared {
         path: "crates/daemon/src/role_job.rs",
         shape: Shape::RunnerCall,
-        count: 2,
+        count: 3,
         class: Class::NotDeckContent,
         reason: "the job runner: it runs a scheduled job's work, and no model",
     },
