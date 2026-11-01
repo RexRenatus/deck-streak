@@ -105,6 +105,7 @@ A8: cargo test -p deck-streak-engine-core --test reorder_shape -- --exact the_in
 | `formal/tla/DueReorderInput/DueReorderInput.tla` | formal | changed: two covers and the prose that said the code was ahead |
 | `scripts/mutation-rows.d/S41400-S41499.json` | mutation | added |
 | `formal/obligations.json` | formal | changed: a `keep` row for `lean/DueReorder`, a `re-point` row with O11 for `tla/DueReorderInput`, and its four properties as O11's present artifacts |
+| `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | docs | changed: its `crates/engine-core/src/lib.rs` citation of `#![forbid(unsafe_code)]` moves from line 52 to 55, below the module list's new line |
 | `scripts/tests/test_formal_obligations.py` | formal | changed: the two entries in `DISPOSITIONS` and `tla/DueReorderInput` in `ENGINE_TIED`; the designed count 43 becomes 45 |
 
 ## 5. What this does NOT do
