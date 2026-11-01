@@ -67,3 +67,15 @@ The covers were stamped after the last edit to `crates/engine-core/src/reorder.r
 vectors were written at the stamped covers by the Lean writer (`3ae536c8`). At `3ae536c8` the formal check of
 `lean/DueReorder` and of `tla/DueReorderInput` each read `FORMAL OK exit=0` with no finding, and the ratchet
 against `dev` read `FORMAL OK exit=0` over 41 entries with no finding.
+
+The branch then merged `origin/dev` `e25c0c45` (merge commit `198a30d1`; one conflict, the module list in
+`crates/engine-core/src/lib.rs`, resolved by keeping both lines). The ledger test
+`scripts/tests/test_formal_obligations.py` read red at `198a30d1` (`entry-without-row` for `lean/DueReorder` and
+`tla/DueReorderInput`) and green once their rows landed (`00771f08`). At `1b9b907c` the record was proved again:
+the killers' target passed its six tests, each of the band's eight rows read killed by its one killer with
+`reorder.rs` restored byte for byte, the vectors test over the stock-order reorder read "649 of 1187 vectors
+differ", and `cargo test -p deck-streak-engine-core` passed 172 tests in 29 binaries. With `--gate`, the formal
+check of `lean/DueReorder` (7 theorems, 7 witnesses) and of `tla/DueReorderInput` (4 properties, 5 witnesses)
+each read `FORMAL OK exit=0`, and the ratchet against `origin/dev` read `FORMAL OK exit=0` over 45 entries with no
+finding. A run of the model at three cards, outside the gate, read clean on all four properties at 3750114
+distinct states, depth 14.

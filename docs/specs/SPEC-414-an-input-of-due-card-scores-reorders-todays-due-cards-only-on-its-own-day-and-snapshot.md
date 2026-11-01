@@ -118,8 +118,8 @@ A8: cargo test -p deck-streak-engine-core --test reorder_shape -- --exact the_in
   as they are (#824).
 - It does not reorder the core's own day queue, `scheduler.rs::day_queue`, which no production caller reads; a
   wiring that serves cards from it adds itself to ADR-428 D7's register (#630, #632).
-- It models one scorer run in flight, not two, and checks the model at two cards; a run at three cards did not
-  finish inside the entry's budget (#824).
+- It models one scorer run in flight, not two, and checks the model at two cards in the gate; a run at three
+  cards, outside the gate, read clean at 3750114 distinct states (`docs/red-first/SPEC-414.md`) (#824).
 
 ## 6. Risks
 
