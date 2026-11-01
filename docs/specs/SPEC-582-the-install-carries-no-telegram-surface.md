@@ -177,6 +177,7 @@ functions the first push cannot compile, so each of those is marked not red with
 | `scripts/tests/test_deploy_templates.py` | tests | changed |
 | `scripts/tests/test_deploy_scripts.py` | tests | changed |
 | `scripts/tests/test_alert_unit.py` | tests | changed |
+| `scripts/tests/_units.py` | tests | changed: the alert template's key list drops its credential pair |
 | `scripts/tests/test_slo_declaration.py` | tests | changed |
 | `scripts/tests/test_rail_contract.py` | tests | changed |
 | `scripts/tests/test_caddy_render.py` | tests | changed |
