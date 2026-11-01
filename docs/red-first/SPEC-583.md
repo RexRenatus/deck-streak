@@ -31,3 +31,23 @@ A10: red at e50f8e4e9ad8057f460d0db1244d8633a826e98d: AssertionError: Lists diff
 A10: green at aa06456d7ba4604c2f2a951b96b8b8ffccdbf953
 A11: not red: the privacy page claims no sealed sync at dev; its reds are rows S58313 and S58314
 ```
+
+Rows S58301 to S58314 were each proved by hand: the row's mutant installed once by script, its killer run alone
+(`python3 -B -m unittest -v <killer>` with `scripts/tests` on the path), and the module restored from its saved bytes
+and compared by sha256. Each killer first passed on the unmutated module, and each mutant parses. Under its mutant,
+each killer failed on this first failing assertion:
+
+- S58301: `AssertionError: Lists differ: [] != ["keys-differ: ('account key', 'device key[55 chars]y')"]`
+- S58302: `AssertionError: Lists differ: [] != ['server-form: account key']`
+- S58303: `AssertionError: Lists differ: [] != ['server-clear: device key']`
+- S58304: `AssertionError: Lists differ: [] != ['head-extra: deck name']`
+- S58305: `AssertionError: Lists differ: [] != ['head-missing: nonce']`
+- S58306: `AssertionError: Lists differ: [] != ["daily-fields: ('date', 'minutes', 'reviews', 'xp granted')"]`
+- S58307: `AssertionError: Lists differ: [] != ["daily-fields: ('date', 'reviews', 'minutes', 'xp granted', 'due count')"]`
+- S58308: `AssertionError: Lists differ: [] != ['table-missing: text_runs']`
+- S58309: `AssertionError: Lists differ: [] != ['table-owner: daily_rollup']`
+- S58310: `AssertionError: Lists differ: [] != ['context-missing: analytics']`
+- S58311: `AssertionError: Lists differ: [] != ['sealed-class-missing: reviews']`
+- S58312: `AssertionError: Lists differ: [] != ['kept-missing: xp granted']`
+- S58313: `AssertionError: Lists differ: [] != ['claim-before-cut-over: sealed on your device']`
+- S58314: `AssertionError: Lists differ: ['claim-before-cut-over: sealed on your device'] != []`
