@@ -377,3 +377,15 @@ Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept i
 - **What holds the row.** `scripts/tests/test_log_capture_wording.py`, the case `test_the_a18_row_states_no_routed_count`, refuses a routed count in A18's row once its struck spans are removed. It pins wording, not a criterion.
 - **Insertions this amendment makes:** the struck count and the clause in A18's row, and this section.
 - **Files this amendment touches:** `docs/specs/SPEC-024-identity-initdata-and-owner-pin.md`, `docs/red-first/SPEC-024.md`, `scripts/tests/test_log_capture_wording.py` and `changelog.d/docs-census-count-and-planned-status.md`.
+
+## 14. Amendment (SPEC-582): with neither credential held, the API starts with Telegram off
+
+R3's "a missing one refuses start by its id" now holds when one of the two credentials is missing
+beside the other. With neither held, or with no credentials directory, the `api` role starts and
+its gate is off: the handshake and the launch validation answer 404 `telegram_off` for a
+well-formed body, and a body that is not the handshake's JSON keeps its 401 `init_data_invalid`
+(SPEC-582 R3, R4; ADR-601 D3). With both held, everything above holds as written.
+
+A16 and `crates/daemon/tests/lifecycle.rs`'s `the_api_role_refuses_start_without_an_identity_credential`
+stay as they are. SPEC-582 A1 and A2 hold the case of neither. §7's sentence that the role "refuses
+start without the credentials" is superseded for that case alone.

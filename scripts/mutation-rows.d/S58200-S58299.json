@@ -1,0 +1,127 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S58201-NEITHER-CREDENTIAL-TURNS-TELEGRAM-OFF",
+        "identity",
+        "src/owner.rs",
+        "        ) => Ok(None),",
+        "        ) => Owner::load(loader).map(|_| None),",
+        "owner::the_gate_is_held_only_with_both_credentials_and_off_with_neither",
+        "with neither Telegram credential held the pair is none and Telegram is off; the mutant refuses by the owner's id instead, so an install that holds no Telegram credential refuses start (SPEC-582 R3, A4)"
+      ],
+      [
+        "S58202-HALF-A-PAIR-STILL-REFUSES-START",
+        "identity",
+        "src/owner.rs",
+        "        (Err(owner), _) => Err(owner),",
+        "        (Err(_), _) => Ok(None),",
+        "owner::the_gate_is_held_only_with_both_credentials_and_off_with_neither",
+        "one Telegram credential held without the other refuses by the missing one's id; the mutant reads a missing owner beside a held token as none, so a half-installed pair starts with Telegram off and says nothing (SPEC-582 R3, A4)"
+      ],
+      [
+        "S58203-THE-OFF-GATE-ANSWERS-TELEGRAM-OFF",
+        "api",
+        "src/session_routes.rs",
+        "            Gate::Off => Err(Refusal::TelegramOff),",
+        "            Gate::Off => Err(Refusal::NotOwner),",
+        "telegram_off::a_well_formed_handshake_or_launch_answers_telegram_off_and_a_malformed_one_keeps_init_data_invalid",
+        "with Telegram off a well-formed handshake or launch answers 404 telegram_off; the mutant answers not_owner, refusing the owner as a stranger (SPEC-582 R4, A6)"
+      ],
+      [
+        "S58204-THE-LINK-CODE-ROUTES-ARE-OFF-WITH-TELEGRAM",
+        "api",
+        "src/linking_routes.rs",
+        "        if !linking.telegram {",
+        "        if false {",
+        "telegram_off::the_link_code_routes_answer_telegram_off_and_the_passkey_routes_linking_off",
+        "with Telegram off the two link-code routes answer 404 telegram_off before linking_off; with the guard never true they fall through to linking_off (SPEC-582 R4, A6)"
+      ],
+      [
+        "S58205-TELEGRAM-OFF-IS-A-404",
+        "identity",
+        "src/lib.rs",
+        "            Self::TelegramOff => StatusCode::NOT_FOUND,",
+        "            Self::TelegramOff => StatusCode::UNAUTHORIZED,",
+        "owner::telegram_off_answers_404_with_its_reason_alone",
+        "telegram_off answers 404 with its reason alone; at 401 a client reads Telegram off as a session to sign in again (SPEC-582 R4, A5)"
+      ],
+      [
+        "S58206-THE-HELD-FLUSH-KEEPS-WITHOUT-A-TRANSPORT",
+        "daemon",
+        "src/role_job.rs",
+        "        return Ok(HeldFlushRouter::Holding(holding));",
+        "        drop(holding); return Err(IdentityError::Malformed { id: \"telegram-bot-token\", expected: \"both Telegram credentials\" }.into());",
+        "roles::the_held_flush_with_no_telegram_credential_keeps_what_it_holds",
+        "with neither Telegram credential held the held flush builds the holding router, keeps every held item and exits 0; the mutant refuses there, so the job's unit fails and pages at every fire (SPEC-582 R9, A8)"
+      ],
+      [
+        "S58215-THE-API-STARTS-WITH-NO-CREDENTIALS-DIRECTORY",
+        "daemon",
+        "src/role_api.rs",
+        "        None => CommandLister::configured_without_credentials(env)?,",
+        "        None => CommandLister::configured(env, &CredentialsDirectory::from_env(env)?)?,",
+        "lifecycle::the_api_role_starts_with_telegram_off_when_no_credentials_directory_is_set",
+        "with no credentials directory set the api role reads its lister without one and starts with Telegram off; the mutant requires the directory there, so the role refuses start (SPEC-582 R3, A2)"
+      ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S58207-THE-SENDER-WRITES-AT-ERROR-PRIORITY",
+        "deploy/scripts/alert-journal.sh",
+        "printf '<3>%s\\n' \"$text\" >&2",
+        "printf '<6>%s\\n' \"$text\" >&2",
+        "the alert line carries the <3> prefix, error priority, the one record a monitoring service off the host matches; at <6> it is an info line that no error filter finds (SPEC-582 R7, A13)",
+        "test_alert_unit.TheJournalSenderWritesOneLine.test_the_journal_sender_names_the_unit_and_result_at_error_priority"
+      ],
+      [
+        "S58210-THE-ALERT-DENY-HOLDS-THE-ENDPOINTS-RANGE",
+        "deploy/systemd/deck-streak-alert@.service",
+        "IPAddressDeny=link-local",
+        "IPAddressDeny=multicast",
+        "the alert template, where the planted ways now sit, denies the link-local range that holds the host's identity endpoint; denying multicast instead, it reaches the endpoint (SPEC-582 R7, A22)",
+        "test_deploy_templates.TheServicesRunTheirRoles.test_no_unit_but_the_exempt_reaches_the_host_identity_endpoint"
+      ],
+      [
+        "S58211-THE-DEPLOY-RESTARTS-NO-BOT",
+        "deploy/deploy.sh",
+        "ready || back deck-streak-api.service\n",
+        "ready || back deck-streak-api.service\nrestart deck-streak-bot.service || back deck-streak-bot.service\n",
+        "the deploy restarts the API alone; restarting a bot unit the release no longer ships fails the deploy and switches back (SPEC-582 R5, A18)",
+        "test_deploy_scripts.TheDeploySwitches.test_a_release_with_no_bot_unit_deploys_and_restarts_the_api_alone"
+      ],
+      [
+        "S58212-THE-EDGE-ALLOWS-NO-FRAMING",
+        "deploy/caddy/deck-streak.caddy",
+        "frame-ancestors 'none';",
+        "frame-ancestors https://web.telegram.org;",
+        "the site block's policy admits no framing origin; the mutant admits Telegram's web client, which may then frame the app (SPEC-582 R6, A12)",
+        "test_deploy_templates.TheCaddyBlock.test_the_caddy_policy_admits_no_framing_and_sends_the_security_headers"
+      ],
+      [
+        "S58213-THE-ALERTS-ROUTE-TO-THE-JOURNAL",
+        "deploy/slo.json",
+        "\"channel\": \"journal\"",
+        "\"channel\": \"telegram\"",
+        "the alerting channel is the journal; named telegram, the declaration routes its alerts to a channel the install no longer has (SPEC-582 R8, A16)",
+        "test_slo_declaration.TheApiSloBurnsAsDeclared.test_every_alert_routes_to_the_one_alert_path"
+      ],
+      [
+        "S58214-THE-API-LOADS-NO-TELEGRAM-PAIR",
+        "deploy/systemd/deck-streak-api.service",
+        "ExecStart=/usr/local/lib/deck-streak/current/bin/deckstreakd api\n",
+        "ExecStart=/usr/local/lib/deck-streak/current/bin/deckstreakd api\nLoadCredential=telegram-bot-token:/run/deck-streak-credentials/socket\n",
+        "no unit loads the bot's pair; an API unit that loads the token again makes the install need a Telegram credential (SPEC-582 R3, A11)",
+        "test_deploy_templates.TheSyncLoginIsTheSyncJobsAlone.test_no_unit_loads_the_telegram_pair"
+      ],
+      [
+        "S58216-THE-LINE-QUOTES-NO-LINE-OF-THE-FAILED-RUN",
+        "deploy/scripts/alert-journal.sh",
+        "text=\"DeckStreak: $unit failed ($result${status:+, status $status})\"\n",
+        "text=\"DeckStreak: $unit failed ($result${status:+, status $status}): $(journalctl --unit=\"$unit\" --priority=err --lines=5 --output=cat --no-pager --quiet | tail -n 5)\"\n",
+        "the alert line names the unit and its result and quotes no line of the failed run; with the run's last error lines appended, error text that can carry user data reaches the alert (SPEC-582 R7, A15)",
+        "test_alert_unit.TheAlertScriptNamesTheFailure.test_the_alert_line_carries_no_line_of_the_failed_run"
+      ]
+    ]
+  }
+}

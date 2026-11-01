@@ -1,4 +1,4 @@
-# DeckStreak's site block (SPEC-032 R6; ADR-007, ADR-025, ADR-032): the Mini App's static build
+# DeckStreak's site block (SPEC-032 R6; ADR-007, ADR-025, ADR-032): the web app's static build
 # with its SPA fallback, /api/* proxied to the API's loopback listener, the sync server under
 # /anki-sync/ proxied to its own (SPEC-337 R4; ADR-347 D4), the health routes closed at the edge, a
 # robots.txt that disallows everything, the security headers on every response, and one access log
@@ -16,7 +16,7 @@
 		X-Robots-Tag "noindex"
 		# The framing policy, which a meta element cannot carry. The page's own meta policy carries
 		# the script sources with its build's hashes (SPEC-028 R14), so none is set here.
-		Content-Security-Policy "frame-ancestors https://web.telegram.org; object-src 'none'; base-uri 'self'"
+		Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
 		-Server
 	}
 
