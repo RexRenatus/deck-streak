@@ -14,6 +14,7 @@
 //! other than `&amp;`, `&lt;`, `&gt;`, `&quot;` and `&nbsp;` (a numeric one is decoded).
 
 use std::borrow::Cow;
+use std::ops::ControlFlow;
 
 /// The tags whose `src` or `data` attribute names a file, in the order the grammar tries them.
 pub const TAGS: [&str; 5] = ["img", "audio", "video", "object", "source"];
@@ -107,23 +108,38 @@ fn entity(body: &str) -> Option<char> {
     }
 }
 
-/// The names written in tags, in the order written: each match starts at a `<`, and the search
-/// resumes after it. One mark per position records which start last tried it.
-fn tag_names(text: &str) -> Vec<&str> {
+/// Each match `matcher` finds where `pattern` occurs in `text`, in order. `matcher` is given where
+/// an occurrence starts, and answers what matched there and where the match ends, nothing when
+/// nothing matches there, or a break when nothing can match there or later. The search resumes
+/// after a match, and after an occurrence where nothing matched.
+pub fn each_match<T>(
+    text: &str,
+    pattern: &str,
+    mut matcher: impl FnMut(usize) -> ControlFlow<(), Option<(T, usize)>>,
+) -> Vec<T> {
     let mut found = Vec::new();
-    let mut marks = vec![0; text.len() + 1];
     let mut from = 0;
-    while let Some(offset) = text[from..].find('<') {
+    while let Some(offset) = text[from..].find(pattern) {
         let start = from + offset;
-        match tag_at(text, start, &mut marks) {
-            Some((name, end)) => {
-                found.push(name);
+        match matcher(start) {
+            ControlFlow::Break(()) => break,
+            ControlFlow::Continue(Some((item, end))) => {
+                found.push(item);
                 from = end;
             }
-            None => from = start + 1,
+            ControlFlow::Continue(None) => from = start + 1,
         }
     }
     found
+}
+
+/// The names written in tags, in the order written: each match starts at a `<`, and the search
+/// resumes after it. One mark per position records which start last tried it.
+fn tag_names(text: &str) -> Vec<&str> {
+    let mut marks = vec![0; text.len() + 1];
+    each_match(text, "<", |start| {
+        ControlFlow::Continue(tag_at(text, start, &mut marks))
+    })
 }
 
 /// The name the tag opening at `start` writes, and where its match ends. After the tag's name, at
@@ -222,19 +238,9 @@ fn value_at(text: &str, at: usize) -> Option<(&str, usize)> {
 
 /// The names written in sound tags, in the order written.
 fn sound_names(text: &str) -> Vec<&str> {
-    let mut found = Vec::new();
-    let mut from = 0;
-    while let Some(offset) = text[from..].find(SOUND_OPEN) {
-        let start = from + offset;
-        match sound_at(text, start + SOUND_OPEN.len()) {
-            Some((name, end)) => {
-                found.push(name);
-                from = end;
-            }
-            None => from = start + 1,
-        }
-    }
-    found
+    each_match(text, SOUND_OPEN, |start| {
+        ControlFlow::Continue(sound_at(text, start + SOUND_OPEN.len()))
+    })
 }
 
 /// A sound tag's name at `open`: at least one character, up to the first `]` after the first.

@@ -14,7 +14,9 @@
 //! engine's media check reveals a field's clozes first, where its renderer does not), and decode a
 //! named entity the grammar's decoder does not know (the engine's decoder knows every HTML name).
 
-use crate::scan::{decode_entities, match_ignoring_case};
+use std::ops::ControlFlow;
+
+use crate::scan::{decode_entities, each_match, match_ignoring_case};
 use crate::sha1::sha1_hex;
 
 /// The type of image a note type renders its LaTeX to.
@@ -51,21 +53,13 @@ pub struct LatexImage {
 /// twice is listed twice.
 #[must_use]
 pub fn latex_images(text: &str, format: LatexFormat) -> Vec<LatexImage> {
-    let mut found = Vec::new();
-    let mut from = 0;
-    while let Some(offset) = text[from..].find('[') {
-        let start = from + offset;
-        match latex_at(text, start) {
-            Some((written, end)) => {
-                let expression = strip_markup(&written);
-                let name = latex_name(&expression, format);
-                found.push(LatexImage { expression, name });
-                from = end;
-            }
-            None => from = start + 1,
-        }
-    }
-    found
+    each_match(text, "[", |start| {
+        ControlFlow::Continue(latex_at(text, start).map(|(written, end)| {
+            let expression = strip_markup(&written);
+            let name = latex_name(&expression, format);
+            (LatexImage { expression, name }, end)
+        }))
+    })
 }
 
 /// The name of the image `expression` renders to, in `format`.
@@ -122,42 +116,36 @@ fn strip_markup(written: &str) -> String {
 
 /// `text` with each line-ending tag replaced by a newline.
 fn replace_newlines(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    let mut copied = 0;
-    let mut from = 0;
-    while let Some(offset) = text[from..].find('<') {
-        let start = from + offset;
-        match NEWLINES
-            .iter()
-            .find_map(|tag| match_ignoring_case(text, start, tag))
-        {
-            Some(end) => {
-                out.push_str(&text[copied..start]);
-                out.push('\n');
-                copied = end;
-                from = end;
-            }
-            None => from = start + 1,
-        }
-    }
-    out.push_str(&text[copied..]);
-    out
+    let tags = each_match(text, "<", |start| {
+        ControlFlow::Continue(
+            NEWLINES
+                .iter()
+                .find_map(|tag| match_ignoring_case(text, start, tag))
+                .map(|end| ((start, end), end)),
+        )
+    });
+    splice(text, &tags, "\n")
 }
 
 /// `text` with every comment, `style` and `script` element and other tag removed.
 fn strip_tags(text: &str) -> String {
+    let tags = each_match(text, "<", |start| {
+        // No match here means no `>` follows, so none can match later either.
+        tag_end(text, start).map_or(ControlFlow::Break(()), |end| {
+            ControlFlow::Continue(Some(((start, end), end)))
+        })
+    });
+    splice(text, &tags, "")
+}
+
+/// `text` with each span of `spans`, in order, replaced by `with`.
+fn splice(text: &str, spans: &[(usize, usize)], with: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut copied = 0;
-    let mut from = 0;
-    while let Some(offset) = text[from..].find('<') {
-        let start = from + offset;
-        // No match here means no `>` follows, so none can match later either.
-        let Some(end) = tag_end(text, start) else {
-            break;
-        };
+    for &(start, end) in spans {
         out.push_str(&text[copied..start]);
+        out.push_str(with);
         copied = end;
-        from = end;
     }
     out.push_str(&text[copied..]);
     out
