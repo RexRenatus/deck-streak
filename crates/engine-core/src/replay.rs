@@ -17,6 +17,8 @@ use crate::dispatch::{Dispatcher, Refusal, failed};
 use crate::late::EngineDay;
 use crate::scheduler::{EventKey, NO_NOTE, Recall, ReviewEvent, SchedulerPort};
 
+#[doc(hidden)]
+pub use fsrs7_port::whole_days;
 pub use fsrs7_port::{FSRS7_VERSION, Fsrs7, Fsrs7State};
 
 /// The length of a preset's fitted FSRS-7 parameter vector. An empty vector names the pinned
@@ -225,6 +227,25 @@ mod fsrs7_port {
         }
     }
 
+    /// FSRS-7's whole days of an interval in days: the interval rounded to the nearest day, half
+    /// away from zero, then cast. The port's `interval_days` reads every interval through it. It
+    /// is public and hidden only so that `lean/Fsrs7Schedule`'s vectors reach it with every
+    /// `f32`, NaN, the infinities and values past `u32::MAX` included, which no review history
+    /// yields (ADR-427, the pure seam).
+    #[doc(hidden)]
+    #[must_use]
+    pub fn whole_days(interval: f32) -> u32 {
+        #[allow(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            reason = "a float-to-integer cast saturates: a negative or NaN interval reads 0, which the \
+                      floor of 1 lifts, and one past the range reads its greatest, which the maximum \
+                      holds"
+        )]
+        let whole = interval.round() as u32;
+        whole
+    }
+
     impl SchedulerPort for Fsrs7 {
         type State = Fsrs7State;
 
@@ -285,15 +306,7 @@ mod fsrs7_port {
         ) -> Result<u32, port::FoldError> {
             let state = self.memory(st, card)?;
             let interval = stock::project(&self.model, state, target.get()).interval;
-            #[allow(
-                clippy::cast_possible_truncation,
-                clippy::cast_sign_loss,
-                reason = "a float-to-integer cast saturates: a negative or NaN interval reads 0, which the \
-                          floor of 1 lifts, and one past the range reads its greatest, which the maximum \
-                          holds"
-            )]
-            let whole = interval.round() as u32;
-            Ok(whole)
+            Ok(whole_days(interval))
         }
 
         fn checkpoint(&self, st: &Fsrs7State) -> Vec<u8> {
@@ -557,4 +570,27 @@ fn scheduled(
 fn day_of(day: EngineDay, at: i64) -> i64 {
     let began = day.next_day_at - SECONDS_PER_DAY;
     i64::from(day.days_elapsed) + (at.div_euclid(MS_PER_SECOND) - began).div_euclid(SECONDS_PER_DAY)
+}
+
+/// A review card's schedule from its whole-day interval, as the replay makes it, or `None` where
+/// the replay refuses it: public and hidden only so that `lean/Fsrs7Schedule`'s vectors reach the
+/// private schedule step with every whole-day interval and maximum (ADR-427, the pure seam).
+#[doc(hidden)]
+#[must_use]
+pub fn schedule_of(
+    rounded: u32,
+    last_review: i64,
+    day: EngineDay,
+    max_ivl: u32,
+) -> Option<Schedule> {
+    scheduled(rounded, last_review, day, max_ivl).ok()
+}
+
+/// The engine day of the instant `at`, in milliseconds, as the replay counts it: public and
+/// hidden only so that `lean/Fsrs7Schedule`'s vectors reach the private day count with instants
+/// before the epoch and after today (ADR-427, the pure seam).
+#[doc(hidden)]
+#[must_use]
+pub fn engine_day_of(day: EngineDay, at: i64) -> i64 {
+    day_of(day, at)
 }

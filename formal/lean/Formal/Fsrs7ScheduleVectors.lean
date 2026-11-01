@@ -12,7 +12,8 @@ hand.
 
 An `f32` is written `[0]` for NaN, `[1]` for negative infinity, `[2]` for positive infinity, and
 `[3,n,d]` for the finite value `n / d`, each a power-of-two denominator, so the value is exact in
-an `f32`. A schedule is `[]` when `scheduled` refuses and `[ivl,due]` otherwise.
+an `f32`. A schedule is `[]` when `scheduled` refuses and `[ivl,due]` otherwise, and `whole` is
+the whole days the port's `interval_days` hands `scheduled` (dev's two steps, SPEC-494).
 
 The schedule inputs are every engine day of three (today's count 0, 1000, and one a few days short
 of `i32::MAX`), every instant at nine offsets from the instant today began, from two days before it
@@ -96,12 +97,14 @@ def inputs : List Input :=
           maxima.map fun maxIvl =>
             ⟨day, (day.nextDayAt - 86400 + offset) * 1000 + ms, interval, maxIvl⟩
 
-/-- One schedule line: the input, the engine day of the last review, and the port's schedule. -/
+/-- One schedule line: the input, the whole days `interval_days` makes of its interval, the engine
+day of the last review, and the port's schedule from those whole days. -/
 def scheduleLine (x : Input) : String :=
   "{\"day\":[" ++ toString x.day.daysElapsed ++ "," ++ toString x.day.nextDayAt ++
     "],\"last\":" ++ toString x.last ++ ",\"interval\":" ++ f32Json x.interval ++
-    ",\"max\":" ++ toString x.maxIvl ++ ",\"last_day\":" ++ toString (dayOf x.day x.last) ++
-    ",\"schedule\":" ++ scheduleJson (scheduled x.interval x.last x.day x.maxIvl) ++ "}"
+    ",\"max\":" ++ toString x.maxIvl ++ ",\"whole\":" ++ toString (intervalDays x.interval) ++
+    ",\"last_day\":" ++ toString (dayOf x.day x.last) ++ ",\"schedule\":" ++
+    scheduleJson (scheduled (intervalDays x.interval) x.last x.day x.maxIvl) ++ "}"
 
 /-- A card as its memory state, interval and due. -/
 def cardJson (c : Card) : String :=

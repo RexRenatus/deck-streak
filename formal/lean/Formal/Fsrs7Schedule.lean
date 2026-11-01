@@ -1,6 +1,8 @@
 -- @phx covers crates/engine-core/src/replay.rs anchor=scheduled digest=sha256:dc0a95482bfccf9b0b4ada1d7e6c6da4b3e317ee6e3defc9f549f3c52debdd82
 -- @phx covers crates/engine-core/src/replay.rs anchor=day_of digest=sha256:42eb7c98f1767965db418bf03dd654018a1a2f9b96b216e0c61a5b43da0b970a
 -- @phx covers crates/engine-core/src/replay.rs anchor=stock_fields digest=sha256:f337f6656e167d5f2dcdd6f91fdb8323b6b86e45785dde3413133a07f70ebdd4
+-- @phx covers crates/engine-core/src/replay.rs anchor=interval_days digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers crates/engine-core/src/replay.rs anchor=whole_days digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 -- @phx cites #823
 -- @phx theorem the_interval_is_a_day_or_more_and_never_past_the_maximum ramp=report
 -- @phx witness an_interval_with_no_floor_reads_zero_days kills=the_interval_is_a_day_or_more_and_never_past_the_maximum
@@ -14,7 +16,11 @@
 # Formal.Fsrs7Schedule
 
 The FSRS-7 replay's schedule and its stock-field write in the engine core (#823):
-`scheduled`, `day_of` and `CardReplay::stock_fields` in `crates/engine-core/src/replay.rs`.
+`interval_days` and its rounding step `whole_days`, then `scheduled`, `day_of` and
+`CardReplay::stock_fields` in `crates/engine-core/src/replay.rs`. Since the scheduling port
+(SPEC-494), the rounding and the schedule are two steps: the port's `interval_days` returns the
+whole days `whole_days` makes of the projected interval, and `scheduled` holds those whole days to
+the maximum and to at least one day.
 
 **The claims.**
 - `the_interval_is_a_day_or_more_and_never_past_the_maximum`: for every `f32` the scheduler can
@@ -63,8 +69,9 @@ def i32Max : Int := 2147483647
 def roundHalfAway (q : Rat) : Int :=
   if 0 ≤ q then (q + 1 / 2).floor else -((-q + 1 / 2).floor)
 
-/-- `interval.round() as u32`: NaN reads 0, and the cast saturates at both ends. -/
-def roundedU32 : F32 → Nat
+/-- `whole_days`, the whole days the port's `interval_days` returns: `interval.round() as u32`,
+where NaN reads 0 and the cast saturates at both ends. -/
+def intervalDays : F32 → Nat
   | .nan => 0
   | .negInf => 0
   | .posInf => u32Max
@@ -72,9 +79,13 @@ def roundedU32 : F32 → Nat
     let i := roundHalfAway q
     if i ≤ 0 then 0 else min i.toNat u32Max
 
-/-- `rounded.min(max_ivl).max(1)` in `scheduled`. -/
+/-- `rounded.min(max_ivl).max(1)` in `scheduled`, over the port's whole days `rounded`. -/
+def scheduledIvl (rounded maxIvl : Nat) : Nat :=
+  max (min rounded maxIvl) 1
+
+/-- The schedule's interval from the scheduler's `f32`: `interval_days`, then `scheduled`. -/
 def ivl (interval : F32) (maxIvl : Nat) : Nat :=
-  max (min (roundedU32 interval) maxIvl) 1
+  scheduledIvl (intervalDays interval) maxIvl
 
 /-- The engine day the caller read: `EngineDay`'s days elapsed and next rollover, in seconds. -/
 structure EngineDay where
@@ -87,10 +98,11 @@ def dayOf (day : EngineDay) (instant : Int) : Int :=
   let began := day.nextDayAt - 86400
   (day.daysElapsed : Int) + (instant / 1000 - began) / 86400
 
-/-- `scheduled`: a review card's interval and due, or `none` when the due is past `i32`. -/
-def scheduled (interval : F32) (lastReview : Int) (day : EngineDay) (maxIvl : Nat) :
+/-- `scheduled`: a review card's interval and due from the port's whole days `rounded`, or `none`
+when the due is past `i32`. -/
+def scheduled (rounded : Nat) (lastReview : Int) (day : EngineDay) (maxIvl : Nat) :
     Option (Nat × Int) :=
-  let i := ivl interval maxIvl
+  let i := scheduledIvl rounded maxIvl
   let due := dayOf day lastReview + i
   if i32Min ≤ due ∧ due ≤ i32Max then some (i, due) else none
 
@@ -132,10 +144,11 @@ def DueRule (d : EngineDay → Int → Int) : Prop :=
       (day.nextDayAt - 86400 + 86400 * k) * 1000 ≤ instant →
       instant < (day.nextDayAt - 86400 + 86400 * (k + 1)) * 1000 →
       d day instant = day.daysElapsed + k) ∧
-  (∀ x last day m i due, scheduled x last day m = some (i, due) →
-      i = ivl x m ∧ due = d day last + i ∧ d day last < due) ∧
-  (∀ x last day m, i32Min ≤ d day last + ivl x m → d day last + ivl x m ≤ i32Max →
-      scheduled x last day m = some (ivl x m, d day last + ivl x m))
+  (∀ r last day m i due, scheduled r last day m = some (i, due) →
+      i = scheduledIvl r m ∧ due = d day last + i ∧ d day last < due) ∧
+  (∀ r last day m, i32Min ≤ d day last + scheduledIvl r m →
+      d day last + scheduledIvl r m ≤ i32Max →
+      scheduled r last day m = some (scheduledIvl r m, d day last + scheduledIvl r m))
 
 /-- The write claim over a write function. -/
 def WriteRule (w : CardReplay → Card → Card) : Prop :=
@@ -170,22 +183,26 @@ theorem roundHalfAway_mono {a b : Rat} (h : a ≤ b) : roundHalfAway a ≤ round
   · have := floor_mono (a := -b + 1 / 2) (b := -a + 1 / 2) (by grind)
     omega
 
-theorem roundedU32_mono {a b : Rat} (h : a ≤ b) :
-    roundedU32 (.fin a) ≤ roundedU32 (.fin b) := by
+theorem intervalDays_mono {a b : Rat} (h : a ≤ b) :
+    intervalDays (.fin a) ≤ intervalDays (.fin b) := by
   have := roundHalfAway_mono h
-  simp only [roundedU32]
+  simp only [intervalDays]
   split <;> split <;> omega
+
+theorem scheduledIvl_pos (r m : Nat) : 1 ≤ scheduledIvl r m := by
+  simp only [scheduledIvl]
+  omega
 
 theorem interval_rule : IntervalRule ivl := by
   refine ⟨?_, ?_, ?_⟩
   · intro x m
-    simp only [ivl]
+    simp only [ivl, scheduledIvl]
     omega
   · intro m
-    simp [ivl, roundedU32]
+    simp [ivl, scheduledIvl, intervalDays]
   · intro a b m h
-    have := roundedU32_mono h
-    simp only [ivl]
+    have := intervalDays_mono h
+    simp only [ivl, scheduledIvl]
     omega
 
 theorem the_interval_is_a_day_or_more_and_never_past_the_maximum : IntervalRule ivl :=
@@ -200,14 +217,14 @@ theorem day_rule (day : EngineDay) (k instant : Int)
 
 theorem the_due_is_the_last_review_day_plus_the_interval : DueRule dayOf := by
   refine ⟨day_rule, ?_, ?_⟩
-  · intro x last day m i due h
+  · intro r last day m i due h
     simp only [scheduled] at h
     split at h
     · simp only [Option.some.injEq, Prod.mk.injEq] at h
-      have hge := (interval_rule.1 x m).1
+      have hge := scheduledIvl_pos r m
       omega
     · exact absurd h (by simp)
-  · intro x last day m h1 h2
+  · intro r last day m h1 h2
     simp only [scheduled]
     simp [h1, h2]
 
@@ -220,9 +237,9 @@ theorem writing_the_stock_fields_again_changes_nothing : WriteRule stockFields :
 
 Each mutant changes one step of the code, and each breaks its claim at one input. -/
 
-/-- The interval with no floor: `rounded.min(max_ivl)`. -/
+/-- The interval with no floor: `rounded.min(max_ivl)` over the port's whole days. -/
 def ivlWithNoFloor (interval : F32) (maxIvl : Nat) : Nat :=
-  min (roundedU32 interval) maxIvl
+  min (intervalDays interval) maxIvl
 
 /-- A first Again's interval at 0.9, about 3.8e-5 days, rounds to 0, and with no floor it is a
 schedule of 0 days. -/
