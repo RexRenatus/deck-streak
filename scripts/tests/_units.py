@@ -134,7 +134,6 @@ ALERT_KEYS = {
         "Group",
         # The host's identity endpoint denied (SPEC-354 R1); A1's census table pins its value.
         "IPAddressDeny",
-        "LoadCredential",
         "LockPersonality",
         "MemoryDenyWriteExecute",
         "MemoryHigh",
