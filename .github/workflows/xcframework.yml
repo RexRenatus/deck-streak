@@ -408,14 +408,14 @@ jobs:
       - name: each simulator booted and the harness launched once, before its tests
         run: |
           # On each simulator in turn: wait for its boot to finish, install the app the build made,
-          # launch it and end it, inside one budget, each phase's outcome and seconds written for
+          # launch it and end it, inside its own budget, each phase's outcome and seconds written for
           # the report. Only a simulator name that is not one available simulator fails the step; a
           # phase that fails is recorded, and the tests decide (SPEC-339 R12, R15).
           cat > "$RUNNER_TEMP/simulator-warm.py" <<'PY'
           import json, os, pathlib, plistlib, subprocess, sys, time
           label, app = sys.argv[1], pathlib.Path(sys.argv[2])
           report = pathlib.Path(os.environ["REPORT"])
-          deadline = time.monotonic() + 480
+          budget = {"debug": 480, "release": 120}[label]
           bundle = plistlib.loads((app / "Info.plist").read_bytes())["CFBundleIdentifier"]
           listed = subprocess.run(["xcrun", "simctl", "list", "-j", "devices", "available"],
                                   capture_output=True, text=True, check=True)
@@ -429,6 +429,7 @@ jobs:
                   problems.append(f"warm: {len(devices)} available simulators named {simulator}, not one")
                   continue
               udid = devices[0]["udid"]
+              deadline = time.monotonic() + budget
               record = {"simulator": simulator, "state": devices[0].get("state", ""), "phases": {}}
               for phase, command in (
                   ("bootstatus", ["xcrun", "simctl", "bootstatus", udid, "-b"]),
@@ -809,6 +810,38 @@ jobs:
           runner_rows("debug", "Debug")
           warm_rows("release", "Release")
           runner_rows("release", "Release")
+          def end_rows(label, title):
+              """Each simulator's longest XCTest end of an earlier instance at a launch, read from
+              the step's console in destination order by XCTest's own seconds (SPEC-339 R16)."""
+              path = report / f"{label}-console.log"
+              lines = path.read_text(errors="replace").splitlines() if path.is_file() else []
+              sessions, pending = [], None
+              for line in lines:
+                  if re.search(r"-Runner\[\d+:\d+\] \[Default\] Running tests\.\.\.", line):
+                      sessions.append([])
+                      pending = None
+                      continue
+                  activity = re.match(r"\s*t =\s+(\d+(?:\.\d+)?)s\s+(.*)", line)
+                  if not sessions or not activity:
+                      continue
+                  at = float(activity.group(1))
+                  if pending is not None and at >= pending:
+                      sessions[-1].append(at - pending)
+                  pending = None
+                  if re.fullmatch(r"Terminate \S+:\d+", activity.group(2).strip()):
+                      pending = at
+              for index, simulator in enumerate(simulators):
+                  if len(sessions) != len(simulators):
+                      value = (f"not measured ({len(sessions)} runner sessions for "
+                               f"{len(simulators)} simulators)")
+                  elif not sessions[index]:
+                      value = "no end in the session"
+                  else:
+                      ends = sessions[index]
+                      value = f"{max(ends):.1f} s, the longest end of {len(ends)}"
+                  rows.append((f"{title} longest end, {simulator}", value))
+          end_rows("debug", "Debug")
+          end_rows("release", "Release")
           lines = [
               "`xcframework.yml`'s `harness` job:",
               "",

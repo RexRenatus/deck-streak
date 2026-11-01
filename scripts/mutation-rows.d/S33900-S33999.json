@@ -59,6 +59,22 @@
         "          true\n",
         "the Release warm runs the warm on the Release build's app before the measurements, where the ends that timed out were measured (SPEC-339 R12, A11)",
         "test_ci_workflows.TheHarnessWarmsEachSimulatorBeforeItsTests.test_the_harness_boots_and_launches_each_simulator_once_before_its_tests"
+      ],
+      [
+        "S33907-THE-WARM-SETS-A-DEADLINE-FOR-EACH-SIMULATOR",
+        ".github/workflows/xcframework.yml",
+        "              deadline = time.monotonic() + budget\n",
+        "              deadline = deadline if records else time.monotonic() + budget\n",
+        "each simulator's warm runs inside a deadline of its own, set when the warm reaches it, so the first simulator's boot cannot spend the second simulator's budget (SPEC-339 R15 as #1074 amends it, A12)",
+        "test_ci_workflows.TheHarnessWarmsEachSimulatorBeforeItsTests.test_the_warm_budgets_each_simulator_and_the_report_reads_its_longest_end"
+      ],
+      [
+        "S33908-THE-RELEASE-WARM-HAS-ITS-OWN-BUDGET",
+        ".github/workflows/xcframework.yml",
+        "          budget = {\"debug\": 480, \"release\": 120}[label]\n",
+        "          budget = {\"debug\": 480, \"release\": 480}[label]\n",
+        "the Release warm gives each simulator 120 seconds, since the Debug warm booted both, so the four warm budgets stay inside the job's bound (SPEC-339 R15 as #1074 amends it, A12)",
+        "test_ci_workflows.TheHarnessWarmsEachSimulatorBeforeItsTests.test_the_warm_budgets_each_simulator_and_the_report_reads_its_longest_end"
       ]
     ]
   }
