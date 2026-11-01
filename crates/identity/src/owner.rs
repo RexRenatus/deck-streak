@@ -160,3 +160,53 @@ impl OwnerGate {
         admitted
     }
 }
+
+/// The owner and the bot's token when both Telegram credentials are held, and `None` when neither
+/// is: the install then runs with Telegram off (SPEC-582 R3).
+///
+/// One held without the other refuses by the missing one's id, the owner's first, exactly as
+/// [`OwnerGate::load`] refuses; a malformed owner id or a blank token refuses as there.
+///
+/// # Errors
+///
+/// [`IdentityError`] naming the first credential that is missing beside the other, unreadable or
+/// malformed.
+pub fn telegram_pair(
+    loader: &CredentialLoader,
+) -> Result<Option<(Owner, deck_streak_kernel::Secret)>, IdentityError> {
+    match (Owner::load(loader), loader.load(TELEGRAM_BOT_TOKEN)) {
+        (
+            Err(IdentityError::Credential(CredentialError::Missing { .. })),
+            Err(CredentialError::Missing { .. }),
+        ) => Ok(None),
+        (Err(owner), _) => Err(owner),
+        (Ok(owner), token) => {
+            let token = token?;
+            if token.expose().trim().is_empty() {
+                return Err(IdentityError::Malformed {
+                    id: TELEGRAM_BOT_TOKEN,
+                    expected: "the bot's token, not blank",
+                });
+            }
+            Ok(Some((owner, token)))
+        }
+    }
+}
+
+impl OwnerGate {
+    /// The gate over the two credentials `loader` reads when both are held, and `None` when
+    /// neither is: Telegram is then off (SPEC-582 R3).
+    ///
+    /// # Errors
+    ///
+    /// [`IdentityError`] as [`telegram_pair`] refuses: one credential held without the other, or
+    /// one unreadable or malformed.
+    pub fn load_held(
+        loader: &CredentialLoader,
+        freshness: Freshness,
+    ) -> Result<Option<Self>, IdentityError> {
+        Ok(telegram_pair(loader)?.map(|(owner, token)| {
+            Self::new(WebAppKey::from_bot_token(token.expose()), owner, freshness)
+        }))
+    }
+}

@@ -24,7 +24,6 @@ import _units
 from _support import REPO, examined
 
 SYSTEMD = REPO / "deploy" / "systemd"
-SCRIPT = REPO / "deploy" / "scripts" / "alert-telegram.sh"
 # The journal sender the alert template runs once the Telegram sender leaves (SPEC-582 R7).
 JOURNAL_SENDER = REPO / "deploy" / "scripts" / "alert-journal.sh"
 JOURNAL_START = "/usr/local/lib/deck-streak/current/deploy/scripts/alert-journal.sh %i"
@@ -33,7 +32,6 @@ OWNER_SOURCE = REPO / "crates" / "identity" / "src" / "owner.rs"
 # The alert template every unit pages through (SPEC-032 R2), and its one instance form.
 ALERT_TEMPLATE = "deck-streak-alert@.service"
 ON_FAILURE = "deck-streak-alert@%n.service"
-SENDMESSAGE = "https://api.telegram.org/bot{token}/sendMessage"
 # The prefixes systemd reads before an ExecStart= path; `-` counts a failure as a success
 # (systemd.service(5)).
 EXEC_PREFIX = re.compile(r"[-@:+!|]*")
@@ -66,25 +64,6 @@ INVOCATION = "a1b2c3d4e5f60718293a4b5c6d7e8f90"
 JOURNAL_LINES = [f"error line {number} of the failed run" for number in range(1, 8)]
 # The commands the script may run besides the two stubs, each wrapped to record its command line.
 WRAPPED = ("cat", "head", "tail", "sed", "awk", "tr", "cut", "env", "iconv", "grep", "wc", "od")
-# curl's options that take a parameter, so a parameter is never read as the URL.
-CURL_PARAMETERS = {
-    "--config",
-    "-K",
-    "--data-urlencode",
-    "--data",
-    "-d",
-    "--url",
-    "--max-time",
-    "-m",
-    "--retry",
-    "--retry-delay",
-    "--retry-max-time",
-    "--connect-timeout",
-    "--output",
-    "-o",
-    "--header",
-    "-H",
-}
 # The escapes curl's configuration reads inside double quotes (curl's cmdline-opts/config.md).
 CURL_ESCAPES = {"\\": "\\", '"': '"', "t": "\t", "n": "\n", "r": "\r", "v": "\v"}
 
@@ -182,8 +161,8 @@ class Run:
         return [call for call in self.all_calls if call["command"] == command]
 
 
-def run_alert(instance, environment, journal=JOURNAL_LINES, script=SCRIPT, planted=None):
-    """Runs `script` as the alert unit runs it, `alert-telegram.sh %i`, with the stubs first on its
+def run_alert(instance, environment, journal=JOURNAL_LINES, script=JOURNAL_SENDER, planted=None):
+    """Runs `script` as the alert unit runs it, `alert-journal.sh %i`, with the stubs first on its
     PATH and a credentials directory holding each credential the unit loads: its synthetic value
     and a newline, or exactly the content `planted` names for its id. A planted id the unit does
     not load is written too, so a sender that loads none still finds a directory with files."""
@@ -262,34 +241,6 @@ def config_options(text):
         match = re.match(r"(?:--?)?([A-Za-z0-9-]+)\s*[=:]?\s*(.*)$", line)
         options.append((match.group(1), config_value(match.group(2))))
     return options
-
-
-def request(call):
-    """The URLs and the form fields one curl call sent, read from its command line and from the
-    configuration it read on standard input together, wherever each was given."""
-    argv = call["argv"]
-    options = []
-    index = 0
-    while index < len(argv):
-        word = argv[index]
-        if word in CURL_PARAMETERS and index + 1 < len(argv):
-            parameter = argv[index + 1]
-            if word in ("--config", "-K") and parameter == "-":
-                options += config_options(call["stdin"] or "")
-            else:
-                options.append((word.lstrip("-"), parameter))
-            index += 2
-            continue
-        if word.startswith(("http://", "https://")):
-            options.append(("url", word))
-        index += 1
-    urls = [value for name, value in options if name == "url"]
-    fields = {}
-    for name, value in options:
-        if name in ("data-urlencode", "data", "d"):
-            key, _, content = value.partition("=")
-            fields[key] = content
-    return urls, fields
 
 
 def option(argv, name):
@@ -511,45 +462,6 @@ class TheJournalSenderWritesOneLine(unittest.TestCase):
 
 
 class TheAlertScriptNamesTheFailure(unittest.TestCase):
-    def test_the_alert_script_reads_its_credentials_and_names_the_unit_and_result(self):
-        run = run_alert(
-            FAILED_UNIT,
-            {
-                "MONITOR_UNIT": FAILED_UNIT,
-                "MONITOR_SERVICE_RESULT": RESULT,
-                "MONITOR_EXIT_STATUS": "KILL",
-            },
-        )
-        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
-        sent = examined("request(s) the page sent", run.calls("curl"))
-        self.assertEqual(len(sent), 1, "the page is one request")
-        urls, fields = request(sent[0])
-        # The token and the chat both came from the credentials directory: the chat is the owner's
-        # private chat, whose id is the owner's user id (R3).
-        self.assertEqual(fields.get("chat_id"), OWNER, "the page went to another chat")
-        self.assertEqual(urls, [SENDMESSAGE.format(token=TOKEN)])
-        # The unit the credentials were loaded for is the one R3 names, and no other.
-        ids = identity_ids()
-        self.assertEqual(
-            sorted(loaded_credentials()), sorted([ids["OWNER_USER_ID"], ids["TELEGRAM_BOT_TOKEN"]])
-        )
-        text = fields.get("text", "")
-        self.assertIn(FAILED_UNIT, text)
-        self.assertIn(RESULT, text)
-        # The failed unit's own error lines: the unit is named to the journal, at error priority.
-        asked = examined("journal read(s)", run.calls("journalctl"))
-        self.assertEqual(option(asked[0]["argv"], "--unit"), FAILED_UNIT)
-        self.assertEqual(option(asked[0]["argv"], "--priority"), "err")
-
-        # With no MONITOR_UNIT, the instance the unit was started as names the failed unit.
-        other = "deck-streak-bot.service"
-        run = run_alert(other, {"MONITOR_SERVICE_RESULT": "exit-code"})
-        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
-        _, fields = request(run.calls("curl")[0])
-        self.assertIn(other, fields.get("text", ""))
-        self.assertIn("exit-code", fields.get("text", ""))
-        self.assertEqual(option(run.calls("journalctl")[0]["argv"], "--unit"), other)
-
     def test_the_page_quotes_the_failed_runs_last_five_error_lines(self):
         # systemd names the failed run, so the line quotes that run's lines and no older ones,
         # joined by " | " on the journal sender's one line (SPEC-582 R7).
@@ -604,7 +516,9 @@ class TheAlertScriptNamesTheFailure(unittest.TestCase):
 
     def test_a_json_error_line_reaches_the_page_as_written(self):
         # A role's error lines are JSON, full of double quotes, and a message may hold a backslash
-        # or a tab: each reaches the page as written, through curl's quoted configuration.
+        # or a tab: each reaches the journal sender's one line as written, the quoted lines joined
+        # by " | " (SPEC-582 R7).
+        script = journal_sender(self)
         line = '{"level":"ERROR","message":"a \\"quoted\\" word, a back\\\\slash","target":"x"}'
         run = run_alert(
             FAILED_UNIT,
@@ -614,44 +528,13 @@ class TheAlertScriptNamesTheFailure(unittest.TestCase):
                 "MONITOR_EXIT_STATUS": "1",
             },
             journal=[line, "a\ttab"],
+            script=script,
         )
         self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
-        text = request(run.calls("curl")[0])[1]["text"]
+        text = journal_text(self, run)
         self.assertEqual(
-            text, f"DeckStreak: {FAILED_UNIT} failed (exit-code, status 1)\n{line}\na\ttab"
+            text, f"DeckStreak: {FAILED_UNIT} failed (exit-code, status 1): {line} | a\ttab"
         )
-
-
-class TheTokenStaysOffTheCommandLine(unittest.TestCase):
-    def test_the_bot_token_never_appears_on_the_command_line(self):
-        run = run_alert(
-            FAILED_UNIT,
-            {"MONITOR_UNIT": FAILED_UNIT, "MONITOR_SERVICE_RESULT": RESULT},
-        )
-        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
-        calls = examined("command(s) the script ran", run.all_calls)
-        # No command line and no environment of anything the script ran carries the token, or the
-        # owner's id, which is a credential too.
-        self.assertEqual(leaks(calls, [TOKEN, OWNER]), [])
-        # The token reached curl all the same: in the configuration curl read on standard input.
-        sent = run.calls("curl")
-        self.assertEqual(len(sent), 1)
-        self.assertEqual(option(sent[0]["argv"], "--config"), "-")
-        self.assertIn(TOKEN, sent[0]["stdin"])
-        self.assertEqual(request(sent[0])[0], [SENDMESSAGE.format(token=TOKEN)])
-        # The census refuses a planted script that puts the token in its URL on the command line.
-        with tempfile.TemporaryDirectory() as scratch:
-            planted = Path(scratch) / "planted-alert.sh"
-            planted.write_text(
-                "#!/bin/sh\nset -eu\n"
-                'token="$(cat "$CREDENTIALS_DIRECTORY/telegram-bot-token")"\n'
-                'curl --silent "https://api.telegram.org/bot$token/sendMessage" > /dev/null\n',
-                encoding="utf-8",
-            )
-            planted.chmod(0o755)
-            run = run_alert(FAILED_UNIT, {"MONITOR_UNIT": FAILED_UNIT}, script=planted)
-        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
-        self.assertEqual(leaks(run.all_calls, [TOKEN]), ["curl: a secret is on its command line"])
 
 
 class EveryUnitPagesThroughTheTemplate(unittest.TestCase):
@@ -694,37 +577,51 @@ class EveryUnitPagesThroughTheTemplate(unittest.TestCase):
 
 
 class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
-    def test_an_empty_credential_fails_the_alert_unit_before_any_request(self):
-        # The alert template names no OnFailure=, so it cannot page about itself (SPEC-031): its
-        # own refusal is its failed state, with one error line naming the credential (SPEC-066 R3).
-        # Each credential the template loads, empty in each form, the other holding its value.
-        environment = {"MONITOR_UNIT": FAILED_UNIT, "MONITOR_SERVICE_RESULT": RESULT}
-        cases = [(ident, form) for ident in loaded_credentials() for form in ("", "\n")]
-        for ident, form in examined("empty credential case(s)", cases):
-            where = f"{ident} holding {form!r}"
-            run = run_alert(FAILED_UNIT, environment, planted={ident: form})
-            self.assertEqual(run.returncode, 1, f"{where}: {run.stdout}{run.stderr}")
-            refusal = (
-                f"<3>the credential {ident} is empty in the credentials directory: no page is sent"
-            )
-            self.assertEqual(run.stderr.splitlines(), [refusal], where)
-            # Refused before anything is asked or sent: no journal read and no request.
-            asked = [call["command"] for call in run.all_calls]
-            self.assertEqual([c for c in asked if c in ("curl", "journalctl")], [], where)
-            # What it wrote names the id and carries no value of either credential.
-            for value in (TOKEN, OWNER):
-                self.assertNotIn(value, run.stdout + run.stderr, where)
-        # The route is the failed instance: the template still names no OnFailure=, and a page
-        # about it is a second route's (#285). It loads its two credentials, and nothing in it
-        # counts the refusal a success, restarts it or unloads the failed instance.
+    def test_a_key_off_the_alert_templates_list_is_refused_by_name(self):
+        # The alert template holds only the keys `_units.ALERT_KEYS` lists, each in the section the
+        # list gives it: a key off the list, in any section, is refused by its key (SPEC-066 R3).
+        # The committed template holds none. Planted, one line at a time after the template's
+        # Description= (in [Unit]) or its ExecStart= (in [Service]): the directives that make a
+        # start depend on another unit; a key with no standard meaning; and a key the list holds in
+        # the other section.
+        self.assertEqual(alert_template_refusals(SYSTEMD / ALERT_TEMPLATE), [])
+        name = ALERT_TEMPLATE
+        plants = [
+            ("Description=", "Requisite=missing.service", "Unit", "Requisite", "missing.service"),
+            ("Description=", "Requires=missing.service", "Unit", "Requires", "missing.service"),
+            ("Description=", "BindsTo=missing.service", "Unit", "BindsTo", "missing.service"),
+            ("Description=", "X-Note=kept", "Unit", "X-Note", "kept"),
+            ("Description=", "User=nobody", "Unit", "User", "nobody"),
+            ("ExecStart=", "X-Note=kept", "Service", "X-Note", "kept"),
+            (
+                "ExecStart=",
+                "Wants=network-online.target",
+                "Service",
+                "Wants",
+                "network-online.target",
+            ),
+        ]
+        got = {}
+        for anchor, line, section, key, value in examined("planted alert template(s)", plants):
+            with tempfile.TemporaryDirectory() as scratch:
+                path = planted_template(Path(scratch), anchor, line, True)
+                got[line] = alert_template_refusals(path)
+        self.assertEqual(
+            got,
+            {
+                line: [f"{name}: [{section}] {key}={value} {OFF_LIST}"]
+                for _, line, section, key, value in plants
+            },
+        )
+        # A failed alert instance is its own record: the template still names no OnFailure=, and
+        # a page about it is a second route's (#285). It loads no credential (SPEC-582 R7), and
+        # nothing in it counts a failure a success, restarts it or unloads the failed instance.
         template = unit_file(SYSTEMD / ALERT_TEMPLATE)
         self.assertEqual(values(template, "Unit", "OnFailure"), [])
-        self.assertEqual(len(values(template, "Service", "LoadCredential")), 2)
-        self.assertEqual(alert_template_refusals(SYSTEMD / ALERT_TEMPLATE), [])
+        self.assertEqual(values(template, "Service", "LoadCredential"), [])
         # Planted templates: the alert template with one line added after its ExecStart= or its
         # Description=, or its ExecStart= given the `-` prefix, each refused for what it breaks.
         (start,) = values(template, "Service", "ExecStart")
-        name = ALERT_TEMPLATE
 
         def off(section, *assigned):
             # The lines a key off the alert's list adds, each after the refusals of what it breaks.
@@ -852,43 +749,6 @@ class AnEmptyCredentialFailsTheAlertUnit(unittest.TestCase):
                     alert_template_refusals(path), [f"{name}:{after}: {why}"], repr(line)
                 )
 
-    def test_a_key_off_the_alert_templates_list_is_refused_by_name(self):
-        # The alert template holds only the keys `_units.ALERT_KEYS` lists, each in the section the
-        # list gives it: a key off the list, in any section, is refused by its key (SPEC-066 R3).
-        # The committed template holds none. Planted, one line at a time after the template's
-        # Description= (in [Unit]) or its ExecStart= (in [Service]): the directives that make a
-        # start depend on another unit; a key with no standard meaning; and a key the list holds in
-        # the other section.
-        self.assertEqual(alert_template_refusals(SYSTEMD / ALERT_TEMPLATE), [])
-        name = ALERT_TEMPLATE
-        plants = [
-            ("Description=", "Requisite=missing.service", "Unit", "Requisite", "missing.service"),
-            ("Description=", "Requires=missing.service", "Unit", "Requires", "missing.service"),
-            ("Description=", "BindsTo=missing.service", "Unit", "BindsTo", "missing.service"),
-            ("Description=", "X-Note=kept", "Unit", "X-Note", "kept"),
-            ("Description=", "User=nobody", "Unit", "User", "nobody"),
-            ("ExecStart=", "X-Note=kept", "Service", "X-Note", "kept"),
-            (
-                "ExecStart=",
-                "Wants=network-online.target",
-                "Service",
-                "Wants",
-                "network-online.target",
-            ),
-        ]
-        got = {}
-        for anchor, line, section, key, value in examined("planted alert template(s)", plants):
-            with tempfile.TemporaryDirectory() as scratch:
-                path = planted_template(Path(scratch), anchor, line, True)
-                got[line] = alert_template_refusals(path)
-        self.assertEqual(
-            got,
-            {
-                line: [f"{name}: [{section}] {key}={value} {OFF_LIST}"]
-                for _, line, section, key, value in plants
-            },
-        )
-
 
 # SPEC-396 (ADR-410): the second route, a oneshot of its own that reads the alert path from the
 # service manager and tells the owner when the alert sender fails or goes silent.
@@ -906,6 +766,26 @@ STATIC_LINE = "deck-streak-alert@.service static -\n"
 RELEASE_SCRIPT = "/usr/local/lib/deck-streak/current/deploy/scripts/second-route.sh"
 ALERT_IDS = ("owner-user-id", "telegram-bot-token")
 SECOND_IDS = (CHECK_IN_ID, REPORT_ID)
+# The alert sender's scripts: the journal sender the template runs, and the Telegram sender it
+# replaced (SPEC-582 R7). The second route runs neither.
+ALERT_SENDERS = ("alert-journal", "alert-telegram")
+# The second route's unit as SPEC-396 drew it, planted in a scratch directory: no unit ships
+# (SPEC-582; SPEC-396's amendment), so its two share-nothing tests read this text and the script.
+SECOND_UNIT_TEXT = "\n".join(
+    [
+        "[Unit]",
+        "Description=DeckStreak's second route to the owner (SPEC-396)",
+        "",
+        "[Service]",
+        "Type=oneshot",
+        f"ExecStart={RELEASE_SCRIPT}",
+        f"LoadCredential={CHECK_IN_ID}:/run/deck-streak-credentials/socket",
+        f"LoadCredential={REPORT_ID}:/run/deck-streak-credentials/socket",
+        "ProtectSystem=strict",
+        "PrivateTmp=yes",
+        "",
+    ]
+)
 BODY_OPTIONS = {"data", "data-binary", "data-urlencode", "data-raw", "form", "json", "upload-file"}
 # What the second route says of its own failures, at priority 3 on the first run of an episode.
 NOT_DELIVERED = f"the request to the credential {REPORT_ID} was not delivered"
@@ -1024,7 +904,7 @@ def second_route_refusals(path):
         if ident in ALERT_IDS:
             refused.append(f"{name}: LoadCredential={ident} is the alert sender's credential")
     for command in values(unit, "Service", "ExecStart"):
-        if "alert-telegram" in command:
+        if any(sender in command for sender in ALERT_SENDERS):
             refused.append(f"{name}: ExecStart={command} runs the alert sender's script")
     for section, keys in (
         ("Unit", ("Wants", "Requires", "Requisite", "BindsTo", "PartOf", "After", "Before")),
@@ -1039,14 +919,22 @@ def second_route_refusals(path):
 
 class ASecondRouteTellsTheOwner(unittest.TestCase):
     def test_the_owner_is_told_through_the_second_route_when_the_alert_sender_fails(self):
-        # The alert sender fails through the existing harness: an empty credential, exit 1, and no
-        # request. That failed instance is what the service manager then lists.
-        refused = run_alert(
-            FAILED_UNIT,
-            {"MONITOR_UNIT": FAILED_UNIT, "MONITOR_SERVICE_RESULT": RESULT},
-            planted={"owner-user-id": ""},
-        )
-        self.assertEqual(refused.returncode, 1, refused.stdout + refused.stderr)
+        # The alert sender fails through the existing harness: the journal sender fails only when
+        # its line cannot be written, so it runs with its standard error closed, exits non-zero
+        # (1 for a write error, 2 for the shell's refused redirection) and makes no request. That
+        # failed instance is what the service manager then lists.
+        sender = journal_sender(self)
+        with tempfile.TemporaryDirectory() as scratch:
+            closed = Path(scratch) / "closed-standard-error.sh"
+            closed.write_text(f'#!/bin/sh\nexec "{sender}" "$@" 2>&-\n', encoding="utf-8")
+            closed.chmod(0o755)
+            refused = run_alert(
+                FAILED_UNIT,
+                {"MONITOR_UNIT": FAILED_UNIT, "MONITOR_SERVICE_RESULT": RESULT},
+                script=closed,
+            )
+        self.assertIn(refused.returncode, (1, 2), refused.stdout + refused.stderr)
+        self.assertEqual((refused.stdout, refused.stderr), ("", ""), "the line was written")
         self.assertEqual(refused.calls("curl"), [], "the failed alert sender sent a request")
         name = instance(FAILED_UNIT)
         with tempfile.TemporaryDirectory() as kept:
@@ -1219,22 +1107,42 @@ class ASecondRouteTellsTheOwner(unittest.TestCase):
 
 
 class TheSecondRouteSharesNothingWithTheAlertSender(unittest.TestCase):
+    def planted_unit(self, scratch, anchor=None, line=None, keep=True):
+        """The second route's planted unit text in `scratch`, with `line` after its one line that
+        starts `anchor`, or in its place when `keep` is false."""
+        lines = SECOND_UNIT_TEXT.split("\n")
+        if anchor is not None:
+            (at,) = [n for n, text in enumerate(lines) if text.startswith(anchor)]
+            lines[at : at + 1] = [lines[at], line] if keep else [line]
+        planted = Path(scratch) / SECOND_UNIT.name
+        planted.write_text("\n".join(lines), encoding="utf-8")
+        return planted
+
     def test_the_second_route_shares_no_credential_with_the_alert_sender(self):
-        self.assertTrue(SECOND_UNIT.is_file(), "the second route's unit is not shipped")
-        unit = unit_file(SECOND_UNIT)
-        ids = sorted(v.partition(":")[0] for v in values(unit, "Service", "LoadCredential"))
-        self.assertEqual(ids, ["second-route-check-in", "second-route-report"])
-        alert = sorted(v.partition(":")[0] for v in loaded_credentials())
-        self.assertEqual(alert, ["owner-user-id", "telegram-bot-token"])
-        self.assertEqual(set(ids) & set(alert), set())
-        # No other unit or drop-in loads a second-route id.
-        others = [p for p in sorted(SYSTEMD.rglob("*")) if p.is_file() and p != SECOND_UNIT]
+        # No unit of the second route ships (SPEC-582): its planted text stands for one, and the
+        # alert sender beside it loads no credential (SPEC-582 R7).
+        self.assertFalse(SECOND_UNIT.is_file(), "the second route's unit is shipped")
+        with tempfile.TemporaryDirectory() as scratch:
+            planted = self.planted_unit(scratch)
+            unit = unit_file(planted)
+            ids = sorted(v.partition(":")[0] for v in values(unit, "Service", "LoadCredential"))
+            self.assertEqual(ids, ["second-route-check-in", "second-route-report"])
+            alert = sorted(v.partition(":")[0] for v in loaded_credentials())
+            self.assertEqual(alert, [])
+            self.assertEqual(set(ids) & set(alert), set())
+            for path in (planted, SYSTEMD / ALERT_TEMPLATE):
+                held = unit_file(path)
+                self.assertEqual(values(held, "Service", "ProtectSystem"), ["strict"], path.name)
+                self.assertEqual(values(held, "Service", "PrivateTmp"), ["yes"], path.name)
+            self.assertEqual(second_route_refusals(planted), [])
+        # No shipped unit or drop-in loads a second-route id.
+        others = [p for p in sorted(SYSTEMD.rglob("*")) if p.is_file()]
         others = [p for p in others if p.suffix in (".service", ".conf")]
         loaders = [
             p.name
-            for p in examined("other unit file(s)", others)
+            for p in examined("shipped unit file(s)", others)
             if any(
-                v.partition(":")[0] in ids
+                v.partition(":")[0] in SECOND_IDS
                 for v in values(unit_file(p), "Service", "LoadCredential")
             )
         ]
@@ -1248,18 +1156,10 @@ class TheSecondRouteSharesNothingWithTheAlertSender(unittest.TestCase):
             if Path(word).parent == run.credentials
         )
         self.assertEqual(read, ["second-route-check-in", "second-route-report"])
-        for path in (SECOND_UNIT, SYSTEMD / ALERT_TEMPLATE):
-            held = unit_file(path)
-            self.assertEqual(values(held, "Service", "ProtectSystem"), ["strict"], path.name)
-            self.assertEqual(values(held, "Service", "PrivateTmp"), ["yes"], path.name)
         # Planted: the second route's unit loading an alert id is refused by name.
-        self.assertEqual(second_route_refusals(SECOND_UNIT), [])
         with tempfile.TemporaryDirectory() as scratch:
-            planted = Path(scratch) / SECOND_UNIT.name
-            lines = SECOND_UNIT.read_text(encoding="utf-8").split("\n")
-            (at,) = [n for n, text in enumerate(lines) if text.startswith("ExecStart=")]
-            lines.insert(at + 1, "LoadCredential=owner-user-id:/run/deck-streak-credentials/socket")
-            planted.write_text("\n".join(lines), encoding="utf-8")
+            line = "LoadCredential=owner-user-id:/run/deck-streak-credentials/socket"
+            planted = self.planted_unit(scratch, "ExecStart=", line)
             self.assertEqual(
                 second_route_refusals(planted),
                 [
@@ -1268,10 +1168,12 @@ class TheSecondRouteSharesNothingWithTheAlertSender(unittest.TestCase):
             )
 
     def test_the_second_route_shares_no_process_with_the_alert_sender(self):
-        self.assertTrue(SECOND_UNIT.is_file(), "the second route's unit is not shipped")
-        unit = unit_file(SECOND_UNIT)
-        self.assertEqual(values(unit, "Service", "ExecStart"), [RELEASE_SCRIPT])
-        self.assertEqual(second_route_refusals(SECOND_UNIT), [])
+        # No unit of the second route ships (SPEC-582): its planted text stands for one.
+        self.assertFalse(SECOND_UNIT.is_file(), "the second route's unit is shipped")
+        with tempfile.TemporaryDirectory() as scratch:
+            planted = self.planted_unit(scratch)
+            self.assertEqual(values(unit_file(planted), "Service", "ExecStart"), [RELEASE_SCRIPT])
+            self.assertEqual(second_route_refusals(planted), [])
         template = (SYSTEMD / ALERT_TEMPLATE).read_text(encoding="utf-8")
         self.assertNotIn("second-route", template, "the alert template names the second route")
         # A run executes no alert script and calls systemctl with its three read verbs only.
@@ -1285,17 +1187,20 @@ class TheSecondRouteSharesNothingWithTheAlertSender(unittest.TestCase):
         for call in run.calls("curl"):
             self.assertNotIn("api.telegram.org", call["stdin"])
         script = SECOND_SCRIPT.read_text(encoding="utf-8")
-        self.assertNotIn("alert-telegram", script)
+        for sender in ALERT_SENDERS:
+            self.assertNotIn(sender, script)
         self.assertIn("systemctl", script)
-        # Planted units: one running the alert script, one wanting the template.
+        # Planted units: each running an alert sender's script, and one wanting the template.
+        release = "/usr/local/lib/deck-streak/current/deploy/scripts"
         plants = [
             (
                 "ExecStart=",
-                "ExecStart=/usr/local/lib/deck-streak/current/deploy/scripts/alert-telegram.sh %i",
-                "ExecStart=/usr/local/lib/deck-streak/current/deploy/scripts/alert-telegram.sh %i "
-                "runs the alert sender's script",
+                f"ExecStart={release}/{sender}.sh %i",
+                f"ExecStart={release}/{sender}.sh %i runs the alert sender's script",
                 False,
-            ),
+            )
+            for sender in ALERT_SENDERS
+        ] + [
             (
                 "Description=",
                 f"Wants={ALERT_TEMPLATE}",
@@ -1305,11 +1210,7 @@ class TheSecondRouteSharesNothingWithTheAlertSender(unittest.TestCase):
         ]
         for anchor, line, refusal, keep in examined("planted unit(s)", plants):
             with tempfile.TemporaryDirectory() as scratch:
-                lines = SECOND_UNIT.read_text(encoding="utf-8").split("\n")
-                (at,) = [n for n, text in enumerate(lines) if text.startswith(anchor)]
-                lines[at : at + 1] = [lines[at], line] if keep else [line]
-                planted = Path(scratch) / SECOND_UNIT.name
-                planted.write_text("\n".join(lines), encoding="utf-8")
+                planted = self.planted_unit(scratch, anchor, line, keep)
                 self.assertEqual(
                     second_route_refusals(planted), [f"{SECOND_UNIT.name}: {refusal}"], line
                 )

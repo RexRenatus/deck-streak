@@ -129,7 +129,6 @@ SCRIPTS = {
         f"/usr/bin/python3 {RELEASE}/deploy/scripts/slo-evaluate.py {RELEASE}/deploy/slo.json"
     ),
     WATCH_SERVICE: f"{RELEASE}/deploy/scripts/memory-watch.sh",
-    SECOND_ROUTE_SERVICE: f"{RELEASE}/deploy/scripts/second-route.sh",
     # SPEC-064: the daily backup and the weekly drill run scripts of the release as well.
     BACKUP_SERVICE_NAME: f"/usr/bin/python3 {RELEASE}/deploy/scripts/backup.py",
     DRILL_SERVICE_NAME: f"{RELEASE}/deploy/scripts/restore-drill.sh",
@@ -152,12 +151,6 @@ OBSERVABILITY_SERVICE = {
     WATCH_SERVICE: {
         "Type": "oneshot",
         "TimeoutStartSec": "50s",
-        "Nice": "10",
-        "IOSchedulingClass": "idle",
-    },
-    SECOND_ROUTE_SERVICE: {
-        "Type": "oneshot",
-        "TimeoutStartSec": "3min",
         "Nice": "10",
         "IOSchedulingClass": "idle",
     },
@@ -217,7 +210,6 @@ SYNC_SERVER_SERVICE = {
 OBSERVABILITY_TIMERS = {
     "deck-streak-slo.timer",
     "deck-streak-memory-watch.timer",
-    "deck-streak-second-route.timer",
     # SPEC-064's daily backup and weekly restore drill.
     "deck-streak-backup.timer",
     "deck-streak-restore-drill.timer",
@@ -225,8 +217,6 @@ OBSERVABILITY_TIMERS = {
 
 # Where the code declares each credential id a role reads, by the constant's name.
 CREDENTIAL_SOURCES = {
-    "OWNER_USER_ID": REPO / "crates" / "identity" / "src" / "owner.rs",
-    "TELEGRAM_BOT_TOKEN": REPO / "crates" / "identity" / "src" / "owner.rs",
     "SYNC_USERNAME": REPO / "crates" / "ingest" / "src" / "settings.rs",
     "SYNC_PASSWORD": REPO / "crates" / "ingest" / "src" / "settings.rs",
     "CORE_CREDENTIAL": REPO / "crates" / "mcp" / "src" / "settings.rs",
@@ -235,9 +225,6 @@ CREDENTIAL_SOURCES = {
     # each id is a shell constant (SPEC-337 R2; ADR-347 D2).
     "SYNC_SERVER_OWNER": SYNC_LAUNCHER,
     "SYNC_SERVER_STAGING": SYNC_LAUNCHER,
-    # The second route's two addresses are shell constants of its script (SPEC-396 R3).
-    "SECOND_ROUTE_CHECK_IN": SECOND_ROUTE_SCRIPT,
-    "SECOND_ROUTE_REPORT": SECOND_ROUTE_SCRIPT,
 }
 # Which credentials each service's role reads: the `sync` job's syncer (SPEC-022, SPEC-027), and no
 # Telegram credential anywhere (SPEC-582 R3, R7). The job template's `sync` instance carries the
@@ -248,13 +235,11 @@ CREDENTIAL_SOURCES = {
 # law-track token (SPEC-119 R6; ADR-332).
 ROLE_CREDENTIALS = {
     "deck-streak-api.service": (),
-    "deck-streak-bot.service": ("OWNER_USER_ID", "TELEGRAM_BOT_TOKEN"),
     "deck-streak-mcp.service": ("CORE_CREDENTIAL", "LAW_TRACK_CREDENTIAL"),
     f"{JOB_TEMPLATE}@.service": ("SYNC_USERNAME", "SYNC_PASSWORD"),
     f"{ALERT_TEMPLATE}@.service": (),
     SLO_SERVICE: (),
     WATCH_SERVICE: (),
-    SECOND_ROUTE_SERVICE: ("SECOND_ROUTE_CHECK_IN", "SECOND_ROUTE_REPORT"),
     LITESTREAM_SERVICE_NAME: (),
     BACKUP_SERVICE_NAME: (),
     DRILL_SERVICE_NAME: (),
@@ -266,7 +251,6 @@ ROLE_CREDENTIALS = {
 # The role each service runs (R2); the job template's `%i` is its instance, the job's id.
 ROLES = {
     "deck-streak-api.service": "api",
-    "deck-streak-bot.service": "bot",
     "deck-streak-mcp.service": "mcp",
     f"{JOB_TEMPLATE}@.service": "job %i",
 }
@@ -295,10 +279,10 @@ JOB_SERVICE = {
 }
 # ADR-032's delivery: the daemons' CPU and task caps. The MCP server's quota is taken from the
 # API's, so the daemons' quotas still fit the share's CPUs (ADR-332); the sync server's three
-# quarters of a processor are taken from the bot's, the replicator's and the MCP server's (ADR-347).
+# quarters of a processor are taken from the bot's, the replicator's and the MCP server's (ADR-347),
+# and the bot's own quota is freed with its unit (ADR-601 D7).
 DAEMON_CAPS = {
     "deck-streak-api.service": {"CPUQuota": "75%", "TasksMax": "64"},
-    "deck-streak-bot.service": {"CPUQuota": "20%", "TasksMax": "64"},
     "deck-streak-mcp.service": {"CPUQuota": "15%", "TasksMax": "32"},
 }
 # R2: the hardening of every service, each at the value the pack's rows score; its identity is
@@ -346,13 +330,11 @@ ROLES_NETWORK = "AF_UNIX AF_INET AF_INET6"
 PER_SERVICE = {
     # service: (StateDirectory, EnvironmentFile, RestrictAddressFamilies, SupplementaryGroups)
     "deck-streak-api.service": ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
-    "deck-streak-bot.service": ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
     "deck-streak-mcp.service": ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
     f"{JOB_TEMPLATE}@.service": ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
     f"{ALERT_TEMPLATE}@.service": (None, None, ROLES_NETWORK, "systemd-journal"),
     SLO_SERVICE: ("deck-streak-slo", None, "AF_UNIX", "systemd-journal"),
     WATCH_SERVICE: ("deck-streak-memory-watch", None, "AF_UNIX", None),
-    SECOND_ROUTE_SERVICE: ("deck-streak-second-route", None, ROLES_NETWORK, None),
     # SPEC-064: the replicator and the drill reach the bucket; the backup copies the database
     # alone, reads no settings and opens no network socket (SPEC-340 R3).
     LITESTREAM_SERVICE_NAME: ("deck-streak", ENVIRONMENT_FILE, ROLES_NETWORK, None),
@@ -426,7 +408,6 @@ WAIVED = {
     (f"{JOB_TEMPLATE}@liveness.timer", "calendar-not-persistent"),
     ("deck-streak-slo.timer", "calendar-not-persistent"),
     ("deck-streak-memory-watch.timer", "calendar-not-persistent"),
-    ("deck-streak-second-route.timer", "calendar-not-persistent"),
     ("deck-streak-litestream.service", "watchdog-missing"),
     (SYNC_SERVER_SERVICE_NAME, "watchdog-missing"),
 }
@@ -461,7 +442,6 @@ NO_IP_SOCKET = "opens no IP socket"
 EXEMPT = "exempt"
 IDENTITY_ARMS = {
     "deck-streak-api.service": "any",
-    "deck-streak-bot.service": "link-local",
     "deck-streak-mcp.service": "any",
     f"{JOB_TEMPLATE}@.service": "link-local",
     f"{ALERT_TEMPLATE}@.service": "link-local",
@@ -471,7 +451,6 @@ IDENTITY_ARMS = {
     SYNC_DRILL_SERVICE_NAME: NO_IP_SOCKET,
     SLO_SERVICE: NO_IP_SOCKET,
     WATCH_SERVICE: NO_IP_SOCKET,
-    SECOND_ROUTE_SERVICE: "link-local",
     LITESTREAM_SERVICE_NAME: EXEMPT,
     SYNC_ARCHIVE_SERVICE_NAME: EXEMPT,
     DRILL_SERVICE_NAME: EXEMPT,
@@ -664,8 +643,8 @@ def credential_lines(root):
 # The ONE place that names the instance drop-in directories a shipped template may carry, by the
 # template's file name (SPEC-062 R14, amended; ruling PR #512). The unit guards read every instance
 # directory into its template, so an instance is admitted only by name and any other is refused:
-# `sync` loads the sync login, `held_flush` loads the bot's token and the owner's id (#291).
-INSTANCE_DROPIN_ALLOWLIST = {f"{JOB_TEMPLATE}@.service": ("sync", "held_flush")}
+# `sync` loads the sync login. No instance loads a Telegram credential (SPEC-582 R3).
+INSTANCE_DROPIN_ALLOWLIST = {f"{JOB_TEMPLATE}@.service": ("sync",)}
 
 NON_UNIT_DROPIN = "deploy/journald.conf.d"
 # The ban service's filter and jail directories hold its own files, never a unit's (SPEC-340 R5).
@@ -3292,8 +3271,8 @@ class TheSyncLoginIsTheSyncJobsAlone(unittest.TestCase):
         self.assertTrue(dropin.is_file(), f"{dropin.relative_to(REPO)} is missing")
         loaded = re.findall(r"^LoadCredential=(.*)$", dropin.read_text(encoding="utf-8"), re.M)
         self.assertEqual(sorted(loaded), sorted(f"{i}:{SOCKET}" for i in self.SYNC_LOGIN))
-        # No other instance has a drop-in that loads one: the held flush's drop-in loads the
-        # bot's two credentials, never the sync login (#291).
+        # No other instance has a drop-in that loads one; the held flush's drop-in left with the
+        # Telegram pair (SPEC-582 R3).
         others = [
             d
             for d in SYSTEMD.glob(f"{JOB_TEMPLATE}@*.service.d")

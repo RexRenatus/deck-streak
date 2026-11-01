@@ -250,14 +250,6 @@
         "test_deploy_templates.TheSyncLoginIsTheSyncJobsAlone.test_no_unit_loads_the_telegram_pair"
       ],
       [
-        "S06233-THE-HELD-FLUSH-INSTANCE-NEVER-LOADS-THE-SYNC-PAIR",
-        "deploy/systemd/deck-streak-job@held_flush.service.d/20-bot-credentials.conf",
-        "LoadCredential=owner-user-id:/run/deck-streak-credentials/socket\n",
-        "LoadCredential=owner-user-id:/run/deck-streak-credentials/socket\nLoadCredential=anki-sync-username:/run/deck-streak-credentials/socket\n",
-        "the held flush instance's drop-in loads the bot's pair alone, never the sync login (SPEC-062 R14; #291)",
-        "test_deploy_templates.TheSyncLoginIsTheSyncJobsAlone.test_the_sync_login_is_loaded_by_the_sync_job_alone"
-      ],
-      [
         "S06234-THE-SYNC-PAIR-IS-LISTED-UNDER-THE-SYNC-UNIT-ONLY",
         "deploy/scripts/credential-pairs.py",
         "            lister.read(name, dropin)\n",

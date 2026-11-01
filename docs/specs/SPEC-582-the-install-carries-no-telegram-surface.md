@@ -180,6 +180,7 @@ functions the first push cannot compile, so each of those is marked not red with
 | `scripts/tests/test_rail_contract.py` | tests | changed |
 | `scripts/tests/test_caddy_render.py` | tests | changed |
 | `scripts/tests/test_sync_path.py` | tests | deleted |
+| `scripts/mutation-rows.d/S04100-S04199.json` | rows | changed: one row re-anchored, its exemption gone |
 | `scripts/mutation-rows.d/S05900-S05999.json` | rows | changed: three rows whose targets leave |
 | `scripts/mutation-rows.d/S06200-S06299.json` | rows | changed: one row leaves, two killers renamed |
 | `scripts/mutation-rows.d/S06600-S06699.json` | rows | changed: four rows whose target leaves |
@@ -190,6 +191,7 @@ functions the first push cannot compile, so each of those is marked not red with
 | `docs/specs/SPEC-582-the-install-carries-no-telegram-surface.md` | docs | added |
 | `docs/decisions/ADR-601-the-install-carries-no-telegram-surface-before-the-telegram-code-leaves-the-tree.md` | docs | added |
 | `docs/schematics/the-install-carries-no-telegram-surface.md` | docs | added |
+| `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | docs | changed: seven cites follow their moved tests |
 | `docs/red-first/SPEC-582.md` | docs | added |
 | `docs/decisions/ADR-589-web-and-ios-only-mini-app-and-bot-deprecated.md` | docs | appended |
 | `docs/decisions/ADR-347-the-sync-server-is-built-from-the-engines-pin-reads-hashed-users-from-credentials-and-serves-under-its-own-path.md` | docs | appended |

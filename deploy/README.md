@@ -11,21 +11,18 @@ maintainer's machine, only when run there (SPEC-062, below).
 
 | file | what it is |
 |---|---|
-| `systemd/deck-streak-api.service` | the `api` role: the HTTP service the Mini App calls, `Type=notify` with a watchdog |
-| `systemd/deck-streak-bot.service` | the `bot` role: the Telegram bot's long-polling transport, `Type=notify` with a watchdog |
+| `systemd/deck-streak-api.service` | the `api` role: the HTTP service the web app calls, `Type=notify` with a watchdog |
 | `systemd/deck-streak-mcp.service` | the `mcp` role: the MCP server the owner's agent calls on a loopback address, `Type=notify` with a watchdog; installed by a deploy and first started by the owner (SPEC-119, ADR-332) |
 | `systemd/deck-streak-sync-server.service`, `scripts/sync-server.sh` | the engine's own sync server for the owner's Anki clients, which the release ships as `bin/anki-sync-server`, `Type=exec` on a loopback address; its launcher reads the two sync users from the unit's credentials, refuses an entry that is not a user name and a pbkdf2-sha256 hash, and execs the server (SPEC-337, ADR-347) |
 | `systemd/deck-streak-job@.service` | one run of one job of coordination's job table, `deckstreakd job <id>`, a `oneshot` |
 | `systemd/deck-streak-job@<id>.timer` | one timer per job of the table (`sync`, `maintenance`, `liveness`, `drill_postback`, `held_flush`), each starting the job instance of its own name |
-| `systemd/deck-streak-job@sync (path unit)` | the owner's `/sync` doorbell: a change of the request file starts `deck-streak-job@sync` (service unit), and it loads no credential (SPEC-059) |
-| `tmpfiles.d/deck-streak-sync-request.conf` | the request directory, the service user's alone, mode `0700`; only the bot unit may write it (SPEC-059) |
-| `systemd/deck-streak-alert@.service` | the one alert path, a `oneshot` every other service names with `OnFailure=`: it pages the owner on Telegram that its instance failed (SPEC-031) |
+| `systemd/deck-streak-alert@.service` | the one alert path, a `oneshot` every other service names with `OnFailure=`: it writes one line at error priority to the journal saying that its instance failed (SPEC-031, SPEC-582) |
 | `systemd/deck-streak-slo.service`, `.timer` | the SLO evaluator, every five minutes: it pages once per burn episode of the API's SLO (SPEC-031) |
 | `systemd/deck-streak-memory-watch.service`, `.timer` | the memory watch, every minute: it pages once per new OOM kill or `MemoryMax` event of any DeckStreak unit (SPEC-031) |
-| `systemd/deck-streak-second-route.service`, `.timer`, `scripts/second-route.sh` | the second route, every ten minutes: it reads the alert path from the service manager, reports a failed alert instance or an absent alert template to a receiver off the host, and checks in; it shares no credential and no process with the alert sender (SPEC-396, ADR-410) |
-| `scripts/alert-telegram.sh`, `scripts/slo-evaluate.py`, `scripts/memory-watch.sh` | the three units' programs, run from the release |
+| `scripts/second-route.sh` | the second route's script, kept in the tree and not installed: its unit and timer left the install, and the monitoring delivery keeps or retires it (SPEC-396, SPEC-582) |
+| `scripts/alert-journal.sh`, `scripts/slo-evaluate.py`, `scripts/memory-watch.sh` | the three units' programs, run from the release |
 | `slo.json` | the API's SLO, its error budget policy and its burn-rate alerts, which the evaluator reads (ADR-031) |
-| `caddy/deck-streak.caddy` | the one site block: the Mini App, `/api/*`, the closed health routes, `robots.txt`, the security headers, and one access log of the sync route alone, with no request header and no `k` parameter (SPEC-340 R6) |
+| `caddy/deck-streak.caddy` | the one site block: the web app, `/api/*`, the closed health routes, `robots.txt`, the security headers, and one access log of the sync route alone, with no request header and no `k` parameter (SPEC-340 R6) |
 | `fail2ban/filter.d/deck-streak-sync.conf`, `fail2ban/jail.d/deck-streak-sync.conf` | the sync route's login bound: a filter over the edge's access log of the sync route, and a jail that bans an address after five refused sync logins within ten minutes, for one hour (SPEC-340 R5; ADR-351 D3) |
 | `deck-streak.env.example` | the non-secret settings every service reads, by name, with neutral values |
 | `host-budget.json` | DeckStreak's share of the host and each unit's `MemoryHigh=` and `MemoryMax=` (ADR-032) |
@@ -43,9 +40,9 @@ that unit (ADR-061).
 |---|---|---|
 | `/usr/local/lib/deck-streak/current/bin/deckstreakd` | every service's `ExecStart=` | the release root, whose `current` link switches by an atomic rename (ADR-010) |
 | `/etc/deck-streak/deck-streak.env` | every service's `EnvironmentFile=`, required | the settings file, from `deck-streak.env.example` |
-| `/usr/local/lib/deck-streak/current/deploy/` | the alert's, the evaluator's, the watch's and the second route's `ExecStart=` | the release's copy of this directory's `scripts/` and `slo.json`, under the same root |
+| `/usr/local/lib/deck-streak/current/deploy/` | the alert's, the evaluator's and the watch's `ExecStart=` | the release's copy of this directory's `scripts/` and `slo.json`, under the same root |
 | UTC, at the default rollover hour 4 | every timer's `OnCalendar=` | the deployment's zone, and each job timer's rollover hour, rendered with the two settings that name them (ADR-027); the evaluator's and the watch's timers fire every few minutes in any zone, and take the deployment's zone all the same, so no calendar is left in UTC |
-| `{$DECKSTREAK_HOST}`, `{$DECKSTREAK_WEB_ROOT}`, `{$DECKSTREAK_API_UPSTREAM}`, `{$DECKSTREAK_SYNC_UPSTREAM}` | the Caddy block | the Mini App's host name, the release's web build, the API's listen address and the sync server's |
+| `{$DECKSTREAK_HOST}`, `{$DECKSTREAK_WEB_ROOT}`, `{$DECKSTREAK_API_UPSTREAM}`, `{$DECKSTREAK_SYNC_UPSTREAM}` | the Caddy block | the web app's host name, the release's web build, the API's listen address and the sync server's |
 | the system user and group `deck-streak` | every service's `User=` and `Group=` but the sync family's | the user itself |
 | the system user and group `deck-streak-sync` | the sync server's, its window's, its archive's and its drill's `User=` and `Group=` | the user itself, with no login shell, no home and no other group (SPEC-340 R2; ADR-351 D1) |
 | `_SYSTEMD_UNIT=caddy.service` | the ban jail's `journalmatch=`, `fail2ban/jail.d/deck-streak-sync.conf` | the edge's unit on the host; the rail installs the jail and its filter into the host's ban service, the filter checked first against one refused login, on the owner's go (SPEC-340 R5; ADR-351 D3) |
@@ -67,13 +64,10 @@ file, and no template carries a secret's value.
 
 | unit | credential ids | why |
 |---|---|---|
-| `deck-streak-api.service` | `owner-user-id`, `telegram-bot-token` | the owner gate over Telegram's launch data (SPEC-024) |
-| `deck-streak-bot.service` | `owner-user-id`, `telegram-bot-token` | the transport and the owner gate (SPEC-026); the owner's `/sync` holds no login, it asks the sync job (SPEC-059) |
+| `deck-streak-api.service` | none | it loads no credential: with neither Telegram credential held, the role starts with Telegram off (SPEC-582) |
 | `deck-streak-mcp.service` | `mcp-core-token`, `mcp-law-track-token` | the MCP server's bearer guard: the core token is required, and the law-track token grants the law track (SPEC-119 R6) |
 | `deck-streak-job@.service` | none | the sync login is loaded by the sync job alone: its instance's drop-in in `systemd/` carries `anki-sync-username` and `anki-sync-password` (SPEC-022, SPEC-062 R14), and the rail's map answers them to that instance alone |
-| `deck-streak-job@.service`, `held_flush` instance | `owner-user-id`, `telegram-bot-token` | the held flush alone sends to the owner's chat (#291): its instance's drop-in in `systemd/` carries the two, and no other job requests them |
-| `deck-streak-alert@.service` | `owner-user-id`, `telegram-bot-token` | the page: the bot's token, and the owner's id, which is the owner's private chat (SPEC-031) |
-| `deck-streak-second-route.service` | `second-route-check-in`, `second-route-report` | the second route's two addresses, https, each the receiver's, off the host: the check-in address takes a request with no body, the report address a plain-text body; neither is the alert sender's, and the rail's map names both for this unit alone (SPEC-396) |
+| `deck-streak-alert@.service` | none | the journal sender reads no credential (SPEC-582) |
 | `deck-streak-sync-server.service` | `sync-server-owner`, `sync-server-staging` | the sync server's two users, the owner's and the staging user (ADR-344), each a user name and a pbkdf2-sha256 hash, never a password; its launcher, `scripts/sync-server.sh`, refuses any other shape and hands them to the server (SPEC-337 R2, ADR-347) |
 
 systemd names the unit in the address it binds for each credential, so a job's credentials reach
@@ -112,9 +106,7 @@ launch never starts on it (SPEC-061 R8).
 
 A credential that arrives empty, with no bytes or only a newline, refuses start by its id as a
 missing one does (SPEC-066, ADR-067). A role refuses it through the kernel's loader, and the page
-quotes the line that names it; the `sync` job records it as `missing_credentials`. The alert unit
-refuses one in its script before any request, and stays failed in `systemctl --failed`, since
-nothing pages about the alert unit itself (#285).
+quotes the line that names it; the `sync` job records it as `missing_credentials`. The alert unit loads none.
 
 ## The schedule
 
@@ -130,14 +122,12 @@ job's slot (ADR-027).
 | `drill_postback` | hourly, minute 19 | `*-*-* *:19:00 UTC` | none, waived with its why |
 | `held_flush` | daily, 07:36 local, outside the quiet window | `*-*-* 07:36:00 UTC` | `true`: a missed flush runs once, still outside the window |
 
-The owner's `/sync` adds no slot and no timer: the bot stores the request and touches the request
-file, `deck-streak-job@sync` (path unit) starts the sync job, and the job serves the stored request before
-its scheduled run, which stays claimed once per study day (SPEC-059, ADR-037).
+The owner's `/sync` doorbell is not installed (SPEC-582): the sync job runs on its daily timer alone.
 
 No job timer carries a random delay: the table already places each job on its own minute, clear of
 the others, and a delay would move a fire off it. Each timer says so in its `X-DurableServices-Waive=`.
 
-The second route's timer is not a job of the table either: it runs every ten minutes with a short random delay, reads the service manager's current state and catches up nothing, and its timer says why.
+The second route is not installed (SPEC-582), so no timer of its own runs beside the job table's.
 
 The SLO evaluator's and the memory watch's timers are not jobs of the table. The evaluator runs every
 five minutes and the watch every minute, each with a short random delay, since neither keeps a minute
@@ -145,36 +135,31 @@ of its own; neither catches up a run missed while the host was down, and each ti
 
 ## Runbook
 
-- First deploy, for the owner's `/sync`: create the request directory before the bot restarts, with
-  `systemd-tmpfiles --create` over `tmpfiles.d/deck-streak-sync-request.conf`, because the bot's
-  `ReadWritePaths=` names the directory without a `-` prefix and the bot does not start while it is
-  absent. Then restart the bot, and enable the path unit of the sync instance (`systemctl enable --now`
-  on the `deck-streak-job` path template, instance `sync`).
 - Start one job by hand with `systemctl start deck-streak-job@<id>.service`, the id being one of the
   table's. The run exits 0 when the job ran, skipped or recorded a missed fire, 1 when it pages
   (the unit fails, and `OnFailure=` sends the one alert), and 2 for an id the table does not hold.
 - Run `maintenance` by hand only at its slot, or expect one drift page: the next `liveness` check
   reads a maintenance fire off its slot as drift, once (ADR-027).
-- A unit that fails pages through `deck-streak-alert@.service` (SPEC-031), which names the failed
+- A unit that fails pages through `deck-streak-alert@.service` (SPEC-031), which writes one line at error priority to the journal naming the failed
   unit and its result and quotes that run's last five error lines. A job that hangs is ended after
   30 minutes and pages the same way. A daemon in a crash loop pages at each failure until its start
   limit ends the loop.
-- A page that cannot be sent leaves its alert instance failed, listed by `systemctl --failed`; no
+- A line that cannot be written leaves its alert instance failed, listed by `systemctl --failed`; no
   page is sent about a failed page.
 - The SLO evaluator pages when both windows of an alert of `slo.json` burn, once per episode, and the
   memory watch once per new OOM kill or `MemoryMax` event; each keeps what it has paged in its own
   state directory, and each pages once, too, when it cannot measure.
-- Each service logs under its own identifier: `deck-streak-api`, `deck-streak-bot`,
+- Each service logs under its own identifier: `deck-streak-api`,
   `deck-streak-slo`, `deck-streak-memory-watch`, and the instance's full name for a job or a page.
 
 ## The Caddy block
 
-One site block serves the Mini App's static build, with `try_files {path} {path}.html /index.html`
+One site block serves the web app's static build, with `try_files {path} {path}.html /index.html`
 answering every route the client renders, and proxies `/api/*` to the API. It answers `404` for
 `/api/livez` and `/api/readyz`, which only the host itself reads (ADR-025), and it answers
 `robots.txt` itself, disallowing everything before the build's own file is reached. Every response
 carries HSTS, `nosniff`, the page's `same-origin` referrer policy, `X-Robots-Tag: noindex`, and a
-Content-Security-Policy of `frame-ancestors https://web.telegram.org; object-src 'none'; base-uri
+Content-Security-Policy of `frame-ancestors 'none'; object-src 'none'; base-uri
 'self'`, and Caddy's `Server` header is removed. The script sources are the page's own meta policy,
 with its build's hashes (SPEC-028), so the header sets none.
 
@@ -195,7 +180,7 @@ failure stops the deploy with the host untouched. On the host the tarball is unp
 `releases/<tag>.partial`, checked against its `MANIFEST.sha256`, renamed to `releases/<tag>`, and
 `current` is replaced by one `mv -T` of a link built beside it. The units are installed byte for
 byte (a drop-in the release no longer ships is removed; the rail's own `10-rail.conf` is left),
-systemd is reloaded, `effective-check.py` judges every unit, and the API then the bot restart. The
+systemd is reloaded, `effective-check.py` judges every unit, and the API restarts. The
 API must answer `/api/readyz` on its loopback listener within the bound. When a unit does not
 become ready, `current` goes back to the release it replaced, that release's units are reinstalled,
 the units restart and the deploy exits non-zero naming the unit. The host keeps the current release
@@ -225,7 +210,7 @@ misconfigured setting, not against code already placed in the step's environment
 ## The MCP server's first start
 
 `deck-streak-mcp.service` runs the `mcp` role (SPEC-119). A deploy installs it with the other units
-and never starts it: `deploy.sh` restarts the API and the bot alone, and the role refuses start
+and never starts it: `deploy.sh` restarts the API alone, and the role refuses start
 without its core token. Its first start is the owner's, in two steps (ADR-332):
 
 1. Store the core token in the private rail under its credential id, `mcp-core-token`, and, to
@@ -236,10 +221,10 @@ without its core token. Its first start is the owner's, in two steps (ADR-332):
 ## The host budget
 
 `host-budget.json` records DeckStreak's share, `"memory": "1152M"` and `"cpus": 2`, and each unit's
-ceilings, which the unit's `MemoryHigh=` and `MemoryMax=` equal (ADR-032). The five long-running
-units' ceilings plus the largest oneshot's fill the share exactly, and their `CPUQuota=` values,
-75% each for the API and the sync server, 20% for the bot and 15% each for the replicator and the
-MCP server, divide its CPUs exactly (ADR-064 and ADR-032 as SPEC-337 amends them, ADR-347). The
+ceilings, which the unit's `MemoryHigh=` and `MemoryMax=` equal (ADR-032). The four long-running
+units' ceilings plus the largest oneshot's fit inside the share, and their `CPUQuota=` values,
+75% each for the API and the sync server and 15% each for the replicator and the
+MCP server, fit inside its CPUs (ADR-064 and ADR-032 as SPEC-337 amends them, ADR-347 as ADR-601 amends it). The
 alert template, the SLO evaluator and the memory watch carry their own entries (SPEC-031); since
 they run beside the jobs, every ceiling reached at once passes the share (SPEC-031 §6).
 

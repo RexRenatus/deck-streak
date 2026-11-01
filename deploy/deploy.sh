@@ -178,7 +178,6 @@ back() {
         install_units "$prev"
         systemctl daemon-reload
         restart deck-streak-api.service || true
-        restart deck-streak-bot.service || true
     else
         rm -f "$root/current"
     fi
@@ -217,7 +216,6 @@ find "$checked" -delete
 switch_to "$rel"
 restart deck-streak-api.service || back deck-streak-api.service
 ready || back deck-streak-api.service
-restart deck-streak-bot.service || back deck-streak-bot.service
 
 if [ "$mode" = install ]; then
     prevname=
