@@ -227,10 +227,15 @@ impl Parser<'_> {
         }
     }
 
-    /// Zero or more nodes, with an `and` between two that have no operator between them.
+    /// Zero or more nodes, with an `and` between two that have no operator between them. A node
+    /// takes at least one character, so no group holds more nodes than the search has characters,
+    /// and a node that takes none cannot hold the parse in place.
     fn group_inner(&mut self) -> Result<Vec<Item>, Refusal> {
         let mut items = Vec::new();
-        while let Some(item) = self.node()? {
+        for _ in 0..=self.chars.len() {
+            let Some(item) = self.node()? else {
+                break;
+            };
             if items.len() % 2 == 0 {
                 if matches!(item, Item::And | Item::Or) {
                     return Err(Refusal::MisplacedOperator);
@@ -314,16 +319,21 @@ impl Parser<'_> {
         }
     }
 
-    /// The text between two unescaped quotes, its escapes kept.
+    /// The text between two unescaped quotes, its escapes kept. Each pass takes at least one
+    /// character, so the search's length bounds the passes, and a quote not closed within them is
+    /// refused as unclosed.
     fn quoted(&mut self) -> Result<String, Refusal> {
         self.at += 1;
         let mut inner = String::new();
-        loop {
+        for _ in 0..self.chars.len() {
             match self.peek() {
                 None => return Err(Refusal::UnclosedQuote),
                 Some('"') => {
                     self.at += 1;
-                    break;
+                    if inner.is_empty() {
+                        return Err(Refusal::EmptyQuote);
+                    }
+                    return Ok(inner);
                 }
                 Some('\\') => {
                     let Some(next) = self.chars.get(self.at + 1).copied() else {
@@ -339,17 +349,15 @@ impl Parser<'_> {
                 }
             }
         }
-        if inner.is_empty() {
-            return Err(Refusal::EmptyQuote);
-        }
-        Ok(inner)
+        Err(Refusal::UnclosedQuote)
     }
 
     /// `key:"value"`, or nothing (and the position restored) when the text is not of that shape.
+    /// Each pass takes at least one character, so the search's length bounds the passes.
     fn partially_quoted(&mut self) -> Result<Option<(String, String)>, Refusal> {
         let start = self.at;
         let mut key = String::new();
-        loop {
+        for _ in 0..self.chars.len() {
             match self.peek() {
                 Some('\\') => match self.chars.get(self.at + 1).copied() {
                     Some(next) if next != ' ' => {
@@ -375,10 +383,11 @@ impl Parser<'_> {
         Ok(None)
     }
 
-    /// Text up to white space or an unescaped `"`, `(` or `)`, its escapes kept.
+    /// Text up to white space or an unescaped `"`, `(` or `)`, its escapes kept. Each pass takes
+    /// at least one character, so the search's length bounds the passes.
     fn unquoted(&mut self) -> Result<String, Refusal> {
         let mut raw = String::new();
-        loop {
+        for _ in 0..self.chars.len() {
             match self.peek() {
                 Some('\\') => match self.chars.get(self.at + 1).copied() {
                     Some(next) if next != ' ' => {
@@ -402,13 +411,17 @@ impl Parser<'_> {
         Ok(raw)
     }
 
-    /// One term's text: unqualified text, or `key:value` split at its first unescaped colon.
+    /// One term's text: unqualified text, or `key:value` split at its first unescaped colon. Each
+    /// pass takes at least one character, so the text's length bounds the passes.
     fn term(&self, raw: &str) -> Result<Term, Refusal> {
         let chars: Vec<char> = raw.chars().collect();
         let mut at = 0;
         let mut key = String::new();
-        while at < chars.len() {
-            match chars[at] {
+        for _ in 0..chars.len() {
+            let Some(&next) = chars.get(at) else {
+                break;
+            };
+            match next {
                 '\\' if at + 1 < chars.len() => {
                     key.push('\\');
                     key.push(chars[at + 1]);
