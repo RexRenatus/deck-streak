@@ -286,3 +286,14 @@ this SPEC names each step only.
 Amendment (2026-09-29): SPEC-127 makes a Caddy reload that fails after the file swap restore the previous site block and Caddyfile, which the last exclusion of section 6 left to #321 (ADR-127).
 
 Amendment (SPEC-373): R1's release also runs on a manual dispatch with no input, made at a release tag's own ref, for a tag whose push started no run (#475). The same guard refuses a ref that is not that tag, and the run joins the tag's group. A8's event pin is now the push and the dispatch, exactly.
+
+## Amendment (SPEC-582): the deploy restarts the API alone, and no unit loads the bot's pair
+
+- The deploy restarts the API, waits for its readiness, and restarts no bot; a switch back
+  restarts the API alone (line 70; SPEC-582 R5).
+- R14 as amended (lines 138-141): the held flush's drop-in leaves, so `INSTANCE_DROPIN_ALLOWLIST`
+  names `sync` alone, and no unit or drop-in loads `owner-user-id` or `telegram-bot-token`. A24's
+  test is renamed `test_no_unit_loads_the_telegram_pair`, and its command is now
+  `python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_no_unit_loads_the_telegram_pair`
+  (SPEC-582 A11). The sync login is still loaded by the sync instance alone.
+- E6, the Mini App's registration, is no longer a step of the install (ADR-601 D2).
