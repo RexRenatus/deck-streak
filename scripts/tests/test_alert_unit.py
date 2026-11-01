@@ -427,7 +427,8 @@ class TheJournalSenderWritesOneLine(unittest.TestCase):
         self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
         self.assertIn(FAILED_UNIT, journal_text(self, run))
         self.assertEqual(run.calls("curl"), [], "the sender made a request")
-        calls = examined("command(s) the sender ran", run.all_calls)
+        self.assertEqual(run.all_calls, [], "the sender ran a command")
+        calls = run.all_calls
         self.assertEqual(credential_reads(calls), [])
         self.assertEqual(leaks(calls, [TOKEN, OWNER]), [])
         for value in (TOKEN, OWNER):
@@ -443,6 +444,7 @@ class TheJournalSenderWritesOneLine(unittest.TestCase):
             reader.chmod(0o755)
             caught = run_alert(FAILED_UNIT, environment, script=reader, planted=planted)
         self.assertEqual(caught.returncode, 0, caught.stdout + caught.stderr)
+        examined("command(s) the planted reader ran", caught.all_calls)
         self.assertEqual(credential_reads(caught.all_calls), ["cat"])
 
 
