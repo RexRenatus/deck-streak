@@ -221,3 +221,11 @@ fn each_match_tries_each_occurrence_once_when_a_match_does_not_advance() {
     }
     println!("examined {} stalled end(s)", STALLED_ENDS.len());
 }
+
+#[test]
+#[should_panic(expected = "a match ends inside a character")]
+fn each_match_refuses_a_match_that_ends_inside_a_character() {
+    each_match("\u{e9}<", "<", |start| {
+        ControlFlow::Continue(Some((start, 1)))
+    });
+}
