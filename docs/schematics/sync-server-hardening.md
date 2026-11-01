@@ -58,7 +58,7 @@ flowchart LR
   seal["the seal command<br/>DECKSTREAK_SNAPSHOT_SEAL<br/>to the owner's offline key"]
   sealed["sync-STAMP.tar.age<br/>sync-STAMP.sha256.age<br/>header checked"]
   copy["the copy command<br/>DECKSTREAK_SNAPSHOT_COPY"]
-  bucket["the offsite bucket<br/>no public access, no listing<br/>lifecycle rule P30D"]
+  bucket["the offsite bucket<br/>no public access, no listing<br/>lifecycle rule 6 days, inside P7D"]
   restore["the sync drill restores<br/>from the plain archive"]
   gen --> check --> plain --> seal --> sealed --> copy --> bucket
   plain --> restore

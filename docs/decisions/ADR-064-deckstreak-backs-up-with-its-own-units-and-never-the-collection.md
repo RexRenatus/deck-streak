@@ -140,3 +140,32 @@ The share's two processors are split by ADR-347 D7 among the five daemons, 200% 
 The replicator's quota moves from 50% to 15%, since it ships write-ahead-log frames and a
 snapshot and waits on the network more than on a processor; the budget table above keeps its
 memory ceilings. The rest of this record stands.
+
+## Amendment (SPEC-584): the window is seven days, and an erase destroys the learner's key first
+
+ADR-603 moves the declared backups window from `P3D` to `P7D`, by SPEC-021's amendment, as this
+record's "What would make this wrong" requires. This section replaces the window bullet of the
+Decision Outcome above; the rest of this record stands.
+
+- **The window.** No backup copy of DeckStreak's database is older than seven days. Each layer
+  prunes a copy at six days old (the second-region copy at four) and keeps the seventh day as margin
+  for its pruner's delay: the replica bucket's rule deletes each object six days after it is
+  written, the replicator's own retention enforcement is off, and the daily copy keeps the newest
+  six and removes any copy older than six days even when that day's run fails. Until those changes
+  land (SPEC-584 section 5), the 24-hour interval, the 48-hour retention and the three daily copies
+  above keep an erased row at most three days, inside the new window.
+- **The bucket.** Soft delete stays off, and no retention lock is set. The host's identity may
+  create and read the replica's objects and delete none; only the bucket's rule deletes.
+- **Crypto-erase.** Once each learner's store is encrypted under that learner's own data key
+  (ADR-603 D3), an erase deletes the learner's wrapped key from both key stores before anything
+  else, so every copy of that learner's data is unreadable at once, and the copies age out inside
+  the window. The key stores are never backed up and keep no history.
+- **Left out**, unchanged: the collection copy, the releases and every credential; the wrapped
+  keys join them.
+
+Chosen against:
+
+- Keeping `P3D`: rejected because it gives up the longer restore history the window allows and leaves the replica's history deletable by the host.
+- Soft delete at seven days: rejected because deleted bytes would then stay up to thirteen days.
+
+The rest of this record stands.
