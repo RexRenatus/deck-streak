@@ -8,8 +8,10 @@
 mod golden;
 
 use std::collections::BTreeSet;
+use std::ops::ControlFlow;
 
 use deck_streak_media::scan;
+use deck_streak_media::scan::each_match;
 use serde_json::Value;
 
 /// The committed golden of the engine's field references.
@@ -189,4 +191,33 @@ fn scan_reads_the_grammars_edges_over_hand_cases() {
         assert_eq!(scan(text), names.to_vec(), "{text:?}");
     }
     println!("examined {} edge case(s)", EDGES.len());
+}
+
+/// Where a match ends, given where it began.
+type EndOf = fn(usize) -> usize;
+
+/// Where a match ends, as a scanner that does not advance answers it: where the match began, and
+/// at the text's start.
+const STALLED_ENDS: [(&str, EndOf); 2] = [
+    ("where it began", |start| start),
+    ("at the text's start", |_| 0),
+];
+
+#[test]
+fn each_match_tries_each_occurrence_once_when_a_match_does_not_advance() {
+    for (named, end_of) in STALLED_ENDS {
+        let mut tried = Vec::new();
+        let found = each_match("a<b<c<", "<", |start| {
+            tried.push(start);
+            assert!(
+                tried.len() <= 3,
+                "a match ending {named}: tried {tried:?} for 3 occurrences, so the search does not \
+                 advance"
+            );
+            ControlFlow::Continue(Some((start, end_of(start))))
+        });
+        assert_eq!(found, [1, 3, 5], "a match ending {named}");
+        assert_eq!(tried, [1, 3, 5], "a match ending {named}");
+    }
+    println!("examined {} stalled end(s)", STALLED_ENDS.len());
 }
