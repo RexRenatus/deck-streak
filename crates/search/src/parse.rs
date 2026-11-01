@@ -221,10 +221,13 @@ impl Parser<'_> {
         self.chars.get(self.at).copied()
     }
 
+    /// Moves past the spaces at `at`, counted once, so no loop waits on a step that does not advance.
     fn skip_spaces(&mut self) {
-        while self.peek() == Some(' ') {
-            self.at += 1;
-        }
+        let rest = self.chars.get(self.at..).unwrap_or_default();
+        self.at += rest
+            .iter()
+            .take_while(|&&character| character == ' ')
+            .count();
     }
 
     /// Zero or more nodes, with an `and` between two that have no operator between them. A node
