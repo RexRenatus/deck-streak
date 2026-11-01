@@ -147,9 +147,9 @@ cookie and the cross-site bound are unchanged.
 
 `deploy/scripts/alert-journal.sh` replaces the Telegram sender. For the unit `%i` it writes one
 line at error priority to the journal, under the alert instance's own identifier: the failed unit,
-its result and exit status, and the failed run's last five error lines, at most 3500 bytes, cut at
-a character boundary. It reads no credential, makes no request and exits 0 once the line is
-written; a line it cannot write leaves the alert instance failed, in `systemctl --failed`.
+its result and exit status, and no line of the failed run (D9). It reads no credential, makes no
+request and exits 0 once the line is written; a line it cannot write leaves the alert instance
+failed, in `systemctl --failed`.
 
 The options, the chosen one first:
 1. The journal sender. Cost: no credential, no host package, no service. What it can page: nothing
@@ -232,6 +232,13 @@ Chosen against:
 | SPEC-354, SPEC-395, ADR-409 | the bot is one of the units denied the host's identity endpoint | the bot is not installed; the planted ways move to the alert template |
 | SPEC-333, ADR-064, ADR-347 | five daemons and the largest job fill the share, and five quotas divide its processors | four daemons and the largest job fit inside it (D7) |
 | SPEC-083, SPEC-341, ADR-352 | name the bot's unit, the doorbell or the framing origin in passing | as the rows above |
+
+### D9. The alert line quotes no line of the failed run
+
+The journal sender's line names the failed unit, its result and its exit status and quotes no line
+of the failed run, because error text in an alert can carry user data and the unit's own lines
+already reach the shipped journal; a line that quoted the run's last error lines is rejected for
+that reason.
 
 ### Consequences
 

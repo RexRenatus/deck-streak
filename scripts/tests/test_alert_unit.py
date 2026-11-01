@@ -60,7 +60,7 @@ DECOY = "987654321"
 FAILED_UNIT = "deck-streak-api.service"
 RESULT = "oom-kill"
 INVOCATION = "a1b2c3d4e5f60718293a4b5c6d7e8f90"
-# Seven error lines the stub journal answers with; the page quotes the last five.
+# Seven error lines the stub journal answers with.
 JOURNAL_LINES = [f"error line {number} of the failed run" for number in range(1, 8)]
 # The commands the script may run besides the two stubs, each wrapped to record its command line.
 WRAPPED = ("cat", "head", "tail", "sed", "awk", "tr", "cut", "env", "iconv", "grep", "wc", "od")
@@ -243,16 +243,6 @@ def config_options(text):
     return options
 
 
-def option(argv, name):
-    """The parameter of `name` in an argument vector, written `name=value` or `name value`."""
-    for index, word in enumerate(argv):
-        if word.startswith(f"{name}="):
-            return word.partition("=")[2]
-        if word == name and index + 1 < len(argv):
-            return argv[index + 1]
-    return None
-
-
 def leaks(calls, secrets):
     """Every command line and environment of `calls` that carries one of `secrets`."""
     found = []
@@ -413,21 +403,16 @@ class TheJournalSenderWritesOneLine(unittest.TestCase):
         self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
         self.assertEqual(
             journal_text(self, run),
-            f"DeckStreak: {FAILED_UNIT} failed ({RESULT}, status KILL): "
-            + " | ".join(JOURNAL_LINES[-5:]),
+            f"DeckStreak: {FAILED_UNIT} failed ({RESULT}, status KILL)",
         )
-        # The failed unit's own error lines: the unit is named to the journal, at error priority.
-        asked = examined("journal read(s)", run.calls("journalctl"))
-        self.assertEqual(option(asked[0]["argv"], "--unit"), FAILED_UNIT)
-        self.assertEqual(option(asked[0]["argv"], "--priority"), "err")
+        self.assertEqual(run.calls("journalctl"), [], "the sender read the journal")
 
-        # With no MONITOR_UNIT, the instance the unit was started as names the failed unit, and a
-        # journal with no error line quotes nothing.
+        # With no MONITOR_UNIT, the instance the unit was started as names the failed unit.
         other = "deck-streak-mcp.service"
         run = run_alert(other, {"MONITOR_SERVICE_RESULT": "exit-code"}, journal=[], script=script)
         self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
         self.assertEqual(journal_text(self, run), f"DeckStreak: {other} failed (exit-code)")
-        self.assertEqual(option(run.calls("journalctl")[0]["argv"], "--unit"), other)
+        self.assertEqual(run.calls("journalctl"), [], "the sender read the journal")
 
     def test_the_journal_sender_reads_no_credential_and_makes_no_request(self):
         # The template loads no credential, and the sender reads none even from a credentials
@@ -461,79 +446,96 @@ class TheJournalSenderWritesOneLine(unittest.TestCase):
         self.assertEqual(credential_reads(caught.all_calls), ["cat"])
 
 
+# The journal sender as it stood when it quoted the failed run's last error lines, byte for
+# byte: the planted control A15's check must refuse (SPEC-582 R7, A15).
+QUOTING_SENDER = r"""#!/bin/sh
+# DeckStreak's one alert path (SPEC-031 R3 as SPEC-582 R7 amends it; ADR-601 D4): write one line
+# at error priority to the journal saying that a unit failed, naming the unit and its result and
+# quoting its last error lines.
+#
+#   alert-journal.sh UNIT
+#
+# deck-streak-alert@.service runs it as `alert-journal.sh %i` for every unit whose OnFailure= names
+# it. systemd passes that unit as $MONITOR_UNIT, its result as $MONITOR_SERVICE_RESULT (exit-code,
+# oom-kill, watchdog, timeout...), its exit as $MONITOR_EXIT_STATUS and its run as
+# $MONITOR_INVOCATION_ID; the argument names the unit when systemd passes none.
+#
+# It reads no credential and makes no request. Its standard error reaches the journal under the
+# alert instance's own identifier, and the `<3>` prefix gives the line error priority: it is the
+# one record a monitoring service off the host matches. The text is one line of at most 3500
+# bytes, cut at a character boundary; the quoted lines are joined by " | ".
+set -eu
+
+unit="${MONITOR_UNIT:-${1:?usage: alert-journal.sh UNIT}}"
+result="${MONITOR_SERVICE_RESULT:-unknown}"
+status="${MONITOR_EXIT_STATUS:-}"
+
+# The failed run's own error lines when systemd names the run, else the unit's latest; at most five.
+# A journal that cannot be read quotes nothing, and the line is still written.
+if [ -n "${MONITOR_INVOCATION_ID:-}" ]; then
+  lines="$(journalctl "_SYSTEMD_INVOCATION_ID=$MONITOR_INVOCATION_ID" --priority=err --lines=5 \
+    --output=cat --no-pager --quiet 2>&- | tail -n 5 || true)"
+else
+  lines="$(journalctl --unit="$unit" --priority=err --lines=5 --output=cat --no-pager --quiet \
+    2>&- | tail -n 5 || true)"
+fi
+
+text="DeckStreak: $unit failed ($result${status:+, status $status})"
+if [ -n "$lines" ]; then
+  joined="$(printf '%s\n' "$lines" | tr -d '\r' | awk 'NR > 1 { printf " | " } { printf "%s", $(0) }')"
+  text="$text: $joined"
+fi
+# At most 3500 bytes, and never half a character: a UTF-8 sequence the cut split is dropped whole.
+text="$(printf '%s' "$text" | head -c 3500 | LC_ALL=C sed -e \
+  '$ s/\([\xC0-\xDF]\|[\xE0-\xEF][\x80-\xBF]\{0,1\}\|[\xF0-\xF7][\x80-\xBF]\{0,2\}\)$//')"
+
+# One line at error priority. A line that cannot be written fails this instance, which stays in
+# systemctl --failed: the alert template names no OnFailure=, so nothing pages about it.
+printf '<3>%s\n' "$text" >&2
+"""
+
+
 class TheAlertScriptNamesTheFailure(unittest.TestCase):
-    def test_the_page_quotes_the_failed_runs_last_five_error_lines(self):
-        # systemd names the failed run, so the line quotes that run's lines and no older ones,
-        # joined by " | " on the journal sender's one line (SPEC-582 R7).
-        script = journal_sender(self)
-        run = run_alert(
-            FAILED_UNIT,
-            {
-                "MONITOR_UNIT": FAILED_UNIT,
-                "MONITOR_SERVICE_RESULT": "exit-code",
-                "MONITOR_INVOCATION_ID": INVOCATION,
-            },
-            script=script,
-        )
-        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
-        asked = run.calls("journalctl")[0]["argv"]
-        self.assertIn(f"_SYSTEMD_INVOCATION_ID={INVOCATION}", asked)
-        self.assertEqual(option(asked, "--priority"), "err")
-        self.assertEqual(option(asked, "--lines"), "5")
-        text = journal_text(self, run)
-        quoted = examined("quoted line(s)", [line for line in JOURNAL_LINES if line in text])
-        self.assertEqual(quoted, JOURNAL_LINES[-5:], "the last five lines, in order")
-        self.assertEqual(
-            text, f"DeckStreak: {FAILED_UNIT} failed (exit-code): " + " | ".join(JOURNAL_LINES[-5:])
-        )
+    def test_the_alert_line_carries_no_line_of_the_failed_run(self):
+        # The failed run's journal holds a marker line; the sender's output is exactly its one
+        # line, which names the unit and its result and carries no line of the failed run
+        # (SPEC-582 R7).
+        marker = "a marker line the failed run wrote, with a user's text in it"
+        environment = {
+            "MONITOR_UNIT": FAILED_UNIT,
+            "MONITOR_SERVICE_RESULT": "exit-code",
+            "MONITOR_EXIT_STATUS": "1",
+            "MONITOR_INVOCATION_ID": INVOCATION,
+        }
+        one_line = f"<3>DeckStreak: {FAILED_UNIT} failed (exit-code, status 1)\n"
 
-    def test_the_page_stays_within_3500_bytes_and_whole_characters(self):
-        # Five lines of a three-byte character overflow the bound; the one ASCII byte that leads
-        # them puts byte 3500 inside a character once the sender joins them by " | ".
-        script = journal_sender(self)
-        long_lines = ["x" + "漢" * 400] + ["漢" * 400] * 4
-        run = run_alert(
-            FAILED_UNIT,
-            {"MONITOR_UNIT": FAILED_UNIT, "MONITOR_SERVICE_RESULT": "exit-code"},
-            journal=long_lines,
-            script=script,
-        )
-        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
-        text = journal_text(self, run)
-        encoded = text.encode("utf-8", "surrogateescape")
-        try:
-            encoded.decode("utf-8")
-        except UnicodeDecodeError as error:
-            self.fail(f"the line is not UTF-8: {error}")
-        self.assertLessEqual(len(encoded), 3500)
-        self.assertGreater(len(encoded), 3490, "the text was cut short of the bound")
-        # Cut at a character boundary: the text is the start of the whole line, and nothing else.
-        whole = f"DeckStreak: {FAILED_UNIT} failed (exit-code): " + " | ".join(long_lines)
-        self.assertGreater(len(whole.encode("utf-8")), 3500, "the lines do not overflow the bound")
-        with self.assertRaises(UnicodeDecodeError, msg="byte 3500 is not inside a character"):
-            whole.encode("utf-8")[:3500].decode("utf-8")
-        self.assertTrue(whole.startswith(text), "the cut text is not the start of the line")
+        def refusals(run):
+            """Why `run` is not the one line that carries no line of the failed run."""
+            found = []
+            if run.returncode != 0:
+                found.append(f"it exited {run.returncode}")
+            if marker in run.stdout + run.stderr:
+                found.append("it carries a line of the failed run")
+            if (run.stdout, run.stderr) != ("", one_line):
+                found.append(f"it is not exactly the one line: {(run.stdout, run.stderr)!r}")
+            return found
 
-    def test_a_json_error_line_reaches_the_page_as_written(self):
-        # A role's error lines are JSON, full of double quotes, and a message may hold a backslash
-        # or a tab: each reaches the journal sender's one line as written, the quoted lines joined
-        # by " | " (SPEC-582 R7).
-        script = journal_sender(self)
-        line = '{"level":"ERROR","message":"a \\"quoted\\" word, a back\\\\slash","target":"x"}'
-        run = run_alert(
-            FAILED_UNIT,
-            {
-                "MONITOR_UNIT": FAILED_UNIT,
-                "MONITOR_SERVICE_RESULT": "exit-code",
-                "MONITOR_EXIT_STATUS": "1",
-            },
-            journal=[line, "a\ttab"],
-            script=script,
-        )
-        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
-        text = journal_text(self, run)
+        run = run_alert(FAILED_UNIT, environment, journal=[marker], script=journal_sender(self))
+        self.assertEqual(refusals(run), [])
+        # The check can fail: the sender that quoted the failed run's lines, planted in scratch,
+        # writes its line and is refused for carrying the marker.
+        with tempfile.TemporaryDirectory() as scratch:
+            quoting = Path(scratch) / "quoting-sender.sh"
+            quoting.write_text(QUOTING_SENDER, encoding="utf-8")
+            quoting.chmod(0o755)
+            caught = run_alert(FAILED_UNIT, environment, journal=[marker], script=quoting)
+        self.assertEqual(caught.returncode, 0, caught.stdout + caught.stderr)
         self.assertEqual(
-            text, f"DeckStreak: {FAILED_UNIT} failed (exit-code, status 1): {line} | a\ttab"
+            refusals(caught),
+            [
+                "it carries a line of the failed run",
+                f"it is not exactly the one line: {(caught.stdout, caught.stderr)!r}",
+            ],
         )
 
 

@@ -141,7 +141,7 @@ of its own; neither catches up a run missed while the host was down, and each ti
 - Run `maintenance` by hand only at its slot, or expect one drift page: the next `liveness` check
   reads a maintenance fire off its slot as drift, once (ADR-027).
 - A unit that fails pages through `deck-streak-alert@.service` (SPEC-031), which writes one line at error priority to the journal naming the failed
-  unit and its result and quotes that run's last five error lines. A job that hangs is ended after
+  unit and its result and quotes no line of that run. A job that hangs is ended after
   30 minutes and pages the same way. A daemon in a crash loop pages at each failure until its start
   limit ends the loop.
 - A line that cannot be written leaves its alert instance failed, listed by `systemctl --failed`; no

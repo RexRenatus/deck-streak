@@ -58,11 +58,11 @@ R6. **The edge.** The site block's policy is
     `frame-ancestors 'none'; object-src 'none'; base-uri 'self'`.
 R7. **The alert sender.** `deck-streak-alert@.service` keeps its name and its sandbox lines and
     runs `deploy/scripts/alert-journal.sh %i`, and loads no credential. The script writes one line
-    to standard error with the `<3>` prefix: `DeckStreak: <unit> failed (<result>[, status <n>])`,
-    then the failed run's last five error lines (by `$MONITOR_INVOCATION_ID` when systemd names the
-    run, else the unit's), at most 3500 bytes, with no split character; it reads no credential,
-    runs no `curl`, and exits 0 once the line is written. No shipped source outside the bot names
-    the Bot API's host.
+    to standard error with the `<3>` prefix: `DeckStreak: <unit> failed (<result>[, status <n>])`;
+    it reads no credential, runs no `curl`, and exits 0 once the line is written. The line quotes
+    no line of the failed run, because error text in an alert can carry user data and the unit's
+    own lines already reach the shipped journal. No shipped source outside the bot names the Bot
+    API's host.
 R8. **The SLO declaration.** Every alert of `deploy/slo.json` routes to `journal`;
     `alerting.channel` is `journal`, and `alerting.unit` is still `deck-streak-alert@.service`.
 R9. **The held flush.** With neither Telegram credential held, `deckstreakd job held_flush` builds
@@ -98,7 +98,7 @@ R13. **The records.** ADR-601; the appended amendments to ADR-589, ADR-347, SPEC
 | A12 | the edge admits no framing origin and sends the security headers | `test_the_caddy_policy_admits_no_framing_and_sends_the_security_headers` |
 | A13 | the alert template runs the journal sender, which names the failed unit and its result at error priority | `test_the_journal_sender_names_the_unit_and_result_at_error_priority` |
 | A14 | the journal sender reads no credential and makes no request | `test_the_journal_sender_reads_no_credential_and_makes_no_request` |
-| A15 | the journal sender quotes the failed run's last five error lines within 3500 bytes and whole characters | `test_the_page_quotes_the_failed_runs_last_five_error_lines`, `test_the_page_stays_within_3500_bytes_and_whole_characters` |
+| A15 | the journal sender's line names the unit and its result and carries no line of the failed run | `test_the_alert_line_carries_no_line_of_the_failed_run` |
 | A16 | every SLO alert and the alert channel route to `journal` through the one template | `test_every_alert_routes_to_the_one_alert_path` |
 | A17 | the MCP server's SLO pages and tickets to `journal` with its exact burn rates | `test_the_mcp_slo_pages_and_tickets_to_the_journal_with_exact_burn_rates` |
 | A18 | a release with no bot unit deploys, and the deploy and its switch back restart the API alone | `test_a_release_with_no_bot_unit_deploys_and_restarts_the_api_alone` |
@@ -122,8 +122,7 @@ A11: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -
 A12: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_caddy_policy_admits_no_framing_and_sends_the_security_headers
 A13: python3 -m unittest discover -s scripts/tests -p test_alert_unit.py -k test_the_journal_sender_names_the_unit_and_result_at_error_priority
 A14: python3 -m unittest discover -s scripts/tests -p test_alert_unit.py -k test_the_journal_sender_reads_no_credential_and_makes_no_request
-A15: python3 -m unittest discover -s scripts/tests -p test_alert_unit.py -k test_the_page_quotes_the_failed_runs_last_five_error_lines
-A15: python3 -m unittest discover -s scripts/tests -p test_alert_unit.py -k test_the_page_stays_within_3500_bytes_and_whole_characters
+A15: python3 -m unittest discover -s scripts/tests -p test_alert_unit.py -k test_the_alert_line_carries_no_line_of_the_failed_run
 A16: python3 -m unittest discover -s scripts/tests -p test_slo_declaration.py -k test_every_alert_routes_to_the_one_alert_path
 A17: python3 -m unittest discover -s scripts/tests -p test_slo_declaration.py -k test_the_mcp_slo_pages_and_tickets_to_the_journal_with_exact_burn_rates
 A18: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_a_release_with_no_bot_unit_deploys_and_restarts_the_api_alone
@@ -180,6 +179,13 @@ functions the first push cannot compile, so each of those is marked not red with
 | `scripts/tests/test_rail_contract.py` | tests | changed |
 | `scripts/tests/test_caddy_render.py` | tests | changed |
 | `scripts/tests/test_sync_path.py` | tests | deleted |
+| `scripts/tests/test_memory_watch.py` | tests | changed: the memory watch's second unit is the MCP server, the bot's cgroup leaving with the bot |
+| `scripts/tests/fixtures/cgroup/system.slice/deck-streak-bot.service/memory.current` | tests | deleted: the bot's cgroup leaves with the bot |
+| `scripts/tests/fixtures/cgroup/system.slice/deck-streak-bot.service/memory.events` | tests | deleted: the bot's cgroup leaves with the bot |
+| `scripts/tests/fixtures/cgroup/system.slice/deck-streak-bot.service/memory.max` | tests | deleted: the bot's cgroup leaves with the bot |
+| `scripts/tests/fixtures/cgroup/system.slice/deck-streak-mcp.service/memory.current` | tests | added: the MCP server's cgroup |
+| `scripts/tests/fixtures/cgroup/system.slice/deck-streak-mcp.service/memory.events` | tests | added: the MCP server's cgroup |
+| `scripts/tests/fixtures/cgroup/system.slice/deck-streak-mcp.service/memory.max` | tests | added: the MCP server's cgroup, its ceiling the host budget's |
 | `scripts/mutation-rows.d/S04100-S04199.json` | rows | changed: one row re-anchored, its exemption gone |
 | `scripts/mutation-rows.d/S05900-S05999.json` | rows | changed: three rows whose targets leave |
 | `scripts/mutation-rows.d/S06200-S06299.json` | rows | changed: one row leaves, two killers renamed |

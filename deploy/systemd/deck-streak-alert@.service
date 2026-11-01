@@ -1,6 +1,6 @@
 # DeckStreak's one alert path: write one line at error priority to the journal saying that
-# the unit %i failed, naming it, its result and its last error lines (SPEC-031 R3, R6, as
-# SPEC-582 R7 amends them; ADR-031, ADR-601 D4). Every service and scheduled job
+# the unit %i failed, naming it and its result and quoting no line of its run (SPEC-031 R3, R6, as
+# SPEC-582 R7 amends them; ADR-031, ADR-601 D4, D9). Every service and scheduled job
 # names it with OnFailure=deck-streak-alert@%n.service, and the SLO evaluator and the memory watch page
 # through it by failing. A template with neutral values that the private rail fills
 # (deploy/README.md); nothing in it is one host's value.
@@ -18,11 +18,11 @@ Type=oneshot
 ExecStart=/usr/local/lib/deck-streak/current/deploy/scripts/alert-journal.sh %i
 User=deck-streak
 Group=deck-streak
-# To quote the failed run's error lines from the journal.
+# Kept with the sandbox lines (SPEC-582 R7); the sender reads no journal.
 SupplementaryGroups=systemd-journal
 # It loads no credential: the sender reads none (SPEC-582 R7). It reads no settings file and
 # writes nothing but its one journal line, so a page waits on neither.
-# A journal read and one written line fit well inside it.
+# One written line fits well inside it.
 TimeoutStartSec=3min
 SyslogIdentifier=%N
 # The budget is deploy/host-budget.json's entry for this template (ADR-032).

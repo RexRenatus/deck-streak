@@ -74,7 +74,7 @@ flowchart LR
   U["a failed unit: OnFailure=deck-streak-alert@%n.service"] --> T["deck-streak-alert@.service (name unchanged)"]
   E["the SLO evaluator and the memory watch fail"] --> T
   T --> S["deploy/scripts/alert-journal.sh %i"]
-  S --> J["one line at error priority: unit, result, status, last five error lines, 3500 bytes at most"]
+  S --> J["one line at error priority: unit, result, status, no line of the failed run"]
   J --> L["the journal, under the alert instance's identifier"]
   L -. "the monitoring delivery reads it" .-> M["a page off the host"]
 ```

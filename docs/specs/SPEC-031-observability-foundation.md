@@ -244,8 +244,8 @@ The install's alert sender is no longer Telegram (ADR-601 D4):
   `alerting.unit` is still `deck-streak-alert@.service`.
 - R3: `deploy/systemd/deck-streak-alert@.service` runs `deploy/scripts/alert-journal.sh` with `%i`.
   The script reads no credential and makes no request. It writes one line at error priority naming
-  the failed unit, its result and its exit status, and quoting the failed run's last five error
-  lines, within 3500 bytes cut at a character boundary, and exits 0 once the line is written.
+  the failed unit, its result and its exit status, quotes no line of the failed run, and exits 0
+  once the line is written.
 - A3 is held by SPEC-582 A9 and A10. A4 (the bot token off the alert's command line) has no
   subject: the sender loads no token.
 
