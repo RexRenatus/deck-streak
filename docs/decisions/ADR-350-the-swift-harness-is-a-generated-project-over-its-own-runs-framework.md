@@ -235,3 +235,76 @@ each Swift mutant killed.
   and its job).
 - `proto/anki/card_rendering.proto` at the engine's pinned rev, for the render call's fields.
 - RFC 2606, for the reserved `.invalid` top-level domain.
+
+## Amendment: each Harness test step is built once and each simulator warmed before it (SPEC-339 section 8), and the alternatives each decision was chosen against
+
+D2 decided that the harness is a job of `xcframework.yml` that tests on one iPhone and one iPad
+simulator, and D7 how each figure is measured. On #1060's branch the job failed in 11 of its 14
+attempts, each in one simulator session near its start: a launch, a UI test runner's start-up or
+an end that ran out of time (SPEC-339 section 8 lists each by job). These decisions answer that
+without a retry and without loosening a test, a wait or a bound. D1 to D9 stand as written.
+
+### D10. Each Harness test step is built for testing, warmed on each simulator, then run without building
+
+The Debug tests and the Release measurements each become three steps: `xcodebuild
+build-for-testing` for both simulators into the step's derived data; a warm that, on each
+simulator in turn, waits for its boot to finish (`xcrun simctl bootstatus <udid> -b`), installs
+the app the build made, launches it and ends it; then `xcodebuild test-without-building` with the
+step's destinations, selection, derived data and result bundle unchanged. A session's finished
+boot, its first launch and its first end of the new install then come before its first test,
+where the Debug failures (the first UI test's launch, the runner's start-up) and the Release ones
+(an end within minutes of the session's start) were measured. M1's measured passes were never a
+session's first launch, since XCTest discards the first pass, so D7's method stands.
+
+Chosen against:
+
+- A retry of a failed test (`-retry-tests-on-failure`, or a second launch inside a test): rejected because a launch or an end that truly hangs would then pass, which narrows what the job proves.
+- A longer wait in a test, or a raised job bound: rejected because each loosens what the tests and the job hold, and SPEC-361 A16 owns the job's bound.
+- A warm before the Debug tests alone: rejected because the end that timed out on #1060's head was in the Release measurements, whose step installs a build of its own.
+- A boot alone (`simctl boot`, or `bootstatus` with no launch): rejected because the failures measured are a session's first launch, its runner's start-up and its ends, and a boot neither launches nor ends the app the tests launch.
+- A warm before every test step, the app's three steps included: rejected for this amendment because the app's steps had no failure on #1060's head and SPEC-347 A14's test holds their order; a later delivery decides it.
+- One xcodebuild run per simulator, each after its own warm: rejected because it doubles the result bundles the report reads and splits the one command each of SPEC-339 A4 to A8 names, for no failure measured to need it.
+
+### D11. The warm records each phase, and the tests decide
+
+Each phase's outcome and seconds are written to the warm's record in the report's folder. The warm
+fails its step only when a simulator name is not exactly one available simulator on the job's
+runtime; a phase that fails or runs out of time is recorded, and the tests run. One budget of 480
+seconds bounds each warm step, both simulators together; a phase past it is recorded as skipped.
+The Debug warm writes the script to the runner's temporary directory once, and the Release warm
+runs that copy, so each line of the warm exists once in the workflow.
+
+Chosen against:
+
+- A warm that fails its step on any phase: rejected because it would turn a run red where the tests, which decide, would pass, and would add a red no criterion names.
+- A warm with no budget: rejected because a simulator command that hangs would spend the job's bound, and the job would end cancelled, naming no test.
+- A step `timeout-minutes` on the warm: rejected because a step past it fails the job, which the record-only rule refuses, and `continue-on-error` would hide the one failure the warm is meant to raise.
+- The warm's script written inline in both warm steps: rejected because each of its lines would exist twice, so a mutation row could not name one.
+
+### D12. The report reads each test step's console for the runner's bootstrap and the first-launch gap
+
+Each Harness test step writes its console beside the report through `tee`, under `set -o
+pipefail`, as the codec's test step already does. The report reads, per simulator in destination
+order, the UI test runner's bootstrap (its "Running tests..." line to its first suite's start) and
+the first-launch gap (the first UI test's start to xcodebuild's launch parameters line), by the
+stamps those lines carry; a count of runner sessions other than the simulators' reads `not
+measured` for that step. The warm's three rows come from its record.
+
+Chosen against:
+
+- Reading both from the result bundle's activities: rejected because the activities' shape is not stated for the image's tools, and a figure read through a guessed shape reads nothing.
+- A pipe to `tee` without `pipefail`: refused because the step's exit would then be `tee`'s, and a failed test step would pass.
+- No new rows: rejected because a red's class would again need a log cut by hand, by step window.
+
+### Consequences of this amendment
+
+- Good, because a session's finished boot, first launch and first end come before its first test, without a retry or a loosened test.
+- Good, because each red near a session's start now carries its class in the report: the warm's three phases and the runner's bootstrap and first-launch gap, per simulator.
+- Good, because the build for testing spares each step's second build, for the second simulator.
+- Bad, because the job runs four more steps and up to 16 more minutes, which the warm's budget bounds.
+- Bad, because the warm and the report read simulator tool output whose shape no census can run; a change in it reads `not measured` in the report, never a false figure.
+
+### What would make this amendment wrong
+
+- The same failures recur at the same rate after the warm: a session's start is then not their cause, and the next design reads SPEC-339 R16's rows (#1060).
+- A warm phase often runs out of its budget: the boot wait then needs its own measurement before the tests depend on it (#1060).
