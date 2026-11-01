@@ -8,10 +8,18 @@
 - **Schematic:** `docs/schematics/due-card-scores-reorder.md`.
 - **Status:** designed; built by this delivery. **Mutation band:** `S41400-S41499`.
   **Changelog:** `changelog.d/reorder-input-414.md`. **Red-first record:** `docs/red-first/SPEC-414.md`.
+- **Related:** #874 (lean warnings as errors and an escape-hatch guard; it changes the Lean build this entry
+  passes if it lands first), #897 (formal parity in the fitness checks; it changes the formal census this
+  delivery's ledger rows join), and `crates/engine-core/src/scheduler.rs::day_queue` (`origin/dev`
+  `e25c0c45`:276, SPEC-494 R6-R7), a second builder of the stock queue with no production caller, which this
+  delivery neither reorders nor wires.
 
 Refs read: `DEV` is DeckStreak `dev` `c74b6b9684bf24dc56a83c7005afd52064d2632c`. Every fact below is read at
 DEV with `git show DEV:<path>` at the lines beside it, or measured by the command named. The engine's own
-source is read at the workspace's pinned engine.
+source is read at the workspace's pinned engine. After the branch merged `origin/dev`
+`e25c0c459d1d1021c8252789d9bd26c619b9682c` (merge commit `198a30d1`), M2, M3, M7 and M8 were read again
+there: M2's command prints 0 lines, and the lines M3 (`wasm.rs:263-265`, `:723-726`), M7 (`late.rs:21-23`,
+`dispatch.rs:43-46`) and M8 (`dispatch.rs:79-90`) cite hold the same text.
 
 ## 1. The problem, measured
 
@@ -96,6 +104,8 @@ A8: cargo test -p deck-streak-engine-core --test reorder_shape -- --exact the_in
 | `formal/vectors/due-reorder.jsonl` | formal | changed: the header names the covers; written by the Lean writer |
 | `formal/tla/DueReorderInput/DueReorderInput.tla` | formal | changed: two covers and the prose that said the code was ahead |
 | `scripts/mutation-rows.d/S41400-S41499.json` | mutation | added |
+| `formal/obligations.json` | formal | changed: a `keep` row for `lean/DueReorder`, a `re-point` row with O11 for `tla/DueReorderInput`, and its four properties as O11's present artifacts |
+| `scripts/tests/test_formal_obligations.py` | formal | changed: the two entries in `DISPOSITIONS` and `tla/DueReorderInput` in `ENGINE_TIED`; the designed count 43 becomes 45 |
 
 ## 5. What this does NOT do
 
@@ -106,6 +116,8 @@ A8: cargo test -p deck-streak-engine-core --test reorder_shape -- --exact the_in
 - It adds no switch to any settings screen; the switch is the `on` argument until a client wires one (#630).
 - It moves no card field and no queue: the stock scheduler's queue, its sibling bury and its fetch limit stay
   as they are (#824).
+- It does not reorder the core's own day queue, `scheduler.rs::day_queue`, which no production caller reads; a
+  wiring that serves cards from it adds itself to ADR-428 D7's register (#630, #632).
 - It models one scorer run in flight, not two, and checks the model at two cards; a run at three cards did not
   finish inside the entry's budget (#824).
 

@@ -9,7 +9,13 @@
 - **Refines:** ADR-339's input ("for each card due today, an identifier and a score") with a key. ADR-339's text
   and status are left as they are; this ADR records the shape the code holds.
 - **Read at:** DeckStreak `dev` `c74b6b9684bf24dc56a83c7005afd52064d2632c`. Every `path:line` below is read
-  there; the engine's own source is read at the workspace's pinned engine.
+  there; the engine's own source is read at the workspace's pinned engine. The branch merged `origin/dev`
+  `e25c0c459d1d1021c8252789d9bd26c619b9682c` (merge commit `198a30d1`); the `wasm.rs`, `late.rs` and
+  `dispatch.rs` lines cited here read the same text there.
+- **Related:** #874 (lean warnings as errors and an escape-hatch guard) and #897 (formal parity in the fitness
+  checks), drafts that change the Lean build and the formal census if they land first; and
+  `crates/engine-core/src/scheduler.rs::day_queue` (SPEC-494 R6-R7), a second builder of the stock queue with
+  no production caller, outside D5's scope and inside D7's register rule once a wiring reads it.
 
 ## Context
 
