@@ -141,12 +141,12 @@ class TheApiSloBurnsAsDeclared(unittest.TestCase):
         body = declaration()
         self.assertEqual(body["schema"], "phx.slo.v1")
         self.assertEqual(
-            body["alerting"], {"unit": "deck-streak-alert@.service", "channel": "journal"}
+            body["alerting"], {"unit": "deck-streak-alert@.service", "channel": "pager"}
         )
         routes = examined(
             "alert route(s)", [alert["route"] for slo in body["slos"] for alert in slo["alerts"]]
         )
-        self.assertEqual(set(routes), {"journal"})
+        self.assertEqual(set(routes), {"pager"})
         # The alert unit, the evaluator and its timer, and the memory watch and its timer ship.
         shipped = {path.name for path in SYSTEMD.iterdir()}
         named = [
@@ -190,7 +190,7 @@ class TheMcpSloBurnsAsDeclared(unittest.TestCase):
         self.assertEqual(slo["expected_events_per_hour"], 1)
         self.assertTrue(slo["rationale"].strip())
 
-    def test_the_mcp_slo_pages_and_tickets_to_the_journal_with_exact_burn_rates(self):
+    def test_the_mcp_slo_pages_and_tickets_on_the_one_alert_path_with_exact_burn_rates(self):
         slo = mcp_slo(declaration())
         alerts = examined("alert(s) of the MCP SLO", slo["alerts"])
         self.assertEqual(burn_refusals(slo), [])
@@ -207,8 +207,8 @@ class TheMcpSloBurnsAsDeclared(unittest.TestCase):
         self.assertEqual(
             declared,
             {
-                "page": ("6h", "30m", 0.05, 5.6, "journal"),
-                "ticket": ("3d", "6h", 0.1, 0.9333, "journal"),
+                "page": ("6h", "30m", 0.05, 5.6, "pager"),
+                "ticket": ("3d", "6h", 0.1, 0.9333, "pager"),
             },
         )
 

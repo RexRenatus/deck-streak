@@ -1,0 +1,27 @@
+{
+  "schema": "deckstreak.pager.v1",
+  "note": "What pages a person off the host, and what the shipped journal lines may hold (SPEC-585, ADR-604). The monitoring service's policies, channels and settings are made outside this repository from this file, and the host's hand-run verify proves each page (SPEC-585 section 8). deploy/slo.json routes every alert to the route named here.",
+  "route": "journal",
+  "retention": {
+    "period": "",
+    "set_before_any_line_ships": false
+  },
+  "shipped": {
+    "units": "*",
+    "service_manager_lines": ""
+  },
+  "pages": [],
+  "delivery": {
+    "channels_at_least": 0,
+    "kinds_at_least": 0,
+    "kinds_include": []
+  },
+  "counters": {
+    "units": [],
+    "event": "finished processing request",
+    "labels": {},
+    "unmatched_route": "unmatched",
+    "status_classes": ["1xx", "2xx", "3xx", "4xx", "5xx"],
+    "never": []
+  }
+}
